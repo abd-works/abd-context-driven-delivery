@@ -131,3 +131,6 @@ sandbox/
 # Agent BDD runs write their session files and request logs beside each spec; they are run output, not sources
 **/.agent_bdd_sessions/
 **/log-action-requests.txt
+# Closed sessions are kept work too: every archived session in .sessions/_complete is tracked.
+!.sessions/_complete/
+!.sessions/_complete/**

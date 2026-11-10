@@ -1,0 +1,312 @@
+2026-11-05T14:38:55Z validate.validate PathsNotFoundError: validate found no file under the session's root C:\dev\abd-cdd-cdd-chat-ui\harness\chat-ui at harness/kanban/board.py, read from C:\dev\abd-cdd-session-board; harness/kanban/ticket.py, read from C:\dev\abd-cdd-session-board; harness/kanban/backlog_item.py, read from C:\dev\abd-cdd-session-board; harness/kanban/data.py, read from C:\dev\abd-cdd-session-board. Name paths from the project's root, or absolute.
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 1201, in _dispatch_between_restarts
+    return runtime.invoke_prompt(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 749, in invoke_prompt
+    return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 549, in invoke
+    return self._expanded_instructions(tool, member, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 567, in _expanded_instructions
+    expanded = AgentInstructions.for_callable(member, tool).expand({}, arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1269, in expand
+    self._scan()
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1302, in _scan
+    self._walk_statements(function_def)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1983, in _walk_statements
+    self._dispatch_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1945, in _dispatch_statement
+    self._dispatch_simple_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1936, in _dispatch_simple_statement
+    self._execute_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1765, in _execute_statement
+    exec(
+  File "<agent_instructions>", line 25, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py", line 163, in _workspace_relative
+    raise PathsNotFoundError(unreadable, project, workspace)
+cdd_guidance.actions.validate.validate.PathsNotFoundError: validate found no file under the session's root C:\dev\abd-cdd-cdd-chat-ui\harness\chat-ui at harness/kanban/board.py, read from C:\dev\abd-cdd-session-board; harness/kanban/ticket.py, read from C:\dev\abd-cdd-session-board; harness/kanban/backlog_item.py, read from C:\dev\abd-cdd-session-board; harness/kanban/data.py, read from C:\dev\abd-cdd-session-board. Name paths from the project's root, or absolute.
+2026-11-05T14:46:17Z validate.validate PathsNotFoundError: validate found no file under the session's root C:\dev\abd-cdd-cdd-chat-ui\harness\chat-ui at C:/dev/abd-cdd-chat-ui/harness/chat-ui/pane/hooks, read from C:\dev\abd-cdd-chat-ui. Name paths from the project's root, or absolute.
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 1201, in _dispatch_between_restarts
+    return runtime.invoke_prompt(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 749, in invoke_prompt
+    return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 549, in invoke
+    return self._expanded_instructions(tool, member, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 567, in _expanded_instructions
+    expanded = AgentInstructions.for_callable(member, tool).expand({}, arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1269, in expand
+    self._scan()
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1302, in _scan
+    self._walk_statements(function_def)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1983, in _walk_statements
+    self._dispatch_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1945, in _dispatch_statement
+    self._dispatch_simple_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1936, in _dispatch_simple_statement
+    self._execute_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1765, in _execute_statement
+    exec(
+  File "<agent_instructions>", line 25, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py", line 163, in _workspace_relative
+    raise PathsNotFoundError(unreadable, project, workspace)
+cdd_guidance.actions.validate.validate.PathsNotFoundError: validate found no file under the session's root C:\dev\abd-cdd-cdd-chat-ui\harness\chat-ui at C:/dev/abd-cdd-chat-ui/harness/chat-ui/pane/hooks, read from C:\dev\abd-cdd-chat-ui. Name paths from the project's root, or absolute.
+2026-11-05T15:00:11Z validate.validate PathsNotFoundError: validate found no file under the session's root C:\dev\abd-cdd-cdd-chat-ui\harness\chat-ui at harness/chat-ui/pane/hooks, read from C:\dev\abd-cdd-chat-ui. Name paths from the project's root, or absolute.
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 1201, in _dispatch_between_restarts
+    return runtime.invoke_prompt(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 749, in invoke_prompt
+    return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 549, in invoke
+    return self._expanded_instructions(tool, member, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 567, in _expanded_instructions
+    expanded = AgentInstructions.for_callable(member, tool).expand({}, arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1269, in expand
+    self._scan()
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1302, in _scan
+    self._walk_statements(function_def)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1983, in _walk_statements
+    self._dispatch_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1945, in _dispatch_statement
+    self._dispatch_simple_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1936, in _dispatch_simple_statement
+    self._execute_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1765, in _execute_statement
+    exec(
+  File "<agent_instructions>", line 25, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py", line 163, in _workspace_relative
+    raise PathsNotFoundError(unreadable, project, workspace)
+cdd_guidance.actions.validate.validate.PathsNotFoundError: validate found no file under the session's root C:\dev\abd-cdd-cdd-chat-ui\harness\chat-ui at harness/chat-ui/pane/hooks, read from C:\dev\abd-cdd-chat-ui. Name paths from the project's root, or absolute.
+2026-11-05T15:00:20Z validate.validate PathsNotFoundError: validate found no file under the session's root C:\dev\abd-cdd-cdd-chat-ui\harness\chat-ui at harness/chat-ui/pane/hooks, read from C:\dev\abd-cdd-chat-ui. Name paths from the project's root, or absolute.
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 1201, in _dispatch_between_restarts
+    return runtime.invoke_prompt(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 749, in invoke_prompt
+    return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 549, in invoke
+    return self._expanded_instructions(tool, member, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 567, in _expanded_instructions
+    expanded = AgentInstructions.for_callable(member, tool).expand({}, arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1269, in expand
+    self._scan()
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1302, in _scan
+    self._walk_statements(function_def)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1983, in _walk_statements
+    self._dispatch_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1945, in _dispatch_statement
+    self._dispatch_simple_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1936, in _dispatch_simple_statement
+    self._execute_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1765, in _execute_statement
+    exec(
+  File "<agent_instructions>", line 25, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py", line 163, in _workspace_relative
+    raise PathsNotFoundError(unreadable, project, workspace)
+cdd_guidance.actions.validate.validate.PathsNotFoundError: validate found no file under the session's root C:\dev\abd-cdd-cdd-chat-ui\harness\chat-ui at harness/chat-ui/pane/hooks, read from C:\dev\abd-cdd-chat-ui. Name paths from the project's root, or absolute.
+2026-11-05T15:00:38Z validate.validate PathsNotFoundError: validate found no file under the session's root C:\dev\abd-cdd-cdd-chat-ui\harness\chat-ui at harness/chat-ui/pane/hooks, read from C:\dev\abd-cdd-chat-ui. Name paths from the project's root, or absolute.
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 1201, in _dispatch_between_restarts
+    return runtime.invoke_prompt(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 749, in invoke_prompt
+    return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 549, in invoke
+    return self._expanded_instructions(tool, member, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 567, in _expanded_instructions
+    expanded = AgentInstructions.for_callable(member, tool).expand({}, arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1269, in expand
+    self._scan()
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1302, in _scan
+    self._walk_statements(function_def)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1983, in _walk_statements
+    self._dispatch_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1945, in _dispatch_statement
+    self._dispatch_simple_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1936, in _dispatch_simple_statement
+    self._execute_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1765, in _execute_statement
+    exec(
+  File "<agent_instructions>", line 25, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py", line 163, in _workspace_relative
+    raise PathsNotFoundError(unreadable, project, workspace)
+cdd_guidance.actions.validate.validate.PathsNotFoundError: validate found no file under the session's root C:\dev\abd-cdd-cdd-chat-ui\harness\chat-ui at harness/chat-ui/pane/hooks, read from C:\dev\abd-cdd-chat-ui. Name paths from the project's root, or absolute.
+2026-11-05T15:46:10Z validate.validate PathsNotFoundError: validate found no file under the session's root C:\dev\abd-cdd-chat-ui\harness\chat-ui at C:\dev\abd-cdd-session-board\harness\kanban\.context\story-map.md, read from C:\dev\abd-context-driven-delivery; C:\dev\abd-cdd-session-board\harness\kanban\.context\story-map.drawio, read from C:\dev\abd-context-driven-delivery. Name paths from the project's root, or absolute.
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 1201, in _dispatch_between_restarts
+    return runtime.invoke_prompt(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 749, in invoke_prompt
+    return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 549, in invoke
+    return self._expanded_instructions(tool, member, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 567, in _expanded_instructions
+    expanded = AgentInstructions.for_callable(member, tool).expand({}, arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1269, in expand
+    self._scan()
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1302, in _scan
+    self._walk_statements(function_def)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1983, in _walk_statements
+    self._dispatch_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1945, in _dispatch_statement
+    self._dispatch_simple_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1936, in _dispatch_simple_statement
+    self._execute_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1765, in _execute_statement
+    exec(
+  File "<agent_instructions>", line 25, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py", line 163, in _workspace_relative
+    raise PathsNotFoundError(unreadable, project, workspace)
+cdd_guidance.actions.validate.validate.PathsNotFoundError: validate found no file under the session's root C:\dev\abd-cdd-chat-ui\harness\chat-ui at C:\dev\abd-cdd-session-board\harness\kanban\.context\story-map.md, read from C:\dev\abd-context-driven-delivery; C:\dev\abd-cdd-session-board\harness\kanban\.context\story-map.drawio, read from C:\dev\abd-context-driven-delivery. Name paths from the project's root, or absolute.
+2026-11-05T19:36:26Z chat.check_in PermissionError: [WinError 5] Access is denied: 'C:\\Users\\jeffa\\.claude\\cdd-chats\\7c7e695e-4f70-4b0b-99be-9d64d3899423\\chat.json.40224.68248' -> 'C:\\Users\\jeffa\\.claude\\cdd-chats\\7c7e695e-4f70-4b0b-99be-9d64d3899423\\chat.json'
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 1202, in _dispatch_between_restarts
+    return runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 746, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 525, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 487, in _invoke_mcp_callable
+    return op.member(**args)
+           ^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 350, in on_subject
+    return operation(found, **arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\tools\chat\chat.py", line 163, in check_in
+    return self._check_in(is_busy, name, folder)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\tools\chat\chat.py", line 169, in _check_in
+    self._write({"name": name, "title": title, "is_busy": is_busy, "seen": self.clock(), "title_read": title_read, "folder": folder})
+  File "C:\Users\jeffa\.cdd\runtime\tools\chat\chat.py", line 253, in _write
+    _while_windows_holds(lambda: written.replace(self._folder / STATE_FILE))
+  File "C:\Users\jeffa\.cdd\runtime\tools\chat\chat.py", line 339, in _while_windows_holds
+    return operation()
+           ^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\tools\chat\chat.py", line 253, in <lambda>
+    _while_windows_holds(lambda: written.replace(self._folder / STATE_FILE))
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1376, in replace
+    os.replace(self, target)
+PermissionError: [WinError 5] Access is denied: 'C:\\Users\\jeffa\\.claude\\cdd-chats\\7c7e695e-4f70-4b0b-99be-9d64d3899423\\chat.json.40224.68248' -> 'C:\\Users\\jeffa\\.claude\\cdd-chats\\7c7e695e-4f70-4b0b-99be-9d64d3899423\\chat.json'
+2026-11-05T22:25:05Z ticket.read_file PathOutsideRootsError: C:/dev/abd-cdd-chat-ui/harness/chat-ui/.context/{epic}/{sub-epic}/{story}/{story_snake}_story.test.md is outside the session's roots
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 1202, in _dispatch_between_restarts
+    return runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 746, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 525, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 487, in _invoke_mcp_callable
+    return op.member(**args)
+           ^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 350, in on_subject
+    return operation(found, **arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\kanban\ticket.py", line 472, in read_file
+    return self._files.read(path)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\kanban\ticket_files.py", line 63, in read
+    return FileManager(self._repo.root, (self._repo.root,)).read(path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\tools\file_manager\file_manager.py", line 144, in read
+    target = self._inside(path)
+             ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\tools\file_manager\file_manager.py", line 152, in _inside
+    raise PathOutsideRootsError(path)
+tools.file_manager.file_manager.PathOutsideRootsError: C:/dev/abd-cdd-chat-ui/harness/chat-ui/.context/{epic}/{sub-epic}/{story}/{story_snake}_story.test.md is outside the session's roots
+2026-11-06T19:14:53Z validate.validate PathsNotFoundError: validate found no file under the session's root C:\dev\abd-cdd-chat-ui\harness\chat-ui at harness/.context/story-map.md, read from C:\dev\abd-context-driven-delivery; harness/.context/story-map.drawio, read from C:\dev\abd-context-driven-delivery. Name paths from the project's root, or absolute.
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 820, in _dispatch_between_restarts
+    return runtime.invoke_prompt(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 542, in invoke_prompt
+    return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1255, in invoke
+    return self._expanded_reply(payload)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1261, in _expanded_reply
+    expanded = AgentInstructions.for_callable(self.callable, toolset).expand({}, arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1298, in expand
+    self._scan()
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1331, in _scan
+    self._walk_statements(function_def)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 2006, in _walk_statements
+    self._dispatch_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1968, in _dispatch_statement
+    self._dispatch_simple_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1959, in _dispatch_simple_statement
+    self._execute_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1788, in _execute_statement
+    exec(
+  File "<agent_instructions>", line 25, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py", line 165, in _workspace_relative
+    raise PathsNotFoundError(unreadable, project, workspace)
+cdd_guidance.actions.validate.validate.PathsNotFoundError: validate found no file under the session's root C:\dev\abd-cdd-chat-ui\harness\chat-ui at harness/.context/story-map.md, read from C:\dev\abd-context-driven-delivery; harness/.context/story-map.drawio, read from C:\dev\abd-context-driven-delivery. Name paths from the project's root, or absolute.
+2026-11-09T22:27:37Z ticket.activate RepoConnectError: Cannot connect git: git worktree add C:\dev\abd-cdd-a a failed in C:\dev\abd-context-driven-delivery: Preparing worktree (checking out 'a')
+fatal: 'C:/dev/abd-cdd-a' already exists.
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 730, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 468, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 479, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 944, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 784, in on_subject
+    return operation(found, **arguments, **({SERVED_CALL: call} if operation_takes_call else {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\kanban\ticket.py", line 260, in activate
+    self.checkout.open(opening or [])
+  File "C:\Users\jeffa\.cdd\runtime\space\kanban\ticket_checkout.py", line 154, in open
+    self._repo.switch_worktree(self.branch.name)
+  File "C:\Users\jeffa\.cdd\runtime\space\repo\repo.py", line 355, in switch_worktree
+    opened = self._named_or_saved_branch(name).move_to_worktree()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\repo\repo.py", line 552, in move_to_worktree
+    return self.open_in_worktree()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\repo\repo.py", line 541, in open_in_worktree
+    return self._repo.worktrees.open(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\repo\worktree.py", line 133, in open
+    opened = self.add(self.sibling_folder(branch), branch)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\repo\worktree.py", line 160, in add
+    self._repo.git.run("worktree", "add", str(dest), branch.name)
+  File "C:\Users\jeffa\.cdd\runtime\harness\process\git.py", line 43, in run
+    raise RepoConnectError(f"Cannot connect git: {command} failed in {self.folder}: {(stderr or stdout or '').strip()}.")
+harness.process.git.RepoConnectError: Cannot connect git: git worktree add C:\dev\abd-cdd-a a failed in C:\dev\abd-context-driven-delivery: Preparing worktree (checking out 'a')
+fatal: 'C:/dev/abd-cdd-a' already exists.

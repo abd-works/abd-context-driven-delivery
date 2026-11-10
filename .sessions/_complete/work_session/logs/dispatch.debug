@@ -1,0 +1,65 @@
+2026-10-06T06:13:09Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-10-06T06:13:09Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-10-06T06:13:09Z MERGED {"permission": "allow"}
+2026-10-06T06:13:10Z EVENT 'postToolUse' tool='Shell' path='' conversation_id='bd36b0cb-9bc0-444c-9950-a91f5a834f4c' payload_keys=['conversation_id', 'cursor_version', 'cwd', 'duration', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_output', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-10-06T06:13:10Z HANDLER Document.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Generate.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER GrillContext.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Improvement.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Iterate.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Partition.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Render.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Satisfy.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Sketch.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Validate.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER CreateAgentToolset.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER CreateContextTool.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Guidance.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER GuidanceAction.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER GraphRulesCollection.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER LernDomainDriven.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER MernDomainDriven.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER AgentBdd.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Bdd.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Cdd.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER CleanEngineering.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Ddd.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Stories.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Ux.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z ENABLED ['Document.inject_rules', 'Generate.inject_rules', 'GrillContext.inject_rules', 'Improvement.inject_rules', 'Iterate.inject_rules', 'Partition.inject_rules', 'Render.inject_rules', 'Satisfy.inject_rules', 'Sketch.inject_rules', 'Validate.inject_rules', 'CreateAgentToolset.inject_rules', 'CreateContextTool.inject_rules', 'Guidance.inject_rules', 'GuidanceAction.inject_rules', 'GraphRulesCollection.inject_rules', 'LernDomainDriven.inject_rules', 'MernDomainDriven.inject_rules', 'AgentBdd.inject_rules', 'Bdd.inject_rules', 'Cdd.inject_rules', 'CleanEngineering.inject_rules', 'Ddd.inject_rules', 'Stories.inject_rules', 'Ux.inject_rules']
+2026-10-06T06:13:10Z MERGED {"permission": "allow"}
+2026-10-06T06:13:10Z EVENT 'postToolUse' tool='Shell' path='' conversation_id='bd36b0cb-9bc0-444c-9950-a91f5a834f4c' payload_keys=['conversation_id', 'cursor_version', 'cwd', 'duration', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_output', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-10-06T06:13:10Z HANDLER Document.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Generate.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER GrillContext.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Improvement.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Iterate.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Partition.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Render.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Satisfy.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Sketch.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Validate.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER CreateAgentToolset.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER CreateContextTool.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Guidance.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER GuidanceAction.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER GraphRulesCollection.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER LernDomainDriven.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER MernDomainDriven.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER AgentBdd.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Bdd.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Cdd.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER CleanEngineering.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Ddd.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Stories.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z HANDLER Ux.inject_rules result={"permission": "allow"}
+2026-10-06T06:13:10Z ENABLED ['Document.inject_rules', 'Generate.inject_rules', 'GrillContext.inject_rules', 'Improvement.inject_rules', 'Iterate.inject_rules', 'Partition.inject_rules', 'Render.inject_rules', 'Satisfy.inject_rules', 'Sketch.inject_rules', 'Validate.inject_rules', 'CreateAgentToolset.inject_rules', 'CreateContextTool.inject_rules', 'Guidance.inject_rules', 'GuidanceAction.inject_rules', 'GraphRulesCollection.inject_rules', 'LernDomainDriven.inject_rules', 'MernDomainDriven.inject_rules', 'AgentBdd.inject_rules', 'Bdd.inject_rules', 'Cdd.inject_rules', 'CleanEngineering.inject_rules', 'Ddd.inject_rules', 'Stories.inject_rules', 'Ux.inject_rules']
+2026-10-06T06:13:10Z MERGED {"permission": "allow"}
+2026-10-06T06:13:24Z EVENT 'preToolUse' tool='Shell' path='' conversation_id='bd36b0cb-9bc0-444c-9950-a91f5a834f4c' payload_keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-10-06T06:13:24Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-10-06T06:13:24Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-10-06T06:13:24Z MERGED {"permission": "allow"}
+2026-10-06T06:13:24Z EVENT 'preToolUse' tool='Shell' path='' conversation_id='bd36b0cb-9bc0-444c-9950-a91f5a834f4c' payload_keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-10-06T06:13:25Z HANDLER PromptEcho.on_pre_tool_use result={"permission": "allow"}
+2026-10-06T06:13:25Z ENABLED ['PromptEcho.on_pre_tool_use']
+2026-10-06T06:13:25Z MERGED {"permission": "allow"}

@@ -1,0 +1,1063 @@
+2026-11-10T19:06:35Z generate.generate UnknownGuidance: no practice or fidelity has the slug 'stories-story-map'; the slugs are stories, stories-story-map, stories-scenarios, stories-acceptance-tests, ddd, ddd-bounded-context, ddd-model, ddd-tactics, ux, ux-ia, ux-mockup, ux-front-end-code, clean-engineering, clean-engineering-modules, clean-engineering-model, clean-engineering-code, bdd, bdd-behavior, bdd-realization, bdd-development
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 746, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 486, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 493, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1067, in answer
+    tool = self.on(self.toolset.for_call(call))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 393, in for_call
+    action.work.take(guidance)
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 231, in take
+    self._items = argument.items if self.text is None else []
+                  ^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 113, in items
+    one = self._one_item() if not isinstance(self._guidance, list) else None
+          ^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 134, in _one_item
+    return self._item(self._guidance)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 155, in _item
+    return self._mapped(item) if isinstance(item, dict) else item
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 171, in _mapped
+    raise UnknownGuidance(toolset, self.slugs)
+harness.guidance_actions.guidance_actions.UnknownGuidance: no practice or fidelity has the slug 'stories-story-map'; the slugs are stories, stories-story-map, stories-scenarios, stories-acceptance-tests, ddd, ddd-bounded-context, ddd-model, ddd-tactics, ux, ux-ia, ux-mockup, ux-front-end-code, clean-engineering, clean-engineering-modules, clean-engineering-model, clean-engineering-code, bdd, bdd-behavior, bdd-realization, bdd-development
+2026-11-10T19:14:03Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:57 `graph_paths = self._graph.check_beside(self._reports)` failed: GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 343, in carry_out
+    self._carry_out(order.step)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 379, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 390, in _read_working_copy
+    practice.reading.read()
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance\practice_reading.py", line 81, in read
+    self.read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\graph_reading.py", line 77, in read_working_copy
+    self.recorded_map.record(self.practice, on_node=lambda detail: self.graph.report_progress(f"stories · record · {detail}"))
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 1118, in record
+    StoryRecording(self, practice, on_node).write()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 158, in write
+    epic.record(self, self.practice.reading.in_graph.root)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 776, in record
+    story.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 997, in record
+    scenario.record(recording, file, node, scoped)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 655, in record
+    example.record(recording, node, at)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 232, in record
+    node = recording.add(self, f"stories:Example:{at.file}:{self.name}", at, recording.example_facts(at.file, self.name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 173, in add
+    self._align(node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 186, in _align
+    node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 176, in align_to_example_export
+    lines = path.read_text(encoding="utf-8").splitlines()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\dev\\abd-context-driven-delivery\\.claude\\worktrees\\project-follows-chat-945fc1\\cdd_guidance\\patterns\\lern_domain_driven\\practices\\stories\\model\\typescript\\_examples\\browser-then-asserts-screen-widgets\\faulty\\tests\\wires\\send-wire\\send-wire.story.playwright.ts'
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 530, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in <lambda>
+    self._ran(lambda: exec(code, environment, environment), statement)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 25, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 51, in check_beside
+    self.files = self._files(reports)
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 87, in _files
+    return [self._built_at(reports.graph_file())]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 121, in _built_at
+    self.session.graph.refreshed(self.prefixes, destination, self._call)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 1413, in refreshed
+    self.build.refresh(paths, call, CheckedFiles(paths, checked))
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 310, in refresh
+    self.run(BuildStep.REFRESH, call, checked=checked)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 324, in run
+    WorkerBuild(report_progress).carry_out(lambda: self._order(step, state, saves, checked), answer, self._hold, self.graph.practices.take)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 241, in carry_out
+    raise GraphBuildFailed(exit_code, errors_file.read_text(encoding="utf-8", errors="replace"))
+harness.graph.graph_build.GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 343, in carry_out
+    self._carry_out(order.step)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 379, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 390, in _read_working_copy
+    practice.reading.read()
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance\practice_reading.py", line 81, in read
+    self.read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\graph_reading.py", line 77, in read_working_copy
+    self.recorded_map.record(self.practice, on_node=lambda detail: self.graph.report_progress(f"stories · record · {detail}"))
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 1118, in record
+    StoryRecording(self, practice, on_node).write()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 158, in write
+    epic.record(self, self.practice.reading.in_graph.root)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 776, in record
+    story.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 997, in record
+    scenario.record(recording, file, node, scoped)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 655, in record
+    example.record(recording, node, at)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 232, in record
+    node = recording.add(self, f"stories:Example:{at.file}:{self.name}", at, recording.example_facts(at.file, self.name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 173, in add
+    self._align(node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 186, in _align
+    node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 176, in align_to_example_export
+    lines = path.read_text(encoding="utf-8").splitlines()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\dev\\abd-context-driven-delivery\\.claude\\worktrees\\project-follows-chat-945fc1\\cdd_guidance\\patterns\\lern_domain_driven\\practices\\stories\\model\\typescript\\_examples\\browser-then-asserts-screen-widgets\\faulty\\tests\\wires\\send-wire\\send-wire.story.playwright.ts'
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 755, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 487, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 494, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1071, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1075, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1093, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 306, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 322, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 558, in _walk
+    self._execute(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in _execute
+    self._ran(lambda: exec(code, environment, environment), statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 534, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:57 `graph_paths = self._graph.check_beside(self._reports)` failed: GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 343, in carry_out
+    self._carry_out(order.step)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 379, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 390, in _read_working_copy
+    practice.reading.read()
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance\practice_reading.py", line 81, in read
+    self.read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\graph_reading.py", line 77, in read_working_copy
+    self.recorded_map.record(self.practice, on_node=lambda detail: self.graph.report_progress(f"stories · record · {detail}"))
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 1118, in record
+    StoryRecording(self, practice, on_node).write()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 158, in write
+    epic.record(self, self.practice.reading.in_graph.root)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 776, in record
+    story.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 997, in record
+    scenario.record(recording, file, node, scoped)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 655, in record
+    example.record(recording, node, at)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 232, in record
+    node = recording.add(self, f"stories:Example:{at.file}:{self.name}", at, recording.example_facts(at.file, self.name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 173, in add
+    self._align(node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 186, in _align
+    node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 176, in align_to_example_export
+    lines = path.read_text(encoding="utf-8").splitlines()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\dev\\abd-context-driven-delivery\\.claude\\worktrees\\project-follows-chat-945fc1\\cdd_guidance\\patterns\\lern_domain_driven\\practices\\stories\\model\\typescript\\_examples\\browser-then-asserts-screen-widgets\\faulty\\tests\\wires\\send-wire\\send-wire.story.playwright.ts'
+
+2026-11-10T19:14:13Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:57 `graph_paths = self._graph.check_beside(self._reports)` failed: GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 343, in carry_out
+    self._carry_out(order.step)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 379, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 390, in _read_working_copy
+    practice.reading.read()
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance\practice_reading.py", line 81, in read
+    self.read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\graph_reading.py", line 77, in read_working_copy
+    self.recorded_map.record(self.practice, on_node=lambda detail: self.graph.report_progress(f"stories · record · {detail}"))
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 1118, in record
+    StoryRecording(self, practice, on_node).write()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 158, in write
+    epic.record(self, self.practice.reading.in_graph.root)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 776, in record
+    story.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 997, in record
+    scenario.record(recording, file, node, scoped)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 655, in record
+    example.record(recording, node, at)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 232, in record
+    node = recording.add(self, f"stories:Example:{at.file}:{self.name}", at, recording.example_facts(at.file, self.name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 173, in add
+    self._align(node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 186, in _align
+    node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 176, in align_to_example_export
+    lines = path.read_text(encoding="utf-8").splitlines()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\dev\\abd-context-driven-delivery\\.claude\\worktrees\\project-follows-chat-945fc1\\cdd_guidance\\patterns\\lern_domain_driven\\practices\\stories\\model\\typescript\\_examples\\browser-then-asserts-screen-widgets\\faulty\\tests\\wires\\send-wire\\send-wire.story.playwright.ts'
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 530, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in <lambda>
+    self._ran(lambda: exec(code, environment, environment), statement)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 25, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 51, in check_beside
+    self.files = self._files(reports)
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 87, in _files
+    return [self._built_at(reports.graph_file())]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 121, in _built_at
+    self.session.graph.refreshed(self.prefixes, destination, self._call)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 1413, in refreshed
+    self.build.refresh(paths, call, CheckedFiles(paths, checked))
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 310, in refresh
+    self.run(BuildStep.REFRESH, call, checked=checked)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 324, in run
+    WorkerBuild(report_progress).carry_out(lambda: self._order(step, state, saves, checked), answer, self._hold, self.graph.practices.take)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 241, in carry_out
+    raise GraphBuildFailed(exit_code, errors_file.read_text(encoding="utf-8", errors="replace"))
+harness.graph.graph_build.GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 343, in carry_out
+    self._carry_out(order.step)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 379, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 390, in _read_working_copy
+    practice.reading.read()
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance\practice_reading.py", line 81, in read
+    self.read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\graph_reading.py", line 77, in read_working_copy
+    self.recorded_map.record(self.practice, on_node=lambda detail: self.graph.report_progress(f"stories · record · {detail}"))
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 1118, in record
+    StoryRecording(self, practice, on_node).write()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 158, in write
+    epic.record(self, self.practice.reading.in_graph.root)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 776, in record
+    story.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 997, in record
+    scenario.record(recording, file, node, scoped)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 655, in record
+    example.record(recording, node, at)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 232, in record
+    node = recording.add(self, f"stories:Example:{at.file}:{self.name}", at, recording.example_facts(at.file, self.name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 173, in add
+    self._align(node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 186, in _align
+    node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 176, in align_to_example_export
+    lines = path.read_text(encoding="utf-8").splitlines()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\dev\\abd-context-driven-delivery\\.claude\\worktrees\\project-follows-chat-945fc1\\cdd_guidance\\patterns\\lern_domain_driven\\practices\\stories\\model\\typescript\\_examples\\browser-then-asserts-screen-widgets\\faulty\\tests\\wires\\send-wire\\send-wire.story.playwright.ts'
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 755, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 487, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 494, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1071, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1075, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1093, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 306, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 322, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 558, in _walk
+    self._execute(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in _execute
+    self._ran(lambda: exec(code, environment, environment), statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 534, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:57 `graph_paths = self._graph.check_beside(self._reports)` failed: GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 343, in carry_out
+    self._carry_out(order.step)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 379, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 390, in _read_working_copy
+    practice.reading.read()
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance\practice_reading.py", line 81, in read
+    self.read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\graph_reading.py", line 77, in read_working_copy
+    self.recorded_map.record(self.practice, on_node=lambda detail: self.graph.report_progress(f"stories · record · {detail}"))
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 1118, in record
+    StoryRecording(self, practice, on_node).write()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 158, in write
+    epic.record(self, self.practice.reading.in_graph.root)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 776, in record
+    story.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 997, in record
+    scenario.record(recording, file, node, scoped)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 655, in record
+    example.record(recording, node, at)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 232, in record
+    node = recording.add(self, f"stories:Example:{at.file}:{self.name}", at, recording.example_facts(at.file, self.name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 173, in add
+    self._align(node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 186, in _align
+    node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 176, in align_to_example_export
+    lines = path.read_text(encoding="utf-8").splitlines()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\dev\\abd-context-driven-delivery\\.claude\\worktrees\\project-follows-chat-945fc1\\cdd_guidance\\patterns\\lern_domain_driven\\practices\\stories\\model\\typescript\\_examples\\browser-then-asserts-screen-widgets\\faulty\\tests\\wires\\send-wire\\send-wire.story.playwright.ts'
+
+2026-11-10T19:21:46Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:57 `graph_paths = self._graph.check_beside(self._reports)` failed: GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 343, in carry_out
+    self._carry_out(order.step)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 379, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 390, in _read_working_copy
+    practice.reading.read()
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance\practice_reading.py", line 81, in read
+    self.read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\graph_reading.py", line 77, in read_working_copy
+    self.recorded_map.record(self.practice, on_node=lambda detail: self.graph.report_progress(f"stories · record · {detail}"))
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 1118, in record
+    StoryRecording(self, practice, on_node).write()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 158, in write
+    epic.record(self, self.practice.reading.in_graph.root)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 776, in record
+    story.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 997, in record
+    scenario.record(recording, file, node, scoped)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 655, in record
+    example.record(recording, node, at)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 232, in record
+    node = recording.add(self, f"stories:Example:{at.file}:{self.name}", at, recording.example_facts(at.file, self.name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 173, in add
+    self._align(node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 186, in _align
+    node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 176, in align_to_example_export
+    lines = path.read_text(encoding="utf-8").splitlines()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\dev\\abd-context-driven-delivery\\.claude\\worktrees\\project-follows-chat-945fc1\\cdd_guidance\\patterns\\lern_domain_driven\\practices\\stories\\model\\typescript\\_examples\\browser-then-asserts-screen-widgets\\faulty\\tests\\wires\\send-wire\\send-wire.story.playwright.ts'
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 530, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in <lambda>
+    self._ran(lambda: exec(code, environment, environment), statement)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 25, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 51, in check_beside
+    self.files = self._files(reports)
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 87, in _files
+    return [self._built_at(reports.graph_file())]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 121, in _built_at
+    self.session.graph.refreshed(self.prefixes, destination, self._call)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 1413, in refreshed
+    self.build.refresh(paths, call, CheckedFiles(paths, checked))
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 310, in refresh
+    self.run(BuildStep.REFRESH, call, checked=checked)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 324, in run
+    WorkerBuild(report_progress).carry_out(lambda: self._order(step, state, saves, checked), answer, self._hold, self.graph.practices.take)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 241, in carry_out
+    raise GraphBuildFailed(exit_code, errors_file.read_text(encoding="utf-8", errors="replace"))
+harness.graph.graph_build.GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 343, in carry_out
+    self._carry_out(order.step)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 379, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 390, in _read_working_copy
+    practice.reading.read()
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance\practice_reading.py", line 81, in read
+    self.read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\graph_reading.py", line 77, in read_working_copy
+    self.recorded_map.record(self.practice, on_node=lambda detail: self.graph.report_progress(f"stories · record · {detail}"))
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 1118, in record
+    StoryRecording(self, practice, on_node).write()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 158, in write
+    epic.record(self, self.practice.reading.in_graph.root)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 776, in record
+    story.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 997, in record
+    scenario.record(recording, file, node, scoped)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 655, in record
+    example.record(recording, node, at)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 232, in record
+    node = recording.add(self, f"stories:Example:{at.file}:{self.name}", at, recording.example_facts(at.file, self.name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 173, in add
+    self._align(node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 186, in _align
+    node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 176, in align_to_example_export
+    lines = path.read_text(encoding="utf-8").splitlines()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\dev\\abd-context-driven-delivery\\.claude\\worktrees\\project-follows-chat-945fc1\\cdd_guidance\\patterns\\lern_domain_driven\\practices\\stories\\model\\typescript\\_examples\\browser-then-asserts-screen-widgets\\faulty\\tests\\wires\\send-wire\\send-wire.story.playwright.ts'
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 755, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 487, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 494, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1071, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1075, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1093, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 306, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 322, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 558, in _walk
+    self._execute(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in _execute
+    self._ran(lambda: exec(code, environment, environment), statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 534, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:57 `graph_paths = self._graph.check_beside(self._reports)` failed: GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 343, in carry_out
+    self._carry_out(order.step)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 379, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 390, in _read_working_copy
+    practice.reading.read()
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance\practice_reading.py", line 81, in read
+    self.read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\graph_reading.py", line 77, in read_working_copy
+    self.recorded_map.record(self.practice, on_node=lambda detail: self.graph.report_progress(f"stories · record · {detail}"))
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 1118, in record
+    StoryRecording(self, practice, on_node).write()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 158, in write
+    epic.record(self, self.practice.reading.in_graph.root)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 776, in record
+    story.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 997, in record
+    scenario.record(recording, file, node, scoped)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 655, in record
+    example.record(recording, node, at)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 232, in record
+    node = recording.add(self, f"stories:Example:{at.file}:{self.name}", at, recording.example_facts(at.file, self.name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 173, in add
+    self._align(node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 186, in _align
+    node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 176, in align_to_example_export
+    lines = path.read_text(encoding="utf-8").splitlines()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\dev\\abd-context-driven-delivery\\.claude\\worktrees\\project-follows-chat-945fc1\\cdd_guidance\\patterns\\lern_domain_driven\\practices\\stories\\model\\typescript\\_examples\\browser-then-asserts-screen-widgets\\faulty\\tests\\wires\\send-wire\\send-wire.story.playwright.ts'
+
+2026-11-10T19:46:58Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:57 `graph_paths = self._graph.check_beside(self._reports)` failed: GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 343, in carry_out
+    self._carry_out(order.step)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 379, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 390, in _read_working_copy
+    practice.reading.read()
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance\practice_reading.py", line 81, in read
+    self.read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\graph_reading.py", line 77, in read_working_copy
+    self.recorded_map.record(self.practice, on_node=lambda detail: self.graph.report_progress(f"stories · record · {detail}"))
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 1118, in record
+    StoryRecording(self, practice, on_node).write()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 158, in write
+    epic.record(self, self.practice.reading.in_graph.root)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 776, in record
+    story.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 997, in record
+    scenario.record(recording, file, node, scoped)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 655, in record
+    example.record(recording, node, at)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 232, in record
+    node = recording.add(self, f"stories:Example:{at.file}:{self.name}", at, recording.example_facts(at.file, self.name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 173, in add
+    self._align(node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 186, in _align
+    node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 176, in align_to_example_export
+    lines = path.read_text(encoding="utf-8").splitlines()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\dev\\abd-context-driven-delivery\\.claude\\worktrees\\project-follows-chat-945fc1\\cdd_guidance\\patterns\\lern_domain_driven\\practices\\stories\\model\\typescript\\_examples\\browser-then-asserts-screen-widgets\\faulty\\tests\\wires\\send-wire\\send-wire.story.playwright.ts'
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 530, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in <lambda>
+    self._ran(lambda: exec(code, environment, environment), statement)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 25, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 51, in check_beside
+    self.files = self._files(reports)
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 87, in _files
+    return [self._built_at(reports.graph_file())]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 121, in _built_at
+    self.session.graph.refreshed(self.prefixes, destination, self._call)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 1413, in refreshed
+    self.build.refresh(paths, call, CheckedFiles(paths, checked))
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 310, in refresh
+    self.run(BuildStep.REFRESH, call, checked=checked)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 324, in run
+    WorkerBuild(report_progress).carry_out(lambda: self._order(step, state, saves, checked), answer, self._hold, self.graph.practices.take)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 241, in carry_out
+    raise GraphBuildFailed(exit_code, errors_file.read_text(encoding="utf-8", errors="replace"))
+harness.graph.graph_build.GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 343, in carry_out
+    self._carry_out(order.step)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 379, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 390, in _read_working_copy
+    practice.reading.read()
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance\practice_reading.py", line 81, in read
+    self.read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\graph_reading.py", line 77, in read_working_copy
+    self.recorded_map.record(self.practice, on_node=lambda detail: self.graph.report_progress(f"stories · record · {detail}"))
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 1118, in record
+    StoryRecording(self, practice, on_node).write()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 158, in write
+    epic.record(self, self.practice.reading.in_graph.root)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 776, in record
+    story.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 997, in record
+    scenario.record(recording, file, node, scoped)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 655, in record
+    example.record(recording, node, at)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 232, in record
+    node = recording.add(self, f"stories:Example:{at.file}:{self.name}", at, recording.example_facts(at.file, self.name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 173, in add
+    self._align(node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 186, in _align
+    node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 176, in align_to_example_export
+    lines = path.read_text(encoding="utf-8").splitlines()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\dev\\abd-context-driven-delivery\\.claude\\worktrees\\project-follows-chat-945fc1\\cdd_guidance\\patterns\\lern_domain_driven\\practices\\stories\\model\\typescript\\_examples\\browser-then-asserts-screen-widgets\\faulty\\tests\\wires\\send-wire\\send-wire.story.playwright.ts'
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 755, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 487, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 494, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1071, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1075, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1093, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 306, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 322, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 558, in _walk
+    self._execute(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in _execute
+    self._ran(lambda: exec(code, environment, environment), statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 534, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:57 `graph_paths = self._graph.check_beside(self._reports)` failed: GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 343, in carry_out
+    self._carry_out(order.step)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 379, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 390, in _read_working_copy
+    practice.reading.read()
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance\practice_reading.py", line 81, in read
+    self.read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\graph_reading.py", line 77, in read_working_copy
+    self.recorded_map.record(self.practice, on_node=lambda detail: self.graph.report_progress(f"stories · record · {detail}"))
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 1118, in record
+    StoryRecording(self, practice, on_node).write()
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 158, in write
+    epic.record(self, self.practice.reading.in_graph.root)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 774, in record
+    child.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 776, in record
+    story.record(recording, node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 997, in record
+    scenario.record(recording, file, node, scoped)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 655, in record
+    example.record(recording, node, at)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_model.py", line 232, in record
+    node = recording.add(self, f"stories:Example:{at.file}:{self.name}", at, recording.example_facts(at.file, self.name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 173, in add
+    self._align(node)
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\practices\stories\model\story_recording.py", line 186, in _align
+    node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 176, in align_to_example_export
+    lines = path.read_text(encoding="utf-8").splitlines()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\dev\\abd-context-driven-delivery\\.claude\\worktrees\\project-follows-chat-945fc1\\cdd_guidance\\patterns\\lern_domain_driven\\practices\\stories\\model\\typescript\\_examples\\browser-then-asserts-screen-widgets\\faulty\\tests\\wires\\send-wire\\send-wire.story.playwright.ts'
+
+2026-11-10T20:24:07Z session.choose_workpath SessionNotFoundError: no session at 'chat-ui-replanning': name the session.json of the session to work on
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 756, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 483, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 494, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 952, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 789, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 812, in on_the_call
+    return function(owner, *arguments, **named)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\session.py", line 100, in from_file
+    return call.session_named(session)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\tool_call.py", line 166, in session_named
+    return ToolCall._sessions.named_in(session_file, self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\sessions.py", line 366, in named_in
+    return self.of_project(project).with_file(session_file)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\sessions.py", line 178, in with_file
+    raise SessionNotFoundError(session_file)
+space.session.session.SessionNotFoundError: no session at 'chat-ui-replanning': name the session.json of the session to work on
+2026-11-10T20:24:08Z practice-session-output.choose_root SessionNotFoundError: no session at 'chat-ui-replanning': name the session.json of the session to work on
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 756, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 483, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 494, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 952, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 789, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 812, in on_the_call
+    return function(owner, *arguments, **named)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\practice_session_output.py", line 59, in load
+    return call.session_named(session).practice(practice)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\tool_call.py", line 166, in session_named
+    return ToolCall._sessions.named_in(session_file, self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\sessions.py", line 366, in named_in
+    return self.of_project(project).with_file(session_file)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\sessions.py", line 178, in with_file
+    raise SessionNotFoundError(session_file)
+space.session.session.SessionNotFoundError: no session at 'chat-ui-replanning': name the session.json of the session to work on
+2026-11-10T20:24:10Z practice-session-output.choose_root SessionNotFoundError: no session at 'chat-ui-replanning': name the session.json of the session to work on
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 756, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 483, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 494, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 952, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 789, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 812, in on_the_call
+    return function(owner, *arguments, **named)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\practice_session_output.py", line 59, in load
+    return call.session_named(session).practice(practice)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\tool_call.py", line 166, in session_named
+    return ToolCall._sessions.named_in(session_file, self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\sessions.py", line 366, in named_in
+    return self.of_project(project).with_file(session_file)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\sessions.py", line 178, in with_file
+    raise SessionNotFoundError(session_file)
+space.session.session.SessionNotFoundError: no session at 'chat-ui-replanning': name the session.json of the session to work on
+2026-11-10T20:24:24Z practice-session-output.choose_root PracticeRootInContextError: C:\dev\abd-context-driven-delivery\harness\.context\stories is inside a .context folder: choose the folder for stories's code, and its documents and diagrams go in that folder's .context
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 756, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 483, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 494, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 952, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 791, in on_subject
+    return operation(found, **arguments, **({SERVED_CALL: call} if operation_takes_call else {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\practice_session_output.py", line 164, in choose_root
+    self.keep_root(self._session.repo_path / path)
+  File "C:\Users\jeffa\.cdd\runtime\space\session\practice_session_output.py", line 172, in keep_root
+    raise PracticeRootInContextError(self.name, Path(root))
+space.session.practice_session_output.PracticeRootInContextError: C:\dev\abd-context-driven-delivery\harness\.context\stories is inside a .context folder: choose the folder for stories's code, and its documents and diagrams go in that folder's .context
+2026-11-10T20:24:27Z practice-session-output.choose_root PracticeRootInContextError: C:\dev\abd-context-driven-delivery\harness\.context\ux is inside a .context folder: choose the folder for ux's code, and its documents and diagrams go in that folder's .context
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 756, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 483, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 494, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 952, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 791, in on_subject
+    return operation(found, **arguments, **({SERVED_CALL: call} if operation_takes_call else {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\practice_session_output.py", line 164, in choose_root
+    self.keep_root(self._session.repo_path / path)
+  File "C:\Users\jeffa\.cdd\runtime\space\session\practice_session_output.py", line 172, in keep_root
+    raise PracticeRootInContextError(self.name, Path(root))
+space.session.practice_session_output.PracticeRootInContextError: C:\dev\abd-context-driven-delivery\harness\.context\ux is inside a .context folder: choose the folder for ux's code, and its documents and diagrams go in that folder's .context
+2026-11-10T21:18:11Z validate AttributeError: 'dict' object has no attribute 'validate'
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 545, in run
+    return self.each(operation)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 518, in each
+    return [operation(self.at_fidelity(item)) for item in self.listed()]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 38, in on
+AttributeError: 'dict' object has no attribute 'validate'
+2026-11-10T21:18:11Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:77 `parts = [part for part in self.run(on, action='validate') if part]` failed: AttributeError: 'dict' object has no attribute 'validate'
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 530, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in <lambda>
+    self._ran(lambda: exec(code, environment, environment), statement)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 45, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 545, in run
+    return self.each(operation)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 518, in each
+    return [operation(self.at_fidelity(item)) for item in self.listed()]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 38, in on
+AttributeError: 'dict' object has no attribute 'validate'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 755, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 487, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 494, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1071, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1075, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1093, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 306, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 322, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 558, in _walk
+    self._execute(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in _execute
+    self._ran(lambda: exec(code, environment, environment), statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 534, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:77 `parts = [part for part in self.run(on, action='validate') if part]` failed: AttributeError: 'dict' object has no attribute 'validate'

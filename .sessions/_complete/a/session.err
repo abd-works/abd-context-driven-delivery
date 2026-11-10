@@ -1,0 +1,30 @@
+2026-11-09T21:45:48Z ticket.activate WorktreeNotRemovedError: could not remove the worktree at C:\dev\abd-cdd-a; close what holds it open and close it again
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 730, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 468, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 479, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 944, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 784, in on_subject
+    return operation(found, **arguments, **({SERVED_CALL: call} if operation_takes_call else {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\kanban\ticket.py", line 259, in activate
+    active.checkout.leave(leaving or [])
+  File "C:\Users\jeffa\.cdd\runtime\space\kanban\ticket_checkout.py", line 162, in leave
+    self.save_work(leaving)
+  File "C:\Users\jeffa\.cdd\runtime\space\kanban\ticket_checkout.py", line 183, in save_work
+    self._delete_worktree(branch, leaving)
+  File "C:\Users\jeffa\.cdd\runtime\space\kanban\ticket_checkout.py", line 201, in _delete_worktree
+    worktree.close(f"{self._ticket.name}: leave session")
+  File "C:\Users\jeffa\.cdd\runtime\space\repo\worktree.py", line 85, in close
+    self._worktrees.remove(self)
+  File "C:\Users\jeffa\.cdd\runtime\space\repo\worktree.py", line 186, in remove
+    raise WorktreeNotRemovedError(dest)
+space.repo.worktree.WorktreeNotRemovedError: could not remove the worktree at C:\dev\abd-cdd-a; close what holds it open and close it again
