@@ -68,6 +68,7 @@ declare module 'claude-code' {
       actionPicker: ActionPickerJson
       fidelityFiles: FidelityFilesJson
       shownStage: string | null
+      stagePicker: boolean
       chatFolder: ChatFolderJson
       busy: BusyJson
     }

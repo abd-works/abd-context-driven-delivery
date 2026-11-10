@@ -107,7 +107,7 @@ function ExpandedView(elements: ElementTable, band: Band) {
       {HeadlineView(elements, health)}
       {InstallLineView(elements, install)}
       {health.connection === 'connected' ? PartsView(elements, health) : null}
-      {view.areDetailsOpen ? DetailsView(elements, health, install) : null}
+      {view.areDetailsOpen && health.connection !== 'connected' ? DetailsView(elements, health, install) : null}
       {ButtonsView(elements, band)}
     </Box>
   )

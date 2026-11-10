@@ -42,7 +42,7 @@ export function detailsOf({ connection, problem }: ServerHealthJson, install: In
     ['error', install.error ?? problem ?? ''],
     ['server', SERVER],
     ['fix', fix],
-  ]
+  ].filter((row): row is [string, string] => Boolean(row[1]))
 }
 
 export function installLineOf({ state }: InstallJson): string {

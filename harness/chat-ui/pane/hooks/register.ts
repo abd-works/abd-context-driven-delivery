@@ -9,6 +9,7 @@ import { ChatBarView } from './chat-bar/chat-bar-view'
 import { checkChatFolder } from './chat-bar/chat-folder-client'
 import { clearBusy, currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
+import { isStagePickerOpen } from './chat-bar/stage-client'
 import { currentFidelityFiles, FILES_PANE, forgetFiles } from './chat-bar/fidelity-files-client'
 import { FidelityFilesView } from './chat-bar/fidelity-files-view'
 import { currentChatBarView } from './chat-bar/session-dialogs-client'
@@ -116,6 +117,7 @@ export const register: Register = on => {
       chatBar: await currentChatBar($),
       view: await currentChatBarView($),
       picker: await currentActionPicker($),
+      isStagePickerOpen: await isStagePickerOpen($),
       busy: await currentBusy($),
       health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band) },
       width: e.props.bodyColumns,
