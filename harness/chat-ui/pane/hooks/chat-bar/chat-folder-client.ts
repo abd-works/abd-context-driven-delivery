@@ -2,6 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
 import type { ChatFolderJson } from '../../types'
+import { isChatBusy, turnsSoFar } from '../board-chat/chat-turns'
 import { reasonOf } from '../shared/failure'
 import { showFailure, type ChatBarClient } from './chat-bar-client'
 
@@ -40,9 +41,13 @@ export async function checkChatFolder($: EngineInterface, chatBar: ChatBarClient
   await update($, chatFolder, () => ({ current, expected }))
 }
 
-// The desktop app moves a chat only when the agent's turn ends, so the chat bar waits that long for the move to land.
-const MOVE_WAIT_MILLISECONDS = 120_000
+// The desktop app moves a chat when the agent's turn ends. A chat still not there this long after the turn that was
+// asked to move it has ended was refused, so the person hears so then instead of waiting on a fixed timeout.
+const MOVE_AFTER_TURN_MILLISECONDS = 3_000
 const MOVE_CHECK_MILLISECONDS = 500
+
+// Where the move was asked of: /cd moves at once; the agent moves the chat when a turn started after the ask ends.
+type MoveAsked = { byAgent: boolean; turnsBefore: number }
 
 // Moves this chat to the main checkout before a worktree it may be working in is deleted, and waits until it is there:
 // a chat still in the worktree holds its folder open, so the delete fails halfway. Answers why the chat is not in the
@@ -51,29 +56,38 @@ export async function moveToMainCheckout($: EngineInterface): Promise<string> {
   const [current, main] = await Promise.all([$.session.cwd(), mainCheckoutOf($)])
   if (!main) return `git found no main checkout from ${current}`
   if (sameFolder(current, main)) return ''
-  if (!(await moveChatTo($, main))) return `this chat did not move out of ${current}`
-  return (await arrivedIn($, main)) ? '' : `this chat is still in ${current} after ${MOVE_WAIT_MILLISECONDS / 1000} seconds, so its worktree is held open`
+  const asked = await moveChatTo($, main)
+  if (!asked) return `this chat did not move out of ${current}`
+  return (await arrivedIn($, main, asked)) ? '' : `the app did not move this chat out of ${current}, so its worktree is held open`
 }
 
-async function arrivedIn($: EngineInterface, folder: string): Promise<boolean> {
-  for (let waited = 0; waited < MOVE_WAIT_MILLISECONDS; waited += MOVE_CHECK_MILLISECONDS) {
+// True once the chat is in folder; false once the move had its chance: the asked turn ended and the app still had not.
+async function arrivedIn($: EngineInterface, folder: string, asked: MoveAsked): Promise<boolean> {
+  let sinceTurnEnded = 0
+  while (sinceTurnEnded < MOVE_AFTER_TURN_MILLISECONDS) {
     if (sameFolder(await $.session.cwd(), folder)) return true
     await $.clock.sleep(MOVE_CHECK_MILLISECONDS)
+    if (askedTurnEnded(asked)) sinceTurnEnded += MOVE_CHECK_MILLISECONDS
   }
   return false
 }
 
+function askedTurnEnded(asked: MoveAsked): boolean {
+  return !asked.byAgent || (turnsSoFar() > asked.turnsBefore && !isChatBusy())
+}
+
 // Claude Code's /cd moves the chat where the session offers it. The desktop app offers no /cd: there the chat's folder
 // changes through the app's change_directory tool, which only the agent can call, so the agent is asked to.
-async function moveChatTo($: EngineInterface, folder: string): Promise<boolean> {
+async function moveChatTo($: EngineInterface, folder: string): Promise<MoveAsked | null> {
+  const turnsBefore = turnsSoFar()
   try {
     const hasCd = (await $.command.list()).some(command => command.name === 'cd')
     if (hasCd) await $.command.run({ command: 'cd', args: folder })
     else await askAgentToMove($, folder)
-    return true
+    return { byAgent: !hasCd, turnsBefore }
   } catch (failure) {
     await showFailure($, `This chat did not move to ${folder}: ${reasonOf(failure)}`)
-    return false
+    return null
   }
 }
 
@@ -88,8 +102,9 @@ export async function followSession($: EngineInterface, chatBar: ChatBarClient):
   await checkChatFolder($, chatBar)
   const { expected, isElsewhere } = await currentChatFolder($)
   if (!isElsewhere) return
-  if (!(await moveChatTo($, expected))) return
+  const asked = await moveChatTo($, expected)
+  if (!asked) return
   $.ui.toast(`Moving this chat to ${expected}${chatBar.sessionName ? `, for ${chatBar.sessionName}` : ''}`)
-  if (!(await arrivedIn($, expected))) await showFailure($, `This chat is still not in ${expected} after ${MOVE_WAIT_MILLISECONDS / 1000} seconds`)
+  if (!(await arrivedIn($, expected, asked))) await showFailure($, `The app did not move this chat to ${expected}`)
   await checkChatFolder($, chatBar)
 }
