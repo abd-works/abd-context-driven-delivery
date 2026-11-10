@@ -32,7 +32,7 @@ section: body
 
 | Source | Note |
 |--------|------|
-| `.sessions/_backlog/mod-ideas.md` | "Automatic handoff" |
+| `.sessions/_backlog/suggest-the-next-step.md` | "Automatic handoff" |
 | https://claude.ai/artifact/HCCiMNSTMhwB9zQT8tVV8p | the story explorer plays the first scenario on the integrated journey screen |
 
 #### Scenario: A handoff is written when the Person closes the session
@@ -56,7 +56,7 @@ section: body
 
 | Source | Note |
 |--------|------|
-| `.sessions/_backlog/mod-ideas.md` | "Correction capture" |
+| `.sessions/_backlog/suggest-the-next-step.md` | "Correction capture" |
 | `.claude/rules/learning-from-corrections.md` | log only a miss in work just generated, in `corrections.log` beside that work |
 | https://claude.ai/artifact/HCCiMNSTMhwB9zQT8tVV8p | the story explorer plays the first scenario on the integrated journey screen |
 
@@ -93,7 +93,7 @@ section: body
 
 | Source | Note |
 |--------|------|
-| `.sessions/_backlog/mod-ideas.md` | "Correction capture": the same check spots a decision |
+| `.sessions/_backlog/suggest-the-next-step.md` | "Correction capture": the same check spots a decision |
 | https://claude.ai/artifact/HCCiMNSTMhwB9zQT8tVV8p | the story explorer plays the first scenario on the integrated journey screen |
 
 #### Scenario: Settling a question offers a decision record

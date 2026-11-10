@@ -17,7 +17,7 @@ section: body
 
 | Source | Note |
 |--------|------|
-| `.sessions/_backlog/board-enhancements.md` | "open associated chat on session open / manually" |
+| `.sessions/_backlog/suggest-the-next-step.md` | "open associated chat on session open / manually" |
 | https://claude.ai/artifact/HCCiMNSTMhwB9zQT8tVV8p | the story explorer plays the first scenario on the integrated journey screen |
 
 #### Scenario: Making a ticket active opens its chat

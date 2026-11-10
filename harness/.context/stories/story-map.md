@@ -15,7 +15,7 @@ section: body
 
 # Story Map — Context-Driven Delivery Framework
 
-**Sources / context:** `harness/.context/module-context.md`; `harness/agent_tools/.context/module-context.md`; `harness/agent_tools/.context/agent-tools-model.md`; `harness/markdown/.context/module-context.md`; `installation/.context/installer-deployed-model.md`; `harness/hooks/.context/module-context.md`; `harness/guidance/guidance.py`; `harness/.context/context-tool-resource-model-om-bdd.md`; `harness/mcp/.context/module-context.md`; `actions/.context/module-context.md`; `practices/.context/module-context.md`; user spine: register agent toolsets → install markdown files (skill, slash command, rules) and MCP → invoke those → use context guidance (install skills and .mdc, invoke instructions, generate under rules) → use practice guidance (register guidance and fidelities, invoke practice and fidelity, shared and fidelity rules constrain output) → hook dispatch → extract markdown → lifecycle actions. Session Board and Chat Bar: `space/kanban/.context/story-map.md` and `story-map.drawio`; `harness/chat-ui/.context/story-map.md` and `story-map.drawio`; the ticket enhancements on the session-board branch (`.sessions/session-board/ticket-enhancements.md`, its `space/kanban/.context/story-map.md`); `harness/chat-ui/.context/cdr/0001-stage-strip-band.md`; `space/kanban/app/src/session-board/board-update.ts`; `harness/chat-ui/pane/hooks/register.ts`. The map also takes in the backlog items `.sessions/_backlog/board-enhancements.md`, `.sessions/_backlog/chat-enhancements.md` and `.sessions/_backlog/mod-ideas.md` as Intended stories.
+**Sources / context:** `harness/.context/module-context.md`; `harness/agent_tools/.context/module-context.md`; `harness/agent_tools/.context/agent-tools-model.md`; `harness/markdown/.context/module-context.md`; `installation/.context/installer-deployed-model.md`; `harness/hooks/.context/module-context.md`; `harness/guidance/guidance.py`; `harness/.context/context-tool-resource-model-om-bdd.md`; `harness/mcp/.context/module-context.md`; `actions/.context/module-context.md`; `practices/.context/module-context.md`; user spine: register agent toolsets → install markdown files (skill, slash command, rules) and MCP → invoke those → use context guidance (install skills and .mdc, invoke instructions, generate under rules) → use practice guidance (register guidance and fidelities, invoke practice and fidelity, shared and fidelity rules constrain output) → hook dispatch → extract markdown → lifecycle actions. Session Board and Chat Bar: `space/kanban/.context/story-map.md` and `story-map.drawio`; `harness/chat-ui/.context/story-map.md` and `story-map.drawio`; the ticket enhancements on the session-board branch (`.sessions/session-board/ticket-enhancements.md`, its `space/kanban/.context/story-map.md`); `harness/chat-ui/.context/cdr/0001-stage-strip-band.md`; `space/kanban/app/src/session-board/board-update.ts`; `harness/chat-ui/pane/hooks/register.ts`. The map also takes in the backlog items `.sessions/_backlog/maintain-tickets-on-board.md`, `.sessions/_backlog/guard-work-and-recover-fast.md` and `.sessions/_backlog/guard-work-and-recover-fast.md` as Intended stories.
 
 **Evidence:** Observed behaviour is cited from those files. Intended: practice guidance and fidelity guidance declare real `@hook` events from `CURSOR_EVENTS`, and lifecycle actions use the same mark-and-install path as practice guidance. For the Session Board and Chat Bar epics: **Observed** means the code and its specs or tests do it today, **Inferred** means the code does it but nothing presses it, **Intended** means a source asks for it and the code does not do it yet, and **Requested** means the person asked on 2026-11-06 for each channel to do what the other does. In `story-map.drawio`, a story whose evidence is only Intended or Requested is filled a lighter yellow than one the code does today.
 
@@ -202,7 +202,7 @@ Requested (2026-11-06, as the Chat Bar does): a panel listing MCP host, Tools, K
 
 ### (S) Person --> Reconnect CDD Server From Board
 
-Requested (2026-11-06, as the Chat Bar does): the board retries `cdd` and reads the board again.
+Requested (2026-11-06, as the Chat Bar does): the board retries `cdd` and reads the board again. Built today (checked 2026-11-10): the board reads itself again every 2 s while cdd is down (`board-page-view.tsx:22`) and the board server opens a new session on the next call after a restart (`cdd-connection.ts:125`). Missing: a Reconnect button.
 
 ### (S) Person --> Reinstall CDD Tools From Board
 
@@ -214,7 +214,7 @@ Observed: Update in the header (`board-update.ts` `BoardUpdate.update`, `/api/up
 
 ### (S) Person --> Reload Everything With One Button
 
-Intended (`.sessions/_backlog/board-enhancements.md` "restart refresh -> one button reloads plugins mcp everything"): Update also reloads the Claude Code plugins and the cdd server, so one press brings every part to the new code.
+Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "restart refresh -> one button reloads plugins mcp everything"): Update also reloads the Claude Code plugins and the cdd server, so one press brings every part to the new code. Built today (checked 2026-11-10): Update pulls the code, pins and restarts the cdd server, reinstalls the cdd-board plugin, rebuilds the page and restarts the board server (`board-update.ts:59-62`). Missing: reloading the plugins in open chats, and reinstalling skills, rules and commands.
 
 ## (E) See Work On Session Board
 
@@ -252,7 +252,7 @@ Observed: the report, files and help panels resize, expand one at a time and clo
 
 ### (S) Person --> Expand Ticket From Empty Area
 
-Intended (`.sessions/_backlog/board-enhancements.md` "click any empty area to expand ticket"): a press anywhere on a card that is not a control expands it.
+Intended (`.sessions/_backlog/maintain-tickets-on-board.md` "click any empty area to expand ticket"): a press anywhere on a card that is not a control expands it.
 
 ## (E) Steer Ticket Sessions
 
@@ -286,7 +286,7 @@ Observed: with Active session only on, a ticket that is not the active session d
 
 ### (S) Board App --> Open Ticket Chat On Session Open
 
-Intended (`.sessions/_backlog/board-enhancements.md` "open associated chat on session open / manually"): opening a ticket's session opens the Claude Code chat it ran in. Observed today: a press on a ticket switches to its chat by hand (`/api/claude/open`, `ClaudeLink`).
+Observed (checked 2026-11-10): a press on a card points the board at the ticket's own chat (`ticket-client.tsx:184-188`), and the card's chat button opens the worktree, making it first if needed, then a new Claude chat on it through `/api/claude/open` and `ClaudeLink` (`ticket-client.tsx:196-205`, `chat-client.tsx:72-80`, `claude-link.ts`). It opens a new chat rather than the one the ticket ran in, and Activate opens none. Was: Intended (`.sessions/_backlog/suggest-the-next-step.md` "open associated chat on session open / manually"): opening a ticket's session opens the Claude Code chat it ran in. Observed today: a press on a ticket switches to its chat by hand (`/api/claude/open`, `ClaudeLink`).
 
 ## (E) Maintain Tickets
 
@@ -312,7 +312,7 @@ Intended (`.sessions/session-board/ticket-enhancements.md`): Delete on a card re
 
 ### (S) Person --> Tag Ticket Session
 
-Intended (`.sessions/_backlog/board-enhancements.md` "tagging sessions"): a person adds tags to a ticket's session, and the card shows them.
+Intended (`.sessions/_backlog/maintain-tickets-on-board.md` "tagging sessions"): a person adds tags to a ticket's session, and the card shows them.
 
 ## (E) Organize Ticket Hierarchy
 
@@ -322,7 +322,7 @@ Observed: `Ticket.new` records the parent; Split fills the prompt through `fillS
 
 ### (S) Person --> Add Child Ticket
 
-Intended (`.sessions/session-board/ticket-enhancements.md`): a person adds a child ticket to a parent by hand.
+Intended (`.sessions/session-board/ticket-enhancements.md`): a person adds a child ticket to a parent by hand. Built today (checked 2026-11-10): `ticket.create(parent=…)` records the parent (`ticket.py:94`, `sessions.py:268-275`) and Split asks the chat for one child per story. Missing: adding a single child by hand on the board.
 
 ### (S) Board App --> Display Child Tickets In Parent
 
@@ -376,25 +376,67 @@ Observed: `Board.help`; the ? on a tile or practice name opens the overview, gui
 
 ## (E) Customize Board Workflow
 
-### (S) Person --> Customize Workflow Stages
+A team defines its own workflow, then the board draws, moves and tracks tickets by that workflow instead of the fixed Discovery, Specification and Implementation stages (`harness/guidance/stages.py` `ApproachStages`).
 
-Intended (`.sessions/_backlog/board-enhancements.md` "customize workflow, add process, assign practices fidelity, HIL column"): a person adds a stage, chooses the practices and fidelities it holds, and adds a column where a person must act before work moves on.
+### (E) Define Board Workflow
 
-### (S) Person --> Write Column Policies
+#### (S) Person --> Customize Workflow Stages
 
-Intended (`.sessions/_backlog/board-enhancements.md` "write policies"): a person writes the policy a column holds work to, such as what must be true before a ticket leaves it.
+Intended (`.sessions/_backlog/customize-board-workflow.md` "customize workflow, add process, assign practices fidelity, HIL column"): a person adds a stage, chooses the practices and fidelities it holds, and adds a column where a person must act before work moves on.
 
-### (S) Person --> Collapse Column Policies
+#### (S) Person --> Write Column Policies
 
-Intended (`.sessions/_backlog/board-enhancements.md` "collapse / expand policies for columns"): a column's policies collapse to its heading and expand again.
+Intended (`.sessions/_backlog/customize-board-workflow.md` "write policies"): a person writes the policy a column holds work to, such as what must be true before a ticket leaves it.
 
-### (S) Person --> Configure Todo List
+#### (S) Person --> Collapse Column Policies
 
-Intended (`.sessions/_backlog/board-enhancements.md` "configurable todo list"): a person sets the list of steps a ticket works through.
+Intended (`.sessions/_backlog/customize-board-workflow.md` "collapse / expand policies for columns"): a column's policies collapse to its heading and expand again.
 
-### (S) Board App --> Run Work Type Flows
+#### (S) Person --> Configure Todo List
 
-Intended (`.sessions/_backlog/board-enhancements.md` "work type based flows; multi flow shows up on board"): each work type has its own flow, and the board shows several flows at once.
+Intended (`.sessions/_backlog/customize-board-workflow.md` "configurable todo list"): a person sets the list of steps a ticket works through.
+
+### (E) Run Tickets Through Customized Workflow
+
+#### (S) Board App --> Display Board From Customized Workflow
+
+Requested (2026-11-10): the board draws one column per stage of the ticket's workflow, in the workflow's order, with its human review columns and each column's policies, in place of the fixed stages.
+
+#### (S) Board App --> Run Work Type Flows
+
+Intended (`.sessions/_backlog/customize-board-workflow.md` "work type based flows; multi flow shows up on board"): each work type has its own flow, and the board shows several flows at once.
+
+#### (S) Person --> Move Ticket Along Customized Workflow
+
+Requested (2026-11-10): moving a ticket to the next or previous stage follows the workflow's own stage order, and a ticket cannot be moved to a stage its workflow does not have.
+
+#### (S) Person --> Approve Ticket Out Of Human Review Column
+
+Requested (2026-11-10), from the human review column in Customize Workflow Stages: a ticket in a human review column waits there until a person approves it, and only then moves to the next stage.
+
+#### (S) Board App --> Track Ticket Status Through Workflow
+
+Requested (2026-11-10): the board records the stage each ticket is in, when it entered and left each stage, which todo list steps are done and which column policies it meets, and shows that status on the ticket card and in its details. Built today (checked 2026-11-10): the session log records timestamped move, done and in-progress lines per stage (`StageMarks`, `ticket.py:447-479`), and the card shows its column, done or in progress, and its age. Missing: when it left each stage, todo steps, and policies met.
+
+#### (S) Board App --> Show Stage Practices From Customized Workflow
+
+Requested (2026-11-10): the practice tiles and next fidelity action for a ticket come from the practices and fidelities its workflow assigns to the ticket's current stage.
+
+## (E) Show Board Quickly
+
+Intended (`.sessions/_backlog/show-board-quickly.md`): `board.show` takes about 1.6 s per call (profiled), which makes `space/kanban/kanban_tools_spec.py` take about 200 s for 198 examples and slows the chat bar and the board. Goal: `kanban_tools_spec` under 60 s and a faster chat bar. The change is in shared modules, so reinstall after it.
+
+### (S:technical) Board App --> Check Ticket Branches Once Per Board Build
+
+Intended (`.sessions/_backlog/show-board-quickly.md` cause 1): `TicketCheckout._found_branch` → `Branch.exists` → `Repo.has_ref` runs one `git show-ref` per check, about 70 ms each and about 7 per `board.show` (`space/kanban/ticket_checkout.py`, `space/repo/repo.py`); one board build checks each branch once.
+
+### (S:technical) Board App --> Cache Practice Guidance By File And Change Time
+
+Intended (`.sessions/_backlog/show-board-quickly.md` cause 2): practice guidance markdown is read and parsed again for every session (`harness/guidance/guidance.py`, `harness/markdown/markdown.py`); it is cached by file and modification time.
+
+### (S:technical) Board App --> Read Session File Once Per Board Build
+
+Intended (`.sessions/_backlog/show-board-quickly.md` cause 3): `session.json` is read thousands of times over a few `board.show` calls (`harness/installation/json_file.py`); one board build reads each session file once.
 
 ## (E) Work Fidelity Outputs On Board
 
@@ -422,15 +464,15 @@ Observed: Run sends `/actions-sketch`, `/actions-iterate` or `/actions-document`
 
 #### (S) Person --> Add Comment To Sent Command
 
-Intended (`.sessions/_backlog/board-enhancements.md` "add comment to command sent to chat"): a person adds their own words to the command the board sends to the chat.
+Intended (`.sessions/_backlog/enter-commands-faster.md` "add comment to command sent to chat"): a person adds their own words to the command the board sends to the chat. Built today (checked 2026-11-10): Split, Handoff, + Ticket and Run next put the command into the prompt for the person to edit before sending (`chat-client.tsx:144-148`). Missing: tile Run, Validate and Fix send at once, and there is no comment field.
 
 #### (S) Person --> Choose Testing Strategy
 
-Intended (`.sessions/_backlog/board-enhancements.md` "support for multi language / bespoke testing layers eg a testing strategy; generate; validate"): a person chooses the test layers and languages a ticket's tests use, and generate and validate follow that choice.
+Intended (`.sessions/_backlog/customize-board-workflow.md` "support for multi language / bespoke testing layers eg a testing strategy; generate; validate"): a person chooses the test layers and languages a ticket's tests use, and generate and validate follow that choice.
 
 #### (S) Person --> Toggle Sub Agents
 
-Intended (`.sessions/_backlog/board-enhancements.md` "use sub agents toggle"): a person turns on running a board action in sub-agents.
+Intended (`.sessions/_backlog/customize-board-workflow.md` "use sub agents toggle"): a person turns on running a board action in sub-agents.
 
 ### (E) Validate Fidelity Outputs On Board
 
@@ -456,11 +498,11 @@ Observed: the band shows the active ticket's violations, only when it has some, 
 
 #### (S) Board App --> Display Report Without Header Noise
 
-Intended (`.sessions/_backlog/board-enhancements.md` "kill weird MD area at top of violation report"): the report panel opens on the findings, without the markdown block that sits above them today.
+Observed (checked 2026-11-10; commits 93eb442e7, e502c9963): the raw report text shows only when the report has no saved graph and no rules could be read from it; otherwise the panel opens on the rules (`report-panel-view.tsx:48-61`). Was: Intended (`.sessions/_backlog/review-work-in-board-files.md` "kill weird MD area at top of violation report"): the report panel opens on the findings, without the markdown block that sits above them today.
 
 #### (S) Board App --> Display Report Errors In Code Fences
 
-Intended (`.sessions/_backlog/board-enhancements.md` "violation report not showing code fences for errors"): each error's content shows in a code fence.
+Observed (checked 2026-11-10): each violation that names a file and line shows a block of source lines headed by its location, with the failing line marked (`report-rule-view.tsx:10-43`, `harness/graph/violation.py:128-164`); a violation with no file and line shows only its message. Was: Intended (`.sessions/_backlog/review-work-in-board-files.md` "violation report not showing code fences for errors"): each error's content shows in a code fence.
 
 ### (E) Review Fidelity Outputs On Board
 
@@ -482,33 +524,33 @@ Observed: Reviewed is off until a clean validate; when every fidelity of a stage
 
 #### (S) Person --> List Ticket Context Files
 
-Intended (`.sessions/_backlog/board-enhancements.md` "include ticket context file and folders with list - folder-files; separate section"): the files panel lists the ticket's own context file and folders in a section of their own.
+Intended (`.sessions/_backlog/review-work-in-board-files.md` "include ticket context file and folders with list - folder-files; separate section"): the files panel lists the ticket's own context file and folders in a section of their own.
 
 #### (S) Person --> Open Session Files From Details
 
-Intended (`.sessions/_backlog/board-enhancements.md` "session information -> link to file or folders"): each file or folder the session information names opens from where it is named.
+Intended (`.sessions/_backlog/review-work-in-board-files.md` "session information -> link to file or folders"): each file or folder the session information names opens from where it is named. Built today (checked 2026-11-10): the details open the session folder, the stage's files and the latest handoff (`details-view.tsx:37-55`). Missing: the workpath link opens the root chooser rather than the folder.
 
 #### (S) Person --> View Files In Rich Viewer
 
-Intended (`.sessions/_backlog/board-enhancements.md` "integrate with monaco viewer OR native file rendering"): files open in an editor-grade viewer, or rendered as the file type.
+Intended (`.sessions/_backlog/review-work-in-board-files.md` "integrate with monaco viewer OR native file rendering"): files open in an editor-grade viewer, or rendered as the file type.
 
 #### (S) Person --> Comment On File Selection
 
-Intended (`.sessions/_backlog/board-enhancements.md` "select some text in file view and add comment that gets sent to chat like in design view"): a person selects text in a file and sends a comment on it to the chat.
+Intended (`.sessions/_backlog/review-work-in-board-files.md` "select some text in file view and add comment that gets sent to chat like in design view"): a person selects text in a file and sends a comment on it to the chat.
 
 #### (S) Board App --> Show AI Changes As Diff
 
-Intended (`.sessions/_backlog/board-enhancements.md` "change viewer from ai change like vscode / cursor"): the viewer marks what the agent changed in a file, as VS Code and Cursor do.
+Intended (`.sessions/_backlog/review-work-in-board-files.md` "change viewer from ai change like vscode / cursor"): the viewer marks what the agent changed in a file, as VS Code and Cursor do.
 
 ### (E) Integrate Practice Content Editor Apps On Board
 
 #### (S) Person --> Open Story UI On Ticket Scope
 
-Requested (2026-11-06, "board --> story ui for ticket's scope"): the board opens the Story UI editor on the part of the story map the ticket covers, from its session folder. Also Intended (`.sessions/_backlog/board-enhancements.md` "view story map / ux design canvas for a session").
+Requested (2026-11-06, "board --> story ui for ticket's scope"): the board opens the Story UI editor on the part of the story map the ticket covers, from its session folder. Also Intended (`.sessions/_backlog/integrate-practice-content-editor-apps.md` "view story map / ux design canvas for a session").
 
 #### (S) Person --> Filter Knowledge Graph To Ticket Scope
 
-Requested (2026-11-06, "filter to scope of ticket"): opening the Graph app from the board or the chat bar loads only the ticket's session folders. Also Intended (`.sessions/_backlog/board-enhancements.md` "view knowledge graph from here").
+Requested (2026-11-06, "filter to scope of ticket"): opening the Graph app from the board or the chat bar loads only the ticket's session folders. Also Intended (`.sessions/_backlog/integrate-practice-content-editor-apps.md` "view knowledge graph from here").
 
 #### (S) Person --> Filter Knowledge Graph To Ticket Practices
 
@@ -520,11 +562,11 @@ Requested (2026-11-06, non-functional): the Graph app runs on the same app serve
 
 #### (S) Agent --> Refactor Knowledge Graph App To Web Domain Access
 
-Requested (2026-11-06, non-functional): the Graph app reaches the CDD domain through the TypeScript language adapter generated by the cdd_web_domain_access pattern, instead of its own calls.
+Observed (checked 2026-11-10; commit 23e3d037e): `GraphClient extends GraphClientGenerated` (`harness/graph/app/graph/GraphClient.ts:1-6`), with `GraphApi implements CddApi` as transport and the server mounting the generated `graphRoutes` (`server.ts:8,50`). Was: Requested (2026-11-06, non-functional): the Graph app reaches the CDD domain through the TypeScript language adapter generated by the cdd_web_domain_access pattern, instead of its own calls.
 
 #### (S) Person --> Invoke Story Explorer In Session Context
 
-Intended (`.sessions/_backlog/board-enhancements.md` "view story map / ux design canvas for a session", requested on 2026-11-06): the board opens the browser story explorer on the ticket's story map, framed by its design canvas screens.
+Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "view story map / ux design canvas for a session", requested on 2026-11-06): the board opens the browser story explorer on the ticket's story map, framed by its design canvas screens.
 
 # (E) Move Work Forward From Chat Bar
 
@@ -550,15 +592,15 @@ Observed: Run install runs the installer and says installing, installed (open a 
 
 ### (S) Person --> Update CDD From Chat Bar
 
-Intended (`.sessions/_backlog/chat-enhancements.md` "checkout latest and build"), and Requested on 2026-11-06 as the Session Board does: get the latest commit, rebuild the board, pin the cdd server to that commit, and restart the board.
+Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "checkout latest and build"), and Requested on 2026-11-06 as the Session Board does: get the latest commit, rebuild the board, pin the cdd server to that commit, and restart the board.
 
 ### (S) Person --> Open App From Health Panel
 
-Intended (`.sessions/_backlog/chat-enhancements.md` "click on app in health bar"): pressing the Kanban app or Graph app in the server health panel opens that app.
+Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "click on app in health bar"): pressing the Kanban app or Graph app in the server health panel opens that app. Requested (2026-11-10, "clicking on app in chat ui starts it if down, opens it if up"): pressing an app that is not running starts it and then opens it; pressing one that is running opens it.
 
 ### (S) Person --> Restart Parts From Chat Bar
 
-Intended (`.sessions/_backlog/chat-enhancements.md` "restart buttons not on panel"): the restart controls sit on the chat bar itself, not only inside the server health panel.
+Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "restart buttons not on panel"): the restart controls sit on the chat bar itself, not only inside the server health panel.
 
 ## (E) See Work In Chat Bar
 
@@ -580,7 +622,7 @@ Observed: pressing a stage icon shows that stage's fidelities on the dots, tinte
 
 ### (S) Person --> [Display Session Card](../../chat-ui/pane/test/move-work-forward-from-chat-bar/see-work-in-chat-bar/display-session-card/display_session_card_story.test.ts)
 
-Observed: the pointer on the session name shows the card, with each fidelity's name and state over its dot and its folder as a chip that opens its files; pressing the name pins the card open and ✕ closes it (`session-card-view.tsx`).
+Observed: the pointer on the session name shows the card, with each fidelity's name and state over its dot and its folder as a chip that opens its files; pressing the name pins the card open and ✕ closes it (`session-card-view.tsx`). The folder chip covers `.sessions/_backlog/bring-chat-bar-level-with-board.md` "Click a practice to get its file list".
 
 ### (S) Chat Bar --> Show Active Session On Status Line
 
@@ -612,6 +654,22 @@ Requested (2026-11-06, as the Session Board does): the chat bar shows the active
 
 Observed: the ✕ icon opens a dialog saying the session's work is committed and pushed first when it has a branch, then Close session calls `ticket.close` (`session-dialogs-view.tsx` `CloseView`).
 
+### (S) Person --> Add Backlog Item From Chat Bar
+
+Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add feature to backlog button and buttons for common repo actions eg push, pull, commit"), from `.sessions/_backlog/bring-chat-bar-level-with-board.md`: an Add to backlog button on the chat bar adds a feature to the backlog, as the board's Add Backlog Item does.
+
+### (S) Person --> Commit Work From Chat Bar
+
+Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add feature to backlog button and buttons for common repo actions eg push, pull, commit"): a Commit button commits the active session's changes (`Repo.commit` in `space/repo/repo.py`).
+
+### (S) Person --> Push Work From Chat Bar
+
+Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add feature to backlog button and buttons for common repo actions eg push, pull, commit"): a Push button pushes the active session's branch (`repo.push_commit`).
+
+### (S) Person --> Pull Latest From Chat Bar
+
+Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add feature to backlog button and buttons for common repo actions eg push, pull, commit"): a Pull button pulls the latest commits into the active session's checkout (`Repo.pull` in `space/repo/repo.py`).
+
 ## (E) Guide Work Through Practices In Chat Bar
 
 ### (S) Person --> [Move Session To Next Stage](../../chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/move-session-to-next-stage/move_session_to_next_stage_story.test.ts)
@@ -628,7 +686,7 @@ Requested (2026-11-06, as the Session Board does): the chat bar marks the active
 
 ### (S) Person --> Choose Session Practices
 
-Requested (2026-11-06, as the Session Board does): the chat bar turns the active session's practices on and off through `ticket.enable_practice`.
+Requested (2026-11-06, as the Session Board does): the chat bar turns the active session's practices on and off through `ticket.enable_practice`. Intended (`.sessions/_backlog/bring-chat-bar-level-with-board.md` "Toggle practices on and off from the card"): the practices turn on and off from the expanded session card.
 
 ### (S) Person --> Open Fidelity Help
 
@@ -648,7 +706,7 @@ Requested (2026-11-06, "reorder buttons; action then practices"): the action but
 
 #### (S) Person --> Select Several Fidelities
 
-Requested (2026-11-06, "multi select"): pressing more than one dot selects each of those fidelities, and the chosen action runs on all of them in one command, as the board's stage head does for a stage.
+Observed (commit a585473e3; `fidelity-progress-client.ts` `selectFidelity`): a press on a fidelity, on the line or on the session card, adds it to or takes it out of the selection, and the action button runs one command on every selected fidelity. Requested on 2026-11-06 ("multi select").
 
 #### (S) Person --> [Choose Action](../../chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/choose-fidelity-action/choose_fidelity_action_story.test.ts)
 
@@ -656,7 +714,7 @@ Observed: the ▾ on the action button opens a list of generate, validate, revie
 
 #### (S) Person --> Choose Format
 
-Requested (2026-11-06, "add format multi select"): choose one or more formats for the selected fidelities, such as markdown and drawio together; today the chat bar always generates each fidelity's default format.
+Observed (commits a6ddef81c, 21a87f4a7; `chat-bar-view.tsx`, `format-choices-client.ts`): one chip per format group the fidelities offer sits just before the action button, as on a board ticket; a press turns it on or off, and the picked formats go into generate and render. Requested on 2026-11-06 ("add format multi select"). Intended (`.sessions/_backlog/bring-chat-bar-level-with-board.md` "Toggle formats on the card, as the format chips do on the bar"): the session card carries the same chips.
 
 #### (S) Person --> [Generate Session Fidelity Output](../../chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/invoke-next-fidelity-action/invoke_next_fidelity_action_story.test.ts)
 
@@ -678,11 +736,11 @@ Observed: the ▤ files icon, or a folder chip on the session card, opens a tab 
 
 #### (S) Person --> [View Session Files](../../chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/view-fidelity-files/view_fidelity_files_story.test.ts)
 
-Observed: each tab's text comes from `session.read_file`, which refuses a file outside the session's roots.
+Observed: each tab's text comes from `session.read_file`, which refuses a file outside the session's roots. This covers `.sessions/_backlog/bring-chat-bar-level-with-board.md` "Show the file list, with each file clickable to open it": the files view has one tab per file.
 
 #### (S) Person --> Open Validation Report From Violation Count
 
-Observed (chat-ui story map, View Fidelity Files): pressing a fidelity's red violation count opens its latest report, from `fidelity-progress.report`, in its own tab drawn as markdown.
+Observed (chat-ui story map, View Fidelity Files): pressing a fidelity's red violation count opens its latest report, from `fidelity-progress.report`, in its own tab drawn as markdown. Intended (`.sessions/_backlog/bring-chat-bar-level-with-board.md` "open its validation report"): the session card opens a practice's report too.
 
 #### (S) Person --> Fix Violations From Chat Bar
 
@@ -712,61 +770,61 @@ Requested (2026-11-06, non-functional): the Story UI app reaches the CDD domain 
 
 #### (S) Person --> Open UX Design In Claude Design
 
-Intended (`.sessions/_backlog/chat-enhancements.md` "claude design integration with ux tool"): the UX practice's design opens in Claude Design from the chat.
+Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "claude design integration with ux tool"): the UX practice's design opens in Claude Design from the chat.
 
 #### (S) Person --> Trace Story Through Artifacts
 
-Intended (`.sessions/_backlog/mod-ideas.md` "Trace pane"): picking a story shows its scenarios, tests and code from `harness/graph`, with the domain, class and bounded-context diagrams.
+Intended (`.sessions/_backlog/integrate-practice-content-editor-apps.md` "Trace pane"): picking a story shows its scenarios, tests and code from `harness/graph`, with the domain, class and bounded-context diagrams. Built today (checked 2026-11-10): the Graph app folds story, scenario and step and shows a step's invokes, observes and demonstrates with its source (`harness/graph/app/app.test.tsx:429,746`). Missing: one trace view of a picked story's scenarios, tests and code, and the diagrams.
 
 ### (E) Capture Session Knowledge
 
 #### (S) Claude Code --> Write Handoff When Session Ends
 
-Intended (`.sessions/_backlog/mod-ideas.md` "Automatic handoff"): the handoff is written when a session ends, so the next session never starts cold.
+Intended (`.sessions/_backlog/suggest-the-next-step.md` "Automatic handoff"): the handoff is written when a session ends, so the next session never starts cold. Built today (checked 2026-11-10): closing or leaving a session from the chat bar offers Create handoff, on by default (`session-dialogs-view.tsx:34`). Missing: writing one when a Claude Code session ends.
 
 #### (S) Claude Code --> Offer Correction Log Entry
 
-Intended (`.sessions/_backlog/mod-ideas.md` "Correction capture"): `$.model.classify` spots when the person corrects generated work and offers, in the chat panel, to add it to `corrections.log` beside that work.
+Intended (`.sessions/_backlog/suggest-the-next-step.md` "Correction capture"): `$.model.classify` spots when the person corrects generated work and offers, in the chat panel, to add it to `corrections.log` beside that work.
 
 #### (S) Claude Code --> Offer Decision Record
 
-Intended (`.sessions/_backlog/mod-ideas.md` "Correction capture"): the same check spots a decision and offers to write a CDR for it.
+Intended (`.sessions/_backlog/suggest-the-next-step.md` "Correction capture"): the same check spots a decision and offers to write a CDR for it.
 
 ## (E) Enter CDD Commands Faster
 
 ### (S) Claude Code --> Autocomplete CDD Commands
 
-Intended (`.sessions/_backlog/mod-ideas.md` "Command entry and autocomplete"; `.sessions/_backlog/chat-enhancements.md` "constrained lists params on commands"): `prompt.autocomplete` offers an action, then a practice-fidelity, then content or a file, taken from the installed CDD catalog so the lists cannot drift.
+Intended (`.sessions/_backlog/enter-commands-faster.md` "Command entry and autocomplete"; `.sessions/_backlog/enter-commands-faster.md` "constrained lists params on commands"): `prompt.autocomplete` offers an action, then a practice-fidelity, then content or a file, taken from the installed CDD catalog so the lists cannot drift.
 
 ### (S) Claude Code --> Show Command Argument Hints
 
-Intended (`.sessions/_backlog/mod-ideas.md` "argumentHint"): after a command's name, the prompt shows the parameters it expects.
+Intended (`.sessions/_backlog/enter-commands-faster.md` "argumentHint"): after a command's name, the prompt shows the parameters it expects.
 
 ### (S) Claude Code --> Suggest Next Command
 
-Intended (`.sessions/_backlog/mod-ideas.md` "Next-step suggestion"): after each turn, `$.prompt.suggest` fills in the next command from `ticket.generate_commands`. Requested (2026-11-06, "the list box of actions should be on the next action recommended"): the recommendation shows on the chat band's action list box, marked recommended and set on ▶, not in the chat panel.
+Intended (`.sessions/_backlog/suggest-the-next-step.md` "Next-step suggestion"): after each turn, `$.prompt.suggest` fills in the next command from `ticket.generate_commands`. Requested (2026-11-06, "the list box of actions should be on the next action recommended"): the recommendation shows on the chat band's action list box, marked recommended and set on ▶, not in the chat panel. Built today (checked 2026-11-10): the action button shows the fidelity's next action and the action list marks it next (`action-button-view.tsx:20-25,77-83`), which covers the 2026-11-06 request. Missing: `prompt.suggest` after a turn.
 
 ### (S) Claude Code --> Announce CDD Tool Calls
 
-Intended (`.sessions/_backlog/mod-ideas.md` "Hooks and notifications"): every CDD tool call shows a toast naming the action or practice that ran, with an optional sound, as `tools/prompt_notify` does for Cursor.
+Intended (`.sessions/_backlog/enter-commands-faster.md` "Hooks and notifications"): every CDD tool call shows a toast naming the action or practice that ran, with an optional sound, as `tools/prompt_notify` does for Cursor.
 
 ## (E) Guard Work Against Rules
 
 ### (S) Claude Code --> Refuse Forbidden Edits
 
-Intended (`.sessions/_backlog/mod-ideas.md` "Rule guards"): `tool.call` refuses edits to `.claude/` or `.mcp.json`, writes to `AGENTS.md`, and a bare `git stash`, and says which rule forbids it.
+Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "Rule guards"): `tool.call` refuses edits to `.claude/` or `.mcp.json`, writes to `AGENTS.md`, and a bare `git stash`, and says which rule forbids it.
 
 ### (S) Claude Code --> Warn When Work Outruns Fidelity
 
-Intended (`.sessions/_backlog/mod-ideas.md` "Stage guard"): a warning shows when work runs ahead of the active ticket's fidelity, such as production code while the ticket is in Discovery.
+Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "Stage guard"): a warning shows when work runs ahead of the active ticket's fidelity, such as production code while the ticket is in Discovery.
 
 ### (S) Claude Code --> Catch Banned Words In Markdown
 
-Intended (`.sessions/_backlog/mod-ideas.md` "Banned word check"): a markdown write that uses a writing-guidelines banned word is caught before it reaches the file.
+Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "Banned word check"): a markdown write that uses a writing-guidelines banned word is caught before it reaches the file.
 
 ### (S) Claude Code --> Warn On Branch Mismatch
 
-Intended (`.sessions/_backlog/mod-ideas.md` "Branch guard"): a warning shows before a commit when the branch does not match the active ticket's session.
+Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "Branch guard"): a warning shows before a commit when the branch does not match the active ticket's session.
 
 # (E) Author Story Maps
 
@@ -1008,6 +1066,10 @@ Intended (story_map.stories.md, Review Proposed Graph Changes): no proposal view
 
 Intended (story_map.stories.md, Apply AI Mutation to Story Map; mern-story-map-ai-sketch.md "Direct auto-apply changes"): no ai-mutation module exists.
 
+### (S) Story Designer --> Place Notes On The Story Map
+
+Requested (2026-11-10, "native claude markup panel": "annotate on the story editor app with notes and have a canvas like experience, eg comments sent directly to claude for processing; then potentially reuse that for a bespoke class editor and realization editor"), from `.sessions/_backlog/integrate-stories-with-the-canvas-explorer.md`: a person places notes anywhere on the Story UI editor's map, as on a canvas, beside the nodes they are about. The same markup may later serve a bespoke class editor and a realization editor; those editors are not on this map yet.
+
 # (E) Explore Stories In Story UI
 
 The story explorer is a new part of the Story UI app: the Story UI editor's screen frames view opens it, and its core frame is the selected step's design canvas screen. It replaces the story map artboard and the explorer (`explorer.dc.html`) the design canvas draws today, so every story here is new.
@@ -1050,7 +1112,7 @@ Requested (2026-11-06): new in the Story UI app; replaces what the design canvas
 
 ### (S) Person --> Pick An Outline Scenario's Example
 
-Intended (`claude_design.md` outline-rows): an outline scenario lists its examples from the fixtures bundle and picking one loads it on the screen; the explorer does not list them yet.
+Built in the design canvas explorer (checked 2026-11-10): `explorer.dc.html` lists an outline scenario's examples from the fixtures bundle and picking one calls `go(..., ex.name)` (`outlineRows`). Intended: the Story UI explorer does the same. Was: Intended (`claude_design.md` outline-rows): an outline scenario lists its examples from the fixtures bundle and picking one loads it on the screen; the explorer does not list them yet.
 
 ## (E) Play Stories In The Explorer
 
@@ -1192,7 +1254,7 @@ Observed: `CanvasVersions.from_release` opens `.sessions/<release>/design-canvas
 
 ## (E) Reuse Production Assets On The Canvas
 
-Intended ([design-canvas-asset-reuse-plan.md](../../../.sessions/_backlog/claud_design_enhancements/design-canvas-asset-reuse-plan.md)): the product repo builds one package of its real CSS, images, fonts and React views, published as a pinned Design System artifact; each screen becomes a thin shell that mounts the real view, and a manifest proves every packaged file by hash. A published canvas only sees its own `project/` files, so links and symlinks cannot do this. The four feature groups below are the plan's phases 1 to 4 and come before every other new design canvas story.
+Intended ([sync-design-canvas-with-production.md](../../../.sessions/_backlog/sync-design-canvas-with-production.md)): the product repo builds one package of its real CSS, images, fonts and React views, published as a pinned Design System artifact; each screen becomes a thin shell that mounts the real view, and a manifest proves every packaged file by hash. A published canvas only sees its own `project/` files, so links and symlinks cannot do this. The four feature groups below are the asset reuse plan's phases 1 to 4 and come before every other new design canvas story.
 
 ### (E) Trace Canvas Files To Production
 
@@ -1250,7 +1312,7 @@ Intended (asset reuse plan, Phase 3): a generic `thin_screen()` driven by `ux.js
 
 #### (S:system) Design Canvas --> Answer Screen Requests From Fixture Routes
 
-Intended (asset reuse plan, Phase 0 gate 3): the screen's requests reach the product's real routes over in-memory repositories holding the scenario's fixture, or a thin fetch table over those repositories when the routes cannot run in the browser.
+Intended (asset reuse plan, Phase 0 gate 3): the screen's requests reach the product's real routes over in-memory repositories holding the scenario's fixture, or a thin fetch table over those repositories when the routes cannot run in the browser. Built today (checked 2026-11-10): in-memory repositories are loaded with the scenario's Givens (`lern_domain_driven/.../claude_design/fixtures.py`, `canvas-fixtures.ts`). Missing: routing the screen's requests to product routes, or a fetch table.
 
 #### (S:system) Design Canvas --> Keep Explorer Navigation Inside The Artboard
 
@@ -1262,7 +1324,7 @@ Intended (asset reuse plan, Phase 0 gate 5): the product's CSS stays inside the 
 
 #### (S) Person --> Type Scenario Values Into A Mounted Screen
 
-Intended (asset reuse plan, `one-scenario-list` under "Thin screens"; [backlog.md](../../../.sessions/_backlog/claud_design_enhancements/backlog.md) item 1 slice C): a mounted view owns its state, so a DOM driver types the scenario's entered values; the same driver plays UI steps in Play A Story's UI Steps On A Screen.
+Intended (asset reuse plan, `one-scenario-list` under "Thin screens"; [integrate-stories-with-the-canvas-explorer.md](../../../.sessions/_backlog/integrate-stories-with-the-canvas-explorer.md) slice C): a mounted view owns its state, so a DOM driver types the scenario's entered values; the same driver plays UI steps in Play A Story's UI Steps On A Screen.
 
 #### (S) Agent --> Generate Attached Screens Without Markup
 
@@ -1288,67 +1350,67 @@ Intended (asset reuse plan, Phase 4): once the change lands in the TSX the scree
 
 ## (E) Check Screens Against Their Scenarios
 
-Intended ([backlog.md](../../../.sessions/_backlog/claud_design_enhancements/backlog.md) item 1): a person presses Test and sees, for each scenario, whether the screen behaves as its specs say. Built after Phase 0 of the asset reuse plan.
+Intended ([integrate-stories-with-the-canvas-explorer.md](../../../.sessions/_backlog/integrate-stories-with-the-canvas-explorer.md)): a person presses Test and sees, for each scenario, whether the screen behaves as its specs say. Built after Phase 0 of the asset reuse plan.
 
 ### (S) Agent --> Package End-To-End Results With The Canvas
 
-Intended (backlog item 1 slice A): at package time the end-to-end JSON under `.sessions/<release>/e2e-test-results` becomes a `results.json` tied to the bundle hash.
+Intended (integrate-stories-with-the-canvas-explorer.md slice A): at package time the end-to-end JSON under `.sessions/<release>/e2e-test-results` becomes a `results.json` tied to the bundle hash.
 
 ### (S:system) Design Canvas --> Mark Each Explorer Scenario Passed Or Failed
 
-Intended (backlog item 1 slice A): each explorer scenario shows passed, failed or no result.
+Intended (integrate-stories-with-the-canvas-explorer.md slice A): each explorer scenario shows passed, failed or no result.
 
 ### (S:system) Design Canvas --> Label Stale Test Results
 
-Intended (backlog item 1 slice A and "Done means"): a result whose bundle hash differs from the canvas's bundle is labelled stale.
+Intended (integrate-stories-with-the-canvas-explorer.md slice A and "Done means"): a result whose bundle hash differs from the canvas's bundle is labelled stale.
 
 ### (S) Person --> Run A Scenario's Thens On The Canvas
 
-Intended (backlog item 1 slice B): a Test button per scenario and per story runs the `beforeEach` and `it` bodies through a second story host with a real `expect` in a test build, and shows passed or failed for each step with the failing assertion's message.
+Intended (integrate-stories-with-the-canvas-explorer.md slice B): a Test button per scenario and per story runs the `beforeEach` and `it` bodies through a second story host with a real `expect` in a test build, and shows passed or failed for each step with the failing assertion's message.
 
 ### (S) Person --> Play A Story's UI Steps On A Screen
 
-Intended (backlog item 1 slice C): the story's Playwright steps run against the screen through a small `page` facade over the DOM, so a detached screen is tested against the same story as production.
+Intended (integrate-stories-with-the-canvas-explorer.md slice C): the story's Playwright steps run against the screen through a small `page` facade over the DOM, so a detached screen is tested against the same story as production.
 
 ### (S) Agent --> Check Screen Logic Against Scenarios From A Command
 
-Intended (backlog item 1 slice D, only if slice C proves too limited): `check_screen.cjs` becomes a generic command in `harness/design_canvas/` that runs a screen's logic on each scenario.
+Intended (integrate-stories-with-the-canvas-explorer.md slice D, only if slice C proves too limited): `check_screen.cjs` becomes a generic command in `harness/design_canvas/` that runs a screen's logic on each scenario.
 
 ## (E) Draw Linked Models On The Canvas
 
-Intended ([backlog.md](../../../.sessions/_backlog/claud_design_enhancements/backlog.md) item 3): the bounded context map, the domain model and the module class models sit beside the story map as artboards that mirror their drawio layout and link to one another, so from any story a person reaches its screen, its classes and its bounded context and back.
+Intended ([draw-linked-models-on-the-canvas.md](../../../.sessions/_backlog/draw-linked-models-on-the-canvas.md)): the bounded context map, the domain model and the module class models sit beside the story map as artboards that mirror their drawio layout and link to one another, so from any story a person reaches its screen, its classes and its bounded context and back.
 
 ### (S:system) Design Canvas --> Draw Arrows From Drawio Waypoints
 
-Intended (backlog item 3 slice 1): `arrow()` in `canvas.py` splits drawio waypoints into straight segments, one small `<svg>` each, using the `diagrams.md` formulas.
+Intended (draw-linked-models-on-the-canvas.md slice 1): `arrow()` in `canvas.py` splits drawio waypoints into straight segments, one small `<svg>` each, using the `diagrams.md` formulas.
 
 ### (S) Agent --> Draw Bounded Context Map As An Artboard
 
-Intended (backlog item 3 slice 2): a `claude_design` format for the ddd practice draws the bounded context map with each box a separate element.
+Intended (draw-linked-models-on-the-canvas.md slice 2): a `claude_design` format for the ddd practice draws the bounded context map with each box a separate element.
 
 ### (S) Agent --> Draw Domain Model As An Artboard
 
-Intended (backlog item 3 slice 3): the domain model gets its own artboard on a Models page.
+Intended (draw-linked-models-on-the-canvas.md slice 3): the domain model gets its own artboard on a Models page.
 
 ### (S) Agent --> Draw Module Class Models As Artboards
 
-Intended (backlog item 3 slice 3): a `claude_design` format for clean engineering draws one artboard per module class model, sharing the layout code with the ddd format.
+Intended (draw-linked-models-on-the-canvas.md slice 3): a `claude_design` format for clean engineering draws one artboard per module class model, sharing the layout code with the ddd format.
 
 ### (S) Person --> Follow Links From A Context To Its Models
 
-Intended (backlog item 3 slice 4): context → domain model → module class model through `<a href>` kept by `LINK_KEY`; arriving selects the target node.
+Intended (draw-linked-models-on-the-canvas.md slice 4): context → domain model → module class model through `<a href>` kept by `LINK_KEY`; arriving selects the target node.
 
 ### (S) Person --> See The Classes A Scenario Touches
 
-Intended (backlog item 3 slice 5): from a scenario in the explorer, the classes it reaches through `specifiedBy` and `invokes`, exported from the graph without the whole 19.7 MB.
+Intended (draw-linked-models-on-the-canvas.md slice 5): from a scenario in the explorer, the classes it reaches through `specifiedBy` and `invokes`, exported from the graph without the whole 19.7 MB.
 
 ### (S) Person --> See The Stories That Exercise A Class
 
-Intended (backlog item 3 slice 5): from a class, the stories whose scenarios reach it.
+Intended (draw-linked-models-on-the-canvas.md slice 5): from a class, the stories whose scenarios reach it.
 
 ### (S:system) Design Canvas --> Mark Model Nodes That Fail Rules
 
-Intended (backlog item 3 slice 6, optional): nodes the graph's `violations: true` filter returns carry a rule mark.
+Intended (draw-linked-models-on-the-canvas.md slice 6, optional): nodes the graph's `violations: true` filter returns carry a rule mark.
 
 # (E) Map Work Into Knowledge Graph
 
@@ -1560,6 +1622,38 @@ Observed: each recorded violation keeps the file and lines of the node it was fo
 
 Observed: every rule is labelled `practice.node.rule`, with the owning pattern in front for an overlay rule (`schema_rules.py` `qualified_rule_label`, `schema_rules_spec.py` "a rule label", `app.test.tsx` "should list rules as practice, node, then rule").
 
+### (E) Check Clean Engineering Code Through The Graph
+
+Validate at Clean Engineering's modules, model and code fidelities checks what one file at a time cannot see: the size and complexity of each function, class and module, and the relationships between classes across files.
+
+#### (S:system) Knowledge Graph --> Record Code Metrics As Node Facts
+
+Requested (2026-11-10, "when we run validation at clean model or clean code we integrate the metrics ... and add those findings onto the model itself, it's just another fact on the model: what is its cyclomatic complexity"); Intended (`.sessions/_backlog/measure-code-on-the-model.md`): each function, class and module node carries its measures as facts, such as the paths through a function (cyclomatic complexity), its readability score (cognitive complexity), its lines and parameters, a class's total complexity, method count and dependencies, and methods sharing no data with the rest of their class, measured with the tools `.context/repo-review/metrics_gate.py` already uses (radon, lizard, complexipy, cohesion, grimp).
+
+#### (S:system) Validate --> Check Code Metrics Against Clean Engineering Limits
+
+Requested (2026-11-10, "when we run validation at clean model or clean code we integrate the metrics ... and add those findings onto the model itself, it's just another fact on the model: what is its cyclomatic complexity"); Intended (`.sessions/_backlog/measure-code-on-the-model.md`): at the Clean Engineering model and code fidelities the limits are named rules checked on those facts, such as a function over 10 paths, a readability score over 15, over 50 lines or over 5 parameters, and a class over 100 total complexity or 30 methods. Each function, class or module past a limit shows in the same validation report as the other rules, its metric named in plain English and its trend coloured as getting better or worse.
+
+#### (S:system) Knowledge Graph --> Report Unused Class For Deletion
+
+Intended (`.sessions/_backlog/check-clean-engineering-across-files.md` "Every class is used or uses something"): a production class with no relationship, not using another class, not used, and not built, read or installed at build time (an annotation kind, a published toolset, a registration at import, a generated adapter), is reported as no use, delete. A class others use that uses nothing is in use.
+
+#### (S:system) Knowledge Graph --> Report Runtime Dependency That Should Be Owned
+
+Intended (`.sessions/_backlog/check-clean-engineering-across-files.md` "A runtime dependency must earn its place"): a caller that builds the other object per call from strings or dicts, re-reads a file another object holds, or passes the owner's data into a helper is reported with the owner and the relationship it should be, a part or a held collaborator.
+
+#### (S:system) Knowledge Graph --> Report Disconnected Class
+
+Intended (`.sessions/_backlog/check-clean-engineering-across-files.md` "Disconnected classes"): a class connected only by inheritance, or not at all, is reported as a relationship the model missed or as code that is not resource-oriented, with the owner and the redesign.
+
+#### (S:system) Knowledge Graph --> Report One-Class Package
+
+Intended (`.sessions/_backlog/check-clean-engineering-across-files.md` "One-class packages"): a package holding one class is reported as unused (delete), part of a bigger package (merge), or not fully modelled.
+
+#### (S:system) Validate --> Judge Clean Engineering Rules Across Files
+
+Intended (`.sessions/_backlog/check-clean-engineering-across-files.md` "Other cross-file checks"): where the graph cannot answer, Clean Engineering's validation judges the whole codebase in one pass, not one folder at a time, for second object models, the same behaviour in several files, second registries of practices, actions or stages, global or ambient state, state passed as parameters the object already holds, legacy names and dead code, and swallowed failures.
+
 ## (E) Review Violations In Graph App
 ### (S) Person --> See Rules Under Node
 
@@ -1575,7 +1669,7 @@ Observed: selecting a violating rule opens the node's source with a banner namin
 
 ### (S) Person --> Display Drawio File As Diagram
 
-Requested on 2026-11-06: a `.drawio` file opens as its diagram, with a Source tab for the XML. A violation marks the shape it names in red, and pressing a shape opens its lines in the source.
+Requested on 2026-11-06: a `.drawio` file opens as its diagram, with a Source tab for the XML. A violation marks the shape it names in red, and pressing a shape opens its lines in the source. Built today (checked 2026-11-10): the chat bar's files view offers Open in draw.io, which opens the file in the draw.io editor through `tools/drawio_viewer` (`drawio-viewer-client.ts:44`). Missing: a Source tab, marking the shape a violation names, and opening a pressed shape's lines.
 
 ### (S) Person --> Copy Correct Prompt
 
@@ -1630,7 +1724,7 @@ Requested (2026-11-06, "update chat band, eg selected stage, next action"; "and 
 
 ### (S) Chat Bar --> Keep Chosen Formats Across Actions In A Fidelity
 
-Requested (2026-11-06, "have format saved across actions in fidelity"): the formats picked for a fidelity stay picked when the person switches between generate, render, sketch, iterate, document and fix, so each action writes the same formats without picking them again.
+Requested (2026-11-06, "have format saved across actions in fidelity"): the formats picked for a fidelity stay picked when the person switches between generate, render, sketch, iterate, document and fix, so each action writes the same formats without picking them again. Built today (checked 2026-11-10): format chips are kept per set of fidelities (`format-choices-client.ts:23,30`, commit 07c9026ee). Missing: the picks go back to the defaults after an action runs, and only generate and render take formats.
 
 ### (S) Person --> Start Ticket Session From Increment
 
@@ -1644,15 +1738,15 @@ Requested (2026-11-06, "story UI -> board/chat integration"): an increment that 
 
 ### (S) Generate --> Refresh Graph After Generate
 
-Requested (2026-11-06, "generate --> load refreshed graph based on changes immediately"): when generate writes a fidelity's files, the knowledge graph rebuilds those files at once, without a separate load or Validate run.
+Requested (2026-11-06, "generate --> load refreshed graph based on changes immediately"): when generate writes a fidelity's files, the knowledge graph rebuilds those files at once, without a separate load or Validate run. Built today (checked 2026-11-10): generate tells the agent to call validate afterwards, and validate refreshes the graph (`generate.py:32-33`, `graph.py:1397`). Missing: generate refreshing the graph itself.
 
 ### (S) Knowledge Graph --> Attach Violations To Latest Graph
 
-Requested (2026-11-06, "violations now attached to latest graph automatically"): each rebuilt node carries its graph-rule violations, so the latest graph is where every violation is read from.
+Observed (checked 2026-11-10): a refresh drops and re-reads the files, then `practices.check()` records each hit on its node (`harness/graph/graph_build.py:368-394`, `graph.py:1105,1131`), and violations are saved per node in graph.json (`saved_graph.py:134,153`); a refresh saves only the checked files' nodes, not the whole graph.json. Was: Requested (2026-11-06, "violations now attached to latest graph automatically"): each rebuilt node carries its graph-rule violations, so the latest graph is where every violation is read from.
 
 ### (S) Generate --> Judge Rules During Generate
 
-Requested (2026-11-06, "judge validation must be part of generate, merge the two actions"): generate ends with the agent's rule-by-rule judgment of what it wrote, saved with the graph's hits, so a generate counts as generated and validated.
+Requested (2026-11-06, "judge validation must be part of generate, merge the two actions"): generate ends with the agent's rule-by-rule judgment of what it wrote, saved with the graph's hits, so a generate counts as generated and validated. Built today (checked 2026-11-10): generate ends by calling validate, which runs the AI judgment and saves it with the graph hits (`generate.py:32-36`, `validate.py:80`). Missing: one action; validate is still a separate call, log line, and board and chat bar action.
 
 ### (S) Agent --> Fix Graph Violations
 
@@ -1660,21 +1754,25 @@ Requested (2026-11-06, "/fix is a first class action; fix rule; file; default ac
 
 ### (S) Agent --> Validate Fidelity On Demand
 
-Requested (2026-11-06, "validate still exists as independent action"; "validate is a slash command story only now"): Validate runs on its own on any files only as the `/actions-validate` slash command, and its report is saved as today; the board and the chat bar have no Validate, since generate judges the rules.
+Requested (2026-11-06, "validate still exists as independent action"; "validate is a slash command story only now"): Validate runs on its own on any files only as the `/actions-validate` slash command, and its report is saved as today; the board and the chat bar have no Validate, since generate judges the rules. Built today (checked 2026-11-10): `/actions-validate` runs and saves its report. Missing: validate is still on the board tiles (`action-bar-view.tsx:64-70`) and in the chat bar's stage actions.
+
+### (S:system) Claude Code --> Check Graph Rules When An Artifact Changes
+
+Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "Validate on save"): when an artifact in a session changes, the graph rules run on it and the band's violation count updates, with no explicit validate.
 
 ## (E) Read Graph Violations On Board
 
 ### (S) Board App --> Read Fidelity Violations From Latest Graph
 
-Requested (2026-11-06, "default is to have a graph and just read the violations"): a tile's violation count and list come from the latest graph, not from the last validation report. Also Intended (`.sessions/_backlog/board-enhancements.md` "better graph integration - load up front on session open, show all violations as a result of graph, no need for explicit run").
+Requested (2026-11-06, "default is to have a graph and just read the violations"): a tile's violation count and list come from the latest graph, not from the last validation report. Also Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "better graph integration - load up front on session open, show all violations as a result of graph, no need for explicit run").
 
 ### (S) Person --> Generate And Judge Fidelity From Board
 
-Requested (2026-11-06, "board and chat generate"): an expanded tile offers ▶ generate, which runs generate with its judgment on the ticket's enabled practices, and the tile shows the violations the refreshed graph holds.
+Requested (2026-11-06, "board and chat generate"): an expanded tile offers ▶ generate, which runs generate with its judgment on the ticket's enabled practices, and the tile shows the violations the refreshed graph holds. Built today (checked 2026-11-10): a tile's generate sends `/actions-generate`, which chains to validate. Missing: the tile's violations come from the report, not the refreshed graph.
 
 ### (S) Person --> Fix Graph Violations From Board
 
-Requested (2026-11-06, "board and chat ... fix"): an expanded tile offers fix, and the Inspector offers Fix rule and Fix this one; each sends the Fix action for that scope, and with nothing picked it fixes every violation.
+Requested (2026-11-06, "board and chat ... fix"): an expanded tile offers fix, and the Inspector offers Fix rule and Fix this one; each sends the Fix action for that scope, and with nothing picked it fixes every violation. Built today (checked 2026-11-10): the report panel has Fix per violation, Fix all per rule and Fix all violations (`report-rule-view.tsx:56,79`, `report-panel-view.tsx:71`), as prompts built from the report. Missing: Fix on the expanded tile, fed from the graph.
 
 ## (E) Read Graph Violations In Chat Bar
 
@@ -1684,7 +1782,7 @@ Requested (2026-11-06, "default is to have a graph and just read the violations"
 
 ### (S) Person --> Generate And Judge Fidelity From Chat Bar
 
-Requested (2026-11-06, "board and chat generate"): generate from the action button runs generate with its judgment, and the dots update from the refreshed graph.
+Requested (2026-11-06, "board and chat generate"): generate from the action button runs generate with its judgment, and the dots update from the refreshed graph. Built today (checked 2026-11-10): generate from the action button chains to validate. Missing: the dots update from the report, not the graph.
 
 ### (S) Person --> Fix Graph Violations From Chat Bar
 
@@ -1692,35 +1790,35 @@ Requested (2026-11-06, "board and chat ... fix"): Fix in the action picker sends
 
 ## (E) Change Stories From Canvas And Story UI
 
-Intended ([backlog.md](../../../.sessions/_backlog/claud_design_enhancements/backlog.md) item 2): a person adds or changes a story from the canvas or from story-ui, or comments on one, and the map updates. Both paths send commands ("add story X under Y"), never a diff of the picture, and end in the same story code.
+Intended ([integrate-stories-with-the-canvas-explorer.md](../../../.sessions/_backlog/integrate-stories-with-the-canvas-explorer.md)): a person adds or changes a story from the canvas or from story-ui, or comments on one, and the map updates. Both paths send commands ("add story X under Y"), never a diff of the picture, and end in the same story code.
 
 ### (S:system) Design Canvas --> Give Each Map Card A Stable Node Id
 
-Intended (backlog item 2 slice 2): each card drawn by `box()` and each explorer entry carries a `data-node` derived from the story path, which every comment and command below names.
+Intended (integrate-stories-with-the-canvas-explorer.md slice 2): each card drawn by `box()` and each explorer entry carries a `data-node` derived from the story path, which every comment and command below names.
 
 ### (S) Person --> Comment On A Story Card
 
-Intended (backlog item 2 slice 3): the canvas declares `comments` with `composer_only: true, customAnchors: true` and opens a composer anchored to the card's node id.
+Intended (integrate-stories-with-the-canvas-explorer.md slice 3): the canvas declares `comments` with `composer_only: true, customAnchors: true` and opens a composer anchored to the card's node id.
 
 ### (S) Agent --> Change Story Code From A Canvas Comment
 
-Intended (backlog item 2 slice 3): the agent reads the comment through `ArtifactComments`, changes the story code, replies on the thread and regenerates the map.
+Intended (integrate-stories-with-the-canvas-explorer.md slice 3): the agent reads the comment through `ArtifactComments`, changes the story code, replies on the thread and regenerates the map.
 
 ### (S) Agent --> Refresh Map Artboard From A Data File
 
-Intended (backlog item 2 slice 4): `Main.dc.html` draws from `project/data/story-map.json`, so an update publishes one data file instead of a whole new version.
+Intended (integrate-stories-with-the-canvas-explorer.md slice 4): `Main.dc.html` draws from `project/data/story-map.json`, so an update publishes one data file instead of a whole new version.
 
 ### (S:system) Story UI --> Save Story Map To Story Files
 
-Intended (backlog item 2 slice 5): a `StoryMapRepository` adapter over the CDD story graph takes the place of MongoDB, so a story added in story-ui appears on the next map refresh.
+Intended (integrate-stories-with-the-canvas-explorer.md slice 5): a `StoryMapRepository` adapter over the CDD story graph takes the place of MongoDB, so a story added in story-ui appears on the next map refresh.
 
 ### (S) Person --> Comment On A Story In Story UI
 
-Intended (backlog item 2 slice 5): story-ui gains comments, keyed by the same node ids as the canvas.
+Intended (integrate-stories-with-the-canvas-explorer.md slice 5): story-ui gains comments, keyed by the same node ids as the canvas. Requested (2026-11-10, "native claude markup panel": "annotate on the story editor app with notes and have a canvas like experience"): a comment goes straight to Claude for processing, as a canvas comment does.
 
 ### (S) Person --> Rearrange Stories Inside The Canvas
 
-Intended (backlog item 2 slice 6, after Phase 0 of the asset reuse plan): story-ui's `StoryHierarchyView` mounts in the canvas, with its drag and drop sent through a transport standing in for REST.
+Intended (integrate-stories-with-the-canvas-explorer.md slice 6, after Phase 0 of the asset reuse plan): story-ui's `StoryHierarchyView` mounts in the canvas, with its drag and drop sent through a transport standing in for REST.
 
 ---
 
@@ -1728,4 +1826,4 @@ Intended (backlog item 2 slice 6, after Phase 0 of the asset reuse plan): story-
 
 **In scope:** Authoring an Agent Toolset with `@agent_tool` and `@agent_instructions`. Installing that toolset as two writes — File Installation publishes skill, slash command, and rules as one story (same channel, same write) and Mcp Installation publishes `mcp.json` — then invoking the skill, slash command, and MCP tool and prompt. Installed rules are not invoked as a file check — they constrain valid output. Context Guidance is installed the same way (skill and `.mdc` rules), invoked so `instructions` come back, then used to generate content those rules constrain. Practice Guidance is that same Guidance plus registered fidelities — invoke at practice scope and at fidelity scope; shared rules and fidelity-specific rules each constrain the matching AI output. Hook dispatch; extracting co-located markdown via `@markdown`; the Session Board and the Chat Bar as two channels that move a ticket's session through its practices, each with its own stories; the practice content editor apps those channels invoke (Story UI, design canvas, Graph app), with each app's own story map; connecting sessions across the channels and apps, which joins the channels and apps on one ticket, and validation read from the latest graph; every host-action kit from `actions/.context/module-context.md` (`partition`, `grill`, `sketch`, `iterate`, `generate`, `document`, `render`, `satisfy`, `validate`, `scan`, `repair`, `createRule`).
 
-**Out of scope:** Catalog HTML pages; backlog lines too vague to name one behaviour yet: "native claude markup panel --> with story UI, better version of claude design", "add feature to backlog widget for existing apps" and "repo actions" (`.sessions/_backlog/board-enhancements.md`); on the Chat Bar, the board's whole-board views (columns, Backlog items, WIP limits, side panels, ticket hierarchy) and sending one action to a whole stage (CDR 0001); one-time renames and repository moves; YAML manifest CLI / `tools.ps1` invoke; inventing extra practices or product domains beyond this framework spine; scenario and acceptance-test text (later fidelities).
+**Out of scope:** Catalog HTML pages; on the Chat Bar, the board's whole-board views (columns, Backlog items, WIP limits, side panels, ticket hierarchy) and sending one action to a whole stage (CDR 0001); one-time renames and repository moves; YAML manifest CLI / `tools.ps1` invoke; inventing extra practices or product domains beyond this framework spine; scenario and acceptance-test text (later fidelities).

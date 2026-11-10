@@ -1,27 +1,29 @@
-# Design canvas: reuse production assets instead of generating copies
+# Sync Design Canvas With Production
 
-Session `claud_design_enhancements`. Analysis and planning only: nothing here is implemented. The follow-on items are in [backlog.md](backlog.md).
+Session `claud_design_enhancements`. Analysis and planning only: nothing here is implemented. This increment is one of the design canvas increments in the thin slice, which sets their order, [harness/.context/stories/thin-slice.md](../../harness/.context/stories/thin-slice.md); its epics, features and stories are on the story map, [harness/.context/stories/story-map.md](../../harness/.context/stories/story-map.md). Each requirement sits under the story it belongs to; approaches, options and recommendations sit on the feature they decide.
 
-This plan is organised by the story map, [harness/.context/stories/story-map.md](../../../harness/.context/stories/story-map.md): the epic **Build Design Canvas Screens**, its feature **Reuse Production Assets On The Canvas**, and that feature's four sub-features, one per phase. Each requirement sits under the story it belongs to. The increments are in [thin-slice.md](../../../harness/.context/stories/thin-slice.md).
+| Increment | Epic → feature on the story map | Depends on | First slice |
+|---|---|---|---|
+| **11: Sync Design Canvas With Production** | Build Design Canvas Screens → Reuse Production Assets On The Canvas, with its four sub-features: Trace Canvas Files To Production (Phase 1), Install Production Design System On The Canvas (Phase 2), Mount Production Views As Screens (Phases 0, 3, 5), Redesign A Screen By Detaching It (Phase 4) | Nothing; comes before every other design canvas increment | Phase 0 spike on `select-plan` |
 
-| Phase | Feature on the story map | Thin slice increment |
-|---|---|---|
-| 0. Spike on one screen | Mount Production Views As Screens (its gates) | Starts Increment 11 |
-| 1. Manifest, no behaviour change | Trace Canvas Files To Production | 11: Trace Canvas Files To Production |
-| 2. Design System package | Install Production Design System On The Canvas | 11: Trace Canvas Files To Production |
-| 3. Mounted screens | Mount Production Views As Screens | 12: Mount Production Views As Screens |
-| 4. Detach and re-attach | Redesign A Screen By Detaching It | 13: Redesign A Screen By Detaching It |
-| 5. Guidance | Mount Production Views As Screens (Generate Attached Screens Without Markup) | 12: Mount Production Views As Screens |
+The other design canvas increments: [Integrate Stories With The Canvas Explorer](integrate-stories-with-the-canvas-explorer.md), [Draw Linked Models On The Canvas](draw-linked-models-on-the-canvas.md).
 
----
+**Outcome:** a design canvas shows production as it is: every file is proven against the product repo by hash, styles and assets come from one pinned Design System package, each screen mounts the real view, hosted edits come back before the next version, and a screen being redesigned is detached and marked diverged until its change reaches production.
 
-# Epic: Build Design Canvas Screens
+| Phase | Feature |
+|---|---|
+| 0. Spike on one screen | Mount Production Views As Screens (its gates) |
+| 1. Manifest, no behaviour change | Trace Canvas Files To Production |
+| 2. Design System package | Install Production Design System On The Canvas |
+| 3. Mounted screens | Mount Production Views As Screens |
+| 4. Detach and re-attach | Redesign A Screen By Detaching It |
+| 5. Guidance | Mount Production Views As Screens (Generate Attached Screens Without Markup) |
 
-The epic that lays out canvas files, loads scenario fixtures, and starts, publishes and releases canvas versions. This plan adds one feature to it. Two other features from [backlog.md](backlog.md), Check Screens Against Their Scenarios and Draw Linked Models On The Canvas, sit beside it in the same epic.
+## Epic: Build Design Canvas Screens
 
-## Feature: Reuse Production Assets On The Canvas
+### Feature: Reuse Production Assets On The Canvas (the asset reuse plan)
 
-### Recommendation
+#### Recommendation
 
 **Package production as a pinned Design System, and mount it.** Do not link files.
 
@@ -35,7 +37,7 @@ Links cannot do this job, for one structural reason: **a published canvas is a s
 
 This depends on one spike, because mounting real views in the canvas runtime has not been tried. If it fails, the fallback still removes every CSS and asset copy (see Phase 0 under Mount Production Views As Screens).
 
-### How the canvas works today
+#### How the canvas works today
 
 Evidence comes from the only real canvas on this machine, `C:\dev\pml-web\.sessions\design-system-setup\design-canvas\design-system-setup\project`, published as `https://claude.ai/artifact/9BXn2up1cvrirpSM9b587H`.
 
@@ -51,7 +53,7 @@ Evidence comes from the only real canvas on this machine, `C:\dev\pml-web\.sessi
 
 The three findings that matter are placed on the stories they drive: the duplicated screens under Mount Production Views As Screens, the fixture bundle under Bundle Product Views For The Canvas, and the drifted copies under Pull Hosted Edits Back Before Next Version.
 
-### Constraints from the canvas runtime
+#### Constraints from the canvas runtime
 
 From the Design type's own `SKILL.md`, `format.md`, `design-system-components.md` and `dc-runtime.js`, read from the published artifact.
 
@@ -67,7 +69,7 @@ From the Design type's own `SKILL.md`, `format.md`, `design-system-components.md
 | Design system files install under `project/ds/<folder>/`, by server-side copy, with a `designSystems` record holding the version | A pinned, hosted reference with provenance |
 | Guidance: "screens, layout and copy stay markup", and components you define yourself can't be selected or edited | Mounting a whole screen **goes against this guidance on purpose**. See the trade-off under Redesign A Screen By Detaching It |
 
-### Options compared
+#### Options compared
 
 | Option | Works when published? | Works on this Windows machine? | Fidelity | Verdict | Where it lands |
 |---|---|---|---|---|---|
@@ -84,7 +86,7 @@ From the Design type's own `SKILL.md`, `format.md`, `design-system-components.md
 | **I3. Fragment by render** (`renderToStaticMarkup`, or capture DOM at a step) | Yes | Yes | Exact at capture, then a copy | **Adopt, only for detach** | Detach A Screen To Editable Markup |
 | **J. Own local surface** (a Vite app like `harness/graph/app`) | Not a canvas at all | Yes | 100%: direct imports | Keep as a last resort: loses editing, comments, sharing | — |
 
-### Why the rejected link options fail
+#### Why the rejected link options fail
 
 **Symlinks (B).** Tested here: `New-Item -ItemType SymbolicLink` and `os.symlink` both fail with `WinError 1314`. Developer Mode is off, the session is not elevated, and `core.symlinks` is `false` in this repo and pml-web. Even with those fixed:
 
@@ -95,7 +97,7 @@ From the Design type's own `SKILL.md`, `format.md`, `design-system-components.md
 
 **Hard links (D).** These do work here, which is the trap. `write_text` would overwrite the production file with no warning. Meanwhile anything that replaces a file by rename, such as `git checkout` and many editors, breaks the link silently and leaves a stale copy that looks fine.
 
-### Target shape
+#### Target shape
 
 ```
 product repo                         local canvas version           hosted
@@ -121,7 +123,7 @@ A version folder keeps only `sources.json`, `canvas.json` and detached screens, 
 
 Where code lands: generic parts in `harness/design_canvas/` (`CanvasSources` for the manifest and check, the thin-screen helper), LERN-specific build in `patterns/lern_domain_driven/practices/stories/model/claude_design/`. The MERN pattern has no `claude_design` folder, so it gets none of this until one is added.
 
-### Risks
+#### Risks
 
 | Risk | Note |
 |---|---|
@@ -130,7 +132,7 @@ Where code lands: generic parts in `harness/design_canvas/` (`CanvasSources` for
 | Bundle size | 16 MB per call should be fine at current bundle sizes; a chunking plan is needed only if screens grow |
 | Package is a snapshot | A canvas shows production as of its pinned version. The check reports staleness; it does not auto-update, which is the correct behaviour for a design review |
 
-### What is verified and what is not
+#### What is verified and what is not
 
 | Status | Claim |
 |---|---|
@@ -142,28 +144,28 @@ Where code lands: generic parts in `harness/design_canvas/` (`CanvasSources` for
 
 ---
 
-### Sub-feature: Trace Canvas Files To Production (Phase 1: manifest, no behaviour change)
+#### Sub-feature: Trace Canvas Files To Production (Phase 1: manifest, no behaviour change)
 
 Keeps option E's hash check and drops the stored copies. **Done:** a version reports its traceability percentage, and an edited CSS file fails the check.
 
-#### Story: Record Packaged Files In Sources Manifest
+##### Story: Record Packaged Files In Sources Manifest
 
 - Add `sources.json` beside `CanvasVersions`, recording every packaged file's repo path, sha256 and git commit.
 
-#### Story: Fail Check When A Packaged File Drifts
+##### Story: Fail Check When A Packaged File Drifts
 
 - Add a drift check beside `CanvasVersions` that fails when a file no longer matches its manifest entry; an edited CSS file fails it.
 
-#### Story: Report Version Traceability Percentage
+##### Story: Report Version Traceability Percentage
 
 - The manifest gives each version its share of bytes proven identical to source. Today that is 342,654 bytes (2.2%); the target is all assets, CSS and bundle.
 
-#### Story: Store Each Screenshot Once By Content Hash
+##### Story: Store Each Screenshot Once By Content Hash
 
 - Dedupe shots by content hash: 183 shots hold only 115 unique ones, so 68 duplicates become 0.
 - Decide where originals live, because none were found outside the canvas folder; e2e output under `.sessions/<release>/e2e-test-results` holds JSON, not PNGs.
 
-#### Story: Find Screen Files Through The Manifest
+##### Story: Find Screen Files Through The Manifest
 
 Thin screens break these existence checks, so they read the manifest instead of the version folder:
 
@@ -173,34 +175,34 @@ Thin screens break these existence checks, so they read the manifest instead of 
 | `_blank` (`nodes.py:359`) | Stats the shot on disk; a missing file reads as not blank, so blank captures return |
 | `_stylesheets` (`nodes.py:346`) | Regex-reads `<link>` lines from each screen; move to the manifest |
 
-### Sub-feature: Install Production Design System On The Canvas (Phase 2: Design System package)
+#### Sub-feature: Install Production Design System On The Canvas (Phase 2: Design System package)
 
 Option G is the delivery route. **Done:** CSS and assets are byte-identical to the repo on the published canvas.
 
-#### Story: Package Product Styles And Assets In Their Production Layout
+##### Story: Package Product Styles And Assets In Their Production Layout
 
 - Mirror the `packages/my-paradise` layout under `ds/paradise/`; remove `copy_styles`.
 - Layout solves the CSS problem: `ds/paradise/paradise.css` beside `ds/paradise/assets/` matches `packages/my-paradise`, so the 8 URL rewrites disappear and the CSS is byte-identical.
 
-#### Story: Publish Product Package As Design System Artifact
+##### Story: Publish Product Package As Design System Artifact
 
 - Publish one Design System artifact per product.
 
-#### Story: Record Installed Design Systems In Canvas File
+##### Story: Record Installed Design Systems In Canvas File
 
 - `_canvas_json` hard-codes `"designSystems": []` (`canvas.py:67`), so that must become data: populate `designSystems` in `canvas.json`.
 - Files copied this way are pinned ("a copy never changes by itself"), and one publish can draw on at most 4 source versions.
 
-#### Story: Derive Publish List From Sources Manifest
+##### Story: Derive Publish List From Sources Manifest
 
 - Replace `pub_*.json` with a publish list derived from the manifest.
 
-#### Story: Pull Hosted Edits Back Before Next Version
+##### Story: Pull Hosted Edits Back Before Next Version
 
 - Add pull-back of hosted edits before `start_next`.
 - Why: local and published copies have already drifted. The published artifact lists `canvas-fixtures.js` at 548,799 bytes and `refresh-alt-icon.svg` at 529; the local files are 561,953 and 532. I did not determine why. Separately, `start_next` copies the *local* folder (`versions.py:63`), and I found no code that pulls hosted edits back. People's edits on a published canvas may therefore be missing from the next version, despite the `never-overwrite-a-published-canvas` rule.
 
-### Sub-feature: Mount Production Views As Screens (Phases 0, 3 and 5)
+#### Sub-feature: Mount Production Views As Screens (Phases 0, 3 and 5)
 
 **The real duplication is the screens.** About 3,700 lines of generators and patch scripts sit in `pml-web/.sessions/design-canvas/tools`. They are outside CDD, session-bound, and hard-code `C:/dev/paradise-mobile/pml-web` (`paradise_screens.py`, `render_pml_canvas.py`). They re-state markup and behaviour that already exist in 44 production `.tsx` files. A substring check of `select-plan.dc.html` found 41 of its 42 class names in the matching TSX, so the port is faithful today. Nothing keeps it that way.
 
@@ -219,7 +221,7 @@ Option G is the delivery route. **Done:** CSS and assets are byte-identical to t
 
 **Phase 3 task, not a story:** migrate the 28 screens, then delete the pml-web generators. **Done:** all 28 are attached and every explorer path works.
 
-#### Story: Bundle Product Views For The Canvas
+##### Story: Bundle Product Views For The Canvas
 
 - Add a `canvas-components` bundle: export views by name (I2), plus `CanvasRoot` for scenario, remount and `go`.
 - **The fixture bundle already proves the right pattern.** `LernCanvasFixtures.build` (`fixtures.py`) and `build-canvas-fixtures.mjs` pull real source through esbuild and stub the node tier at build time. Screens are the part that never got this treatment.
@@ -229,37 +231,37 @@ Option G is the delivery route. **Done:** CSS and assets are byte-identical to t
   - `window.location` is used at 16 sites, and `assign` would navigate the artboard away. esbuild `define` can redirect it at build time with **no production code change**.
 - The reasoning here is from the code; none of it has been run.
 
-#### Story: Mount Production View In A Thin Screen
+##### Story: Mount Production View In A Thin Screen
 
 - Add the generic thin-screen generator, driven by `ux.json`, replacing the hard-coded `prototype()` map. Each screen is a shell of about 30 lines that mounts the view with `<x-import component-from-global-scope="Paradise.SelectPlanView">`.
 - `DesignCanvas.files` and `write` are text only (`Dict[str, str]`, `write_text`), so they cannot carry binary or source entries; they must change for thin screens.
 
-#### Story: Answer Screen Requests From Fixture Routes
+##### Story: Answer Screen Requests From Fixture Routes
 
 - Phase 0 gate 3: a real route answers a fixture, or a thin fetch table over the in-memory repositories stands in.
 
-#### Story: Keep Explorer Navigation Inside The Artboard
+##### Story: Keep Explorer Navigation Inside The Artboard
 
 - Phase 0 gate 4: the `define` seam holds, `followStepIfNeeded` moves the explorer through `go`, and the artboard stays put.
 
-#### Story: Keep Product Styles Inside The Screen
+##### Story: Keep Product Styles Inside The Screen
 
 - Phase 0 gate 5: `.paradise` CSS stays inside the screen; the explorer's `sm-` panel is unaffected. Not yet checked.
 
-#### Story: Type Scenario Values Into A Mounted Screen
+##### Story: Type Scenario Values Into A Mounted Screen
 
-- The `one-scenario-list` rule types values through `fromFixture(...).entered`; mounted views own their state, so typing needs a driver. The same driver plays UI steps in backlog item 1 (Play A Story's UI Steps On A Screen), so build it once.
+- The `one-scenario-list` rule types values through `fromFixture(...).entered`; mounted views own their state, so typing needs a driver. The same driver plays UI steps in Play A Story's UI Steps On A Screen ([Integrate Stories With The Canvas Explorer](integrate-stories-with-the-canvas-explorer.md)), so build it once.
 
-#### Story: Generate Attached Screens Without Markup
+##### Story: Generate Attached Screens Without Markup
 
 Phase 5, guidance. **Done:** an agent following guidance generates no screen markup for an attached screen.
 
 - Rewrite the rules in `claude_design.md` that thin screens break: `from-fixture`, `real-domain-logic`, `prototype-is-a-file`, `each-version-carries-its-files`.
 - Rewrite `ux.md` step 10, which tells agents to "port each story's screen".
-- `check_screen.cjs` extracts the `text/x-dc` logic, which thin screens no longer have; see backlog item 1 (Check Screen Logic Against Scenarios From A Command).
+- `check_screen.cjs` extracts the `text/x-dc` logic, which thin screens no longer have; see Check Screen Logic Against Scenarios From A Command in [Integrate Stories With The Canvas Explorer](integrate-stories-with-the-canvas-explorer.md).
 - Update the specs (`design_canvas_spec.py`, `claude_design_story_model_spec.py`).
 
-### Sub-feature: Redesign A Screen By Detaching It (Phase 4: detach and re-attach)
+#### Sub-feature: Redesign A Screen By Detaching It (Phase 4: detach and re-attach)
 
 **The trade-off to accept.** A mounted view runs real code, but the editor sees it as one element: people cannot click into its text and retype it. Hand-ported markup is fully editable but is a copy. Since the goal is production-identical design, **attached is the default and detach is the explicit step**:
 
@@ -270,18 +272,19 @@ Phase 5, guidance. **Done:** an agent following guidance generates no screen mar
 
 This keeps a clear answer to "is this what production does?" for every screen. Phase 0 gate 6 writes down what people can actually do with a mounted view, to confirm this trade-off. **Done:** a detached screen is editable and visibly marked; re-attaching clears the mark.
 
-#### Story: Detach A Screen To Editable Markup
+##### Story: Detach A Screen To Editable Markup
 
 - Add `detach(screen)` using render-to-markup (I3: `renderToStaticMarkup`, or capture DOM at a step).
 
-#### Story: Keep Leaf Components Mounted In A Detached Screen
+##### Story: Keep Leaf Components Mounted In A Detached Screen
 
 - Leaf components such as `PlanCardView` and `ParadiseShell` take props and can stay mounted inside a detached layout; `SelectPlanView` owns its state and client calls, so it mounts whole.
 
-#### Story: Mark Detached Screen As Diverged
+##### Story: Mark Detached Screen As Diverged
 
 - Add diverged marking on the map and explorer; the manifest marks the screen as diverged.
 
-#### Story: Reattach A Screen Once Its Change Reaches Production
+##### Story: Reattach A Screen Once Its Change Reaches Production
 
 - A detached screen shows as diverged until the change lands in the TSX, then it re-attaches and the mark clears.
+

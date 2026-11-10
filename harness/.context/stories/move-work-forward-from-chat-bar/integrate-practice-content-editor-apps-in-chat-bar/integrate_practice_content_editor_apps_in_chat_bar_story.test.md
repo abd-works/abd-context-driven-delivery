@@ -169,7 +169,7 @@ section: body
 | Source | Note |
 |--------|------|
 | `harness/.context/stories/story-map.md` | Move Work Forward From Chat Bar > Integrate Practice Content Editor Apps In Chat Bar > Person --> Trace Story Through Artifacts |
-| `.sessions/_backlog/mod-ideas.md` | "Trace pane": a story's scenarios, tests, code and diagrams, read from the knowledge graph |
+| `.sessions/_backlog/integrate-practice-content-editor-apps.md` | "Trace pane": a story's scenarios, tests, code and diagrams, read from the knowledge graph |
 
 #### Scenario Outline: The Inspector traces a violation's story through its artifacts
 

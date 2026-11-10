@@ -13,7 +13,7 @@ section: body
 
 **Slicing intent:** Increment 0 is what the code does today. The Intended and Requested stories follow the order set on 2026-11-06.
 
-**Spine vs optional:** the increments run in the order they are built: ticket management first, then the small editor-app stories that open each app in a session, then next-step suggestions, then the fully integrated flow, then faster command entry and the board's file review. Guards, chat bar parity and workflow customizing follow, each standing on its own. The design canvas increments (11 to 16, from `.sessions/_backlog/claud_design_enhancements/`) come last: asset reuse first, then mounted screens, detach, testing and story changes; linked models depend on nothing and can run beside them.
+**Spine vs optional:** the increments run in the order they are built, as set on 2026-11-10: ticket management and the editor-app stories first, then syncing the design canvas with production and integrating stories with the canvas explorer, then faster command entry and the Clean Engineering checks (metrics on the model, then checks across files), then the fully integrated flow, then the board's file review, workflow customizing and the Story UI editor's own stories; guards, a faster board, chat bar parity and linked models on the canvas follow, and next-step suggestions come last.
 
 ## Increments
 
@@ -264,6 +264,13 @@ section: body
 - *Refuse Missing Path*
 - *Save Checked Graph Beside Report*
 - *Count Graph Hits From Report*
+- *Select Several Fidelities*
+- *Choose Format*
+- *Open Ticket Chat On Session Open*
+- *Display Report Without Header Noise*
+- *Display Report Errors In Code Fences*
+- *Refactor Knowledge Graph App To Web Domain Access*
+- *Attach Violations To Latest Graph*
 
 ### Increment 1: Maintain Tickets On Board
 
@@ -298,28 +305,104 @@ section: body
 - *Filter Knowledge Graph To Ticket Scope*
 - *Filter Knowledge Graph To Ticket Practices*
 - *Deploy Knowledge Graph App With Board State*
-- *Refactor Knowledge Graph App To Web Domain Access*
 - *Trace Story Through Artifacts*
 - *Invoke Claude Design Story Explorer From Chat Bar*
 - *Deploy Story UI App With Board State*
 - *Refactor Story UI App To Web Domain Access*
 
-### Increment 3: Suggest The Next Step
+### Increment 3: Sync Design Canvas With Production
 
-**Outcome:** the chat proposes the next command, and captures handoffs, corrections and decisions.
+**Outcome:** a design canvas shows production as it is: every file is proven against the product repo by hash, styles and assets come from one pinned Design System package, each screen mounts the real view, hosted edits come back before the next version, and a screen being redesigned is detached and marked diverged until its change reaches production.
 
-**Slicing notes:** mod-ideas build order 3, next-step suggestions.
+**Slicing notes:** `.sessions/_backlog/sync-design-canvas-with-production.md`, the asset reuse plan's phases 1 to 5, the features Trace Canvas Files To Production, Install Production Design System On The Canvas, Mount Production Views As Screens and Redesign A Screen By Detaching It. It comes before every other design canvas increment. Start with the plan's Phase 0 spike on `select-plan`. If its gates 1 to 3 fail, the mounting stories give way to screens rendered to markup and hash-pinned to the TSX; the tracing and Design System stories hold either way. Migrating pml-web's 28 screens and deleting its generators is a task inside this increment.
 
 **Stories in this increment:**
 
-- *Suggest Next Command*
-- *Write Handoff When Session Ends*
-- *Display Latest Session Handoff*
-- *Open Ticket Chat On Session Open*
-- *Offer Correction Log Entry*
-- *Offer Decision Record*
+- *Record Packaged Files In Sources Manifest*
+- *Fail Check When A Packaged File Drifts*
+- *Report Version Traceability Percentage*
+- *Store Each Screenshot Once By Content Hash*
+- *Find Screen Files Through The Manifest*
+- *Package Product Styles And Assets In Their Production Layout*
+- *Publish Product Package As Design System Artifact*
+- *Record Installed Design Systems In Canvas File*
+- *Derive Publish List From Sources Manifest*
+- *Pull Hosted Edits Back Before Next Version*
+- *Bundle Product Views For The Canvas*
+- *Mount Production View In A Thin Screen*
+- *Answer Screen Requests From Fixture Routes*
+- *Keep Explorer Navigation Inside The Artboard*
+- *Keep Product Styles Inside The Screen*
+- *Type Scenario Values Into A Mounted Screen*
+- *Generate Attached Screens Without Markup*
+- *Detach A Screen To Editable Markup*
+- *Keep Leaf Components Mounted In A Detached Screen*
+- *Mark Detached Screen As Diverged*
+- *Reattach A Screen Once Its Change Reaches Production*
 
-### Increment 4: Fully Integrated App Flow
+### Increment 4: Integrate Stories With The Canvas Explorer
+
+**Outcome:** a person tests a screen against its scenarios from the explorer, and changes stories from the canvas or story-ui with the map updating, both ending in the same story code.
+
+**Slicing notes:** `.sessions/_backlog/integrate-stories-with-the-canvas-explorer.md`, the features Check Screens Against Their Scenarios and Change Stories From Canvas And Story UI. Test results first (slices A, B, C; D only if C proves too limited), and comment to story code first. Decide the source of truth before any story change (story code is recommended, which changes `map-mirrors-drawio` and needs a CDR). Playing UI steps and rearranging stories inside the canvas need Sync Design Canvas With Production's mounted screens.
+
+**Stories in this increment:**
+
+- *Package End-To-End Results With The Canvas*
+- *Mark Each Explorer Scenario Passed Or Failed*
+- *Label Stale Test Results*
+- *Run A Scenario's Thens On The Canvas*
+- *Play A Story's UI Steps On A Screen*
+- *Check Screen Logic Against Scenarios From A Command*
+- *Give Each Map Card A Stable Node Id*
+- *Comment On A Story Card*
+- *Change Story Code From A Canvas Comment*
+- *Refresh Map Artboard From A Data File*
+- *Save Story Map To Story Files*
+- *Comment On A Story In Story UI*
+- *Place Notes On The Story Map*
+- *Rearrange Stories Inside The Canvas*
+
+### Increment 5: Enter Commands Faster
+
+**Outcome:** a person types a CDD command with the actions, practices, fidelities and formats offered as they go.
+
+**Slicing notes:** mod-ideas build order 2, command entry and autocomplete; Choose Format sits here because a format is one of the command's parameters.
+
+**Stories in this increment:**
+
+- *Autocomplete CDD Commands*
+- *Show Command Argument Hints*
+- *Display Action Before Fidelity Dots*
+- *Add Comment To Sent Command*
+- *Announce CDD Tool Calls*
+
+### Increment 6: Measure Code On The Model
+
+**Outcome:** validating at the Clean Engineering model or code fidelity measures each function, class and module, keeps each measure as a fact on its node, and reports what is past a limit in the same validation report.
+
+**Slicing notes:** `.sessions/_backlog/measure-code-on-the-model.md`; the always-on metrics gate was removed on 2026-11-09, and its measuring moves into the practice.
+
+**Stories in this increment:**
+
+- *Record Code Metrics As Node Facts*
+- *Check Code Metrics Against Clean Engineering Limits*
+
+### Increment 7: Check Clean Engineering Across Files
+
+**Outcome:** Clean Engineering's validation finds the problems that only show across files, as graph rules where the graph can answer and as one AI-judged pass over the codebase where it cannot.
+
+**Slicing notes:** `.sessions/_backlog/check-clean-engineering-across-files.md`; replaces the cross-file passes agents ran by hand.
+
+**Stories in this increment:**
+
+- *Report Unused Class For Deletion*
+- *Report Runtime Dependency That Should Be Owned*
+- *Report Disconnected Class*
+- *Report One-Class Package*
+- *Judge Clean Engineering Rules Across Files*
+
+### Increment 8: Fully Integrated App Flow
 
 **Outcome:** the chat bar, the board, the Story UI editor with its story explorer, and the Graph app work on one ticket together, and violations are read from the latest graph that generate refreshes.
 
@@ -328,10 +411,10 @@ section: body
 **Stories in this increment:**
 
 - *Refresh Graph After Generate*
-- *Attach Violations To Latest Graph*
 - *Judge Rules During Generate*
 - *Fix Graph Violations*
 - *Validate Fidelity On Demand*
+- *Check Graph Rules When An Artifact Changes*
 - *Read Fidelity Violations From Latest Graph*
 - *Generate And Judge Fidelity From Board*
 - *Fix Graph Violations From Board*
@@ -367,7 +450,42 @@ section: body
 - *Test Knowledge Graph Explorer On Session Files*
 - *Display Drawio File As Diagram*
 
-### Increment 5: Author Story Maps
+### Increment 9: Review Work In Board Files
+
+**Outcome:** a person reads a ticket's context and changed files in a proper viewer, comments on them to the chat, and reads clean reports.
+
+**Slicing notes:** board-enhancements "Files" and the report fixes under "Actions".
+
+**Stories in this increment:**
+
+- *List Ticket Context Files*
+- *Open Session Files From Details*
+- *View Files In Rich Viewer*
+- *Comment On File Selection*
+- *Show AI Changes As Diff*
+
+### Increment 10: Customize Board Workflow
+
+**Outcome:** a team shapes the board's stages, policies, steps and test strategy to its own way of working.
+
+**Slicing notes:** board-enhancements "Workflow Enhancements"; it changes the board's own structure, so it comes after the board is finished.
+
+**Stories in this increment:**
+
+- *Customize Workflow Stages*
+- *Write Column Policies*
+- *Collapse Column Policies*
+- *Configure Todo List*
+- *Run Work Type Flows*
+- *Display Board From Customized Workflow*
+- *Move Ticket Along Customized Workflow*
+- *Approve Ticket Out Of Human Review Column*
+- *Track Ticket Status Through Workflow*
+- *Show Stage Practices From Customized Workflow*
+- *Choose Testing Strategy*
+- *Toggle Sub Agents*
+
+### Increment 11: Author Story Maps
 
 **Outcome:** the Story UI editor gets its own remaining stories: dashboard, nested lanes, the node inspector, save history, real-time sessions and AI story changes.
 
@@ -390,39 +508,7 @@ section: body
 - *Review Proposed Map Changes*
 - *Apply AI Change To Story Map*
 
-### Increment 6: Enter Commands Faster
-
-**Outcome:** a person types a CDD command with the actions, practices, fidelities and formats offered as they go.
-
-**Slicing notes:** mod-ideas build order 2, command entry and autocomplete; Choose Format sits here because a format is one of the command's parameters.
-
-**Stories in this increment:**
-
-- *Autocomplete CDD Commands*
-- *Show Command Argument Hints*
-- *Display Action Before Fidelity Dots*
-- *Select Several Fidelities*
-- *Choose Format*
-- *Add Comment To Sent Command*
-- *Announce CDD Tool Calls*
-
-### Increment 7: Review Work In Board Files
-
-**Outcome:** a person reads a ticket's context and changed files in a proper viewer, comments on them to the chat, and reads clean reports.
-
-**Slicing notes:** board-enhancements "Files" and the report fixes under "Actions".
-
-**Stories in this increment:**
-
-- *List Ticket Context Files*
-- *Open Session Files From Details*
-- *View Files In Rich Viewer*
-- *Comment On File Selection*
-- *Show AI Changes As Diff*
-- *Display Report Without Header Noise*
-- *Display Report Errors In Code Fences*
-
-### Increment 8: Guard Work And Recover Fast
+### Increment 12: Guard Work And Recover Fast
 
 **Outcome:** a person sees at once when cdd is down, fixes it from where they are, and the agent is stopped before it breaks a rule.
 
@@ -442,7 +528,19 @@ section: body
 - *Restart Parts From Chat Bar*
 - *Open App From Health Panel*
 
-### Increment 9: Bring Chat Bar Level With Board
+### Increment 13: Show Board Quickly
+
+**Outcome:** `board.show` stops repeating git checks, guidance parsing and session file reads, so the board and the chat bar answer faster and `space/kanban/kanban_tools_spec.py` runs in under 60 s.
+
+**Slicing notes:** `.sessions/_backlog/show-board-quickly.md`. Technical stories in shared modules (`space/repo`, `harness/guidance`, `harness/installation`), so reinstall after; small, and can go in at any point.
+
+**Stories in this increment:**
+
+- *Check Ticket Branches Once Per Board Build*
+- *Cache Practice Guidance By File And Change Time*
+- *Read Session File Once Per Board Build*
+
+### Increment 14: Bring Chat Bar Level With Board
 
 **Outcome:** everything a person can do to one session on the board, they can do from the chat bar.
 
@@ -455,107 +553,16 @@ section: body
 - *Choose Session Practices*
 - *Open Fidelity Help*
 - *Fix Violations From Chat Bar*
+- *Add Backlog Item From Chat Bar*
+- *Commit Work From Chat Bar*
+- *Push Work From Chat Bar*
+- *Pull Latest From Chat Bar*
 
-### Increment 10: Customize Board Workflow
-
-**Outcome:** a team shapes the board's stages, policies, steps and test strategy to its own way of working.
-
-**Slicing notes:** board-enhancements "Workflow Enhancements"; it changes the board's own structure, so it comes after the board is finished.
-
-**Stories in this increment:**
-
-- *Customize Workflow Stages*
-- *Write Column Policies*
-- *Collapse Column Policies*
-- *Configure Todo List*
-- *Run Work Type Flows*
-- *Choose Testing Strategy*
-- *Toggle Sub Agents*
-
-### Increment 11: Trace Canvas Files To Production
-
-**Outcome:** every file a design canvas version carries is proven against the product repo by hash, and its styles and assets come from one pinned Design System package instead of copies.
-
-**Slicing notes:** design-canvas-asset-reuse-plan.md phases 1 and 2, which come before every other design canvas increment. Start with the plan's Phase 0 spike on `select-plan`: its gates decide Increment 12, but this increment holds whether they pass or fail.
-
-**Stories in this increment:**
-
-- *Record Packaged Files In Sources Manifest*
-- *Fail Check When A Packaged File Drifts*
-- *Report Version Traceability Percentage*
-- *Store Each Screenshot Once By Content Hash*
-- *Find Screen Files Through The Manifest*
-- *Package Product Styles And Assets In Their Production Layout*
-- *Publish Product Package As Design System Artifact*
-- *Record Installed Design Systems In Canvas File*
-- *Derive Publish List From Sources Manifest*
-- *Pull Hosted Edits Back Before Next Version*
-
-### Increment 12: Mount Production Views As Screens
-
-**Outcome:** every screen that exists in production is a thin shell that mounts the real view, and every explorer path still works.
-
-**Slicing notes:** asset reuse plan Phase 3 and Phase 5, only when Phase 0 gates 1 to 3 pass; otherwise screens are rendered to markup and hash-pinned to the TSX. Migrating pml-web's 28 screens and deleting its generators is a task inside this increment.
-
-**Stories in this increment:**
-
-- *Bundle Product Views For The Canvas*
-- *Mount Production View In A Thin Screen*
-- *Answer Screen Requests From Fixture Routes*
-- *Keep Explorer Navigation Inside The Artboard*
-- *Keep Product Styles Inside The Screen*
-- *Type Scenario Values Into A Mounted Screen*
-- *Generate Attached Screens Without Markup*
-
-### Increment 13: Redesign A Screen By Detaching It
-
-**Outcome:** a person detaches a screen to edit it on the canvas, sees it marked as diverged, and reattaches it once the change is in production.
-
-**Slicing notes:** asset reuse plan Phase 4.
-
-**Stories in this increment:**
-
-- *Detach A Screen To Editable Markup*
-- *Keep Leaf Components Mounted In A Detached Screen*
-- *Mark Detached Screen As Diverged*
-- *Reattach A Screen Once Its Change Reaches Production*
-
-### Increment 14: Check Screens Against Their Scenarios
-
-**Outcome:** a person presses Test on a scenario and sees passed or failed for each step, on attached and detached screens, with stale results labelled.
-
-**Slicing notes:** backlog.md item 1, slices A, B, C in that order; slice D only if C proves too limited. Slice A needs nothing from Increment 12; slice C needs its DOM driver.
-
-**Stories in this increment:**
-
-- *Package End-To-End Results With The Canvas*
-- *Mark Each Explorer Scenario Passed Or Failed*
-- *Label Stale Test Results*
-- *Run A Scenario's Thens On The Canvas*
-- *Play A Story's UI Steps On A Screen*
-- *Check Screen Logic Against Scenarios From A Command*
-
-### Increment 15: Change Stories From Canvas And Story UI
-
-**Outcome:** a comment on a story card, or an edit in story-ui, ends in changed story code and a refreshed map, with a reply on the thread.
-
-**Slicing notes:** backlog.md item 2. Decide the source of truth first (story code is recommended, which changes `map-mirrors-drawio` and needs a CDR). Comment to story code is the first slice; Rearrange Stories Inside The Canvas waits for Increment 12's mechanism.
-
-**Stories in this increment:**
-
-- *Give Each Map Card A Stable Node Id*
-- *Comment On A Story Card*
-- *Change Story Code From A Canvas Comment*
-- *Refresh Map Artboard From A Data File*
-- *Save Story Map To Story Files*
-- *Comment On A Story In Story UI*
-- *Rearrange Stories Inside The Canvas*
-
-### Increment 16: Draw Linked Models On The Canvas
+### Increment 15: Draw Linked Models On The Canvas
 
 **Outcome:** from any story a person reaches its screen, its classes and its bounded context by clicking, and back, and every diagram matches its drawio layout.
 
-**Slicing notes:** backlog.md item 3; depends on nothing, so it can run beside Increments 11 to 15. The bounded context map is the first slice.
+**Slicing notes:** `.sessions/_backlog/draw-linked-models-on-the-canvas.md`; depends on nothing, so it can run beside Sync Design Canvas With Production and Integrate Stories With The Canvas Explorer. The bounded context map is the first slice.
 
 **Stories in this increment:**
 
@@ -567,3 +574,17 @@ section: body
 - *See The Classes A Scenario Touches*
 - *See The Stories That Exercise A Class*
 - *Mark Model Nodes That Fail Rules*
+
+### Increment 16: Suggest The Next Step
+
+**Outcome:** the chat proposes the next command, and captures handoffs, corrections and decisions.
+
+**Slicing notes:** mod-ideas build order 3, next-step suggestions.
+
+**Stories in this increment:**
+
+- *Suggest Next Command*
+- *Write Handoff When Session Ends*
+- *Display Latest Session Handoff*
+- *Offer Correction Log Entry*
+- *Offer Decision Record*

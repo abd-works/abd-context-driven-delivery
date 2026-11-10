@@ -20,7 +20,7 @@ section: body
 
 | Source | Note |
 |--------|------|
-| `.sessions/_backlog/mod-ideas.md` | "Next-step suggestion": `$.prompt.suggest` fills in the next command from `ticket.generate_commands` |
+| `.sessions/_backlog/suggest-the-next-step.md` | "Next-step suggestion": `$.prompt.suggest` fills in the next command from `ticket.generate_commands` |
 | artifact comment, 2026-11-06 | "the list box of actions should be on the next action recommended; it's not shown anywhere in chat panel but there" |
 | https://claude.ai/artifact/HCCiMNSTMhwB9zQT8tVV8p | the story explorer plays the first scenario on the integrated journey screen |
 
