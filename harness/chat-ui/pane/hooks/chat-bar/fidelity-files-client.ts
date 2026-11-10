@@ -5,6 +5,7 @@ import type { FileEntryData, ReportData } from '@cdd/space/kanban/fidelity-progr
 import type { FileTextData } from '@cdd/space/session/session'
 
 import type { FidelityFilesJson } from '../../types'
+import { openInBrowser, runningBoardUrl } from '../board-chat/board-server'
 import { reasonOf } from '../shared/failure'
 import { callTool, currentChatBar } from './chat-bar-client'
 import { runAction, type FidelityProgressClient } from './fidelity-progress-client'
@@ -41,9 +42,13 @@ export async function openFiles($: EngineInterface, fidelity: FidelityProgressCl
   }
 }
 
-// The fidelity's latest validation report in its own tab of the files pane, as the board opens it in its side panel
-// from a violation count, so the person reads the violations before telling the agent to fix them.
+// The fidelity's latest validation report in the board's own report panel, with its findings and Fix buttons, opened in
+// the person's browser by the board's ?report=&fidelity= link. With no board to open, the report's text shows in its own
+// tab of the files pane instead, so the person still reads the violations before telling the agent to fix them.
 export async function openReport($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
+  const url = await runningBoardUrl($).catch(() => '')
+  const link = url && `${url}/?report=${encodeURIComponent(fidelity.progress.ticket.name)}&fidelity=${encodeURIComponent(fidelity.slug)}`
+  if (link && (await openInBrowser($, link))) return
   try {
     const report = await callTool<ReportData>($, 'fidelity-progress.report', { ticket: fidelity.progress.ticket.name, fidelity: fidelity.slug })
     await update($, fidelityFiles, () => ({ fidelity: fidelity.slug, tabs: [{ path: report.path, text: report.text }], shown: report.path, isOutOfDate: report.is_out_of_date }))

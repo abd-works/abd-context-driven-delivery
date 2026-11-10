@@ -39,6 +39,29 @@ async function cameUp($: EngineInterface, url: string): Promise<boolean> {
   return false
 }
 
+// The board's address once it answers, starting it from this repository when nothing answers on its port; empty when
+// cdd has not said where it answers or it does not start.
+export async function runningBoardUrl($: EngineInterface): Promise<string> {
+  await refreshHealth($)
+  const url = await boardUrl($)
+  if (!url) return ''
+  if (await isBoardUp($, url)) return url
+  const folder = await boardAppFolder($)
+  if (!folder || !(await $.fs.exists(`${folder}/node_modules`)) || !(await $.fs.exists(`${folder}/dist`))) return ''
+  startServer($, folder)
+  return (await cameUp($, url)) ? url : ''
+}
+
+// Opens a page in the person's browser with the system's own opener, since mods have no call that opens a link.
+export async function openInBrowser($: EngineInterface, url: string): Promise<boolean> {
+  const openers = [['rundll32', 'url.dll,FileProtocolHandler', url], ['open', url], ['xdg-open', url]]
+  for (const argv of openers) {
+    const opened = await $.process.run(argv).catch(() => null)
+    if (opened?.exitCode === 0) return true
+  }
+  return false
+}
+
 // Starts the board when nothing answers on its port, so /board always ends with a board to open. cdd's server health
 // gives the board's address, so the chat names no port of the board's.
 export async function openedBoard($: EngineInterface): Promise<string> {
