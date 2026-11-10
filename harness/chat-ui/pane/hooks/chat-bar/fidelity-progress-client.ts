@@ -116,9 +116,9 @@ export async function runAction($: EngineInterface, fidelity: FidelityProgressCl
 }
 
 // One command for several fidelities, as the actions take a list of slugs: the first one's command with every slug.
-export async function runActionOn($: EngineInterface, fidelities: FidelityProgressClient[], action: string): Promise<void> {
+export async function runActionOn($: EngineInterface, fidelities: FidelityProgressClient[], action: string, suffix = ''): Promise<void> {
   const [first, ...rest] = fidelities
   if (!first) return
   const command = first.commandFor(action)
-  await promptCommand($, rest.length ? command.replace(` ${first.slug} `, ` ${fidelities.map(fidelity => fidelity.slug).join(' ')} `) : command)
+  await promptCommand($, (rest.length ? command.replace(` ${first.slug} `, ` ${fidelities.map(fidelity => fidelity.slug).join(' ')} `) : command) + suffix)
 }

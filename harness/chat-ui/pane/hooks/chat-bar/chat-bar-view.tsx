@@ -4,6 +4,7 @@ import type { ActionPickerJson, ChatBarViewJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { GlyphButtonView } from '../shared/glyph-button-view'
 import { ActionButtonView, PickerView } from './action-button-view'
+import { toggleFormat, type FormatChips } from './format-choices-client'
 import { askChatToFix, dismissFailure, fixFailure, runHandoff, type ChatBarClient } from './chat-bar-client'
 import { openFiles, openReport } from './fidelity-files-client'
 import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
@@ -22,6 +23,7 @@ export type ChatBarDraw = {
   view: ChatBarViewJson
   picker: ActionPickerJson
   isStagePickerOpen: boolean
+  formats: FormatChips
   busy: { doing: string; wheel: string }
   health: { band: unknown; panel: unknown }
   width: number
@@ -127,6 +129,30 @@ function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBa
   )
 }
 
+// The canvas's glyph for each format group; a group with none shows its name.
+const FORMAT_GLYPHS: Record<string, string> = { markdown: 'M↓', diagram: '◇', code: '</>' }
+
+// One chip per format group the fidelities offer, just before the action button, as on a board ticket's action bar:
+// orange while picked, green when every fidelity has a file in it already, grey otherwise; a press turns it on or off.
+function FormatChipsView($: EngineInterface, elements: ElementTable, { formats }: ChatBarDraw) {
+  const { Box } = elements
+  if (!formats.choices.length) return null
+  return (
+    <Box key="format-chips" flexDirection="row" gap={0}>
+      {formats.choices.map(choice => {
+        const isOn = formats.picked.includes(choice.label)
+        const colour = isOn ? BRAND.onAccent : choice.made && choice.made === choice.offered ? BRAND.success : BRAND.muted
+        return (
+          <Box key={`format-${choice.label}`} paddingX={1} backgroundColor={isOn ? BRAND.accent : undefined}>
+            {GlyphButtonView(elements, `format-chip-${choice.label}`, FORMAT_GLYPHS[choice.label] ?? choice.label, colour, () => toggleFormat($, formats, choice.label))}
+            {TipView(elements, choice.label, `${choice.made}/${choice.offered} made`, BRAND.muted)}
+          </Box>
+        )
+      })}
+    </Box>
+  )
+}
+
 // The line, left to right: health mark, the stage button, │, fidelity dots and the action chip, then at the right end
 // the session name and its buttons.
 function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
@@ -140,6 +166,7 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
         <Text color={BRAND.border}>{SEPARATOR}</Text>
         <Box key="fidelity-column" flexDirection="row" gap={1} alignItems="center">
           {chatBar.fidelities.map(fidelity => FidelityView($, elements, fidelity))}
+          {FormatChipsView($, elements, draw)}
           {ActionButtonView($, elements, draw)}
         </Box>
         <Box flexGrow={1} />

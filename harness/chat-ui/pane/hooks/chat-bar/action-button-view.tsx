@@ -6,6 +6,7 @@ import { chooseAction, clearChosenAction, toggleActionPicker } from './action-pi
 import { moveNext, type ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
 import { runActionOn } from './fidelity-progress-client'
+import { formatArgumentOf, resetFormats, type FormatChips } from './format-choices-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
@@ -29,24 +30,26 @@ function shownActionOf(chatBar: ChatBarClient, chosenAction: string | null): str
 }
 
 // The action button runs what it shows: advance moves the session on, and every other action is a command the chat runs. A picked action is run once, and the button then shows the next one again.
-async function pressAction($: EngineInterface, chatBar: ChatBarClient, action: string): Promise<unknown> {
+async function pressAction($: EngineInterface, chatBar: ChatBarClient, formats: FormatChips, action: string): Promise<unknown> {
   const fidelity = chatBar.actionFidelity
   await clearChosenAction($)
   if (action === 'advance') return moveNext($, chatBar)
   if (!fidelity) return
-  return runActionOn($, chatBar.actionFidelities, action)
+  const formatArgument = formatArgumentOf(chatBar, formats, action)
+  await runActionOn($, chatBar.actionFidelities, action, formatArgument)
+  if (formatArgument) await resetFormats($)
 }
 
 // The orange chip of the canvas, an orange Box holding the next action's icon, then the ▾ that opens
 // the picker, its action and fidelity shown above it on hover.
-export function ActionButtonView($: EngineInterface, elements: ElementTable, { chatBar, picker }: ChatBarDraw) {
+export function ActionButtonView($: EngineInterface, elements: ElementTable, { chatBar, picker, formats }: ChatBarDraw) {
   const { Box, Text } = elements
   const action = shownActionOf(chatBar, picker.chosenAction)
   if (!action) return null
   const target = action === 'advance' ? `move ${chatBar.sessionName} on` : `${action} ${chatBar.actionFidelities.map(fidelity => fidelity.slug).join(' ')}`
   return (
     <Box key="action" flexDirection="row" gap={0} paddingX={1} backgroundColor={BRAND.accent}>
-      {GlyphButtonView(elements, 'next-action', iconOf(action), BRAND.onAccent, () => pressAction($, chatBar, action))}
+      {GlyphButtonView(elements, 'next-action', iconOf(action), BRAND.onAccent, () => pressAction($, chatBar, formats, action))}
       {GlyphButtonView(elements, 'action-picker', '▾', BRAND.onAccent, () => toggleActionPicker($))}
       <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
         <Text color={BRAND.text}>{target}</Text>

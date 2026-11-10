@@ -42,6 +42,9 @@ export type ChatBarViewJson = {
 
 // Whether the action picker's menu is open.
 // chosenAction: the action picked from the menu, which the action button shows and runs in place of the next one.
+// One format chip as ticket.format_choices answers it, and the chips held for the fidelities they were read for.
+export type FormatChoiceJson = { label: string; formats: string[]; offered: number; made: number; starts_picked: boolean }
+export type FormatChoicesJson = { key: string; choices: FormatChoiceJson[]; picked: string[] | null }
 export type ActionPickerJson = { isOpen: boolean; chosenAction: string | null }
 
 // The files view of the selected fidelity: one tab per file fidelity-progress.files declares, its text once session.read_file read it.
@@ -69,6 +72,7 @@ declare module 'claude-code' {
       fidelityFiles: FidelityFilesJson
       shownStage: string | null
       stagePicker: boolean
+      formatChoices: FormatChoicesJson
       chatFolder: ChatFolderJson
       busy: BusyJson
     }

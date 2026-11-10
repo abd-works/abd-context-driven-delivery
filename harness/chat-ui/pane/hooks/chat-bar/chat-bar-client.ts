@@ -97,6 +97,17 @@ export class ChatBarClient {
 
   // Every action a person can run on a fidelity of the shown stage, its steps first, as the stage sends them. Review is
   // left out: the chat bar has nothing for it to do.
+  // The ticket the session works on, by name; empty with none.
+  get ticketName(): string {
+    return this.ticket?.name ?? ''
+  }
+
+  // The actions of the shown stage whose command takes the formats the chips pick, generate and render.
+  get actionsWithFormats(): string[] {
+    const column = this.board?.columns.find(column => column.name === this.shownStage) as { actions_with_formats?: string[] } | undefined
+    return column?.actions_with_formats ?? ['generate', 'render']
+  }
+
   get actions(): string[] {
     return (this.board?.columns.find(column => column.name === this.shownStage)?.actions ?? []).filter(action => action !== REVIEW)
   }

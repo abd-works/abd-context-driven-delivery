@@ -10,6 +10,7 @@ import { checkChatFolder } from './chat-bar/chat-folder-client'
 import { clearBusy, currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
 import { isStagePickerOpen } from './chat-bar/stage-client'
+import { currentFormatChips } from './chat-bar/format-choices-client'
 import { currentFidelityFiles, FILES_PANE, forgetFiles } from './chat-bar/fidelity-files-client'
 import { FidelityFilesView } from './chat-bar/fidelity-files-view'
 import { currentChatBarView } from './chat-bar/session-dialogs-client'
@@ -113,8 +114,10 @@ export const register: Register = on => {
     }
     const band = { health: await currentServerHealth($), view: await currentHealthView($), install: await currentInstall($), actions }
     const elements = $.ui.resolve(e)
+    const chatBar = await currentChatBar($)
     return ChatBarView($, elements, {
-      chatBar: await currentChatBar($),
+      chatBar,
+      formats: await currentFormatChips($, chatBar),
       view: await currentChatBarView($),
       picker: await currentActionPicker($),
       isStagePickerOpen: await isStagePickerOpen($),
