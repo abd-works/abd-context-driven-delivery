@@ -4,7 +4,7 @@ import type { EngineInterface } from 'claude-code'
 import type { ChatFolderJson } from '../../types'
 import { isChatBusy, turnsSoFar } from '../board-chat/chat-turns'
 import { reasonOf } from '../shared/failure'
-import { showFailure, type ChatBarClient } from './chat-bar-client'
+import { dismissFailure, showFailure, type ChatBarClient } from './chat-bar-client'
 
 // Where this chat works against where the active session's work is: the ticket's own worktree, else the repository's
 // main checkout, where activating it checked its branch out. A switch made in the chat bar moves the chat there with
@@ -74,6 +74,19 @@ async function arrivedIn($: EngineInterface, folder: string, asked: MoveAsked): 
   return false
 }
 
+// The app sometimes moves the chat later than the grace period, such as while it reconnects the folder's MCP servers.
+// The failure shows at once, and is taken back if the chat arrives after all, so a move that worked never reads as one
+// that failed.
+const LATE_MOVE_MILLISECONDS = 60_000
+
+async function reportLateMove($: EngineInterface, folder: string): Promise<void> {
+  await showFailure($, `The app did not move this chat to ${folder}`)
+  for (let waited = 0; waited < LATE_MOVE_MILLISECONDS; waited += MOVE_CHECK_MILLISECONDS) {
+    if (sameFolder(await $.session.cwd(), folder)) return dismissFailure($)
+    await $.clock.sleep(MOVE_CHECK_MILLISECONDS)
+  }
+}
+
 function askedTurnEnded(asked: MoveAsked): boolean {
   return !asked.byAgent || (turnsSoFar() > asked.turnsBefore && !isChatBusy())
 }
@@ -107,6 +120,6 @@ export async function followSession($: EngineInterface, chatBar: ChatBarClient):
   const asked = await moveChatTo($, expected)
   if (!asked) return
   $.ui.toast(`Moving this chat to ${expected}${chatBar.sessionName ? `, for ${chatBar.sessionName}` : ''}`)
-  if (!(await arrivedIn($, expected, asked))) await showFailure($, `The app did not move this chat to ${expected}`)
+  if (!(await arrivedIn($, expected, asked))) await reportLateMove($, expected)
   await checkChatFolder($, chatBar)
 }
