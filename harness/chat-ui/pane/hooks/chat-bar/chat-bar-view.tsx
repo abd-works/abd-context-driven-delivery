@@ -78,9 +78,11 @@ export function StagePickerView($: EngineInterface, { Box, Button, Text }: Eleme
       {chatBar.stages.filter(stage => stage.canShow).map((stage: StageClient) => {
         const isShown = stage.stage === chatBar.shownStage
         return (
-          <Box key={`stage-row-${stage.stage}`} flexDirection="row" gap={1} alignItems="center" backgroundColor={isShown ? BRAND.accentTint : undefined}>
-            <Text color={stage.ink}>{stage.icon}</Text>
-            <Button key={`stage-pick-${stage.stage}`} plain label={stage.isCurrent ? `${stage.stage} ·` : stage.stage} onPress={() => selectStage($, stage)} />
+          <Box key={`stage-row-${stage.stage}`} backgroundColor={isShown ? BRAND.accentTint : undefined}>
+            <Button key={`stage-pick-${stage.stage}`} plain onPress={() => selectStage($, stage)}>
+              <Text color={stage.ink}>{`${stage.icon} `}</Text>
+              <Text color={BRAND.text} weight={stage.isCurrent ? 'bold' : undefined}>{stage.stage}</Text>
+            </Button>
           </Box>
         )
       })}
