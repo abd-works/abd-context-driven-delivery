@@ -62,6 +62,14 @@ class CommitMessageRequiredError(ValueError):
         super().__init__("commit message is required")
 
 
+class NothingToCommitError(RuntimeError):
+    """Raised when push-commit finds no change in the checkout it commits in. Answering with the sha already at HEAD
+    would read as a new commit, so the caller would report work pushed that never left the disk."""
+
+    def __init__(self, checkout: Path) -> None:
+        super().__init__(f"nothing to commit in {checkout}: its working tree has no changes")
+
+
 class NoOpenWorktreeError(RuntimeError):
     """Raised when close-worktree runs with no worktree saved in the chat's open state under ``~/.cdd``."""
 
@@ -73,14 +81,21 @@ class Commit:
     """One git commit. Its data is its sha, subject, full message, and the trailers the message carries, which is what
     an MCP tool that makes a commit answers with."""
 
-    def __init__(self, sha: str, message: str) -> None:
+    def __init__(self, sha: str, message: str, checkout: Path | str = "") -> None:
         self._sha = sha
         self._message = message
+        self._checkout = str(checkout)
 
     @property
     @data_field
     def sha(self) -> str:
         return self._sha
+
+    @property
+    @data_field
+    def checkout(self) -> str:
+        """The folder of the checkout the commit was made in, so the caller can see which worktree it went to."""
+        return self._checkout
 
     @property
     @data_field
@@ -420,15 +435,18 @@ class Repo:
         untracked: bool = True,
         sync_remote: bool = True,
     ) -> Commit:
-        """Commit the working tree the repo tools act in using ``message`` (subject and optional body)."""
+        """Commit the working tree the repo tools act in using ``message`` (subject and optional body). Fails, naming that
+        checkout, when it has no changes; the answer names the checkout the commit went to."""
         text = (message or "").strip()
         if not text:
             raise CommitMessageRequiredError()
         repository = self._checkout_tools_act_in()
+        if not repository.is_dirty(untracked=untracked):
+            raise NothingToCommitError(repository.root)
         sha = repository.commit([str(repository.root)], text, untracked=untracked)
         if sync_remote:
             repository.push_upstream()
-        return Commit(sha, text)
+        return Commit(sha, text, repository.root)
 
     @command(name="push")
     @agent_instructions
