@@ -575,6 +575,10 @@ class Branch:
         """Delete this branch here and on origin. git refuses a branch not merged into the default branch unless
         unmerged says the person chose to delete it as it is."""
         self._repo.git.run("branch", "-D" if unmerged else "-d", self.name)
+        self.delete_on_origin()
+
+    def delete_on_origin(self) -> None:
+        """Delete this branch on origin only, leaving it here: a worktree that still has it checked out keeps it."""
         if self._repo.has_ref(f"refs/remotes/origin/{self.name}"):
             self._repo.git.run("push", "origin", "--delete", self.name)
 

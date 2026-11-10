@@ -17,6 +17,8 @@ const LEFT_STEPS: Record<string, string> = { handoff: 'handoff written', commit:
 const DELETE_WORKTREE = 'delete_worktree'
 // Deleting a branch deletes the worktree that has it checked out, so the chat moves out for it too.
 const DELETE_BRANCH = 'delete_branch'
+// Asks the board to keep the worktree the chat could not leave; a branch deleted with it goes from origin only.
+const KEEP_WORKTREE = 'keep_worktree'
 
 // ticket.close refused to close the session. reason is the server's own text.
 export class CloseRefused {
@@ -29,13 +31,13 @@ async function leftWorktreeFor($: EngineInterface, leaving: string[]): Promise<s
   return leaving.includes(DELETE_WORKTREE) || leaving.includes(DELETE_BRANCH) ? moveToMainCheckout($) : ''
 }
 
-// A switch or close goes ahead even when the chat could not leave its worktree: only the deletes that worktree would
-// stop are left out, and the person is told the worktree and branch were kept.
+// A switch or close goes ahead even when the chat could not leave its worktree: the worktree is kept, a branch chosen
+// for deleting is still deleted on origin, and the person is told the worktree was kept.
 async function leavingWithoutDeletes($: EngineInterface, leaving: string[], action: string): Promise<string[]> {
   const stuck = await whileBusy($, 'Moving this chat out of its worktree', () => leftWorktreeFor($, leaving))
   if (!stuck) return leaving
-  await showFailure($, `${action}, but its worktree and branch were kept: ${stuck}`)
-  return leaving.filter(step => step !== DELETE_WORKTREE && step !== DELETE_BRANCH)
+  await showFailure($, `${action}, but its worktree was kept: ${stuck}`)
+  return [...leaving.filter(step => step !== DELETE_WORKTREE), KEEP_WORKTREE]
 }
 
 export async function activateSession($: EngineInterface, sessionName: string): Promise<ChatBarClient> {
