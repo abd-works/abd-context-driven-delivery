@@ -173,6 +173,11 @@ class CddHome:
     def mode(self) -> str:
         return self._runtime().get("mode", "")
 
+    def is_pinned_to(self, checkout: Path | str) -> bool:
+        """True when the pinned runtime serves ``checkout``'s current commit."""
+        source = Path(checkout).resolve()
+        return self._runtime().get("commit", "") == self._git(source, Git(source), "rev-parse", "HEAD")
+
     @functools.cached_property
     def interpreter(self) -> PythonInterpreter:
         """The Python the server runs on: the one the first install recorded, else the one running this install."""

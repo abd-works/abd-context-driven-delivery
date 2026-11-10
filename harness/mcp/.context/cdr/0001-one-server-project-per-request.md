@@ -14,4 +14,4 @@ The first two consequences below are superseded by `0002-the-project-travels-on-
 
 - The server keeps one set of toolset objects and one current session per project, because toolsets hold state between calls.
 - A call outside the server (a script or a spec) names its project with `space.work_state.working_on`, or falls back to `CDD_PROJECT`, then the current folder.
-- Installing from a worktree no longer changes the serving code. `install.py --pin-runtime` and `install.py --serve-from-checkout` are the only ways to change it.
+- Installing from a worktree never changes the serving code. A plain install from the main checkout pins its commit when the server is pinned to an older one; `--pin-runtime` pins without the full install, and `--serve-from-checkout` serves the checkout on disk.

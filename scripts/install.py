@@ -34,7 +34,7 @@ def main() -> int:
         "--pin-runtime",
         action="store_true",
         help="Serve this checkout's current commit from ~/.cdd/runtime to every chat, restarting the cdd server. "
-        "Only pins: run a plain install as well when skills, rules, or commands changed.",
+        "Only pins, skipping the full install; a plain install from the main checkout pins as well.",
     )
     serving.add_argument(
         "--update",
@@ -82,6 +82,10 @@ def main() -> int:
         installer.install_self(replace=not args.no_replace)
     else:
         installer.install(replace=not args.no_replace)
+        # A plain install from the main checkout also moves the server onto the commit it just installed.
+        restarted = server.keep_pinned_current()
+        if restarted:
+            print(f"cdd server: {restarted}")
     return 0
 
 

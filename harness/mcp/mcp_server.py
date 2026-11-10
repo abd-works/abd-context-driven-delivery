@@ -296,6 +296,20 @@ class McpInstallation(ServerInstallation):
         """Serve this checkout's current commit from ``~/.cdd/runtime``, restarting the server onto it."""
         return self.daemon.pin_from(self._checkout)
 
+    def keep_pinned_current(self) -> str | None:
+        """After a plain install, serve this checkout's current commit when the server is pinned to an older one, so
+        every chat runs the code just installed. Left alone: a server serving a checkout on disk, an install run from
+        a linked worktree (its commit is not what every chat should run), and an install run inside the server itself.
+        Returns the server's status when it was restarted, else None."""
+        home = self.daemon.home
+        if self.serves_this_process() or (self._checkout / ".git").is_file():
+            return None
+        if home.is_installed and home.mode != home.PINNED:
+            return None
+        if home.is_installed and home.is_pinned_to(self._checkout) and self.daemon.is_running():
+            return None
+        return self.pin_server()
+
     def serve_from_checkout(self) -> str:
         """Serve this checkout as it is on disk, for working on CDD itself, restarting the server onto it."""
         return self.daemon.serve_checkout(self._checkout)
