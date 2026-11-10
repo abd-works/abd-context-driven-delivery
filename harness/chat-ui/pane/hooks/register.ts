@@ -10,7 +10,7 @@ import { checkChatFolder } from './chat-bar/chat-folder-client'
 import { clearBusy, currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
 import { isStagePickerOpen } from './chat-bar/stage-client'
-import { currentFormatChips, loadFormatChips } from './chat-bar/format-choices-client'
+import { currentFormatChips, forgetFormatChips, loadFormatChips } from './chat-bar/format-choices-client'
 import { currentFidelityFiles, FILES_PANE, forgetFiles } from './chat-bar/fidelity-files-client'
 import { FidelityFilesView } from './chat-bar/fidelity-files-view'
 import { currentChatBarView } from './chat-bar/session-dialogs-client'
@@ -93,7 +93,10 @@ export const register: Register = on => {
   // the mod, so a cdd tool call that finishes reads it again.
   on('tool.call', async ($, e, next) => {
     const ran = await next(await withChatNamed($, e))
-    if (CDD_TOOL.test(e.tool)) await refreshChatBar($)
+    if (CDD_TOOL.test(e.tool)) {
+      forgetFormatChips()
+      await refreshChatBar($)
+    }
     return ran
   })
 

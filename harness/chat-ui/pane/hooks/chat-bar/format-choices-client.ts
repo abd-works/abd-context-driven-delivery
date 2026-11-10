@@ -9,6 +9,14 @@ import { callTool, type ChatBarClient } from './chat-bar-client'
 // picks, the chips Python marks starts_picked are on. Atom formatChoices, declared in pane/types/index.d.ts.
 const formatChoices = atom({ plugin: 'cdd-board', key: 'formatChoices' } as const, { key: '', choices: [], picked: null } as FormatChoicesJson)
 
+// The chips read for each set of fidelities this run of the mod, so going back to a set shows its chips at once. A
+// generate changes which formats are made, so the board refresh after a cdd tool call empties it.
+const CACHE = new Map<string, FormatChoiceJson[]>()
+
+export function forgetFormatChips(): void {
+  CACHE.clear()
+}
+
 export type FormatChips = { choices: FormatChoiceJson[]; picked: string[] }
 
 function keyOf(chatBar: ChatBarClient): string {
@@ -28,11 +36,14 @@ export async function loadFormatChips($: EngineInterface, chatBar: ChatBarClient
   const key = keyOf(chatBar)
   const held = await read($, formatChoices)
   if (held?.key === key || !chatBar.ticketName || !chatBar.actionFidelities.length) return
-  let choices: FormatChoiceJson[] = []
-  try {
-    choices = await callTool<FormatChoiceJson[]>($, 'ticket.format_choices', { ticket: chatBar.ticketName, fidelities: chatBar.actionFidelities.map(fidelity => fidelity.slug) })
-  } catch {
-    return
+  let choices = CACHE.get(key)
+  if (!choices) {
+    try {
+      choices = await callTool<FormatChoiceJson[]>($, 'ticket.format_choices', { ticket: chatBar.ticketName, fidelities: chatBar.actionFidelities.map(fidelity => fidelity.slug) })
+    } catch {
+      return
+    }
+    CACHE.set(key, choices)
   }
   await update($, formatChoices, () => ({ key, choices, picked: null }))
 }
