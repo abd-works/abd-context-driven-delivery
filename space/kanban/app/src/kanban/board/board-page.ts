@@ -32,6 +32,9 @@ const FIDELITY_QUERY = 'fidelity'
 const NOT_READ_YET: BoardData = { project: '', practices: [], open_tickets: [], active: null, columns: [], fidelities: [] }
 
 // Everything the page's views act through, wired once.
+// How much of a chat's id tells two chats with the same name apart.
+const SHOWN_CHAT_ID = 8
+
 export class BoardPage {
   readonly store = new BoardStore()
   readonly api: BoardApi
@@ -76,12 +79,12 @@ export class BoardPage {
     await Promise.all([this.tiles.reload(), this.panels.reload(), this.files.reload()])
   }
 
-  // A chat keeps its own name in the chat list, after the name of the ticket it serves, the ticket it was picked for or
-  // the one Python finds it working on, so a person still recognises the chat they picked.
+  // A chat goes by its own name in the chat list; two chats with the same name, such as two titled the same in the app,
+  // also show the start of their ids, so a person can tell them apart.
   chatName(chat: ChatData): string {
     const own = chat.name || chat.id
-    const ticket = this.board.tickets.find(entry => entry.chat.found?.id === chat.id)
-    return ticket ? `${ticket.name} · ${own}` : own
+    const isShared = this.store.state.chats.some(other => other.id !== chat.id && (other.name || other.id) === own)
+    return isShared ? `${own} (${chat.id.slice(0, SHOWN_CHAT_ID)})` : own
   }
 
   // A chat picked in the chat list while a ticket is selected is assigned to that ticket, kept in its session.json, so
@@ -91,6 +94,7 @@ export class BoardPage {
     this.chat.choose(chat)
     const selected = this.board.tickets.find(ticket => ticket.address === this.store.state.selected)
     if (!selected) return
+    this.chat.assign(selected.name, chat)
     await selected.assignChat(chat)
     await this.reader.refresh()
   }

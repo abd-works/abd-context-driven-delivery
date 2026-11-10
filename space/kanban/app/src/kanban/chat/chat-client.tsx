@@ -92,6 +92,24 @@ export class ChatClient {
     void this.readMessages()
   }
 
+  // The chat a person has just assigned to each ticket, until a board read names it as the ticket's chat. A read can
+  // take longer than the person waits before pressing the ticket, and one started before the assignment still names
+  // the chat from before it, so until a read catches up the assignment is the ticket's chat.
+  private readonly assigning = new Map<string, string>()
+
+  assign(ticket: string, chat: string): void {
+    if (chat) this.assigning.set(ticket, chat)
+    else this.assigning.delete(ticket)
+  }
+
+  // The id of ticket's chat: the one just assigned while board reads still name another, else the one the read names.
+  chatOf(ticket: string, read: string): string {
+    const assigned = this.assigning.get(ticket)
+    if (assigned === undefined) return read
+    if (assigned === read) this.assigning.delete(ticket)
+    return assigned
+  }
+
   // A message the chat took but did not show goes back in its queue, and the chat takes it again.
   resend(message: string): Promise<void> {
     return this.actOnTarget(chat => chat.resend(message))
@@ -175,7 +193,8 @@ export class TicketChat {
   ) {}
 
   get found(): ChatData | undefined {
-    return this.working ? this.chats.connected(this.working.id) : undefined
+    const chat = this.chats.chatOf(this.ticket, this.working?.id ?? '')
+    return chat ? this.chats.connected(chat) : undefined
   }
 
   get isOpening(): boolean {

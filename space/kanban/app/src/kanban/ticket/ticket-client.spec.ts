@@ -273,10 +273,10 @@ describe('Open Ticket Chat', () => {
       expect((await clicked()).store.state.targetChat).toBe('ticket-chat')
     })
 
-    it('should name that chat by the ticket, then by its own name', async () => {
+    it('should list that chat by its own name', async () => {
       const page = await clicked()
       const chat = page.store.state.chats.find(entry => entry.id === 'ticket-chat')!
-      expect(page.chatName(chat)).toBe(`${ACTIVE} · abd · first words`)
+      expect(page.chatName(chat)).toBe('abd · first words')
     })
   })
 
@@ -294,12 +294,6 @@ describe('Open Ticket Chat', () => {
       await ticketOn(page, ACTIVE).choose()
       return page
     }
-
-    it('should list the picked chat by the ticket and its own name', async () => {
-      const page = await pickedThenClicked()
-      const chat = page.store.state.chats.find(entry => entry.id === 'other-chat')!
-      expect(page.chatName(chat)).toBe(`${ACTIVE} · ${chat.name || chat.id}`)
-    })
 
     it('should choose the picked chat again when the ticket is clicked', async () => {
       expect((await pickedThenClicked()).store.state.targetChat).toBe('other-chat')
