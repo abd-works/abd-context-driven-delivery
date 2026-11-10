@@ -274,6 +274,11 @@ class Board:
         default = self.repo.branch_named(self.repo.default_branch)
         if not default.is_checked_out:
             default.check_out()
+        # Main works in the repository's own folder on the default branch, so the chat forgets any worktree and
+        # branch it had open; the repo tools then act here, not in the last ticket's worktree.
+        state = self.repo.work_state
+        state.worktree_folder = None
+        state.branch_name = default.name
         self.sessions.switch(MAIN_SESSION_NAME)
         self.reread()
         return BoardOverview(self)

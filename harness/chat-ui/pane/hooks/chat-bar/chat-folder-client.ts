@@ -35,9 +35,8 @@ async function workFolderOf($: EngineInterface, chatBar: ChatBarClient): Promise
   return chatBar.worktree || (await mainCheckoutOf($))
 }
 
-// Reads where the chat is and where the active session's work is. When they differ, the chat bar asks the chat to move
-// there by itself, once for each new folder, so a session opened anywhere brings the chat along without a press, and a
-// move the app refuses is not asked again every turn; the band's button asks again.
+// Reads where the chat is and where the active session's work is. Only a switch made in the chat bar asks the chat to
+// move, once; reading never asks.
 async function readChatFolder($: EngineInterface, chatBar: ChatBarClient): Promise<{ current: string; expected: string }> {
   const [current, expected] = await Promise.all([$.session.root(), workFolderOf($, chatBar)])
   await update($, chatFolder, json => ({ ...json, current, expected }))
@@ -45,11 +44,7 @@ async function readChatFolder($: EngineInterface, chatBar: ChatBarClient): Promi
 }
 
 export async function checkChatFolder($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
-  const { current, expected } = await readChatFolder($, chatBar)
-  const { asked } = await read($, chatFolder)
-  if (!current || !expected || sameFolder(current, expected) || sameFolder(asked ?? '', expected) || isChatBusy()) return
-  await update($, chatFolder, json => ({ ...json, asked: expected }))
-  void followSession($, chatBar)
+  await readChatFolder($, chatBar)
 }
 
 // The desktop app moves a chat when the agent's turn ends. A chat still not there this long after the turn that was
@@ -67,14 +62,15 @@ export async function moveToMainCheckout($: EngineInterface): Promise<string> {
   const [current, main] = await Promise.all([$.session.root(), mainCheckoutOf($)])
   if (!main) return `git found no main checkout from ${current}`
   if (sameFolder(current, main)) return ''
-  if (await movedTo($, main)) return ''
+  if (await movedTo($, main, false)) return ''
   return `the app did not move this chat out of ${current}, so its worktree is held open`
 }
 
 // True once the chat is in folder; false once the move had its chance: the asked turn ended and the app still had not.
-async function arrivedIn($: EngineInterface, folder: string, asked: MoveAsked): Promise<boolean> {
+async function arrivedIn($: EngineInterface, folder: string, asked: MoveAsked, followsSession: boolean): Promise<boolean> {
   let sinceTurnEnded = 0
   while (sinceTurnEnded < MOVE_AFTER_TURN_MILLISECONDS) {
+    if (!(await stillWanted($, folder, followsSession))) return true
     if (sameFolder(await $.session.root(), folder)) return true
     await $.clock.sleep(MOVE_CHECK_MILLISECONDS)
     // The app moves the chat once it is idle, so a turn that starts after the asked one (a second move request, a
@@ -88,8 +84,17 @@ async function arrivedIn($: EngineInterface, folder: string, asked: MoveAsked): 
 // so a move is waited on this long before the person is told it failed.
 const LATE_MOVE_MILLISECONDS = 60_000
 
-async function arrivedLate($: EngineInterface, folder: string): Promise<boolean> {
+// A session opened since the move was asked has its own folder, so a wait for the old one ends there: the chat bar
+// neither keeps asking for it nor says it failed.
+async function stillWanted($: EngineInterface, folder: string, followsSession: boolean): Promise<boolean> {
+  if (!followsSession) return true
+  const { expected } = await read($, chatFolder)
+  return !expected || sameFolder(expected, folder)
+}
+
+async function arrivedLate($: EngineInterface, folder: string, followsSession: boolean): Promise<boolean> {
   for (let waited = 0; waited < LATE_MOVE_MILLISECONDS; waited += MOVE_CHECK_MILLISECONDS) {
+    if (!(await stillWanted($, folder, followsSession))) return true
     if (sameFolder(await $.session.root(), folder)) return true
     await $.clock.sleep(MOVE_CHECK_MILLISECONDS)
   }
@@ -132,14 +137,16 @@ export async function followSession($: EngineInterface, chatBar: ChatBarClient):
   const { expected, isElsewhere } = await currentChatFolder($)
   if (!isElsewhere) return
   $.ui.toast(`Moving this chat to ${expected}${chatBar.sessionName ? `, for ${chatBar.sessionName}` : ''}`)
-  if (!(await movedTo($, expected))) await showFailure($, `The app did not move this chat to ${expected}`)
+  if (!(await movedTo($, expected, true))) await showFailure($, `The app did not move this chat to ${expected}`)
   await readChatFolder($, chatBar)
 }
 
 // Asks the move once: the agent's change_directory is asked a single time, and the chat is waited on through the
 // late-move limit before the move counts as refused.
-async function movedTo($: EngineInterface, folder: string): Promise<boolean> {
+async function movedTo($: EngineInterface, folder: string, followsSession: boolean): Promise<boolean> {
   const asked = await moveChatTo($, folder)
   if (!asked) return false
-  return (await arrivedIn($, folder, asked)) || (await arrivedLate($, folder))
+  if (await arrivedIn($, folder, asked, followsSession)) return true
+  // A switch asks once and waits once; only leaving a worktree that is about to be deleted waits for a late move.
+  return !followsSession && (await arrivedLate($, folder, followsSession))
 }
