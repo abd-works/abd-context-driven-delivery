@@ -1,23 +1,64 @@
 import type { EngineInterface } from 'claude-code'
 
-import type { LeaveChoicesData, OpenChoicesData } from '@cdd/space/kanban/ticket'
+import type { LeaveChoicesData, OpenChoicesData, TicketData } from '@cdd/space/kanban/ticket'
 
 import { reasonOf } from '../shared/failure'
-import { callTool, MAIN_SESSION, showFailure, type ChatBarClient } from './chat-bar-client'
+import { callTool, currentChatBar, MAIN_SESSION, refreshChatBar, showFailure, type ChatBarClient } from './chat-bar-client'
+import { whileBusy } from './busy-client'
+import { followSession, moveToMainCheckout } from './chat-folder-client'
 import { cancelClose, cancelSwitch, currentChatBarView, showClose, showSwitch } from './session-dialogs-client'
 
-// The person's moves between sessions: open one, create one, close the active one. The dialogs read what each Ticket
-// offers; confirming one puts a command in the chat box, as the other chat bar buttons do, and the agent runs it. A
-// switch has to move this chat between folders and may delete the worktree it works in, which only the agent can see
-// through and recover from, so the chat bar asks it instead of running the steps itself.
+// The person's moves between sessions: open one, create one, close the active one. Each is one ticket tool; the
+// dialogs they open and close, and what they chose, are in session-dialogs-client.ts.
 
-const listed = (words: string[]): string => (words.length ? words.join(', ') : 'nothing')
+// What a close did, in the board's words, ahead of what came of the session.
+const LEFT_STEPS: Record<string, string> = { handoff: 'handoff written', commit: 'committed', push: 'pushed', merge: 'merged to main', delete_branch: 'branch deleted', delete_worktree: 'worktree deleted' }
+// Deleting the worktree this chat works in would leave the chat in a folder that is gone, so it moves out first.
+const DELETE_WORKTREE = 'delete_worktree'
+// Deleting a branch deletes the worktree that has it checked out, so the chat moves out for it too.
+const DELETE_BRANCH = 'delete_branch'
 
-// The steps the agent takes for a switch: leave the active session, open the new one, and move the chat to its folder.
-function openCommandOf(name: string, current: string, leaving: string[], opening: string[]): string {
-  const leave = current ? `Leave session ${current} doing: ${listed(leaving)}. ` : ''
-  const open = name === MAIN_SESSION ? `call board.open_main with leaving=[${leaving.join(', ')}]` : `call ticket.activate with ticket=${name}, leaving=[${leaving.join(', ')}], opening=[${opening.join(', ')}]`
-  return `Open session ${name}. ${leave}If leaving deletes the worktree or branch this chat works in, first move this chat to the main checkout with change_directory. Then ${open}, and move this chat with change_directory to the folder the session now works in.`
+// ticket.close refused to close the session. reason is the server's own text.
+export class CloseRefused {
+  constructor(readonly reason: string) {}
+}
+
+// Deleting a worktree the chat still works in fails halfway, so the chat moves out first and nothing runs until it has.
+// Answers why it could not, or '' when the chat is out or nothing deletes a worktree.
+async function leftWorktreeFor($: EngineInterface, leaving: string[]): Promise<string> {
+  return leaving.includes(DELETE_WORKTREE) || leaving.includes(DELETE_BRANCH) ? moveToMainCheckout($) : ''
+}
+
+export async function activateSession($: EngineInterface, sessionName: string): Promise<ChatBarClient> {
+  const { leaving, opening } = await currentChatBarView($)
+  await cancelSwitch($)
+  const stuck = await whileBusy($, 'Moving this chat out of its worktree', () => leftWorktreeFor($, leaving))
+  if (stuck) {
+    await showFailure($, `${sessionName} did not open, and nothing was changed: ${stuck}`)
+    return currentChatBar($)
+  }
+  const after = await whileBusy($, `Opening ${sessionName}`, () => activatedSession($, sessionName, leaving, opening))
+  if (!after) return currentChatBar($)
+  // The chat bar's switch moves this chat to the new session's worktree, so its branch and files follow CDD. The move
+  // runs after the wheel stops: where the agent is asked to move the chat, its answer waits for the agent's turn to end.
+  await followSession($, after)
+  return after
+}
+
+// board.open_main opens main, the default branch in the repository's own folder, as ticket.activate opens any other
+// ticket's session.
+// Null when the switch failed: the failure stays above the line and the chat stays where it is.
+async function activatedSession($: EngineInterface, sessionName: string, leaving: string[], opening: string[]): Promise<ChatBarClient | null> {
+  try {
+    if (sessionName === MAIN_SESSION) await callTool<object>($, 'board.open_main', { leaving })
+    else await callTool<TicketData>($, 'ticket.activate', { ticket: sessionName, leaving, opening })
+  } catch (failure) {
+    await refreshChatBar($)
+    await showFailure($, `${sessionName} did not open: ${reasonOf(failure)}`)
+    return null
+  }
+  await refreshChatBar($)
+  return currentChatBar($)
 }
 
 // Main has nothing to create: it is the repository's own folder, which board.open_main puts on the default branch.
@@ -37,18 +78,16 @@ export async function pickSession($: EngineInterface, chatBar: ChatBarClient, na
   }
 }
 
-// Confirming the activation dialog puts the switch in the chat box.
-export async function activateSession($: EngineInterface, chatBar: ChatBarClient, sessionName: string): Promise<void> {
-  const { leaving, opening } = await currentChatBarView($)
-  await cancelSwitch($)
-  const current = chatBar.hasSession && !chatBar.isMain ? chatBar.sessionName : ''
-  await $.prompt.fill({ text: openCommandOf(sessionName, current, leaving, opening), mode: 'replace' })
-}
-
-// A new session is created and opened by the agent, in its own worktree, the way a switch opens one.
-export async function createSession($: EngineInterface, chatBar: ChatBarClient, sessionName: string): Promise<void> {
-  const current = chatBar.hasSession && !chatBar.isMain ? ` Leave session ${chatBar.sessionName} first, asking me what to do with its work.` : ''
-  await $.prompt.fill({ text: `Create session ${sessionName} with ticket.create, then open it in its own worktree with ticket.activate, opening=[worktree].${current} Then move this chat with change_directory to the new worktree.`, mode: 'replace' })
+// A new session opens through the same activation dialog as one picked from the list.
+export async function createSession($: EngineInterface, chatBar: ChatBarClient, sessionName: string): Promise<ChatBarClient> {
+  try {
+    const created = await callTool<TicketData>($, 'ticket.create', { title: sessionName })
+    await pickSession($, chatBar, created.name)
+  } catch (failure) {
+    await showFailure($, `${sessionName} was not created: ${reasonOf(failure)}`)
+  }
+  await refreshChatBar($)
+  return currentChatBar($)
 }
 
 // The close dialog offers what the Python Ticket answers closing can do with the session's work.
@@ -60,12 +99,34 @@ export async function openClose($: EngineInterface, chatBar: ChatBarClient): Pro
   }
 }
 
-// Confirming the close dialog puts the close in the chat box; closing returns the chat to main.
-export async function closeSession($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
+// Closing opens main, so the bar answers with main's ticket.
+export async function closeSession($: EngineInterface, chatBar: ChatBarClient): Promise<ChatBarClient | CloseRefused> {
   const { leaving } = await currentChatBarView($)
   await cancelClose($)
-  await $.prompt.fill({
-    text: `Close session ${chatBar.sessionName} doing: ${listed(leaving)}. If that deletes the worktree or branch this chat works in, first move this chat to the main checkout with change_directory. Then call ticket.close with ticket=${chatBar.sessionName}, leaving=[${leaving.join(', ')}], and move this chat to the main checkout.`,
-    mode: 'replace',
-  })
+  const stuck = await whileBusy($, 'Moving this chat out of its worktree', () => leftWorktreeFor($, leaving))
+  if (stuck) {
+    const reason = `${chatBar.title} did not close, and nothing was changed: ${stuck}`
+    await showFailure($, reason)
+    return new CloseRefused(reason)
+  }
+  const after = await whileBusy($, `Closing ${chatBar.sessionName}`, () => closedSession($, chatBar, leaving))
+  if (after instanceof CloseRefused) return after
+  // With the session closed, the chat goes back to the main checkout, which closing returned to the default branch.
+  // The move runs after the wheel stops, as a switch's does.
+  await followSession($, after)
+  return after
+}
+
+async function closedSession($: EngineInterface, chatBar: ChatBarClient, leaving: string[]): Promise<ChatBarClient | CloseRefused> {
+  try {
+    await callTool<TicketData>($, 'ticket.close', { ticket: chatBar.sessionName, leaving })
+  } catch (failure) {
+    await refreshChatBar($)
+    await showFailure($, `${chatBar.title} did not close: ${reasonOf(failure)}`)
+    return new CloseRefused(reasonOf(failure))
+  }
+  const left = leaving.map(step => LEFT_STEPS[step] ?? step)
+  $.ui.toast(`${left.length ? `${chatBar.title}: ${left.join(', ')} · ` : ''}Session ${chatBar.title} closed`)
+  await refreshChatBar($)
+  return currentChatBar($)
 }

@@ -49,6 +49,18 @@ const MOVE_CHECK_MILLISECONDS = 500
 // Where the move was asked of: /cd moves at once; the agent moves the chat when a turn started after the ask ends.
 type MoveAsked = { byAgent: boolean; turnsBefore: number }
 
+// Moves this chat to the main checkout before a worktree it may be working in is deleted, and waits until it is there:
+// a chat still in the worktree holds its folder open, so the delete fails halfway. Answers why the chat is not in the
+// main checkout, or '' once it is.
+export async function moveToMainCheckout($: EngineInterface): Promise<string> {
+  const [current, main] = await Promise.all([$.session.cwd(), mainCheckoutOf($)])
+  if (!main) return `git found no main checkout from ${current}`
+  if (sameFolder(current, main)) return ''
+  const asked = await moveChatTo($, main)
+  if (!asked) return `this chat did not move out of ${current}`
+  return (await arrivedIn($, main, asked)) ? '' : `the app did not move this chat out of ${current}, so its worktree is held open`
+}
+
 // True once the chat is in folder; false once the move had its chance: the asked turn ended and the app still had not.
 async function arrivedIn($: EngineInterface, folder: string, asked: MoveAsked): Promise<boolean> {
   let sinceTurnEnded = 0
