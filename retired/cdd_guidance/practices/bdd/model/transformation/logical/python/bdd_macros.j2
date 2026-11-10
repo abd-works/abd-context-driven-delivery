@@ -1,0 +1,41 @@
+{% macro domain_subject(node) -%}
+with description("{{ node.name }}"):{{ '\n' }}
+{%- endmacro %}
+
+{% macro description_tree(node) -%}
+{%- for child in node.contexts | default([], true) -%}
+{{ context_block(child) | indent(4, true) }}
+{%- endfor -%}
+{%- endmacro %}
+
+{% macro context_block(node) -%}
+with description("{{ node.name }}"):{{ '\n' }}
+{{- setup_for_label(node) | indent(4, true) -}}
+{%- for obs in node.observations | default([], true) -%}
+{{ signature_only(obs) | indent(4, true) }}
+{%- endfor -%}
+{%- if node.contexts | default([], true) -%}
+{{ description_tree(node) }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro setup_for_label(node) -%}
+with before.each:
+    ...{{ '\n' }}
+{%- endmacro %}
+
+{% macro signature_only(node) -%}
+with it("{{ node.name }}"):
+    ...{{ '\n' }}
+{%- endmacro %}
+
+{% macro one_framework(node) -%}
+from mamba import before, description, it
+from expects import expect{{ '\n' }}
+{%- endmacro %}
+
+{% macro scan_pair(node) -%}
+{%- if node.scan | default('', true) -%}
+from {{ node.scan | snake }} import scan{{ '\n' }}
+{%- endif -%}
+{%- endmacro %}

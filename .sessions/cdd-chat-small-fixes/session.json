@@ -1,7 +1,9 @@
 {
-  "worktree": "C:\\dev\\abd-context-driven-delivery",
-  "branch": "cdd-chat-small-fixes",
   "name": "cdd-chat-small-fixes",
-  "workpath": "C:\\dev\\abd-context-driven-delivery",
-  "repo_path": "C:\\dev\\abd-context-driven-delivery"
+  "workpath": "C:\dev\abd-context-driven-delivery",
+  "repo_path": "C:\dev\abd-context-driven-delivery",
+  "title": "cdd-chat-small-fixes",
+  "scope": "feature",
+  "branch": "cdd-chat-small-fixes",
+  "worktree": "C:\dev\abd-context-driven-delivery"
 }

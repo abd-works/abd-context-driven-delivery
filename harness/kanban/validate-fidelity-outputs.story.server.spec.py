@@ -1,0 +1,11 @@
+"""Validate Fidelity Outputs at the server tier: the shared scenarios through the cdd tools ticket.report and
+ticket.violations and the validate.validate prompt, on a cdd server started on a throwaway project."""
+
+from harness.kanban.session_board_tiers import ServerTier
+from harness.kanban.story_test import load_shared, replay
+
+LEFT_OUT = {
+    "Count Validate done only with no graph-rule violations": "Validate writes its validate line from the graph it builds inside the cdd server; no tool writes a line naming chosen violations",
+}
+
+globals().update(replay(load_shared(__file__, "validate-fidelity-outputs"), ServerTier(), LEFT_OUT))
