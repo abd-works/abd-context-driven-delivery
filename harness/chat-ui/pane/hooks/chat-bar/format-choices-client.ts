@@ -24,10 +24,11 @@ function keyOf(chatBar: ChatBarClient): string {
 }
 
 // The chips for the fidelities the action button acts on, as last read. Drawing only reads: until loadFormatChips has
-// read the chips for these fidelities, the bar shows none.
+// read the chips for new fidelities, the bar keeps showing the last chips, so they never blink out.
 export async function currentFormatChips($: EngineInterface, chatBar: ChatBarClient): Promise<FormatChips> {
   const held = (await read($, formatChoices)) ?? { key: '', choices: [], picked: null }
-  if (held.key !== keyOf(chatBar)) return { choices: [], picked: [] }
+  const cached = CACHE.get(keyOf(chatBar))
+  if (held.key !== keyOf(chatBar) && cached) return { choices: cached, picked: cached.filter(choice => choice.starts_picked).map(choice => choice.label) }
   return { choices: held.choices, picked: held.picked ?? held.choices.filter(choice => choice.starts_picked).map(choice => choice.label) }
 }
 
