@@ -8,7 +8,7 @@ import type { TicketData } from '@cdd/space/kanban/ticket'
 import { promptCommand } from '../shared/chat-command'
 import { clearChosenAction } from './action-picker-client'
 
-const selectedFidelity = atom({ plugin: 'cdd-board', key: 'selectedFidelity' } as const, null as string | null)
+const selectedFidelities = atom({ plugin: 'cdd-board', key: 'selectedFidelities' } as const, [] as string[])
 
 // The canvas's progress looks (design/StageStrip.dc.html), one for each state FidelityProgress.state sends; each
 // practice's colour comes with the board.
@@ -97,15 +97,15 @@ export class FidelityProgressClient {
   }
 }
 
-// Atom selectedFidelity, declared in pane/types/index.d.ts and kept in this file.
-export function selectedFidelitySlug($: EngineInterface) {
-  return read($, selectedFidelity)
+// Atom selectedFidelities, declared in pane/types/index.d.ts and kept in this file.
+export async function selectedFidelitySlugs($: EngineInterface): Promise<string[]> {
+  return (await read($, selectedFidelities)) ?? []
 }
 
-// Selecting one fidelity replaces the last, so one dot is selected at most. Selecting another fidelity drops an action
-// picked for the one before, so the button shows this one's next action.
+// A press on a fidelity adds it to the selection, or takes it out when it is already there, so one action can run on
+// several fidelities at once. A change drops an action picked before, so the button shows the next action again.
 export async function selectFidelity($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
-  await update($, selectedFidelity, () => fidelity.slug)
+  await update($, selectedFidelities, slugs => ((slugs ?? []).includes(fidelity.slug) ? (slugs ?? []).filter(slug => slug !== fidelity.slug) : [...(slugs ?? []), fidelity.slug]))
   await clearChosenAction($)
 }
 
@@ -113,4 +113,12 @@ export async function selectFidelity($: EngineInterface, fidelity: FidelityProgr
 // itself when that fidelity has no file in the format, so every action is one command.
 export async function runAction($: EngineInterface, fidelity: FidelityProgressClient, action: string): Promise<void> {
   await promptCommand($, fidelity.commandFor(action))
+}
+
+// One command for several fidelities, as the actions take a list of slugs: the first one's command with every slug.
+export async function runActionOn($: EngineInterface, fidelities: FidelityProgressClient[], action: string): Promise<void> {
+  const [first, ...rest] = fidelities
+  if (!first) return
+  const command = first.commandFor(action)
+  await promptCommand($, rest.length ? command.replace(` ${first.slug} `, ` ${fidelities.map(fidelity => fidelity.slug).join(' ')} `) : command)
 }

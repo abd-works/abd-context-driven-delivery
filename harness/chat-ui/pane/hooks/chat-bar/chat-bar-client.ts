@@ -8,7 +8,7 @@ import type { TicketData } from '@cdd/space/kanban/ticket'
 import type { ChatBarJson } from '../../types'
 import { reasonOf } from '../shared/failure'
 import { SERVER } from '../health/server-health-client'
-import { FidelityProgressClient, selectedFidelitySlug } from './fidelity-progress-client'
+import { FidelityProgressClient, selectedFidelitySlugs } from './fidelity-progress-client'
 import { StageClient, shownStageName } from './stage-client'
 
 // The chat bar: the active session's line above the prompt. Sources: harness/chat-ui/.context/story-map.md,
@@ -26,7 +26,7 @@ export class ChatBarClient {
   constructor(
     json: ChatBarJson,
     private readonly shown: string | null,
-    private readonly selected: string | null,
+    private readonly selected: string[],
   ) {
     this.board = json.board as BoardOverviewData | null
     this.problem = json.problem
@@ -108,7 +108,7 @@ export class ChatBarClient {
     if (!ticket) return []
     return ticket.progress
       .filter(progress => progress.stage.name === this.shownStage && progress.is_enabled)
-      .map(progress => new FidelityProgressClient(progress, ticket, this.practiceNamed(progress.practice.key), progress.fidelity.slug === this.selected, this.labelOf(progress.fidelity.slug)))
+      .map(progress => new FidelityProgressClient(progress, ticket, this.practiceNamed(progress.practice.key), this.selected.includes(progress.fidelity.slug), this.labelOf(progress.fidelity.slug)))
   }
 
   // The fidelities the session card lists a folder beside: practices that write under one folder share it, so each
@@ -124,9 +124,17 @@ export class ChatBarClient {
     return this.selectedFidelity ?? this.fidelities.find(fidelity => fidelity.slug === this.ticket?.next?.fidelity.slug) ?? this.fidelities[0] ?? null
   }
 
-  // Null when the stored fidelity is not one of the shown stage's, so the selection never points into a hidden stage.
+  // The first selected of the shown stage's fidelities; a selection in a hidden stage is ignored.
   get selectedFidelity(): FidelityProgressClient | null {
     return this.fidelities.find(fidelity => fidelity.isSelected) ?? null
+  }
+
+  // Every fidelity the action button acts on: each one selected, else the one actionFidelity names.
+  get actionFidelities(): FidelityProgressClient[] {
+    const selected = this.fidelities.filter(fidelity => fidelity.isSelected)
+    if (selected.length) return selected
+    const one = this.actionFidelity
+    return one ? [one] : []
   }
 
   // The status line: the session, its stage, its next fidelity or done, and how many fidelities have violations.
@@ -193,7 +201,7 @@ export async function callTool<T>($: EngineInterface, tool: string, args: object
 
 // Atom chatBar, declared in pane/types/index.d.ts and kept in this file: the last board.overview answer.
 export async function currentChatBar($: EngineInterface): Promise<ChatBarClient> {
-  return new ChatBarClient(await read($, chatBar), await shownStageName($), await selectedFidelitySlug($))
+  return new ChatBarClient(await read($, chatBar), await shownStageName($), await selectedFidelitySlugs($))
 }
 
 // A failed read keeps the last board and says why, so the bar never draws old state as if it were current.

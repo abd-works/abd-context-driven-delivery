@@ -5,7 +5,7 @@ import { GlyphButtonView } from '../shared/glyph-button-view'
 import { chooseAction, clearChosenAction, toggleActionPicker } from './action-picker-client'
 import { moveNext, type ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
-import { runAction } from './fidelity-progress-client'
+import { runActionOn } from './fidelity-progress-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
@@ -34,7 +34,7 @@ async function pressAction($: EngineInterface, chatBar: ChatBarClient, action: s
   await clearChosenAction($)
   if (action === 'advance') return moveNext($, chatBar)
   if (!fidelity) return
-  return runAction($, fidelity, action)
+  return runActionOn($, chatBar.actionFidelities, action)
 }
 
 // The orange chip of the canvas, an orange Box holding the next action's icon, then the ▾ that opens
@@ -43,7 +43,7 @@ export function ActionButtonView($: EngineInterface, elements: ElementTable, { c
   const { Box, Text } = elements
   const action = shownActionOf(chatBar, picker.chosenAction)
   if (!action) return null
-  const target = action === 'advance' ? `move ${chatBar.sessionName} on` : `${action} ${chatBar.actionFidelity?.slug ?? ''}`
+  const target = action === 'advance' ? `move ${chatBar.sessionName} on` : `${action} ${chatBar.actionFidelities.map(fidelity => fidelity.slug).join(' ')}`
   return (
     <Box key="action" flexDirection="row" gap={0} paddingX={1} backgroundColor={BRAND.accent}>
       {GlyphButtonView(elements, 'next-action', iconOf(action), BRAND.onAccent, () => pressAction($, chatBar, action))}

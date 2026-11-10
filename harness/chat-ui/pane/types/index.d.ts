@@ -64,7 +64,7 @@ declare module 'claude-code' {
       install: InstallJson
       chatBar: ChatBarJson
       chatBarView: ChatBarViewJson
-      selectedFidelity: string | null
+      selectedFidelities: string[]
       actionPicker: ActionPickerJson
       fidelityFiles: FidelityFilesJson
       shownStage: string | null
