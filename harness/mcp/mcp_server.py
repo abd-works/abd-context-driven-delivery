@@ -709,8 +709,11 @@ class McpHost:
         # Read it from its module as it is now: a restart imports it again, and tools read the new one.
         from harness.agent_tools.progress import reporting_to
 
-        with reporting_to(reporter):
-            return self.answer(call)
+        # The answer is read into JSON while the call is still the one being answered: properties such as a board's
+        # active ticket depend on the chat that asked, and read after the call they would answer for no chat.
+        with reporting_to(reporter), call.being_answered():
+            value = self.answer(call)
+            return value if isinstance(value, str) else data_of(value)
 
     def dispatch(self, name: str, arguments: dict[str, object] | None = None, project: Path | None = None) -> object:
         """Run one tool call made in process on project; one that names no project works on the folder ``CDD_PROJECT``
