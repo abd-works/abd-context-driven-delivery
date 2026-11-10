@@ -510,6 +510,17 @@ with description("an MCP host") as self:
                 expect(self.host.dispatch("hosting-demo.read_count", {}, self.first)).to(equal(0))
 
 
+# A restart imports the checkout again; a package folder with no __init__.py must be imported again with it.
+with description("an MCP host over every toolset of the checkout") as self:
+    with context("that has been restarted"):
+        with before.all:
+            self.host = McpHost.from_repo(_REPO_ROOT)
+            self.restarted = self.host.dispatch("cdd.restart", {})
+
+        with it("should start every toolset again"):
+            expect(self.restarted["exceptions"]).to(equal([]))
+
+
 with description("an MCP host tool ping") as self:
     with before.each:
         self.host = McpHost.from_refs(

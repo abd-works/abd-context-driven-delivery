@@ -171,105 +171,71 @@ with description("a ticket's work through the cdd server") as self:
     # (S) Person --> Open Ticket Session
     with context("that a ticket is created"):
         with before.all:
-            self.created = self.chat.answer("ticket.create", title="Walk branch")
+            self.created = self.chat.answer("ticket.create", title="Walk worktree")
 
         with it("should name the ticket after its title"):
-            expect(self.created["name"]).to(equal("walk-branch"))
+            expect(self.created["name"]).to(equal("walk-worktree"))
 
         with it("should make its session folder"):
-            expect((self.clone.work / ".sessions" / "walk-branch" / "session.json").is_file()).to(be_true)
+            expect((self.clone.work / ".sessions" / "walk-worktree" / "session.json").is_file()).to(be_true)
 
     # (S) Person --> Activate Ticket
-    with context("that the ticket is opened on its branch"):
+    with context("that the ticket is opened in its own worktree"):
         with before.all:
-            self.chat.answer("ticket.activate", ticket="walk-branch", opening=["branch"])
-
-        with it("should check its branch out"):
-            expect(self.clone.branch).to(equal("walk-branch"))
-
-        with it("should open its session"):
-            expect(self.chat.answer("sessions.current")["name"]).to(equal("walk-branch"))
-
-        with it("should have pushed its session folder to main first"):
-            expect(self.clone.tracked("origin/main", ".sessions/walk-branch")).to(contain(".sessions/walk-branch/session.json"))
-
-    # (S) Repo --> Push Branch
-    with context("that work is pushed from its branch"):
-        with before.all:
-            (self.clone.work / "feature.txt").write_text("first\n", encoding="utf-8")
-            self.chat.answer("repo.push_commit", message="Add feature", untracked=True, sync_remote=True)
-
-        with it("should commit the work on its branch"):
-            expect(self.clone.subject()).to(equal("Add feature"))
-
-        with it("should push the branch to origin"):
-            expect(self.clone.subject("origin/walk-branch")).to(equal("Add feature"))
-
-    with context("that work was pushed to its branch from elsewhere"):
-        with before.all:
-            self.clone.push_from_elsewhere("walk-branch", "elsewhere.txt", "from elsewhere\n", "Change from elsewhere")
-            (self.clone.work / "feature.txt").write_text("second\n", encoding="utf-8")
-            self.chat.answer("repo.push_commit", message="Change feature", untracked=True, sync_remote=True)
-
-        with it("should bring that work in"):
-            expect((self.clone.work / "elsewhere.txt").is_file()).to(be_true)
-
-        with it("should push its own commit after it"):
-            expect(self.clone.subjects("origin/walk-branch")).to(contain("Change feature", "Change from elsewhere"))
-
-    # (S) Person --> Open Main
-    with context("that main is opened again, merging the ticket's work"):
-        with before.all:
-            self.chat.answer("board.open_main", leaving=["handoff", "commit", "push", "merge"])
-
-        with it("should check main out"):
-            expect(self.clone.branch).to(equal("main"))
-
-        with it("should merge the ticket's work into main"):
-            expect((self.clone.work / "feature.txt").is_file()).to(be_true)
-
-        with it("should open main"):
-            expect(self.chat.answer("sessions.current")["name"]).to(equal("main"))
-
-    with context("that a ticket is opened in its own worktree"):
-        with before.all:
-            self.chat.answer("ticket.create", title="Walk worktree")
             self.chat.answer("ticket.activate", ticket="walk-worktree", opening=["worktree"])
             self.worktree = self.clone.worktree_of("walk-worktree")
 
         with it("should make a worktree on its branch"):
             expect(self.worktree is not None and self.worktree.is_dir()).to(be_true)
 
-        with it("should leave the main clone on main"):
+        with it("should leave the clone's own folder on main"):
             expect(self.clone.branch).to(equal("main"))
-
-        with it("should give the worktree its session folder"):
-            expect((self.worktree / ".sessions" / "walk-worktree" / "session.json").is_file()).to(be_true)
-
-        with it("should keep its session folder committed on main"):
-            expect(self.clone.tracked("main", ".sessions/walk-worktree")).to(contain(".sessions/walk-worktree/session.json"))
 
         with it("should open its session"):
             expect(self.chat.answer("sessions.current")["name"]).to(equal("walk-worktree"))
 
+        with it("should keep its session folder in the clone's own .sessions"):
+            expect((self.clone.work / ".sessions" / "walk-worktree" / "session.json").is_file()).to(be_true)
+
+    # (S) Repo --> Push Branch
     with context("that work is pushed from the worktree"):
         with before.all:
-            worktree = self.clone.worktree_of("walk-worktree")
-            (worktree / "in-worktree.txt").write_text("worktree work\n", encoding="utf-8")
-            self.chat.answer("repo.push_commit", message="Work in worktree", untracked=True, sync_remote=True)
-            self.worktree = worktree
+            self.worktree = self.clone.worktree_of("walk-worktree")
+            (self.worktree / "feature.txt").write_text("first
+", encoding="utf-8")
+            self.chat.answer("repo.push_commit", message="Add feature", untracked=True, sync_remote=True)
 
         with it("should commit the work on the worktree's branch"):
-            expect(self.clone.subject(folder=self.worktree)).to(equal("Work in worktree"))
+            expect(self.clone.subject(folder=self.worktree)).to(equal("Add feature"))
+
+        with it("should push the branch to origin"):
+            expect(self.clone.subject("origin/walk-worktree")).to(equal("Add feature"))
 
         with it("should leave main without that commit"):
-            expect(self.clone.subjects("main")).not_to(contain("Work in worktree"))
+            expect(self.clone.subjects("main")).not_to(contain("Add feature"))
 
-        with it("should push the worktree's branch to origin"):
-            expect(self.clone.origin_branches()).to(contain("walk-worktree"))
+        # The ticket's record lives on main; its branch carries only the work.
+        with it("should carry no session files on the ticket's branch"):
+            changed = git(self.clone.work, "diff", "--name-only", "main...walk-worktree").splitlines()
+            expect([path for path in changed if path.startswith(".sessions/")]).to(equal([]))
+
+    with context("that work was pushed to its branch from elsewhere"):
+        with before.all:
+            self.worktree = self.clone.worktree_of("walk-worktree")
+            self.clone.push_from_elsewhere("walk-worktree", "elsewhere.txt", "from elsewhere
+", "Change from elsewhere")
+            (self.worktree / "feature.txt").write_text("second
+", encoding="utf-8")
+            self.chat.answer("repo.push_commit", message="Change feature", untracked=True, sync_remote=True)
+
+        with it("should bring that work in"):
+            expect((self.worktree / "elsewhere.txt").is_file()).to(be_true)
+
+        with it("should push its own commit after it"):
+            expect(self.clone.subjects("origin/walk-worktree")).to(contain("Change feature", "Change from elsewhere"))
 
     # (S) Person --> Close Ticket
-    with context("that the worktree's ticket is closed, its branch merged and deleted"):
+    with context("that the ticket is closed, its branch merged and deleted"):
         with before.all:
             self.worktree = self.clone.worktree_of("walk-worktree")
             leaving = ["handoff", "commit", "push", "merge", "delete_branch", "delete_worktree"]
@@ -279,7 +245,7 @@ with description("a ticket's work through the cdd server") as self:
             expect(self.worktree.exists()).to(equal(False))
 
         with it("should merge its work into main"):
-            expect((self.clone.work / "in-worktree.txt").is_file()).to(be_true)
+            expect(((self.clone.work / "feature.txt").is_file(), (self.clone.work / "elsewhere.txt").is_file())).to(equal((True, True)))
 
         with it("should delete its branch here"):
             expect(self.clone.branches()).not_to(contain("walk-worktree"))
@@ -324,57 +290,39 @@ with description("a ticket's work through the cdd server") as self:
         with it("should push main with the merge"):
             expect(self.clone.subject("origin/main")).to(equal(self.clone.subject("main")))
 
-    with context("that a person switches between two tickets on their branches"):
+    with context("that a person switches between two tickets in their worktrees"):
         with before.all:
             for title in ("Walk one", "Walk two"):
                 self.chat.answer("ticket.create", title=title)
-            self.chat.answer("ticket.activate", ticket="walk-one", opening=["branch"])
-            (self.clone.work / "one.txt").write_text("one\n", encoding="utf-8")
-            self.chat.answer("ticket.activate", ticket="walk-two", leaving=["handoff", "commit", "push"], opening=["branch"])
-            self.on_two = (self.clone.branch, self.chat.answer("sessions.current")["name"])
+            self.chat.answer("ticket.activate", ticket="walk-one", opening=["worktree"])
+            (self.clone.worktree_of("walk-one") / "one.txt").write_text("one
+", encoding="utf-8")
+            self.chat.answer("ticket.activate", ticket="walk-two", leaving=["handoff", "commit", "push"], opening=["worktree"])
+            self.on_two = self.chat.answer("sessions.current")["name"]
             self.board_on_two = board_tickets(self.chat.answer("board.show"))
-            self.chat.answer("ticket.activate", ticket="walk-one", leaving=["commit", "push"], opening=["branch"])
-            self.on_one = self.clone.branch
+            self.chat.answer("ticket.activate", ticket="walk-one", leaving=["commit", "push"])
+            self.on_one = self.chat.answer("sessions.current")["name"]
+            leaving = ["commit", "push", "merge", "delete_branch", "delete_worktree"]
             for ticket in ("walk-one", "walk-two"):
-                self.chat.answer("ticket.close", ticket=ticket, leaving=["commit", "push", "merge", "delete_branch"])
+                self.chat.answer("ticket.close", ticket=ticket, leaving=leaving)
 
         with it("should bring the work of the ticket it left to main once that ticket closes"):
             expect(self.clone.tracked("origin/main", "one.txt")).to(contain("one.txt"))
 
         with it("should open the ticket switched to"):
-            expect(self.on_two).to(equal(("walk-two", "walk-two")))
+            expect(self.on_two).to(equal("walk-two"))
 
-        with it("should keep both tickets on the board on either branch"):
+        with it("should keep both tickets on the board"):
             expect(self.board_on_two).to(contain("walk-one", "walk-two"))
 
-        with it("should switch back to the first ticket's branch"):
+        with it("should open the first ticket again"):
             expect(self.on_one).to(equal("walk-one"))
 
         with it("should delete both branches once closed"):
             expect(self.clone.branches()).not_to(contain("walk-one", "walk-two"))
 
-        with it("should end on main"):
+        with it("should keep the clone's own folder on main throughout"):
             expect(self.clone.branch).to(equal("main"))
-
-    with context("that a ticket is created while the clone is on another ticket's branch"):
-        with before.all:
-            self.chat.answer("ticket.create", title="Walk a")
-            self.chat.answer("ticket.activate", ticket="walk-a", opening=["branch"])
-            self.chat.answer("ticket.create", title="Walk b")
-            self.chat.answer("ticket.activate", ticket="walk-b", leaving=["commit", "push"], opening=["branch"])
-            self.board = board_tickets(self.chat.answer("board.show"))
-            self.on = self.clone.branch
-            for ticket in ("walk-b", "walk-a"):
-                self.chat.answer("ticket.close", ticket=ticket, leaving=["commit", "push", "merge", "delete_branch"])
-
-        with it("should open the new ticket on its branch"):
-            expect(self.on).to(equal("walk-b"))
-
-        with it("should push the new ticket's session folder to main"):
-            expect(self.clone.tracked("origin/main", ".sessions/_complete/walk-b")).to(contain(".sessions/_complete/walk-b/session.json"))
-
-        with it("should keep both tickets on the board"):
-            expect(self.board).to(contain("walk-a", "walk-b"))
 
     # (S) Repo --> Close Branch
     with context("that origin's main moved on before a branch is closed"):

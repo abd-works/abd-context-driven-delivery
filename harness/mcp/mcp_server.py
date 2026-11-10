@@ -426,10 +426,17 @@ class McpServer:
         return [item if isinstance(item, str) else str(ToolsetReference.of(item)) for item in self._toolsets]
 
     def _forget_checkout_modules(self) -> None:
-        for name, module in list(sys.modules.items()):
-            if self._is_checkout_file(getattr(module, "__file__", None)):
-                del sys.modules[name]
+        # Every module is judged before any is forgotten: a namespace package reads its folders through its parent.
+        forgotten = [name for name, module in list(sys.modules.items()) if self._is_checkout_module(module)]
+        for name in forgotten:
+            del sys.modules[name]
         importlib.invalidate_caches()
+
+    def _is_checkout_module(self, module: Any) -> bool:
+        """Whether module was imported from this checkout. A package folder with no ``__init__.py`` has no file, only
+        its folders, and kept while the packages around it are forgotten it looks for a parent that is gone."""
+        folders = list(getattr(module, "__path__", None) or [])
+        return any(self._is_checkout_file(file) for file in (getattr(module, "__file__", None), *folders))
 
     def _is_checkout_file(self, file: str | None) -> bool:
         if not file:

@@ -82,28 +82,79 @@ function Get-RelativePath {
     return $FullName.Substring($repo.Length).TrimStart('\', '/').Replace('\', '/')
 }
 
+# Spec files run one batch per module folder: each batch is one process, which imports the framework once for all of
+# that folder's files, and the batches run side by side. Each batch gets its own cdd home, so no two batches write the
+# same open-sessions.json.
+$parallelBatches = [Math]::Max(2, [Environment]::ProcessorCount - 2)
+# How many folders deep a batch reaches: `space/kanban`, `harness/mcp`, `cdd_guidance/practices/stories`.
+$batchDepth = 3
+
+function Get-BatchKey {
+    param([string]$Relative)
+    $folders = @($Relative.Split('/') | Select-Object -SkipLast 1)
+    if ($folders.Count -eq 0) { return "." }
+    return ($folders | Select-Object -First $batchDepth) -join '/'
+}
+
+function Start-SpecBatch {
+    param([string]$Executable, [string[]]$Arguments, [string]$Key, [string[]]$Relatives, [string]$OutputFolder)
+    $env:CDD_HOME = Join-Path $OutputFolder ("home-" + [guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Force $env:CDD_HOME | Out-Null
+    $out = Join-Path $OutputFolder ([guid]::NewGuid().ToString("N") + ".out")
+    $process = Start-Process -FilePath $Executable -ArgumentList ($Arguments + $Relatives) -WorkingDirectory $repo `
+        -NoNewWindow -PassThru -RedirectStandardOutput $out -RedirectStandardError "$out.err"
+    # Windows PowerShell reads a started process's exit code only when its handle was taken while it ran.
+    $null = $process.Handle
+    return [pscustomobject]@{ Process = $process; Key = $Key; Relatives = $Relatives; Out = $out }
+}
+
+function Get-FailedFiles {
+    param($Batch)
+    # Mamba names the spec file of each failed example on its Failure/Error line.
+    $text = Get-Content $Batch.Out, "$($Batch.Out).err" -Raw -ErrorAction SilentlyContinue
+    $failed = @($Batch.Relatives | Where-Object { $text -match [regex]::Escape("Failure/Error: " + $_.Replace('/', '\')) -or $text -match [regex]::Escape("Failure/Error: " + $_) })
+    if ($Batch.Process.ExitCode -ne 0 -and $failed.Count -eq 0) { return @($Batch.Key) }
+    return $failed
+}
+
 function Invoke-Reported {
     param(
         [string]$Label,
         [string[]]$Files,
-        [scriptblock]$RunOne
+        [string]$Executable,
+        [string[]]$Arguments,
+        [int]$Parallel = $parallelBatches
     )
     Write-Host ""
     Write-Host "$Label ($($Files.Count))"
     if ($Files.Count -eq 0) {
         return
     }
-    $index = 0
-    foreach ($file in $Files) {
-        $index++
-        $relative = Get-RelativePath $file
-        Write-Host ""
-        Write-Host "[$index/$($Files.Count)] $relative"
-        & $RunOne $relative | Out-Host
-        if ($LASTEXITCODE -ne 0) {
-            Write-Output $relative
+    $outputFolder = Join-Path ([IO.Path]::GetTempPath()) ("cdd-spec-run-" + [guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Force $outputFolder | Out-Null
+    $batches = $Files | ForEach-Object { Get-RelativePath $_ } | Group-Object { Get-BatchKey $_ } | Sort-Object Count -Descending
+    $pending = [System.Collections.Generic.Queue[object]]::new([object[]]@($batches))
+    $running = New-Object System.Collections.Generic.List[object]
+    $finished = New-Object System.Collections.Generic.List[object]
+    while ($pending.Count -gt 0 -or $running.Count -gt 0) {
+        while ($pending.Count -gt 0 -and $running.Count -lt $Parallel) {
+            $group = $pending.Dequeue()
+            $running.Add((Start-SpecBatch $Executable $Arguments $group.Name ([string[]]$group.Group) $outputFolder))
         }
+        foreach ($batch in @($running | Where-Object { $_.Process.HasExited })) {
+            $batch.Process.WaitForExit()
+            $finished.Add($batch)
+            $running.Remove($batch) | Out-Null
+        }
+        Start-Sleep -Milliseconds 200
     }
+    foreach ($batch in ($finished | Sort-Object Key)) {
+        Write-Host ""
+        Write-Host "[$($batch.Key)] $($batch.Relatives.Count) files"
+        Get-Content $batch.Out, "$($batch.Out).err" -ErrorAction SilentlyContinue | Out-Host
+        Get-FailedFiles $batch | ForEach-Object { Write-Output $_ }
+    }
+    Remove-Item -Recurse -Force $outputFolder -ErrorAction SilentlyContinue
 }
 
 Set-TestEnvironment
@@ -124,24 +175,19 @@ try {
         $storyModule = Join-Path $repo "cdd_guidance\practices\stories\templates\py"
         $savedPath = $env:PYTHONPATH
         $env:PYTHONPATH = "$storyModule$([IO.Path]::PathSeparator)$savedPath"
-        $storyFailures = Invoke-Reported "Python story tests" $stories {
-            param($relative)
-            & $python -m story_test --format documentation $relative
-        }
+        $storyFailures = Invoke-Reported "Python story tests" $stories $python @("-m", "story_test", "--format", "documentation")
         $env:PYTHONPATH = $savedPath
-        $specFailures = Invoke-Reported "Mamba specs" $specs {
-            param($relative)
-            & $mamba --format documentation $relative
-        }
+        $specFailures = Invoke-Reported "Mamba specs" $specs $mamba @("--format", "documentation")
         foreach ($relative in @($storyFailures) + @($specFailures)) {
             if ($relative) { $failures.Add($relative) | Out-Null }
         }
         $total = @($stories).Count + @($specs).Count
     } elseif ($Suite -eq "heavy") {
         $heavySpecs = @(Get-RepoFiles { param($name) Test-Heavy $name })
-        $heavyFailures = Invoke-Reported "Heavy specs" $heavySpecs {
-            param($relative)
-            & $mamba --format documentation $relative
+        # Heavy specs start servers and browsers, so each runs in its own process, one at a time.
+        $heavyFailures = @()
+        foreach ($heavy in $heavySpecs) {
+            $heavyFailures += Invoke-Reported "Heavy spec" @($heavy) $mamba @("--format", "documentation") -Parallel 1
         }
         foreach ($relative in @($heavyFailures)) {
             if ($relative) { $failures.Add($relative) | Out-Null }
@@ -151,10 +197,7 @@ try {
         $agentSpecs = @(Get-RepoFiles { param($name) $name -like "*_spec.py" } | Where-Object {
             Test-AgenticBdd ([IO.Path]::GetFileName($_))
         })
-        $agentFailures = Invoke-Reported "Agentic BDD" $agentSpecs {
-            param($relative)
-            & $mamba --format documentation $relative
-        }
+        $agentFailures = Invoke-Reported "Agentic BDD" $agentSpecs $mamba @("--format", "documentation")
         foreach ($relative in @($agentFailures)) {
             if ($relative) { $failures.Add($relative) | Out-Null }
         }

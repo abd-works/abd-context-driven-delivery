@@ -35,9 +35,9 @@
 - Has the work that is done. It knows its past work by reading its own log, and it finds the files that work produced by asking the knowledge graph.
 - Works in one folder of the repository, its *workpath*; the whole repository until a person chooses one. Each practice writes under its own folder, its *practice root*: the folder a person chose for that practice, or else the workpath plus the practice's default folder.
 - Its *work required* is every fidelity of its active practices. A practice is active until a person turns it off for this session, so tickets can work on different practices on one board.
-- Each fidelity goes through the same actions in order: Generate, Validate, then Review, where a person approves it. Each action on a fidelity is to do, in progress, or done.
-- A fidelity is done when every action is done. Validate is done when its latest activity on that fidelity names no graph-rule violations and the judgment the validating agent added to its latest report fails no rule. The person checks the AI-judged rules in Review, which counts only after Validate is done.
-- *Next action* is what Run next does on a ticket: on the first fidelity not done in its stage or any stage before it, earliest stage first, the first of generate, validate, and review not done. Violations hold a session on that fidelity, so the next action is review: a person reads the violations and tells the agent to fix them, and the review itself is recorded only after a clean Validate.
+- Each fidelity goes through Generate and Validate, and a person may Review it. Each action on a fidelity is to do, in progress, or done.
+- A fidelity is done once Generate and Validate are done: review is never required. Validate is done when its latest activity on that fidelity names no graph-rule violations and the judgment the validating agent added to its latest report fails no rule.
+- *Next action* is what Run next does on a ticket: on the first fidelity not done in its stage or any stage before it, earliest stage first, the first of generate and validate not done. Violations hold a session on that fidelity, so the next action is review: a person reads the violations and tells the agent to fix them.
 
 ### activity
 

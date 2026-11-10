@@ -42,6 +42,9 @@ GRAPH_RULE_VIOLATION = "graph-rule"
 MOVED_INTO = "move"
 MARKED_DONE = "done"
 MARKED_IN_PROGRESS = "in-progress"
+# The session.json fields that record a ticket's stage and its mark there.
+_STAGE_FIELD = "stage"
+_STAGE_MARK_FIELD = "stage_mark"
 # The actions that check or convert a fidelity's output, so they wait until there is some.
 ONCE_THERE_IS_OUTPUT = (VALIDATE, REVIEW, RENDER)
 
@@ -470,9 +473,10 @@ class TicketWork:
 
 
 class StageMarks:
-    """*StageMarks* are the moves and marks a person made on one ticket's stages, as its session's log answers them: the
-    stage it was last moved into, and in a stage whether it was last marked done or in progress since entering it. A
-    move or mark is a line written through the ticket's work, whose progress is read again after it."""
+    """*StageMarks* are the moves and marks a person made on one ticket's stages: the stage it was last moved into, and
+    in that stage whether it was last marked done or in progress. They are the ticket's record, kept in its session.json
+    (``stage``, ``stage_mark``), so the stage never depends on which log lines a branch has. Each move or mark is also a
+    log line, the history agentic improvement reads; a ticket moved before the record existed is read from its log."""
 
     def __init__(self, ticket: Ticket) -> None:
         self._ticket = ticket
@@ -480,20 +484,33 @@ class StageMarks:
     @property
     def moved_into(self) -> Stage | None:
         """The stage of the ticket's latest move; none before a person has moved it."""
-        moved = self._ticket.session.log.latest(MOVED_INTO)
-        return next((stage for stage in self._ticket.board.stages if moved is not None and stage.name == moved.stage), None)
+        name = self._recorded_stage
+        if name is None:
+            moved = self._ticket.session.log.latest(MOVED_INTO)
+            name = moved.stage if moved is not None else ""
+        return next((stage for stage in self._ticket.board.stages if stage.name == name), None)
 
     def latest_in(self, stage: Stage) -> str | None:
         """The latest mark a person made in stage since entering it; none when they have made none."""
+        if self._recorded_stage is not None:
+            mark = str(self._ticket.session.fields.get(_STAGE_MARK_FIELD, "") or "")
+            return mark if self._recorded_stage == stage.name and mark else None
         latest = self._ticket.session.log.latest(MOVED_INTO, MARKED_DONE, MARKED_IN_PROGRESS, stage=stage.name)
         return latest.verb if latest is not None and latest.verb != MOVED_INTO else None
+
+    @property
+    def _recorded_stage(self) -> str | None:
+        """The stage session.json records; none for a ticket whose moves are only in its log."""
+        recorded = self._ticket.session.fields.get(_STAGE_FIELD)
+        return str(recorded) if recorded else None
 
     def enter(self, stage: Stage) -> Ticket:
         """Move the ticket into stage's In progress."""
         return self.mark(MOVED_INTO, stage)
 
     def mark(self, mark: str, stage: Stage) -> Ticket:
-        """Mark the ticket done or in progress in stage."""
+        """Mark the ticket done or in progress in stage, or move it into stage, keeping the result in session.json."""
+        self._ticket.session.save_fields(**{_STAGE_FIELD: stage.name, _STAGE_MARK_FIELD: "" if mark == MOVED_INTO else mark})
         self._ticket.work.record(f"{mark} {stage.name}")
         return self._ticket
 

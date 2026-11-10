@@ -520,6 +520,18 @@ with description("a ticket") as self:
                 log = (self.root / "pet-visits" / "session.log").read_text(encoding="utf-8")
                 expect(log.splitlines()[-1]).to(contain("move Specification"))
 
+            # The ticket's record is its session.json, so its stage never depends on which log lines a branch has.
+            with it("should keep the stage it entered in its session.json"):
+                saved = json.loads((self.root / "pet-visits" / "session.json").read_text(encoding="utf-8"))
+                expect((saved["stage"], saved.get("stage_mark", ""))).to(equal(("Specification", "")))
+
+            with context("with its session log no longer naming the move"):
+                with before.each:
+                    (self.root / "pet-visits" / "session.log").write_text("".join(f"{line}\n" for line in DISCOVERY_DONE), encoding="utf-8")
+
+                with it("should still be in the stage its session.json names"):
+                    expect(self.board.ticket("pet-visits").column.name).to(equal("Specification"))
+
     # (S) Person --> Mark Ticket Done In Stage
     with context("with its stage not done"):
         with before.each:
@@ -534,6 +546,9 @@ with description("a ticket") as self:
 
             with it("should be done in its stage, in the same column"):
                 expect((self.ticket.column.name, self.ticket.is_done)).to(equal(("Discovery", True)))
+
+            with it("should keep its done mark in its session.json"):
+                expect((self.ticket.session.fields["stage"], self.ticket.session.fields["stage_mark"])).to(equal(("Discovery", "done")))
 
             with it("should have no next"):
                 expect(self.ticket.next_fidelity).to(be_none)
