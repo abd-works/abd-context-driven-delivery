@@ -138,14 +138,9 @@ class Sessions:
         return self.folder / BACKLOG_FOLDER
 
     def folder_of(self, name: str) -> Path:
-        """The folder of the session called name. A ticket on the board lives in the main checkout's ``.sessions``, so
-        a chat in the ticket's linked worktree logs there too and the board shows its work. Each checkout keeps its own
-        main session."""
-        preferred = self.folder / name
-        candidates = [preferred]
-        if name != MAIN_SESSION_NAME:
-            candidates.insert(0, self.repo.main_clone.root / SESSIONS_FOLDER / name)
-        return next((folder for folder in candidates if (folder / SESSION_FILE).is_file()), preferred)
+        """The folder of the session called name, in this checkout's ``.sessions``: a ticket opened in its own worktree
+        keeps its details there, committed on its branch, and the board loaded in that worktree shows them."""
+        return self.folder / name
 
     def all(self) -> list[Session]:
         """Every session the board shows: main first, the default session that works on the whole repository, then the

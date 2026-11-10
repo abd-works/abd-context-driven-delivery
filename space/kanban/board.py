@@ -102,10 +102,10 @@ class Board:
     @classmethod
     @tool_subject
     def load(cls, project: Path | str) -> Board:
-        """The board of project, with every practice chosen; a tool call is handed the project the call names. A chat
-        in a ticket's worktree reads the board of the project's main checkout, where every ticket's session lives."""
+        """The board of project, with every practice chosen; a tool call is handed the project the call names. The board
+        lists the sessions of the checkout it is loaded in: a ticket's worktree shows its own ``.sessions``."""
         sessions = Sessions.of_project(project)
-        return cls(sessions.repo.main_clone, sessions.board_practices)
+        return cls(sessions.repo, sessions.board_practices)
 
     @property
     def repo(self) -> Repo:

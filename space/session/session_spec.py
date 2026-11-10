@@ -230,8 +230,8 @@ with description("a session"):
             with it("should keep the session in a folder named by its slug"):
                 expect((self.repo / ".sessions" / "chat-ui" / "session.json").is_file()).to(equal(True))
 
-        # The board reads the main checkout's .sessions, so a ticket's log written in its worktree never showed there.
-        with context("from a linked worktree of the checkout whose board holds it"):
+        # A ticket opened in its own worktree keeps its details there, committed on its branch.
+        with context("from a linked worktree of the checkout"):
             with before.each:
                 self.worktree = Path(tempfile.mkdtemp())
                 worktree_git = self.repo / ".git" / "worktrees" / "alpha"
@@ -244,8 +244,8 @@ with description("a session"):
             with after.each:
                 shutil.rmtree(self.worktree, ignore_errors=True)
 
-            with it("should log into the ticket's folder on the board"):
-                expect(Sessions(self.called).current().session_path).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
+            with it("should log into the ticket's folder in the worktree"):
+                expect(Sessions(self.called).current().session_path).to(equal(self.worktree.resolve() / ".sessions" / "alpha"))
 
             with it("should keep the worktree's own choice of session in the worktree"):
                 expect(WorkState(self.worktree).session).to(equal("alpha"))

@@ -4,6 +4,7 @@ can do with them."""
 from __future__ import annotations
 
 import re
+import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -126,12 +127,28 @@ class TicketCheckout:
 
     def open(self, opening: list[str]) -> None:
         """Open the ticket the way opening names: in its own worktree, which creates its branch when missing, or else by
-        switching this checkout to its branch, created when missing. The two are alternatives, so a worktree wins."""
+        switching this checkout to its branch, created when missing. The two are alternatives, so a worktree wins. A
+        ticket opened in its own worktree takes its session folder along, so its details are committed on its branch."""
         if OPEN_WORKTREE in opening:
             self._repo.switch_worktree(self.branch.name)
         elif OPEN_BRANCH in opening:
             self._repo.switch_branch(self.branch.name)
         if opening:
+            self._ticket.board.reread()
+        if OPEN_WORKTREE in opening:
+            self._move_session_folder_into_worktree()
+
+    def _move_session_folder_into_worktree(self) -> None:
+        """Move the ticket's session folder from the checkout it was opened from into its worktree's ``.sessions``,
+        unless the worktree already has one."""
+        worktree = self.worktree
+        if not worktree:
+            return
+        here = self._ticket.board.sessions.folder / self._ticket.name
+        there = Path(worktree) / here.parent.name / self._ticket.name
+        if here.is_dir() and not there.exists() and here.resolve() != there.resolve():
+            there.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(here), str(there))
             self._ticket.board.reread()
 
     def open_worktree(self) -> None:

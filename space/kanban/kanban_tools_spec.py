@@ -1114,6 +1114,22 @@ with description("the board tools") as self:
             with it("should create the ticket's branch when a ticket that has none is activated"):
                 expect(self.project.call("ticket.branch", ticket="sign-up")["exists"]).to(be_true)
 
+        # A ticket opened in its own worktree takes its session folder along, so its details are committed on its branch.
+        with context("that activates a ticket in its own worktree"):
+            with before.each:
+                self.project.call("ticket.activate", ticket="sign-up", opening=["worktree"])
+                listing = subprocess.run(["git", "worktree", "list", "--porcelain"], cwd=self.project.root, capture_output=True, text=True, check=True).stdout
+                self.opened = Path([block for block in listing.split(2 * chr(10)) if "refs/heads/sign-up" in block][0].splitlines()[0].removeprefix("worktree "))
+
+            with after.each:
+                subprocess.run(["git", "worktree", "remove", "--force", str(self.opened)], cwd=self.project.root, check=False)
+
+            with it("should move the ticket's session folder into the worktree"):
+                expect((self.opened / ".sessions" / "sign-up" / "session.json").is_file()).to(be_true)
+
+            with it("should leave no session folder for the ticket in the checkout it was opened from"):
+                expect((self.project.root / ".sessions" / "sign-up").exists()).to(be_false)
+
         with it("should say a ticket has no branch yet"):
             expect(self.project.call("ticket.branch", ticket="sign-up")["exists"]).to(be_false)
 

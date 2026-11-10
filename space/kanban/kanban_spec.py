@@ -152,8 +152,8 @@ with description("a board") as self:
             (self.worktree / ".git").write_text(f"gitdir: {worktree_git}\n", encoding="utf-8")
             (self.worktree / "docs").mkdir()
 
-        with it("should show the board of the project's main checkout, where every ticket's session lives"):
-            expect(Board.load(self.worktree / "docs").repo.root).to(equal(self.checkout.resolve()))
+        with it("should show the board of the worktree it is loaded in"):
+            expect(Board.load(self.worktree / "docs").repo.root).to(equal(self.worktree.resolve()))
 
     with context("with no session saved as open"):
         with it("should make main the active ticket"):
