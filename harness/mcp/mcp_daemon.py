@@ -16,6 +16,8 @@ from harness.process.process import BackgroundStart, ExclusivePort, StoppablePro
 SERVER_PORT_ENV = "CDD_SERVER_PORT"
 DEFAULT_SERVER_PORT = 47800
 PROJECT_HEADER = "X-CDD-Project"
+# The Claude Code chat a request comes from, so the server can follow that chat into whatever folder it works in now.
+CHAT_HEADER = "X-CDD-Chat"
 PING_PATH = "/ping"
 MCP_PATH = "/mcp"
 _PING_SECONDS = 2

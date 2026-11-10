@@ -1190,6 +1190,166 @@ Observed: once no numbered version is left, `start_next` starts `version-1` as a
 
 Observed: `CanvasVersions.from_release` opens `.sessions/<release>/design-canvas`, for the release being worked on or a named one (`versions_spec.py`).
 
+## (E) Reuse Production Assets On The Canvas
+
+Intended ([design-canvas-asset-reuse-plan.md](../../../.sessions/_backlog/claud_design_enhancements/design-canvas-asset-reuse-plan.md)): the product repo builds one package of its real CSS, images, fonts and React views, published as a pinned Design System artifact; each screen becomes a thin shell that mounts the real view, and a manifest proves every packaged file by hash. A published canvas only sees its own `project/` files, so links and symlinks cannot do this. The four feature groups below are the plan's phases 1 to 4 and come before every other new design canvas story.
+
+### (E) Trace Canvas Files To Production
+
+#### (S:system) Design Canvas --> Record Packaged Files In Sources Manifest
+
+Intended (asset reuse plan, Phase 1): `sources.json` beside `CanvasVersions` records each packaged file's repo path, sha256 and git commit.
+
+#### (S:system) Design Canvas --> Fail Check When A Packaged File Drifts
+
+Intended (asset reuse plan, Phase 1): the drift check fails when a file no longer matches its manifest entry, for example an edited CSS file.
+
+#### (S:system) Design Canvas --> Report Version Traceability Percentage
+
+Intended (asset reuse plan, Phase 1): each version reports the share of its files proven identical to source by hash; pml-web proves 342,654 bytes (2.2%) today.
+
+#### (S:system) Design Canvas --> Store Each Screenshot Once By Content Hash
+
+Intended (asset reuse plan, Phase 1): shots are named by content hash, so the 68 duplicate shots in pml-web become none.
+
+#### (S:system) Design Canvas --> Find Screen Files Through The Manifest
+
+Intended (asset reuse plan, Phase 1 and "Thin screens"): `_fixture_scripts`, `_blank` and `_stylesheets` in `nodes.py` read the manifest instead of the version folder, so a manifest entry is not dropped and a blank capture is not shown.
+
+### (E) Install Production Design System On The Canvas
+
+#### (S) Agent --> Package Product Styles And Assets In Their Production Layout
+
+Intended (asset reuse plan, Phase 2): `ds/<product>/` mirrors the product package layout (`packages/my-paradise`), so the CSS is byte-identical with no URL rewrites and `copy_styles` goes.
+
+#### (S) Agent --> Publish Product Package As Design System Artifact
+
+Intended (asset reuse plan, Phase 2): one Design System artifact per product, published once.
+
+#### (S:system) Design Canvas --> Record Installed Design Systems In Canvas File
+
+Intended (asset reuse plan, Phase 2 and option G): `canvas.json` lists its `designSystems` with their versions instead of the hard-coded empty list (`canvas.py:67`), and each version takes the package by server-side copy into `project/ds/<product>/`.
+
+#### (S) Agent --> Derive Publish List From Sources Manifest
+
+Intended (asset reuse plan, Phase 2): the publish list comes from the manifest in place of the `pub_*.json` files.
+
+#### (S) Agent --> Pull Hosted Edits Back Before Next Version
+
+Intended (asset reuse plan, Phase 2): before `start_next` copies the local folder (`versions.py:63`), the edits people made on the published canvas come back, so they are not missing from the next version.
+
+### (E) Mount Production Views As Screens
+
+#### (S) Agent --> Bundle Product Views For The Canvas
+
+Intended (asset reuse plan, Phase 3 and option I2): a `canvas-components` bundle exports the wanted views by name and a `CanvasRoot` for scenario, remount and `go`; it builds with classic `React.createElement` against `window.React` (React 18.3.1), and esbuild `define` stands in for `fetch` and `window.location` with no production code change.
+
+#### (S:system) Design Canvas --> Mount Production View In A Thin Screen
+
+Intended (asset reuse plan, Phase 3): a generic `thin_screen()` driven by `ux.json` writes a shell of about 30 lines that mounts the view with `<x-import component-from-global-scope="Ns.Export">`, in place of the hard-coded `prototype()` map.
+
+#### (S:system) Design Canvas --> Answer Screen Requests From Fixture Routes
+
+Intended (asset reuse plan, Phase 0 gate 3): the screen's requests reach the product's real routes over in-memory repositories holding the scenario's fixture, or a thin fetch table over those repositories when the routes cannot run in the browser.
+
+#### (S:system) Design Canvas --> Keep Explorer Navigation Inside The Artboard
+
+Intended (asset reuse plan, Phase 0 gate 4): a mounted view's navigation moves the explorer through `go` and the artboard stays put.
+
+#### (S:system) Design Canvas --> Keep Product Styles Inside The Screen
+
+Intended (asset reuse plan, Phase 0 gate 5): the product's CSS stays inside the screen, so the explorer's own panel is unaffected.
+
+#### (S) Person --> Type Scenario Values Into A Mounted Screen
+
+Intended (asset reuse plan, `one-scenario-list` under "Thin screens"; [backlog.md](../../../.sessions/_backlog/claud_design_enhancements/backlog.md) item 1 slice C): a mounted view owns its state, so a DOM driver types the scenario's entered values; the same driver plays UI steps in Play A Story's UI Steps On A Screen.
+
+#### (S) Agent --> Generate Attached Screens Without Markup
+
+Intended (asset reuse plan, Phase 5): an agent following the rewritten guidance writes no screen markup for a screen that exists in production.
+
+### (E) Redesign A Screen By Detaching It
+
+#### (S) Person --> Detach A Screen To Editable Markup
+
+Intended (asset reuse plan, Phase 4 and option I3): the production view is rendered once to markup with `renderToStaticMarkup`, so people can edit its text on the canvas.
+
+#### (S:system) Design Canvas --> Keep Leaf Components Mounted In A Detached Screen
+
+Intended (asset reuse plan, "The trade-off to accept"): leaf components that take props, such as `PlanCardView` and `ParadiseShell`, stay mounted inside a detached layout.
+
+#### (S:system) Design Canvas --> Mark Detached Screen As Diverged
+
+Intended (asset reuse plan, Phase 4): the manifest, the map and the explorer mark a detached screen as diverged from production.
+
+#### (S) Person --> Reattach A Screen Once Its Change Reaches Production
+
+Intended (asset reuse plan, Phase 4): once the change lands in the TSX the screen mounts the production view again and the diverged mark clears.
+
+## (E) Check Screens Against Their Scenarios
+
+Intended ([backlog.md](../../../.sessions/_backlog/claud_design_enhancements/backlog.md) item 1): a person presses Test and sees, for each scenario, whether the screen behaves as its specs say. Built after Phase 0 of the asset reuse plan.
+
+### (S) Agent --> Package End-To-End Results With The Canvas
+
+Intended (backlog item 1 slice A): at package time the end-to-end JSON under `.sessions/<release>/e2e-test-results` becomes a `results.json` tied to the bundle hash.
+
+### (S:system) Design Canvas --> Mark Each Explorer Scenario Passed Or Failed
+
+Intended (backlog item 1 slice A): each explorer scenario shows passed, failed or no result.
+
+### (S:system) Design Canvas --> Label Stale Test Results
+
+Intended (backlog item 1 slice A and "Done means"): a result whose bundle hash differs from the canvas's bundle is labelled stale.
+
+### (S) Person --> Run A Scenario's Thens On The Canvas
+
+Intended (backlog item 1 slice B): a Test button per scenario and per story runs the `beforeEach` and `it` bodies through a second story host with a real `expect` in a test build, and shows passed or failed for each step with the failing assertion's message.
+
+### (S) Person --> Play A Story's UI Steps On A Screen
+
+Intended (backlog item 1 slice C): the story's Playwright steps run against the screen through a small `page` facade over the DOM, so a detached screen is tested against the same story as production.
+
+### (S) Agent --> Check Screen Logic Against Scenarios From A Command
+
+Intended (backlog item 1 slice D, only if slice C proves too limited): `check_screen.cjs` becomes a generic command in `harness/design_canvas/` that runs a screen's logic on each scenario.
+
+## (E) Draw Linked Models On The Canvas
+
+Intended ([backlog.md](../../../.sessions/_backlog/claud_design_enhancements/backlog.md) item 3): the bounded context map, the domain model and the module class models sit beside the story map as artboards that mirror their drawio layout and link to one another, so from any story a person reaches its screen, its classes and its bounded context and back.
+
+### (S:system) Design Canvas --> Draw Arrows From Drawio Waypoints
+
+Intended (backlog item 3 slice 1): `arrow()` in `canvas.py` splits drawio waypoints into straight segments, one small `<svg>` each, using the `diagrams.md` formulas.
+
+### (S) Agent --> Draw Bounded Context Map As An Artboard
+
+Intended (backlog item 3 slice 2): a `claude_design` format for the ddd practice draws the bounded context map with each box a separate element.
+
+### (S) Agent --> Draw Domain Model As An Artboard
+
+Intended (backlog item 3 slice 3): the domain model gets its own artboard on a Models page.
+
+### (S) Agent --> Draw Module Class Models As Artboards
+
+Intended (backlog item 3 slice 3): a `claude_design` format for clean engineering draws one artboard per module class model, sharing the layout code with the ddd format.
+
+### (S) Person --> Follow Links From A Context To Its Models
+
+Intended (backlog item 3 slice 4): context → domain model → module class model through `<a href>` kept by `LINK_KEY`; arriving selects the target node.
+
+### (S) Person --> See The Classes A Scenario Touches
+
+Intended (backlog item 3 slice 5): from a scenario in the explorer, the classes it reaches through `specifiedBy` and `invokes`, exported from the graph without the whole 19.7 MB.
+
+### (S) Person --> See The Stories That Exercise A Class
+
+Intended (backlog item 3 slice 5): from a class, the stories whose scenarios reach it.
+
+### (S:system) Design Canvas --> Mark Model Nodes That Fail Rules
+
+Intended (backlog item 3 slice 6, optional): nodes the graph's `violations: true` filter returns carry a rule mark.
+
 # (E) Map Work Into Knowledge Graph
 
 This epic is the app's own story map, [graph/.context/story-map.md](../../graph/.context/story-map.md); its evidence lines name the app's files.
@@ -1529,6 +1689,38 @@ Requested (2026-11-06, "board and chat generate"): generate from the action butt
 ### (S) Person --> Fix Graph Violations From Chat Bar
 
 Requested (2026-11-06, "board and chat ... fix"): Fix in the action picker sends the Fix action for the selected fidelity, a rule or a file, every violation by default.
+
+## (E) Change Stories From Canvas And Story UI
+
+Intended ([backlog.md](../../../.sessions/_backlog/claud_design_enhancements/backlog.md) item 2): a person adds or changes a story from the canvas or from story-ui, or comments on one, and the map updates. Both paths send commands ("add story X under Y"), never a diff of the picture, and end in the same story code.
+
+### (S:system) Design Canvas --> Give Each Map Card A Stable Node Id
+
+Intended (backlog item 2 slice 2): each card drawn by `box()` and each explorer entry carries a `data-node` derived from the story path, which every comment and command below names.
+
+### (S) Person --> Comment On A Story Card
+
+Intended (backlog item 2 slice 3): the canvas declares `comments` with `composer_only: true, customAnchors: true` and opens a composer anchored to the card's node id.
+
+### (S) Agent --> Change Story Code From A Canvas Comment
+
+Intended (backlog item 2 slice 3): the agent reads the comment through `ArtifactComments`, changes the story code, replies on the thread and regenerates the map.
+
+### (S) Agent --> Refresh Map Artboard From A Data File
+
+Intended (backlog item 2 slice 4): `Main.dc.html` draws from `project/data/story-map.json`, so an update publishes one data file instead of a whole new version.
+
+### (S:system) Story UI --> Save Story Map To Story Files
+
+Intended (backlog item 2 slice 5): a `StoryMapRepository` adapter over the CDD story graph takes the place of MongoDB, so a story added in story-ui appears on the next map refresh.
+
+### (S) Person --> Comment On A Story In Story UI
+
+Intended (backlog item 2 slice 5): story-ui gains comments, keyed by the same node ids as the canvas.
+
+### (S) Person --> Rearrange Stories Inside The Canvas
+
+Intended (backlog item 2 slice 6, after Phase 0 of the asset reuse plan): story-ui's `StoryHierarchyView` mounts in the canvas, with its drag and drop sent through a transport standing in for REST.
 
 ---
 

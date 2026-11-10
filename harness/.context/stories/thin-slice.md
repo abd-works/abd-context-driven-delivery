@@ -13,7 +13,7 @@ section: body
 
 **Slicing intent:** Increment 0 is what the code does today. The Intended and Requested stories follow the order set on 2026-11-06.
 
-**Spine vs optional:** the increments run in the order they are built: ticket management first, then the small editor-app stories that open each app in a session, then next-step suggestions, then the fully integrated flow, then faster command entry and the board's file review. Guards, chat bar parity and workflow customizing follow, each standing on its own.
+**Spine vs optional:** the increments run in the order they are built: ticket management first, then the small editor-app stories that open each app in a session, then next-step suggestions, then the fully integrated flow, then faster command entry and the board's file review. Guards, chat bar parity and workflow customizing follow, each standing on its own. The design canvas increments (11 to 16, from `.sessions/_backlog/claud_design_enhancements/`) come last: asset reuse first, then mounted screens, detach, testing and story changes; linked models depend on nothing and can run beside them.
 
 ## Increments
 
@@ -471,3 +471,99 @@ section: body
 - *Run Work Type Flows*
 - *Choose Testing Strategy*
 - *Toggle Sub Agents*
+
+### Increment 11: Trace Canvas Files To Production
+
+**Outcome:** every file a design canvas version carries is proven against the product repo by hash, and its styles and assets come from one pinned Design System package instead of copies.
+
+**Slicing notes:** design-canvas-asset-reuse-plan.md phases 1 and 2, which come before every other design canvas increment. Start with the plan's Phase 0 spike on `select-plan`: its gates decide Increment 12, but this increment holds whether they pass or fail.
+
+**Stories in this increment:**
+
+- *Record Packaged Files In Sources Manifest*
+- *Fail Check When A Packaged File Drifts*
+- *Report Version Traceability Percentage*
+- *Store Each Screenshot Once By Content Hash*
+- *Find Screen Files Through The Manifest*
+- *Package Product Styles And Assets In Their Production Layout*
+- *Publish Product Package As Design System Artifact*
+- *Record Installed Design Systems In Canvas File*
+- *Derive Publish List From Sources Manifest*
+- *Pull Hosted Edits Back Before Next Version*
+
+### Increment 12: Mount Production Views As Screens
+
+**Outcome:** every screen that exists in production is a thin shell that mounts the real view, and every explorer path still works.
+
+**Slicing notes:** asset reuse plan Phase 3 and Phase 5, only when Phase 0 gates 1 to 3 pass; otherwise screens are rendered to markup and hash-pinned to the TSX. Migrating pml-web's 28 screens and deleting its generators is a task inside this increment.
+
+**Stories in this increment:**
+
+- *Bundle Product Views For The Canvas*
+- *Mount Production View In A Thin Screen*
+- *Answer Screen Requests From Fixture Routes*
+- *Keep Explorer Navigation Inside The Artboard*
+- *Keep Product Styles Inside The Screen*
+- *Type Scenario Values Into A Mounted Screen*
+- *Generate Attached Screens Without Markup*
+
+### Increment 13: Redesign A Screen By Detaching It
+
+**Outcome:** a person detaches a screen to edit it on the canvas, sees it marked as diverged, and reattaches it once the change is in production.
+
+**Slicing notes:** asset reuse plan Phase 4.
+
+**Stories in this increment:**
+
+- *Detach A Screen To Editable Markup*
+- *Keep Leaf Components Mounted In A Detached Screen*
+- *Mark Detached Screen As Diverged*
+- *Reattach A Screen Once Its Change Reaches Production*
+
+### Increment 14: Check Screens Against Their Scenarios
+
+**Outcome:** a person presses Test on a scenario and sees passed or failed for each step, on attached and detached screens, with stale results labelled.
+
+**Slicing notes:** backlog.md item 1, slices A, B, C in that order; slice D only if C proves too limited. Slice A needs nothing from Increment 12; slice C needs its DOM driver.
+
+**Stories in this increment:**
+
+- *Package End-To-End Results With The Canvas*
+- *Mark Each Explorer Scenario Passed Or Failed*
+- *Label Stale Test Results*
+- *Run A Scenario's Thens On The Canvas*
+- *Play A Story's UI Steps On A Screen*
+- *Check Screen Logic Against Scenarios From A Command*
+
+### Increment 15: Change Stories From Canvas And Story UI
+
+**Outcome:** a comment on a story card, or an edit in story-ui, ends in changed story code and a refreshed map, with a reply on the thread.
+
+**Slicing notes:** backlog.md item 2. Decide the source of truth first (story code is recommended, which changes `map-mirrors-drawio` and needs a CDR). Comment to story code is the first slice; Rearrange Stories Inside The Canvas waits for Increment 12's mechanism.
+
+**Stories in this increment:**
+
+- *Give Each Map Card A Stable Node Id*
+- *Comment On A Story Card*
+- *Change Story Code From A Canvas Comment*
+- *Refresh Map Artboard From A Data File*
+- *Save Story Map To Story Files*
+- *Comment On A Story In Story UI*
+- *Rearrange Stories Inside The Canvas*
+
+### Increment 16: Draw Linked Models On The Canvas
+
+**Outcome:** from any story a person reaches its screen, its classes and its bounded context by clicking, and back, and every diagram matches its drawio layout.
+
+**Slicing notes:** backlog.md item 3; depends on nothing, so it can run beside Increments 11 to 15. The bounded context map is the first slice.
+
+**Stories in this increment:**
+
+- *Draw Arrows From Drawio Waypoints*
+- *Draw Bounded Context Map As An Artboard*
+- *Draw Domain Model As An Artboard*
+- *Draw Module Class Models As Artboards*
+- *Follow Links From A Context To Its Models*
+- *See The Classes A Scenario Touches*
+- *See The Stories That Exercise A Class*
+- *Mark Model Nodes That Fail Rules*

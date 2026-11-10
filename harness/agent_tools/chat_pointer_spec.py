@@ -18,6 +18,11 @@ from harness.agent_tools.tool_call import ToolCall
 CHAT_ID = "4f1c2b3a-1111-2222-3333-444455556666"
 
 
+def record_folders(transcript: Path, *folders: Path) -> None:
+    """Write a Claude Code transcript whose events record the chat working in each folder in turn."""
+    transcript.write_text("".join(json.dumps({"type": "user", "cwd": str(folder)}) + "\n" for folder in folders), encoding="utf-8")
+
+
 # (E) Record Session Log
 with description("a chat pointer"):
     with before.each:
@@ -52,6 +57,40 @@ with description("a chat pointer"):
             with it("should name no transcript"):
                 chat, _ = ChatPointer.taken_from({"conversation_id": CHAT_ID})
                 expect(chat.transcript).to(equal(Path("unknown")))
+
+    with context("found for a Claude Code session"):
+        with before.each:
+            self.transcript = self.config / "projects" / "C--spare" / f"{CHAT_ID}.jsonl"
+            self.transcript.parent.mkdir(parents=True)
+            self.spare = self.config / "spare"
+            self.spare.mkdir()
+            self.checkout = self.config / "shop"
+            (self.checkout / ".git").mkdir(parents=True)
+            (self.checkout / "src").mkdir()
+
+        with context("that moved from the folder it started in to a checkout"):
+            with it("should work in the checkout it moved to"):
+                record_folders(self.transcript, self.spare, self.checkout)
+                expect(ChatPointer.from_claude_session(CHAT_ID).working_folder).to(equal(self.checkout.resolve()))
+
+        with context("that moved into a subfolder of a checkout"):
+            with it("should work in the checkout holding the subfolder"):
+                record_folders(self.transcript, self.checkout, self.checkout / "src")
+                expect(ChatPointer.from_claude_session(CHAT_ID).working_folder).to(equal(self.checkout.resolve()))
+
+        with context("whose last recorded folder is gone"):
+            with it("should work in the last folder that is still there"):
+                record_folders(self.transcript, self.checkout, self.config / "deleted")
+                expect(ChatPointer.from_claude_session(CHAT_ID).working_folder).to(equal(self.checkout.resolve()))
+
+        with context("whose transcript records no folder"):
+            with it("should work in no folder"):
+                self.transcript.write_text('{"type": "user"}\n', encoding="utf-8")
+                expect(ChatPointer.from_claude_session(CHAT_ID).working_folder).to(be_none)
+
+        with context("with no transcript by its id"):
+            with it("should be none"):
+                expect(ChatPointer.from_claude_session("9f1c2b3a-1111-2222-3333-444455556666")).to(be_none)
 
     with context("taken from a tool call that names no chat"):
         with it("should be none"):

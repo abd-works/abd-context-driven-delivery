@@ -1,7 +1,10 @@
 """How the cdd server answers a chat's tool calls: the answer, a failure the chat can tell from an answer, and how long
 the chat waits."""
 import asyncio
+import json
+import os
 import sys
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -16,17 +19,20 @@ from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 from space.session.throwaway_project import ThrowawayProject
 
-from harness.mcp.mcp_daemon import PROJECT_HEADER
+from harness.mcp.mcp_daemon import CHAT_HEADER, PROJECT_HEADER
 from harness.mcp.mcp_server import CALL_SECONDS, LONG_CALL_SECONDS, McpHost, ToolNotEnrolled
 
 _CALL_OUTCOMES = "harness.mcp._examples.call_outcomes.call_outcomes:CallOutcomes"
+_MOVED_CHAT = "7a2d9c4e-1111-2222-3333-444455556666"
 
 
-def _call(host: McpHost, name: str, project: Path) -> types.CallToolResult:
-    """Send one tools/call request to the host's protocol handler, as a chat working on project sends it."""
+def _call(host: McpHost, name: str, project: Path, chat_id: str = "") -> types.CallToolResult:
+    """Send one tools/call request to the host's protocol handler, as a chat that started on project sends it; with
+    chat_id, as the Claude Code chat of that id."""
     handler = host._protocol.request_handlers[types.CallToolRequest]
     request = types.CallToolRequest(method="tools/call", params=types.CallToolRequestParams(name=name, arguments={}))
-    chat = SimpleNamespace(headers={PROJECT_HEADER: str(project)})
+    headers = {PROJECT_HEADER: str(project), **({CHAT_HEADER: chat_id} if chat_id else {})}
+    chat = SimpleNamespace(headers=headers)
     token = request_ctx.set(RequestContext(request_id=1, meta=None, session=None, lifespan_context=None, request=chat))
     try:
         return asyncio.run(handler(request)).root
@@ -51,6 +57,31 @@ with description("a cdd server answering a chat's tool calls") as self:
     with context("with a tool that answers"):
         with it("should answer with what the tool returned"):
             expect(_call(self.host, "cdd.ping", self.project).content[0].text).to(equal("pong"))
+
+    with context("from a chat that started on the project"):
+        with it("should work on that project"):
+            expect(_call(self.host, "call-outcomes.ledger_folder", self.project).content[0].text).to(equal(str(self.project.resolve())))
+
+    with context("from a Claude Code chat that moved to another checkout after it started"):
+        with before.each:
+            self.config = Path(tempfile.mkdtemp())
+            self.prior_config = os.environ.get("CLAUDE_CONFIG_DIR")
+            os.environ["CLAUDE_CONFIG_DIR"] = str(self.config)
+            self.moved_to = ThrowawayProject().root
+            transcript = self.config / "projects" / "C--spare" / f"{_MOVED_CHAT}.jsonl"
+            transcript.parent.mkdir(parents=True)
+            events = ({"type": "user", "cwd": str(folder)} for folder in (self.project, self.moved_to))
+            transcript.write_text("".join(json.dumps(event) + "\n" for event in events), encoding="utf-8")
+
+        with after.each:
+            if self.prior_config is None:
+                os.environ.pop("CLAUDE_CONFIG_DIR", None)
+            else:
+                os.environ["CLAUDE_CONFIG_DIR"] = self.prior_config
+
+        with it("should work on the checkout the chat moved to"):
+            answer = _call(self.host, "call-outcomes.ledger_folder", self.project, _MOVED_CHAT).content[0].text
+            expect(answer).to(equal(str(self.moved_to.resolve())))
 
     with context("with a tool that fails"):
         with before.each:

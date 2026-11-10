@@ -13,23 +13,30 @@ from pathlib import Path
 
 HOME = Path(__file__).resolve().parent
 ADDRESS_FLAG = "--address"
+# Claude Code runs a chat's tools, this script among them, with the chat's id in this variable. The id stays the same
+# when the chat moves to another folder, which the folder Claude Code fills into the arguments does not.
+CHAT_ID_VARIABLE = "CLAUDE_CODE_SESSION_ID"
 
 
 def main() -> None:
     runtime = json.loads((HOME / "runtime.json").read_text(encoding="utf-8"))
     sys.path.insert(0, runtime["source"])
     from harness.mcp.cdd_home import CddHome
-    from harness.mcp.mcp_daemon import PROJECT_HEADER, McpDaemon
+    from harness.mcp.mcp_daemon import CHAT_HEADER, PROJECT_HEADER, McpDaemon
 
     daemon = McpDaemon(CddHome(HOME))
     daemon.ensure()
-    print(json.dumps(answer(sys.argv[1:], daemon.url, PROJECT_HEADER)))
+    print(json.dumps(answer(sys.argv[1:], daemon.url, PROJECT_HEADER, CHAT_HEADER)))
 
 
-def answer(arguments: list[str], url: str, project_header: str) -> dict:
+def answer(arguments: list[str], url: str, project_header: str, chat_header: str) -> dict:
     """What the script prints: the headers alone for an IDE's ``headersHelper``, or, asked with ``--address``, the
-    server's address with the headers, for a language adapter that connects on its own."""
+    server's address with the headers, for a language adapter that connects on its own. A Claude Code chat's id goes
+    in the chat header, so the server reads the folder the chat works in now from its transcript."""
     headers = {project_header: project_folder([word for word in arguments if word != ADDRESS_FLAG])}
+    chat_id = os.environ.get(CHAT_ID_VARIABLE, "").strip()
+    if chat_id:
+        headers[chat_header] = chat_id
     return {"url": url, "headers": headers} if ADDRESS_FLAG in arguments else headers
 
 

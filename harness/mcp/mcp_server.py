@@ -21,6 +21,7 @@ from mcp.server import NotificationOptions, Server
 from mcp.server.models import InitializationOptions
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetReference
+from harness.agent_tools.chat_pointer import ChatPointer
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.destination import ServerInstallation, SkippedTool, SkippedTools
 from harness.installation.data_class import data_of
@@ -31,7 +32,7 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.annotations.annotation import Destination, Annotation
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.claude_plugins import ClaudePlugins
-from harness.mcp.mcp_daemon import MCP_PATH, PING_PATH, PROJECT_HEADER, McpDaemon
+from harness.mcp.mcp_daemon import CHAT_HEADER, MCP_PATH, PING_PATH, PROJECT_HEADER, McpDaemon
 from harness.mcp.server_hooks import CddServerHooks
 from harness.mcp.restart_gate import _RestartGate
 from harness.mcp.tool_calls import ThrottledReporter, _StillRunning, _ToolCalls
@@ -688,20 +689,28 @@ class McpHost:
         return ThrottledReporter(report)
 
     def _requested_project(self, tool: str) -> Path | None:
-        """The project the calling chat works on, from its ``X-CDD-Project`` header. Only ``cdd.ping`` and
-        ``cdd.restart`` work without one; anything else would act on whichever folder the server started in."""
+        """The project the calling chat works on: the folder its transcript says it works in now, when its
+        ``X-CDD-Chat`` header names a Claude Code chat, else its ``X-CDD-Project`` header. The header holds the folder
+        the chat started in, which is wrong once the chat moves. Only ``cdd.ping`` and ``cdd.restart`` work without
+        one; anything else would act on whichever folder the server started in."""
         try:
             request = self._protocol.request_context.request
         except LookupError:
             request = None
-        named = request.headers.get(PROJECT_HEADER) if request is not None else None
+        headers = request.headers if request is not None else {}
+        named = headers.get(PROJECT_HEADER)
         if tool in (BUILTIN_PING_TOOL, BUILTIN_RESTART_TOOL):
             return Path(named) if named else None
-        if named and Path(named).resolve() == self._claude_settings:
-            raise ProjectIsClaudeSettings(tool, Path(named))
-        if named:
-            return Path(named)
-        raise ProjectNotNamed(tool)
+        project = self._folder_of_chat(headers.get(CHAT_HEADER)) or (Path(named) if named else None)
+        if project is None:
+            raise ProjectNotNamed(tool)
+        if project.resolve() == self._claude_settings:
+            raise ProjectIsClaudeSettings(tool, project)
+        return project
+
+    def _folder_of_chat(self, chat_id: str | None) -> Path | None:
+        chat = ChatPointer.from_claude_session(chat_id or "")
+        return chat.working_folder if chat is not None else None
 
     def _answer_reporting(self, call: ToolCall, reporter: Callable[[str], None] | None) -> object:
         """Answer a chat's call on its worker thread: its progress goes to reporter. The call says it answers a chat

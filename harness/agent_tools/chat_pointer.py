@@ -16,6 +16,10 @@ _IN_LOG_LINE = re.compile(
     re.IGNORECASE,
 )
 _LINE_RANGE = re.compile(r"^\d+(?:-\d+)?$")
+# Each event a Claude Code transcript records names the folder the chat worked in then, as its "cwd".
+_RECORDED_FOLDER = re.compile(r'"cwd"\s*:\s*("(?:[^"\\]|\\.)*")')
+# The latest folder is near the end of the transcript, so only this much of a long transcript is read for it.
+_FOLDER_SEARCH_BYTES = 256 * 1024
 # The names a tool call's arguments may give each part of its chat, first choice first.
 _ID_ARGUMENTS = ("conversation_id", "_conversation_id")
 _TRANSCRIPT_ARGUMENTS = ("transcript_path", "agent_transcript_path", "_transcript_path")
@@ -66,11 +70,49 @@ class ChatPointer:
     def from_claude_chat(cls, chat_id: str) -> ChatPointer | None:
         """A Claude Code chat's pointer, found by its id alone: its transcript is the file named for that id under the
         Claude projects folder, in the folder of the project the chat started in. None when no such transcript is there."""
+        found = cls._claude_transcript(chat_id)
+        return cls.of(chat_id, found) if found is not None else None
+
+    @classmethod
+    def from_claude_session(cls, chat_id: str) -> ChatPointer | None:
+        """A Claude Code chat's pointer with its transcript found but not counted: enough to read the folder the chat
+        works in, on every call, without reading a long transcript whole. None when no such transcript is there."""
+        found = cls._claude_transcript(chat_id)
+        return cls(chat_id, found) if found is not None else None
+
+    @property
+    def working_folder(self) -> Path | None:
+        """The checkout the chat works in now: the folder its transcript recorded last, or the checkout holding it when
+        the chat had moved into a subfolder. A chat moved to another folder after it started records the new one, so
+        this follows the chat where the folder it started in does not. None when the transcript records no folder that
+        is still there."""
+        folder = self._latest_recorded_folder()
+        return self._checkout_holding(folder) if folder is not None else None
+
+    def _latest_recorded_folder(self) -> Path | None:
+        if self.transcript is None or not self.transcript.is_file():
+            return None
+        recorded = _RECORDED_FOLDER.findall(self._transcript_end())
+        folders = [Path(json.loads(text)) for text in reversed(recorded)]
+        return next((folder for folder in folders if folder.is_dir()), None)
+
+    def _transcript_end(self) -> str:
+        with self.transcript.open("rb") as transcript:
+            transcript.seek(0, os.SEEK_END)
+            transcript.seek(max(0, transcript.tell() - _FOLDER_SEARCH_BYTES))
+            return transcript.read().decode("utf-8", errors="replace")
+
+    @staticmethod
+    def _checkout_holding(folder: Path) -> Path:
+        resolved = folder.resolve()
+        return next((above for above in (resolved, *resolved.parents) if (above / ".git").exists()), resolved)
+
+    @staticmethod
+    def _claude_transcript(chat_id: str) -> Path | None:
         if not _CHAT_ID.fullmatch(chat_id or ""):
             return None
         projects = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude") / "projects"
-        found = next(projects.glob(f"*/{chat_id}.jsonl"), None) if projects.is_dir() else None
-        return cls.of(chat_id, found) if found is not None else None
+        return next(projects.glob(f"*/{chat_id}.jsonl"), None) if projects.is_dir() else None
 
     @classmethod
     def in_log_line(cls, line: str) -> ChatPointer | None:
