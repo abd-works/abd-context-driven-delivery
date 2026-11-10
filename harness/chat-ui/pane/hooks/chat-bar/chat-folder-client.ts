@@ -9,14 +9,14 @@ import { dismissFailure, showFailure, type ChatBarClient } from './chat-bar-clie
 // Where this chat works against where the active session's work is: the ticket's own worktree, else the repository's
 // main checkout, where activating it checked its branch out. A switch made in the chat bar moves the chat there with
 // Claude Code's own /cd; one made elsewhere shows in the band until the person moves it.
-const chatFolder = atom({ plugin: 'cdd-board', key: 'chatFolder' } as const, { current: '', expected: '' } as ChatFolderJson)
+const chatFolder = atom({ plugin: 'cdd-board', key: 'chatFolder' } as const, { current: '', expected: '', asked: '' } as ChatFolderJson, { shape: 'chat-folder-2' })
 
 // Windows names one folder with either slash and any case, so a folder is compared in one spelling.
 const spelled = (folder: string): string => folder.split('\\').join('/').replace(/\/+$/, '').toLowerCase()
 const sameFolder = (one: string, other: string): boolean => spelled(one) === spelled(other)
 
 // Atom chatFolder, declared in pane/types/index.d.ts and kept in this file.
-export async function currentChatFolder($: EngineInterface): Promise<ChatFolderJson & { isElsewhere: boolean }> {
+async function currentChatFolder($: EngineInterface): Promise<ChatFolderJson & { isElsewhere: boolean }> {
   const folder = await read($, chatFolder)
   return { ...folder, isElsewhere: Boolean(folder.current && folder.expected && !sameFolder(folder.current, folder.expected)) }
 }
@@ -35,10 +35,21 @@ async function workFolderOf($: EngineInterface, chatBar: ChatBarClient): Promise
   return chatBar.worktree || (await mainCheckoutOf($))
 }
 
-// Reads where the chat is and where the active session's work is, so the band can say when they differ.
-export async function checkChatFolder($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
+// Reads where the chat is and where the active session's work is. When they differ, the chat bar asks the chat to move
+// there by itself, once for each new folder, so a session opened anywhere brings the chat along without a press, and a
+// move the app refuses is not asked again every turn; the band's button asks again.
+async function readChatFolder($: EngineInterface, chatBar: ChatBarClient): Promise<{ current: string; expected: string }> {
   const [current, expected] = await Promise.all([$.session.root(), workFolderOf($, chatBar)])
-  await update($, chatFolder, () => ({ current, expected }))
+  await update($, chatFolder, json => ({ ...json, current, expected }))
+  return { current, expected }
+}
+
+export async function checkChatFolder($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
+  const { current, expected } = await readChatFolder($, chatBar)
+  const { asked } = await read($, chatFolder)
+  if (!current || !expected || sameFolder(current, expected) || sameFolder(asked ?? '', expected) || isChatBusy()) return
+  await update($, chatFolder, json => ({ ...json, asked: expected }))
+  void followSession($, chatBar)
 }
 
 // The desktop app moves a chat when the agent's turn ends. A chat still not there this long after the turn that was
@@ -119,12 +130,12 @@ async function askAgentToMove($: EngineInterface, folder: string): Promise<void>
 // Moves this chat to the folder the active session's work is in, as /cd does when the person types it. The desktop app
 // moves the chat only after the agent's turn ends, so the band is read again once the chat is there, not before.
 export async function followSession($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
-  await checkChatFolder($, chatBar)
+  await readChatFolder($, chatBar)
   const { expected, isElsewhere } = await currentChatFolder($)
   if (!isElsewhere) return
   const asked = await moveChatTo($, expected)
   if (!asked) return
   $.ui.toast(`Moving this chat to ${expected}${chatBar.sessionName ? `, for ${chatBar.sessionName}` : ''}`)
   if (!(await arrivedIn($, expected, asked))) await reportLateMove($, expected)
-  await checkChatFolder($, chatBar)
+  await readChatFolder($, chatBar)
 }
