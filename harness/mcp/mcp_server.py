@@ -497,20 +497,36 @@ class McpServer:
 class _ProjectNamedOnly:
     """The ``/mcp`` endpoint for requests that name their project. Claude Code runs a chat's header helper again only
     when the server answers 401, so a chat that connected while the helper could not run, such as during a restart or
-    an install, names its project on the next try instead of failing every call."""
+    an install, names its project on the next try instead of failing every call.
+
+    A request that names a Claude Code spare folder as its project and does not name its chat comes from a chat the
+    desktop app started in that spare folder, through a header helper older than the chat header. It is refused too,
+    so the helper runs again and names the chat, and the server follows the chat to the folder it has moved to."""
 
     def __init__(self, app: Any) -> None:
         self._app = app
         self._header = PROJECT_HEADER.lower().encode("latin-1")
+        self._chat_header = CHAT_HEADER.lower().encode("latin-1")
+        self._spares = (Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude") / "spares").resolve()
         self._refusal = {"error": f"name the chat's project in the {PROJECT_HEADER} header"}
+        self._chat_refusal = {"error": f"a chat started in a Claude Code spare folder names itself in the {CHAT_HEADER} header"}
 
     async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
         from starlette.responses import JSONResponse
 
-        if scope["type"] == "http" and not any(name == self._header and value for name, value in scope["headers"]):
-            await JSONResponse(self._refusal, status_code=401)(scope, receive, send)
+        refusal = self._refusal_for(dict(scope["headers"])) if scope["type"] == "http" else None
+        if refusal is not None:
+            await JSONResponse(refusal, status_code=401)(scope, receive, send)
             return
         await self._app(scope, receive, send)
+
+    def _refusal_for(self, headers: dict[bytes, bytes]) -> dict[str, str] | None:
+        project = headers.get(self._header, b"").decode("latin-1").strip()
+        if not project:
+            return self._refusal
+        if self._chat_header not in headers and Path(project).resolve().is_relative_to(self._spares):
+            return self._chat_refusal
+        return None
 
 
 class ProjectNotNamed(Exception):

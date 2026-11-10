@@ -38,8 +38,8 @@ with description("what a chat's connect script prints") as self:
             os.environ[connect.CHAT_ID_VARIABLE] = self.prior_chat
 
     with context("for an IDE's headers helper, with the chat's folder passed"):
-        with it("should be the headers alone, naming that folder"):
-            expect(connect.answer([r"C:\dev\pets"], _URL, "x-cdd-project", "x-cdd-chat")).to(equal({"x-cdd-project": r"C:\dev\pets"}))
+        with it("should be the headers alone, naming that folder and an unnamed chat"):
+            expect(connect.answer([r"C:\dev\pets"], _URL, "x-cdd-project", "x-cdd-chat")).to(equal({"x-cdd-project": r"C:\dev\pets", "x-cdd-chat": connect.UNNAMED_CHAT}))
 
     with context("for a Claude Code chat's headers helper"):
         with it("should name the chat, so the server can follow it to the folder it works in now"):
@@ -48,4 +48,4 @@ with description("what a chat's connect script prints") as self:
 
     with context("for a language adapter, asked for the server's address in the project's folder"):
         with it("should be the server's address with the headers naming the folder it runs in"):
-            expect(connect.answer(["--address"], _URL, "x-cdd-project", "x-cdd-chat")).to(equal({"url": _URL, "headers": {"x-cdd-project": os.getcwd()}}))
+            expect(connect.answer(["--address"], _URL, "x-cdd-project", "x-cdd-chat")).to(equal({"url": _URL, "headers": {"x-cdd-project": os.getcwd(), "x-cdd-chat": connect.UNNAMED_CHAT}}))

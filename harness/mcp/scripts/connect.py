@@ -16,6 +16,9 @@ ADDRESS_FLAG = "--address"
 # Claude Code runs a chat's tools, this script among them, with the chat's id in this variable. The id stays the same
 # when the chat moves to another folder, which the folder Claude Code fills into the arguments does not.
 CHAT_ID_VARIABLE = "CLAUDE_CODE_SESSION_ID"
+# The chat header always goes, so the server never refuses a second time for a chat this script has already named:
+# an IDE that gives no chat id sends this in its place.
+UNNAMED_CHAT = "unnamed"
 
 
 def main() -> None:
@@ -33,10 +36,10 @@ def answer(arguments: list[str], url: str, project_header: str, chat_header: str
     """What the script prints: the headers alone for an IDE's ``headersHelper``, or, asked with ``--address``, the
     server's address with the headers, for a language adapter that connects on its own. A Claude Code chat's id goes
     in the chat header, so the server reads the folder the chat works in now from its transcript."""
-    headers = {project_header: project_folder([word for word in arguments if word != ADDRESS_FLAG])}
-    chat_id = os.environ.get(CHAT_ID_VARIABLE, "").strip()
-    if chat_id:
-        headers[chat_header] = chat_id
+    headers = {
+        project_header: project_folder([word for word in arguments if word != ADDRESS_FLAG]),
+        chat_header: os.environ.get(CHAT_ID_VARIABLE, "").strip() or UNNAMED_CHAT,
+    }
     return {"url": url, "headers": headers} if ADDRESS_FLAG in arguments else headers
 
 
