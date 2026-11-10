@@ -349,7 +349,17 @@ class CallSessions:
         return self.of_project(project).current()
 
     def open_in(self, call: ToolCall) -> Session:
-        return self.of_project(call.project).current(call)
+        """The session the call's chat has open, read from the checkout the chat works in: a chat whose ticket is open
+        in its own worktree keeps that session's details in the worktree's ``.sessions``."""
+        return self.of_chat(call).current(call)
+
+    def of_chat(self, call: ToolCall) -> Sessions:
+        """The sessions of the checkout the call's chat works in: its open worktree, else the call's project."""
+        sessions = self.of_project(call.project)
+        worktree = sessions.open_state(call.chat_id).worktree_folder
+        if worktree is not None and Path(worktree).is_dir():
+            return self.of_project(worktree)
+        return sessions
 
     def named_in(self, session_file: str, call: ToolCall) -> Session:
         project = call.project if call.project is not None else Path(session_file).resolve().parent
