@@ -167,10 +167,9 @@ export class TicketClient extends TicketClientGenerated {
     else await this.moveNext()
   }
 
-  // A ticket dropped on another becomes its child, wherever either sits; one is never its own parent, and one already
-  // its child stays where it is.
+  // Python names the tickets another can be dropped on to become their child.
   canTakeAsChild(other: TicketClient): boolean {
-    return other.name !== this.name && !this.children.some(child => child.name === other.name)
+    return other.parent_choices.includes(this.name)
   }
 
   async takeAsChild(other: TicketClient): Promise<void> {

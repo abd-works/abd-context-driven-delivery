@@ -248,6 +248,19 @@ class Ticket(Card):
 
     @property
     @data_field
+    def parent_choices(self) -> list[str]:
+        """The tickets a person can drop it on to make it their child: any on the board but its own parent, itself, and
+        the tickets under it, which would make a loop."""
+        if self.is_main:
+            return []
+        parent = self.parent
+        return [ticket.name for ticket in self._board.tickets if ticket is not parent and self._can_be_child_of(ticket)]
+
+    def _can_be_child_of(self, parent: Ticket) -> bool:
+        return self.name not in [parent.name, *(ancestor.name for ancestor in parent.ancestors)]
+
+    @property
+    @data_field
     def drop_targets(self) -> list[str]:
         """The columns besides the stages a person can drop it on. The Backlog takes any ticket, which keeps its whole
         folder there. Complete takes one from Implementation's Done, or an open ticket, through its Close dialog, because
@@ -511,7 +524,7 @@ class Ticket(Card):
     @noSessionLog
     def reassign_parent(self, parent: Ticket | None = None) -> Ticket:
         """Make parent ticket's parent, as dragging ticket onto it does, or none, so ticket is a ticket of its own (Alt-dragging it out of its parent); either way it is no longer pulled out. Committed on main and pushed."""
-        if parent is not None and self.name in [parent.name, *(ancestor.name for ancestor in parent.ancestors)]:
+        if parent is not None and not self._can_be_child_of(parent):
             raise ParentLoopError(self.name, parent.name)
         self._session.set_parent(parent.session if parent is not None else None)
         return self._saved(f"give {self.name} the parent {parent.name if parent is not None else 'none'}")
