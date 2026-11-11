@@ -374,6 +374,28 @@ with description('a Draw.io class diagram'):
             with it('should still place the cart class'):
                 expect(_has_vertex(self.xml, _CART)).to(be_true)
 
+        with context('with a model large enough for one page per module'):
+            with before.each:
+                from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import CLASSES_ON_ONE_PAGE
+
+                def two_modules():
+                    model = CleanEngineeringModel(name='Shop', sequential_order=1)
+                    for number, name in enumerate(('Orders', 'Billing'), start=1):
+                        module = Module(name=name, sequential_order=number)
+                        module.classes.extend(
+                            OoadClass(name=f'{name}Part{index}', sequential_order=index, properties=[Property(name='size', type_hint='int')])
+                            for index in range(1, CLASSES_ON_ONE_PAGE // 2 + 2)
+                        )
+                        model.modules.append(module)
+                    return model
+
+                first = DrawIOCleanEngineeringModel().render(two_modules())
+                self.card = next(cell.get('id') for cell in ET.fromstring(first).iter('mxCell') if cell.get('vertex') == '1' and 'OrdersPart3' in (cell.get('value') or ''))
+                self.xml = _render_kept(two_modules(), _set_cell_xy(first, self.card, 1234, 567))
+
+            with it('should keep a hand-moved card where it was on its module page'):
+                expect(_cell_xy(self.xml, self.card)).to(equal((1234.0, 567.0)))
+
     with context('that does not keep positioning'):
         with context('with a new class added after a hand-moved layout'):
             with it('should not keep a hand-moved position after full relayout'):

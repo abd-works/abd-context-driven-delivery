@@ -438,6 +438,9 @@ class _ClassDiagramWriter:
         }
         self.named_modules = [module for module in channel.modules if module.classes]
         self.module_fills = self._module_fill_colors()
+        # Each page of the diagram this render replaces, by name, when it keeps positions: a module page keeps the cards
+        # and arrows of the page with its name.
+        self.previous_pages = self._previous_pages()
 
     def write(self) -> str:
         mxfile = ET.Element('mxfile')
@@ -541,7 +544,21 @@ class _ClassDiagramWriter:
         graph = _add_diagram_page(mxfile, page_name, f'page-{_cell_slug(page_name)}')
         local_ids = {self.cell_ids[id(oclass)] for oclass in module.classes}
         import_ids = self._direct_import_ids(local_ids, module_tab_label(page_name))
-        _ClassDiagramPage(self, local_ids | set(import_ids), local_ids, import_ids).write(graph, {}, {})
+        drawn = self.previous_pages.get(page_name)
+        positions = drawn.positions() if drawn is not None else {}
+        previous_edges = drawn.edges_by_ends() if drawn is not None else {}
+        _ClassDiagramPage(self, local_ids | set(import_ids), local_ids, import_ids).write(graph, positions, previous_edges)
+
+    def _previous_pages(self) -> Dict[str, DrawioPage]:
+        """The pages of the diagram this render replaces, by name; none when it keeps no positions or the previous
+        text is not a draw.io file."""
+        previous = self.channel.kept_previous()
+        if not previous:
+            return {}
+        try:
+            return {page.name: page for page in DrawioPage.pages_in(ET.fromstring(previous))}
+        except ET.ParseError:
+            return {}
 
     def _direct_import_ids(self, local_ids: set[str], local_label: str) -> List[str]:
         """Foreign class ids with a direct link from this module's page.
