@@ -39,6 +39,10 @@ export function BoardHeaderView() {
         <span>Active session only</span>
         <input type="checkbox" role="switch" className="practice-switch" checked={state.onlyActive} onChange={() => page.layout.toggleOnlyActive()} />
       </label>
+      <label className="header-field" title="Off: a report's Fix goes into the chat's prompt for you to edit and send. On: it is sent to the chat directly.">
+        <span>Send fixes directly</span>
+        <input type="checkbox" role="switch" className="practice-switch" checked={page.board.sends_fixes_directly} onChange={() => void page.board.toggleFixesSentDirectly()} />
+      </label>
       <HeaderActionsView />
     </header>
   )

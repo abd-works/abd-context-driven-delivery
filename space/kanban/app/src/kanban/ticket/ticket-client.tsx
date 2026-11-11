@@ -281,18 +281,27 @@ export class TicketClient extends TicketClientGenerated {
     return this.chat.fill(this.inSession(`Write a handoff for ticket ${this.name} with /space-session-handoff-session`))
   }
 
-  // A report's fixes are for the ticket whose report it is, so they name its session and go to its chat. Each fills the
-  // chat's prompt rather than sending, so the person can edit the fix before sending it.
+  // A report's fixes are for the ticket whose report it is, so they name its session and go to its chat: into its prompt
+  // for the person to edit before sending, unless the repository's board sends fixes directly.
   fixViolation(rule: ReportRuleData, violation: ViolationData): Promise<void> {
-    return this.chat.fill(this.inSession(fixViolationPrompt(rule, violation)))
+    return this.deliverFix(fixViolationPrompt(rule, violation))
   }
 
   fixRule(report: ReportClient, rule: ReportRuleData): Promise<void> {
-    return this.chat.fill(this.inSession(fixRulePrompt(report, rule)))
+    return this.deliverFix(fixRulePrompt(report, rule))
   }
 
   fixReport(report: ReportClient): Promise<void> {
-    return this.chat.fill(this.inSession(fixReportPrompt(report)))
+    return this.deliverFix(fixReportPrompt(report))
+  }
+
+  get fixTitle(): string {
+    return this.page.board.sends_fixes_directly ? 'Send this fix to the chat' : "Put this fix in the chat's prompt to edit and send"
+  }
+
+  private deliverFix(prompt: string): Promise<void> {
+    const text = this.inSession(prompt)
+    return this.page.board.sends_fixes_directly ? this.chat.command(text) : this.chat.fill(text)
   }
 
   // A report whose saved graph is out of date has lost its graph's rules, so its fidelity is validated again to find them.

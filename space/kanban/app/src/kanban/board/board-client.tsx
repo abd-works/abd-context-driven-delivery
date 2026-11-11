@@ -34,6 +34,12 @@ export class BoardClient extends BoardClientGenerated {
     return this.heldPractices
   }
 
+  // Set once for the repository: Python keeps it in the board's file, and the board is read again to show it.
+  async toggleFixesSentDirectly(): Promise<void> {
+    await this.setSendsFixesDirectly(!this.sends_fixes_directly)
+    await this.page.reader.refresh()
+  }
+
   practiceNamed(key: string): PracticeClient | undefined {
     return this.shownPractices.find(practice => practice.key === key)
   }
