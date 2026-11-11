@@ -37,8 +37,8 @@ The starting line, not a slice to build: what the framework, the CDD Kanban, the
 | Sketch and iterate | Grill, sketch and iterate |
 | Sessions | Sessions, worktrees and branches · Handoffs and decision records · Server health |
 | Bring in real context | Index and segment a source · Capture documents into a searchable index · Sandbox a live app · Meeting notes |
-| Take the work to code | Move a ticket through Specification and Implementation · Hand a stubborn bug to a background agent |
-| The CDD Kanban and the visual apps | CDD Kanban · Kanban fidelity work · Story UI editor · Design canvas and story demo · Knowledge graph · Catalog and project approach |
+| CDD Kanban | See and move work on the board · Work a ticket's fidelities · Move a ticket through Specification and Implementation · Hand a stubborn bug to a background agent |
+| Visual apps | Story UI editor · Design canvas and story demo · Knowledge graph · Catalog and project approach |
 | Pattern overlays | Add your stack: LERN, MERN, CDD web domain access, Claude Code mods |
 | Extend CDD | Builders and annotations · Agent BDD and prompt log |
 
@@ -358,30 +358,9 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
 - *What you get:* decisions and facts from meetings become citable context files, one file per note. Nothing is moved until you confirm.
 - *Under the hood:* `tools/granola`.
 
-### Take the work to code: from story map to tests to code
+### CDD Kanban: see, move and work tickets from story map to code
 
-**Lesson 16. Move a ticket through Specification and Implementation**
-- *What you do:* move the ticket through Specification and Implementation.
-  - Generate `stories-scenarios`, `ddd-model`, `ux-mockup` and `clean-engineering-model`.
-  - Then generate `stories-acceptance-tests`, `bdd-development` and `clean-engineering-code`.
-  - Use the Specification and Implementation agents to run each stage.
-- *What you get:* scenarios become executable specs, then passing tests that drive real code. The same domain words run from the outcome all the way down to the code.
-- *Or from the chat bar:* when every fidelity of the stage has passed validate, the action button shows ➜. Press it to move the session to the next stage, then work the new stage's dots the same way.
-- *Under the hood:* the practices in `cdd_guidance/practices/`, with `cdd_guidance/agents/specification.md` and `implementation.md`.
-- *What happens underneath:*
-  1. ➜ calls `ticket.move_next`, which records the new stage in `session.json` and the log.
-  2. The chat bar shows the new stage's fidelities on its dots.
-  3. Generate builds each fidelity from the one before it, rendering into the new format first when the formats differ.
-  4. Acceptance tests come before the code they drive, and the graph links steps and observations to the operations they call.
-
-**Lesson 17. Hand a stubborn bug to a background agent**
-- *What you do:* `/diagnose` (optionally with a practice) for a stubborn bug, or `sub-agent` for any recipe.
-- *What you get:* a disciplined hunt runs in the background (reproduce, minimise, form hypotheses, fix, add a regression test) while you keep working.
-- *Under the hood:* `cdd_guidance/actions/diagnose` and `tools/sub_agent`.
-
-### The CDD Kanban and the visual apps
-
-**Lesson 18. See and move work on the CDD Kanban**
+**Lesson 16. See and move work on the CDD Kanban**
 - *What you do:* open the board and find every session as a ticket in Backlog, Discovery, Specification, Implementation or Complete.
   - Add a backlog item and start it as a ticket.
   - Move tickets forward or back.
@@ -396,7 +375,7 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
   5. A move calls `ticket.move_next`, `move_previous` or `move_to`, which writes `stage` and `stage_mark` into `session.json` and adds a line to the log.
   6. WIP limits and the order of cards are kept in `.sessions/_board.json`.
 
-**Lesson 19. Work a ticket's fidelities from the board**
+**Lesson 17. Work a ticket's fidelities from the board**
 - *What you do:* choose the ticket's practices and read each fidelity tile's progress dots.
   - Send the next action, or one action to every practice in the stage, with format chips.
   - Open the violations band and its report, and fix the violations.
@@ -408,6 +387,27 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
   2. Pressing an action sends that command through `harness/chat` to the connected chat working on the ticket, whose cdd-board plugin checks in every second.
   3. The board follows the command until the chat has shown it and finished.
   4. The violations band reads `ticket.violations`, and the files list reads `fidelity-progress.files` and `file-manager.*`.
+
+**Lesson 18. Move a ticket through Specification and Implementation**
+- *What you do:* move the ticket through Specification and Implementation.
+  - Generate `stories-scenarios`, `ddd-model`, `ux-mockup` and `clean-engineering-model`.
+  - Then generate `stories-acceptance-tests`, `bdd-development` and `clean-engineering-code`.
+  - Use the Specification and Implementation agents to run each stage.
+- *What you get:* scenarios become executable specs, then passing tests that drive real code. The same domain words run from the outcome all the way down to the code.
+- *Or from the chat bar:* when every fidelity of the stage has passed validate, the action button shows ➜. Press it to move the session to the next stage, then work the new stage's dots the same way.
+- *Under the hood:* the practices in `cdd_guidance/practices/`, with `cdd_guidance/agents/specification.md` and `implementation.md`.
+- *What happens underneath:*
+  1. ➜ calls `ticket.move_next`, which records the new stage in `session.json` and the log.
+  2. The chat bar shows the new stage's fidelities on its dots.
+  3. Generate builds each fidelity from the one before it, rendering into the new format first when the formats differ.
+  4. Acceptance tests come before the code they drive, and the graph links steps and observations to the operations they call.
+
+**Lesson 19. Hand a stubborn bug to a background agent**
+- *What you do:* `/diagnose` (optionally with a practice) for a stubborn bug, or `sub-agent` for any recipe.
+- *What you get:* a disciplined hunt runs in the background (reproduce, minimise, form hypotheses, fix, add a regression test) while you keep working.
+- *Under the hood:* `cdd_guidance/actions/diagnose` and `tools/sub_agent`.
+
+### Visual apps: shape and trace the work visually
 
 **Lesson 20. Author story maps in the Story UI editor**
 - *What you do:* open a map by its address and switch between map view and increment view.
