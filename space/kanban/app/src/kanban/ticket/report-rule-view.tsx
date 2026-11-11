@@ -53,7 +53,7 @@ function ViolationView({ panel, rule, violation, isOff }: { panel: ReportPanel; 
           {hasSource ? null : <ViolationLocationView panel={panel} rule={rule} violation={violation} />}
           <div className="violation-message">{violation.message}</div>
         </div>
-        <button className="fix-button" aria-label={`Fix ${locationOf(violation)}`} disabled={isOff} title={isOff ? 'Connect a chat to send fixes' : "Put this fix in the chat's prompt to edit and send"} onClick={() => void panel.ticket.fixViolation(rule, violation)}>
+        <button className="fix-button" aria-label={`Fix ${locationOf(violation)}`} disabled={isOff} title={isOff ? 'Connect a chat to send fixes' : panel.ticket.fixTitle} onClick={() => void panel.ticket.fixViolation(rule, violation)}>
           Fix
         </button>
       </div>

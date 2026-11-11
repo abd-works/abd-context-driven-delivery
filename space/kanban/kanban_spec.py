@@ -266,6 +266,21 @@ with description("a board") as self:
                 saved = json.loads((self.sessions.root / "_board.json").read_text(encoding="utf-8"))
                 expect(saved).to(equal({"pinned": ["pet-visits"], "wip_limits": {"Discovery": 5}}))
 
+        # A report's Fix goes into the chat's prompt for a person to edit, unless the repository sends fixes directly.
+        with it("should put fixes in the chat's prompt until a person sends them directly"):
+            expect(self.board.sends_fixes_directly).to(be_false)
+
+        with context("that a person sets fixes to be sent directly"):
+            with before.each:
+                self.board.set_sends_fixes_directly(True)
+
+            with it("should send fixes directly"):
+                expect(self.board.sends_fixes_directly).to(be_true)
+
+            with it("should keep it for the repository beside what else the board's file holds"):
+                saved = json.loads((self.sessions.root / "_board.json").read_text(encoding="utf-8"))
+                expect(saved).to(equal({"pinned": ["pet-visits"], "sends_fixes_directly": True}))
+
 with description("a backlog item") as self:
     with after.each:
         os.environ.pop("CDD_PROJECT", None)

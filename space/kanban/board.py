@@ -160,6 +160,14 @@ class Board:
         shared["order"] = {**shared.get("order", {}), column.name: list(keys)}
         JsonFile(self.file).write(shared)
 
+    @property
+    @data_field
+    def sends_fixes_directly(self) -> bool:
+        """Whether a report's Fix sends straight to the ticket's chat as a message, rather than putting it in the chat's
+        prompt for a person to edit before sending: set once for the repository, in the board's file, and off until a
+        person turns it on."""
+        return bool(self._shared.get("sends_fixes_directly", False))
+
     @cached_property
     def _shared(self) -> dict:
         """Everything the board's file holds, read once per board read; the board is its one reader and writer."""
@@ -327,6 +335,16 @@ class Board:
     @noSessionLog
     def show(self) -> Board:
         """Return the session board: Backlog, Discovery, Specification, Implementation, and Complete, with every ticket's progress through Generate and Validate, and the active ticket."""
+        return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def set_sends_fixes_directly(self, sends: bool) -> Board:
+        """Set whether a report's Fix sends straight to the ticket's chat as a message, or puts it in the chat's prompt to edit before sending; kept for the repository in the board's file."""
+        shared = self._shared
+        shared["sends_fixes_directly"] = sends
+        JsonFile(self.file).write(shared)
         return self
 
     @mcp
