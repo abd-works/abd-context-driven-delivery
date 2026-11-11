@@ -1,6 +1,6 @@
 """Validate Fidelity Outputs: the shared scenarios the Python tiers replay.
 
-Scenarios: move-work-forward-on-session-board/validate-fidelity-outputs/*/*_story.test.py.
+Scenarios: harness/.context/stories/move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md.
 Map: .context/story-map.md#e-validate-fidelity-outputs. Model: .context/kanban-model.md.
 
 Steps reach the board, the session, and the Validate action only through the World a tier hands them

@@ -188,7 +188,7 @@ Observed, turned off: `PromptLog` hooks `beforeSubmitPrompt`, `beforeReadFile`, 
 
 # (E) Move Work Forward On Session Board
 
-The Session Board shows every ticket in the repository. Story files are under `space/kanban/.context/move-work-forward-on-session-board/`.
+The Session Board shows every ticket in the repository. Story files are under `move-work-forward-on-session-board/` beside this map, one per sub-epic; the specs that run them stay in `space/kanban/`.
 
 ## (E) Check CDD Server Health On Board
 
@@ -218,35 +218,35 @@ Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "restart refresh -
 
 ## (E) See Work On Session Board
 
-### (S) Person --> [Open Board](../../kanban/.context/move-work-forward-on-session-board/see-work-on-session-board/open-board/open_board_story.test.md)
+### (S) Person --> [Open Board](move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-open-board)
 
 Observed: `board-page.ts` `start()` reads the board when the page opens.
 
-### (S) Board App --> [Display Board](../../kanban/.context/move-work-forward-on-session-board/see-work-on-session-board/display-board/display_board_story.test.md)
+### (S) Board App --> [Display Board](move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-board)
 
 Observed: Backlog, Discovery, Specification, Implementation and Complete, with In progress and Done inside each stage; the board refreshes after each cdd tool call, and a toast announces a ticket's move or review.
 
-### (S) Person --> [Arrange Board And Details](../../kanban/.context/move-work-forward-on-session-board/see-work-on-session-board/arrange-board-and-details/arrange_board_and_details_story.test.md)
+### (S) Person --> [Arrange Board And Details](move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-arrange-board-and-details)
 
 Observed: a drag on the split bar resizes the board and details; either can take the whole page.
 
-### (S) Board App --> [Display Backlog Items As Tickets](../../kanban/.context/move-work-forward-on-session-board/see-work-on-session-board/display-backlog-items-as-tickets/display_backlog_items_as_tickets_story.test.md)
+### (S) Board App --> [Display Backlog Items As Tickets](move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-backlog-items-as-tickets)
 
 Observed: the Backlog column shows the title of each file in `.sessions/_backlog/`.
 
-### (S) Board App --> [Display Ticket Card](../../kanban/.context/move-work-forward-on-session-board/see-work-on-session-board/display-ticket-card/display_ticket_card_story.test.md)
+### (S) Board App --> [Display Ticket Card](move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-ticket-card)
 
 Observed: `ticket-card-view.tsx` draws the title, age and one block per enabled practice; the active ticket has a thick orange outline.
 
-### (S) Board App --> [Display Ticket Details](../../kanban/.context/move-work-forward-on-session-board/see-work-on-session-board/display-ticket-details/display_ticket_details_story.test.md)
+### (S) Board App --> [Display Ticket Details](move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-ticket-details)
 
 Observed: a press on a card shows its practices, fidelity progress and latest validation reports below the board; with none pressed, the details show the active ticket.
 
-### (S) Person --> [Set Stage WIP Limit](../../kanban/.context/move-work-forward-on-session-board/see-work-on-session-board/set-stage-wip-limit/set_stage_wip_limit_story.test.md)
+### (S) Person --> [Set Stage WIP Limit](move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-set-stage-wip-limit)
 
 Observed: `Board.set_wip_limit`, saved in `.sessions/_board.json`.
 
-### (S) Person --> [Arrange Side Panel](../../kanban/.context/move-work-forward-on-session-board/see-work-on-session-board/arrange-side-panel/arrange_side_panel_story.test.md)
+### (S) Person --> [Arrange Side Panel](move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-arrange-side-panel)
 
 Observed: the report, files and help panels resize, expand one at a time and close.
 
@@ -256,31 +256,31 @@ Intended (`.sessions/_backlog/maintain-tickets-on-board.md` "click any empty are
 
 ## (E) Steer Ticket Sessions
 
-### (S) Person --> [Open Ticket Session](../../kanban/.context/move-work-forward-on-session-board/steer-ticket-sessions/open-ticket-session/open_ticket_session_story.test.md)
+### (S) Person --> [Open Ticket Session](move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-open-ticket-session)
 
 Observed: `Ticket.new` calls `Session.new`; a person can choose the folder the ticket's work goes in, for the whole ticket or one practice.
 
-### (S) Person --> [Activate Ticket](../../kanban/.context/move-work-forward-on-session-board/steer-ticket-sessions/activate-ticket/activate_ticket_story.test.md)
+### (S) Person --> [Activate Ticket](move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-activate-ticket)
 
 Observed: Activate opens a dialog with what to do on leaving (commit, push, merge into main) and on opening (branch and worktree), then calls `board.activate`.
 
-### (S) Person --> [Close Active Session](../../kanban/.context/move-work-forward-on-session-board/steer-ticket-sessions/close-active-session/close_active_session_story.test.md)
+### (S) Person --> [Close Active Session](move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-close-active-session)
 
 Observed: Close asks what to do with the work, then `Ticket.close` moves the folder to `.sessions/_complete/`, so the ticket shows in Complete.
 
-### (S) Person --> [Move Ticket](../../kanban/.context/move-work-forward-on-session-board/steer-ticket-sessions/move-ticket/move_ticket_story.test.md)
+### (S) Person --> [Move Ticket](move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-move-ticket)
 
 Observed: the arrows or a drag move a ticket one column on (`Ticket.move_next`) or back (`Ticket.move_previous`); out of Implementation it closes into Complete, and back out of Discovery it goes to the Backlog with its work.
 
-### (S) Person --> [Write Ticket Handoff](../../kanban/.context/move-work-forward-on-session-board/steer-ticket-sessions/write-ticket-handoff/write_ticket_handoff_story.test.md)
+### (S) Person --> [Write Ticket Handoff](move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-write-ticket-handoff)
 
 Observed: Handoff fills the prompt with `/space-handoff-handoff-session`.
 
-### (S) Board App --> [Display Latest Handoff](../../kanban/.context/move-work-forward-on-session-board/steer-ticket-sessions/display-latest-handoff/display_latest_handoff_story.test.md)
+### (S) Board App --> [Display Latest Handoff](move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-display-latest-handoff)
 
 Observed: `Ticket.latest_handoff`.
 
-### (S) Person --> [Restrict Actions To Active Session](../../kanban/.context/move-work-forward-on-session-board/see-work-on-session-board/restrict-actions-to-active-session/restrict_actions_to_active_session_story.test.md)
+### (S) Person --> [Restrict Actions To Active Session](move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-restrict-actions-to-active-session)
 
 Observed: with Active session only on, a ticket that is not the active session disables what sends commands to a chat; moving, activating and information stay open.
 
@@ -294,7 +294,7 @@ Observed (checked 2026-11-10): starting a backlog item opens Where <item> works,
 
 ## (E) Maintain Tickets
 
-### (S) Person --> [Add Backlog Item](../../kanban/.context/move-work-forward-on-session-board/steer-ticket-sessions/add-backlog-item/add_backlog_item_story.test.md)
+### (S) Person --> [Add Backlog Item](move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-add-backlog-item)
 
 Observed: the + on the Backlog heading writes a title and text to one markdown file in `.sessions/_backlog/`; the → on a backlog card starts it as a ticket in Discovery (`BacklogItem.start`).
 
@@ -306,7 +306,7 @@ Intended (`.sessions/session-board/ticket-enhancements.md`): a double click on a
 
 Intended (`.sessions/session-board/ticket-enhancements.md`): a ticket dragged up or down within its column keeps that place. Built today (checked 2026-11-11): a drag moves a ticket between columns only; the Backlog lists its items by file name (`board.py:328`) and no column keeps a place a person chose.
 
-### (S) Person --> [Archive Ticket](../../kanban/.context/move-work-forward-on-session-board/steer-ticket-sessions/archive-ticket/archive_ticket_story.test.md)
+### (S) Person --> [Archive Ticket](move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-archive-ticket)
 
 Observed as the `ticket.archive` tool (`Ticket.archive`). Intended (`.sessions/session-board/ticket-enhancements.md`): Archive on a card.
 
@@ -320,7 +320,7 @@ Intended (`.sessions/_backlog/maintain-tickets-on-board.md` "tagging sessions"):
 
 ## (E) Organize Ticket Hierarchy
 
-### (S) Person --> [Split Ticket Into Child Tickets](../../kanban/.context/move-work-forward-on-session-board/steer-ticket-sessions/split-ticket-into-child-tickets/split_ticket_into_child_tickets_story.test.md)
+### (S) Person --> [Split Ticket Into Child Tickets](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-split-ticket-into-child-tickets)
 
 Observed: `Ticket.new` records the parent; Split fills the prompt through `fillSplit`. Intended (`.sessions/session-board/ticket-enhancements.md`): the AI slices the ticket thinly into the child tickets it proposes.
 
@@ -350,31 +350,31 @@ Intended (`.sessions/session-board/ticket-enhancements.md`): a child ticket's br
 
 ## (E) Guide Work Through Practices On Board
 
-### (S) Board App --> [Display Fidelity Progress](../../kanban/.context/move-work-forward-on-session-board/guide-work-through-practices/display-fidelity-progress/display_fidelity_progress_story.test.md)
+### (S) Board App --> [Display Fidelity Progress](move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-display-fidelity-progress)
 
 Observed: each fidelity on a tile shows Generate, Validate and Review as ○ to do, … in progress or ✓ done.
 
-### (S) Person --> [Open Practice Tile](../../kanban/.context/move-work-forward-on-session-board/guide-work-through-practices/open-practice-tile/open_practice_tile_story.test.md)
+### (S) Person --> [Open Practice Tile](move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-open-practice-tile)
 
 Observed: a tile opens after a short hover, closes on leaving, and a press keeps it open.
 
-### (S) Person --> [Choose Ticket Practices](../../kanban/.context/move-work-forward-on-session-board/guide-work-through-practices/choose-ticket-practices/choose_ticket_practices_story.test.md)
+### (S) Person --> [Choose Ticket Practices](move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-choose-ticket-practices)
 
 Observed: `Ticket.enable_practice` saves the choice to the ticket's `session.json`.
 
-### (S) Person --> [Send Next Fidelity Action](../../kanban/.context/move-work-forward-on-session-board/guide-work-through-practices/send-next-fidelity-action/send_next_fidelity_action_story.test.md)
+### (S) Person --> [Send Next Fidelity Action](move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-send-next-fidelity-action)
 
 Observed: Run next names the step that runs next and steps through generate, validate and review for each practice in order (`Ticket.next_fidelity`, `Ticket.next_action`), holding on fix violations until they are fixed.
 
-### (S) Person --> [Send Action To Stage Practices](../../kanban/.context/move-work-forward-on-session-board/guide-work-through-practices/send-action-to-stage-practices/send_action_to_stage_practices_story.test.md)
+### (S) Person --> [Send Action To Stage Practices](move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-send-action-to-stage-practices)
 
 Observed: the stage head sends one action for every enabled practice in a stage.
 
-### (S) Person --> [Mark Ticket Done In Stage](../../kanban/.context/move-work-forward-on-session-board/guide-work-through-practices/mark-ticket-done-in-stage/mark_ticket_done_in_stage_story.test.md)
+### (S) Person --> [Mark Ticket Done In Stage](move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-mark-ticket-done-in-stage)
 
 Observed: the arrow takes an In progress ticket to Done without crossing a column, written as a `done <stage>` session log line, and back as `in-progress <stage>`.
 
-### (S) Person --> [Open Help](../../kanban/.context/move-work-forward-on-session-board/guide-work-through-practices/open-help/open_help_story.test.md)
+### (S) Person --> [Open Help](move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-open-help)
 
 Observed: `Board.help`; the ? on a tile or practice name opens the overview, guidance and rules in a side panel, with a link to the Forge page.
 
@@ -450,23 +450,23 @@ Intended (`.sessions/_backlog/show-board-quickly.md` cause 3): `session.json` is
 
 ### (E) Generate Fidelity Outputs On Board
 
-#### (S) Person --> [Choose Action And Formats](../../kanban/.context/move-work-forward-on-session-board/generate-fidelity-outputs/choose-action-and-formats/choose_action_and_formats_story.test.md)
+#### (S) Person --> [Choose Action And Formats](move-work-forward-on-session-board/work-fidelity-outputs-on-board/generate-fidelity-outputs-on-board/generate_fidelity_outputs_on_board_story.test.md#story-choose-action-and-formats)
 
 Observed: the tile's action bar lists the actions and format chips, with the default format picked unless that output exists.
 
-#### (S) Claude Code --> [Resolve Fidelity Output Paths](../../kanban/.context/move-work-forward-on-session-board/generate-fidelity-outputs/resolve-fidelity-output-paths/resolve_fidelity_output_paths_story.test.md)
+#### (S) Claude Code --> [Resolve Fidelity Output Paths](move-work-forward-on-session-board/work-fidelity-outputs-on-board/generate-fidelity-outputs-on-board/generate_fidelity_outputs_on_board_story.test.md#story-resolve-fidelity-output-paths)
 
 Observed: `Generate` and `Session.fidelity_outputs` take the outputs a fidelity declares, with the `session.json` overrides.
 
-#### (S) Person --> [Generate Fidelity Output](../../kanban/.context/move-work-forward-on-session-board/generate-fidelity-outputs/generate-fidelity-output/generate_fidelity_output_story.test.md)
+#### (S) Person --> [Generate Fidelity Output](move-work-forward-on-session-board/work-fidelity-outputs-on-board/generate-fidelity-outputs-on-board/generate_fidelity_outputs_on_board_story.test.md#story-generate-fidelity-output)
 
 Observed: Run sends `/actions-generate <fidelities> format=<formats>`, rendering the earlier fidelity into a new format first (`Ticket.generate_commands`); a generate line in the session log counts as Generate done.
 
-#### (S) Person --> [Render Fidelity Format](../../kanban/.context/move-work-forward-on-session-board/generate-fidelity-outputs/render-fidelity-format/render_fidelity_format_story.test.md)
+#### (S) Person --> [Render Fidelity Format](move-work-forward-on-session-board/work-fidelity-outputs-on-board/generate-fidelity-outputs-on-board/generate_fidelity_outputs_on_board_story.test.md#story-render-fidelity-format)
 
 Observed: Render sends `/actions-render`.
 
-#### (S) Person --> [Send Tile Action To Chat](../../kanban/.context/move-work-forward-on-session-board/generate-fidelity-outputs/send-tile-action-to-chat/send_tile_action_to_chat_story.test.md)
+#### (S) Person --> [Send Tile Action To Chat](move-work-forward-on-session-board/work-fidelity-outputs-on-board/generate-fidelity-outputs-on-board/generate_fidelity_outputs_on_board_story.test.md#story-send-tile-action-to-chat)
 
 Observed: Run sends `/actions-sketch`, `/actions-iterate` or `/actions-document` to the chosen chat.
 
@@ -484,23 +484,23 @@ Intended (`.sessions/_backlog/customize-board-workflow.md` "use sub agents toggl
 
 ### (E) Validate Fidelity Outputs On Board
 
-#### (S) Person --> [Validate Fidelity](../../kanban/.context/move-work-forward-on-session-board/validate-fidelity-outputs/validate-fidelity/validate_fidelity_story.test.md)
+#### (S) Person --> [Validate Fidelity](move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-validate-fidelity)
 
 Observed: Validate sends `/actions-validate`; a validate line counts as done only when it names no graph-rule violations.
 
-#### (S) Claude Code --> [Save Validation Report](../../kanban/.context/move-work-forward-on-session-board/validate-fidelity-outputs/save-validation-report/save_validation_report_story.test.md)
+#### (S) Claude Code --> [Save Validation Report](move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-save-validation-report)
 
 Observed: `Validate` saves `.sessions/<session>/validation-reports/<practice>-<fidelity>-<date>.md` and the graph it checked beside it in `.json`.
 
-#### (S) Person --> [Open Validation Report](../../kanban/.context/move-work-forward-on-session-board/validate-fidelity-outputs/open-validation-report/open_validation_report_story.test.md)
+#### (S) Person --> [Open Validation Report](move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-open-validation-report)
 
 Observed: `fidelity-progress.report` opens the latest report in a side panel.
 
-#### (S) Person --> [Fix Report Violations](../../kanban/.context/move-work-forward-on-session-board/validate-fidelity-outputs/fix-report-violations/fix_report_violations_story.test.md)
+#### (S) Person --> [Fix Report Violations](move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-fix-report-violations)
 
 Observed: Fix sends the chat the rule, the error at its file and line, and the content that failed; Fix all sends every violation of the rule in one message.
 
-#### (S) Board App --> [Display Violations Band](../../kanban/.context/move-work-forward-on-session-board/validate-fidelity-outputs/display-violations-band/display_violations_band_story.test.md)
+#### (S) Board App --> [Display Violations Band](move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-display-violations-band)
 
 Observed: the band shows the active ticket's violations, only when it has some, and sends them to satisfy.
 
@@ -514,19 +514,19 @@ Observed (checked 2026-11-10): each violation that names a file and line shows a
 
 ### (E) Review Fidelity Outputs On Board
 
-#### (S) Person --> [List Ticket Files](../../kanban/.context/move-work-forward-on-session-board/review-fidelity-outputs/list-ticket-files/list_ticket_files_story.test.md)
+#### (S) Person --> [List Ticket Files](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-list-ticket-files)
 
 Observed: `fidelity-progress.files` lists the tile's or ticket's fidelities' files; on a ticket working in the whole repository, only what its branch changed.
 
-#### (S) Person --> [Browse Ticket Folder](../../kanban/.context/move-work-forward-on-session-board/review-fidelity-outputs/browse-ticket-folder/browse_ticket_folder_story.test.md)
+#### (S) Person --> [Browse Ticket Folder](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-browse-ticket-folder)
 
 Observed: the folder mode of the files panel groups the files under their folders.
 
-#### (S) Person --> [View Fidelity Files](../../kanban/.context/move-work-forward-on-session-board/review-fidelity-outputs/view-fidelity-files/view_fidelity_files_story.test.md)
+#### (S) Person --> [View Fidelity Files](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-view-fidelity-files)
 
 Observed: one tab per format the fidelity offers, generated or not; × closes one.
 
-#### (S) Person --> [Review Fidelity](../../kanban/.context/move-work-forward-on-session-board/review-fidelity-outputs/review-fidelity/review_fidelity_story.test.md)
+#### (S) Person --> [Review Fidelity](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-review-fidelity)
 
 Observed: Reviewed is off until a clean validate; when every fidelity of a stage is reviewed, the ticket shows in that stage's Done.
 
@@ -636,7 +636,7 @@ Observed: the pointer on the session name shows the card, with each fidelity's n
 
 Inferred: the chat's status line names the active session, its stage, next guidance and violations, read from the same chat bar client as the strip (`register.ts` `readActive`).
 
-### (S) Claude Code --> [Add Active Ticket To System Prompt](../../kanban/.context/move-work-forward-on-session-board/guide-work-through-practices/add-active-ticket-to-system-prompt/add_active_ticket_to_system_prompt_story.test.md)
+### (S) Claude Code --> [Add Active Ticket To System Prompt](move-work-forward-from-chat-bar/see-work-in-chat-bar/see_work_in_chat_bar_story.test.md#story-add-active-ticket-to-system-prompt)
 
 Inferred: the `prompt.compose` hook in `register.ts` adds the active session and its next guidance, and leaves the prompt unchanged with no active session.
 

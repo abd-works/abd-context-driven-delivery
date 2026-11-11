@@ -10,7 +10,7 @@ the way `space/kanban/app/test-utils/fixture-repo.ts` writes the board app's fix
 a fidelity. They are passed to the board's operations in a When.
 
 The ticket names, titles, and log lines are those of `fixture-repo.ts` and of the scenarios in
-`move-work-forward-on-session-board/`, so the Python tiers and the board app agree on one example world.
+`harness/.context/stories/move-work-forward-on-session-board/`, so the Python tiers and the board app agree on one example world.
 """
 
 from __future__ import annotations

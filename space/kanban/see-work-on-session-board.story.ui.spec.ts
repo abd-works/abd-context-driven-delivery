@@ -1,7 +1,7 @@
 /**
  * See Work On Session Board at the browser tier: the scenarios whose behaviour lives only in the board app.
  *
- * Scenarios: move-work-forward-on-session-board/see-work-on-session-board/*\/*_story.test.py. The Python tiers replay
+ * Scenarios: harness/.context/stories/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md; Restrict Actions To Active Session is in harness/.context/stories/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md. The Python tiers replay
  * the rest from see-work-on-session-board.story.shared.py.
  *
  * Each scenario runs against the board app built and served on the throwaway fixture project

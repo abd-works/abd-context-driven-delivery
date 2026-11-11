@@ -1,6 +1,6 @@
 """Generate Fidelity Outputs: the shared scenarios the Python tiers replay.
 
-Scenarios: move-work-forward-on-session-board/generate-fidelity-outputs/*/*_story.test.py.
+Scenarios: harness/.context/stories/move-work-forward-on-session-board/work-fidelity-outputs-on-board/generate-fidelity-outputs-on-board/generate_fidelity_outputs_on_board_story.test.md.
 Map: .context/story-map.md#e-generate-fidelity-outputs. Model: .context/kanban-model.md.
 
 Steps reach the board and the session only through the World a tier hands them (`world.Ticket`, `world.Generate`,

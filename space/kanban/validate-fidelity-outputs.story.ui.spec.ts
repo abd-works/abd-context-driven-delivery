@@ -1,7 +1,7 @@
 /**
  * Validate Fidelity Outputs at the browser tier: the scenarios that only the board app's page shows.
  *
- * Scenarios: move-work-forward-on-session-board/validate-fidelity-outputs/*\/*_story.test.py. The Python tiers replay
+ * Scenarios: harness/.context/stories/move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md. The Python tiers replay
  * the rest from validate-fidelity-outputs.story.shared.py.
  *
  * Each scenario runs against the board app built and served on the throwaway fixture project

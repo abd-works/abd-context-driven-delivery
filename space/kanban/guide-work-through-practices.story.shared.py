@@ -1,6 +1,6 @@
 """Guide Work Through Practices: the shared scenarios the Python tiers replay.
 
-Scenarios: move-work-forward-on-session-board/guide-work-through-practices/*/*_story.test.py.
+Scenarios: harness/.context/stories/move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md; Add Active Ticket To System Prompt is in harness/.context/stories/move-work-forward-from-chat-bar/see-work-in-chat-bar/see_work_in_chat_bar_story.test.md.
 Map: .context/story-map.md#e-guide-work-through-practices. Model: .context/kanban-model.md.
 
 Steps reach the board only through the World a tier hands them (`world.Ticket`, `world.Board`), so the domain spec

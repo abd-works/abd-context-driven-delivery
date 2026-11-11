@@ -1,6 +1,6 @@
 """Review Fidelity Outputs: the shared scenarios the Python tiers replay.
 
-Scenarios: move-work-forward-on-session-board/review-fidelity-outputs/*/*_story.test.py.
+Scenarios: harness/.context/stories/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md.
 Map: .context/story-map.md#e-review-fidelity-outputs. Model: .context/kanban-model.md.
 
 Steps reach the board only through the World a tier hands them (`world.Ticket`), so the domain spec and the cdd tools

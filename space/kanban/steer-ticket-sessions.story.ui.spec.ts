@@ -2,7 +2,7 @@
  * Steer Ticket Sessions at the browser tier: the scenarios, and the Thens of the Python tiers' scenarios, that only the
  * board app's page shows.
  *
- * Scenarios: move-work-forward-on-session-board/steer-ticket-sessions/*\/*_story.test.py. The Python tiers replay the
+ * Scenarios: harness/.context/stories/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md, harness/.context/stories/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md and harness/.context/stories/move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md. The Python tiers replay the
  * rest from steer-ticket-sessions.story.shared.py.
  *
  * Each scenario runs against the board app built and served on the throwaway fixture project

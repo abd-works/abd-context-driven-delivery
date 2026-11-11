@@ -2,7 +2,7 @@
  * Guide Work Through Practices at the browser tier: the scenarios, and the Thens of the Python tiers' scenarios, that
  * only the board app's page shows.
  *
- * Scenarios: move-work-forward-on-session-board/guide-work-through-practices/*\/*_story.test.py. The Python tiers
+ * Scenarios: harness/.context/stories/move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md; Add Active Ticket To System Prompt is in harness/.context/stories/move-work-forward-from-chat-bar/see-work-in-chat-bar/see_work_in_chat_bar_story.test.md. The Python tiers
  * replay the rest from guide-work-through-practices.story.shared.py.
  *
  * Each scenario runs against the board app built and served on the throwaway fixture project
