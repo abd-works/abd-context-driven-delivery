@@ -1,14 +1,14 @@
 <mxfile host="CleanEngineering.diagram.drawio">
   <diagram name="CleanEngineering Model" id="CleanEngineering-model">
-    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3900" pageHeight="4110" math="0" shadow="0">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3900" pageHeight="5278" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="space-kanban--board" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Board&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ repo: Repo&lt;br/&gt;+ sessions: Sessions&lt;br/&gt;+ file: Path&lt;br/&gt;+ project: str&lt;br/&gt;+ practices: list[PracticeGuidance]&lt;br/&gt;+ columns: list[Column]&lt;br/&gt;+ tickets: list[Ticket]&lt;br/&gt;+ backlog_items: list[BacklogItem]&lt;br/&gt;+ cards: list[Card]&lt;br/&gt;+ active: Ticket&lt;br/&gt;+ worktrees: dict[Branch, Worktree]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Board(repo: Repo, practices: list[PracticeGuidance])&lt;br/&gt;+ load(project: Path): Board&lt;br/&gt;+ show(): Board&lt;br/&gt;+ folders(path: str): list[str]&lt;br/&gt;+ help(slug: str): Help&lt;br/&gt;+ practice(key: str): PracticeGuidance&lt;br/&gt;+ ticket(name: str): Ticket&lt;br/&gt;+ backlog_item(title: str): BacklogItem&lt;br/&gt;+ column(name: str): Column&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
-          <mxGeometry x="2300" y="390" width="320" height="366" as="geometry" />
+        <mxCell id="space-kanban--board" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Board&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ repo: Repo&lt;br/&gt;+ sessions: Sessions&lt;br/&gt;+ file: Path&lt;br/&gt;+ project: str&lt;br/&gt;+ practices: list[PracticeGuidance]&lt;br/&gt;+ catalogued_practices: BoardPractices&lt;br/&gt;+ stages: list[Stage]&lt;br/&gt;+ fidelities: list[BoardFidelity]&lt;br/&gt;+ columns: list[Column]&lt;br/&gt;+ tickets: list[Ticket]&lt;br/&gt;+ backlog_items: list[BacklogItem]&lt;br/&gt;+ cards: list[Card]&lt;br/&gt;+ active: Ticket&lt;br/&gt;+ worktrees: dict[Branch, Worktree]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Board(repo: Repo, practices: BoardPractices)&lt;br/&gt;+ load(project: Path): Board&lt;br/&gt;+ show(): Board&lt;br/&gt;+ folders(path: str): list[str]&lt;br/&gt;+ help(practice: str): Help&lt;br/&gt;+ save_sessions_on_main(message: str)&lt;br/&gt;+ open_ticket(title: str, scope: str, parent: str, path: str): Ticket&lt;br/&gt;+ ticket_of(session: Session): Ticket&lt;br/&gt;+ make_ticket(session: Session): Ticket&lt;br/&gt;+ make_backlog_item(path: Path): BacklogItem&lt;br/&gt;+ reread()&lt;br/&gt;+ wip_limit(stage: Stage): int&lt;br/&gt;+ set_wip_limit(stage: Stage, limit: int)&lt;br/&gt;+ ticket(name: str): Ticket&lt;br/&gt;+ ticket_called(name: str): Ticket&lt;br/&gt;+ children_of(ticket: Ticket): list[Ticket]&lt;br/&gt;+ backlog_item(title: str): BacklogItem&lt;br/&gt;+ backlog_item_called(title: str): BacklogItem&lt;br/&gt;+ order_in(column: Column): list[str]&lt;br/&gt;+ keep_order(column: Column, keys: list[str])&lt;br/&gt;+ column(name: str): Column&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="2300" y="390" width="400" height="606" as="geometry" />
         </mxCell>
-        <mxCell id="space-kanban--column" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Column&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ cards: list[Card]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Column(name: str, board: Board)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
-          <mxGeometry x="1080" y="80" width="200" height="94" as="geometry" />
+        <mxCell id="space-kanban--column" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Column&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ kind: str&lt;br/&gt;+ cards: list[Card]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Column(name: str, kind: str, board: Board)&lt;br/&gt;+ place_before(card: Card, other: Card): Column&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="80" width="280" height="126" as="geometry" />
         </mxCell>
         <mxCell id="space-kanban--backlog" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Backlog&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ items: list[BacklogItem]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Backlog(board: Board)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
           <mxGeometry x="690" y="510" width="200" height="80" as="geometry" />
@@ -16,35 +16,53 @@
         <mxCell id="space-kanban--complete" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Complete&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ tickets: list[Ticket]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Complete(board: Board)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
           <mxGeometry x="1720" y="510" width="200" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="space-kanban--stage" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Stage&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ steps: list[str]&lt;br/&gt;+ scope: StageScope&lt;br/&gt;+ actions: list[str]&lt;br/&gt;+ producing_actions: list[str]&lt;br/&gt;+ work_required: list[FidelityGuidance]&lt;br/&gt;+ next_stage: Stage&lt;br/&gt;+ previous_stage: Stage&lt;br/&gt;+ wip_limit: int&lt;br/&gt;+ is_over_limit: bool&lt;br/&gt;+ in_progress: list[Ticket]&lt;br/&gt;+ done: list[Ticket]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Stage(approach: ApproachStage, board: Board)&lt;br/&gt;+ load(stage: str, project: Path): Stage&lt;br/&gt;+ set_wip_limit(limit: int): Stage&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
-          <mxGeometry x="1020" y="2330" width="280" height="270" as="geometry" />
+        <mxCell id="space-kanban--stage" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Stage&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ steps: list[str]&lt;br/&gt;+ scope: StageScope&lt;br/&gt;+ actions: list[str]&lt;br/&gt;+ producing_actions: list[str]&lt;br/&gt;+ work_required: list[FidelityGuidance]&lt;br/&gt;+ next_stage: Stage&lt;br/&gt;+ previous_stage: Stage&lt;br/&gt;+ wip_limit: int&lt;br/&gt;+ is_over_limit: bool&lt;br/&gt;+ in_progress: list[Ticket]&lt;br/&gt;+ done: list[Ticket]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Stage(approach: ApproachStage, board: Board)&lt;br/&gt;+ requires(fidelity: FidelityGuidance): bool&lt;br/&gt;+ load(stage: str, project: Path): Stage&lt;br/&gt;+ set_wip_limit(limit: int): Stage&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="2330" width="280" height="286" as="geometry" />
         </mxCell>
-        <mxCell id="space-kanban--card" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Card&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ board: Board&lt;br/&gt;+ title: str&lt;br/&gt;+ column: Column&lt;br/&gt;+ last_activity: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Card(board: Board)&lt;br/&gt;+ move_next(): Card&lt;br/&gt;+ move_previous(): Card&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
-          <mxGeometry x="3370" y="60" width="200" height="158" as="geometry" />
+        <mxCell id="space-kanban--card" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Card&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ board: Board&lt;br/&gt;+ title: str&lt;br/&gt;+ column: Column&lt;br/&gt;+ last_activity: str&lt;br/&gt;+ key: str&lt;br/&gt;+ is_stacked: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Card(board: Board)&lt;br/&gt;+ move_next(): Card&lt;br/&gt;+ move_previous(): Card&lt;br/&gt;+ move_before(other: Card): Column&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="3370" y="60" width="220" height="206" as="geometry" />
         </mxCell>
-        <mxCell id="space-kanban--ticket" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Ticket&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ title: str&lt;br/&gt;+ session: Session&lt;br/&gt;+ progress: list[FidelityProgress]&lt;br/&gt;+ column: Column&lt;br/&gt;+ is_closed: bool&lt;br/&gt;+ is_active: bool&lt;br/&gt;+ drop_targets: list[str]&lt;br/&gt;+ is_done: bool&lt;br/&gt;+ next_fidelity: FidelityProgress&lt;br/&gt;+ worktree: str&lt;br/&gt;+ last_activity: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Ticket(session: Session, board: Board)&lt;br/&gt;+ load(ticket: str, project: Path): Ticket&lt;br/&gt;+ create(title: str, scope: str, parent: str, path: str, project: Path): Ticket&lt;br/&gt;+ branch(): Branch&lt;br/&gt;+ progress_of(slug: str): FidelityProgress&lt;br/&gt;+ activate(leaving: list[str], opening: list[str]): Ticket&lt;br/&gt;+ open_worktree(): Ticket&lt;br/&gt;+ leave(leaving: list[str])&lt;br/&gt;+ move_next(): Ticket&lt;br/&gt;+ move_previous(): Ticket | BacklogItem&lt;br/&gt;+ move_to(stage: str, done: bool): Ticket | BacklogItem&lt;br/&gt;+ close(leaving: list[str]): Ticket&lt;br/&gt;+ archive(): Ticket&lt;br/&gt;+ violations(): Report&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
-          <mxGeometry x="3240" y="920" width="460" height="462" as="geometry" />
+        <mxCell id="space-kanban--ticket" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Ticket&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ title: str&lt;br/&gt;+ text: str&lt;br/&gt;+ tags: list[str]&lt;br/&gt;+ parent: Ticket&lt;br/&gt;+ ancestors: list[Ticket]&lt;br/&gt;+ children: list[Ticket]&lt;br/&gt;+ is_pulled_out: bool&lt;br/&gt;+ is_stacked: bool&lt;br/&gt;+ session: Session&lt;br/&gt;+ progress: list[FidelityProgress]&lt;br/&gt;+ work: TicketWork&lt;br/&gt;+ checkout: TicketCheckout&lt;br/&gt;+ marks: StageMarks&lt;br/&gt;+ column: Column&lt;br/&gt;+ is_closed: bool&lt;br/&gt;+ is_active: bool&lt;br/&gt;+ is_open: bool&lt;br/&gt;+ drop_targets: list[str]&lt;br/&gt;+ is_done: bool&lt;br/&gt;+ next_fidelity: FidelityProgress&lt;br/&gt;+ worktree: str&lt;br/&gt;+ chat: Chat&lt;br/&gt;+ stage_work: list[StageWork]&lt;br/&gt;+ last_activity: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Ticket(session: Session, board: Board)&lt;br/&gt;+ load(ticket: str, project: Path): Ticket&lt;br/&gt;+ create(title: str, scope: str, parent: str, path: str, project: Path): Ticket&lt;br/&gt;+ branch(): Branch&lt;br/&gt;+ work_branch(): Branch&lt;br/&gt;+ format_choices(fidelities: list[str]): list[FormatChoice]&lt;br/&gt;+ activate(): Ticket&lt;br/&gt;+ move_next(): Ticket&lt;br/&gt;+ move_previous(): Ticket | BacklogItem&lt;br/&gt;+ move_to(stage: str, done: bool): Ticket | BacklogItem&lt;br/&gt;+ close(leaving: list[str]): Ticket&lt;br/&gt;+ assign_chat(chat: str): Ticket&lt;br/&gt;+ archive(): Ticket&lt;br/&gt;+ edit_text(text: str): Ticket&lt;br/&gt;+ tag(word: str): Ticket&lt;br/&gt;+ delete()&lt;br/&gt;+ add_child(title: str): Ticket&lt;br/&gt;+ pull_out(): Ticket&lt;br/&gt;+ reassign_parent(parent: Ticket): Ticket&lt;br/&gt;+ choose_parent(parent: str): Ticket&lt;br/&gt;+ place_before(before: str): Ticket&lt;br/&gt;+ violations(): Report&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="3240" y="920" width="460" height="798" as="geometry" />
         </mxCell>
-        <mxCell id="space-kanban--fidelityprogress" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;FidelityProgress&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ticket: str&lt;br/&gt;+ fidelity_slug: str&lt;br/&gt;+ fidelity: FidelityGuidance&lt;br/&gt;+ stage: Stage&lt;br/&gt;+ practice: str&lt;br/&gt;+ is_enabled: bool&lt;br/&gt;+ next_action: str&lt;br/&gt;+ allowed_actions: list[str]&lt;br/&gt;+ state: str&lt;br/&gt;+ action_states: ActionStates&lt;br/&gt;+ report_file: str&lt;br/&gt;+ violation_count: int&lt;br/&gt;+ done_actions: list[str]&lt;br/&gt;+ remaining_actions: list[str]&lt;br/&gt;+ has_violations: bool&lt;br/&gt;+ is_done: bool&lt;br/&gt;+ latest_report: ReportFile&lt;br/&gt;+ session: Session&lt;br/&gt;+ repo: Repo&lt;br/&gt;+ earlier_fidelities: list[FidelityGuidance]&lt;br/&gt;+ rule_descriptions: dict[str, str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ FidelityProgress(fidelity: FidelityGuidance, stage: Stage, done_actions: list[str], has_violations: bool, ticket: Ticket)&lt;br/&gt;+ from_log(fidelity: FidelityGuidance, stage: Stage, entries: list[LogEntry], ticket: Ticket): FidelityProgress&lt;br/&gt;+ load(ticket: str, fidelity: str, project: Path): FidelityProgress&lt;br/&gt;+ finish_review(): FidelityProgress&lt;br/&gt;+ report(): Report&lt;br/&gt;+ files(): dict[str, list[FileEntry]]&lt;br/&gt;+ with_violations(): FidelityProgress&lt;br/&gt;+ rules_answered_by(report: ReportFile): set[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
-          <mxGeometry x="1470" y="2210" width="700" height="510" as="geometry" />
+        <mxCell id="space-kanban--ticketwork" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;TicketWork&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ progress: list[FidelityProgress]&lt;br/&gt;+ enabled: list[FidelityProgress]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ TicketWork(ticket: Ticket)&lt;br/&gt;+ progress_of(slug: str): FidelityProgress&lt;br/&gt;+ in_stage(stage: Stage): StageWork&lt;br/&gt;+ command(action: str, fidelities: list[FidelityGuidance]): str&lt;br/&gt;+ record(line: str)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="780" y="4920" width="380" height="158" as="geometry" />
         </mxCell>
-        <mxCell id="space-kanban--actionstates" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ActionStates&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ generate: str&lt;br/&gt;+ validate: str&lt;br/&gt;+ review: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
-          <mxGeometry x="2360" y="2880" width="200" height="94" as="geometry" />
+        <mxCell id="space-kanban--ticketcheckout" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;TicketCheckout&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ branch: Branch&lt;br/&gt;+ work_branch: Branch&lt;br/&gt;+ worktree: str&lt;br/&gt;+ chat: Chat&lt;br/&gt;+ close_choices: LeaveChoices&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ TicketCheckout(ticket: Ticket)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="4410" width="200" height="142" as="geometry" />
         </mxCell>
-        <mxCell id="space-kanban--backlogitem" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;BacklogItem&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ title: str&lt;br/&gt;+ column: Column&lt;br/&gt;+ text: str&lt;br/&gt;+ path: Path&lt;br/&gt;+ path_from_project: str&lt;br/&gt;+ last_activity: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ BacklogItem(path: Path, board: Board)&lt;br/&gt;+ load(backlog_item: str, project: Path): BacklogItem&lt;br/&gt;+ create(title: str, text: str, project: Path): BacklogItem&lt;br/&gt;+ from_ticket(ticket: Ticket, board: Board): BacklogItem&lt;br/&gt;+ write_if_missing(title: str)&lt;br/&gt;+ start(scope: str, path: str): Ticket&lt;br/&gt;+ move_next(): Ticket&lt;br/&gt;+ move_previous(): BacklogItem&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
-          <mxGeometry x="2750" y="440" width="360" height="270" as="geometry" />
+        <mxCell id="space-kanban--stagemarks" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;StageMarks&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ moved_into: Stage&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ StageMarks(ticket: Ticket)&lt;br/&gt;+ latest_in(stage: Stage): str&lt;br/&gt;+ enter(stage: Stage): Ticket&lt;br/&gt;+ mark(mark: str, stage: Stage): Ticket&lt;br/&gt;+ place(stage: Stage, mark: str): Ticket&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="4680" width="240" height="142" as="geometry" />
         </mxCell>
-        <mxCell id="space-kanban--help" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Help&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ practice: PracticeGuidance&lt;br/&gt;+ fidelity: FidelityGuidance&lt;br/&gt;+ stage: Stage&lt;br/&gt;+ overview: str&lt;br/&gt;+ guidance: str&lt;br/&gt;+ rules: list[Rule]&lt;br/&gt;+ href: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Help(practice: PracticeGuidance, fidelity: FidelityGuidance, stage: Stage)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
-          <mxGeometry x="90" y="1540" width="440" height="174" as="geometry" />
+        <mxCell id="space-kanban--fidelityprogress" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;FidelityProgress&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ticket: str&lt;br/&gt;+ fidelity_slug: str&lt;br/&gt;+ fidelity: FidelityGuidance&lt;br/&gt;+ stage: Stage&lt;br/&gt;+ practice_key: str&lt;br/&gt;+ is_enabled: bool&lt;br/&gt;+ next_action: str&lt;br/&gt;+ commands: dict[str, str]&lt;br/&gt;+ allowed_actions: list[str]&lt;br/&gt;+ state: str&lt;br/&gt;+ action_states: ActionStates&lt;br/&gt;+ report_file: str&lt;br/&gt;+ violation_count: int&lt;br/&gt;+ has_violations: bool&lt;br/&gt;+ done_actions: list[str]&lt;br/&gt;+ remaining_actions: list[str]&lt;br/&gt;+ is_done: bool&lt;br/&gt;+ latest_report: ReportFile&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ FidelityProgress(fidelity: FidelityGuidance, stage: Stage, done_actions: list[str], has_violations: bool, ticket: Ticket)&lt;br/&gt;+ from_log(fidelity: FidelityGuidance, stage: Stage, entries: list[LogEntry], ticket: Ticket): FidelityProgress&lt;br/&gt;+ load(ticket: str, fidelity: str, project: Path): FidelityProgress&lt;br/&gt;+ finish_review(): FidelityProgress&lt;br/&gt;+ report(): Report&lt;br/&gt;+ files(): dict[str, list[FileEntry]]&lt;br/&gt;+ help(): Help&lt;br/&gt;+ with_violations(): FidelityProgress&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="1470" y="2210" width="700" height="462" as="geometry" />
+        </mxCell>
+        <mxCell id="space-kanban--actionstates" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ActionStates&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ generate: str&lt;br/&gt;+ validate: str&lt;br/&gt;+ review: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ taken_together(every: list[ActionStates]): ActionStates&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="2360" y="2880" width="340" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="space-kanban--stagework" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;StageWork&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ stage: Stage&lt;br/&gt;+ progress: list[FidelityProgress]&lt;br/&gt;+ action_states: ActionStates&lt;br/&gt;+ has_violations: bool&lt;br/&gt;+ violation_count: int&lt;br/&gt;+ commands: dict[str, str]&lt;br/&gt;+ allowed_actions: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ StageWork(ticket: Ticket, stage: Stage, progress: list[FidelityProgress])&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="750" y="4400" width="440" height="174" as="geometry" />
+        </mxCell>
+        <mxCell id="space-kanban--formatchoice" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;FormatChoice&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ label: str&lt;br/&gt;+ formats: list[str]&lt;br/&gt;+ offered: int&lt;br/&gt;+ made: int&lt;br/&gt;+ starts_picked: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ offered_by(read: list[tuple[FidelityGuidance, dict[str, list[FileEntry]]]]): list[FormatChoice]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="60" y="4150" width="560" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="space-kanban--backlogitem" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;BacklogItem&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ title: str&lt;br/&gt;+ column: Column&lt;br/&gt;+ text: str&lt;br/&gt;+ path: Path&lt;br/&gt;+ path_from_project: str&lt;br/&gt;+ last_activity: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ BacklogItem(path: Path, board: Board)&lt;br/&gt;+ load(backlog_item: str, project: Path): BacklogItem&lt;br/&gt;+ create(title: str, text: str, project: Path): BacklogItem&lt;br/&gt;+ from_ticket(ticket: Ticket): BacklogItem&lt;br/&gt;+ write_if_missing(title: str)&lt;br/&gt;+ start(scope: str, path: str): Ticket&lt;br/&gt;+ move_next(): Ticket&lt;br/&gt;+ move_previous(): BacklogItem&lt;br/&gt;+ edit_text(text: str): BacklogItem&lt;br/&gt;+ place_before(before: str): BacklogItem&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="2750" y="440" width="360" height="302" as="geometry" />
+        </mxCell>
+        <mxCell id="space-kanban--help" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Help&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ catalogued: CatalogPractice&lt;br/&gt;+ practice: PracticeGuidance&lt;br/&gt;+ fidelity: FidelityGuidance&lt;br/&gt;+ stage: Stage&lt;br/&gt;+ overview: str&lt;br/&gt;+ guidance: str&lt;br/&gt;+ rules: list[Rule]&lt;br/&gt;+ href: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Help(practice: PracticeGuidance, fidelity: FidelityGuidance, stage: Stage, catalogued: CatalogPractice)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="90" y="1540" width="600" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="space-kanban--boardfidelity" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;BoardFidelity&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ fidelity: FidelityGuidance&lt;br/&gt;+ practice: PracticeGuidance&lt;br/&gt;+ label: str&lt;br/&gt;+ skill: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ BoardFidelity(catalogued: CatalogPractice, shown: CatalogFidelity)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="770" y="4690" width="400" height="126" as="geometry" />
         </mxCell>
         <mxCell id="space-kanban--report" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Report&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ path: str&lt;br/&gt;+ text: str&lt;br/&gt;+ rules: list[ReportRule]&lt;br/&gt;+ has_saved_graph: bool&lt;br/&gt;+ violation_count: int&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Report(path: str, text: str, rules: list[ReportRule], has_saved_graph: bool)&lt;br/&gt;+ from_reports(folder: str, reports: list[Report]): Report&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
           <mxGeometry x="80" y="1880" width="460" height="158" as="geometry" />
         </mxCell>
-        <mxCell id="space-kanban--reportrule" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ReportRule&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ fidelity: str&lt;br/&gt;+ name: str&lt;br/&gt;+ description: str&lt;br/&gt;+ count: int&lt;br/&gt;+ violations: list[Violation]&lt;br/&gt;+ identity: tuple&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ReportRule(fidelity: str, name: str, description: str, violations: list[Violation])&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
-          <mxGeometry x="60" y="2860" width="500" height="158" as="geometry" />
+        <mxCell id="space-kanban--reportrule" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ReportRule&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ fidelity: FidelityGuidance&lt;br/&gt;+ rule: Rule&lt;br/&gt;+ count: int&lt;br/&gt;+ violations: list[Violation]&lt;br/&gt;+ identity: tuple&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ReportRule(fidelity: FidelityGuidance, rule: Rule, violations: list[Violation])&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="60" y="2860" width="480" height="142" as="geometry" />
         </mxCell>
-        <mxCell id="space-kanban--reportfile" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ReportFile&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ file: Path&lt;br/&gt;+ stamp: str&lt;br/&gt;+ text: str&lt;br/&gt;+ has_result: bool&lt;br/&gt;+ is_judged_failing: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ReportFile(file: Path, progress: FidelityProgress)&lt;br/&gt;+ report(): Report&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
-          <mxGeometry x="2300" y="2360" width="320" height="158" as="geometry" />
+        <mxCell id="space-kanban--reportfile" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ReportFile&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ file: Path&lt;br/&gt;+ stamp: str&lt;br/&gt;+ text: str&lt;br/&gt;+ has_result: bool&lt;br/&gt;+ is_judged_failing: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ReportFile(file: Path, fidelity: FidelityGuidance)&lt;br/&gt;+ from_fidelity(fidelity: FidelityGuidance): ReportFile&lt;br/&gt;+ report(): Report&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="2300" y="2360" width="340" height="174" as="geometry" />
         </mxCell>
         <mxCell id="space-kanban--judgment" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Judgment&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ file: str&lt;br/&gt;+ rule: str&lt;br/&gt;+ findings: list[Violation]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ from_report(text: str): list[Judgment]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
           <mxGeometry x="2810" y="2390" width="240" height="110" as="geometry" />
@@ -67,8 +85,26 @@
         <mxCell id="space-kanban--backlogitemnotfounderror" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;BacklogItemNotFoundError&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
           <mxGeometry x="690" y="1100" width="200" height="80" as="geometry" />
         </mxCell>
+        <mxCell id="space-kanban--cardnotincolumnerror" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CardNotInColumnError&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="4180" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="space-kanban--parentmoveswithchildrenerror" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ParentMovesWithChildrenError&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="240" y="4440" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="space-kanban--notachilderror" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;NotAChildError&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="870" y="3970" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="space-kanban--parentlooperror" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ParentLoopError&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="240" y="4710" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="space-kanban--mainstaysopenerror" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MainStaysOpenError&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="870" y="4180" width="200" height="80" as="geometry" />
+        </mxCell>
         <mxCell id="collaborators--repo" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Repo&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#666666;module=Collaborators;" vertex="1" parent="1">
           <mxGeometry x="390" y="3650" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="collaborators--chat" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Chat&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#666666;module=Collaborators;" vertex="1" parent="1">
+          <mxGeometry x="1690" y="4440" width="200" height="80" as="geometry" />
         </mxCell>
         <mxCell id="collaborators--branch" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Branch&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#666666;module=Collaborators;" vertex="1" parent="1">
           <mxGeometry x="390" y="3290" width="200" height="80" as="geometry" />
@@ -78,6 +114,9 @@
         </mxCell>
         <mxCell id="collaborators--session" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Session&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#666666;module=Collaborators;" vertex="1" parent="1">
           <mxGeometry x="720" y="3830" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="collaborators--ideafile" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;IdeaFile&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#666666;module=Collaborators;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="3830" width="200" height="80" as="geometry" />
         </mxCell>
         <mxCell id="collaborators--practiceguidance" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PracticeGuidance&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#666666;module=Collaborators;" vertex="1" parent="1">
           <mxGeometry x="390" y="3470" width="200" height="80" as="geometry" />
@@ -91,263 +130,431 @@
         <mxCell id="collaborators--violation" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Violation&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#666666;module=Collaborators;" vertex="1" parent="1">
           <mxGeometry x="60" y="3650" width="200" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="4" value="columns" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.8;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--board" target="space-kanban--column" parent="1">
+        <mxCell id="2" value="repo" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.325;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--board" target="collaborators--repo" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="2460" y="360" />
-              <mxPoint x="1950" y="360" />
-              <mxPoint x="1950" y="620" />
-              <mxPoint x="1240" y="620" />
+              <mxPoint x="2430" y="2090" />
+              <mxPoint x="570" y="2090" />
+              <mxPoint x="570" y="3100" />
+              <mxPoint x="340" y="3100" />
+              <mxPoint x="340" y="3610" />
+              <mxPoint x="490" y="3610" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="5" value="tickets, active" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.75;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3261;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--board" target="space-kanban--ticket" parent="1">
+        <mxCell id="3" value="sessions" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.175;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--board" target="collaborators--sessions" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="2540" y="880" />
-              <mxPoint x="3390" y="880" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="6" value="backlog_items" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;exitX=1.0;exitY=0.479;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.4955;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--board" target="space-kanban--backlogitem" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="5" value="tickets, active" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.75;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3261;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--board" target="space-kanban--ticket" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="2540" y="880" />
-              <mxPoint x="3390" y="880" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="7" value="cards" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;exitX=1.0;exitY=0.4255;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.4225;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--column" target="space-kanban--card" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--backlog" target="space-kanban--column" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="790" y="210" />
-              <mxPoint x="1120" y="210" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--complete" target="space-kanban--column" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1820" y="220" />
-              <mxPoint x="1200" y="220" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.6562;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--stage" target="space-kanban--column" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1230" y="630" />
-              <mxPoint x="1160" y="630" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="24" value="board" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--card" target="space-kanban--board" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="3470" y="340" />
-              <mxPoint x="2460" y="340" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="13" value="progress, next_fidelity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.2609;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticket" target="space-kanban--fidelityprogress" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="3360" y="1470" />
-              <mxPoint x="2590" y="1470" />
-              <mxPoint x="2590" y="2140" />
-              <mxPoint x="1820" y="2140" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="13" value="progress, next_fidelity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.2609;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticket" target="space-kanban--fidelityprogress" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="3360" y="1470" />
-              <mxPoint x="2590" y="1470" />
-              <mxPoint x="2590" y="2140" />
-              <mxPoint x="1820" y="2140" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.6739;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.65;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticket" target="space-kanban--card" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="3550" y="240" />
-              <mxPoint x="3500" y="240" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="16" value="stage" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.0;exitY=0.4978;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0;entryY=0.4955;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--fidelityprogress" target="space-kanban--stage" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="17" value="action_states" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6714;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--fidelityprogress" target="space-kanban--actionstates" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1940" y="2840" />
-              <mxPoint x="2460" y="2840" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="18" value="latest_report" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=1.0;exitY=0.4762;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.443;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--fidelityprogress" target="space-kanban--reportfile" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.35;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--backlogitem" target="space-kanban--card" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="2930" y="240" />
-              <mxPoint x="3440" y="240" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="22" value="stage" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6591;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3438;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--help" target="space-kanban--stage" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="380" y="1850" />
-              <mxPoint x="1130" y="1850" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="23" value="rules" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--report" target="space-kanban--reportrule" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="25" value="repo" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.65;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--board" target="collaborators--repo" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="2460" y="840" />
-              <mxPoint x="660" y="840" />
-              <mxPoint x="660" y="3580" />
-              <mxPoint x="520" y="3580" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="26" value="sessions" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.25;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--board" target="collaborators--sessions" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="2380" y="820" />
-              <mxPoint x="10" y="820" />
-              <mxPoint x="10" y="3790" />
+              <mxPoint x="2370" y="1020" />
+              <mxPoint x="1950" y="1020" />
+              <mxPoint x="1950" y="260" />
+              <mxPoint x="1050" y="260" />
+              <mxPoint x="1050" y="10" />
+              <mxPoint x="3750" y="10" />
+              <mxPoint x="3750" y="5240" />
+              <mxPoint x="10" y="5240" />
+              <mxPoint x="10" y="3990" />
+              <mxPoint x="30" y="3990" />
+              <mxPoint x="30" y="3790" />
               <mxPoint x="160" y="3790" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="27" value="practices" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;exitX=0.75;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.65;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--board" target="collaborators--practiceguidance" parent="1">
+        <mxCell id="4" value="practices" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.65;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--board" target="collaborators--practiceguidance" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="2540" y="860" />
-              <mxPoint x="2220" y="860" />
-              <mxPoint x="2220" y="3980" />
-              <mxPoint x="300" y="3980" />
-              <mxPoint x="300" y="3400" />
-              <mxPoint x="520" y="3400" />
+              <mxPoint x="2500" y="2110" />
+              <mxPoint x="620" y="2110" />
+              <mxPoint x="620" y="3430" />
+              <mxPoint x="520" y="3430" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="28" value="work_required" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--stage" target="collaborators--fidelityguidance" parent="1">
+        <mxCell id="5" value="stages" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.825;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.75;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--board" target="space-kanban--stage" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1160" y="3600" />
-              <mxPoint x="660" y="3600" />
-              <mxPoint x="660" y="3780" />
-              <mxPoint x="490" y="3780" />
+              <mxPoint x="2630" y="2150" />
+              <mxPoint x="1230" y="2150" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="29" value="session" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6739;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.65;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticket" target="collaborators--session" parent="1">
+        <mxCell id="6" value="fidelities" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.675;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.75;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--board" target="space-kanban--boardfidelity" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="3550" y="1410" />
-              <mxPoint x="3730" y="1410" />
-              <mxPoint x="3730" y="860" />
-              <mxPoint x="2560" y="860" />
-              <mxPoint x="2560" y="1870" />
-              <mxPoint x="1350" y="1870" />
-              <mxPoint x="1350" y="3790" />
-              <mxPoint x="850" y="3790" />
+              <mxPoint x="2570" y="2310" />
+              <mxPoint x="2670" y="2310" />
+              <mxPoint x="2670" y="2820" />
+              <mxPoint x="2010" y="2820" />
+              <mxPoint x="2010" y="4620" />
+              <mxPoint x="1070" y="4620" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="30" value="fidelity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.2429;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.75;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--fidelityprogress" target="collaborators--fidelityguidance" parent="1">
+        <mxCell id="7" value="columns" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.325;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6786;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--board" target="space-kanban--column" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1640" y="2750" />
-              <mxPoint x="1330" y="2750" />
-              <mxPoint x="1330" y="2300" />
-              <mxPoint x="970" y="2300" />
-              <mxPoint x="970" y="3620" />
-              <mxPoint x="620" y="3620" />
-              <mxPoint x="620" y="3760" />
-              <mxPoint x="540" y="3760" />
+              <mxPoint x="2430" y="240" />
+              <mxPoint x="1270" y="240" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="31" value="session" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.7571;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.35;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--fidelityprogress" target="collaborators--session" parent="1">
+        <mxCell id="8" value="tickets, active" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=1.0;exitY=0.6601;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.5013;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--board" target="space-kanban--ticket" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="2000" y="3940" />
-              <mxPoint x="690" y="3940" />
-              <mxPoint x="690" y="3760" />
-              <mxPoint x="790" y="3760" />
+              <mxPoint x="3200" y="790" />
+              <mxPoint x="3200" y="1320" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="32" value="repo" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.35;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--fidelityprogress" target="collaborators--repo" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1820" y="2770" />
-              <mxPoint x="1440" y="2770" />
-              <mxPoint x="1440" y="2180" />
-              <mxPoint x="2200" y="2180" />
-              <mxPoint x="2200" y="3960" />
-              <mxPoint x="320" y="3960" />
-              <mxPoint x="320" y="3580" />
-              <mxPoint x="460" y="3580" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="33" value="practice" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.3409;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.35;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--help" target="collaborators--practiceguidance" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="240" y="1830" />
-              <mxPoint x="570" y="1830" />
-              <mxPoint x="570" y="2830" />
-              <mxPoint x="620" y="2830" />
-              <mxPoint x="620" y="3420" />
-              <mxPoint x="460" y="3420" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="34" value="fidelity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6591;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--help" target="collaborators--fidelityguidance" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="380" y="1810" />
-              <mxPoint x="640" y="1810" />
-              <mxPoint x="640" y="3600" />
-              <mxPoint x="340" y="3600" />
-              <mxPoint x="340" y="3790" />
-              <mxPoint x="440" y="3790" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="35" value="violations" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.2;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--reportrule" target="collaborators--violation" parent="1">
+        <mxCell id="9" value="backlog_items" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;exitX=1.0;exitY=0.33;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.4967;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--board" target="space-kanban--backlogitem" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="36" value="branch" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.3261;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticket" target="collaborators--branch" parent="1">
+        <mxCell id="10" value="cards" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;exitX=1.0;exitY=0.4762;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.3883;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--column" target="space-kanban--card" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3214;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--backlog" target="space-kanban--column" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="3390" y="1890" />
-              <mxPoint x="2240" y="1890" />
-              <mxPoint x="2240" y="4000" />
-              <mxPoint x="30" y="4000" />
-              <mxPoint x="30" y="3250" />
-              <mxPoint x="490" y="3250" />
+              <mxPoint x="790" y="460" />
+              <mxPoint x="1170" y="460" />
             </Array>
           </mxGeometry>
+        </mxCell>
+        <mxCell id="12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3214;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--complete" target="space-kanban--column" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1820" y="460" />
+              <mxPoint x="1170" y="460" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="13" value="work_required" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;exitX=0.25;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--stage" target="collaborators--fidelityguidance" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1090" y="3120" />
+              <mxPoint x="360" y="3120" />
+              <mxPoint x="360" y="3770" />
+              <mxPoint x="510" y="3770" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3214;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--stage" target="space-kanban--column" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1160" y="460" />
+              <mxPoint x="1170" y="460" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="15" value="board" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.3182;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.675;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--card" target="space-kanban--board" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3440" y="350" />
+              <mxPoint x="2570" y="350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="16" value="session" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.2174;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticket" target="collaborators--session" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="17" value="progress, next_fidelity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.8913;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticket" target="space-kanban--fidelityprogress" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3650" y="2180" />
+              <mxPoint x="1830" y="2180" />
+              <mxPoint x="1830" y="2170" />
+              <mxPoint x="1820" y="2170" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="18" value="work" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.3261;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6579;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticket" target="space-kanban--ticketwork" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3390" y="1850" />
+              <mxPoint x="3310" y="1850" />
+              <mxPoint x="3310" y="5220" />
+              <mxPoint x="1190" y="5220" />
+              <mxPoint x="1190" y="4880" />
+              <mxPoint x="1030" y="4880" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="19" value="checkout" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5652;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.65;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticket" target="space-kanban--ticketcheckout" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3500" y="1890" />
+              <mxPoint x="2730" y="1890" />
+              <mxPoint x="2730" y="5140" />
+              <mxPoint x="680" y="5140" />
+              <mxPoint x="680" y="4150" />
+              <mxPoint x="1570" y="4150" />
+              <mxPoint x="1570" y="4370" />
+              <mxPoint x="1470" y="4370" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="20" value="marks" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.6739;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6667;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticket" target="space-kanban--stagemarks" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3550" y="1890" />
+              <mxPoint x="3600" y="1890" />
+              <mxPoint x="3600" y="5160" />
+              <mxPoint x="1590" y="5160" />
+              <mxPoint x="1590" y="4640" />
+              <mxPoint x="1480" y="4640" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="21" value="chat" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.7826;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticket" target="collaborators--chat" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3600" y="1760" />
+              <mxPoint x="3730" y="1760" />
+              <mxPoint x="3730" y="30" />
+              <mxPoint x="660" y="30" />
+              <mxPoint x="660" y="1510" />
+              <mxPoint x="990" y="1510" />
+              <mxPoint x="990" y="3380" />
+              <mxPoint x="1590" y="3380" />
+              <mxPoint x="1590" y="4400" />
+              <mxPoint x="1790" y="4400" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="22" value="stage_work" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.4348;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.7955;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticket" target="space-kanban--stagework" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3440" y="1870" />
+              <mxPoint x="2770" y="1870" />
+              <mxPoint x="2770" y="5200" />
+              <mxPoint x="630" y="5200" />
+              <mxPoint x="630" y="4350" />
+              <mxPoint x="820" y="4350" />
+              <mxPoint x="820" y="4290" />
+              <mxPoint x="1100" y="4290" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6818;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticket" target="space-kanban--card" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3470" y="390" />
+              <mxPoint x="3520" y="390" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="24" value="progress" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.3421;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticketwork" target="space-kanban--fidelityprogress" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="910" y="4840" />
+              <mxPoint x="1290" y="4840" />
+              <mxPoint x="1290" y="4880" />
+              <mxPoint x="1990" y="4880" />
+              <mxPoint x="1990" y="2760" />
+              <mxPoint x="1750" y="2760" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="25" value="branch, work_branch" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.35;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticketcheckout" target="collaborators--branch" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1410" y="4290" />
+              <mxPoint x="1280" y="4290" />
+              <mxPoint x="1280" y="3760" />
+              <mxPoint x="680" y="3760" />
+              <mxPoint x="680" y="3410" />
+              <mxPoint x="490" y="3410" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="26" value="chat" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=1.0;exitY=0.493;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticketcheckout" target="collaborators--chat" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="27" value="moved_into" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.3333;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.75;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--stagemarks" target="space-kanban--stage" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1400" y="4600" />
+              <mxPoint x="1950" y="4600" />
+              <mxPoint x="1950" y="2780" />
+              <mxPoint x="1230" y="2780" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="28" value="fidelity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.2;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.8;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--fidelityprogress" target="collaborators--fidelityguidance" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1610" y="3780" />
+              <mxPoint x="630" y="3780" />
+              <mxPoint x="630" y="3770" />
+              <mxPoint x="550" y="3770" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="29" value="stage" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.0;exitY=0.5628;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0;entryY=0.4895;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--fidelityprogress" target="space-kanban--stage" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="30" value="action_states" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.8;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--fidelityprogress" target="space-kanban--actionstates" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2030" y="2840" />
+              <mxPoint x="2530" y="2840" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="31" value="latest_report" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=1.0;exitY=0.4978;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.4598;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--fidelityprogress" target="space-kanban--reportfile" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="32" value="stage" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.2045;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--stagework" target="space-kanban--stage" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="840" y="4350" />
+              <mxPoint x="1310" y="4350" />
+              <mxPoint x="1310" y="4580" />
+              <mxPoint x="1920" y="4580" />
+              <mxPoint x="1920" y="3260" />
+              <mxPoint x="1160" y="3260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="33" value="progress" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.4091;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--stagework" target="space-kanban--fidelityprogress" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="930" y="4330" />
+              <mxPoint x="720" y="4330" />
+              <mxPoint x="720" y="4860" />
+              <mxPoint x="1970" y="4860" />
+              <mxPoint x="1970" y="2740" />
+              <mxPoint x="1890" y="2740" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="34" value="action_states" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5909;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--stagework" target="space-kanban--actionstates" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1010" y="4310" />
+              <mxPoint x="700" y="4310" />
+              <mxPoint x="700" y="5100" />
+              <mxPoint x="2530" y="5100" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="35" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6818;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--backlogitem" target="space-kanban--card" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2930" y="390" />
+              <mxPoint x="3520" y="390" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="36" value="practice" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.25;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.35;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--help" target="collaborators--practiceguidance" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="240" y="1850" />
+              <mxPoint x="30" y="1850" />
+              <mxPoint x="30" y="3760" />
+              <mxPoint x="320" y="3760" />
+              <mxPoint x="320" y="3430" />
+              <mxPoint x="460" y="3430" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="37" value="fidelity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--help" target="collaborators--fidelityguidance" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="390" y="1830" />
+              <mxPoint x="10" y="1830" />
+              <mxPoint x="10" y="3970" />
+              <mxPoint x="620" y="3970" />
+              <mxPoint x="620" y="3790" />
+              <mxPoint x="470" y="3790" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="38" value="stage" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.75;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--help" target="space-kanban--stage" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="540" y="1850" />
+              <mxPoint x="1090" y="1850" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="39" value="fidelity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.25;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--boardfidelity" target="collaborators--fidelityguidance" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="870" y="4600" />
+              <mxPoint x="650" y="4600" />
+              <mxPoint x="650" y="3950" />
+              <mxPoint x="490" y="3950" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="40" value="practice" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--boardfidelity" target="collaborators--practiceguidance" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="970" y="4600" />
+              <mxPoint x="1220" y="4600" />
+              <mxPoint x="1220" y="3940" />
+              <mxPoint x="660" y="3940" />
+              <mxPoint x="660" y="3590" />
+              <mxPoint x="490" y="3590" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="41" value="rules" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5208;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--report" target="space-kanban--reportrule" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="42" value="fidelity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--reportrule" target="collaborators--fidelityguidance" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="300" y="3790" />
+              <mxPoint x="430" y="3790" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="43" value="rule" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.75;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--reportrule" target="collaborators--rule" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="420" y="3260" />
+              <mxPoint x="820" y="3260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="44" value="violations" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.25;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--reportrule" target="collaborators--violation" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="180" y="3610" />
+              <mxPoint x="160" y="3610" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="45" value="format_choices" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.1087;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticket" target="space-kanban--formatchoice" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3290" y="1740" />
+              <mxPoint x="3180" y="1740" />
+              <mxPoint x="3180" y="870" />
+              <mxPoint x="3770" y="870" />
+              <mxPoint x="3770" y="5260" />
+              <mxPoint x="30" y="5260" />
+              <mxPoint x="30" y="4110" />
+              <mxPoint x="340" y="4110" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="46" value="text, edit_text" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--backlogitem" target="collaborators--ideafile" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2930" y="1850" />
+              <mxPoint x="2520" y="1850" />
+              <mxPoint x="2520" y="2130" />
+              <mxPoint x="970" y="2130" />
+              <mxPoint x="970" y="3740" />
+              <mxPoint x="1150" y="3740" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="47" value="idea_file" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=1.0;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="collaborators--session" target="collaborators--ideafile" parent="1">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
