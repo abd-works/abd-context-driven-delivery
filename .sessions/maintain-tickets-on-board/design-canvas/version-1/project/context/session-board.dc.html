@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stories</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap"><style>body{margin:0;background:#0B0B0B}.cx-epic,.cx-sub{font:600 11px/1.6 'JetBrains Mono',ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A4A52;padding:4px 0}.cx-sub{padding-left:12px}.cx-story{font:500 13px/1.6 'Inter',system-ui,sans-serif;color:#4A4A52;padding:2px 0 2px 24px}.cx-story.cx-on{color:#E8E8ED;font-weight:600;box-shadow:inset 3px 0 0 #E5531A;margin-top:6px}.cx-scenario{font:600 13px/1.6 'Inter',system-ui,sans-serif;color:#F2A07A;padding:6px 0 0 36px}.cx-steps{font:400 12px/1.5 'JetBrains Mono',ui-monospace,monospace;color:#9B9BA8;white-space:pre-wrap;padding:2px 0 4px 48px}</style></helmet>
+<div style="position: relative; width: 560px; height: 1100px; background: #0B0B0B">
+<div style="position: absolute; inset: 0; overflow: auto; box-sizing: border-box; padding: 20px 20px 40px; background: #111113; border-left: 1px solid #2A2A2A">
+<div class="cx-epic">Move Work Forward On Session Board</div>
+<div class="cx-sub">See Work On Session Board</div>
+<div class="cx-story cx-on">Expand Ticket From Empty Area</div>
+<div class="cx-scenario">Expand a card from an empty area</div>
+<div class="cx-steps">Given the ticket checkout-flow&#x27;s card is collapsed on the board
+When the Person presses an empty area of checkout-flow&#x27;s card
+Then checkout-flow&#x27;s card is expanded to show its actions
+    And the details show checkout-flow</div>
+<div class="cx-scenario">Leave a card&#x27;s controls to do their own work</div>
+<div class="cx-steps">Given the ticket checkout-flow&#x27;s card is collapsed on the board
+When the Person opens the stories tile on checkout-flow&#x27;s card
+Then the stories tile is open
+    And checkout-flow&#x27;s card stays collapsed</div>
+<div class="cx-sub">Maintain Tickets</div>
+<div class="cx-story cx-on">Edit Ticket Text</div>
+<div class="cx-scenario">Show a ticket&#x27;s text from its session file</div>
+<div class="cx-steps">Given the ticket checkout-flow&#x27;s session folder holds checkout-flow.md with the text Pay for the basket.
+When the Person opens the board
+Then checkout-flow&#x27;s card shows Pay for the basket.</div>
+<div class="cx-scenario">Edit a ticket&#x27;s text</div>
+<div class="cx-steps">Given the ticket checkout-flow&#x27;s card shows Pay for the basket.
+When the Person edits checkout-flow&#x27;s text to Pay for the basket by card.
+Then checkout-flow.md in checkout-flow&#x27;s session folder holds Pay for the basket by card.
+    And checkout-flow&#x27;s card shows Pay for the basket by card.</div>
+<div class="cx-scenario">Write the text file for a ticket that has none</div>
+<div class="cx-steps">Given the ticket pet-visits is on the board
+    But pet-visits&#x27; session folder holds no pet-visits.md
+When the Person edits pet-visits&#x27; text to Book a visit for a pet.
+Then pet-visits.md in pet-visits&#x27; session folder holds Book a visit for a pet.
+    And pet-visits&#x27; card shows Book a visit for a pet.</div>
+<div class="cx-scenario">Edit a backlog item&#x27;s text</div>
+<div class="cx-steps">Given the backlog item Gift cards has the text Sell gift cards.
+When the Person edits Gift cards&#x27; text to Sell gift cards at the till.
+Then .sessions/_backlog/gift-cards.md holds Sell gift cards at the till.
+    And the Backlog shows Gift cards with the text Sell gift cards at the till.</div>
+<div class="cx-story cx-on">Reorder Tickets In Column</div>
+<div class="cx-scenario">Keep a ticket where it was moved in its column</div>
+<div class="cx-steps">Given the Discovery column shows the ticket pet-visits above sign-up
+When the Person moves sign-up above pet-visits in Discovery
+Then Discovery shows sign-up above pet-visits
+    And Discovery still shows sign-up above pet-visits when the board is read again</div>
+<div class="cx-scenario">Keep a backlog item where it was moved</div>
+<div class="cx-steps">Given the Backlog shows the backlog item Gift cards above Returns and refunds
+When the Person moves Returns and refunds above Gift cards
+Then the Backlog shows Returns and refunds above Gift cards
+    And the Backlog still shows Returns and refunds above Gift cards when the board is read again</div>
+<div class="cx-story cx-on">Delete Ticket</div>
+<div class="cx-scenario">Delete a ticket and its session folder</div>
+<div class="cx-steps">Given the ticket pet-visits is on the board
+When the Person deletes pet-visits
+Then no column shows pet-visits
+    And .sessions/pet-visits is gone</div>
+<div class="cx-scenario">Refuse to delete a ticket the board does not have</div>
+<div class="cx-steps">Given the board shows no ticket named no-such-ticket
+When the Person deletes no-such-ticket
+Then the board says no ticket named &#x27;no-such-ticket&#x27; on the board
+    And no session folder is removed</div>
+<div class="cx-story cx-on">Tag Ticket Session</div>
+<div class="cx-scenario">Tag a ticket&#x27;s session</div>
+<div class="cx-steps">Given the ticket pet-visits has no tags
+When the Person tags pet-visits&#x27; session with billing
+Then pet-visits&#x27; card shows the tag billing
+    And pet-visits&#x27; session.json holds the tag billing</div>
+<div class="cx-scenario">Add a second tag</div>
+<div class="cx-steps">Given the ticket pet-visits is tagged billing
+When the Person tags pet-visits&#x27; session with urgent
+Then pet-visits&#x27; card shows the tags billing and urgent</div>
+<div class="cx-sub">Organize Ticket Hierarchy</div>
+<div class="cx-story cx-on">Add Child Ticket</div>
+<div class="cx-scenario">Add a child ticket by hand</div>
+<div class="cx-steps">Given the ticket checkout-flow is In progress in Discovery
+    But checkout-flow has no child tickets
+When the Person adds the child ticket Enter card details to checkout-flow
+Then the ticket enter-card-details is In progress in Discovery with the parent checkout-flow
+    And checkout-flow&#x27;s card holds enter-card-details (Display Child Tickets In Parent)</div>
+<div class="cx-story cx-on">Display Child Tickets In Parent</div>
+<div class="cx-scenario">Stack a parent&#x27;s children inside its card</div>
+<div class="cx-steps">Given the ticket checkout-flow is in Discovery
+    And its child tickets enter-card-details and confirm-order are in Discovery
+When the board shows Discovery
+Then checkout-flow&#x27;s card holds enter-card-details and confirm-order stacked inside it
+    And checkout-flow&#x27;s title sits small above them
+    And neither child shows as a card of its own in Discovery</div>
+<div class="cx-scenario">Keep a dashed row for a child pulled out of its parent</div>
+<div class="cx-steps">Given the ticket checkout-flow is in Discovery
+    And its child ticket enter-card-details was pulled out of it and is in Specification
+When the board shows checkout-flow
+Then checkout-flow&#x27;s card holds a dashed row for enter-card-details</div>
+<div class="cx-story cx-on">Expand Parent Ticket</div>
+<div class="cx-scenario">Expand a parent to show its children</div>
+<div class="cx-steps">Given the ticket checkout-flow is collapsed with the child tickets enter-card-details and confirm-order
+    And checkout-flow&#x27;s card reads + 2 children
+When the Person expands checkout-flow
+Then checkout-flow&#x27;s card shows enter-card-details and confirm-order
+    And it reads - 2 children</div>
+<div class="cx-scenario">Collapse a parent to its own card</div>
+<div class="cx-steps">Given the ticket checkout-flow is expanded to show enter-card-details and confirm-order
+When the Person collapses checkout-flow
+Then checkout-flow&#x27;s card shows no child rows
+    And it reads + 2 children</div>
+<div class="cx-story cx-on">Detach Child Ticket</div>
+<div class="cx-scenario">Pull a child out of its parent</div>
+<div class="cx-steps">Given the ticket checkout-flow holds its child ticket enter-card-details in Discovery
+When the Person pulls enter-card-details out of checkout-flow
+Then enter-card-details shows as a card of its own beside checkout-flow, titled Checkout flow.Enter card details
+    And enter-card-details still has the parent checkout-flow
+    And checkout-flow&#x27;s card holds a dashed row for enter-card-details</div>
+<div class="cx-scenario">Move a pulled-out child like any ticket</div>
+<div class="cx-steps">Given the ticket enter-card-details was pulled out of checkout-flow and is Done in Discovery
+When the Person moves enter-card-details to Specification
+Then the Specification column shows enter-card-details
+    And enter-card-details still has the parent checkout-flow (Place Parent At Leftmost Child Stage)</div>
+<div class="cx-story cx-on">Reassign Ticket Parent</div>
+<div class="cx-scenario">Move a child to another parent</div>
+<div class="cx-steps">Given the ticket enter-card-details is a child of checkout-flow
+    And the ticket billing-report is In progress in Discovery
+When the Person makes enter-card-details a child of billing-report
+Then billing-report&#x27;s card holds enter-card-details
+    And checkout-flow&#x27;s card no longer holds enter-card-details
+    And enter-card-details&#x27; session.json names billing-report as its parent</div>
+<div class="cx-scenario">Take a child off its parent</div>
+<div class="cx-steps">Given the ticket enter-card-details is a child of checkout-flow
+When the Person takes enter-card-details off checkout-flow
+Then enter-card-details shows as a card of its own with no parent
+    And checkout-flow&#x27;s card holds no row for enter-card-details, dashed or not
+    And enter-card-details&#x27; session.json names no parent</div>
+<div class="cx-story cx-on">Place Parent At Leftmost Child Stage</div>
+<div class="cx-scenario">Show a parent in its earliest child&#x27;s stage</div>
+<div class="cx-steps">Given the ticket checkout-flow has the child tickets enter-card-details in Specification and confirm-order in Discovery
+When the board shows checkout-flow
+Then checkout-flow shows in the Discovery column</div>
+<div class="cx-scenario">Move a parent on when its last child moves on</div>
+<div class="cx-steps">Given the ticket checkout-flow has the child tickets enter-card-details in Specification and confirm-order Done in Discovery
+When the Person moves confirm-order to Specification
+Then checkout-flow shows in the Specification column</div>
+<div class="cx-scenario">Refuse to move a parent by hand</div>
+<div class="cx-steps">Given the ticket checkout-flow has the child ticket confirm-order in Discovery
+When the Person tries to move checkout-flow to Specification
+Then checkout-flow stays in the Discovery column</div>
+<div class="cx-story cx-on">Nest Child Branch And Session</div>
+<div class="cx-scenario">Nest a child&#x27;s session and branch under its parent&#x27;s</div>
+<div class="cx-steps">Given the ticket checkout-flow&#x27;s session is .sessions/checkout-flow on the branch checkout-flow
+When Claude Code opens the child ticket Enter card details of checkout-flow
+Then enter-card-details&#x27; session folder is .sessions/checkout-flow/enter-card-details
+    And enter-card-details&#x27; branch is checkout-flow.enter-card-details</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":560,"height":1100}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
