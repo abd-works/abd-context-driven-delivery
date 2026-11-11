@@ -309,6 +309,16 @@ with description("a backlog item") as self:
             with it("should stay in the Backlog"):
                 expect(self.moved.column.name).to(equal("Backlog"))
 
+        # (S) Person --> Reassign Ticket Parent: a backlog item dropped on a ticket's card starts as its child.
+        with context("that a person drops on a ticket"):
+            with before.each:
+                self.sessions.session("checkout-flow")
+                board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+                self.child = board.backlog_items[0].start_under(board.ticket("checkout-flow"))
+
+            with it("should start it with that ticket as its parent"):
+                expect(self.child.session.parent).to(equal("checkout-flow"))
+
         with context("that has been started"):
             with before.each:
                 self.written = self.item_path.read_text(encoding="utf-8")

@@ -119,6 +119,13 @@ class BacklogItem(Card):
     @mcp
     @agent_tool
     @noSessionLog
+    def start_under(self, parent: Ticket) -> Ticket:
+        """Start the backlog item titled backlog_item as a child of parent, as dropping it on parent's card does: its ticket opens in Discovery, or comes back with its work, and takes parent as its parent. Committed on main and pushed."""
+        return self.start().reassign_parent(parent)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
     def edit_text(self, text: str) -> BacklogItem:
         """Write text as the backlog item's idea, under its heading in its file, which keeps its title. Committed on main and pushed."""
         self._idea.rewrite_text(text)

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { DragEvent } from 'react'
 
+import type { BacklogItemClient } from '../backlog-item/backlog-item-client'
 import { useBoard } from '../shared/board-context'
 import type { TicketClient } from './ticket-client'
 
@@ -16,13 +17,16 @@ function useDragSource(ticket: TicketClient) {
   return { onDragStart, onDragEnd }
 }
 
-// The ticket being dragged when it can become this ticket's child. Read when each event arrives, not from the last
-// drawing: a quick drag reaches the card before the page redraws.
-function useDraggedChild(ticket: TicketClient): () => TicketClient | undefined {
+// What is being dragged when it can become this ticket's child: a ticket Python names it a parent choice of, or a
+// backlog item, which starts as its child. Read when each event arrives, not from the last drawing: a quick drag
+// reaches the card before the page redraws.
+function useDraggedChild(ticket: TicketClient): () => TicketClient | BacklogItemClient | undefined {
   const { page } = useBoard()
   return () => {
-    const dragged = page.board.tickets.find(entry => entry.address === page.store.state.dragged)
-    return dragged && ticket.canTakeAsChild(dragged) ? dragged : undefined
+    const address = page.store.state.dragged
+    const dragged = page.board.tickets.find(entry => entry.address === address)
+    if (dragged) return ticket.canTakeAsChild(dragged) ? dragged : undefined
+    return ticket.isMain ? undefined : page.board.backlogItems.find(entry => entry.address === address)
   }
 }
 
@@ -48,7 +52,7 @@ function useChildDrop(ticket: TicketClient) {
     if (!dragged) return
     takeHere(event)
     page.store.change({ dragged: null })
-    void ticket.takeAsChild(dragged)
+    void ('parentChoices' in dragged ? ticket.takeAsChild(dragged) : dragged.startUnder(ticket.name))
   }
   return { isTakingChild, onDragOver, onDragLeave: () => setTakingChild(false), onDrop }
 }

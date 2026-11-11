@@ -20,6 +20,14 @@ export class BacklogItemClient extends BacklogItemClientGenerated {
     this.page.board.select(this.address)
   }
 
+  // Dropped on a ticket's card, the item starts as that ticket's child, and the board is read again to show it there.
+  override async startUnder(parent: string): Promise<TicketData | null> {
+    const child = await super.startUnder(parent)
+    await this.page.reader.refresh()
+    if (child) this.page.store.toast(`${this.title} started as a child of ${parent}`)
+    return child
+  }
+
   override async start(scope?: string, path?: string): Promise<TicketData | null> {
     const ticket = await super.start(scope, path)
     await this.page.reader.refresh()
