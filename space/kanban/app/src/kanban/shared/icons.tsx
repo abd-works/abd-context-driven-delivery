@@ -59,6 +59,7 @@ const SESSION_ACTION_SHAPES: Record<string, string> = {
   next: 'M4.5 3v10l8-5z',
   handoff: 'M2.5 8h9M8.5 4.5L12 8l-3.5 3.5M13.5 3v10',
   split: 'M2.5 8h4M6.5 8L10 4.5h3.5M6.5 8l3.5 3.5h3.5',
+  child: 'M8 3v10M3 8h10',
   activate: 'M8 2.5v5M4.8 4.5a4.5 4.5 0 1 0 6.4 0',
   close: 'M4 4l8 8M12 4l-8 8',
 }

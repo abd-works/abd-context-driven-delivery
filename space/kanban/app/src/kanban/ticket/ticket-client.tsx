@@ -264,6 +264,13 @@ export class TicketClient extends TicketClientGenerated {
     return `${prompt} session=${this.session.session_file}`
   }
 
+  // The child opens in Discovery as a ticket of its own, so the board is read again to show it under this one.
+  override async addChild(title: string): Promise<this | null> {
+    const child = await super.addChild(title)
+    await this.page.reader.refresh()
+    return child
+  }
+
   fillSplit(): Promise<void> {
     return this.chat.fill(this.inSession(`Split ticket ${this.name} into child tickets, one per story on its story map: call ticket.create with parent ${this.name} for each story.`))
   }
