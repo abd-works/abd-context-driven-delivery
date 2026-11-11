@@ -776,16 +776,25 @@ class ToolSubjectLoader:
         arguments and the operation's own, so every reader of its signature sees what a caller passes. The loader is
         handed what it takes from the call, and an operation that takes ``call`` is handed the call too, so a line it
         logs points at the call's chat."""
-        identity = list(inspect.signature(load).parameters.values())
         operation_takes_call = SERVED_CALL in inspect.signature(operation).parameters
         own = [param for param in inspect.signature(operation).parameters.values() if param.name not in ("self", SERVED_CALL)]
-        loaded_from_call = TakesFromCall.names_on(load)
-        identity_names = [*(param.name for param in identity), *loaded_from_call]
         named_objects = self._named_objects(operation, own)
         taken = tuple(dict.fromkeys([
-            *loaded_from_call, *(name for other in named_objects.values() for name in TakesFromCall.names_on(other)),
+            *TakesFromCall.names_on(load), *(name for other in named_objects.values() for name in TakesFromCall.names_on(other)),
             *([SERVED_CALL] if operation_takes_call else []),
         ]))
+        on_subject = self._loading(load, operation, named_objects, taken)
+        self._publish(on_subject, load, operation, own, named_objects)
+        if taken:
+            TakesFromCall(*taken).annotate(on_subject)
+        return OnSubject(on_subject)
+
+    def _loading(
+        self, load: Callable[..., Any], operation: Callable[..., Any], named_objects: dict[str, Callable[..., Any]], taken: tuple[str, ...]
+    ) -> Callable[..., Any]:
+        """The tool's body: load each object the call names, then the subject, then run the operation on it."""
+        operation_takes_call = SERVED_CALL in taken
+        identity_names = [*inspect.signature(load).parameters, *TakesFromCall.names_on(load)]
 
         @functools.wraps(operation)
         def on_subject(**arguments: Any) -> Any:
@@ -799,15 +808,21 @@ class ToolSubjectLoader:
                 arguments.pop(name, None)
             return operation(found, **arguments, **({SERVED_CALL: call} if operation_takes_call else {}))
 
+        return on_subject
+
+    def _publish(
+        self, on_subject: Callable[..., Any], load: Callable[..., Any], operation: Callable[..., Any],
+        own: list[inspect.Parameter], named_objects: dict[str, Callable[..., Any]],
+    ) -> None:
+        """Give the tool the signature a caller reads: the loader's arguments, then the operation's own, with each
+        object argument taken by name."""
+        identity = list(inspect.signature(load).parameters.values())
         published = [self._by_name(param) if param.name in named_objects else param for param in own]
         on_subject.__signature__ = inspect.Signature(identity + published, return_annotation=inspect.signature(operation).return_annotation)
         on_subject.__annotations__ = {
             name: (str if name in named_objects else hint)
             for name, hint in {**load.__annotations__, **operation.__annotations__}.items() if name != SERVED_CALL
         }
-        if taken:
-            TakesFromCall(*taken).annotate(on_subject)
-        return OnSubject(on_subject)
 
     def _named_objects(self, operation: Callable[..., Any], own: list[inspect.Parameter]) -> dict[str, Callable[..., Any]]:
         """The operation's arguments that are themselves objects a tool can load, such as another ``Ticket``, each with
@@ -818,7 +833,7 @@ class ToolSubjectLoader:
             return {}
         found = {}
         for param in own:
-            owner = _object_class_in(hints.get(param.name))
+            owner = self._object_class_in(hints.get(param.name))
             loader = ToolsetMembers.of(owner).subject_loader.loader if owner is not None else None
             if loader is not None:
                 found[param.name] = loader
@@ -834,6 +849,13 @@ class ToolSubjectLoader:
         identity = next(iter(inspect.signature(load_other).parameters))
         wanted = TakesFromCall.names_on(load_other)
         return load_other(**{identity: named, **{name: value for name, value in from_call.items() if name in wanted}})
+
+    def _object_class_in(self, hint: Any) -> type | None:
+        """The class a hint names, a ``Ticket`` or a ``Ticket | None``; none for any other hint."""
+        if isinstance(hint, type):
+            return hint if hint.__module__ != "builtins" else None
+        named = [member for member in getattr(hint, "__args__", ()) if isinstance(member, type) and member is not type(None)]
+        return named[0] if len(named) == 1 and type(None) in getattr(hint, "__args__", ()) else None
 
     def _by_name(self, param: inspect.Parameter) -> inspect.Parameter:
         """An object argument as a tool publishes it: its name, empty for none when the operation allows none."""
@@ -1177,14 +1199,6 @@ class AgentInstructions(AgentTool):
             if callable(recipe) and AgentInstructionsAnnotation.annotates(recipe):
                 return AgentInstructions(name=method_name, callable=recipe, toolset=self.toolset), owner
         return None
-
-
-def _object_class_in(hint: Any) -> type | None:
-    """The class a hint names, a ``Ticket`` or a ``Ticket | None``; none for any other hint."""
-    if isinstance(hint, type):
-        return hint if hint.__module__ != "builtins" else None
-    named = [member for member in getattr(hint, "__args__", ()) if isinstance(member, type) and member is not type(None)]
-    return named[0] if len(named) == 1 and type(None) in getattr(hint, "__args__", ()) else None
 
 
 def _callable_needs_arguments(call: Callable[..., Any]) -> bool:
