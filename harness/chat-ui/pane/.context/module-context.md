@@ -1,7 +1,7 @@
 # harness/chat-ui/pane
-The *cdd-board* plugin connects a Claude Code chat to the Session Board, so the board's buttons can put a prompt in that chat or run a command there. It also shows the active ticket on the chat's status line, tells the agent which ticket it is working on, and draws the chat bar above the prompt, which starts with the server health mark. The bar's design and decisions are in `harness/chat-ui`.
+The *cdd-board* plugin connects a Claude Code chat to the CDD Kanban, so the board's buttons can put a prompt in that chat or run a command there. It also shows the active ticket on the chat's status line, tells the agent which ticket it is working on, and draws the chat bar above the prompt, which starts with the server health mark. The bar's design and decisions are in `harness/chat-ui`.
 
-`/board` says where the Session Board is and how to start it.
+`/board` says where the CDD Kanban is and how to start it.
 
 - **Purpose:** let a person drive the agent from the board, and keep the chat aware of the active ticket.
 - **Seam (terms):** `cdd-board` plugin; `/board`; the status line entry; the active ticket section of the system prompt; the server health band

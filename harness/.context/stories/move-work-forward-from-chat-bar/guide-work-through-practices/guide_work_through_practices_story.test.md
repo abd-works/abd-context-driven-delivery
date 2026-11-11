@@ -9,7 +9,7 @@ section: body
 
 ### Domain terms
 
-- ++files pane++ — the pane the chat bar opens beside the chat, as the Session Board opens its files panel, holding a fidelity's files or its validation report.
+- ++files pane++ — the pane the chat bar opens beside the chat, as the CDD Kanban opens its files panel, holding a fidelity's files or its validation report.
 - ++action button++ — the band's ▶ chip and its ▾ action list, which run an action on the fidelity the band shows.
 
 ## Story: View Fidelity Files

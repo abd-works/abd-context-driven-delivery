@@ -8,7 +8,7 @@ Round 9 split `Ticket` by job (finding 1 of `round9-space-tools.md`; fix rule 10
 
 That took `Ticket` from 48 methods and a total complexity of 143 to 33 methods and a total complexity of 75. The rule asks for under 30 methods. We keep the 33 because 32 of them are what the ticket publishes:
 
-- 15 MCP tools (`ticket.create`, `branch`, `work_branch`, `format_choices`, `close_choices`, `leave_choices`, `open_choices`, `activate`, `open_worktree`, `move_next`, `move_previous`, `move_to`, `close`, `archive`, `violations`). The chat bar, the Session Board app, the installed slash commands, and the stub chat in `harness/chat-ui` call them by these names, and a toolset publishes a tool under its own class's name, so moving a tool onto a part would rename it.
+- 15 MCP tools (`ticket.create`, `branch`, `work_branch`, `format_choices`, `close_choices`, `leave_choices`, `open_choices`, `activate`, `open_worktree`, `move_next`, `move_previous`, `move_to`, `close`, `archive`, `violations`). The chat bar, the CDD Kanban app, the installed slash commands, and the stub chat in `harness/chat-ui` call them by these names, and a toolset publishes a tool under its own class's name, so moving a tool onto a part would rename it.
 - 15 data fields (`name`, `title`, `session`, `progress`, `column`, `is_closed`, `is_active`, `drop_targets`, `is_done`, `next`, `agent_context`, `last_activity`, `worktree`, `working_chat`, `stage_work`), which the generated TypeScript `TicketData` reads by these keys.
 - Its constructor and its `@tool_subject` loader, which every tool needs.
 

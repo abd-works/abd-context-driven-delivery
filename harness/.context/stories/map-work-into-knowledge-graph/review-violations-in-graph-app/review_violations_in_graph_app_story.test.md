@@ -21,7 +21,7 @@ section: body
 | shape | source lines | violation |
 | --- | --- | --- |
 | Ticket details | 8 to 10 | screen-story-budget: the screen shows 7 stories, about 4 fit |
-| Session Board | 4 | none |
+| CDD Kanban | 4 | none |
 | Chat Bar | 3 | none |
 
 ## Story: Display Drawio File As Diagram
@@ -51,7 +51,7 @@ section: body
 | shape | source lines |
 | --- | --- |
 | Ticket details | 8 to 10 |
-| Session Board | 4 |
+| CDD Kanban | 4 |
 | Chat Bar | 3 |
 
 #### Scenario: With violations hidden the diagram shows no red shape

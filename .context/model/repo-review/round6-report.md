@@ -39,7 +39,7 @@ The harness-core and harness-upper areas were split differently in round 6: hook
 3. **actions and practices import each other.** `cdd_guidance/actions/__init__.py:14` imports the practices, and seven practice files import `actions/sketch` (actions N3).
 
 **Problems already there before round 5:**
-4. **B10 still happens.** A graph build stops the server answering anyone, for up to 9 minutes this round. All six validators lost the server, and only some graph checks finished. The likely cause is progress reported per node and per rule through the event loop, while the Session Board holds about 257 open connections waiting (upper H2).
+4. **B10 still happens.** A graph build stops the server answering anyone, for up to 9 minutes this round. All six validators lost the server, and only some graph checks finished. The likely cause is progress reported per node and per rule through the event loop, while the CDD Kanban holds about 257 open connections waiting (upper H2).
 5. **A hook daemon started by the old code keeps hooks dead after an update.** The new daemon cannot claim the port and never finds the old one. Closing a worktree never stops its daemon: 71 old-layout daemons are running (upper H1).
 6. **Session tools called with `session=` lose the calling chat.** The `@tool_subject` loaders build a stand-in `ToolCall` (`session.py:98`, `practice_session_output.py:56`) (space H1).
 7. **The context index reads paths against the server's folder,** and embeds a missing segment as empty text (actions N4).

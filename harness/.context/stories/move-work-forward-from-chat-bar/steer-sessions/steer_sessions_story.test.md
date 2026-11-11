@@ -17,7 +17,7 @@ section: body
 
 | Source | Note |
 |--------|------|
-| `harness/.context/stories/story-map.md` | Requested 2026-11-06: the chat bar shows the active session's latest handoff, as the Session Board does |
+| `harness/.context/stories/story-map.md` | Requested 2026-11-06: the chat bar shows the active session's latest handoff, as the CDD Kanban does |
 | https://claude.ai/artifact/HCCiMNSTMhwB9zQT8tVV8p | the story explorer plays the first scenario on the integrated journey screen |
 
 #### Scenario: Opening a session shows its latest handoff in the chat panel

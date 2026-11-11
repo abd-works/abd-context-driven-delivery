@@ -1,4 +1,4 @@
-# BDD Realization — Session Board
+# BDD Realization — CDD Kanban
 
 Fidelity: realization
 

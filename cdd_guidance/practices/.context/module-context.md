@@ -1,7 +1,7 @@
 # cdd_guidance/practices
 *Practice* is a field of expertise used as a lens on the work — Stories, DDD, UX, Clean Engineering, BDD, and agent BDD — each a *PracticeGuidance* with its own `{practice}.md` (Overview, shared rules, and a section per fidelity with its rules), templates, examples, and formats. Each practice is its own module with its own card in its folder; this card covers what the practices share.
 
-*Stage* is how far the work has gone — `discovery`, `specification`, or `implementation` — written on each fidelity as **Stage:**, so the fidelities of different practices line up: story map, bounded context, IA, modules, and behavior are all discovery. The stage names are the constants `DISCOVERY`, `SPECIFICATION`, and `IMPLEMENTATION` in `harness.guidance.stages`, the framework's vocabulary that the graph, the catalog, and the Session Board's *Stage* columns (space/kanban) all read.
+*Stage* is how far the work has gone — `discovery`, `specification`, or `implementation` — written on each fidelity as **Stage:**, so the fidelities of different practices line up: story map, bounded context, IA, modules, and behavior are all discovery. The stage names are the constants `DISCOVERY`, `SPECIFICATION`, and `IMPLEMENTATION` in `harness.guidance.stages`, the framework's vocabulary that the graph, the catalog, and the CDD Kanban's *Stage* columns (space/kanban) all read.
 
 - **Purpose:** Name the stages every practice's fidelities line up on, so the board and the actions can move work through the same three stages whatever practice it uses.
 - **Seam (terms):** the stage names each fidelity's **Stage:** gives, from `harness.guidance.stages` — `DISCOVERY`, `SPECIFICATION`, `IMPLEMENTATION`

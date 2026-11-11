@@ -9,7 +9,7 @@ section: body
 
 ### Domain terms
 
-- ++ticket++ — a card on the Session Board with its own session; the active ticket is the one every view shows.
+- ++ticket++ — a card on the CDD Kanban with its own session; the active ticket is the one every view shows.
 - ++session++ — the ticket's folder of work, with the practices enabled for it.
 - ++practice++ — a lens enabled on a session: Stories, DDD, UX, Clean Engineering or BDD.
 - ++story map++ — the session's epics, sub-epics and stories, shown by the Story UI app.
@@ -115,10 +115,10 @@ section: body
 #### Scenario: The explorer plays the active ticket's stories on their design canvas screens
 
 *Given* ++checkout-flow++ is the active ticket  
-  *And* its story map shows Screen frames, with Activate Ticket on the Session Board design canvas screen  
+  *And* its story map shows Screen frames, with Activate Ticket on the CDD Kanban design canvas screen  
 *When* the Person explores ++checkout-flow++'s stories from its story map  
 *Then* the story explorer opens below the story map on Activate Ticket  
-  *And* its frame shows the Session Board design canvas screen
+  *And* its frame shows the CDD Kanban design canvas screen
 
 #### Scenario: Another ticket's explorer plays that ticket's stories
 

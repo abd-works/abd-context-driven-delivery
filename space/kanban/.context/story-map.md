@@ -5,7 +5,7 @@ format: md
 section: body
 ---
 
-# Story Map — Session Board
+# Story Map — CDD Kanban
 
 **Sources / context:** `.sessions/session-board/ticket-enhancements.md` (the ticket enhancements, from the board notes now in `.sessions/_backlog/*.md, one per thin-slice increment` and the board notes of 2026-11-05); `space/kanban/board.py`; `space/kanban/ticket.py`; `space/kanban/backlog_item.py`; `space/kanban/kanban_spec.py`; `space/kanban/kanban_tools_spec.py`; `space/kanban/app/src/kanban/` and its `*.spec.ts`; `space/kanban/app/tests/` (`story-actions.spec.ts`, `board-surface.spec.ts`, and the `tests/kanban/` sub-epics); `harness/chat-ui/pane/hooks/register.ts`; `space/kanban/.context/module-context.md`; `space/kanban/.context/kanban-model.md`; the Board Pane canvas, Version 72 (https://claude.ai/artifact/LGLk189R4aZ14bgwcWRiPN, `project/Main.dc.html`) and its comment threads of 2026-10-31.
 
@@ -239,6 +239,6 @@ Observed: a review line completes a fidelity. Reviewed on a tile is off until a 
 
 ## Scope boundary
 
-**In scope:** what a Person does on the Session Board and what the Board App shows them, from the code today and from the canvas at Version 72.
+**In scope:** what a Person does on the CDD Kanban and what the Board App shows them, from the code today and from the canvas at Version 72.
 
 **Out of scope:** animation on the canvas, because it is not repeatable behaviour.

@@ -20,7 +20,7 @@ section: body
 
 | story | design canvas screen | frame shows |
 | --- | --- | --- |
-| ++Activate Ticket++ | Session Board | ▶ Session Board |
+| ++Activate Ticket++ | CDD Kanban | ▶ CDD Kanban |
 | ++Open Ticket Session++ | Ticket Details | ▶ Ticket Details |
 | ++Move Ticket++ | none | no screen |
 
@@ -65,7 +65,7 @@ section: body
 
 | story | design canvas screen | frame shows |
 | --- | --- | --- |
-| Activate Ticket | the Session Board design canvas screen | ▶ Session Board |
+| Activate Ticket | the CDD Kanban design canvas screen | ▶ CDD Kanban |
 | Open Ticket Session | the Ticket Details design canvas screen | ▶ Ticket Details |
 | Move Ticket | no design canvas screen | no screen |
 
@@ -102,7 +102,7 @@ section: body
   *But* the story explorer is not open  
 *When* the Person explores ++Activate Ticket++ from its frame  
 *Then* the story explorer opens below the story map on ++Activate Ticket++  
-  *And* its frame shows the Session Board artboard from the design canvas  
+  *And* its frame shows the CDD Kanban artboard from the design canvas  
   *And* ++Activate Ticket++'s frame reads in explorer
 
 #### Scenario: Exploring another story changes the open explorer

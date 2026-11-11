@@ -9,7 +9,7 @@ section: body
 
 ## Product / context
 
-**Product:** the CDD framework, its Session Board and its Chat Bar, as mapped in [story-map.md](story-map.md).
+**Product:** the CDD framework, its CDD Kanban and its Chat Bar, as mapped in [story-map.md](story-map.md).
 
 **Slicing intent:** Increment 0 is what the code does today. The Intended and Requested stories follow the order set on 2026-11-06.
 
@@ -19,7 +19,7 @@ section: body
 
 ### Increment 0: Built Today
 
-**Outcome:** what the framework, the Session Board and the Chat Bar do now: every story whose evidence is Observed or Inferred.
+**Outcome:** what the framework, the CDD Kanban and the Chat Bar do now: every story whose evidence is Observed or Inferred.
 
 **Slicing notes:** not a slice to build; it is the starting line the other increments add to.
 

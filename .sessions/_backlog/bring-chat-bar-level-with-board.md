@@ -27,19 +27,19 @@ From `board-enhancements.md`: "add feature to backlog widget for existing apps" 
 
 #### Story: Move Session To Previous Stage
 
-*Person*. Requested (2026-11-06, as the Session Board does): the chat bar moves the session back a stage through `ticket.move_previous`.
+*Person*. Requested (2026-11-06, as the CDD Kanban does): the chat bar moves the session back a stage through `ticket.move_previous`.
 
 #### Story: Mark Session Done In Stage
 
-*Person*. Requested (2026-11-06, as the Session Board does): the chat bar marks the active session Done in its stage and back to In progress.
+*Person*. Requested (2026-11-06, as the CDD Kanban does): the chat bar marks the active session Done in its stage and back to In progress.
 
 #### Story: Choose Session Practices
 
-*Person*. Requested (2026-11-06, as the Session Board does): the chat bar turns the active session's practices on and off through `ticket.enable_practice`. Intended (`.sessions/_backlog/bring-chat-bar-level-with-board.md` "Toggle practices on and off from the card"): the practices turn on and off from the expanded session card.
+*Person*. Requested (2026-11-06, as the CDD Kanban does): the chat bar turns the active session's practices on and off through `ticket.enable_practice`. Intended (`.sessions/_backlog/bring-chat-bar-level-with-board.md` "Toggle practices on and off from the card"): the practices turn on and off from the expanded session card.
 
 #### Story: Open Fidelity Help
 
-*Person*. Requested (2026-11-06, as the Session Board does): the chat bar opens the same help for a fidelity or practice through `board.help`.
+*Person*. Requested (2026-11-06, as the CDD Kanban does): the chat bar opens the same help for a fidelity or practice through `board.help`.
 
 #### Story: Choose Session Folders From Chat Bar
 
@@ -49,7 +49,7 @@ From `board-enhancements.md`: "add feature to backlog widget for existing apps" 
 
 #### Story: Fix Violations From Chat Bar
 
-*Person*. Requested (2026-11-06, as the Session Board does): the chat bar sends Fix and Fix all for the report it opens.
+*Person*. Requested (2026-11-06, as the CDD Kanban does): the chat bar sends Fix and Fix all for the report it opens.
 
 ### Feature: Steer Sessions
 

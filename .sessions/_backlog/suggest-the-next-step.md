@@ -59,4 +59,4 @@ From `mod-ideas.md`, "Flow" and "Capturing knowledge":
 
 #### Story: Display Latest Session Handoff
 
-*Chat Bar*. Requested (2026-11-06, as the Session Board does): the chat bar shows the active session's latest handoff.
+*Chat Bar*. Requested (2026-11-06, as the CDD Kanban does): the chat bar shows the active session's latest handoff.

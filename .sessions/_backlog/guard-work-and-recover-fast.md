@@ -84,7 +84,7 @@ From `board-enhancements.md`: "restart refresh ->onre button relopadsplugins mcp
 
 #### Story: Update CDD From Chat Bar
 
-*Person*. Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "checkout latest and build"), and Requested on 2026-11-06 as the Session Board does: get the latest commit, rebuild the board, pin the cdd server to that commit, and restart the board.
+*Person*. Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "checkout latest and build"), and Requested on 2026-11-06 as the CDD Kanban does: get the latest commit, rebuild the board, pin the cdd server to that commit, and restart the board.
 
 #### Story: Restart Parts From Chat Bar
 

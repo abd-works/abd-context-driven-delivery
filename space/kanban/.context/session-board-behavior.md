@@ -5,7 +5,7 @@ format: md
 section: body
 ---
 
-# BDD Behavior — Session Board
+# BDD Behavior — CDD Kanban
 
 Fidelity: behavior
 

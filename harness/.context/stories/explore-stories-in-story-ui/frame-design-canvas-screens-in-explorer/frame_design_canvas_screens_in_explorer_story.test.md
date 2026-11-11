@@ -36,9 +36,9 @@ section: body
 
 #### Scenario: The design canvas artboard fills the explorer's frame
 
-*Given* Activate Ticket's Session Board screen is an artboard on the design canvas  
+*Given* Activate Ticket's CDD Kanban screen is an artboard on the design canvas  
 *When* the story explorer opens on Activate Ticket  
-*Then* the Session Board design canvas artboard fills the explorer's frame  
+*Then* the CDD Kanban design canvas artboard fills the explorer's frame  
   *And* it runs live, with its own buttons working
 
 ## Story: Choose The Screen For A Step
@@ -114,7 +114,7 @@ section: body
 
 #### Scenario: A design canvas screen keeps its look inside the explorer
 
-*Given* the Session Board design canvas screen links its own stylesheet  
-*When* the explorer draws the Session Board screen  
+*Given* the CDD Kanban design canvas screen links its own stylesheet  
+*When* the explorer draws the CDD Kanban screen  
 *Then* the screen looks as it does on its own artboard  
   *And* the explorer's panel styles do not reach it

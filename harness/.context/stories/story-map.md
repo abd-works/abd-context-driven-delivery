@@ -15,13 +15,13 @@ section: body
 
 # Story Map — Context-Driven Delivery Framework
 
-**Sources / context:** `harness/.context/module-context.md`; `harness/agent_tools/.context/module-context.md`; `harness/agent_tools/.context/agent-tools-model.md`; `harness/markdown/.context/module-context.md`; `installation/.context/installer-deployed-model.md`; `harness/hooks/.context/module-context.md`; `harness/guidance/guidance.py`; `harness/.context/context-tool-resource-model-om-bdd.md`; `harness/mcp/.context/module-context.md`; `actions/.context/module-context.md`; `practices/.context/module-context.md`; user spine: register agent toolsets → install markdown files (skill, slash command, rules) and MCP → invoke those → use context guidance (install skills and .mdc, invoke instructions, generate under rules) → use practice guidance (register guidance and fidelities, invoke practice and fidelity, shared and fidelity rules constrain output) → hook dispatch → extract markdown → lifecycle actions. Session Board and Chat Bar: `space/kanban/.context/story-map.md` and `story-map.drawio`; `harness/chat-ui/.context/story-map.md` and `story-map.drawio`; the ticket enhancements on the session-board branch (`.sessions/session-board/ticket-enhancements.md`, removed with that session in commit 8483f7a40 and read from commit b08bfe47e; its `space/kanban/.context/story-map.md`); `harness/chat-ui/.context/cdr/0001-stage-strip-band.md`; `space/kanban/app/src/session-board/board-update.ts`; the ticket drawing `harness/.context/ux/ticket-ui.drawio` (2026-11-11), which supplements the design canvas for parent and child tickets; `harness/chat-ui/pane/hooks/register.ts`. The map also takes in the backlog items `.sessions/_backlog/maintain-tickets-on-board.md`, `.sessions/_backlog/guard-work-and-recover-fast.md` and `.sessions/_backlog/guard-work-and-recover-fast.md` as Intended stories.
+**Sources / context:** `harness/.context/module-context.md`; `harness/agent_tools/.context/module-context.md`; `harness/agent_tools/.context/agent-tools-model.md`; `harness/markdown/.context/module-context.md`; `installation/.context/installer-deployed-model.md`; `harness/hooks/.context/module-context.md`; `harness/guidance/guidance.py`; `harness/.context/context-tool-resource-model-om-bdd.md`; `harness/mcp/.context/module-context.md`; `actions/.context/module-context.md`; `practices/.context/module-context.md`; user spine: register agent toolsets → install markdown files (skill, slash command, rules) and MCP → invoke those → use context guidance (install skills and .mdc, invoke instructions, generate under rules) → use practice guidance (register guidance and fidelities, invoke practice and fidelity, shared and fidelity rules constrain output) → hook dispatch → extract markdown → lifecycle actions. CDD Kanban and Chat Bar: `space/kanban/.context/story-map.md` and `story-map.drawio`; `harness/chat-ui/.context/story-map.md` and `story-map.drawio`; the ticket enhancements on the session-board branch (`.sessions/session-board/ticket-enhancements.md`, removed with that session in commit 8483f7a40 and read from commit b08bfe47e; its `space/kanban/.context/story-map.md`); `harness/chat-ui/.context/cdr/0001-stage-strip-band.md`; `space/kanban/app/src/session-board/board-update.ts`; the ticket drawing `harness/.context/ux/ticket-ui.drawio` (2026-11-11), which supplements the design canvas for parent and child tickets; `harness/chat-ui/pane/hooks/register.ts`. The map also takes in the backlog items `.sessions/_backlog/maintain-tickets-on-board.md`, `.sessions/_backlog/guard-work-and-recover-fast.md` and `.sessions/_backlog/guard-work-and-recover-fast.md` as Intended stories.
 
-**Evidence:** Observed behaviour is cited from those files. Intended: practice guidance and fidelity guidance declare real `@hook` events from `CURSOR_EVENTS`, and lifecycle actions use the same mark-and-install path as practice guidance. For the Session Board and Chat Bar epics: **Observed** means the code and its specs or tests do it today, **Inferred** means the code does it but nothing presses it, **Intended** means a source asks for it and the code does not do it yet, and **Requested** means the person asked on 2026-11-06 for each channel to do what the other does. In `story-map.drawio`, a story whose evidence is only Intended or Requested is filled a lighter yellow than one the code does today.
+**Evidence:** Observed behaviour is cited from those files. Intended: practice guidance and fidelity guidance declare real `@hook` events from `CURSOR_EVENTS`, and lifecycle actions use the same mark-and-install path as practice guidance. For the CDD Kanban and Chat Bar epics: **Observed** means the code and its specs or tests do it today, **Inferred** means the code does it but nothing presses it, **Intended** means a source asks for it and the code does not do it yet, and **Requested** means the person asked on 2026-11-06 for each channel to do what the other does. In `story-map.drawio`, a story whose evidence is only Intended or Requested is filled a lighter yellow than one the code does today.
 
 ---
 
-The map reads in the order the work happens: authors register and install toolsets, guidance and actions; people deliver work with context guidance through slash commands, skills and MCP; then people move work forward through two channels, the Session Board and the Chat Bar. Each channel has its own epic and its own stories, because the two surfaces draw and behave differently even when they call the same `ticket.*`, `board.*`, `fidelity-progress.*` and `session.*` tools.
+The map reads in the order the work happens: authors register and install toolsets, guidance and actions; people deliver work with context guidance through slash commands, skills and MCP; then people move work forward through two channels, the CDD Kanban and the Chat Bar. Each channel has its own epic and its own stories, because the two surfaces draw and behave differently even when they call the same `ticket.*`, `board.*`, `fidelity-progress.*` and `session.*` tools.
 
 # (E) Register And Install Toolsets
 
@@ -188,7 +188,7 @@ Observed, turned off: `PromptLog` hooks `beforeSubmitPrompt`, `beforeReadFile`, 
 
 # (E) Move Work Forward On Session Board
 
-The Session Board shows every ticket in the repository. Story files are under `move-work-forward-on-session-board/` beside this map, one per sub-epic; the specs that run them stay in `space/kanban/`.
+The CDD Kanban shows every ticket in the repository. Story files are under `move-work-forward-on-session-board/` beside this map, one per sub-epic; the specs that run them stay in `space/kanban/`.
 
 ## (E) Check CDD Server Health On Board
 
@@ -604,7 +604,7 @@ Observed: Run install runs the installer and says installing, installed (open a 
 
 ### (S) Person --> Update CDD From Chat Bar
 
-Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "checkout latest and build"), and Requested on 2026-11-06 as the Session Board does: get the latest commit, rebuild the board, pin the cdd server to that commit, and restart the board.
+Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "checkout latest and build"), and Requested on 2026-11-06 as the CDD Kanban does: get the latest commit, rebuild the board, pin the cdd server to that commit, and restart the board.
 
 ### (S) Person --> Open App From Health Panel
 
@@ -648,7 +648,7 @@ Inferred: the `prompt.compose` hook in `register.ts` adds the active session and
 
 ### (S) Person --> [Create New Session](../../chat-ui/pane/test/move-work-forward-from-chat-bar/steer-sessions/create-new-session/create_new_session_story.test.ts)
 
-Observed: the ▾ beside the session name opens the session list, whose field names a new session that `ticket.create` creates (`session-client.ts` `createSession`). Requested (2026-11-06, as the Session Board does): choose the session root.
+Observed: the ▾ beside the session name opens the session list, whose field names a new session that `ticket.create` creates (`session-client.ts` `createSession`). Requested (2026-11-06, as the CDD Kanban does): choose the session root.
 
 ### (S) Person --> [Open Session](../../chat-ui/pane/test/move-work-forward-from-chat-bar/steer-sessions/open-session/open_session_story.test.ts)
 
@@ -660,7 +660,7 @@ Observed: the ⇥ handoff icon adds "Write a handoff for ticket <session> with /
 
 ### (S) Chat Bar --> Display Latest Session Handoff
 
-Requested (2026-11-06, as the Session Board does): the chat bar shows the active session's latest handoff.
+Requested (2026-11-06, as the CDD Kanban does): the chat bar shows the active session's latest handoff.
 
 ### (S) Person --> [Close Session From Chat Bar](../../chat-ui/pane/test/move-work-forward-from-chat-bar/steer-sessions/close-active-session/close_active_session_story.test.ts)
 
@@ -690,19 +690,19 @@ Observed: once every fidelity of the stage is reviewed, the action button shows 
 
 ### (S) Person --> Move Session To Previous Stage
 
-Requested (2026-11-06, as the Session Board does): the chat bar moves the session back a stage through `ticket.move_previous`.
+Requested (2026-11-06, as the CDD Kanban does): the chat bar moves the session back a stage through `ticket.move_previous`.
 
 ### (S) Person --> Mark Session Done In Stage
 
-Requested (2026-11-06, as the Session Board does): the chat bar marks the active session Done in its stage and back to In progress.
+Requested (2026-11-06, as the CDD Kanban does): the chat bar marks the active session Done in its stage and back to In progress.
 
 ### (S) Person --> Choose Session Practices
 
-Requested (2026-11-06, as the Session Board does): the chat bar turns the active session's practices on and off through `ticket.enable_practice`. Intended (`.sessions/_backlog/bring-chat-bar-level-with-board.md` "Toggle practices on and off from the card"): the practices turn on and off from the expanded session card.
+Requested (2026-11-06, as the CDD Kanban does): the chat bar turns the active session's practices on and off through `ticket.enable_practice`. Intended (`.sessions/_backlog/bring-chat-bar-level-with-board.md` "Toggle practices on and off from the card"): the practices turn on and off from the expanded session card.
 
 ### (S) Person --> Open Fidelity Help
 
-Requested (2026-11-06, as the Session Board does): the chat bar opens the same help for a fidelity or practice through `board.help`.
+Requested (2026-11-06, as the CDD Kanban does): the chat bar opens the same help for a fidelity or practice through `board.help`.
 
 ### (S) Person --> Choose Session Folders From Chat Bar
 
@@ -738,7 +738,7 @@ Observed: pressing the button on generate puts the commands of `ticket.generate_
 
 #### (S) Claude Code --> Resolve Session Fidelity Output Paths
 
-Observed: `Generate` and `Session.fidelity_outputs` take the outputs the fidelity declares, with the session's `session.json` overrides, as on the Session Board.
+Observed: `Generate` and `Session.fidelity_outputs` take the outputs the fidelity declares, with the session's `session.json` overrides, as on the CDD Kanban.
 
 #### (S) Person --> Fill Prompt With Fidelity Action
 
@@ -760,7 +760,7 @@ Observed (chat-ui story map, View Fidelity Files): pressing a fidelity's red vio
 
 #### (S) Person --> Fix Violations From Chat Bar
 
-Requested (2026-11-06, as the Session Board does): the chat bar sends Fix and Fix all for the report it opens.
+Requested (2026-11-06, as the CDD Kanban does): the chat bar sends Fix and Fix all for the report it opens.
 
 #### (S) Person --> [Review Session Fidelity](../../chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/review-fidelity/review_fidelity_story.test.ts)
 
@@ -770,11 +770,11 @@ Observed: pressing the button on review records the person's approval through `f
 
 #### (S) Person --> Open Story UI Side Panel From Chat Bar
 
-Requested (2026-11-06, "chat band -> story UI side panel"): the chat bar opens the Story UI editor in a side panel on the active session's story map. Also Intended (the chat bar, as the Session Board).
+Requested (2026-11-06, "chat band -> story UI side panel"): the chat bar opens the Story UI editor in a side panel on the active session's story map. Also Intended (the chat bar, as the CDD Kanban).
 
 #### (S) Person --> Invoke Claude Design Story Explorer From Chat Bar
 
-Intended (requested on 2026-11-06, as the Session Board): the chat bar opens the Claude Design story explorer the design canvas draws today (`explorer.dc.html`) on the active session's story map and screens.
+Intended (requested on 2026-11-06, as the CDD Kanban): the chat bar opens the Claude Design story explorer the design canvas draws today (`explorer.dc.html`) on the active session's story map and screens.
 
 #### (S) Agent --> Deploy Story UI App With Board State
 
@@ -1726,7 +1726,7 @@ Observed: the session board reads the graph saved beside a validation report and
 
 # (E) Connect Sessions Across Channels And Apps
 
-The chat bar, the Session Board, the Story UI editor and the knowledge graph work on one ticket's session at a time, so each one opens the others on that ticket and shows what the others are doing. Validation moves into generate: the graph is rebuilt from what changed, its violations are read straight from it, and Fix is an action of its own. Every story here was requested on 2026-11-06 and none is built yet.
+The chat bar, the CDD Kanban, the Story UI editor and the knowledge graph work on one ticket's session at a time, so each one opens the others on that ticket and shows what the others are doing. Validation moves into generate: the graph is rebuilt from what changed, its violations are read straight from it, and Fix is an action of its own. Every story here was requested on 2026-11-06 and none is built yet.
 
 ## (E) Connect Chat Bar Board And Story UI
 
@@ -1840,6 +1840,6 @@ Intended (integrate-stories-with-the-canvas-explorer.md slice 6, after Phase 0 o
 
 ## Scope boundary
 
-**In scope:** Authoring an Agent Toolset with `@agent_tool` and `@agent_instructions`. Installing that toolset as two writes — File Installation publishes skill, slash command, and rules as one story (same channel, same write) and Mcp Installation publishes `mcp.json` — then invoking the skill, slash command, and MCP tool and prompt. Installed rules are not invoked as a file check — they constrain valid output. Context Guidance is installed the same way (skill and `.mdc` rules), invoked so `instructions` come back, then used to generate content those rules constrain. Practice Guidance is that same Guidance plus registered fidelities — invoke at practice scope and at fidelity scope; shared rules and fidelity-specific rules each constrain the matching AI output. Hook dispatch; extracting co-located markdown via `@markdown`; the Session Board and the Chat Bar as two channels that move a ticket's session through its practices, each with its own stories; the practice content editor apps those channels invoke (Story UI, design canvas, Graph app), with each app's own story map; connecting sessions across the channels and apps, which joins the channels and apps on one ticket, and validation read from the latest graph; every host-action kit from `actions/.context/module-context.md` (`partition`, `grill`, `sketch`, `iterate`, `generate`, `document`, `render`, `satisfy`, `validate`, `scan`, `repair`, `createRule`).
+**In scope:** Authoring an Agent Toolset with `@agent_tool` and `@agent_instructions`. Installing that toolset as two writes — File Installation publishes skill, slash command, and rules as one story (same channel, same write) and Mcp Installation publishes `mcp.json` — then invoking the skill, slash command, and MCP tool and prompt. Installed rules are not invoked as a file check — they constrain valid output. Context Guidance is installed the same way (skill and `.mdc` rules), invoked so `instructions` come back, then used to generate content those rules constrain. Practice Guidance is that same Guidance plus registered fidelities — invoke at practice scope and at fidelity scope; shared rules and fidelity-specific rules each constrain the matching AI output. Hook dispatch; extracting co-located markdown via `@markdown`; the CDD Kanban and the Chat Bar as two channels that move a ticket's session through its practices, each with its own stories; the practice content editor apps those channels invoke (Story UI, design canvas, Graph app), with each app's own story map; connecting sessions across the channels and apps, which joins the channels and apps on one ticket, and validation read from the latest graph; every host-action kit from `actions/.context/module-context.md` (`partition`, `grill`, `sketch`, `iterate`, `generate`, `document`, `render`, `satisfy`, `validate`, `scan`, `repair`, `createRule`).
 
 **Out of scope:** Catalog HTML pages; on the Chat Bar, the board's whole-board views (columns, Backlog items, WIP limits, side panels, ticket hierarchy) and sending one action to a whole stage (CDR 0001); one-time renames and repository moves; YAML manifest CLI / `tools.ps1` invoke; inventing extra practices or product domains beyond this framework spine; scenario and acceptance-test text (later fidelities).

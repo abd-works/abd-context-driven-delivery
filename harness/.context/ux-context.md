@@ -4,7 +4,7 @@ Notes the [information architecture](information-architecture.drawio) cannot sho
 
 ## Invariants
 
-- One screen per app. The Session Board and the Story UI editor are the same screen whether they open as their own page or as a side panel beside the chat; a side panel only changes where the screen sits.
+- One screen per app. The CDD Kanban and the Story UI editor are the same screen whether they open as their own page or as a side panel beside the chat; a side panel only changes where the screen sits.
 - The chat bar, the board, the Story UI editor, the story explorer and the Graph app always show the same ticket's session, so a selection in one is never about a different ticket in another.
 - The story map lives in the Story UI editor. Its base view is the plain map; the screen frames view adds each story's design canvas screen as a frame under its card.
 - The story explorer runs in the browser. Its core frame is the selected step's design canvas screen; the design canvas keeps the screens, their files, versions and fixture bar, and no longer draws the story map or the explorer.

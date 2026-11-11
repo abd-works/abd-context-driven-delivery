@@ -29,7 +29,7 @@ Built today: Refactor Knowledge Graph App To Web Domain Access (the Graph app ru
 
 #### Story: Open Story UI Side Panel From Chat Bar
 
-*Person*. Requested (2026-11-06, "chat band -> story UI side panel"): the chat bar opens the Story UI editor in a side panel on the active session's story map. Also Intended (the chat bar, as the Session Board).
+*Person*. Requested (2026-11-06, "chat band -> story UI side panel"): the chat bar opens the Story UI editor in a side panel on the active session's story map. Also Intended (the chat bar, as the CDD Kanban).
 
 #### Story: Trace Story Through Artifacts
 
@@ -37,7 +37,7 @@ Built today: Refactor Knowledge Graph App To Web Domain Access (the Graph app ru
 
 #### Story: Invoke Claude Design Story Explorer From Chat Bar
 
-*Person*. Intended (requested on 2026-11-06, as the Session Board): the chat bar opens the Claude Design story explorer the design canvas draws today (`explorer.dc.html`) on the active session's story map and screens.
+*Person*. Intended (requested on 2026-11-06, as the CDD Kanban): the chat bar opens the Claude Design story explorer the design canvas draws today (`explorer.dc.html`) on the active session's story map and screens.
 
 #### Story: Deploy Story UI App With Board State
 

@@ -22,7 +22,7 @@ section: body
 
 | view | opened beside the chat as |
 | --- | --- |
-| ++board++ | the Session Board with the active ticket outlined |
+| ++board++ | the CDD Kanban with the active ticket outlined |
 | ++story map++ | the active ticket's epics and stories |
 | ++knowledge graph++ | the active ticket's practice trees |
 | ++Inspector++ | the active ticket's files as tabs |
@@ -38,7 +38,7 @@ section: body
 
 | story | design canvas screen |
 | --- | --- |
-| ++Activate Ticket++ | Session Board |
+| ++Activate Ticket++ | CDD Kanban |
 | ++Open Ticket Session++ | Ticket Details |
 | ++Move Ticket++ | none |
 
@@ -70,7 +70,7 @@ section: body
 
 | view | opened beside the chat as |
 | --- | --- |
-| board | the Session Board with the active ticket outlined |
+| board | the CDD Kanban with the active ticket outlined |
 | story map | the active ticket's epics and stories |
 | knowledge graph | the active ticket's practice trees |
 | Inspector | the active ticket's files as tabs |
@@ -97,7 +97,7 @@ section: body
   *And* its story map shows Screen frames  
 *When* the Person explores ++Activate Ticket++  
 *Then* the story explorer opens below the story map  
-  *And* its frame shows ++Activate Ticket++'s Session Board design canvas screen
+  *And* its frame shows ++Activate Ticket++'s CDD Kanban design canvas screen
 
 #### Scenario: A story with no design canvas screen cannot be explored
 

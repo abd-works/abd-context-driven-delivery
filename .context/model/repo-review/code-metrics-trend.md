@@ -110,7 +110,7 @@ The last column is the code after three of the four round-8 fix branches (harnes
 | Pairs of unrelated classes holding nearly the same fields (80% or more) <br>*(lower is better)* | 5 | 3 🟢 | 3 ⚪ | 2 🟢 | 1 🟢 | 1 ⚪ | 3 🔴 | 3 ⚪ | 2 🟢 | – |
 | TypeScript types named like a Python class, a sign of a copied model <br>*(lower is better)* | 5 | 7 🔴 | 7 ⚪ | 4 🟢 | 4 ⚪ | 4 ⚪ | 4 ⚪ | 4 ⚪ | 4 ⚪ | – |
 
-**TypeScript (the chat pane, the graph app and the Session Board)**
+**TypeScript (the chat pane, the graph app and the CDD Kanban)**
 
 | What is measured | Rounds 1–2 | Round 3 | Round 4 | Round 5 | Round 6 | Round 7 | Round 8 | Round 8 end | Round 9 | Target |
 |---|---|---|---|---|---|---|---|---|---|---|

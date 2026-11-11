@@ -9,7 +9,7 @@
 ## Why
 
 - The declared formats come from their owner: the keys of `FidelityGuidance.outputs` and of `FidelityGuidance.files()` (harness/guidance) are the labels a fidelity's YAML fields give. Generate does not hold those strings or pass them around; it asks the fidelity it works at each time it builds the instructions, once per call.
-- Making the fidelity hold *Format* objects for its declared outputs is the change that removes the remaining conversions, and it belongs to `harness/guidance`, whose fidelity every action, the graph, and the Session Board read. Generate converting its own copy into objects would add a second, Generate-only model of a fidelity's formats beside the fidelity's, which is the duplicated shape the guardrails forbid.
+- Making the fidelity hold *Format* objects for its declared outputs is the change that removes the remaining conversions, and it belongs to `harness/guidance`, whose fidelity every action, the graph, and the CDD Kanban read. Generate converting its own copy into objects would add a second, Generate-only model of a fidelity's formats beside the fidelity's, which is the duplicated shape the guardrails forbid.
 
 ## Consequences
 
