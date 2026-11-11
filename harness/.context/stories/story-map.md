@@ -350,7 +350,7 @@ Intended (`harness/.context/ux/ticket-ui.drawio` "parents cant be dragged; they 
 
 ### (S) Claude Code --> [Nest Child Branch And Session](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-nest-child-branch-and-session)
 
-Intended (`.sessions/session-board/ticket-enhancements.md`): a child ticket's branch and session nest under its parent's, so the hierarchy holds in git and in `.sessions/` as on the board.
+Intended (`.sessions/session-board/ticket-enhancements.md`): a child ticket's branch and session nest under its parent's, so the hierarchy holds in git and in `.sessions/` as on the board. Set aside in the Maybe Later increment (the person, 2026-11-11: complicated, not now).
 
 ## (E) Guide Work Through Practices On Board
 

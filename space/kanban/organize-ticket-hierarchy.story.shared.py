@@ -249,31 +249,3 @@ def _(s):
     @s.then('checkout-flow stays in the Discovery column')
     def _(world):
         pass
-
-
-@shared_stories.scenario("Nest Child Branch And Session", "Nest a child's session and branch under its parent's")
-def _(s):
-    @s.given("the ticket checkout-flow's session is .sessions/checkout-flow on the branch checkout-flow")
-    def _(world):
-        pass
-
-    @s.when('Claude Code opens the child ticket Enter card details of checkout-flow')
-    def _(world):
-        # ticket.create("Enter card details", scope="story", parent="checkout-flow")
-        #   -> Board.ticket("checkout-flow")
-        #   <- checkout-flow
-        #   -> checkout-flow.add_child("Enter card details")
-        #      -> self.session.open_child("Enter card details", scope="story")
-        #      <- the session .sessions/checkout-flow/enter-card-details
-        #      -> enter-card-details.branch
-        #         -> self.parent.branch
-        #      <- checkout-flow.enter-card-details
-        pass
-
-    @s.then("enter-card-details' session folder is .sessions/checkout-flow/enter-card-details")
-    def _(world):
-        pass
-
-    @s.and_("enter-card-details' branch is checkout-flow.enter-card-details")
-    def _(world):
-        pass

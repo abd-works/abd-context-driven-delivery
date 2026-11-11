@@ -293,7 +293,6 @@ section: body
 - *Detach Child Ticket*
 - *Reassign Ticket Parent*
 - *Place Parent At Leftmost Child Stage*
-- *Nest Child Branch And Session*
 
 ### Increment 2: Integrate Practice Content Editor Apps
 
@@ -592,3 +591,13 @@ section: body
 - *Display Latest Session Handoff*
 - *Offer Correction Log Entry*
 - *Offer Decision Record*
+
+### Increment 17: Maybe Later
+
+**Outcome:** work set aside for now because it is complicated and not needed yet; picked up only when asked.
+
+**Slicing notes:** the person, 2026-11-11, on the story explorer: "this is complicated, I don't want to do it; add to backlog 'maybe later' ticket". Taken out of Maintain Tickets On Board.
+
+**Stories in this increment:**
+
+- *Nest Child Branch And Session*
