@@ -112,8 +112,9 @@ def _(s):
 
     @s.when('the Person moves sign-up above pet-visits in Discovery')
     def _(world):
-        # Column.place("sign-up", above="pet-visits")
-        #   -> Board.keep_order("Discovery", ["sign-up", "pet-visits"])
+        # Board.ticket("sign-up")
+        #   <- sign-up
+        # sign-up.move_before(pet-visits)
         #   <- Discovery with sign-up above pet-visits
         pass
 
@@ -134,8 +135,9 @@ def _(s):
 
     @s.when('the Person moves Returns and refunds above Gift cards')
     def _(world):
-        # Column.place("returns-and-refunds", above="gift-cards")
-        #   -> Board.keep_order("Backlog", ["returns-and-refunds", "gift-cards"])
+        # Board.backlog_item("Returns and refunds")
+        #   <- Returns and refunds
+        # Returns and refunds.move_before(Gift cards)
         #   <- the Backlog with Returns and refunds above Gift cards
         pass
 

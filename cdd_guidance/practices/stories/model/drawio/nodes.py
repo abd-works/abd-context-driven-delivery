@@ -294,6 +294,7 @@ class DrawIOStoryModel(DiagramStoryModel):
             self.style = ""
             self.link = ""
             self.entry = ""
+            self.code_link: dict = {}
             self.node = None
 
         @classmethod
@@ -315,12 +316,14 @@ class DrawIOStoryModel(DiagramStoryModel):
 
         def take_links(self, links: StoryMapLinks) -> None:
             """``link`` opens the story's own file when it has one, otherwise its ``story-map.md`` entry;
-            ``entry`` keeps the story-map entry."""
+            ``entry`` keeps the story-map entry; ``code_link`` opens ``link`` in the draw.io editor of VS Code and
+            Cursor, which does not follow ``link`` to a file."""
             if self.node is None:
                 return
             self.entry = links.entry_for(self.node)
             story_file = links.story_file(self.node) if isinstance(self.node, Story) else ""
             self.link = story_file or self.entry
+            self.code_link = links.code_link(self.link)
 
 
     def _parse_estimate_value(self, value: str) -> str:
@@ -617,6 +620,7 @@ class DrawIOStoryModel(DiagramStoryModel):
             user = {"label": attributes.pop("value"), "link": vertex.link, "id": attributes.pop("id")}
             if vertex.entry and vertex.entry != vertex.link:
                 user["entry"] = vertex.entry
+            user.update(vertex.code_link)
             holder = ET.SubElement(graph_root, "UserObject", attrib=user)
             cell = ET.SubElement(holder, "mxCell", attrib=attributes)
         else:

@@ -31,6 +31,22 @@ def heading_anchor(heading: str) -> str:
     return text.replace(" ", "-")
 
 
+# The prefix the draw.io editor of VS Code and Cursor gives the data it links a cell to a file with.
+CODE_LINK = "hedietLinkedDataV1"
+
+
+def _heading_line(path: Path, anchor: str) -> int:
+    """The zero-based line of the heading in path whose anchor is anchor; 0 when anchor is empty or no heading has it."""
+    if not anchor:
+        return 0
+    anchors = _Anchors()
+    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines()):
+        heading = re.match(r"#+ (.+)$", line)
+        if heading and anchors.next(heading.group(1)) == anchor:
+            return number
+    return 0
+
+
 def _slug(name: str) -> str:
     return Name(unlink(name)).title_slug
 
@@ -100,6 +116,24 @@ class StoryMapLinks:
     def entry_for(self, node) -> str:
         """The node's ``story-map.md#anchor`` link; empty for a node the map does not hold, or with no story map."""
         return next((entry for held, entry in self._entries if held is node), "")
+
+    def code_link(self, link: str) -> Dict[str, str]:
+        """The cell attributes the draw.io editor of VS Code and Cursor opens link with.
+
+        That editor does not follow a cell's ``link`` to a file in the workspace; with its Code Link on, selecting a
+        cell opens the file its ``hedietLinkedDataV1`` attributes name, relative to the diagram file itself, at the
+        line they name. The diagram sits in ``base``, so the file is ``../`` and link's path, and the line is the
+        heading link's anchor names (the first line when it names none). Empty when link names no file there."""
+        path, _, anchor = link.partition("#")
+        target = self.base / path
+        if not path or not target.is_file():
+            return {}
+        line = _heading_line(target, anchor)
+        return {
+            f"{CODE_LINK}_path": f"../{path}",
+            f"{CODE_LINK}_start_line_x-num": str(line), f"{CODE_LINK}_start_col_x-num": "0",
+            f"{CODE_LINK}_end_line_x-num": str(line), f"{CODE_LINK}_end_col_x-num": "0",
+        }
 
     def _entries_of(self, story_map) -> List[tuple]:
         """Each epic, sub-epic, and story of story_map with its ``story-map.md#anchor`` link, in map order.

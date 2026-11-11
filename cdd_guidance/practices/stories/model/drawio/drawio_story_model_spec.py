@@ -473,6 +473,15 @@ def _links_by_label(text: str) -> dict:
     }
 
 
+def _code_links_by_label(text: str) -> dict:
+    """Each linked cell's file and line as the draw.io editor of VS Code and Cursor reads them."""
+    tree = ET.fromstring(text)
+    return {
+        holder.attrib["label"]: (holder.attrib.get("hedietLinkedDataV1_path", ""), holder.attrib.get("hedietLinkedDataV1_start_line_x-num", ""))
+        for holder in tree.iter("UserObject")
+    }
+
+
 with description("a DrawIO Story Map rendered in a workspace") as self:
     with context("beside a story-map.md and one story's own markdown file"):
         with before.each:
@@ -501,6 +510,15 @@ with description("a DrawIO Story Map rendered in a workspace") as self:
         with it("should link a story with no file to its story-map.md entry"):
             expect(self.links["Activate Sim"][0]).to(equal("story-map.md#s-customer----activate-sim"))
 
+        with it("should open a sub-epic cell at its story-map.md heading in the draw.io editor of VS Code and Cursor"):
+            expect(_code_links_by_label(self.text)["Get Sim"]).to(equal(("../story-map.md", "1")))
+
+        with it("should open a story cell with no file at its story-map.md heading in that editor"):
+            expect(_code_links_by_label(self.text)["Activate Sim"]).to(equal(("../story-map.md", "3")))
+
+        with it("should open a story cell with its own file at that file's first line in that editor"):
+            expect(_code_links_by_label(self.text)["Select Sim"]).to(equal(("../onboard/get-sim/select_sim_story.test.md", "0")))
+
         with it("should read linked cells back into the same hierarchy"):
             parsed = DrawIOStoryModel().load(self.text)
             stories = parsed.epics[0].epics[0].stories
@@ -523,3 +541,4 @@ with description("a DrawIO Story Map rendered in a workspace") as self:
             text = DrawIOStoryModel().render(source, workspace=str(_workspace({"notes.md": "x\n"})))
             expect(_links_by_label(text)).to(equal({}))
             expect("link=" in text).to(be_false)
+            expect("hedietLinkedDataV1" in text).to(be_false)

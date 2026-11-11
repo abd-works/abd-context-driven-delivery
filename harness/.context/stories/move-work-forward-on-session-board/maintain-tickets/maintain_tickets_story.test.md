@@ -146,8 +146,9 @@ The realizations name the operations these scenarios need; none of them exists y
 *When* the Person moves sign-up above pet-visits in Discovery
 
 ```realization
-Column.place("sign-up", above="pet-visits")
-  -> Board.keep_order("Discovery", ["sign-up", "pet-visits"])
+Board.ticket("sign-up")
+  <- sign-up
+sign-up.move_before(pet-visits)
   <- Discovery with sign-up above pet-visits
 ```
 
@@ -160,8 +161,9 @@ Column.place("sign-up", above="pet-visits")
 *When* the Person moves Returns and refunds above Gift cards
 
 ```realization
-Column.place("returns-and-refunds", above="gift-cards")
-  -> Board.keep_order("Backlog", ["returns-and-refunds", "gift-cards"])
+Board.backlog_item("Returns and refunds")
+  <- Returns and refunds
+Returns and refunds.move_before(Gift cards)
   <- the Backlog with Returns and refunds above Gift cards
 ```
 
