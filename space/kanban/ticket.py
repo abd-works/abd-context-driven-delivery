@@ -26,7 +26,7 @@ from space.kanban.board import (
 )
 from space.kanban.format_choice import FormatChoice
 from space.kanban.report import Report, ReportFile
-from space.kanban.ticket_checkout import LEAVE_DELETE_BRANCH, LeaveChoices, OpenChoices, TicketCheckout
+from space.kanban.ticket_checkout import LeaveChoices, TicketCheckout
 from space.repo.repo import Branch
 from space.session import Session
 from space.session.session import MAIN_SESSION_NAME
@@ -122,7 +122,7 @@ class Ticket(Card):
     @property
     @data_field
     def is_main(self) -> bool:
-        """Whether this is main, the default session on the repository's own folder: it opens with board.open_main and
+        """Whether this is main, the default session: every chat in the repository's own folder works on it, and it
         never closes, archives, or goes to the Backlog."""
         return self.name == MAIN_SESSION_NAME
 
@@ -169,12 +169,13 @@ class Ticket(Card):
     @data_field
     def drop_targets(self) -> list[str]:
         """The columns besides the stages a person can drop it on. The Backlog takes any ticket, which keeps its whole
-        folder there. Complete takes one from Implementation's Done, or the active ticket through its Close dialog,
-        because closing it asks what to do with its work."""
+        folder there. Complete takes one from Implementation's Done, or a ticket open in its own worktree, or the active
+        ticket, through its Close dialog, because closing it asks what to do with its work."""
         if self.is_main:
             return []
         final = self._board.stages[-1]
-        closes = not self.is_closed and (self.is_active or (self.column is final and self.is_done))
+        is_open = bool(self.worktree) or self.is_active
+        closes = not self.is_closed and (is_open or (self.column is final and self.is_done))
         return [BACKLOG_COLUMN, *([COMPLETE_COLUMN] if closes else [])]
 
     @property
@@ -262,47 +263,13 @@ class Ticket(Card):
         """Return what closing ticket can do with its work, each chosen at first: a handoff always, and a commit and a push of the branch its work is on while that branch is checked out, which branch names. Closing never merges."""
         return self.checkout.close_choices
 
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def leave_choices(self) -> LeaveChoices:
-        """Return what leaving ticket for another can do with its work now, in the order leave does it: a handoff always; a commit and a push of the branch its work is on while that branch is checked out, which branch names; and a merge of that branch while it is the ticket's own, not the default branch. Each is chosen at first but the merge, which waits for the person."""
-        return self.checkout.leave_choices
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def open_choices(self) -> OpenChoices:
-        """Return what opening ticket can create for it now, each chosen at first: its own branch while the repository has none, and its own worktree while it has none."""
-        return self.checkout.open_choices
-
     @long_call
     @mcp
     @agent_tool
     @noSessionLog
-    def activate(self, leaving: list[str] | None = None, opening: list[str] | None = None) -> Ticket:
-        """Make ticket the current session. leaving names what to do with the active ticket's work first: handoff, commit, push, merge, delete_branch, delete_worktree; deleting its branch closes it, so it moves to Complete. opening names how to open ticket: worktree opens its own worktree, creating its branch when missing, and is the only way, since the repository's own folder stays on main."""
-        active = self._board.active
-        if active is not None and active.name != self.name:
-            active.leave_for_another(leaving or [])
-        self.checkout.open(opening or [])
-        self._board.sessions.switch(self.name)
-        return self
-
-    def leave_for_another(self, leaving: list[str]) -> None:
-        """A session whose branch is deleted has nowhere left for its work, so it closes; any other is only left."""
-        if LEAVE_DELETE_BRANCH in leaving:
-            self.close(leaving)
-            return
-        self.checkout.leave(leaving)
-
-    @long_call
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def open_worktree(self) -> Ticket:
-        """Open ticket's own worktree beside the repository, creating its branch when missing: the folder its chat works in, named as its worktree. The open session is left as it is."""
-        self.checkout.open_worktree()
+    def activate(self) -> Ticket:
+        """Open ticket in its own worktree, where its own chat works on it: the worktree it has, else a new one on its own branch, made when missing, after the session folders not yet committed are committed on main and pushed. Sessions open only from main: the chat that asks keeps its own session, the repository's own folder stays on main, and nothing is left or moved."""
+        self.checkout.open()
         return self
 
     @mcp
@@ -365,6 +332,8 @@ class Ticket(Card):
         # The work is saved after the folder moves, so the move is committed with it.
         self.checkout.save_work(chosen)
         self.checkout.return_to_default_branch()
+        # The ticket's record is kept on main, so its move among the closed sessions is committed and pushed there.
+        self.checkout.save_sessions_on_main(f"sessions: close {self.name}")
         return closed
 
     @mcp

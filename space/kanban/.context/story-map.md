@@ -65,21 +65,19 @@ Observed: `Ticket.create` calls `Sessions.create`; `board-page.ts` `openNewTicke
 
 Observed: Close on the active ticket's card sends `/space:session:close-session` to the chat, which calls `Session.close`; the ticket stays in its column. Moving the active ticket into Complete asks what to do with its work, then `Ticket.close` calls `Session.close` and moves the folder to `_complete/`, so the ticket shows in Complete.
 
+Requested 2026-11-09: main is the default session, the session of every chat in the repository's own folder, which stays on the default branch. Main is a ticket on the board like any other, in its stage's column (Discovery while it has no work), with the practices its session.json names; it never closes, archives, or goes to the Backlog.
+
 ### (S) Person --> [Move Ticket](move-work-forward-on-session-board/steer-ticket-sessions/move-ticket/move_ticket_story.test.md)
 
 Observed: the arrows on a card, or a drag, move its ticket whatever its session's work.
 
 ### (S) Person --> [Activate Ticket](move-work-forward-on-session-board/steer-ticket-sessions/activate-ticket/activate_ticket_story.test.md)
 
-Observed: Activate on a card or the details opens a dialog with what to do on leaving and on opening, then calls `ticket.activate`.
+Requested 2026-11-10: sessions open only from main. Activating a ticket opens it in its own worktree, on its own branch, made when missing, after the session folders not yet committed are committed on main and pushed; a ticket opened before keeps its worktree. The chat that asked stays on main, and the ticket's own chat works in the worktree: a chat there works on that ticket. No chat moves, and nothing is left: another ticket is another chat and worktree.
 
 ### (S) Person --> [Delete Ticket Branch](move-work-forward-on-session-board/steer-ticket-sessions/delete-ticket-branch/delete_ticket_branch_story.test.md)
 
-Requested 2026-11-09: leaving a session offers delete branch whenever its branch is in git, checked out or not. Deleting the branch deletes it here and on origin without merging it, deletes the worktree that has it checked out, and closes the session, so it shows in Complete. Merge is its own choice.
-
-### (S) Person --> [Open Main Session](move-work-forward-on-session-board/steer-ticket-sessions/open-main-session/open_main_session_story.test.md)
-
-Requested 2026-11-09: main is the default session, listed first in the chat bar's sessions. `Board.open_main` leaves the active ticket as the person chose, puts the repository's own folder on the default branch, and opens main; closing a ticket opens main the same way. Requested 2026-11-09: main is a ticket on the board like any other, in its stage's column (Discovery while it has no work), with the practices its session.json names; it never closes, archives, or goes to the Backlog.
+Requested 2026-11-09: closing a session offers delete branch whenever its branch is in git, checked out or not. Deleting the branch deletes it here and on origin without merging it, and deletes the worktree that has it checked out. Merge is its own choice.
 
 ### (S) Person --> [Write Ticket Handoff](move-work-forward-on-session-board/steer-ticket-sessions/write-ticket-handoff/write_ticket_handoff_story.test.md)
 

@@ -25,11 +25,10 @@ with story("Close Active Session"):
             pass
     with scenario("Complete the active ticket with its work committed"):
         # Evidence: observed: activation-client.spec 'Close Active Session' — 'should ask what to do with its work', 'should send what to do with its work', 'should select the ticket in Complete'; ticket-client.tsx dropOn opens the Close dialog for the active ticket; kanban_tools_spec 'should leave no ticket active'.
-        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), on its own branch"):
+        with given("checkout-flow is open in its own worktree"):
             pass
         with when("the Person moves checkout-flow into Complete"):
-            # Person -> Ticket.open_choices(), Ticket.leave_choices()
-            # Ticket <- Branch is_checked_out: true
+            # Person -> Ticket.close_choices()
             pass
         with then("a dialog headed Close session Checkout flow offers commit and push, chosen"):
             pass
@@ -48,7 +47,7 @@ with story("Close Active Session"):
             pass
     with scenario("Commit the closed session's folder and return to main"):
         # Evidence: observed: e2e-report B4 — the close commit was made before the session folder moved to .sessions/_complete/, so the move stayed uncommitted, and the closed ticket's branch stayed checked out.
-        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), on its own branch, with its session folder tracked"):
+        with given("checkout-flow is open in its own worktree"):
             pass
         with when("the Person closes checkout-flow, committing and pushing"):
             # Person -> Ticket.close(['commit', 'push'])
@@ -63,7 +62,7 @@ with story("Close Active Session"):
             pass
     with scenario("Return to main whatever is chosen"):
         # Evidence: requested 2026-11-09: closing a session goes to main, the default session in the repository's own folder.
-        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), on its own branch"):
+        with given("checkout-flow is open in its own worktree"):
             pass
         with when("the Person closes checkout-flow with nothing chosen"):
             # Person -> Ticket.close([])
@@ -133,5 +132,5 @@ with story("Close Active Session"):
             pass
         with and_("its folder is in .sessions/_complete/checkout-flow"):
             pass
-        with but_("nothing is committed"):
+        with but_("checkout-flow's work is not committed"):
             pass

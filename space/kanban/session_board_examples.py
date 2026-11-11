@@ -279,8 +279,9 @@ class SessionsProject(ThrowawayProject):
         return self.seed_file(relative, (GRAPH_EXAMPLES / relative).read_text(encoding="utf-8"))
 
     def seed_git_checkout(self) -> None:
-        """The project as a git checkout on main, its files committed and .sessions/ ignored, as fixture-repo.ts makes it."""
-        self.seed_file(".gitignore", ".sessions/\n")
+        """The project as a git checkout on main, its files committed. Session folders are the board's record and belong
+        on main, so .sessions/ is tracked, as in a CDD repository; only the hook logs and chat injections are ignored."""
+        self.seed_file(".gitignore", ".sessions/**/logs/\n.sessions/**/chat-injections/\n")
         self.git("init", "-q", "-b", "main")
         self.git("config", "user.name", "Story Spec")
         self.git("config", "user.email", "story-spec@example.invalid")

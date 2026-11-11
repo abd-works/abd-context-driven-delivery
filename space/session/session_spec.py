@@ -2,6 +2,7 @@
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import threading
@@ -229,32 +230,26 @@ with description("a session"):
             with it("should keep the session in a folder named by its slug"):
                 expect((self.repo / ".sessions" / "chat-ui" / "session.json").is_file()).to(equal(True))
 
-        # Every ticket's record stays in the repository's own .sessions; a ticket's worktree carries only its work.
-        with context("from a linked worktree of the checkout"):
+        # A chat in a ticket's own worktree works on that ticket; every ticket's record stays in the repository's own
+        # .sessions, and the ticket's worktree carries only its work.
+        with context("from the linked worktree of a ticket"):
             with before.each:
-                self.worktree = Path(tempfile.mkdtemp())
-                worktree_git = self.repo / ".git" / "worktrees" / "alpha"
-                worktree_git.mkdir(parents=True)
-                (worktree_git / "commondir").write_text("../..\n", encoding="utf-8")
-                (self.worktree / ".git").write_text(f"gitdir: {worktree_git}\n", encoding="utf-8")
+                git = ["git", "-c", "user.name=t", "-c", "user.email=t@t"]
+                subprocess.run(["git", "init", "-q", "-b", "main"], cwd=self.repo, check=True)
+                subprocess.run([*git, "commit", "-q", "--allow-empty", "-m", "start"], cwd=self.repo, check=True)
+                Sessions(self.repo).create("alpha")
+                self.worktree = Path(tempfile.mkdtemp()) / "alpha"
+                subprocess.run(["git", "worktree", "add", "-q", "-b", "alpha", str(self.worktree)], cwd=self.repo, check=True)
                 self.called = self.worktree
-                Sessions(self.worktree).switch("alpha")
 
             with after.each:
-                shutil.rmtree(self.worktree, ignore_errors=True)
+                subprocess.run(["git", "worktree", "remove", "--force", str(self.worktree)], cwd=self.repo, check=False)
+
+            with it("should work on that ticket's session"):
+                expect(Sessions(self.called).current().name).to(equal("alpha"))
 
             with it("should log into the ticket's folder in the repository's own .sessions"):
                 expect(Sessions(self.called).current().session_path).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
-
-            with it("should keep the worktree's own choice of session in the worktree"):
-                expect(WorkState(self.worktree).session).to(equal("alpha"))
-
-            with context("that switches to the main session"):
-                with before.each:
-                    Sessions(self.worktree).switch("main")
-
-                with it("should log into the repository's main session"):
-                    expect(Sessions(self.called).current().session_path).to(equal(self.repo.resolve() / ".sessions" / "main"))
 
         with context("with a repo path"):
             with before.each:

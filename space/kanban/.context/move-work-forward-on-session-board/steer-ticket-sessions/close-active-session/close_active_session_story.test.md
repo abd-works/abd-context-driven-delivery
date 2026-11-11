@@ -11,7 +11,7 @@
 
 #### Scenario: Complete the active ticket with its work committed
 
-*Given* checkout-flow is the active [ticket](../../../kanban-model.md#ticket--card), on its own branch
+*Given* checkout-flow is open in its own worktree
 *When* the Person moves checkout-flow into Complete
 *Then* a dialog headed Close session Checkout flow offers commit and push, chosen
 *When* the Person confirms
@@ -26,4 +26,4 @@
 *When* the Person moves checkout-flow into Complete and confirms
 *Then* checkout-flow shows in Complete
 *And* its folder is in .sessions/_complete/checkout-flow
-*But* nothing is committed
+*But* checkout-flow's work is not committed

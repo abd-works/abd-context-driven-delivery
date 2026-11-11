@@ -168,7 +168,8 @@ try {
         $stories = @(Get-RepoFiles { param($name) $name -like "*_story.test.py" } | Where-Object {
             $_ -notlike "*\_examples\actual\*"
         })
-        $specs = @(Get-RepoFiles { param($name) $name -like "*_spec.py" } | Where-Object {
+        # A sub-epic's story tiers, `{sub_epic}.story.domain.spec.py` and `.story.server.spec.py`, are its acceptance tests.
+        $specs = @(Get-RepoFiles { param($name) $name -like "*_spec.py" -or $name -like "*.story.*.spec.py" } | Where-Object {
             $name = [IO.Path]::GetFileName($_)
             -not (Test-AgenticBdd $name) -and -not (Test-Heavy $name)
         })

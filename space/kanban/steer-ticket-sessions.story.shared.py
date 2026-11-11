@@ -69,6 +69,9 @@ from space.kanban.story_test import (
     ticket_in,
 )
 from space.kanban.board import NotAStageError
+from space.kanban.ticket_checkout import TicketBranchUnclearError
+from space.repo.repo import Repo
+from space.session import Sessions
 from space.kanban.ticket import TicketNotFoundError
 
 shared_stories = SharedStories("Steer Ticket Sessions")
@@ -287,18 +290,18 @@ def _(s):
 
 @shared_stories.scenario("Close Active Session", "Complete the active ticket with its work committed")
 def _(s):
-    @s.given("checkout-flow is the active ticket, on its own branch")
+    @s.given("checkout-flow is open in its own worktree")
     def _(world):
-        seed_checkout_flow_open_on_its_pushed_branch(world.project)
+        world.worktree = open_checkout_flow_in_its_worktree(world)
         world.ticket = world.Ticket.load(CHECKOUT_FLOW.name)
 
     @s.when("the Person moves checkout-flow into Complete")
     def _(world):
-        world.leaving = world.data_of(world.ticket.branch())
+        world.closing = world.data_of(world.ticket.close_choices())
 
     @s.then("a dialog headed Close session Checkout flow offers commit and push, chosen")
     def _(world):
-        expect(world.leaving["is_checked_out"]).to(be_true)
+        expect((world.closing["branch"], world.closing["choices"][:3])).to(equal((CHECKOUT_FLOW.name, ["handoff", "commit", "push"])))
 
     @s.when("the Person confirms")
     def _(world):
@@ -319,11 +322,9 @@ def _(s):
 
 @shared_stories.scenario("Close Active Session", "Commit the closed session's folder and return to main")
 def _(s):
-    @s.given("checkout-flow is the active ticket, on its own branch, with its session folder tracked")
+    @s.given("checkout-flow is open in its own worktree")
     def _(world):
-        seed_checkout_flow_open_on_its_pushed_branch(world.project)
-        # The fixture's checkout ignores .sessions/; a project that tracks it sees the folder move in git.
-        world.project.seed_file(".gitignore", "")
+        world.worktree = open_checkout_flow_in_its_worktree(world)
 
     @s.when("the Person closes checkout-flow, committing and pushing")
     def _(world):
@@ -343,7 +344,7 @@ def _(s):
     @s.given("checkout-flow is the active ticket, its branch open in its own worktree")
     def _(world):
         seed_checkout_flow_open_on_main(world.project)
-        world.Ticket.load(CHECKOUT_FLOW.name).open_worktree()
+        world.Ticket.load(CHECKOUT_FLOW.name).activate()
 
     @s.when("the Person closes checkout-flow")
     def _(world):
@@ -429,9 +430,10 @@ def _(s):
     def _(world):
         expect_session_folder(world.project.sessions, "_complete", CHECKOUT_FLOW.name)
 
-    @s.but_("nothing is committed")
+    # The ticket's record is kept on main, so its move into the closed sessions is committed; its work is not.
+    @s.but_("checkout-flow's work is not committed")
     def _(world):
-        expect_commit_count(world.project, "HEAD", 1)
+        expect(world.project.git("status", "--porcelain", "--", "work.txt")).to(contain("work.txt"))
 
 
 @shared_stories.scenario("Move Ticket", "Move a ticket on to the next column")
@@ -571,42 +573,85 @@ def _(s):
         expect_placed(world.data_of(world.ticket), "Discovery", is_done=False)
 
 
-@shared_stories.scenario("Activate Ticket", "Switch to another ticket, committing, pushing, and merging the one left")
+@shared_stories.scenario("Activate Ticket", "Open a ticket in its own worktree")
 def _(s):
-    @s.given("checkout-flow is the active ticket, on its own branch pushed to origin")
+    @s.given("the git repository has no branch billing-report")
     def _(world):
-        seed_checkout_flow_open_on_its_pushed_branch(world.project)
-
-    @s.and_("billing-report has no branch in the repository")
-    def _(world):
+        world.project.seed_git_checkout()
         world.project.seed_session(BILLING_REPORT)
-        world.ticket = world.Ticket.load(BILLING_REPORT.name)
 
     @s.when("the Person activates billing-report")
     def _(world):
-        world.leaving = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).branch())
-        world.opening = world.data_of(world.ticket.branch())
+        world.Ticket.load(BILLING_REPORT.name).activate()
 
-    @s.then("a dialog headed Switch from Checkout flow to Billing report offers commit and push, chosen, and merge, not chosen")
+    @s.then("billing-report has its own worktree, on the branch billing-report")
     def _(world):
-        expect(world.leaving["is_checked_out"]).to(be_true)
+        worktree = Path(world.data_of(world.Ticket.load(BILLING_REPORT.name))["worktree"])
+        expect(Repo(worktree).current_branch.name).to(equal(BILLING_REPORT.name))
 
-    @s.and_("it offers a branch for billing-report, chosen")
+    @s.and_("the repository's own folder stays on main")
     def _(world):
-        expect(world.opening["exists"]).to(be_false)
+        expect(world.project.git("rev-parse", "--abbrev-ref", "HEAD")).to(equal("main"))
 
-    @s.when("the Person chooses merge and confirms")
+    @s.and_("main is still the session of the chat that activated it")
     def _(world):
-        world.ticket.activate(leaving=["commit", "push", "merge"], opening=["worktree"])
+        expect_active(world.data_of(world.Board.load().show()), "main")
 
-    @s.then("billing-report is the active ticket with a thick orange outline")
-    def _(world):
-        expect_active(world.data_of(world.Board.load().show()), BILLING_REPORT.name)
 
-    @s.and_("a toast says Checkout flow: committed, pushed, merged to main · Billing report: branch created · Billing report is now active")
+@shared_stories.scenario("Activate Ticket", "Save the session folders on main before opening")
+def _(s):
+    @s.given("billing-report's session folder is not yet committed")
     def _(world):
-        left_and_opened = (world.project.origin_log("main")[0], BILLING_REPORT.name in world.project.git("branch", "--list", BILLING_REPORT.name))
-        expect(left_and_opened).to(equal((LEAVE_SESSION_COMMIT, True)))
+        seed_checkout_flow_open_on_pushed_main(world.project)
+        world.project.seed_session(BILLING_REPORT)
+
+    @s.when("the Person activates billing-report")
+    def _(world):
+        world.Ticket.load(BILLING_REPORT.name).activate()
+
+    @s.then("main on origin holds billing-report's session folder")
+    def _(world):
+        held = world.project.git("ls-tree", "-r", "--name-only", "origin/main", f".sessions/{BILLING_REPORT.name}")
+        expect(held).to(contain(f".sessions/{BILLING_REPORT.name}/session.json"))
+
+
+def open_billing_report_in_its_worktree(world) -> Path:
+    """billing-report opened in its own worktree, on a checkout whose main is on origin."""
+    seed_checkout_flow_open_on_pushed_main(world.project)
+    world.project.seed_session(BILLING_REPORT)
+    world.Ticket.load(BILLING_REPORT.name).activate()
+    return Path(world.data_of(world.Ticket.load(BILLING_REPORT.name))["worktree"])
+
+
+@shared_stories.scenario("Activate Ticket", "Open a ticket again in the worktree it has")
+def _(s):
+    @s.given("billing-report is open in its own worktree")
+    def _(world):
+        world.worktree = open_billing_report_in_its_worktree(world)
+
+    @s.when("the Person activates billing-report again")
+    def _(world):
+        world.Ticket.load(BILLING_REPORT.name).activate()
+
+    @s.then("billing-report keeps that worktree")
+    def _(world):
+        worktree = Path(world.data_of(world.Ticket.load(BILLING_REPORT.name))["worktree"])
+        expect(worktree.resolve()).to(equal(world.worktree.resolve()))
+
+
+@shared_stories.scenario("Activate Ticket", "Work on the ticket from a chat in its worktree")
+def _(s):
+    @s.given("billing-report is open in its own worktree")
+    def _(world):
+        world.worktree = open_billing_report_in_its_worktree(world)
+
+    @s.when("a chat in that worktree asks which session it works on")
+    def _(world):
+        world.answer = Sessions.of_project(world.worktree).current().name
+
+    @s.then("the answer is billing-report")
+    def _(world):
+        expect(world.answer).to(equal(BILLING_REPORT.name))
 
 
 OUTSIDE_BRANCH = "claude/checkout-flow-cef4bc"
@@ -638,13 +683,13 @@ def _(s):
         # The session seeded above records only its name and folders.
         pass
 
-    @s.when("the Person picks checkout-flow to open")
+    @s.when("the Person activates checkout-flow")
     def _(world):
-        world.opening = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).open_choices())
+        world.Ticket.load(CHECKOUT_FLOW.name).activate()
 
-    @s.then("the open dialog offers nothing to create")
+    @s.then("checkout-flow opens in that worktree, creating nothing")
     def _(world):
-        expect(world.opening["choices"]).to(equal([]))
+        expect((has_branch(world, CHECKOUT_FLOW.name), Path(world.data_of(world.Ticket.load(CHECKOUT_FLOW.name))["worktree"]).resolve())).to(equal((False, world.worktree.resolve())))
 
     @s.and_("checkout-flow's session records claude/checkout-flow-cef4bc and its worktree")
     def _(world):
@@ -662,9 +707,9 @@ def _(s):
         session = world.project.sessions / CHECKOUT_FLOW.name / "session.json"
         session.write_text(json.dumps({**json.loads(session.read_text(encoding="utf-8")), "branch": "gone-branch", "worktree": "C:/nowhere"}), encoding="utf-8")
 
-    @s.when("the Person picks checkout-flow to open")
+    @s.when("the Person activates checkout-flow")
     def _(world):
-        world.Ticket.load(CHECKOUT_FLOW.name).open_choices()
+        world.Ticket.load(CHECKOUT_FLOW.name).activate()
 
     @s.then("checkout-flow's session records claude/checkout-flow-cef4bc and its worktree")
     def _(world):
@@ -679,37 +724,17 @@ def _(s):
         world.project.git("branch", OUTSIDE_BRANCH)
         world.project.git("branch", OTHER_OUTSIDE_BRANCH)
 
-    @s.when("the Person picks checkout-flow to open")
+    @s.when("the Person activates checkout-flow")
     def _(world):
-        world.opening = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).open_choices())
+        world.refusal = refusal_of(lambda: world.Ticket.load(CHECKOUT_FLOW.name).activate())
 
-    @s.then("the open dialog names both branches")
+    @s.then("the Person is told both branches could be checkout-flow's")
     def _(world):
-        expect(sorted(world.opening["candidate_branches"])).to(equal(sorted([OUTSIDE_BRANCH, OTHER_OUTSIDE_BRANCH])))
+        expect_refused(world.refusal, TicketBranchUnclearError, f"{OTHER_OUTSIDE_BRANCH}, {OUTSIDE_BRANCH} could each be {CHECKOUT_FLOW.name}'s branch; record the one that is in its session")
 
     @s.and_("checkout-flow's session records no branch")
     def _(world):
         expect(recorded_checkout(world)[0]).to(equal(""))
-
-
-@shared_stories.scenario("Activate Ticket", "Merge the branch left into main and keep it")
-def _(s):
-    @s.given("checkout-flow is the active ticket, on its own branch pushed to origin")
-    def _(world):
-        seed_checkout_flow_open_on_its_pushed_branch(world.project)
-        world.project.seed_session(BILLING_REPORT)
-
-    @s.when("the Person activates billing-report, committing, pushing, and merging checkout-flow")
-    def _(world):
-        world.Ticket.load(BILLING_REPORT.name).activate(leaving=["commit", "push", "merge"], opening=[])
-
-    @s.then("main on origin holds checkout-flow's work")
-    def _(world):
-        expect(world.project.origin_log("main")).to(contain(LEAVE_SESSION_COMMIT))
-
-    @s.and_("the checkout-flow branch is still there")
-    def _(world):
-        expect(world.project.git("branch", "--list", CHECKOUT_FLOW.name).strip()).to(equal(CHECKOUT_FLOW.name))
 
 
 def has_branch(world, name: str) -> bool:
@@ -720,44 +745,27 @@ def origin_has_branch(world, name: str) -> bool:
     return bool(world.project.git("ls-remote", "--heads", "origin", name).strip())
 
 
-def open_in_own_worktree(world) -> Path:
-    """checkout-flow active, its branch open in its own worktree with work in it, and billing-report on the board."""
-    seed_checkout_flow_open_on_pushed_main(world.project)
-    world.project.seed_session(BILLING_REPORT)
-    worktree = Path(world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).open_worktree())["worktree"])
+def open_checkout_flow_in_its_worktree(world) -> Path:
+    """checkout-flow opened in its own worktree, with work in it, on a checkout whose main is on origin; its work is in
+    the worktree alone."""
+    world.project.seed_git_checkout()
+    world.project.seed_origin()
+    world.project.seed_session(CHECKOUT_FLOW)
+    world.Ticket.load(CHECKOUT_FLOW.name).activate()
+    worktree = Path(world.data_of(world.Ticket.load(CHECKOUT_FLOW.name))["worktree"])
     (worktree / "worked.txt").write_text("work\n", encoding="utf-8")
     return worktree
 
 
-@shared_stories.scenario("Activate Ticket", "Merge the branch left while its worktree stays")
+@shared_stories.scenario("Delete Ticket Branch", "Delete the branch on closing without merging it")
 def _(s):
-    @s.given("checkout-flow is the active ticket, its branch open in its own worktree")
+    @s.given("checkout-flow is open in its own worktree, with work in it")
     def _(world):
-        world.worktree = open_in_own_worktree(world)
+        world.worktree = open_checkout_flow_in_its_worktree(world)
 
-    @s.when("the Person activates billing-report, committing, pushing, and merging checkout-flow")
+    @s.when("the Person closes checkout-flow, committing, pushing, and deleting its branch")
     def _(world):
-        world.Ticket.load(BILLING_REPORT.name).activate(leaving=["commit", "push", "merge"], opening=[])
-
-    @s.then("main on origin holds checkout-flow's work")
-    def _(world):
-        expect(world.project.origin_log("main")).to(contain(LEAVE_SESSION_COMMIT))
-
-    @s.and_("the worktree folder is still there")
-    def _(world):
-        expect(world.worktree.exists()).to(be_true)
-
-
-@shared_stories.scenario("Delete Ticket Branch", "Delete the branch left without merging it")
-def _(s):
-    @s.given("checkout-flow is the active ticket, on its own branch pushed to origin")
-    def _(world):
-        seed_checkout_flow_open_on_its_pushed_branch(world.project)
-        world.project.seed_session(BILLING_REPORT)
-
-    @s.when("the Person activates billing-report, committing, pushing, and deleting checkout-flow's branch")
-    def _(world):
-        world.Ticket.load(BILLING_REPORT.name).activate(leaving=["commit", "push", "delete_branch"], opening=[])
+        world.Ticket.load(CHECKOUT_FLOW.name).close(leaving=["commit", "push", "delete_branch"])
 
     @s.then("the checkout-flow branch is gone, here and on origin")
     def _(world):
@@ -765,26 +773,22 @@ def _(s):
 
     @s.but_("main on origin does not hold checkout-flow's work")
     def _(world):
-        expect(world.project.origin_log("main")).not_to(contain(LEAVE_SESSION_COMMIT))
+        expect(world.project.git("ls-tree", "--name-only", "origin/main", "worked.txt")).to(equal(""))
 
     @s.and_("checkout-flow shows in Complete")
     def _(world):
         expect_session_folder(world.project.sessions, "_complete", CHECKOUT_FLOW.name)
 
-    @s.and_("billing-report is the active ticket")
-    def _(world):
-        expect_active(world.data_of(world.Board.load().show()), BILLING_REPORT.name)
-
 
 @shared_stories.scenario("Delete Ticket Branch", "Delete the branch and the worktree that has it")
 def _(s):
-    @s.given("checkout-flow is the active ticket, its branch open in its own worktree")
+    @s.given("checkout-flow is open in its own worktree")
     def _(world):
-        world.worktree = open_in_own_worktree(world)
+        world.worktree = open_checkout_flow_in_its_worktree(world)
 
-    @s.when("the Person activates billing-report, deleting checkout-flow's branch")
+    @s.when("the Person closes checkout-flow, deleting its branch")
     def _(world):
-        world.Ticket.load(BILLING_REPORT.name).activate(leaving=["delete_branch"], opening=[])
+        world.Ticket.load(CHECKOUT_FLOW.name).close(leaving=["delete_branch"])
 
     @s.then("the worktree folder is gone")
     def _(world):
@@ -801,28 +805,27 @@ def _(s):
 
 @shared_stories.scenario("Delete Ticket Branch", "Delete a branch checked out nowhere")
 def _(s):
-    @s.given("checkout-flow is the active ticket and has a branch")
+    @s.given("checkout-flow has a branch")
     def _(world):
         seed_checkout_flow_open_on_main(world.project)
         world.project.seed_branch(CHECKOUT_FLOW.name, checked_out=False)
-        world.project.seed_session(BILLING_REPORT)
 
     @s.but_("that branch is not checked out")
     def _(world):
         # The branch seeded above was created without being checked out.
         pass
 
-    @s.when("the Person picks billing-report to open")
+    @s.when("the Person asks what closing checkout-flow can do")
     def _(world):
-        world.leaving = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).leave_choices())
+        world.closing = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).close_choices())
 
-    @s.then("the dialog offers to delete checkout-flow's branch")
+    @s.then("closing offers to delete checkout-flow's branch")
     def _(world):
-        expect((world.leaving["own_branch"], world.leaving["choices"])).to(equal((CHECKOUT_FLOW.name, ["handoff", "commit", "push", "merge", "delete_branch"])))
+        expect((world.closing["own_branch"], world.closing["choices"])).to(equal((CHECKOUT_FLOW.name, ["handoff", "commit", "push", "merge", "delete_branch"])))
 
-    @s.when("the Person activates billing-report, deleting checkout-flow's branch")
+    @s.when("the Person closes checkout-flow, deleting its branch")
     def _(world):
-        world.Ticket.load(BILLING_REPORT.name).activate(leaving=["delete_branch"], opening=[])
+        world.Ticket.load(CHECKOUT_FLOW.name).close(leaving=["delete_branch"])
 
     @s.then("the checkout-flow branch is gone")
     def _(world):
@@ -833,80 +836,11 @@ def _(s):
         expect_session_folder(world.project.sessions, "_complete", CHECKOUT_FLOW.name)
 
 
-@shared_stories.scenario("Open Main Session", "Open main from a ticket on its own branch")
-def _(s):
-    @s.given("checkout-flow is the active ticket, on its own branch pushed to origin")
-    def _(world):
-        seed_checkout_flow_open_on_its_pushed_branch(world.project)
-
-    @s.when("the Person opens main, committing checkout-flow")
-    def _(world):
-        world.Board.load().open_main(leaving=["commit"])
-
-    @s.then("main is the active ticket")
-    def _(world):
-        expect_active(world.data_of(world.Board.load().overview()), "main")
-
-    @s.and_("the checkout is on main")
-    def _(world):
-        expect(world.project.git("rev-parse", "--abbrev-ref", "HEAD")).to(equal("main"))
-
-    @s.and_("the checkout-flow branch is still there")
-    def _(world):
-        expect(has_branch(world, CHECKOUT_FLOW.name)).to(be_true)
-
-
-@shared_stories.scenario("Open Main Session", "Open main, deleting the ticket's branch")
-def _(s):
-    @s.given("checkout-flow is the active ticket, on its own branch pushed to origin")
-    def _(world):
-        seed_checkout_flow_open_on_its_pushed_branch(world.project)
-
-    @s.when("the Person opens main, deleting checkout-flow's branch")
-    def _(world):
-        world.Board.load().open_main(leaving=["delete_branch"])
-
-    @s.then("main is the active ticket")
-    def _(world):
-        expect_active(world.data_of(world.Board.load().overview()), "main")
-
-    @s.and_("the checkout-flow branch is gone")
-    def _(world):
-        expect(has_branch(world, CHECKOUT_FLOW.name)).to(be_false)
-
-    @s.and_("checkout-flow shows in Complete")
-    def _(world):
-        expect_session_folder(world.project.sessions, "_complete", CHECKOUT_FLOW.name)
-
-
-@shared_stories.scenario("Open Main Session", "Open main from a ticket in its own worktree")
-def _(s):
-    @s.given("checkout-flow is the active ticket, its branch open in its own worktree")
-    def _(world):
-        world.worktree = open_in_own_worktree(world)
-
-    @s.when("the Person opens main with nothing chosen")
-    def _(world):
-        world.Board.load().open_main(leaving=[])
-
-    @s.then("main is the active ticket")
-    def _(world):
-        expect_active(world.data_of(world.Board.load().overview()), "main")
-
-    @s.and_("checkout-flow's worktree is still there")
-    def _(world):
-        expect(world.worktree.exists()).to(be_true)
-
-    @s.but_("checkout-flow is not closed")
-    def _(world):
-        expect((world.project.sessions / "_complete" / CHECKOUT_FLOW.name).exists()).to(be_false)
-
-
 @shared_stories.scenario("Close Active Session", "Return to main whatever is chosen")
 def _(s):
-    @s.given("checkout-flow is the active ticket, on its own branch")
+    @s.given("checkout-flow is open in its own worktree")
     def _(world):
-        seed_checkout_flow_open_on_its_pushed_branch(world.project)
+        world.worktree = open_checkout_flow_in_its_worktree(world)
 
     @s.when("the Person closes checkout-flow with nothing chosen")
     def _(world):
@@ -919,123 +853,6 @@ def _(s):
     @s.and_("main is the active ticket")
     def _(world):
         expect_active(world.data_of(world.Board.load().overview()), "main")
-
-
-@shared_stories.scenario("Activate Ticket", "Delete the worktree left")
-def _(s):
-    @s.given("checkout-flow is the active ticket, its branch open in its own worktree")
-    def _(world):
-        seed_checkout_flow_open_on_pushed_main(world.project)
-        world.project.seed_session(BILLING_REPORT)
-        world.worktree = Path(world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).open_worktree())["worktree"])
-
-    @s.when("the Person activates billing-report, committing, pushing, and deleting checkout-flow's worktree")
-    def _(world):
-        (world.worktree / "worked.txt").write_text("work\n", encoding="utf-8")
-        world.Ticket.load(BILLING_REPORT.name).activate(leaving=["commit", "push", "delete_worktree"], opening=[])
-
-    @s.then("the worktree folder is gone")
-    def _(world):
-        expect(world.worktree.exists()).to(be_false)
-
-    @s.and_("checkout-flow's work is on its branch on origin")
-    def _(world):
-        expect(world.project.origin_log(CHECKOUT_FLOW.name)[0]).to(equal(LEAVE_SESSION_COMMIT))
-
-
-@shared_stories.scenario("Activate Ticket", "Write a handoff for the session being left")
-def _(s):
-    @s.given("checkout-flow is the active ticket")
-    def _(world):
-        seed_checkout_flow_open_on_main(world.project)
-        world.project.seed_session(BILLING_REPORT)
-
-    @s.when("the Person activates billing-report with Create handoff chosen")
-    def _(world):
-        world.Ticket.load(BILLING_REPORT.name).activate(leaving=["handoff"], opening=[])
-
-    @s.then("checkout-flow's session folder holds a handoff")
-    def _(world):
-        expect(len(list((world.project.sessions / CHECKOUT_FLOW.name).glob("handoff-*.md")))).to(equal(1))
-
-    @s.but_("billing-report's session folder holds none")
-    def _(world):
-        expect(list((world.project.sessions / BILLING_REPORT.name).glob("handoff-*.md"))).to(equal([]))
-
-
-@shared_stories.scenario("Activate Ticket", "Activate a ticket when the active one has no branch")
-def _(s):
-    @s.given("checkout-flow is the active ticket")
-    def _(world):
-        seed_checkout_flow_open_on_main(world.project)
-        world.project.seed_session(BILLING_REPORT)
-
-    @s.but_("checkout-flow has no branch of its own")
-    def _(world):
-        # The checkout seeded above has main alone.
-        pass
-
-    @s.when("the Person activates billing-report with nothing chosen")
-    def _(world):
-        world.Ticket.load(BILLING_REPORT.name).activate(leaving=[], opening=[])
-
-    @s.then("billing-report is the active ticket")
-    def _(world):
-        expect_active(world.data_of(world.Board.load().show()), BILLING_REPORT.name)
-
-    @s.and_("the branch checked out is as it was")
-    def _(world):
-        expect(world.project.git("rev-parse", "--abbrev-ref", "HEAD")).to(equal("main"))
-
-    @s.but_("nothing is committed")
-    def _(world):
-        expect_commit_count(world.project, "HEAD", 1)
-
-
-@shared_stories.scenario("Activate Ticket", "Commit nothing when the ticket left is not checked out")
-def _(s):
-    @s.given("checkout-flow is the active ticket and has a branch")
-    def _(world):
-        seed_checkout_flow_open_on_main(world.project)
-        world.project.seed_branch(CHECKOUT_FLOW.name, checked_out=False)
-        world.project.seed_session(BILLING_REPORT)
-
-    @s.but_("that branch is not checked out")
-    def _(world):
-        # The branch seeded above was created without being checked out.
-        pass
-
-    @s.when("the Person activates billing-report with commit chosen")
-    def _(world):
-        world.Ticket.load(BILLING_REPORT.name).activate(leaving=["commit"], opening=[])
-
-    @s.then("billing-report is the active ticket")
-    def _(world):
-        expect_active(world.data_of(world.Board.load().show()), BILLING_REPORT.name)
-
-    @s.but_("nothing is committed on checkout-flow's branch")
-    def _(world):
-        expect_commit_count(world.project, CHECKOUT_FLOW.name, 1)
-
-
-@shared_stories.scenario("Activate Ticket", "Create the ticket's branch on activation")
-def _(s):
-    @s.given("the git repository has no branch billing-report")
-    def _(world):
-        world.project.seed_git_checkout()
-        world.project.seed_session(BILLING_REPORT)
-
-    @s.when("the Person activates billing-report with a new branch")
-    def _(world):
-        world.Ticket.load(BILLING_REPORT.name).activate(leaving=[], opening=["worktree"])
-
-    @s.then("the repository has the branch billing-report")
-    def _(world):
-        expect(world.project.git("branch", "--list", BILLING_REPORT.name)).to(contain(BILLING_REPORT.name))
-
-    @s.and_("billing-report is the active ticket")
-    def _(world):
-        expect_active(world.data_of(world.Board.load().show()), BILLING_REPORT.name)
 
 
 @shared_stories.scenario("Split Ticket Into Child Tickets", "Ask the chat to split a ticket into child tickets")

@@ -965,7 +965,8 @@ with description("the board tools") as self:
         with before.each:
             for number in range(12):
                 self.project.ticket(f"ticket-{number}", *DISCOVERY_DONE, title=f"Ticket {number}")
-            self.project.call("ticket.activate", ticket="ticket-0")
+            # The chat bar of ticket-0's own chat, which works on ticket-0.
+            self.project.call("sessions.switch", name="ticket-0")
             self.overview = self.project.call("board.overview")
 
         with it("should send the active ticket whole, with its progress"):
@@ -992,8 +993,8 @@ with description("the board tools") as self:
         with it("should name each tool after its object"):
             names = set(self.project.server.tools)
             expect(names).to(equal({
-                "board.show", "board.overview", "board.open_main", "board.help", "board.folders", "stage.set_wip_limit",
-                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.leave_choices", "ticket.open_choices", "ticket.format_choices", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations", "ticket.assign_chat",
+                "board.show", "board.overview", "board.help", "board.folders", "stage.set_wip_limit",
+                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.format_choices", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations", "ticket.assign_chat",
                 "fidelity-progress.finish_review", "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
                 "session.choose_workpath", "session.folder_files", "session.read_file",
@@ -1033,7 +1034,7 @@ with description("the board tools") as self:
             expect(self.project.ticket_json("pet-visits")["next"]).to(equal({"ticket": {"name": "pet-visits"}, "fidelity": {"slug": "stories-story-map"}}))
 
         with it("should send the board's active ticket whole, so the chat bar never finds it again by its name"):
-            self.project.call("ticket.activate", ticket="pet-visits")
+            self.project.call("sessions.switch", name="pet-visits")
             active = self.project.call("board.show")["active"]
             expect((active["name"], "progress" in active)).to(equal(("pet-visits", True)))
 

@@ -17,12 +17,11 @@ from harness.diagnostics.server_health import ServerHealth
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
-from harness.mcp.mcp_server import long_call, mcp
+from harness.mcp.mcp_server import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
 from space.kanban.board_app import BOARD_APP_PORTS
 from space.repo.repo import Repo
 from space.session.session_log import LogTimestamp
-from space.session.session import MAIN_SESSION_NAME
 from space.session.sessions import BoardPractices, Sessions
 
 if TYPE_CHECKING:
@@ -268,27 +267,6 @@ class Board:
     def show(self) -> Board:
         """Return the session board: Backlog, Discovery, Specification, Implementation, and Complete, with every ticket's progress through Generate, Validate, and Review, and the active ticket."""
         return self
-
-    @long_call
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def open_main(self, leaving: list[str] | None = None) -> BoardOverview:
-        """Open main, the default session: leave the active ticket first, doing what leaving names with its work (handoff, commit, push, merge, delete_branch, delete_worktree), then put the repository's own folder on the default branch. Returns the board as overview does."""
-        active = self.active
-        if active is not None and active.name != MAIN_SESSION_NAME:
-            active.leave_for_another(leaving or [])
-        default = self.repo.branch_named(self.repo.default_branch)
-        if not default.is_checked_out:
-            default.check_out()
-        # Main works in the repository's own folder on the default branch, so the chat forgets any worktree and
-        # branch it had open; the repo tools then act here, not in the last ticket's worktree.
-        state = self.repo.work_state
-        state.worktree_folder = None
-        state.branch_name = default.name
-        self.sessions.switch(MAIN_SESSION_NAME)
-        self.reread()
-        return BoardOverview(self)
 
     @mcp
     @agent_tool

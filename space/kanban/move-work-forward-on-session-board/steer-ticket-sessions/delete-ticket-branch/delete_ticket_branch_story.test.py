@@ -10,13 +10,12 @@ from story_test import and_, but_, given, scenario, story, then, when
 # Story: Delete Ticket Branch
 # Actor: Person
 with story("Delete Ticket Branch"):
-    with scenario("Delete the branch left without merging it"):
-        # Evidence: requested 2026-11-09: delete branch only deletes the branch; merge is its own choice; deleting a session's branch closes the session.
-        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), on its own branch pushed to origin"):
+    with scenario("Delete the branch on closing without merging it"):
+        # Evidence: requested 2026-11-09: delete branch only deletes the branch; merge is its own choice.
+        with given("checkout-flow is open in its own worktree, with work in it"):
             pass
-        with when("the Person activates billing-report, committing, pushing, and deleting checkout-flow's branch"):
-            # Person -> Ticket.activate(leaving=['commit', 'push', 'delete_branch'])
-            # Ticket -> Ticket.close(['commit', 'push', 'delete_branch'])
+        with when("the Person closes checkout-flow, committing, pushing, and deleting its branch"):
+            # Person -> Ticket.close(leaving=['commit', 'push', 'delete_branch'])
             # TicketCheckout -> Branch(main).check_out()
             # TicketCheckout -> Branch.delete(unmerged=True)
             pass
@@ -26,17 +25,12 @@ with story("Delete Ticket Branch"):
             pass
         with and_("checkout-flow shows in Complete"):
             pass
-        with and_("billing-report is the active ticket"):
-            pass
     with scenario("Delete the branch and the worktree that has it"):
-        # Evidence: observed 2026-11-09: "cdd-chat-ui did not open: LeaveRefused: integrated-harness-flow: its worktree still has it checked out"; git deletes no branch a worktree has checked out.
-        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), its branch open in its own worktree"):
+        with given("checkout-flow is open in its own worktree"):
             pass
-        with when("the Person activates billing-report, deleting checkout-flow's branch"):
-            # Person -> Ticket.activate(leaving=['delete_branch'])
-            # Ticket -> Ticket.close(['delete_branch'])
-            # TicketCheckout -> Worktree.close()
-            # TicketCheckout -> Branch.delete(unmerged=True)
+        with when("the Person closes checkout-flow, deleting its branch"):
+            # Person -> Ticket.close(leaving=['delete_branch'])
+            # TicketCheckout -> Worktree.close(), Branch.delete(unmerged=True)
             pass
         with then("the worktree folder is gone"):
             pass
@@ -45,19 +39,16 @@ with story("Delete Ticket Branch"):
         with and_("checkout-flow shows in Complete"):
             pass
     with scenario("Delete a branch checked out nowhere"):
-        # Evidence: observed 2026-11-09: leaving us-taxes after its worktree was deleted offered no delete branch, though the branch was still in git.
-        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card) and has a branch"):
+        with given("checkout-flow has a branch"):
             pass
         with but_("that branch is not checked out"):
             pass
-        with when("the Person picks billing-report to open"):
-            # Person -> Ticket.leave_choices() <- own_branch: checkout-flow, choices: handoff, commit, push, merge, delete_branch
+        with when("the Person asks what closing checkout-flow can do"):
+            # Person -> Ticket.close_choices()
             pass
-        with then("the dialog offers to delete checkout-flow's branch"):
+        with then("closing offers to delete checkout-flow's branch"):
             pass
-        with when("the Person activates billing-report, deleting checkout-flow's branch"):
-            # Person -> Ticket.activate(leaving=['delete_branch'])
-            # TicketCheckout -> Branch.delete(unmerged=True)
+        with when("the Person closes checkout-flow, deleting its branch"):
             pass
         with then("the checkout-flow branch is gone"):
             pass

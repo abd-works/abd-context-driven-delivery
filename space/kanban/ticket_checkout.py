@@ -26,7 +26,6 @@ LEAVE_HANDOFF = "handoff"
 LEAVE_BRANCH_STEPS = {LEAVE_MERGE, LEAVE_DELETE_BRANCH, LEAVE_DELETE_WORKTREE}
 # The session.json field that keeps the chat a person assigned to a ticket.
 ASSIGNED_CHAT = "chat"
-OPEN_WORKTREE = "worktree"
 
 
 def own_worktree_of(branch: Branch) -> Worktree | None:
@@ -121,13 +120,8 @@ class TicketCheckout:
         return next((chat for chat in chats if chat.folder and Path(chat.folder).resolve().is_relative_to(Path(worktree).resolve())), None)
 
     @property
-    def leave_choices(self) -> LeaveChoices:
-        """What leaving the ticket for another can do with its work now."""
-        return LeaveChoices(self._checked_out_work_branch, self._own_branch)
-
-    @property
     def close_choices(self) -> LeaveChoices:
-        """What closing the ticket can do with its work now: the same as leaving it for another."""
+        """What closing the ticket can do with its work now."""
         return LeaveChoices(self._checked_out_work_branch, self._own_branch)
 
     @property
@@ -137,55 +131,42 @@ class TicketCheckout:
         return self.branch if self.branch.exists and not self.branch.is_default else None
 
     @property
-    def open_choices(self) -> OpenChoices:
-        """What opening the ticket can create for it now."""
-        candidates = [] if self.branch.exists else self.candidate_branches
-        return OpenChoices(self.branch, self.worktree, [branch.name for branch in candidates] if len(candidates) > 1 else [])
-
-    @property
     def _checked_out_work_branch(self) -> Branch | None:
         """The branch the ticket's work is on while a checkout has it, the repository or its own worktree, which leaving
         acts on; none otherwise."""
         branch = self.work_branch
         return branch if branch.is_checked_out or branch.worktree is not None else None
 
-    def open(self, opening: list[str]) -> None:
-        """Open the ticket the way opening names, which can only be in its own worktree, creating its branch when
-        missing: the repository's own folder stays on main. The session folders not yet committed are committed on main
-        and pushed first, so the ticket's branch starts from a main that has them; the ticket's record stays there and
-        its branch carries only the work."""
-        refused = [way for way in opening if way != OPEN_WORKTREE]
-        if refused:
-            raise OpeningNotOfferedError(refused[0], self._ticket.name)
-        if OPEN_WORKTREE not in opening:
-            return
-        self._save_sessions_on_main()
-        self._repo.switch_worktree(self.branch.name)
-        self._ticket.board.reread()
+    def open(self) -> None:
+        """Open the ticket in its own worktree, where its chat works: the worktree it has, else a new one on its own
+        branch, made when missing, after the session folders not yet committed are committed on main and pushed, so the
+        branch starts from a main that has them. The repository's own folder stays on main, and no chat's open session
+        changes. The branch and worktree found are recorded in the ticket's session. Two branches that could each be the
+        ticket's are named instead of either being guessed."""
+        if not self.worktree:
+            self._refuse_unclear_branch()
+            self.save_sessions_on_main(f"sessions: save before opening {self._ticket.name}")
+            self.branch.open_in_worktree()
+            self._ticket.board.reread()
+        self._ticket.session.save_fields(branch=self.branch.name, worktree=self.worktree)
 
-    def _save_sessions_on_main(self) -> None:
-        """Commit the session folders not yet committed on main, and push main, while the repository's own folder has
-        main checked out."""
+    def _refuse_unclear_branch(self) -> None:
+        candidates = [] if self.branch.exists else self.candidate_branches
+        if len(candidates) > 1:
+            raise TicketBranchUnclearError(self._ticket.name, [branch.name for branch in candidates])
+
+    def save_sessions_on_main(self, message: str) -> None:
+        """Commit the session folders not yet committed on main with message, and push main, while the repository's own
+        folder has main checked out: every ticket's record is kept on main."""
         repository = self._repo.main_clone
         folder = self._ticket.board.sessions.folder
         if not repository.branch_named(repository.default_branch).is_checked_out or not folder.is_dir():
             return
         if not repository.is_dirty(folder):
             return
-        repository.commit([str(folder)], f"sessions: save before opening {self._ticket.name}", untracked=True)
+        repository.commit([str(folder)], message, untracked=True)
         if repository.has_origin:
             repository.push_upstream()
-
-    def open_worktree(self) -> None:
-        """Open the ticket's own worktree beside the repository, creating its branch when missing. The board lists
-        worktrees once per read, so it forgets them and lists the new one next time."""
-        self.branch.open_in_worktree()
-        self._ticket.board.reread()
-
-    def leave(self, leaving: list[str]) -> None:
-        """Do what leaving names with the ticket's work: write a handoff for its session, then save the work."""
-        self.write_handoff(leaving)
-        self.save_work(leaving)
 
     def write_handoff(self, leaving: list[str]) -> None:
         """Write a handoff for the ticket's session when leaving names one."""
@@ -263,14 +244,15 @@ class TicketCheckout:
         self._repo.branch_named(self._repo.default_branch).check_out()
 
 
-class OpeningNotOfferedError(ValueError):
-    """Raised when a ticket is asked to open a way it is not offered, such as on a branch in the repository's own
-    folder, which stays on main. It names that way and the ticket."""
 
-    def __init__(self, opening: str, ticket: str) -> None:
-        super().__init__(f"cannot open {ticket!r} by {opening!r}: a ticket opens only in its own worktree")
-        self.opening = opening
+class TicketBranchUnclearError(LookupError):
+    """Raised when a ticket with no branch of its own is opened while several branches hold its name, as the Claude
+    desktop app names them; it names the ticket and those branches, so a person picks one rather than a guess."""
+
+    def __init__(self, ticket: str, branches: list[str]) -> None:
+        super().__init__(f"{', '.join(sorted(branches))} could each be {ticket}'s branch; record the one that is in its session")
         self.ticket = ticket
+        self.branches = sorted(branches)
 
 
 class LeaveChoices:
@@ -315,38 +297,3 @@ class LeaveChoices:
     def chosen(self) -> list[str]:
         """The choices a person starts with chosen: none, so leaving does only what the person ticks."""
         return []
-
-
-class OpenChoices:
-    """How opening a ticket with no worktree of its own can go: in its own worktree, creating its branch when missing,
-    chosen at first. The repository's own folder stays on main, so there is no other way. ``TicketCheckout.open`` does
-    it."""
-
-    def __init__(self, branch: Branch, worktree: str, candidate_branches: list[str]) -> None:
-        self._branch = branch
-        self._worktree = worktree
-        self._candidate_branches = list(candidate_branches)
-
-    @property
-    @data_field
-    def has_branch(self) -> bool:
-        """Whether the ticket's own branch is in the repository already."""
-        return self._branch.exists
-
-    @property
-    @data_field
-    def candidate_branches(self) -> list[str]:
-        """The branches that could each be the ticket's, when more than one holds its name and none is chosen."""
-        return list(self._candidate_branches)
-
-    @property
-    @data_field
-    def choices(self) -> list[str]:
-        """Each way opening offers now: none while the ticket has a worktree, where its chat moves instead."""
-        return [] if self._worktree else [OPEN_WORKTREE]
-
-    @property
-    @data_field
-    def chosen(self) -> list[str]:
-        """The way a person starts with chosen: its own worktree, while one is offered."""
-        return [OPEN_WORKTREE] if OPEN_WORKTREE in self.choices else []

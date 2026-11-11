@@ -6,7 +6,7 @@
 
 - Its columns are always the same: Backlog, one stage for each stage name, then Complete. Practices play no part in them, because the session of each ticket says which practices that ticket works on.
 - Has a reference to one repository, and shows one ticket for each of the repository's sessions.
-- The main session is in use when no named session is open. It is a ticket like any other, placed in its stage's column and listed first, but it opens with `board.open_main` on the repository's own folder and the default branch, and it never closes, archives, or goes to the Backlog. Closed sessions are finished tickets; archived sessions are off the board.
+- The main session is in use when no named session is open. It is a ticket like any other, placed in its stage's column and listed first, and every chat in the repository's own folder, which stays on the default branch, works on it; it never closes, archives, or goes to the Backlog. Sessions open only from main: activating a ticket opens it in its own worktree, where its own chat works on it. Closed sessions are finished tickets; archived sessions are off the board.
 
 ### card
 

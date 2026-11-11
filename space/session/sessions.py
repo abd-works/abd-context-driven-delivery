@@ -289,7 +289,30 @@ class Sessions:
     @agent_tool
     def current(self, call: ToolCall | None = None) -> Session:
         """The open session of this chat; the main session, which works on the whole repository, when none is named."""
+        ticket = self._ticket_of_worktree()
+        if ticket is not None:
+            return ticket
         return self.load(self.folder_of(self.open_name_for(call.chat_id if call is not None else "")))
+
+    def _ticket_of_worktree(self) -> Session | None:
+        """The ticket whose own worktree these sessions serve: a chat there works on that ticket, whatever any chat
+        chose to open. None in the repository's own folder, and in a worktree whose branch names no ticket."""
+        if not self.repo.is_linked_worktree() or not self.repo.git.succeeds("symbolic-ref", "-q", "HEAD"):
+            # A worktree on no branch, such as one detached at a commit, names no ticket.
+            return None
+        branch = self.repo.current_branch.name
+        tickets = self._open_ticket_names()
+        if branch in tickets:
+            return self.named(branch)
+        # The Claude desktop app names a branch around the ticket's name, such as claude/checkout-flow-cef4bc.
+        holding = [name for name in tickets if re.search(rf"(^|[/_-]){re.escape(name)}($|[/_-])", branch)]
+        return self.named(holding[0]) if len(holding) == 1 else None
+
+    def _open_ticket_names(self) -> list[str]:
+        """The names of the open work sessions in the repository's own .sessions."""
+        if not self.folder.is_dir():
+            return []
+        return [folder.name for folder in self.folder.iterdir() if folder.is_dir() and self._is_work_session(folder.name)]
 
     @mcp
     @command(name="switch-session")
