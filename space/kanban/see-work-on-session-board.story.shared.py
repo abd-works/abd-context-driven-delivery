@@ -21,7 +21,6 @@ below that only the page shows (the band, the outline, the polling) are left to 
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 
 from expects import be_none, be_true, equal, expect
@@ -30,6 +29,7 @@ from cdd_guidance.practices.ddd.ddd import Ddd
 from cdd_guidance.practices.stories.stories import Stories
 from cdd_guidance.practices.ux.ux import Ux
 from harness.catalog_generator.catalog_practice import CatalogPractice
+from harness.installation.json_file import JsonFileUnreadable
 from space.session.sessions import BoardPractices
 from space.repo.repo import Repo
 from space.kanban.session_board_examples import (
@@ -121,9 +121,10 @@ def _(s):
     def _(world):
         world.refusal = refusal_of(lambda: world.data_of(world.Board.load().show()))
 
-    @s.then("a toast says cdd board.show failed: JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)")
+    @s.then("a toast says cdd board.show failed: JsonFileUnreadable: .sessions/broken/session.json is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))")
     def _(world):
-        expect_refused(world.refusal, json.JSONDecodeError, "Expecting property name enclosed in double quotes: line 1 column 2 (char 1)")
+        broken = world.project.sessions / BROKEN.name / "session.json"
+        expect_refused(world.refusal, JsonFileUnreadable, f"{broken} is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))")
 
 
 @shared_stories.scenario("Display Backlog Items As Tickets", "Show each idea file in the Backlog")

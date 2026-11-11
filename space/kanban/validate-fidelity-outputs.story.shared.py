@@ -65,7 +65,6 @@ def _(s):
         world.project.seed_session(PET_VISITS.with_log(generated("stories", "story_map")))
         world.session = world.sessions.load(world.project.sessions / PET_VISITS.name)
         world.stories = world.session.practice("stories").fidelities["story_map"].session_output
-        world.ticket = world.Ticket.load(PET_VISITS.name)
 
     @s.when("Claude Code validates the story map and finds no graph-rule violation")
     def _(world):
@@ -76,9 +75,10 @@ def _(s):
         last = (world.project.sessions / PET_VISITS.name / "session.log").read_text(encoding="utf-8").splitlines()[-1]
         expect((last.split()[1:4], "graph-rule" in last)).to(equal((["validate", "Stories", "story_map"], False)))
 
+    # A ticket reads its session's log once per read, as the board reads it afresh each time it draws the tile.
     @s.and_("the story_map tile marks Validate ✓")
     def _(world):
-        expect_action(world.data_of(world.ticket), STORY_MAP, "validate", "done")
+        expect_action(world.data_of(world.Ticket.load(PET_VISITS.name)), STORY_MAP, "validate", "done")
 
     @s.when("Claude Code validates it again and finds actor-named-in-step on map.md line 12")
     def _(world):
@@ -91,7 +91,7 @@ def _(s):
 
     @s.and_("the story_map tile marks Validate as violations again")
     def _(world):
-        expect_held_on_violations(world.data_of(world.ticket), STORY_MAP)
+        expect_held_on_violations(world.data_of(world.Ticket.load(PET_VISITS.name)), STORY_MAP)
 
 
 @shared_stories.scenario("Validate Fidelity", "Allow Validate again on the same output")

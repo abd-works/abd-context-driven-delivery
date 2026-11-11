@@ -7,7 +7,7 @@
 *Given* billing-report is the active [ticket](../../../kanban-model.md#ticket--card) with nothing recorded and a chat is connected
 *When* the Person runs billing-report's next step
 *Then* Run next read Run next: generate before it ran
-*And* the chat receives the command /actions-generate stories-story-map format=markdown
+*And* the chat receives the command /actions-generate stories-story-map
 
 #### Scenario: Fill the prompt to validate
 
@@ -27,15 +27,15 @@
 
 *Given* billing-report's story map is generated and validated with no violations
 *But* no chat is connected
-*When* the Person runs billing-report's next step
+*When* the Person records a review of billing-report's story_map
 *Then* billing-report's story_map marks Review ✓
 
-#### Scenario: Go back to an earlier stage's fidelity still to review
+#### Scenario: Go back to an earlier stage's fidelity still to validate
 
-*Given* pet-visits' story map is generated and validated with no violations
+*Given* pet-visits' story map is generated
 *And* a person has moved pet-visits into Specification
 *When* the session board reads pet-visits
-*Then* Run next reads Run next: review on stories-story-map
+*Then* Run next reads Run next: validate on stories-story-map
 
 #### Scenario: Keep Run next off where it cannot run
 

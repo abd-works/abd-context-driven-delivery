@@ -13,7 +13,7 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 #
 # Acceptance criteria:
 # - Name Next Fidelity: the button names the step that runs next. Observed: `Ticket.next_fidelity`, `Ticket.next_action`.
-# - Run next steps through generate, validate, and review for each practice in order. Observed: `Ticket.next_action`.
+# - Run next steps through generate and validate for each practice in order; review is never required. Observed: `Ticket.next_action`.
 # - Run next holds on review while violations hold the fidelity, says "review violations", and opens the report. Observed.
 with story("Send Next Fidelity Action"):
     with scenario("Generate the next fidelity in its default format"):
@@ -22,13 +22,13 @@ with story("Send Next Fidelity Action"):
             pass
         with when("the Person runs billing-report's next step"):
             # Person -> Ticket.next_action <- generate on stories-story-map
-            # Board page -> FidelityProgress.fidelity.default_format <- markdown for stories-story-map
-            # Board page -> TicketClient.actionCommand('/actions-generate stories-story-map format=markdown')
-            # Board page -> Chat.send('command', '/actions-generate stories-story-map format=markdown')
+            # Board page -> TicketClient.actionCommand('/actions-generate stories-story-map session=.sessions/billing-report/session.json')
+            # Board page -> Chat.send('command', '/actions-generate stories-story-map session=.sessions/billing-report/session.json')
+            # Generate writes the fidelity in its default format, since the command names none
             pass
         with then("Run next read Run next: generate before it ran"):
             pass
-        with and_("the chat receives the command /actions-generate stories-story-map format=markdown"):
+        with and_("the chat receives the command /actions-generate stories-story-map"):
             pass
     with scenario("Fill the prompt to validate"):
         # Evidence: observed: ticket-client.spec 'should fill the prompt on validate'.
@@ -60,17 +60,16 @@ with story("Send Next Fidelity Action"):
             pass
         with but_("no chat is connected"):
             pass
-        with when("the Person runs billing-report's next step"):
-            # Person -> Ticket.next_action <- review on stories-story-map
-            # Person -> Ticket.finish_review(['stories-story-map'])
+        with when("the Person records a review of billing-report's story_map"):
+            # Person -> FidelityProgress.finish_review() on stories-story-map
             # Ticket -> TicketWork.record('review stories story_map')
             # Board page -> Board.show()
             pass
         with then("billing-report's story_map marks Review ✓"):
             pass
-    with scenario("Go back to an earlier stage's fidelity still to review"):
-        # Evidence: observed: kanban_spec 'that a person has moved on with an earlier stage's fidelity still to review' — 'should name Review on that fidelity as next'.
-        with given("pet-visits' story map is generated and validated with no violations"):
+    with scenario("Go back to an earlier stage's fidelity still to validate"):
+        # Evidence: observed: kanban_spec 'that a person has moved on with an earlier stage's fidelity still to validate' — 'should name Validate on that fidelity as next'.
+        with given("pet-visits' story map is generated"):
             pass
         with and_("a person has moved pet-visits into Specification"):
             pass
@@ -78,7 +77,7 @@ with story("Send Next Fidelity Action"):
             # Ticket -> Ticket.next_fidelity
             # Ticket <- the first fidelity not done in Specification or an earlier stage: stories-story-map
             pass
-        with then("Run next reads Run next: review on stories-story-map"):
+        with then("Run next reads Run next: validate on stories-story-map"):
             pass
     with scenario("Keep Run next off where it cannot run"):
         # Evidence: observed: ticket-client.spec 'should stay off with no chat to send to'; ticket-client.tsx runNextHint for a locked ticket.
