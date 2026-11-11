@@ -296,12 +296,12 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   get fixTitle(): string {
-    return this.page.board.sends_fixes_directly ? 'Send this fix to the chat' : "Put this fix in the chat's prompt to edit and send"
+    return this.page.board.sendsFixesDirectly ? 'Send this fix to the chat' : "Put this fix in the chat's prompt to edit and send"
   }
 
   private deliverFix(prompt: string): Promise<void> {
     const text = this.inSession(prompt)
-    return this.page.board.sends_fixes_directly ? this.chat.command(text) : this.chat.fill(text)
+    return this.page.board.sendsFixesDirectly ? this.chat.command(text) : this.chat.fill(text)
   }
 
   // A report whose saved graph is out of date has lost its graph's rules, so its fidelity is validated again to find them.

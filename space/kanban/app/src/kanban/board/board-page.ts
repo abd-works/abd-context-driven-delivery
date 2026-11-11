@@ -29,7 +29,7 @@ const SERVER_BACK_CHECK_MILLISECONDS = 1000
 const CLAUDE_OPEN_PATH = '/claude/open'
 const REPORT_QUERY = 'report'
 const FIDELITY_QUERY = 'fidelity'
-const NOT_READ_YET: BoardData = { project: '', practices: [], open_tickets: [], active: null, columns: [], fidelities: [] }
+const NOT_READ_YET: BoardData = { project: '', practices: [], open_tickets: [], active: null, columns: [], fidelities: [], sends_fixes_directly: false }
 
 // Everything the page's views act through, wired once.
 // How much of a chat's id tells two chats with the same name apart.
