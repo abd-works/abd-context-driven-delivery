@@ -23,6 +23,15 @@ From `board-enhancements.md`, "Actions":
 
 Both are built: Display Report Without Header Noise and Display Report Errors In Code Fences are in Built Today.
 
+From the person, 2026-11-11, on a screenshot of the board's bottom panel showing "stories-scenarios files" (a grid of chips, one per file, with the chosen file rendered below):
+
+> the bottom panel grid from the board is a perfect v2 file viewer; add tabs on top of file groupings for each stage; dimensions are roots of the knowledge graph eg each practice; click to select, check box to multi select
+
+- The board's files panel (its chip grid of a fidelity's files above the rendered file) is the model for the v2 file viewer.
+- Tabs across the top, one per stage (Discovery, Specification, Implementation), each holding that stage's file groupings.
+- The groupings' dimensions are the roots of the knowledge graph, such as each practice.
+- A click on a file selects it; a check box on each file selects several at once.
+
 ## Epic: Move Work Forward On Session Board
 
 ### Feature: Work Fidelity Outputs On Board → Review Fidelity Outputs On Board
