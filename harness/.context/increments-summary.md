@@ -39,7 +39,8 @@ The starting line, not a slice to build: what the framework, the CDD Kanban, the
 | Bring in real context | Index and segment a source · Capture documents into a searchable index · Sandbox a live app · Meeting notes |
 | Take the work to code | Move a ticket through Specification and Implementation · Hand a stubborn bug to a background agent |
 | The CDD Kanban and the visual apps | CDD Kanban · Kanban fidelity work · Story UI editor · Design canvas and story demo · Knowledge graph · Catalog and project approach |
-| Extend CDD | Pattern overlays · Builders and annotations · Agent BDD and prompt log |
+| Pattern overlays | Add your stack: LERN, MERN, CDD web domain access, Claude Code mods |
+| Extend CDD | Builders and annotations · Agent BDD and prompt log |
 
 ## 1. Maintain Tickets On Board — 11 stories - IN PROGRESS
 
@@ -439,12 +440,14 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
 - *What you get:* a self-contained, brandable website of every practice, fidelity, rule and action, plus a one-page approach built from your own project's example artifacts, to share with a team or a client.
 - *Under the hood:* `harness/catalog_generator`.
 
-### Extend CDD
+### Pattern overlays: add your stack on top of the practices
 
 **Lesson 24. Add your stack: pattern overlays**
 - *What you do:* apply a pattern such as LERN or MERN domain-driven, CDD web domain access, or a Claude Code mod on top of the practices.
 - *What you get:* stack-specific guidance and graph rules (acceptance tests first, then the code they drive) without changing a practice.
 - *Under the hood:* `cdd_guidance/patterns` (*DomainDrivenStack*, *LernDomainDriven*, *MernDomainDriven*, *CddWebDomainAccess*, *CddClaudeMod*).
+
+### Extend CDD: build and test your own tools
 
 **Lesson 25. Build your own toolsets and practices**
 - *What you do:*
