@@ -53,14 +53,3 @@ with description("a chat's work state"):
 
         with it("should treat an unknown chat as no chat"):
             expect(self.state("unknown").session).to(equal("legacy-compare"))
-
-    with context("that saves a branch and a worktree"):
-        with before.each:
-            self.state().branch_name = "feature/pet-visits"
-            self.state().worktree_folder = self.root / "pet-visits"
-
-        with it("should read back the branch by its name"):
-            expect(self.state().branch_name).to(equal("feature/pet-visits"))
-
-        with it("should read back the worktree by its folder"):
-            expect(self.state().worktree_folder).to(equal(self.root / "pet-visits"))

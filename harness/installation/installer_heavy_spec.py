@@ -1511,14 +1511,14 @@ with description("Repo branch commands installed into Cursor") as self:
     with after.each:
         shutil.rmtree(self._tmp, ignore_errors=True)
 
-    with it("should write switch-branch naming repo.switch_branch"):
-        path = self.tree / "commands" / "space" / "repo" / "switch-branch.md"
-        expect(path.read_text(encoding="utf-8")).to(contain("repo.switch_branch"))
+    with it("should write push naming repo.push_commit"):
+        path = self.tree / "commands" / "space" / "repo" / "push.md"
+        expect(path.read_text(encoding="utf-8")).to(contain("repo.push_commit"))
 
     with it("should not write the retired new-branch command"):
         path = self.tree / "commands" / "space" / "repo" / "new-branch.md"
         expect(path.is_file()).to(equal(False))
 
-    with it("should enroll repo.switch_branch on the MCP channel"):
+    with it("should enroll repo.push_commit on the MCP channel"):
         names = [op.mcp_name for op in self.mcp.mcp_operations]
-        expect(names).to(contain("repo.switch_branch"))
+        expect(names).to(contain("repo.push_commit"))

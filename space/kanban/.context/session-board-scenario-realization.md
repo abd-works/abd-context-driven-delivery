@@ -3751,9 +3751,8 @@ it should count only the rules the scenarios report answers for
 ```
 it should make the chosen ticket the current session
 -> Ticket.activate(ticket="sign-up")
-  -> Repo.switch_branch(name: str)
   <- str
-  -> Repo.switch_worktree(name: str)
+  -> Branch.open_in_worktree()
   <- str
   -> Sessions.switch
 <- Ticket
@@ -3766,9 +3765,8 @@ it should make the chosen ticket the current session
 ```
 it should create the ticket's branch when a ticket that has none is activated
 -> Ticket.activate(ticket="sign-up", opening=["branch"])
-  -> Repo.switch_branch(name: str)
   <- str
-  -> Repo.switch_worktree(name: str)
+  -> Branch.open_in_worktree()
   <- str
   -> Sessions.switch
 <- Ticket
@@ -3805,9 +3803,8 @@ it should commit nothing on a ticket that has no branch
 -> Board.ticket("pet-visits", title="Pet visits")
 <- Ticket
 -> Ticket.activate(ticket="sign-up", leaving=["commit", "push", "merge"])
-  -> Repo.switch_branch(name: str)
   <- str
-  -> Repo.switch_worktree(name: str)
+  -> Branch.open_in_worktree()
   <- str
   -> Sessions.switch
 <- Ticket
@@ -3841,9 +3838,8 @@ it should commit the branch the ticket being left is on
 -> GuidanceAction.run(["git", "checkout", "-q", "-b", "pet-visits"], cwd=self.project.root, check=True)
   -> SessionLog.guidance_action(action: str)
 -> Ticket.activate(ticket="sign-up", leaving=["commit"])
-  -> Repo.switch_branch(name: str)
   <- str
-  -> Repo.switch_worktree(name: str)
+  -> Branch.open_in_worktree()
   <- str
   -> Sessions.switch
 <- Ticket
@@ -3874,9 +3870,8 @@ it should commit nothing on a branch that is not checked out
 -> GuidanceAction.run(["git", "branch", "pet-visits"], cwd=self.project.root, check=True)
   -> SessionLog.guidance_action(action: str)
 -> Ticket.activate(ticket="sign-up", leaving=["commit"])
-  -> Repo.switch_branch(name: str)
   <- str
-  -> Repo.switch_worktree(name: str)
+  -> Branch.open_in_worktree()
   <- str
   -> Sessions.switch
 <- Ticket

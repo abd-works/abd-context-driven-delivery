@@ -1,7 +1,6 @@
 """BDD spec for MCP host JSON Schema of Python parameter types."""
 import json
 import os
-import re
 import shutil
 import sys
 import tempfile
@@ -15,7 +14,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
-from expects import contain, equal, expect, raise_error
+from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.parameter_schema import ParameterSchema
@@ -31,7 +30,7 @@ from harness.mcp._examples.illegitimate_name.illegitimate_name import (
     IllegitimateName,
 )
 from harness.installation.ide_layout import IdeLayout
-from space.repo.repo import Commit, DefaultBranchError
+from space.repo.repo import Commit
 from space.session import Sessions
 from space.work_state import WorkState
 
@@ -384,24 +383,15 @@ with description("an MCP host") as self:
                 project=str(_REPO_ROOT),
             )
 
-        with it("should expose branch lifecycle and push_commit"):
-            tools = self.host.diagnose()["tools"]
-            expect(tools).to(contain("repo.switch_branch"))
-            expect(tools).to(contain("repo.close_branch"))
-            expect(tools).to(contain("repo.switch_worktree"))
-            expect(tools).to(contain("repo.close_worktree"))
-            expect(tools).to(contain("repo.push_commit"))
-            expect("repo.push" in tools).to(equal(False))
+        # Tickets open and close their own branches and worktrees; the repo toolset only commits and pushes.
+        with it("should expose push_commit alone"):
+            tools = [name for name in self.host.diagnose()["tools"] if name.startswith("repo.")]
+            expect(tools).to(equal(["repo.push_commit"]))
 
         with it("should resolve Cursor underscore aliases to enrolled names"):
             expect(self.host.checkout_server.resolve_call_name("repo_push_commit")).to(
                 equal("repo.push_commit")
             )
-
-        with it("should refuse repo.close_branch on main through MCP dispatch"):
-            expect(
-                lambda: self.host.dispatch("repo.close_branch", {"name": "main"})
-            ).to(raise_error(DefaultBranchError))
 
     with context("that has enrolled the sessions toolset on a project"):
         with before.each:

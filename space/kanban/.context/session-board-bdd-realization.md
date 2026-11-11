@@ -3106,9 +3106,8 @@ the board tools
     that activates a ticket
       ```
       -> Ticket.activate(leaving: list[str], opening: list[str])
-        -> Repo.switch_branch(name: str)
         <- str
-        -> Repo.switch_worktree(name: str)
+        -> Branch.open_in_worktree()
         <- str
         -> Sessions.switch(name: str)
       <- Ticket
@@ -3119,9 +3118,8 @@ the board tools
     that activates a ticket with a new branch
       ```
       -> Ticket.activate(leaving: list[str], opening: list[str])
-        -> Repo.switch_branch(name: str)
         <- str
-        -> Repo.switch_worktree(name: str)
+        -> Branch.open_in_worktree()
         <- str
         -> Sessions.switch(name: str)
       <- Ticket
@@ -3141,9 +3139,8 @@ the board tools
       -> Board.ticket(name: str)
       <- Ticket
       -> Ticket.activate(leaving: list[str], opening: list[str])
-        -> Repo.switch_branch(name: str)
         <- str
-        -> Repo.switch_worktree(name: str)
+        -> Branch.open_in_worktree()
         <- str
         -> Sessions.switch(name: str)
       <- Ticket
@@ -3171,9 +3168,8 @@ the board tools
       -> Board.ticket(name: str)
       <- Ticket
       -> Ticket.activate(leaving: list[str], opening: list[str])
-        -> Repo.switch_branch(name: str)
         <- str
-        -> Repo.switch_worktree(name: str)
+        -> Branch.open_in_worktree()
         <- str
         -> Sessions.switch(name: str)
       <- Ticket
@@ -3200,9 +3196,8 @@ the board tools
       -> Board.ticket(name: str)
       <- Ticket
       -> Ticket.activate(leaving: list[str], opening: list[str])
-        -> Repo.switch_branch(name: str)
         <- str
-        -> Repo.switch_worktree(name: str)
+        -> Branch.open_in_worktree()
         <- str
         -> Sessions.switch(name: str)
       <- Ticket

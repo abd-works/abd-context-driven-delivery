@@ -23,14 +23,8 @@ from mamba import after, before, context, description, it
 from harness.agent_tools.agent_tools import AgentToolSet
 from harness.mcp.mcp_server import McpHost
 from harness.process.git import Git, RepoConnectError
-from space.repo.repo import (
-    BranchInWorktreeError,
-    BranchNameRequiredError,
-    DefaultBranchError,
-    NoOpenWorktreeError,
-    Repo,
-)
-from space.work_state import WorkState
+from space.repo.latest_release import LatestRelease
+from space.repo.repo import Repo
 
 
 # (E) Open Work Session
@@ -235,221 +229,93 @@ with description("Repo dirty detection"):
 
 
 # (E) Open Work Session
-# (E) Work With Repo Branch
-with description("a branch opened through the repo toolset"):
-    with context("on a clone whose origin has a main branch"):
+# (S) Repo --> Keep Latest Release
+# A ticket that closes with its branch merged lands its release; its end-to-end results are the only ones kept.
+with description("a release that lands on the default branch"):
+    with context("with end-to-end results from it and from older releases"):
         with before.each:
             self.tmp = tempfile.TemporaryDirectory()
             self.origin, self.clone = _clone_with_origin(Path(self.tmp.name))
-            self.toolset = Repo(self.clone)
+            (self.clone / ".gitignore").write_text(".sessions/*/e2e-test-results/**/*.png\n", encoding="utf-8")
+            self.latest = _release_screenshot(self.clone, "new-release", finished=True)
+            self.older = _release_screenshot(self.clone, "old-release", finished=True)
+            self.recording = _release_screenshot(self.clone, "pml-my", finished=False)
+            _git(self.clone, "add", "-A")
+            _git(self.clone, "commit", "-m", "results")
+            _git(self.clone, "push", "origin", "main")
+            LatestRelease(Repo(self.clone), "new-release").keep()
 
         with after.each:
             _remove_tree(self.tmp)
 
-        # (S) Repo --> Switch Branch
-        with it("should check out a new branch started from main"):
-            self.toolset.switch_branch("feature/a")
-            expect(_git(self.clone, "branch", "--show-current")).to(equal("feature/a"))
+        with it("should push the landed release's screenshots to e2e-latest"):
+            expect(_git(self.origin, "ls-tree", "-r", "--name-only", "e2e-latest")).to(
+                equal(".sessions/new-release/e2e-test-results/run/pml-web/step.png")
+            )
 
-        with it("should save the branch in .sessions/session.json"):
-            self.toolset.switch_branch("feature/a")
-            expect(WorkState(self.clone).branch_name).to(equal("feature/a"))
+        with it("should keep the landed release's screenshots in the clone"):
+            expect(self.latest.exists()).to(equal(True))
 
-        with it("should switch to the saved branch when no name is given"):
-            WorkState(self.clone).branch_name = "feature/saved"
-            self.toolset.switch_branch()
-            expect(_git(self.clone, "branch", "--show-current")).to(equal("feature/saved"))
+        with it("should remove an older release's results from the clone"):
+            expect(self.older.parent.parent.parent.exists()).to(equal(False))
 
-        with it("should refuse to switch with no name and no saved branch"):
-            expect(lambda: self.toolset.switch_branch()).to(raise_error(BranchNameRequiredError))
+        with it("should remove an older release's results from main on origin"):
+            expect(_git(self.origin, "ls-tree", "-r", "--name-only", "main")).not_to(contain(".sessions/old-release/"))
 
-        with context("with uncommitted work on main"):
-            with before.each:
-                (self.clone / "main-work.txt").write_text("main work\n", encoding="utf-8")
-                self.toolset.switch_branch("feature/a")
+        with it("should keep the landed release's results on main on origin"):
+            expect(_git(self.origin, "ls-tree", "-r", "--name-only", "main")).to(
+                contain(".sessions/new-release/e2e-test-results/run/pml-web/step.json")
+            )
 
-            # A switch commits nothing: git carries uncommitted work to the branch switched to.
-            with it("should carry that work, uncommitted, onto the branch switched to"):
-                expect(_git(self.clone, "status", "--porcelain")).to(contain("main-work.txt"))
+        with it("should keep the results of a release that never finished a run"):
+            expect(_git(self.origin, "ls-tree", "-r", "--name-only", "main")).to(
+                contain(".sessions/pml-my/e2e-test-results/run/pml-web/step.json")
+            )
 
-            with it("should not push main to origin"):
-                expect(_git(self.origin, "ls-tree", "--name-only", "main")).not_to(contain("main-work.txt"))
-
-        with context("with uncommitted work on a feature branch"):
-            with before.each:
-                self.toolset.switch_branch("feature/a")
-                (self.clone / "work.txt").write_text("feature work\n", encoding="utf-8")
-
-            with it("should carry that work, uncommitted, onto the branch switched to"):
-                self.toolset.switch_branch("feature/b")
-                expect(_git(self.clone, "status", "--porcelain")).to(contain("work.txt"))
-
-            # (S) Repo --> Close Branch
-            with it("should merge the branch into main on origin when closed"):
-                self.toolset.close_branch()
-                expect(_git(self.origin, "ls-tree", "--name-only", "main")).to(contain("work.txt"))
-
-            with it("should delete the closed branch from origin"):
-                self.toolset.close_branch()
-                expect(_git(self.origin, "branch", "--list", "feature/a")).to(equal(""))
-
-            with it("should delete the closed branch from the clone"):
-                self.toolset.close_branch()
-                expect(_git(self.clone, "branch", "--list", "feature/a")).to(equal(""))
-
-            with it("should leave the clone on main after close"):
-                self.toolset.close_branch()
-                expect(_git(self.clone, "branch", "--show-current")).to(equal("main"))
-
-            with it("should save main as the branch after close"):
-                self.toolset.close_branch()
-                expect(WorkState(self.clone).branch_name).to(equal("main"))
-
-        with it("should refuse to close main"):
-            expect(lambda: self.toolset.close_branch("main")).to(raise_error(DefaultBranchError))
-
-        with context("with end-to-end results from the release that lands and from older ones"):
-            with before.each:
-                self.toolset.switch_branch("feature/a")
-                WorkState(self.clone).session = "new-release"
-                (self.clone / ".gitignore").write_text(
-                    ".sessions/session.json\n.sessions/*/e2e-test-results/**/*.png\n", encoding="utf-8"
-                )
-                self.latest = _release_screenshot(self.clone, "new-release", finished=True)
-                self.older = _release_screenshot(self.clone, "old-release", finished=True)
-                self.recording = _release_screenshot(self.clone, "pml-my", finished=False)
-                self.toolset.close_branch()
-
-            with it("should push the landed release's screenshots to e2e-latest"):
-                expect(_git(self.origin, "ls-tree", "-r", "--name-only", "e2e-latest")).to(
-                    equal(".sessions/new-release/e2e-test-results/run/pml-web/step.png")
-                )
-
-            with it("should keep the landed release's screenshots in the clone"):
-                expect(self.latest.exists()).to(equal(True))
-
-            with it("should remove an older release's results from the clone"):
-                expect(self.older.parent.parent.parent.exists()).to(equal(False))
-
-            with it("should remove an older release's results from main on origin"):
-                expect(_git(self.origin, "ls-tree", "-r", "--name-only", "main")).not_to(contain(".sessions/old-release/"))
-
-            with it("should keep the landed release's results on main on origin"):
-                expect(_git(self.origin, "ls-tree", "-r", "--name-only", "main")).to(
-                    contain(".sessions/new-release/e2e-test-results/run/pml-web/step.json")
-                )
-
-            with it("should keep the results of a release that never finished a run"):
-                expect(_git(self.origin, "ls-tree", "-r", "--name-only", "main")).to(
-                    contain(".sessions/pml-my/e2e-test-results/run/pml-web/step.json")
-                )
-
-            with it("should leave screenshots out of main"):
-                expect(_git(self.origin, "ls-tree", "-r", "--name-only", "main")).not_to(contain(".png"))
-
-        with context("loaded for the project a call names"):
-            with before.each:
-                (Path(self.tmp.name) / "host").mkdir()
-                self.host_origin, self.host = _clone_with_origin(Path(self.tmp.name) / "host")
-                Repo.of_project(self.clone).switch_branch("feature/a")
-
-            with it("should switch that project's clone"):
-                expect(_git(self.clone, "branch", "--show-current")).to(equal("feature/a"))
-
-            with it("should leave another project's clone on main"):
-                expect(_git(self.host, "branch", "--show-current")).to(equal("main"))
-
-            with it("should save the branch in that project's .sessions/session.json"):
-                expect(WorkState(self.clone).branch_name).to(equal("feature/a"))
-
-            with it("should commit and push in that project's clone"):
-                (self.clone / "work.txt").write_text("feature work\n", encoding="utf-8")
-                Repo.of_project(self.clone).push_commit("work")
-                expect(_git(self.origin, "ls-tree", "--name-only", "feature/a")).to(contain("work.txt"))
-
-            with it("should close the branch in that project's clone"):
-                Repo.of_project(self.clone).close_branch()
-                expect(_git(self.clone, "branch", "--list", "feature/a")).to(equal(""))
+        with it("should leave screenshots out of main"):
+            expect(_git(self.origin, "ls-tree", "-r", "--name-only", "main")).not_to(contain(".png"))
 
 
 # (E) Open Work Session
-# (E) Work With Repo Worktree
-with description("a worktree opened through the repo toolset"):
+# (S) Repo --> Push Commit
+# A chat's calls name its own folder, so a commit lands in the checkout that chat works in.
+with description("a commit pushed through the repo toolset"):
     with context("on a clone whose origin has a main branch"):
         with before.each:
             self.tmp = tempfile.TemporaryDirectory()
             self.origin, self.clone = _clone_with_origin(Path(self.tmp.name))
-            self.toolset = Repo(self.clone)
 
         with after.each:
             _remove_tree(self.tmp)
 
-        with it("should refuse a worktree for main"):
-            expect(lambda: self.toolset.switch_worktree("main")).to(raise_error(DefaultBranchError))
-
-        with context("with a feature branch open in the clone"):
+        with context("for the project a call names, beside another project"):
             with before.each:
-                self.toolset.switch_branch("feature/a")
+                (Path(self.tmp.name) / "other").mkdir()
+                self.other_origin, self.other = _clone_with_origin(Path(self.tmp.name) / "other")
+                (self.clone / "work.txt").write_text("work\n", encoding="utf-8")
+                Repo.of_project(self.clone).push_commit("work")
 
-            # (S) Repo --> Open Worktree
-            with it("should check the branch out in a sibling folder"):
-                self.toolset.switch_worktree()
-                tree = WorkState(self.clone).worktree_folder
-                expect(_git(tree, "branch", "--show-current")).to(equal("feature/a"))
+            with it("should commit and push in that project's clone"):
+                expect(_git(self.origin, "ls-tree", "--name-only", "main")).to(contain("work.txt"))
 
-            with it("should move the clone back to main"):
-                self.toolset.switch_worktree()
-                expect(_git(self.clone, "branch", "--show-current")).to(equal("main"))
+            with it("should leave the other project's clone as it was"):
+                expect(_git(self.other_origin, "ls-tree", "--name-only", "main")).not_to(contain("work.txt"))
 
-            with context("that has an open worktree with uncommitted work"):
-                with before.each:
-                    self.toolset.switch_worktree()
-                    self.tree = WorkState(self.clone).worktree_folder
-                    (self.tree / "tree.txt").write_text("worktree work\n", encoding="utf-8")
-
-                # (S) Repo --> Close Worktree
-                with it("should push the work to the branch on origin when closed"):
-                    self.toolset.close_worktree()
-                    expect(_git(self.origin, "ls-tree", "--name-only", "feature/a")).to(contain("tree.txt"))
-
-                with it("should remove the worktree folder when closed"):
-                    self.toolset.close_worktree()
-                    expect(self.tree.exists()).to(equal(False))
-
-                with it("should clear the worktree from .sessions/session.json when closed"):
-                    self.toolset.close_worktree()
-                    expect(WorkState(self.clone).worktree_folder).to(equal(None))
-
-                with it("should keep the branch open when closed"):
-                    self.toolset.close_worktree()
-                    expect(WorkState(self.clone).branch_name).to(equal("feature/a"))
-
-                with it("should refuse to close the branch while its worktree is open"):
-                    expect(lambda: self.toolset.close_branch()).to(raise_error(BranchInWorktreeError))
-
-                with it("should commit in the worktree when pushed from the main clone"):
-                    Repo(self.clone).push_commit("worktree work")
-                    expect(_git(self.origin, "ls-tree", "--name-only", "feature/a")).to(contain("tree.txt"))
-
-                with it("should commit in the worktree when pushed from a new toolset after a restart"):
-                    fresh = Repo(self.clone)
-                    fresh.push_commit("worktree work", sync_remote=False)
-                    expect(_git(self.tree, "status", "--porcelain")).to(equal(""))
-
-        with it("should refuse to close a worktree when none is open"):
-            expect(lambda: self.toolset.close_worktree()).to(raise_error(NoOpenWorktreeError))
-
-        with context("loaded for the project a call names"):
+        with context("from a linked worktree of the clone"):
             with before.each:
-                Repo.of_project(self.clone).switch_worktree("feature/a")
-                self.tree = WorkState(self.clone).worktree_folder
+                self.tree = Path(self.tmp.name) / "clone-feature"
+                _git(self.clone, "worktree", "add", "-q", "-b", "feature/a", str(self.tree))
+                (self.tree / "tree.txt").write_text("worktree work\n", encoding="utf-8")
+                Repo.of_project(self.tree).push_commit("worktree work")
 
-            with it("should open the worktree beside that project's clone"):
-                expect(_git(self.tree, "branch", "--show-current")).to(equal("feature/a"))
+            with it("should commit on the worktree's branch"):
+                expect(_git(self.tree, "log", "-1", "--format=%s")).to(equal("worktree work"))
 
-            with it("should remove that project's worktree when closed"):
-                Repo.of_project(self.clone).close_worktree()
-                expect(self.tree.exists()).to(equal(False))
+            with it("should push the worktree's branch to origin"):
+                expect(_git(self.origin, "ls-tree", "--name-only", "feature/a")).to(contain("tree.txt"))
+
+            with it("should leave main without that commit"):
+                expect(_git(self.clone, "log", "-1", "--format=%s", "main")).not_to(equal("worktree work"))
 
 
 # (E) Open Work Session

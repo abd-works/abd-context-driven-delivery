@@ -398,23 +398,19 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 	// `ticket.leave_choices`: a merge included
 + close_choices: LeaveChoices
 	// `ticket.close_choices`: closing never merges
-+ open_choices: OpenChoices
-	// `ticket.open_choices`
-----
-+ open(opening: list[str])
-	// creates what opening names: its own branch, checked out, and its own worktree
-	-> Repo.switch_branch
-	-> Repo.switch_worktree
-+ open_worktree()
-	// opens its own worktree, creating its branch when missing; the board forgets the worktrees it listed
++ open()
+	// opens the ticket in its own worktree: the one it has, else a new one on its own branch, after the session folders not yet committed are committed on main and pushed; records the branch and worktree in its session; refuses with TicketBranchUnclearError when several branches could each be the ticket's
+	-> TicketCheckout.save_sessions_on_main
 	-> Branch.open_in_worktree
 	-> Board.reread
-+ leave(leaving: list[str])
-	// writes a handoff for its session when leaving names handoff, then commits, pushes, and merges as leaving names, only while the branch its work is on is checked out; work on the default branch is committed and pushed there, never merged, and no worktree is removed
-	-> Handoffs.write
-	-> LeavingHandoff.document
-	-> Repo.push_commit
-	-> Repo.close_branch
+	-> Session.save_fields
++ save_sessions_on_main(message: str)
+	// commits the session folders not yet committed on main and pushes main: every ticket's record is kept on main
+	-> Repo.commit
+	-> Repo.push_upstream
++ keep_landing_release(leaving: list[str])
+	// a ticket closed with its branch merged keeps its end-to-end results only
+	-> LatestRelease.keep
 
 ## StageMarks
 

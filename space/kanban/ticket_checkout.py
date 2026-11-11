@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from harness.chat.chat import Chat
 from harness.installation.data_class import data_field
 from space.kanban.leaving_handoff import LeavingHandoff
+from space.repo.latest_release import LatestRelease
 from space.repo.repo import Branch
 
 if TYPE_CHECKING:
@@ -154,6 +155,12 @@ class TicketCheckout:
         candidates = [] if self.branch.exists else self.candidate_branches
         if len(candidates) > 1:
             raise TicketBranchUnclearError(self._ticket.name, [branch.name for branch in candidates])
+
+    def keep_landing_release(self, leaving: list[str]) -> None:
+        """A ticket closed with its branch merged lands its release: its end-to-end results are the only ones kept, its
+        screenshots pushed to e2e-latest. Done while its folder is still among the open sessions, where they are."""
+        if LEAVE_MERGE in leaving:
+            LatestRelease(self._repo.main_clone, self._ticket.name).keep()
 
     def save_sessions_on_main(self, message: str) -> None:
         """Commit the session folders not yet committed on main with message, and push main, while the repository's own

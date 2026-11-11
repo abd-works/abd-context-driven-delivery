@@ -12,10 +12,7 @@ from harness.installation.data_class import data_field, language_adapter
 from harness.installation.files import command
 from harness.mcp.mcp_server import long_call, mcp
 from harness.process.git import Git, RepoConnectError
-from space.repo.latest_release import LatestRelease
 from space.repo.worktree import Worktree, Worktrees
-from harness.agent_tools.tool_call import ToolCall
-from space.work_state import WorkState
 
 # A file git reports as changed that is the hook server's running log, not work: it never blocks a switch or a close.
 _RUNTIME_LOG = "events.log"
@@ -23,31 +20,7 @@ _RUNTIME_LOG = "events.log"
 _UNION_MERGED_LOGS = (".sessions/**/session.log merge=union", ".sessions/**/session.err merge=union")
 
 
-class BranchNameRequiredError(ValueError):
-    """Raised when a branch command has no name and none is saved in the chat's open state under ``~/.cdd``."""
 
-    def __init__(self) -> None:
-        super().__init__(
-            "branch name is required: pass name, or switch to a branch first so "
-            "it is saved as this chat's open branch"
-        )
-
-
-class DefaultBranchError(ValueError):
-    """Raised when a branch or worktree command is aimed at the default branch."""
-
-    def __init__(self, operation: str, default: str) -> None:
-        super().__init__(f"cannot {operation} the default branch {default!r}")
-
-
-class BranchInWorktreeError(RuntimeError):
-    """Raised when the branch to close is still checked out in a linked worktree."""
-
-    def __init__(self, branch: str, path: Path) -> None:
-        super().__init__(
-            f"branch {branch!r} is checked out in the worktree at {path}; "
-            "close that worktree first"
-        )
 
 
 class CommitPathsRequiredError(ValueError):
@@ -63,12 +36,6 @@ class CommitMessageRequiredError(ValueError):
     def __init__(self) -> None:
         super().__init__("commit message is required")
 
-
-class NoOpenWorktreeError(RuntimeError):
-    """Raised when close-worktree runs with no worktree saved in the chat's open state under ``~/.cdd``."""
-
-    def __init__(self) -> None:
-        super().__init__("no open worktree: this chat has no worktree open")
 
 
 class Commit:
@@ -310,148 +277,6 @@ class Repo:
         primary = self.primary_root()
         return self if primary == self.root else self.checkout_at(primary)
 
-    @property
-    def own_work_state(self) -> WorkState:
-        """The branch, worktree, and session open for this checkout folder, kept under ``~/.cdd`` and never in the
-        checkout: the entry of the chat whose call is being answered, else this folder's own."""
-        call = ToolCall.answering()
-        return WorkState(self.root, call.chat_id if call is not None else "")
-
-    @property
-    def work_state(self) -> WorkState:
-        """The branch, worktree, and session open in the main clone for the calling chat; every checkout of the
-        repository reads the main clone's ``own_work_state``."""
-        return self.main_clone.own_work_state
-
-    @property
-    def open_worktree(self) -> Worktree | None:
-        """The worktree saved as open, as the main clone's worktrees list it; none when none is saved or git no longer
-        lists one there."""
-        folder = self.work_state.worktree_folder
-        return self.main_clone.worktrees.at(folder) if folder is not None else None
-
-    def _checkout_tools_act_in(self) -> Repo:
-        """The checkout the repo tools act in. In the main clone that is the open worktree while its folder exists, so
-        the work goes where ``switch_worktree`` moved the branch; in a linked worktree, or with no worktree open, it is
-        this checkout."""
-        if self.is_linked_worktree():
-            return self
-        opened = self.open_worktree
-        return opened.repository if opened is not None and opened.path.is_dir() else self.main_clone
-
-    def _named_or_saved_branch(self, name: str) -> Branch:
-        """The branch called name on the main clone, else the branch saved as open."""
-        cleaned = (name or "").strip() or self.work_state.branch_name
-        if not cleaned:
-            raise BranchNameRequiredError()
-        return self.main_clone.branch_named(cleaned)
-
-    @long_call
-    @agent_tool
-    @mcp
-    def switch_branch(self, name: str = "") -> str:
-        """Switch the main clone to branch ``name``, creating it when missing.
-
-        ``name`` defaults to ``branch`` in the chat's open state under ``~/.cdd``. Commits nothing: work
-        left uncommitted goes along to ``name``, as git carries it, and git refuses the switch when it would
-        overwrite that work. Checks out ``name`` (a new branch starts from origin's copy or the default
-        branch) and saves ``name`` as ``branch`` in the chat's open state under ``~/.cdd``. Does not touch
-        worktrees or sessions.
-        """
-        branch = self._named_or_saved_branch(name).switch_to()
-        self.work_state.branch_name = branch.name
-        return f"on branch {branch.name!r} at {branch.repo.root}"
-
-    @long_call
-    @agent_tool
-    @mcp
-    def close_branch(self, name: str = "", commit_message: str = "branch: close") -> str:
-        """Close branch ``name``: commit, push, merge into the default branch, push it, delete ``name``.
-
-        ``name`` defaults to ``branch`` in the chat's open state under ``~/.cdd``. Refuses the default branch and
-        a branch still open in a worktree. Deletes ``name`` locally and on origin, leaves the main
-        clone on the default branch, and saves the default branch as ``branch``. Does not touch sessions.
-        The release that landed (the open session, else ``name``) keeps its end-to-end results, its
-        screenshots pushed to ``e2e-latest``; every older release's results are removed and that removal is
-        committed and pushed on the default branch.
-        """
-        branch = self._named_or_saved_branch(name)
-        release = LatestRelease(branch.repo, self.work_state.session or branch.name)
-        branch.close(commit_message)
-        self.work_state.branch_name = branch.repo.default_branch
-        pruned = release.keep()
-        kept = f"; kept {release.release!r} end-to-end results, removed {', '.join(pruned)}" if pruned else ""
-        return f"closed branch {branch.name!r}: merged into {branch.repo.default_branch!r}, pushed, and deleted{kept}"
-
-    @long_call
-    @agent_tool
-    @mcp
-    def switch_worktree(self, name: str = "") -> str:
-        """Open the sibling worktree for branch ``name``, creating the branch and folder when missing.
-
-        ``name`` defaults to ``branch`` in the chat's open state under ``~/.cdd`` and must not be the default
-        branch. When the main clone has ``name`` checked out, it is committed, pushed, and the main
-        clone goes back to the default branch so the worktree can take it. Saves ``branch`` and the
-        worktree path as ``worktree`` in the chat's open state under ``~/.cdd``; later repo tools act in it.
-        When the worktree cannot be brought up to date with origin, the reply says so and why.
-        """
-        opened = self._named_or_saved_branch(name).move_to_worktree()
-        self.work_state.branch_name = opened.branch.name
-        self.work_state.worktree_folder = opened.path
-        behind = f"; not updated from origin: {opened.sync_failure}" if opened.sync_failure else ""
-        return f"worktree for {opened.branch.name!r} at {opened.path}{behind}"
-
-    @long_call
-    @agent_tool
-    @mcp
-    def close_worktree(self, commit_message: str = "worktree: close") -> str:
-        """Close the worktree saved in the chat's open state under ``~/.cdd``: commit, push its branch, remove the folder.
-
-        Does not merge; the branch stays open as ``branch``. Clears ``worktree`` in
-        the chat's open state under ``~/.cdd`` and returns later repo tools to the main clone.
-        """
-        worktree = self.open_worktree
-        if worktree is None:
-            raise NoOpenWorktreeError()
-        branch = worktree.close(commit_message)
-        self.work_state.worktree_folder = None
-        return f"closed worktree for {branch.name!r}; branch pushed and kept open"
-
-    @command(name="switch-branch")
-    @agent_instructions
-    def switch_branch_command(self) -> str:
-        """Switch the main clone to a branch, creating it when missing. Nothing is committed: uncommitted work goes along.
-
-        Use the branch the user names; otherwise call without a name so the branch saved in
-        the chat's open state under ``~/.cdd`` is used. Call MCP ``repo.switch_branch``."""
-        return ""
-
-    @command(name="close-branch")
-    @agent_instructions
-    def close_branch_command(self) -> str:
-        """Close a branch: commit, push, merge into main, push main, delete the branch.
-
-        Use the branch the user names; otherwise call without a name so the branch saved in
-        the chat's open state under ``~/.cdd`` is used. Call MCP ``repo.close_branch``."""
-        return ""
-
-    @command(name="switch-worktree")
-    @agent_instructions
-    def switch_worktree_command(self) -> str:
-        """Open the sibling worktree for a branch other than main, creating it when missing.
-
-        Use the branch the user names; otherwise call without a name so the branch saved in
-        the chat's open state under ``~/.cdd`` is used. Call MCP ``repo.switch_worktree``."""
-        return ""
-
-    @command(name="close-worktree")
-    @agent_instructions
-    def close_worktree_command(self) -> str:
-        """Close the open worktree: commit, push its branch, remove the folder. The branch stays open.
-
-        Call MCP ``repo.close_worktree``."""
-        return ""
-
     @long_call
     @agent_tool
     @mcp
@@ -462,14 +287,15 @@ class Repo:
         untracked: bool = True,
         sync_remote: bool = True,
     ) -> Commit:
-        """Commit the working tree the repo tools act in using ``message`` (subject and optional body)."""
+        """Commit this checkout's working tree using ``message`` (subject and optional body), and push its branch: the
+        checkout of the project the call names, which is the folder the calling chat works in, such as a ticket's own
+        worktree."""
         text = (message or "").strip()
         if not text:
             raise CommitMessageRequiredError()
-        repository = self._checkout_tools_act_in()
-        sha = repository.commit([str(repository.root)], text, untracked=untracked)
+        sha = self.commit([str(self.root)], text, untracked=untracked)
         if sync_remote:
-            repository.push_upstream()
+            self.push_upstream()
         return Commit(sha, text)
 
     @command(name="push")
@@ -494,7 +320,7 @@ class Repo:
 
 
 class Branch:
-    """Named branch on a *Repo* — checkout, commit, merge, and close."""
+    """Named branch on a *Repo*: checkout, commit, merge, and delete."""
 
     __slots__ = ("_repo", "_name")
 
@@ -585,17 +411,6 @@ class Branch:
         """Check out this branch in a sibling worktree and return that worktree."""
         return self._repo.worktrees.open(self)
 
-    def move_to_worktree(self) -> Worktree:
-        """Move this branch out of the main clone into its sibling worktree. The clone goes back to the default branch
-        when it has this one checked out, after saving it."""
-        repository = self._repo
-        if self.is_default:
-            raise DefaultBranchError("open a worktree for", repository.default_branch)
-        if repository.current_branch == self:
-            self.save(f"worktree: move {self.name} to its worktree")
-            repository.branch_named(repository.default_branch).check_out()
-        return self.open_in_worktree()
-
     def save(self, commit_message: str) -> None:
         """Commit every change on this checked-out branch, then push it when origin is behind.
 
@@ -627,22 +442,6 @@ class Branch:
         if repository.has_ref(f"refs/remotes/origin/{self.name}"):
             repository.git.run("push", "origin", "--delete", self.name)
 
-    def close(self, commit_message: str = "branch: close") -> None:
-        """Save this branch, land it on the default branch, and delete it here and on origin. Refuses the default
-        branch, and a branch still checked out in a linked worktree."""
-        repository = self._repo
-        if self.is_default:
-            raise DefaultBranchError("close", repository.default_branch)
-        occupied = self.worktree
-        if occupied is not None and occupied.path.resolve() != repository.root:
-            raise BranchInWorktreeError(self.name, occupied.path)
-        leaving = repository.current_branch
-        if leaving != self:
-            leaving.save(commit_message)
-        self.switch_to()
-        self.save(commit_message)
-        self.land_on_default()
-        self.delete()
 
 
 class ServedCheckouts:

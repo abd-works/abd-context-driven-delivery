@@ -18,9 +18,10 @@ _TOOLSET_REFS_ENV = "MCP_TOOLSET_REFS"
 
 
 class UserHome:
-    """Points HOME, USERPROFILE and APPDATA at a temp folder so specs never touch the user's own config."""
+    """Points HOME, USERPROFILE and APPDATA at a temp folder so specs never touch the user's own config, and the cdd home
+    at its ``.cdd``, as it is for a user with no ``CDD_HOME`` of their own; a test run names a ``CDD_HOME`` of its own."""
 
-    _KEYS = ("HOME", "USERPROFILE", "APPDATA")
+    _KEYS = ("HOME", "USERPROFILE", "APPDATA", CDD_HOME_ENV)
 
     def __init__(self) -> None:
         self.root = Path(tempfile.mkdtemp(prefix="cdd-user-home-"))
@@ -30,6 +31,7 @@ class UserHome:
         os.environ["HOME"] = str(self.root)
         os.environ["USERPROFILE"] = str(self.root)
         os.environ["APPDATA"] = str(self.root / "AppData" / "Roaming")
+        os.environ[CDD_HOME_ENV] = str(self.root / ".cdd")
         return self.root
 
     def leave(self) -> None:

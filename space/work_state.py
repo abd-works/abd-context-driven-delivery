@@ -1,4 +1,4 @@
-"""The open session, branch, and worktree of one chat, kept by the cdd server in ``~/.cdd/open-sessions.json``.
+"""The open session of one chat, kept by the cdd server in ``~/.cdd/open-sessions.json``.
 
 What is open is true only for one chat on one machine, so it is never written in the checkout, where it would be
 committed and clash between worktrees. A call that names its chat keeps its own entry; a call that names none keeps one
@@ -23,9 +23,9 @@ _WRITING = threading.Lock()
 
 
 class WorkState:
-    """The open branch, worktree, and session of one chat, or of one checkout folder for a call that names no chat. It
-    keeps names only: the repository turns a branch name into its *Branch* and a worktree's folder into its *Worktree*.
-    Nothing it keeps is written under the checkout; ``sessions_folder`` is only where the checkout's sessions live."""
+    """The open session of one chat in the repository's own folder, or of one checkout folder for a call that names no
+    chat; a chat in a ticket's own worktree works on that ticket whatever is kept here. Nothing it keeps is written under
+    the checkout; ``sessions_folder`` is only where the checkout's sessions live."""
 
     def __init__(self, repo_root: Path | str, chat: str = "", home: Path | str | None = None) -> None:
         self.root = Path(repo_root).resolve()
@@ -45,25 +45,6 @@ class WorkState:
     def key(self) -> str:
         """This chat's entry in that file; a call naming no chat keeps the entry of its checkout folder."""
         return f"{_CHAT_KEY}{self.chat}" if self.chat else f"{_FOLDER_KEY}{self.root}"
-
-    @property
-    def branch_name(self) -> str:
-        """The name of the branch saved as open; empty when none is saved."""
-        return self._value("branch")
-
-    @branch_name.setter
-    def branch_name(self, name: str) -> None:
-        self._store("branch", name)
-
-    @property
-    def worktree_folder(self) -> Path | None:
-        """The folder of the worktree saved as open; none when no worktree is open."""
-        path = self._value("worktree")
-        return Path(path) if path else None
-
-    @worktree_folder.setter
-    def worktree_folder(self, folder: Path | None) -> None:
-        self._store("worktree", str(folder) if folder is not None else "")
 
     @property
     def session(self) -> str:

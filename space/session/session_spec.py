@@ -1058,28 +1058,6 @@ with description("a session on an MCP host whose CDD_REPO is the CDD checkout, n
 
 
 with description("a session switched to without a name"):
-    with context("with a branch saved in .sessions/session.json"):
-        with before.each:
-            self.repo = Path(tempfile.mkdtemp())
-            self.called = self.repo
-            WorkState(self.repo).branch_name = "feature/space-battle"
-            Sessions(self.repo).switch(workpath=self.repo)
-
-        with after.each:
-            shutil.rmtree(self.repo, ignore_errors=True)
-
-        with it("should take its name from the branch"):
-            expect(Sessions(self.repo).current().name).to(equal("feature-space-battle"))
-
-        with it("should create the session folder"):
-            expect((self.repo / ".sessions" / "feature-space-battle" / "session.json").is_file()).to(equal(True))
-
-        with it("should save the session in .sessions/session.json"):
-            expect(WorkState(self.repo).session).to(equal("feature-space-battle"))
-
-        with it("should keep the saved branch"):
-            expect(WorkState(self.repo).branch_name).to(equal("feature/space-battle"))
-
     with context("with nothing saved in .sessions/session.json"):
         with before.each:
             self.repo = Path(tempfile.mkdtemp())

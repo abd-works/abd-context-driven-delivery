@@ -128,29 +128,29 @@ with description("mcp tools diagnostics"):
             installer = _installer(
                 tree,
                 [
-                    "repo.switch_branch",
+                    "repo.push_commit",
                     "agent-tools-diagnostics.agent_tools_diagnostics",
                     "guidance-diagnostics.guidance_diagnostics",
                 ],
                 toolset_items=["space.repo.repo:Repo"],
             )
             scoped = AgentToolsProbe(installer, mcp_host=_host_of(_REPO_TOOLSET, _AGENT_TOOLS_DIAGNOSTICS_REF)).published
-            expect(scoped).to(contain("repo.switch_branch"))
+            expect(scoped).to(contain("repo.push_commit"))
             expect(scoped).not_to(contain("agent-tools-diagnostics.agent_tools_diagnostics"))
             expect(scoped).not_to(contain("guidance-diagnostics.guidance_diagnostics"))
         finally:
             shutil.rmtree(tree, ignore_errors=True)
 
-    with it("should list repo.switch_branch in published workspace MCP names"):
+    with it("should list repo.push_commit in published workspace MCP names"):
         tree = Path(tempfile.mkdtemp())
         try:
             installer = _installer(
                 tree,
-                ["repo.switch_branch", "bdd-behavior", "cdd.ping"],
+                ["repo.push_commit", "bdd-behavior", "cdd.ping"],
                 toolset_items=["space.repo.repo:Repo"],
             )
             scoped = AgentToolsProbe(installer, mcp_host=_host_of(_REPO_TOOLSET)).published
-            expect(scoped).to(equal(["repo.switch_branch"]))
+            expect(scoped).to(equal(["repo.push_commit"]))
             expect(scoped).not_to(contain("bdd-behavior"))
         finally:
             shutil.rmtree(tree, ignore_errors=True)
@@ -160,7 +160,7 @@ with description("mcp tools diagnostics"):
         try:
             installer = _installer(
                 tree,
-                ["repo.switch_branch", "bdd-behavior", "cdd.ping"],
+                ["repo.push_commit", "bdd-behavior", "cdd.ping"],
                 toolset_items=["space.repo.repo:Repo"],
             )
             report = AgentToolsProbe(installer, mcp_host=_host_of(_REPO_TOOLSET)).run()
@@ -170,7 +170,7 @@ with description("mcp tools diagnostics"):
             expect("ping" in section).to(equal(True))
             expect("invoke" in section).to(equal(True))
             names = [item["mcp"] for item in section["ping"]["items"]]
-            expect(names).to(contain("repo.switch_branch"))
+            expect(names).to(contain("repo.push_commit"))
         finally:
             shutil.rmtree(tree, ignore_errors=True)
 

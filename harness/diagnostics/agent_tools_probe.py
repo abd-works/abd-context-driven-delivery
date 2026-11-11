@@ -24,10 +24,6 @@ _HEAVY_INVOKE_PREFIXES = ("session.", "sessions.", "graph.")
 _INVOKE_SKIP_PREFIXES = ("session.", "sessions.", "graph.", "partition.", "catalog.", "repo.")
 _SKIP_INVOKE: dict[str, str] = {
     "repo.push_commit": "ping only (git)",
-    "repo.close_branch": "ping only (git)",
-    "repo.close_worktree": "ping only (git)",
-    "repo.switch_branch": "ping only (git)",
-    "repo.switch_worktree": "ping only (git)",
     "installer.install": "use /install shell",
     "installer.clean": "use /clean shell",
 }

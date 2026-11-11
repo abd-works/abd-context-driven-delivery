@@ -263,37 +263,6 @@ with description("a ticket's work through the cdd server") as self:
         with it("should commit the closed ticket's record on main"):
             expect(self.clone.tracked("origin/main", ".sessions/_complete/walk-worktree")).to(contain(".sessions/_complete/walk-worktree/session.json"))
 
-    # (S) Repo --> Switch Worktree
-    with context("that the repo tools push a branch, move it to a worktree, and close both"):
-        with before.all:
-            self.chat.answer("repo.switch_branch", name="walk-repo")
-            (self.clone.work / "repo.txt").write_text("repo work\n", encoding="utf-8")
-            self.chat.answer("repo.push_commit", message="Repo work", untracked=True, sync_remote=True)
-            self.chat.answer("repo.switch_worktree", name="walk-repo")
-            self.worktree = self.clone.worktree_of("walk-repo")
-            (self.worktree / "repo-worktree.txt").write_text("more\n", encoding="utf-8")
-            self.chat.answer("repo.close_worktree", commit_message="Close worktree")
-            self.after_worktree = self.clone.subject("origin/walk-repo")
-            self.chat.answer("repo.close_branch", name="walk-repo", commit_message="Close branch")
-
-        with it("should push the worktree's last work before removing it"):
-            expect(self.after_worktree).to(equal("Close worktree"))
-
-        with it("should remove the worktree"):
-            expect(self.worktree.exists()).to(equal(False))
-
-        with it("should merge the branch into main"):
-            expect((self.clone.work / "repo-worktree.txt").is_file()).to(be_true)
-
-        with it("should delete the branch here"):
-            expect(self.clone.branches()).not_to(contain("walk-repo"))
-
-        with it("should delete the branch on origin"):
-            expect(self.clone.origin_branches()).not_to(contain("walk-repo"))
-
-        with it("should push main with the merge"):
-            expect(self.clone.subject("origin/main")).to(equal(self.clone.subject("main")))
-
     # Another ticket is another chat and worktree: nothing is left or moved.
     with context("that a person opens two tickets, each worked on in its own chat"):
         with before.all:
@@ -331,46 +300,54 @@ with description("a ticket's work through the cdd server") as self:
         with it("should keep the clone's own folder on main throughout"):
             expect(self.clone.branch).to(equal("main"))
 
-    # (S) Repo --> Close Branch
-    with context("that origin's main moved on before a branch is closed"):
+    # (S) Person --> Close Ticket
+    with context("that origin's main moved on before a ticket is closed with its branch merged"):
         with before.all:
+            self.chat.answer("ticket.create", title="Walk land")
+            self.chat.answer("ticket.activate", ticket="walk-land")
+            worktree = self.clone.worktree_of("walk-land")
+            (worktree / "land.txt").write_text("land\n", encoding="utf-8")
+            Chat(self.server, worktree).answer("repo.push_commit", message="Land it", untracked=True, sync_remote=True)
             self.clone.push_from_elsewhere("main", "on-main.txt", "pushed to main elsewhere\n", "Main from elsewhere")
-            self.chat.answer("repo.switch_branch", name="walk-land")
-            (self.clone.work / "land.txt").write_text("land\n", encoding="utf-8")
-            self.chat.answer("repo.close_branch", name="walk-land", commit_message="Land it")
+            self.chat.answer("ticket.close", ticket="walk-land", leaving=["commit", "push", "merge", "delete_branch"])
 
         with it("should bring origin's change into main"):
             expect((self.clone.work / "on-main.txt").is_file()).to(be_true)
 
-        with it("should merge the branch into main"):
+        with it("should merge the ticket's branch into main"):
             expect((self.clone.work / "land.txt").is_file()).to(be_true)
 
         with it("should push main with both"):
-            expect(self.clone.subjects("origin/main")).to(contain("Main from elsewhere"))
+            expect(self.clone.subjects("origin/main")).to(contain("Main from elsewhere", "Land it"))
 
-    with context("that a push meets a real conflict"):
+    # (S) Repo --> Push Commit
+    with context("that a push from a ticket's chat meets a real conflict"):
         with before.all:
-            self.chat.answer("repo.switch_branch", name="walk-conflict")
-            (self.clone.work / "shared.txt").write_text("mine\n", encoding="utf-8")
-            self.chat.answer("repo.push_commit", message="Mine", untracked=True, sync_remote=True)
+            self.chat.answer("ticket.create", title="Walk conflict")
+            self.chat.answer("ticket.activate", ticket="walk-conflict")
+            worktree = self.clone.worktree_of("walk-conflict")
+            ticket_chat = Chat(self.server, worktree)
+            (worktree / "shared.txt").write_text("mine\n", encoding="utf-8")
+            ticket_chat.answer("repo.push_commit", message="Mine", untracked=True, sync_remote=True)
             self.clone.push_from_elsewhere("walk-conflict", "shared.txt", "theirs\n", "Theirs")
-            (self.clone.work / "shared.txt").write_text("mine again\n", encoding="utf-8")
-            _, self.error = self.chat.call("repo.push_commit", message="Mine again", untracked=True, sync_remote=True)
-            self.merge_head = (self.clone.work / ".git" / "MERGE_HEAD").exists()
-            self.kept = self.clone.subject()
-            git(self.clone.work, "reset", "-q", "--hard", "origin/walk-conflict")
-            self.chat.answer("repo.switch_branch", name="main")
+            (worktree / "shared.txt").write_text("mine again\n", encoding="utf-8")
+            _, self.error = ticket_chat.call("repo.push_commit", message="Mine again", untracked=True, sync_remote=True)
+            # A linked worktree keeps its merge state in its own git folder.
+            self.merging = (Path(git(worktree, "rev-parse", "--absolute-git-dir")) / "MERGE_HEAD").exists()
+            self.kept = self.clone.subject(folder=worktree)
+            git(worktree, "reset", "-q", "--hard", "origin/walk-conflict")
+            self.chat.answer("ticket.close", ticket="walk-conflict", leaving=["delete_branch"])
 
         with it("should refuse the push, naming the conflict"):
             expect(self.error.lower()).to(contain("conflict"))
 
         with it("should leave no merge half done"):
-            expect(self.merge_head).to(equal(False))
+            expect(self.merging).to(equal(False))
 
-        with it("should keep the commit made here"):
+        with it("should keep the commit made in the worktree"):
             expect(self.kept).to(equal("Mine again"))
 
-        with it("should switch back to main afterwards"):
+        with it("should keep the clone's own folder on main"):
             expect(self.clone.branch).to(equal("main"))
 
     # (S) Person --> Switch Session

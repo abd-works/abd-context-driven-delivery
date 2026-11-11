@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from expects import be, be_false, be_none, be_true, contain, equal, expect, raise_error
+from expects import be, be_false, be_none, be_true, contain, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -13,7 +13,6 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from space.repo.repo import Repo  # noqa: E402
-from space.work_state import WorkState  # noqa: E402
 
 
 def _git(root: Path, *args: str) -> str:
@@ -64,15 +63,8 @@ with description("a worktree opened for a branch") as self:
             with it("should say why it is not up to date with origin"):
                 expect(self.opened.sync_failure).to(contain("fetch"))
 
-        with context("that has been opened through the repo toolset"):
-            with before.each:
-                self.reply = Repo(self.clone).switch_worktree("feature/a")
-
-            with it("should say in its reply that it was not updated from origin"):
-                expect(self.reply).to(contain("not updated from origin"))
-
             with it("should still open the worktree folder"):
-                expect(WorkState(self.clone).worktree_folder.is_dir()).to(be_true)
+                expect(self.opened.path.is_dir()).to(be_true)
 
     with context("whose folder holds files past Windows' 260-character path limit"):
         with before.each:
@@ -141,31 +133,25 @@ with description("a Repo and its checkouts") as self:
     with it("should be its own main clone"):
         expect(self.repo.main_clone).to(be(self.repo))
 
-    with it("should have no open worktree before one is switched to"):
-        expect(self.repo.open_worktree).to(be_none)
-
     with context("with a branch opened in a linked worktree"):
         with before.each:
-            self.repo.switch_worktree("feature/a")
-            self.tree = WorkState(self.clone).worktree_folder
+            self.opened = self.repo.branch_named("feature/a").open_in_worktree()
+            self.tree = self.opened.path
             self.linked = Repo(self.tree)
 
-        with it("should answer the saved worktree as the one git lists there"):
-            expect(self.repo.open_worktree.path).to(equal(self.tree.resolve()))
+        with it("should list the worktree where git has it"):
+            expect(self.repo.worktrees.at(self.tree).path).to(equal(self.tree.resolve()))
 
         with it("should answer the worktree's branch from its own checkout"):
-            expect(self.repo.open_worktree.branch.repo.root).to(equal(self.tree.resolve()))
+            expect(self.repo.worktrees.at(self.tree).branch.repo.root).to(equal(self.tree.resolve()))
 
         with it("should find the main clone from the linked worktree"):
             expect(self.linked.main_clone.root).to(equal(self.clone.resolve()))
-
-        with it("should share the main clone's saved work state with the linked worktree"):
-            expect(self.linked.work_state.path).to(equal(self.repo.work_state.path))
 
         with it("should list the main clone with the repository that lists it"):
             listed = self.repo.worktrees.at(self.clone)
             expect(listed.repository).to(be(self.repo))
 
         with it("should remove the worktree through the checkouts that listed it"):
-            self.repo.close_worktree()
+            self.repo.worktrees.at(self.tree).close("close the worktree")
             expect(self.tree.exists()).to(be_false)
