@@ -5,7 +5,7 @@ import { turnCompleted, turnStarted } from './board-chat/chat-turns'
 import { readName } from './board-chat/chat-name'
 import { openedBoard } from './board-chat/board-server'
 import { currentChatBar, refreshChatBar } from './chat-bar/chat-bar-client'
-import { ChatBarView, StatusRowView } from './chat-bar/chat-bar-view'
+import { ChatBarView } from './chat-bar/chat-bar-view'
 import { clearBusy, currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
 import { shownActionOf } from './chat-bar/action-button-view'
@@ -46,6 +46,13 @@ function logged($: EngineInterface, doing: string): (failure: unknown) => void {
   return failure => $.ui.log(`${PLUGIN}: ${doing} failed: ${reasonOf(failure)}`, { to: 'debug' })
 }
 
+// The status line below the chat, where the host draws a plugin's status: the repository, the session, the folder it
+// works in, and the action the button runs with its fidelities.
+async function showStatus($: EngineInterface): Promise<void> {
+  const chatBar = await currentChatBar($)
+  $.ui.status(chatBar.statusLine(shownActionOf(chatBar, (await currentActionPicker($)).chosenAction)) || undefined)
+}
+
 // The status line, the system prompt and the chat bar read the same ChatBarClient. The cdd server can still be
 // connecting at session start; the chat bar then shows why, and the next event reads again.
 async function readActive($: EngineInterface): Promise<void> {
@@ -57,9 +64,8 @@ async function readActive($: EngineInterface): Promise<void> {
   // The system prompt is cached; when the active session's summary changes, it is composed again next turn.
   if (chatBar.agentContext !== shownContext) await $.ui.invalidate('prompt.section')
   shownContext = chatBar.agentContext
-  // The status row under the prompt is drawn by the PromptHint hook, from the left, so the host's status line is left
   // empty.
-  $.ui.status(undefined)
+  await showStatus($)
 }
 
 export const register: Register = on => {
@@ -103,25 +109,18 @@ export const register: Register = on => {
     return ran
   })
 
-  // A press can change which fidelities or stage the action button acts on, so the format chips are read again after it.
+  // A press can change which fidelities or stage the action button acts on, so the format chips are read again after it,
+  // and the status line names the action the button now runs.
   on('ui.press', async ($, e, next) => {
     const pressed = await next(e)
     if (e.plugin === PLUGIN && CHANGES_FIDELITIES.test(e.element)) void loadFormatChips($, await currentChatBar($)).catch(logged($, 'reading the format chips'))
+    if (e.plugin === PLUGIN) await showStatus($)
     return pressed
   })
 
   on('prompt.submit', async ($, e, next) => {
     await Promise.all([refreshHealth($), refreshChatBar($)])
     return next(e)
-  })
-
-  // The status row, dim and from the left under the prompt, below the engine's own hint line: the repository, the
-  // session, the folder it works in, and the action the button runs with its fidelities.
-  on('ui.render', { component: 'PromptHint' }, async ($, e, next) => {
-    const chatBar = await currentChatBar($)
-    const status = chatBar.statusLine(shownActionOf(chatBar, (await currentActionPicker($)).chosenAction))
-    if (!status) return next(e)
-    return StatusRowView($.ui.resolve(e), await next(e), status)
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
