@@ -124,7 +124,7 @@ test.describe('with a chat connected', () => {
         await (await openStoryMapReport(page)).getByRole('button', { name: 'Fix .context/story-map.md:6' }).click()
       })
 
-      test('Then the chat receives one message naming the verb-noun-format rule, the error at .context/story-map.md:6, and the content that failed, with instructions to fix it', async () => {
+      test("Then the chat's prompt is filled with one message, for the person to edit and send, naming the verb-noun-format rule, the error at .context/story-map.md:6, and the content that failed, with instructions to fix it", async () => {
         await expect.poll(() => sentSince(before).length).toBe(1)
         const [message] = sentSince(before)
         expect(['verb-noun-format', '.context/story-map.md:6', 'Handle Payment'].every(part => message!.includes(part))).toBe(true)
@@ -140,7 +140,7 @@ test.describe('with a chat connected', () => {
         await (await openStoryMapReport(page)).locator('.rule-head').getByRole('button', { name: 'Fix all', exact: true }).click()
       })
 
-      test('Then the chat receives one message with every verb-noun-format violation, each at its file and line with the content that failed, and instructions to fix them', async () => {
+      test("Then the chat's prompt is filled with one message, for the person to edit and send, with every verb-noun-format violation, each at its file and line with the content that failed, and instructions to fix them", async () => {
         await expect.poll(() => sentSince(before).length).toBe(1)
         const [message] = sentSince(before)
         expect(['verb-noun-format', '.context/story-map.md:6', 'Handle Payment'].every(part => message!.includes(part))).toBe(true)
@@ -159,7 +159,7 @@ test.describe('with a chat connected', () => {
         await opened.getByRole('button', { name: 'Fix all violations' }).click()
       })
 
-      test('Then the chat receives one message naming each rule with every violation of it, each at its file and line with the content that failed, and instructions to fix them all', async () => {
+      test("Then the chat's prompt is filled with one message, for the person to edit and send, naming each rule with every violation of it, each at its file and line with the content that failed, and instructions to fix them all", async () => {
         await expect.poll(() => sentSince(before).length).toBe(1)
         const [message] = sentSince(before)
         expect(['verb-noun-format', '.context/story-map.md:6', 'Handle Payment', 'do-not-invent-requirements', '.context/story-map.md:7', 'Confirm Order'].every(part => message!.includes(part))).toBe(true)

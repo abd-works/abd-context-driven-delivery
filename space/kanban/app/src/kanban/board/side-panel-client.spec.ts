@@ -209,6 +209,11 @@ describe('Fix Report Violations', () => {
       expect((await sent()).commands).toHaveLength(1)
     })
 
+    // The person edits the fix in the chat's prompt before sending it.
+    it("should fill the chat's prompt rather than send", async () => {
+      expect((await sent()).commands[0]!.kind).toBe('fill')
+    })
+
     it('should name the rule and what it requires', async () => {
       const { rule, commands } = await sent()
       expect(commands[0]!.text).toContain(`${rule.rule.slug}: ${rule.rule.body}`)
