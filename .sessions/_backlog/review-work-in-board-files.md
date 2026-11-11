@@ -32,6 +32,13 @@ From the person, 2026-11-11, on a screenshot of the board's bottom panel showing
 - The groupings' dimensions are the roots of the knowledge graph, such as each practice.
 - A click on a file selects it; a check box on each file selects several at once.
 
+From the person, 2026-11-11, on the same chip grid:
+
+> color coding files and higlithginh the ares thast have chnged to make agent revew easy
+
+- Colour-code the file chips, so a person sees at a glance which files the agent changed.
+- Inside an open file, highlight the areas that changed, so reviewing the agent's work is quick. This joins Show AI Changes As Diff below.
+
 ## Epic: Move Work Forward On Session Board
 
 ### Feature: Work Fidelity Outputs On Board → Review Fidelity Outputs On Board
