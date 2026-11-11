@@ -54,11 +54,20 @@ section: body
 | `harness/.context/ux/ticket-ui.drawio` | "add and remove a child" |
 | `space/kanban/ticket.py:97-100`, `space/session/sessions.py:269-276` | Observed: `Ticket.create` with a parent records the parent in `session.json` and opens the ticket in Discovery |
 
+The realizations name the operations these scenarios need; none of them exists yet, so each is Intended.
+
 #### Scenario: Add a child ticket by hand
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow is In progress in Discovery
 *But* checkout-flow has no child tickets
 *When* the Person adds the child ticket Enter card details to checkout-flow
+
+```realization
+Ticket.add_child("Enter card details")
+  -> Ticket.create("Enter card details", scope="story", parent="checkout-flow")
+  <- enter-card-details In progress in Discovery
+```
+
 *Then* the ticket enter-card-details is In progress in Discovery with the parent checkout-flow
 *And* checkout-flow's card holds enter-card-details (Display Child Tickets In Parent)
 
@@ -121,10 +130,19 @@ section: body
 | `.sessions/session-board/ticket-enhancements.md` (commit b08bfe47e) | "pull a child out of its parent so it moves on its own"; "a child pulled out of its parent becomes a ticket of its own beside it" |
 | `harness/.context/ux/ticket-ui.drawio` | "pull out of parent; and then drag and then move like regular ticket; remembers parent"; the pulled-out card reads parent.Child |
 
+The realizations name the operations these scenarios need; none of them exists yet, so each is Intended.
+
 #### Scenario: Pull a child out of its parent
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow holds its child ticket enter-card-details in Discovery
 *When* the Person pulls enter-card-details out of checkout-flow
+
+```realization
+Ticket.pull_out()
+  -> Session.mark_pulled_out()
+  <- enter-card-details pulled out, with the parent checkout-flow
+```
+
 *Then* enter-card-details shows as a card of its own beside checkout-flow, titled Checkout flow.Enter card details
 *And* enter-card-details still has the parent checkout-flow
 *And* checkout-flow's card holds a dashed row for enter-card-details
@@ -133,6 +151,12 @@ section: body
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) enter-card-details was pulled out of checkout-flow and is Done in Discovery
 *When* the Person moves enter-card-details to Specification
+
+```realization
+Ticket.move_next()
+  <- enter-card-details in Specification, with the parent checkout-flow
+```
+
 *Then* the Specification [column](../../../../../space/kanban/.context/kanban-model.md#column) shows enter-card-details
 *And* enter-card-details still has the parent checkout-flow (Place Parent At Leftmost Child Stage)
 
@@ -146,11 +170,20 @@ section: body
 | `harness/.context/ux/ticket-ui.drawio` | "add and remove a child" |
 | `space/session/sessions.py:276` | Observed: a ticket's parent is the `parent` field of its `session.json` |
 
+The realizations name the operations these scenarios need; none of them exists yet, so each is Intended.
+
 #### Scenario: Move a child to another parent
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) enter-card-details is a child of checkout-flow
 *And* the ticket billing-report is In progress in Discovery
 *When* the Person makes enter-card-details a child of billing-report
+
+```realization
+Ticket.reassign_parent("billing-report")
+  -> Session.set_parent("billing-report")
+  <- enter-card-details with the parent billing-report
+```
+
 *Then* billing-report's card holds enter-card-details
 *And* checkout-flow's card no longer holds enter-card-details
 *And* enter-card-details' session.json names billing-report as its parent
@@ -159,6 +192,13 @@ section: body
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) enter-card-details is a child of checkout-flow
 *When* the Person takes enter-card-details off checkout-flow
+
+```realization
+Ticket.reassign_parent("")
+  -> Session.set_parent("")
+  <- enter-card-details with no parent
+```
+
 *Then* enter-card-details shows as a card of its own with no parent
 *And* checkout-flow's card holds no row for enter-card-details, dashed or not
 *And* enter-card-details' session.json names no parent
@@ -171,22 +211,48 @@ section: body
 |--------|------|
 | `harness/.context/ux/ticket-ui.drawio` | "parents cant be dragged; they change stage by taking on the stage of the leftmost ticket" |
 
+The realizations name the operations these scenarios need; none of them exists yet, so each is Intended.
+
 #### Scenario: Show a parent in its earliest child's stage
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow has the child tickets enter-card-details in Specification and confirm-order in Discovery
 *When* the [board](../../../../../space/kanban/.context/kanban-model.md#board) shows checkout-flow
+
+```realization
+Board.show()
+  -> Ticket.column
+     -> Ticket.children
+  <- checkout-flow in Discovery, the stage of its leftmost child
+```
+
 *Then* checkout-flow shows in the Discovery [column](../../../../../space/kanban/.context/kanban-model.md#column)
 
 #### Scenario: Move a parent on when its last child moves on
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow has the child tickets enter-card-details in Specification and confirm-order Done in Discovery
 *When* the Person moves confirm-order to Specification
+
+```realization
+Ticket.move_next()
+  <- confirm-order in Specification
+Board.show()
+  -> Ticket.column
+  <- checkout-flow in Specification, the stage of its leftmost child
+```
+
 *Then* checkout-flow shows in the Specification [column](../../../../../space/kanban/.context/kanban-model.md#column)
 
 #### Scenario: Refuse to move a parent by hand
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow has the child ticket confirm-order in Discovery
 *When* the Person tries to move checkout-flow to Specification
+
+```realization
+Ticket.move_next()
+  -> Ticket.children
+  <- checkout-flow, still in Discovery: a parent moves only with its children
+```
+
 *Then* checkout-flow stays in the Discovery [column](../../../../../space/kanban/.context/kanban-model.md#column)
 
 ## Story: Nest Child Branch And Session
@@ -198,11 +264,22 @@ section: body
 | `.sessions/session-board/ticket-enhancements.md` (commit b08bfe47e) | "Nest branches and sessions for tickets in a hierarchy" |
 | `space/kanban/ticket.py:114-125` | Observed: a ticket's branch and work branch are named after the ticket |
 
+The realizations name the operations these scenarios need; none of them exists yet, so each is Intended.
+
 Evidence gap: the source says to nest, not how. The folder and branch below are examples to agree. Git cannot hold a branch checkout-flow/enter-card-details beside a branch checkout-flow, so the child's branch joins the names with a dot, as the drawing's parent.Child does.
 
 #### Scenario: Nest a child's session and branch under its parent's
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow's [session](../../../../../space/kanban/.context/kanban-model.md#session) is .sessions/checkout-flow on the branch checkout-flow
 *When* Claude Code opens the child ticket enter-card-details of checkout-flow
+
+```realization
+Ticket.create("Enter card details", scope="story", parent="checkout-flow")
+  -> Sessions.create("enter-card-details", parent="checkout-flow")
+  <- the session .sessions/checkout-flow/enter-card-details
+  -> Ticket.branch
+  <- checkout-flow.enter-card-details
+```
+
 *Then* enter-card-details' session folder is .sessions/checkout-flow/enter-card-details
 *And* enter-card-details' branch is checkout-flow.enter-card-details

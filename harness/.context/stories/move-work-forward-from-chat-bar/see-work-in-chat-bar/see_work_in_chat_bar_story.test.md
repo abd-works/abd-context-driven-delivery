@@ -48,6 +48,22 @@ section: body
 *When* the chat composes its system prompt
 *Then* the system prompt holds no session board section
 
+#### Scenario: Name the ticket's text file in the system prompt
+
+Intended (`.sessions/session-board/ticket-enhancements.md`, commit b08bfe47e: "A session's instructions refer to that file, so the board and the agent read the same text"); `Ticket.agent_context` does not name the file today.
+
+*Given* checkout-flow is the active [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card)
+*And* its session folder holds checkout-flow.md
+*When* the chat composes its system prompt
+
+```realization
+Ticket.agent_context
+  -> Ticket.text_file
+  <- the system prompt section naming .sessions/checkout-flow/checkout-flow.md
+```
+
+*Then* the system prompt names .sessions/checkout-flow/checkout-flow.md as the ticket's text
+
 ## Story: Select Fidelity
 
 ### Evidence

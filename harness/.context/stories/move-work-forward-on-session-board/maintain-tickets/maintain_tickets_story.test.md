@@ -69,26 +69,49 @@ section: body
 | `harness/.context/ux/ticket-ui.drawio` | "edit text in markdown file" |
 | `space/kanban/backlog_item.py:121-128`, `space/kanban/app/src/kanban/backlog-item/backlog-item-view.tsx:62` | Observed: starting a backlog item moves its file, text and all, into the ticket's session folder; a backlog card shows its file's text |
 
-Intended, not built: a ticket's card does not show its text, no card edits text, and `Ticket.agent_context` does not name the file. The last scenario is the interaction the story map's validation asks to split into a story of its own.
+Intended, not built: a ticket's card does not show its text, no card edits text, and `Ticket.agent_context` does not name the file.
+The realizations name the operations these scenarios need; none of them exists yet, so each is Intended. Naming the file in the agent's system prompt is a scenario of Add Active Ticket To System Prompt, the story that composes that prompt.
 
 #### Scenario: Show a ticket's text from its session file
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow's [session](../../../../../space/kanban/.context/kanban-model.md#session) folder holds checkout-flow.md with the text Pay for the basket.
 *When* the Person opens the [board](../../../../../space/kanban/.context/kanban-model.md#board)
+
+```realization
+Board.show()
+  -> Ticket.text
+     -> Session.read_file("checkout-flow.md")
+  <- checkout-flow with the text Pay for the basket.
+```
+
 *Then* checkout-flow's card shows Pay for the basket.
 
 #### Scenario: Edit a ticket's text
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow's card shows Pay for the basket.
 *When* the Person edits checkout-flow's text to Pay for the basket by card.
+
+```realization
+Ticket.edit_text("Pay for the basket by card.")
+  -> Session.keep_text("checkout-flow.md", "Pay for the basket by card.")
+  <- checkout-flow with the text Pay for the basket by card.
+```
+
 *Then* checkout-flow.md in checkout-flow's [session](../../../../../space/kanban/.context/kanban-model.md#session) folder holds Pay for the basket by card.
 *And* checkout-flow's card shows Pay for the basket by card.
 
 #### Scenario: Write the text file for a ticket that has none
 
-*Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits is In progress in Discovery
+*Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits is on the [board](../../../../../space/kanban/.context/kanban-model.md#board)
 *But* pet-visits' [session](../../../../../space/kanban/.context/kanban-model.md#session) folder holds no pet-visits.md
 *When* the Person edits pet-visits' text to Book a visit for a pet.
+
+```realization
+Ticket.edit_text("Book a visit for a pet.")
+  -> Session.keep_text("pet-visits.md", "Book a visit for a pet.")
+  <- pet-visits with the text Book a visit for a pet.
+```
+
 *Then* pet-visits.md in pet-visits' session folder holds Book a visit for a pet.
 *And* pet-visits' card shows Book a visit for a pet.
 
@@ -96,14 +119,15 @@ Intended, not built: a ticket's card does not show its text, no card edits text,
 
 *Given* the [backlog item](../../../../../space/kanban/.context/kanban-model.md#backlogitem--card) Gift cards has the text Sell gift cards.
 *When* the Person edits Gift cards' text to Sell gift cards at the till.
+
+```realization
+BacklogItem.edit_text("Sell gift cards at the till.")
+  <- Gift cards with the text Sell gift cards at the till.
+```
+
 *Then* .sessions/_backlog/gift-cards.md holds Sell gift cards at the till.
 *And* the Backlog shows Gift cards with the text Sell gift cards at the till.
 
-#### Scenario: Tell the agent which file holds the ticket's text
-
-*Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow's [session](../../../../../space/kanban/.context/kanban-model.md#session) folder holds checkout-flow.md
-*When* checkout-flow becomes the active ticket
-*Then* the agent's context for checkout-flow names .sessions/checkout-flow/checkout-flow.md as the ticket's text
 
 ## Story: Reorder Tickets In Column
 
@@ -114,10 +138,19 @@ Intended, not built: a ticket's card does not show its text, no card edits text,
 | `.sessions/session-board/ticket-enhancements.md` (commit b08bfe47e) | "Reorder tickets in a column" |
 | `space/kanban/board.py:328` | Observed: the Backlog lists its items by file name; no column keeps a place a person chose |
 
+The realizations name the operations these scenarios need; none of them exists yet, so each is Intended.
+
 #### Scenario: Keep a ticket where it was moved in its column
 
 *Given* the Discovery [column](../../../../../space/kanban/.context/kanban-model.md#column) shows the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits above sign-up
 *When* the Person moves sign-up above pet-visits in Discovery
+
+```realization
+Column.place("sign-up", above="pet-visits")
+  -> Board.keep_order("Discovery", ["sign-up", "pet-visits"])
+  <- Discovery with sign-up above pet-visits
+```
+
 *Then* Discovery shows sign-up above pet-visits
 *And* Discovery still shows sign-up above pet-visits when the [board](../../../../../space/kanban/.context/kanban-model.md#board) is read again
 
@@ -125,6 +158,13 @@ Intended, not built: a ticket's card does not show its text, no card edits text,
 
 *Given* the Backlog shows the [backlog item](../../../../../space/kanban/.context/kanban-model.md#backlogitem--card) Gift cards above Returns and refunds
 *When* the Person moves Returns and refunds above Gift cards
+
+```realization
+Column.place("returns-and-refunds", above="gift-cards")
+  -> Board.keep_order("Backlog", ["returns-and-refunds", "gift-cards"])
+  <- the Backlog with Returns and refunds above Gift cards
+```
+
 *Then* the Backlog shows Returns and refunds above Gift cards
 *And* the Backlog still shows Returns and refunds above Gift cards when the [board](../../../../../space/kanban/.context/kanban-model.md#board) is read again
 
@@ -153,12 +193,21 @@ Intended, not built: a ticket's card does not show its text, no card edits text,
 | `.sessions/session-board/ticket-enhancements.md` (commit b08bfe47e) | "Delete a ticket"; Delete on a card removes the ticket and its session folder |
 | `space/kanban/ticket.py:352` | Observed: Archive is the nearest operation; there is no delete |
 
+The realizations name the operations these scenarios need; none of them exists yet, so each is Intended.
+
 Evidence gap: the source does not say what becomes of a deleted ticket's branch and worktree; these scenarios leave them out.
 
 #### Scenario: Delete a ticket and its session folder
 
-*Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits is In progress in Discovery
+*Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits is on the [board](../../../../../space/kanban/.context/kanban-model.md#board)
 *When* the Person deletes pet-visits
+
+```realization
+Ticket.delete()
+  -> Sessions.remove("pet-visits")
+  <- the board without pet-visits
+```
+
 *Then* no [column](../../../../../space/kanban/.context/kanban-model.md#column) shows pet-visits
 *And* .sessions/pet-visits is gone
 
@@ -166,8 +215,14 @@ Evidence gap: the source does not say what becomes of a deleted ticket's branch 
 
 *Given* the [board](../../../../../space/kanban/.context/kanban-model.md#board) shows no [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) named no-such-ticket
 *When* the Person deletes no-such-ticket
+
+```realization
+Ticket.load("no-such-ticket")
+  <- TicketNotFoundError: no ticket named 'no-such-ticket' on the board
+```
+
 *Then* the board says no ticket named 'no-such-ticket' on the board
-*But* no session folder is removed
+*And* no session folder is removed
 
 ## Story: Tag Ticket Session
 
@@ -178,10 +233,19 @@ Evidence gap: the source does not say what becomes of a deleted ticket's branch 
 | `.sessions/_backlog/maintain-tickets-on-board.md` | "tagging sessions" |
 | `space/session/sessions.py:276` | Observed: `session.json` holds no tags |
 
+The realizations name the operations these scenarios need; none of them exists yet, so each is Intended.
+
 #### Scenario: Tag a ticket's session
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits has no tags
 *When* the Person tags pet-visits' [session](../../../../../space/kanban/.context/kanban-model.md#session) with billing
+
+```realization
+Ticket.tag("billing")
+  -> Session.add_tag("billing")
+  <- pet-visits tagged billing
+```
+
 *Then* pet-visits' card shows the tag billing
 *And* pet-visits' session.json holds the tag billing
 
@@ -189,4 +253,11 @@ Evidence gap: the source does not say what becomes of a deleted ticket's branch 
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits is tagged billing
 *When* the Person tags pet-visits' [session](../../../../../space/kanban/.context/kanban-model.md#session) with urgent
+
+```realization
+Ticket.tag("urgent")
+  -> Session.add_tag("urgent")
+  <- pet-visits tagged billing and urgent
+```
+
 *Then* pet-visits' card shows the tags billing and urgent
