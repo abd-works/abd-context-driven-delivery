@@ -28,7 +28,7 @@ What each increment delivers and why it matters, in build priority order. Drawn 
 
 ## 0. Built Today — 244 stories
 
-The starting line, not a slice to build: what the framework, the CDD Kanban, the Chat Bar and the apps do now, grouped as the 26 lessons of the [Learning plan](#learning-plan) below, each topic leaning only on the ones before it.
+The starting line, not a slice to build: what the framework, the CDD Kanban, the Chat Bar and the apps do now, grouped as the 24 lessons of the [Learning plan](#learning-plan) below, each topic leaning only on the ones before it.
 
 | Topic | Lessons |
 |---|---|
@@ -36,7 +36,6 @@ The starting line, not a slice to build: what the framework, the CDD Kanban, the
 | Sketch and iterate | Grill, sketch and iterate |
 | Sessions | Sessions, worktrees and branches · Handoffs and decision records · Server health |
 | Bring in real context | Index and segment a source · Capture documents into a searchable index · Sandbox a live app · Meeting notes |
-| Take the work to code | Move a ticket through Specification and Implementation · Hand a stubborn bug to a background agent |
 | CDD Applications | CDD Kanban · Kanban fidelity work · Story UI editor · Design canvas and story demo · Knowledge graph · Catalog and project approach |
 | Pattern overlays | Add your stack: LERN, MERN, CDD web domain access, Claude Code mods |
 | Extend CDD | Builders and annotations · Agent BDD and prompt log |
@@ -101,6 +100,27 @@ A team shapes the board's stages, column policies, todo list, work-type flows an
 
 The benefit is that the board fits the team's way of working rather than one fixed process.
 
+**Lessons taught when this increment ships** (taken out of the Built Today learning plan because this increment changes the stages a ticket moves through and adds the sub-agent toggle):
+
+**Move a ticket through Specification and Implementation**
+- *What you do:* move the ticket through Specification and Implementation.
+  - Generate `stories-scenarios`, `ddd-model`, `ux-mockup` and `clean-engineering-model`.
+  - Then generate `stories-acceptance-tests`, `bdd-development` and `clean-engineering-code`.
+  - Use the Specification and Implementation agents to run each stage.
+- *What you get:* scenarios become executable specs, then passing tests that drive real code. The same domain words run from the outcome all the way down to the code.
+- *Or from the chat bar:* when every fidelity of the stage has passed validate, the action button shows ➜. Press it to move the session to the next stage, then work the new stage's dots the same way.
+- *Under the hood:* the practices in `cdd_guidance/practices/`, with `cdd_guidance/agents/specification.md` and `implementation.md`.
+- *What happens underneath:*
+  1. ➜ calls `ticket.move_next`, which records the new stage in `session.json` and the log.
+  2. The chat bar shows the new stage's fidelities on its dots.
+  3. Generate builds each fidelity from the one before it, rendering into the new format first when the formats differ.
+  4. Acceptance tests come before the code they drive, and the graph links steps and observations to the operations they call.
+
+**Hand a stubborn bug to a background agent**
+- *What you do:* `/diagnose` (optionally with a practice) for a stubborn bug, or `sub-agent` for any recipe.
+- *What you get:* a disciplined hunt runs in the background (reproduce, minimise, form hypotheses, fix, add a regression test) while you keep working.
+- *Under the hood:* `cdd_guidance/actions/diagnose` and `tools/sub_agent`.
+
 ## 11. Author Story Maps — 14 stories
 
 The Story UI editor gets its remaining stories: a dashboard to pick maps, nested sub-epic lanes, a node inspector, show/hide scenarios and examples, save history and view-state recovery, real-time shared sessions, and an AI chat panel that proposes map changes for review before applying them.
@@ -145,7 +165,7 @@ Work set aside because it is complicated and not needed yet: nesting a child tic
 
 ## Learning plan
 
-How to teach what is built today (Increment 0): what the framework, the CDD Kanban, the Chat Bar and the apps do now. The 26 lessons below are drawn from the README, `catalog/workflow.md`, `.context/cdd-approach.md`, every module's `.context/module-context.md`, the installed skills, and the Built Today stories in the story map. Each lesson is one feature a person can be taught on its own, told from their point of view. They are grouped by topic, and each lesson leans only on the ones before it.
+How to teach what is built today (Increment 0): what the framework, the CDD Kanban, the Chat Bar and the apps do now. The 24 lessons below are drawn from the README, `catalog/workflow.md`, `.context/cdd-approach.md`, every module's `.context/module-context.md`, the installed skills, and the Built Today stories in the story map. Each lesson is one feature a person can be taught on its own, told from their point of view. They are grouped by topic, and each lesson leans only on the ones before it.
 
 Each lesson has the same parts: **What you do**, **What you get** (the benefit), **Try it** (a command or place to start), **Or from the chat bar** (where the chat bar can do it), **Under the hood** (where it lives in the code) and, for the ones the chat bar or board drive, **What happens underneath** (the steps the system takes). The CDD Kanban does everything the chat bar does for every ticket at once, so it is taught later, in its own topic.
 
@@ -351,30 +371,9 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
 - *What you get:* decisions and facts from meetings become citable context files, one file per note. Nothing is moved until you confirm.
 - *Under the hood:* `tools/granola`.
 
-### Take the work to code: from story map to tests to code
-
-**Lesson 16. Move a ticket through Specification and Implementation**
-- *What you do:* move the ticket through Specification and Implementation.
-  - Generate `stories-scenarios`, `ddd-model`, `ux-mockup` and `clean-engineering-model`.
-  - Then generate `stories-acceptance-tests`, `bdd-development` and `clean-engineering-code`.
-  - Use the Specification and Implementation agents to run each stage.
-- *What you get:* scenarios become executable specs, then passing tests that drive real code. The same domain words run from the outcome all the way down to the code.
-- *Or from the chat bar:* when every fidelity of the stage has passed validate, the action button shows ➜. Press it to move the session to the next stage, then work the new stage's dots the same way.
-- *Under the hood:* the practices in `cdd_guidance/practices/`, with `cdd_guidance/agents/specification.md` and `implementation.md`.
-- *What happens underneath:*
-  1. ➜ calls `ticket.move_next`, which records the new stage in `session.json` and the log.
-  2. The chat bar shows the new stage's fidelities on its dots.
-  3. Generate builds each fidelity from the one before it, rendering into the new format first when the formats differ.
-  4. Acceptance tests come before the code they drive, and the graph links steps and observations to the operations they call.
-
-**Lesson 17. Hand a stubborn bug to a background agent**
-- *What you do:* `/diagnose` (optionally with a practice) for a stubborn bug, or `sub-agent` for any recipe.
-- *What you get:* a disciplined hunt runs in the background (reproduce, minimise, form hypotheses, fix, add a regression test) while you keep working.
-- *Under the hood:* `cdd_guidance/actions/diagnose` and `tools/sub_agent`.
-
 ### CDD Applications: the CDD Kanban, Story UI, design canvas, knowledge graph and catalog
 
-**Lesson 18. See and move work on the CDD Kanban**
+**Lesson 16. See and move work on the CDD Kanban**
 - *What you do:* open the board and find every session as a ticket in Backlog, Discovery, Specification, Implementation or Complete.
   - Add a backlog item and start it as a ticket.
   - Move tickets forward or back.
@@ -389,7 +388,7 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
   5. A move calls `ticket.move_next`, `move_previous` or `move_to`, which writes `stage` and `stage_mark` into `session.json` and adds a line to the log.
   6. WIP limits and the order of cards are kept in `.sessions/_board.json`.
 
-**Lesson 19. Work a ticket's fidelities from the board**
+**Lesson 17. Work a ticket's fidelities from the board**
 - *What you do:* choose the ticket's practices and read each fidelity tile's progress dots.
   - Send the next action, or one action to every practice in the stage, with format chips.
   - Open the violations band and its report, and fix the violations.
@@ -402,7 +401,7 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
   3. The board follows the command until the chat has shown it and finished.
   4. The violations band reads `ticket.violations`, and the files list reads `fidelity-progress.files` and `file-manager.*`.
 
-**Lesson 20. Author story maps in the Story UI editor**
+**Lesson 18. Author story maps in the Story UI editor**
 - *What you do:* open a map by its address and switch between map view and increment view.
   - Add, rename, drag and reorder epics, sub-epics and stories.
   - Plan increments by dragging stories into them.
@@ -410,7 +409,7 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
 - *What you get:* product people shape scope visually. Each edit is saved as you go, edits that break map rules are refused, and the result is the same story files the agents read.
 - *Under the hood:* the Story UI app and the story model in `cdd_guidance/practices/stories/model`.
 
-**Lesson 21. Prototype on the design canvas and play stories through it**
+**Lesson 19. Prototype on the design canvas and play stories through it**
 - *What you do:*
   - Lay out pages and artboards and write the canvas into a project folder.
   - Load a scenario's fixture data into a screen and follow screen links to the next story.
@@ -419,7 +418,7 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
 - *What you get:* stakeholders click through screens driven by real scenarios, and every published version is kept with its link. Regenerating the canvas never overwrites what people edited.
 - *Under the hood:* `harness/design_canvas` (*DesignCanvas*, *FixtureScreen*) and `cdd_guidance/practices/ux/story-demo`.
 
-**Lesson 22. See everything in the knowledge graph**
+**Lesson 20. See everything in the knowledge graph**
 - *What you do:*
   - Load the working copy into one graph of every practice's nodes and the links between them.
   - Apply pattern overlays.
@@ -428,21 +427,21 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
 - *What you get:* you can click through from outcome to story to class to code, and cross-practice problems show on the exact node and line. Graph rules also report inside `/validate`, and the graph is refreshed after each action that writes files.
 - *Under the hood:* `harness/graph` (`graph.load_working_copy`, `return_nodes`, `explorer_trees`, `save_json`), with each practice's `PracticeReading`.
 
-**Lesson 23. Publish the catalog and your project's approach**
+**Lesson 21. Publish the catalog and your project's approach**
 - *What you do:* run `catalog.generate_catalog`, `catalog.generate_project_approach` and `catalog.apply_brand`.
 - *What you get:* a self-contained, brandable website of every practice, fidelity, rule and action, plus a one-page approach built from your own project's example artifacts, to share with a team or a client.
 - *Under the hood:* `harness/catalog_generator`.
 
 ### Pattern overlays: add your stack on top of the practices
 
-**Lesson 24. Add your stack: pattern overlays**
+**Lesson 22. Add your stack: pattern overlays**
 - *What you do:* apply a pattern such as LERN or MERN domain-driven, CDD web domain access, or a Claude Code mod on top of the practices.
 - *What you get:* stack-specific guidance and graph rules (acceptance tests first, then the code they drive) without changing a practice.
 - *Under the hood:* `cdd_guidance/patterns` (*DomainDrivenStack*, *LernDomainDriven*, *MernDomainDriven*, *CddWebDomainAccess*, *CddClaudeMod*).
 
 ### Extend CDD: build and test your own tools
 
-**Lesson 25. Build your own toolsets and practices**
+**Lesson 23. Build your own toolsets and practices**
 - *What you do:*
   - Use the builders `builders-create-agent-toolset` and `builders-create-practice-guidance`.
   - Annotate a plain class with `@agent_toolset`, `@agent_tool`, `@agent_instructions`, `@skill`, `@mcp`, `@hook` or `@Toast`.
@@ -450,7 +449,7 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
 - *What you get:* a team turns its own practices, tools and quality bar into commands, skills, MCP tools and hooks that work with every existing action on the first try.
 - *Under the hood:* `cdd_guidance/builders`, `harness/annotations`, `harness/agent_tools`, and `harness/guidance` (*PracticeGuidance*, *PracticeCatalogue*).
 
-**Lesson 26. Test agents and audit what they see**
+**Lesson 24. Test agents and audit what they see**
 - *What you do:*
   - Write agent BDD specs that drive a real agent and judge its output with an AI rubric.
   - Turn on the prompt log to record every prompt, file read and tool call.
