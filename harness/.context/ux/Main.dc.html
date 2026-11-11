@@ -2363,7 +2363,7 @@ class Component extends DCLogic {
     const stage = `${child.column}${child.column === 'Complete' ? '' : child.done ? ' · done' : ' · in progress'}`;
     return {
       title: child.title,
-      place: child.pulledOut ? `pulled out · ${stage}` : stage,
+      place: child.pulledOut ? `pulled out · ${stage}` : '',
       rowClass: child.pulledOut ? 'pulled' : '',
       isStacked: !child.pulledOut,
       select: () => this.setState({ selected: child.id }),
