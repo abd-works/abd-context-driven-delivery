@@ -301,3 +301,26 @@ section: body
 *Given* the [board](../../../../../space/kanban/.context/kanban-model.md#board) shows its five [columns](../../../../../space/kanban/.context/kanban-model.md#column) at their own width
 *When* the Person opens checkout-flow's files list
 *Then* the columns keep their width and scroll sideways beside the files panel
+
+## Story: Expand Ticket From Empty Area
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| `.sessions/_backlog/maintain-tickets-on-board.md` | "click any empty area to expand ticket" |
+| `space/kanban/app/src/kanban/ticket/ticket-card-view.tsx:57`, `:198` | Observed: a press on a card chooses it and shows its details; only the expand mark opens its actions |
+
+#### Scenario: Expand a card from an empty area
+
+*Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow's card is collapsed on the [board](../../../../../space/kanban/.context/kanban-model.md#board)
+*When* the Person presses an empty area of checkout-flow's card
+*Then* checkout-flow's card is expanded to show its actions
+*And* the details show checkout-flow
+
+#### Scenario: Leave a card's controls to do their own work
+
+*Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow's card is collapsed on the [board](../../../../../space/kanban/.context/kanban-model.md#board)
+*When* the Person opens the stories tile on checkout-flow's card
+*Then* the stories tile is open
+*And* checkout-flow's card stays collapsed

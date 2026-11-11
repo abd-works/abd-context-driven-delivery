@@ -291,7 +291,8 @@ section: body
 - *Display Child Tickets In Parent*
 - *Expand Parent Ticket*
 - *Detach Child Ticket*
-- *Move Child Ticket To Another Parent*
+- *Reassign Ticket Parent*
+- *Place Parent At Leftmost Child Stage*
 - *Nest Child Branch And Session*
 
 ### Increment 2: Integrate Practice Content Editor Apps
