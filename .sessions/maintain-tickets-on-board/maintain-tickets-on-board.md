@@ -77,7 +77,3 @@ From `mod-ideas.md`, "Kanban and session tracking" (build order 4, "Finish the K
 #### Story: Place Parent At Leftmost Child Stage
 
 *Board App*. Intended (`harness/.context/ux/ticket-ui.drawio` "parents cant be dragged; they change stage by taking on the stage of the leftmost ticket"): a parent sits in the stage of its child furthest back on the board and moves only as its children move; a person cannot drag a parent.
-
-#### Story: Nest Child Branch And Session
-
-*Claude Code*. Intended (`.sessions/session-board/ticket-enhancements.md`): a child ticket's branch and session nest under its parent's, so the hierarchy holds in git and in `.sessions/` as on the board.

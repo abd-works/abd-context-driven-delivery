@@ -31,7 +31,7 @@ TICKET = {
     'See Work On Session Board': ['Expand Ticket From Empty Area'],
     'Maintain Tickets': ['Edit Ticket Text', 'Reorder Tickets In Column', 'Delete Ticket', 'Tag Ticket Session'],
     'Organize Ticket Hierarchy': ['Add Child Ticket', 'Display Child Tickets In Parent', 'Expand Parent Ticket', 'Detach Child Ticket',
-                                  'Reassign Ticket Parent', 'Place Parent At Leftmost Child Stage', 'Nest Child Branch And Session'],
+                                  'Reassign Ticket Parent', 'Place Parent At Leftmost Child Stage'],
 }
 KIND = {'Given': StepType.GIVEN, 'When': StepType.WHEN, 'Then': StepType.THEN}
 
