@@ -163,7 +163,7 @@ The benefit is less "what now?" between steps, and knowledge that would otherwis
 
 Work set aside because it is complicated and not needed yet: nesting a child ticket's own branch and session under its parent. Picked up only when asked.
 
----
+
 
 ## Learning plan
 
