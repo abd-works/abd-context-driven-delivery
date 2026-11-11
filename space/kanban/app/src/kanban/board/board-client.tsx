@@ -36,7 +36,7 @@ export class BoardClient extends BoardClientGenerated {
 
   // Set once for the repository: Python keeps it in the board's file, and the board is read again to show it.
   async toggleFixesSentDirectly(): Promise<void> {
-    await this.setSendsFixesDirectly(!this.sends_fixes_directly)
+    await this.setSendsFixesDirectly(!this.sendsFixesDirectly)
     await this.page.reader.refresh()
   }
 
