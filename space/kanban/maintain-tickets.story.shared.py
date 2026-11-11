@@ -195,11 +195,12 @@ def _(s):
         #   <- sign-up
         # sign-up.move_before(pet-visits)
         #   <- Discovery with sign-up above pet-visits
-        world.discovery = world.data_of(world.Ticket.load(SIGN_UP.name).move_before(world.Ticket.load(PET_VISITS.name)))
+        world.Ticket.load(SIGN_UP.name).move_before(world.Ticket.load(PET_VISITS.name))
 
     @s.then('Discovery shows sign-up above pet-visits')
     def _(world):
-        expect(shown_in_order(world.discovery, SIGN_UP.name, PET_VISITS.name)).to(equal([SIGN_UP.name, PET_VISITS.name]))
+        discovery = column_in(board_of(world), "Discovery")
+        expect(shown_in_order(discovery, SIGN_UP.name, PET_VISITS.name)).to(equal([SIGN_UP.name, PET_VISITS.name]))
 
     @s.and_('Discovery still shows sign-up above pet-visits when the board is read again')
     def _(world):
@@ -220,11 +221,12 @@ def _(s):
         #   <- Returns and refunds
         # Returns and refunds.move_before(Gift cards)
         #   <- the Backlog with Returns and refunds above Gift cards
-        world.backlog = world.data_of(world.BacklogItem.load(RETURNS_AND_REFUNDS.heading).move_before(world.BacklogItem.load(GIFT_CARDS_IN_BACKLOG.heading)))
+        world.BacklogItem.load(RETURNS_AND_REFUNDS.heading).move_before(world.BacklogItem.load(GIFT_CARDS_IN_BACKLOG.heading))
 
     @s.then('the Backlog shows Returns and refunds above Gift cards')
     def _(world):
-        expect([item["title"] for item in world.backlog["items"]]).to(equal([RETURNS_AND_REFUNDS.heading, GIFT_CARDS_IN_BACKLOG.heading]))
+        backlog = column_in(board_of(world), "Backlog")
+        expect([item["title"] for item in backlog["items"]]).to(equal([RETURNS_AND_REFUNDS.heading, GIFT_CARDS_IN_BACKLOG.heading]))
 
     @s.and_('the Backlog still shows Returns and refunds above Gift cards when the board is read again')
     def _(world):
@@ -244,11 +246,11 @@ def _(s):
         # pet-visits.delete()
         #   -> self.session.remove()
         #   <- the board without pet-visits
-        world.board = world.data_of(world.Ticket.load(PET_VISITS.name).delete())
+        world.Ticket.load(PET_VISITS.name).delete()
 
     @s.then('no column shows pet-visits')
     def _(world):
-        expect(ticket_in(world.board, PET_VISITS.name)).to(be_none)
+        expect(ticket_in(board_of(world), PET_VISITS.name)).to(be_none)
 
     @s.and_('.sessions/pet-visits is gone')
     def _(world):

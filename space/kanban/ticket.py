@@ -461,7 +461,7 @@ class Ticket(Card):
     @mcp
     @agent_tool
     @noSessionLog
-    def delete(self) -> Board:
+    def delete(self) -> None:
         """Delete ticket: its session ends and its folder, log, and files are removed, that removal committed on main and pushed, and it leaves the board. Main never deletes."""
         if self.is_main:
             raise MainStaysOpenError("be deleted")
@@ -469,7 +469,6 @@ class Ticket(Card):
         self._session.remove()
         self._board.reread()
         self._board.save_sessions_on_main(f"sessions: delete {self.name}")
-        return self._board
 
     @mcp
     @agent_tool
@@ -507,11 +506,10 @@ class Ticket(Card):
     @mcp
     @agent_tool
     @noSessionLog
-    def place_before(self, before: str) -> Column:
+    def place_before(self, before: str) -> Ticket:
         """Move ticket just above the ticket named before in their column, as dragging it there does; the column keeps that order, in .sessions/_board.json. Committed on main and pushed."""
-        placed = self.move_before(self._board.ticket_called(before))
-        self._board.save_sessions_on_main(f"sessions: place {self.name} before {before}")
-        return placed
+        self.move_before(self._board.ticket_called(before))
+        return self._saved(f"place {self.name} before {before}")
 
     @property
     def _furthest_back_child_stage(self) -> Stage | None:

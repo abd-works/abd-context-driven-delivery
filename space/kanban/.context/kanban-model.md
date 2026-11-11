@@ -407,7 +407,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 + tag(word: str): Ticket
 	// `ticket.tag`: adds word to its session's tags; committed on main and pushed
 	-> Session.add_tag
-+ delete(): Board
++ delete()
 	// `ticket.delete`: its session closes and its folder is removed, that removal committed on main and pushed; main raises `MainStaysOpenError`
 	-> Session.close
 	-> Session.remove
@@ -425,7 +425,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 + choose_parent(parent: str): Ticket
 	// `ticket.choose_parent`: `reassign_parent` with the ticket named parent, or none when it is empty
 	-> Board.ticket_called
-+ place_before(before: str): Column
++ place_before(before: str): Ticket
 	// `ticket.place_before`: `move_before` the ticket named before; committed on main and pushed
 	-> Board.ticket_called
 	-> Card.move_before
@@ -688,7 +688,7 @@ Marked `@identity("title")`.
 + edit_text(text: str): BacklogItem
 	// `backlog-item.edit_text`: rewrites the text under its file's heading, which keeps its title; committed on main and pushed
 	-> IdeaFile.rewrite_text
-+ place_before(before: str): Column
++ place_before(before: str): BacklogItem
 	// `backlog-item.place_before`: `move_before` the item titled before; committed on main and pushed
 	-> Board.backlog_item_called
 	-> Card.move_before

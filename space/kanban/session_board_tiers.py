@@ -202,9 +202,9 @@ class TicketHandle:
             raise TicketNotFoundError(self.name)
         return found
 
-    def move_before(self, other: TicketHandle) -> Any:
+    def move_before(self, other: TicketHandle) -> TicketHandle:
         """``Ticket.move_before(other)``: the tool takes the other ticket by its name."""
-        return self._cdd.call("ticket.place_before", ticket=self.name, before=other.name)
+        return _handle_of(self._cdd, self._cdd.call("ticket.place_before", ticket=self.name, before=other.name))
 
     def reassign_parent(self, parent: TicketHandle | None) -> TicketHandle:
         """``Ticket.reassign_parent(parent)``: the tool takes the parent by its name, and none as no name."""
@@ -335,9 +335,9 @@ class BacklogItemHandle:
     def edit_text(self, text: str) -> BacklogItemHandle:
         return _handle_of(self._cdd, self._cdd.call("backlog-item.edit_text", backlog_item=self.title, text=text))
 
-    def move_before(self, other: BacklogItemHandle) -> Any:
+    def move_before(self, other: BacklogItemHandle) -> BacklogItemHandle:
         """``BacklogItem.move_before(other)``: the tool takes the other item by its title."""
-        return self._cdd.call("backlog-item.place_before", backlog_item=self.title, before=other.title)
+        return _handle_of(self._cdd, self._cdd.call("backlog-item.place_before", backlog_item=self.title, before=other.title))
 
     def data(self) -> dict:
         backlog = next(column for column in self._cdd.call("board.show")["columns"] if column["name"] == "Backlog")
