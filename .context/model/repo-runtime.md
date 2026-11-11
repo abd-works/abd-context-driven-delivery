@@ -86,7 +86,7 @@ Read `annotation_kinds` as the one private registry of annotation kinds in harne
 - `GuidanceAction.listed` `-> AgentToolSet.instantiate_all(items)` builds each PracticeGuidance, then has the session's practice adopt it · harness/guidance_actions/guidance_actions.py:244
 -   `<- list[PracticeGuidance]` · harness/guidance_actions/guidance_actions.py:248
 - `Validate._fidelities` `-> PracticeGuidance.fidelities.current` the FidelityGuidance each guidance is at · cdd_guidance/actions/validate/validate.py:100
-- `Validate.validate` `-> CheckedGraph(session, checked, graph_practices)` builds the graph from the checked files · cdd_guidance/actions/validate/validate.py:57
+- `Validate.validate` `-> CheckedGraph(session, fidelities, NamedToCheck(paths, graph, call))` builds the graph from the checked files · cdd_guidance/actions/validate/validate.py:55
 - `Validate.validate` `-> GuidanceAction.run(on, action="validate")` runs once per listed guidance and logs the action · cdd_guidance/actions/validate/validate.py:80
 - `Validate.listed_rules -> _rules_text` `-> PracticeGuidance.checked_rule_collections` the shared rules, then the current fidelity's · cdd_guidance/actions/validate/validate.py:218
 - `PracticeGuidance.checked_rule_collections` `-> FidelityGuidance.rules` <- list[RulesCollection] · harness/guidance/guidance.py:118

@@ -1,5 +1,6 @@
 import { useBoard } from '../shared/board-context'
 import type { ReportPanel } from '../shared/board-store'
+import { fixTitleOn } from './report-client'
 import { RuleView } from './report-rule-view'
 
 export function ReportPanelHeadView({ panel }: { panel: ReportPanel }) {
@@ -68,7 +69,7 @@ export function ReportPanelBodyView({ panel }: { panel: ReportPanel }) {
     <div className="panel-body report-body" key={state.board?.project}>
       <ReportStandingView panel={panel} isOff={isOff} />
       {panel.report.rules.length ? (
-        <button className="ghost-button" disabled={isOff} title={isOff ? 'Connect a chat to send fixes' : panel.ticket.fixTitle} onClick={() => void panel.ticket.fixReport(panel.report)}>
+        <button className="ghost-button" disabled={isOff} title={isOff ? 'Connect a chat to send fixes' : fixTitleOn(page.board)} onClick={() => void panel.report.fixReport()}>
           Fix all violations
         </button>
       ) : null}

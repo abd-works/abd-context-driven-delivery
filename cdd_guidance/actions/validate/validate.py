@@ -11,7 +11,7 @@ from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
 from harness.guidance.rule import Rule
 
-from cdd_guidance.actions.validate.checked_graph import CheckedGraph
+from cdd_guidance.actions.validate.checked_graph import CheckedGraph, NamedToCheck
 from cdd_guidance.actions.validate.report_files import ReportFiles
 
 _VALIDATE_MARKDOWN = Path(__file__).with_name("validate.md").read_text(encoding="utf-8")
@@ -52,7 +52,7 @@ class Validate(GuidanceAction):
         self._work_on(guidance)
         sections: list[str] = [_VALIDATE_MARKDOWN]
         fidelities = self._fidelities()
-        self._graph = CheckedGraph(self.session, fidelities, paths, graph, self.call)
+        self._graph = CheckedGraph(self.session, fidelities, NamedToCheck(paths, graph, self.call))
         self._reports = ReportFiles(self.session, fidelities)
         graph_paths = self._graph.check_beside(self._reports)
         if fidelities:

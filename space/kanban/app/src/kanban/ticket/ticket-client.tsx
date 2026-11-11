@@ -1,7 +1,7 @@
 import type { RequiredFidelity } from '../board/column-client'
 import type { BacklogItemData } from '@cdd/space/kanban/backlog-item'
 import type { FidelityProgressClientGenerated, FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
-import { TicketClientGenerated, type ActionStatesData, type ReportRuleData, type TicketData, type ViolationData } from '@cdd/space/kanban/ticket'
+import { TicketClientGenerated, type ActionStatesData, type TicketData } from '@cdd/space/kanban/ticket'
 import { PracticeSessionOutputClientGenerated } from '@cdd/space/session/practice-session-output'
 import { SessionClientGenerated } from '@cdd/space/session/session'
 
@@ -9,7 +9,7 @@ import type { BoardPage } from '../board/board-page'
 import type { ColumnClient } from '../board/column-client'
 import { TicketChat } from '../chat/chat-client'
 import { FidelityProgressClient } from './fidelity-progress-client'
-import { fixReportPrompt, fixRulePrompt, fixViolationPrompt, ReportClient } from './report-client'
+import { ReportClient } from './report-client'
 
 const CLOSE_SESSION_COMMAND = '/space:session:close-session'
 
@@ -130,7 +130,7 @@ export class TicketClient extends TicketClientGenerated {
   // One fidelity's latest report, or with none the violations of every fidelity of the ticket's stage.
   async reportOf(progress: FidelityProgressClient | null): Promise<ReportClient | null> {
     const report = await (progress ? progress.report() : this.violations())
-    return report ? new ReportClient(report) : null
+    return report ? new ReportClient(report, this, this.page) : null
   }
 
   get nextStepName(): string {
@@ -258,9 +258,9 @@ export class TicketClient extends TicketClientGenerated {
     return true
   }
 
-  // A prompt runs in whichever chat it is sent to, whose open session can be another ticket's, so a fix prompt names
-  // this ticket's session.json, as Python's action commands do.
-  private inSession(prompt: string): string {
+  // A prompt runs in whichever chat it is sent to, whose open session can be another ticket's, so a prompt for this
+  // ticket, such as a report's fix, names this ticket's session.json, as Python's action commands do.
+  inSession(prompt: string): string {
     return `${prompt} session=${this.session.session_file}`
   }
 
@@ -296,29 +296,6 @@ export class TicketClient extends TicketClientGenerated {
 
   fillHandoff(): Promise<void> {
     return this.chat.fill(this.inSession(`Write a handoff for ticket ${this.name} with /space-session-handoff-session`))
-  }
-
-  // A report's fixes are for the ticket whose report it is, so they name its session and go to its chat: into its prompt
-  // for the person to edit before sending, unless the repository's board sends fixes directly.
-  fixViolation(rule: ReportRuleData, violation: ViolationData): Promise<void> {
-    return this.deliverFix(fixViolationPrompt(rule, violation))
-  }
-
-  fixRule(report: ReportClient, rule: ReportRuleData): Promise<void> {
-    return this.deliverFix(fixRulePrompt(report, rule))
-  }
-
-  fixReport(report: ReportClient): Promise<void> {
-    return this.deliverFix(fixReportPrompt(report))
-  }
-
-  get fixTitle(): string {
-    return this.page.board.sendsFixesDirectly ? 'Send this fix to the chat' : "Put this fix in the chat's prompt to edit and send"
-  }
-
-  private deliverFix(prompt: string): Promise<void> {
-    const text = this.inSession(prompt)
-    return this.page.board.sendsFixesDirectly ? this.chat.command(text) : this.chat.fill(text)
   }
 
   // A report whose saved graph is out of date has lost its graph's rules, so its fidelity is validated again to find them.

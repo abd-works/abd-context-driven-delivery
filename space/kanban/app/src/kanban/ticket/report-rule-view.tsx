@@ -4,8 +4,7 @@ import { countOf } from '../shared/board-brand'
 import { useBoard } from '../shared/board-context'
 import type { ReportPanel } from '../shared/board-store'
 import { ChevronIcon } from '../shared/icons'
-import { locationOf, type ReportClient } from './report-client'
-import type { TicketClient } from './ticket-client'
+import { fixTitleOn, locationOf, type ReportClient } from './report-client'
 
 function SourceLineView({ violation, entry }: { violation: ViolationData; entry: SourceLineData }) {
   return (
@@ -53,7 +52,7 @@ function ViolationView({ panel, rule, violation, isOff }: { panel: ReportPanel; 
           {hasSource ? null : <ViolationLocationView panel={panel} rule={rule} violation={violation} />}
           <div className="violation-message">{violation.message}</div>
         </div>
-        <button className="fix-button" aria-label={`Fix ${locationOf(violation)}`} disabled={isOff} title={isOff ? 'Connect a chat to send fixes' : panel.ticket.fixTitle} onClick={() => void panel.ticket.fixViolation(rule, violation)}>
+        <button className="fix-button" aria-label={`Fix ${locationOf(violation)}`} disabled={isOff} title={isOff ? 'Connect a chat to send fixes' : fixTitleOn(page.board)} onClick={() => void panel.report.fixViolation(rule, violation)}>
           Fix
         </button>
       </div>
@@ -62,7 +61,7 @@ function ViolationView({ panel, rule, violation, isOff }: { panel: ReportPanel; 
   )
 }
 
-function RuleHeadView({ ticket, report, rule, place, isOpen, isOff }: { ticket: TicketClient; report: ReportClient; rule: ReportRuleData; place: string; isOpen: boolean; isOff: boolean }) {
+function RuleHeadView({ report, rule, place, isOpen, isOff }: { report: ReportClient; rule: ReportRuleData; place: string; isOpen: boolean; isOff: boolean }) {
   const { page } = useBoard()
   return (
     <div className="rule-head">
@@ -76,7 +75,7 @@ function RuleHeadView({ ticket, report, rule, place, isOpen, isOff }: { ticket: 
         </h2>
         <p>{rule.rule.body}</p>
       </div>
-      <button className="ghost-button" disabled={isOff} onClick={() => void ticket.fixRule(report, rule)}>
+      <button className="ghost-button" disabled={isOff} onClick={() => void report.fixRule(rule)}>
         Fix all
       </button>
     </div>
@@ -88,7 +87,7 @@ export function RuleView({ panel, rule, isOff }: { panel: ReportPanel; rule: Rep
   const isOpen = !panel.closedRules.includes(place)
   return (
     <section className="report-rule">
-      <RuleHeadView ticket={panel.ticket} report={panel.report} rule={rule} place={place} isOpen={isOpen} isOff={isOff} />
+      <RuleHeadView report={panel.report} rule={rule} place={place} isOpen={isOpen} isOff={isOff} />
       {isOpen ? rule.violations.map((violation, index) => <ViolationView key={`${violation.location}-${violation.line}-${index}`} panel={panel} rule={rule} violation={violation} isOff={isOff} />) : null}
     </section>
   )

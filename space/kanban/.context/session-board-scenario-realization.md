@@ -1074,34 +1074,34 @@ it should show every fidelity's violations with no fidelity named
 
 ```
 it should send one message to the chat
--> TicketClient.fixViolation(rule, violation)
+-> ReportClient.fixViolation(rule, violation)
 ```
 
 ```
 it should name the rule and what it requires
--> TicketClient.fixViolation(rule, violation)
+-> ReportClient.fixViolation(rule, violation)
 ```
 
 ```
 it should give the error at its file and line
--> TicketClient.fixViolation(rule, violation)
+-> ReportClient.fixViolation(rule, violation)
 ```
 
 ```
 it should quote the content that failed
--> TicketClient.fixViolation(rule, violation)
+-> ReportClient.fixViolation(rule, violation)
 ```
 
 ```
 it should name the ticket's session
--> TicketClient.fixViolation(rule, violation)
+-> ReportClient.fixViolation(rule, violation)
 ```
 
 #### with Fix all pressed on a rule
 
 ```
 it should send every violation of the rule in one message
--> TicketClient.fixRule(report, rule)
+-> ReportClient.fixRule(rule)
 ```
 
 #### with Fix all pressed on the whole report
@@ -1110,7 +1110,7 @@ it should send every violation of the rule in one message
 it should send one message to the chat
 -> SidePanelClient.openReport(TICKET, '')
 -> SidePanelClient.reportPanel(page)
--> TicketClient.fixReport(report)
+-> ReportClient.fixReport()
   -> report-client.fixReportPrompt()
 ```
 
@@ -1118,7 +1118,7 @@ it should send one message to the chat
 it should name every rule the report breaks
 -> SidePanelClient.openReport(TICKET, '')
 -> SidePanelClient.reportPanel(page)
--> TicketClient.fixReport(report)
+-> ReportClient.fixReport()
   -> report-client.fixReportPrompt()
 ```
 
@@ -1126,7 +1126,7 @@ it should name every rule the report breaks
 it should give every violation of every rule
 -> SidePanelClient.openReport(TICKET, '')
 -> SidePanelClient.reportPanel(page)
--> TicketClient.fixReport(report)
+-> ReportClient.fixReport()
   -> report-client.fixReportPrompt()
 ```
 

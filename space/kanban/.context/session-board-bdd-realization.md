@@ -417,32 +417,32 @@ Open Validation Report
 Fix Report Violations
   with Fix pressed on one violation
     ```
-    -> TicketClient.fixViolation(rule: ReportRuleData, violation: ViolationData)
+    -> ReportClient.fixViolation(rule: ReportRuleData, violation: ViolationData)
     it should send one message to the chat
     ```
     ```
-    -> TicketClient.fixViolation(rule: ReportRuleData, violation: ViolationData)
+    -> ReportClient.fixViolation(rule: ReportRuleData, violation: ViolationData)
     -> ReportClient.text
     it should name the rule and what it requires
     ```
     ```
-    -> TicketClient.fixViolation(rule: ReportRuleData, violation: ViolationData)
+    -> ReportClient.fixViolation(rule: ReportRuleData, violation: ViolationData)
     -> ReportClient.text
     it should give the error at its file and line
     ```
     ```
-    -> TicketClient.fixViolation(rule: ReportRuleData, violation: ViolationData)
+    -> ReportClient.fixViolation(rule: ReportRuleData, violation: ViolationData)
     -> ReportClient.text
     it should quote the content that failed
     ```
     ```
-    -> TicketClient.fixViolation(rule: ReportRuleData, violation: ViolationData)
+    -> ReportClient.fixViolation(rule: ReportRuleData, violation: ViolationData)
     -> ReportClient.text
     it should name the ticket's session
     ```
   with Fix all pressed on a rule
     ```
-    -> TicketClient.fixRule(report: ReportClient, rule: ReportRuleData)
+    -> ReportClient.fixRule(rule: ReportRuleData)
     -> ReportClient.text
     it should send every violation of the rule in one message
     ```
@@ -451,14 +451,14 @@ Fix Report Violations
     -> SidePanelClient.openReport(ticket: string, fidelity: string)
     -> SidePanelClient.reportPanel
     -> _module.reportPanel
-    -> TicketClient.fixReport(report: ReportClient)
+    -> ReportClient.fixReport()
     it should send one message to the chat
     ```
     ```
     -> SidePanelClient.openReport(ticket: string, fidelity: string)
     -> SidePanelClient.reportPanel
     -> _module.reportPanel
-    -> TicketClient.fixReport(report: ReportClient)
+    -> ReportClient.fixReport()
     -> ReportClient.text
     it should name every rule the report breaks
     ```
@@ -466,7 +466,7 @@ Fix Report Violations
     -> SidePanelClient.openReport(ticket: string, fidelity: string)
     -> SidePanelClient.reportPanel
     -> _module.reportPanel
-    -> TicketClient.fixReport(report: ReportClient)
+    -> ReportClient.fixReport()
     -> ReportClient.text
     it should give every violation of every rule
     ```
