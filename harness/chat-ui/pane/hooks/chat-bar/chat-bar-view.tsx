@@ -1,9 +1,9 @@
-import type { EngineInterface } from 'claude-code'
+import type { EngineInterface, RenderChildren } from 'claude-code'
 
 import type { ActionPickerJson, ChatBarViewJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { GlyphButtonView } from '../shared/glyph-button-view'
-import { ActionButtonView, PickerView, shownActionOf } from './action-button-view'
+import { ActionButtonView, PickerView } from './action-button-view'
 import { toggleFormat, type FormatChips } from './format-choices-client'
 import { askChatToFix, dismissFailure, fixFailure, runHandoff, type ChatBarClient } from './chat-bar-client'
 import { openFilesOf, openReport } from './fidelity-files-client'
@@ -178,13 +178,6 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
   )
 }
 
-// The status row under the line, dim and from the left: the repository, the session, the folder it works in, and the
-// action the button runs with its fidelities. The chat bar draws it rather than the host's status line, which sits apart.
-function StatusRowView({ Text }: ElementTable, { chatBar, picker }: ChatBarDraw) {
-  const status = chatBar.statusLine(shownActionOf(chatBar, picker.chosenAction))
-  return status ? <Text key="status-row" color={BRAND.muted}>{status}</Text> : null
-}
-
 // The board did not answer, in red above the line, with Fix to send it to the chat; the next read that works clears it.
 function ProblemView($: EngineInterface, { Box, Button, Text }: ElementTable, shown: string) {
   return (
@@ -208,6 +201,16 @@ function FailureView($: EngineInterface, elements: ElementTable, { chatBar }: Ch
   )
 }
 
+// The status row under the prompt, below the engine's own hint line, dim and from the left.
+export function StatusRowView({ Box, Text }: ElementTable, hint: RenderChildren, status: string) {
+  return (
+    <Box key="status-row" flexDirection="column">
+      {hint}
+      <Text color={BRAND.muted}>{status}</Text>
+    </Box>
+  )
+}
+
 // The chat bar above the prompt: the boxes a person opened sit above one line holding the server health mark, the
 // session name, the fidelity dots, the action button, and the stage icons. A failed board read says so above the line.
 export function ChatBarView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
@@ -224,7 +227,6 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
       {StagePickerView($, elements, draw)}
       {PickerView($, elements, draw)}
       {LineView($, elements, draw)}
-      {StatusRowView(elements, draw)}
     </Box>
   )
 }
