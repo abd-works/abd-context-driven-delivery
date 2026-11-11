@@ -10,7 +10,7 @@ from cdd_guidance.patterns.lern_domain_driven.practices.stories.rules.front_end_
 
 def _story(name: str, story_type: str = "user") -> SimpleNamespace:
     facts = {"story_type": story_type}
-    return SimpleNamespace(id=f"stories:Story:{name}", name=name, source=SimpleNamespace(file="story-map.md"), get_fact=lambda key, default=None: facts.get(key, default))
+    return SimpleNamespace(node_id=f"stories:Story:{name}", name=name, source=SimpleNamespace(file="story-map.md"), get_fact=lambda key, default=None: facts.get(key, default))
 
 
 class _Context:
