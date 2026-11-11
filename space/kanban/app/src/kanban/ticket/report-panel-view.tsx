@@ -68,7 +68,7 @@ export function ReportPanelBodyView({ panel }: { panel: ReportPanel }) {
     <div className="panel-body report-body" key={state.board?.project}>
       <ReportStandingView panel={panel} isOff={isOff} />
       {panel.report.rules.length ? (
-        <button className="ghost-button" disabled={isOff} title={isOff ? 'Connect a chat to send fixes' : 'Ask the chat to fix all violations found in this report'} onClick={() => void panel.ticket.fixReport(panel.report)}>
+        <button className="ghost-button" disabled={isOff} title={isOff ? 'Connect a chat to send fixes' : "Put a fix for all violations found in this report in the chat's prompt to edit and send"} onClick={() => void panel.ticket.fixReport(panel.report)}>
           Fix all violations
         </button>
       ) : null}

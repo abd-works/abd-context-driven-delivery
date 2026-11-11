@@ -305,7 +305,7 @@ test.describe('Open Validation Report', () => {
 })
 
 test.describe('Fix Report Violations', () => {
-  test('should send Fix and Fix all to the chat', async ({ page }) => {
+  test("should fill the chat's prompt with Fix and Fix all", async ({ page }) => {
     await waitForChat(page)
     await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: validate' }).first().click()
     const report = page.locator('[data-panel="report"]')
@@ -315,7 +315,7 @@ test.describe('Fix Report Violations', () => {
     await receivedContaining('Fix all violations of verb-noun-format found in this report', 1)
   })
 
-  test('should send Fix all violations to the chat as the report it names', async ({ page }) => {
+  test("should fill the chat's prompt with Fix all violations as the report it names", async ({ page }) => {
     await waitForChat(page)
     await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: validate' }).first().click()
     await page.locator('[data-panel="report"]').getByRole('button', { name: 'Fix all violations', exact: true }).click()
