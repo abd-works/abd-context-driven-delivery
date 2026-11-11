@@ -169,7 +169,7 @@ export class TicketClient extends TicketClientGenerated {
 
   // Python names the tickets another can be dropped on to become their child.
   canTakeAsChild(other: TicketClient): boolean {
-    return other.parent_choices.includes(this.name)
+    return other.parentChoices.includes(this.name)
   }
 
   async takeAsChild(other: TicketClient): Promise<void> {
