@@ -104,6 +104,21 @@ a { color: #E5531A; } a:hover { color: #C64514; }
 @media (prefers-reduced-motion: reduce) { .scope-tip { transition: none; transform: none; } }
 .grip { background: transparent; border: 0; cursor: row-resize !important; touch-action: none; }
 .grip:hover .grip-line { background: var(--accent) !important; }
+/* Ticket text, tags, order and parent/child: mockup only, nothing on the real board does these yet. */
+.board-root .ticket-text { position: relative; z-index: 1; align-self: stretch; padding: 0; background: transparent; border: 0; text-align: left; font: 12px/1.45 Inter, system-ui, sans-serif; overflow-wrap: anywhere; white-space: pre-wrap; cursor: text; }
+.board-root .ticket-text:hover { text-decoration: underline dotted var(--muted); text-underline-offset: 3px; }
+.text-editor { position: relative; z-index: 3; display: flex; flex-direction: column; gap: 6px; }
+.text-editor textarea { box-sizing: border-box; width: 100%; padding: 6px 8px; background: var(--bg); color: var(--text); border: 1px solid var(--accent); border-radius: 4px; font: 12px/1.45 Inter, system-ui, sans-serif; resize: vertical; }
+.tag-row { position: relative; display: flex; flex-wrap: wrap; gap: 4px; pointer-events: none; }
+.tag-chip { padding: 1px 7px; background: var(--raised); color: var(--accent-text); border: 1px solid var(--border); border-radius: 999px; font: 10px var(--mono); }
+.board-root .children-toggle { position: relative; z-index: 1; align-self: flex-start; padding: 0; background: transparent; border: 0; color: var(--muted); font: 11px var(--mono); }
+.board-root .children-toggle:hover { color: var(--text); text-decoration: underline; }
+.child-row { display: flex; flex-direction: column; gap: 5px; padding: 6px 8px; background: var(--raised); border: 1px solid var(--border); border-radius: 4px; }
+.child-row.pulled { background: transparent; border-style: dashed; }
+.mini-input { box-sizing: border-box; min-width: 0; padding: 3px 6px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font: 11px var(--mono); }
+.parent-note { position: relative; color: var(--muted); font: italic 10px var(--mono); text-align: center; }
+.ticket-tools { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+.board-root .action.small { padding: 2px 8px; font-size: 11px; }
 </style>
 </helmet>
 <div class="board-root {{themeClass}}" style="width: 1960px; height: 920px; box-sizing: border-box; display: flex; overflow: hidden; background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; font-size: 13px">
@@ -148,6 +163,7 @@ a { color: #E5531A; } a:hover { color: #C64514; }
     <svg width="18" height="18" viewBox="0 0 256 256" role="img" aria-label="abd.works"><path fill="#E5531A" fill-rule="evenodd" d="M52.98,20.31l150.04,84.18v46.44S52.98,235.69,52.98,235.69v-54.77s104.7-53.41,104.7-53.41l-104.7-52.83V20.31Z"></path></svg>
     <span style="font: 600 13px var(--mono); letter-spacing: .1em">BOARD<span style="color: var(--accent)">_</span></span>
     <span style="flex: 1; color: var(--muted); font: 12px var(--mono)">abd-context-driven-delivery · {{ticketCount}} tickets · active: <span style="color: var(--accent-text); font-weight: 600">{{activeTitle}}</span></span>
+    <span style="color: var(--muted); font: 10px var(--mono); opacity: .75">Mockup: ticket text, reorder, tags, delete and parent/child are Intended, not built.</span>
     <label title="Actions only run on the active session's ticket" style="display: flex; align-items: center; gap: 8px; color: var(--muted); font: 11px var(--mono)">
       <span>Active session only</span>
       <input type="checkbox" role="switch" class="practice-switch" checked="{{onlyActive}}" onChange="{{toggleOnlyActive}}">
@@ -223,10 +239,38 @@ a { color: #E5531A; } a:hover { color: #C64514; }
                   </sc-if>
                   <sc-for list="{{list.cards}}" as="card" hint-placeholder-count="2">
                     <div class="ticket-card {{card.motionClass}}" style="position: relative; background: {{card.background}}; border: {{card.borderWidth}} solid {{card.border}}; border-radius: 4px; padding: 8px 26px 8px 9px; display: flex; flex-direction: column; gap: 4px; min-width: 0">
-                      <button onClick="{{card.select}}" aria-label="Show {{card.title}}" style="position: absolute; inset: 0; background: transparent; border: 0; padding: 0"></button>
+                      <button onClick="{{card.press}}" aria-label="{{card.pressLabel}}" style="position: absolute; inset: 0; background: transparent; border: 0; padding: 0"></button>
                       <button class="expand-mark" style="position: absolute; top: 4px; right: 4px; z-index: 2" aria-label="Actions for {{card.title}}" aria-expanded="{{card.isExpanded}}" onClick="{{card.toggle}}">{{card.mark}}</button>
-                      <div class="ticket-title" style="font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; pointer-events: none; position: relative">{{card.title}}</div>
+                      <div class="ticket-title" style="font-weight: 600; font-size: {{card.titleSize}}; line-height: 1.3; overflow-wrap: anywhere; pointer-events: none; position: relative">{{card.title}}</div>
                       <div style="color: var(--muted); font: 11px var(--mono); pointer-events: none; position: relative">{{card.meta}}</div>
+                      <sc-if value="{{card.showsText}}" hint-placeholder-val="{{ true }}">
+                        <button class="ticket-text" title="Double click to edit the text" style="color: {{card.textColor}}" onClick="{{card.textPress}}" onDoubleClick="{{card.editText}}">{{card.text}}</button>
+                      </sc-if>
+                      <sc-if value="{{card.editsHere}}" hint-placeholder-val="{{ false }}">
+                        <form class="text-editor" onSubmit="{{card.textEditor.save}}">
+                          <textarea aria-label="Text of {{card.title}}" rows="3" value="{{card.textEditor.draft}}" onChange="{{card.textEditor.type}}" onKeyDown="{{card.textEditor.key}}" autoFocus="{{ true }}"></textarea>
+                          <div style="display: flex; justify-content: space-between; gap: 6px">
+                            <button class="action primary small" type="submit">Save</button>
+                            <button class="action small" type="button" onClick="{{card.textEditor.cancel}}">Cancel</button>
+                          </div>
+                        </form>
+                      </sc-if>
+                      <sc-if value="{{card.hasTags}}" hint-placeholder-val="{{ false }}">
+                        <div class="tag-row">
+                          <sc-for list="{{card.tags}}" as="tag" hint-placeholder-count="2">
+                            <span class="tag-chip">{{tag}}</span>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{card.isParent}}" hint-placeholder-val="{{ false }}">
+                        <button class="children-toggle" aria-expanded="{{card.isExpanded}}" onClick="{{card.toggle}}">{{card.childrenLabel}}</button>
+                      </sc-if>
+                      <sc-if value="{{card.inlineOrder}}" hint-placeholder-val="{{ false }}">
+                        <div style="display: flex; gap: 6px; position: relative">
+                          <button class="action small" aria-label="Move {{card.title}} up" disabled="{{card.inlineOrder.upOff}}" onClick="{{card.inlineOrder.up}}">Move up</button>
+                          <button class="action small" aria-label="Move {{card.title}} down" disabled="{{card.inlineOrder.downOff}}" onClick="{{card.inlineOrder.down}}">Move down</button>
+                        </div>
+                      </sc-if>
                       <sc-if value="{{card.hasSegments}}" hint-placeholder-val="{{ true }}">
                         <div style="position: absolute; top: 28px; right: 7px; z-index: 1; display: flex; flex-direction: column; gap: 3px">
                           <sc-for list="{{card.segments}}" as="segment" hint-placeholder-count="5">
@@ -252,8 +296,73 @@ a { color: #E5531A; } a:hover { color: #C64514; }
                       <sc-if value="{{card.isOpen}}" hint-placeholder-val="{{ false }}">
                         <div class="card-open {{card.growClass}}" style="position: absolute; top: {{card.panelTop}}; left: {{card.tileLeft}}; right: {{card.tileRight}}; width: {{card.tileWidth}}; box-sizing: border-box; z-index: 60; display: flex; flex-direction: column; gap: 6px; padding: 8px 26px 8px 9px; background: var(--surface); border: {{card.borderWidth}} solid {{card.border}}; border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5)">
                       <button class="expand-mark" style="position: absolute; top: 4px; right: 4px; z-index: 2" aria-label="Actions for {{card.title}}" aria-expanded="{{card.isExpanded}}" onClick="{{card.toggle}}">{{card.mark}}</button>
-                      <div class="ticket-title" style="font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; pointer-events: none; position: relative">{{card.title}}</div>
+                      <div class="ticket-title" style="font-weight: 600; font-size: {{card.titleSize}}; line-height: 1.3; overflow-wrap: anywhere; pointer-events: none; position: relative">{{card.title}}</div>
                       <div style="color: var(--muted); font: 11px var(--mono); pointer-events: none; position: relative">{{card.meta}}</div>
+                      <sc-if value="{{card.panelText}}" hint-placeholder-val="{{ true }}">
+                        <button class="ticket-text" title="Double click to edit the text" style="color: {{card.textColor}}" onDoubleClick="{{card.editText}}">{{card.text}}</button>
+                      </sc-if>
+                      <sc-if value="{{card.editsInPanel}}" hint-placeholder-val="{{ false }}">
+                        <form class="text-editor" onSubmit="{{card.textEditor.save}}">
+                          <textarea aria-label="Text of {{card.title}}" rows="3" value="{{card.textEditor.draft}}" onChange="{{card.textEditor.type}}" onKeyDown="{{card.textEditor.key}}" autoFocus="{{ true }}"></textarea>
+                          <div style="display: flex; justify-content: space-between; gap: 6px">
+                            <button class="action primary small" type="submit">Save</button>
+                            <button class="action small" type="button" onClick="{{card.textEditor.cancel}}">Cancel</button>
+                          </div>
+                        </form>
+                      </sc-if>
+                      <sc-if value="{{card.hasTags}}" hint-placeholder-val="{{ false }}">
+                        <div class="tag-row">
+                          <sc-for list="{{card.tags}}" as="tag" hint-placeholder-count="2">
+                            <span class="tag-chip">{{tag}}</span>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{card.isParent}}" hint-placeholder-val="{{ false }}">
+                        <div style="display: flex; flex-direction: column; gap: 6px">
+                          <button class="children-toggle" aria-expanded="{{card.isExpanded}}" onClick="{{card.toggle}}">{{card.childrenLabel}}</button>
+                          <sc-for list="{{card.children}}" as="child" hint-placeholder-count="2">
+                            <div class="child-row {{child.rowClass}}">
+                              <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
+                                <button class="readme-link" style="font-weight: 600" title="Show {{child.title}} in the details" onClick="{{child.select}}">{{child.title}}</button>
+                                <span style="color: var(--muted); font: 10px var(--mono); text-align: right">{{child.place}}</span>
+                              </div>
+                              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px">
+                                <sc-if value="{{child.isStacked}}" hint-placeholder-val="{{ true }}">
+                                  <div style="display: flex; gap: 6px">
+                                    <button class="action small" title="{{child.moveHint}}" aria-label="Move {{child.title}} to the previous column" disabled="{{child.backOff}}" onClick="{{child.moveBack}}">←</button>
+                                    <button class="action small" title="{{child.moveHint}}" aria-label="Move {{child.title}} to the next column" disabled="{{child.nextOff}}" onClick="{{child.moveNext}}">→</button>
+                                    <button class="action small" onClick="{{child.pullOut}}">Pull out</button>
+                                  </div>
+                                </sc-if>
+                                <label style="margin-left: auto; display: flex; align-items: center; gap: 6px; color: var(--muted); font: 10px var(--mono)">
+                                  <span>parent</span>
+                                  <select class="mini-input" aria-label="Parent of {{child.title}}" value="{{child.pick.value}}" onChange="{{child.pick.change}}">
+                                    <sc-for list="{{child.pick.choices}}" as="choice" hint-placeholder-count="3">
+                                      <option value="{{choice.id}}">{{choice.label}}</option>
+                                    </sc-for>
+                                  </select>
+                                </label>
+                              </div>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{card.childForm}}" hint-placeholder-val="{{ false }}">
+                        <form onSubmit="{{card.childForm.add}}" style="display: flex; gap: 6px">
+                          <input class="mini-input" style="flex: 1" aria-label="New child ticket of {{card.title}}" placeholder="Child ticket title" value="{{card.childForm.draft}}" onChange="{{card.childForm.type}}">
+                          <button class="action small" type="submit" disabled="{{card.childForm.addOff}}">Add child</button>
+                        </form>
+                      </sc-if>
+                      <sc-if value="{{card.parentPick}}" hint-placeholder-val="{{ false }}">
+                        <label style="display: flex; align-items: center; gap: 6px; color: var(--muted); font: 11px var(--mono)">
+                          <span>parent</span>
+                          <select class="mini-input" aria-label="Parent of {{card.title}}" value="{{card.parentPick.value}}" onChange="{{card.parentPick.change}}">
+                            <sc-for list="{{card.parentPick.choices}}" as="choice" hint-placeholder-count="3">
+                              <option value="{{choice.id}}">{{choice.label}}</option>
+                            </sc-for>
+                          </select>
+                        </label>
+                      </sc-if>
                       <sc-if value="{{card.hasSegments}}" hint-placeholder-val="{{ true }}">
                         <div style="position: absolute; top: 28px; right: 7px; z-index: 1; display: flex; flex-direction: column; gap: 3px">
                           <sc-for list="{{card.segments}}" as="segment" hint-placeholder-count="5">
@@ -356,7 +465,24 @@ a { color: #E5531A; } a:hover { color: #C64514; }
                         <div style="display: flex; justify-content: space-between; position: relative">
                           <button class="action" style="padding: 2px 10px" title="{{card.backLabel}}" aria-label="{{card.backLabel}}" disabled="{{card.backOff}}" onClick="{{card.moveBack}}">←</button>
                           <button class="action" style="padding: 2px 8px; font-size: 11px" disabled="{{card.activateOff}}" onClick="{{card.activate}}">{{card.activateLabel}}</button>
-                          <button class="action" style="padding: 2px 10px" aria-label="Move {{card.title}} to the next column" disabled="{{card.nextOff}}" onClick="{{card.moveNext}}">→</button>
+                          <button class="action" style="padding: 2px 10px" title="{{card.nextLabel}}" aria-label="{{card.nextLabel}}" disabled="{{card.nextOff}}" onClick="{{card.moveNext}}">→</button>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{card.parentNote}}" hint-placeholder-val="{{ false }}">
+                        <div class="parent-note">{{card.parentNote}}</div>
+                      </sc-if>
+                      <sc-if value="{{card.tools}}" hint-placeholder-val="{{ false }}">
+                        <div class="ticket-tools">
+                          <form onSubmit="{{card.tools.addTag}}" style="display: flex; gap: 6px">
+                            <input class="mini-input" style="flex: 1" aria-label="New tag for {{card.title}}" placeholder="tag" value="{{card.tools.tagDraft}}" onChange="{{card.tools.typeTag}}">
+                            <button class="action small" type="submit" disabled="{{card.tools.addTagOff}}">Add tag</button>
+                          </form>
+                          <div style="display: flex; flex-wrap: wrap; gap: 6px">
+                            <button class="action small" aria-label="Move {{card.title}} up in its column" disabled="{{card.tools.upOff}}" onClick="{{card.tools.up}}">Move up</button>
+                            <button class="action small" aria-label="Move {{card.title}} down in its column" disabled="{{card.tools.downOff}}" onClick="{{card.tools.down}}">Move down</button>
+                            <button class="action small" onClick="{{card.tools.editText}}">Edit text</button>
+                            <button class="action small" style="margin-left: auto; color: var(--violations)" aria-label="Delete {{card.title}}" onClick="{{card.tools.remove}}">Delete</button>
+                          </div>
                         </div>
                       </sc-if>
                         </div>
@@ -365,8 +491,11 @@ a { color: #E5531A; } a:hover { color: #C64514; }
                         <div style="display: flex; justify-content: space-between; position: relative">
                           <button class="action" style="padding: 2px 10px" title="{{card.backLabel}}" aria-label="{{card.backLabel}}" disabled="{{card.backOff}}" onClick="{{card.moveBack}}">←</button>
                           <button class="action" style="padding: 2px 8px; font-size: 11px" disabled="{{card.activateOff}}" onClick="{{card.activate}}">{{card.activateLabel}}</button>
-                          <button class="action" style="padding: 2px 10px" aria-label="Move {{card.title}} to the next column" disabled="{{card.nextOff}}" onClick="{{card.moveNext}}">→</button>
+                          <button class="action" style="padding: 2px 10px" title="{{card.nextLabel}}" aria-label="{{card.nextLabel}}" disabled="{{card.nextOff}}" onClick="{{card.moveNext}}">→</button>
                         </div>
+                      </sc-if>
+                      <sc-if value="{{card.parentNote}}" hint-placeholder-val="{{ false }}">
+                        <div class="parent-note">{{card.parentNote}}</div>
                       </sc-if>
                       <sc-if value="{{card.start}}" hint-placeholder-val="{{ false }}">
                         <div style="display: flex; justify-content: flex-end; position: relative">
@@ -865,7 +994,29 @@ const BACKLOG = [
   { title: 'Backlog', path: '.sessions/_backlog/backlog.md', age: 'just now' },
   { title: 'Claude Code plugin', path: '.sessions/_backlog/plugin.md', age: 'today' },
   { title: 'Session board: every session is a ticket on a kanban', path: '.sessions/_backlog/session-board.md', age: 'today' },
+  { title: 'Gift cards', path: '.sessions/_backlog/gift-cards.md', age: 'today', body: 'Sell gift cards.' },
+  { title: 'Returns and refunds', path: '.sessions/_backlog/returns-and-refunds.md', age: 'today', body: 'Take back an order and refund the card.' },
 ];
+// Mockup only: ticket text, tags, a chosen order and parent/child tickets are Intended, not built on the real board.
+// checkout-flow's children: enter-card-details is pulled out and in Specification, confirm-order is stacked and Done in Discovery.
+const MOCK_TICKETS = [
+  { id: 'checkout-flow', title: 'Checkout flow', column: 'Discovery', age: '2 days ago', progress: ['P----', IDLE, IDLE], handoff: '', text: 'Pay for the basket.', tags: ['payments'] },
+  { id: 'enter-card-details', title: 'Enter card details', column: 'Specification', age: 'today', progress: ['RRRRR', 'P----', IDLE], handoff: '', text: 'Type the card number, expiry date and security code.', tags: [], parent: 'checkout-flow', pulledOut: true },
+  { id: 'confirm-order', title: 'Confirm order', column: 'Discovery', done: true, age: 'today', progress: ['RRRRR', IDLE, IDLE], handoff: '', text: 'Show the order and take the payment.', tags: [], parent: 'checkout-flow' },
+  { id: 'pet-visits', title: 'pet-visits', column: 'Discovery', age: '3 days ago', progress: [IDLE, IDLE, IDLE], handoff: '', text: '', tags: [] },
+  { id: 'sign-up', title: 'sign-up', column: 'Discovery', age: '3 days ago', progress: [IDLE, IDLE, IDLE], handoff: '', text: 'Open an account with an email address.', tags: [] },
+  { id: 'billing-report', title: 'billing-report', column: 'Discovery', age: '6 days ago', progress: ['P----', IDLE, IDLE], handoff: '', text: 'Report what each customer was billed.', tags: ['billing'] },
+];
+const PARENT_NOTE = 'a parent moves with its children';
+const slugOf = title => title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const columnRank = ticket => COLUMN_ORDER.indexOf(ticket.column) * 2 + (ticket.done ? 1 : 0);
+// A parent cannot be moved by hand: it sits in the stage of its child furthest back on the board.
+const settleParents = tickets => tickets.map(ticket => {
+  const children = tickets.filter(entry => entry.parent === ticket.id);
+  if (!children.length) return ticket;
+  const first = children.reduce((low, entry) => (columnRank(entry) < columnRank(low) ? entry : low));
+  return { ...ticket, column: first.column, done: !!first.done };
+});
 // The open card's ticket-wide menu stays up while the tiles below it open and close, so it keeps its own choices.
 const CARD_MENU = 'menu';
 const LEFT_OPENING_COLUMNS = ['Implementation', 'Complete'];
@@ -1092,12 +1243,13 @@ const skillOf = (practice, fidelity) => `/practices-${practice.skill}-${fidelity
 
 class Component extends DCLogic {
   state = {
-    tickets: TICKETS.map(ticket => ({
+    tickets: settleParents([TICKETS[0], ...MOCK_TICKETS, ...TICKETS.slice(1)].map(ticket => ({
       ...ticket,
       hasBranch: ['session-board', EXAMPLE_TICKET].includes(ticket.id),
       practices: ticket.id === EXAMPLE_TICKET ? [true, false, false, false, false] : undefined,
       generated: ticket.id === 'session-board' ? { 'stories-story_map': ['markdown'], 'stories-scenarios': ['python', 'markdown'] } : {},
-    })),
+    }))),
+    editingText: null, textDraft: '', tagDraft: '', childDraft: '',
     backlog: BACKLOG, selected: EXAMPLE_TICKET, active: EXAMPLE_TICKET,
     expanded: null, boardHeight: 470, hovered: null, message: '', composing: false, draft: '', draftBody: '',
     switching: null, hideDisabled: false, chat: [], working: 0, onlyActive: true, openCard: EXAMPLE_TICKET, cardClosing: false, expansion: null, expansionClosing: false, arrival: null, reportOpen: false, reportFor: null, cardMenus: {}, filesPane: null, filesExpanded: false, filesWidth: REPORT_PANE_WIDTH, helpFor: null, helpExpanded: false, helpWidth: REPORT_PANE_WIDTH, reportExpanded: false, reportWidth: REPORT_PANE_WIDTH, collapsedRules: [], wipLimits: { Discovery: 3, Specification: 3, Implementation: 3 }, editingLimit: null,
@@ -1817,9 +1969,9 @@ class Component extends DCLogic {
     const enabled = this.enabledPractices(ticket);
     const isReviewed = stage.fidelities.every((_, position) => !enabled[position] || codes[position] === 'R');
     const done = isReviewed && stage.name === ticket.column;
-    const tickets = this.state.tickets.map(entry => (
+    const tickets = settleParents(this.state.tickets.map(entry => (
       entry.id === ticket.id ? { ...entry, progress, steps, generated, findings, done: entry.done || done, age: 'just now' } : entry
-    ));
+    )));
     this.setState({ tickets, selected: ticket.id });
     if (done && !ticket.done) this.arrive(ticket.id, 'slides-right');
   }
@@ -1909,14 +2061,17 @@ class Component extends DCLogic {
     const rank = (name, isDone) => COLUMN_ORDER.indexOf(name) * 2 + (isDone ? 1 : 0);
     this.arrive(ticket.id, rank(column, done) > rank(ticket.column, ticket.done) ? 'slides-right' : 'slides-left');
     const moved = { ...ticket, column, done };
-    const tickets = this.state.tickets.map(entry => (entry.id === ticket.id ? { ...entry, column, done } : entry));
+    const parentBefore = this.state.tickets.find(entry => entry.id === ticket.parent);
+    const tickets = settleParents(this.state.tickets.map(entry => (entry.id === ticket.id ? { ...entry, column, done } : entry)));
+    const parentAfter = tickets.find(entry => entry.id === ticket.parent);
     const open = this.state.expansion;
     const target = this.nextTile(moved);
     const expansion = open?.id === ticket.id ? this.expansionStart(moved, target.stage, target.indexes, target.place) : open;
     if (open?.id === ticket.id) this.pinnedPlace = target.place;
     this.setState({ tickets, expansion });
     const list = column === 'Complete' ? '' : done ? ' · Done' : ' · In progress';
-    this.say(`${ticket.title} moved to ${column}${list}`);
+    const carried = parentBefore && columnRank(parentBefore) !== columnRank(parentAfter) ? ` · ${parentAfter.title} moves with it to ${parentAfter.column}` : '';
+    this.say(`${ticket.title} moved to ${column}${list}${carried}`);
   }
   // Each stage has two steps, In progress then Done, so an arrow crosses a column only from its far side.
   moveForward(ticket) {
@@ -1936,7 +2091,7 @@ class Component extends DCLogic {
     const { tickets, backlog, active, openCard, expansion, filesPane, reportFor, reportOpen } = this.state;
     const item = { title: ticket.title, path: `.sessions/_backlog/${ticket.id}.md`, age: 'just now', ticket };
     this.setState({
-      tickets: tickets.filter(entry => entry.id !== ticket.id),
+      tickets: settleParents(tickets.filter(entry => entry.id !== ticket.id)),
       backlog: [...backlog, item],
       selected: item.path,
       active: active === ticket.id ? null : active,
@@ -1950,9 +2105,9 @@ class Component extends DCLogic {
   }
   start(item) {
     const id = item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    const ticket = item.ticket ?? { id, title: item.title, column: 'Discovery', age: 'just now', progress: [IDLE, IDLE, IDLE], handoff: '' };
+    const ticket = item.ticket ?? { id, title: item.title, column: 'Discovery', age: 'just now', progress: [IDLE, IDLE, IDLE], handoff: '', text: item.body ?? '', tags: [] };
     this.setState({
-      tickets: [...this.state.tickets, ticket],
+      tickets: settleParents([...this.state.tickets, ticket]),
       backlog: this.state.backlog.filter(entry => entry !== item),
       selected: ticket.id,
     });
@@ -1967,6 +2122,7 @@ class Component extends DCLogic {
     const isLocked = this.isLocked(ticket);
     const hoveredSkill = hovered && hovered.id === ticket.id ? hovered.skill : '';
     const position = COLUMN_ORDER.indexOf(ticket.column);
+    const isParent = this.childrenOf(ticket).length > 0;
     return {
       title: ticket.title,
       meta: ticket.age,
@@ -2004,11 +2160,205 @@ class Component extends DCLogic {
       showFolder: () => this.openFilesPane(ticket, stage, this.enabledIndexes(ticket), 'folder'),
       showFiles: () => this.openFilesPane(ticket, stage, this.enabledIndexes(ticket), 'files'),
       hasArrows: showArrows,
-      backOff: isLocked,
-      backLabel: position === 0 && !isDone ? `Move ${ticket.title} to the Backlog` : `Move ${ticket.title} to the previous column`,
+      backOff: isLocked || isParent,
+      backLabel: isParent ? PARENT_NOTE : position === 0 && !isDone ? `Move ${ticket.title} to the Backlog` : `Move ${ticket.title} to the previous column`,
+      nextOff: isLocked || isParent || position === COLUMN_ORDER.length - 1,
+      nextLabel: isParent ? PARENT_NOTE : `Move ${ticket.title} to the next column`,
+      moveBack: event => { event.stopPropagation(); if (!isParent) this.moveBack(ticket); },
+      moveNext: event => { event.stopPropagation(); if (!isParent) this.moveForward(ticket); },
+      ...this.ticketExtras(ticket),
+    };
+  }
+  // Mockup only from here to composerVals: text, tags, order, delete and parent/child are Intended, not built.
+  displayTitle(ticket) {
+    const parent = ticket.pulledOut && this.state.tickets.find(entry => entry.id === ticket.parent);
+    return parent ? `${parent.title}.${ticket.title}` : ticket.title;
+  }
+  isShownAsCard(ticket) {
+    return !ticket.parent || !!ticket.pulledOut || !this.state.tickets.some(entry => entry.id === ticket.parent);
+  }
+  childrenOf(ticket) {
+    return this.state.tickets.filter(entry => entry.parent === ticket.id);
+  }
+  ticketExtras(ticket) {
+    const { openCard, cardClosing, selected, tagDraft, childDraft } = this.state;
+    const children = this.childrenOf(ticket);
+    const isOpen = openCard === ticket.id;
+    const isStaying = isOpen && !cardClosing;
+    const order = this.orderVals(ticket);
+    const title = this.displayTitle(ticket);
+    const editText = () => this.setState({ editingText: ticket.id, textDraft: ticket.text ?? '' });
+    return {
+      title,
+      titleSize: children.length ? '11px' : '13px',
+      pressLabel: `Show the actions for ${title}`,
+      // A press on an empty part of the card expands it; the controls on it keep their own work.
+      press: () => {
+        if (isStaying) { this.setState({ selected: ticket.id }); return; }
+        this.toggleCard(ticket, false);
+      },
+      ...this.textVals(ticket.id, ticket.text ?? '', isOpen, selected === ticket.id, () => this.setState({ selected: ticket.id }), value => this.keepTicketText(ticket, value)),
+      hasTags: !!ticket.tags?.length,
+      tags: ticket.tags ?? [],
+      isParent: children.length > 0,
+      childrenLabel: `${isStaying ? '-' : '+'} ${children.length} ${children.length === 1 ? 'child' : 'children'}`,
+      children: children.map(child => this.childRow(child)),
+      childForm: ticket.parent ? null : {
+        draft: childDraft,
+        addOff: !childDraft.trim(),
+        type: event => this.setState({ childDraft: event.target.value }),
+        add: event => { event.preventDefault(); this.addChild(ticket, this.state.childDraft.trim()); },
+      },
+      parentPick: ticket.parent ? this.parentPick(ticket) : null,
+      parentNote: children.length ? PARENT_NOTE : '',
+      inlineOrder: null,
+      tools: {
+        tagDraft,
+        addTagOff: !tagDraft.trim(),
+        typeTag: event => this.setState({ tagDraft: event.target.value }),
+        addTag: event => { event.preventDefault(); this.addTag(ticket, this.state.tagDraft); },
+        ...order,
+        editText,
+        remove: () => this.deleteTicket(ticket),
+      },
+    };
+  }
+  // The text shows on the card; a double click on it edits it in place, in the open card when the card is open.
+  textVals(key, text, isOpen, isSelected, select, keep) {
+    const isEditing = this.state.editingText === key;
+    const stop = () => this.setState({ editingText: null, textDraft: '' });
+    return {
+      text: text || 'No text yet. Double click to add it.',
+      textColor: text ? 'var(--text)' : 'var(--muted)',
+      showsText: !isEditing && (!!text || isSelected),
+      panelText: !isEditing,
+      editsHere: isEditing && !isOpen,
+      editsInPanel: isEditing && isOpen,
+      textPress: select,
+      editText: () => this.setState({ editingText: key, textDraft: text }),
+      textEditor: {
+        draft: this.state.textDraft,
+        type: event => this.setState({ textDraft: event.target.value }),
+        key: event => { if (event.key === 'Escape') stop(); },
+        cancel: stop,
+        save: event => { event.preventDefault(); keep(this.state.textDraft.trim()); stop(); },
+      },
+    };
+  }
+  keepTicketText(ticket, text) {
+    this.setState({ tickets: this.state.tickets.map(entry => (entry.id === ticket.id ? { ...entry, text } : entry)) });
+    this.say(`${ticket.title} text saved to .sessions/${ticket.id}/${ticket.id}.md`);
+  }
+  keepItemText(item, body) {
+    this.setState({ backlog: this.state.backlog.map(entry => (entry.path === item.path ? { ...entry, body } : entry)) });
+    this.say(`${item.title} text saved to ${item.path}`);
+  }
+  // A ticket moves above or below its neighbour in the same list of its column, and keeps that place.
+  orderVals(ticket) {
+    const { tickets } = this.state;
+    const list = tickets.filter(entry => this.isShownAsCard(entry) && entry.column === ticket.column && (ticket.column === 'Complete' || !!entry.done === !!ticket.done));
+    const at = list.findIndex(entry => entry.id === ticket.id);
+    const swap = step => {
+      const other = list[at + step];
+      if (!other) return;
+      const next = [...this.state.tickets];
+      const from = next.findIndex(entry => entry.id === ticket.id);
+      const to = next.findIndex(entry => entry.id === other.id);
+      [next[from], next[to]] = [next[to], next[from]];
+      this.setState({ tickets: next });
+      this.say(`${this.displayTitle(ticket)} moved ${step < 0 ? 'above' : 'below'} ${this.displayTitle(other)} in ${ticket.column}`);
+    };
+    return { upOff: at <= 0, downOff: at < 0 || at >= list.length - 1, up: () => swap(-1), down: () => swap(1) };
+  }
+  itemOrder(item) {
+    const { backlog } = this.state;
+    const at = backlog.findIndex(entry => entry.path === item.path);
+    const swap = step => {
+      const next = [...this.state.backlog];
+      const other = next[at + step];
+      if (!other) return;
+      [next[at], next[at + step]] = [other, next[at]];
+      this.setState({ backlog: next });
+      this.say(`${item.title} moved ${step < 0 ? 'above' : 'below'} ${other.title} in the Backlog`);
+    };
+    return { upOff: at <= 0, downOff: at >= backlog.length - 1, up: () => swap(-1), down: () => swap(1) };
+  }
+  deleteTicket(ticket) {
+    const { tickets, active, openCard, expansion, filesPane, reportFor, reportOpen, selected } = this.state;
+    const rest = tickets
+      .filter(entry => entry.id !== ticket.id)
+      .map(entry => (entry.parent === ticket.id ? { ...entry, parent: null, pulledOut: false } : entry));
+    this.setState({
+      tickets: settleParents(rest),
+      selected: selected === ticket.id ? null : selected,
+      active: active === ticket.id ? null : active,
+      openCard: openCard === ticket.id ? null : openCard,
+      cardClosing: false,
+      expansion: expansion?.id === ticket.id ? null : expansion,
+      filesPane: filesPane?.ticketId === ticket.id ? null : filesPane,
+      reportOpen: reportOpen && reportFor !== ticket.id,
+      editingText: null,
+    });
+    this.say(`${this.displayTitle(ticket)} deleted, and .sessions/${ticket.id} with it`);
+  }
+  addTag(ticket, typed) {
+    const tag = typed.trim().toLowerCase();
+    if (!tag) return;
+    const tags = ticket.tags ?? [];
+    this.setState({ tagDraft: '', tickets: tags.includes(tag) ? this.state.tickets : this.state.tickets.map(entry => (entry.id === ticket.id ? { ...entry, tags: [...tags, tag] } : entry)) });
+    this.say(`${ticket.title} tagged ${tag} · saved to .sessions/${ticket.id}/session.json`);
+  }
+  addChild(parent, title) {
+    if (!title) return;
+    const id = slugOf(title);
+    if (this.state.tickets.some(entry => entry.id === id)) { this.say(`A ticket named ${id} is already on the board`); return; }
+    const child = { id, title, column: 'Discovery', done: false, age: 'just now', progress: [IDLE, IDLE, IDLE], handoff: '', generated: {}, text: '', tags: [], parent: parent.id };
+    this.setState({ childDraft: '', tickets: settleParents([...this.state.tickets, child]) });
+    this.say(`${title} added to ${parent.title}, In progress in Discovery`);
+  }
+  // A pulled-out child is a card of its own beside its parent, and still has the parent.
+  pullOut(child) {
+    const rest = this.state.tickets.filter(entry => entry.id !== child.id);
+    const at = rest.findIndex(entry => entry.id === child.parent);
+    rest.splice(at + 1, 0, { ...child, pulledOut: true });
+    this.setState({ tickets: rest });
+    this.arrive(child.id, 'slides-right');
+    const parent = rest[at];
+    this.say(`${child.title} pulled out of ${parent.title}; it still has the parent ${parent.title}`);
+  }
+  reassignParent(child, parentId) {
+    const parent = this.state.tickets.find(entry => entry.id === parentId);
+    const tickets = this.state.tickets.map(entry => (
+      entry.id === child.id ? { ...entry, parent: parent ? parent.id : null, pulledOut: parent ? !!entry.pulledOut : false } : entry
+    ));
+    this.setState({ tickets: settleParents(tickets) });
+    this.say(parent ? `${child.title} is now a child of ${parent.title}` : `${child.title} has no parent now`);
+  }
+  parentPick(child) {
+    const candidates = this.state.tickets.filter(entry => entry.id !== child.id && !entry.parent && entry.column !== 'Complete');
+    return {
+      value: child.parent ?? '',
+      choices: [{ id: '', label: 'no parent' }, ...candidates.map(entry => ({ id: entry.id, label: entry.title }))],
+      change: event => this.reassignParent(child, event.target.value),
+    };
+  }
+  childRow(child) {
+    const position = COLUMN_ORDER.indexOf(child.column);
+    const isLocked = this.isLocked(child);
+    const stage = `${child.column}${child.column === 'Complete' ? '' : child.done ? ' · done' : ' · in progress'}`;
+    return {
+      title: child.title,
+      place: child.pulledOut ? `pulled out · ${stage}` : stage,
+      rowClass: child.pulledOut ? 'pulled' : '',
+      isStacked: !child.pulledOut,
+      select: () => this.setState({ selected: child.id }),
+      moveHint: isLocked ? 'Activate this session, or turn off Active session only, to move it' : '',
+      backOff: isLocked || (position === 0 && !child.done),
       nextOff: isLocked || position === COLUMN_ORDER.length - 1,
-      moveBack: event => { event.stopPropagation(); this.moveBack(ticket); },
-      moveNext: event => { event.stopPropagation(); this.moveForward(ticket); },
+      moveBack: () => this.moveBack(child),
+      moveNext: () => this.moveForward(child),
+      pullOut: () => this.pullOut(child),
+      pick: this.parentPick(child),
     };
   }
   composerVals() {
@@ -2037,10 +2387,16 @@ class Component extends DCLogic {
       borderWidth: '1px', background: 'var(--surface)', hasArrows: false, segments: [],
       border: this.state.selected === item.path ? 'var(--text)' : 'var(--border)',
       select: () => this.setState({ selected: item.path }),
+      press: () => this.setState({ selected: item.path }),
+      pressLabel: `Show ${item.title}`,
+      titleSize: '13px', hasTags: false, tags: [], isParent: false, childrenLabel: '', children: [], childForm: null, parentPick: null, parentNote: '', tools: null, nextLabel: '',
+      ...this.textVals(item.path, item.body ?? '', false, this.state.selected === item.path, () => this.setState({ selected: item.path }), value => this.keepItemText(item, value)),
+      inlineOrder: this.state.selected === item.path ? this.itemOrder(item) : null,
     };
   }
   columns(stageTracks, showArrows) {
-    const inColumn = name => this.state.tickets.filter(ticket => ticket.column === name);
+    // A child stacked inside its parent shows in the parent's card, not as a card of its own.
+    const inColumn = name => this.state.tickets.filter(ticket => ticket.column === name && this.isShownAsCard(ticket));
     const cards = (tickets, spot) => tickets.map(ticket => this.card(ticket, showArrows, spot));
     const isStacked = stageTracks === 'minmax(0, 1fr)';
     const stages = STAGES.map(stage => {
