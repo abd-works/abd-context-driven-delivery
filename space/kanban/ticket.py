@@ -56,14 +56,6 @@ class MainStaysOpenError(ValueError):
         super().__init__(f"main is the default session and stays open; it cannot {action}")
 
 
-class NotAPatternError(ValueError):
-    """An overlay was asked for by a name that is no registered pattern."""
-
-    def __init__(self, names: list[str], patterns: list[str]) -> None:
-        self.names = names
-        super().__init__(f"{', '.join(names)} is no pattern; the patterns are {', '.join(patterns)}")
-
-
 class TicketNotFoundError(LookupError):
     """Raised when a tool names a ticket the board does not show."""
 
@@ -287,10 +279,6 @@ class Ticket(Card):
     @agent_tool
     def choose_overlays(self, overlays: list[str]) -> list[OverlayChoice]:
         """Overlay the patterns overlays names, such as lern_domain_driven, on ticket's session's graph in place of those chosen before, refusing a name that is no pattern with NotAPatternError; return its overlay choices."""
-        patterns = PatternOverlays().names
-        unknown = [name for name in overlays if name not in patterns]
-        if unknown:
-            raise NotAPatternError(unknown, patterns)
         self._session.choose_overlays(overlays)
         return self.overlay_choices()
 

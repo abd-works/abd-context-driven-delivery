@@ -150,6 +150,11 @@ class PatternOverlays:
         """The folder the registered pattern name is defined in."""
         return class_folder(self._registered[name])
 
+    def pattern_named(self, name: str) -> Any:
+        """The guidance of the registered pattern name, whether its folder holds practices or not, made the first time
+        this object wants it: what an action reads a pattern's own rules from."""
+        return self._pattern(name)
+
     def _pattern(self, name: str) -> Any:
         """The guidance of the registered pattern name, made the first time this object wants it."""
         if name not in self._made:

@@ -752,6 +752,10 @@ Observed: `Generate` and `Session.fidelity_outputs` take the outputs the fidelit
 
 Observed: pressing the button on validate, render, iterate, sketch or document puts `/actions-<action> <guidance>` in the prompt box for the person to send (`fidelity-client.ts` `runAction`).
 
+
+#### (S) Person --> [Run Fidelity Action With Overlays](move-work-forward-from-chat-bar/generate-fidelity-outputs-in-chat-bar/generate_fidelity_outputs_in_chat_bar_story.test.md)
+
+Requested (2026-11-11, "doesnt result in LERN being passed in as a param? shouldnt it?"): the command the action button puts in the prompt names the session's chosen overlays in an `overlays=` word beside `format=` (`overlay-choices-client.ts` `overlayArgumentOf`); an action run with that word chooses those overlays on the session first (`WorkList.take`), and Generate adds each overlay's shared rules on top of the practices' rules (`Generate._overlay_rules`).
 ### (E) Review Fidelity Outputs In Chat Bar
 
 #### (S) Person --> [List Session Files](../../chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/list-session-files/list_session_files_story.test.ts)

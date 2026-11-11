@@ -28,6 +28,11 @@ export async function loadOverlayChoices($: EngineInterface, chatBar: ChatBarCli
   await update($, overlayChoices, () => ({ ticket: chatBar.ticketName, choices, isOpen: false }))
 }
 
+// What a command adds for the overlays the session has chosen, so the action runs with them; nothing with none chosen.
+export function overlayArgumentOf(chips: OverlayChips): string {
+  return chips.chosen.length ? ` overlays=${chips.chosen.map(choice => choice.pattern).join(',')}` : ''
+}
+
 // A press on the + opens or closes the list box of patterns.
 export async function toggleOverlayList($: EngineInterface): Promise<void> {
   await update($, overlayChoices, held => ({ ...(held ?? { ticket: '', choices: [] }), isOpen: !held?.isOpen }))
