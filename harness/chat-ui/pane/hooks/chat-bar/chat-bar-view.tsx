@@ -3,8 +3,9 @@ import type { EngineInterface, RenderChildren } from 'claude-code'
 import type { ActionPickerJson, ChatBarViewJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { GlyphButtonView } from '../shared/glyph-button-view'
-import { ActionButtonView, PickerView } from './action-button-view'
+import { ActionButtonView, actionColumnOf, PickerView } from './action-button-view'
 import { toggleFormat, type FormatChips } from './format-choices-client'
+import { toggleOverlay, toggleOverlayList, type OverlayChips } from './overlay-choices-client'
 import { askChatToFix, dismissFailure, fixFailure, runHandoff, type ChatBarClient } from './chat-bar-client'
 import { openFilesOf, openReport } from './fidelity-files-client'
 import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
@@ -24,6 +25,7 @@ export type ChatBarDraw = {
   picker: ActionPickerJson
   isStagePickerOpen: boolean
   formats: FormatChips
+  overlays: OverlayChips
   busy: { doing: string; wheel: string }
   health: { band: unknown; panel: unknown }
   width: number
@@ -155,6 +157,41 @@ function FormatChipsView($: EngineInterface, elements: ElementTable, { formats }
   )
 }
 
+// The + right after the fidelity dots, then one icon per pattern the session overlays on its graph, its first and last
+// letter, the pattern's name above it on hover; the format chips and the action button follow them.
+function OverlayChipsView($: EngineInterface, elements: ElementTable, { overlays }: ChatBarDraw) {
+  const { Box } = elements
+  if (!overlays.choices.length) return null
+  return (
+    <Box key="overlay-chips" flexDirection="row" gap={1} alignItems="center">
+      {GlyphButtonView(elements, 'overlay-list', '+', overlays.isOpen ? BRAND.accent : BRAND.muted, () => toggleOverlayList($))}
+      {overlays.chosen.map(choice => (
+        <Box key={`overlay-${choice.pattern}`}>
+          <elements.Text color={BRAND.text}>{choice.icon}</elements.Text>
+          {TipView(elements, choice.pattern, '', BRAND.muted)}
+        </Box>
+      ))}
+    </Box>
+  )
+}
+
+// Every pattern as a list box above the +, the session's overlays marked; a press on one adds it or takes it out, and
+// the list stays open so a person can pick several.
+function OverlayListView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar, overlays }: ChatBarDraw) {
+  if (!overlays.isOpen) return null
+  return (
+    <Box key="overlay-list-box" flexDirection="column" alignSelf="flex-start" marginLeft={actionColumnOf(chatBar)} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
+      {overlays.choices.map(choice => (
+        <Box key={`overlay-row-${choice.pattern}`} flexDirection="row" gap={1} alignItems="center" backgroundColor={choice.is_chosen ? BRAND.accentTint : undefined}>
+          <Text color={choice.is_chosen ? BRAND.accent : BRAND.muted}>{choice.is_chosen ? '✓' : ' '}</Text>
+          <Text color={BRAND.faint}>{choice.icon}</Text>
+          <Button key={`overlay-pick-${choice.pattern}`} plain label={choice.pattern} onPress={() => toggleOverlay($, overlays, choice.pattern)} />
+        </Box>
+      ))}
+    </Box>
+  )
+}
+
 // The line, left to right: health mark, the stage button, │, fidelity dots and the action chip, then at the right end
 // the session name and its buttons.
 function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
@@ -168,6 +205,7 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
         <Text color={BRAND.border}>{SEPARATOR}</Text>
         <Box key="fidelity-column" flexDirection="row" gap={1} alignItems="center">
           {chatBar.fidelities.map(fidelity => FidelityView($, elements, fidelity))}
+          {OverlayChipsView($, elements, draw)}
           {FormatChipsView($, elements, draw)}
           {ActionButtonView($, elements, draw)}
         </Box>
@@ -226,6 +264,7 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
       {SessionCardView($, elements, draw)}
       {StagePickerView($, elements, draw)}
       {PickerView($, elements, draw)}
+      {OverlayListView($, elements, draw)}
       {LineView($, elements, draw)}
     </Box>
   )

@@ -126,6 +126,12 @@ class PatternOverlays:
         return merged
 
     @property
+    def names(self) -> list[str]:
+        """Every registered pattern by name, in name order, whether its folder holds practices yet or not: the patterns a
+        person can choose to overlay."""
+        return sorted(self._registered)
+
+    @property
     def available(self) -> list[str]:
         """Every registered pattern that holds at least one practice."""
         return [name for name in sorted(self._registered) if self._holds_practices(self._folder_of(name))]

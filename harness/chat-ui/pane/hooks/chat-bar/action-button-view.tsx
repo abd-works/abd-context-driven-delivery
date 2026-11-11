@@ -61,7 +61,7 @@ export function ActionButtonView($: EngineInterface, elements: ElementTable, { c
 // The column the action button starts at on the line: the health mark and its gap, the stage chip and its gap, │ and
 // its gap, then each dot with its violation count and a gap. The menu opens at it, so it reads as the button's list box.
 const HEALTH_STAGE_AND_SEPARATOR = 9
-function actionColumnOf(chatBar: ChatBarClient): number {
+export function actionColumnOf(chatBar: ChatBarClient): number {
   const dots = chatBar.fidelities.reduce((cells, fidelity) => cells + 1 + (fidelity.violationCount ? String(fidelity.violationCount).length : 0) + 1, 0)
   return HEALTH_STAGE_AND_SEPARATOR + dots
 }

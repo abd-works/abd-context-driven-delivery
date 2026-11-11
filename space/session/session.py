@@ -184,6 +184,8 @@ class Session:
             if self._graph is None:
                 graph = Graph(output.guidance for output in self._own_outputs.values())
                 graph.open_saved(self.work_root)
+                if self.overlays:
+                    graph.overlays = self.overlays
                 self._graph = graph
             return self._graph
 
@@ -238,6 +240,20 @@ class Session:
     def parent(self) -> str:
         """The name of the session this one was split from; empty when it was not split from one."""
         return self.fields.get("parent", "")
+
+    @property
+    def overlays(self) -> list[str]:
+        """The patterns this session overlays on its graph, by name, as its session.json keeps them; none until a
+        person chooses some."""
+        return list(self.fields.get("overlays", []))
+
+    def choose_overlays(self, overlays: list[str]) -> None:
+        """Overlay the patterns named on this session's graph from now on, in place of those chosen before: kept in its
+        session.json, and applied to its graph at once when it has one."""
+        self.save_fields(overlays=list(overlays))
+        with self._parts_lock:
+            if self._graph is not None:
+                self._graph.overlays = list(overlays)
 
     @property
     def fields(self) -> dict:

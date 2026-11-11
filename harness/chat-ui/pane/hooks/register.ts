@@ -11,6 +11,7 @@ import { currentActionPicker } from './chat-bar/action-picker-client'
 import { shownActionOf } from './chat-bar/action-button-view'
 import { isStagePickerOpen } from './chat-bar/stage-client'
 import { currentFormatChips, forgetFormatChips, loadFormatChips } from './chat-bar/format-choices-client'
+import { currentOverlayChips, loadOverlayChoices } from './chat-bar/overlay-choices-client'
 import { currentFidelityFiles, FILES_PANE, forgetFiles } from './chat-bar/fidelity-files-client'
 import { FidelityFilesView } from './chat-bar/fidelity-files-view'
 import { currentChatBarView } from './chat-bar/session-dialogs-client'
@@ -52,6 +53,7 @@ async function readActive($: EngineInterface): Promise<void> {
   const chatBar = await currentChatBar($)
   if (chatBar.problem) return
   await loadFormatChips($, chatBar)
+  await loadOverlayChoices($, chatBar).catch(logged($, 'reading the overlay choices'))
   // The system prompt is cached; when the active session's summary changes, it is composed again next turn.
   if (chatBar.agentContext !== shownContext) await $.ui.invalidate('prompt.section')
   shownContext = chatBar.agentContext
@@ -142,6 +144,7 @@ export const register: Register = on => {
     return ChatBarView($, elements, {
       chatBar,
       formats: await currentFormatChips($, chatBar),
+      overlays: await currentOverlayChips($, chatBar),
       view: await currentChatBarView($),
       picker: await currentActionPicker($),
       isStagePickerOpen: await isStagePickerOpen($),

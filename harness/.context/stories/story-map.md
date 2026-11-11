@@ -634,7 +634,7 @@ Observed: the pointer on the session name shows the card, with each fidelity's n
 
 ### (S) Chat Bar --> Show Active Session On Status Line
 
-Inferred: the chat's status line names the active session, its stage, next guidance and violations, read from the same chat bar client as the strip (`register.ts` `readActive`).
+Observed (commits ce6b9157e, 066b2d3fc; `register.ts` `PromptHint` hook, `chat-bar-view.tsx` `StatusRowView`, `chat-bar-client.ts` `statusLine`): a dim row below the prompt, under the engine's own hint line and from the left, names the repository, the active session, the folder it works in, and the action the button runs with the fidelities it runs on. Requested on 2026-11-11 ("repo . session . root path of session . action selected", "below the actual chat edit like before", left aligned); the host's status line is left empty.
 
 ### (S) Claude Code --> [Add Active Ticket To System Prompt](../../kanban/.context/move-work-forward-on-session-board/guide-work-through-practices/add-active-ticket-to-system-prompt/add_active_ticket_to_system_prompt_story.test.md)
 
@@ -703,6 +703,18 @@ Requested (2026-11-06, as the Session Board does): the chat bar opens the same h
 ### (S) Person --> Choose Session Folders From Chat Bar
 
 Requested (2026-11-10, "new session or session where folders aren't set on switch --> probably one dialog box, eg expand above chat bar"): when the chat bar creates a session that does not come from a backlog item, or switches to a session whose workpath and practice roots are not set, one dialog opens above the chat bar to choose the workpath and each practice's root, as the board's Choose Where A Backlog Item Works and Choose Session And Practice Roots do.
+
+### (S:system) Ticket --> List Available Patterns
+
+Requested (2026-11-11, "opens a list box for LERN, MERN eg all patterns we have ... set this list dynamically based on contents of folder"): a ticket's `overlay_choices` answers one choice per pattern, each with its icon and whether the session chose it. The patterns are every one registered from `cdd_guidance/patterns/`, where each subfolder whose module of the same name defines a pattern class registers itself (`PatternOverlays.names`), so a pattern folder added there is offered with no change to the chat bar.
+
+### (S) Person --> Choose Graph Overlays
+
+Requested (2026-11-11, "right after practices we need + overlay button where we can add one or more graph overlays ... can select more than one"): a + right after the fidelity dots opens a list box of the patterns the board lists, the session's chosen ones marked; a press on one adds it to or takes it out of the session's overlays through `ticket.choose_overlays`, which keeps them in the session's `session.json` and applies them to the session's graph (`Graph.overlays`).
+
+### (S) Chat Bar --> Display Overlay Icons
+
+Requested (2026-11-11, "adds a new icon to bar, pushing action and format", "icon is first and last letter of pattern"): each overlay the session has chosen shows as an icon after the + and before the format chips and the action button, its pattern's first and last letter in capitals (`lern_domain_driven` is LN), the pattern's name on hover.
 
 ## (E) Work Fidelity Outputs In Chat Bar
 

@@ -40,6 +40,9 @@ export type ChatBarViewJson = {
 export type FormatChoiceJson = { label: string; formats: string[]; offered: number; made: number; starts_picked: boolean }
 export type FormatChoicesJson = { key: string; choices: FormatChoiceJson[]; picked: string[] | null }
 export type ActionPickerJson = { isOpen: boolean; chosenAction: string | null }
+// The pattern overlays ticket.overlay_choices answers for the session the bar shows, and whether the + list box is open.
+export type OverlayChoiceJson = { pattern: string; icon: string; is_chosen: boolean }
+export type OverlayChoicesJson = { ticket: string; choices: OverlayChoiceJson[]; isOpen: boolean }
 
 // The files view of the selected fidelity: one tab per file fidelity-progress.files declares, its text once session.read_file read it.
 // isOutOfDate: a report's saved graph is in a shape the graph no longer reads, so the tab offers Validate again.
@@ -62,6 +65,7 @@ declare module 'claude-code' {
       shownStage: string | null
       stagePicker: boolean
       formatChoices: FormatChoicesJson
+      overlayChoices: OverlayChoicesJson
       busy: BusyJson
     }
   }

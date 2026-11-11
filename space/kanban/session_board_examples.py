@@ -20,6 +20,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import cdd_guidance.actions  # noqa: F401 - registers the actions and the practices, as the cdd server does when it loads every toolset
+import cdd_guidance.patterns  # noqa: F401 - registers the patterns with the graph's pattern overlays, as the cdd server does when it loads every toolset
 from harness.process.git import Git
 from harness.graph.saved_graph import SavedGraph, SavedNode, SavedPractice
 from harness.graph.violation import Violation
