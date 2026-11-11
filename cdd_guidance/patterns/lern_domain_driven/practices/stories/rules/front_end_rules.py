@@ -23,7 +23,7 @@ class UserStoriesHaveAFrontEnd(PracticeGraphRule):
     def check_practice(self, context) -> list[tuple[str, str]]:
         shown = self._screen_stories(context.source_root)
         return [
-            (story.id, f"{story.source.file}: user story `{story.name}` has no front end: no screen story "
+            (story.node_id, f"{story.source.file}: user story `{story.name}` has no front end: no screen story "
                        f"(`*.story.ui.spec.ts` or Playwright file) describes it; build its screen and drive it there.")
             for story in context.nodes("Story")
             if story.get_fact("story_type", "user") == "user" and _key(story.name) not in shown
