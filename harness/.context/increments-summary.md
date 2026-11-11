@@ -35,7 +35,8 @@ The starting line, not a slice to build: what the framework, the CDD Kanban, the
 | Generate and check | Install · Practices, fidelities, actions and stages · Generate · Document and render · Validate · Satisfy · Injected rules and toasts |
 | Sketch and iterate | Grill, sketch and iterate |
 | Sessions | Sessions, worktrees and branches · Handoffs and decision records · Server health |
-| Real context and deeper stages | Partition · Document capture · Live-app sandbox · Meeting notes · Specification and implementation · Background diagnosis |
+| Bring in real context | Index and segment a source · Capture documents into a searchable index · Sandbox a live app · Meeting notes |
+| Take the work to code | Move a ticket through Specification and Implementation · Hand a stubborn bug to a background agent |
 | The CDD Kanban and the visual apps | CDD Kanban · Kanban fidelity work · Story UI editor · Design canvas and story demo · Knowledge graph · Catalog and project approach |
 | Improve and extend CDD | Guidance repair · Pattern overlays · Builders and annotations · Agent BDD and prompt log |
 
@@ -298,7 +299,7 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
   3. Run install runs the installer and reports installing, installed (open a new session) or failed. Details shows the tool, the error, the server and the fix.
   4. Install probes call each published tool through the live host and write the results to `diagnostics.json`.
 
-### Real context and deeper stages: bring in real context and take the work to code
+### Bring in real context: work from the real sources, not memory
 
 **Lesson 12. Partition: index a source, then cut it into verbatim segments**
 - *What you do:* `/partition stories-story-map paths=<handbook folder>`, then partition the same source through another practice, such as `/partition ux-ia` or `/partition clean-engineering-modules`.
@@ -349,7 +350,9 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
 - *What you get:* decisions and facts from meetings become citable context files, one file per note. Nothing is moved until you confirm.
 - *Under the hood:* `tools/granola`.
 
-**Lesson 16. Go deeper: from story map to tests to code**
+### Take the work to code: from story map to tests to code
+
+**Lesson 16. Move a ticket through Specification and Implementation**
 - *What you do:* move the ticket through Specification and Implementation.
   - Generate `stories-scenarios`, `ddd-model`, `ux-mockup` and `clean-engineering-model`.
   - Then generate `stories-acceptance-tests`, `bdd-development` and `clean-engineering-code`.
@@ -363,7 +366,7 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
   3. Generate builds each fidelity from the one before it, rendering into the new format first when the formats differ.
   4. Acceptance tests come before the code they drive, and the graph links steps and observations to the operations they call.
 
-**Lesson 17. Hand hard problems to a background agent**
+**Lesson 17. Hand a stubborn bug to a background agent**
 - *What you do:* `/diagnose` (optionally with a practice) for a stubborn bug, or `sub-agent` for any recipe.
 - *What you get:* a disciplined hunt runs in the background (reproduce, minimise, form hypotheses, fix, add a regression test) while you keep working.
 - *Under the hood:* `cdd_guidance/actions/diagnose` and `tools/sub_agent`.
