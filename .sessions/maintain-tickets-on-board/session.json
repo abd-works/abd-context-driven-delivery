@@ -2,8 +2,12 @@
   "name": "maintain-tickets-on-board",
   "title": "Maintain Tickets On Board",
   "scope": "feature",
-  "workpath": "C:\\dev\\abd-cdd-maintain-tickets-on-boar\\harness",
+  "workpath": "C:\\dev\\abd-cdd-maintain-tickets-on-boar",
   "branch": "maintain-tickets-on-board",
   "worktree": "C:\\dev\\abd-cdd-maintain-tickets-on-boar",
-  "repo_path": "C:\\dev\\abd-cdd-maintain-tickets-on-boar"
+  "repo_path": "C:\\dev\\abd-cdd-maintain-tickets-on-boar",
+  "overlays": [
+    "cdd_web_domain_access",
+    "lern_domain_driven"
+  ]
 }
