@@ -1034,6 +1034,13 @@ with description("the board tools") as self:
                 "backlog-item.create", "backlog-item.start", "backlog-item.edit_text", "backlog-item.place_before",
             }))
 
+        # An agent that opens a ticket must work in the ticket's own worktree, not in the chat that opened it.
+        with it("should tell an agent opening a ticket to activate it and work in a chat in its worktree"):
+            for tool in ("ticket.create", "backlog-item.start"):
+                described = self.project.server.tools[tool].description
+                expect(described).to(contain("Then run ticket.activate"))
+                expect(described).to(contain("start_session with cwd set to the ticket's worktree"))
+
         with it("should take the ticket's name on every ticket tool that acts on one"):
             schema = self.project.server.tools["ticket.move_next"].callable
             expect(list(__import__("inspect").signature(schema).parameters)).to(equal(["ticket"]))

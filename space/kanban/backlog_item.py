@@ -107,7 +107,7 @@ class BacklogItem(Card):
     @agent_tool
     @noSessionLog
     def start(self, scope: str = "feature", path: str = "") -> Ticket:
-        """Start the backlog item titled backlog_item: open a ticket for it in Discovery, or bring back the ticket that was moved here, with its work. Its file goes into the ticket's session folder, text and all, and the change is committed on main and pushed. scope is feature, story, or slice; path is the folder in the repository its session works on."""
+        """Start the backlog item titled backlog_item: open a ticket for it in Discovery, or bring back the ticket that was moved here, with its work. Its file goes into the ticket's session folder, text and all, and the change is committed on main and pushed. scope is feature, story, or slice; path is the folder in the repository its session works on. Then run ticket.activate to open the ticket's own worktree, and do its work in a chat started there (start_session with cwd set to the ticket's worktree), not in this chat."""
         kept_folder = self._held_ticket_folder
         ticket = self._ticket_brought_back(kept_folder) if kept_folder.is_dir() else self._ticket_opened(scope, path)
         # An item kept inside its folder went back with the folder; a file beside it or on its own moves in now.

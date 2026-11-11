@@ -26,6 +26,12 @@ BACKLOG_FOLDER = "_backlog"
 _SHARED_FOLDER_MARK = "_"
 # How long one ``git worktree list`` answers for, so a board read that loads every session asks git once.
 _WORKTREE_LISTING_SECONDS = 2.0
+# Said first when a chat switches to a session whose own worktree is not where the chat works: work done here would
+# land in the wrong folder.
+_OUTSIDE_WORKTREE_NOTE = (
+    "This chat works in {chat}, but {session}'s worktree is {worktree}. Do this session's work in a chat started there "
+    "(start_session with cwd {worktree}), not in this chat.\n\n"
+)
 _BRANCH_REF = "refs/heads/"
 
 
@@ -327,13 +333,24 @@ class Sessions:
 
         ``name`` defaults to the session this chat has open, then to its open ``branch``.
         ``workpath`` is a folder a new session works in; without one its root is derived: its worktree, else the checkout.
-        A switch writes nothing in the checkout and does not touch branches or worktrees."""
+        A switch writes nothing in the checkout and does not touch branches or worktrees: when the session has its own
+        worktree and the call's chat works elsewhere, the answer opens by saying to start a chat in that worktree."""
         chat = call.chat_id if call is not None else ""
         wanted = self._name_to_switch_to(name, chat)
         folder = self.folder_of(wanted)
         is_kept = (folder / SESSION_FILE).is_file() or wanted == MAIN_SESSION_NAME
         session = self.load(folder) if is_kept else self.create(wanted, workpath)
-        return self.open(session, chat).log.instructions()
+        return self._outside_worktree_note(session, call) + self.open(session, chat).log.instructions()
+
+    def _outside_worktree_note(self, session: Session, call: ToolCall | None) -> str:
+        """What a chat working outside session's own worktree must do instead; nothing when it works there, or the
+        session has none."""
+        if call is None or call.project is None or session.name == MAIN_SESSION_NAME:
+            return ""
+        worktree = self._worktree_of(session.name)
+        if worktree is None or worktree == call.project or worktree in call.project.parents:
+            return ""
+        return _OUTSIDE_WORKTREE_NOTE.format(chat=call.project, session=session.name, worktree=worktree)
 
     def _name_to_switch_to(self, name: str, chat: str = "") -> str:
         state = self.open_state(chat)

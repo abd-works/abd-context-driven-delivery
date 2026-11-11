@@ -251,6 +251,21 @@ with description("a session"):
             with it("should log into the ticket's folder in the repository's own .sessions"):
                 expect(Sessions(self.called).current().session_path).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
 
+            with context("that a chat in the repository's own folder switches to"):
+                with before.each:
+                    self.instructions = Sessions(self.repo).switch("alpha", call=ToolCall({}, self.repo))
+
+                with it("should say the chat works outside the ticket's worktree"):
+                    expect(self.instructions).to(contain(f"This chat works in {self.repo.resolve()}, but alpha's worktree is {self.worktree.resolve()}"))
+
+                with it("should say to start a chat in the worktree"):
+                    expect(self.instructions).to(contain(f"start_session with cwd {self.worktree.resolve()}"))
+
+            with context("that a chat in the ticket's worktree switches to"):
+                with it("should give no warning"):
+                    instructions = Sessions(self.worktree).switch("alpha", call=ToolCall({}, self.worktree))
+                    expect(instructions).not_to(contain("This chat works in"))
+
         with context("with a repo path"):
             with before.each:
                 self.instructions = Sessions(self.repo).switch("alpha")
