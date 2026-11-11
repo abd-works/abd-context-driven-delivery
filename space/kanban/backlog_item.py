@@ -128,10 +128,9 @@ class BacklogItem(Card):
     @mcp
     @agent_tool
     @noSessionLog
-    def place_before(self, before: str) -> BacklogItem:
-        """Move the backlog item just above the item titled before in the Backlog, as dragging it there does; the Backlog keeps that order, in .sessions/_board.json. Committed on main and pushed."""
-        self.move_before(self._board.backlog_item_called(before))
-        self._board.save_sessions_on_main(f"sessions: place {self.title} before {before} in the Backlog")
+    def move_before(self, other: BacklogItem) -> BacklogItem:
+        """Move the backlog item just above other in the Backlog, as dragging it there does; the Backlog keeps that order, in .sessions/_board.json. Committed on main and pushed."""
+        super().move_before(other)
         return self
 
     def move_next(self) -> Ticket:

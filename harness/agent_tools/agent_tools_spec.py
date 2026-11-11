@@ -1352,6 +1352,12 @@ class Crate:
     def ship(self) -> str:
         return f"{self.label} shipped from {self.project.name}"
 
+    @_tool
+    def stack_on(self, other: "Crate | None" = None) -> str:
+        if other is None:
+            return f"{self.label} on the floor of {self.project.name}"
+        return f"{self.label} on {other.label} in {other.project.name}"
+
 
 @agent_toolset
 class Pallet:
@@ -1420,6 +1426,23 @@ with description("a domain class whose constructor takes collaborators"):
             with it("should hand it the project the call works on"):
                 pack = AgentToolSet.instantiate(Crate).tools["pack"]
                 expect(pack.invoke({"label": "crate-2"}, project=self.project)).to(equal(f"crate-2 packed in {self.project.name}"))
+
+        with context("with a tool that takes another crate"):
+            with it("should take the other crate by name"):
+                stack_on = AgentToolSet.instantiate(Crate).tools["stack_on"]
+                expect(list(stack_on.parameter_schema.names)).to(equal(["crate", "other"]))
+
+            with it("should hand the operation the crate that name loads, from the same project"):
+                stack_on = AgentToolSet.instantiate(Crate).tools["stack_on"]
+                expect(stack_on.invoke({"crate": "crate-1", "other": "crate-2"}, project=self.project)).to(
+                    equal(f"crate-1 on crate-2 in {self.project.name}")
+                )
+
+            with it("should hand it no crate when the name is left out"):
+                stack_on = AgentToolSet.instantiate(Crate).tools["stack_on"]
+                expect(stack_on.invoke({"crate": "crate-1"}, project=self.project)).to(
+                    equal(f"crate-1 on the floor of {self.project.name}")
+                )
 
     with context("whose loader takes the call it serves"):
         with before.each:

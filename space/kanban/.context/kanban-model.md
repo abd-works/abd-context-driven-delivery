@@ -274,7 +274,8 @@ The base type of Ticket and BacklogItem. It marks `title` and `last_activity` as
 	// a person's move to the next column
 + move_previous(): Card
 	// a person's move to the previous column
-+ move_before(other: Card): Column
++ move_before(other: Card): Card
+	// keeps this card just above other in their column; committed on main and pushed
 	// a person's move of it just above other in their column
 	-> Column.place_before
 
@@ -419,15 +420,11 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 + pull_out(): Ticket
 	// `ticket.pull_out`: a child becomes a card of its own, keeping its parent; a ticket with no parent raises `NotAChildError`
 	-> Session.mark_pulled_out
-+ reassign_parent(parent: Ticket): Ticket
-	// parent, or none, becomes its parent, and it is no longer pulled out; raises `ParentLoopError` when parent is it or one of its children
++ reassign_parent(parent: Ticket | None): Ticket
+	// `ticket.reassign_parent`: parent, or none, becomes its parent, and it is no longer pulled out; raises `ParentLoopError` when parent is it or one of its children; the tool names parent as it names any ticket
 	-> Session.set_parent
-+ choose_parent(parent: str): Ticket
-	// `ticket.choose_parent`: `reassign_parent` with the ticket named parent, or none when it is empty
-	-> Board.ticket_called
-+ place_before(before: str): Ticket
-	// `ticket.place_before`: `move_before` the ticket named before; committed on main and pushed
-	-> Board.ticket_called
++ move_before(other: Ticket): Ticket
+	// `ticket.move_before`: keeps it just above other in their column; the tool names other as it names any ticket
 	-> Card.move_before
 + violations(): Report
 	// `ticket.violations`: the rules broken on every fidelity of its stage left with violations, each naming its fidelity, a rule two fidelities share listed once; its path is the session's reports folder from the project
@@ -688,9 +685,8 @@ Marked `@identity("title")`.
 + edit_text(text: str): BacklogItem
 	// `backlog-item.edit_text`: rewrites the text under its file's heading, which keeps its title; committed on main and pushed
 	-> IdeaFile.rewrite_text
-+ place_before(before: str): BacklogItem
-	// `backlog-item.place_before`: `move_before` the item titled before; committed on main and pushed
-	-> Board.backlog_item_called
++ move_before(other: BacklogItem): BacklogItem
+	// `backlog-item.move_before`: keeps it just above other in the Backlog; the tool names other by its title
 	-> Card.move_before
 
 ## Help
@@ -842,6 +838,10 @@ One rule the judgment in a validation report fails, in one judged file.
 
 ## ParentLoopError : ValueError
 
+## MainStaysOpenError : ValueError
+
+`ticket.py`, raised when a tool would close, archive, shelve, or delete main.
+
 ---
 
 # Collaborators
@@ -867,6 +867,10 @@ The classes below belong to other modules and are modelled in those modules' own
 ## Session
 
 `space/session/session.py`, sent whole as a ticket's `session` data field. The board reads `name`, `title`, `parent`, `is_pulled_out`, `tags`, `text`, `is_closed`, `workpath`, `practices`, `reports_folder`, and `log`, and calls `close()`, `remove()`, `reopen()`, `move_to_closed()`, `move_to_archive()`, `move_to_backlog()`, `keep_file(file)`, `keep_text(text)`, `add_tag(word)`, `set_parent(parent)`, `mark_pulled_out()`, `open_child(title, scope)`, and `from_project(path)`. A backlog item reads and writes its file through an `IdeaFile` (`space/session/idea_file.py`), the same as a session's idea file. Its `log` is a `SessionLog` (`space/session/session_log.py`), whose `entries` are `LogEntry`s with `time`, `verb`, `stage`, `words`, and `names(fidelity)`, and whose `record(line)` writes a move or a review; `latest(*verbs, stage)` answers a ticket's latest move and its latest mark in a stage.
+
+## IdeaFile
+
+`space/session/idea_file.py`: one markdown file holding an idea, its `# ` heading and the text under it. A backlog item holds one for its file and reads its `text` and calls `rewrite_text(text)`; a session's `idea_file` is the `<name>.md` its folder keeps, from which it answers `text` and `keep_text(text)`.
 
 ## PracticeGuidance
 

@@ -603,9 +603,12 @@ class Card(ABC):
         """Whether it shows inside another card rather than as a card of its own: only a ticket's child does."""
         return False
 
-    def move_before(self, other: Card) -> Column:
-        """A person's move of this card just above other in their column; the column keeps that order."""
-        return self.column.place_before(self, other)
+    def move_before(self, other: Card) -> Card:
+        """A person's move of this card just above other in their column: the column keeps that order, committed on
+        main and pushed."""
+        column = self.column.place_before(self, other)
+        self._board.save_sessions_on_main(f"sessions: move {self.key} before {other.key} in {column.name}")
+        return self
 
     @abstractmethod
     def move_next(self) -> Card: ...

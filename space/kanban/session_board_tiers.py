@@ -203,12 +203,12 @@ class TicketHandle:
         return found
 
     def move_before(self, other: TicketHandle) -> TicketHandle:
-        """``Ticket.move_before(other)``: the tool takes the other ticket by its name."""
-        return _handle_of(self._cdd, self._cdd.call("ticket.place_before", ticket=self.name, before=other.name))
+        """``ticket.move_before``, naming the other ticket as the tool names any ticket."""
+        return _handle_of(self._cdd, self._cdd.call("ticket.move_before", ticket=self.name, other=other.name))
 
     def reassign_parent(self, parent: TicketHandle | None) -> TicketHandle:
-        """``Ticket.reassign_parent(parent)``: the tool takes the parent by its name, and none as no name."""
-        answered = self._cdd.call("ticket.choose_parent", ticket=self.name, parent=parent.name if parent is not None else "")
+        """``ticket.reassign_parent``, naming the parent as the tool names any ticket, and none as no name."""
+        answered = self._cdd.call("ticket.reassign_parent", ticket=self.name, parent=parent.name if parent is not None else "")
         return _handle_of(self._cdd, answered)
 
     @property
@@ -336,8 +336,8 @@ class BacklogItemHandle:
         return _handle_of(self._cdd, self._cdd.call("backlog-item.edit_text", backlog_item=self.title, text=text))
 
     def move_before(self, other: BacklogItemHandle) -> BacklogItemHandle:
-        """``BacklogItem.move_before(other)``: the tool takes the other item by its title."""
-        return _handle_of(self._cdd, self._cdd.call("backlog-item.place_before", backlog_item=self.title, before=other.title))
+        """``backlog-item.move_before``, naming the other item by its title as the tool names any backlog item."""
+        return _handle_of(self._cdd, self._cdd.call("backlog-item.move_before", backlog_item=self.title, other=other.title))
 
     def data(self) -> dict:
         backlog = next(column for column in self._cdd.call("board.show")["columns"] if column["name"] == "Backlog")

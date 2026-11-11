@@ -506,8 +506,11 @@ class Ticket(Card):
         self._session.mark_pulled_out()
         return self._saved(f"pull {self.name} out of {self._session.parent}")
 
-    def reassign_parent(self, parent: Ticket | None) -> Ticket:
-        """Make parent this ticket's parent, or none, so it is a ticket of its own; either way it is no longer pulled out."""
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def reassign_parent(self, parent: Ticket | None = None) -> Ticket:
+        """Make parent ticket's parent, as dragging ticket onto it does, or none, so ticket is a ticket of its own (Alt-dragging it out of its parent); either way it is no longer pulled out. Committed on main and pushed."""
         if parent is not None and self.name in [parent.name, *(ancestor.name for ancestor in parent.ancestors)]:
             raise ParentLoopError(self.name, parent.name)
         self._session.set_parent(parent.session if parent is not None else None)
@@ -516,17 +519,10 @@ class Ticket(Card):
     @mcp
     @agent_tool
     @noSessionLog
-    def choose_parent(self, parent: str = "") -> Ticket:
-        """Make the ticket named parent ticket's parent, as dragging ticket onto it does; an empty parent leaves ticket with none, a ticket of its own. Either way ticket is no longer pulled out. Committed on main and pushed."""
-        return self.reassign_parent(self._board.ticket_called(parent) if parent else None)
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def place_before(self, before: str) -> Ticket:
-        """Move ticket just above the ticket named before in their column, as dragging it there does; the column keeps that order, in .sessions/_board.json. Committed on main and pushed."""
-        self.move_before(self._board.ticket_called(before))
-        return self._saved(f"place {self.name} before {before}")
+    def move_before(self, other: Ticket) -> Ticket:
+        """Move ticket just above other in their column, as dragging it there does; the column keeps that order, in .sessions/_board.json. Committed on main and pushed."""
+        super().move_before(other)
+        return self
 
     @property
     def _furthest_back_child_stage(self) -> Stage | None:
