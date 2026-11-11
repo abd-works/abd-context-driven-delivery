@@ -5,7 +5,7 @@ import type { FileEntryData } from '@cdd/space/kanban/fidelity-progress'
 import type { FileTextData } from '@cdd/space/session/session'
 
 import type { FidelityFilesJson } from '../../types'
-import { openInBrowser, runningBoardUrl } from '../board-chat/board-server'
+import { openInBrowser, repositoryFolder, runningBoardUrl } from '../board-chat/board-server'
 import { reasonOf } from '../shared/failure'
 import { callTool, currentChatBar } from './chat-bar-client'
 import { runAction, type FidelityProgressClient } from './fidelity-progress-client'
@@ -74,6 +74,15 @@ export async function showFile($: EngineInterface, path: string): Promise<void> 
     text = reasonOf(failure)
   }
   await update($, fidelityFiles, files => (files ? { ...files, shown: path, tabs: files.tabs.map(tab => (tab.path === path ? { path, text } : tab)) } : files))
+}
+
+// A press on the shown file's title opens it in the editor the system opens its kind of file with, by its file:// link.
+// A path from the project is named from the repository's own folder; an absolute one, such as a report's, is as it is.
+const ABSOLUTE_PATH = /^([A-Za-z]:[\\/]|\/)/
+export async function openFileInEditor($: EngineInterface, path: string): Promise<void> {
+  const absolute = ABSOLUTE_PATH.test(path) ? path : `${await repositoryFolder($)}/${path}`
+  const link = `file:///${absolute.split('\\').join('/').replace(/^\//, '')}`
+  if (!(await openInBrowser($, link))) $.ui.toast(`${path} did not open: no program took ${link}`)
 }
 
 // A report whose saved graph is out of date has lost its graph's rules, so its fidelity is validated again to find them.

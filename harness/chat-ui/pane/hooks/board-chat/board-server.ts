@@ -18,11 +18,17 @@ function isBoardUp($: EngineInterface, url: string): Promise<boolean> {
     .catch(() => false)
 }
 
-// The board app in the repository's own folder, where it is installed and built: a chat in a ticket's worktree shares
-// the repository's git folder, so its own worktree, which holds no build, never starts it.
-async function boardAppFolder($: EngineInterface): Promise<string> {
+// The repository's own folder, which a chat in a ticket's worktree reaches through the git folder they share: where the
+// board is installed and built, and what a path from the project is named from. Empty outside a repository.
+export async function repositoryFolder($: EngineInterface): Promise<string> {
   const { exitCode, stdout } = await $.process.run(['git', 'rev-parse', '--path-format=absolute', '--git-common-dir'])
-  return exitCode === 0 ? `${stdout.trim().replace(/[\\/]\.git$/, '')}/${BOARD_APP}` : ''
+  return exitCode === 0 ? stdout.trim().replace(/[\\/]\.git$/, '') : ''
+}
+
+// The board app in the repository's own folder, so a chat in a ticket's worktree, which holds no build, starts it too.
+async function boardAppFolder($: EngineInterface): Promise<string> {
+  const repository = await repositoryFolder($)
+  return repository ? `${repository}/${BOARD_APP}` : ''
 }
 
 // The board lives as long as this chat's mod: leaving the loop, or the module unloading, ends the server.
