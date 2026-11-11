@@ -22,8 +22,26 @@ function HeaderActionsView() {
   )
 }
 
-export function BoardHeaderView() {
+// The header's switches: Active session only for this page, Send fixes directly for the repository.
+function HeaderSwitchesView() {
   const { page, state } = useBoard()
+  const { board } = page
+  return (
+    <>
+      <label className="header-field" title="Actions only run on the active session's ticket">
+        <span>Active session only</span>
+        <input type="checkbox" role="switch" className="practice-switch" checked={state.onlyActive} onChange={() => page.layout.toggleOnlyActive()} />
+      </label>
+      <label className="header-field" title="Off: a report's Fix goes into the chat's prompt for you to edit and send. On: it is sent to the chat directly.">
+        <span>Send fixes directly</span>
+        <input type="checkbox" role="switch" className="practice-switch" checked={board.sendsFixesDirectly} onChange={() => void board.setSendsFixesDirectly(!board.sendsFixesDirectly)} />
+      </label>
+    </>
+  )
+}
+
+export function BoardHeaderView() {
+  const { page } = useBoard()
   return (
     <header className="board-header">
       <BrandMark />
@@ -35,14 +53,7 @@ export function BoardHeaderView() {
       </span>
       <ChatPickerView />
       <ChatMessagesView />
-      <label className="header-field" title="Actions only run on the active session's ticket">
-        <span>Active session only</span>
-        <input type="checkbox" role="switch" className="practice-switch" checked={state.onlyActive} onChange={() => page.layout.toggleOnlyActive()} />
-      </label>
-      <label className="header-field" title="Off: a report's Fix goes into the chat's prompt for you to edit and send. On: it is sent to the chat directly.">
-        <span>Send fixes directly</span>
-        <input type="checkbox" role="switch" className="practice-switch" checked={page.board.sendsFixesDirectly} onChange={() => void page.board.toggleFixesSentDirectly()} />
-      </label>
+      <HeaderSwitchesView />
       <HeaderActionsView />
     </header>
   )

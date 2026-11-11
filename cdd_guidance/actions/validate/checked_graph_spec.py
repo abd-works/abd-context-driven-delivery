@@ -15,7 +15,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
 from expects import equal, expect
 from mamba import after, before, context, description, it
 
-from cdd_guidance.actions.validate.checked_graph import CheckedGraph
+from cdd_guidance.actions.validate.checked_graph import CheckedGraph, NamedToCheck
 from cdd_guidance.actions.validate.report_files import ReportFiles
 from harness.agent_tools.tool_call import ToolCall
 from harness.graph.saved_graph import SavedGraph
@@ -30,7 +30,7 @@ def _checked(named):
     """A validate call's checked graph for the graph files named, in a throwaway project, and the project."""
     throwaway = ThrowawayProject()
     session = ToolCall(project=throwaway.root).session
-    graph = CheckedGraph(session, [], None, named)
+    graph = CheckedGraph(session, [], NamedToCheck(graph=named))
     graph.check_beside(ReportFiles(session, []))
     return graph, throwaway
 
@@ -98,7 +98,7 @@ with description("a validate call's checked graph"):
             self.saved = session.graph.saved_file.path
             self.saved.parent.mkdir(parents=True, exist_ok=True)
             self.saved.write_bytes(_SAVED_GRAPH.read_bytes())
-            self.graph = CheckedGraph(session, [], None, True)
+            self.graph = CheckedGraph(session, [], NamedToCheck(graph=True))
             self.files = self.graph.check_beside(ReportFiles(session, []))
 
         with after.each:

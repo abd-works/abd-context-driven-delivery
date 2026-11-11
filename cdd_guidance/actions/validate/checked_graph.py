@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -15,6 +16,17 @@ if TYPE_CHECKING:
     from space.session.session import Session
 
 
+@dataclass(frozen=True)
+class NamedToCheck:
+    """What one validate call names to check: the files being edited (paths), the graph it names (graph: true for the
+    session's saved graph, or the graph files), and the call naming them, which says where a graph build runs; none in
+    process."""
+
+    paths: list[str] | None = None
+    graph: bool | str | list[str] | None = None
+    call: ToolCall | None = None
+
+
 class CheckedGraph:
     """The graph a validate call checks: built from just the files the call names, or from the folders its fidelities
     have written when it names none, and written beside the call's report; or the saved graph or node lists the call
@@ -24,23 +36,16 @@ class CheckedGraph:
     its formats is written. Validate checks one format of each fidelity, so the declared files of its other formats are
     left out of the report: the formats mirror each other, and judging both reports every finding twice."""
 
-    def __init__(
-        self,
-        session: Session,
-        fidelities: list[Any],
-        edited: list[str] | None,
-        named: bool | str | list[str] | None,
-        call: ToolCall | None = None,
-    ) -> None:
+    def __init__(self, session: Session, fidelities: list[Any], to_check: NamedToCheck) -> None:
         self.session = session
-        self._call = call
+        self._call = to_check.call
         self._fidelities = fidelities
         # Read once, so another call changing a fidelity's format mid-way never changes which files this call checks.
         self._formats = [fidelity.format for fidelity in fidelities]
-        self._named = named
+        self._named = to_check.graph
         self.unchecked_files = self._other_format_files()
         # Read now, so a path that is not there is refused before the call claims any report file.
-        self.edited = self._edited_in_checked_format(edited)
+        self.edited = self._edited_in_checked_format(to_check.paths)
         self.prefixes = self._graph_prefixes()
         self._checked: SavedGraph | None = None
         self.files: list[Path] = []

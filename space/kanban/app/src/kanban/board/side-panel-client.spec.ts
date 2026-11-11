@@ -201,7 +201,7 @@ describe('Fix Report Violations', () => {
       const chat = await board.connectChat(page)
       const rule = await brokenRule(page)
       const violation = rule.violations[0]!
-      await ticketOn(page).fixViolation(rule, violation)
+      await reportPanel(page).report.fixViolation(rule, violation)
       return { rule, violation, commands: await chat.checkIn() }
     }
 
@@ -246,7 +246,7 @@ describe('Fix Report Violations', () => {
       const chat = await board.connectChat(page)
       const rule = await brokenRule(page)
       const { report } = reportPanel(page)
-      await ticketOn(page).fixRule(report, rule)
+      await report.fixRule(rule)
       const [command] = await chat.checkIn()
       expect(command!.text).toContain(`Fix all violations of ${rule.rule.slug} found in this report: ${report.path}`)
     })
@@ -255,7 +255,7 @@ describe('Fix Report Violations', () => {
       const { page } = await board.page()
       const chat = await board.connectChat(page)
       const rule = await brokenRule(page)
-      await ticketOn(page).fixRule(reportPanel(page).report, rule)
+      await reportPanel(page).report.fixRule(rule)
       const [command] = await chat.checkIn()
       expect(command!.text).toContain(EVERY_FORMAT)
     })
@@ -268,7 +268,7 @@ describe('Fix Report Violations', () => {
       const chat = await board.connectChat(page)
       await page.panels.openReport(ticketOn(page), storyMapOn(page))
       const { report } = reportPanel(page)
-      await ticketOn(page).fixReport(report)
+      await report.fixReport()
       return { report, commands: await chat.checkIn() }
     }
 

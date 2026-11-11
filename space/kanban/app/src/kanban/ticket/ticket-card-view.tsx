@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import type { DragEvent, MouseEvent, RefObject } from 'react'
+import type { MouseEvent, RefObject } from 'react'
 
 import { ageOf } from '../shared/board-brand'
 import { useBoard } from '../shared/board-context'
 import type { ColumnClient } from '../board/column-client'
 import { SessionActionIcon } from '../shared/icons'
 import { AddChildView } from './add-child-view'
+import { useCardDrag } from './card-drag'
 import { FileViewsView } from './file-views-view'
 import type { TicketClient } from './ticket-client'
 import { TileView } from './tile-view'
@@ -176,58 +177,21 @@ function OpenCardView({ ticket, stage, spot }: { ticket: TicketClient; stage: Co
 
 const borderColorOf = (ticket: TicketClient, isSelected = false): string => (ticket.isActive ? 'var(--accent)' : isSelected ? 'var(--text)' : 'var(--border)')
 
+const cardClassOf = (ticket: TicketClient, isDragged: boolean, isTakingChild: boolean): string =>
+  ['ticket-card', ticket.isActive ? 'is-active' : '', isDragged ? 'is-dragged' : '', isTakingChild ? 'is-drop-over' : ''].filter(Boolean).join(' ')
+
+// Every card drags, locked or not: Active session only keeps commands to the active session's chat, and a move runs
+// nothing in a chat. Chrome starts no drag on a button, and the card's hit button covers the card, so it carries the
+// card's drag too.
 export function TicketCardView({ ticket, spot }: { ticket: TicketClient; spot: CardSpot }) {
   const { page, state } = useBoard()
   const stage = page.board.stageOf(ticket)
   const isSelected = page.board.selectedTicket?.address === ticket.address
-  const [isTakingChild, setTakingChild] = useState(false)
+  const { isTakingChild, handlers } = useCardDrag(ticket)
   if (!stage) return null
-  // Every card drags, locked or not: Active session only keeps commands to the active session's chat, and a move runs
-  // nothing in a chat. An opened card closes when the drag ends.
-  const isDraggable = true
-  const dragStarted = (event: DragEvent) => {
-    event.dataTransfer.setData('text/plain', ticket.name)
-    event.dataTransfer.effectAllowed = 'move'
-    page.store.change({ dragged: ticket.address })
-  }
-  const dragEnded = () => page.store.change(current => ({ dragged: null, openCard: current.openCard === ticket.name ? null : current.openCard }))
-  // Read when each event arrives, not from the last drawing: a quick drag reaches the card before the page redraws.
-  const draggedTicket = () => page.board.tickets.find(entry => entry.address === page.store.state.dragged)
-  const takes = () => {
-    const dragged = draggedTicket()
-    return dragged !== undefined && ticket.canTakeAsChild(dragged)
-  }
-  const draggedOver = (event: DragEvent) => {
-    if (!takes()) return
-    event.preventDefault()
-    event.stopPropagation()
-    setTakingChild(true)
-  }
-  // The card takes the drop, so the list under it does not move the ticket to its column as well.
-  const dropped = (event: DragEvent) => {
-    setTakingChild(false)
-    const dragged = draggedTicket()
-    if (!dragged || !ticket.canTakeAsChild(dragged)) return
-    event.preventDefault()
-    event.stopPropagation()
-    page.store.change({ dragged: null })
-    void ticket.takeAsChild(dragged)
-  }
   return (
-    <div
-      className={['ticket-card', ticket.isActive ? 'is-active' : '', state.dragged === ticket.address ? 'is-dragged' : '', isTakingChild ? 'is-drop-over' : ''].filter(Boolean).join(' ')}
-      data-ticket={ticket.name}
-      draggable={isDraggable}
-      onDragStart={dragStarted}
-      onDragEnd={dragEnded}
-      onDragOver={draggedOver}
-      onDragLeave={() => setTakingChild(false)}
-      onDrop={dropped}
-      onClick={() => ticket.choose()}
-      style={{ borderColor: borderColorOf(ticket, isSelected), borderWidth: ticket.isActive ? ACTIVE_BORDER_WIDTH : 1 }}
-    >
-      {/* Chrome starts no drag on a button, and this one covers the card, so it carries the card's drag. */}
-      <button className="card-hit" aria-label={`Show ${ticket.title}`} draggable={isDraggable} />
+    <div className={cardClassOf(ticket, state.dragged === ticket.address, isTakingChild)} data-ticket={ticket.name} draggable {...handlers} onClick={() => ticket.choose()} style={{ borderColor: borderColorOf(ticket, isSelected), borderWidth: ticket.isActive ? ACTIVE_BORDER_WIDTH : 1 }}>
+      <button className="card-hit" aria-label={`Show ${ticket.title}`} draggable />
       <CardFaceView ticket={ticket} stage={stage} />
       {state.openCard === ticket.name ? <OpenCardView ticket={ticket} stage={stage} spot={spot} /> : null}
     </div>
