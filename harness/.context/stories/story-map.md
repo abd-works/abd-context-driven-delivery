@@ -15,7 +15,7 @@ section: body
 
 # Story Map — Context-Driven Delivery Framework
 
-**Sources / context:** `harness/.context/module-context.md`; `harness/agent_tools/.context/module-context.md`; `harness/agent_tools/.context/agent-tools-model.md`; `harness/markdown/.context/module-context.md`; `installation/.context/installer-deployed-model.md`; `harness/hooks/.context/module-context.md`; `harness/guidance/guidance.py`; `harness/.context/context-tool-resource-model-om-bdd.md`; `harness/mcp/.context/module-context.md`; `actions/.context/module-context.md`; `practices/.context/module-context.md`; user spine: register agent toolsets → install markdown files (skill, slash command, rules) and MCP → invoke those → use context guidance (install skills and .mdc, invoke instructions, generate under rules) → use practice guidance (register guidance and fidelities, invoke practice and fidelity, shared and fidelity rules constrain output) → hook dispatch → extract markdown → lifecycle actions. Session Board and Chat Bar: `space/kanban/.context/story-map.md` and `story-map.drawio`; `harness/chat-ui/.context/story-map.md` and `story-map.drawio`; the ticket enhancements on the session-board branch (`.sessions/session-board/ticket-enhancements.md`, its `space/kanban/.context/story-map.md`); `harness/chat-ui/.context/cdr/0001-stage-strip-band.md`; `space/kanban/app/src/session-board/board-update.ts`; `harness/chat-ui/pane/hooks/register.ts`. The map also takes in the backlog items `.sessions/_backlog/maintain-tickets-on-board.md`, `.sessions/_backlog/guard-work-and-recover-fast.md` and `.sessions/_backlog/guard-work-and-recover-fast.md` as Intended stories.
+**Sources / context:** `harness/.context/module-context.md`; `harness/agent_tools/.context/module-context.md`; `harness/agent_tools/.context/agent-tools-model.md`; `harness/markdown/.context/module-context.md`; `installation/.context/installer-deployed-model.md`; `harness/hooks/.context/module-context.md`; `harness/guidance/guidance.py`; `harness/.context/context-tool-resource-model-om-bdd.md`; `harness/mcp/.context/module-context.md`; `actions/.context/module-context.md`; `practices/.context/module-context.md`; user spine: register agent toolsets → install markdown files (skill, slash command, rules) and MCP → invoke those → use context guidance (install skills and .mdc, invoke instructions, generate under rules) → use practice guidance (register guidance and fidelities, invoke practice and fidelity, shared and fidelity rules constrain output) → hook dispatch → extract markdown → lifecycle actions. Session Board and Chat Bar: `space/kanban/.context/story-map.md` and `story-map.drawio`; `harness/chat-ui/.context/story-map.md` and `story-map.drawio`; the ticket enhancements on the session-board branch (`.sessions/session-board/ticket-enhancements.md`, removed with that session in commit 8483f7a40 and read from commit b08bfe47e; its `space/kanban/.context/story-map.md`); `harness/chat-ui/.context/cdr/0001-stage-strip-band.md`; `space/kanban/app/src/session-board/board-update.ts`; `harness/chat-ui/pane/hooks/register.ts`. The map also takes in the backlog items `.sessions/_backlog/maintain-tickets-on-board.md`, `.sessions/_backlog/guard-work-and-recover-fast.md` and `.sessions/_backlog/guard-work-and-recover-fast.md` as Intended stories.
 
 **Evidence:** Observed behaviour is cited from those files. Intended: practice guidance and fidelity guidance declare real `@hook` events from `CURSOR_EVENTS`, and lifecycle actions use the same mark-and-install path as practice guidance. For the Session Board and Chat Bar epics: **Observed** means the code and its specs or tests do it today, **Inferred** means the code does it but nothing presses it, **Intended** means a source asks for it and the code does not do it yet, and **Requested** means the person asked on 2026-11-06 for each channel to do what the other does. In `story-map.drawio`, a story whose evidence is only Intended or Requested is filled a lighter yellow than one the code does today.
 
@@ -252,7 +252,7 @@ Observed: the report, files and help panels resize, expand one at a time and clo
 
 ### (S) Person --> Expand Ticket From Empty Area
 
-Intended (`.sessions/_backlog/maintain-tickets-on-board.md` "click any empty area to expand ticket"): a press anywhere on a card that is not a control expands it.
+Intended (`.sessions/_backlog/maintain-tickets-on-board.md` "click any empty area to expand ticket"): a press anywhere on a card that is not a control expands it. Built today (checked 2026-11-11): a press on a card chooses it and shows its details (`ticket-card-view.tsx:198`); only the expand mark opens the card's actions (`ticket-card-view.tsx:57`). Missing: expanding from an empty area.
 
 ## (E) Steer Ticket Sessions
 
@@ -300,11 +300,11 @@ Observed: the + on the Backlog heading writes a title and text to one markdown f
 
 ### (S) Person --> Edit Ticket Text
 
-Intended (`.sessions/session-board/ticket-enhancements.md`): a double click on a card's text edits it; a session ticket's text is a markdown file in its session folder that the session's instructions refer to, so the board and the agent read the same text.
+Intended (`.sessions/session-board/ticket-enhancements.md`): a double click on a card's text edits it; a session ticket's text is a markdown file in its session folder that the session's instructions refer to, so the board and the agent read the same text. Built today (checked 2026-11-11): starting a backlog item moves its markdown file, text and all, into the ticket's session folder (`BacklogItem.start`, `backlog_item.py:121-128`), and a backlog card shows the file's text (`backlog-item-view.tsx:62`). Missing: a ticket's card does not show its file's text, no card edits text, and the agent's context (`Ticket.agent_context`, `ticket.py:217-226`) does not name the file.
 
 ### (S) Person --> Reorder Tickets In Column
 
-Intended (`.sessions/session-board/ticket-enhancements.md`): a ticket dragged up or down within its column keeps that place.
+Intended (`.sessions/session-board/ticket-enhancements.md`): a ticket dragged up or down within its column keeps that place. Built today (checked 2026-11-11): a drag moves a ticket between columns only; the Backlog lists its items by file name (`board.py:328`) and no column keeps a place a person chose.
 
 ### (S) Person --> [Archive Ticket](../../kanban/.context/move-work-forward-on-session-board/steer-ticket-sessions/archive-ticket/archive_ticket_story.test.md)
 
@@ -312,11 +312,11 @@ Observed as the `ticket.archive` tool (`Ticket.archive`). Intended (`.sessions/s
 
 ### (S) Person --> Delete Ticket
 
-Intended (`.sessions/session-board/ticket-enhancements.md`): Delete on a card removes the ticket and its session folder.
+Intended (`.sessions/session-board/ticket-enhancements.md`): Delete on a card removes the ticket and its session folder. Built today (checked 2026-11-11): no delete operation on `Ticket` or `BacklogItem` (`ticket.py`, `backlog_item.py`); Archive is the nearest (`Ticket.archive`, `ticket.py:352`).
 
 ### (S) Person --> Tag Ticket Session
 
-Intended (`.sessions/_backlog/maintain-tickets-on-board.md` "tagging sessions"): a person adds tags to a ticket's session, and the card shows them.
+Intended (`.sessions/_backlog/maintain-tickets-on-board.md` "tagging sessions"): a person adds tags to a ticket's session, and the card shows them. Built today (checked 2026-11-11): none; `session.json` holds no tags (`sessions.py:276`).
 
 ## (E) Organize Ticket Hierarchy
 
@@ -330,7 +330,7 @@ Intended (`.sessions/session-board/ticket-enhancements.md`): a person adds a chi
 
 ### (S) Board App --> Display Child Tickets In Parent
 
-Intended (`.sessions/session-board/ticket-enhancements.md`): a parent's card holds its child tickets stacked inside it, with the parent's title small above them.
+Intended (`.sessions/session-board/ticket-enhancements.md`): a parent's card holds its child tickets stacked inside it, with the parent's title small above them. Built today (checked 2026-11-11): a child's card names its scope and parent, such as "story of epic" (`ticket-client.tsx:97-98`), and sits in its column like any other ticket.
 
 ### (S) Person --> Expand Parent Ticket
 
