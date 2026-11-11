@@ -1,0 +1,54 @@
+2026-11-11T17:00:31Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:55 `self._graph = CheckedGraph(self.session, fidelities, paths, graph, self.call)` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-cdd-canvas-format-chip\harness at C:/dev/abd-cdd-canvas-format-chip/space/kanban/guide-work-through-practices-in-chat-bar.story.shared.py, read from C:\dev\abd-cdd-canvas-format-chip; name paths from the project's root, or absolute
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 530, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in <lambda>
+    self._ran(lambda: exec(code, environment, environment), statement)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 23, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 42, in __init__
+    self.prefixes = self._prefixes(edited)
+                    ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 128, in _prefixes
+    named = [path for path in self._from_session_root(edited) if path not in self.unchecked_files]
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 137, in _from_session_root
+    return [self.session.session_files.from_root(item) for item in paths or []]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\session_files.py", line 88, in from_root
+    raise NamedPathNotFoundError(str(named), self._session.repo_path, self._session.work_root)
+space.session.session_files.NamedPathNotFoundError: nothing under the session's root C:\dev\abd-cdd-canvas-format-chip\harness at C:/dev/abd-cdd-canvas-format-chip/space/kanban/guide-work-through-practices-in-chat-bar.story.shared.py, read from C:\dev\abd-cdd-canvas-format-chip; name paths from the project's root, or absolute
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 786, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 495, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 502, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1071, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1075, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1093, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 306, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 322, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 558, in _walk
+    self._execute(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in _execute
+    self._ran(lambda: exec(code, environment, environment), statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 534, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:55 `self._graph = CheckedGraph(self.session, fidelities, paths, graph, self.call)` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-cdd-canvas-format-chip\harness at C:/dev/abd-cdd-canvas-format-chip/space/kanban/guide-work-through-practices-in-chat-bar.story.shared.py, read from C:\dev\abd-cdd-canvas-format-chip; name paths from the project's root, or absolute
