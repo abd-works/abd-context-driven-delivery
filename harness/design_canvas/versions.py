@@ -1,5 +1,5 @@
-"""Numbered versions of a design canvas: ``version-1``, ``version-2``, … beside each other under one folder, the release's
-``.sessions/<release>/design-canvas``.
+"""Numbered versions of a design canvas: ``version-1``, ``version-2``, … beside each other under one folder, the
+``design-canvas`` folder in the UX practice's root.
 
 People edit a published canvas directly, so a regeneration never writes over one: it starts the next version, a
 copy of the latest that the generator then renders into, and that version is published as a new canvas.
@@ -17,7 +17,7 @@ from typing import Dict, List, Optional
 
 from harness.installation.json_file import JsonFile
 
-# The folder a release keeps its canvas in, under the release's own folder (``.sessions/<release>/``).
+# The folder a canvas is kept in, under the UX practice's root, where the UX practice writes its other outputs.
 DESIGN_CANVAS_FOLDER = "design-canvas"
 _VERSION = re.compile(r"^version-(\d+)$")
 
@@ -27,7 +27,7 @@ class PublishedVersion(Exception):
 
 
 class CanvasVersions:
-    """The versions of the canvas kept under *root* (for example ``.sessions/<session>/design-canvas``)."""
+    """The versions of the canvas kept under *root* (for example ``<ux root>/design-canvas``)."""
 
     def __init__(self, root: str | Path) -> None:
         self.root = Path(root)
@@ -35,10 +35,10 @@ class CanvasVersions:
         self._record = JsonFile(self.root / "versions.json")
 
     @classmethod
-    def in_session_folder(cls, session_folder: str | Path) -> CanvasVersions:
-        """The canvas a session keeps in its folder, such as the open session's folder under
-        ``WorkState(repo).sessions_folder``."""
-        return cls(Path(session_folder) / DESIGN_CANVAS_FOLDER)
+    def in_practice_root(cls, practice_root: str | Path) -> CanvasVersions:
+        """The canvas the UX practice keeps in its root, the folder session.json names for it (``practices.ux.root``),
+        beside its other outputs."""
+        return cls(Path(practice_root) / DESIGN_CANVAS_FOLDER)
 
     @property
     def numbers(self) -> List[int]:
