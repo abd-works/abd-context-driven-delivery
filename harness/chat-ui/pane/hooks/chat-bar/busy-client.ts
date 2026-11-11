@@ -3,8 +3,8 @@ import type { EngineInterface } from 'claude-code'
 
 import type { BusyJson } from '../../types'
 
-// A switch or close commits, pushes, merges, and moves the chat, which can take a while; the band shows what it is doing
-// with a turning wheel until it is done.
+// Opening a ticket creates its worktree, and a close commits, pushes and merges, which can take a while; the band shows
+// what it is doing with a turning wheel until it is done.
 const busy = atom({ plugin: 'cdd-board', key: 'busy' } as const, { doing: '', frame: 0 } as BusyJson)
 
 const WHEEL = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']

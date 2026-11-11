@@ -6,7 +6,6 @@ import { readName } from './board-chat/chat-name'
 import { openedBoard } from './board-chat/board-server'
 import { currentChatBar, refreshChatBar } from './chat-bar/chat-bar-client'
 import { ChatBarView } from './chat-bar/chat-bar-view'
-import { checkChatFolder } from './chat-bar/chat-folder-client'
 import { clearBusy, currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
 import { isStagePickerOpen } from './chat-bar/stage-client'
@@ -52,7 +51,6 @@ async function readActive($: EngineInterface): Promise<void> {
   const chatBar = await currentChatBar($)
   if (chatBar.problem) return
   await loadFormatChips($, chatBar)
-  await checkChatFolder($, chatBar)
   // The system prompt is cached; when the active session's summary changes, it is composed again next turn.
   if (chatBar.statusLine !== shownStatus) await $.ui.invalidate('prompt.section')
   shownStatus = chatBar.statusLine

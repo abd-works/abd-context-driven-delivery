@@ -1,152 +1,60 @@
-import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { ChatFolderJson } from '../../types'
-import { isChatBusy, turnsSoFar } from '../board-chat/chat-turns'
+import type { ChatData } from '@cdd/harness/chat/chat'
+import type { TicketData } from '@cdd/space/kanban/ticket'
+
 import { reasonOf } from '../shared/failure'
-import { showFailure, type ChatBarClient } from './chat-bar-client'
+import { callTool, showFailure } from './chat-bar-client'
 
-// Where this chat works against where the active session's work is: the ticket's own worktree, else the repository's
-// main checkout, where activating it checked its branch out. A switch made in the chat bar moves the chat there with
-// Claude Code's own /cd; one made elsewhere shows in the band until the person moves it.
-const chatFolder = atom({ plugin: 'cdd-board', key: 'chatFolder' } as const, { current: '', expected: '', asked: '' } as ChatFolderJson, { shape: 'chat-folder-2' })
+// A ticket's work happens in a chat of its own, in the ticket's worktree: the server decides which ticket a chat works
+// on from the folder it is in. Opening a ticket from the main chat never moves the main chat; it finds the ticket's chat
+// or starts a new one in the worktree.
 
-// Windows names one folder with either slash and any case, so a folder is compared in one spelling.
-const spelled = (folder: string): string => folder.split('\\').join('/').replace(/\/+$/, '').toLowerCase()
-const sameFolder = (one: string, other: string): boolean => spelled(one) === spelled(other)
-
-// Atom chatFolder, declared in pane/types/index.d.ts and kept in this file.
-async function currentChatFolder($: EngineInterface): Promise<ChatFolderJson & { isElsewhere: boolean }> {
-  const folder = await read($, chatFolder)
-  return { ...folder, isElsewhere: Boolean(folder.current && folder.expected && !sameFolder(folder.current, folder.expected)) }
+// The name a person reads for the chat working on a ticket, as chat.list names it; its id when the list names none.
+async function nameOfChat($: EngineInterface, id: string): Promise<string> {
+  const chats = await callTool<ChatData[]>($, 'chat.list', {})
+  return chats.find(chat => chat.id === id)?.name || id
 }
 
-// The folder holding a .git folder git names, in git's own spelling.
-const spelledAsGiven = (gitFolder: string): string => gitFolder.split('\\').join('/').replace(/\/\.git$/, '')
-
-// The repository's main checkout, which every worktree shares: the folder holding its .git.
-async function mainCheckoutOf($: EngineInterface): Promise<string> {
-  const { exitCode, stdout } = await $.process.run(['git', 'rev-parse', '--path-format=absolute', '--git-common-dir'])
-  return exitCode === 0 ? spelledAsGiven(stdout.trim()) : ''
-}
-
-// The folder the active session's work is in: its ticket's worktree, else the main checkout.
-async function workFolderOf($: EngineInterface, chatBar: ChatBarClient): Promise<string> {
-  return chatBar.worktree || (await mainCheckoutOf($))
-}
-
-// Reads where the chat is and where the active session's work is. Only a switch made in the chat bar asks the chat to
-// move, once; reading never asks.
-async function readChatFolder($: EngineInterface, chatBar: ChatBarClient): Promise<{ current: string; expected: string }> {
-  const [current, expected] = await Promise.all([$.session.root(), workFolderOf($, chatBar)])
-  await update($, chatFolder, json => ({ ...json, current, expected }))
-  return { current, expected }
-}
-
-export async function checkChatFolder($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
-  await readChatFolder($, chatBar)
-}
-
-// The desktop app moves a chat when the agent's turn ends. A chat still not there this long after the turn that was
-// asked to move it has ended was refused, so the person hears so then instead of waiting on a fixed timeout.
-const MOVE_AFTER_TURN_MILLISECONDS = 5_000
-const MOVE_CHECK_MILLISECONDS = 500
-
-// Where the move was asked of: /cd moves at once; the agent moves the chat when a turn started after the ask ends.
-type MoveAsked = { byAgent: boolean; turnsBefore: number }
-
-// Moves this chat to the main checkout before a worktree it may be working in is deleted, and waits until it is there:
-// a chat still in the worktree holds its folder open, so the delete fails halfway. Answers why the chat is not in the
-// main checkout, or '' once it is.
-export async function moveToMainCheckout($: EngineInterface): Promise<string> {
-  const [current, main] = await Promise.all([$.session.root(), mainCheckoutOf($)])
-  if (!main) return `git found no main checkout from ${current}`
-  if (sameFolder(current, main)) return ''
-  if (await movedTo($, main, false)) return ''
-  return `the app did not move this chat out of ${current}, so its worktree is held open`
-}
-
-// True once the chat is in folder; false once the move had its chance: the asked turn ended and the app still had not.
-async function arrivedIn($: EngineInterface, folder: string, asked: MoveAsked, followsSession: boolean): Promise<boolean> {
-  let sinceTurnEnded = 0
-  while (sinceTurnEnded < MOVE_AFTER_TURN_MILLISECONDS) {
-    if (!(await stillWanted($, folder, followsSession))) return true
-    if (sameFolder(await $.session.root(), folder)) return true
-    await $.clock.sleep(MOVE_CHECK_MILLISECONDS)
-    // The app moves the chat once it is idle, so a turn that starts after the asked one (a second move request, a
-    // queued prompt) starts the count again instead of being counted against the move.
-    sinceTurnEnded = askedTurnEnded(asked) ? sinceTurnEnded + MOVE_CHECK_MILLISECONDS : 0
-  }
-  return false
-}
-
-// The app sometimes moves the chat later than the grace period, such as while it reconnects the folder's MCP servers,
-// so a move is waited on this long before the person is told it failed.
-const LATE_MOVE_MILLISECONDS = 60_000
-
-// A session opened since the move was asked has its own folder, so a wait for the old one ends there: the chat bar
-// neither keeps asking for it nor says it failed.
-async function stillWanted($: EngineInterface, folder: string, followsSession: boolean): Promise<boolean> {
-  if (!followsSession) return true
-  const { expected } = await read($, chatFolder)
-  return !expected || sameFolder(expected, folder)
-}
-
-async function arrivedLate($: EngineInterface, folder: string, followsSession: boolean): Promise<boolean> {
-  for (let waited = 0; waited < LATE_MOVE_MILLISECONDS; waited += MOVE_CHECK_MILLISECONDS) {
-    if (!(await stillWanted($, folder, followsSession))) return true
-    if (sameFolder(await $.session.root(), folder)) return true
-    await $.clock.sleep(MOVE_CHECK_MILLISECONDS)
-  }
-  return false
-}
-
-function askedTurnEnded(asked: MoveAsked): boolean {
-  return !asked.byAgent || (turnsSoFar() > asked.turnsBefore && !isChatBusy())
-}
-
-// Claude Code's /cd moves the chat where the session offers it. The desktop app offers no /cd: there the chat's folder
-// changes through the app's change_directory tool, which only the agent can call, so the agent is asked to.
-async function moveChatTo($: EngineInterface, folder: string): Promise<MoveAsked | null> {
-  const turnsBefore = turnsSoFar()
-  try {
-    const hasCd = (await $.command.list()).some(command => command.name === 'cd')
-    if (hasCd) await $.command.run({ command: 'cd', args: folder })
-    else await askAgentToMove($, folder)
-    return { byAgent: !hasCd, turnsBefore }
-  } catch (failure) {
-    await showFailure($, `This chat did not move to ${folder}: ${reasonOf(failure)}`)
-    return null
-  }
-}
-
-// The desktop app rewrites a Windows path to backslashes before change_directory runs, and auto mode refuses a call
-// whose input changed after it was reviewed; asking in the spelling the app uses leaves nothing to rewrite.
+// The desktop app rewrites a Windows path to backslashes before its tools run, and auto mode refuses a call whose input
+// changed after it was reviewed; asking in the spelling the app uses leaves nothing to rewrite.
 const DRIVE_PATH = /^[A-Za-z]:\//
 const inWindowsSpelling = (folder: string): string => (DRIVE_PATH.test(folder) ? folder.split('/').join('\\') : folder)
 
-async function askAgentToMove($: EngineInterface, folder: string): Promise<void> {
-  const answer = await $.prompt.submit({ text: `Move this chat to ${inWindowsSpelling(folder)}: call the change_directory tool with that path, and do nothing else.`, asUser: true })
+// The desktop app starts a new chat only through its start_session tool, which only the agent can call, so the agent is
+// asked to start one in the ticket's worktree and to do nothing else.
+async function askAgentToStartChat($: EngineInterface, ticket: TicketData): Promise<void> {
+  const folder = inWindowsSpelling(ticket.worktree)
+  const text = [
+    `Start a new chat for ticket ${ticket.name} in its worktree ${folder}: call the start_session tool with initiation "user_asked", context "fresh", cwd "${folder}", use_worktree false and title "${ticket.name}",`,
+    `with a prompt saying it works on ticket ${ticket.name} (${ticket.title}) and should read the session's latest handoff first, and a background saying the chat bar opened this ticket from the main chat.`,
+    'Do nothing else, and stay in this chat.',
+  ].join(' ')
+  const answer = await $.prompt.submit({ text, asUser: true })
   if (answer.drop !== undefined) throw new Error(answer.drop || 'the chat did not take the request')
 }
 
-// Moves this chat to the folder the active session's work is in, as /cd does when the person types it. The desktop app
-// moves the chat only after the agent's turn ends, so the band is read again once the chat is there, not before.
-export async function followSession($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
-  await readChatFolder($, chatBar)
-  const { expected, isElsewhere } = await currentChatFolder($)
-  if (!isElsewhere) return
-  $.ui.toast(`Moving this chat to ${expected}${chatBar.sessionName ? `, for ${chatBar.sessionName}` : ''}`)
-  if (!(await movedTo($, expected, true))) await showFailure($, `The app did not move this chat to ${expected}`)
-  await readChatFolder($, chatBar)
-}
-
-// Asks the move once: the agent's change_directory is asked a single time, and the chat is waited on through the
-// late-move limit before the move counts as refused.
-async function movedTo($: EngineInterface, folder: string, followsSession: boolean): Promise<boolean> {
-  const asked = await moveChatTo($, folder)
-  if (!asked) return false
-  if (await arrivedIn($, folder, asked, followsSession)) return true
-  // A switch asks once and waits once; only leaving a worktree that is about to be deleted waits for a late move.
-  return !followsSession && (await arrivedLate($, folder, followsSession))
+// Where a ticket that ticket.activate opened is worked on: its chat when one is open, else a new chat in its worktree.
+// The desktop app offers no /cd and starts the chat through the agent; a terminal or IDE chat is opened by the person,
+// so the chat bar names the folder to open it in.
+export async function startedChatIn($: EngineInterface, ticket: TicketData): Promise<void> {
+  if (ticket.working_chat) {
+    $.ui.toast(`${ticket.name} is already open in the chat ${await nameOfChat($, ticket.working_chat.id).catch(failure => `${ticket.working_chat?.id} (chat.list failed: ${reasonOf(failure)})`)}`)
+    return
+  }
+  if (!ticket.worktree) {
+    await showFailure($, `${ticket.name} opened with no worktree, so there is no folder to start its chat in`)
+    return
+  }
+  const isDesktopApp = !(await $.command.list()).some(command => command.name === 'cd')
+  if (!isDesktopApp) {
+    $.ui.toast(`${ticket.name} is open in ${ticket.worktree}: open a chat in that folder to work on it`)
+    return
+  }
+  try {
+    await askAgentToStartChat($, ticket)
+    $.ui.toast(`Starting a chat for ${ticket.name} in ${ticket.worktree}`)
+  } catch (failure) {
+    await showFailure($, `No chat started for ${ticket.name}: ${reasonOf(failure)}. Open a chat in ${ticket.worktree} to work on it`)
+  }
 }

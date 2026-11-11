@@ -16,17 +16,15 @@ export type InstallJson = { state: 'idle' | 'running' | 'installed' | 'failed'; 
 
 // What the chat bar keeps between draws: board.overview's answer, and the server's own text when the last call failed.
 // problem is why the last board read failed, cleared by the next read that works. failure is an action the person ran
-// that failed, such as a switch or a close, kept until they dismiss it, so a refresh never hides it.
+// that failed, such as opening a ticket or a close, kept until they dismiss it, so a refresh never hides it.
 export type ChatBarJson = { board: object | null; problem: string | null; failure: string | null }
 
-// Which of the chat bar's boxes is open above the line. switchTo names the session the activation dialog opens;
-// closing holds the branch the active session's work is on, checked out, whose work the close dialog offers to commit
-// and push, or null. leaveChoices and openChoices are what the Python Ticket offers the open dialog, in its order;
-// leaving and opening are what the dialog has chosen of them, as ticket.activate and ticket.close take them.
+// Which of the chat bar's boxes is open above the line. closing holds the branch the active session's work is on,
+// checked out, whose work the close dialog offers to commit and push, or null. leaveChoices is what the Python Ticket
+// offers the close dialog, in its order; leaving is what the dialog has chosen of them, as ticket.close takes them.
 export type ChatBarViewJson = {
   isSessionListOpen: boolean
   isCardOpen: boolean
-  switchTo: string | null
   closing: { branch: string | null } | null
   leaveChoices: string[]
   // The branch leaving commits and pushes, which the LEAVE line names; empty when nothing checked out is the session's.
@@ -34,10 +32,6 @@ export type ChatBarViewJson = {
   // The session's own branch, which merge and delete branch act on, checked out or not; empty while git has none.
   leaveOwnBranch: string
   leaving: string[]
-  openChoices: string[]
-  // The branches that could each be the session's when more than one holds its name; none is chosen for it.
-  candidateBranches: string[]
-  opening: string[]
 }
 
 // Whether the action picker's menu is open.
@@ -51,12 +45,7 @@ export type ActionPickerJson = { isOpen: boolean; chosenAction: string | null }
 // isOutOfDate: a report's saved graph is in a shape the graph no longer reads, so the tab offers Validate again.
 export type FidelityFilesJson = { fidelity: string; tabs: { path: string; text: string | null }[]; shown: string | null; isOutOfDate: boolean } | null
 
-// Where this chat works (its session root) and where the active session's work is (its ticket's worktree, else the
-// main checkout), so the band can say when they differ.
-// asked: the folder the chat bar last asked the chat to move to by itself, so it asks once for each new folder.
-export type ChatFolderJson = { current: string; expected: string; asked: string }
-
-// What the chat bar is doing while a switch or close runs, which the band shows with a turning wheel; empty when idle.
+// What the chat bar is doing while a ticket opens or closes, which the band shows with a turning wheel; empty when idle.
 export type BusyJson = { doing: string; frame: number }
 
 declare module 'claude-code' {
@@ -73,7 +62,6 @@ declare module 'claude-code' {
       shownStage: string | null
       stagePicker: boolean
       formatChoices: FormatChoicesJson
-      chatFolder: ChatFolderJson
       busy: BusyJson
     }
   }

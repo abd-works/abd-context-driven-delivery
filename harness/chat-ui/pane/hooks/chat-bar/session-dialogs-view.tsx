@@ -3,8 +3,8 @@ import type { EngineInterface } from 'claude-code'
 import { BRAND } from '../shared/brand'
 import type { ChatBarDraw } from './chat-bar-view'
 import { MAIN_SESSION } from './chat-bar-client'
-import { activateSession, closeSession, createSession, pickSession } from './session-client'
-import { cancelClose, cancelSwitch, toggleLeaving, toggleOpening } from './session-dialogs-client'
+import { activateTicket, closeSession, createSession } from './session-client'
+import { cancelClose, toggleLeaving } from './session-dialogs-client'
 import { stageIconOf } from './stage-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
@@ -16,7 +16,7 @@ function ChoiceView({ Button }: ElementTable, choice: Choice) {
   return <Button key={choice.key} plain label={`${choice.isChosen ? '☑' : '☐'} ${choice.label}`} onPress={choice.onPress} />
 }
 
-// A dialog's group of choices, after its heading, such as LEAVE or OPEN.
+// A dialog's group of choices, after its heading, such as LEAVE.
 function ChoicesView(elements: ElementTable, heading: string, choices: Choice[]) {
   const { Box, Text } = elements
   return (
@@ -41,12 +41,6 @@ function leaveLabelOf(word: string, branch: string): string {
   return labels[word] ?? word
 }
 
-// Each way the Ticket offers to open a session, by the word TicketCheckout.open reads, as the dialog words it.
-function openLabelOf(word: string, session: string): string {
-  const labels: Record<string, string> = { branch: `switch this folder to branch ${session}`, worktree: 'create worktree' }
-  return labels[word] ?? word
-}
-
 function leavingChoices($: EngineInterface, prefix: string, view: ChatBarDraw['view']): Choice[] {
   return view.leaveChoices.map(word => ({ key: `${prefix}-${word}`, label: leaveLabelOf(word, view.leaveOwnBranch), isChosen: view.leaving.includes(word), onPress: () => toggleLeaving($, word) }))
 }
@@ -56,48 +50,26 @@ function leaveHeadingOf(session: string, branch: string): string {
   return `LEAVE ${session}${branch ? ` on ${branch}` : ''}`
 }
 
-// The sessions a person can switch to, each after its stage's orange icon, and a field to name a new one.
+// In the main chat, the tickets a person can open, each after its stage's orange icon, and a field to name a new one.
+// Main is listed first as the session this chat works on; opening a ticket finds its chat or starts one in its worktree.
+// A ticket's own chat works only on that ticket, so it has no list.
 export function SessionListView($: EngineInterface, { Box, Button, Input, Text }: ElementTable, { chatBar, view }: ChatBarDraw) {
-  if (!view.isSessionListOpen) return null
+  if (!view.isSessionListOpen || !chatBar.isMain) return null
   return (
     <Box key="session-list" flexDirection="column" alignSelf="flex-end" paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
       <Box key="session-row-main" flexDirection="row" gap={1}>
         <Text color={BRAND.muted}>⌂</Text>
-        <Button key="session-main" plain onPress={() => pickSession($, chatBar, MAIN_SESSION)}>
-          <Text color={chatBar.isMain ? BRAND.accent : BRAND.text}>{MAIN_SESSION}</Text>
-        </Button>
+        <Text color={BRAND.accent}>{MAIN_SESSION}</Text>
       </Box>
       {chatBar.openTickets.map(ticket => (
         <Box key={`session-row-${ticket.name}`} flexDirection="row" gap={1}>
           <Text color={BRAND.accent}>{stageIconOf(ticket.stage)}</Text>
-          <Button key={`session-${ticket.name}`} plain onPress={() => pickSession($, chatBar, ticket.name)}>
-            <Text color={ticket.name === chatBar.sessionName ? BRAND.accent : BRAND.text}>{ticket.name}</Text>
+          <Button key={`session-${ticket.name}`} plain onPress={() => activateTicket($, ticket.name)}>
+            <Text color={BRAND.text}>{ticket.name}</Text>
           </Button>
         </Box>
       ))}
-      <Input key="new-session" placeholder="New session name" value="" onSubmit={value => (value.trim() ? createSession($, chatBar, value.trim()) : undefined)} />
-    </Box>
-  )
-}
-
-// Opening a session leaves the active one with what the person chose, from what the active Ticket offers, and opens the
-// new one with what its Ticket offers to create.
-export function ActivateView($: EngineInterface, elements: ElementTable, { chatBar, view }: ChatBarDraw) {
-  const { Box, Button, Text } = elements
-  const switchTo = view.switchTo
-  if (!switchTo) return null
-  const leaving = leavingChoices($, 'leave', view)
-  const opening: Choice[] = view.openChoices.map(word => ({ key: `open-${word}`, label: openLabelOf(word, switchTo), isChosen: view.opening.includes(word), onPress: () => toggleOpening($, word) }))
-  return (
-    <Box key="activate" flexDirection="column" paddingX={1} borderStyle="single" borderColor={BRAND.accent} backgroundColor={BRAND.raised}>
-      <Text weight="semibold" color={BRAND.text}>{`Open ${switchTo}`}</Text>
-      {chatBar.sessionName ? ChoicesView(elements, leaveHeadingOf(chatBar.sessionName, view.leaveBranch), leaving) : null}
-      {ChoicesView(elements, 'OPEN', opening)}
-      {view.candidateBranches.length ? <Text color={BRAND.muted}>{`Several branches could be ${switchTo}'s: ${view.candidateBranches.join(', ')}. Record the right one as branch in its session.json, or create its own.`}</Text> : null}
-      <Box flexDirection="row" gap={1}>
-        <Button key="activate-cancel" label="Cancel" onPress={() => cancelSwitch($)} />
-        <Button key="activate-confirm" label="Open" variant="primary" onPress={() => activateSession($, switchTo)} />
-      </Box>
+      <Input key="new-session" placeholder="New session name" value="" onSubmit={value => (value.trim() ? createSession($, value.trim()) : undefined)} />
     </Box>
   )
 }

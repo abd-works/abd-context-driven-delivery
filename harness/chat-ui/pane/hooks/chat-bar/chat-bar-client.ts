@@ -38,8 +38,8 @@ export class ChatBarClient {
   // An action the person ran that failed, in the server's own words, shown until they dismiss it.
   readonly failure: string | null
 
-  // The tickets a person can switch to, each named in the stage it is in, as board.overview sends them. Main is a
-  // ticket too, but the session list shows it first on its own row, so it is left out here.
+  // The tickets a person can open from the main chat, each named in the stage it is in, as board.overview sends them.
+  // Main is a ticket too, but the session list shows it first on its own row, so it is left out here.
   get openTickets(): { name: string; stage: string }[] {
     return (this.board?.columns ?? []).flatMap(column => column.tickets.filter(ticket => ticket.name !== MAIN_SESSION).map(ticket => ({ name: ticket.name, stage: column.name })))
   }
@@ -49,7 +49,8 @@ export class ChatBarClient {
     return this.ticket !== null
   }
 
-  // Main, the default session, opens with board.open_main and never closes, so the bar offers no close for it.
+  // Main, the default session, is what a chat in the repository's own folder works on. It never closes, so the bar offers
+  // no close for it, and only its chat opens other tickets.
   get isMain(): boolean {
     return this.ticket?.is_main ?? false
   }
@@ -61,11 +62,6 @@ export class ChatBarClient {
   // The session.json that names the session to the session tools.
   get sessionFile(): string {
     return this.ticket?.session.session_file ?? ''
-  }
-
-  // The active ticket's own worktree, where the chat bar moves this chat; empty while it has none.
-  get worktree(): string {
-    return this.ticket?.worktree ?? ''
   }
 
   get title(): string {
@@ -168,7 +164,6 @@ export class ChatBarClient {
     return this.board?.active ?? null
   }
 
-  // A ticket the board's switch list names, found where its column sends it whole (harness/chat-ui/.context/cdr/0002).
   // A fidelity's label as the board names it, such as story-map; its slug when the board names none.
   private labelOf(slug: string): string {
     return this.board?.fidelities.find(shown => shown.fidelity.slug === slug)?.label ?? slug
