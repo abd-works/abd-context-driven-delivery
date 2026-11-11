@@ -19,11 +19,11 @@
         <mxCell id="space-kanban--stage" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Stage&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ steps: list[str]&lt;br/&gt;+ scope: StageScope&lt;br/&gt;+ actions: list[str]&lt;br/&gt;+ producing_actions: list[str]&lt;br/&gt;+ work_required: list[FidelityGuidance]&lt;br/&gt;+ next_stage: Stage&lt;br/&gt;+ previous_stage: Stage&lt;br/&gt;+ wip_limit: int&lt;br/&gt;+ is_over_limit: bool&lt;br/&gt;+ in_progress: list[Ticket]&lt;br/&gt;+ done: list[Ticket]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Stage(approach: ApproachStage, board: Board)&lt;br/&gt;+ requires(fidelity: FidelityGuidance): bool&lt;br/&gt;+ load(stage: str, project: Path): Stage&lt;br/&gt;+ set_wip_limit(limit: int): Stage&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
           <mxGeometry x="1020" y="2330" width="280" height="286" as="geometry" />
         </mxCell>
-        <mxCell id="space-kanban--card" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Card&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ board: Board&lt;br/&gt;+ title: str&lt;br/&gt;+ column: Column&lt;br/&gt;+ last_activity: str&lt;br/&gt;+ key: str&lt;br/&gt;+ is_stacked: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Card(board: Board)&lt;br/&gt;+ move_next(): Card&lt;br/&gt;+ move_previous(): Card&lt;br/&gt;+ move_before(other: Card): Column&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
-          <mxGeometry x="3370" y="60" width="220" height="206" as="geometry" />
+        <mxCell id="space-kanban--card" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Card&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ board: Board&lt;br/&gt;+ title: str&lt;br/&gt;+ column: Column&lt;br/&gt;+ last_activity: str&lt;br/&gt;+ key: str&lt;br/&gt;+ is_stacked: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Card(board: Board)&lt;br/&gt;+ move_next(): Card&lt;br/&gt;+ move_previous(): Card&lt;br/&gt;+ move_before(other: Card): Card&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="3370" y="60" width="200" height="206" as="geometry" />
         </mxCell>
-        <mxCell id="space-kanban--ticket" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Ticket&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ title: str&lt;br/&gt;+ text: str&lt;br/&gt;+ tags: list[str]&lt;br/&gt;+ parent: Ticket&lt;br/&gt;+ ancestors: list[Ticket]&lt;br/&gt;+ children: list[Ticket]&lt;br/&gt;+ is_pulled_out: bool&lt;br/&gt;+ is_stacked: bool&lt;br/&gt;+ session: Session&lt;br/&gt;+ progress: list[FidelityProgress]&lt;br/&gt;+ work: TicketWork&lt;br/&gt;+ checkout: TicketCheckout&lt;br/&gt;+ marks: StageMarks&lt;br/&gt;+ column: Column&lt;br/&gt;+ is_closed: bool&lt;br/&gt;+ is_active: bool&lt;br/&gt;+ is_open: bool&lt;br/&gt;+ drop_targets: list[str]&lt;br/&gt;+ is_done: bool&lt;br/&gt;+ next_fidelity: FidelityProgress&lt;br/&gt;+ worktree: str&lt;br/&gt;+ chat: Chat&lt;br/&gt;+ stage_work: list[StageWork]&lt;br/&gt;+ last_activity: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Ticket(session: Session, board: Board)&lt;br/&gt;+ load(ticket: str, project: Path): Ticket&lt;br/&gt;+ create(title: str, scope: str, parent: str, path: str, project: Path): Ticket&lt;br/&gt;+ branch(): Branch&lt;br/&gt;+ work_branch(): Branch&lt;br/&gt;+ format_choices(fidelities: list[str]): list[FormatChoice]&lt;br/&gt;+ activate(): Ticket&lt;br/&gt;+ move_next(): Ticket&lt;br/&gt;+ move_previous(): Ticket | BacklogItem&lt;br/&gt;+ move_to(stage: str, done: bool): Ticket | BacklogItem&lt;br/&gt;+ close(leaving: list[str]): Ticket&lt;br/&gt;+ assign_chat(chat: str): Ticket&lt;br/&gt;+ archive(): Ticket&lt;br/&gt;+ edit_text(text: str): Ticket&lt;br/&gt;+ tag(word: str): Ticket&lt;br/&gt;+ delete()&lt;br/&gt;+ add_child(title: str): Ticket&lt;br/&gt;+ pull_out(): Ticket&lt;br/&gt;+ reassign_parent(parent: Ticket): Ticket&lt;br/&gt;+ choose_parent(parent: str): Ticket&lt;br/&gt;+ place_before(before: str): Ticket&lt;br/&gt;+ violations(): Report&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
-          <mxGeometry x="3240" y="920" width="460" height="798" as="geometry" />
+        <mxCell id="space-kanban--ticket" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Ticket&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ title: str&lt;br/&gt;+ text: str&lt;br/&gt;+ tags: list[str]&lt;br/&gt;+ parent: Ticket&lt;br/&gt;+ ancestors: list[Ticket]&lt;br/&gt;+ children: list[Ticket]&lt;br/&gt;+ is_pulled_out: bool&lt;br/&gt;+ is_stacked: bool&lt;br/&gt;+ session: Session&lt;br/&gt;+ progress: list[FidelityProgress]&lt;br/&gt;+ work: TicketWork&lt;br/&gt;+ checkout: TicketCheckout&lt;br/&gt;+ marks: StageMarks&lt;br/&gt;+ column: Column&lt;br/&gt;+ is_closed: bool&lt;br/&gt;+ is_active: bool&lt;br/&gt;+ is_open: bool&lt;br/&gt;+ drop_targets: list[str]&lt;br/&gt;+ is_done: bool&lt;br/&gt;+ next_fidelity: FidelityProgress&lt;br/&gt;+ worktree: str&lt;br/&gt;+ chat: Chat&lt;br/&gt;+ stage_work: list[StageWork]&lt;br/&gt;+ last_activity: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Ticket(session: Session, board: Board)&lt;br/&gt;+ load(ticket: str, project: Path): Ticket&lt;br/&gt;+ create(title: str, scope: str, parent: str, path: str, project: Path): Ticket&lt;br/&gt;+ branch(): Branch&lt;br/&gt;+ work_branch(): Branch&lt;br/&gt;+ format_choices(fidelities: list[str]): list[FormatChoice]&lt;br/&gt;+ activate(): Ticket&lt;br/&gt;+ move_next(): Ticket&lt;br/&gt;+ move_previous(): Ticket | BacklogItem&lt;br/&gt;+ move_to(stage: str, done: bool): Ticket | BacklogItem&lt;br/&gt;+ close(leaving: list[str]): Ticket&lt;br/&gt;+ assign_chat(chat: str): Ticket&lt;br/&gt;+ archive(): Ticket&lt;br/&gt;+ edit_text(text: str): Ticket&lt;br/&gt;+ tag(word: str): Ticket&lt;br/&gt;+ delete()&lt;br/&gt;+ add_child(title: str): Ticket&lt;br/&gt;+ pull_out(): Ticket&lt;br/&gt;+ reassign_parent(parent: Ticket | None): Ticket&lt;br/&gt;+ move_before(other: Ticket): Ticket&lt;br/&gt;+ violations(): Report&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+          <mxGeometry x="3240" y="920" width="460" height="782" as="geometry" />
         </mxCell>
         <mxCell id="space-kanban--ticketwork" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;TicketWork&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ progress: list[FidelityProgress]&lt;br/&gt;+ enabled: list[FidelityProgress]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ TicketWork(ticket: Ticket)&lt;br/&gt;+ progress_of(slug: str): FidelityProgress&lt;br/&gt;+ in_stage(stage: Stage): StageWork&lt;br/&gt;+ command(action: str, fidelities: list[FidelityGuidance]): str&lt;br/&gt;+ record(line: str)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
           <mxGeometry x="780" y="4920" width="380" height="158" as="geometry" />
@@ -46,7 +46,7 @@
         <mxCell id="space-kanban--formatchoice" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;FormatChoice&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ label: str&lt;br/&gt;+ formats: list[str]&lt;br/&gt;+ offered: int&lt;br/&gt;+ made: int&lt;br/&gt;+ starts_picked: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ offered_by(read: list[tuple[FidelityGuidance, dict[str, list[FileEntry]]]]): list[FormatChoice]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
           <mxGeometry x="60" y="4150" width="560" height="142" as="geometry" />
         </mxCell>
-        <mxCell id="space-kanban--backlogitem" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;BacklogItem&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ title: str&lt;br/&gt;+ column: Column&lt;br/&gt;+ text: str&lt;br/&gt;+ path: Path&lt;br/&gt;+ path_from_project: str&lt;br/&gt;+ last_activity: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ BacklogItem(path: Path, board: Board)&lt;br/&gt;+ load(backlog_item: str, project: Path): BacklogItem&lt;br/&gt;+ create(title: str, text: str, project: Path): BacklogItem&lt;br/&gt;+ from_ticket(ticket: Ticket): BacklogItem&lt;br/&gt;+ write_if_missing(title: str)&lt;br/&gt;+ start(scope: str, path: str): Ticket&lt;br/&gt;+ move_next(): Ticket&lt;br/&gt;+ move_previous(): BacklogItem&lt;br/&gt;+ edit_text(text: str): BacklogItem&lt;br/&gt;+ place_before(before: str): BacklogItem&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
+        <mxCell id="space-kanban--backlogitem" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;BacklogItem&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ title: str&lt;br/&gt;+ column: Column&lt;br/&gt;+ text: str&lt;br/&gt;+ path: Path&lt;br/&gt;+ path_from_project: str&lt;br/&gt;+ last_activity: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ BacklogItem(path: Path, board: Board)&lt;br/&gt;+ load(backlog_item: str, project: Path): BacklogItem&lt;br/&gt;+ create(title: str, text: str, project: Path): BacklogItem&lt;br/&gt;+ from_ticket(ticket: Ticket): BacklogItem&lt;br/&gt;+ write_if_missing(title: str)&lt;br/&gt;+ start(scope: str, path: str): Ticket&lt;br/&gt;+ move_next(): Ticket&lt;br/&gt;+ move_previous(): BacklogItem&lt;br/&gt;+ edit_text(text: str): BacklogItem&lt;br/&gt;+ move_before(other: BacklogItem): BacklogItem&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
           <mxGeometry x="2750" y="440" width="360" height="302" as="geometry" />
         </mxCell>
         <mxCell id="space-kanban--help" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Help&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ catalogued: CatalogPractice&lt;br/&gt;+ practice: PracticeGuidance&lt;br/&gt;+ fidelity: FidelityGuidance&lt;br/&gt;+ stage: Stage&lt;br/&gt;+ overview: str&lt;br/&gt;+ guidance: str&lt;br/&gt;+ rules: list[Rule]&lt;br/&gt;+ href: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Help(practice: PracticeGuidance, fidelity: FidelityGuidance, stage: Stage, catalogued: CatalogPractice)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=space/kanban;" vertex="1" parent="1">
@@ -198,11 +198,11 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="8" value="tickets, active" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=1.0;exitY=0.6601;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.5013;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--board" target="space-kanban--ticket" parent="1">
+        <mxCell id="8" value="tickets, active" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=1.0;exitY=0.6601;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.4987;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--board" target="space-kanban--ticket" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="3200" y="790" />
-              <mxPoint x="3200" y="1320" />
+              <mxPoint x="3200" y="1310" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -246,7 +246,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="15" value="board" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.3182;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.675;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--card" target="space-kanban--board" parent="1">
+        <mxCell id="15" value="board" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.35;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.675;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--card" target="space-kanban--board" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="3440" y="350" />
@@ -308,8 +308,8 @@
         <mxCell id="21" value="chat" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.7826;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticket" target="collaborators--chat" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="3600" y="1760" />
-              <mxPoint x="3730" y="1760" />
+              <mxPoint x="3600" y="1750" />
+              <mxPoint x="3730" y="1750" />
               <mxPoint x="3730" y="30" />
               <mxPoint x="660" y="30" />
               <mxPoint x="660" y="1510" />
@@ -335,11 +335,11 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6818;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticket" target="space-kanban--card" parent="1">
+        <mxCell id="23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.65;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticket" target="space-kanban--card" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="3470" y="390" />
-              <mxPoint x="3520" y="390" />
+              <mxPoint x="3500" y="390" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -438,11 +438,11 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="35" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6818;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--backlogitem" target="space-kanban--card" parent="1">
+        <mxCell id="35" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.65;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--backlogitem" target="space-kanban--card" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="2930" y="390" />
-              <mxPoint x="3520" y="390" />
+              <mxPoint x="3500" y="390" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -530,8 +530,8 @@
         <mxCell id="45" value="format_choices" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.1087;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-kanban--ticket" target="space-kanban--formatchoice" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="3290" y="1740" />
-              <mxPoint x="3180" y="1740" />
+              <mxPoint x="3290" y="1730" />
+              <mxPoint x="3180" y="1730" />
               <mxPoint x="3180" y="870" />
               <mxPoint x="3770" y="870" />
               <mxPoint x="3770" y="5260" />
