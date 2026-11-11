@@ -892,6 +892,7 @@ with description("the board tools") as self:
                 "sign-up",
                 "2026-10-31T01:00:00Z validate Stories story_map graph-rule verb-noun-format map.md:12 no-chat",
                 "2026-10-31T01:00:01Z validate Stories scenarios graph-rule plain-english-gwt-steps map.md:12 no-chat",
+                "2026-10-31T01:00:02Z move Discovery no-chat",
                 title="Sign up",
             )
             self.project.report("sign-up", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
@@ -909,6 +910,7 @@ with description("the board tools") as self:
                 "sign-up",
                 "2026-10-31T01:00:00Z validate Stories story_map graph-rule verb-noun-format map.md:12 no-chat",
                 "2026-10-31T01:00:01Z validate Stories scenarios graph-rule verb-noun-format map.md:12 no-chat",
+                "2026-10-31T01:00:02Z move Discovery no-chat",
                 title="Sign up",
             )
             self.project.report("sign-up", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
