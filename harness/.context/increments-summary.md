@@ -24,21 +24,23 @@ What each increment delivers and why it matters, in build priority order. Drawn 
 | 17 | Maybe Later | 1 |
 | | **Planned (1–17)** | **178** |
 
+**Lessons by topic.** What is built today, taught as the [Learning plan](#learning-plan) below, and the planned increments that extend each topic.
+
+| Topic | Lessons | Extended through |
+|---|---|---|
+| Generate and check | Install · Practices, fidelities, actions and stages · Generate · Document and render · Validate · Satisfy · Injected rules and toasts | 5 Repair Guidance From Mistakes · 6 Enter Commands Faster · 7 Check Clean Engineering On The Model · 12 Guard Work And Recover Fast |
+| Sketch and iterate | Grill, sketch and iterate | 16 Suggest The Next Step |
+| Sessions | Sessions, worktrees and branches · Handoffs and decision records · Server health | 12 Guard Work And Recover Fast · 14 Bring Chat Bar Level With Board · 16 Suggest The Next Step · 17 Maybe Later |
+| Bring in real context | Index and segment a source · Capture documents into a searchable index · Sandbox a live app · Meeting notes | — |
+| CDD Applications | CDD Kanban · Kanban fidelity work · Story UI editor · Design canvas and story demo · Knowledge graph · Catalog and project approach | 1 Maintain Tickets On Board · 2 Integrate Practice Content Editor Apps · 3 Sync Design Canvas With Production · 4 Integrate Stories With The Canvas Explorer · 8 Fully Integrated App Flow · 9 Review Work In Board Files · 10 Customize Board Workflow · 11 Author Story Maps · 13 Show Board Quickly · 15 Draw Linked Models On The Canvas |
+| Pattern overlays | Add your stack: LERN, MERN, CDD web domain access, Claude Code mods | — |
+| Extend CDD | Builders and annotations · Agent BDD and prompt log | — |
+
 ---
 
 ## 0. Built Today — 244 stories
 
 The starting line, not a slice to build: what the framework, the CDD Kanban, the Chat Bar and the apps do now, grouped as the 24 lessons of the [Learning plan](#learning-plan) below, each topic leaning only on the ones before it.
-
-| Topic | Lessons |
-|---|---|
-| Generate and check | Install · Practices, fidelities, actions and stages · Generate · Document and render · Validate · Satisfy · Injected rules and toasts |
-| Sketch and iterate | Grill, sketch and iterate |
-| Sessions | Sessions, worktrees and branches · Handoffs and decision records · Server health |
-| Bring in real context | Index and segment a source · Capture documents into a searchable index · Sandbox a live app · Meeting notes |
-| CDD Applications | CDD Kanban · Kanban fidelity work · Story UI editor · Design canvas and story demo · Knowledge graph · Catalog and project approach |
-| Pattern overlays | Add your stack: LERN, MERN, CDD web domain access, Claude Code mods |
-| Extend CDD | Builders and annotations · Agent BDD and prompt log |
 
 ## 1. Maintain Tickets On Board — 11 stories - IN PROGRESS
 
