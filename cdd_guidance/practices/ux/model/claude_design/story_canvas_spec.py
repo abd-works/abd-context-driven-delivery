@@ -93,6 +93,9 @@ with description("a Claude Design story map") as self:
             expect(explorer).to(contain('go="{{goToStory}}"'))
             expect(explorer).to(contain('"p": "plan-catalog"'))
 
+        with it("hands each screen the selected step, so the screen can play it"):
+            expect(self.files["project/screens/explorer.dc.html"]).to(contain('step="{{stepText}}"'))
+
     with context("rendered from a story with no screens"):
         with it("gives that story no thumbnail"):
             expect(self.files["project/Main.dc.html"]).not_to(contain("story=Create%20Credentials"))

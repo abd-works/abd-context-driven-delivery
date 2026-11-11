@@ -38,7 +38,7 @@ Render it with `ClaudeDesignStoryModel` (`cdd_guidance.practices.ux.model.claude
 - **`selection-in-view`** — The selected row scrolls into view whenever the selection changes, including when a screen's button moves the explorer.
 - **`group-steps-without-screens`** — A step with no screen of its own joins the next step that has one, so every row the reader picks shows a screen.
 - **`screen-cascade`** — A step shows the screen it is `shownOn`; without one, its scenario's screen; without that, its story's screen. When no screen applies, show the step's screenshot, else *No screen for this step yet*.
-- **`explorer-drives-the-screen`** — The explorer dc-imports each prototype screen with `story`, `scenario`, and `go` props. The screen loads the selected scenario's fixture itself, and `go(story)` moves the explorer to that story when a button on the screen leads there — the reader stays in the explorer.
+- **`explorer-drives-the-screen`** — The explorer dc-imports each prototype screen with `story`, `scenario`, `step` (the selected step's text), and `go` props. The screen loads the selected scenario's fixture itself, and `go(story)` moves the explorer to that story when a button on the screen leads there — the reader stays in the explorer.
 
 ## Prototype screens
 
