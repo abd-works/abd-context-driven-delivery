@@ -167,6 +167,17 @@ export class TicketClient extends TicketClientGenerated {
     else await this.moveNext()
   }
 
+  // A ticket dropped on another becomes its child, wherever either sits; one is never its own parent, and one already
+  // its child stays where it is.
+  canTakeAsChild(other: TicketClient): boolean {
+    return other.name !== this.name && !this.children.some(child => child.name === other.name)
+  }
+
+  async takeAsChild(other: TicketClient): Promise<void> {
+    await other.reassignParent(this.name)
+    await this.page.reader.refresh()
+  }
+
   // Python sends every practice of the ticket's session with whether it works on it.
   isEnabled(practice: string): boolean {
     return this.session.practices[practice]?.enabled === true
