@@ -48,10 +48,11 @@ class BacklogItem(Card):
     @agent_tool
     @noSessionLog
     def create(cls, title: str, text: str = "", *, project: Path | str) -> BacklogItem:
-        """Add an idea to the Backlog: one markdown file, with title as its heading and text under it."""
+        """Add an idea to the Backlog: one markdown file, with title as its heading and text under it, committed on main and pushed."""
         board = Board.load(project)
         item = cls(board.sessions.backlog_folder / f"{Name(title).title_slug}.md", board)
         item._write(title, text)
+        board.save_sessions_on_main(f"sessions: add {title} to the Backlog")
         return item
 
     @classmethod
@@ -118,12 +119,13 @@ class BacklogItem(Card):
     @agent_tool
     @noSessionLog
     def start(self, scope: str = "feature", path: str = "") -> Ticket:
-        """Start the backlog item titled backlog_item: open a ticket for it in Discovery, or bring back the ticket that was moved here, with its work. Its file goes into the ticket's session folder, text and all. scope is feature, story, or slice; path is the folder in the repository its session works on."""
+        """Start the backlog item titled backlog_item: open a ticket for it in Discovery, or bring back the ticket that was moved here, with its work. Its file goes into the ticket's session folder, text and all, and the change is committed on main and pushed. scope is feature, story, or slice; path is the folder in the repository its session works on."""
         kept_folder = self._held_ticket_folder
         ticket = self._ticket_brought_back(kept_folder) if kept_folder.is_dir() else self._ticket_opened(scope, path)
         # An item kept inside its folder went back with the folder; a file beside it or on its own moves in now.
         if self._path.exists():
             ticket.session.keep_file(self._path)
+        self._board.save_sessions_on_main(f"sessions: start {ticket.name} from the Backlog")
         return ticket
 
     def move_next(self) -> Ticket:

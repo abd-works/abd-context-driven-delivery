@@ -86,6 +86,15 @@ with description("a session's file manager"):
         with it("should give each file its size"):
             expect(self.files.list("src").entries[0].size).to(equal(len(ORDER)))
 
+        # A person choosing a practice root picks among these folders, and a module's .context can be one.
+        with context("with hidden folders in it"):
+            with before.each:
+                for name in (".context", ".git", "node_modules"):
+                    (self.workpath / "src" / name).mkdir()
+
+            with it("should offer its .context folder and no other hidden folder or installed packages"):
+                expect([entry.name for entry in self.files.list("src").folders]).to(equal([".context"]))
+
     # A practice's declared outputs are glob patterns; the board asks each fidelity whether its pattern finds a file.
     with context("that finds the files a pattern names"):
 

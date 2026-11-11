@@ -64,9 +64,14 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
       {chatBar.openTickets.map(ticket => (
         <Box key={`session-row-${ticket.name}`} flexDirection="row" gap={1}>
           <Text color={BRAND.accent}>{stageIconOf(ticket.stage)}</Text>
-          <Button key={`session-${ticket.name}`} plain onPress={() => activateTicket($, ticket.name)}>
+          {/* The desktop pads a Button and draws it in its own colour, so the name is Text in main's column and a
+              see-through Button over it takes the press. */}
+          <Box key={`session-name-${ticket.name}`}>
             <Text color={BRAND.text}>{ticket.name}</Text>
-          </Button>
+            <Box position="absolute" top={0} left={0} width={ticket.name.length}>
+              <Button key={`session-${ticket.name}`} plain label=" " onPress={() => activateTicket($, ticket.name)} />
+            </Box>
+          </Box>
         </Box>
       ))}
       <Input key="new-session" placeholder="New session name" value="" onSubmit={value => (value.trim() ? createSession($, value.trim()) : undefined)} />

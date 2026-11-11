@@ -252,6 +252,20 @@ class Board:
     def backlog_item(self, title: str) -> BacklogItem | None:
         return next((item for item in self.backlog_items if item.title == title), None)
 
+    def save_sessions_on_main(self, message: str) -> None:
+        """Commit the session folders not yet committed on main with message, and push main, while the repository's own
+        folder has main checked out: every ticket's record is kept on main, so each change to one is committed and pushed
+        as it is made, and every chat and worktree reads the same board."""
+        repository = self._repo.main_clone
+        folder = self.sessions.folder
+        if not repository.branch_named(repository.default_branch).is_checked_out or not folder.is_dir():
+            return
+        if not repository.is_dirty(folder):
+            return
+        repository.commit([str(folder)], message, untracked=True)
+        if repository.has_origin:
+            repository.push_upstream()
+
     def open_ticket(self, title: str, scope: str, parent: str, path: str) -> Ticket:
         """A new ticket titled title in Discovery, its session working on path, a folder in the repository (its top when
         empty)."""
@@ -277,7 +291,7 @@ class Board:
     @agent_tool
     @noSessionLog
     def folders(self, path: str = "") -> list[str]:
-        """List the folders inside path, a folder in the repository (its top when empty), as paths from the project, for a person choosing a workpath or a practice root. Installed packages, caches, and hidden folders hold no one's work, so they are left out."""
+        """List the folders inside path, a folder in the repository (its top when empty), as paths from the project, for a person choosing a workpath or a practice root. Installed packages, caches, and hidden folders hold no one's work, so they are left out, apart from .context, which holds a module's models and maps and can be a practice root."""
         return sorted(entry.path for entry in self.sessions.file_manager.list(path).folders)
 
     @mcp

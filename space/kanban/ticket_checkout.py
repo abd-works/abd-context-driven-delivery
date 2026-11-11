@@ -114,8 +114,9 @@ class TicketCheckout:
 
     def assign_chat(self, chat: str) -> None:
         """Make chat, a chat's id, the ticket's chat from now on; an empty chat gives it back to the chat named after
-        it."""
+        it. The record is committed on main and pushed."""
         self._ticket.session.save_fields(**{ASSIGNED_CHAT: chat})
+        self._ticket.board.save_sessions_on_main(f"sessions: assign a chat to {self._ticket.name}")
 
     def _chat_in_worktree(self, chats: list[Chat]) -> Chat | None:
         worktree = self.worktree
@@ -145,14 +146,16 @@ class TicketCheckout:
         """Open the ticket in its own worktree, where its chat works: the worktree it has, else a new one on its own
         branch, made when missing, after the session folders not yet committed are committed on main and pushed, so the
         branch starts from a main that has them. The repository's own folder stays on main, and no chat's open session
-        changes. The branch and worktree found are recorded in the ticket's session. Two branches that could each be the
-        ticket's are named instead of either being guessed."""
+        changes. The branch and worktree found are recorded in the ticket's session, and that record is committed on main
+        and pushed. Two branches that could each be the ticket's are named instead of either being guessed."""
+        board = self._ticket.board
         if not self.worktree:
             self._refuse_unclear_branch()
-            self.save_sessions_on_main(f"sessions: save before opening {self._ticket.name}")
+            board.save_sessions_on_main(f"sessions: save before opening {self._ticket.name}")
             self.branch.open_in_worktree()
-            self._ticket.board.reread()
+            board.reread()
         self._ticket.session.save_fields(branch=self.branch.name, worktree=self.worktree)
+        board.save_sessions_on_main(f"sessions: open {self._ticket.name}")
 
     def _refuse_unclear_branch(self) -> None:
         candidates = [] if self.branch.exists else self.candidate_branches
@@ -164,19 +167,6 @@ class TicketCheckout:
         screenshots pushed to e2e-latest. Done while its folder is still among the open sessions, where they are."""
         if LEAVE_MERGE in leaving:
             LatestRelease(self._repo.main_clone, self._ticket.name).keep()
-
-    def save_sessions_on_main(self, message: str) -> None:
-        """Commit the session folders not yet committed on main with message, and push main, while the repository's own
-        folder has main checked out: every ticket's record is kept on main."""
-        repository = self._repo.main_clone
-        folder = self._ticket.board.sessions.folder
-        if not repository.branch_named(repository.default_branch).is_checked_out or not folder.is_dir():
-            return
-        if not repository.is_dirty(folder):
-            return
-        repository.commit([str(folder)], message, untracked=True)
-        if repository.has_origin:
-            repository.push_upstream()
 
     def write_handoff(self, leaving: list[str]) -> None:
         """Write a handoff for the ticket's session when leaving names one."""

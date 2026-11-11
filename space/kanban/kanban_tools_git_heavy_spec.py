@@ -22,6 +22,9 @@ from space.session import Sessions  # noqa: E402
 
 from space.kanban.board_tools_examples import ProjectTools  # noqa: E402
 
+# The session records with nothing left off origin's main: none uncommitted, none unpushed.
+SAVED = {"uncommitted": "", "unpushed": ""}
+
 
 with description("the board tools") as self:
     with before.each:
@@ -91,6 +94,77 @@ with description("the board tools") as self:
 
                 with it("should keep the worktree it has"):
                     expect(Path(self.project.ticket_json("sign-up")["worktree"]).resolve()).to(equal(self.opened.resolve()))
+
+        # Every ticket's record is kept on main: each change a tool makes to one is committed there and pushed at once.
+        with context("with main pushed to an origin"):
+            with before.each:
+                self.origin = Path(tempfile.mkdtemp(prefix="kanban-origin-"))
+                subprocess.run(["git", "init", "-q", "--bare", str(self.origin)], check=True)
+                subprocess.run(["git", "remote", "add", "origin", str(self.origin)], cwd=self.project.root, check=True)
+                subprocess.run(["git", "push", "-q", "-u", "origin", "main"], cwd=self.project.root, check=True)
+
+            with after.each:
+                shutil.rmtree(self.origin, ignore_errors=True)
+
+            def records_on_origin(self) -> dict:
+                """What is left of the session records off origin's main: files not committed, and commits not pushed."""
+                status = subprocess.run(["git", "status", "--porcelain", "--", ".sessions"], cwd=self.project.root, check=True, capture_output=True, text=True)
+                unpushed = subprocess.run(["git", "rev-list", "origin/main..main"], cwd=self.project.root, check=True, capture_output=True, text=True)
+                return {"uncommitted": status.stdout.strip(), "unpushed": unpushed.stdout.strip()}
+
+            with it("should commit and push a new ticket's record"):
+                self.project.call("ticket.create", title="Order history")
+                expect(self.records_on_origin()).to(equal(SAVED))
+
+            with it("should commit and push a ticket's move to the next column"):
+                self.project.call("ticket.move_next", ticket="sign-up")
+                expect(self.records_on_origin()).to(equal(SAVED))
+
+            with it("should commit and push a ticket's move back"):
+                self.project.call("ticket.move_to", ticket="sign-up", stage="Specification")
+                self.project.call("ticket.move_previous", ticket="sign-up")
+                expect(self.records_on_origin()).to(equal(SAVED))
+
+            with it("should commit and push a ticket's move straight into a stage"):
+                self.project.call("ticket.move_to", ticket="sign-up", stage="Implementation", done=True)
+                expect(self.records_on_origin()).to(equal(SAVED))
+
+            with it("should commit and push a ticket sent back to the Backlog"):
+                self.project.call("ticket.move_to", ticket="sign-up", stage="Backlog")
+                expect(self.records_on_origin()).to(equal(SAVED))
+
+            with it("should commit and push an archived ticket"):
+                self.project.call("ticket.archive", ticket="sign-up")
+                expect(self.records_on_origin()).to(equal(SAVED))
+
+            with it("should commit and push the chat assigned to a ticket"):
+                self.project.call("ticket.assign_chat", ticket="sign-up", chat="picked")
+                expect(self.records_on_origin()).to(equal(SAVED))
+
+            with it("should commit and push a new backlog item"):
+                self.project.call("backlog-item.create", title="Gift cards", text="Sell gift cards.")
+                expect(self.records_on_origin()).to(equal(SAVED))
+
+            with it("should commit and push a ticket started from the Backlog"):
+                self.project.backlog_item("returns.md", "Returns and refunds")
+                self.project.call("backlog-item.start", backlog_item="Returns and refunds")
+                expect(self.records_on_origin()).to(equal(SAVED))
+
+            with context("with a ticket opened in its worktree"):
+                with before.each:
+                    self.project.call("ticket.activate", ticket="sign-up")
+                    self.opened = Path(self.project.ticket_json("sign-up")["worktree"])
+
+                with after.each:
+                    subprocess.run(["git", "worktree", "remove", "--force", str(self.opened)], cwd=self.project.root, check=False)
+
+                with it("should commit and push the branch and worktree it records"):
+                    expect(self.records_on_origin()).to(equal(SAVED))
+
+                with it("should commit and push its record again when it is opened again"):
+                    (self.project.root / ".sessions" / "sign-up" / "session.json").write_text(json.dumps({"name": "sign-up"}), encoding="utf-8")
+                    self.project.call("ticket.activate", ticket="sign-up")
+                    expect(self.records_on_origin()).to(equal(SAVED))
 
         with it("should say a ticket has no branch yet"):
             expect(self.project.call("ticket.branch", ticket="sign-up")["exists"]).to(be_false)

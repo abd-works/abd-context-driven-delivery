@@ -19,9 +19,15 @@ from harness.mcp.mcp_server import mcp
 
 
 # Installed packages and caches hold no one's work. Hidden folders hold tools and caches too, but a module's .context
-# folder holds its models and maps, so a search still looks inside it.
+# folder holds its models and maps, so a search looks inside it and a person can choose it as a practice root.
 UNWORKED_FOLDERS = frozenset({"node_modules", "__pycache__"})
-SEARCHED_HIDDEN_FOLDERS = frozenset({".context"})
+WORKED_HIDDEN_FOLDERS = frozenset({".context"})
+
+
+def holds_work(folder_name: str) -> bool:
+    """Whether a folder of this name can hold someone's work: not installed packages or a cache, and not hidden unless
+    it is one of the hidden folders that do, such as .context."""
+    return folder_name not in UNWORKED_FOLDERS and (not folder_name.startswith(".") or folder_name in WORKED_HIDDEN_FOLDERS)
 
 
 class PathOutsideRootsError(ValueError):
@@ -81,8 +87,8 @@ class Folder:
     @property
     def folders(self) -> list[FolderEntry]:
         """Its folders that can hold someone's work, for a person choosing a workpath or a practice root: installed
-        packages, caches, and hidden folders are left out."""
-        return [entry for entry in self._entries if entry.is_folder and entry.name not in UNWORKED_FOLDERS and not entry.name.startswith(".")]
+        packages, caches, and hidden folders other than .context are left out."""
+        return [entry for entry in self._entries if entry.is_folder and holds_work(entry.name)]
 
 
 class FileEntry:
@@ -193,13 +199,9 @@ class FileManager:
             # Plain strings here: building a Path for every file in the repository made the search take a second.
             inside = folder[len(base_text):].strip("\\/").replace("\\", "/")
             depth = inside.count("/") + 1 if inside else 0
-            folders[:] = [] if deepest is not None and depth >= deepest else [name for name in folders if self._is_searched(name)]
+            folders[:] = [] if deepest is not None and depth >= deepest else [name for name in folders if holds_work(name)]
             found += [Path(folder, name) for name in files if matching.fullmatch(f"{inside}/{name}" if inside else name)]
         return sorted(found)
-
-    def _is_searched(self, folder_name: str) -> bool:
-        """Installed packages and hidden folders hold no one's work, apart from the hidden folders that do."""
-        return folder_name not in UNWORKED_FOLDERS and (not folder_name.startswith(".") or folder_name in SEARCHED_HIDDEN_FOLDERS)
 
     def _inside(self, path: str) -> Path:
         """The path resolved from the workpath; a page names paths, so one outside every root is refused."""

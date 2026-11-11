@@ -95,8 +95,11 @@ class Ticket(Card):
     @agent_tool
     @noSessionLog
     def create(cls, title: str, scope: str = "feature", parent: str = "", path: str = "", *, project: Path | str) -> Ticket:
-        """Open a new ticket titled title in Discovery. scope is feature, story, or slice; parent names the ticket it was split from; path is the folder in the repository its session works on."""
-        return Board.load(project).open_ticket(title, scope, parent, path)
+        """Open a new ticket titled title in Discovery, its record committed on main and pushed. scope is feature, story, or slice; parent names the ticket it was split from; path is the folder in the repository its session works on."""
+        board = Board.load(project)
+        opened = board.open_ticket(title, scope, parent, path)
+        board.save_sessions_on_main(f"sessions: create {opened.name}")
+        return opened
 
     @property
     @data_field
@@ -340,18 +343,20 @@ class Ticket(Card):
         self.checkout.save_work(chosen)
         self.checkout.return_to_default_branch()
         # The ticket's record is kept on main, so its move among the closed sessions is committed and pushed there.
-        self.checkout.save_sessions_on_main(f"sessions: close {self.name}")
+        self._board.save_sessions_on_main(f"sessions: close {self.name}")
         return closed
 
     @mcp
     @agent_tool
     @noSessionLog
     def archive(self) -> Ticket:
-        """Archive ticket: its session ends, its folder moves to _archive/, and it leaves the board. Main never archives."""
+        """Archive ticket: its session ends, its folder moves to _archive/, that move is committed on main and pushed, and it leaves the board. Main never archives."""
         if self.is_main:
             raise MainStaysOpenError("archive")
         self._session.close()
-        return self._board.ticket_of(self._session.move_to_archive())
+        archived = self._board.ticket_of(self._session.move_to_archive())
+        self._board.save_sessions_on_main(f"sessions: archive {self.name}")
+        return archived
 
     @mcp
     @agent_tool
@@ -364,13 +369,14 @@ class Ticket(Card):
 
     def _return_to_backlog(self) -> BacklogItem:
         """Into the Backlog from any column: its session closes and its whole folder becomes a backlog item, so starting
-        the item brings the ticket back with its work."""
+        the item brings the ticket back with its work. The move is committed on main and pushed."""
         if self.is_main:
             raise MainStaysOpenError("go to the Backlog")
         self._session.close()
         kept_in_backlog = self._board.ticket_of(self._session.move_to_backlog())
         item = self._board.backlog_item_of(kept_in_backlog)
         item.write_if_missing(kept_in_backlog.title)
+        self._board.save_sessions_on_main(f"sessions: return {self.name} to the Backlog")
         return item
 
 
@@ -465,16 +471,25 @@ class StageMarks:
         return self.mark(MOVED_INTO, stage)
 
     def mark(self, mark: str, stage: Stage) -> Ticket:
-        """Mark the ticket done or in progress in stage, or move it into stage, keeping the result in session.json."""
-        self._ticket.session.save_fields(**{_STAGE_FIELD: stage.name, _STAGE_MARK_FIELD: "" if mark == MOVED_INTO else mark})
-        self._ticket.work.record(f"{mark} {stage.name}")
-        return self._ticket
+        """Mark the ticket done or in progress in stage, or move it into stage, keeping the result in session.json, which
+        is committed on main and pushed."""
+        self._write(mark, stage)
+        return self._saved(f"{mark} {stage.name}")
 
     def place(self, stage: Stage, mark: str) -> Ticket:
-        """Put the ticket in stage, entering it first unless it is there, then mark it there."""
+        """Put the ticket in stage, entering it first unless it is there, then mark it there: one commit on main, pushed,
+        for both."""
         if self._ticket.column is not stage:
-            self.enter(stage)
+            self._write(MOVED_INTO, stage)
         return self.mark(mark, stage)
+
+    def _write(self, mark: str, stage: Stage) -> None:
+        self._ticket.session.save_fields(**{_STAGE_FIELD: stage.name, _STAGE_MARK_FIELD: "" if mark == MOVED_INTO else mark})
+        self._ticket.work.record(f"{mark} {stage.name}")
+
+    def _saved(self, change: str) -> Ticket:
+        self._ticket.board.save_sessions_on_main(f"sessions: {self._ticket.name} {change}")
+        return self._ticket
 
 
 @identity("ticket", "fidelity")
