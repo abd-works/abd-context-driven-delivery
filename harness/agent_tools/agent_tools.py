@@ -793,7 +793,7 @@ class ToolSubjectLoader:
         self, load: Callable[..., Any], operation: Callable[..., Any], named_objects: dict[str, Callable[..., Any]], taken: tuple[str, ...]
     ) -> Callable[..., Any]:
         """The tool's body: load each object the call names, then the subject, then run the operation on it."""
-        operation_takes_call = SERVED_CALL in taken
+        operation_takes_call = SERVED_CALL in inspect.signature(operation).parameters
         identity_names = [*inspect.signature(load).parameters, *TakesFromCall.names_on(load)]
 
         @functools.wraps(operation)
