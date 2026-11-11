@@ -178,6 +178,7 @@ export function TicketCardView({ ticket, spot }: { ticket: TicketClient; spot: C
   const { page, state } = useBoard()
   const stage = page.board.stageOf(ticket)
   const isSelected = page.board.selectedTicket?.address === ticket.address
+  const [isTakingChild, setTakingChild] = useState(false)
   if (!stage) return null
   // Every card drags, locked or not: Active session only keeps commands to the active session's chat, and a move runs
   // nothing in a chat. An opened card closes when the drag ends.
@@ -188,13 +189,38 @@ export function TicketCardView({ ticket, spot }: { ticket: TicketClient; spot: C
     page.store.change({ dragged: ticket.address })
   }
   const dragEnded = () => page.store.change(current => ({ dragged: null, openCard: current.openCard === ticket.name ? null : current.openCard }))
+  // Read when each event arrives, not from the last drawing: a quick drag reaches the card before the page redraws.
+  const draggedTicket = () => page.board.tickets.find(entry => entry.address === page.store.state.dragged)
+  const takes = () => {
+    const dragged = draggedTicket()
+    return dragged !== undefined && ticket.canTakeAsChild(dragged)
+  }
+  const draggedOver = (event: DragEvent) => {
+    if (!takes()) return
+    event.preventDefault()
+    event.stopPropagation()
+    setTakingChild(true)
+  }
+  // The card takes the drop, so the list under it does not move the ticket to its column as well.
+  const dropped = (event: DragEvent) => {
+    setTakingChild(false)
+    const dragged = draggedTicket()
+    if (!dragged || !ticket.canTakeAsChild(dragged)) return
+    event.preventDefault()
+    event.stopPropagation()
+    page.store.change({ dragged: null })
+    void ticket.takeAsChild(dragged)
+  }
   return (
     <div
-      className={['ticket-card', ticket.isActive ? 'is-active' : '', state.dragged === ticket.address ? 'is-dragged' : ''].filter(Boolean).join(' ')}
+      className={['ticket-card', ticket.isActive ? 'is-active' : '', state.dragged === ticket.address ? 'is-dragged' : '', isTakingChild ? 'is-drop-over' : ''].filter(Boolean).join(' ')}
       data-ticket={ticket.name}
       draggable={isDraggable}
       onDragStart={dragStarted}
       onDragEnd={dragEnded}
+      onDragOver={draggedOver}
+      onDragLeave={() => setTakingChild(false)}
+      onDrop={dropped}
       onClick={() => ticket.choose()}
       style={{ borderColor: borderColorOf(ticket, isSelected), borderWidth: ticket.isActive ? ACTIVE_BORDER_WIDTH : 1 }}
     >
