@@ -66,7 +66,7 @@ The realizations name the operations these scenarios need; none of them exists y
 Board.ticket("checkout-flow")
   <- checkout-flow
 checkout-flow.add_child("Enter card details")
-  -> checkout-flow.session.open_child("Enter card details", scope="story")
+  -> self.session.open_child("Enter card details", scope="story")
   <- enter-card-details In progress in Discovery, its parent checkout-flow
 ```
 
@@ -143,7 +143,7 @@ The realizations name the operations these scenarios need; none of them exists y
 Board.ticket("enter-card-details")
   <- enter-card-details
 enter-card-details.pull_out()
-  -> enter-card-details.session.mark_pulled_out()
+  -> self.session.mark_pulled_out()
   <- enter-card-details pulled out, its parent still checkout-flow
 ```
 
@@ -190,7 +190,7 @@ Board.ticket("enter-card-details")
 Board.ticket("billing-report")
   <- billing-report
 enter-card-details.reassign_parent(billing-report)
-  -> enter-card-details.session.set_parent(billing-report.session)
+  -> self.session.set_parent(billing-report.session)
   <- enter-card-details, its parent billing-report
 ```
 
@@ -207,7 +207,7 @@ enter-card-details.reassign_parent(billing-report)
 Board.ticket("enter-card-details")
   <- enter-card-details
 enter-card-details.reassign_parent(None)
-  -> enter-card-details.session.set_parent(None)
+  -> self.session.set_parent(None)
   <- enter-card-details with no parent
 ```
 
@@ -233,7 +233,7 @@ The realizations name the operations these scenarios need; none of them exists y
 ```realization
 Board.show()
   -> checkout-flow.column
-     -> checkout-flow.children
+     -> self.children
   <- checkout-flow in Discovery, the stage of its leftmost child
 ```
 
@@ -251,7 +251,7 @@ confirm-order.move_next()
   <- confirm-order in Specification
 Board.show()
   -> checkout-flow.column
-     -> checkout-flow.children
+     -> self.children
   <- checkout-flow in Specification, the stage of its leftmost child
 ```
 
@@ -266,7 +266,7 @@ Board.show()
 Board.ticket("checkout-flow")
   <- checkout-flow
 checkout-flow.move_next()
-  -> checkout-flow.children
+  -> self.children
   <- checkout-flow, still in Discovery: a parent moves only with its children
 ```
 
@@ -295,10 +295,10 @@ ticket.create("Enter card details", scope="story", parent="checkout-flow")
   -> Board.ticket("checkout-flow")
   <- checkout-flow
   -> checkout-flow.add_child("Enter card details")
-     -> checkout-flow.session.open_child("Enter card details", scope="story")
+     -> self.session.open_child("Enter card details", scope="story")
      <- the session .sessions/checkout-flow/enter-card-details
      -> enter-card-details.branch
-        -> checkout-flow.branch
+        -> self.parent.branch
      <- checkout-flow.enter-card-details
 ```
 

@@ -80,7 +80,7 @@ The realizations name the operations these scenarios need; none of them exists y
 ```realization
 Board.show()
   -> checkout-flow.text
-     -> checkout-flow.session.text
+     -> self.session.text
   <- checkout-flow with the text Pay for the basket.
 ```
 
@@ -95,7 +95,7 @@ Board.show()
 Board.ticket("checkout-flow")
   <- checkout-flow
 checkout-flow.edit_text("Pay for the basket by card.")
-  -> checkout-flow.session.keep_text("Pay for the basket by card.")
+  -> self.session.keep_text("Pay for the basket by card.")
   <- checkout-flow with the text Pay for the basket by card.
 ```
 
@@ -112,7 +112,7 @@ checkout-flow.edit_text("Pay for the basket by card.")
 Board.ticket("pet-visits")
   <- pet-visits
 pet-visits.edit_text("Book a visit for a pet.")
-  -> pet-visits.session.keep_text("Book a visit for a pet.")
+  -> self.session.keep_text("Book a visit for a pet.")
   <- pet-visits with the text Book a visit for a pet.
 ```
 
@@ -214,7 +214,7 @@ Evidence gap: the source does not say what becomes of a deleted ticket's branch 
 Board.ticket("pet-visits")
   <- pet-visits
 pet-visits.delete()
-  -> pet-visits.session.remove()
+  -> self.session.remove()
   <- the board without pet-visits
 ```
 
@@ -254,7 +254,7 @@ The realizations name the operations these scenarios need; none of them exists y
 Board.ticket("pet-visits")
   <- pet-visits
 pet-visits.tag("billing")
-  -> pet-visits.session.add_tag("billing")
+  -> self.session.add_tag("billing")
   <- pet-visits tagged billing
 ```
 
@@ -270,7 +270,7 @@ pet-visits.tag("billing")
 Board.ticket("pet-visits")
   <- pet-visits
 pet-visits.tag("urgent")
-  -> pet-visits.session.add_tag("urgent")
+  -> self.session.add_tag("urgent")
   <- pet-visits tagged billing and urgent
 ```
 

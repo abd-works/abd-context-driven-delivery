@@ -26,7 +26,7 @@ def _(s):
     def _(world):
         # Board.show()
         #   -> checkout-flow.text
-        #      -> checkout-flow.session.text
+        #      -> self.session.text
         #   <- checkout-flow with the text Pay for the basket.
         pass
 
@@ -46,7 +46,7 @@ def _(s):
         # Board.ticket("checkout-flow")
         #   <- checkout-flow
         # checkout-flow.edit_text("Pay for the basket by card.")
-        #   -> checkout-flow.session.keep_text("Pay for the basket by card.")
+        #   -> self.session.keep_text("Pay for the basket by card.")
         #   <- checkout-flow with the text Pay for the basket by card.
         pass
 
@@ -74,7 +74,7 @@ def _(s):
         # Board.ticket("pet-visits")
         #   <- pet-visits
         # pet-visits.edit_text("Book a visit for a pet.")
-        #   -> pet-visits.session.keep_text("Book a visit for a pet.")
+        #   -> self.session.keep_text("Book a visit for a pet.")
         #   <- pet-visits with the text Book a visit for a pet.
         pass
 
@@ -167,7 +167,7 @@ def _(s):
         # Board.ticket("pet-visits")
         #   <- pet-visits
         # pet-visits.delete()
-        #   -> pet-visits.session.remove()
+        #   -> self.session.remove()
         #   <- the board without pet-visits
         pass
 
@@ -212,7 +212,7 @@ def _(s):
         # Board.ticket("pet-visits")
         #   <- pet-visits
         # pet-visits.tag("billing")
-        #   -> pet-visits.session.add_tag("billing")
+        #   -> self.session.add_tag("billing")
         #   <- pet-visits tagged billing
         pass
 
@@ -236,7 +236,7 @@ def _(s):
         # Board.ticket("pet-visits")
         #   <- pet-visits
         # pet-visits.tag("urgent")
-        #   -> pet-visits.session.add_tag("urgent")
+        #   -> self.session.add_tag("urgent")
         #   <- pet-visits tagged billing and urgent
         pass
 
