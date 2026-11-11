@@ -900,13 +900,23 @@ class ActionStates:
     def taken_together(cls, every: list[ActionStates]) -> ActionStates:
         """Where each action stands across several fidelities: done only once it is done on all of them, in progress
         once it is under way on any, else to do."""
-        return cls({action: cls._together([states._states[action] for states in every]) for action in (GENERATE, VALIDATE)})
+        if not every:
+            return cls({action: "to_do" for action in (GENERATE, VALIDATE)})
+        taken = every[0]
+        for states in every[1:]:
+            taken = taken._with(states)
+        return taken
 
-    @staticmethod
-    def _together(states: list[str]) -> str:
-        if states and all(state == "done" for state in states):
+    def _with(self, other: ActionStates) -> ActionStates:
+        """These states taken together with other's: an action is done only when done on both, else in progress once
+        under way on either, else to do."""
+        return ActionStates({action: self._state_with(action, other._states[action]) for action in self._states})
+
+    def _state_with(self, action: str, other: str) -> str:
+        mine = self._states[action]
+        if mine == "done" and other == "done":
             return "done"
-        return "in_progress" if any(state != "to_do" for state in states) else "to_do"
+        return "in_progress" if mine != "to_do" or other != "to_do" else "to_do"
 
     @property
     @data_field

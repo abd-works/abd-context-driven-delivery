@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from harness.agent_tools.tool_call import ToolCall
 from harness.graph.saved_graph import SavedGraph
 from harness.graph.violation import Violation
 
 from cdd_guidance.actions.validate.report_files import ReportFiles
+
+if TYPE_CHECKING:
+    from space.session.session import Session
 
 
 class CheckedGraph:
@@ -22,31 +26,33 @@ class CheckedGraph:
 
     def __init__(
         self,
-        session: Any,
+        session: Session,
         fidelities: list[Any],
         edited: list[str] | None,
         named: bool | str | list[str] | None,
-        call: Any = None,
+        call: ToolCall | None = None,
     ) -> None:
         self.session = session
-        # The call this validate answers, which says where the graph it refreshes is built.
         self._call = call
         self._fidelities = fidelities
-        # The format each fidelity is checked in, read once, so another call changing a fidelity's format mid-way never
-        # changes which files this call checks.
+        # Read once, so another call changing a fidelity's format mid-way never changes which files this call checks.
         self._formats = [fidelity.format for fidelity in fidelities]
-        # What the call names: the files being edited, and a graph (true for the session's saved one, or graph files).
         self._named = named
         self.unchecked_files = self._other_format_files()
-        # Read now, so a path that is not there is refused before the call claims any report file: the paths the call
-        # names in the checked format, and the files the graph is built from, those paths, else, when it names no graph
-        # either, the folders holding what each graph-backed fidelity has written.
-        self.edited = [path for path in self._from_session_root(edited) if path not in self.unchecked_files]
-        self.prefixes = self.edited or self._from_session_root(self._written_outputs() if self._named is None else [])
-        # The graph this call checks: the one it built from the files it names, the session's saved graph, or the graph
-        # files it names, read once.
+        # Read now, so a path that is not there is refused before the call claims any report file.
+        self.edited = self._edited_in_checked_format(edited)
+        self.prefixes = self._graph_prefixes()
         self._checked: SavedGraph | None = None
         self.files: list[Path] = []
+
+    def _edited_in_checked_format(self, edited: list[str] | None) -> list[str]:
+        """The paths the call names in the checked format, from the session's root."""
+        return [path for path in self._from_session_root(edited) if path not in self.unchecked_files]
+
+    def _graph_prefixes(self) -> list[str]:
+        """The files the graph is built from: the paths the call names, else, when it names no graph either, the folders
+        holding what each graph-backed fidelity has written."""
+        return self.edited or self._from_session_root(self._written_outputs() if self._named is None else [])
 
     def check_beside(self, reports: ReportFiles) -> list[Path]:
         """The graph files this call checks: a graph built from the prefixes and written where reports keeps the call's
