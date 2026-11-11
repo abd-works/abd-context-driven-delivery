@@ -63,9 +63,11 @@ The realizations name the operations these scenarios need; none of them exists y
 *When* the Person adds the child ticket Enter card details to checkout-flow
 
 ```realization
-Ticket.add_child("Enter card details")
-  -> Ticket.create("Enter card details", scope="story", parent="checkout-flow")
-  <- enter-card-details In progress in Discovery
+Board.ticket("checkout-flow")
+  <- checkout-flow
+checkout-flow.add_child("Enter card details")
+  -> checkout-flow.session.open_child("Enter card details", scope="story")
+  <- enter-card-details In progress in Discovery, its parent checkout-flow
 ```
 
 *Then* the ticket enter-card-details is In progress in Discovery with the parent checkout-flow
@@ -138,9 +140,11 @@ The realizations name the operations these scenarios need; none of them exists y
 *When* the Person pulls enter-card-details out of checkout-flow
 
 ```realization
-Ticket.pull_out()
-  -> Session.mark_pulled_out()
-  <- enter-card-details pulled out, with the parent checkout-flow
+Board.ticket("enter-card-details")
+  <- enter-card-details
+enter-card-details.pull_out()
+  -> enter-card-details.session.mark_pulled_out()
+  <- enter-card-details pulled out, its parent still checkout-flow
 ```
 
 *Then* enter-card-details shows as a card of its own beside checkout-flow, titled Checkout flow.Enter card details
@@ -153,8 +157,10 @@ Ticket.pull_out()
 *When* the Person moves enter-card-details to Specification
 
 ```realization
-Ticket.move_next()
-  <- enter-card-details in Specification, with the parent checkout-flow
+Board.ticket("enter-card-details")
+  <- enter-card-details
+enter-card-details.move_next()
+  <- enter-card-details in Specification, its parent still checkout-flow
 ```
 
 *Then* the Specification [column](../../../../../space/kanban/.context/kanban-model.md#column) shows enter-card-details
@@ -179,9 +185,13 @@ The realizations name the operations these scenarios need; none of them exists y
 *When* the Person makes enter-card-details a child of billing-report
 
 ```realization
-Ticket.reassign_parent("billing-report")
-  -> Session.set_parent("billing-report")
-  <- enter-card-details with the parent billing-report
+Board.ticket("enter-card-details")
+  <- enter-card-details
+Board.ticket("billing-report")
+  <- billing-report
+enter-card-details.reassign_parent(billing-report)
+  -> enter-card-details.session.set_parent(billing-report.session)
+  <- enter-card-details, its parent billing-report
 ```
 
 *Then* billing-report's card holds enter-card-details
@@ -194,8 +204,10 @@ Ticket.reassign_parent("billing-report")
 *When* the Person takes enter-card-details off checkout-flow
 
 ```realization
-Ticket.reassign_parent("")
-  -> Session.set_parent("")
+Board.ticket("enter-card-details")
+  <- enter-card-details
+enter-card-details.reassign_parent(None)
+  -> enter-card-details.session.set_parent(None)
   <- enter-card-details with no parent
 ```
 
@@ -220,8 +232,8 @@ The realizations name the operations these scenarios need; none of them exists y
 
 ```realization
 Board.show()
-  -> Ticket.column
-     -> Ticket.children
+  -> checkout-flow.column
+     -> checkout-flow.children
   <- checkout-flow in Discovery, the stage of its leftmost child
 ```
 
@@ -233,10 +245,13 @@ Board.show()
 *When* the Person moves confirm-order to Specification
 
 ```realization
-Ticket.move_next()
+Board.ticket("confirm-order")
+  <- confirm-order
+confirm-order.move_next()
   <- confirm-order in Specification
 Board.show()
-  -> Ticket.column
+  -> checkout-flow.column
+     -> checkout-flow.children
   <- checkout-flow in Specification, the stage of its leftmost child
 ```
 
@@ -248,8 +263,10 @@ Board.show()
 *When* the Person tries to move checkout-flow to Specification
 
 ```realization
-Ticket.move_next()
-  -> Ticket.children
+Board.ticket("checkout-flow")
+  <- checkout-flow
+checkout-flow.move_next()
+  -> checkout-flow.children
   <- checkout-flow, still in Discovery: a parent moves only with its children
 ```
 
@@ -271,14 +288,18 @@ Evidence gap: the source says to nest, not how. The folder and branch below are 
 #### Scenario: Nest a child's session and branch under its parent's
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow's [session](../../../../../space/kanban/.context/kanban-model.md#session) is .sessions/checkout-flow on the branch checkout-flow
-*When* Claude Code opens the child ticket enter-card-details of checkout-flow
+*When* Claude Code opens the child ticket Enter card details of checkout-flow
 
 ```realization
-Ticket.create("Enter card details", scope="story", parent="checkout-flow")
-  -> Sessions.create("enter-card-details", parent="checkout-flow")
-  <- the session .sessions/checkout-flow/enter-card-details
-  -> Ticket.branch
-  <- checkout-flow.enter-card-details
+ticket.create("Enter card details", scope="story", parent="checkout-flow")
+  -> Board.ticket("checkout-flow")
+  <- checkout-flow
+  -> checkout-flow.add_child("Enter card details")
+     -> checkout-flow.session.open_child("Enter card details", scope="story")
+     <- the session .sessions/checkout-flow/enter-card-details
+     -> enter-card-details.branch
+        -> checkout-flow.branch
+     <- checkout-flow.enter-card-details
 ```
 
 *Then* enter-card-details' session folder is .sessions/checkout-flow/enter-card-details

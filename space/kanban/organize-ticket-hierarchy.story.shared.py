@@ -30,9 +30,11 @@ def _(s):
 
     @s.when('the Person adds the child ticket Enter card details to checkout-flow')
     def _(world):
-        # Ticket.add_child("Enter card details")
-        #   -> Ticket.create("Enter card details", scope="story", parent="checkout-flow")
-        #   <- enter-card-details In progress in Discovery
+        # Board.ticket("checkout-flow")
+        #   <- checkout-flow
+        # checkout-flow.add_child("Enter card details")
+        #   -> checkout-flow.session.open_child("Enter card details", scope="story")
+        #   <- enter-card-details In progress in Discovery, its parent checkout-flow
         pass
 
     @s.then('the ticket enter-card-details is In progress in Discovery with the parent checkout-flow')
@@ -52,9 +54,11 @@ def _(s):
 
     @s.when('the Person pulls enter-card-details out of checkout-flow')
     def _(world):
-        # Ticket.pull_out()
-        #   -> Session.mark_pulled_out()
-        #   <- enter-card-details pulled out, with the parent checkout-flow
+        # Board.ticket("enter-card-details")
+        #   <- enter-card-details
+        # enter-card-details.pull_out()
+        #   -> enter-card-details.session.mark_pulled_out()
+        #   <- enter-card-details pulled out, its parent still checkout-flow
         pass
 
     @s.then('enter-card-details shows as a card of its own beside checkout-flow, titled Checkout flow.Enter card details')
@@ -78,8 +82,10 @@ def _(s):
 
     @s.when('the Person moves enter-card-details to Specification')
     def _(world):
-        # Ticket.move_next()
-        #   <- enter-card-details in Specification, with the parent checkout-flow
+        # Board.ticket("enter-card-details")
+        #   <- enter-card-details
+        # enter-card-details.move_next()
+        #   <- enter-card-details in Specification, its parent still checkout-flow
         pass
 
     @s.then('the Specification column shows enter-card-details')
@@ -103,9 +109,13 @@ def _(s):
 
     @s.when('the Person makes enter-card-details a child of billing-report')
     def _(world):
-        # Ticket.reassign_parent("billing-report")
-        #   -> Session.set_parent("billing-report")
-        #   <- enter-card-details with the parent billing-report
+        # Board.ticket("enter-card-details")
+        #   <- enter-card-details
+        # Board.ticket("billing-report")
+        #   <- billing-report
+        # enter-card-details.reassign_parent(billing-report)
+        #   -> enter-card-details.session.set_parent(billing-report.session)
+        #   <- enter-card-details, its parent billing-report
         pass
 
     @s.then("billing-report's card holds enter-card-details")
@@ -129,8 +139,10 @@ def _(s):
 
     @s.when('the Person takes enter-card-details off checkout-flow')
     def _(world):
-        # Ticket.reassign_parent("")
-        #   -> Session.set_parent("")
+        # Board.ticket("enter-card-details")
+        #   <- enter-card-details
+        # enter-card-details.reassign_parent(None)
+        #   -> enter-card-details.session.set_parent(None)
         #   <- enter-card-details with no parent
         pass
 
@@ -156,8 +168,8 @@ def _(s):
     @s.when('the board shows checkout-flow')
     def _(world):
         # Board.show()
-        #   -> Ticket.column
-        #      -> Ticket.children
+        #   -> checkout-flow.column
+        #      -> checkout-flow.children
         #   <- checkout-flow in Discovery, the stage of its leftmost child
         pass
 
@@ -174,10 +186,13 @@ def _(s):
 
     @s.when('the Person moves confirm-order to Specification')
     def _(world):
-        # Ticket.move_next()
+        # Board.ticket("confirm-order")
+        #   <- confirm-order
+        # confirm-order.move_next()
         #   <- confirm-order in Specification
         # Board.show()
-        #   -> Ticket.column
+        #   -> checkout-flow.column
+        #      -> checkout-flow.children
         #   <- checkout-flow in Specification, the stage of its leftmost child
         pass
 
@@ -194,8 +209,10 @@ def _(s):
 
     @s.when('the Person tries to move checkout-flow to Specification')
     def _(world):
-        # Ticket.move_next()
-        #   -> Ticket.children
+        # Board.ticket("checkout-flow")
+        #   <- checkout-flow
+        # checkout-flow.move_next()
+        #   -> checkout-flow.children
         #   <- checkout-flow, still in Discovery: a parent moves only with its children
         pass
 
@@ -210,13 +227,17 @@ def _(s):
     def _(world):
         pass
 
-    @s.when('Claude Code opens the child ticket enter-card-details of checkout-flow')
+    @s.when('Claude Code opens the child ticket Enter card details of checkout-flow')
     def _(world):
-        # Ticket.create("Enter card details", scope="story", parent="checkout-flow")
-        #   -> Sessions.create("enter-card-details", parent="checkout-flow")
-        #   <- the session .sessions/checkout-flow/enter-card-details
-        #   -> Ticket.branch
-        #   <- checkout-flow.enter-card-details
+        # ticket.create("Enter card details", scope="story", parent="checkout-flow")
+        #   -> Board.ticket("checkout-flow")
+        #   <- checkout-flow
+        #   -> checkout-flow.add_child("Enter card details")
+        #      -> checkout-flow.session.open_child("Enter card details", scope="story")
+        #      <- the session .sessions/checkout-flow/enter-card-details
+        #      -> enter-card-details.branch
+        #         -> checkout-flow.branch
+        #      <- checkout-flow.enter-card-details
         pass
 
     @s.then("enter-card-details' session folder is .sessions/checkout-flow/enter-card-details")

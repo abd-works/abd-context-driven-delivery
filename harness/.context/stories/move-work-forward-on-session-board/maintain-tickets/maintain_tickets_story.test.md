@@ -79,8 +79,8 @@ The realizations name the operations these scenarios need; none of them exists y
 
 ```realization
 Board.show()
-  -> Ticket.text
-     -> Session.read_file("checkout-flow.md")
+  -> checkout-flow.text
+     -> checkout-flow.session.text
   <- checkout-flow with the text Pay for the basket.
 ```
 
@@ -92,8 +92,10 @@ Board.show()
 *When* the Person edits checkout-flow's text to Pay for the basket by card.
 
 ```realization
-Ticket.edit_text("Pay for the basket by card.")
-  -> Session.keep_text("checkout-flow.md", "Pay for the basket by card.")
+Board.ticket("checkout-flow")
+  <- checkout-flow
+checkout-flow.edit_text("Pay for the basket by card.")
+  -> checkout-flow.session.keep_text("Pay for the basket by card.")
   <- checkout-flow with the text Pay for the basket by card.
 ```
 
@@ -107,8 +109,10 @@ Ticket.edit_text("Pay for the basket by card.")
 *When* the Person edits pet-visits' text to Book a visit for a pet.
 
 ```realization
-Ticket.edit_text("Book a visit for a pet.")
-  -> Session.keep_text("pet-visits.md", "Book a visit for a pet.")
+Board.ticket("pet-visits")
+  <- pet-visits
+pet-visits.edit_text("Book a visit for a pet.")
+  -> pet-visits.session.keep_text("Book a visit for a pet.")
   <- pet-visits with the text Book a visit for a pet.
 ```
 
@@ -121,7 +125,9 @@ Ticket.edit_text("Book a visit for a pet.")
 *When* the Person edits Gift cards' text to Sell gift cards at the till.
 
 ```realization
-BacklogItem.edit_text("Sell gift cards at the till.")
+Board.backlog_item("Gift cards")
+  <- Gift cards
+Gift cards.edit_text("Sell gift cards at the till.")
   <- Gift cards with the text Sell gift cards at the till.
 ```
 
@@ -205,8 +211,10 @@ Evidence gap: the source does not say what becomes of a deleted ticket's branch 
 *When* the Person deletes pet-visits
 
 ```realization
-Ticket.delete()
-  -> Sessions.remove("pet-visits")
+Board.ticket("pet-visits")
+  <- pet-visits
+pet-visits.delete()
+  -> pet-visits.session.remove()
   <- the board without pet-visits
 ```
 
@@ -219,7 +227,7 @@ Ticket.delete()
 *When* the Person deletes no-such-ticket
 
 ```realization
-Ticket.load("no-such-ticket")
+Board.ticket("no-such-ticket")
   <- TicketNotFoundError: no ticket named 'no-such-ticket' on the board
 ```
 
@@ -243,8 +251,10 @@ The realizations name the operations these scenarios need; none of them exists y
 *When* the Person tags pet-visits' [session](../../../../../space/kanban/.context/kanban-model.md#session) with billing
 
 ```realization
-Ticket.tag("billing")
-  -> Session.add_tag("billing")
+Board.ticket("pet-visits")
+  <- pet-visits
+pet-visits.tag("billing")
+  -> pet-visits.session.add_tag("billing")
   <- pet-visits tagged billing
 ```
 
@@ -257,8 +267,10 @@ Ticket.tag("billing")
 *When* the Person tags pet-visits' [session](../../../../../space/kanban/.context/kanban-model.md#session) with urgent
 
 ```realization
-Ticket.tag("urgent")
-  -> Session.add_tag("urgent")
+Board.ticket("pet-visits")
+  <- pet-visits
+pet-visits.tag("urgent")
+  -> pet-visits.session.add_tag("urgent")
   <- pet-visits tagged billing and urgent
 ```
 

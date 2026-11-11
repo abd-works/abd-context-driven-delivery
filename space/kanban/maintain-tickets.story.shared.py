@@ -25,8 +25,8 @@ def _(s):
     @s.when('the Person opens the board')
     def _(world):
         # Board.show()
-        #   -> Ticket.text
-        #      -> Session.read_file("checkout-flow.md")
+        #   -> checkout-flow.text
+        #      -> checkout-flow.session.text
         #   <- checkout-flow with the text Pay for the basket.
         pass
 
@@ -43,8 +43,10 @@ def _(s):
 
     @s.when("the Person edits checkout-flow's text to Pay for the basket by card.")
     def _(world):
-        # Ticket.edit_text("Pay for the basket by card.")
-        #   -> Session.keep_text("checkout-flow.md", "Pay for the basket by card.")
+        # Board.ticket("checkout-flow")
+        #   <- checkout-flow
+        # checkout-flow.edit_text("Pay for the basket by card.")
+        #   -> checkout-flow.session.keep_text("Pay for the basket by card.")
         #   <- checkout-flow with the text Pay for the basket by card.
         pass
 
@@ -69,8 +71,10 @@ def _(s):
 
     @s.when("the Person edits pet-visits' text to Book a visit for a pet.")
     def _(world):
-        # Ticket.edit_text("Book a visit for a pet.")
-        #   -> Session.keep_text("pet-visits.md", "Book a visit for a pet.")
+        # Board.ticket("pet-visits")
+        #   <- pet-visits
+        # pet-visits.edit_text("Book a visit for a pet.")
+        #   -> pet-visits.session.keep_text("Book a visit for a pet.")
         #   <- pet-visits with the text Book a visit for a pet.
         pass
 
@@ -91,7 +95,9 @@ def _(s):
 
     @s.when("the Person edits Gift cards' text to Sell gift cards at the till.")
     def _(world):
-        # BacklogItem.edit_text("Sell gift cards at the till.")
+        # Board.backlog_item("Gift cards")
+        #   <- Gift cards
+        # Gift cards.edit_text("Sell gift cards at the till.")
         #   <- Gift cards with the text Sell gift cards at the till.
         pass
 
@@ -158,8 +164,10 @@ def _(s):
 
     @s.when('the Person deletes pet-visits')
     def _(world):
-        # Ticket.delete()
-        #   -> Sessions.remove("pet-visits")
+        # Board.ticket("pet-visits")
+        #   <- pet-visits
+        # pet-visits.delete()
+        #   -> pet-visits.session.remove()
         #   <- the board without pet-visits
         pass
 
@@ -180,7 +188,7 @@ def _(s):
 
     @s.when('the Person deletes no-such-ticket')
     def _(world):
-        # Ticket.load("no-such-ticket")
+        # Board.ticket("no-such-ticket")
         #   <- TicketNotFoundError: no ticket named 'no-such-ticket' on the board
         pass
 
@@ -201,8 +209,10 @@ def _(s):
 
     @s.when("the Person tags pet-visits' session with billing")
     def _(world):
-        # Ticket.tag("billing")
-        #   -> Session.add_tag("billing")
+        # Board.ticket("pet-visits")
+        #   <- pet-visits
+        # pet-visits.tag("billing")
+        #   -> pet-visits.session.add_tag("billing")
         #   <- pet-visits tagged billing
         pass
 
@@ -223,8 +233,10 @@ def _(s):
 
     @s.when("the Person tags pet-visits' session with urgent")
     def _(world):
-        # Ticket.tag("urgent")
-        #   -> Session.add_tag("urgent")
+        # Board.ticket("pet-visits")
+        #   <- pet-visits
+        # pet-visits.tag("urgent")
+        #   -> pet-visits.session.add_tag("urgent")
         #   <- pet-visits tagged billing and urgent
         pass
 

@@ -57,8 +57,8 @@ Intended (`.sessions/session-board/ticket-enhancements.md`, commit b08bfe47e: "A
 *When* the chat composes its system prompt
 
 ```realization
-Ticket.agent_context
-  -> Ticket.text_file
+checkout-flow.agent_context
+  -> checkout-flow.session.text_file
   <- the system prompt section naming .sessions/checkout-flow/checkout-flow.md
 ```
 
