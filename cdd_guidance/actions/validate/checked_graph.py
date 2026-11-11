@@ -38,8 +38,11 @@ class CheckedGraph:
         # What the call names: the files being edited, and a graph (true for the session's saved one, or graph files).
         self._named = named
         self.unchecked_files = self._other_format_files()
-        # Read now, so a path that is not there is refused before the call claims any report file.
-        self.prefixes = self._prefixes(edited)
+        # Read now, so a path that is not there is refused before the call claims any report file: the paths the call
+        # names in the checked format, and the files the graph is built from, those paths, else, when it names no graph
+        # either, the folders holding what each graph-backed fidelity has written.
+        self.edited = [path for path in self._from_session_root(edited) if path not in self.unchecked_files]
+        self.prefixes = self.edited or self._from_session_root(self._written_outputs() if self._named is None else [])
         # The graph this call checks: the one it built from the files it names, the session's saved graph, or the graph
         # files it names, read once.
         self._checked: SavedGraph | None = None
@@ -74,13 +77,14 @@ class CheckedGraph:
 
     def judged_files(self, on_graph: bool) -> str:
         """Each checked format and its files, for the fidelities judged on this call's graph (on_graph) or on their
-        files: a model or code fidelity is judged on the graph when the call checks one."""
+        files: a model or code fidelity is judged on the graph when the call checks one. The files are the ones the call
+        names when it names any, else the ones the fidelity writes in that format."""
         judged = [
             (fidelity, format)
             for fidelity, format in zip(self._fidelities, self._formats)
             if (bool(self.files) and fidelity.is_judged_on_graph) == on_graph
         ]
-        return "; ".join(f"{format}: {', '.join(fidelity.output_paths().get(format, []))}" for fidelity, format in judged)
+        return "; ".join(f"{format}: {', '.join(self.edited or fidelity.output_paths().get(format, []))}" for fidelity, format in judged)
 
     def _files(self, reports: ReportFiles) -> list[Path]:
         if self.prefixes and self._named in (None, True) and self._fidelities:
@@ -121,12 +125,6 @@ class CheckedGraph:
         self.session.graph.refreshed(self.prefixes, destination, self._call)
         self._checked = SavedGraph.from_file(destination)
         return destination
-
-    def _prefixes(self, edited: list[str] | None) -> list[str]:
-        """The files the graph is built from, from the session's root: the paths the call names in the checked format,
-        else, when it names no graph either, the folders holding what each graph-backed fidelity has written."""
-        named = [path for path in self._from_session_root(edited) if path not in self.unchecked_files]
-        return named or self._from_session_root(self._written_outputs() if self._named is None else [])
 
     def _from_session_root(self, paths: list[str] | None) -> list[str]:
         """Each named path as graph node files record it, relative to the session's root.

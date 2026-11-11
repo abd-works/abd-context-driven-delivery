@@ -26,7 +26,7 @@
 ### ticket
 
 - The visual representation of one session on the board, with its title, scope, and *parent* (the ticket it was split from). It holds no work of its own: every question about work goes to its session.
-- Sits in the stage of its latest work, or Discovery when nothing is done yet. A person's move puts it in a stage; work after that move on a fidelity of a later stage takes it on into that stage, and a move back holds until new work goes further.
+- Sits in the stage of its latest work, or Discovery when nothing is done yet. A generate or validate on a fidelity of any stage takes it into that stage, forward or back; a person's move puts it in a stage, which holds until the next generate or validate.
 - Its work goes on in its own *worktree*, a checkout of its branch beside the repository, and its *chat* is the chat working in that worktree. Clicking a ticket on the board sends the board's commands to that chat, shown under the ticket's name; when no chat works there yet, the board opens a new chat in the Claude app on the worktree from a `claude://code/new` link, whose prompt asks it to take the ticket's name as its title, opening the worktree first if the ticket has none. The app asks the person to confirm the folder and send, because it starts no session on its own.
 - **Invariant:** a ticket never moves to another column by itself. A person moves it, by dragging it or moving it on and back, whatever its session's work, and the move is written to its session log with the stage it enters.
 - Its *text* says what its work is about: the idea file `<name>.md` its session folder keeps, the backlog item's file when it was started from one. Its *tags* are words a person tagged its session with, kept in its `session.json`.
@@ -318,7 +318,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 + << composition >> checkout: TicketCheckout
 + << composition >> marks: StageMarks
 + << association >> column: Column
-	// reference data field: Complete once its session is closed; a parent's is the stage of its child furthest back; otherwise the stage named by its latest `move` line, unless a generate or validate after that move names a fidelity of a later stage, which it then sits in; before any move, the stage of its latest work, or Discovery
+	// reference data field: Complete once its session is closed; a parent's is the stage of its child furthest back; otherwise the stage of the fidelity its latest generate or validate names, unless a `move` line came after it, whose stage it then sits in; with neither, Discovery
 + is_closed: bool
 	// data field: its session is closed, so it shows in Complete
 + is_active: bool

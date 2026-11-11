@@ -251,7 +251,7 @@ with description("a validate action on practice guidance") as self:
         # The session board lists the agent's judgment beside the graph's hits only when it is written in this shape.
         with it("should tell the agent to write its judgment under the judged file, one heading per failed rule"):
             report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
-            expect(report).to(contain("## Judgment — `space/kanban/.context/story-map.md`\n\n   ### `rule-slug` — Fail\n   - story-map.md:86"))
+            expect(report).to(contain("## Judgment — `harness/.context/stories/story-map.md`\n\n   ### `rule-slug` — Fail\n   - story-map.md:86"))
 
         # The board opens a finding's file in this project, so a path anywhere else cannot be opened.
         with it("should tell the agent to name the judged file by its path from the project's root"):
@@ -324,6 +324,11 @@ with description("a validate action on practice guidance") as self:
                 with it("should judge only the markdown the fidelity writes by default"):
                     report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md", "board/.context/story-map.drawio"])
                     expect(report).to(contain("Judge only the checked format's files (markdown: "))
+
+                with it("should judge the markdown file the call names, not the fidelity's declared one"):
+                    _write(self.folder, "elsewhere/story-map.md", "# (E) Board Elsewhere\n")
+                    report = self.action.validate(guidance=["stories-story-map"], paths=["elsewhere/story-map.md"])
+                    expect(report).to(contain("Judge only the checked format's files (markdown: elsewhere/story-map.md)"))
 
                 with it("should judge only the format the guidance names"):
                     expect(self.action.validate(guidance="stories-story-map format=drawio")).to(contain("Judge only the checked format's files (drawio: "))

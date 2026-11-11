@@ -217,21 +217,15 @@ class Ticket(Card):
     @property
     @data_field(reference=True)
     def column(self) -> Column:
-        """Complete once closed; otherwise the stage of its latest move, unless work since that move was on a fidelity
-        of a later stage, which the ticket then sits in: the stage follows the work forward, and a person's move back
-        holds until new work goes further. With no move, the stage of its latest work, else the first stage. Sent by its
-        name, since the column sends the ticket."""
+        """Complete once closed; otherwise the stage of the fidelity its latest generate or validate names, unless a
+        person moved it since, which holds until the next generate or validate: the stage follows the work, forward or
+        back. With neither, the first stage. Sent by its name, since the column sends the ticket."""
         if self._session.is_closed:
             return self._board.column(COMPLETE_COLUMN)
         furthest_back = self._furthest_back_child_stage
         if furthest_back is not None:
             return furthest_back
-        moved = self.marks.moved_into
-        worked = self.work.stage_worked_since_latest_move
-        if moved is None:
-            return worked or self._board.stages[0]
-        stages = self._board.stages
-        return worked if worked is not None and stages.index(worked) > stages.index(moved) else moved
+        return self.work.stage_worked_since_latest_move or self.marks.moved_into or self._board.stages[0]
 
     @property
     @data_field

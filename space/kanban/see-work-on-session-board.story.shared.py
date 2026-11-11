@@ -268,7 +268,7 @@ def _(s):
         expect(ticket_in(world.read, PET_VISITS.name)["column"]["name"]).to(equal("Specification"))
 
 
-@shared_stories.scenario("Display Ticket Card", "Keep a person's move back until work goes further")
+@shared_stories.scenario("Display Ticket Card", "Keep a person's move until the next work")
 def _(s):
     @s.given("pet-visits' ux mockup was generated")
     def _(world):
@@ -285,6 +285,25 @@ def _(s):
     @s.then("pet-visits shows in the Discovery stage")
     def _(world):
         expect(ticket_in(world.read, PET_VISITS.name)["column"]["name"]).to(equal("Discovery"))
+
+
+@shared_stories.scenario("Display Ticket Card", "Follow work back into an earlier stage")
+def _(s):
+    @s.given("a person moved pet-visits into Implementation")
+    def _(world):
+        world.project.seed_session(PET_VISITS.with_log(f"{STAMP} move Implementation no-chat"))
+
+    @s.and_("pet-visits' ux mockup was generated after that move")
+    def _(world):
+        world.project.seed_log_line(PET_VISITS, GENERATED_UX_MOCKUP)
+
+    @s.when("the session board reads the board")
+    def _(world):
+        world.read = world.data_of(world.Board.load().show())
+
+    @s.then("pet-visits shows in the Specification stage")
+    def _(world):
+        expect(ticket_in(world.read, PET_VISITS.name)["column"]["name"]).to(equal("Specification"))
 
 
 @shared_stories.scenario("Display Ticket Card", "Outline the active ticket")

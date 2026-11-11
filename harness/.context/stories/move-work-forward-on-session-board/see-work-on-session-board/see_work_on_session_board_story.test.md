@@ -173,12 +173,19 @@ section: body
 *When* the session board reads the [board](../../../../../space/kanban/.context/kanban-model.md#board)
 *Then* pet-visits shows in the Specification [stage](../../../../../space/kanban/.context/kanban-model.md#stage--column)
 
-#### Scenario: Keep a person's move back until work goes further
+#### Scenario: Keep a person's move until the next work
 
 *Given* pet-visits' ux mockup was generated
 *And* a person then moved pet-visits back into Discovery
 *When* the session board reads the [board](../../../../../space/kanban/.context/kanban-model.md#board)
 *Then* pet-visits shows in the Discovery [stage](../../../../../space/kanban/.context/kanban-model.md#stage--column)
+
+#### Scenario: Follow work back into an earlier stage
+
+*Given* a person moved pet-visits into Implementation
+*And* pet-visits' ux mockup was generated after that move
+*When* the session board reads the [board](../../../../../space/kanban/.context/kanban-model.md#board)
+*Then* pet-visits shows in the Specification [stage](../../../../../space/kanban/.context/kanban-model.md#stage--column)
 
 #### Scenario: Draw the card's title, age, and fidelity segments
 
