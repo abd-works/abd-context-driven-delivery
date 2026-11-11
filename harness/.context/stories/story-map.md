@@ -1262,7 +1262,7 @@ Observed: once no numbered version is left, `start_next` starts `version-1` as a
 
 ### (S) Agent --> Find A Release's Canvas Folder
 
-Observed: `CanvasVersions.from_release` opens `.sessions/<release>/design-canvas`, for the release being worked on or a named one (`versions_spec.py`).
+Observed: `CanvasVersions.in_practice_root` opens `<ux root>/design-canvas`, in the root session.json names for the UX practice, beside its other outputs (`versions_spec.py`).
 
 ## (E) Reuse Production Assets On The Canvas
 

@@ -4,10 +4,9 @@ import tempfile
 from pathlib import Path
 
 from mamba import description, context, it, before, after
-from expects import equal, expect, be_none, raise_error
+from expects import contain, equal, expect, be_none, raise_error
 
 from harness.design_canvas.versions import CanvasVersions, PublishedVersion
-from space.work_state import WorkState
 
 
 with description("Canvas versions") as self:
@@ -83,19 +82,16 @@ with description("Canvas versions") as self:
             expect((self.versions.folder(1) / "project" / "Main.dc.html").read_text(encoding="utf-8")).to(equal("version 2"))
 
 
-with description("a session's canvas") as self:
+with description("the UX practice's canvas") as self:
     with before.each:
         self.folder = tempfile.TemporaryDirectory()
         self.repo = Path(self.folder.name)
-        WorkState(self.repo).session = "small-change"
 
     with after.each:
         self.folder.cleanup()
 
-    with it("should keep its versions in the session's folder"):
-        expect(CanvasVersions.in_session_folder(WorkState(self.repo).sessions_folder / WorkState(self.repo).session).root).to(equal(self.repo.resolve() / ".sessions" / "small-change" / "design-canvas"))
+    with it("should keep its versions in the UX practice's root"):
+        expect(CanvasVersions.in_practice_root(self.repo / "harness" / ".context" / "ux").root).to(equal(self.repo / "harness" / ".context" / "ux" / "design-canvas"))
 
-    with it("should open a named session's canvas"):
-        expect(CanvasVersions.in_session_folder(WorkState(self.repo).sessions_folder / "design-system-setup").root).to(
-            equal(self.repo.resolve() / ".sessions" / "design-system-setup" / "design-canvas")
-        )
+    with it("should keep them out of the session's own folder"):
+        expect(str(CanvasVersions.in_practice_root(self.repo / "harness" / ".context" / "ux").root)).not_to(contain(".sessions"))

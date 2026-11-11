@@ -719,6 +719,36 @@ with description("the board tools") as self:
             with it("should open with the chip of its default format picked"):
                 expect([chip["label"] for chip in self.chips if chip["starts_picked"]]).to(equal(["markdown"]))
 
+        with context("with an action bar opened on its UX mockup"):
+            with before.each:
+                self.chips = self.project.call("ticket.format_choices", ticket="sign-up", fidelities=["ux-mockup"])
+
+            with it("should offer the design canvas as a chip of its own, after the code"):
+                expect([chip["label"] for chip in self.chips]).to(equal(["code", "canvas"]))
+
+            with it("should send the claude_design format for the canvas chip"):
+                expect(next(chip["formats"] for chip in self.chips if chip["label"] == "canvas")).to(equal(["claude_design"]))
+
+            with it("should open with the canvas unpicked, since the mockup defaults to html"):
+                expect([chip["label"] for chip in self.chips if chip["starts_picked"]]).to(equal(["code"]))
+
+        with context("with an action bar opened on its UX mockup, a canvas written in the UX root"):
+            with before.each:
+                # A session working in a folder of its own counts every file there as its work.
+                (self.project.root / "app").mkdir()
+                session_file = self.project.sessions / "sign-up" / "session.json"
+                session = json.loads(session_file.read_text(encoding="utf-8"))
+                session_file.write_text(json.dumps({**session, "workpath": str(self.project.root / "app")}), encoding="utf-8")
+                self.project.call("practice-session-output.choose_root", session=session_file_of("sign-up"), practice="ux", path="app/ux")
+                canvas = self.project.root / "app" / "ux" / "design-canvas" / "version-1" / "project" / "canvas.json"
+                canvas.parent.mkdir(parents=True)
+                canvas.write_text("{}", encoding="utf-8")
+                chips = self.project.call("ticket.format_choices", ticket="sign-up", fidelities=["ux-mockup"])
+                self.canvas = next(chip for chip in chips if chip["label"] == "canvas")
+
+            with it("should count the canvas as made"):
+                expect(self.canvas["made"]).to(equal(1))
+
         with context("with an action bar opened on its story map and its bounded context, the story map's markdown written"):
             with before.each:
                 (self.project.root / ".context").mkdir(exist_ok=True)
