@@ -116,9 +116,9 @@ function SessionActionsView({ ticket }: { ticket: TicketClient }) {
     <span className="file-views">
       <SessionActionView action="next" label={ticket.runNextLabel} hint={ticket.runNextHint} isOff={!ticket.canRunNext} onPress={() => ticket.runNext()} />
       <SessionActionView action="handoff" label="Handoff" hint="Write a handoff for this session" isOff={cannotFill} onPress={() => ticket.fillHandoff()} />
-      {ticket.isActive ? (
-        <SessionActionView action="close" label="Close" hint="Close this session in the chat" isOff={cannotFill} onPress={() => ticket.closeSession()} />
-      ) : (
+      {ticket.isOpen ? (
+        <SessionActionView action="close" label="Close" hint={ticket.closeHint} isOff={false} onPress={() => ticket.startClose()} />
+      ) : ticket.isMain ? null : (
         <SessionActionView action="activate" label="Activate" hint="Open this ticket in its own worktree" isOff={ticket.isClosed} onPress={() => page.activation.activate(ticket)} />
       )}
     </span>

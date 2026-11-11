@@ -40,7 +40,7 @@ class SessionFiles:
         """The session's file manager, held in memory, reading under the session's roots: the folder each practice works
         in, as ``session.json`` records it or by the practice's default, and the folder its declared outputs sit under. A
         new one when those roots change."""
-        practices = self._session.practices.values()
+        practices = self._session.own_practices.values()
         roots = tuple(sorted({practice.folder for practice in practices} | {practice.output_root for practice in practices}))
         if self._file_manager is None or self._file_manager.roots != roots:
             self._file_manager = FileManager(self._session.work_root, roots)

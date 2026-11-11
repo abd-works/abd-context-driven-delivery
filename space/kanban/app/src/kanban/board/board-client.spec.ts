@@ -93,10 +93,11 @@ describe('Display Board', () => {
         return page
       }
 
-      // The installer pulls through the repository and pins cdd; the board server only builds its own page.
-      it('should have the installer get the latest code and pin cdd to it, then rebuild the page', async () => {
+      // The installer gets the latest code, pins cdd to it, and rebuilds the page, so an install outside the board
+      // rebuilds it too.
+      it('should have the installer get the latest code, pin cdd to it, and rebuild the page', async () => {
         await updated()
-        expect(board.board.updates.steps).toEqual([expect.stringMatching(/scripts\/install\.py --ide Claude --update$/), expect.stringMatching(/vite\.js build$/)])
+        expect(board.board.updates.steps).toEqual([expect.stringMatching(/scripts\/install\.py --ide Claude --update$/)])
       })
 
       it('should restart the board server once the update has answered', async () => {

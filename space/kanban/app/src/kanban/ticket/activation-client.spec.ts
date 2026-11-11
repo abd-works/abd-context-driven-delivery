@@ -106,6 +106,26 @@ describe('Close Active Session', () => {
     expect(page.store.state.selected).toBe('Complete/checkout-flow')
   })
 
+  // A ticket open in its own worktree closes from the main board too, while no chat working on it is chosen.
+  describe('that is open in its worktree with no chat of its own chosen', () => {
+    async function pressed() {
+      board.openWorktree(CHOSEN)
+      const { page } = await board.page()
+      await ticketOn(page, CHOSEN).startClose()
+      return page
+    }
+
+    it('should say the ticket is open', async () => {
+      board.openWorktree(CHOSEN)
+      const { page } = await board.page()
+      expect(ticketOn(page, CHOSEN).isOpen).toBe(true)
+    })
+
+    it('should ask what to do with its work', async () => {
+      expect(closingHeading((await pressed()).store.state.closing!)).toBe('Close session Billing report')
+    })
+  })
+
   describe('that a person has cancelled', () => {
     async function cancelled() {
       const { page, asked } = await closing()

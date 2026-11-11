@@ -61,18 +61,21 @@ class TicketCheckout:
 
     def _found_branch(self) -> Branch:
         """The recorded branch while the repository has it, else the ticket's branch found in git and recorded."""
+        existing = {branch.name for branch in self._ticket.board.branches}
         recorded = self._recorded.get("branch", "")
-        if recorded and self._repo.branch_named(recorded).exists:
+        if recorded and recorded in existing:
             return self._repo.branch_named(recorded)
         named = self._repo.branch_named(self._ticket.name)
-        candidates = [] if named.exists else self.candidate_branches
-        return named if named.exists or len(candidates) != 1 else candidates[0]
+        if named.name in existing:
+            return named
+        candidates = self.candidate_branches
+        return candidates[0] if len(candidates) == 1 else named
 
     @property
     def candidate_branches(self) -> list[Branch]:
         """The branches whose name holds the ticket's name as a whole word, such as claude/chat-ui-defects-cef4bc."""
         word = re.compile(rf"(^|[/_-]){re.escape(self._ticket.name)}($|[/_-])")
-        return [branch for branch in self._repo.branches if branch.name != self._ticket.name and word.search(branch.name)]
+        return [branch for branch in self._ticket.board.branches if branch.name != self._ticket.name and word.search(branch.name)]
 
     @property
     def work_branch(self) -> Branch:
@@ -263,11 +266,10 @@ class TicketBranchUnclearError(LookupError):
 
 
 class LeaveChoices:
-    """What leaving a ticket can do with its work now, closing it or switching to another: a handoff always; a commit
-    and a push of the branch its work is on while a checkout has it, since those steps act on whatever is checked out;
-    and, for the ticket's own branch, not the default branch, a merge into the default branch, a delete of the branch
-    once merged, and a delete of its worktree while it has one. ``TicketCheckout.leave`` does exactly these, so a dialog
-    offers only what will be done."""
+    """What closing a ticket can do with its work now: a handoff always; a commit and a push of the branch its work is
+    on while a checkout has it, since those steps act on whatever is checked out; and, for the ticket's own branch, not
+    the default branch, a merge into the default branch, a delete of the branch once merged, and a delete of its
+    worktree while it has one. ``Ticket.close`` does exactly these, so a dialog offers only what will be done."""
 
     def __init__(self, branch: Branch | None, own_branch: Branch | None) -> None:
         self._branch = branch

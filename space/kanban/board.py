@@ -146,6 +146,11 @@ class Board:
         return self._reads.worktrees
 
     @property
+    def branches(self) -> list[Branch]:
+        """Every local branch, listed once per board read rather than once per ticket, so each ticket finds its own."""
+        return self._reads.branches
+
+    @property
     @data_field
     def practices(self) -> list[PracticeGuidance]:
         """The practices every ticket works through, in the order the board shows them, each with its name and colour."""
@@ -312,6 +317,10 @@ class BoardReads:
     @cached_property
     def chats(self) -> list[Chat]:
         return Chat.list()
+
+    @cached_property
+    def branches(self) -> list[Branch]:
+        return self._board.repo.branches
 
     @cached_property
     def worktrees(self) -> dict[Branch, Worktree]:

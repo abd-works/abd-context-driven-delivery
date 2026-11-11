@@ -86,6 +86,22 @@ with description("a session's file manager"):
         with it("should give each file its size"):
             expect(self.files.list("src").entries[0].size).to(equal(len(ORDER)))
 
+    # A practice's declared outputs are glob patterns; the board asks each fidelity whether its pattern finds a file.
+    with context("that finds the files a pattern names"):
+
+        with before.each:
+            (self.workpath / "src" / "deep" / "deeper").mkdir(parents=True)
+            (self.workpath / "src" / "deep" / "deeper" / "line.ts").write_bytes(ORDER)
+
+        with it("should find only the files in the folder a pattern without ** names"):
+            expect(self.files.find("src/*.ts")).to(equal([self.workpath / "src" / "order.ts"]))
+
+        with it("should find files one folder down for a pattern that names one folder level"):
+            expect(self.files.find("src/*/*/*.ts")).to(equal([self.workpath / "src" / "deep" / "deeper" / "line.ts"]))
+
+        with it("should find files at every depth for a pattern with **"):
+            expect(self.files.find("**/*.ts")).to(equal(sorted([self.workpath / "src" / "order.ts", self.workpath / "src" / "deep" / "deeper" / "line.ts"])))
+
     with context("that reads a file"):
 
         with it("should return the file's text"):

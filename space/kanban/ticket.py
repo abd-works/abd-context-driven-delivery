@@ -167,15 +167,21 @@ class Ticket(Card):
 
     @property
     @data_field
+    def is_open(self) -> bool:
+        """Whether it is open for work: in its own worktree, or the active ticket. An open ticket closes through its Close
+        dialog, whichever chat the board has chosen. Main is never open or closed this way."""
+        return not self.is_main and not self.is_closed and (bool(self.worktree) or self.is_active)
+
+    @property
+    @data_field
     def drop_targets(self) -> list[str]:
         """The columns besides the stages a person can drop it on. The Backlog takes any ticket, which keeps its whole
-        folder there. Complete takes one from Implementation's Done, or a ticket open in its own worktree, or the active
-        ticket, through its Close dialog, because closing it asks what to do with its work."""
+        folder there. Complete takes one from Implementation's Done, or an open ticket, through its Close dialog, because
+        closing it asks what to do with its work."""
         if self.is_main:
             return []
         final = self._board.stages[-1]
-        is_open = bool(self.worktree) or self.is_active
-        closes = not self.is_closed and (is_open or (self.column is final and self.is_done))
+        closes = self.is_open or (not self.is_closed and self.column is final and self.is_done)
         return [BACKLOG_COLUMN, *([COMPLETE_COLUMN] if closes else [])]
 
     @property
@@ -260,7 +266,7 @@ class Ticket(Card):
     @agent_tool
     @noSessionLog
     def close_choices(self) -> LeaveChoices:
-        """Return what closing ticket can do with its work, each chosen at first: a handoff always, and a commit and a push of the branch its work is on while that branch is checked out, which branch names. Closing never merges."""
+        """Return what closing ticket can do with its work, none chosen at first, so closing does only what the person ticks: a handoff always; a commit and a push of the branch its work is on while a checkout has it, which branch names; and, for its own branch, which own_branch names, a merge into main, a delete of the branch, and a delete of its worktree while it has one."""
         return self.checkout.close_choices
 
     @long_call
@@ -320,7 +326,7 @@ class Ticket(Card):
     @agent_tool
     @noSessionLog
     def close(self, leaving: list[str] | None = None) -> Ticket:
-        """Close ticket: its session ends, its folder moves to _complete/, it shows in Complete, and main opens, the default branch in the repository's own folder. leaving names what to do with its work first: handoff, commit, push, merge, delete_branch, delete_worktree."""
+        """Close ticket: leaving names what to do with its work first (handoff, commit, push, merge, delete_branch, delete_worktree); then its session ends, its folder moves to _complete/, that move is committed on main and pushed, and it shows in Complete. The repository's own folder stays on main."""
         if self.is_main:
             raise MainStaysOpenError("close")
         chosen = leaving or []
@@ -381,7 +387,7 @@ class TicketWork:
     def _required(self) -> list[tuple[Stage, FidelityGuidance]]:
         """Each fidelity a stage requires, as this ticket's session holds it, with its stage: one object per fidelity in
         a session, which finds its own files and reports there and is the one an action on it works with."""
-        fidelities = [fidelity for practice in self._ticket.session.practices.values() for fidelity in practice.fidelities]
+        fidelities = [fidelity for practice in self._ticket.session.own_practices.values() for fidelity in practice.fidelities]
         return [(stage, fidelity) for stage in self._ticket.board.stages for fidelity in fidelities if stage.requires(fidelity)]
 
     @property

@@ -306,12 +306,19 @@ class Session:
         return found
 
     @property
-    @data_field
     def practices(self) -> dict[str, PracticeSessionOutput]:
         """Every practice CDD has, by practice key, each the session's one instance of it: the ones its graph holds,
-        kept between calls with the graph."""
+        kept between calls with the graph, which opening here gives each practice to work in."""
         outputs = self._own_outputs
         return {key: outputs[key] for key in self.graph.practices.held}
+
+    @property
+    @data_field(key="practices")
+    def own_practices(self) -> dict[str, PracticeSessionOutput]:
+        """The same practices, without opening the graph, for reading what each one declares, its folder and fidelities:
+        a board listing every session would otherwise read every session's saved graph. A practice that runs is reached
+        through ``practices``, so it works in the graph."""
+        return dict(self._own_outputs)
 
     @property
     @data_field(key="handoff")

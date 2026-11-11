@@ -273,8 +273,11 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// data field: its session is closed, so it shows in Complete
 + is_active: bool
 	// data field: its session is the one saved as open
++ is_open: bool
+	// data field: open for work, in its own worktree or the active ticket, and not main; its card offers Close, which closes it through its Close dialog unless the chosen chat works on it
+	-> TicketCheckout.worktree
 + drop_targets: list[str]
-	// data field: the columns besides the stages it can be dropped on: the Backlog always, Complete from Implementation's Done or while it is active
+	// data field: the columns besides the stages it can be dropped on: the Backlog always, Complete from Implementation's Done or while it is open
 + is_done: bool
 	// data field: true only in a stage, when a person marked it done there or, with no mark since entering, when all its enabled work there is done
 + next_fidelity: FidelityProgress
@@ -311,15 +314,9 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> TicketWork.progress_of
 	-> FidelityProgress.files
 	-> FormatChoice.offered_by
-+ activate(leaving: list[str], opening: list[str]): Ticket
-	// `ticket.activate`: the active ticket leaves its work as leaving says (handoff, commit, push, merge), this ticket opens what opening names (branch, worktree), and its session becomes current
-	-> Board.active
-	-> TicketCheckout.leave
++ activate(): Ticket
+	// `ticket.activate`: opens it in its own worktree, where its own chat works on it; the chat that asks keeps its session, and the repository's own folder stays on main
 	-> TicketCheckout.open
-	-> Sessions.switch
-+ open_worktree(): Ticket
-	// `ticket.open_worktree`: opens its own worktree beside the repository, creating its branch when missing; the board forgets the worktrees it listed, so the ticket's next read lists the new one
-	-> TicketCheckout.open_worktree
 + move_next(): Ticket
 	// `ticket.move_next`: from In progress it writes `done <stage>`, from Done it writes `move <next stage>`, and out of Implementation it closes
 	-> Stage.next_stage
@@ -338,10 +335,12 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> BacklogItem.from_ticket
 	-> BacklogItem.write_if_missing
 + close(leaving: list[str]): Ticket
-	// `ticket.close`: its session closes and its folder moves to `_complete/`
-	-> TicketCheckout.leave
+	// `ticket.close`: does with its work what leaving names (handoff, commit, push, merge, delete_branch, delete_worktree); its session closes, its folder moves to `_complete/`, and that move is committed on main and pushed
+	-> TicketCheckout.free_worktree
+	-> TicketCheckout.keep_landing_release
 	-> Session.close
 	-> Session.move_to_closed
+	-> TicketCheckout.save_sessions_on_main
 + archive(): Ticket
 	// `ticket.archive`: its session closes and its folder moves to `_archive/`, off the board
 	-> Session.close
@@ -384,7 +383,8 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 + TicketCheckout(ticket: Ticket)
 ------
 + << composition >> branch: Branch
-	// made once; a Branch reads whether it exists and is checked out from git each time
+	// made once, found among the branches the board lists once per read: the recorded branch, else the one named as the ticket, else the one branch holding its name as a whole word; a Branch reads whether it is checked out from git each time
+	-> Board.branches
 	-> Repo.branch_named
 + work_branch: Branch
 	// its own branch while it is checked out, else the default branch while the checkout is on it; any other checkout gives its own branch, not checked out
@@ -394,10 +394,8 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 + << association >> chat: Chat
 	// the connected chat working in its worktree or a folder inside it, else one with no folder titled by the ticket's name
 	-> Board.chats
-+ leave_choices: LeaveChoices
-	// `ticket.leave_choices`: a merge included
 + close_choices: LeaveChoices
-	// `ticket.close_choices`: closing never merges
+	// `ticket.close_choices`: a handoff, a commit and push of its work branch while a checkout has it, and a merge, branch delete, and worktree delete for its own branch; none chosen at first
 + open()
 	// opens the ticket in its own worktree: the one it has, else a new one on its own branch, after the session folders not yet committed are committed on main and pushed; records the branch and worktree in its session; refuses with TicketBranchUnclearError when several branches could each be the ticket's
 	-> TicketCheckout.save_sessions_on_main

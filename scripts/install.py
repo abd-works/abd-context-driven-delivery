@@ -39,8 +39,9 @@ def main() -> int:
     serving.add_argument(
         "--update",
         action="store_true",
-        help="Bring this checkout onto its latest commit (a fast-forward pull) and serve that commit from "
-        "~/.cdd/runtime to every chat, restarting the cdd server. The Session Board's Update runs this.",
+        help="Bring this checkout onto its latest commit (merging in what origin has) and serve that commit from "
+        "~/.cdd/runtime to every chat, restarting the cdd server, then rebuild the Session Board's page. The Session "
+        "Board's Update runs this.",
     )
     serving.add_argument(
         "--serve-from-checkout",
@@ -72,11 +73,12 @@ def main() -> int:
     if args.update:
         from space.repo.repo import Repo
 
-        Repo.of_project(_REPO).pull()
+        Repo.of_project(_REPO).catch_up_with_origin()
     if args.pin_runtime or args.update or args.serve_from_checkout:
         print(f"cdd server: {server.serve_from_checkout() if args.serve_from_checkout else server.pin_server()}")
         if installer.layout.is_claude_code:
             print(f"cdd-board: {server.claude_plugins.install_board()}")
+        _rebuild_board_page()
         return 0
     if args.self:
         installer.install_self(replace=not args.no_replace)
@@ -86,7 +88,16 @@ def main() -> int:
         restarted = server.keep_pinned_current()
         if restarted:
             print(f"cdd server: {restarted}")
+        _rebuild_board_page()
     return 0
+
+
+def _rebuild_board_page() -> None:
+    """The board's server serves a page built from this checkout, which a pull or a merge leaves as it was, so every
+    install rebuilds it and the open board reloads onto the new code."""
+    from space.kanban.board_app import BoardPage
+
+    print(f"board page: {BoardPage().rebuild()}")
 
 
 if __name__ == "__main__":

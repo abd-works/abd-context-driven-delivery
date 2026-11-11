@@ -166,7 +166,7 @@ export class TicketClient extends TicketClientGenerated {
 
   async dropOn(edge: string): Promise<void> {
     if (this.page.board.columnNamed(edge)?.isBacklog) await this.moveTo(edge, false)
-    else if (this.isActive) await this.page.activation.startClosing(this)
+    else if (this.isOpen) await this.page.activation.startClosing(this)
     else await this.moveNext()
   }
 
@@ -269,6 +269,20 @@ export class TicketClient extends TicketClientGenerated {
   // Closing ends the chat's session and leaves the ticket where it is; moving it into Complete is what completes it.
   closeSession(): Promise<void> {
     return this.chat.command(this.inSession(CLOSE_SESSION_COMMAND))
+  }
+
+  // An open ticket closes in the chosen chat when that chat works on it, so the agent can write its handoff; any other
+  // open ticket, such as one in its worktree with no chat chosen, closes through the board's Close dialog.
+  private get closesInChat(): boolean {
+    return this.isActive && this.page.chat.canSend
+  }
+
+  get closeHint(): string {
+    return this.closesInChat ? 'Close this session in the chat' : 'Close this ticket and choose what to do with its work'
+  }
+
+  startClose(): Promise<void> {
+    return this.closesInChat ? this.closeSession() : this.page.activation.startClosing(this)
   }
 
   fillHandoff(): Promise<void> {

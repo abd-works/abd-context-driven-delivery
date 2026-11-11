@@ -182,15 +182,24 @@ class FileManager:
         fixed = next((index for index, part in enumerate(parts) if set(part) & set("*?")), len(parts))
         # The search starts at the deepest folder the pattern names outright, so a pattern under one folder never walks the drive.
         base = start.joinpath(*parts[:fixed])
-        matching = self._glob_expression("/".join(parts[fixed:]))
+        searched = parts[fixed:]
+        matching = self._glob_expression("/".join(searched))
+        # A pattern without ** names files a fixed number of folders down, so the walk stops there: `*.md` on a large
+        # checkout reads its top folder alone instead of every folder in it.
+        deepest = None if "**" in searched else len(searched) - 1
         base_text = str(base)
         found = []
         for folder, folders, files in os.walk(base_text):
-            folders[:] = [name for name in folders if name not in UNWORKED_FOLDERS and (not name.startswith(".") or name in SEARCHED_HIDDEN_FOLDERS)]
             # Plain strings here: building a Path for every file in the repository made the search take a second.
             inside = folder[len(base_text):].strip("\\/").replace("\\", "/")
+            depth = inside.count("/") + 1 if inside else 0
+            folders[:] = [] if deepest is not None and depth >= deepest else [name for name in folders if self._is_searched(name)]
             found += [Path(folder, name) for name in files if matching.fullmatch(f"{inside}/{name}" if inside else name)]
         return sorted(found)
+
+    def _is_searched(self, folder_name: str) -> bool:
+        """Installed packages and hidden folders hold no one's work, apart from the hidden folders that do."""
+        return folder_name not in UNWORKED_FOLDERS and (not folder_name.startswith(".") or folder_name in SEARCHED_HIDDEN_FOLDERS)
 
     def _inside(self, path: str) -> Path:
         """The path resolved from the workpath; a page names paths, so one outside every root is refused."""

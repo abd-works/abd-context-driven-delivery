@@ -32,9 +32,9 @@ const pythonIn = (repository: string): string => {
   return existsSync(inEnvironment) ? inEnvironment : 'python'
 }
 
-// One press brings the board and every chat onto the checkout's latest commit: the installer pulls it through the
-// repository and pins the cdd server to it, this server builds the page from it, then restarts so its own routes are
-// the new ones too. The pin restarts the cdd server, so it runs as its own process rather than as a cdd call.
+// One press brings the board and every chat onto the checkout's latest commit: the installer merges it in from origin,
+// pins the cdd server to it, and rebuilds the page from it, then this server restarts so its own routes are the new
+// ones too. The pin restarts the cdd server, so it runs as its own process rather than as a cdd call.
 export class BoardUpdate {
   private readonly repository: string
 
@@ -59,7 +59,6 @@ export class BoardUpdate {
   private steps(): Step[] {
     return [
       { name: 'get latest and re-pin', command: pythonIn(this.repository), args: ['scripts/install.py', '--ide', 'Claude', '--update'], folder: this.repository },
-      { name: 'rebuild', command: process.execPath, args: [join(this.appFolder, 'node_modules', 'vite', 'bin', 'vite.js'), 'build'], folder: this.appFolder },
     ]
   }
 
