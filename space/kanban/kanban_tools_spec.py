@@ -995,12 +995,13 @@ with description("the board tools") as self:
             expect(names).to(equal({
                 "board.show", "board.overview", "board.help", "board.folders", "stage.set_wip_limit",
                 "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.format_choices", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations", "ticket.assign_chat",
+                "ticket.edit_text", "ticket.tag", "ticket.delete", "ticket.add_child", "ticket.pull_out", "ticket.choose_parent", "ticket.place_before",
                 "fidelity-progress.finish_review", "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
                 "session.choose_workpath", "session.folder_files", "session.read_file",
                 "session.write_handoff", "session.read_handoff_format", "session.read_cdr_format", "session.list_cdrs", "session.write_cdr",
                 "practice-session-output.enable", "practice-session-output.choose_root", "practice-session-output.use_default_root",
-                "backlog-item.create", "backlog-item.start",
+                "backlog-item.create", "backlog-item.start", "backlog-item.edit_text", "backlog-item.place_before",
             }))
 
         with it("should take the ticket's name on every ticket tool that acts on one"):

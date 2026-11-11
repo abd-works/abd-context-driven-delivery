@@ -23,6 +23,7 @@ from space.session.chat_injections import ChatInjections
 from space.session.decision_records import FORMAT_FILE, DecisionRecords
 from space.session.file_manager import FileEntry, FileText
 from space.session.handoffs import HANDOFF_FORMAT_FILE, Handoffs
+from space.session.idea_file import IdeaFile
 from space.session.practice_session_output import PracticeSessionOutput
 from space.session.session_files import SessionFiles
 from space.session.session_log import HookLog, SessionLog
@@ -37,6 +38,10 @@ SESSION_FILE = "session.json"
 _REPORT_FOLDER = "validation-reports"
 _HOOK_LOGS_FOLDER = "logs"
 _DECISION_RECORDS_FOLDER = "cdr"
+# The session.json fields that hold a session's parent, whether it was pulled out of that parent, and its tags.
+_PARENT_FIELD = "parent"
+_PULLED_OUT_FIELD = "pulled_out"
+_TAGS_FIELD = "tags"
 
 
 class SessionNotFoundError(LookupError):
@@ -237,7 +242,50 @@ class Session:
     @data_field
     def parent(self) -> str:
         """The name of the session this one was split from; empty when it was not split from one."""
-        return self.fields.get("parent", "")
+        return self.fields.get(_PARENT_FIELD, "")
+
+    def set_parent(self, parent: Session | None) -> None:
+        """Make parent the session this one is a child of, or none; a child moved to another parent, or to none, is no
+        longer pulled out of one."""
+        self.save_fields(**{_PARENT_FIELD: parent.name if parent is not None else "", _PULLED_OUT_FIELD: False})
+
+    def open_child(self, title: str, scope: str) -> Session:
+        """A new session titled title, its parent this one, working where this one works."""
+        return self._sessions.create(title, self.work_root, title=title, scope=scope, parent=self.name)
+
+    @property
+    def is_pulled_out(self) -> bool:
+        """Whether this child moves on the board as a card of its own, still keeping its parent."""
+        return bool(self.fields.get(_PULLED_OUT_FIELD, False))
+
+    def mark_pulled_out(self) -> None:
+        self.save_fields(**{_PULLED_OUT_FIELD: True})
+
+    @property
+    def tags(self) -> list[str]:
+        """The words a person tagged this session with, in the order they were added."""
+        return list(self.fields.get(_TAGS_FIELD, []))
+
+    def add_tag(self, word: str) -> None:
+        """Tag this session with word, once however often it is added."""
+        tags = self.tags
+        if word not in tags:
+            self.save_fields(**{_TAGS_FIELD: [*tags, word]})
+
+    @property
+    def idea_file(self) -> IdeaFile:
+        """``<name>.md`` in this session's folder: what its work is about, the backlog item's file when it was started from one."""
+        return IdeaFile(self.session_path / f"{self.name}.md")
+
+    @property
+    def text(self) -> str:
+        """The text of its idea file; empty while it has none."""
+        return self.idea_file.text
+
+    def keep_text(self, text: str) -> None:
+        """Write text under its idea file's heading, making the file, headed with its title, when it has none."""
+        idea = self.idea_file
+        idea.write(idea.heading or self.title or self.name, text)
 
     @property
     def fields(self) -> dict:
@@ -286,6 +334,11 @@ class Session:
     def reopen(self) -> Session:
         """Back among the open sessions, from closed or the backlog."""
         return self._move_folder_to(self.sessions.folder)
+
+    def remove(self) -> None:
+        """Delete this session's folder, log, files, and all; its sessions no longer hold it."""
+        shutil.rmtree(self.session_path)
+        self._sessions.removed(self)
 
     def _move_folder_to(self, parent: Path) -> Session:
         """Move this session's folder under ``parent``, such as ``.sessions/_complete/``; this session, now kept there,

@@ -249,6 +249,11 @@ class Sessions:
             self._held.pop(Path(moved_from).resolve(), None)
             self._held[session.session_path.resolve()] = session
 
+    def removed(self, session: Session) -> None:
+        """Hold session no more, its folder deleted."""
+        with self._held_lock:
+            self._held.pop(session.session_path.resolve(), None)
+
     def open_state(self, chat: str = "") -> WorkState:
         """What chat keeps open, under ``~/.cdd``: the chat named, else the chat of the call being answered, else this
         checkout folder's own entry, for a call that names no chat."""

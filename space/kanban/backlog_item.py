@@ -11,17 +11,11 @@ from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subje
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.annotations.name import Name
 from space.kanban.board import BACKLOG_COLUMN, Board, Card, Column
+from space.session.idea_file import IdeaFile
 from harness.mcp.mcp_server import mcp
 
 if TYPE_CHECKING:
     from space.kanban.ticket import Ticket
-
-
-class BacklogItemNotFoundError(LookupError):
-    """Raised when a tool names a backlog item the board does not show."""
-
-    def __init__(self, backlog_item: str) -> None:
-        super().__init__(f"no backlog item titled {backlog_item!r} on the board")
 
 
 @identity("title")
@@ -33,15 +27,14 @@ class BacklogItem(Card):
     def __init__(self, path: Path, board: Board) -> None:
         super().__init__(board)
         self._path = path
+        # The idea the item holds: its heading is the item's title, and the text under it its text.
+        self._idea = IdeaFile(path)
 
     @classmethod
     @tool_subject
     def load(cls, backlog_item: str, *, project: Path | str) -> BacklogItem:
         """The backlog item titled backlog_item on the board of project."""
-        found = Board.load(project).backlog_item(backlog_item)
-        if found is None:
-            raise BacklogItemNotFoundError(backlog_item)
-        return found
+        return Board.load(project).backlog_item_called(backlog_item)
 
     @classmethod
     @mcp
@@ -51,7 +44,7 @@ class BacklogItem(Card):
         """Add an idea to the Backlog: one markdown file, with title as its heading and text under it, committed on main and pushed."""
         board = Board.load(project)
         item = cls(board.sessions.backlog_folder / f"{Name(title).title_slug}.md", board)
-        item._write(title, text)
+        item._idea.write(title, text)
         board.save_sessions_on_main(f"sessions: add {title} to the Backlog")
         return item
 
@@ -64,12 +57,8 @@ class BacklogItem(Card):
 
     def write_if_missing(self, title: str) -> None:
         """Give an item whose ticket never had an idea file one holding title, so it shows in the Backlog."""
-        if not self._path.exists():
-            self._write(title, "")
-
-    def _write(self, title: str, text: str) -> None:
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(f"# {title}\n\n{text}\n".rstrip() + "\n", encoding="utf-8")
+        if not self._idea.exists():
+            self._idea.write(title, "")
 
     @property
     def path(self) -> Path:
@@ -83,10 +72,11 @@ class BacklogItem(Card):
     @property
     def title(self) -> str:
         """The item's first `# ` heading, or its file name in words."""
-        for line in self._path.read_text(encoding="utf-8").splitlines():
-            if line.startswith("# "):
-                return line[2:].strip()
-        return self._path.stem.replace("-", " ").replace("_", " ").capitalize()
+        return self._idea.heading or self._path.stem.replace("-", " ").replace("_", " ").capitalize()
+
+    @property
+    def key(self) -> str:
+        return self.title
 
     @property
     @data_field(reference=True)
@@ -106,9 +96,7 @@ class BacklogItem(Card):
     @data_field
     def text(self) -> str:
         """The file's content after its heading."""
-        content = self._path.read_text(encoding="utf-8")
-        heading = f"# {self.title}"
-        return content.split(heading, 1)[-1].strip() if heading in content else content.strip()
+        return self._idea.text
 
     @property
     def last_activity(self) -> str:
@@ -127,6 +115,24 @@ class BacklogItem(Card):
             ticket.session.keep_file(self._path)
         self._board.save_sessions_on_main(f"sessions: start {ticket.name} from the Backlog")
         return ticket
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def edit_text(self, text: str) -> BacklogItem:
+        """Write text as the backlog item's idea, under its heading in its file, which keeps its title. Committed on main and pushed."""
+        self._idea.rewrite_text(text)
+        self._board.save_sessions_on_main(f"sessions: edit {self.title}'s text in the Backlog")
+        return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def place_before(self, before: str) -> Column:
+        """Move the backlog item just above the item titled before in the Backlog, as dragging it there does; the Backlog keeps that order, in .sessions/_board.json. Committed on main and pushed."""
+        placed = self.move_before(self._board.backlog_item_called(before))
+        self._board.save_sessions_on_main(f"sessions: place {self.title} before {before} in the Backlog")
+        return placed
 
     def move_next(self) -> Ticket:
         """A person's move forward out of the Backlog: starting the item."""

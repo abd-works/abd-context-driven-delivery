@@ -67,6 +67,27 @@ class FidelityNotFoundError(LookupError):
         super().__init__(f"no fidelity named {fidelity!r} on {within}")
 
 
+class TicketNotFoundError(LookupError):
+    """Raised when a tool names a ticket the board does not show."""
+
+    def __init__(self, ticket: str) -> None:
+        super().__init__(f"no ticket named {ticket!r} on the board")
+
+
+class BacklogItemNotFoundError(LookupError):
+    """Raised when a tool names a backlog item the board does not show."""
+
+    def __init__(self, backlog_item: str) -> None:
+        super().__init__(f"no backlog item titled {backlog_item!r} on the board")
+
+
+class CardNotInColumnError(ValueError):
+    """Raised when a card is to be placed before another, and either is not a card of its own in the column."""
+
+    def __init__(self, card: str, column: str) -> None:
+        super().__init__(f"{card!r} is not a card of its own in {column}")
+
+
 @language_adapter(language="typescript")
 @agent_toolset
 class Board:
@@ -127,6 +148,16 @@ class Board:
         """Keep stage's limit in the board's file beside the other stages' limits and whatever else the sessions share there."""
         shared = self._shared
         shared["wip_limits"] = {**shared.get("wip_limits", {}), stage.name: limit}
+        JsonFile(self.file).write(shared)
+
+    def order_in(self, column: Column) -> list[str]:
+        """The keys of column's cards in the order a person last placed them; none before they have placed any."""
+        return list(self._shared.get("order", {}).get(column.name, []))
+
+    def keep_order(self, column: Column, keys: list[str]) -> None:
+        """Keep column's cards in the order keys gives them, in the board's file beside whatever else it holds."""
+        shared = self._shared
+        shared["order"] = {**shared.get("order", {}), column.name: list(keys)}
         JsonFile(self.file).write(shared)
 
     @cached_property
@@ -249,8 +280,26 @@ class Board:
         session = self.sessions.named(name)
         return self.make_ticket(session) if session is not None else None
 
+    def ticket_called(self, name: str) -> Ticket:
+        """The ticket called name, as ``ticket`` reads it; raises ``TicketNotFoundError`` when the board has none."""
+        found = self.ticket(name)
+        if found is None:
+            raise TicketNotFoundError(name)
+        return found
+
+    def children_of(self, ticket: Ticket) -> list[Ticket]:
+        """The tickets whose session names ticket's as its parent, found once per board read."""
+        return self._reads.children.get(ticket.name, [])
+
     def backlog_item(self, title: str) -> BacklogItem | None:
         return next((item for item in self.backlog_items if item.title == title), None)
+
+    def backlog_item_called(self, title: str) -> BacklogItem:
+        """The backlog item titled title; raises ``BacklogItemNotFoundError`` when the board has none."""
+        found = self.backlog_item(title)
+        if found is None:
+            raise BacklogItemNotFoundError(title)
+        return found
 
     def save_sessions_on_main(self, message: str) -> None:
         """Commit the session folders not yet committed on main with message, and push main, while the repository's own
@@ -316,6 +365,15 @@ class BoardReads:
         return [board.make_ticket(session) for session in board.sessions.all()]
 
     @cached_property
+    def children(self) -> dict[str, list[Ticket]]:
+        """Every ticket that has a parent, under its parent's name."""
+        held: dict[str, list[Ticket]] = {}
+        for ticket in self.tickets:
+            if ticket.session.parent:
+                held.setdefault(ticket.session.parent, []).append(ticket)
+        return held
+
+    @cached_property
     def backlog_items(self) -> list[BacklogItem]:
         board = self._board
         folder = board.sessions.backlog_folder
@@ -366,7 +424,24 @@ class Column:
 
     @property
     def cards(self) -> list[Card]:
-        return [card for card in self._board.cards if card.column is self]
+        """The cards of its own in this column, in the order a person placed them; any not placed yet follow, in the
+        order the board reads them. A child stacked inside its parent's card is not a card of its own."""
+        own = [card for card in self._board.cards if card.column is self and not card.is_stacked]
+        placed = self._board.order_in(self)
+        return sorted(own, key=lambda card: placed.index(card.key) if card.key in placed else len(placed))
+
+    def place_before(self, card: Card, other: Card) -> Column:
+        """Put card just above other in this column, and keep that order."""
+        keys = [shown.key for shown in self.cards]
+        for named in (card, other):
+            if named.key not in keys:
+                raise CardNotInColumnError(named.key, self.name)
+        if card.key == other.key:
+            return self
+        keys.remove(card.key)
+        keys.insert(keys.index(other.key), card.key)
+        self._board.keep_order(self, keys)
+        return self
 
 
 class Backlog(Column):
@@ -517,6 +592,20 @@ class Card(ABC):
     @data_field
     @abstractmethod
     def last_activity(self) -> str: ...
+
+    @property
+    @abstractmethod
+    def key(self) -> str:
+        """What names the card among the others in its column, by which the board keeps its place there."""
+
+    @property
+    def is_stacked(self) -> bool:
+        """Whether it shows inside another card rather than as a card of its own: only a ticket's child does."""
+        return False
+
+    def move_before(self, other: Card) -> Column:
+        """A person's move of this card just above other in their column; the column keeps that order."""
+        return self.column.place_before(self, other)
 
     @abstractmethod
     def move_next(self) -> Card: ...

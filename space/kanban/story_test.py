@@ -154,6 +154,22 @@ def ticket_in(board: dict, name: str) -> dict | None:
     return next((ticket for column in columns for key in ("in_progress", "done", "tickets") for ticket in column.get(key, []) if ticket["name"] == name), None)
 
 
+def held_ticket_in(board: dict, name: str) -> dict | None:
+    """The ticket named name wherever the board shows it: a card of its own, or a child stacked in its parent's card."""
+    tickets = [ticket for column in board["columns"] for key in ("in_progress", "done", "tickets") for ticket in column.get(key, [])]
+    while tickets:
+        ticket = tickets.pop(0)
+        if ticket["name"] == name:
+            return ticket
+        tickets.extend(ticket.get("children", []))
+    return None
+
+
+def children_in(ticket: dict) -> list[str]:
+    """The names of the children a ticket's card holds, stacked or pulled out."""
+    return [child["name"] for child in ticket["children"]]
+
+
 def column_in(board: dict, name: str) -> dict:
     return next(column for column in board["columns"] if column["name"] == name)
 

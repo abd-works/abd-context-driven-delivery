@@ -500,8 +500,9 @@ with description("a ticket") as self:
             self.root, self.board = board_with(DISCOVERY_DONE)
             self.ticket = self.board.ticket("pet-visits")
 
+        # pet-visits is a child of pawplace, so it waits stacked in pawplace's card, which takes its stage and its Done.
         with it("should be done, waiting in its stage's done part"):
-            expect(names(self.board.column("Discovery").done)).to(equal(["pet-visits"]))
+            expect((self.ticket.column.name, self.ticket.is_done, names(self.board.column("Discovery").done))).to(equal(("Discovery", True, ["pawplace"])))
 
         with it("should have no next"):
             expect(self.ticket.next_fidelity).to(be_none)

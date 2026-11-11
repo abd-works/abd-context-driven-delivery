@@ -29,6 +29,10 @@
 - Starts in the earliest stage its session shows work in, or Discovery when nothing is done yet. After that it moves only when a person moves it.
 - Its work goes on in its own *worktree*, a checkout of its branch beside the repository, and its *chat* is the chat working in that worktree. Clicking a ticket on the board sends the board's commands to that chat, shown under the ticket's name; when no chat works there yet, the board opens a new chat in the Claude app on the worktree from a `claude://code/new` link, whose prompt asks it to take the ticket's name as its title, opening the worktree first if the ticket has none. The app asks the person to confirm the folder and send, because it starts no session on its own.
 - **Invariant:** a ticket never moves to another column by itself. A person moves it, by dragging it or moving it on and back, whatever its session's work, and the move is written to its session log with the stage it enters.
+- Its *text* says what its work is about: the idea file `<name>.md` its session folder keeps, the backlog item's file when it was started from one. Its *tags* are words a person tagged its session with, kept in its `session.json`.
+- A *parent* ticket holds the *child* tickets whose session names it as their parent. A child is stacked inside its parent's card and shows in no column of its own until a person pulls it out; a *pulled-out* child is a card of its own, titled under its parent's title, and keeps its parent, which keeps a row for it. Giving a child another parent, or none, makes it no longer pulled out.
+- **Invariant:** a parent is in the column of its child furthest back on the board, and moves only with its children: a person moving it is refused.
+- A person keeps a card where they put it in its column: the order is kept in `.sessions/_board.json`, and a card not placed yet follows those that were.
 
 ### session
 
@@ -151,7 +155,18 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 + ticket(name: str): Ticket
 	// read from that ticket's session folder alone, open before closed; none when no session has that name
 	-> Sessions.named
++ ticket_called(name: str): Ticket
+	// `ticket`, raising `TicketNotFoundError` when the board has none: where a ticket's name enters from a tool call
++ children_of(ticket: Ticket): list[Ticket]
+	// the tickets whose session names ticket's as its parent, found once per board read
+	-> Session.parent
 + backlog_item(title: str): BacklogItem
++ backlog_item_called(title: str): BacklogItem
+	// `backlog_item`, raising `BacklogItemNotFoundError` when the board has none
++ order_in(column: Column): list[str]
+	// the keys of column's cards in the order a person last placed them, kept in `.sessions/_board.json`
++ keep_order(column: Column, keys: list[str])
+	// saved in `.sessions/_board.json` beside the WIP limits, keeping whatever else the file holds
 + column(name: str): Column
 	// raises `ColumnNotFoundError` for a column the board does not have
 
@@ -166,10 +181,15 @@ Marked `@identity("name")`, so a reference to a column is its name.
 + kind: str
 	// data field: backlog, stage, or complete, so a reader of the board knows which fields the column sends
 + << aggregation >> cards: list[Card]
-	// every card of the board whose column is this one
+	// every card of its own on the board whose column is this one, in the order a person placed them, then any not placed yet; a child stacked in its parent's card is not one
 	-> Board.cards
 	-> Card.column
+	-> Card.is_stacked
+	-> Board.order_in
 ----
++ place_before(card: Card, other: Card): Column
+	// keeps card just above other; raises `CardNotInColumnError` when either is not a card of its own here
+	-> Board.keep_order
 
 ## Backlog : Column
 
@@ -245,11 +265,18 @@ The base type of Ticket and BacklogItem. It marks `title` and `last_activity` as
 + << association >> column: Column
 + last_activity: str
 	// data field; a timestamp, blank when nothing has happened yet
++ key: str
+	// what names it among its column's cards, by which the board keeps its place: a ticket's name, a backlog item's title
++ is_stacked: bool
+	// whether it shows inside another card rather than as a card of its own; only a ticket's child does
 ----
 + move_next(): Card
 	// a person's move to the next column
 + move_previous(): Card
 	// a person's move to the previous column
++ move_before(other: Card): Column
+	// a person's move of it just above other in their column
+	-> Column.place_before
 
 ## Ticket : Card
 
@@ -261,8 +288,27 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// data field: its session's name; a ticket is an agent toolset, whose own name is the toolset's, so without this it would answer "ticket"
 	-> Session.name
 + title: str
-	// its session's title, or its name when it has none
+	// its session's title, or its name when it has none; a pulled-out child's is under its parent's, as Checkout flow.Enter card details
 	-> Session.title
++ text: str
+	// data field: the text of the idea file its session folder keeps
+	-> Session.text
++ tags: list[str]
+	// data field: the words a person tagged its session with
+	-> Session.tags
++ << association >> parent: Ticket
+	// the ticket its session names as its parent; none when it names none or one the board does not have
+	-> Board.ticket
++ << association >> ancestors: list[Ticket]
+	// its parent, its parent's parent, and so on
++ << aggregation >> children: list[Ticket]
+	// data field, sent whole, since a stacked child shows in no column: the tickets whose session names it as their parent
+	-> Board.children_of
++ is_pulled_out: bool
+	// data field: a child moving on the board as a card of its own, still keeping its parent
+	-> Session.is_pulled_out
++ is_stacked: bool
+	// data field: an open child, not pulled out, of an open parent, shown inside the parent's card
 + << association >> session: Session
 	// data field: its folders, its practices and their files, and its log
 + << composition >> progress: list[FidelityProgress]
@@ -272,7 +318,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 + << composition >> checkout: TicketCheckout
 + << composition >> marks: StageMarks
 + << association >> column: Column
-	// reference data field: Complete once its session is closed; otherwise the stage named by its latest `move` line; before any move, the earliest stage its log shows work in, or Discovery
+	// reference data field: Complete once its session is closed; a parent's is the stage of its child furthest back; otherwise the stage named by its latest `move` line; before any move, the earliest stage its log shows work in, or Discovery
 + is_closed: bool
 	// data field: its session is closed, so it shows in Complete
 + is_active: bool
@@ -283,7 +329,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 + drop_targets: list[str]
 	// data field: the columns besides the stages it can be dropped on: the Backlog always, Complete from Implementation's Done or while it is open
 + is_done: bool
-	// data field: true only in a stage, when a person marked it done there or, with no mark since entering, when all its enabled work there is done
+	// data field: true only in a stage: a parent's when every child of it in that stage is done; else when a person marked it done there or, with no mark since entering, when all its enabled work there is done
 + next_fidelity: FidelityProgress
 	// reference data field `next`: the first fidelity not done in its stage or any stage before it, earliest stage first, because later work builds on it; sent by its ticket and slug, since `progress` sends it; none once it is done in its stage
 + worktree: str
@@ -323,7 +369,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// `ticket.activate`: opens it in its own worktree, where its own chat works on it; the chat that asks keeps its session, and the repository's own folder stays on main
 	-> TicketCheckout.open
 + move_next(): Ticket
-	// `ticket.move_next`: from In progress it writes `done <stage>`, from Done it writes `move <next stage>`, and out of Implementation it closes
+	// `ticket.move_next`: from In progress it writes `done <stage>`, from Done it writes `move <next stage>`, and out of Implementation it closes; a parent raises `ParentMovesWithChildrenError`, as `move_previous` and `move_to` do
 	-> Stage.next_stage
 	-> StageMarks.mark
 	-> StageMarks.enter
@@ -355,6 +401,34 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> Session.close
 	-> Session.move_to_archive
 	-> Board.save_sessions_on_main
++ edit_text(text: str): Ticket
+	// `ticket.edit_text`: writes text under its idea file's heading, making the file when it has none; committed on main and pushed
+	-> Session.keep_text
++ tag(word: str): Ticket
+	// `ticket.tag`: adds word to its session's tags; committed on main and pushed
+	-> Session.add_tag
++ delete(): Board
+	// `ticket.delete`: its session closes and its folder is removed, that removal committed on main and pushed; main raises `MainStaysOpenError`
+	-> Session.close
+	-> Session.remove
+	-> Board.save_sessions_on_main
++ add_child(title: str): Ticket
+	// `ticket.add_child`: a new child ticket, a story In progress in Discovery, working where it works; committed on main and pushed
+	-> Session.open_child
+	-> Board.ticket_of
++ pull_out(): Ticket
+	// `ticket.pull_out`: a child becomes a card of its own, keeping its parent; a ticket with no parent raises `NotAChildError`
+	-> Session.mark_pulled_out
++ reassign_parent(parent: Ticket): Ticket
+	// parent, or none, becomes its parent, and it is no longer pulled out; raises `ParentLoopError` when parent is it or one of its children
+	-> Session.set_parent
++ choose_parent(parent: str): Ticket
+	// `ticket.choose_parent`: `reassign_parent` with the ticket named parent, or none when it is empty
+	-> Board.ticket_called
++ place_before(before: str): Column
+	// `ticket.place_before`: `move_before` the ticket named before; committed on main and pushed
+	-> Board.ticket_called
+	-> Card.move_before
 + violations(): Report
 	// `ticket.violations`: the rules broken on every fidelity of its stage left with violations, each naming its fidelity, a rule two fidelities share listed once; its path is the session's reports folder from the project
 	-> FidelityProgress.report
@@ -578,6 +652,7 @@ Marked `@identity("title")`.
 	// always the Backlog
 + text: str
 	// data field: the file's content after its heading
+	-> IdeaFile.text
 + path: Path
 	// its markdown file
 + path_from_project: str
@@ -610,6 +685,13 @@ Marked `@identity("title")`.
 	-> BacklogItem.start
 + move_previous(): BacklogItem
 	// the Backlog is the first column, so the item stays where it is
++ edit_text(text: str): BacklogItem
+	// `backlog-item.edit_text`: rewrites the text under its file's heading, which keeps its title; committed on main and pushed
+	-> IdeaFile.rewrite_text
++ place_before(before: str): Column
+	// `backlog-item.place_before`: `move_before` the item titled before; committed on main and pushed
+	-> Board.backlog_item_called
+	-> Card.move_before
 
 ## Help
 
@@ -752,6 +834,14 @@ One rule the judgment in a validation report fails, in one judged file.
 
 ## BacklogItemNotFoundError : LookupError
 
+## CardNotInColumnError : ValueError
+
+## ParentMovesWithChildrenError : ValueError
+
+## NotAChildError : ValueError
+
+## ParentLoopError : ValueError
+
 ---
 
 # Collaborators
@@ -776,7 +866,7 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## Session
 
-`space/session/session.py`, sent whole as a ticket's `session` data field. The board reads `name`, `title`, `is_closed`, `workpath`, `practices`, `reports_folder`, and `log`, and calls `close()`, `reopen()`, `move_to_closed()`, `move_to_archive()`, `move_to_backlog()`, `keep_file(file)`, and `from_project(path)`. Its `log` is a `SessionLog` (`space/session/session_log.py`), whose `entries` are `LogEntry`s with `time`, `verb`, `stage`, `words`, and `names(fidelity)`, and whose `record(line)` writes a move or a review; `latest(*verbs, stage)` answers a ticket's latest move and its latest mark in a stage.
+`space/session/session.py`, sent whole as a ticket's `session` data field. The board reads `name`, `title`, `parent`, `is_pulled_out`, `tags`, `text`, `is_closed`, `workpath`, `practices`, `reports_folder`, and `log`, and calls `close()`, `remove()`, `reopen()`, `move_to_closed()`, `move_to_archive()`, `move_to_backlog()`, `keep_file(file)`, `keep_text(text)`, `add_tag(word)`, `set_parent(parent)`, `mark_pulled_out()`, `open_child(title, scope)`, and `from_project(path)`. A backlog item reads and writes its file through an `IdeaFile` (`space/session/idea_file.py`), the same as a session's idea file. Its `log` is a `SessionLog` (`space/session/session_log.py`), whose `entries` are `LogEntry`s with `time`, `verb`, `stage`, `words`, and `names(fidelity)`, and whose `record(line)` writes a move or a review; `latest(*verbs, stage)` answers a ticket's latest move and its latest mark in a stage.
 
 ## PracticeGuidance
 

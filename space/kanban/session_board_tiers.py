@@ -23,11 +23,11 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from cdd_guidance.actions.generate.generate import Generate  # noqa: E402
-from space.kanban.backlog_item import BacklogItem, BacklogItemNotFoundError  # noqa: E402
-from space.kanban.board import Board, Stage  # noqa: E402
+from space.kanban.backlog_item import BacklogItem  # noqa: E402
+from space.kanban.board import BacklogItemNotFoundError, Board, FidelityNotFoundError, Stage, TicketNotFoundError  # noqa: E402
 from space.kanban.session_board_examples import SURFACE_FIXTURE_PROJECT, SessionsProject  # noqa: E402
-from space.kanban.story_test import World, progress_in, ticket_in  # noqa: E402
-from space.kanban.ticket import FidelityNotFoundError, Ticket, TicketNotFoundError  # noqa: E402
+from space.kanban.story_test import World, held_ticket_in, progress_in  # noqa: E402
+from space.kanban.ticket import Ticket  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
 from space.session import Session, Sessions  # noqa: E402
 from cdd_guidance.actions.validate.validate import Validate  # noqa: E402
@@ -197,10 +197,19 @@ class TicketHandle:
         self.name = name
 
     def data(self) -> dict:
-        found = ticket_in(self._cdd.call("board.show"), self.name)
+        found = held_ticket_in(self._cdd.call("board.show"), self.name)
         if found is None:
             raise TicketNotFoundError(self.name)
         return found
+
+    def move_before(self, other: TicketHandle) -> Any:
+        """``Ticket.move_before(other)``: the tool takes the other ticket by its name."""
+        return self._cdd.call("ticket.place_before", ticket=self.name, before=other.name)
+
+    def reassign_parent(self, parent: TicketHandle | None) -> TicketHandle:
+        """``Ticket.reassign_parent(parent)``: the tool takes the parent by its name, and none as no name."""
+        answered = self._cdd.call("ticket.choose_parent", ticket=self.name, parent=parent.name if parent is not None else "")
+        return _handle_of(self._cdd, answered)
 
     @property
     def session(self) -> SessionHandle:
@@ -322,6 +331,13 @@ class BacklogItemHandle:
     def start(self, scope: str = "feature", path: str = "") -> TicketHandle:
         started = self._cdd.call("backlog-item.start", backlog_item=self.title, scope=scope, path=path)
         return TicketHandle(self._cdd, started["name"])
+
+    def edit_text(self, text: str) -> BacklogItemHandle:
+        return _handle_of(self._cdd, self._cdd.call("backlog-item.edit_text", backlog_item=self.title, text=text))
+
+    def move_before(self, other: BacklogItemHandle) -> Any:
+        """``BacklogItem.move_before(other)``: the tool takes the other item by its title."""
+        return self._cdd.call("backlog-item.place_before", backlog_item=self.title, before=other.title)
 
     def data(self) -> dict:
         backlog = next(column for column in self._cdd.call("board.show")["columns"] if column["name"] == "Backlog")

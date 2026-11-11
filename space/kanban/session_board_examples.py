@@ -163,6 +163,15 @@ ALPHA = SessionSeed("alpha", "Alpha", workpath="work")
 GIFT_CARDS_HELD = SessionSeed("gift-cards", "Gift cards", (generated("stories", "story_map"),), folder="_backlog")
 SIGN_UP_HELD = SessionSeed("sign-up", "Sign up", (f"{STAMP} move Discovery no-chat",), folder="_backlog")
 
+# The scenarios' own child tickets: a session.json naming its parent, and one pulled out of it.
+DONE_IN_DISCOVERY = f"{STAMP} done Discovery no-chat"
+ENTER_CARD_DETAILS_CHILD = SessionSeed("enter-card-details", "Enter card details", fields={"scope": "story", "parent": "checkout-flow"})
+ENTER_CARD_DETAILS_IN_SPECIFICATION = ENTER_CARD_DETAILS_CHILD.with_log(MOVED_INTO_SPECIFICATION)
+ENTER_CARD_DETAILS_PULLED_OUT_DONE = replace(ENTER_CARD_DETAILS_CHILD.with_log(DONE_IN_DISCOVERY), fields={**ENTER_CARD_DETAILS_CHILD.fields, "pulled_out": True})
+CONFIRM_ORDER_CHILD = SessionSeed("confirm-order", "Confirm order", fields={"scope": "story", "parent": "checkout-flow"})
+CONFIRM_ORDER_DONE_IN_DISCOVERY = CONFIRM_ORDER_CHILD.with_log(DONE_IN_DISCOVERY)
+PULLED_OUT_TITLE = "Checkout flow.Enter card details"
+
 # The scenarios' own session log lines.
 GENERATED_STORY_MAP_IN_TWO_FOLDERS = f"{STAMP} generate /work, /work/docs stories story_map markdown stories no-chat"
 GENERATED_UX_MOCKUP = f"{STAMP} generate /work/ux ux mockup html ux no-chat"
@@ -173,6 +182,14 @@ SIGN_UP_HELD_FILE = BacklogFileSeed("sign-up.md", "Sign up", "")
 RETURNS_AND_REFUNDS = BacklogFileSeed("returns-and-refunds.md", "Returns and refunds", "Refund an order.")
 RETURNS_AND_REFUNDS_UNHEADED = BacklogFileSeed("returns-and-refunds.md", "", "Refund an order.")
 GIFT_CARDS_IN_BACKLOG = BacklogFileSeed("gift-cards.md", "Gift cards", "Sell gift cards.")
+# The text a ticket's idea file holds, its session folder's <name>.md.
+CHECKOUT_FLOW_TEXT = "Pay for the basket."
+CONFIRM_ORDER_TEXT = "Show the order and take the payment."
+
+
+def idea_file_text(heading: str, text: str) -> str:
+    """Seed: an idea file as a started backlog item leaves it in a session folder, its heading and its text."""
+    return f"# {heading}\n\n{text}\n"
 
 # The scenarios' own files in a session folder or the project.
 LATEST_HANDOFF = "handoff-20261101T120000.md"
@@ -201,6 +218,12 @@ VISITS_ROOT = "src/visits"
 BILLING_ROOT = "src/billing"
 OUTSIDE_FILE = "../secrets.txt"
 NO_SUCH_TICKET = "no-such-ticket"
+EDITED_CHECKOUT_FLOW_TEXT = "Pay for the basket by card."
+PET_VISITS_TEXT = "Book a visit for a pet."
+EDITED_GIFT_CARDS_TEXT = "Sell gift cards at the till."
+EDITED_CONFIRM_ORDER_TEXT = "Show the order, then take the payment."
+BILLING_TAG = "billing"
+URGENT_TAG = "urgent"
 NO_SUCH_FIDELITY = "stories-no_such_fidelity"
 
 # --- What the board answers with ---------------------------------------------------------------------------------

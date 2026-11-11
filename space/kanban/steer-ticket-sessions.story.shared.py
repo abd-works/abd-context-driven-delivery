@@ -72,7 +72,7 @@ from space.kanban.board import NotAStageError
 from space.kanban.ticket_checkout import TicketBranchUnclearError
 from space.repo.repo import Repo
 from space.session import Sessions
-from space.kanban.ticket import TicketNotFoundError
+from space.kanban.board import TicketNotFoundError
 
 shared_stories = SharedStories("Steer Ticket Sessions")
 
