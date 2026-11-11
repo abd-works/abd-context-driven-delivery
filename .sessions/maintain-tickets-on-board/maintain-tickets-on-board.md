@@ -4,6 +4,8 @@ Analysis and planning: the stories here are not built yet, or only partly built 
 
 **Outcome:** a person edits, orders, tags and removes tickets, and arranges them as parents and children.
 
+**Design:** `harness/.context/ux/ticket-ui.drawio` (2026-11-11) draws parent and child tickets and supplements the design canvas. Scenarios: `harness/.context/stories/move-work-forward-on-session-board/maintain-tickets/`, `organize-ticket-hierarchy/` and `see-work-on-session-board/`.
+
 **Slicing notes:** mod-ideas build order 4, finish the Kanban: board-enhancements "Tickets Enhancements".
 
 ## Notes from the backlog
@@ -68,10 +70,10 @@ From `mod-ideas.md`, "Kanban and session tracking" (build order 4, "Finish the K
 
 *Person*. Intended (`.sessions/session-board/ticket-enhancements.md`): a child pulled out of its parent becomes a ticket of its own beside it and moves independently.
 
-#### Story: Move Child Ticket To Another Parent
+#### Story: Reassign Ticket Parent
 
-*Person*. Intended (`.sessions/session-board/ticket-enhancements.md`): a ticket added as a child of a different parent leaves its old parent.
+*Person*. Intended (`.sessions/session-board/ticket-enhancements.md` "Add a ticket as a child of a different parent" and "Make a child independent of its parent"; `harness/.context/ux/ticket-ui.drawio` "add and remove a child"): a ticket made the child of a different parent leaves its old parent, and a child taken off its parent becomes a ticket with no parent. Was: Move Child Ticket To Another Parent.
 
-#### Story: Nest Child Branch And Session
+#### Story: Place Parent At Leftmost Child Stage
 
-*Claude Code*. Intended (`.sessions/session-board/ticket-enhancements.md`): a child ticket's branch and session nest under its parent's, so the hierarchy holds in git and in `.sessions/` as on the board.
+*Board App*. Intended (`harness/.context/ux/ticket-ui.drawio` "parents cant be dragged; they change stage by taking on the stage of the leftmost ticket"): a parent sits in the stage of its child furthest back on the board and moves only as its children move; a person cannot drag a parent.

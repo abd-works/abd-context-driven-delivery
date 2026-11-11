@@ -126,6 +126,12 @@ class PatternOverlays:
         return merged
 
     @property
+    def names(self) -> list[str]:
+        """Every registered pattern by name, in name order, whether its folder holds practices yet or not: the patterns a
+        person can choose to overlay."""
+        return sorted(self._registered)
+
+    @property
     def available(self) -> list[str]:
         """Every registered pattern that holds at least one practice."""
         return [name for name in sorted(self._registered) if self._holds_practices(self._folder_of(name))]
@@ -143,6 +149,11 @@ class PatternOverlays:
     def _folder_of(self, name: str) -> Path:
         """The folder the registered pattern name is defined in."""
         return class_folder(self._registered[name])
+
+    def pattern_named(self, name: str) -> Any:
+        """The guidance of the registered pattern name, whether its folder holds practices or not, made the first time
+        this object wants it: what an action reads a pattern's own rules from."""
+        return self._pattern(name)
 
     def _pattern(self, name: str) -> Any:
         """The guidance of the registered pattern name, made the first time this object wants it."""

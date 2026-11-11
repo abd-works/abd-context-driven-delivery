@@ -20,15 +20,17 @@ class Format(str):
     _NAMES_BY_SHORT_NAME = {short: name for name, short in _SHORT_NAMES.items()}
     CODE = frozenset({"python", "typescript", "java", "javascript"})
     TEMPLATED = frozenset({"markdown", *CODE})
-    # The groups a person picks formats by, in the order an action bar offers them: a diagram, the markdown, or the
-    # code. Any other format is a group of its own, under its own name.
+    # The groups a person picks formats by, in the order an action bar offers them: a diagram, the markdown, the code,
+    # or a Claude Design canvas. Any other format is a group of its own, under its own name.
     GROUPS: dict[str, tuple[str, ...]] = {
         "diagram": ("drawio",),
         "markdown": ("markdown",),
         "code": ("python", "typescript", "javascript", "java", "html"),
+        "canvas": ("claude_design",),
     }
-    # The order a fidelity's files are shown in, by group: prose first, then the code, then the diagrams drawn from them.
-    FILE_ORDER: tuple[str, ...] = ("markdown", "code", "diagram")
+    # The order a fidelity's files are shown in, by group: prose first, then the code, then the diagrams drawn from them,
+    # then the canvas played from them.
+    FILE_ORDER: tuple[str, ...] = ("markdown", "code", "diagram", "canvas")
 
     def __new__(cls, name: str | None = "") -> Format:
         folded = (name or "").strip().casefold()

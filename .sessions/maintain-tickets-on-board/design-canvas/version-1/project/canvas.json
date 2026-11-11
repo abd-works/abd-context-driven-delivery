@@ -1,0 +1,73 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-28T18:00:00Z"
+ },
+ "title": "Story Map",
+ "launch": {
+  "view": "canvas",
+  "page": "story-map"
+ },
+ "pages": [
+  {
+   "id": "story-map",
+   "name": "Story map"
+  },
+  {
+   "id": "screens",
+   "name": "Story explorer"
+  },
+  {
+   "id": "screen-session-board",
+   "name": "Session board"
+  }
+ ],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 2048,
+   "h": 490,
+   "page": "story-map",
+   "title": "Story map",
+   "is_interactive": true,
+   "expand": "fill"
+  },
+  "screens/explorer.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1880,
+   "h": 948,
+   "page": "screens",
+   "title": "Story explorer",
+   "is_interactive": true,
+   "expand": "fill"
+  },
+  "screens/session-board.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1600,
+   "h": 1100,
+   "page": "screen-session-board",
+   "title": "Session board",
+   "is_interactive": true
+  },
+  "context/session-board.dc.html": {
+   "x": 1680,
+   "y": 0,
+   "w": 560,
+   "h": 1100,
+   "page": "screen-session-board",
+   "title": "Stories"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "screens/explorer.dc.html",
+  "screens/session-board.dc.html",
+  "context/session-board.dc.html"
+ ],
+ "notes": {},
+ "designSystems": []
+}

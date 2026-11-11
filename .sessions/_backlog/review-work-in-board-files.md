@@ -23,6 +23,22 @@ From `board-enhancements.md`, "Actions":
 
 Both are built: Display Report Without Header Noise and Display Report Errors In Code Fences are in Built Today.
 
+From the person, 2026-11-11, on a screenshot of the board's bottom panel showing "stories-scenarios files" (a grid of chips, one per file, with the chosen file rendered below):
+
+> the bottom panel grid from the board is a perfect v2 file viewer; add tabs on top of file groupings for each stage; dimensions are roots of the knowledge graph eg each practice; click to select, check box to multi select
+
+- The board's files panel (its chip grid of a fidelity's files above the rendered file) is the model for the v2 file viewer.
+- Tabs across the top, one per stage (Discovery, Specification, Implementation), each holding that stage's file groupings.
+- The groupings' dimensions are the roots of the knowledge graph, such as each practice.
+- A click on a file selects it; a check box on each file selects several at once.
+
+From the person, 2026-11-11, on the same chip grid:
+
+> color coding files and higlithginh the ares thast have chnged to make agent revew easy
+
+- Colour-code the file chips, so a person sees at a glance which files the agent changed.
+- Inside an open file, highlight the areas that changed, so reviewing the agent's work is quick. This joins Show AI Changes As Diff below.
+
 ## Epic: Move Work Forward On Session Board
 
 ### Feature: Work Fidelity Outputs On Board → Review Fidelity Outputs On Board

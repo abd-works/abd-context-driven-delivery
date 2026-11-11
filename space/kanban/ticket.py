@@ -10,6 +10,7 @@ from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.chat.chat import Chat
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
+from harness.graph.pattern_overlays import PatternOverlays
 from harness.guidance.stages import GENERATE, RENDER, REVIEW, VALIDATE
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.markdown.format import Format
@@ -25,6 +26,7 @@ from space.kanban.board import (
     Stage,
 )
 from space.kanban.format_choice import FormatChoice
+from space.kanban.overlay_choice import OverlayChoice
 from space.kanban.report import Report, ReportFile
 from space.kanban.ticket_checkout import LeaveChoices, TicketCheckout
 from space.repo.repo import Branch
@@ -336,6 +338,21 @@ class Ticket(Card):
         """Return the format chips of an action bar on ticket over fidelities, slugs such as stories-story-map: each group of formats they offer, the format each fidelity uses from it, how many offer it and have a file in it already, and whether the bar opens with it picked."""
         read = [(progress.fidelity, progress.files()) for progress in (self.work.progress_of(slug) for slug in fidelities)]
         return FormatChoice.offered_by(read)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def overlay_choices(self) -> list[OverlayChoice]:
+        """Return the pattern overlays a person can choose for ticket's session: every registered pattern in name order, each with its icon, its first and last letter, and whether the session overlays it on its graph."""
+        chosen = self._session.overlays
+        return [OverlayChoice(pattern, pattern in chosen) for pattern in PatternOverlays().names]
+
+    @mcp
+    @agent_tool
+    def choose_overlays(self, overlays: list[str]) -> list[OverlayChoice]:
+        """Overlay the patterns overlays names, such as lern_domain_driven, on ticket's session's graph in place of those chosen before, refusing a name that is no pattern with NotAPatternError; return its overlay choices."""
+        self._session.choose_overlays(overlays)
+        return self.overlay_choices()
 
     @mcp
     @agent_tool

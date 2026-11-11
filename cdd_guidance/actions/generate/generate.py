@@ -23,6 +23,8 @@ class Generate(GuidanceAction):
         self._work_on(guidance)
         rules = self.rules_to_follow()
         instructions(rules)
+        overlay_rules = self._overlay_rules()
+        instructions(overlay_rules)
         tools(self._render().render)
         earlier = self._earlier_renders()
         instructions(earlier)
@@ -73,6 +75,22 @@ class Generate(GuidanceAction):
     def _existing_files(self, fidelity) -> dict[str, list[str]]:
         """The files fidelity has in this session, by the format it declares them in, each a path from the project."""
         return {label: [entry.path for entry in entries if entry.exists] for label, entries in fidelity.files().items()}
+
+    def _overlay_rules(self) -> str:
+        """The shared rules of each pattern the session overlays, such as lern_domain_driven, which apply on top of the
+        practices' rules; none for an action made for no session or a session that overlays none."""
+        if self._session is None or not self.session.overlays:
+            return ""
+        patterns = self.graph.applied_patterns
+        return "\n\n".join(self._overlay_rules_of(patterns.pattern_named(name), name) for name in self.session.overlays)
+
+    def _overlay_rules_of(self, pattern: PracticeGuidance, name: str) -> str:
+        return (
+            f"## Pattern overlay: {name}\n\n"
+            f"This session overlays the {name} pattern, so its shared rules below apply on top of the practices' rules. "
+            f"Its whole guidance is its instructions, `{pattern.slug}_instructions`.\n\n"
+            f"{pattern.section_text('Shared rules')}"
+        )
 
     def _generate_item(self, item) -> str:
         """What generating one listed guidance asks for: the text itself, or the instructions of the fidelity this

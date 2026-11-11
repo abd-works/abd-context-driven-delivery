@@ -11,6 +11,7 @@ from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, t
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
 from harness.agent_tools.tool_call import ToolCall
 from harness.graph.graph import Graph
+from harness.graph.pattern_overlays import PatternOverlays
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.documents import load_document
 from harness.installation.data_class import data_field, identity, language_adapter
@@ -50,6 +51,14 @@ class SessionNotFoundError(LookupError):
     def __init__(self, session: str) -> None:
         super().__init__(f"no session at {session!r}: name the session.json of the session to work on")
         self.session = session
+
+
+class NotAPatternError(ValueError):
+    """An overlay was asked for by a name that is no registered pattern."""
+
+    def __init__(self, names: list[str], patterns: list[str]) -> None:
+        self.names = names
+        super().__init__(f"{', '.join(names)} is no pattern; the patterns are {', '.join(patterns)}")
 
 
 class UnknownPracticeError(ValueError):
@@ -189,6 +198,8 @@ class Session:
             if self._graph is None:
                 graph = Graph(output.guidance for output in self._own_outputs.values())
                 graph.open_saved(self.work_root)
+                if self.overlays:
+                    graph.overlays = self.overlays
                 self._graph = graph
             return self._graph
 
@@ -286,6 +297,25 @@ class Session:
         """Write text under its idea file's heading, making the file, headed with its title, when it has none."""
         idea = self.idea_file
         idea.write(idea.heading or self.title or self.name, text)
+
+    @property
+    def overlays(self) -> list[str]:
+        """The patterns this session overlays on its graph, by name, as its session.json keeps them; none until a
+        person chooses some."""
+        return list(self.fields.get("overlays", []))
+
+    def choose_overlays(self, overlays: list[str]) -> None:
+        """Overlay the patterns named on this session's graph from now on, in place of those chosen before: kept in its
+        session.json, and applied to its graph at once when it has one. A name that is no registered pattern is refused
+        with NotAPatternError, and nothing changes."""
+        patterns = PatternOverlays().names
+        unknown = [name for name in overlays if name not in patterns]
+        if unknown:
+            raise NotAPatternError(unknown, patterns)
+        self.save_fields(overlays=list(overlays))
+        with self._parts_lock:
+            if self._graph is not None:
+                self._graph.overlays = list(overlays)
 
     @property
     def fields(self) -> dict:

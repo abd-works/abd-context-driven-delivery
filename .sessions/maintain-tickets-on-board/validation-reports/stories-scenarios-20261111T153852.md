@@ -1,0 +1,300 @@
+# Validate
+
+Take the persona of a **critical judge** — do not edit the artifact.
+
+1. Read the appropriate practice and fidelity level guidlines and rules. Scope judgment to artifacts passed into context.
+2. Use each **practice** as the rubric — report Pass or Fail per named practice fidelity and named rule with brief evidence. There is no third verdict: a rule that is only partly met is a Fail, because a softer verdict lets a broken rule through review.
+3. When **paths** names the files being edited, the graph is built from just those files as they are now, and its rules run on them. Pass the files you wrote, not the whole tree. Without **paths**, when **graph** is `true`, read the saved graph of the session's folder (`.context/graph.json`, which exists only after `graph.load_working_copy` has run on that folder); when it is a path (or list of paths), read that `graph_return_nodes` JSON or saved graph. Append a **Graph rule validation** report for each guidance's practice. Each rule is one section: heading, rule text, any graph hits (**[graph rule]**), then the AI judgment prompt for that rule.
+4. Collection validate on graph-backed practices reads the working copy and reports each rule hit. A single base Rule is instruction text only.
+5. Do not fix. Report failures for fixing, then add your judgment for each rule to the report this action saved, so the board links to the whole result. It names the report's path at the end of its reply.
+6. Append the judgment to the end of the saved report in exactly this shape. The session board parses it, lists each finding beside the graph's hits, opens the finding's file at its line, and sends a Fix back, so a finding in any other shape is lost:
+
+   ```markdown
+   ## Judgment — `space/kanban/.context/story-map.md`
+
+   ### `rule-slug` — Fail
+   - story-map.md:86 `Archive Ticket`: what breaks the rule, and why.
+
+   ### `other-rule-slug` — Fail
+   - story-map.md:148 `Send Sketch Iterate Or Document`: what breaks the rule, and why.
+   ```
+
+   - **One `## Judgment — ` section per judged file,** with an em dash, and the file in backticks as a path from the project's root, the way the session names paths. Never an absolute path or another checkout's path, because the board opens the file in this project and cannot open one anywhere else.
+   - **One `### ` heading per rule that fails:** the rule slug in backticks, an em dash, then `Fail`. Leave passing rules out of these headings; a table or a Passes paragraph after the judgment may list them.
+   - **One bullet per finding,** opening with the judged file's name, a colon, and one line number (`story-map.md:86`), then a space and what breaks the rule. A finding that spans lines takes its first line, and a finding at two places is two bullets, because the board opens each finding at one line.
+
+
+Judge only the checked format's files (python: C:/dev/abd-cdd-maintain-tickets-on-boar/harness/{epic}/{sub-epic}/{story}/{story_snake}_story.test.py). The other formats mirror them, so judging those too reports every finding twice.
+
+# Graph rule validation
+
+**Generated:** 2026-11-11 15:38:55 UTC
+**Project:** harness
+**Action:** validate (graph JSON + AI rules)
+
+**Graph sources:**
+- `C:\dev\abd-context-driven-delivery\.sessions\maintain-tickets-on-board\validation-reports\stories-scenarios-20261111T153852.json`
+
+**The session's graph also held, and practice-wide rules compared against:**
+- `author-story-maps/author-story-changes-with-ai`
+- `author-story-maps/save-and-share-changes`
+- `author-story-maps/view-story-map`
+- `build-design-canvas-screens/publish-and-release-a-canvas-version`
+- `connect-sessions-across-channels-and-apps/check-work-in-generate`
+- `connect-sessions-across-channels-and-apps/connect-chat-bar-board-and-story-ui`
+- `connect-sessions-across-channels-and-apps/read-graph-violations-in-chat-bar`
+- `connect-sessions-across-channels-and-apps/read-graph-violations-on-board`
+- `explore-stories-in-story-ui/frame-design-canvas-screens-in-explorer`
+- `explore-stories-in-story-ui/navigate-the-story-tree`
+- `explore-stories-in-story-ui/play-stories-in-the-explorer`
+- `explore-stories-in-story-ui/show-screen-frames-in-story-ui`
+- `map-work-into-knowledge-graph/review-violations-in-graph-app`
+- `move-work-forward-from-chat-bar/capture-session-knowledge`
+- `move-work-forward-from-chat-bar/enter-cdd-commands-faster`
+- `move-work-forward-from-chat-bar/guide-work-through-practices`
+- `move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar`
+- `move-work-forward-from-chat-bar/see-work-in-chat-bar`
+- `move-work-forward-from-chat-bar/steer-sessions`
+- `move-work-forward-on-session-board/guide-work-through-practices-on-board`
+- `move-work-forward-on-session-board/integrate-practice-content-editor-apps-on-board`
+- `move-work-forward-on-session-board/maintain-tickets`
+- `move-work-forward-on-session-board/organize-ticket-hierarchy`
+- `move-work-forward-on-session-board/see-work-on-session-board`
+- `move-work-forward-on-session-board/steer-ticket-sessions`
+- `move-work-forward-on-session-board/work-fidelity-outputs-on-board`
+
+## Summary
+
+**Total graph violations:** 21
+**Rules with graph hits:** 5
+**AI rules in scope:** 21
+
+## Rules
+
+Each rule shows its guidance text, any graph scanner hits (`**[graph rule]**`), then the AI judgment prompt.
+
+### `vocabulary-traces-to-domain-source`
+
+Use terms from the domain language and model when they exist, because one shared definition keeps Stories, examples, and code consistent.
+
+Evaluate the current context against this rule (vocabulary-traces-to-domain-source):
+
+### `read-all-source-context-in-full`
+
+Before fixing the hierarchy or asking a question about an interaction between systems, read every referenced source that informs the decision, including the owning segment, module context, session records, related Story context, build order, code, recorded observations, and relevant run logs. Name the source and location that supports each important interaction, because titles and search results do not explain behaviour.
+
+Evaluate the current context against this rule (read-all-source-context-in-full):
+
+### `do-not-invent-requirements`
+
+Write only behaviour described by a source or explicitly requested by the user. Add a system-to-system interaction only when a named caller invokes it or a source requires it, because an assumed interaction becomes unrequested architecture, Scenarios, and tests.
+
+Evaluate the current context against this rule (do-not-invent-requirements):
+
+### `gwt-steps-trace-to-domain-operations`
+
+Map every Given, When, and Then to a named domain operation or property. Express continuation as an operation on the aggregate that receives control, because routes, waits, and framework calls do not describe domain behaviour.
+
+Evaluate the current context against this rule (gwt-steps-trace-to-domain-operations):
+
+### `behavioral-and-system-observable-outcomes`
+
+Write each Then as a result a person or another system can observe, such as changed information, a returned response, or a changed interface state. Keep internal flags and function-local state out of Then, because they do not prove delivered behaviour.
+
+Evaluate the current context against this rule (behavioral-and-system-observable-outcomes):
+
+### `explore-full-interaction-surface`
+
+Before finalizing Scenarios and again before generating acceptance tests, inspect every distinct visible behaviour required by the source or running product. Add Scenarios for distinct mechanics, because a happy path cannot protect validation and failure behaviour.
+
+Evaluate the current context against this rule (explore-full-interaction-surface):
+
+### `examples-trace-domain-model`
+
+Provide an example for every domain concept the scenario mentions. Use that concept's own terms and the values the source gives, because a step that names a concept without an example leaves the behaviour unagreed.
+
+Evaluate the current context against this rule (examples-trace-domain-model):
+
+### `reconcile-live-immediately`
+
+In brownfield work, update the map and Scenario in the same increment when the running product contradicts the current description. Mark intended changes separately, because observed and desired behaviour are different evidence.
+
+Evaluate the current context against this rule (reconcile-live-immediately):
+
+### `flagged-writes-intended-gwt`
+
+When available evidence cannot exercise required behaviour, write the intended Given, When, and Then and state what evidence is missing, because an evidence gap must not erase the requirement or turn an expectation into an observed fact.
+
+Evaluate the current context against this rule (flagged-writes-intended-gwt):
+
+### `scenario-names-continuation`
+
+Put the main flow first and make each continuing Then name the next Story on the map. Add a missing map node when a live path continues without one, because Scenarios are alternate flows within Stories rather than substitutes for Stories.
+
+Evaluate the current context against this rule (scenario-names-continuation):
+
+### `given-only-what-the-system-checks`
+
+Describe the activity and state that the system actually uses for this behaviour, including state left by a prior Story. Omit off-system history, orphan data, screen names used as state, and fields the decision never reads, because irrelevant setup hides the real preconditions.
+
+Evaluate the current context against this rule (given-only-what-the-system-checks):
+
+### `given-names-complex-state-root-first`
+
+Begin complex Given state with the aggregate root, then describe its owned parts in their current state, because an owned entity does not have independent context outside its aggregate.
+
+Evaluate the current context against this rule (given-names-complex-state-root-first):
+
+### `but-marks-missing-state`
+
+Use But for a record that is absent or an action the actor did not take; use And for consequences of that absence and name gated operations as enabled or disabled, because But should identify the missing condition rather than its effects.
+
+Evaluate the current context against this rule (but-marks-missing-state):
+
+### `when-holds-the-operation`
+
+Put the operation under test in When and, in Then, assert only results it has already produced. For downstream system Stories, describe the request arriving at that system instead of replaying the original user action. Specify enablement and activation as separate behaviours when both are observable, because triggers inside assertions and combined operations hide which action caused the result.
+
+Evaluate the current context against this rule (when-holds-the-operation):
+
+### `when-names-intent-not-interface-gesture`
+
+Name the actor's domain intent and subject rather than the button or gesture used to express it. Keep click and tap details in UX artifacts unless the physical interaction is required behaviour, because controls can change while intent remains stable.
+
+Evaluate the current context against this rule (when-names-intent-not-interface-gesture):
+
+### `expressive-system-interactions`
+
+Describe each system's When and Then in that system's vocabulary. A caller's Then names the result it receives; a translating intermediary names the incoming caller concept and the returned caller-facing result, because "calls the service" does not explain the work performed.
+
+Evaluate the current context against this rule (expressive-system-interactions):
+
+### `and-chaining`
+
+Start each state, interaction, and result block with Given, When, and Then, then continue later steps of the same kind with And. Keep Given conditions in root-first order, start a new When for a new interaction, and keep one interaction's observable results in one Then/And block. Use Background only when more than one Scenario shares the state, because repeated keywords hide which conditions, actions, and results belong together.
+
+Evaluate the current context against this rule (and-chaining):
+
+### `outline-requires-many-permutations`
+
+Use a Scenario Outline when many data combinations follow the same steps. Use separate steps or Scenarios for two alternatives or a changed flow, and keep only example fields that affect behaviour, because examples should show variation rather than conceal structure.
+
+Evaluate the current context against this rule (outline-requires-many-permutations):
+
+### `plain-english-gwt-steps`
+
+Write each step as a readable sentence with a named actor and observable behaviour. Use the plain-English example name rather than a code identifier, because test reports must make sense without source code.
+
+Evaluate the current context against this rule (plain-english-gwt-steps):
+
+### `seed-prior-story-as-given`
+
+Seed a later Story from examples produced by prior Stories instead of replaying their When steps. Reuse fixtures from the owning domain concept and keep the boundary under test real, because each Story must run independently while proving its own behaviour.
+
+Evaluate the current context against this rule (seed-prior-story-as-given):
+
+### `domain-terms-link-to-model`
+
+Link each domain term in Given, When, and Then text and in example tables to its definition in the domain model markdown, `domain-model.md` (DDD) or `class-model.md` (Clean Engineering), anchored at the class or term heading (`domain-model.md#sim-aggregate-root-entity`). With no model file, write the term without a link, because a step that leads to its definition keeps the Scenario and the model on one meaning, and a link to a missing file misleads.
+
+Evaluate the current context against this rule (domain-terms-link-to-model):
+
+### `behaviours-not-one-time-tasks`
+
+Use Stories for repeatable stakeholder or system interactions that can be expressed as GWT more than once. Keep one-time renames, migrations, and repository changes in plans or tasks, because completed maintenance is not recurring product behaviour.
+
+**Graph violations:** 4
+
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L441): Story `Check Ticket Branches Once Per Board Build`: Story 'Check Ticket Branches Once Per Board Build' reads like a one-time task, not a repeatable behaviour.
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L449): Story `Read Session File Once Per Board Build`: Story 'Read Session File Once Per Board Build' reads like a one-time task, not a repeatable behaviour.
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L1289): Story `Store Each Screenshot Once By Content Hash`: Story 'Store Each Screenshot Once By Content Hash' reads like a one-time task, not a repeatable behaviour.
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L1363): Story `Reattach A Screen Once Its Change Reaches Production`: Story 'Reattach A Screen Once Its Change Reaches Production' reads like a one-time task, not a repeatable behaviour.
+
+Evaluate the current context against this rule (behaviours-not-one-time-tasks):
+
+### `four-to-nine-children`
+
+Keep 4-9 direct children on an epic or sub-epic, and restructure at 3 or fewer or 10 or more, because readers cannot reason easily about shallow chains or crowded nodes. Do not apply this band to the scenarios under a story.
+
+**Graph violations:** 5
+
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L389): SubEpic `Customize Board Workflow`: sub-epic 'Customize Board Workflow': 2 children (target 4-9)
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L437): SubEpic `Show Board Quickly`: sub-epic 'Show Board Quickly': 3 children (target 4-9)
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L795): SubEpic `Capture Session Knowledge`: sub-epic 'Capture Session Knowledge': 3 children (target 4-9)
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L1779): SubEpic `Read Graph Violations On Board`: sub-epic 'Read Graph Violations On Board': 3 children (target 4-9)
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L1793): SubEpic `Read Graph Violations In Chat Bar`: sub-epic 'Read Graph Violations In Chat Bar': 3 children (target 4-9)
+
+Evaluate the current context against this rule (four-to-nine-children):
+
+### `story-name-captures-system-mechanic`
+
+At Story level, use a verb that names the operation and a noun that names the record or concept it acts on. Replace vague names such as `Handle Request`, `Process Data`, or `Manage Record`, because they hide what the system does.
+
+**Graph violations:** 2
+
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L417): Story `Run Work Type Flows`: Story 'Run Work Type Flows' names a generic handler; use the system mechanic (e.g. 'Submit Order').
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L1383): Story `Run A Scenario's Thens On The Canvas`: Story "Run A Scenario's Thens On The Canvas" names a generic handler; use the system mechanic (e.g. 'Submit Order').
+
+Evaluate the current context against this rule (story-name-captures-system-mechanic):
+
+### `story-scenarios-at-most-seven`
+
+A story holds at most 7 code scenarios. More than 7 and the story is huge — split it, because one story should be one interaction a reader can test in a few examples. A story with no scenarios passes: its scenarios are simply not written yet.
+
+**Graph violations:** 4
+
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L225): Story `Display Board`: story 'Display Board': 10 scenarios — story is huge (target 1-7)
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L241): Story `Display Ticket Details`: story 'Display Ticket Details': 8 scenarios — story is huge (target 1-7)
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L259): Story `Open Ticket Session`: story 'Open Ticket Session': 8 scenarios — story is huge (target 1-7)
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L457): Story `Choose Action And Formats`: story 'Choose Action And Formats': 8 scenarios — story is huge (target 1-7)
+
+Evaluate the current context against this rule (story-scenarios-at-most-seven):
+
+### `verb-noun-format`
+
+Name every Epic, Sub-Epic, and Story with a base-form verb and noun. Epics and Sub-Epics name goals rather than an actor's activity or a supporting system call, because grammar alone does not preserve the right level of abstraction.
+
+**Graph violations:** 6
+
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L411): SubEpic `Run Tickets Through Customized Workflow`: SubEpic 'Run Tickets Through Customized Workflow': name should start with a verb (got generic-verb).
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L417): Story `Run Work Type Flows`: Story 'Run Work Type Flows': name should start with a verb (got generic-verb).
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L549): Story `Comment On File Selection`: Story 'Comment On File Selection': name should start with a verb (got nominalisation).
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L1383): Story `Run A Scenario's Thens On The Canvas`: Story "Run A Scenario's Thens On The Canvas": name should start with a verb (got generic-verb).
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L1815): Story `Comment On A Story Card`: Story 'Comment On A Story Card': name should start with a verb (got nominalisation).
+- [X] **ERROR** **[graph rule]** - [.context/stories/story-map.md](C:\dev\abd-cdd-maintain-tickets-on-boar\harness\.context\stories\story-map.md#L1831): Story `Comment On A Story In Story UI`: Story 'Comment On A Story In Story UI': name should start with a verb (got nominalisation).
+
+Evaluate the current context against this rule (verb-noun-format):
+
+## Judgment — `harness/.context/stories/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md`
+
+Scope: the scenarios this ticket wrote (Edit Ticket Text, Reorder Tickets In Column, Delete Ticket, Tag Ticket Session). Add Backlog Item and Archive Ticket came over unchanged in the migration and are not judged here. The 21 graph hits fall on other increments' stories and are left to those tickets. The Python skeletons (`space/kanban/maintain-tickets.story.shared.py`, `space/kanban/organize-ticket-hierarchy.story.shared.py`) mirror these steps word for word; validate refused them because they sit outside the session's root, `harness`.
+
+### `gwt-steps-trace-to-domain-operations` — Fail
+- maintain_tickets_story.test.md:83 `Edit a ticket's text`: no operation on Ticket edits its text; the kanban model has none yet.
+- maintain_tickets_story.test.md:98 `Edit a backlog item's text`: BacklogItem has `text` to read and nothing to write it.
+- maintain_tickets_story.test.md:120 `Keep a ticket where it was moved in its column`: no operation keeps a ticket's place in a column.
+- maintain_tickets_story.test.md:161 `Delete a ticket and its session folder`: Ticket has `archive`, no `delete`.
+- maintain_tickets_story.test.md:184 `Tag a ticket's session`: Session has no tags to set.
+
+### `given-only-what-the-system-checks` — Fail
+- maintain_tickets_story.test.md:89 `Write the text file for a ticket that has none`: writing text does not read the ticket's stage; In progress in Discovery is setup the behaviour never checks.
+- maintain_tickets_story.test.md:160 `Delete a ticket and its session folder`: deleting does not read the stage either.
+
+### `but-marks-missing-state` — Fail
+- maintain_tickets_story.test.md:170 `Refuse to delete a ticket the board does not have`: no session folder is removed is a consequence of the refusal, so it continues with And, not But.
+
+### `right-size-story-nodes` — Fail
+- maintain_tickets_story.test.md:102 `Tell the agent which file holds the ticket's text`: the agent's context is a second boundary inside Edit Ticket Text, as the story map's validation found; it wants a story of its own.
+
+## Judgment — `harness/.context/stories/move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md`
+
+Scope: the scenarios this ticket wrote (Add Child Ticket through Nest Child Branch And Session). Split Ticket Into Child Tickets came over unchanged.
+
+### `gwt-steps-trace-to-domain-operations` — Fail
+- organize_ticket_hierarchy_story.test.md:61 `Add a child ticket by hand`: the board has no add-child operation; `Ticket.create` with a parent is the nearest.
+- organize_ticket_hierarchy_story.test.md:127 `Pull a child out of its parent`: nothing records that a child is pulled out.
+- organize_ticket_hierarchy_story.test.md:153 `Move a child to another parent`: no operation changes a ticket's parent after it is opened.
+- organize_ticket_hierarchy_story.test.md:189 `Refuse to move a parent by hand`: `Ticket.move_next` does not know a ticket has children.
+- organize_ticket_hierarchy_story.test.md:206 `Nest a child's session and branch under its parent's`: `Sessions.create` and `Ticket.branch` name a ticket's folder and branch from its own name only.
+
+**Passes, both files:** vocabulary-traces-to-domain-source; read-all-source-context-in-full (each story's Evidence table cites the source, the drawing, and the code checked 2026-11-11); do-not-invent-requirements (each scenario traces to ticket-enhancements.md, the backlog notes, or ticket-ui.drawio; the Nest scenario's folder and branch are flagged as examples to agree); behavioral-and-system-observable-outcomes; explore-full-interaction-surface (only refusals and alternatives a source or the code names; open question for review: whether a ticket can be made the child of its own child); examples-trace-domain-model; reconcile-live-immediately (Observed and Intended kept apart in each Evidence table); flagged-writes-intended-gwt (Delete's branch and worktree, Nest's naming); scenario-names-continuation (Add Child Ticket names Display Child Tickets In Parent; the pulled-out child names Place Parent At Leftmost Child Stage); given-names-complex-state-root-first; when-holds-the-operation; when-names-intent-not-interface-gesture (the one gesture, a press on an empty area, is the required behaviour); expressive-system-interactions; and-chaining; outline-requires-many-permutations; plain-english-gwt-steps; seed-prior-story-as-given; domain-terms-link-to-model (ticket, board, column, session and backlog item link to kanban-model.md; parent ticket, child ticket, tag and ticket text have no model entry yet and stay plain, defined under Domain terms).

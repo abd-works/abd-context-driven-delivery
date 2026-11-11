@@ -5,11 +5,13 @@ import { turnCompleted, turnStarted } from './board-chat/chat-turns'
 import { readName } from './board-chat/chat-name'
 import { openedBoard } from './board-chat/board-server'
 import { currentChatBar, refreshChatBar } from './chat-bar/chat-bar-client'
-import { ChatBarView } from './chat-bar/chat-bar-view'
+import { ChatBarView, StatusRowView } from './chat-bar/chat-bar-view'
 import { clearBusy, currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
+import { shownActionOf } from './chat-bar/action-button-view'
 import { isStagePickerOpen } from './chat-bar/stage-client'
 import { currentFormatChips, forgetFormatChips, loadFormatChips } from './chat-bar/format-choices-client'
+import { currentOverlayChips, loadOverlayChoices } from './chat-bar/overlay-choices-client'
 import { currentFidelityFiles, FILES_PANE, forgetFiles } from './chat-bar/fidelity-files-client'
 import { FidelityFilesView } from './chat-bar/fidelity-files-view'
 import { currentChatBarView } from './chat-bar/session-dialogs-client'
@@ -36,8 +38,8 @@ const CHANGES_FIDELITIES = /^(dot-|card-pick-|stage-pick-)/
 const CHECK_IN_MILLISECONDS = 1000
 const CDD_TOOL = /^mcp__(plugin_cdd_)?cdd__/
 
-// The status line the chat last showed, so the cached system prompt is composed again only when it changes.
-let shownStatus = ''
+// The agent context the system prompt last held, so the cached prompt is composed again only when it changes.
+let shownContext = ''
 
 // A failure the mod rides over, such as the cdd server still connecting, goes to the debug log, never nowhere.
 function logged($: EngineInterface, doing: string): (failure: unknown) => void {
@@ -51,10 +53,13 @@ async function readActive($: EngineInterface): Promise<void> {
   const chatBar = await currentChatBar($)
   if (chatBar.problem) return
   await loadFormatChips($, chatBar)
+  await loadOverlayChoices($, chatBar).catch(logged($, 'reading the overlay choices'))
   // The system prompt is cached; when the active session's summary changes, it is composed again next turn.
-  if (chatBar.statusLine !== shownStatus) await $.ui.invalidate('prompt.section')
-  shownStatus = chatBar.statusLine
-  $.ui.status(chatBar.statusLine || undefined)
+  if (chatBar.agentContext !== shownContext) await $.ui.invalidate('prompt.section')
+  shownContext = chatBar.agentContext
+  // The status row under the prompt is drawn by the PromptHint hook, from the left, so the host's status line is left
+  // empty.
+  $.ui.status(undefined)
 }
 
 export const register: Register = on => {
@@ -110,6 +115,15 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // The status row, dim and from the left under the prompt, below the engine's own hint line: the repository, the
+  // session, the folder it works in, and the action the button runs with its fidelities.
+  on('ui.render', { component: 'PromptHint' }, async ($, e, next) => {
+    const chatBar = await currentChatBar($)
+    const status = chatBar.statusLine(shownActionOf(chatBar, (await currentActionPicker($)).chosenAction))
+    if (!status) return next(e)
+    return StatusRowView($.ui.resolve(e), await next(e), status)
+  })
+
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
     // A press on the health mark reads the board and the server again, and shows the card with the diagnostics open.
@@ -130,6 +144,7 @@ export const register: Register = on => {
     return ChatBarView($, elements, {
       chatBar,
       formats: await currentFormatChips($, chatBar),
+      overlays: await currentOverlayChips($, chatBar),
       view: await currentChatBarView($),
       picker: await currentActionPicker($),
       isStagePickerOpen: await isStagePickerOpen($),

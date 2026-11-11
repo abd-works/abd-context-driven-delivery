@@ -1,0 +1,1536 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stories</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap"><style>body{margin:0;background:#0B0B0B}.cx-epic,.cx-sub{font:600 11px/1.6 'JetBrains Mono',ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A4A52;padding:4px 0}.cx-sub{padding-left:12px}.cx-story{font:500 13px/1.6 'Inter',system-ui,sans-serif;color:#4A4A52;padding:2px 0 2px 24px}.cx-story.cx-on{color:#E8E8ED;font-weight:600;box-shadow:inset 3px 0 0 #E5531A;margin-top:6px}.cx-scenario{font:600 13px/1.6 'Inter',system-ui,sans-serif;color:#F2A07A;padding:6px 0 0 36px}.cx-steps{font:400 12px/1.5 'JetBrains Mono',ui-monospace,monospace;color:#9B9BA8;white-space:pre-wrap;padding:2px 0 4px 48px}</style></helmet>
+<div style="position: relative; width: 560px; height: 1100px; background: #0B0B0B">
+<div style="position: absolute; inset: 0; overflow: auto; box-sizing: border-box; padding: 20px 20px 40px; background: #111113; border-left: 1px solid #2A2A2A">
+<div class="cx-epic">Register And Install Toolsets</div>
+<div class="cx-sub">Register Agent Toolsets</div>
+<div class="cx-story">Register Agent Toolsets</div>
+<div class="cx-story">Register Agent Operations</div>
+<div class="cx-story">Register Agent Tools</div>
+<div class="cx-story">Register Agent Instructions</div>
+<div class="cx-story">Validate Instruction Body</div>
+<div class="cx-sub">Register Guidance And Actions</div>
+<div class="cx-story">Register Guidance</div>
+<div class="cx-story">Register Fidelities</div>
+<div class="cx-story">Register Action Tools</div>
+<div class="cx-story">Register Action Prompt</div>
+<div class="cx-story">Build Instruction Expansion</div>
+<div class="cx-story">Collect Deferred Tools</div>
+<div class="cx-sub">Install Markdown Files</div>
+<div class="cx-story">Publish Markdown Files</div>
+<div class="cx-story">Publish Guidance Files</div>
+<div class="cx-story">Publish Action Command</div>
+<div class="cx-story">Store Install State</div>
+<div class="cx-sub">Install MCP And Hook Manifests</div>
+<div class="cx-story">Record Mcp Operation</div>
+<div class="cx-story">Publish Mcp Manifest</div>
+<div class="cx-story">Register Hook Event</div>
+<div class="cx-story">Publish Hooks Manifest</div>
+<div class="cx-epic">Deliver Work With Context Guidance</div>
+<div class="cx-sub">Invoke Guidance Through Slash Commands</div>
+<div class="cx-story">Compose Practice Action Fidelity Command</div>
+<div class="cx-story">Load Practice Fidelity Instructions</div>
+<div class="cx-story">Call CDD Tool Through MCP</div>
+<div class="cx-story">Guide Output With Matching Rules</div>
+<div class="cx-sub">Turn Source Material Into Context</div>
+<div class="cx-story">Index Source Into Lens Segments</div>
+<div class="cx-story">Add Lens To Existing Index</div>
+<div class="cx-story">Describe Existing Artifacts</div>
+<div class="cx-story">Capture Documents Into Searchable Context</div>
+<div class="cx-story">Capture Live App Context</div>
+<div class="cx-sub">Shape The Solution With Context</div>
+<div class="cx-story">Grill Plan Against Context</div>
+<div class="cx-story">Sketch Rough Draft</div>
+<div class="cx-story">Iterate One Slice At A Time</div>
+<div class="cx-story">Record Context Decision</div>
+<div class="cx-sub">Produce Formal Artifacts</div>
+<div class="cx-story">Generate Fidelity Artifact</div>
+<div class="cx-story">Render Artifact Into Another Format</div>
+<div class="cx-story">Generate From Previous Fidelity</div>
+<div class="cx-story">Generate Several Practices In One Command</div>
+<div class="cx-sub">Check Artifacts Against Rules</div>
+<div class="cx-story">Validate Artifact Against Rules</div>
+<div class="cx-story">Satisfy Violations Until Clean</div>
+<div class="cx-story">Repair Guidance Behind Violation</div>
+<div class="cx-story">Improve Guidance From Mistake</div>
+<div class="cx-story">Add Rule From Failed Example</div>
+<div class="cx-story">Review Fidelity Output</div>
+<div class="cx-sub">Inject Guidance Into Chat Lifecycle</div>
+<div class="cx-story">Start CDD Server On Session Start</div>
+<div class="cx-story">Inject Action Rules After Action Call</div>
+<div class="cx-story">Inject Practice Rules After File Edit</div>
+<div class="cx-story">Announce Running Action In Toast</div>
+<div class="cx-story">Log Prompts And Tool Calls</div>
+<div class="cx-epic">Move Work Forward On Session Board</div>
+<div class="cx-sub">Check CDD Server Health On Board</div>
+<div class="cx-story cx-on">Display Board Server Health</div>
+<div class="cx-story cx-on">Open Board Server Health Panel</div>
+<div class="cx-story cx-on">Reconnect CDD Server From Board</div>
+<div class="cx-story cx-on">Reinstall CDD Tools From Board</div>
+<div class="cx-story cx-on">Update Board And CDD</div>
+<div class="cx-story cx-on">Reload Everything With One Button</div>
+<div class="cx-sub">See Work On Session Board</div>
+<div class="cx-story cx-on">Open Board</div>
+<div class="cx-scenario">Open the board on a project</div>
+<div class="cx-steps">Given the board of project cdd-board-surface-fixture shows 9 tickets
+    And its session checkout-flow, titled Checkout flow, is the active ticket
+When the Person opens the session board at http://127.0.0.1:8778
+Then the header reads cdd-board-surface-fixture · 10 tickets · active: Checkout flow
+    And the session board reads the board again every two seconds</div>
+<div class="cx-scenario">Find the board from a chat</div>
+<div class="cx-steps">Given a Claude Code chat has the cdd-board mod loaded
+When the Person asks the chat where the session board is
+Then the chat answers The board is at http://127.0.0.1:8778, and starts the board first when nothing answers on that port</div>
+<div class="cx-story cx-on">Display Board</div>
+<div class="cx-scenario">Draw the columns of the board</div>
+<div class="cx-steps">Given a board with the Stories, DDD, and UX practices chosen
+When the session board reads the board
+Then the columns read Backlog, Discovery, Specification, Implementation, and Complete, in that order
+    And each stage shows an In progress list and a Done list
+    And the Discovery stage requires story_map, bounded_context, and ia, each through Generate, Validate, and Review</div>
+<div class="cx-scenario">Say the cdd server is not connected</div>
+<div class="cx-steps">Given the cdd server behind the session board is not connected
+When the session board reads the board
+Then a band across the top of the page says The cdd server is not connected
+    And the header offers Update</div>
+<div class="cx-scenario">Show a failing tool in a toast</div>
+<div class="cx-steps">Given the session folder .sessions/broken holds a session.json that is not JSON
+When the session board reads the board
+Then a toast says cdd board.show failed: JsonFileUnreadable: .sessions/broken/session.json is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))
+    But no band says the cdd server is lost</div>
+<div class="cx-scenario">Update the board and cdd to the latest code</div>
+<div class="cx-steps">Given the band says the cdd server is lost
+When the Person presses Update
+Then the session board server gets the latest code, rebuilds the page, and pins the cdd server to it
+    And the session board server restarts on the new code
+    And the page loads again from the restarted server</div>
+<div class="cx-scenario">Say which update step failed</div>
+<div class="cx-steps">Given the latest code cannot be pulled
+When the Person presses Update
+Then a toast says Update failed at get latest, with the reason
+    And the page and the session board server keep running as they were</div>
+<div class="cx-scenario">Keep the newer board when an older read answers late</div>
+<div class="cx-steps">Given the ticket move-me is In progress in the Discovery stage
+    And a read of the board is still waiting for its answer
+    And another chat has moved move-me into Discovery&#x27;s Done
+When the session board reads the board again
+Then the session board shows move-me in Discovery&#x27;s Done even though the older read answered last</div>
+<div class="cx-scenario">Announce a ticket that moved</div>
+<div class="cx-steps">Given the session board shows the ticket move-me In progress in Discovery
+When another chat moves move-me into Discovery&#x27;s Done
+Then a toast says Move me moved to Discovery · Done</div>
+<div class="cx-scenario">Announce a fidelity done</div>
+<div class="cx-steps">Given the ticket billing-report has the story_map fidelity generated and validated with no violations
+When a review of stories-story-map is written to billing-report&#x27;s session log
+Then a toast says stories-story-map done on billing-report</div>
+<div class="cx-scenario">Show a server failure on one line</div>
+<div class="cx-steps">Given the cdd server answers with a Python traceback
+When the session board draws its server band
+Then the band shows the traceback&#x27;s exception line
+    And the whole traceback is behind Details</div>
+<div class="cx-scenario">Say a slow call is still running</div>
+<div class="cx-steps">Given the cdd server is busy
+When a ticket call has run for eight seconds
+Then a toast says the board is still waiting on it</div>
+<div class="cx-story cx-on">Arrange Board And Details</div>
+<div class="cx-scenario">Give the board more height</div>
+<div class="cx-steps">Given the page is 900 pixels high
+When the Person resizes the board to 300 pixels
+Then the board region is 300 pixels high and the details take the rest</div>
+<div class="cx-scenario">Keep both regions open</div>
+<div class="cx-steps">Given the page is 900 pixels high
+When the Person resizes the board to 10 pixels
+Then the board region stays 160 pixels high
+When the Person resizes the board to 5000 pixels
+Then the board region stops at 650 pixels, so the details stay open</div>
+<div class="cx-scenario">Expand one region and show both again</div>
+<div class="cx-steps">Given the board and the details share the page
+When the Person expands the board
+Then the board takes the whole page
+When the Person collapses the board
+Then the board and the details share the page again</div>
+<div class="cx-story cx-on">Display Backlog Items As Tickets</div>
+<div class="cx-scenario">Show each idea file in the Backlog</div>
+<div class="cx-steps">Given the repository&#x27;s .sessions/_backlog/ holds search-the-catalog.md headed Search the catalog with the text An idea.
+When the session board reads the board
+Then the Backlog column shows the backlog item Search the catalog
+    And selecting it shows its text An idea. in the details
+    And its last activity is when search-the-catalog.md last changed</div>
+<div class="cx-scenario">Show a ticket kept in the Backlog under its own file</div>
+<div class="cx-steps">Given the Backlog folder holds the folder gift-cards with its session log and gift-cards.md headed Gift cards
+    And gift-cards.md holds the text Sell them at the till.
+When the session board reads the board
+Then the Backlog column shows one backlog item Gift cards with the text Sell them at the till.
+    But no stage shows a ticket for gift-cards</div>
+<div class="cx-scenario">Name an item that has no heading by its file name</div>
+<div class="cx-steps">Given the Backlog folder holds returns-and-refunds.md with no # heading
+When the session board reads the board
+Then the Backlog column shows the backlog item Returns and refunds</div>
+<div class="cx-story cx-on">Display Ticket Card</div>
+<div class="cx-scenario">Show every work session as a ticket</div>
+<div class="cx-steps">Given the repository&#x27;s .sessions/ holds the work sessions pet-visits and sign-up, the closed session browse-pets, main, and the archived session old-spike
+When the session board reads the board
+Then the Discovery stage shows the tickets main, Pet visits, and Sign up
+    And the Complete column shows Browse pets
+    But old-spike is not on the board</div>
+<div class="cx-scenario">Place a ticket in the stage of its latest move</div>
+<div class="cx-steps">Given the session log of the ticket second-spec ends with move Specification
+When the session board reads the board
+Then second-spec shows In progress in the Specification stage</div>
+<div class="cx-scenario">Place a ticket with no move in the earliest stage it has work in</div>
+<div class="cx-steps">Given the session log of the ticket pet-visits has one line, generate /work/ux ux mockup html ux
+    But it has no move line
+When the session board reads the board
+Then pet-visits shows in the Specification stage</div>
+<div class="cx-scenario">Draw the card&#x27;s title, age, and fidelity segments</div>
+<div class="cx-steps">Given the ticket checkout-flow, titled Checkout flow, last worked on at 2026-11-01T10:00:00Z
+    And its story_map fidelity has violations and its other Discovery fidelities are not started
+When the session board draws checkout-flow&#x27;s card 13 hours later
+Then the card reads Checkout flow and 13 hours ago
+    And it shows one segment for each enabled Discovery fidelity, the story_map segment in the violations colour and the rest dim
+    And a violations link on the card opens the report</div>
+<div class="cx-scenario">Outline the active ticket</div>
+<div class="cx-steps">Given the repository&#x27;s .sessions/session.json names checkout-flow as the open session
+When the session board reads the board
+Then the checkout-flow card has a thick orange outline
+    And the header names Checkout flow as active</div>
+<div class="cx-scenario">Name the active ticket on the chat&#x27;s status line</div>
+<div class="cx-steps">Given checkout-flow is the active ticket, in Discovery, with violations on stories-story-map
+When a turn in a chat with the cdd-board mod loaded ends
+Then the chat&#x27;s status line reads checkout-flow · Discovery · next: stories-story-map · 1 with violations</div>
+<div class="cx-story cx-on">Display Ticket Details</div>
+<div class="cx-scenario">Show the ticket of a card pressed anywhere</div>
+<div class="cx-steps">Given the ticket billing-report is In progress in Discovery with nothing recorded
+When the Person selects billing-report&#x27;s card
+Then the details show Billing report, root whole repository, and Discovery · in progress
+    And the details say No handoff yet and Next: stories-story-map, generate
+    And the details show a tile for each enabled fidelity with its fidelity progress</div>
+<div class="cx-scenario">Show the active ticket with no card pressed</div>
+<div class="cx-steps">Given checkout-flow is the active ticket
+    But no card is pressed
+When the session board draws the details
+Then the details show Checkout flow</div>
+<div class="cx-scenario">Show the ticket worked on last when none is active</div>
+<div class="cx-steps">Given no ticket is active
+    And billing-report has the latest line in its session log, at 2026-11-02T10:00:00Z
+When the session board draws the details
+Then the details show Billing report</div>
+<div class="cx-scenario">Name a split ticket by the ticket it came from</div>
+<div class="cx-steps">Given the ticket child has scope story and parent epic in its session.json
+When the Person selects child&#x27;s card
+Then the details read child · story of epic</div>
+<div class="cx-scenario">Say another session must be activated to act on a locked ticket</div>
+<div class="cx-steps">Given Active session only is on
+    And checkout-flow is the active ticket
+When the Person selects billing-report&#x27;s card
+Then the details say Activate this session to run actions</div>
+<div class="cx-scenario">Expand one ticket&#x27;s card at a time</div>
+<div class="cx-steps">Given the card of the ticket checkout-flow is expanded over the board
+When the Person expands billing-report&#x27;s card
+Then billing-report&#x27;s card is expanded with a tile for each enabled Discovery fidelity
+    And checkout-flow&#x27;s card is closed</div>
+<div class="cx-scenario">Open a card on the fidelity of a pressed segment</div>
+<div class="cx-steps">Given billing-report&#x27;s card shows a segment for the story_map fidelity
+When the Person opens billing-report&#x27;s story_map segment
+Then billing-report&#x27;s card is expanded with the story_map tile&#x27;s action bar open</div>
+<div class="cx-scenario">Name the board&#x27;s own project</div>
+<div class="cx-steps">Given the session board runs in board-sandbox
+When the details show a ticket
+Then their corner names board-sandbox</div>
+<div class="cx-story cx-on">Set Stage WIP Limit</div>
+<div class="cx-scenario">Set a stage&#x27;s limit</div>
+<div class="cx-steps">Given the Discovery stage has the limit 3
+When the Person sets Discovery&#x27;s limit to 4
+Then Discovery shows the limit 4
+    And the limit is still 4 when the board is read again</div>
+<div class="cx-scenario">Give every stage a limit of 3 until a person sets one</div>
+<div class="cx-steps">Given the repository has no .sessions/_board.json
+When the session board reads the board
+Then Discovery, Specification, and Implementation each show the limit 3</div>
+<div class="cx-scenario">Show a stage over its limit</div>
+<div class="cx-steps">Given the Discovery stage holds the tickets billing-report, move-me, and back-to-backlog
+When the Person sets Discovery&#x27;s limit to 2
+Then Discovery&#x27;s count shows in red, over its limit</div>
+<div class="cx-scenario">Change nothing for a limit that is not a whole number</div>
+<div class="cx-steps">Given the Discovery stage has the limit 3
+When the Person types many as Discovery&#x27;s limit
+Then Discovery still shows the limit 3
+    But no limit is saved</div>
+<div class="cx-story cx-on">Arrange Side Panel</div>
+<div class="cx-scenario">Set a panel&#x27;s width</div>
+<div class="cx-steps">Given the files panel is open beside the board
+When the Person widens the files panel to 700 pixels
+Then the files panel is 700 pixels wide
+When the Person narrows the files panel to 10 pixels
+Then the files panel stops at 360 pixels</div>
+<div class="cx-scenario">Expand one panel at a time</div>
+<div class="cx-steps">Given the report panel and the files panel are open
+    And the report panel is expanded
+When the Person expands the files panel
+Then the files panel takes the board&#x27;s width less the other open panels
+    And the report panel is no longer expanded</div>
+<div class="cx-scenario">Close a side panel</div>
+<div class="cx-steps">Given checkout-flow&#x27;s validation report panel is open
+When the Person closes the report panel
+Then no side panel is open</div>
+<div class="cx-scenario">Keep the columns&#x27; width when a panel opens</div>
+<div class="cx-steps">Given the board shows its five columns at their own width
+When the Person opens checkout-flow&#x27;s files list
+Then the columns keep their width and scroll sideways beside the files panel</div>
+<div class="cx-story cx-on">Expand Ticket From Empty Area</div>
+<div class="cx-scenario">Expand a card from an empty area</div>
+<div class="cx-steps">Given the ticket checkout-flow&#x27;s card is collapsed on the board
+When the Person presses an empty area of checkout-flow&#x27;s card
+Then checkout-flow&#x27;s card is expanded to show its actions
+    And the details show checkout-flow</div>
+<div class="cx-scenario">Leave a card&#x27;s controls to do their own work</div>
+<div class="cx-steps">Given the ticket checkout-flow&#x27;s card is collapsed on the board
+When the Person opens the stories tile on checkout-flow&#x27;s card
+Then the stories tile is open
+    And checkout-flow&#x27;s card stays collapsed</div>
+<div class="cx-sub">Steer Ticket Sessions</div>
+<div class="cx-story cx-on">Open Ticket Session</div>
+<div class="cx-scenario">Open a new ticket</div>
+<div class="cx-steps">Given checkout-flow is the active ticket
+When the Person opens a new ticket titled Pet visits
+Then pet-visits is In progress in Discovery, titled Pet visits
+    And its next step is Generate on stories-story-map
+    And checkout-flow is still the active ticket</div>
+<div class="cx-scenario">Ask a chat to open a ticket</div>
+<div class="cx-steps">Given a chat is connected to the session board
+When the Person asks for a new ticket from the board&#x27;s header
+Then the chat&#x27;s prompt holds Open a new ticket with ticket.create, titled: for the Person to finish</div>
+<div class="cx-scenario">Keep + Ticket off with no chat</div>
+<div class="cx-steps">Given no chat is connected to the session board
+When the session board draws its header
+Then + Ticket is off</div>
+<div class="cx-scenario">Open a ticket on a folder of the repository</div>
+<div class="cx-steps">Given the repository has the folder src/billing
+When the Person opens a ticket titled Billing report on src/billing
+Then billing-report&#x27;s session works in src/billing
+    And the details show its workpath as src/billing</div>
+<div class="cx-scenario">Choose a ticket&#x27;s workpath</div>
+<div class="cx-steps">Given checkout-flow works on the whole repository
+    And the repository has src/billing and src/visits under src
+When the Person browses src for checkout-flow&#x27;s workpath
+Then the roots dialog lists src/billing and src/visits
+When the Person chooses src/visits as checkout-flow&#x27;s workpath
+Then checkout-flow&#x27;s workpath reads src/visits
+    And each practice&#x27;s default practice root sits under src/visits</div>
+<div class="cx-scenario">Choose one practice&#x27;s root and go back to its default</div>
+<div class="cx-steps">Given checkout-flow&#x27;s Stories practice writes under its default root
+When the Person chooses src/billing for checkout-flow&#x27;s Stories root
+Then the Stories root reads src/billing, chosen by the Person
+    And every other practice stays on its default root
+When the Person puts Stories back on its default root
+Then the Stories root is the default again</div>
+<div class="cx-scenario">A press on a card only selects it</div>
+<div class="cx-steps">Given checkout-flow has no worktree and no chat
+When the Person presses checkout-flow&#x27;s card
+Then checkout-flow is selected
+    But no worktree is created and no chat is opened; its card&#x27;s chat button opens them</div>
+<div class="cx-scenario">Ask for a chat rather than send to an unrelated one</div>
+<div class="cx-steps">Given no chat works on checkout-flow and none is picked
+When the Person writes checkout-flow&#x27;s handoff from its card
+Then nothing is sent
+    And a toast asks to open checkout-flow&#x27;s chat or pick one in the chat list</div>
+<div class="cx-story cx-on">Activate Ticket</div>
+<div class="cx-scenario">Open a ticket in its own worktree</div>
+<div class="cx-steps">Given the git repository has no branch billing-report
+When the Person activates billing-report
+Then billing-report has its own worktree, on the branch billing-report
+    And the repository&#x27;s own folder stays on main
+    And main is still the session of the chat that activated it</div>
+<div class="cx-scenario">Save the session folders on main before opening</div>
+<div class="cx-steps">Given billing-report&#x27;s session folder is not yet committed
+When the Person activates billing-report
+Then main on origin holds billing-report&#x27;s session folder</div>
+<div class="cx-scenario">Open a ticket again in the worktree it has</div>
+<div class="cx-steps">Given billing-report is open in its own worktree
+When the Person activates billing-report again
+Then billing-report keeps that worktree</div>
+<div class="cx-scenario">Work on the ticket from a chat in its worktree</div>
+<div class="cx-steps">Given billing-report is open in its own worktree
+When a chat in that worktree asks which session it works on
+Then the answer is billing-report</div>
+<div class="cx-scenario">Find a branch and worktree made outside CDD</div>
+<div class="cx-steps">Given checkout-flow&#x27;s work is on claude/checkout-flow-cef4bc, open in its own worktree
+    But checkout-flow&#x27;s session records no branch or worktree
+When the Person activates checkout-flow
+Then checkout-flow opens in that worktree, creating nothing
+    And checkout-flow&#x27;s session records claude/checkout-flow-cef4bc and its worktree</div>
+<div class="cx-scenario">Correct a branch the session records wrongly</div>
+<div class="cx-steps">Given checkout-flow&#x27;s work is on claude/checkout-flow-cef4bc, open in its own worktree
+    But checkout-flow&#x27;s session records a branch the repository no longer has
+When the Person activates checkout-flow
+Then checkout-flow&#x27;s session records claude/checkout-flow-cef4bc and its worktree</div>
+<div class="cx-scenario">Say which branches could be the session&#x27;s rather than guess</div>
+<div class="cx-steps">Given the repository has the branches claude/checkout-flow-cef4bc and claude/checkout-flow-9a1b2c
+When the Person activates checkout-flow
+Then the Person is told both branches could be checkout-flow&#x27;s
+    And checkout-flow&#x27;s session records no branch</div>
+<div class="cx-story cx-on">Close Active Session</div>
+<div class="cx-scenario">Close the session with its work committed</div>
+<div class="cx-steps">Given checkout-flow is the active session, on its own branch
+When the Person closes checkout-flow
+Then a dialog headed Close session Checkout flow offers Create handoff, commit and push on checkout-flow, all chosen
+When the Person confirms
+Then a toast says Checkout flow: handoff written, committed, pushed · Session Checkout flow closed
+    And no session is active</div>
+<div class="cx-scenario">Close a session whose work is on main</div>
+<div class="cx-steps">Given checkout-flow is the active session, its work on main
+When the Person closes checkout-flow and confirms
+Then the dialog offered to commit and push main
+    And ticket.close was asked to commit and push, and to merge nothing</div>
+<div class="cx-scenario">Choose what closing does</div>
+<div class="cx-steps">Given the close dialog for checkout-flow, on its own branch, is open
+When the Person unchooses Create handoff and push, and confirms
+Then the dialog showed only commit chosen, and ticket.close was asked only to commit</div>
+<div class="cx-story cx-on">Move Ticket</div>
+<div class="cx-scenario">Move a ticket on to the next column</div>
+<div class="cx-steps">Given the ticket ready-to-move is in Discovery&#x27;s Done
+When the Person moves ready-to-move on
+Then ready-to-move is In progress in Specification and selected
+    And its session log ends with move Specification</div>
+<div class="cx-scenario">Drag a ticket into a stage&#x27;s Done whatever its work</div>
+<div class="cx-steps">Given the ticket move-me is In progress in Discovery with nothing done
+When the Person moves move-me into Implementation&#x27;s Done
+Then move-me shows in Implementation&#x27;s Done and is selected</div>
+<div class="cx-scenario">Move a ticket back to the previous column</div>
+<div class="cx-steps">Given the ticket second-spec is In progress in Specification
+When the Person moves second-spec back
+Then second-spec shows in Discovery&#x27;s Done</div>
+<div class="cx-scenario">Move a ticket into the Backlog with its work</div>
+<div class="cx-steps">Given the ticket back-to-backlog is In progress in Discovery with its story map generated
+When the Person moves back-to-backlog into the Backlog
+Then the Backlog shows the backlog item Back to backlog and it is selected
+    And a toast says Back to backlog moved to Backlog
+    But no stage shows back-to-backlog</div>
+<div class="cx-scenario">Close a ticket moved on past Implementation</div>
+<div class="cx-steps">Given the ticket almost-shipped is in Implementation&#x27;s Done
+    And almost-shipped is not the active ticket
+When the Person moves almost-shipped on into Complete
+Then almost-shipped shows in Complete
+    And its folder is in .sessions/_complete/almost-shipped</div>
+<div class="cx-scenario">Reopen a ticket moved back out of Complete</div>
+<div class="cx-steps">Given the closed ticket shipped-work is in Complete
+When the Person moves shipped-work back
+Then shipped-work shows in Implementation&#x27;s Done
+    And its folder is back in .sessions/shipped-work</div>
+<div class="cx-scenario">Refuse a move into a column that is not a stage</div>
+<div class="cx-steps">Given the ticket billing-report is In progress in Discovery
+    And billing-report is not the active ticket
+When the Person tries to move billing-report into Complete
+Then Complete does not take billing-report
+    And billing-report stays In progress in Discovery</div>
+<div class="cx-story cx-on">Write Ticket Handoff</div>
+<div class="cx-scenario">Ask the chat to write a handoff</div>
+<div class="cx-steps">Given checkout-flow is the active ticket and a chat is connected
+When the Person asks for a handoff on checkout-flow
+Then the chat&#x27;s prompt holds Write a handoff for ticket checkout-flow with /space-session-handoff-session.
+    And a toast says Queued for the prompt, for you to review</div>
+<div class="cx-scenario">Hold the handoff until the chat&#x27;s turn ends</div>
+<div class="cx-steps">Given the connected chat is running a turn
+When the Person asks for a handoff on checkout-flow
+Then a toast says the fill goes in when this turn ends
+    And the prompt receives the text once the turn has ended</div>
+<div class="cx-scenario">Keep Handoff off with no chat</div>
+<div class="cx-steps">Given checkout-flow is the active ticket
+    But no chat is connected
+When the session board draws checkout-flow&#x27;s card
+Then Handoff is off
+    And the header says No chat connected: load the cdd-board mod in a chat to send commands</div>
+<div class="cx-story cx-on">Display Latest Handoff</div>
+<div class="cx-scenario">Show the latest handoff</div>
+<div class="cx-steps">Given checkout-flow&#x27;s session folder holds handoff-20261101T120000.md and an earlier handoff
+When the Person selects checkout-flow
+Then the details read Latest handoff: .sessions/checkout-flow/handoff-20261101T120000.md
+When the Person opens the handoff
+Then the files panel shows the handoff in a tab with its text # Handoff</div>
+<div class="cx-scenario">Say a ticket has no handoff</div>
+<div class="cx-steps">Given billing-report&#x27;s session folder holds no handoff
+When the Person selects billing-report
+Then the details say No handoff yet</div>
+<div class="cx-story cx-on">Restrict Actions To Active Session</div>
+<div class="cx-scenario">Lock tickets that are not the active session</div>
+<div class="cx-steps">Given Active session only is on
+    And checkout-flow is the active ticket
+When the session board draws billing-report&#x27;s card and tiles
+Then billing-report&#x27;s Run next, Run, practice switches, Split, and Handoff are off
+    And billing-report&#x27;s Run next says Activate this session to run its next step
+    And checkout-flow&#x27;s actions stay on</div>
+<div class="cx-scenario">Keep information and moves open on a locked ticket</div>
+<div class="cx-steps">Given Active session only is on
+    And billing-report is not the active ticket
+When the Person opens billing-report&#x27;s files
+Then the files panel lists billing-report&#x27;s files
+When the Person moves billing-report to Specification
+Then billing-report moves to Specification
+    And Activate stays on for billing-report</div>
+<div class="cx-scenario">Unlock every ticket</div>
+<div class="cx-steps">Given Active session only is on
+When the Person turns Active session only off
+Then billing-report&#x27;s actions are on like the active ticket&#x27;s</div>
+<div class="cx-story cx-on">Open Ticket Chat On Session Open</div>
+<div class="cx-scenario">Making a ticket active opens its chat</div>
+<div class="cx-steps">Given checkout-flow is the active ticket
+    And billing-report has a ticket chat
+When the Person makes billing-report the active ticket on the board
+Then billing-report&#x27;s chat opens in the chat panel with the session
+    And the chat panel shows billing-report&#x27;s last messages</div>
+<div class="cx-story cx-on">Choose Where A Backlog Item Works</div>
+<div class="cx-sub">Maintain Tickets</div>
+<div class="cx-story cx-on">Add Backlog Item</div>
+<div class="cx-scenario">Add an idea to the Backlog</div>
+<div class="cx-steps">Given the Backlog column has no backlog item titled Gift cards
+When the Person adds the backlog item Gift cards with the text Sell gift cards.
+Then the Backlog shows Gift cards with the text Sell gift cards.
+    And Gift cards is selected and the form is closed
+    And a toast says Gift cards added to Backlog</div>
+<div class="cx-scenario">Keep Add off with no title</div>
+<div class="cx-steps">Given the new backlog item form is open
+    But the Person has typed no title
+When the Person tries to add the item
+Then Add stays off
+    And no backlog item is written</div>
+<div class="cx-scenario">Start a backlog item in a chosen folder</div>
+<div class="cx-steps">Given the backlog item Gift cards is in the Backlog
+    And the repository has the folders src/billing and src/visits
+When the Person starts Gift cards
+Then the roots dialog lists the top folders of the repository
+    And Gift cards is still in the Backlog
+When the Person chooses src/visits as its root
+Then the ticket gift-cards is In progress in Discovery with root src/visits
+    And the roots dialog stays open on gift-cards so its practices&#x27; roots can be set
+    And a toast says Gift cards started in Discovery</div>
+<div class="cx-scenario">Keep the idea file with the new ticket</div>
+<div class="cx-steps">Given the backlog item Returns and refunds is the file .sessions/_backlog/returns-and-refunds.md
+When the Person starts Returns and refunds on the whole repository
+Then the ticket returns-and-refunds is In progress in Discovery
+    And its session folder holds returns-and-refunds.md, text and all
+    And its session log names the item&#x27;s file
+    But the Backlog no longer shows Returns and refunds</div>
+<div class="cx-scenario">Bring a ticket back from the Backlog with its work</div>
+<div class="cx-steps">Given the ticket sign-up was moved back out of Discovery and waits in the Backlog as the backlog item Sign up
+    And its folder .sessions/_backlog/sign-up/ keeps its session log
+When the Person starts Sign up
+Then sign-up is back on the board with its session log and session.json
+    But no new ticket is opened</div>
+<div class="cx-story cx-on">Edit Ticket Text</div>
+<div class="cx-scenario">Show a ticket&#x27;s text from its session file</div>
+<div class="cx-steps">Given the ticket checkout-flow&#x27;s session folder holds checkout-flow.md with the text Pay for the basket.
+When the Person opens the board
+Then checkout-flow&#x27;s card shows Pay for the basket.</div>
+<div class="cx-scenario">Edit a ticket&#x27;s text</div>
+<div class="cx-steps">Given the ticket checkout-flow&#x27;s card shows Pay for the basket.
+When the Person edits checkout-flow&#x27;s text to Pay for the basket by card.
+Then checkout-flow.md in checkout-flow&#x27;s session folder holds Pay for the basket by card.
+    And checkout-flow&#x27;s card shows Pay for the basket by card.</div>
+<div class="cx-scenario">Write the text file for a ticket that has none</div>
+<div class="cx-steps">Given the ticket pet-visits is on the board
+    But pet-visits&#x27; session folder holds no pet-visits.md
+When the Person edits pet-visits&#x27; text to Book a visit for a pet.
+Then pet-visits.md in pet-visits&#x27; session folder holds Book a visit for a pet.
+    And pet-visits&#x27; card shows Book a visit for a pet.</div>
+<div class="cx-scenario">Edit a backlog item&#x27;s text</div>
+<div class="cx-steps">Given the backlog item Gift cards has the text Sell gift cards.
+When the Person edits Gift cards&#x27; text to Sell gift cards at the till.
+Then .sessions/_backlog/gift-cards.md holds Sell gift cards at the till.
+    And the Backlog shows Gift cards with the text Sell gift cards at the till.</div>
+<div class="cx-scenario">Edit a child&#x27;s text inside its parent</div>
+<div class="cx-steps">Given the ticket checkout-flow holds its child ticket confirm-order
+    And confirm-order&#x27;s text is Show the order and take the payment.
+When the Person edits confirm-order&#x27;s text inside checkout-flow&#x27;s card to Show the order, then take the payment.
+Then confirm-order.md in confirm-order&#x27;s session folder holds Show the order, then take the payment.
+    And confirm-order&#x27;s tooltip in checkout-flow&#x27;s card shows Show the order, then take the payment.</div>
+<div class="cx-story cx-on">Reorder Tickets In Column</div>
+<div class="cx-scenario">Keep a ticket where it was moved in its column</div>
+<div class="cx-steps">Given the Discovery column shows the ticket pet-visits above sign-up
+When the Person moves sign-up above pet-visits in Discovery
+Then Discovery shows sign-up above pet-visits
+    And Discovery still shows sign-up above pet-visits when the board is read again</div>
+<div class="cx-scenario">Keep a backlog item where it was moved</div>
+<div class="cx-steps">Given the Backlog shows the backlog item Gift cards above Returns and refunds
+When the Person moves Returns and refunds above Gift cards
+Then the Backlog shows Returns and refunds above Gift cards
+    And the Backlog still shows Returns and refunds above Gift cards when the board is read again</div>
+<div class="cx-story cx-on">Archive Ticket</div>
+<div class="cx-scenario">Archive a ticket off the board</div>
+<div class="cx-steps">Given the ticket pet-visits is In progress in Discovery with its story map generated
+When the Person archives pet-visits
+Then no column shows pet-visits
+    And its folder is in .sessions/_archive/pet-visits</div>
+<div class="cx-scenario">Refuse to archive a ticket the board does not have</div>
+<div class="cx-steps">Given the board shows no ticket named no-such-ticket
+When the Person archives no-such-ticket
+Then the board says no ticket named &#x27;no-such-ticket&#x27; on the board
+    But nothing is moved to .sessions/_archive</div>
+<div class="cx-story cx-on">Delete Ticket</div>
+<div class="cx-scenario">Delete a ticket and its session folder</div>
+<div class="cx-steps">Given the ticket pet-visits is on the board
+When the Person deletes pet-visits
+Then no column shows pet-visits
+    And .sessions/pet-visits is gone</div>
+<div class="cx-scenario">Refuse to delete a ticket the board does not have</div>
+<div class="cx-steps">Given the board shows no ticket named no-such-ticket
+When the Person deletes no-such-ticket
+Then the board says no ticket named &#x27;no-such-ticket&#x27; on the board
+    And no session folder is removed</div>
+<div class="cx-story cx-on">Tag Ticket Session</div>
+<div class="cx-scenario">Tag a ticket&#x27;s session</div>
+<div class="cx-steps">Given the ticket pet-visits has no tags
+When the Person tags pet-visits&#x27; session with billing
+Then pet-visits&#x27; card shows the tag billing
+    And pet-visits&#x27; session.json holds the tag billing</div>
+<div class="cx-scenario">Add a second tag</div>
+<div class="cx-steps">Given the ticket pet-visits is tagged billing
+When the Person tags pet-visits&#x27; session with urgent
+Then pet-visits&#x27; card shows the tags billing and urgent</div>
+<div class="cx-sub">Organize Ticket Hierarchy</div>
+<div class="cx-story cx-on">Split Ticket Into Child Tickets</div>
+<div class="cx-scenario">Ask the chat to split a ticket into child tickets</div>
+<div class="cx-steps">Given checkout-flow is the active ticket and a chat is connected
+When the Person splits checkout-flow into child tickets
+Then the chat&#x27;s prompt holds Split ticket checkout-flow into child tickets, one per story on its story map: call ticket.create with parent checkout-flow for each story.
+When the chat opens a child ticket Enter card details with parent checkout-flow
+Then enter-card-details is In progress in Discovery
+    And its details read enter-card-details · story of checkout-flow</div>
+<div class="cx-scenario">Keep Split off where nothing can take the prompt</div>
+<div class="cx-steps">Given checkout-flow is the active ticket
+    But no chat is connected
+When the session board draws checkout-flow&#x27;s card
+Then Split is off</div>
+<div class="cx-scenario">Keep Split off on a closed ticket</div>
+<div class="cx-steps">Given the ticket browse-pets is closed in Complete
+When the session board draws browse-pets&#x27; card
+Then Split is off</div>
+<div class="cx-scenario">Keep Split off on a locked ticket</div>
+<div class="cx-steps">Given Active session only is on
+    And billing-report is not the active ticket
+When the session board draws billing-report&#x27;s card
+Then Split is off</div>
+<div class="cx-story cx-on">Add Child Ticket</div>
+<div class="cx-scenario">Add a child ticket by hand</div>
+<div class="cx-steps">Given the ticket checkout-flow is In progress in Discovery
+    But checkout-flow has no child tickets
+When the Person adds the child ticket Enter card details to checkout-flow
+Then the ticket enter-card-details is In progress in Discovery with the parent checkout-flow
+    And checkout-flow&#x27;s card holds enter-card-details (Display Child Tickets In Parent)</div>
+<div class="cx-scenario">Drag a ticket onto a parent</div>
+<div class="cx-steps">Given the ticket pet-visits is In progress in Discovery with no parent
+    And the ticket checkout-flow is In progress in Discovery
+When the Person drags pet-visits onto checkout-flow
+Then checkout-flow&#x27;s card holds pet-visits
+    And no column shows pet-visits as a card of its own</div>
+<div class="cx-story cx-on">Display Child Tickets In Parent</div>
+<div class="cx-scenario">Stack a parent&#x27;s children inside its card</div>
+<div class="cx-steps">Given the ticket checkout-flow is in Discovery
+    And its child tickets enter-card-details and confirm-order are in Discovery
+When the board shows Discovery
+Then checkout-flow&#x27;s card holds enter-card-details and confirm-order stacked inside it
+    And checkout-flow&#x27;s title sits small above them
+    And neither child shows as a card of its own in Discovery
+    And neither child row names a stage of its own</div>
+<div class="cx-scenario">Keep a dashed row for a child pulled out of its parent</div>
+<div class="cx-steps">Given the ticket checkout-flow is in Discovery
+    And its child ticket enter-card-details was pulled out of it and is in Specification
+When the board shows checkout-flow
+Then checkout-flow&#x27;s card holds a dashed row for enter-card-details</div>
+<div class="cx-scenario">Show a child&#x27;s text when the pointer rests on it</div>
+<div class="cx-steps">Given the ticket checkout-flow holds its child ticket confirm-order
+    And confirm-order&#x27;s text is Show the order and take the payment.
+When the Person rests the pointer on confirm-order in checkout-flow&#x27;s card
+Then a tooltip shows Show the order and take the payment.</div>
+<div class="cx-story cx-on">Expand Parent Ticket</div>
+<div class="cx-scenario">Expand a parent to show its children</div>
+<div class="cx-steps">Given the ticket checkout-flow is collapsed with the child tickets enter-card-details and confirm-order
+    And checkout-flow&#x27;s card reads + 2 children
+When the Person expands checkout-flow
+Then checkout-flow&#x27;s card shows enter-card-details and confirm-order
+    And it reads - 2 children</div>
+<div class="cx-scenario">Collapse a parent to its own card</div>
+<div class="cx-steps">Given the ticket checkout-flow is expanded to show enter-card-details and confirm-order
+When the Person collapses checkout-flow
+Then checkout-flow&#x27;s card shows no child rows
+    And it reads + 2 children</div>
+<div class="cx-story cx-on">Detach Child Ticket</div>
+<div class="cx-scenario">Pull a child out of its parent</div>
+<div class="cx-steps">Given the ticket checkout-flow holds its child ticket enter-card-details in Discovery
+When the Person drags enter-card-details out of checkout-flow
+Then enter-card-details shows as a card of its own beside checkout-flow, titled Checkout flow.Enter card details
+    And enter-card-details still has the parent checkout-flow
+    And checkout-flow&#x27;s card holds a dashed row for enter-card-details</div>
+<div class="cx-scenario">Move a pulled-out child like any ticket</div>
+<div class="cx-steps">Given the ticket enter-card-details was pulled out of checkout-flow and is Done in Discovery
+When the Person moves enter-card-details to Specification
+Then the Specification column shows enter-card-details
+    And enter-card-details still has the parent checkout-flow (Place Parent At Leftmost Child Stage)</div>
+<div class="cx-story cx-on">Reassign Ticket Parent</div>
+<div class="cx-scenario">Move a child to another parent</div>
+<div class="cx-steps">Given the ticket enter-card-details is a child of checkout-flow
+    And the ticket billing-report is In progress in Discovery
+When the Person drags enter-card-details onto billing-report
+Then billing-report&#x27;s card holds enter-card-details
+    And checkout-flow&#x27;s card no longer holds enter-card-details
+    And enter-card-details&#x27; session.json names billing-report as its parent</div>
+<div class="cx-scenario">Take a child off its parent</div>
+<div class="cx-steps">Given the ticket enter-card-details is a child of checkout-flow
+When the Person Alt-drags enter-card-details out of checkout-flow
+Then enter-card-details shows as a card of its own with no parent
+    And checkout-flow&#x27;s card holds no row for enter-card-details, dashed or not
+    And enter-card-details&#x27; session.json names no parent</div>
+<div class="cx-story cx-on">Place Parent At Leftmost Child Stage</div>
+<div class="cx-scenario">Show a parent in its earliest child&#x27;s stage</div>
+<div class="cx-steps">Given the ticket checkout-flow has the child tickets enter-card-details in Specification and confirm-order in Discovery
+When the board shows checkout-flow
+Then checkout-flow shows in the Discovery column</div>
+<div class="cx-scenario">Move a parent on when its last child moves on</div>
+<div class="cx-steps">Given the ticket checkout-flow has the child tickets enter-card-details in Specification and confirm-order Done in Discovery
+When the Person moves confirm-order to Specification
+Then checkout-flow shows in the Specification column</div>
+<div class="cx-scenario">Refuse to move a parent by hand</div>
+<div class="cx-steps">Given the ticket checkout-flow has the child ticket confirm-order in Discovery
+When the Person tries to move checkout-flow to Specification
+Then checkout-flow stays in the Discovery column</div>
+<div class="cx-story cx-on">Nest Child Branch And Session</div>
+<div class="cx-scenario">Nest a child&#x27;s session and branch under its parent&#x27;s</div>
+<div class="cx-steps">Given the ticket checkout-flow&#x27;s session is .sessions/checkout-flow on the branch checkout-flow
+When Claude Code opens the child ticket Enter card details of checkout-flow
+Then enter-card-details&#x27; session folder is .sessions/checkout-flow/enter-card-details
+    And enter-card-details&#x27; branch is checkout-flow.enter-card-details</div>
+<div class="cx-sub">Guide Work Through Practices On Board</div>
+<div class="cx-story cx-on">Display Fidelity Progress</div>
+<div class="cx-scenario">Show Generate done</div>
+<div class="cx-steps">Given pet-visits&#x27; session log has generate /work, /work/docs stories story_map markdown stories
+When the session board reads pet-visits
+Then the story_map tile marks Generate ✓ and Validate and Review ○</div>
+<div class="cx-scenario">Show violations held on Validate</div>
+<div class="cx-steps">Given pet-visits&#x27; story_map is generated
+    And its latest validate line is validate Stories story_map graph-rule actor-named-in-step map.md:12
+When the session board reads pet-visits
+Then the story_map tile marks Validate as violations and its segment shows in the violations colour
+    And Review stays to do</div>
+<div class="cx-scenario">Show Validate done after a clean validate</div>
+<div class="cx-steps">Given pet-visits&#x27; story_map is generated
+    And its latest validate line is validate Stories story_map with no graph-rule
+When the session board reads pet-visits
+Then the story_map tile marks Generate ✓, Validate ✓, and Review ○</div>
+<div class="cx-scenario">Show each fidelity of the stage on the ticket</div>
+<div class="cx-steps">Given billing-report has nothing recorded in its session log
+When the session board reads billing-report
+Then each Discovery tile marks Generate, Validate, and Review ○, its segment dim</div>
+<div class="cx-story cx-on">Open Practice Tile</div>
+<div class="cx-scenario">Open a tile on a short hover</div>
+<div class="cx-steps">Given billing-report&#x27;s card is expanded
+When the Person rests the pointer on the story_map tile for half a second
+Then the story_map tile&#x27;s action bar opens above the grid, at full width
+When the Person moves the pointer away
+Then the action bar closes</div>
+<div class="cx-scenario">Keep a pressed tile open</div>
+<div class="cx-steps">Given billing-report is selected
+When the Person presses the story_map tile
+Then the story_map action bar stays open after the pointer leaves
+When the Person presses the story_map tile again
+Then the story_map action bar closes</div>
+<div class="cx-scenario">Keep two pressed tiles open at once</div>
+<div class="cx-steps">Given billing-report&#x27;s story_map tile is pressed open
+When the Person presses the bounded_context tile
+Then both action bars are open
+When the Person chooses sketch on the bounded_context bar
+Then only the bounded_context bar&#x27;s action is sketch</div>
+<div class="cx-scenario">Open a hovered tile beside a pressed one</div>
+<div class="cx-steps">Given billing-report&#x27;s card is expanded with the story_map tile pressed open
+When the Person hovers on the ia tile
+Then the ia bar opens beside the story_map bar
+When the Person moves the pointer away from the ia tile
+Then the ia bar closes and the story_map bar stays open</div>
+<div class="cx-scenario">Leave a tile in the details closed under a resting pointer</div>
+<div class="cx-steps">Given billing-report is shown in the details
+When the Person rests the pointer on the story_map tile in the details
+Then the story_map action bar stays closed</div>
+<div class="cx-story cx-on">Choose Ticket Practices</div>
+<div class="cx-scenario">Turn a practice off for a ticket</div>
+<div class="cx-steps">Given checkout-flow is the active ticket working on every practice
+    And its bounded_context tile is open
+When the Person turns DDD off for checkout-flow
+Then a toast says DDD off for Checkout flow · saved to .sessions/checkout-flow/session.json
+    And the bounded_context tile closes and fades
+    And the card shows no DDD segment</div>
+<div class="cx-scenario">Finish a stage on the practices left on</div>
+<div class="cx-steps">Given pet-visits has generated, validated, and reviewed the story_map fidelity
+    And every practice but Stories is turned off for pet-visits
+When the session board reads pet-visits
+Then pet-visits shows in Discovery&#x27;s Done</div>
+<div class="cx-scenario">Keep practice switches off on a locked ticket</div>
+<div class="cx-steps">Given Active session only is on
+    And billing-report is not the active ticket
+When the session board draws billing-report&#x27;s practices
+Then each practice switch is off until Active session only is turned off</div>
+<div class="cx-story cx-on">Send Next Fidelity Action</div>
+<div class="cx-scenario">Generate the next fidelity in its default format</div>
+<div class="cx-steps">Given billing-report is the active ticket with nothing recorded and a chat is connected
+When the Person runs billing-report&#x27;s next step
+Then Run next read Run next: generate before it ran
+    And the chat receives the command /actions-generate stories-story-map</div>
+<div class="cx-scenario">Fill the prompt to validate</div>
+<div class="cx-steps">Given back-to-backlog is the active ticket with its story map generated and a chat is connected
+When the Person runs back-to-backlog&#x27;s next step
+Then the chat&#x27;s prompt holds /actions-validate stories-story-map</div>
+<div class="cx-scenario">Open the report while violations hold the ticket</div>
+<div class="cx-steps">Given checkout-flow&#x27;s story map has a verb-noun-format violation on .context/story-map.md line 6
+    But no chat is connected
+When the Person runs checkout-flow&#x27;s next step
+Then Run next read Run next: review violations
+    And the report panel opens on stories-story-map</div>
+<div class="cx-scenario">Record a review with no chat</div>
+<div class="cx-steps">Given billing-report&#x27;s story map is generated and validated with no violations
+    But no chat is connected
+When the Person records a review of billing-report&#x27;s story_map
+Then billing-report&#x27;s story_map marks Review ✓</div>
+<div class="cx-scenario">Go back to an earlier stage&#x27;s fidelity still to validate</div>
+<div class="cx-steps">Given pet-visits&#x27; story map is generated
+    And a person has moved pet-visits into Specification
+When the session board reads pet-visits
+Then Run next reads Run next: validate on stories-story-map</div>
+<div class="cx-scenario">Keep Run next off where it cannot run</div>
+<div class="cx-steps">Given billing-report is the active ticket with generate next
+    But no chat is connected
+When the session board draws billing-report&#x27;s Run next
+Then Run next is off</div>
+<div class="cx-scenario">Name nothing to run on a ticket done in its stage</div>
+<div class="cx-steps">Given every Discovery fidelity of pet-visits is reviewed
+When the session board reads pet-visits
+Then Run next says Nothing to run next</div>
+<div class="cx-story cx-on">Send Action To Stage Practices</div>
+<div class="cx-scenario">Sketch every fidelity of a stage in one command</div>
+<div class="cx-steps">Given billing-report is the active ticket in Discovery and a chat is connected
+    And the Discovery stage head&#x27;s action bar is open
+When the Person runs sketch from the Discovery stage head
+Then the chat receives the command /actions-sketch stories-story-map ddd-bounded-context ux-ia clean-engineering-modules bdd-behavior</div>
+<div class="cx-scenario">Keep two stage heads open at once</div>
+<div class="cx-steps">Given billing-report&#x27;s Discovery stage head is pressed open
+When the Person presses the Specification stage head
+Then both stage bars are open</div>
+<div class="cx-story cx-on">Mark Ticket Done In Stage</div>
+<div class="cx-scenario">Mark a ticket done in its stage</div>
+<div class="cx-steps">Given the ticket pet-visits is In progress in Discovery with only its story map generated
+When the Person marks pet-visits done in Discovery
+Then pet-visits shows in Discovery&#x27;s Done
+    And it has no next step
+    And a toast says Pet visits moved to Discovery · Done</div>
+<div class="cx-scenario">Mark a ticket back in progress</div>
+<div class="cx-steps">Given the ticket ready-to-move is in Discovery&#x27;s Done
+When the Person moves ready-to-move back into Discovery&#x27;s In progress
+Then ready-to-move shows In progress in Discovery</div>
+<div class="cx-story cx-on">Open Help</div>
+<div class="cx-scenario">Open a fidelity&#x27;s help</div>
+<div class="cx-steps">Given billing-report&#x27;s story_map tile is shown
+When the Person opens help on the story_map fidelity
+Then a side panel shows story_map&#x27;s overview, guidance, and rules such as verb-noun-format
+    And it names the stage Discovery
+    And its Forge link opens https://forge.abdworks.net/abd-context-driven-delivery/fidelities/stories-story_map.html</div>
+<div class="cx-scenario">Open a practice&#x27;s help</div>
+<div class="cx-steps">Given billing-report&#x27;s practices are shown in the details
+When the Person opens help on the Stories practice
+Then a side panel shows Practice overview and SHARED RULES such as do-not-invent-requirements
+    And it names no fidelity
+    And its Forge link opens https://forge.abdworks.net/abd-context-driven-delivery/context-tools/stories.html</div>
+<div class="cx-scenario">Link the ddd model fidelity to its own page</div>
+<div class="cx-steps">Given the catalog has a page for the ddd model fidelity
+When the Person opens help on the ddd model fidelity
+Then its Forge link opens https://forge.abdworks.net/abd-context-driven-delivery/fidelities/ddd-model.html</div>
+<div class="cx-story cx-on">Choose Session And Practice Roots</div>
+<div class="cx-sub">Define Board Workflow</div>
+<div class="cx-story cx-on">Customize Workflow Stages</div>
+<div class="cx-story cx-on">Write Column Policies</div>
+<div class="cx-story cx-on">Collapse Column Policies</div>
+<div class="cx-story cx-on">Configure Todo List</div>
+<div class="cx-sub">Run Tickets Through Customized Workflow</div>
+<div class="cx-story cx-on">Display Board From Customized Workflow</div>
+<div class="cx-story cx-on">Run Work Type Flows</div>
+<div class="cx-story cx-on">Move Ticket Along Customized Workflow</div>
+<div class="cx-story cx-on">Approve Ticket Out Of Human Review Column</div>
+<div class="cx-story cx-on">Track Ticket Status Through Workflow</div>
+<div class="cx-story cx-on">Show Stage Practices From Customized Workflow</div>
+<div class="cx-sub">Show Board Quickly</div>
+<div class="cx-story cx-on">Check Ticket Branches Once Per Board Build</div>
+<div class="cx-story cx-on">Cache Practice Guidance By File And Change Time</div>
+<div class="cx-story cx-on">Read Session File Once Per Board Build</div>
+<div class="cx-sub">Generate Fidelity Outputs On Board</div>
+<div class="cx-story cx-on">Choose Action And Formats</div>
+<div class="cx-scenario">Pick the fidelity&#x27;s default format</div>
+<div class="cx-steps">Given billing-report&#x27;s story_map fidelity has no file generated
+When the Person opens the story_map tile
+Then the generate action is chosen with the markdown chip picked</div>
+<div class="cx-scenario">Leave a generated format unpicked</div>
+<div class="cx-steps">Given billing-report&#x27;s story map is .context/story-map.md, already there
+When the Person opens the story_map tile
+Then the markdown chip is green and not picked</div>
+<div class="cx-scenario">Stand one chip for a group of formats</div>
+<div class="cx-steps">Given billing-report&#x27;s story map is generated in markdown and its bounded context is not
+When the Person opens the Discovery stage head on story_map and bounded_context
+Then the bar shows a diagram chip and a markdown chip
+    And the markdown chip reads 1 of 2 with the hint markdown: 1 of 2 done</div>
+<div class="cx-scenario">Keep Run off with no format picked</div>
+<div class="cx-steps">Given billing-report&#x27;s story map is already in markdown
+    But no format is picked
+When the session board draws the story_map bar
+Then Run is off</div>
+<div class="cx-scenario">Keep Run off on a render with nothing to render</div>
+<div class="cx-steps">Given billing-report&#x27;s story map has no file
+When the Person chooses render on the story_map bar
+Then Run is off</div>
+<div class="cx-scenario">Keep Run off with no chat</div>
+<div class="cx-steps">Given the story_map bar has the markdown chip picked
+    But no chat is connected
+When the session board draws the story_map bar
+Then Run is off</div>
+<div class="cx-scenario">Keep Run off on a locked ticket</div>
+<div class="cx-steps">Given Active session only is on
+    And billing-report is not the active ticket
+    And billing-report&#x27;s story_map bar has the markdown chip picked
+When the session board draws billing-report&#x27;s story_map bar
+Then Run is off</div>
+<div class="cx-scenario">Write each fidelity in its own default format from a stage Run</div>
+<div class="cx-steps">Given checkout-flow&#x27;s story map has its markdown written
+    And its bounded context has none
+When the session board opens the Discovery stage bar
+Then the markdown chip is picked, since the bounded context has not made its default format
+    And Run sends `format=markdown,python`, of which each fidelity takes the first it writes</div>
+<div class="cx-story cx-on">Resolve Fidelity Output Paths</div>
+<div class="cx-scenario">Put a fidelity&#x27;s files under its practice&#x27;s root</div>
+<div class="cx-steps">Given the session alpha works in /work
+    And the story_map fidelity declares markdown .context/story-map.md and drawio .context/story-map.drawio
+When Claude Code asks where story_map&#x27;s files go
+Then the markdown file is /work/.context/story-map.md</div>
+<div class="cx-scenario">Use the practice&#x27;s root named in session.json</div>
+<div class="cx-steps">Given alpha&#x27;s session.json names docs/stories as the stories root
+When Claude Code asks where story_map&#x27;s files go
+Then the markdown file is /work/docs/stories/.context/story-map.md</div>
+<div class="cx-scenario">Prefer the fidelity&#x27;s own root</div>
+<div class="cx-steps">Given alpha&#x27;s session.json names docs/stories for stories and docs/map for story_map
+When Claude Code asks where story_map&#x27;s files go
+Then the drawio file is /work/docs/map/.context/story-map.drawio</div>
+<div class="cx-scenario">Rename a single-file output and keep a pattern</div>
+<div class="cx-steps">Given alpha&#x27;s session.json names our-map.md for story_map&#x27;s markdown and one-file.py for scenarios&#x27; python
+When Claude Code asks where story_map&#x27;s and scenarios&#x27; files go
+Then story_map&#x27;s markdown is /work/.context/our-map.md and its drawio stays /work/.context/story-map.drawio
+    And scenarios&#x27; python keeps its declared name, such as archive_ticket_story.test.py for the story Archive Ticket</div>
+<div class="cx-story cx-on">Generate Fidelity Output</div>
+<div class="cx-scenario">Send the generate command from a tile</div>
+<div class="cx-steps">Given billing-report is the active ticket with nothing generated and a chat is connected
+    And its story_map bar has generate chosen and the markdown chip picked
+When the Person runs generate on story_map
+Then the chat runs /actions-generate stories-story-map format=markdown
+    And the bar&#x27;s picks are cleared
+    And Claude Code goes on to Resolve Fidelity Output Paths for stories-story-map</div>
+<div class="cx-scenario">Render the earlier fidelity into a new format first</div>
+<div class="cx-steps">Given pet-visits&#x27; story map is docs/.context/story-map.md, generated in markdown only
+When the Person generates scenarios in drawio
+Then the first command is /actions-render stories-story-map format=drawio source=markdown
+    And the last is /actions-generate stories-scenarios format=drawio</div>
+<div class="cx-scenario">Count a generate line as Generate done</div>
+<div class="cx-steps">Given the session log of pet-visits has no generate line for story_map
+When Claude Code finishes generating the story map
+Then the session log ends with a generate line naming stories story_map markdown
+    And the story_map tile marks Generate ✓</div>
+<div class="cx-story cx-on">Render Fidelity Format</div>
+<div class="cx-scenario">Render existing output into another format</div>
+<div class="cx-steps">Given billing-report&#x27;s story map is .context/story-map.md, in markdown
+    And a chat is connected
+When the Person renders story_map into the diagram format
+Then the chat receives the command /actions-render stories-story-map format=drawio</div>
+<div class="cx-scenario">Keep render off with nothing to render</div>
+<div class="cx-steps">Given billing-report&#x27;s story map has no file
+When the Person chooses render on the story_map bar
+Then Run is off</div>
+<div class="cx-story cx-on">Send Tile Action To Chat</div>
+<div class="cx-scenario">Send sketch, iterate, or document as its own command</div>
+<div class="cx-steps">Given billing-report is the active ticket and a chat is connected
+    And its story_map bar is open
+When the Person runs sketch on story_map
+Then the chat receives the command /actions-sketch stories-story-map
+When the Person runs iterate on story_map
+Then the chat receives the command /actions-iterate stories-story-map
+When the Person runs document on story_map
+Then the chat receives the command /actions-document stories-story-map</div>
+<div class="cx-scenario">Tell the person which chat got the command</div>
+<div class="cx-steps">Given two chats are connected and none is picked
+When the Person runs sketch on story_map
+Then nothing is sent
+When the Person picks a chat and runs sketch again
+Then a toast says Sent to the chat: /actions-sketch stories-story-map</div>
+<div class="cx-story cx-on">Add Comment To Sent Command</div>
+<div class="cx-story cx-on">Choose Testing Strategy</div>
+<div class="cx-story cx-on">Toggle Sub Agents</div>
+<div class="cx-sub">Validate Fidelity Outputs On Board</div>
+<div class="cx-story cx-on">Validate Fidelity</div>
+<div class="cx-scenario">Send the fidelity to validate</div>
+<div class="cx-steps">Given billing-report is the active ticket and a chat is connected
+    And its story map .context/story-map.md is there
+When the Person validates story_map
+Then the chat receives the command /actions-validate stories-story-map
+    And Claude Code goes on to Save Validation Report for stories-story-map</div>
+<div class="cx-scenario">Count Validate done only with no graph-rule violations</div>
+<div class="cx-steps">Given pet-visits&#x27; story map is generated
+When Claude Code validates the story map and finds no graph-rule violation
+Then the session log ends with validate Stories story_map
+    And the story_map tile marks Validate ✓
+When Claude Code validates it again and finds actor-named-in-step on map.md line 12
+Then the session log ends with validate Stories story_map graph-rule actor-named-in-step map.md:12
+    And the story_map tile marks Validate as violations again</div>
+<div class="cx-scenario">Keep Validate off with nothing to check</div>
+<div class="cx-steps">Given billing-report&#x27;s story map has no file
+    But nothing is recorded on it
+When the session board draws the story_map bar
+Then validate is off</div>
+<div class="cx-scenario">Allow Validate again on the same output</div>
+<div class="cx-steps">Given checkout-flow&#x27;s story map has violations
+When the session board reads checkout-flow
+Then validate is on for story_map</div>
+<div class="cx-story cx-on">Save Validation Report</div>
+<div class="cx-scenario">Save the report and the graph it checked</div>
+<div class="cx-steps">Given the session checkout-flow has an entity root with a private-method-naming violation
+When Claude Code validates ddd-tactics on that file
+Then the validation report is saved as validation-reports/ddd-tactics-20261101T100000.md naming private-method-naming
+    And the graph it checked is saved beside it as ddd-tactics-20261101T100000.json, with the rule hits on its nodes
+    And Claude Code&#x27;s reply says where the report is saved</div>
+<div class="cx-scenario">Save one report for each listed guidance</div>
+<div class="cx-steps">Given the session checkout-flow has edited files for ddd-tactics and stories-scenarios
+When Claude Code validates ddd-tactics and stories-scenarios together
+Then validation-reports holds one stories-scenarios report and one ddd-tactics report</div>
+<div class="cx-scenario">Leave an earlier report&#x27;s graph as it was</div>
+<div class="cx-steps">Given validation-reports holds ddd-tactics-20200101T000000.json
+When Claude Code validates ddd-tactics again
+Then ddd-tactics-20200101T000000.json is unchanged</div>
+<div class="cx-story cx-on">Open Validation Report</div>
+<div class="cx-scenario">Open a fidelity&#x27;s latest report</div>
+<div class="cx-steps">Given checkout-flow&#x27;s story map has the validation report stories-story-map-20261101T100000.md with its saved graph
+    And the graph names verb-noun-format on .context/story-map.md line 6
+When the Person opens checkout-flow&#x27;s story_map report
+Then the report panel shows .sessions/checkout-flow/validation-reports/stories-story-map-20261101T100000.md
+    And it lists verb-noun-format with one violation at .context/story-map.md line 6 and the source lines around it</div>
+<div class="cx-scenario">Show every fidelity&#x27;s violations at once</div>
+<div class="cx-steps">Given checkout-flow has violations
+When the Person opens checkout-flow&#x27;s violations from its card
+Then the report panel shows .sessions/checkout-flow/validation-reports with every rule broken, each naming its fidelity</div>
+<div class="cx-scenario">Say a report has no saved graph</div>
+<div class="cx-steps">Given the ticket&#x27;s latest story_map report has no graph saved beside it
+When the Person opens the story_map report
+Then the report panel shows the report&#x27;s text
+    And it says the report has no saved graph in place of saying it has no violations</div>
+<div class="cx-scenario">Open a violation&#x27;s file at its line</div>
+<div class="cx-steps">Given checkout-flow&#x27;s story_map report is open
+When the Person opens the verb-noun-format violation
+Then the files panel shows .context/story-map.md with line 6 marked</div>
+<div class="cx-scenario">Say there is no report</div>
+<div class="cx-steps">Given billing-report has no validation report
+When the session board reads billing-report
+Then the story_map bar shows no report link</div>
+<div class="cx-story cx-on">Fix Report Violations</div>
+<div class="cx-scenario">Fix one violation at its line</div>
+<div class="cx-steps">Given checkout-flow&#x27;s story_map report lists verb-noun-format at .context/story-map.md line 6
+    And a chat is connected
+When the Person fixes that violation
+Then the chat receives one message naming the verb-noun-format rule, the error at .context/story-map.md:6, and the content that failed, with instructions to fix it</div>
+<div class="cx-scenario">Fix every violation of a rule</div>
+<div class="cx-steps">Given checkout-flow&#x27;s story_map report lists verb-noun-format
+When the Person fixes every violation of verb-noun-format
+Then the chat receives one message with every verb-noun-format violation, each at its file and line with the content that failed, and instructions to fix them</div>
+<div class="cx-scenario">Fix every violation in the report</div>
+<div class="cx-steps">Given checkout-flow&#x27;s report lists violations of verb-noun-format and do-not-invent-requirements
+    And a chat is connected
+When the Person fixes every violation in the report
+Then the chat receives one message naming each rule with every violation of it, each at its file and line with the content that failed, and instructions to fix them all</div>
+<div class="cx-scenario">Read an open report again after the fix</div>
+<div class="cx-steps">Given checkout-flow&#x27;s story_map report is open with verb-noun-format listed
+When Claude Code validates the story map again with no violations
+Then the open report lists no rules</div>
+<div class="cx-story cx-on">Display Violations Band</div>
+<div class="cx-scenario">Show the active ticket&#x27;s violations in a band</div>
+<div class="cx-steps">Given checkout-flow is the active ticket with violations on stories-story-map
+When the session board reads the board
+Then a band across the page top names checkout-flow&#x27;s violations</div>
+<div class="cx-scenario">Show no band when the active ticket is clean</div>
+<div class="cx-steps">Given billing-report is the active ticket with no violations
+When the session board reads the board
+Then no violations band shows</div>
+<div class="cx-story cx-on">Display Report Without Header Noise</div>
+<div class="cx-story cx-on">Display Report Errors In Code Fences</div>
+<div class="cx-sub">Review Fidelity Outputs On Board</div>
+<div class="cx-story cx-on">List Ticket Files</div>
+<div class="cx-scenario">List a fidelity&#x27;s files with whether each exists</div>
+<div class="cx-steps">Given checkout-flow&#x27;s story map .context/story-map.md is there and .context/story-map.drawio is not
+When the Person lists checkout-flow&#x27;s story_map files
+Then the files panel lists .context/story-map.md as there
+    But no file of another fidelity is listed</div>
+<div class="cx-scenario">List only what the ticket&#x27;s branch changed</div>
+<div class="cx-steps">Given the ticket pet-visits works on the whole repository on its own branch pet-visits
+    And the repository holds src/theirs_spec.py and its branch added src/mine_spec.py
+When the Person lists pet-visits&#x27; bdd behavior files
+Then the files panel lists src/mine_spec.py
+    But src/theirs_spec.py is not listed</div>
+<div class="cx-scenario">Say in a toast when the list cannot be read</div>
+<div class="cx-steps">Given the board shows no ticket named no-such-ticket
+When the Person lists no-such-ticket&#x27;s story_map files
+Then a toast says cdd fidelity-progress.files failed: TicketNotFoundError: no ticket named &#x27;no-such-ticket&#x27; on the board
+    But no panel opens</div>
+<div class="cx-story cx-on">Browse Ticket Folder</div>
+<div class="cx-scenario">Group a stage&#x27;s files under their folders</div>
+<div class="cx-steps">Given checkout-flow&#x27;s Discovery files are tests/a.md, tests/deep/b.md, and src/c.ts
+When the Person browses checkout-flow&#x27;s Discovery files
+Then the files panel groups a.md and deep/b.md under tests/ and c.ts under src/</div>
+<div class="cx-scenario">Browse the ticket&#x27;s session folder</div>
+<div class="cx-steps">Given checkout-flow&#x27;s session folder holds its log and validation-reports/stories-story-map-20261101T100000.md
+When the Person browses checkout-flow&#x27;s session folder
+Then the files panel lists .sessions/checkout-flow/validation-reports/stories-story-map-20261101T100000.md under its folder</div>
+<div class="cx-story cx-on">View Fidelity Files</div>
+<div class="cx-scenario">Open the files beside the chat, never in it</div>
+<div class="cx-steps">Given checkout-flow&#x27;s clean-engineering-model declares chat-bar-model.md and chat-bar-model.drawio
+When the Person opens the files of clean-engineering-model
+Then the files pane opens beside the chat, titled clean-engineering-model files
+    And the chat bar above the prompt draws no file tab
+    And the diagram is never read as text</div>
+<div class="cx-story cx-on">Review Fidelity</div>
+<div class="cx-scenario">Review a fidelity after a clean validate</div>
+<div class="cx-steps">Given billing-report&#x27;s story map is generated and its latest validate passed with no graph-rule
+When the Person reviews story_map on billing-report
+Then billing-report&#x27;s session log ends with review stories story_map
+    And the story_map tile marks Review ✓ and the fidelity is done
+    And a toast says stories-story-map done on billing-report</div>
+<div class="cx-scenario">Keep Review off until Validate is clean</div>
+<div class="cx-steps">Given billing-report&#x27;s story map has no file
+    But nothing is recorded on it
+When the session board draws the story_map bar
+Then review is off</div>
+<div class="cx-scenario">Ignore a review recorded before a clean validate</div>
+<div class="cx-steps">Given pet-visits&#x27; session log has generate, then review, then validate Stories story_map
+When the session board reads pet-visits
+Then the story_map tile marks Review ○</div>
+<div class="cx-scenario">Refuse a fidelity the ticket does not have</div>
+<div class="cx-steps">Given billing-report&#x27;s story map passed validate
+When the Person reviews stories-no_such_fidelity
+Then the board says no fidelity named stories-no_such_fidelity on ticket billing-report
+    But no review line is written for stories-story-map</div>
+<div class="cx-scenario">Complete a stage&#x27;s work</div>
+<div class="cx-steps">Given pet-visits has every Discovery fidelity generated, validated, and reviewed
+When the session board reads pet-visits
+Then pet-visits waits in Discovery&#x27;s Done
+    And it has no next step</div>
+<div class="cx-story cx-on">List Ticket Context Files</div>
+<div class="cx-story cx-on">Open Session Files From Details</div>
+<div class="cx-story cx-on">View Files In Rich Viewer</div>
+<div class="cx-story cx-on">Comment On File Selection</div>
+<div class="cx-story cx-on">Show AI Changes As Diff</div>
+<div class="cx-sub">Integrate Practice Content Editor Apps On Board</div>
+<div class="cx-story cx-on">Open Story UI On Ticket Scope</div>
+<div class="cx-scenario">The story map shows the chosen ticket&#x27;s epics and stories</div>
+<div class="cx-steps">Given ++checkout-flow++ is the active ticket
+    And ++billing-report++&#x27;s session has Stories and DDD enabled
+When the Person makes ++billing-report++ the active ticket on the board
+Then the story map shows ++billing-report++&#x27;s epic, Report Billing, and its stories
+    And the band shows ++billing-report++&#x27;s Stories and DDD squares</div>
+<div class="cx-scenario">A ticket without a session leaves the story map where it was</div>
+<div class="cx-steps">Given ++checkout-flow++ is the active ticket
+    But ++search-orders++ has no session yet
+When the Person picks ++search-orders++ on the board
+Then the story map still shows ++checkout-flow++&#x27;s stories
+    And the band says only tickets with a session can be opened</div>
+<div class="cx-story cx-on">Filter Knowledge Graph To Ticket Scope</div>
+<div class="cx-scenario">The graph shows only the active ticket&#x27;s session folders</div>
+<div class="cx-steps">Given ++checkout-flow++ is the active ticket
+When the Person opens the knowledge graph
+Then the graph shows only ++checkout-flow++&#x27;s session folders
+    And no other ticket&#x27;s folders are listed</div>
+<div class="cx-scenario">Changing the active ticket rescopes an open graph</div>
+<div class="cx-steps">Given the knowledge graph is open on ++checkout-flow++
+When the Person makes ++billing-report++ the active ticket
+Then the graph shows only ++billing-report++&#x27;s session folders</div>
+<div class="cx-story cx-on">Filter Knowledge Graph To Ticket Practices</div>
+<div class="cx-scenario">The graph shows only the practices enabled for billing-report</div>
+<div class="cx-steps">Given ++billing-report++ is the active ticket
+    And its session has Stories and DDD enabled
+When the Person opens the knowledge graph
+Then the graph shows ++billing-report++&#x27;s Stories and DDD trees
+    And it shows no UX or Clean Engineering tree</div>
+<div class="cx-scenario">The graph shows only the practices enabled for checkout-flow</div>
+<div class="cx-steps">Given ++checkout-flow++ is the active ticket
+    And its session has Stories, UX and Clean Engineering enabled
+When the Person opens the knowledge graph
+Then the graph shows ++checkout-flow++&#x27;s Stories, UX and Clean Engineering trees
+    And it shows no DDD tree</div>
+<div class="cx-story cx-on">Deploy Knowledge Graph App With Board State</div>
+<div class="cx-scenario">The Graph app shares the board&#x27;s state</div>
+<div class="cx-steps">Given the board&#x27;s state runs on its app server instance
+When the Agent deploys the Graph app
+Then the Graph app runs on the same app server and instance as the board&#x27;s state
+    And a ticket made active on the board is the ticket the graph shows, without a reload</div>
+<div class="cx-story cx-on">Refactor Knowledge Graph App To Web Domain Access</div>
+<div class="cx-scenario">The Graph app reaches the CDD domain only through the generated adapter</div>
+<div class="cx-steps">Given the cdd_web_domain_access pattern has generated the TypeScript language adapter
+When the Agent refactors the Graph app
+Then every call the Graph app makes to the CDD domain goes through the generated adapter
+    And the Graph app keeps no calls of its own to the domain&#x27;s tools</div>
+<div class="cx-story cx-on">Invoke Story Explorer In Session Context</div>
+<div class="cx-scenario">The explorer plays the active ticket&#x27;s stories on their design canvas screens</div>
+<div class="cx-steps">Given ++checkout-flow++ is the active ticket
+    And its story map shows Screen frames, with Activate Ticket on the Session Board design canvas screen
+When the Person explores ++checkout-flow++&#x27;s stories from its story map
+Then the story explorer opens below the story map on Activate Ticket
+    And its frame shows the Session Board design canvas screen</div>
+<div class="cx-scenario">Another ticket&#x27;s explorer plays that ticket&#x27;s stories</div>
+<div class="cx-steps">Given the story explorer is open on ++checkout-flow++&#x27;s Activate Ticket
+When the Person makes ++billing-report++ the active ticket
+Then the story explorer closes
+    And ++billing-report++&#x27;s story map shows in its place</div>
+<div class="cx-epic">Move Work Forward From Chat Bar</div>
+<div class="cx-sub">Check CDD Server Health In Chat Bar</div>
+<div class="cx-story">Display Server Health Mark</div>
+<div class="cx-story">Open Server Health Panel</div>
+<div class="cx-story">Reconnect CDD Server</div>
+<div class="cx-story">Reinstall CDD Tools</div>
+<div class="cx-story">Update CDD From Chat Bar</div>
+<div class="cx-story">Open App From Health Panel</div>
+<div class="cx-story">Restart Parts From Chat Bar</div>
+<div class="cx-sub">See Work In Chat Bar</div>
+<div class="cx-story">Open Board From Chat</div>
+<div class="cx-story">Display Stage Strip</div>
+<div class="cx-story">Display Session Fidelity Dots</div>
+<div class="cx-story">Display Stage Fidelities</div>
+<div class="cx-story">Display Session Card</div>
+<div class="cx-story">Show Active Session On Status Line</div>
+<div class="cx-story">Add Active Ticket To System Prompt</div>
+<div class="cx-sub">Steer Sessions</div>
+<div class="cx-story">Create New Session</div>
+<div class="cx-story">Open Session</div>
+<div class="cx-story">Write Session Handoff</div>
+<div class="cx-story">Display Latest Session Handoff</div>
+<div class="cx-story">Close Session From Chat Bar</div>
+<div class="cx-story">Add Backlog Item From Chat Bar</div>
+<div class="cx-story">Commit Work From Chat Bar</div>
+<div class="cx-story">Push Work From Chat Bar</div>
+<div class="cx-story">Pull Latest From Chat Bar</div>
+<div class="cx-sub">Guide Work Through Practices In Chat Bar</div>
+<div class="cx-story">Move Session To Next Stage</div>
+<div class="cx-story">Move Session To Previous Stage</div>
+<div class="cx-story">Mark Session Done In Stage</div>
+<div class="cx-story">Choose Session Practices</div>
+<div class="cx-story">Open Fidelity Help</div>
+<div class="cx-story">Choose Session Folders From Chat Bar</div>
+<div class="cx-sub">Generate Fidelity Outputs In Chat Bar</div>
+<div class="cx-story">Select Fidelity</div>
+<div class="cx-story">Display Action Before Fidelity Dots</div>
+<div class="cx-story">Select Several Fidelities</div>
+<div class="cx-story">Choose Action</div>
+<div class="cx-story">Choose Format</div>
+<div class="cx-story">Generate Session Fidelity Output</div>
+<div class="cx-story">Resolve Session Fidelity Output Paths</div>
+<div class="cx-story">Fill Prompt With Fidelity Action</div>
+<div class="cx-sub">Review Fidelity Outputs In Chat Bar</div>
+<div class="cx-story">List Session Files</div>
+<div class="cx-story">View Session Files</div>
+<div class="cx-story">Open Validation Report From Violation Count</div>
+<div class="cx-story">Fix Violations From Chat Bar</div>
+<div class="cx-story">Review Session Fidelity</div>
+<div class="cx-sub">Integrate Practice Content Editor Apps In Chat Bar</div>
+<div class="cx-story">Open Story UI Side Panel From Chat Bar</div>
+<div class="cx-story">Invoke Claude Design Story Explorer From Chat Bar</div>
+<div class="cx-story">Deploy Story UI App With Board State</div>
+<div class="cx-story">Refactor Story UI App To Web Domain Access</div>
+<div class="cx-story">Open UX Design In Claude Design</div>
+<div class="cx-story">Trace Story Through Artifacts</div>
+<div class="cx-sub">Capture Session Knowledge</div>
+<div class="cx-story">Write Handoff When Session Ends</div>
+<div class="cx-story">Offer Correction Log Entry</div>
+<div class="cx-story">Offer Decision Record</div>
+<div class="cx-sub">Enter CDD Commands Faster</div>
+<div class="cx-story">Autocomplete CDD Commands</div>
+<div class="cx-story">Show Command Argument Hints</div>
+<div class="cx-story">Suggest Next Command</div>
+<div class="cx-story">Announce CDD Tool Calls</div>
+<div class="cx-sub">Guard Work Against Rules</div>
+<div class="cx-story">Refuse Forbidden Edits</div>
+<div class="cx-story">Warn When Work Outruns Fidelity</div>
+<div class="cx-story">Catch Banned Words In Markdown</div>
+<div class="cx-story">Warn On Branch Mismatch</div>
+<div class="cx-epic">Author Story Maps</div>
+<div class="cx-sub">View Story Map</div>
+<div class="cx-story">Open Story Map By Address</div>
+<div class="cx-story">Pick Story Map From Dashboard</div>
+<div class="cx-story">Browse Story Hierarchy</div>
+<div class="cx-story">Browse Nested SubEpic Lanes</div>
+<div class="cx-story">Inspect Selected Node Fields</div>
+<div class="cx-story">Pan Workspace Canvas With Right-Click Drag</div>
+<div class="cx-story">Switch Between Map View And Increment View</div>
+<div class="cx-story">Show And Hide Scenarios And Examples</div>
+<div class="cx-story">Switch Color Mode</div>
+<div class="cx-sub">Expand Story Details</div>
+<div class="cx-story">Expand One Story Card</div>
+<div class="cx-story">Expand Descendant Story Cards</div>
+<div class="cx-story">Expand And Collapse Whole Map</div>
+<div class="cx-story">Widen Columns Around Expanded Story Cards</div>
+<div class="cx-sub">Build Map Structure</div>
+<div class="cx-story">Add First Epic To Empty Map</div>
+<div class="cx-story">Add Epic, SubEpic, Or Story At Chosen Position</div>
+<div class="cx-story">Remove Epic, SubEpic, Or Story</div>
+<div class="cx-story">Rename Node Inline</div>
+<div class="cx-sub">Rearrange Map By Dragging</div>
+<div class="cx-story">Reorder Sibling Epics, SubEpics, And Stories</div>
+<div class="cx-story">Move Story To A Different SubEpic</div>
+<div class="cx-story">Move SubEpic To A Different Epic</div>
+<div class="cx-story">Drop Node Into Empty Parent</div>
+<div class="cx-story">See Full-Size Drop Preview While Dragging</div>
+<div class="cx-sub">Plan Increments</div>
+<div class="cx-story">Add Increment</div>
+<div class="cx-story">Rename Increment</div>
+<div class="cx-story">Reorder Increments</div>
+<div class="cx-story">Remove Increment</div>
+<div class="cx-story">Assign Story To Increment By Dragging</div>
+<div class="cx-story">Unassign Story From Increment</div>
+<div class="cx-sub">Author Scenarios And Steps</div>
+<div class="cx-story">Add Scenario Under Story</div>
+<div class="cx-story">Rename Scenario</div>
+<div class="cx-story">Remove Scenario</div>
+<div class="cx-story">Reorder Scenarios</div>
+<div class="cx-story">Add Step</div>
+<div class="cx-story">Edit Step Keyword And Text</div>
+<div class="cx-story">Remove Step</div>
+<div class="cx-story">Reorder Steps</div>
+<div class="cx-sub">Author Examples</div>
+<div class="cx-story">Add Example To Scenario</div>
+<div class="cx-story">Remove Example From Scenario</div>
+<div class="cx-story">Add Example Field</div>
+<div class="cx-story">Remove Example Field</div>
+<div class="cx-story">Add Example Line</div>
+<div class="cx-story">Edit Example Cell</div>
+<div class="cx-story">Remove Example Line</div>
+<div class="cx-story">Reorder Example Lines</div>
+<div class="cx-sub">Save And Share Changes</div>
+<div class="cx-story">Save Each Edit To The Server</div>
+<div class="cx-story">Show Save Status</div>
+<div class="cx-story">Refuse Edits That Break Map Rules</div>
+<div class="cx-story">Record One Save Event Per Save</div>
+<div class="cx-story">Browse Save History</div>
+<div class="cx-story">Recover Workspace View State</div>
+<div class="cx-story">Join Real-Time Story Map Session</div>
+<div class="cx-story">Reconcile Concurrent View State Changes</div>
+<div class="cx-story">Test Story UI Editor On Session Story Map</div>
+<div class="cx-sub">Author Story Changes With AI</div>
+<div class="cx-story">Open AI Chat Panel</div>
+<div class="cx-story">Request AI Story Change</div>
+<div class="cx-story">Review Proposed Map Changes</div>
+<div class="cx-story">Apply AI Change To Story Map</div>
+<div class="cx-story">Place Notes On The Story Map</div>
+<div class="cx-epic">Explore Stories In Story UI</div>
+<div class="cx-sub">Show Screen Frames In Story UI</div>
+<div class="cx-story">Switch Story Map To Screen Frames View</div>
+<div class="cx-story">Show Screen Frame Under Each Story</div>
+<div class="cx-story">Mark Story Without A Screen</div>
+<div class="cx-story">Open Story Explorer From Screen Frame</div>
+<div class="cx-sub">Navigate The Story Tree</div>
+<div class="cx-story">Open The Explorer At A Story, Scenario And Step</div>
+<div class="cx-story">Collapse And Reset The Story Tree</div>
+<div class="cx-story">Keep The Selected Story In View</div>
+<div class="cx-story">Copy A Request To Open A Story In Its File</div>
+<div class="cx-story">Pick An Outline Scenario&#x27;s Example</div>
+<div class="cx-sub">Play Stories In The Explorer</div>
+<div class="cx-story">Play The Next Story</div>
+<div class="cx-story">Hide And Show The Story Panel</div>
+<div class="cx-story">Return To Story UI Map</div>
+<div class="cx-story">Test Story Explorer On Session Story Map</div>
+<div class="cx-sub">Frame Design Canvas Screens In Explorer</div>
+<div class="cx-story">Show Design Canvas Screen As Explorer Frame</div>
+<div class="cx-story">Choose The Screen For A Step</div>
+<div class="cx-story">Join A Step Without A Screen To The Next Step</div>
+<div class="cx-story">Show A Screenshot When No Screen Runs</div>
+<div class="cx-story">Keep Each Screen&#x27;s Own Stylesheets</div>
+<div class="cx-epic">Build Design Canvas Screens</div>
+<div class="cx-sub">Lay Out The Canvas Files</div>
+<div class="cx-story">Place Pages On The Canvas</div>
+<div class="cx-story">Place Artboards On Their Pages</div>
+<div class="cx-story">Write The Canvas Into A Project Folder</div>
+<div class="cx-story">Name An Imported Screen After Its File</div>
+<div class="cx-story">Give Each Prototype Screen Its Own Page</div>
+<div class="cx-story">Place A Read-Only Story Panel Beside A Screen</div>
+<div class="cx-sub">Load Scenario Fixtures With The Fixture Bar</div>
+<div class="cx-story">Load A Scenario Into A Standalone Screen</div>
+<div class="cx-story">Load The Explorer&#x27;s Scenario Into The Screen</div>
+<div class="cx-story">Pick Another Scenario From Inside The Explorer</div>
+<div class="cx-story">Paste Dev Seed Data Into A Screen</div>
+<div class="cx-story">Follow A Screen Link To The Next Story</div>
+<div class="cx-story">Edit A Screen On Its Own Artboard</div>
+<div class="cx-story">Report Where The Screen&#x27;s Data Came From</div>
+<div class="cx-sub">Start A Canvas Version</div>
+<div class="cx-story">Start The First Version</div>
+<div class="cx-story">Start The Next Version As A Copy</div>
+<div class="cx-story">Write Into The Version Not Yet Published</div>
+<div class="cx-story">Refuse To Add To A Published Version</div>
+<div class="cx-sub">Publish And Release A Canvas Version</div>
+<div class="cx-story">Title A Published Canvas By Its Version</div>
+<div class="cx-story">Record Each Version&#x27;s Published Link</div>
+<div class="cx-story">Keep A Published Version As A Release</div>
+<div class="cx-story">Remove Older Versions When Keeping A Release</div>
+<div class="cx-story">Start Numbering Again From A Release</div>
+<div class="cx-story">Find A Release&#x27;s Canvas Folder</div>
+<div class="cx-sub">Trace Canvas Files To Production</div>
+<div class="cx-story">Record Packaged Files In Sources Manifest</div>
+<div class="cx-story">Fail Check When A Packaged File Drifts</div>
+<div class="cx-story">Report Version Traceability Percentage</div>
+<div class="cx-story">Store Each Screenshot Once By Content Hash</div>
+<div class="cx-story">Find Screen Files Through The Manifest</div>
+<div class="cx-sub">Install Production Design System On The Canvas</div>
+<div class="cx-story">Package Product Styles And Assets In Their Production Layout</div>
+<div class="cx-story">Publish Product Package As Design System Artifact</div>
+<div class="cx-story">Record Installed Design Systems In Canvas File</div>
+<div class="cx-story">Derive Publish List From Sources Manifest</div>
+<div class="cx-story">Pull Hosted Edits Back Before Next Version</div>
+<div class="cx-sub">Mount Production Views As Screens</div>
+<div class="cx-story">Bundle Product Views For The Canvas</div>
+<div class="cx-story">Mount Production View In A Thin Screen</div>
+<div class="cx-story">Answer Screen Requests From Fixture Routes</div>
+<div class="cx-story">Keep Explorer Navigation Inside The Artboard</div>
+<div class="cx-story">Keep Product Styles Inside The Screen</div>
+<div class="cx-story">Type Scenario Values Into A Mounted Screen</div>
+<div class="cx-story">Generate Attached Screens Without Markup</div>
+<div class="cx-sub">Redesign A Screen By Detaching It</div>
+<div class="cx-story">Detach A Screen To Editable Markup</div>
+<div class="cx-story">Keep Leaf Components Mounted In A Detached Screen</div>
+<div class="cx-story">Mark Detached Screen As Diverged</div>
+<div class="cx-story">Reattach A Screen Once Its Change Reaches Production</div>
+<div class="cx-sub">Check Screens Against Their Scenarios</div>
+<div class="cx-story">Package End-To-End Results With The Canvas</div>
+<div class="cx-story">Mark Each Explorer Scenario Passed Or Failed</div>
+<div class="cx-story">Label Stale Test Results</div>
+<div class="cx-story">Run A Scenario&#x27;s Thens On The Canvas</div>
+<div class="cx-story">Play A Story&#x27;s UI Steps On A Screen</div>
+<div class="cx-story">Check Screen Logic Against Scenarios From A Command</div>
+<div class="cx-sub">Draw Linked Models On The Canvas</div>
+<div class="cx-story">Draw Arrows From Drawio Waypoints</div>
+<div class="cx-story">Draw Bounded Context Map As An Artboard</div>
+<div class="cx-story">Draw Domain Model As An Artboard</div>
+<div class="cx-story">Draw Module Class Models As Artboards</div>
+<div class="cx-story">Follow Links From A Context To Its Models</div>
+<div class="cx-story">See The Classes A Scenario Touches</div>
+<div class="cx-story">See The Stories That Exercise A Class</div>
+<div class="cx-story">Mark Model Nodes That Fail Rules</div>
+<div class="cx-epic">Map Work Into Knowledge Graph</div>
+<div class="cx-sub">Load And Save Graph</div>
+<div class="cx-story">Load Working Copy Into Graph</div>
+<div class="cx-story">Reuse Saved Graph</div>
+<div class="cx-story">Rebuild Graph After Source Or Rule Changes</div>
+<div class="cx-story">Force Graph Reload</div>
+<div class="cx-story">Load Only Edited Files</div>
+<div class="cx-story">Skip Build And Cache Folders</div>
+<div class="cx-story">Report Load Progress</div>
+<div class="cx-story">Save Graph To Context Folder</div>
+<div class="cx-story">Keep Other Practices When Saving</div>
+<div class="cx-sub">Build Practice Trees From Source</div>
+<div class="cx-story">Read Modules Classes And Operations</div>
+<div class="cx-story">Read Clean Engineering Model Documents</div>
+<div class="cx-story">Place DDD Building Blocks Under Aggregates</div>
+<div class="cx-story">Read Story Maps And Story Tests</div>
+<div class="cx-story">Read BDD Spec Trees</div>
+<div class="cx-story">Link Steps And Observations To Operations</div>
+<div class="cx-story">Link Examples To Classes And Steps</div>
+<div class="cx-story">Place Story Nodes On Their Source Lines</div>
+<div class="cx-story">Give Each Node Its Fidelity</div>
+<div class="cx-sub">Apply Pattern Overlays</div>
+<div class="cx-story">Add Named Overlay From Catalog</div>
+<div class="cx-story">Add Overlay Folder</div>
+<div class="cx-story">Remove Overlay</div>
+<div class="cx-story">Rebuild Graph With Overlay Nodes</div>
+<div class="cx-story">Remember Applied Overlays</div>
+<div class="cx-sub">Explore Graph In Graph App</div>
+<div class="cx-story">Choose Repo Folder</div>
+<div class="cx-story">Reopen Last Folder</div>
+<div class="cx-story">Expand Practice Tree</div>
+<div class="cx-story">Follow Relationships Under Node</div>
+<div class="cx-story">Open Node Source</div>
+<div class="cx-story">Unfold Calls And Classes In Source</div>
+<div class="cx-story">Show Load Steps While Loading</div>
+<div class="cx-story">Copy Load Failure For Agent</div>
+<div class="cx-story">Switch Display Theme</div>
+<div class="cx-sub">Filter Graph In Graph App</div>
+<div class="cx-story">Filter By Practice</div>
+<div class="cx-story">Filter By Node Type</div>
+<div class="cx-story">Filter By Connector</div>
+<div class="cx-story">Show Only Violations</div>
+<div class="cx-story">Filter Violations By Rule</div>
+<div class="cx-story">Select All Or No Filter Choices</div>
+<div class="cx-sub">Find Nodes For Agent</div>
+<div class="cx-story">Return Matching Nodes With Relationships</div>
+<div class="cx-story">Return Only Failing Nodes And Rules</div>
+<div class="cx-story">List Practice Inventory</div>
+<div class="cx-story">List Filter Choices</div>
+<div class="cx-story">Read Node Source With Members</div>
+<div class="cx-sub">Check Clean Engineering Code Through The Graph</div>
+<div class="cx-story">Record Code Metrics As Node Facts</div>
+<div class="cx-story">Check Code Metrics Against Clean Engineering Limits</div>
+<div class="cx-story">Report Unused Class For Deletion</div>
+<div class="cx-story">Report Runtime Dependency That Should Be Owned</div>
+<div class="cx-story">Report Disconnected Class</div>
+<div class="cx-story">Report One-Class Package</div>
+<div class="cx-story">Judge Clean Engineering Rules Across Files</div>
+<div class="cx-sub">Review Violations In Graph App</div>
+<div class="cx-story">See Rules Under Node</div>
+<div class="cx-story">Hover Violating Rule For Message</div>
+<div class="cx-story">Open Violation In Source</div>
+<div class="cx-story">Display Drawio File As Diagram</div>
+<div class="cx-story">Copy Correct Prompt</div>
+<div class="cx-story">Test Knowledge Graph Explorer On Session Files</div>
+<div class="cx-sub">Report Graph Rules In Validate</div>
+<div class="cx-story">Build Graph From Edited Files</div>
+<div class="cx-story">Report Own Practice Violations</div>
+<div class="cx-story">Report Saved Graph Hits</div>
+<div class="cx-story">Leave Unedited Files Out</div>
+<div class="cx-story">Refuse Missing Path</div>
+<div class="cx-story">Save Checked Graph Beside Report</div>
+<div class="cx-story">Count Graph Hits From Report</div>
+<div class="cx-epic">Connect Sessions Across Channels And Apps</div>
+<div class="cx-sub">Connect Chat Bar Board And Story UI</div>
+<div class="cx-story">Open Board Side Panel From Chat Bar</div>
+<div class="cx-story">Sync Chat Bar With Board Selection</div>
+<div class="cx-story">Keep Chosen Formats Across Actions In A Fidelity</div>
+<div class="cx-story">Start Ticket Session From Increment</div>
+<div class="cx-story">Show Increment Ticket In Story UI</div>
+<div class="cx-sub">Check Work In Generate</div>
+<div class="cx-story">Refresh Graph After Generate</div>
+<div class="cx-story">Attach Violations To Latest Graph</div>
+<div class="cx-story">Judge Rules During Generate</div>
+<div class="cx-story">Fix Graph Violations</div>
+<div class="cx-story">Validate Fidelity On Demand</div>
+<div class="cx-story">Check Graph Rules When An Artifact Changes</div>
+<div class="cx-sub">Read Graph Violations On Board</div>
+<div class="cx-story">Read Fidelity Violations From Latest Graph</div>
+<div class="cx-story">Generate And Judge Fidelity From Board</div>
+<div class="cx-story">Fix Graph Violations From Board</div>
+<div class="cx-sub">Read Graph Violations In Chat Bar</div>
+<div class="cx-story">Read Session Violations From Latest Graph</div>
+<div class="cx-story">Generate And Judge Fidelity From Chat Bar</div>
+<div class="cx-story">Fix Graph Violations From Chat Bar</div>
+<div class="cx-sub">Change Stories From Canvas And Story UI</div>
+<div class="cx-story">Give Each Map Card A Stable Node Id</div>
+<div class="cx-story">Comment On A Story Card</div>
+<div class="cx-story">Change Story Code From A Canvas Comment</div>
+<div class="cx-story">Refresh Map Artboard From A Data File</div>
+<div class="cx-story">Save Story Map To Story Files</div>
+<div class="cx-story">Comment On A Story In Story UI</div>
+<div class="cx-story">Rearrange Stories Inside The Canvas</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":560,"height":1100}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

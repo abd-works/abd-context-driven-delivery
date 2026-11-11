@@ -6,7 +6,8 @@ import { chooseAction, clearChosenAction, toggleActionPicker } from './action-pi
 import { moveNext, type ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
 import { runActionOn } from './fidelity-progress-client'
-import { formatArgumentOf, resetFormats, type FormatChips } from './format-choices-client'
+import { formatArgumentOf, resetFormats } from './format-choices-client'
+import { overlayArgumentOf } from './overlay-choices-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
@@ -25,31 +26,34 @@ export function actionOf(chatBar: ChatBarClient): string {
 }
 
 // What the button shows and runs: the action picked from the menu, else the next one.
-function shownActionOf(chatBar: ChatBarClient, chosenAction: string | null): string {
+export function shownActionOf(chatBar: ChatBarClient, chosenAction: string | null): string {
   return chosenAction && chatBar.actionFidelity ? chosenAction : actionOf(chatBar)
 }
 
-// The action button runs what it shows: advance moves the session on, and every other action is a command the chat runs. A picked action is run once, and the button then shows the next one again.
-async function pressAction($: EngineInterface, chatBar: ChatBarClient, formats: FormatChips, action: string): Promise<unknown> {
+// The action button runs what it shows: advance moves the session on, and every other action is a command the chat runs,
+// with the formats its chips pick and the session's pattern overlays. A picked action is run once, and the button then
+// shows the next one again.
+async function pressAction($: EngineInterface, { chatBar, formats, overlays }: ChatBarDraw, action: string): Promise<unknown> {
   const fidelity = chatBar.actionFidelity
   await clearChosenAction($)
   if (action === 'advance') return moveNext($, chatBar)
   if (!fidelity) return
   const formatArgument = formatArgumentOf(chatBar, formats, action)
-  await runActionOn($, chatBar.actionFidelities, action, formatArgument)
+  await runActionOn($, chatBar.actionFidelities, action, formatArgument + overlayArgumentOf(overlays))
   if (formatArgument) await resetFormats($)
 }
 
 // The orange chip of the canvas, an orange Box holding the next action's icon, then the ▾ that opens
 // the picker, its action and fidelity shown above it on hover.
-export function ActionButtonView($: EngineInterface, elements: ElementTable, { chatBar, picker, formats }: ChatBarDraw) {
+export function ActionButtonView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
+  const { chatBar, picker } = draw
   const { Box, Text } = elements
   const action = shownActionOf(chatBar, picker.chosenAction)
   if (!action) return null
   const target = action === 'advance' ? `move ${chatBar.sessionName} on` : `${action} ${chatBar.actionFidelities.map(fidelity => fidelity.slug).join(' ')}`
   return (
     <Box key="action" flexDirection="row" gap={0} paddingX={1} backgroundColor={BRAND.accent}>
-      {GlyphButtonView(elements, 'next-action', iconOf(action), BRAND.onAccent, () => pressAction($, chatBar, formats, action))}
+      {GlyphButtonView(elements, 'next-action', iconOf(action), BRAND.onAccent, () => pressAction($, draw, action))}
       {GlyphButtonView(elements, 'action-picker', '▾', BRAND.onAccent, () => toggleActionPicker($))}
       <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
         <Text color={BRAND.text}>{target}</Text>
@@ -61,7 +65,7 @@ export function ActionButtonView($: EngineInterface, elements: ElementTable, { c
 // The column the action button starts at on the line: the health mark and its gap, the stage chip and its gap, │ and
 // its gap, then each dot with its violation count and a gap. The menu opens at it, so it reads as the button's list box.
 const HEALTH_STAGE_AND_SEPARATOR = 9
-function actionColumnOf(chatBar: ChatBarClient): number {
+export function actionColumnOf(chatBar: ChatBarClient): number {
   const dots = chatBar.fidelities.reduce((cells, fidelity) => cells + 1 + (fidelity.violationCount ? String(fidelity.violationCount).length : 0) + 1, 0)
   return HEALTH_STAGE_AND_SEPARATOR + dots
 }

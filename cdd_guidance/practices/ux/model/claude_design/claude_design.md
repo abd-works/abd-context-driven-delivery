@@ -11,7 +11,7 @@ The UX side of the Claude Design channel: the **Screens** page of the canvas, an
 
 ## Story → screen edges
 
-The UX map, edges included, is `ux/ux.json` in the workspace; each release's canvas is in `.sessions/<release>/design-canvas/`.
+The UX map, edges included, is `ux/ux.json` in the workspace; each release's canvas is in the UX practice's root, `<ux root>/design-canvas/`.
 
 - **`shown-on-edges`** — Link stories to screens with the cross-tree `shownOn` edge (`schema_edges.py`). An edge may sit on a step (`Screen.show_step`, key `Story › Scenario › Step`), a scenario (`Screen.show_scenario`, key `Story › Scenario`), or a story (`Screen.show_story`). The screen holds each one as a `StoryLink`, which holds the Stories node once it is on the screen's graph.
 - **`edge-at-the-highest-true-level`** — Put the edge on the story when every scenario shows that screen; on a scenario when only some do; on a step only when a scenario moves across screens. The explorer cascades step → scenario → story, so a story-level edge covers every scenario without listing them.

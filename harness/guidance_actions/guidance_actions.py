@@ -45,6 +45,8 @@ _GUIDANCE_SLUG = re.compile(r"^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$")
 _FORMAT_WORD = "format="
 # The session a command is for, as the session board names it: `session=.sessions/<name>/session.json`.
 _SESSION_WORD = "session="
+# The pattern overlays a command runs with, as the chat bar names them: `overlays=lern_domain_driven,mern_domain_driven`.
+_OVERLAYS_WORD = "overlays="
 # What an action works on before it names any guidance; None cannot stand for it, since naming None keeps what it had.
 _NOTHING_WORKED_ON = object()
 PATHS_NOTE = (
@@ -59,6 +61,15 @@ def session_file_named(guidance: Any) -> str:
     if not isinstance(guidance, str):
         return ""
     return next((word[len(_SESSION_WORD):] for word in guidance.split() if word.startswith(_SESSION_WORD)), "")
+
+
+def overlays_named(guidance: GuidanceArg) -> list[str] | None:
+    """The patterns an ``overlays=`` word of guidance names, comma separated; none when no such word is there, so the
+    session keeps the overlays it has. A word with nothing after it names no overlay, and clears them."""
+    if not isinstance(guidance, str):
+        return None
+    word = next((word for word in guidance.split() if word.startswith(_OVERLAYS_WORD)), None)
+    return None if word is None else [name for name in word[len(_OVERLAYS_WORD):].split(",") if name]
 
 
 @dataclass(frozen=True)
@@ -134,7 +145,7 @@ class GuidanceArgument:
         return self._item(self._guidance)
 
     def _slug_words(self) -> list:
-        words = [word for word in self._guidance.split() if not word.startswith(_SESSION_WORD)]
+        words = [word for word in self._guidance.split() if not word.startswith((_SESSION_WORD, _OVERLAYS_WORD))]
         listed = next((word[len(_FORMAT_WORD):].split(",") for word in words if word.startswith(_FORMAT_WORD)), [])
         slugs = [slug for word in words if not word.startswith(_FORMAT_WORD) for slug in word.split(",") if slug]
         named = [self._named(slug) for slug in slugs]
@@ -223,7 +234,11 @@ class WorkList:
         return self._outer is not None
 
     def take(self, guidance: GuidanceArg) -> None:
-        """Work on guidance, read once into the practices and fidelities of the action's set that it names."""
+        """Work on guidance, read once into the practices and fidelities of the action's set that it names. An
+        ``overlays=`` word chooses those pattern overlays on the session first, so the action runs with them."""
+        overlays = overlays_named(guidance)
+        if overlays is not None and self._session is not None:
+            self._session.choose_overlays(overlays)
         argument = GuidanceArgument(guidance, self.practice_set)
         self.worked_on = guidance
         self._listed = None

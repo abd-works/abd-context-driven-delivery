@@ -638,7 +638,7 @@ Observed: the pointer on the session name shows the card, with each fidelity's n
 
 ### (S) Chat Bar --> Show Active Session On Status Line
 
-Inferred: the chat's status line names the active session, its stage, next guidance and violations, read from the same chat bar client as the strip (`register.ts` `readActive`).
+Observed (commits ce6b9157e, 066b2d3fc; `register.ts` `PromptHint` hook, `chat-bar-view.tsx` `StatusRowView`, `chat-bar-client.ts` `statusLine`): a dim row below the prompt, under the engine's own hint line and from the left, names the repository, the active session, the folder it works in, and the action the button runs with the fidelities it runs on. Requested on 2026-11-11 ("repo . session . root path of session . action selected", "below the actual chat edit like before", left aligned); the host's status line is left empty.
 
 ### (S) Claude Code --> [Add Active Ticket To System Prompt](move-work-forward-from-chat-bar/see-work-in-chat-bar/see_work_in_chat_bar_story.test.md#story-add-active-ticket-to-system-prompt)
 
@@ -708,6 +708,18 @@ Requested (2026-11-06, as the CDD Kanban does): the chat bar opens the same help
 
 Requested (2026-11-10, "new session or session where folders aren't set on switch --> probably one dialog box, eg expand above chat bar"): when the chat bar creates a session that does not come from a backlog item, or switches to a session whose workpath and practice roots are not set, one dialog opens above the chat bar to choose the workpath and each practice's root, as the board's Choose Where A Backlog Item Works and Choose Session And Practice Roots do.
 
+### (S:system) Ticket --> List Available Patterns
+
+Requested (2026-11-11, "opens a list box for LERN, MERN eg all patterns we have ... set this list dynamically based on contents of folder"): a ticket's `overlay_choices` answers one choice per pattern, each with its icon and whether the session chose it. The patterns are every one registered from `cdd_guidance/patterns/`, where each subfolder whose module of the same name defines a pattern class registers itself (`PatternOverlays.names`), so a pattern folder added there is offered with no change to the chat bar.
+
+### (S) Person --> Choose Graph Overlays
+
+Requested (2026-11-11, "right after practices we need + overlay button where we can add one or more graph overlays ... can select more than one"): a + right after the fidelity dots opens a list box of the patterns the board lists, the session's chosen ones marked; a press on one adds it to or takes it out of the session's overlays through `ticket.choose_overlays`, which keeps them in the session's `session.json` and applies them to the session's graph (`Graph.overlays`).
+
+### (S) Chat Bar --> Display Overlay Icons
+
+Requested (2026-11-11, "adds a new icon to bar, pushing action and format", "icon is first and last letter of pattern"): each overlay the session has chosen shows as an icon after the + and before the format chips and the action button, its pattern's first and last letter in capitals (`lern_domain_driven` is LN), the pattern's name on hover.
+
 ## (E) Work Fidelity Outputs In Chat Bar
 
 ### (E) Generate Fidelity Outputs In Chat Bar
@@ -744,6 +756,10 @@ Observed: `Generate` and `Session.fidelity_outputs` take the outputs the fidelit
 
 Observed: pressing the button on validate, render, iterate, sketch or document puts `/actions-<action> <guidance>` in the prompt box for the person to send (`fidelity-client.ts` `runAction`).
 
+
+#### (S) Person --> [Run Fidelity Action With Overlays](move-work-forward-from-chat-bar/generate-fidelity-outputs-in-chat-bar/generate_fidelity_outputs_in_chat_bar_story.test.md)
+
+Requested (2026-11-11, "doesnt result in LERN being passed in as a param? shouldnt it?"): the command the action button puts in the prompt names the session's chosen overlays in an `overlays=` word beside `format=` (`overlay-choices-client.ts` `overlayArgumentOf`); an action run with that word chooses those overlays on the session first (`WorkList.take`), and Generate adds each overlay's shared rules on top of the practices' rules (`Generate._overlay_rules`).
 ### (E) Review Fidelity Outputs In Chat Bar
 
 #### (S) Person --> [List Session Files](../../chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/list-session-files/list_session_files_story.test.ts)
@@ -1266,7 +1282,7 @@ Observed: once no numbered version is left, `start_next` starts `version-1` as a
 
 ### (S) Agent --> Find A Release's Canvas Folder
 
-Observed: `CanvasVersions.from_release` opens `.sessions/<release>/design-canvas`, for the release being worked on or a named one (`versions_spec.py`).
+Observed: `CanvasVersions.in_practice_root` opens `<ux root>/design-canvas`, in the root session.json names for the UX practice, beside its other outputs (`versions_spec.py`).
 
 ## (E) Reuse Production Assets On The Canvas
 
