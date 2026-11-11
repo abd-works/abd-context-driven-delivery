@@ -275,8 +275,7 @@ The base type of Ticket and BacklogItem. It marks `title` and `last_activity` as
 + move_previous(): Card
 	// a person's move to the previous column
 + move_before(other: Card): Card
-	// keeps this card just above other in their column; committed on main and pushed
-	// a person's move of it just above other in their column
+	// a person's move of it just above other in their column; committed on main and pushed
 	-> Column.place_before
 
 ## Ticket : Card
@@ -349,7 +348,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 + load(ticket: str, project: Path): Ticket
 	// the `@tool_subject` of the `ticket.*` tools; raises `TicketNotFoundError` for a ticket the board does not show
 	-> Board.load
-	-> Board.ticket
+	-> Board.ticket_called
 + create(title: str, scope: str, parent: str, path: str, project: Path): Ticket
 	// `ticket.create`: a new ticket in Discovery, in progress; it does not become the current session. scope is feature, story, or slice; parent names the ticket it was split from; path is its workpath
 	-> Board.load
@@ -661,7 +660,7 @@ Marked `@identity("title")`.
 + load(backlog_item: str, project: Path): BacklogItem
 	// the `@tool_subject` of the `backlog-item.*` tools; raises `BacklogItemNotFoundError` for an item the board does not show
 	-> Board.load
-	-> Board.backlog_item
+	-> Board.backlog_item_called
 + create(title: str, text: str, project: Path): BacklogItem
 	// `backlog-item.create`: writes one markdown file to `_backlog/`, the title as its heading and the text under it, committed on main and pushed
 	-> Sessions.backlog_folder
