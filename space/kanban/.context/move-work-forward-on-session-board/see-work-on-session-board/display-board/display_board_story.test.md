@@ -21,7 +21,7 @@
 
 *Given* the [session](../../../kanban-model.md#session) folder .sessions/broken holds a session.json that is not JSON
 *When* the session board reads the [board](../../../kanban-model.md#board)
-*Then* a toast says cdd board.show failed: JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+*Then* a toast says cdd board.show failed: JsonFileUnreadable: .sessions/broken/session.json is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))
 *But* no band says the cdd server is lost
 
 #### Scenario: Update the board and cdd to the latest code

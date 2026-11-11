@@ -101,8 +101,8 @@ test.describe('Display Board', () => {
       writeInto(join(fixtureRoot, '.sessions', 'broken', 'session.json'), '{broken')
     })
 
-    test('Then a toast says cdd board.show failed: JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)', async ({ page }) => {
-      await expect(toast(page, 'cdd board.show failed: JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)').first()).toBeVisible({ timeout: 8_000 })
+    test('Then a toast says cdd board.show failed: JsonFileUnreadable: .sessions/broken/session.json is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))', async ({ page }) => {
+      await expect(toast(page, /^cdd board\.show failed: JsonFileUnreadable: .*[\\/]\.sessions[\\/]broken[\\/]session\.json is not a readable JSON object \(Expecting property name enclosed in double quotes: line 1 column 2 \(char 1\)\)/).first()).toBeVisible({ timeout: 8_000 })
     })
 
     test('But no band says the cdd server is lost', async ({ page }) => {

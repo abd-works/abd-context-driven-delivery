@@ -38,7 +38,7 @@ from space.kanban.session_board_examples import (
     seed_checkout_flow_held_on_violations,
     validated,
 )
-from space.kanban.story_test import SharedStories, column_in, expect_action, expect_actions, expect_held_on_violations, expect_no_next, expect_placed, next_in, progress_in
+from space.kanban.story_test import SharedStories, expect_action, expect_actions, expect_held_on_violations, expect_no_next, expect_placed, next_in, progress_in
 
 shared_stories = SharedStories("Guide Work Through Practices")
 
@@ -268,17 +268,16 @@ def _(s):
     @s.when("the Person runs billing-report's next step")
     def _(world):
         world.before = world.data_of(world.Ticket.load(BILLING_REPORT.name))
-        world.discovery = column_in(world.data_of(world.Board.load().show()), "Discovery")
-        world.next_fidelity = next(fidelity for fidelity in world.discovery["work_required"] if fidelity["slug"] == world.before["next"]["fidelity"]["slug"])
 
     @s.then("Run next read Run next: generate before it ran")
     def _(world):
         expect((next_in(world.before)["next_action"], world.before["next"]["fidelity"]["slug"])).to(equal(("generate", STORY_MAP)))
 
-    # The board app writes the command from the stage's default format; the command itself is left to its specs.
-    @s.and_("the chat receives the command /actions-generate stories-story-map format=markdown")
+    # The board app writes the command from the next fidelity and the ticket's session.json, and names no format, so
+    # Generate writes the fidelity in its default format; sending the command is left to the board app's specs.
+    @s.and_("the chat receives the command /actions-generate stories-story-map")
     def _(world):
-        expect(world.next_fidelity["default_format"]).to(equal("markdown"))
+        expect((world.before["next"]["fidelity"]["slug"], world.before["session"]["session_file"])).to(equal((STORY_MAP, f".sessions/{BILLING_REPORT.name}/session.json")))
 
 
 @shared_stories.scenario("Send Next Fidelity Action", "Open the report while violations hold the ticket")
@@ -318,21 +317,20 @@ def _(s):
         # No chat checks in on a throwaway project; a review is the person's own approval and needs none.
         pass
 
-    @s.when("the Person runs billing-report's next step")
+    @s.when("the Person records a review of billing-report's story_map")
     def _(world):
-        ticket = world.Ticket.load(BILLING_REPORT.name)
-        world.reviewed = world.data_of(ticket.work.progress_of(world.data_of(ticket)["next"]["fidelity"]["slug"]).finish_review())
+        world.reviewed = world.data_of(world.Ticket.load(BILLING_REPORT.name).work.progress_of(STORY_MAP).finish_review())
 
     @s.then("billing-report's story_map marks Review ✓")
     def _(world):
         expect((world.reviewed["fidelity"]["slug"], world.reviewed["actions"]["review"])).to(equal((STORY_MAP, "done")))
 
 
-@shared_stories.scenario("Send Next Fidelity Action", "Go back to an earlier stage's fidelity still to review")
+@shared_stories.scenario("Send Next Fidelity Action", "Go back to an earlier stage's fidelity still to validate")
 def _(s):
-    @s.given("pet-visits' story map is generated and validated with no violations")
+    @s.given("pet-visits' story map is generated")
     def _(world):
-        world.project.seed_session(PET_VISITS.with_log(*STORY_MAP_VALIDATED_CLEAN))
+        world.project.seed_session(PET_VISITS.with_log(generated("stories", "story_map")))
 
     @s.and_("a person has moved pet-visits into Specification")
     def _(world):
@@ -342,9 +340,9 @@ def _(s):
     def _(world):
         world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
 
-    @s.then("Run next reads Run next: review on stories-story-map")
+    @s.then("Run next reads Run next: validate on stories-story-map")
     def _(world):
-        expect((next_in(world.read)["next_action"], world.read["next"]["fidelity"]["slug"])).to(equal(("review", STORY_MAP)))
+        expect((next_in(world.read)["next_action"], world.read["next"]["fidelity"]["slug"])).to(equal(("validate", STORY_MAP)))
 
 
 @shared_stories.scenario("Send Next Fidelity Action", "Name nothing to run on a ticket done in its stage")

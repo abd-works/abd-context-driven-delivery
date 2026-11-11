@@ -2607,10 +2607,10 @@ it should have no next
 <- Ticket
 ```
 
-#### that a person has moved on with an earlier stage's fidelity still to review
+#### that a person has moved on with an earlier stage's fidelity still to validate
 
 ```
-it should name Review on that fidelity as next
+it should name Validate on that fidelity as next
 -> Ticket.move_to("Specification")
   -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
   <- BacklogItem

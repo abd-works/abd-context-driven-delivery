@@ -82,13 +82,15 @@ MOVED_INTO_SPECIFICATION = f"{STAMP} move Specification no-chat"
 @dataclass(frozen=True)
 class SessionSeed:
     """Seed: a work session's folder as the board reads it. folder is where it sits under .sessions/: open, closed,
-    _archive, or _backlog for a ticket moved back."""
+    _archive, or _backlog for a ticket moved back. workpath is a folder of the project the session chose to work in,
+    such as `work` for the scenarios' /work; empty for a session that works in the whole project."""
 
     name: str
     title: str
     log: tuple[str, ...] = ()
     folder: str = ""
     fields: dict = field(default_factory=dict)
+    workpath: str = ""
 
     def with_log(self, *lines: str) -> SessionSeed:
         return replace(self, log=tuple(lines))
@@ -157,8 +159,7 @@ MAIN = SessionSeed("main", "Main")
 BROKEN = SessionSeed("broken", "Broken")
 BROKEN_SESSION_JSON = "{broken"
 CHILD = SessionSeed("child", "child", fields={"scope": "story", "parent": "epic"})
-ALPHA_WORKPATH = "/work"
-ALPHA = SessionSeed("alpha", "Alpha", fields={"workpath": ALPHA_WORKPATH})
+ALPHA = SessionSeed("alpha", "Alpha", workpath="work")
 GIFT_CARDS_HELD = SessionSeed("gift-cards", "Gift cards", (generated("stories", "story_map"),), folder="_backlog")
 SIGN_UP_HELD = SessionSeed("sign-up", "Sign up", (f"{STAMP} move Discovery no-chat",), folder="_backlog")
 
@@ -219,7 +220,10 @@ class SessionsProject(ThrowawayProject):
     def seed_session(self, seed: SessionSeed) -> Path:
         folder = self.sessions / seed.folder / seed.name
         folder.mkdir(parents=True, exist_ok=True)
-        fields = {"name": seed.name, "title": seed.title, "scope": "feature", "workpath": str(self.root), "repo_path": str(self.root), **seed.fields}
+        # A chosen workpath counts only when its folder is there (Sessions.root_of), so the seed makes it.
+        workpath = self.root / seed.workpath
+        workpath.mkdir(parents=True, exist_ok=True)
+        fields = {"name": seed.name, "title": seed.title, "scope": "feature", "workpath": str(workpath), "repo_path": str(self.root), **seed.fields}
         (folder / "session.json").write_text(json.dumps(fields), encoding="utf-8")
         (folder / "session.log").write_text("".join(f"{line}\n" for line in seed.log), encoding="utf-8")
         return folder

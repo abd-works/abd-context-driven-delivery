@@ -53,9 +53,9 @@ with story("Display Board"):
         with when("the session board reads the [board](../../../.context/kanban-model.md#board)"):
             # Board page -> Board.show()
             # Board -> Board.tickets
-            # Board <- JSONDecodeError
+            # Board <- JsonFileUnreadable
             pass
-        with then("a toast says cdd board.show failed: JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"):
+        with then("a toast says cdd board.show failed: JsonFileUnreadable: .sessions/broken/session.json is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))"):
             pass
         with but_("no band says the cdd server is lost"):
             pass

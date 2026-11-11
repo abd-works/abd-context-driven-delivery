@@ -22,13 +22,10 @@ The story_map fidelity declares its markdown at `.context/story-map.md` and its 
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from expects import end_with, equal, expect
 
 from space.kanban.session_board_examples import (
     ALPHA,
-    ALPHA_WORKPATH,
     PET_VISITS,
     STORY_MAP,
 )
@@ -37,9 +34,10 @@ from space.kanban.story_test import SharedStories, expect_action
 shared_stories = SharedStories("Generate Fidelity Outputs")
 
 
-def at_work(relative: str) -> str:
-    """A path under alpha's workpath, as FidelityGuidance.output_paths writes it."""
-    return (Path(ALPHA_WORKPATH) / relative).resolve().as_posix()
+def at_work(world, relative: str) -> str:
+    """A path under alpha's workpath, the scenarios' /work, which is the folder work of the scenario's project, as
+    FidelityGuidance.output_paths writes it."""
+    return (world.project.root / ALPHA.workpath / relative).resolve().as_posix()
 
 
 @shared_stories.scenario("Generate Fidelity Output", "Count a generate line as Generate done")
@@ -82,7 +80,7 @@ def _(s):
 
     @s.then("the markdown file is /work/.context/story-map.md")
     def _(world):
-        expect(world.outputs["markdown"]).to(equal([at_work(".context/story-map.md")]))
+        expect(world.outputs["markdown"]).to(equal([at_work(world, ".context/story-map.md")]))
 
 
 @shared_stories.scenario("Resolve Fidelity Output Paths", "Use the practice's root named in session.json")
@@ -98,7 +96,7 @@ def _(s):
 
     @s.then("the markdown file is /work/docs/stories/.context/story-map.md")
     def _(world):
-        expect(world.outputs["markdown"]).to(equal([at_work("docs/stories/.context/story-map.md")]))
+        expect(world.outputs["markdown"]).to(equal([at_work(world, "docs/stories/.context/story-map.md")]))
 
 
 @shared_stories.scenario("Resolve Fidelity Output Paths", "Prefer the fidelity's own root")
@@ -114,7 +112,7 @@ def _(s):
 
     @s.then("the drawio file is /work/docs/map/.context/story-map.drawio")
     def _(world):
-        expect(world.outputs["drawio"]).to(equal([at_work("docs/map/.context/story-map.drawio")]))
+        expect(world.outputs["drawio"]).to(equal([at_work(world, "docs/map/.context/story-map.drawio")]))
 
 
 @shared_stories.scenario("Resolve Fidelity Output Paths", "Rename a single-file output and keep a pattern")
@@ -131,7 +129,7 @@ def _(s):
 
     @s.then("story_map's markdown is /work/.context/our-map.md and its drawio stays /work/.context/story-map.drawio")
     def _(world):
-        expect((world.outputs["markdown"], world.outputs["drawio"])).to(equal(([at_work(".context/our-map.md")], [at_work(".context/story-map.drawio")])))
+        expect((world.outputs["markdown"], world.outputs["drawio"])).to(equal(([at_work(world, ".context/our-map.md")], [at_work(world, ".context/story-map.drawio")])))
 
     @s.and_("scenarios' python keeps its declared name, such as archive_ticket_story.test.py for the story Archive Ticket")
     def _(world):

@@ -2173,13 +2173,13 @@ a ticket
       // the graph holds no operation this observation calls
       it should have no next
       ```
-  that a person has moved on with an earlier stage's fidelity still to review
+  that a person has moved on with an earlier stage's fidelity still to validate
     ```
     -> Ticket.move_to(stage: str, done: bool)
       -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
       <- BacklogItem
     <- Ticket | BacklogItem
-    it should name Review on that fidelity as next
+    it should name Validate on that fidelity as next
     ```
   that a person has dragged into a later stage's done part
     ```
@@ -3284,7 +3284,7 @@ Say the cdd server is not connected
 Show a failing tool in a toast
   ```
   // the graph holds no operation this observation calls
-  it Then a toast says cdd board.show failed: JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+  it Then a toast says cdd board.show failed: JsonFileUnreadable: .sessions/broken/session.json is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))
   ```
   ```
   // the graph holds no operation this observation calls
