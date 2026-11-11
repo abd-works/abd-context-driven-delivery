@@ -115,6 +115,8 @@ a { color: #E5531A; } a:hover { color: #C64514; }
 .board-root .children-toggle:hover { color: var(--text); text-decoration: underline; }
 .child-row { display: flex; flex-direction: column; gap: 5px; padding: 6px 8px; background: var(--raised); border: 1px solid var(--border); border-radius: 4px; }
 .child-row.pulled { background: transparent; border-style: dashed; }
+.child-row[draggable="true"] { cursor: grab; }
+.ticket-card.drop-target { outline: 2px dashed var(--accent); outline-offset: 2px; }
 .mini-input { box-sizing: border-box; min-width: 0; padding: 3px 6px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font: 11px var(--mono); }
 .parent-note { position: relative; color: var(--muted); font: italic 10px var(--mono); text-align: center; }
 .ticket-tools { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
@@ -233,12 +235,12 @@ a { color: #E5531A; } a:hover { color: #C64514; }
             </sc-if>
             <div style="display: grid; grid-template-columns: {{column.listTracks}}; gap: 8px; padding: 8px">
               <sc-for list="{{column.lists}}" as="list" hint-placeholder-count="2">
-                <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
+                <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0" onDragOver="{{dragOverBoard}}" onDrop="{{dropOnBoard}}">
                   <sc-if value="{{list.label}}" hint-placeholder-val="{{ true }}">
                     <span style="color: var(--muted); font: 10px var(--mono); letter-spacing: .1em">{{list.label}}</span>
                   </sc-if>
                   <sc-for list="{{list.cards}}" as="card" hint-placeholder-count="2">
-                    <div class="ticket-card {{card.motionClass}}" style="position: relative; background: {{card.background}}; border: {{card.borderWidth}} solid {{card.border}}; border-radius: 4px; padding: 8px 26px 8px 9px; display: flex; flex-direction: column; gap: 4px; min-width: 0">
+                    <div class="ticket-card {{card.motionClass}} {{card.dropClass}}" draggable="{{card.draggable}}" onDragStart="{{card.drag}}" onDragEnd="{{endDrag}}" onDragOver="{{card.dragOver}}" onDrop="{{card.drop}}" style="position: relative; background: {{card.background}}; border: {{card.borderWidth}} solid {{card.border}}; border-radius: 4px; padding: 8px 26px 8px 9px; display: flex; flex-direction: column; gap: 4px; min-width: 0">
                       <button onClick="{{card.press}}" aria-label="{{card.pressLabel}}" style="position: absolute; inset: 0; background: transparent; border: 0; padding: 0"></button>
                       <button class="expand-mark" style="position: absolute; top: 4px; right: 4px; z-index: 2" aria-label="Actions for {{card.title}}" aria-expanded="{{card.isExpanded}}" onClick="{{card.toggle}}">{{card.mark}}</button>
                       <div class="ticket-title" style="font-weight: 600; font-size: {{card.titleSize}}; line-height: 1.3; overflow-wrap: anywhere; pointer-events: none; position: relative">{{card.title}}</div>
@@ -321,27 +323,10 @@ a { color: #E5531A; } a:hover { color: #C64514; }
                         <div style="display: flex; flex-direction: column; gap: 6px">
                           <button class="children-toggle" aria-expanded="{{card.isExpanded}}" onClick="{{card.toggle}}">{{card.childrenLabel}}</button>
                           <sc-for list="{{card.children}}" as="child" hint-placeholder-count="2">
-                            <div class="child-row {{child.rowClass}}">
+                            <div class="child-row {{child.rowClass}}" draggable="{{child.draggable}}" onDragStart="{{child.drag}}" onDragEnd="{{endDrag}}" title="{{child.dragHint}}">
                               <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
                                 <button class="readme-link" style="font-weight: 600" title="Show {{child.title}} in the details" onClick="{{child.select}}">{{child.title}}</button>
                                 <span style="color: var(--muted); font: 10px var(--mono); text-align: right">{{child.place}}</span>
-                              </div>
-                              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px">
-                                <sc-if value="{{child.isStacked}}" hint-placeholder-val="{{ true }}">
-                                  <div style="display: flex; gap: 6px">
-                                    <button class="action small" title="{{child.moveHint}}" aria-label="Move {{child.title}} to the previous column" disabled="{{child.backOff}}" onClick="{{child.moveBack}}">←</button>
-                                    <button class="action small" title="{{child.moveHint}}" aria-label="Move {{child.title}} to the next column" disabled="{{child.nextOff}}" onClick="{{child.moveNext}}">→</button>
-                                    <button class="action small" onClick="{{child.pullOut}}">Pull out</button>
-                                  </div>
-                                </sc-if>
-                                <label style="margin-left: auto; display: flex; align-items: center; gap: 6px; color: var(--muted); font: 10px var(--mono)">
-                                  <span>parent</span>
-                                  <select class="mini-input" aria-label="Parent of {{child.title}}" value="{{child.pick.value}}" onChange="{{child.pick.change}}">
-                                    <sc-for list="{{child.pick.choices}}" as="choice" hint-placeholder-count="3">
-                                      <option value="{{choice.id}}">{{choice.label}}</option>
-                                    </sc-for>
-                                  </select>
-                                </label>
                               </div>
                             </div>
                           </sc-for>
@@ -366,16 +351,6 @@ a { color: #E5531A; } a:hover { color: #C64514; }
                             <button class="action small" style="margin-left: auto; color: var(--violations)" aria-label="Delete {{card.title}}" onClick="{{card.tools.remove}}">Delete</button>
                           </div>
                         </div>
-                      </sc-if>
-                      <sc-if value="{{card.parentPick}}" hint-placeholder-val="{{ false }}">
-                        <label style="display: flex; align-items: center; gap: 6px; color: var(--muted); font: 11px var(--mono)">
-                          <span>parent</span>
-                          <select class="mini-input" aria-label="Parent of {{card.title}}" value="{{card.parentPick.value}}" onChange="{{card.parentPick.change}}">
-                            <sc-for list="{{card.parentPick.choices}}" as="choice" hint-placeholder-count="3">
-                              <option value="{{choice.id}}">{{choice.label}}</option>
-                            </sc-for>
-                          </select>
-                        </label>
                       </sc-if>
                       <sc-if value="{{card.hasSegments}}" hint-placeholder-val="{{ true }}">
                         <div style="position: absolute; top: 28px; right: 7px; z-index: 1; display: flex; flex-direction: column; gap: 3px">
@@ -2209,7 +2184,11 @@ class Component extends DCLogic {
         type: event => this.setState({ childDraft: event.target.value }),
         add: event => { event.preventDefault(); this.addChild(ticket, this.state.childDraft.trim()); },
       },
-      parentPick: ticket.parent ? this.parentPick(ticket) : null,
+      draggable: children.length ? 'false' : 'true',
+      drag: event => this.startChildDrag(event, ticket),
+      dragOver: event => this.overCard(event, ticket),
+      drop: event => this.dropOnCard(event, ticket),
+      dropClass: this.state.dropOn === ticket.id ? 'drop-target' : '',
       parentNote: children.length ? PARENT_NOTE : '',
       inlineOrder: null,
       tools: {
@@ -2317,6 +2296,50 @@ class Component extends DCLogic {
     this.say(`${title} added to ${parent.title}, In progress in Discovery`);
   }
   // A pulled-out child is a card of its own beside its parent, and still has the parent.
+  titleOf(id) {
+    const found = this.state.tickets.find(entry => entry.id === id);
+    return found ? found.title : id;
+  }
+  startChildDrag(event, child) {
+    if (this.state.tickets.some(entry => entry.parent === child.id)) return;
+    event.stopPropagation();
+    if (event.dataTransfer) { event.dataTransfer.setData('text/plain', child.id); event.dataTransfer.effectAllowed = 'move'; }
+    this.setState({ draggingChild: child.id, orphaning: !!event.altKey });
+  }
+  endChildDrag() {
+    this.setState({ draggingChild: null, dropOn: null, orphaning: false });
+  }
+  overCard(event, ticket) {
+    const child = this.state.tickets.find(entry => entry.id === this.state.draggingChild);
+    if (!child || ticket.id === child.id || ticket.parent) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.state.dropOn !== ticket.id) this.setState({ dropOn: ticket.id });
+  }
+  dropOnCard(event, ticket) {
+    const child = this.state.tickets.find(entry => entry.id === this.state.draggingChild);
+    if (!child || ticket.id === child.id || ticket.parent) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.endChildDrag();
+    if (ticket.id === child.parent && !child.pulledOut) return;
+    this.reassignParent(child, ticket.id);
+  }
+  overBoard(event) {
+    if (!this.state.draggingChild) return;
+    event.preventDefault();
+    if (this.state.dropOn) this.setState({ dropOn: null });
+  }
+  dropOnBoard(event) {
+    const child = this.state.tickets.find(entry => entry.id === this.state.draggingChild);
+    if (!child) return;
+    event.preventDefault();
+    const orphan = event.altKey || this.state.orphaning;
+    this.endChildDrag();
+    if (!child.parent) return;
+    if (orphan) { this.reassignParent(child, ''); return; }
+    if (!child.pulledOut) this.pullOut(child);
+  }
   pullOut(child) {
     const rest = this.state.tickets.filter(entry => entry.id !== child.id);
     const at = rest.findIndex(entry => entry.id === child.parent);
@@ -2329,18 +2352,10 @@ class Component extends DCLogic {
   reassignParent(child, parentId) {
     const parent = this.state.tickets.find(entry => entry.id === parentId);
     const tickets = this.state.tickets.map(entry => (
-      entry.id === child.id ? { ...entry, parent: parent ? parent.id : null, pulledOut: parent ? !!entry.pulledOut : false } : entry
+      entry.id === child.id ? { ...entry, parent: parent ? parent.id : null, pulledOut: false } : entry
     ));
     this.setState({ tickets: settleParents(tickets) });
     this.say(parent ? `${child.title} is now a child of ${parent.title}` : `${child.title} has no parent now`);
-  }
-  parentPick(child) {
-    const candidates = this.state.tickets.filter(entry => entry.id !== child.id && !entry.parent && entry.column !== 'Complete');
-    return {
-      value: child.parent ?? '',
-      choices: [{ id: '', label: 'no parent' }, ...candidates.map(entry => ({ id: entry.id, label: entry.title }))],
-      change: event => this.reassignParent(child, event.target.value),
-    };
   }
   childRow(child) {
     const position = COLUMN_ORDER.indexOf(child.column);
@@ -2357,8 +2372,9 @@ class Component extends DCLogic {
       nextOff: isLocked || position === COLUMN_ORDER.length - 1,
       moveBack: () => this.moveBack(child),
       moveNext: () => this.moveForward(child),
-      pullOut: () => this.pullOut(child),
-      pick: this.parentPick(child),
+      draggable: child.pulledOut ? 'false' : 'true',
+      drag: event => this.startChildDrag(event, child),
+      dragHint: child.pulledOut ? '' : `Drag out of ${this.titleOf(child.parent)} to pull it out; Alt+drag out to make it a ticket with no parent; drag onto another ticket to make it that ticket's child`,
     };
   }
   composerVals() {
@@ -2389,7 +2405,7 @@ class Component extends DCLogic {
       select: () => this.setState({ selected: item.path }),
       press: () => this.setState({ selected: item.path }),
       pressLabel: `Show ${item.title}`,
-      titleSize: '13px', hasTags: false, tags: [], isParent: false, childrenLabel: '', children: [], childForm: null, parentPick: null, parentNote: '', tools: null, nextLabel: '',
+      titleSize: '13px', hasTags: false, tags: [], isParent: false, childrenLabel: '', children: [], childForm: null, draggable: 'false', drag: () => {}, dragOver: () => {}, drop: () => {}, dropClass: '', parentNote: '', tools: null, nextLabel: '',
       ...this.textVals(item.path, item.body ?? '', false, this.state.selected === item.path, () => this.setState({ selected: item.path }), value => this.keepItemText(item, value)),
       inlineOrder: this.state.selected === item.path ? this.itemOrder(item) : null,
     };
@@ -2501,6 +2517,9 @@ class Component extends DCLogic {
     const chosen = tickets.find(ticket => ticket.id === selected);
     const chosenItem = backlog.find(item => item.path === selected);
     return {
+      dragOverBoard: event => this.overBoard(event),
+      dropOnBoard: event => this.dropOnBoard(event),
+      endDrag: () => this.endChildDrag(),
       themeClass: `theme-${this.props.theme ?? 'engineering'}`,
       ticketCount: new Set(tickets.map(ticket => ticket.title)).size,
       chat: this.state.chat.map(entry => ({
