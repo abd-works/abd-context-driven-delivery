@@ -144,13 +144,22 @@ export class ChatBarClient {
     return one ? [one] : []
   }
 
-  // The status line: the session, its stage, its next fidelity or done, and how many fidelities have violations.
-  get statusLine(): string {
-    const ticket = this.ticket
-    if (!ticket) return ''
-    const violations = ticket.progress.filter(progress => progress.state === 'violations').length
-    const next = ticket.next ? `next: ${ticket.next.fidelity.slug}` : ticket.is_done ? 'done' : ''
-    return [ticket.name, ticket.column.name, next, violations ? `${violations} with violations` : ''].filter(Boolean).join(' · ')
+  // The repository the board shows, by its folder's name.
+  get repoName(): string {
+    return this.board?.project ?? ''
+  }
+
+  // The folder the session works in, its workpath; a session that chose none works in the whole repository.
+  get rootPath(): string {
+    return this.ticket ? this.ticket.session.workpath || this.repoName : ''
+  }
+
+  // The status row under the strip: the repository, the session, the folder it works in, and the action the button
+  // runs with the fidelities it runs on.
+  statusLine(action: string): string {
+    if (!this.ticket) return ''
+    const acting = action ? [action, ...this.actionFidelities.map(fidelity => fidelity.slug)].join(' ') : ''
+    return [this.repoName, this.ticket.name, this.rootPath, acting].filter(Boolean).join(' · ')
   }
 
   // The agent context: what the Python Ticket tells the agent about the active session in its system prompt, the same

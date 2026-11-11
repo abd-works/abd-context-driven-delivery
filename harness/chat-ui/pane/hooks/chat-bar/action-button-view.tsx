@@ -25,7 +25,7 @@ export function actionOf(chatBar: ChatBarClient): string {
 }
 
 // What the button shows and runs: the action picked from the menu, else the next one.
-function shownActionOf(chatBar: ChatBarClient, chosenAction: string | null): string {
+export function shownActionOf(chatBar: ChatBarClient, chosenAction: string | null): string {
   return chosenAction && chatBar.actionFidelity ? chosenAction : actionOf(chatBar)
 }
 

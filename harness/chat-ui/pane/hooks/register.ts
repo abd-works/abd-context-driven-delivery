@@ -36,8 +36,8 @@ const CHANGES_FIDELITIES = /^(dot-|card-pick-|stage-pick-)/
 const CHECK_IN_MILLISECONDS = 1000
 const CDD_TOOL = /^mcp__(plugin_cdd_)?cdd__/
 
-// The status line the chat last showed, so the cached system prompt is composed again only when it changes.
-let shownStatus = ''
+// The agent context the system prompt last held, so the cached prompt is composed again only when it changes.
+let shownContext = ''
 
 // A failure the mod rides over, such as the cdd server still connecting, goes to the debug log, never nowhere.
 function logged($: EngineInterface, doing: string): (failure: unknown) => void {
@@ -52,9 +52,10 @@ async function readActive($: EngineInterface): Promise<void> {
   if (chatBar.problem) return
   await loadFormatChips($, chatBar)
   // The system prompt is cached; when the active session's summary changes, it is composed again next turn.
-  if (chatBar.statusLine !== shownStatus) await $.ui.invalidate('prompt.section')
-  shownStatus = chatBar.statusLine
-  $.ui.status(chatBar.statusLine || undefined)
+  if (chatBar.agentContext !== shownContext) await $.ui.invalidate('prompt.section')
+  shownContext = chatBar.agentContext
+  // The chat bar draws the status row itself (StatusRowView), so the host's status line is left empty.
+  $.ui.status(undefined)
 }
 
 export const register: Register = on => {
