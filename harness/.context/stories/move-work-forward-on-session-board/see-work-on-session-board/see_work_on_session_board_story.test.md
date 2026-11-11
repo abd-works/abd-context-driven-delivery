@@ -31,7 +31,7 @@ section: body
 *When* the session board reads the [board](../../../../../space/kanban/.context/kanban-model.md#board)
 *Then* the [columns](../../../../../space/kanban/.context/kanban-model.md#column) read Backlog, Discovery, Specification, Implementation, and Complete, in that order
 *And* each [stage](../../../../../space/kanban/.context/kanban-model.md#stage--column) shows an In progress list and a Done list
-*And* the Discovery [stage](../../../../../space/kanban/.context/kanban-model.md#stage--column) requires story_map, bounded_context, and ia, each through Generate, Validate, and Review
+*And* the Discovery [stage](../../../../../space/kanban/.context/kanban-model.md#stage--column) requires story_map, bounded_context, and ia, each through Generate and Validate
 
 #### Scenario: Say the cdd server is not connected
 
@@ -79,7 +79,7 @@ section: body
 #### Scenario: Announce a fidelity done
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) billing-report has the story_map [fidelity](../../../../../space/kanban/.context/kanban-model.md#fidelityguidance) generated and validated with no violations
-*When* a review of stories-story-map is written to billing-report's [session log](../../../../../space/kanban/.context/kanban-model.md#session)
+*When* a clean validate of stories-story-map is written to billing-report's [session log](../../../../../space/kanban/.context/kanban-model.md#session)
 *Then* a toast says stories-story-map done on billing-report
 
 #### Scenario: Show a server failure on one line

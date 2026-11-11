@@ -148,15 +148,15 @@ Observed: `/satisfy` validates, fixes every reported violation in the artifact, 
 
 ### (S) Agent --> Repair Guidance Behind Violation
 
-Intended (increment 17, Repair Guidance From Mistakes; the person, 2026-11-11: not built yet): `/repair` fixes why the practice produced the violation, in its context, example, template or scanner, rather than the artifact alone, and waits for approval (`actions/improvement`).
+Intended (increment 5, Repair Guidance From Mistakes; the person, 2026-11-11: not built yet): `/repair` fixes why the practice produced the violation, in its context, example, template or scanner, rather than the artifact alone, and waits for approval (`actions/improvement`).
 
 ### (S) Agent --> Improve Guidance From Mistake
 
-Intended (increment 17, Repair Guidance From Mistakes; the person, 2026-11-11: not built yet): `/improve` logs the mistake and the correction, runs repair, and captures a regression example so the same failure does not come back (`catalog/workflow.md` Scenario 4).
+Intended (increment 5, Repair Guidance From Mistakes; the person, 2026-11-11: not built yet): `/improve` logs the mistake and the correction, runs repair, and captures a regression example so the same failure does not come back (`catalog/workflow.md` Scenario 4).
 
 ### (S) Agent --> Add Rule From Failed Example
 
-Intended (increment 17, Repair Guidance From Mistakes; the person, 2026-11-11: not built yet): validate adds a named rule from an example that failed, so the next validation catches the same mistake (`actions/validate` purpose).
+Intended (increment 5, Repair Guidance From Mistakes; the person, 2026-11-11: not built yet): validate adds a named rule from an example that failed, so the next validation catches the same mistake (`actions/validate` purpose).
 
 ## (E) Inject Guidance Into Chat Lifecycle
 

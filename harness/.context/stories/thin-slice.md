@@ -13,7 +13,7 @@ section: body
 
 **Slicing intent:** Increment 0 is what the code does today. The Intended and Requested stories follow the order set on 2026-11-06.
 
-**Spine vs optional:** the increments run in the order they are built, as set on 2026-11-10: ticket management and the editor-app stories first, then syncing the design canvas with production and integrating stories with the canvas explorer, then faster command entry and the Clean Engineering checks (metrics on the model, then checks across files), then the fully integrated flow, then the board's file review, workflow customizing and the Story UI editor's own stories; guards, a faster board, chat bar parity and linked models on the canvas follow, next-step suggestions follow, and repairing guidance from mistakes comes last.
+**Spine vs optional:** the increments run in the order they are built, as set on 2026-11-10: ticket management and the editor-app stories first, then syncing the design canvas with production and integrating stories with the canvas explorer, then repairing guidance from mistakes, then faster command entry and the Clean Engineering checks (metrics on the model, then checks across files), then the fully integrated flow, then the board's file review, workflow customizing and the Story UI editor's own stories; guards, a faster board, chat bar parity and linked models on the canvas follow, and next-step suggestions come last.
 
 ## Increments
 
@@ -361,7 +361,19 @@ section: body
 - *Place Notes On The Story Map*
 - *Rearrange Stories Inside The Canvas*
 
-### Increment 5: Enter Commands Faster
+### Increment 5: Repair Guidance From Mistakes
+
+**Outcome:** a violation is traced back to the guidance that let it happen and that guidance is fixed, a mistake and its correction are captured as a regression example, and a failed example becomes a new named rule, so each error makes every later run better.
+
+**Slicing notes:** the person, 2026-11-11: repair is not built yet, so it is taken out of Built Today and planned as its own increment.
+
+**Stories in this increment:**
+
+- *Repair Guidance Behind Violation*
+- *Improve Guidance From Mistake*
+- *Add Rule From Failed Example*
+
+### Increment 6: Enter Commands Faster
 
 **Outcome:** a person types a CDD command with the actions, practices, fidelities and formats offered as they go.
 
@@ -375,7 +387,7 @@ section: body
 - *Add Comment To Sent Command*
 - *Announce CDD Tool Calls*
 
-### Increment 6: Measure Code On The Model
+### Increment 7: Measure Code On The Model
 
 **Outcome:** validating at the Clean Engineering model or code fidelity measures each function, class and module, keeps each measure as a fact on its node, and reports what is past a limit in the same validation report.
 
@@ -386,7 +398,7 @@ section: body
 - *Record Code Metrics As Node Facts*
 - *Check Code Metrics Against Clean Engineering Limits*
 
-### Increment 7: Check Clean Engineering Across Files
+### Increment 8: Check Clean Engineering Across Files
 
 **Outcome:** Clean Engineering's validation finds the problems that only show across files, as graph rules where the graph can answer and as one AI-judged pass over the codebase where it cannot.
 
@@ -400,7 +412,7 @@ section: body
 - *Report One-Class Package*
 - *Judge Clean Engineering Rules Across Files*
 
-### Increment 8: Fully Integrated App Flow
+### Increment 9: Fully Integrated App Flow
 
 **Outcome:** the chat bar, the board, the Story UI editor with its story explorer, and the Graph app work on one ticket together, and violations are read from the latest graph that generate refreshes.
 
@@ -448,7 +460,7 @@ section: body
 - *Test Knowledge Graph Explorer On Session Files*
 - *Display Drawio File As Diagram*
 
-### Increment 9: Review Work In Board Files
+### Increment 10: Review Work In Board Files
 
 **Outcome:** a person reads a ticket's context and changed files in a proper viewer, comments on them to the chat, and reads clean reports.
 
@@ -462,7 +474,7 @@ section: body
 - *Comment On File Selection*
 - *Show AI Changes As Diff*
 
-### Increment 10: Customize Board Workflow
+### Increment 11: Customize Board Workflow
 
 **Outcome:** a team shapes the board's stages, policies, steps and test strategy to its own way of working.
 
@@ -483,7 +495,7 @@ section: body
 - *Choose Testing Strategy*
 - *Toggle Sub Agents*
 
-### Increment 11: Author Story Maps
+### Increment 12: Author Story Maps
 
 **Outcome:** the Story UI editor gets its own remaining stories: dashboard, nested lanes, the node inspector, save history, real-time sessions and AI story changes.
 
@@ -506,7 +518,7 @@ section: body
 - *Review Proposed Map Changes*
 - *Apply AI Change To Story Map*
 
-### Increment 12: Guard Work And Recover Fast
+### Increment 13: Guard Work And Recover Fast
 
 **Outcome:** a person sees at once when cdd is down, fixes it from where they are, and the agent is stopped before it breaks a rule.
 
@@ -526,7 +538,7 @@ section: body
 - *Restart Parts From Chat Bar*
 - *Open App From Health Panel*
 
-### Increment 13: Show Board Quickly
+### Increment 14: Show Board Quickly
 
 **Outcome:** `board.show` stops repeating git checks, guidance parsing and session file reads, so the board and the chat bar answer faster and `space/kanban/kanban_tools_spec.py` runs in under 60 s.
 
@@ -538,7 +550,7 @@ section: body
 - *Cache Practice Guidance By File And Change Time*
 - *Read Session File Once Per Board Build*
 
-### Increment 14: Bring Chat Bar Level With Board
+### Increment 15: Bring Chat Bar Level With Board
 
 **Outcome:** everything a person can do to one session on the board, they can do from the chat bar.
 
@@ -557,7 +569,7 @@ section: body
 - *Push Work From Chat Bar*
 - *Pull Latest From Chat Bar*
 
-### Increment 15: Draw Linked Models On The Canvas
+### Increment 16: Draw Linked Models On The Canvas
 
 **Outcome:** from any story a person reaches its screen, its classes and its bounded context by clicking, and back, and every diagram matches its drawio layout.
 
@@ -574,7 +586,7 @@ section: body
 - *See The Stories That Exercise A Class*
 - *Mark Model Nodes That Fail Rules*
 
-### Increment 16: Suggest The Next Step
+### Increment 17: Suggest The Next Step
 
 **Outcome:** the chat proposes the next command, and captures handoffs, corrections and decisions.
 
@@ -587,18 +599,6 @@ section: body
 - *Display Latest Session Handoff*
 - *Offer Correction Log Entry*
 - *Offer Decision Record*
-
-### Increment 17: Repair Guidance From Mistakes
-
-**Outcome:** a violation is traced back to the guidance that let it happen and that guidance is fixed, a mistake and its correction are captured as a regression example, and a failed example becomes a new named rule, so each error makes every later run better.
-
-**Slicing notes:** the person, 2026-11-11: repair is not built yet, so it is taken out of Built Today and planned as its own increment.
-
-**Stories in this increment:**
-
-- *Repair Guidance Behind Violation*
-- *Improve Guidance From Mistake*
-- *Add Rule From Failed Example*
 
 ### Increment 18: Maybe Later
 
