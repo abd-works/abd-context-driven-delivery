@@ -104,7 +104,7 @@ function SessionNameView($: EngineInterface, { Box, Button, Text }: ElementTable
           <Text weight="semibold" color={BRAND.text}>{chatBar.sessionName || 'main'}</Text>
         </Button>
       </Box>
-      {chatBar.isMain ? GlyphButtonView({ Box, Button, Text }, 'session-list-button', '▾', BRAND.muted, () => toggleSessionList($)) : null}
+      {chatBar.isMain ? GlyphButtonView({ Box, Button, Text }, 'session-list-button', '+', BRAND.muted, () => toggleSessionList($)) : null}
     </Box>
   )
 }
