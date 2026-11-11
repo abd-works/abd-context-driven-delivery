@@ -367,3 +367,14 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 - **`domain-tier-only-for-domain-logic`** — Add a domain tier only when `<aggregate>.ts` holds logic worth proving alone. A core that only states structure has nothing to run, and the server tier already exercises it.
 - **`same-signature-across-languages`** — When the domain is in another language, as a CDD-backed domain is, a behavior the Mamba spec states keeps the same `should` sentence in the shared behavior. A sentence on one side only shows a behavior untested on the other.
 - **`ask-cross-aggregate-sync`** — **Hard gate** when generating stories. Use AskQuestion; persist the answer under **Cross-aggregate sync** in `.context/grill-answers.md` before writing story files.
+## Judgment — `cdd_guidance/actions/validate/checked_graph.py`
+
+### `limit-operation-parameters` — Fail
+- checked_graph.py:27 `CheckedGraph.__init__`: five parameters; `edited` and `named` are one concept, what the call names to check.
+
+## Judgment — `space/kanban/ticket.py`
+
+### `limit-operation-parameters` — Fail
+- ticket.py:692 `FidelityProgress.__init__`: five values; `done_actions` and `has_violations` are one concept, the fidelity's action states read from the log.
+
+Not upheld: `keep-classes-single-responsibility` on `Ticket` (ticket.py:83). Its public operations are its published tools and data fields, kept on it by `space/kanban/.context/cdr/0004-a-ticket-keeps-its-published-tools-and-fields.md`; the person kept that decision on 2026-11-11. `use-typed-signatures`, `prefer-instance-operations` and `keep-operations-small-focused` pass after the fix.
