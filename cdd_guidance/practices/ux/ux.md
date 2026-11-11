@@ -129,6 +129,7 @@ default_format: html
 stage: specification
 outputs:
   html: "{epic}/{user_goal}.html"
+  claude_design: "**/design-canvas/{version}/project/canvas.json"
 ```
 
 #### Overview

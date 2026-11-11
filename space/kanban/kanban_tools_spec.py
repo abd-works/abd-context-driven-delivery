@@ -719,6 +719,19 @@ with description("the board tools") as self:
             with it("should open with the chip of its default format picked"):
                 expect([chip["label"] for chip in self.chips if chip["starts_picked"]]).to(equal(["markdown"]))
 
+        with context("with an action bar opened on its UX mockup"):
+            with before.each:
+                self.chips = self.project.call("ticket.format_choices", ticket="sign-up", fidelities=["ux-mockup"])
+
+            with it("should offer the design canvas as a chip of its own, after the code"):
+                expect([chip["label"] for chip in self.chips]).to(equal(["code", "canvas"]))
+
+            with it("should send the claude_design format for the canvas chip"):
+                expect(next(chip["formats"] for chip in self.chips if chip["label"] == "canvas")).to(equal(["claude_design"]))
+
+            with it("should open with the canvas unpicked, since the mockup defaults to html"):
+                expect([chip["label"] for chip in self.chips if chip["starts_picked"]]).to(equal(["code"]))
+
         with context("with an action bar opened on its story map and its bounded context, the story map's markdown written"):
             with before.each:
                 (self.project.root / ".context").mkdir(exist_ok=True)

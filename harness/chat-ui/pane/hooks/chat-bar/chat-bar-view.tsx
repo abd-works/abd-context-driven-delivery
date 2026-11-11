@@ -132,7 +132,7 @@ function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBa
 }
 
 // The canvas's glyph for each format group; a group with none shows its name.
-const FORMAT_GLYPHS: Record<string, string> = { markdown: 'M↓', diagram: '◇', code: '</>' }
+const FORMAT_GLYPHS: Record<string, string> = { markdown: 'M↓', diagram: '◇', code: '</>', canvas: '▦' }
 
 // One chip per format group the fidelities offer, just before the action button, as on a board ticket's action bar:
 // orange while picked, green when every fidelity has a file in it already, grey otherwise; a press turns it on or off.

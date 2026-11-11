@@ -78,3 +78,6 @@ with description("a fidelity's declared outputs") as self:
 
         with it("should write mockups as html beside the front end's code"):
             expect(self.ux.fidelities["mockup"].outputs["html"]).to(equal("{epic}/{user_goal}.html"))
+
+        with it("should also offer the mockup as a Claude Design canvas, each version's canvas.json"):
+            expect(self.ux.fidelities["mockup"].outputs["claude_design"]).to(equal("**/design-canvas/{version}/project/canvas.json"))
