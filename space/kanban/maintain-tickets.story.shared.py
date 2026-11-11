@@ -110,6 +110,34 @@ def _(s):
         pass
 
 
+@shared_stories.scenario("Edit Ticket Text", "Edit a child's text inside its parent")
+def _(s):
+    @s.given('the ticket checkout-flow holds its child ticket confirm-order')
+    def _(world):
+        pass
+
+    @s.and_("confirm-order's text is Show the order and take the payment.")
+    def _(world):
+        pass
+
+    @s.when("the Person edits confirm-order's text inside checkout-flow's card to Show the order, then take the payment.")
+    def _(world):
+        # Board.ticket("confirm-order")
+        #   <- confirm-order
+        # confirm-order.edit_text("Show the order, then take the payment.")
+        #   -> self.session.keep_text("Show the order, then take the payment.")
+        #   <- confirm-order with the text Show the order, then take the payment.
+        pass
+
+    @s.then("confirm-order.md in confirm-order's session folder holds Show the order, then take the payment.")
+    def _(world):
+        pass
+
+    @s.and_("confirm-order's tooltip in checkout-flow's card shows Show the order, then take the payment.")
+    def _(world):
+        pass
+
+
 @shared_stories.scenario("Reorder Tickets In Column", "Keep a ticket where it was moved in its column")
 def _(s):
     @s.given('the Discovery column shows the ticket pet-visits above sign-up')

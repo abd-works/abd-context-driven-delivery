@@ -46,13 +46,43 @@ def _(s):
         pass
 
 
+@shared_stories.scenario("Add Child Ticket", "Drag a ticket onto a parent")
+def _(s):
+    @s.given('the ticket pet-visits is In progress in Discovery with no parent')
+    def _(world):
+        pass
+
+    @s.and_('the ticket checkout-flow is In progress in Discovery')
+    def _(world):
+        pass
+
+    @s.when('the Person drags pet-visits onto checkout-flow')
+    def _(world):
+        # Board.ticket("pet-visits")
+        #   <- pet-visits
+        # Board.ticket("checkout-flow")
+        #   <- checkout-flow
+        # pet-visits.reassign_parent(checkout-flow)
+        #   -> self.session.set_parent(checkout-flow.session)
+        #   <- pet-visits inside checkout-flow
+        pass
+
+    @s.then("checkout-flow's card holds pet-visits")
+    def _(world):
+        pass
+
+    @s.and_('no column shows pet-visits as a card of its own')
+    def _(world):
+        pass
+
+
 @shared_stories.scenario("Detach Child Ticket", "Pull a child out of its parent")
 def _(s):
     @s.given('the ticket checkout-flow holds its child ticket enter-card-details in Discovery')
     def _(world):
         pass
 
-    @s.when('the Person pulls enter-card-details out of checkout-flow')
+    @s.when('the Person drags enter-card-details out of checkout-flow')
     def _(world):
         # Board.ticket("enter-card-details")
         #   <- enter-card-details
@@ -107,7 +137,7 @@ def _(s):
     def _(world):
         pass
 
-    @s.when('the Person makes enter-card-details a child of billing-report')
+    @s.when('the Person drags enter-card-details onto billing-report')
     def _(world):
         # Board.ticket("enter-card-details")
         #   <- enter-card-details
@@ -137,7 +167,7 @@ def _(s):
     def _(world):
         pass
 
-    @s.when('the Person takes enter-card-details off checkout-flow')
+    @s.when('the Person Alt-drags enter-card-details out of checkout-flow')
     def _(world):
         # Board.ticket("enter-card-details")
         #   <- enter-card-details

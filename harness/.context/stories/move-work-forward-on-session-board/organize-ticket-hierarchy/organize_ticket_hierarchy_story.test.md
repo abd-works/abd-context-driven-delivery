@@ -53,6 +53,7 @@ section: body
 | `.sessions/session-board/ticket-enhancements.md` (commit b08bfe47e) | "Create children: a person can also add children to a ticket by hand" |
 | `harness/.context/ux/ticket-ui.drawio` | "add and remove a child" |
 | `space/kanban/ticket.py:97-100`, `space/session/sessions.py:269-276` | Observed: `Ticket.create` with a parent records the parent in `session.json` and opens the ticket in Discovery |
+| the person, 2026-11-11 | "user needs to drag the card outside the parent"; "alt drag … create an orphaned ticket … no longer a child"; "drag to adds to parent and removes from board" |
 
 The realizations name the operations these scenarios need; none of them exists yet, so each is Intended.
 
@@ -73,6 +74,25 @@ checkout-flow.add_child("Enter card details")
 *Then* the ticket enter-card-details is In progress in Discovery with the parent checkout-flow
 *And* checkout-flow's card holds enter-card-details (Display Child Tickets In Parent)
 
+#### Scenario: Drag a ticket onto a parent
+
+*Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits is In progress in Discovery with no parent
+*And* the ticket checkout-flow is In progress in Discovery
+*When* the Person drags pet-visits onto checkout-flow
+
+```realization
+Board.ticket("pet-visits")
+  <- pet-visits
+Board.ticket("checkout-flow")
+  <- checkout-flow
+pet-visits.reassign_parent(checkout-flow)
+  -> self.session.set_parent(checkout-flow.session)
+  <- pet-visits inside checkout-flow
+```
+
+*Then* checkout-flow's card holds pet-visits
+*And* no column shows pet-visits as a card of its own
+
 ## Story: Display Child Tickets In Parent
 
 ### Evidence
@@ -82,6 +102,7 @@ checkout-flow.add_child("Enter card details")
 | `.sessions/session-board/ticket-enhancements.md` (commit b08bfe47e) | "a parent ticket holds its child tickets stacked inside it. The parent's title sits small, above the children." |
 | `harness/.context/ux/ticket-ui.drawio` | a pulled-out child keeps a dashed row in its parent |
 | `space/kanban/app/src/kanban/ticket/ticket-client.tsx:97-98` | Observed: a child's card names its scope and parent, such as story of checkout-flow, and sits in its column like any other ticket |
+| the person, 2026-11-11 | a stacked child names no stage: "its state is state of parent"; "hover tooltip should show ticket text" |
 
 #### Scenario: Stack a parent's children inside its card
 
@@ -91,6 +112,7 @@ checkout-flow.add_child("Enter card details")
 *Then* checkout-flow's card holds enter-card-details and confirm-order stacked inside it
 *And* checkout-flow's title sits small above them
 *And* neither child shows as a card of its own in Discovery
+*And* neither child row names a stage of its own
 
 #### Scenario: Keep a dashed row for a child pulled out of its parent
 
@@ -98,6 +120,13 @@ checkout-flow.add_child("Enter card details")
 *And* its child ticket enter-card-details was pulled out of it and is in Specification
 *When* the [board](../../../../../space/kanban/.context/kanban-model.md#board) shows checkout-flow
 *Then* checkout-flow's card holds a dashed row for enter-card-details
+
+#### Scenario: Show a child's text when the pointer rests on it
+
+*Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow holds its child ticket confirm-order
+*And* confirm-order's text is Show the order and take the payment.
+*When* the Person rests the pointer on confirm-order in checkout-flow's card
+*Then* a tooltip shows Show the order and take the payment.
 
 ## Story: Expand Parent Ticket
 
@@ -131,13 +160,14 @@ checkout-flow.add_child("Enter card details")
 |--------|------|
 | `.sessions/session-board/ticket-enhancements.md` (commit b08bfe47e) | "pull a child out of its parent so it moves on its own"; "a child pulled out of its parent becomes a ticket of its own beside it" |
 | `harness/.context/ux/ticket-ui.drawio` | "pull out of parent; and then drag and then move like regular ticket; remembers parent"; the pulled-out card reads parent.Child |
+| the person, 2026-11-11 | "user needs to drag the card outside the parent"; "alt drag … create an orphaned ticket … no longer a child"; "drag to adds to parent and removes from board" |
 
 The realizations name the operations these scenarios need; none of them exists yet, so each is Intended.
 
 #### Scenario: Pull a child out of its parent
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow holds its child ticket enter-card-details in Discovery
-*When* the Person pulls enter-card-details out of checkout-flow
+*When* the Person drags enter-card-details out of checkout-flow
 
 ```realization
 Board.ticket("enter-card-details")
@@ -175,6 +205,7 @@ enter-card-details.move_next()
 | `.sessions/session-board/ticket-enhancements.md` (commit b08bfe47e) | "Add a ticket as a child of a different parent"; "Make a child independent of its parent" |
 | `harness/.context/ux/ticket-ui.drawio` | "add and remove a child" |
 | `space/session/sessions.py:276` | Observed: a ticket's parent is the `parent` field of its `session.json` |
+| the person, 2026-11-11 | "user needs to drag the card outside the parent"; "alt drag … create an orphaned ticket … no longer a child"; "drag to adds to parent and removes from board" |
 
 The realizations name the operations these scenarios need; none of them exists yet, so each is Intended.
 
@@ -182,7 +213,7 @@ The realizations name the operations these scenarios need; none of them exists y
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) enter-card-details is a child of checkout-flow
 *And* the ticket billing-report is In progress in Discovery
-*When* the Person makes enter-card-details a child of billing-report
+*When* the Person drags enter-card-details onto billing-report
 
 ```realization
 Board.ticket("enter-card-details")
@@ -201,7 +232,7 @@ enter-card-details.reassign_parent(billing-report)
 #### Scenario: Take a child off its parent
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) enter-card-details is a child of checkout-flow
-*When* the Person takes enter-card-details off checkout-flow
+*When* the Person Alt-drags enter-card-details out of checkout-flow
 
 ```realization
 Board.ticket("enter-card-details")

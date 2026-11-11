@@ -135,6 +135,23 @@ Gift cards.edit_text("Sell gift cards at the till.")
 *And* the Backlog shows Gift cards with the text Sell gift cards at the till.
 
 
+#### Scenario: Edit a child's text inside its parent
+
+*Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow holds its child ticket confirm-order
+*And* confirm-order's text is Show the order and take the payment.
+*When* the Person edits confirm-order's text inside checkout-flow's card to Show the order, then take the payment.
+
+```realization
+Board.ticket("confirm-order")
+  <- confirm-order
+confirm-order.edit_text("Show the order, then take the payment.")
+  -> self.session.keep_text("Show the order, then take the payment.")
+  <- confirm-order with the text Show the order, then take the payment.
+```
+
+*Then* confirm-order.md in confirm-order's [session](../../../../../space/kanban/.context/kanban-model.md#session) folder holds Show the order, then take the payment.
+*And* confirm-order's tooltip in checkout-flow's card shows Show the order, then take the payment.
+
 ## Story: Reorder Tickets In Column
 
 ### Evidence

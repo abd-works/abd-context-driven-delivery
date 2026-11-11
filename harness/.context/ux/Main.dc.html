@@ -323,11 +323,20 @@ a { color: #E5531A; } a:hover { color: #C64514; }
                         <div style="display: flex; flex-direction: column; gap: 6px">
                           <button class="children-toggle" aria-expanded="{{card.isExpanded}}" onClick="{{card.toggle}}">{{card.childrenLabel}}</button>
                           <sc-for list="{{card.children}}" as="child" hint-placeholder-count="2">
-                            <div class="child-row {{child.rowClass}}" draggable="{{child.draggable}}" onDragStart="{{child.drag}}" onDragEnd="{{endDrag}}" title="{{child.dragHint}}">
+                            <div class="child-row {{child.rowClass}}" draggable="{{child.draggable}}" onDragStart="{{child.drag}}" onDragEnd="{{endDrag}}" title="{{child.hint}}">
                               <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
-                                <button class="readme-link" style="font-weight: 600" title="Show {{child.title}} in the details" onClick="{{child.select}}">{{child.title}}</button>
+                                <button class="readme-link" style="font-weight: 600" title="{{child.hint}}" onClick="{{child.select}}" onDoubleClick="{{child.editText}}">{{child.title}}</button>
                                 <span style="color: var(--muted); font: 10px var(--mono); text-align: right">{{child.place}}</span>
                               </div>
+                              <sc-if value="{{child.editsHere}}" hint-placeholder-val="{{ false }}">
+                                <form class="text-editor" onSubmit="{{child.textEditor.save}}">
+                                  <textarea aria-label="Text of {{child.title}}" rows="3" value="{{child.textEditor.draft}}" onChange="{{child.textEditor.type}}" onKeyDown="{{child.textEditor.key}}" autoFocus="{{ true }}"></textarea>
+                                  <div style="display: flex; gap: 6px">
+                                    <button class="action small primary" type="submit">Save</button>
+                                    <button class="action small" type="button" onClick="{{child.textEditor.cancel}}">Cancel</button>
+                                  </div>
+                                </form>
+                              </sc-if>
                             </div>
                           </sc-for>
                         </div>
@@ -2374,7 +2383,8 @@ class Component extends DCLogic {
       moveNext: () => this.moveForward(child),
       draggable: child.pulledOut ? 'false' : 'true',
       drag: event => this.startChildDrag(event, child),
-      dragHint: child.pulledOut ? '' : `Drag out of ${this.titleOf(child.parent)} to pull it out; Alt+drag out to make it a ticket with no parent; drag onto another ticket to make it that ticket's child`,
+      hint: child.text || (child.pulledOut ? '' : `Drag out of ${this.titleOf(child.parent)} to pull it out; Alt+drag out to make it a ticket with no parent; drag onto another ticket to make it that ticket's child`),
+      ...this.textVals(`child:${child.id}`, child.text ?? '', false, false, () => this.setState({ selected: child.id }), value => this.keepTicketText(child, value)),
     };
   }
   composerVals() {
