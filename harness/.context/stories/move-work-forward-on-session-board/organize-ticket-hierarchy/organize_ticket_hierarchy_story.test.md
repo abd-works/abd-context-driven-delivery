@@ -55,7 +55,7 @@ section: body
 | `space/kanban/ticket.py:97-100`, `space/session/sessions.py:269-276` | Observed: `Ticket.create` with a parent records the parent in `session.json` and opens the ticket in Discovery |
 | the person, 2026-11-11 | "user needs to drag the card outside the parent"; "alt drag … create an orphaned ticket … no longer a child"; "drag to adds to parent and removes from board" |
 
-The realizations name the operations these scenarios need; none of them exists yet, so each is Intended.
+The realizations name the operations these scenarios need. Add a child ticket by hand is built (2026-11-11): the plus on a ticket card opens a title field, and Enter calls `ticket.add_child`.
 
 #### Scenario: Add a child ticket by hand
 
@@ -162,7 +162,7 @@ pet-visits.reassign_parent(checkout-flow)
 | `harness/.context/ux/ticket-ui.drawio` | "pull out of parent; and then drag and then move like regular ticket; remembers parent"; the pulled-out card reads parent.Child |
 | the person, 2026-11-11 | "user needs to drag the card outside the parent"; "alt drag … create an orphaned ticket … no longer a child"; "drag to adds to parent and removes from board" |
 
-The realizations name the operations these scenarios need; none of them exists yet, so each is Intended.
+The realizations name the operations these scenarios need. Add a child ticket by hand is built (2026-11-11): the plus on a ticket card opens a title field, and Enter calls `ticket.add_child`.
 
 #### Scenario: Pull a child out of its parent
 
@@ -207,7 +207,7 @@ enter-card-details.move_next()
 | `space/session/sessions.py:276` | Observed: a ticket's parent is the `parent` field of its `session.json` |
 | the person, 2026-11-11 | "user needs to drag the card outside the parent"; "alt drag … create an orphaned ticket … no longer a child"; "drag to adds to parent and removes from board" |
 
-The realizations name the operations these scenarios need; none of them exists yet, so each is Intended.
+The realizations name the operations these scenarios need. Add a child ticket by hand is built (2026-11-11): the plus on a ticket card opens a title field, and Enter calls `ticket.add_child`.
 
 #### Scenario: Move a child to another parent
 
@@ -254,7 +254,7 @@ enter-card-details.reassign_parent(None)
 |--------|------|
 | `harness/.context/ux/ticket-ui.drawio` | "parents cant be dragged; they change stage by taking on the stage of the leftmost ticket" |
 
-The realizations name the operations these scenarios need; none of them exists yet, so each is Intended.
+The realizations name the operations these scenarios need. Add a child ticket by hand is built (2026-11-11): the plus on a ticket card opens a title field, and Enter calls `ticket.add_child`.
 
 #### Scenario: Show a parent in its earliest child's stage
 
@@ -312,7 +312,7 @@ checkout-flow.move_next()
 | `.sessions/session-board/ticket-enhancements.md` (commit b08bfe47e) | "Nest branches and sessions for tickets in a hierarchy" |
 | `space/kanban/ticket.py:114-125` | Observed: a ticket's branch and work branch are named after the ticket |
 
-The realizations name the operations these scenarios need; none of them exists yet, so each is Intended.
+The realizations name the operations these scenarios need. Add a child ticket by hand is built (2026-11-11): the plus on a ticket card opens a title field, and Enter calls `ticket.add_child`.
 
 Evidence gap: the source says to nest, not how. The folder and branch below are examples to agree. Git cannot hold a branch checkout-flow/enter-card-details beside a branch checkout-flow, so the child's branch joins the names with a dot, as the drawing's parent.Child does.
 

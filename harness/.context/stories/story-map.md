@@ -322,7 +322,7 @@ Observed: `Ticket.new` records the parent; Split fills the prompt through `fillS
 
 ### (S) Person --> [Add Child Ticket](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-add-child-ticket)
 
-Intended (`.sessions/session-board/ticket-enhancements.md`; `harness/.context/ux/ticket-ui.drawio` "add and remove a child"): a person adds a child ticket to a parent by hand. Built today (checked 2026-11-10): `ticket.create(parent=…)` records the parent (`ticket.py:94`, `sessions.py:268-275`) and Split asks the chat for one child per story. Missing: adding a single child by hand on the board.
+Built (2026-11-11): a person adds a child ticket to a parent by hand: the plus on its card opens a title field, and Enter calls `ticket.add_child` (`add-child-view.tsx`). Split still asks the chat for one child per story.
 
 ### (S) Board App --> [Display Child Tickets In Parent](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-display-child-tickets-in-parent)
 

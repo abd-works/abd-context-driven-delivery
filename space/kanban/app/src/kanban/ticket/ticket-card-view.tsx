@@ -5,6 +5,7 @@ import { ageOf } from '../shared/board-brand'
 import { useBoard } from '../shared/board-context'
 import type { ColumnClient } from '../board/column-client'
 import { SessionActionIcon } from '../shared/icons'
+import { AddChildView } from './add-child-view'
 import { FileViewsView } from './file-views-view'
 import type { TicketClient } from './ticket-client'
 import { TileView } from './tile-view'
@@ -73,6 +74,7 @@ function CardFaceView({ ticket, stage }: { ticket: TicketClient; stage: ColumnCl
           <SessionActionView action="chat" label={`Open the chat of ${ticket.title}`} hint="Open its chat: its worktree and a new chat in the Claude app" isOff={false} onPress={() => ticket.openChat()} />
         ) : null}
         <SplitActionView ticket={ticket} />
+        <AddChildView ticket={ticket} />
       </div>
       <div className="ticket-meta">{ageOf(state.now, ticket.lastActivity)}</div>
       <SegmentsView ticket={ticket} stage={stage} onSkill={setSkill} />

@@ -167,10 +167,9 @@ export class TicketClient extends TicketClientGenerated {
     else await this.moveNext()
   }
 
-  // A ticket dropped on another becomes its child, wherever either sits; one is never its own parent, and one already
-  // its child stays where it is.
+  // Python names the tickets another can be dropped on to become their child.
   canTakeAsChild(other: TicketClient): boolean {
-    return other.name !== this.name && !this.children.some(child => child.name === other.name)
+    return other.parent_choices.includes(this.name)
   }
 
   async takeAsChild(other: TicketClient): Promise<void> {
@@ -263,6 +262,13 @@ export class TicketClient extends TicketClientGenerated {
   // this ticket's session.json, as Python's action commands do.
   private inSession(prompt: string): string {
     return `${prompt} session=${this.session.session_file}`
+  }
+
+  // The child opens in Discovery as a ticket of its own, so the board is read again to show it under this one.
+  override async addChild(title: string): Promise<this | null> {
+    const child = await super.addChild(title)
+    await this.page.reader.refresh()
+    return child
   }
 
   fillSplit(): Promise<void> {
