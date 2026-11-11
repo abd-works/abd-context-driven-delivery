@@ -159,12 +159,26 @@ section: body
 *When* the session board reads the [board](../../../../../space/kanban/.context/kanban-model.md#board)
 *Then* second-spec shows In progress in the Specification [stage](../../../../../space/kanban/.context/kanban-model.md#stage--column)
 
-#### Scenario: Place a ticket with no move in the earliest stage it has work in
+#### Scenario: Place a ticket with no move in the stage of its latest work
 
 *Given* the [session log](../../../../../space/kanban/.context/kanban-model.md#session) of the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits has one line, generate /work/ux ux mockup html ux
 *But* it has no move line
 *When* the session board reads the [board](../../../../../space/kanban/.context/kanban-model.md#board)
 *Then* pet-visits shows in the Specification [stage](../../../../../space/kanban/.context/kanban-model.md#stage--column)
+
+#### Scenario: Follow work into a later stage
+
+*Given* a person moved pet-visits into Discovery
+*And* pet-visits' ux mockup was generated after that move
+*When* the session board reads the [board](../../../../../space/kanban/.context/kanban-model.md#board)
+*Then* pet-visits shows in the Specification [stage](../../../../../space/kanban/.context/kanban-model.md#stage--column)
+
+#### Scenario: Keep a person's move back until work goes further
+
+*Given* pet-visits' ux mockup was generated
+*And* a person then moved pet-visits back into Discovery
+*When* the session board reads the [board](../../../../../space/kanban/.context/kanban-model.md#board)
+*Then* pet-visits shows in the Discovery [stage](../../../../../space/kanban/.context/kanban-model.md#stage--column)
 
 #### Scenario: Draw the card's title, age, and fidelity segments
 

@@ -55,6 +55,7 @@ from space.kanban.session_board_examples import (
     SEARCH_THE_CATALOG,
     SECOND_SPEC,
     SIGN_UP,
+    STAMP,
     SURFACE_FIXTURE_PROJECT,
     seed_surface_fixture,
 )
@@ -228,7 +229,7 @@ def _(s):
         expect_placed(ticket_in(world.read, SECOND_SPEC.name), "Specification", is_done=False)
 
 
-@shared_stories.scenario("Display Ticket Card", "Place a ticket with no move in the earliest stage it has work in")
+@shared_stories.scenario("Display Ticket Card", "Place a ticket with no move in the stage of its latest work")
 def _(s):
     @s.given("the session log of the ticket pet-visits has one line, generate /work/ux ux mockup html ux")
     def _(world):
@@ -246,6 +247,44 @@ def _(s):
     @s.then("pet-visits shows in the Specification stage")
     def _(world):
         expect(ticket_in(world.read, PET_VISITS.name)["column"]["name"]).to(equal("Specification"))
+
+
+@shared_stories.scenario("Display Ticket Card", "Follow work into a later stage")
+def _(s):
+    @s.given("a person moved pet-visits into Discovery")
+    def _(world):
+        world.project.seed_session(PET_VISITS.with_log(f"{STAMP} move Discovery no-chat"))
+
+    @s.and_("pet-visits' ux mockup was generated after that move")
+    def _(world):
+        world.project.seed_log_line(PET_VISITS, GENERATED_UX_MOCKUP)
+
+    @s.when("the session board reads the board")
+    def _(world):
+        world.read = world.data_of(world.Board.load().show())
+
+    @s.then("pet-visits shows in the Specification stage")
+    def _(world):
+        expect(ticket_in(world.read, PET_VISITS.name)["column"]["name"]).to(equal("Specification"))
+
+
+@shared_stories.scenario("Display Ticket Card", "Keep a person's move back until work goes further")
+def _(s):
+    @s.given("pet-visits' ux mockup was generated")
+    def _(world):
+        world.project.seed_session(PET_VISITS.with_log(GENERATED_UX_MOCKUP))
+
+    @s.and_("a person then moved pet-visits back into Discovery")
+    def _(world):
+        world.project.seed_log_line(PET_VISITS, f"{STAMP} move Discovery no-chat")
+
+    @s.when("the session board reads the board")
+    def _(world):
+        world.read = world.data_of(world.Board.load().show())
+
+    @s.then("pet-visits shows in the Discovery stage")
+    def _(world):
+        expect(ticket_in(world.read, PET_VISITS.name)["column"]["name"]).to(equal("Discovery"))
 
 
 @shared_stories.scenario("Display Ticket Card", "Outline the active ticket")

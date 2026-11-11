@@ -217,15 +217,21 @@ class Ticket(Card):
     @property
     @data_field(reference=True)
     def column(self) -> Column:
-        """Complete once closed; otherwise the stage of its latest move, or the earliest stage it has work in. Sent by
-        its name, since the column sends the ticket."""
+        """Complete once closed; otherwise the stage of its latest move, unless work since that move was on a fidelity
+        of a later stage, which the ticket then sits in: the stage follows the work forward, and a person's move back
+        holds until new work goes further. With no move, the stage of its latest work, else the first stage. Sent by its
+        name, since the column sends the ticket."""
         if self._session.is_closed:
             return self._board.column(COMPLETE_COLUMN)
         furthest_back = self._furthest_back_child_stage
         if furthest_back is not None:
             return furthest_back
-        worked = [progress.stage for progress in self.work.enabled if progress.done_actions]
-        return self.marks.moved_into or (worked[0] if worked else self._board.stages[0])
+        moved = self.marks.moved_into
+        worked = self.work.stage_worked_since_latest_move
+        if moved is None:
+            return worked or self._board.stages[0]
+        stages = self._board.stages
+        return worked if worked is not None and stages.index(worked) > stages.index(moved) else moved
 
     @property
     @data_field
@@ -580,6 +586,21 @@ class TicketWork:
     def enabled(self) -> list[FidelityProgress]:
         """The progress of the fidelities whose practice the ticket's session works on."""
         return [entry for entry in self.progress if entry.is_enabled]
+
+    @property
+    def stage_worked_since_latest_move(self) -> Stage | None:
+        """The stage of the fidelity the latest generate or validate line names, when that line came after the ticket's
+        latest move; none when no such work followed it."""
+        entries = self._ticket.session.log.entries
+        moves = [index for index, entry in enumerate(entries) if entry.verb == MOVED_INTO]
+        since = entries[moves[-1] + 1:] if moves else entries
+        for entry in reversed(since):
+            if entry.verb not in (GENERATE, VALIDATE):
+                continue
+            stage = next((progress.stage for progress in self.enabled if entry.names(progress.fidelity)), None)
+            if stage is not None:
+                return stage
+        return None
 
     def progress_of(self, slug: str) -> FidelityProgress:
         """The progress of the fidelity slug names, such as stories-story-map. Only that fidelity's progress is read,
