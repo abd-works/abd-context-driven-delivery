@@ -1,4 +1,4 @@
-import type { EngineInterface, RenderChildren } from 'claude-code'
+import type { EngineInterface } from 'claude-code'
 
 import type { ActionPickerJson, ChatBarViewJson } from '../../types'
 import { BRAND } from '../shared/brand'
@@ -235,16 +235,6 @@ function FailureView($: EngineInterface, elements: ElementTable, { chatBar }: Ch
       <Text color={BRAND.error}>{chatBar.failure}</Text>
       <Button key="fix-failure" label="Fix" variant="primary" onPress={() => fixFailure($, chatBar)} />
       {GlyphButtonView(elements, 'dismiss-failure', '✕', BRAND.muted, () => dismissFailure($))}
-    </Box>
-  )
-}
-
-// The status row under the prompt, below the engine's own hint line, dim and from the left.
-export function StatusRowView({ Box, Text }: ElementTable, hint: RenderChildren, status: string) {
-  return (
-    <Box key="status-row" flexDirection="column">
-      {hint}
-      <Text color={BRAND.muted}>{status}</Text>
     </Box>
   )
 }

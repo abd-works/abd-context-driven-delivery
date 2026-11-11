@@ -638,7 +638,7 @@ Observed: the pointer on the session name shows the card, with each fidelity's n
 
 ### (S) Chat Bar --> Show Active Session On Status Line
 
-Observed (commits ce6b9157e, 066b2d3fc; `register.ts` `PromptHint` hook, `chat-bar-view.tsx` `StatusRowView`, `chat-bar-client.ts` `statusLine`): a dim row below the prompt, under the engine's own hint line and from the left, names the repository, the active session, the folder it works in, and the action the button runs with the fidelities it runs on. Requested on 2026-11-11 ("repo . session . root path of session . action selected", "below the actual chat edit like before", left aligned); the host's status line is left empty.
+Observed (`register.ts` `showStatus`, `chat-bar-client.ts` `statusLine`): the status line below the chat, where the host draws a plugin's status, names the repository, the active session, the folder it works in, and the action the button runs with the fidelities it runs on; a press on the chat bar shows the action it now runs. Requested on 2026-11-11 ("repo . session . root path of session . action selected", "below the actual chat edit like before"). Left aligned was also asked; the host places a plugin's status line itself, so a plugin cannot align it, and drawing the row in the chat bar or in the prompt hint line (tried in ce6b9157e and 066b2d3fc) lost it below the chat.
 
 ### (S) Claude Code --> [Add Active Ticket To System Prompt](move-work-forward-from-chat-bar/see-work-in-chat-bar/see_work_in_chat_bar_story.test.md#story-add-active-ticket-to-system-prompt)
 
