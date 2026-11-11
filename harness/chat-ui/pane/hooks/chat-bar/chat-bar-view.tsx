@@ -11,7 +11,7 @@ import { selectFidelity, type FidelityProgressClient } from './fidelity-progress
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
 import { openClose } from './session-client'
 import { toggleCard, toggleSessionList } from './session-dialogs-client'
-import { ActivateView, CloseView, SessionListView } from './session-dialogs-view'
+import { CloseView, SessionListView } from './session-dialogs-view'
 import { selectStage, toggleStagePicker, type StageClient } from './stage-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
@@ -92,6 +92,8 @@ export function StagePickerView($: EngineInterface, { Box, Button, Text }: Eleme
   )
 }
 
+// The session name; in the main chat a ▾ beside it opens the list of tickets to open. A ticket's own chat works only on
+// that ticket, so it shows the name alone.
 function SessionNameView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar }: ChatBarDraw) {
   return (
     <Box key="session-name" flexDirection="row" gap={1}>
@@ -100,7 +102,7 @@ function SessionNameView($: EngineInterface, { Box, Button, Text }: ElementTable
           <Text weight="semibold" color={BRAND.text}>{chatBar.sessionName || 'main'}</Text>
         </Button>
       </Box>
-      {GlyphButtonView({ Box, Button, Text }, 'session-list-button', '▾', BRAND.muted, () => toggleSessionList($))}
+      {chatBar.isMain ? GlyphButtonView({ Box, Button, Text }, 'session-list-button', '▾', BRAND.muted, () => toggleSessionList($)) : null}
     </Box>
   )
 }
@@ -210,7 +212,6 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
       {FailureView($, elements, draw)}
       {draw.busy.doing ? <Text key="busy" color={BRAND.accent}>{`${draw.busy.wheel} ${draw.busy.doing}…`}</Text> : null}
       {CloseView($, elements, draw)}
-      {ActivateView($, elements, draw)}
       {SessionListView($, elements, draw)}
       {SessionCardView($, elements, draw)}
       {StagePickerView($, elements, draw)}
