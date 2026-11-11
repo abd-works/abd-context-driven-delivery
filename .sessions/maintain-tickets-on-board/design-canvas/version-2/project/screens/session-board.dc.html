@@ -353,6 +353,20 @@ a { color: #E5531A; } a:hover { color: #C64514; }
                           <button class="action small" type="submit" disabled="{{card.childForm.addOff}}">Add child</button>
                         </form>
                       </sc-if>
+                      <sc-if value="{{card.tools}}" hint-placeholder-val="{{ false }}">
+                        <div class="ticket-tools">
+                          <form onSubmit="{{card.tools.addTag}}" style="display: flex; gap: 6px">
+                            <input class="mini-input" style="flex: 1" aria-label="New tag for {{card.title}}" placeholder="tag" value="{{card.tools.tagDraft}}" onChange="{{card.tools.typeTag}}">
+                            <button class="action small" type="submit" disabled="{{card.tools.addTagOff}}">Add tag</button>
+                          </form>
+                          <div style="display: flex; flex-wrap: wrap; gap: 6px">
+                            <button class="action small" aria-label="Move {{card.title}} up in its column" disabled="{{card.tools.upOff}}" onClick="{{card.tools.up}}">Move up</button>
+                            <button class="action small" aria-label="Move {{card.title}} down in its column" disabled="{{card.tools.downOff}}" onClick="{{card.tools.down}}">Move down</button>
+                            <button class="action small" onClick="{{card.tools.editText}}">Edit text</button>
+                            <button class="action small" style="margin-left: auto; color: var(--violations)" aria-label="Delete {{card.title}}" onClick="{{card.tools.remove}}">Delete</button>
+                          </div>
+                        </div>
+                      </sc-if>
                       <sc-if value="{{card.parentPick}}" hint-placeholder-val="{{ false }}">
                         <label style="display: flex; align-items: center; gap: 6px; color: var(--muted); font: 11px var(--mono)">
                           <span>parent</span>
@@ -470,20 +484,6 @@ a { color: #E5531A; } a:hover { color: #C64514; }
                       </sc-if>
                       <sc-if value="{{card.parentNote}}" hint-placeholder-val="{{ false }}">
                         <div class="parent-note">{{card.parentNote}}</div>
-                      </sc-if>
-                      <sc-if value="{{card.tools}}" hint-placeholder-val="{{ false }}">
-                        <div class="ticket-tools">
-                          <form onSubmit="{{card.tools.addTag}}" style="display: flex; gap: 6px">
-                            <input class="mini-input" style="flex: 1" aria-label="New tag for {{card.title}}" placeholder="tag" value="{{card.tools.tagDraft}}" onChange="{{card.tools.typeTag}}">
-                            <button class="action small" type="submit" disabled="{{card.tools.addTagOff}}">Add tag</button>
-                          </form>
-                          <div style="display: flex; flex-wrap: wrap; gap: 6px">
-                            <button class="action small" aria-label="Move {{card.title}} up in its column" disabled="{{card.tools.upOff}}" onClick="{{card.tools.up}}">Move up</button>
-                            <button class="action small" aria-label="Move {{card.title}} down in its column" disabled="{{card.tools.downOff}}" onClick="{{card.tools.down}}">Move down</button>
-                            <button class="action small" onClick="{{card.tools.editText}}">Edit text</button>
-                            <button class="action small" style="margin-left: auto; color: var(--violations)" aria-label="Delete {{card.title}}" onClick="{{card.tools.remove}}">Delete</button>
-                          </div>
-                        </div>
                       </sc-if>
                         </div>
                       </sc-if>
