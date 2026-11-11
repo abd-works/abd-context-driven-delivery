@@ -1,5 +1,17 @@
 {
   "name": "show-the-design-canvas-format",
   "title": "Show The Design Canvas Format",
-  "scope": "story"
+  "scope": "story",
+  "workpath": "C:\\dev\\abd-cdd-canvas-format-chip",
+  "repo_path": "C:\\dev\\abd-cdd-canvas-format-chip",
+  "outputs": {
+    "stories": {
+      "root": "harness/.context/stories"
+    }
+  },
+  "overlays": [
+    "lern_domain_driven"
+  ],
+  "stage": "Implementation",
+  "stage_mark": "in-progress"
 }
