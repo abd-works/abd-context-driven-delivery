@@ -38,7 +38,7 @@ The starting line, not a slice to build: what the framework, the CDD Kanban, the
 | Sessions | Sessions, worktrees and branches · Handoffs and decision records · Server health |
 | Bring in real context | Index and segment a source · Capture documents into a searchable index · Sandbox a live app · Meeting notes |
 | Take the work to code | Move a ticket through Specification and Implementation · Hand a stubborn bug to a background agent |
-| The CDD Kanban and the visual apps | CDD Kanban · Kanban fidelity work · Story UI editor · Design canvas and story demo · Knowledge graph · Catalog and project approach |
+| CDD Applications | CDD Kanban · Kanban fidelity work · Story UI editor · Design canvas and story demo · Knowledge graph · Catalog and project approach |
 | Pattern overlays | Add your stack: LERN, MERN, CDD web domain access, Claude Code mods |
 | Extend CDD | Builders and annotations · Agent BDD and prompt log |
 
@@ -379,7 +379,7 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
 - *What you get:* a disciplined hunt runs in the background (reproduce, minimise, form hypotheses, fix, add a regression test) while you keep working.
 - *Under the hood:* `cdd_guidance/actions/diagnose` and `tools/sub_agent`.
 
-### The CDD Kanban and the visual apps
+### CDD Applications: the CDD Kanban, Story UI, design canvas, knowledge graph and catalog
 
 **Lesson 18. See and move work on the CDD Kanban**
 - *What you do:* open the board and find every session as a ticket in Backlog, Discovery, Specification, Implementation or Complete.
