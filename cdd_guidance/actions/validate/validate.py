@@ -76,6 +76,9 @@ class Validate(GuidanceAction):
 
         parts = [part for part in self.run(on, action="validate") if part]
         sections.extend(parts)
+        overlay_rules = self._overlay_rules()
+        if overlay_rules:
+            sections.append(f"Judge the work against these overlaid patterns' rules too, as you judge the practices' rules.\n\n{overlay_rules}")
         report = "\n\n".join(sections)
         self._reports.save(report, self._graph)
         return f"{report}\n\nValidation report for these artifacts: {self._reports.where()}"

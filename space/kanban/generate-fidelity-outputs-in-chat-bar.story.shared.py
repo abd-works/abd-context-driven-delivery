@@ -96,3 +96,40 @@ def _(s):
     @s.then("the instructions name no pattern overlay")
     def _(world):
         expect(world.instructions).not_to(contain("Pattern overlay:"))
+
+
+@shared_stories.scenario("Run Fidelity Action With Overlays", "Judge each overlay's shared rules when validating")
+def _(s):
+    @s.given("checkout-flow's session overlays lern_domain_driven and mern_domain_driven")
+    def _(world):
+        world.project.seed_session(CHECKOUT_FLOW)
+        world.project.seed_session_fields(CHECKOUT_FLOW, overlays=list(OVERLAYS))
+        world.project.seed_active(CHECKOUT_FLOW)
+
+    @s.when("Claude Code validates stories-acceptance-tests")
+    def _(world):
+        world.report = str(world.Validate().validate(guidance=ACCEPTANCE_TESTS))
+
+    @s.then("the report names each overlay as a pattern overlay")
+    def _(world):
+        expect([f"## Pattern overlay: {name}" in world.report for name in OVERLAYS]).to(equal([True, True]))
+
+    @s.and_("it holds each overlay's shared rules")
+    def _(world):
+        expect([opening in world.report for opening in OVERLAYS.values()]).to(equal([True, True]))
+
+
+@shared_stories.scenario("Run Fidelity Action With Overlays", "Validate with no overlay chosen")
+def _(s):
+    @s.given("checkout-flow's session overlays none")
+    def _(world):
+        world.project.seed_session(CHECKOUT_FLOW)
+        world.project.seed_active(CHECKOUT_FLOW)
+
+    @s.when("Claude Code validates stories-acceptance-tests")
+    def _(world):
+        world.report = str(world.Validate().validate(guidance=ACCEPTANCE_TESTS))
+
+    @s.then("the report names no pattern overlay")
+    def _(world):
+        expect(world.report).not_to(contain("Pattern overlay:"))

@@ -434,6 +434,23 @@ class GuidanceAction:
         whose agent writes files lists its ``refresh`` as the tool to call with exactly those files."""
         return self.session.graph
 
+    def _overlay_rules(self) -> str:
+        """The shared rules of each pattern the session overlays, such as lern_domain_driven, which apply on top of the
+        practices' rules for every action on its work, generate and validate alike; none for an action made for no
+        session or a session that overlays none."""
+        if self._session is None or not self.session.overlays:
+            return ""
+        patterns = self.graph.applied_patterns
+        return "\n\n".join(self._overlay_rules_of(patterns.pattern_named(name), name) for name in self.session.overlays)
+
+    def _overlay_rules_of(self, pattern: PracticeGuidance, name: str) -> str:
+        return (
+            f"## Pattern overlay: {name}\n\n"
+            f"This session overlays the {name} pattern, so its shared rules below apply on top of the practices' rules. "
+            f"Its whole guidance is its instructions, `{pattern.slug}_instructions`.\n\n"
+            f"{pattern.section_text('Shared rules')}"
+        )
+
     def wrote(self, paths: list[str | Path]) -> None:
         """Refresh the session's graph with exactly the files this action just wrote, so the graph holds them as they
         are now; nothing watches the files. An action made for no session holds no graph to refresh."""

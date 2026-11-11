@@ -60,3 +60,16 @@ Evidence still missing: the chat bar's TypeScript story tests were removed in co
 *Given* checkout-flow's session overlays none
 *When* Claude Code generates stories-acceptance-tests
 *Then* the instructions name no pattern overlay
+
+#### Scenario: Judge each overlay's shared rules when validating
+
+*Given* checkout-flow's session overlays ++lern_domain_driven++ and ++mern_domain_driven++
+*When* Claude Code validates stories-acceptance-tests
+*Then* the report names each overlay as a pattern overlay
+  *And* it holds each overlay's shared rules
+
+#### Scenario: Validate with no overlay chosen
+
+*Given* checkout-flow's session overlays none
+*When* Claude Code validates stories-acceptance-tests
+*Then* the report names no pattern overlay
