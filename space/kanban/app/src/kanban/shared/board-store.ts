@@ -19,20 +19,13 @@ export type BacklogDraft = { isOpen: boolean; title: string; text: string }
 export type Tile = { ticket: TicketClient; place: string; stage: ColumnClient; fidelities: RequiredFidelity[]; action: string; picked: string[]; isPinned: boolean; choices: FormatChoiceData[] }
 
 // A dialog or panel holds the ticket it is about, so its actions reach that ticket's tools without looking it up again.
-export type Activation = {
+// The Close dialog holds what a person has ticked, starting from what Python chooses at first; what closing offers, as
+// Python answers it; and the branch the ticket's work is on, empty while nothing checked out is its own.
+export type Closing = {
   ticket: TicketClient
-  isClosing: boolean
-  leavingTitle: string
-  // What a person has ticked, starting from what Python chooses at first.
   leaving: string[]
-  opening: string[]
-  // What the dialog offers, as Python answers it: on leaving, what the ticket left can do with its work now; on
-  // opening, what the ticket does not have yet. The branch the work left is on, empty while nothing checked out is its
-  // own, and whether the ticket opened has its own branch.
   offeredLeaving: string[]
-  offeredOpening: string[]
   leavingBranch: string
-  hasBranch: boolean
 }
 
 // The roots dialog: the ticket's workpath on top and each practice's practice root under it. Starting a backlog item asks for its workpath
@@ -70,7 +63,7 @@ export type BoardState = {
   openCard: string | null
   dragged: string | null
   tiles: Tile[]
-  activation: Activation | null
+  closing: Closing | null
   rootChoice: RootChoice | null
   draft: BacklogDraft
   panels: SidePanel[]
@@ -112,7 +105,7 @@ const initialState = (): BoardState => ({
   openCard: null,
   dragged: null,
   tiles: [],
-  activation: null,
+  closing: null,
   rootChoice: null,
   draft: EMPTY_DRAFT,
   panels: [],

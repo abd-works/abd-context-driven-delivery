@@ -104,9 +104,10 @@ export function createFixtureRepo(root: string): void {
   writeInto(join(root, STORY_MAP_FILE), STORY_MAP_TEXT)
   // A folder of code, so a person choosing a root has a folder to pick: the story map's .context is hidden from that list.
   writeInto(join(root, SOURCE_FILE), '')
-  writeInto(join(root, '.gitignore'), '.sessions/\n')
-  commitAll(root)
+  // Session folders are the board's record, committed on main; only their logs and chat injections stay out of git.
+  writeInto(join(root, '.gitignore'), '.sessions/**/logs/\n.sessions/**/chat-injections/\n')
   writeSessions(root)
+  commitAll(root)
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) createFixtureRepo(fixtureRoot)

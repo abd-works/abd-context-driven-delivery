@@ -1,6 +1,12 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
-import { ACCENT, card, openBoard, openCard, openCardOf, openTileBarOf } from './support'
+import { ACCENT, card, dragCard, openBoard, openCard, openCardOf, openTileBarOf } from './support'
+
+// Dropping the active ticket on Complete asks, in the Close dialog, what to do with its work.
+async function openCloseDialog(page: Page): Promise<void> {
+  await dragCard(page, card(page, 'checkout-flow'), page.locator('.board-column[data-column="Complete"] .card-list').first())
+  await expect(page.getByRole('dialog')).toBeVisible({ timeout: 8_000 })
+}
 
 // The signatures carried over from kanban_surface_heavy_spec.py: the surface measured where it landed. These press only
 // what changes the view, and this file sorts first, before any spec connects a chat.
@@ -101,11 +107,11 @@ test.describe('the session board on the page', () => {
     })
   })
 
-  test.describe('with the activation dialog open', () => {
-    // The dialog's own Activate acts on the session, so it is only read here.
+  test.describe('with the Close dialog open', () => {
+    // The dialog's own Close session acts on the session, so it is only read here.
     test('should draw the primary action in the accent colour', async ({ page }) => {
-      await card(page, 'billing-report').getByRole('button', { name: 'Activate' }).first().click()
-      const confirm = page.getByRole('dialog').getByRole('button', { name: 'Activate' })
+      await openCloseDialog(page)
+      const confirm = page.getByRole('dialog').getByRole('button', { name: 'Close session' })
       await expect(confirm).toHaveCSS('background-color', ACCENT)
       await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click()
       await expect(page.getByRole('dialog')).toHaveCount(0)
@@ -144,7 +150,7 @@ test.describe('the session board on the page', () => {
     })
 
     test('should keep the dialog inside the page', async ({ page }) => {
-      await card(page, 'billing-report').getByRole('button', { name: 'Activate' }).first().click()
+      await openCloseDialog(page)
       const dialog = await page.getByRole('dialog').boundingBox()
       expect(dialog!.x).toBeGreaterThanOrEqual(0)
       expect(dialog!.x + dialog!.width).toBeLessThanOrEqual(375)

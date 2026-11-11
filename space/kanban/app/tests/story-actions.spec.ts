@@ -411,15 +411,10 @@ test.describe('Choose Session Root', () => {
 })
 
 test.describe('Activate Ticket', () => {
-  test('should switch the session from the dialog, with merge off', async ({ page }) => {
+  test('should open the ticket in its own worktree with one press, asking nothing', async ({ page }) => {
     await card(page, 'billing-report').getByRole('button', { name: 'Activate' }).first().click()
-    const dialog = page.getByRole('dialog')
-    await expect(dialog.getByRole('heading', { name: 'Switch from Checkout flow to Billing report' })).toBeVisible()
-    await expect(dialog.getByRole('checkbox', { name: 'Merge Checkout flow into main' })).not.toBeChecked()
-    await expect(dialog.getByRole('checkbox', { name: 'Create branch billing-report' })).toBeChecked()
-    await dialog.getByRole('button', { name: 'Activate' }).click()
-    await expect(toast(page, 'Billing report is now active')).toBeVisible({ timeout: 15_000 })
-    await expect(page.locator('.header-active')).toHaveText('Billing report')
+    await expect(toast(page, /^Billing report is open in its worktree .+/)).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('dialog')).toHaveCount(0)
   })
 })
 

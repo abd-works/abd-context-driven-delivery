@@ -166,7 +166,7 @@ export class TicketClient extends TicketClientGenerated {
 
   async dropOn(edge: string): Promise<void> {
     if (this.page.board.columnNamed(edge)?.isBacklog) await this.moveTo(edge, false)
-    else if (this.isActive) await this.page.activation.start(this, true)
+    else if (this.isActive) await this.page.activation.startClosing(this)
     else await this.moveNext()
   }
 
@@ -191,8 +191,8 @@ export class TicketClient extends TicketClientGenerated {
     return !this.isClosed && !this.chat.found
   }
 
-  // A new chat opens on the ticket's worktree, after the worktree when the ticket has none. A ticket in Complete has
-  // closed its work, so it gets no new branch, worktree, or chat.
+  // A new chat opens on the ticket's worktree, after activating opens one when the ticket has none. A ticket in Complete
+  // has closed its work, so it gets no new branch, worktree, or chat.
   async openChat(): Promise<void> {
     const chat = this.chat
     if (!this.canOpenChat || !chat.beginOpening()) return
@@ -201,7 +201,7 @@ export class TicketClient extends TicketClientGenerated {
 
   private async worktreeOpened(): Promise<string> {
     if (this.worktree) return this.worktree
-    const opened = await this.openWorktree()
+    const opened = await this.activate()
     await this.page.reader.refresh()
     return opened?.worktree ?? ''
   }

@@ -2,9 +2,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { BoardOnProject, ticketOn, type Asked } from 'test-utils/board-page-support'
 
-import { activationHeading } from './activation-client'
+import { closingHeading } from './activation-client'
 
-// checkout-flow is the active ticket; billing-report is the one a person switches to.
+// checkout-flow is the active ticket; billing-report is the one a person activates.
 const ACTIVE = 'checkout-flow'
 const CHOSEN = 'billing-report'
 
@@ -19,124 +19,108 @@ beforeEach(() => board.reset())
 
 afterAll(() => board.close())
 
-// The active ticket works on a branch of its own, pushed to an origin, so leaving it can commit, push, and merge.
-async function switchingPage() {
-  board.checkOutBranch(ACTIVE)
-  const { page, asked } = await board.page()
-  return { page, asked, active: ticketOn(page, ACTIVE), chosen: ticketOn(page, CHOSEN) }
-}
-
 const activatePosts = (asked: Asked[]) => asked.filter(request => request.path === `/api/ticket/${CHOSEN}/activate`)
 
+// One press opens the ticket in its own worktree: there is nothing to ask first, because no chat moves between folders.
 describe('Activate Ticket', () => {
-  it('should offer a handoff, commit and push on leaving and open with merge off', async () => {
-    const { page, chosen } = await switchingPage()
-    await page.activation.start(chosen, false)
-    expect(page.store.state.activation?.leaving).toEqual(['handoff', 'commit', 'push'])
-  })
-
-  // Python chooses each open choice at first; the dialog offers those the ticket does not have yet.
-  it('should offer a branch and a worktree to a ticket that has neither', async () => {
-    const { page, chosen } = await switchingPage()
-    await page.activation.start(chosen, false)
-    expect(page.store.state.activation?.opening).toEqual(['branch', 'worktree'])
-  })
-
-  // The fixture project is checked out on main, so the active session's work is on main, which leaving commits and pushes.
-  it('should offer a handoff, commit and push of main when the session has no branch of its own', async () => {
-    const { page } = await board.page()
-    await page.activation.start(ticketOn(page, CHOSEN), false)
-    expect([page.store.state.activation?.leavingBranch, page.store.state.activation?.leaving]).toEqual(['main', ['handoff', 'commit', 'push']])
-  })
-
-  // Leaving never merges the default branch, so the dialog offers no merge there.
-  it('should offer no merge when the session being left works on main', async () => {
-    const { page } = await board.page()
-    await page.activation.start(ticketOn(page, CHOSEN), false)
-    expect(page.store.state.activation?.offeredLeaving).toEqual(['handoff', 'commit', 'push'])
-  })
-
-  it('should offer a merge and a delete of the branch when the session being left works on its own branch', async () => {
-    const { page, chosen } = await switchingPage()
-    await page.activation.start(chosen, false)
-    expect(page.store.state.activation?.offeredLeaving).toEqual(['handoff', 'commit', 'push', 'merge', 'delete_branch'])
-  })
-
-  it('should leave only the handoff chosen once a person unchooses commit and push', async () => {
-    const { page, chosen } = await switchingPage()
-    await page.activation.start(chosen, false)
-    page.activation.toggleLeaving('commit')
-    page.activation.toggleLeaving('push')
-    expect(page.store.state.activation?.leaving).toEqual(['handoff'])
-  })
-
-  it('should say what it switches from and to', async () => {
-    const { page, chosen } = await switchingPage()
-    await page.activation.start(chosen, false)
-    expect(activationHeading(page.store.state.activation!)).toBe('Switch from Checkout flow to Billing report')
-  })
-
-  describe('that a person has confirmed with merge chosen', () => {
-    async function confirmed() {
-      const { page, asked, chosen } = await switchingPage()
-      await page.activation.start(chosen, false)
-      page.activation.toggleLeaving('merge')
-      await page.activation.confirm()
+  describe('Open a ticket in its own worktree', () => {
+    async function activated() {
+      const { page, asked } = await board.page()
+      await page.activation.activate(ticketOn(page, CHOSEN))
       return { page, asked }
     }
 
-    it('should send what was chosen', async () => {
-      const { asked } = await confirmed()
-      expect(activatePosts(asked)[0]?.body).toEqual({ leaving: ['handoff', 'commit', 'push', 'merge'], opening: ['branch', 'worktree'] })
+    it('should send the ticket alone, with no choices', async () => {
+      const { asked } = await activated()
+      expect(activatePosts(asked).map(request => request.body)).toEqual([{}])
     })
 
-    it('should report it', async () => {
-      const { page } = await confirmed()
-      expect(page.store.state.toasts.at(-1)?.text).toBe('Checkout flow: handoff written, committed, pushed, merged to main · Billing report: branch created, worktree created · Billing report is now active')
+    it('should open no dialog', async () => {
+      const { page } = await activated()
+      expect(page.store.state.closing).toBeNull()
+    })
+
+    it('should select the ticket', async () => {
+      const { page } = await activated()
+      expect(page.store.state.selected).toBe(ticketOn(page, CHOSEN).address)
+    })
+
+    it('should name its worktree, where a chat can be opened', async () => {
+      const { page } = await activated()
+      const { worktree } = ticketOn(page, CHOSEN)
+      expect(page.store.state.toasts.at(-1)?.text).toBe(`Billing report is open in its worktree ${worktree} · open its chat from its card`)
     })
   })
 
-  describe('that a person has cancelled', () => {
-    async function cancelled() {
-      const { page, asked, chosen } = await switchingPage()
-      await page.activation.start(chosen, false)
-      page.activation.cancel()
-      return { page, asked }
+  describe('Work on the ticket from a chat in its worktree', () => {
+    async function activated() {
+      const { page } = await board.page()
+      await board.connectChat(page, 'other-chat')
+      const worktree = board.openWorktree(CHOSEN)
+      await board.chat('ticket-chat', 'abd · first words', worktree).checkIn()
+      await page.chat.refresh()
+      await page.reader.refresh()
+      await page.activation.activate(ticketOn(page, CHOSEN))
+      return page
     }
 
-    it('should close the dialog', async () => {
-      const { page } = await cancelled()
-      expect(page.store.state.activation).toBeNull()
+    it("should send the board's commands to that chat", async () => {
+      expect((await activated()).store.state.targetChat).toBe('ticket-chat')
     })
 
-    it('should send nothing', async () => {
-      const { asked } = await cancelled()
-      expect(activatePosts(asked)).toEqual([])
+    it('should say its chat is chosen', async () => {
+      expect((await activated()).store.state.toasts.at(-1)?.text).toMatch(/^Billing report is open in its worktree .* · its chat is chosen$/)
     })
   })
 })
 
+// The active ticket works on a branch of its own in its own worktree, so closing it can commit and push that branch.
 describe('Close Active Session', () => {
   async function closing() {
-    const { page, asked, active } = await switchingPage()
-    await page.activation.start(active, true)
+    board.openWorktree(ACTIVE)
+    const { page, asked } = await board.page()
+    await page.activation.startClosing(ticketOn(page, ACTIVE))
     return { page, asked }
   }
 
   it('should ask what to do with its work', async () => {
     const { page } = await closing()
-    expect(activationHeading(page.store.state.activation!)).toBe('Close session Checkout flow')
+    expect(closingHeading(page.store.state.closing!)).toBe('Close session Checkout flow')
   })
 
-  it('should send what to do with its work', async () => {
+  it('should offer what closing can do with its branch and worktree', async () => {
+    const { page } = await closing()
+    expect(page.store.state.closing?.offeredLeaving).toEqual(['handoff', 'commit', 'push', 'merge', 'delete_branch', 'delete_worktree'])
+  })
+
+  it('should send what a person has ticked', async () => {
     const { page, asked } = await closing()
+    page.activation.toggleLeaving('handoff')
     await page.activation.confirm()
-    expect(asked.find(request => request.path === `/api/ticket/${ACTIVE}/close`)?.body).toEqual({ leaving: ['handoff', 'commit', 'push'] })
+    expect(asked.find(request => request.path === `/api/ticket/${ACTIVE}/close`)?.body).toEqual({ leaving: ['handoff'] })
   })
 
   it('should select the ticket in Complete', async () => {
     const { page } = await closing()
     await page.activation.confirm()
     expect(page.store.state.selected).toBe('Complete/checkout-flow')
+  })
+
+  describe('that a person has cancelled', () => {
+    async function cancelled() {
+      const { page, asked } = await closing()
+      page.activation.cancel()
+      return { page, asked }
+    }
+
+    it('should close the dialog', async () => {
+      const { page } = await cancelled()
+      expect(page.store.state.closing).toBeNull()
+    })
+
+    it('should send nothing', async () => {
+      const { asked } = await cancelled()
+      expect(asked.filter(request => request.path === `/api/ticket/${ACTIVE}/close`)).toEqual([])
+    })
   })
 })
