@@ -97,10 +97,6 @@ Mirrors List Ticket Files, for the selected fidelity only: files opens a tab per
 
 Mirrors View Fidelity Files: each tab's text comes from `session.read_file`, which refuses a file outside the session's roots (CDR "Handoff, files, close"). Requested: pressing a fidelity's red violation count opens its latest validation report, from `fidelity-progress.report`, in its own tab drawn as markdown, as the board does.
 
-### (S) Person --> [Review Fidelity](../pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/review-fidelity/review_fidelity_story.test.ts)
-
-Mirrors Review Fidelity: review calls `fidelity-progress.finish_review` on one fidelity, which needs its latest Validate to have passed (CDR "Actions run on one fidelity at a time").
-
 ---
 
 ## Scope boundary

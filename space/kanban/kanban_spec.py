@@ -81,8 +81,8 @@ with description("a board") as self:
         with it("should have story_map, bounded_context, and ia as Discovery's work required"):
             expect([fidelity.name for fidelity in self.discovery.work_required]).to(equal(["story_map", "bounded_context", "ia"]))
 
-        with it("should give every stage Generate, Validate, and Review, in that order"):
-            expect([self.board.column(name).steps for name in ("Discovery", "Specification", "Implementation")]).to(equal([["generate", "validate", "review"]] * 3))
+        with it("should give every stage Generate, then Validate"):
+            expect([self.board.column(name).steps for name in ("Discovery", "Specification", "Implementation")]).to(equal([["generate", "validate"]] * 3))
 
     with context("with BDD chosen"):
         with before.each:
@@ -362,14 +362,12 @@ with description("a backlog item") as self:
 GENERATE_STORY_MAP = "generate /work, /work/docs stories story_map markdown stories no-chat"
 VALIDATE_STORY_MAP_WITH_VIOLATIONS = "validate Stories story_map graph-rule actor-named-in-step map.md:12 no-chat"
 VALIDATE_STORY_MAP = "validate Stories story_map no-chat"
-REVIEW_STORY_MAP = "review /work stories story_map markdown stories no-chat"
 
 
 def every_action(practice: str, practice_class: str, fidelity: str) -> list:
     return [
         f"generate /work {practice} {fidelity} markdown {practice} no-chat",
         f"validate {practice_class} {fidelity} no-chat",
-        f"review /work {practice} {fidelity} markdown {practice} no-chat",
     ]
 
 
@@ -414,14 +412,14 @@ with description("a ticket") as self:
         with it("should tell the agent the ticket, its stage, its next guidance, and the steps each fidelity goes through"):
             expect(self.ticket.agent_context).to(equal(
                 'CDD session board: you are working on ticket pet-visits ("Pet visits"), in Discovery. Its next guidance is stories-story-map. '
-                "Each fidelity goes through generate, validate, then review, which a person records on the board."
+                "Each fidelity goes through generate, then validate, and is done once its latest validate passes."
             ))
 
         with it("should command an action on its next fidelity in its own session, naming no format so the fidelity's kept format holds"):
             expect(self.ticket.next_fidelity.commands["generate"]).to(equal("/actions-generate stories-story-map session=.sessions/pet-visits/session.json"))
 
         with it("should command every action its stage offers"):
-            expect(list(self.ticket.next_fidelity.commands)).to(equal(["generate", "validate", "review", "iterate", "sketch", "render", "document"]))
+            expect(list(self.ticket.next_fidelity.commands)).to(equal(["generate", "validate", "iterate", "sketch", "render", "document"]))
 
     # (S) Board App --> Display Ticket Card, Place Ticket In Column
     with context("with its first logged work on a Specification fidelity"):
@@ -429,7 +427,7 @@ with description("a ticket") as self:
             ticket = ticket_with(["generate /work/ux ux mockup html ux no-chat"])
             expect(ticket.column.name).to(equal("Specification"))
 
-    # (S) Board App --> Display Fidelity Progress; (S) Person --> Generate Fidelity Output, Validate Fidelity, Review Fidelity
+    # (S) Board App --> Display Fidelity Progress; (S) Person --> Generate Fidelity Output, Validate Fidelity
     with context("with a fidelity generated"):
         with before.each:
             self.lines = [GENERATE_STORY_MAP]
@@ -459,12 +457,8 @@ with description("a ticket") as self:
             with it("should match the practice's class name in the validate line to its folder name"):
                 expect([progress.fidelity.slug for progress in ticket_with(self.lines).progress if progress.done_actions]).to(equal(["stories-story-map"]))
 
-            with context("that has been reviewed"):
-                with before.each:
-                    self.lines.append(REVIEW_STORY_MAP)
-
-                with it("should show the fidelity done"):
-                    expect(story_map(ticket_with(self.lines)).is_done).to(be_true)
+            with it("should show the fidelity done"):
+                expect(story_map(ticket_with(self.lines)).is_done).to(be_true)
 
             # (S) Person --> Send Action To Stage Practices: a stage head's bar shows the stage's work taken together.
             with it("should show Validate in progress across Discovery while one of its fidelities is validated"):
@@ -479,22 +473,7 @@ with description("a ticket") as self:
                 ticket = ticket_with(self.lines)
                 expect(ticket.work.in_stage(ticket.column).allowed_actions).not_to(contain("validate"))
 
-        with context("that was reviewed before its validate passed"):
-            with before.each:
-                self.lines += [REVIEW_STORY_MAP, VALIDATE_STORY_MAP]
-
-            with it("should not count the review"):
-                expect(story_map(ticket_with(self.lines)).done_actions).to(equal(["generate", "validate"]))
-
-        # A person who clicks Review has reviewed the output, whatever its validate found.
-        with context("that was reviewed after a validate that found violations"):
-            with before.each:
-                self.lines += [VALIDATE_STORY_MAP_WITH_VIOLATIONS, REVIEW_STORY_MAP]
-
-            with it("should count the review"):
-                expect(story_map(ticket_with(self.lines)).done_actions).to(equal(["generate", "review"]))
-
-    # (S) Person --> Review Fidelity, Complete Stage Work; (S) Person --> Move Ticket
+    # (S) Person --> Complete Stage Work; (S) Person --> Move Ticket
     with context("with every required fidelity in its stage done"):
         with before.each:
             self.root, self.board = board_with(DISCOVERY_DONE)

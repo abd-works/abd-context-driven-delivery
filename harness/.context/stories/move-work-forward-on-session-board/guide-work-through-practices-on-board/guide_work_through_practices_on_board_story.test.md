@@ -13,7 +13,7 @@ section: body
 
 *Given* pet-visits' [session log](../../../../../space/kanban/.context/kanban-model.md#session) has generate /work, /work/docs stories story_map markdown stories
 *When* the session board reads pet-visits
-*Then* the story_map tile marks Generate ✓ and Validate and Review ○
+*Then* the story_map tile marks Generate ✓ and Validate ○
 
 #### Scenario: Show violations held on Validate
 
@@ -21,20 +21,26 @@ section: body
 *And* its latest validate line is validate Stories story_map graph-rule actor-named-in-step map.md:12
 *When* the session board reads pet-visits
 *Then* the story_map tile marks Validate as violations and its segment shows in the violations colour
-*And* Review stays to do
 
 #### Scenario: Show Validate done after a clean validate
 
 *Given* pet-visits' story_map is generated
 *And* its latest validate line is validate Stories story_map with no graph-rule
 *When* the session board reads pet-visits
-*Then* the story_map tile marks Generate ✓, Validate ✓, and Review ○
+*Then* the story_map tile marks Generate ✓ and Validate ✓, and the fidelity is done
+
+#### Scenario: Complete a stage's work
+
+*Given* pet-visits has every Discovery fidelity generated and validated with no violations
+*When* the session board reads pet-visits
+*Then* pet-visits waits in Discovery's Done
+*And* it has no next step
 
 #### Scenario: Show each fidelity of the stage on the ticket
 
 *Given* billing-report has nothing recorded in its [session log](../../../../../space/kanban/.context/kanban-model.md#session)
 *When* the session board reads billing-report
-*Then* each Discovery tile marks Generate, Validate, and Review ○, its segment dim
+*Then* each Discovery tile marks Generate and Validate ○, its segment dim
 
 ## Story: Open Practice Tile
 
@@ -89,7 +95,7 @@ section: body
 
 #### Scenario: Finish a stage on the practices left on
 
-*Given* pet-visits has generated, validated, and reviewed the story_map [fidelity](../../../../../space/kanban/.context/kanban-model.md#fidelityguidance)
+*Given* pet-visits has generated and validated the story_map [fidelity](../../../../../space/kanban/.context/kanban-model.md#fidelityguidance)
 *And* every practice but Stories is turned off for pet-visits
 *When* the session board reads pet-visits
 *Then* pet-visits shows in Discovery's Done
@@ -121,15 +127,8 @@ section: body
 *Given* checkout-flow's story map has a verb-noun-format violation on .context/story-map.md line 6
 *But* no chat is connected
 *When* the Person runs checkout-flow's next step
-*Then* Run next read Run next: review violations
+*Then* Run next read Run next: validate
 *And* the report panel opens on stories-story-map
-
-#### Scenario: Record a review with no chat
-
-*Given* billing-report's story map is generated and validated with no violations
-*But* no chat is connected
-*When* the Person records a review of billing-report's story_map
-*Then* billing-report's story_map marks Review ✓
 
 #### Scenario: Go back to an earlier stage's fidelity still to validate
 
@@ -147,7 +146,7 @@ section: body
 
 #### Scenario: Name nothing to run on a ticket done in its stage
 
-*Given* every Discovery fidelity of pet-visits is reviewed
+*Given* every Discovery fidelity of pet-visits is validated with no violations
 *When* the session board reads pet-visits
 *Then* Run next says Nothing to run next
 

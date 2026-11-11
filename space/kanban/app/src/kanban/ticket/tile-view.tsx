@@ -6,7 +6,7 @@ import type { FidelityProgressClient } from './fidelity-progress-client'
 import type { TicketClient } from './ticket-client'
 import { cellPlace } from './tile-client'
 
-const REVIEWED_EDGE_PIXELS = 7
+const DONE_EDGE_PIXELS = 7
 const EDGE_PIXELS = 3
 
 // opensOnHover: a hover opens the bar for a look on an opened card. The details grid opens one only on a press, so
@@ -72,7 +72,7 @@ export function TileView(props: TileProps) {
   const hover = isOn && opensOnHover ? { onMouseEnter: () => page.tiles.hoverIn({ ticket, stage, place, fidelities: [fidelity] }), onMouseLeave: () => page.tiles.hoverOut(ticket.name, place) } : {}
   const open = isOn ? page.tiles.openOn(ticket.name, place) : undefined
   return (
-    <div className="skill-cell" data-tile={slug} {...hover} style={{ opacity: progress.light, borderColor, borderLeftColor: practice?.color, borderLeftWidth: key === 'done' ? REVIEWED_EDGE_PIXELS : EDGE_PIXELS }}>
+    <div className="skill-cell" data-tile={slug} {...hover} style={{ opacity: progress.light, borderColor, borderLeftColor: practice?.color, borderLeftWidth: key === 'done' ? DONE_EDGE_PIXELS : EDGE_PIXELS }}>
       <TileHeadingView {...props} />
       {open ? <ActionBarView ticket={ticket} tile={open} /> : null}
     </div>

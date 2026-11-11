@@ -81,21 +81,9 @@ function ValidateLineView({ ticket, tile, bar }: { ticket: TicketClient; tile: T
   )
 }
 
-function ReviewLineView({ tile, bar }: { tile: Tile; bar: TileBar }) {
-  const { page } = useBoard()
-  return (
-    <div className="bar-line wide-gap">
-      <button className="action step-control small" disabled={bar.reviewOff} onClick={() => void page.tileActions.review(tile)}>
-        review
-      </button>
-      <StepMarkView step={bar.review} />
-    </div>
-  )
-}
-
 type ActionBarProps = { ticket: TicketClient; tile: Tile; onMouseEnter?: () => void; onMouseLeave?: () => void }
 
-// What a person does on an open tile: look at its files, pick an action and formats, run it, validate, and review.
+// What a person does on an open tile: look at its files, pick an action and formats, run it, and validate.
 export function ActionBarView({ ticket, tile, onMouseEnter, onMouseLeave }: ActionBarProps) {
   const { page } = useBoard()
   const bar = page.tileActions.barOf(ticket, tile)
@@ -106,7 +94,6 @@ export function ActionBarView({ ticket, tile, onMouseEnter, onMouseLeave }: Acti
       </div>
       <RunLineView tile={tile} bar={bar} />
       <ValidateLineView ticket={ticket} tile={tile} bar={bar} />
-      <ReviewLineView tile={tile} bar={bar} />
     </div>
   )
 }

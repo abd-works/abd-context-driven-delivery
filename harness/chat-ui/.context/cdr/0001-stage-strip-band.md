@@ -11,7 +11,7 @@ The line reads left to right:
 - **Stage icons.** Backlog, Discovery (magnifier), Specification (document), Implementation (gear), Complete (check), in orange; stages not yet reached are faint, and only the stage in progress has an outline. Clicking a stage shows that stage's fidelities.
 - **Handoff, files, close.** Close closes the active session (`ticket.close`), as Close does on the board; it does not just hide the bar. Files opens the board's files view for the selected fidelity only: a tab per file `fidelity-progress.files` declares, its text from `session.read_file`.
 
-Actions run on one fidelity at a time. Each fidelity goes generate, validate, then review (`fidelity-progress.finish_review` on that one fidelity), which needs its latest Validate to have passed.
+Actions run on one fidelity at a time. Each fidelity goes generate, then validate, and is done once its latest validate passes.
 
 ## Considered options
 

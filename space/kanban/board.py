@@ -326,7 +326,7 @@ class Board:
     @agent_tool
     @noSessionLog
     def show(self) -> Board:
-        """Return the session board: Backlog, Discovery, Specification, Implementation, and Complete, with every ticket's progress through Generate, Validate, and Review, and the active ticket."""
+        """Return the session board: Backlog, Discovery, Specification, Implementation, and Complete, with every ticket's progress through Generate and Validate, and the active ticket."""
         return self
 
     @mcp
@@ -489,7 +489,7 @@ class Stage(Column):
 
     @property
     def steps(self) -> list[str]:
-        """What every fidelity goes through in this stage, in order: generate, validate, and review."""
+        """What every fidelity goes through in this stage, in order: generate, then validate."""
         return self._approach.steps
 
     @property

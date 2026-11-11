@@ -63,17 +63,12 @@ def validated(practice_class: str, fidelity: str, violations: str = "", stamp: s
     return f"{stamp} validate {practice_class} {fidelity} {violations} no-chat".replace("  ", " ")
 
 
-def reviewed(practice: str, fidelity: str, stamp: str = STAMP) -> str:
-    return f"{stamp} review /work {practice} {fidelity} markdown {practice} no-chat"
-
-
 def every_action(practice: str, practice_class: str, fidelity: str) -> tuple[str, ...]:
-    return (generated(practice, fidelity), validated(practice_class, fidelity), reviewed(practice, fidelity))
+    return (generated(practice, fidelity), validated(practice_class, fidelity))
 
 
 DISCOVERY_FIDELITIES = (("stories", "Stories", "story_map"), ("ddd", "Ddd", "bounded_context"), ("ux", "Ux", "ia"), ("clean_engineering", "CleanEngineering", "modules"), ("bdd", "Bdd", "behavior"))
-EVERY_DISCOVERY_FIDELITY_REVIEWED = tuple(line for entry in DISCOVERY_FIDELITIES for line in every_action(*entry))
-STORY_MAP_REVIEWED = every_action("stories", "Stories", "story_map")
+EVERY_DISCOVERY_FIDELITY_DONE = tuple(line for entry in DISCOVERY_FIDELITIES for line in every_action(*entry))
 STORY_MAP_VALIDATED_CLEAN = (generated("stories", "story_map"), validated("Stories", "story_map"))
 STORY_MAP_VIOLATION = f"graph-rule verb-noun-format {STORY_MAP_FILE}:6"
 STORY_MAP_HELD_ON_VIOLATIONS = (generated("stories", "story_map"), validated("Stories", "story_map", STORY_MAP_VIOLATION))

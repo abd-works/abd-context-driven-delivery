@@ -296,7 +296,7 @@ test.describe('Open Validation Report', () => {
   })
 
   test('should open a violation\'s file at its line in the Files panel', async ({ page }) => {
-    await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: review violations' }).first().click()
+    await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: validate' }).first().click()
     await page.locator('[data-panel="report"]').getByRole('button', { name: '.context/story-map.md:6', exact: true }).click()
     const files = page.locator('[data-panel="files"]')
     await expect(files.getByRole('tab', { name: 'story-map.md' })).toBeVisible()
@@ -307,7 +307,7 @@ test.describe('Open Validation Report', () => {
 test.describe('Fix Report Violations', () => {
   test('should send Fix and Fix all to the chat', async ({ page }) => {
     await waitForChat(page)
-    await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: review violations' }).first().click()
+    await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: validate' }).first().click()
     const report = page.locator('[data-panel="report"]')
     await report.getByRole('button', { name: 'Fix .context/story-map.md:6' }).click()
     await receivedContaining('of the stories-story-map rule.', 1)
@@ -317,7 +317,7 @@ test.describe('Fix Report Violations', () => {
 
   test('should send Fix all violations to the chat as the report it names', async ({ page }) => {
     await waitForChat(page)
-    await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: review violations' }).first().click()
+    await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: validate' }).first().click()
     await page.locator('[data-panel="report"]').getByRole('button', { name: 'Fix all violations', exact: true }).click()
     await receivedContaining('Fix all violations found in this report: .sessions/checkout-flow/validation-reports/', 1)
   })
@@ -384,7 +384,7 @@ test.describe('Display Connected Status', () => {
 
   // The ticket a violation belongs to is gone, so session.read_file really refuses it.
   test('should show a tool failure in a toast', async ({ page }) => {
-    await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: review violations' }).first().click()
+    await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: validate' }).first().click()
     const violation = page.locator('[data-panel="report"]').getByRole('button', { name: '.context/story-map.md:6', exact: true })
     await expect(violation).toBeVisible()
     rmSync(join(fixtureRoot, '.sessions', 'checkout-flow'), { recursive: true, force: true })

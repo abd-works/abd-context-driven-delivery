@@ -15,7 +15,6 @@ IMPLEMENTATION: str = "implementation"
 # The steps every fidelity goes through in its stage, named as the session log names them.
 GENERATE: str = "generate"
 VALIDATE: str = "validate"
-REVIEW: str = "review"
 # The action that converts a fidelity's output into other formats, so it needs output to convert.
 RENDER: str = "render"
 
@@ -61,8 +60,8 @@ class ApproachStage:
     built on one."""
 
     # The steps every fidelity goes through, then the other actions a person can run on a fidelity in place of the
-    # next step. Each but review is an operation in the action catalogue; review is the person's approval.
-    _STEPS = (GENERATE, VALIDATE, REVIEW)
+    # next step. Each is an operation in the action catalogue; a fidelity is done once its latest validate passes.
+    _STEPS = (GENERATE, VALIDATE)
     _OTHER_ACTIONS = ("iterate", "sketch", RENDER, "document")
     # Generate writes a fidelity in the formats a person picks, and render converts it into them; every other action
     # writes or reads a fidelity's files in the formats they already have.
@@ -92,7 +91,7 @@ class ApproachStage:
     @property
     @data_field
     def steps(self) -> list[str]:
-        """What every fidelity goes through in this stage, in order: generate, validate, and review."""
+        """What every fidelity goes through in this stage, in order: generate, then validate."""
         return list(self._STEPS)
 
     @property
@@ -104,8 +103,8 @@ class ApproachStage:
     @property
     @data_field
     def producing_actions(self) -> list[str]:
-        """The actions that write a fidelity's files: every action but validate and review, which check them."""
-        return [action for action in self.actions if action not in (VALIDATE, REVIEW)]
+        """The actions that write a fidelity's files: every action but validate, which checks them."""
+        return [action for action in self.actions if action != VALIDATE]
 
     @property
     @data_field

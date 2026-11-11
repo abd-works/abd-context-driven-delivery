@@ -13,7 +13,7 @@ section: body
 
 **Slicing intent:** Increment 0 is what the code does today. The Intended and Requested stories follow the order set on 2026-11-06.
 
-**Spine vs optional:** the increments run in the order they are built, as set on 2026-11-10: ticket management and the editor-app stories first, then syncing the design canvas with production and integrating stories with the canvas explorer, then faster command entry and the Clean Engineering checks (metrics on the model, then checks across files), then the fully integrated flow, then the board's file review, workflow customizing and the Story UI editor's own stories; guards, a faster board, chat bar parity and linked models on the canvas follow, and next-step suggestions come last.
+**Spine vs optional:** the increments run in the order they are built, as set on 2026-11-10: ticket management and the editor-app stories first, then syncing the design canvas with production and integrating stories with the canvas explorer, then repairing guidance from mistakes, then faster command entry and the Clean Engineering checks on the model, then the fully integrated flow, then the board's file review, workflow customizing and the Story UI editor's own stories; guards, a faster board, chat bar parity and linked models on the canvas follow, and next-step suggestions come last.
 
 ## Increments
 
@@ -63,10 +63,6 @@ section: body
 - *Generate Several Practices In One Command*
 - *Validate Artifact Against Rules*
 - *Satisfy Violations Until Clean*
-- *Repair Guidance Behind Violation*
-- *Improve Guidance From Mistake*
-- *Add Rule From Failed Example*
-- *Review Fidelity Output*
 - *Start CDD Server On Session Start*
 - *Inject Action Rules After Action Call*
 - *Inject Practice Rules After File Edit*
@@ -365,7 +361,19 @@ section: body
 - *Place Notes On The Story Map*
 - *Rearrange Stories Inside The Canvas*
 
-### Increment 5: Enter Commands Faster
+### Increment 5: Repair Guidance From Mistakes
+
+**Outcome:** a violation is traced back to the guidance that let it happen and that guidance is fixed, a mistake and its correction are captured as a regression example, and a failed example becomes a new named rule, so each error makes every later run better.
+
+**Slicing notes:** the person, 2026-11-11: repair is not built yet, so it is taken out of Built Today and planned as its own increment.
+
+**Stories in this increment:**
+
+- *Repair Guidance Behind Violation*
+- *Improve Guidance From Mistake*
+- *Add Rule From Failed Example*
+
+### Increment 6: Enter Commands Faster
 
 **Outcome:** a person types a CDD command with the actions, practices, fidelities and formats offered as they go.
 
@@ -379,25 +387,16 @@ section: body
 - *Add Comment To Sent Command*
 - *Announce CDD Tool Calls*
 
-### Increment 6: Measure Code On The Model
+### Increment 7: Check Clean Engineering On The Model
 
-**Outcome:** validating at the Clean Engineering model or code fidelity measures each function, class and module, keeps each measure as a fact on its node, and reports what is past a limit in the same validation report.
+**Outcome:** validating at the Clean Engineering model or code fidelity measures each function, class and module, keeps each measure as a fact on its node, and reports what is past a limit in the same validation report; the same validation finds the problems that only show across files, as graph rules where the graph can answer and as one AI-judged pass over the codebase where it cannot.
 
-**Slicing notes:** `.sessions/_backlog/measure-code-on-the-model.md`; the always-on metrics gate was removed on 2026-11-09, and its measuring moves into the practice.
+**Slicing notes:** `.sessions/_backlog/measure-code-on-the-model.md` and `.sessions/_backlog/check-clean-engineering-across-files.md`, merged on 2026-11-11 at the person's request; the always-on metrics gate was removed on 2026-11-09, and its measuring moves into the practice, which also replaces the cross-file passes agents ran by hand.
 
 **Stories in this increment:**
 
 - *Record Code Metrics As Node Facts*
 - *Check Code Metrics Against Clean Engineering Limits*
-
-### Increment 7: Check Clean Engineering Across Files
-
-**Outcome:** Clean Engineering's validation finds the problems that only show across files, as graph rules where the graph can answer and as one AI-judged pass over the codebase where it cannot.
-
-**Slicing notes:** `.sessions/_backlog/check-clean-engineering-across-files.md`; replaces the cross-file passes agents ran by hand.
-
-**Stories in this increment:**
-
 - *Report Unused Class For Deletion*
 - *Report Runtime Dependency That Should Be Owned*
 - *Report Disconnected Class*

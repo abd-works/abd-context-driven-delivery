@@ -201,16 +201,16 @@ def expect_placed(ticket: dict, column: str, is_done: bool) -> None:
         raise AssertionError(f"expected {ticket['name']} in {column} {'Done' if is_done else 'In progress'}, but it is in {actual[0]} {'Done' if actual[1] else 'In progress'}")
 
 
-def expect_actions(ticket: dict, fidelity: str, generate: str, validate: str, review: str) -> None:
-    """The fidelity's Generate, Validate, and Review each read to_do, in_progress, or done on the ticket."""
-    expected = {"generate": generate, "validate": validate, "review": review}
+def expect_actions(ticket: dict, fidelity: str, generate: str, validate: str) -> None:
+    """The fidelity's Generate and Validate each read to_do, in_progress, or done on the ticket."""
+    expected = {"generate": generate, "validate": validate}
     actual = progress_in(ticket, fidelity)["actions"]
     if actual != expected:
         raise AssertionError(f"expected {fidelity} on {ticket['name']} to read {expected}, but it reads {actual}")
 
 
 def expect_action(ticket: dict, fidelity: str, action: str, state: str) -> None:
-    """One of the fidelity's Generate, Validate, and Review reads state on the ticket."""
+    """One of the fidelity's Generate and Validate reads state on the ticket."""
     _expect_equal(progress_in(ticket, fidelity)["actions"][action], state, f"{fidelity} {action} on {ticket['name']}")
 
 

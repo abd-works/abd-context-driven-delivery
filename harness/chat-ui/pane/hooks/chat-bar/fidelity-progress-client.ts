@@ -74,11 +74,10 @@ export class FidelityProgressClient {
     return this.progress.violation_count
   }
 
-  // What the Python FidelityProgress names next: review while it has violations, since a person reads them and tells
-  // the agent to fix them, else the first of generate, validate and review not done; nothing once it is done.
+  // What the Python FidelityProgress names next: the first of generate and validate not done, which is validate again
+  // while it has violations; nothing once it is done.
   get nextAction(): string {
-    // The chat bar offers no review, so a fidelity whose next step is review shows the stage's first action instead.
-    return this.progress.next_action === 'review' ? '' : this.progress.next_action
+    return this.progress.next_action
   }
 
   // The practice root this fidelity's files are written under, as the ticket's session holds it.

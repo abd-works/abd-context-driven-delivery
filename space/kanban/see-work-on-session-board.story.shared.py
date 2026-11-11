@@ -104,10 +104,10 @@ def _(s):
     def _(world):
         expect([("in_progress" in column_in(world.read, stage), "done" in column_in(world.read, stage)) for stage in STAGES]).to(equal([(True, True)] * 3))
 
-    @s.and_("the Discovery stage requires story_map, bounded_context, and ia, each through Generate, Validate, and Review")
+    @s.and_("the Discovery stage requires story_map, bounded_context, and ia, each through Generate and Validate")
     def _(world):
         required = ([fidelity["slug"] for fidelity in column_in(world.read, "Discovery")["work_required"]], world.board.column("Discovery").steps)
-        expect(required).to(equal((["stories-story-map", "ddd-bounded-context", "ux-ia"], ["generate", "validate", "review"])))
+        expect(required).to(equal((["stories-story-map", "ddd-bounded-context", "ux-ia"], ["generate", "validate"])))
 
 
 @shared_stories.scenario("Display Board", "Show a failing tool in a toast")

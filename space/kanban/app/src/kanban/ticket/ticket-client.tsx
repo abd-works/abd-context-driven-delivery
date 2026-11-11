@@ -11,9 +11,6 @@ import { TicketChat } from '../chat/chat-client'
 import { FidelityProgressClient } from './fidelity-progress-client'
 import { fixReportPrompt, fixRulePrompt, fixViolationPrompt, ReportClient } from './report-client'
 
-// Steps the board does itself rather than sending to a chat: a review is the person's own, opening the report while the
-// fidelity has violations and recording the approval once it has none.
-const STEPS_WITHOUT_CHAT = ['review']
 const CLOSE_SESSION_COMMAND = '/space:session:close-session'
 
 // Each fidelity's files by format, as its own files tool answers, by the fidelity's slug: a tile or panel over several
@@ -137,7 +134,7 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   get nextStepName(): string {
-    return this.nextAction === 'review' && this.nextProgress?.state === 'violations' ? 'review violations' : this.nextAction
+    return this.nextAction
   }
 
   get runNextLabel(): string {
@@ -251,11 +248,6 @@ export class TicketClient extends TicketClientGenerated {
     return true
   }
 
-  private async review(progress: FidelityProgressClient): Promise<void> {
-    await progress.finishReview()
-    await this.page.reader.refresh()
-  }
-
   // A prompt runs in whichever chat it is sent to, whose open session can be another ticket's, so a fix prompt names
   // this ticket's session.json, as Python's action commands do.
   private inSession(prompt: string): string {
@@ -309,16 +301,17 @@ export class TicketClient extends TicketClientGenerated {
 
   get canRunNext(): boolean {
     if (!this.next || this.isLocked) return false
-    return STEPS_WITHOUT_CHAT.includes(this.nextAction) || this.page.chat.canSend
+    // Opening the report while violations hold the fidelity is done on the board, so it needs no chat.
+    return this.nextProgress?.state === 'violations' || this.page.chat.canSend
   }
 
   // Python gives the command for the next action, naming the session and no format. Generate is sent straight to the
-  // chat, in the format the fidelity keeps; the others fill the prompt. A review is the person's own, made on the board.
+  // chat, in the format the fidelity keeps; the others fill the prompt. While violations hold the fidelity, Run next opens
+  // its report on the board, where the person reads them and sends the fix.
   async runNext(): Promise<void> {
     const next = this.nextProgress
     if (!next) return
-    if (this.nextAction === 'review' && next.state === 'violations') return this.page.panels.openReport(this, next)
-    if (this.nextAction === 'review') return this.review(next)
+    if (next.state === 'violations') return this.page.panels.openReport(this, next)
     const command = next.commands[this.nextAction] ?? ''
     if (this.nextAction !== 'generate') return this.chat.fill(command)
     await this.chat.command(command)

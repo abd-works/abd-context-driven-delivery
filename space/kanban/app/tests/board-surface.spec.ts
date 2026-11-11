@@ -126,7 +126,7 @@ test.describe('the session board on the page', () => {
     })
 
     test('should keep local actions working', async ({ page }) => {
-      await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: review violations' }).first().click()
+      await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: validate' }).first().click()
       await expect(page.locator('[data-panel="report"]')).toBeVisible()
     })
   })
@@ -142,7 +142,7 @@ test.describe('the session board on the page', () => {
     })
 
     test('should give an open panel the whole page, with no sideways scroll', async ({ page }) => {
-      await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: review violations' }).first().click()
+      await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: validate' }).first().click()
       const panel = await page.locator('[data-panel="report"]').boundingBox()
       expect(panel!.x).toBe(0)
       expect(panel!.width).toBe(375)

@@ -91,7 +91,7 @@ test.describe('with no chat connected', () => {
       })
 
       test('Then the open report lists no rules', async ({ page }) => {
-        await expect(report(page).getByText('No open violations. Reviewed is ready on the card.')).toBeVisible({ timeout: 8_000 })
+        await expect(report(page).getByText('No open violations. The fidelity is done.')).toBeVisible({ timeout: 8_000 })
       })
     })
   })

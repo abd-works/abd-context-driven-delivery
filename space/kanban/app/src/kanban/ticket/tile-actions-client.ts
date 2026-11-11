@@ -15,9 +15,7 @@ export type TileBar = {
   isLocked: boolean
   runOff: boolean
   validateOff: boolean
-  reviewOff: boolean
   validate: StepFace
-  review: StepFace
   report: FidelityProgressClient | undefined
   hasViolations: boolean
 }
@@ -93,11 +91,9 @@ export class TileActionsClient {
       chips: tile.choices.map(choice => chipFaceOf(tile, choice)),
       isLocked: ticket.isLocked,
       runOff: !this.canRun(ticket, tile, work),
-      // Validate runs in the chat; a review is the person's own approval, so it needs no chat.
+      // Validate runs in the chat.
       validateOff: !this.chat.canSend || !this.allows(ticket, work, 'validate'),
-      reviewOff: !this.allows(ticket, work, 'review'),
       validate,
-      review: stepFaceOf(work?.actions.review ?? 'to_do', 'Review'),
       report: reportOf(ticket.progressOn(tile.fidelities)),
       hasViolations: validate.text !== '',
     }
@@ -125,11 +121,5 @@ export class TileActionsClient {
   // The command goes to the tile's ticket's own chat.
   private sendFor(tile: Tile, command: string): Promise<void> {
     return tile.ticket.chat.command(command)
-  }
-
-  // The ticket writes the review to its session log, and the board read after it shows the fidelity done.
-  async review(tile: Tile): Promise<void> {
-    await Promise.all(tile.ticket.progressOn(tile.fidelities).map(progress => progress.finishReview()))
-    await this.page.reader.refresh()
   }
 }

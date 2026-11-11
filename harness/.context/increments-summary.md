@@ -4,14 +4,14 @@ What each increment delivers and why it matters, in build priority order. Drawn 
 
 | # | Increment | Stories |
 |---|---|---|
-| 0 | Built Today (baseline) | 248 |
+| 0 | Built Today (baseline) | 244 |
 | 1 | Maintain Tickets On Board | 11 |
 | 2 | Integrate Practice Content Editor Apps | 9 |
 | 3 | Sync Design Canvas With Production | 21 |
 | 4 | Integrate Stories With The Canvas Explorer | 14 |
-| 5 | Enter Commands Faster | 5 |
-| 6 | Measure Code On The Model | 2 |
-| 7 | Check Clean Engineering Across Files | 5 |
+| 5 | Repair Guidance From Mistakes | 3 |
+| 6 | Enter Commands Faster | 5 |
+| 7 | Check Clean Engineering On The Model | 7 |
 | 8 | Fully Integrated App Flow | 39 |
 | 9 | Review Work In Board Files | 5 |
 | 10 | Customize Board Workflow | 12 |
@@ -22,22 +22,25 @@ What each increment delivers and why it matters, in build priority order. Drawn 
 | 15 | Draw Linked Models On The Canvas | 8 |
 | 16 | Suggest The Next Step | 5 |
 | 17 | Maybe Later | 1 |
-| | **Planned (1–17)** | **175** |
+| | **Planned (1–17)** | **178** |
+
+**Lessons by topic.** What is built today, taught as the [Learning plan](#learning-plan) below, and the planned increments that extend each topic.
+
+| Topic | Lessons | Extended through |
+|---|---|---|
+| Generate and check | Install · Practices, fidelities, actions and stages · Generate · Document and render · Validate · Satisfy · Injected rules and toasts | 5 Repair Guidance From Mistakes · 6 Enter Commands Faster · 7 Check Clean Engineering On The Model · 12 Guard Work And Recover Fast |
+| Sketch and iterate | Grill, sketch and iterate | 16 Suggest The Next Step |
+| Sessions | Sessions, worktrees and branches · Handoffs and decision records · Server health | 12 Guard Work And Recover Fast · 14 Bring Chat Bar Level With Board · 16 Suggest The Next Step · 17 Maybe Later |
+| Bring in real context | Index and segment a source · Capture documents into a searchable index · Sandbox a live app · Meeting notes | — |
+| CDD Applications | CDD Kanban · Kanban fidelity work · Story UI editor · Design canvas and story demo · Knowledge graph · Catalog and project approach | 1 Maintain Tickets On Board · 2 Integrate Practice Content Editor Apps · 3 Sync Design Canvas With Production · 4 Integrate Stories With The Canvas Explorer · 8 Fully Integrated App Flow · 9 Review Work In Board Files · 10 Customize Board Workflow · 11 Author Story Maps · 13 Show Board Quickly · 15 Draw Linked Models On The Canvas |
+| Pattern overlays | Add your stack: LERN, MERN, CDD web domain access, Claude Code mods | — |
+| Extend CDD | Builders and annotations · Agent BDD and prompt log | — |
 
 ---
 
-## 0. Built Today — 248 stories
+## 0. Built Today — 244 stories
 
-The starting line, not a slice to build: what the framework, the CDD Kanban, the Chat Bar and the apps do now, grouped as the 28 lessons of the [Learning plan](#learning-plan) below, from basic to advanced.
-
-| Section | Lessons |
-|---|---|
-| Level 1 — Basics | Install · Practices, fidelities, actions and stages · Generate · Document and render |
-| Level 2 — Check and fix | Validate · Satisfy · Review · Injected rules and toasts |
-| Level 3 — Intermediate | Sessions, worktrees and branches · Handoffs and decision records · Server health |
-| Level 4 — Practitioner | Partition · Document capture · Live-app sandbox · Meeting notes · Grill, sketch and iterate · Specification and implementation · Background diagnosis |
-| Level 5 — Advanced | CDD Kanban · Kanban fidelity work · Story UI editor · Design canvas and story demo · Knowledge graph · Catalog and project approach |
-| Level 6 — Expert | Guidance repair · Pattern overlays · Builders and annotations · Agent BDD and prompt log |
+The starting line, not a slice to build: what the framework, the CDD Kanban, the Chat Bar and the apps do now, grouped as the 24 lessons of the [Learning plan](#learning-plan) below, each topic leaning only on the ones before it.
 
 ## 1. Maintain Tickets On Board — 11 stories - IN PROGRESS
 
@@ -63,23 +66,23 @@ A person tests a screen against its scenarios from the explorer — each scenari
 
 The benefit is one loop between design and specification: screens are checked against the behaviour they promise, and story feedback given where people look at the design flows straight into the same source of truth.
 
-## 5. Enter Commands Faster — 5 stories
+## 5. Repair Guidance From Mistakes — 3 stories
+
+`/repair` traces a violation back to the guidance that let it happen (its context, example, template or scanner) and fixes that guidance, `/improve` captures a mistake and its correction as a regression example, and a failed example becomes a new named rule.
+
+The benefit is learning that compounds: each error makes every later run better, instead of the same thing being fixed again by hand.
+
+## 6. Enter Commands Faster — 5 stories
 
 A person types a CDD command with actions, practices, fidelities and formats offered as they type, sees argument hints, can add a comment to a sent command, and sees CDD tool calls announced.
 
 The benefit is fewer mistyped or half-remembered commands and less trips to the help: the framework's vocabulary is discoverable right at the prompt.
 
-## 6. Measure Code On The Model — 2 stories
+## 7. Check Clean Engineering On The Model — 7 stories
 
-Validating at the Clean Engineering model or code fidelity measures each function, class and module, stores each measure as a fact on its graph node, and reports anything past a limit in the same validation report.
+Validating at the Clean Engineering model or code fidelity measures each function, class and module, stores each measure as a fact on its graph node, and reports anything past a limit in the same validation report. The same validation finds problems that only show across files — unused classes, runtime dependencies that should be owned, disconnected classes, one-class packages — as graph rules, plus one AI-judged pass over the codebase where the graph cannot answer.
 
-The benefit is that code-size and complexity limits are checked as part of the practice, where the violation can be fixed, replacing the removed always-on metrics gate.
-
-## 7. Check Clean Engineering Across Files — 5 stories
-
-Clean Engineering validation finds problems that only show across files — unused classes, runtime dependencies that should be owned, disconnected classes, one-class packages — as graph rules, plus one AI-judged pass over the codebase where the graph cannot answer.
-
-The benefit is that structural decay is caught automatically instead of by agents running cross-file passes by hand.
+The benefit is that code-size limits and structural decay are caught as part of the practice, where they can be fixed, replacing the removed always-on metrics gate and the cross-file passes agents ran by hand.
 
 ## 8. Fully Integrated App Flow — 39 stories
 
@@ -98,6 +101,27 @@ The benefit is reviewing agent work on the board where the ticket lives, with fe
 A team shapes the board's stages, column policies, todo list, work-type flows and testing strategy, and the board displays, moves, approves and tracks tickets along that customized workflow, including a human-review column and a sub-agent toggle.
 
 The benefit is that the board fits the team's way of working rather than one fixed process.
+
+**Lessons taught when this increment ships** (taken out of the Built Today learning plan because this increment changes the stages a ticket moves through and adds the sub-agent toggle):
+
+**Move a ticket through Specification and Implementation**
+- *What you do:* move the ticket through Specification and Implementation.
+  - Generate `stories-scenarios`, `ddd-model`, `ux-mockup` and `clean-engineering-model`.
+  - Then generate `stories-acceptance-tests`, `bdd-development` and `clean-engineering-code`.
+  - Use the Specification and Implementation agents to run each stage.
+- *What you get:* scenarios become executable specs, then passing tests that drive real code. The same domain words run from the outcome all the way down to the code.
+- *Or from the chat bar:* when every fidelity of the stage has passed validate, the action button shows ➜. Press it to move the session to the next stage, then work the new stage's dots the same way.
+- *Under the hood:* the practices in `cdd_guidance/practices/`, with `cdd_guidance/agents/specification.md` and `implementation.md`.
+- *What happens underneath:*
+  1. ➜ calls `ticket.move_next`, which records the new stage in `session.json` and the log.
+  2. The chat bar shows the new stage's fidelities on its dots.
+  3. Generate builds each fidelity from the one before it, rendering into the new format first when the formats differ.
+  4. Acceptance tests come before the code they drive, and the graph links steps and observations to the operations they call.
+
+**Hand a stubborn bug to a background agent**
+- *What you do:* `/diagnose` (optionally with a practice) for a stubborn bug, or `sub-agent` for any recipe.
+- *What you get:* a disciplined hunt runs in the background (reproduce, minimise, form hypotheses, fix, add a regression test) while you keep working.
+- *Under the hood:* `cdd_guidance/actions/diagnose` and `tools/sub_agent`.
 
 ## 11. Author Story Maps — 14 stories
 
@@ -139,15 +163,15 @@ The benefit is less "what now?" between steps, and knowledge that would otherwis
 
 Work set aside because it is complicated and not needed yet: nesting a child ticket's own branch and session under its parent. Picked up only when asked.
 
----
+
 
 ## Learning plan
 
-How to teach what is built today (Increment 0): what the framework, the CDD Kanban, the Chat Bar and the apps do now. The 28 lessons below are drawn from the README, `catalog/workflow.md`, `.context/cdd-approach.md`, every module's `.context/module-context.md`, the installed skills, and the Built Today stories in the story map. Each lesson is one feature a person can be taught on its own, told from their point of view. They run from basic to advanced, so each lesson leans only on the ones before it.
+How to teach what is built today (Increment 0): what the framework, the CDD Kanban, the Chat Bar and the apps do now. The 24 lessons below are drawn from the README, `catalog/workflow.md`, `.context/cdd-approach.md`, every module's `.context/module-context.md`, the installed skills, and the Built Today stories in the story map. Each lesson is one feature a person can be taught on its own, told from their point of view. They are grouped by topic, and each lesson leans only on the ones before it.
 
-Each lesson has the same parts: **What you do**, **What you get** (the benefit), **Try it** (a command or place to start), **Or from the chat bar** (where the chat bar can do it), **Under the hood** (where it lives in the code) and, for the ones the chat bar or board drive, **What happens underneath** (the steps the system takes). The CDD Kanban does everything the chat bar does for every ticket at once, so it is taught later, at the advanced level.
+Each lesson has the same parts: **What you do**, **What you get** (the benefit), **Try it** (a command or place to start), **Or from the chat bar** (where the chat bar can do it), **Under the hood** (where it lives in the code) and, for the ones the chat bar or board drive, **What happens underneath** (the steps the system takes). The CDD Kanban does everything the chat bar does for every ticket at once, so it is taught later, in its own topic.
 
-### Level 1 — Basics: get CDD running and make your first artifact from the chat
+### Generate and check: get CDD running, make your first artifact, and hold it to written rules
 
 **Lesson 1. Install CDD into your IDE**
 - *What you do:* run `python scripts/install.py --ide Claude` (or Cursor, "VS Code", Kilo), or `/install` in chat. To get the CDD Kanban pane in Claude Code, also install the `cdd-board` plugin.
@@ -206,8 +230,6 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
   4. The practice's `model/{format}/` adapter parses that format and writes the target one.
   5. Render then folds the result into the module it belongs to, keeping behaviour that is already there and never replacing an existing file. It refreshes the session's graph with exactly the files it wrote.
 
-### Level 2 — Check and fix: hold the AI's work to written rules
-
 **Lesson 5. Validate: check an artifact against its rules**
 - *What you do:* `/validate stories-story-map`, optionally with `rule=` to check just one rule, or `paths=` to check exactly the files you're editing.
 - *What you get:* a pass/fail report against the practice's written, named rules, saved in the session so you can come back to it. For graph-backed practices it also reports problems that only show across files.
@@ -233,18 +255,7 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
   3. It validates again, and repeats until the report is clean.
   4. Satisfy itself checks nothing and saves no report: each validate it calls saves its own report and log line.
 
-**Lesson 7. Review: a person signs off**
-- *What you do:* read the fidelity's output and its latest report, then record your review.
-- *What you get:* nothing counts as done until a person has looked at it. A ticket moves to the next stage only when every fidelity of its stage has been generated, validated and reviewed.
-- *Or from the chat bar:* once the latest validate has passed, select the dot, pick review from ▾ and press the button.
-- *Under the hood:* `fidelity-progress.finish_review` in `space/kanban`.
-- *What happens underneath:*
-  1. Review calls `fidelity-progress.finish_review`.
-  2. It refuses until the fidelity's latest validate has passed.
-  3. It records the review in the session log, so the dot shows the fidelity as reviewed.
-  4. When every fidelity of the stage is reviewed, the action button shows ➜ to move the session on.
-
-**Lesson 8. Rules and notices that come to you**
+**Lesson 7. Rules and notices that come to you**
 - *What you do:* nothing. Just work.
 - *What you get:*
   - After an action call or a file edit, the matching practice rules are added to the chat for that path.
@@ -252,7 +263,24 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
   - Always-on rules (in `cdd_guidance/rules/`) apply everywhere.
 - *Under the hood:* `harness/hooks` (`preToolUse`, `afterAgentResponse`), `tools/prompt_notify` (toasts), `cdd_guidance/rules/`.
 
-### Level 3 — Intermediate: run your work as sessions from the chat
+### Sketch and iterate: shape the plan with a person in the loop
+
+**Lesson 8. Shape the plan with a person in the loop**
+- *What you do:*
+  - `/grill` asks questions grounded in files it has read.
+  - `/sketch stories ddd` drafts several practices together in short passes.
+  - `/iterate` delivers the formal artifact one agreed slice at a time.
+  - Use the Discoverer agent to run a whole discovery stage this way.
+- *What you get:* each pass is small enough for a person to absorb, so systemic mistakes are caught while they're still cheap. Answers are kept in `grill-answers.md`.
+- *Or from the chat bar:* select one or more fidelity dots, pick sketch or iterate from ▾ and send the prompt. `/grill` is typed in the chat.
+- *Under the hood:* `cdd_guidance/actions/grill_context`, `sketch`, `iterate`, and `cdd_guidance/agents/discovery.md`.
+- *What happens underneath:*
+  1. Grill reads the context files first, then asks one framed question at a time and writes each answer to `grill-answers.md`.
+  2. Sketch writes one shell file with a section per practice, at that fidelity's Scaffold level, then asks three or four questions and sketches the answers in.
+  3. Iterate generates only the slice the latest answers unlocked, validates it, makes one fix pass, and asks for feedback before the next batch.
+  4. Each round is marked as a Loop in the session log.
+
+### Sessions: run your work as sessions from the chat
 
 **Lesson 9. Sessions: each piece of work gets its own folder, worktree and branch**
 - *What you do:* create a session (`ticket.create`, or `/switch-session <name>`) and activate it (`ticket.activate`). `/current-session` says which one is open.
@@ -294,7 +322,7 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
   3. Run install runs the installer and reports installing, installed (open a new session) or failed. Details shows the tool, the error, the server and the fix.
   4. Install probes call each published tool through the live host and write the results to `diagnostics.json`.
 
-### Level 4 — Practitioner: bring in real context and shape the solution
+### Bring in real context: work from the real sources, not memory
 
 **Lesson 12. Partition: index a source, then cut it into verbatim segments**
 - *What you do:* `/partition stories-story-map paths=<handbook folder>`, then partition the same source through another practice, such as `/partition ux-ia` or `/partition clean-engineering-modules`.
@@ -345,48 +373,14 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
 - *What you get:* decisions and facts from meetings become citable context files, one file per note. Nothing is moved until you confirm.
 - *Under the hood:* `tools/granola`.
 
-**Lesson 16. Shape the plan with a person in the loop**
-- *What you do:*
-  - `/grill` asks questions grounded in files it has read.
-  - `/sketch stories ddd` drafts several practices together in short passes.
-  - `/iterate` delivers the formal artifact one agreed slice at a time.
-  - Use the Discoverer agent to run a whole discovery stage this way.
-- *What you get:* each pass is small enough for a person to absorb, so systemic mistakes are caught while they're still cheap. Answers are kept in `grill-answers.md`.
-- *Or from the chat bar:* select one or more fidelity dots, pick sketch or iterate from ▾ and send the prompt. `/grill` is typed in the chat.
-- *Under the hood:* `cdd_guidance/actions/grill_context`, `sketch`, `iterate`, and `cdd_guidance/agents/discovery.md`.
-- *What happens underneath:*
-  1. Grill reads the context files first, then asks one framed question at a time and writes each answer to `grill-answers.md`.
-  2. Sketch writes one shell file with a section per practice, at that fidelity's Scaffold level, then asks three or four questions and sketches the answers in.
-  3. Iterate generates only the slice the latest answers unlocked, validates it, makes one fix pass, and asks for feedback before the next batch.
-  4. Each round is marked as a Loop in the session log.
+### CDD Applications: the CDD Kanban, Story UI, design canvas, knowledge graph and catalog
 
-**Lesson 17. Go deeper: from story map to tests to code**
-- *What you do:* move the ticket through Specification and Implementation.
-  - Generate `stories-scenarios`, `ddd-model`, `ux-mockup` and `clean-engineering-model`.
-  - Then generate `stories-acceptance-tests`, `bdd-development` and `clean-engineering-code`.
-  - Use the Specification and Implementation agents to run each stage.
-- *What you get:* scenarios become executable specs, then passing tests that drive real code. The same domain words run from the outcome all the way down to the code.
-- *Or from the chat bar:* when every fidelity of the stage is reviewed, the action button shows ➜. Press it to move the session to the next stage, then work the new stage's dots the same way.
-- *Under the hood:* the practices in `cdd_guidance/practices/`, with `cdd_guidance/agents/specification.md` and `implementation.md`.
-- *What happens underneath:*
-  1. ➜ calls `ticket.move_next`, which records the new stage in `session.json` and the log.
-  2. The chat bar shows the new stage's fidelities on its dots.
-  3. Generate builds each fidelity from the one before it, rendering into the new format first when the formats differ.
-  4. Acceptance tests come before the code they drive, and the graph links steps and observations to the operations they call.
-
-**Lesson 18. Hand hard problems to a background agent**
-- *What you do:* `/diagnose` (optionally with a practice) for a stubborn bug, or `sub-agent` for any recipe.
-- *What you get:* a disciplined hunt runs in the background (reproduce, minimise, form hypotheses, fix, add a regression test) while you keep working.
-- *Under the hood:* `cdd_guidance/actions/diagnose` and `tools/sub_agent`.
-
-### Level 5 — Advanced: the CDD Kanban and the visual apps
-
-**Lesson 19. See and move work on the CDD Kanban**
+**Lesson 16. See and move work on the CDD Kanban**
 - *What you do:* open the board and find every session as a ticket in Backlog, Discovery, Specification, Implementation or Complete.
   - Add a backlog item and start it as a ticket.
   - Move tickets forward or back.
   - Set a WIP limit per stage, split a ticket into children, and archive it when it's finished.
-- *What you get:* AI work is visible and limited like any agile team's work. A ticket's place comes from its log (Generate, Validate and Review per fidelity), so a move made by the agent and one made by a person give the same answer.
+- *What you get:* AI work is visible and limited like any agile team's work. A ticket's place comes from its log (Generate and Validate per fidelity), so a move made by the agent and one made by a person give the same answer.
 - *Under the hood:* `space/kanban` (*Board*, *Ticket*, *Stage*, *BacklogItem*, *FidelityProgress*) and the CDD Kanban app in `app/src/kanban`.
 - *What happens underneath:*
   1. Typing `/board` in the chat starts the board app if it isn't running, then opens it.
@@ -396,21 +390,20 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
   5. A move calls `ticket.move_next`, `move_previous` or `move_to`, which writes `stage` and `stage_mark` into `session.json` and adds a line to the log.
   6. WIP limits and the order of cards are kept in `.sessions/_board.json`.
 
-**Lesson 20. Work a ticket's fidelities from the board**
+**Lesson 17. Work a ticket's fidelities from the board**
 - *What you do:* choose the ticket's practices and read each fidelity tile's progress dots.
   - Send the next action, or one action to every practice in the stage, with format chips.
   - Open the violations band and its report, and fix the violations.
-  - Browse the ticket's files and record the review.
+  - Browse the ticket's files.
 - *What you get:* the next step is always one click away. The board sends the exact command to the chat working on the ticket.
 - *Under the hood:* `fidelity-progress.*`, `ticket.violations`, `file-manager.*`, and `harness/chat`, which reaches a live chat and follows the command until it finishes.
 - *What happens underneath:*
-  1. Each tile reads its *FidelityProgress* (whether Generate, Validate and Review are done, from the session log) and its `commands`.
+  1. Each tile reads its *FidelityProgress* (whether Generate and Validate are done, from the session log) and its `commands`.
   2. Pressing an action sends that command through `harness/chat` to the connected chat working on the ticket, whose cdd-board plugin checks in every second.
   3. The board follows the command until the chat has shown it and finished.
   4. The violations band reads `ticket.violations`, and the files list reads `fidelity-progress.files` and `file-manager.*`.
-  5. Review calls `fidelity-progress.finish_review`.
 
-**Lesson 21. Author story maps in the Story UI editor**
+**Lesson 18. Author story maps in the Story UI editor**
 - *What you do:* open a map by its address and switch between map view and increment view.
   - Add, rename, drag and reorder epics, sub-epics and stories.
   - Plan increments by dragging stories into them.
@@ -418,7 +411,7 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
 - *What you get:* product people shape scope visually. Each edit is saved as you go, edits that break map rules are refused, and the result is the same story files the agents read.
 - *Under the hood:* the Story UI app and the story model in `cdd_guidance/practices/stories/model`.
 
-**Lesson 22. Prototype on the design canvas and play stories through it**
+**Lesson 19. Prototype on the design canvas and play stories through it**
 - *What you do:*
   - Lay out pages and artboards and write the canvas into a project folder.
   - Load a scenario's fixture data into a screen and follow screen links to the next story.
@@ -427,7 +420,7 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
 - *What you get:* stakeholders click through screens driven by real scenarios, and every published version is kept with its link. Regenerating the canvas never overwrites what people edited.
 - *Under the hood:* `harness/design_canvas` (*DesignCanvas*, *FixtureScreen*) and `cdd_guidance/practices/ux/story-demo`.
 
-**Lesson 23. See everything in the knowledge graph**
+**Lesson 20. See everything in the knowledge graph**
 - *What you do:*
   - Load the working copy into one graph of every practice's nodes and the links between them.
   - Apply pattern overlays.
@@ -436,27 +429,21 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
 - *What you get:* you can click through from outcome to story to class to code, and cross-practice problems show on the exact node and line. Graph rules also report inside `/validate`, and the graph is refreshed after each action that writes files.
 - *Under the hood:* `harness/graph` (`graph.load_working_copy`, `return_nodes`, `explorer_trees`, `save_json`), with each practice's `PracticeReading`.
 
-**Lesson 24. Publish the catalog and your project's approach**
+**Lesson 21. Publish the catalog and your project's approach**
 - *What you do:* run `catalog.generate_catalog`, `catalog.generate_project_approach` and `catalog.apply_brand`.
 - *What you get:* a self-contained, brandable website of every practice, fidelity, rule and action, plus a one-page approach built from your own project's example artifacts, to share with a team or a client.
 - *Under the hood:* `harness/catalog_generator`.
 
-### Level 6 — Expert: improve and extend CDD
+### Pattern overlays: add your stack on top of the practices
 
-**Lesson 25. Make the guidance learn from mistakes**
-- *What you do:*
-  - `/repair` traces a violation back to the guidance that let it happen and fixes that guidance.
-  - Improve guidance from a mistake, and add a rule from a failed example.
-  - `/verify_fix` re-runs the regression check.
-- *What you get:* each error makes every later run better. You compound learning instead of fixing the same thing again.
-- *Under the hood:* `cdd_guidance/actions/improvement`, `Validate.create_rule`, and each practice's `rules/rule_examples.py`.
-
-**Lesson 26. Add your stack: pattern overlays**
+**Lesson 22. Add your stack: pattern overlays**
 - *What you do:* apply a pattern such as LERN or MERN domain-driven, CDD web domain access, or a Claude Code mod on top of the practices.
 - *What you get:* stack-specific guidance and graph rules (acceptance tests first, then the code they drive) without changing a practice.
 - *Under the hood:* `cdd_guidance/patterns` (*DomainDrivenStack*, *LernDomainDriven*, *MernDomainDriven*, *CddWebDomainAccess*, *CddClaudeMod*).
 
-**Lesson 27. Build your own toolsets and practices**
+### Extend CDD: build and test your own tools
+
+**Lesson 23. Build your own toolsets and practices**
 - *What you do:*
   - Use the builders `builders-create-agent-toolset` and `builders-create-practice-guidance`.
   - Annotate a plain class with `@agent_toolset`, `@agent_tool`, `@agent_instructions`, `@skill`, `@mcp`, `@hook` or `@Toast`.
@@ -464,7 +451,7 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
 - *What you get:* a team turns its own practices, tools and quality bar into commands, skills, MCP tools and hooks that work with every existing action on the first try.
 - *Under the hood:* `cdd_guidance/builders`, `harness/annotations`, `harness/agent_tools`, and `harness/guidance` (*PracticeGuidance*, *PracticeCatalogue*).
 
-**Lesson 28. Test agents and audit what they see**
+**Lesson 24. Test agents and audit what they see**
 - *What you do:*
   - Write agent BDD specs that drive a real agent and judge its output with an AI rubric.
   - Turn on the prompt log to record every prompt, file read and tool call.

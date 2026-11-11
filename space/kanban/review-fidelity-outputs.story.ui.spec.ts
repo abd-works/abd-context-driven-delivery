@@ -71,15 +71,3 @@ test.describe('View Fidelity Files', () => {
     })
   })
 })
-
-test.describe('Review Fidelity', () => {
-  test.describe('Keep Review off until Validate is clean', () => {
-    test.beforeEach(async ({ page }) => {
-      await openBoard(page)
-    })
-
-    test('Then review is off', async ({ page }) => {
-      await expect((await openStoryMapBar(page, 'billing-report', 'Billing report')).getByRole('button', { name: 'review', exact: true })).toBeDisabled()
-    })
-  })
-})
