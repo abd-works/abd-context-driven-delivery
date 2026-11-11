@@ -926,7 +926,7 @@ a { color: #E5531A; } a:hover { color: #C64514; }
 </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"story":{"editor":null},"scenario":{"editor":null},"go":{"editor":null},"theme":{"editor":"enum","options":["engineering","executive"],"default":"engineering","section":"Look"},"stageLists":{"editor":"enum","options":["side by side","stacked"],"default":"side by side","section":"Layout"},"showArrows":{"editor":"boolean","default":true,"section":"Layout"},"$preview":{"width":1960,"height":920}}'>
+<script type="text/x-dc" data-dc-script data-props='{"story":{"editor":null},"scenario":{"editor":null},"step":{"editor":null},"go":{"editor":null},"theme":{"editor":"enum","options":["engineering","executive"],"default":"engineering","section":"Look"},"stageLists":{"editor":"enum","options":["side by side","stacked"],"default":"side by side","section":"Layout"},"showArrows":{"editor":"boolean","default":true,"section":"Layout"},"$preview":{"width":1960,"height":920}}'>
 const PRACTICES = [
   { name: 'Stories', slug: 'stories', skill: 'stories-stories', color: '#6BCB77' },
   { name: 'DDD', slug: 'ddd', skill: 'ddd-ddd', color: '#6C5CE7' },
@@ -1241,12 +1241,85 @@ const ACTION_REPLIES = [
 const guidanceSlugOf = (index, stage) => `${PRACTICES[index].slug}-${stage.fidelities[index]}`.replaceAll('_', '-');
 const skillOf = (practice, fidelity) => `/practices-${practice.skill}-${fidelity.replaceAll('_', '-')}`;
 
-const STORY_FOCUS = {"Expand Ticket From Empty Area": {"selected": "checkout-flow", "openCard": null}, "Edit Ticket Text": {"selected": "checkout-flow", "openCard": null, "Write the text file for a ticket that has none": {"selected": "pet-visits", "openCard": null}, "Edit a backlog item's text": {"selected": ".sessions/_backlog/gift-cards.md", "openCard": null}}, "Reorder Tickets In Column": {"selected": "pet-visits", "openCard": "pet-visits", "Keep a backlog item where it was moved": {"selected": ".sessions/_backlog/gift-cards.md", "openCard": null}}, "Delete Ticket": {"selected": "pet-visits", "openCard": "pet-visits"}, "Tag Ticket Session": {"selected": "pet-visits", "openCard": "pet-visits"}, "Add Child Ticket": {"selected": "pet-visits", "openCard": "pet-visits"}, "Display Child Tickets In Parent": {"selected": "checkout-flow", "openCard": "checkout-flow"}, "Expand Parent Ticket": {"selected": "checkout-flow", "openCard": null, "Collapse a parent to its own card": {"selected": "checkout-flow", "openCard": "checkout-flow"}}, "Detach Child Ticket": {"selected": "checkout-flow", "openCard": "checkout-flow", "Move a pulled-out child like any ticket": {"selected": "enter-card-details", "openCard": "enter-card-details"}}, "Reassign Ticket Parent": {"selected": "checkout-flow", "openCard": "checkout-flow"}, "Place Parent At Leftmost Child Stage": {"selected": "checkout-flow", "openCard": null}, "Nest Child Branch And Session": {"selected": "checkout-flow", "openCard": "checkout-flow"}};
+const STORY_FOCUS = {"Expand Ticket From Empty Area": {"selected": "checkout-flow", "openCard": null}, "Edit Ticket Text": {"selected": "checkout-flow", "openCard": null, "Write the text file for a ticket that has none": {"selected": "pet-visits", "openCard": null}, "Edit a backlog item's text": {"selected": ".sessions/_backlog/gift-cards.md", "openCard": null}}, "Reorder Tickets In Column": {"selected": "pet-visits", "openCard": "pet-visits", "Keep a backlog item where it was moved": {"selected": ".sessions/_backlog/gift-cards.md", "openCard": null}}, "Delete Ticket": {"selected": "pet-visits", "openCard": "pet-visits"}, "Tag Ticket Session": {"selected": "pet-visits", "openCard": "pet-visits"}, "Add Child Ticket": {"selected": "checkout-flow", "openCard": "checkout-flow"}, "Display Child Tickets In Parent": {"selected": "checkout-flow", "openCard": "checkout-flow"}, "Expand Parent Ticket": {"selected": "checkout-flow", "openCard": null, "Collapse a parent to its own card": {"selected": "checkout-flow", "openCard": "checkout-flow"}}, "Detach Child Ticket": {"selected": "checkout-flow", "openCard": "checkout-flow", "Move a pulled-out child like any ticket": {"selected": "enter-card-details", "openCard": "enter-card-details"}}, "Reassign Ticket Parent": {"selected": "checkout-flow", "openCard": "checkout-flow"}, "Place Parent At Leftmost Child Stage": {"selected": "checkout-flow", "openCard": null}, "Nest Child Branch And Session": {"selected": "checkout-flow", "openCard": "checkout-flow"}};
+const SCENARIO_STEPS = {"Expand Ticket From Empty Area": {"Expand a card from an empty area": ["Given the ticket checkout-flow's card is collapsed on the board", "When the Person presses an empty area of checkout-flow's card", "Then checkout-flow's card is expanded to show its actions", "And the details show checkout-flow"], "Leave a card's controls to do their own work": ["Given the ticket checkout-flow's card is collapsed on the board", "When the Person opens the stories tile on checkout-flow's card", "Then the stories tile is open", "And checkout-flow's card stays collapsed"]}, "Edit Ticket Text": {"Show a ticket's text from its session file": ["Given the ticket checkout-flow's session folder holds checkout-flow.md with the text Pay for the basket.", "When the Person opens the board", "Then checkout-flow's card shows Pay for the basket."], "Edit a ticket's text": ["Given the ticket checkout-flow's card shows Pay for the basket.", "When the Person edits checkout-flow's text to Pay for the basket by card.", "Then checkout-flow.md in checkout-flow's session folder holds Pay for the basket by card.", "And checkout-flow's card shows Pay for the basket by card."], "Write the text file for a ticket that has none": ["Given the ticket pet-visits is on the board", "But pet-visits' session folder holds no pet-visits.md", "When the Person edits pet-visits' text to Book a visit for a pet.", "Then pet-visits.md in pet-visits' session folder holds Book a visit for a pet.", "And pet-visits' card shows Book a visit for a pet."], "Edit a backlog item's text": ["Given the backlog item Gift cards has the text Sell gift cards.", "When the Person edits Gift cards' text to Sell gift cards at the till.", "Then .sessions/_backlog/gift-cards.md holds Sell gift cards at the till.", "And the Backlog shows Gift cards with the text Sell gift cards at the till."]}, "Reorder Tickets In Column": {"Keep a ticket where it was moved in its column": ["Given the Discovery column shows the ticket pet-visits above sign-up", "When the Person moves sign-up above pet-visits in Discovery", "Then Discovery shows sign-up above pet-visits", "And Discovery still shows sign-up above pet-visits when the board is read again"], "Keep a backlog item where it was moved": ["Given the Backlog shows the backlog item Gift cards above Returns and refunds", "When the Person moves Returns and refunds above Gift cards", "Then the Backlog shows Returns and refunds above Gift cards", "And the Backlog still shows Returns and refunds above Gift cards when the board is read again"]}, "Delete Ticket": {"Delete a ticket and its session folder": ["Given the ticket pet-visits is on the board", "When the Person deletes pet-visits", "Then no column shows pet-visits", "And .sessions/pet-visits is gone"], "Refuse to delete a ticket the board does not have": ["Given the board shows no ticket named no-such-ticket", "When the Person deletes no-such-ticket", "Then the board says no ticket named 'no-such-ticket' on the board", "And no session folder is removed"]}, "Tag Ticket Session": {"Tag a ticket's session": ["Given the ticket pet-visits has no tags", "When the Person tags pet-visits' session with billing", "Then pet-visits' card shows the tag billing", "And pet-visits' session.json holds the tag billing"], "Add a second tag": ["Given the ticket pet-visits is tagged billing", "When the Person tags pet-visits' session with urgent", "Then pet-visits' card shows the tags billing and urgent"]}, "Add Child Ticket": {"Add a child ticket by hand": ["Given the ticket checkout-flow is In progress in Discovery", "But checkout-flow has no child tickets", "When the Person adds the child ticket Enter card details to checkout-flow", "Then the ticket enter-card-details is In progress in Discovery with the parent checkout-flow", "And checkout-flow's card holds enter-card-details (Display Child Tickets In Parent)"]}, "Display Child Tickets In Parent": {"Stack a parent's children inside its card": ["Given the ticket checkout-flow is in Discovery", "And its child tickets enter-card-details and confirm-order are in Discovery", "When the board shows Discovery", "Then checkout-flow's card holds enter-card-details and confirm-order stacked inside it", "And checkout-flow's title sits small above them", "And neither child shows as a card of its own in Discovery"], "Keep a dashed row for a child pulled out of its parent": ["Given the ticket checkout-flow is in Discovery", "And its child ticket enter-card-details was pulled out of it and is in Specification", "When the board shows checkout-flow", "Then checkout-flow's card holds a dashed row for enter-card-details"]}, "Expand Parent Ticket": {"Expand a parent to show its children": ["Given the ticket checkout-flow is collapsed with the child tickets enter-card-details and confirm-order", "And checkout-flow's card reads + 2 children", "When the Person expands checkout-flow", "Then checkout-flow's card shows enter-card-details and confirm-order", "And it reads - 2 children"], "Collapse a parent to its own card": ["Given the ticket checkout-flow is expanded to show enter-card-details and confirm-order", "When the Person collapses checkout-flow", "Then checkout-flow's card shows no child rows", "And it reads + 2 children"]}, "Detach Child Ticket": {"Pull a child out of its parent": ["Given the ticket checkout-flow holds its child ticket enter-card-details in Discovery", "When the Person pulls enter-card-details out of checkout-flow", "Then enter-card-details shows as a card of its own beside checkout-flow, titled Checkout flow.Enter card details", "And enter-card-details still has the parent checkout-flow", "And checkout-flow's card holds a dashed row for enter-card-details"], "Move a pulled-out child like any ticket": ["Given the ticket enter-card-details was pulled out of checkout-flow and is Done in Discovery", "When the Person moves enter-card-details to Specification", "Then the Specification column shows enter-card-details", "And enter-card-details still has the parent checkout-flow (Place Parent At Leftmost Child Stage)"]}, "Reassign Ticket Parent": {"Move a child to another parent": ["Given the ticket enter-card-details is a child of checkout-flow", "And the ticket billing-report is In progress in Discovery", "When the Person makes enter-card-details a child of billing-report", "Then billing-report's card holds enter-card-details", "And checkout-flow's card no longer holds enter-card-details", "And enter-card-details' session.json names billing-report as its parent"], "Take a child off its parent": ["Given the ticket enter-card-details is a child of checkout-flow", "When the Person takes enter-card-details off checkout-flow", "Then enter-card-details shows as a card of its own with no parent", "And checkout-flow's card holds no row for enter-card-details, dashed or not", "And enter-card-details' session.json names no parent"]}, "Place Parent At Leftmost Child Stage": {"Show a parent in its earliest child's stage": ["Given the ticket checkout-flow has the child tickets enter-card-details in Specification and confirm-order in Discovery", "When the board shows checkout-flow", "Then checkout-flow shows in the Discovery column"], "Move a parent on when its last child moves on": ["Given the ticket checkout-flow has the child tickets enter-card-details in Specification and confirm-order Done in Discovery", "When the Person moves confirm-order to Specification", "Then checkout-flow shows in the Specification column"], "Refuse to move a parent by hand": ["Given the ticket checkout-flow has the child ticket confirm-order in Discovery", "When the Person tries to move checkout-flow to Specification", "Then checkout-flow stays in the Discovery column"]}, "Nest Child Branch And Session": {"Nest a child's session and branch under its parent's": ["Given the ticket checkout-flow's session is .sessions/checkout-flow on the branch checkout-flow", "When Claude Code opens the child ticket Enter card details of checkout-flow", "Then enter-card-details' session folder is .sessions/checkout-flow/enter-card-details", "And enter-card-details' branch is checkout-flow.enter-card-details"]}};
+
+const IDS = { flow: 'checkout-flow', card: 'enter-card-details', order: 'confirm-order', pets: 'pet-visits', signUp: 'sign-up', billing: 'billing-report' };
+const GIFT = '.sessions/_backlog/gift-cards.md', RETURNS = '.sessions/_backlog/returns-and-refunds.md';
+const change = (tickets, id, fields) => tickets.map(t => (t.id === id ? Object.assign({}, t, fields) : t));
+const stacked = tickets => change(change(tickets, IDS.card, { column: 'Discovery', done: false, pulledOut: false, parent: IDS.flow }), IDS.order, { column: 'Discovery', done: false, parent: IDS.flow });
+const before = (list, key, moving, anchor) => {
+  const item = list.find(x => x[key] === moving);
+  const rest = list.filter(x => x[key] !== moving);
+  const at = rest.findIndex(x => x[key] === anchor);
+  return [...rest.slice(0, at), item, ...rest.slice(at)];
+};
+const PLAYS = {
+  'Expand Ticket From Empty Area': {
+    'Expand a card from an empty area': { act: () => ({ openCard: IDS.flow }) },
+    "Leave a card's controls to do their own work": { act: () => ({ message: "The stories tile opens; checkout-flow's card stays collapsed." }) },
+  },
+  'Edit Ticket Text': {
+    "Show a ticket's text from its session file": { act: () => ({ selected: IDS.flow }) },
+    "Edit a ticket's text": { act: s => ({ tickets: change(s.tickets, IDS.flow, { text: 'Pay for the basket by card.' }), message: 'Saved to .sessions/checkout-flow/checkout-flow.md' }) },
+    'Write the text file for a ticket that has none': { act: s => ({ tickets: change(s.tickets, IDS.pets, { text: 'Book a visit for a pet.' }), message: 'Wrote .sessions/pet-visits/pet-visits.md' }) },
+    "Edit a backlog item's text": { act: s => ({ backlog: s.backlog.map(b => (b.path === GIFT ? Object.assign({}, b, { body: 'Sell gift cards at the till.' }) : b)), message: 'Saved to .sessions/_backlog/gift-cards.md' }) },
+  },
+  'Reorder Tickets In Column': {
+    'Keep a ticket where it was moved in its column': { act: s => ({ tickets: before(s.tickets, 'id', IDS.signUp, IDS.pets), selected: IDS.signUp, openCard: IDS.signUp, message: 'sign-up now sits above pet-visits in Discovery' }) },
+    'Keep a backlog item where it was moved': { act: s => ({ backlog: before(s.backlog, 'path', RETURNS, GIFT), selected: RETURNS, message: 'Returns and refunds now sits above Gift cards' }) },
+  },
+  'Delete Ticket': {
+    'Delete a ticket and its session folder': { act: s => ({ tickets: s.tickets.filter(t => t.id !== IDS.pets), selected: null, openCard: null, message: 'Deleted pet-visits; .sessions/pet-visits is gone' }) },
+    'Refuse to delete a ticket the board does not have': { act: () => ({ message: "No ticket named 'no-such-ticket' on the board; no session folder is removed" }) },
+  },
+  'Tag Ticket Session': {
+    "Tag a ticket's session": { given: s => ({ tickets: change(s.tickets, IDS.pets, { tags: [] }) }), act: s => ({ tickets: change(s.tickets, IDS.pets, { tags: ['billing'] }) }) },
+    'Add a second tag': { given: s => ({ tickets: change(s.tickets, IDS.pets, { tags: ['billing'] }) }), act: s => ({ tickets: change(s.tickets, IDS.pets, { tags: ['billing', 'urgent'] }) }) },
+  },
+  'Add Child Ticket': {
+    'Add a child ticket by hand': {
+      given: s => ({ tickets: s.tickets.filter(t => t.parent !== IDS.flow), selected: IDS.flow, openCard: IDS.flow }),
+      act: s => ({ tickets: [...s.tickets, { id: IDS.card, title: 'Enter card details', column: 'Discovery', age: 'just now', progress: [IDLE, IDLE, IDLE], handoff: '', text: '', tags: [], parent: IDS.flow }], message: 'Opened enter-card-details in Discovery as a child of checkout-flow' }),
+    },
+  },
+  'Display Child Tickets In Parent': {
+    "Stack a parent's children inside its card": { given: s => ({ tickets: stacked(s.tickets), openCard: null }), act: () => ({ selected: IDS.flow, openCard: IDS.flow }) },
+    'Keep a dashed row for a child pulled out of its parent': { given: () => ({ openCard: null }), act: () => ({ selected: IDS.flow, openCard: IDS.flow }) },
+  },
+  'Expand Parent Ticket': {
+    'Expand a parent to show its children': { given: s => ({ tickets: stacked(s.tickets), selected: IDS.flow, openCard: null }), act: () => ({ openCard: IDS.flow }) },
+    'Collapse a parent to its own card': { given: s => ({ tickets: stacked(s.tickets), selected: IDS.flow, openCard: IDS.flow }), act: () => ({ openCard: null }) },
+  },
+  'Detach Child Ticket': {
+    'Pull a child out of its parent': { given: s => ({ tickets: stacked(s.tickets), selected: IDS.flow, openCard: IDS.flow }), act: s => ({ tickets: change(s.tickets, IDS.card, { pulledOut: true }), selected: IDS.card, message: 'enter-card-details is a card of its own; checkout-flow keeps a dashed row' }) },
+    'Move a pulled-out child like any ticket': { given: s => ({ tickets: change(s.tickets, IDS.card, { column: 'Discovery', done: true, pulledOut: true }), selected: IDS.card }), act: s => ({ tickets: change(s.tickets, IDS.card, { column: 'Specification', done: false }), message: 'enter-card-details moved to Specification; its parent is still checkout-flow' }) },
+  },
+  'Reassign Ticket Parent': {
+    'Move a child to another parent': { given: s => ({ tickets: stacked(s.tickets), selected: IDS.flow, openCard: IDS.flow }), act: s => ({ tickets: change(s.tickets, IDS.card, { parent: IDS.billing }), selected: IDS.billing, openCard: IDS.billing, message: 'enter-card-details is now a child of billing-report' }) },
+    'Take a child off its parent': { given: s => ({ tickets: stacked(s.tickets), selected: IDS.flow, openCard: IDS.flow }), act: s => ({ tickets: change(s.tickets, IDS.card, { parent: undefined, pulledOut: false }), message: 'enter-card-details has no parent' }) },
+  },
+  'Place Parent At Leftmost Child Stage': {
+    "Show a parent in its earliest child's stage": { act: () => ({ selected: IDS.flow }) },
+    'Move a parent on when its last child moves on': { act: s => ({ tickets: change(s.tickets, IDS.order, { column: 'Specification', done: false }), selected: IDS.flow, message: 'Checkout flow moves with it to Specification' }) },
+    'Refuse to move a parent by hand': { act: () => ({ selected: IDS.flow, openCard: IDS.flow, message: 'a parent moves with its children; checkout-flow stays in Discovery' }) },
+  },
+  'Nest Child Branch And Session': {
+    "Nest a child's session and branch under its parent's": { act: () => ({ selected: IDS.card, openCard: IDS.card, message: 'enter-card-details: session .sessions/checkout-flow/enter-card-details, branch checkout-flow.enter-card-details' }) },
+  },
+};
 function storyFocus(story, scenario) {
   const focus = STORY_FOCUS[story];
   if (!focus) return null;
   const own = focus[scenario];
   return own || { selected: focus.selected, openCard: focus.openCard };
+}
+function stepPlace(story, scenario, step) {
+  const steps = (SCENARIO_STEPS[story] || {})[scenario] || [];
+  const shown = String(step || "").split("\n").map(line => line.trim()).filter(Boolean).pop() || "";
+  const at = steps.findIndex(line => line === shown);
+  const when = steps.findIndex(line => line.startsWith("When "));
+  return { at, when };
 }
 class Component extends DCLogic {
   state = {
@@ -1264,13 +1337,21 @@ class Component extends DCLogic {
 
   pinnedPlace = null;
 
-  componentDidMount() { this.followStory(); }
+  componentDidMount() { this.seed = { tickets: this.state.tickets, backlog: this.state.backlog }; this.followStory(); }
   componentDidUpdate(previous) {
-    if (previous.story !== this.props.story || previous.scenario !== this.props.scenario) this.followStory();
+    const { story, scenario, step } = this.props;
+    if (previous.story !== story || previous.scenario !== scenario || previous.step !== step) this.followStory();
   }
   followStory() {
-    const focus = storyFocus(this.props.story, this.props.scenario);
-    if (focus) this.setState({ selected: focus.selected, openCard: focus.openCard, cardClosing: false, expansion: null });
+    const { story, scenario, step } = this.props;
+    const focus = storyFocus(story, scenario);
+    if (!focus) return;
+    let s = { tickets: (this.seed || this.state).tickets, backlog: (this.seed || this.state).backlog, selected: focus.selected, openCard: focus.openCard, message: "" };
+    const play = (PLAYS[story] || {})[scenario];
+    if (play && play.given) s = Object.assign(s, play.given(s));
+    const { at, when } = stepPlace(story, scenario, step);
+    if (play && play.act && when >= 0 && at >= when) s = Object.assign(s, play.act(s));
+    this.setState(Object.assign({}, s, { tickets: settleParents(s.tickets), cardClosing: false, expansion: null, editingText: null }));
   }
 
   wipVals(stage, count) {
