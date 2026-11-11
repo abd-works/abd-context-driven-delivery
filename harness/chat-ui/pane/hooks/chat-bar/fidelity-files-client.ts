@@ -1,11 +1,11 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { FileEntryData, ReportData } from '@cdd/space/kanban/fidelity-progress'
+import type { FileEntryData } from '@cdd/space/kanban/fidelity-progress'
 import type { FileTextData } from '@cdd/space/session/session'
 
 import type { FidelityFilesJson } from '../../types'
-import { openInBrowser, runningBoardUrl } from '../board-chat/board-server'
+import { openInBrowser, repositoryFolder, runningBoardUrl } from '../board-chat/board-server'
 import { reasonOf } from '../shared/failure'
 import { callTool, currentChatBar } from './chat-bar-client'
 import { runAction, type FidelityProgressClient } from './fidelity-progress-client'
@@ -52,19 +52,15 @@ export async function openFilesOf($: EngineInterface, fidelities: FidelityProgre
 }
 
 // The fidelity's latest validation report in the board's own report panel, with its findings and Fix buttons, opened in
-// the person's browser by the board's ?report=&fidelity= link. With no board to open, the report's text shows in its own
-// tab of the files pane instead, so the person still reads the violations before telling the agent to fix them.
+// the person's browser by the board's ?report=&fidelity= link, the board started first when it is not running. The
+// report's text never comes into the chat: a report can run to many thousands of characters, past what one tool answer
+// holds. With no board to open, the toast says so and names the report's file.
 export async function openReport($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
   const url = await runningBoardUrl($).catch(() => '')
   const link = url && `${url}/?report=${encodeURIComponent(fidelity.progress.ticket.name)}&fidelity=${encodeURIComponent(fidelity.slug)}`
   if (link && (await openInBrowser($, link))) return
-  try {
-    const report = await callTool<ReportData>($, 'fidelity-progress.report', { ticket: fidelity.progress.ticket.name, fidelity: fidelity.slug })
-    await update($, fidelityFiles, () => ({ fidelity: fidelity.slug, tabs: [{ path: report.path, text: report.text }], shown: report.path, isOutOfDate: report.is_out_of_date }))
-    await openPane($, `${fidelity.slug} report`)
-  } catch (failure) {
-    $.ui.toast(`${fidelity.slug} report: ${reasonOf(failure)}`)
-  }
+  const why = url ? `the browser did not open ${link}` : 'the board is not running and did not start'
+  $.ui.toast(`${fidelity.slug} report: ${why}. The report is ${fidelity.progress.report_file || 'not saved yet'}`)
 }
 
 // A file the server refuses shows the server's reason in its tab. A diagram's tab shows only its draw.io button.
@@ -78,6 +74,15 @@ export async function showFile($: EngineInterface, path: string): Promise<void> 
     text = reasonOf(failure)
   }
   await update($, fidelityFiles, files => (files ? { ...files, shown: path, tabs: files.tabs.map(tab => (tab.path === path ? { path, text } : tab)) } : files))
+}
+
+// A press on the shown file's title opens it in the editor the system opens its kind of file with, by its file:// link.
+// A path from the project is named from the repository's own folder; an absolute one, such as a report's, is as it is.
+const ABSOLUTE_PATH = /^([A-Za-z]:[\\/]|\/)/
+export async function openFileInEditor($: EngineInterface, path: string): Promise<void> {
+  const absolute = ABSOLUTE_PATH.test(path) ? path : `${await repositoryFolder($)}/${path}`
+  const link = `file:///${absolute.split('\\').join('/').replace(/^\//, '')}`
+  if (!(await openInBrowser($, link))) $.ui.toast(`${path} did not open: no program took ${link}`)
 }
 
 // A report whose saved graph is out of date has lost its graph's rules, so its fidelity is validated again to find them.

@@ -3,31 +3,33 @@ import type { EngineInterface } from 'claude-code'
 import type { FidelityFilesJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { openInDrawio } from './drawio-viewer-client'
-import { closeFiles, isDiagram, showFile, validateAgain } from './fidelity-files-client'
+import { closeFiles, isDiagram, openFileInEditor, showFile, validateAgain } from './fidelity-files-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
-// A file's text in the files view shows this many lines, so the box keeps above the prompt.
-const FILE_LINES = 40
-
-// The shown tab's first lines: markdown drawn as the board and the chat draw it, with headings, tables and links, and any
-// other file as its plain lines. A note says how many lines are left out.
+// The shown tab's whole text, which the pane scrolls: markdown drawn as the board and the chat draw it, with headings,
+// tables and links, and any other file as its plain lines.
 function FileTextView({ Box, Markdown, Text }: ElementTable, path: string, text: string) {
-  const lines = text.split('\n')
-  const shown = lines.slice(0, FILE_LINES)
-  const more = lines.length - shown.length
   return (
     <Box key="file-text" flexDirection="column">
-      {path.endsWith('.md') ? <Markdown key="file-markdown" text={shown.join('\n')} /> : shown.map((line, index) => <Text key={`line-${index}`} color={BRAND.text}>{line}</Text>)}
-      {more > 0 ? <Text color={BRAND.muted}>{`… ${more} more lines`}</Text> : null}
+      {path.endsWith('.md') ? <Markdown key="file-markdown" text={text} /> : text.split('\n').map((line, index) => <Text key={`line-${index}`} color={BRAND.text}>{line}</Text>)}
     </Box>
   )
 }
 
-function ShownFileView(elements: ElementTable, shown: { path: string; text: string | null }) {
-  const { Text } = elements
-  if (isDiagram(shown.path)) return <Text color={BRAND.muted}>{`${shown.path} is a diagram: open it in draw.io.`}</Text>
-  return FileTextView(elements, shown.path, shown.text ?? '')
+// The shown file's path as its title: a press opens the file in the system's own editor for it.
+function FileTitleView($: EngineInterface, { Button }: ElementTable, path: string) {
+  return <Button key="file-title" plain label={path} onPress={() => openFileInEditor($, path)} />
+}
+
+function ShownFileView($: EngineInterface, elements: ElementTable, shown: { path: string; text: string | null }) {
+  const { Box, Text } = elements
+  return (
+    <Box key="shown-file" flexDirection="column">
+      {FileTitleView($, elements, shown.path)}
+      {isDiagram(shown.path) ? <Text color={BRAND.muted}>{`${shown.path} is a diagram: open it in draw.io.`}</Text> : FileTextView(elements, shown.path, shown.text ?? '')}
+    </Box>
+  )
 }
 
 // A report whose saved graph predates the graph's shape says so, and offers to validate its fidelity again, as the board does.
@@ -40,7 +42,8 @@ function OutOfDateView($: EngineInterface, { Box, Button, Text }: ElementTable, 
   )
 }
 
-// The files pane: one tab per file the fidelity declares, or its validation report alone, and the shown tab's first lines.
+// The files pane: one tab per file the fidelity declares, or its validation report alone, and the shown tab's title and
+// whole text.
 export function FidelityFilesView($: EngineInterface, elements: ElementTable, files: FidelityFilesJson) {
   const { Box, Button, Text } = elements
   if (!files) return <Text color={BRAND.muted}>No files open.</Text>
@@ -55,7 +58,7 @@ export function FidelityFilesView($: EngineInterface, elements: ElementTable, fi
         <Button key="files-close" label="✕" onPress={() => closeFiles($)} />
       </Box>
       {files.isOutOfDate ? OutOfDateView($, elements, files.fidelity) : null}
-      {shown ? ShownFileView(elements, shown) : <Text color={BRAND.muted}>{`${files.fidelity} declares no files.`}</Text>}
+      {shown ? ShownFileView($, elements, shown) : <Text color={BRAND.muted}>{`${files.fidelity} declares no files.`}</Text>}
     </Box>
   )
 }
