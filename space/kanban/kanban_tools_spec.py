@@ -509,9 +509,9 @@ with description("the board tools") as self:
                 expect(refused).to(equal("astrology"))
 
         # (S) Board App --> Display Fidelity Progress
-        with it("should show each fidelity's Generate, Validate, and Review"):
+        with it("should show each fidelity's Generate and Validate"):
             actions = progress_in(self.project.ticket_json("pet-visits"), "stories-story-map")["actions"]
-            expect(actions).to(equal({"generate": "done", "validate": "done", "review": "done"}))
+            expect(actions).to(equal({"generate": "done", "validate": "done"}))
 
         # The board app names and colours each practice from these, and finds a fidelity's practice among its slugs.
         with it("should name and colour every practice the board shows"):
@@ -579,7 +579,7 @@ with description("the board tools") as self:
                     refused = (error.practice, error.within)
                 expect(refused).to(equal(("astrology", "the board")))
 
-        # (E) Review
+        # (E) Review Fidelity Outputs
         # (S) Person --> List Ticket Files
         with context("with a work folder outside the repository"):
             with before.each:
@@ -789,13 +789,13 @@ with description("the board tools") as self:
                 (self.project.root / ".context").mkdir(exist_ok=True)
                 (self.project.root / ".context" / "story-map.md").write_text("# Story Map\n", encoding="utf-8")
 
-            with it("should allow Validate, Review, and Render on that file"):
-                expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["generate", "validate", "review", "iterate", "sketch", "render", "document"]))
+            with it("should allow Validate and Render on that file"):
+                expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["generate", "validate", "iterate", "sketch", "render", "document"]))
 
             with it("should still name generate as the next action"):
                 expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["next_action"]).to(equal("generate"))
 
-    # (S) Person --> Review Fidelity
+    # (S) Person --> Send Next Fidelity Action
     with context("with a ticket whose story map has passed validate"):
         with before.each:
             self.project.ticket(
@@ -805,7 +805,7 @@ with description("the board tools") as self:
                 title="Sign up",
             )
 
-        # Review is never required, so a story map generated and validated without violations is done.
+        # A story map generated and validated without violations is done.
         with it("should name generate on the next fidelity as the next action"):
             expect(next_action_of(self.project.ticket_json("sign-up"))).to(equal("generate"))
 
@@ -820,42 +820,11 @@ with description("the board tools") as self:
                 self.project.report("sign-up", "stories-story-map-20261031T041200")
                 (self.project.sessions / "sign-up" / "validation-reports" / "stories-story-map-20261031T041200.md").write_text(JUDGED_REPORT, encoding="utf-8")
 
-            with it("should name review as the next action"):
-                expect(next_action_of(self.project.ticket_json("sign-up"))).to(equal("review"))
+            with it("should name validate as the next action"):
+                expect(next_action_of(self.project.ticket_json("sign-up"))).to(equal("validate"))
 
             with it("should count each finding of the judgment"):
                 expect(violation_counts_of(self.project.ticket_json("sign-up"))).to(equal({"stories-story-map": 5}))
-
-        with context("that a person has finished reviewing"):
-            with before.each:
-                self.reviewed = self.project.call("fidelity-progress.finish_review", ticket="sign-up", fidelity="stories-story-map")
-
-            with it("should show the fidelity's review done"):
-                expect(self.reviewed["actions"]["review"]).to(equal("done"))
-
-            with it("should write the review to the session log"):
-                log = (self.project.sessions / "sign-up" / "session.log").read_text(encoding="utf-8")
-                expect(log.splitlines()[-1]).to(match(r" review stories story_map$"))
-
-        with context("that a person names a fidelity the ticket does not have"):
-            with it("should refuse it, naming the fidelity"):
-                expect(lambda: self.project.call("fidelity-progress.finish_review", ticket="sign-up", fidelity="stories-nothing")).to(raise_error(FidelityNotFoundError))
-
-            with it("should say which fidelity and which ticket it refused"):
-                try:
-                    self.project.call("fidelity-progress.finish_review", ticket="sign-up", fidelity="stories-nothing")
-                except FidelityNotFoundError as refused:
-                    expect((refused.fidelity, refused.within)).to(equal(("stories-nothing", "ticket 'sign-up'")))
-
-            with context("that it has refused"):
-                with before.each:
-                    try:
-                        self.project.call("fidelity-progress.finish_review", ticket="sign-up", fidelity="stories-nothing")
-                    except FidelityNotFoundError:
-                        pass
-
-                with it("should write no review for any fidelity"):
-                    expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["actions"]["review"]).to(equal("to_do"))
 
     # (S) Person --> Send Next Fidelity Action
     with context("with a ticket whose next fidelity has violations"):
@@ -867,14 +836,14 @@ with description("the board tools") as self:
                 title="Sign up",
             )
 
-        with it("should name review as the next action"):
-            expect(next_action_of(self.project.ticket_json("sign-up"))).to(equal("review"))
+        with it("should name validate as the next action"):
+            expect(next_action_of(self.project.ticket_json("sign-up"))).to(equal("validate"))
 
-        with it("should allow Validate and Review again on the same output"):
-            expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["generate", "validate", "review", "iterate", "sketch", "render", "document"]))
+        with it("should allow Validate again on the same output"):
+            expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["generate", "validate", "iterate", "sketch", "render", "document"]))
 
-        with it("should name review as that fidelity's own next action"):
-            expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["next_action"]).to(equal("review"))
+        with it("should name validate as that fidelity's own next action"):
+            expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["next_action"]).to(equal("validate"))
 
         # (S) Person --> Open Validation Report
         with context("with that fidelity's report saved with its graph"):
@@ -1026,7 +995,7 @@ with description("the board tools") as self:
                 "board.show", "board.overview", "board.help", "board.folders", "stage.set_wip_limit",
                 "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.format_choices", "ticket.overlay_choices", "ticket.choose_overlays", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations", "ticket.assign_chat",
                 "ticket.edit_text", "ticket.tag", "ticket.delete", "ticket.add_child", "ticket.pull_out", "ticket.reassign_parent", "ticket.move_before",
-                "fidelity-progress.finish_review", "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",
+                "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
                 "session.choose_workpath", "session.folder_files", "session.read_file",
                 "session.write_handoff", "session.read_handoff_format", "session.read_cdr_format", "session.list_cdrs", "session.write_cdr",

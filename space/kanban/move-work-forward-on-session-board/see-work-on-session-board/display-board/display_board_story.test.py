@@ -15,10 +15,10 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 # - Display Connected Status: with the cdd server not connected, a band across the page says so and how to reconnect, until the server answers again. Observed.
 # - Draw Board Columns: Backlog, Discovery, Specification, Implementation, and Complete, in that order, with In progress and Done inside each stage. Observed: `board-columns-view.tsx`.
 # - Refresh Board After Tool Calls: after a cdd tool call finishes, the board, an open tile, and an open Files panel or report show the state they are in then. Observed.
-# - Announce Ticket Changes: a toast shows when a ticket moves, including from In progress to Done and to the Backlog, or a fidelity is reviewed. Observed.
+# - Announce Ticket Changes: a toast shows when a ticket moves, including from In progress to Done and to the Backlog, or a fidelity is done. Observed.
 with story("Display Board"):
     with scenario("Draw the columns of the board"):
-        # Evidence: observed: kanban_spec 'should have the columns Backlog, Discovery, Specification, Implementation, and Complete, in that order', 'should have story_map, bounded_context, and ia as Discovery's work required', 'should give every stage Generate, Validate, and Review, in that order'.
+        # Evidence: observed: kanban_spec 'should have the columns Backlog, Discovery, Specification, Implementation, and Complete, in that order', 'should have story_map, bounded_context, and ia as Discovery's work required', 'should give every stage Generate and Validate, in that order'.
         with given("a [board](../../../.context/kanban-model.md#board) with the Stories, DDD, and UX [practices](../../../.context/kanban-model.md#practiceguidance) chosen"):
             pass
         with when("the session board reads the [board](../../../.context/kanban-model.md#board)"):
@@ -32,7 +32,7 @@ with story("Display Board"):
             pass
         with and_("each [stage](../../../.context/kanban-model.md#stage--column) shows an In progress list and a Done list"):
             pass
-        with and_("the Discovery [stage](../../../.context/kanban-model.md#stage--column) requires story_map, bounded_context, and ia, each through Generate, Validate, and Review"):
+        with and_("the Discovery [stage](../../../.context/kanban-model.md#stage--column) requires story_map, bounded_context, and ia, each through Generate and Validate"):
             pass
     with scenario("Say the cdd server is not connected"):
         # Evidence: observed: board-client.spec 'should show a band when the board read answers that cdd is not connected', 'should show the band when the server itself does not answer' (the band then says not answering); board-header-view.tsx names the button Connect.
@@ -114,12 +114,11 @@ with story("Display Board"):
         with then("a toast says Move me moved to Discovery · Done"):
             pass
     with scenario("Announce a fidelity done"):
-        # Evidence: observed: board-client.spec 'should name a fidelity that was reviewed'.
+        # Evidence: observed: board-client.spec 'should name a fidelity that is done'.
         with given("the [ticket](../../../.context/kanban-model.md#ticket--card) billing-report has the story_map [fidelity](../../../.context/kanban-model.md#fidelityguidance) generated and validated with no violations"):
             pass
-        with when("a review of stories-story-map is written to billing-report's [session log](../../../.context/kanban-model.md#session)"):
-            # Person -> Ticket.finish_review(['stories-story-map'])
-            # Ticket -> TicketWork.record('review stories story_map')
+        with when("a clean validate of stories-story-map is written to billing-report's [session log](../../../.context/kanban-model.md#session)"):
+            # Agent -> validate.validate(stories-story-map) writes a clean validate line
             # Board page -> Board.show()
             # Board <- stories-story-map done on billing-report
             pass

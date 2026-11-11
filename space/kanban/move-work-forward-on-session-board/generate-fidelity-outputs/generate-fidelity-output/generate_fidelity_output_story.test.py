@@ -45,7 +45,7 @@ with story("Generate Fidelity Output"):
         with and_("the last is /actions-generate stories-scenarios format=drawio"):
             pass
     with scenario("Count a generate line as Generate done"):
-        # Evidence: observed: kanban_spec 'should show Generate done and Validate and Review remaining for that fidelity'.
+        # Evidence: observed: kanban_spec 'should show Generate done and Validate remaining for that fidelity'.
         with given("the [session log](../../../.context/kanban-model.md#session) of pet-visits has no generate line for story_map"):
             pass
         with when("Claude Code finishes generating the story map"):

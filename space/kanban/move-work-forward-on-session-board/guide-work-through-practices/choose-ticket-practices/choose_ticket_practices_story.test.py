@@ -30,7 +30,7 @@ with story("Choose Ticket Practices"):
             pass
     with scenario("Finish a stage on the practices left on"):
         # Evidence: observed: kanban_spec 'with every practice but Stories turned off' — 'should be done with the one practice it works on'.
-        with given("pet-visits has generated, validated, and reviewed the story_map [fidelity](../../../.context/kanban-model.md#fidelityguidance)"):
+        with given("pet-visits has generated and validated the story_map [fidelity](../../../.context/kanban-model.md#fidelityguidance)"):
             pass
         with and_("every practice but Stories is turned off for pet-visits"):
             pass

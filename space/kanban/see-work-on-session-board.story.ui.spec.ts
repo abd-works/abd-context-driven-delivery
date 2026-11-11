@@ -125,10 +125,12 @@ test.describe('Display Board', () => {
 
   test.describe('Announce a fidelity done', () => {
     test.beforeEach(async ({ page, request }) => {
-      writeSession(fixtureRoot, { name: 'billing-report', title: 'Billing report', log: [generatedLine('stories', 'story_map'), validatedLine('Stories', 'story_map')] })
+      writeSession(fixtureRoot, { name: 'billing-report', title: 'Billing report', log: [generatedLine('stories', 'story_map')] })
       await openBoard(page)
       await expect(card(page, 'billing-report')).toBeVisible()
-      await request.post('/api/fidelity-progress/billing-report/stories-story-map/finish-review', { headers: BOARD_POST_HEADERS, data: {} })
+      // A clean validate written to the log, then a cdd tool call, which the board reads the board again after.
+      writeSession(fixtureRoot, { name: 'billing-report', title: 'Billing report', log: [generatedLine('stories', 'story_map'), validatedLine('Stories', 'story_map')] })
+      await request.post('/api/fidelity-progress/billing-report/stories-story-map/report', { headers: BOARD_POST_HEADERS, data: {} })
     })
 
     test('Then a toast says stories-story-map done on billing-report', async ({ page }) => {

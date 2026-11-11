@@ -56,7 +56,6 @@ DISCOVERY_DONE = [
     for line in (
         f"2026-10-31T01:00:00Z generate /work {practice} {fidelity} markdown {practice} no-chat",
         f"2026-10-31T01:00:01Z validate {practice_class} {fidelity} no-chat",
-        f"2026-10-31T01:00:02Z review /work {practice} {fidelity} markdown {practice} no-chat",
     )
 ]
 CHECKED_GRAPH = saved_graph(

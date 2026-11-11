@@ -58,7 +58,7 @@ function ReportStandingView({ panel, isOff }: { panel: ReportPanel; isOff: boole
       </>
     )
   }
-  return report.rules.length ? null : <p className="panel-clean">No open violations. Reviewed is ready on the card.</p>
+  return report.rules.length ? null : <p className="panel-clean">No open violations. The fidelity is done.</p>
 }
 
 export function ReportPanelBodyView({ panel }: { panel: ReportPanel }) {

@@ -11,7 +11,7 @@ from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subje
 from harness.chat.chat import Chat
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.graph.pattern_overlays import PatternOverlays
-from harness.guidance.stages import GENERATE, RENDER, REVIEW, VALIDATE
+from harness.guidance.stages import GENERATE, RENDER, VALIDATE
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.markdown.format import Format
 from harness.mcp.mcp_server import long_call, mcp
@@ -46,7 +46,7 @@ MARKED_IN_PROGRESS = "in-progress"
 _STAGE_FIELD = "stage"
 _STAGE_MARK_FIELD = "stage_mark"
 # The actions that check or convert a fidelity's output, so they wait until there is some.
-ONCE_THERE_IS_OUTPUT = (VALIDATE, REVIEW, RENDER)
+ONCE_THERE_IS_OUTPUT = (VALIDATE, RENDER)
 
 
 class MainStaysOpenError(ValueError):
@@ -296,7 +296,7 @@ class Ticket(Card):
         following = f"Its next guidance is {upcoming.fidelity.slug}. " if upcoming else "Its stage is done and waits for a person to move it. "
         return (
             f'CDD session board: you are working on ticket {self.name} ("{self.title}"), in {self.column.name}. '
-            f"{following}Each fidelity goes through {', '.join(steps[:-1])}, then {steps[-1]}, which a person records on the board."
+            f"{following}Each fidelity goes through {', '.join(steps[:-1])}, then {steps[-1]}, and is done once its latest {steps[-1]} passes."
         )
 
     @property
@@ -672,7 +672,7 @@ class FidelityProgress:
     """*FidelityProgress* is how far one fidelity has got through its stage's actions on one ticket."""
 
     # Validate is done when its latest line names no graph-rule violations and the latest report's judgment fails no
-    # rule. Review is done once a person reviews after the latest validate, passed or not.
+    # rule; a fidelity whose latest validate passes is done.
 
     def __init__(self, fidelity: FidelityGuidance, stage: Stage, done_actions: list[str], has_violations: bool, ticket: Ticket) -> None:
         self._fidelity = fidelity
@@ -690,12 +690,10 @@ class FidelityProgress:
         latest_validation = validations[-1] if validations else None
         has_violations = latest_validation is not None and GRAPH_RULE_VIOLATION in entries[latest_validation].words
         validated = latest_validation is not None and not has_violations
-        reviewed = any(verb == REVIEW and (latest_validation is None or index > latest_validation) for index, verb in naming)
         # Only the generate tool writes a generate line: an action started inside another, such as the generate a
         # Sketch prompt expands, logs nothing (GuidanceAction.log_running), so every generate line counts.
         done_verbs = {verb for _index, verb in naming if verb == GENERATE}
         done_verbs |= {VALIDATE} if validated else set()
-        done_verbs |= {REVIEW} if reviewed else set()
         read = cls(fidelity, stage, [action for action in stage.steps if action in done_verbs], has_violations, ticket)
         return read.with_violations() if read._is_judged_failing else read
 
@@ -749,17 +747,14 @@ class FidelityProgress:
 
     @property
     def remaining_actions(self) -> list[str]:
-        """Its stage's actions not yet done; review is never required, so a fidelity generated and validated without
-        violations is done."""
-        return [action for action in self._stage.steps if action not in self._done_actions and action != REVIEW]
+        """Its stage's actions not yet done: a fidelity generated and validated without violations is done."""
+        return [action for action in self._stage.steps if action not in self._done_actions]
 
     @property
     @data_field
     def next_action(self) -> str:
-        """What Run next does on this fidelity: review while it has violations, since a person reads them and tells the
-        agent to fix them, else the first of its stage's actions not done, or nothing once it is done."""
-        if self._has_violations:
-            return REVIEW
+        """What Run next does on this fidelity: the first of its stage's actions not done, which is validate again
+        while it has violations, or nothing once it is done."""
         remaining = self.remaining_actions
         return remaining[0] if remaining else ""
 
@@ -779,7 +774,7 @@ class FidelityProgress:
     @property
     @data_field
     def allowed_actions(self) -> list[str]:
-        """Every action of its stage, in the stage's order; Validate, Review, and Render only once there is output to
+        """Every action of its stage, in the stage's order; Validate and Render only once there is output to
         check or convert: an action on the fidelity is recorded, or a file it declares is already there, such as one a
         person wrote. A person can check the same output again as often as they like."""
         has_output = bool(self._done_actions) or self._has_files
@@ -846,14 +841,6 @@ class FidelityProgress:
     @mcp
     @agent_tool
     @noSessionLog
-    def finish_review(self) -> FidelityProgress:
-        """Record that a person has reviewed and approved this fidelity: a review line in its ticket's session log. A review counts until the fidelity is validated again, and a fidelity whose actions are all done is done in its stage."""
-        self._ticket.work.record(f"{REVIEW} {self._practice.key} {self._fidelity.name}")
-        return next(progress for progress in self._ticket.progress if progress.fidelity is self._fidelity)
-
-    @mcp
-    @agent_tool
-    @noSessionLog
     def report(self) -> Report:
         """Return this fidelity's latest validation report: its path and text, and the rules broken in it, each with its description and each violation with its line and the source around it. The rules are those broken on the nodes of the graph saved beside the report, then each rule the validating agent's judgment fails that the graph did not hit. has_saved_graph is false when the report has no saved graph, so its graph's rules are missing."""
         latest = self.latest_report
@@ -875,8 +862,8 @@ class FidelityProgress:
         return dict(sorted(files.items(), key=lambda formats: Format(formats[0]).file_order))
 
     def with_violations(self) -> FidelityProgress:
-        """This progress with its latest validate failed, so validate is to do again; a person's review stands."""
-        kept = [action for action in self._done_actions if action in (GENERATE, REVIEW)]
+        """This progress with its latest validate failed, so validate is to do again."""
+        kept = [action for action in self._done_actions if action == GENERATE]
         return FidelityProgress(self._fidelity, self._stage, kept, True, self._ticket)
 
     @property
@@ -898,7 +885,7 @@ class ActionStates:
     def taken_together(cls, every: list[ActionStates]) -> ActionStates:
         """Where each action stands across several fidelities: done only once it is done on all of them, in progress
         once it is under way on any, else to do."""
-        return cls({action: cls._together([states._states[action] for states in every]) for action in (GENERATE, VALIDATE, REVIEW)})
+        return cls({action: cls._together([states._states[action] for states in every]) for action in (GENERATE, VALIDATE)})
 
     @staticmethod
     def _together(states: list[str]) -> str:
@@ -915,11 +902,6 @@ class ActionStates:
     @data_field
     def validate(self) -> str:
         return self._states[VALIDATE]
-
-    @property
-    @data_field
-    def review(self) -> str:
-        return self._states[REVIEW]
 
 
 class StageWork:

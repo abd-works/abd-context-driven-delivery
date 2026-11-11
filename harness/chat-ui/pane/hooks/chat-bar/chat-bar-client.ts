@@ -77,7 +77,7 @@ export class ChatBarClient {
     return this.shown && this.board?.columns.some(column => column.name === this.shown && column.kind === 'stage') ? this.shown : this.stage
   }
 
-  // Ticket.is_done answers whether every fidelity of the stage is reviewed, so the action button moves the session on;
+  // Ticket.is_done answers whether every fidelity of the stage has passed validate, so the action button moves the session on;
   // it is never done outside a stage.
   get canMoveNext(): boolean {
     return this.ticket?.is_done ?? false
@@ -91,8 +91,7 @@ export class ChatBarClient {
     return columns.map((column, place) => new StageClient(column, place, sessionPlace, column.name === this.shownStage && column.name !== this.stage))
   }
 
-  // Every action a person can run on a fidelity of the shown stage, its steps first, as the stage sends them. Review is
-  // left out: the chat bar has nothing for it to do.
+  // Every action a person can run on a fidelity of the shown stage, its steps first, as the stage sends them.
   // The ticket the session works on, by name; empty with none.
   get ticketName(): string {
     return this.ticket?.name ?? ''
@@ -105,7 +104,7 @@ export class ChatBarClient {
   }
 
   get actions(): string[] {
-    return (this.board?.columns.find(column => column.name === this.shownStage)?.actions ?? []).filter(action => action !== REVIEW)
+    return (this.board?.columns.find(column => column.name === this.shownStage)?.actions ?? [])
   }
 
   // The shown stage's fidelities of the practices this session has turned on: the ticket's progress on each fidelity
@@ -275,8 +274,6 @@ export async function moveNext($: EngineInterface, chatBar: ChatBarClient): Prom
   await refreshChatBar($)
   return currentChatBar($)
 }
-
-const REVIEW = 'review'
 
 export async function runHandoff($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
   await $.prompt.fill({ text: `Write a handoff for ticket ${chatBar.sessionName} with /space-session-handoff-session session=${chatBar.sessionFile}`, mode: 'append' })

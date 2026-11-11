@@ -352,7 +352,7 @@ Intended (`.sessions/session-board/ticket-enhancements.md`): a child ticket's br
 
 ### (S) Board App --> [Display Fidelity Progress](move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-display-fidelity-progress)
 
-Observed: each fidelity on a tile shows Generate, Validate and Review as ○ to do, … in progress or ✓ done.
+Observed: each fidelity on a tile shows Generate and Validate as ○ to do, … in progress or ✓ done; a fidelity whose latest validate passes is done.
 
 ### (S) Person --> [Open Practice Tile](move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-open-practice-tile)
 
@@ -364,7 +364,7 @@ Observed: `Ticket.enable_practice` saves the choice to the ticket's `session.jso
 
 ### (S) Person --> [Send Next Fidelity Action](move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-send-next-fidelity-action)
 
-Observed: Run next names the step that runs next and steps through generate, validate and review for each practice in order (`Ticket.next_fidelity`, `Ticket.next_action`), holding on fix violations until they are fixed.
+Observed: Run next names the step that runs next and steps through generate and validate for each practice in order (`Ticket.next_fidelity`, `Ticket.next_action`), holding on fix violations until they are fixed.
 
 ### (S) Person --> [Send Action To Stage Practices](move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-send-action-to-stage-practices)
 

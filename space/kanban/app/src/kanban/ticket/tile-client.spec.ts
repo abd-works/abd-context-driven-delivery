@@ -207,14 +207,6 @@ describe('Validate Fidelity', () => {
   })
 })
 
-describe('Review Fidelity', () => {
-  it('should not allow Review until Validate is clean', async () => {
-    const { page, ticket } = await activeTicketPage()
-    await page.tiles.open(spot(page), true)
-    expect(page.tileActions.barOf(ticket, barAt(page)!).reviewOff).toBe(true)
-  })
-})
-
 describe('Send Action To Stage Practices', () => {
   it('should name every fidelity of the stage in one command', async () => {
     const { page, chat } = await activeTicketPage()

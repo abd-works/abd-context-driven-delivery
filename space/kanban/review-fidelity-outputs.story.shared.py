@@ -8,8 +8,7 @@ spec replay the same steps.
 
 Covered by the board app's TypeScript client specs in space/kanban/app, not here, because they have no Python
 operation: Browse Ticket Folder "Group a stage's files under their folders" (the files panel groups them); View
-Fidelity Files "Go back to the list when the last tab closes"; Review Fidelity "Keep Review off until Validate is
-clean" (the tile's action bar). The Thens of the scenarios below that only the page shows (a toast, a panel that does
+Fidelity Files "Go back to the list when the last tab closes". The Thens of the scenarios below that only the page shows (a toast, a panel that does
 not open) are left to those specs too.
 
 The scenarios name the story map `.context/story-map.md`. The story_map fidelity declares its markdown at
@@ -26,7 +25,6 @@ from space.kanban.session_board_examples import (
     BILLING_REPORT,
     CHECKOUT_FLOW,
     CHECKOUT_FLOW_REPORT,
-    EVERY_DISCOVERY_FIDELITY_REVIEWED,
     NO_SUCH_FIDELITY,
     NO_SUCH_TICKET,
     OUTSIDE_FILE,
@@ -39,7 +37,6 @@ from space.kanban.session_board_examples import (
     STORY_MAP_TEXT,
     STORY_MAP_VALIDATED_CLEAN,
     generated,
-    reviewed,
     validated,
 )
 from space.kanban.story_test import SharedStories, expect_action, expect_no_next, expect_placed, expect_refused, refusal_of
@@ -171,75 +168,3 @@ def _(s):
     @s.then("the board says ../secrets.txt is not a file in this repository")
     def _(world):
         expect_refused(world.refusal, PathOutsideRootsError, "../secrets.txt is outside the session's roots")
-
-
-@shared_stories.scenario("Review Fidelity", "Review a fidelity after a clean validate")
-def _(s):
-    @s.given("billing-report's story map is generated and its latest validate passed with no graph-rule")
-    def _(world):
-        world.project.seed_session(BILLING_REPORT.with_log(*STORY_MAP_VALIDATED_CLEAN))
-
-    @s.when("the Person reviews story_map on billing-report")
-    def _(world):
-        world.reviewed = world.data_of(world.Ticket.load(BILLING_REPORT.name).work.progress_of(STORY_MAP).finish_review())
-
-    @s.then("billing-report's session log ends with review stories story_map")
-    def _(world):
-        expect(log_lines(world, BILLING_REPORT)[-1]).to(end_with(" review stories story_map"))
-
-    @s.and_("the story_map tile marks Review ✓ and the fidelity is done")
-    def _(world):
-        expect((world.reviewed["actions"]["review"], world.reviewed["state"])).to(equal(("done", "done")))
-
-
-@shared_stories.scenario("Review Fidelity", "Ignore a review recorded before a clean validate")
-def _(s):
-    @s.given("pet-visits' session log has generate, then review, then validate Stories story_map")
-    def _(world):
-        world.project.seed_session(PET_VISITS.with_log(generated("stories", "story_map"), reviewed("stories", "story_map"), validated("Stories", "story_map")))
-
-    @s.when("the session board reads pet-visits")
-    def _(world):
-        world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
-
-    @s.then("the story_map tile marks Review ○")
-    def _(world):
-        expect_action(world.read, STORY_MAP, "review", "to_do")
-
-
-@shared_stories.scenario("Review Fidelity", "Refuse a fidelity the ticket does not have")
-def _(s):
-    @s.given("billing-report's story map passed validate")
-    def _(world):
-        world.project.seed_session(BILLING_REPORT.with_log(*STORY_MAP_VALIDATED_CLEAN))
-
-    @s.when("the Person reviews stories-no_such_fidelity")
-    def _(world):
-        world.refusal = refusal_of(lambda: world.Ticket.load(BILLING_REPORT.name).work.progress_of(NO_SUCH_FIDELITY).finish_review())
-
-    @s.then("the board says no fidelity named stories-no_such_fidelity on ticket billing-report")
-    def _(world):
-        expect_refused(world.refusal, FidelityNotFoundError, "no fidelity named 'stories-no_such_fidelity' on ticket 'billing-report'")
-
-    @s.but_("no review line is written for stories-story-map")
-    def _(world):
-        expect([line for line in log_lines(world, BILLING_REPORT) if " review " in line]).to(equal([]))
-
-
-@shared_stories.scenario("Review Fidelity", "Complete a stage's work")
-def _(s):
-    @s.given("pet-visits has every Discovery fidelity generated, validated, and reviewed")
-    def _(world):
-        world.project.seed_session(PET_VISITS.with_log(*EVERY_DISCOVERY_FIDELITY_REVIEWED))
-
-    @s.when("the session board reads pet-visits")
-    def _(world):
-        world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
-
-    @s.then("pet-visits waits in Discovery's Done")
-    def _(world):
-        expect_placed(world.read, "Discovery", is_done=True)
-
-    @s.and_("it has no next step")
-    def _(world):
-        expect_no_next(world.read)

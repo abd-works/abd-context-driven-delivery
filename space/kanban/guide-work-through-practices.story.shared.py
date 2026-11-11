@@ -4,7 +4,7 @@ Scenarios: harness/.context/stories/move-work-forward-on-session-board/guide-wor
 Map: .context/story-map.md#e-guide-work-through-practices. Model: .context/kanban-model.md.
 
 Steps reach the board only through the World a tier hands them (`world.Ticket`, `world.Board`), so the domain spec
-and the cdd tools spec replay the same steps. A fidelity's tile reads its Generate, Validate, and Review from the
+and the cdd tools spec replay the same steps. A fidelity's tile reads its Generate and Validate from the
 ticket's `actions`, and its segment colour from the ticket's `progress`, so the Thens assert those.
 
 Covered by the board app's TypeScript client specs in space/kanban/app, not here, because they have no Python
@@ -25,14 +25,13 @@ from space.kanban.session_board_examples import (
     BILLING_REPORT,
     CHECKOUT_FLOW,
     DISCOVERY_FIDELITY_SLUGS,
-    EVERY_DISCOVERY_FIDELITY_REVIEWED,
+    EVERY_DISCOVERY_FIDELITY_DONE,
     GENERATED_STORY_MAP_IN_TWO_FOLDERS,
     MOVED_INTO_SPECIFICATION,
     PET_VISITS,
     READY_TO_MOVE,
     STORY_MAP,
     STORY_MAP_REPORT,
-    STORY_MAP_REVIEWED,
     STORY_MAP_VALIDATED_CLEAN,
     generated,
     seed_checkout_flow_held_on_violations,
@@ -55,9 +54,9 @@ def _(s):
     def _(world):
         world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
 
-    @s.then("the story_map tile marks Generate ✓ and Validate and Review ○")
+    @s.then("the story_map tile marks Generate ✓ and Validate ○")
     def _(world):
-        expect_actions(world.read, STORY_MAP, generate="done", validate="to_do", review="to_do")
+        expect_actions(world.read, STORY_MAP, generate="done", validate="to_do")
 
 
 @shared_stories.scenario("Display Fidelity Progress", "Show violations held on Validate")
@@ -78,9 +77,6 @@ def _(s):
     def _(world):
         expect_held_on_violations(world.read, STORY_MAP)
 
-    @s.and_("Review stays to do")
-    def _(world):
-        expect_action(world.read, STORY_MAP, "review", "to_do")
 
 
 @shared_stories.scenario("Display Fidelity Progress", "Show Validate done after a clean validate")
@@ -97,9 +93,28 @@ def _(s):
     def _(world):
         world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
 
-    @s.then("the story_map tile marks Generate ✓, Validate ✓, and Review ○")
+    @s.then("the story_map tile marks Generate ✓ and Validate ✓, and the fidelity is done")
     def _(world):
-        expect_actions(world.read, STORY_MAP, generate="done", validate="done", review="to_do")
+        expect_actions(world.read, STORY_MAP, generate="done", validate="done")
+
+
+@shared_stories.scenario("Display Fidelity Progress", "Complete a stage's work")
+def _(s):
+    @s.given("pet-visits has every Discovery fidelity generated and validated with no violations")
+    def _(world):
+        world.project.seed_session(PET_VISITS.with_log(*EVERY_DISCOVERY_FIDELITY_DONE))
+
+    @s.when("the session board reads pet-visits")
+    def _(world):
+        world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
+
+    @s.then("pet-visits waits in Discovery's Done")
+    def _(world):
+        expect_placed(world.read, "Discovery", is_done=True)
+
+    @s.and_("it has no next step")
+    def _(world):
+        expect_no_next(world.read)
 
 
 @shared_stories.scenario("Display Fidelity Progress", "Show each fidelity of the stage on the ticket")
@@ -112,10 +127,10 @@ def _(s):
     def _(world):
         world.read = world.data_of(world.Ticket.load(BILLING_REPORT.name))
 
-    @s.then("each Discovery tile marks Generate, Validate, and Review ○, its segment dim")
+    @s.then("each Discovery tile marks Generate and Validate ○, its segment dim")
     def _(world):
         tiles = {slug: (progress_in(world.read, slug)["actions"], progress_in(world.read, slug)["state"]) for slug in DISCOVERY_FIDELITY_SLUGS}
-        expect(tiles).to(equal(dict.fromkeys(DISCOVERY_FIDELITY_SLUGS, ({"generate": "to_do", "validate": "to_do", "review": "to_do"}, "not_started"))))
+        expect(tiles).to(equal(dict.fromkeys(DISCOVERY_FIDELITY_SLUGS, ({"generate": "to_do", "validate": "to_do"}, "not_started"))))
 
 
 @shared_stories.scenario("Choose Ticket Practices", "Turn a practice off for a ticket")
@@ -141,9 +156,9 @@ def _(s):
 
 @shared_stories.scenario("Choose Ticket Practices", "Finish a stage on the practices left on")
 def _(s):
-    @s.given("pet-visits has generated, validated, and reviewed the story_map fidelity")
+    @s.given("pet-visits has generated and validated the story_map fidelity")
     def _(world):
-        world.project.seed_session(PET_VISITS.with_log(*STORY_MAP_REVIEWED))
+        world.project.seed_session(PET_VISITS.with_log(*STORY_MAP_VALIDATED_CLEAN))
 
     @s.and_("every practice but Stories is turned off for pet-visits")
     def _(world):
@@ -297,33 +312,13 @@ def _(s):
         world.before = world.data_of(ticket)
         world.report = world.data_of(ticket.work.progress_of(world.before["next"]["fidelity"]["slug"]).report())
 
-    @s.then("Run next read Run next: review violations")
+    @s.then("Run next read Run next: validate")
     def _(world):
-        expect(next_in(world.before)["next_action"]).to(equal("review"))
+        expect(next_in(world.before)["next_action"]).to(equal("validate"))
 
     @s.and_("the report panel opens on stories-story-map")
     def _(world):
         expect(world.report["path"]).to(equal(f".sessions/{CHECKOUT_FLOW.name}/validation-reports/{STORY_MAP_REPORT}.md"))
-
-
-@shared_stories.scenario("Send Next Fidelity Action", "Record a review with no chat")
-def _(s):
-    @s.given("billing-report's story map is generated and validated with no violations")
-    def _(world):
-        world.project.seed_session(BILLING_REPORT.with_log(*STORY_MAP_VALIDATED_CLEAN))
-
-    @s.but_("no chat is connected")
-    def _(world):
-        # No chat checks in on a throwaway project; a review is the person's own approval and needs none.
-        pass
-
-    @s.when("the Person records a review of billing-report's story_map")
-    def _(world):
-        world.reviewed = world.data_of(world.Ticket.load(BILLING_REPORT.name).work.progress_of(STORY_MAP).finish_review())
-
-    @s.then("billing-report's story_map marks Review ✓")
-    def _(world):
-        expect((world.reviewed["fidelity"]["slug"], world.reviewed["actions"]["review"])).to(equal((STORY_MAP, "done")))
 
 
 @shared_stories.scenario("Send Next Fidelity Action", "Go back to an earlier stage's fidelity still to validate")
@@ -347,9 +342,9 @@ def _(s):
 
 @shared_stories.scenario("Send Next Fidelity Action", "Name nothing to run on a ticket done in its stage")
 def _(s):
-    @s.given("every Discovery fidelity of pet-visits is reviewed")
+    @s.given("every Discovery fidelity of pet-visits is validated with no violations")
     def _(world):
-        world.project.seed_session(PET_VISITS.with_log(*EVERY_DISCOVERY_FIDELITY_REVIEWED))
+        world.project.seed_session(PET_VISITS.with_log(*EVERY_DISCOVERY_FIDELITY_DONE))
 
     @s.when("the session board reads pet-visits")
     def _(world):

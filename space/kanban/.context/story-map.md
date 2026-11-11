@@ -231,10 +231,6 @@ Observed: the folder mode of the files panel groups the files under their folder
 
 Observed: `Session.read_file` and `file-views-view.tsx`; one tab per format the fidelity offers, generated or not, and × closes one.
 
-### (S) Person --> [Review Fidelity](../../../harness/.context/stories/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-review-fidelity)
-
-Observed: a review line completes a fidelity. Reviewed on a tile is off until a clean validate.
-
 ---
 
 ## Scope boundary

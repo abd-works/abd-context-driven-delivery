@@ -173,7 +173,7 @@ describe('Display Board', () => {
 
     it('should name a fidelity that is done', async () => {
       const { page } = await board.page()
-      board.logOn('billing-report', 'generate /work stories story_map markdown stories', 'validate Stories story_map', 'review Stories story_map')
+      board.logOn('billing-report', 'generate /work stories story_map markdown stories', 'validate Stories story_map')
       await page.reader.refresh()
       expect(toastsOf(page)).toEqual(['stories-story-map done on billing-report'])
     })

@@ -21,7 +21,7 @@ with story("Add Active Ticket To System Prompt"):
             pass
         with then("the system prompt holds CDD session board: you are working on ticket checkout-flow (Checkout flow), in Discovery. Its next guidance is stories-story-map."):
             pass
-        with and_("it says each fidelity goes through generate, validate, then review by a person"):
+        with and_("it says each fidelity goes through generate, then validate"):
             pass
     with scenario("Say a done ticket waits for a person to move it"):
         # Evidence: inferred: register.ts prompt.compose.

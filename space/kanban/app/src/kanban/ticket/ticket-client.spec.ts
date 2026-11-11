@@ -68,27 +68,6 @@ describe('Display Ticket Details', () => {
   })
 })
 
-describe('Review Fidelity', () => {
-  describe('with a story map that has passed validate', () => {
-    async function validated() {
-      board.logOn(OTHER, 'generate /work stories story_map markdown stories', 'validate Stories story_map')
-      const { page } = await board.page()
-      page.layout.toggleOnlyActive()
-      return page
-    }
-
-    it('should offer the review with no chat connected, since it is the person\'s own approval', async () => {
-      expect(ticketOn(await validated(), OTHER).canRunNext).toBe(true)
-    })
-
-    it('should show the review done once Run next records it', async () => {
-      const page = await validated()
-      await ticketOn(page, OTHER).runNext()
-      expect(ticketOn(page, OTHER).progressNamed('stories-story-map')!.actions.review).toBe('done')
-    })
-  })
-})
-
 describe('Move Ticket', () => {
   it('should read the board again and select the ticket where it landed', async () => {
     const { page } = await board.page()
@@ -137,9 +116,9 @@ describe('Send Next Fidelity Action', () => {
     expect(ticketOn(page, OTHER).runNextLabel).toBe('Run next: generate')
   })
 
-  it('should say review violations on held violations', async () => {
+  it('should name validate on held violations', async () => {
     const { page } = await board.page()
-    expect(ticketOn(page, ACTIVE).runNextLabel).toBe('Run next: review violations')
+    expect(ticketOn(page, ACTIVE).runNextLabel).toBe('Run next: validate')
   })
 
   describe('with generate next', () => {

@@ -39,9 +39,9 @@
 - Has the work that is done. It knows its past work by reading its own log, and it finds the files that work produced by asking the knowledge graph.
 - Works in one folder of the repository, its *workpath*; the whole repository until a person chooses one. Each practice writes under its own folder, its *practice root*: the folder a person chose for that practice, or else the workpath plus the practice's default folder.
 - Its *work required* is every fidelity of its active practices. A practice is active until a person turns it off for this session, so tickets can work on different practices on one board.
-- Each fidelity goes through Generate and Validate, and a person may Review it. Each action on a fidelity is to do, in progress, or done.
-- A fidelity is done once Generate and Validate are done: review is never required. Validate is done when its latest activity on that fidelity names no graph-rule violations and the judgment the validating agent added to its latest report fails no rule.
-- *Next action* is what Run next does on a ticket: on the first fidelity not done in its stage or any stage before it, earliest stage first, the first of generate and validate not done. Violations hold a session on that fidelity, so the next action is review: a person reads the violations and tells the agent to fix them.
+- Each fidelity goes through Generate, then Validate. Each action on a fidelity is to do, in progress, or done.
+- A fidelity is done once Generate and Validate are done. Validate is done when its latest activity on that fidelity names no graph-rule violations and the judgment the validating agent added to its latest report fails no rule.
+- *Next action* is what Run next does on a ticket: on the first fidelity not done in its stage or any stage before it, earliest stage first, the first of generate and validate not done. Violations hold a session on that fidelity, so the next action is validate again: Run next opens the report, a person reads the violations and tells the agent to fix them.
 
 ### activity
 
@@ -55,7 +55,7 @@
 ### the work behind a ticket
 
 - *Practices* say what has to be produced. Each practice has *fidelities*, and each fidelity names the stage that requires it, the *artifacts* it produces, and the *rules* those artifacts must keep. An artifact is a file a fidelity's `outputs` declares, saved relative to the session's workpath, so it is a path rather than a class.
-- *Actions* do the work on one fidelity inside a session. Generate writes the artifacts. Validate reads them into the *knowledge graph*, runs the rules on its nodes, and saves a report with the graph it checked beside it, so a report's violations stay on their nodes. Review is a person's approval, which the ticket records itself; it is not an action an agent runs.
+- *Actions* do the work on one fidelity inside a session. Generate writes the artifacts. Validate reads them into the *knowledge graph*, runs the rules on its nodes, and saves a report with the graph it checked beside it, so a report's violations stay on their nodes.
 - Each node of the knowledge graph knows the fidelity that creates it, the file it came from, and the rules it breaks, so the graph can say which files belong to a fidelity.
 - The board runs none of this. Each action writes a line to the session log, and the session answers from those lines and from the graph.
 
@@ -214,7 +214,7 @@ Made for one `ApproachStage` of `STAGES`, which gives its title as the column's 
 + Stage(approach: ApproachStage, board: Board)
 ------
 + steps: list[str]
-	// generate, validate, and review, in that order, named as the session log names them
+	// generate, then validate, named as the session log names them
 	-> ApproachStage.steps
 + scope: StageScope
 	// data field: how much of the solution the stage's work covers, which the board draws as its shape
@@ -223,7 +223,7 @@ Made for one `ApproachStage` of `STAGES`, which gives its title as the column's 
 	// data field: every action a person can run on a fidelity in this stage, its steps first, then iterate, sketch, render, and document
 	-> ApproachStage.actions
 + producing_actions: list[str]
-	// data field: the actions that write a fidelity's files, every action but validate and review
+	// data field: the actions that write a fidelity's files, every action but validate
 	-> ApproachStage.producing_actions
 + << aggregation >> work_required: list[FidelityGuidance]
 	// data field: every fidelity of every chosen practice whose stage is this stage, each with its slug, name, outputs by format, and default format
@@ -453,7 +453,7 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 + command(action: str, fidelities: list[FidelityGuidance]): str
 	// one command running action on fidelities, naming its session.json and no format; FidelityProgress.commands and StageWork.commands both ask it
 + record(line: str)
-	// writes line to its session's log, a move, a mark, a review, or a backlog line; its progress is read from the log again next time
+	// writes line to its session's log, a move, a mark, or a backlog line; its progress is read from the log again next time
 	-> SessionLog.record
 
 ## TicketCheckout
@@ -532,12 +532,12 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 + is_enabled: bool
 	// data field: the ticket's session works on its practice
 + next_action: str
-	// data field: review while it has violations, else the first of its stage's actions not done
+	// data field: the first of its stage's actions not done, which is validate again while it has violations
 + commands: dict[str, str]
 	// data field: the command for each action of its stage on this fidelity, naming its ticket's session.json and no format
 	-> TicketWork.command
 + allowed_actions: list[str]
-	// data field: every action of its stage; validate, review, and render only once an action is recorded or a declared file is there
+	// data field: every action of its stage; validate and render only once an action is recorded or a declared file is there
 + state: str
 	// data field: done, violations, in_progress, or not_started
 + action_states: ActionStates
@@ -563,10 +563,6 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 	// the `@tool_subject` of the `fidelity-progress.*` tools
 	-> Ticket.load
 	-> TicketWork.progress_of
-+ finish_review(): FidelityProgress
-	// `fidelity-progress.finish_review`: a person's approval, one `review <practice key> <fidelity>` line in its ticket's session log, as action lines name the practice; answers its progress read again from the log
-	-> TicketWork.record
-	-> Ticket.progress
 + report(): Report
 	// `fidelity-progress.report`: its latest report, with the rules broken on the nodes of the graph saved beside it, then each rule the judgment fails
 	-> ReportFile.report
@@ -586,8 +582,6 @@ Where each of a stage's actions stands on one fidelity.
 + generate: str
 	// data field; to_do, in_progress, or done
 + validate: str
-	// data field
-+ review: str
 	// data field
 ----
 + taken_together(every: list[ActionStates]): ActionStates
@@ -865,7 +859,7 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## Session
 
-`space/session/session.py`, sent whole as a ticket's `session` data field. The board reads `name`, `title`, `parent`, `is_pulled_out`, `tags`, `text`, `is_closed`, `workpath`, `practices`, `reports_folder`, and `log`, and calls `close()`, `remove()`, `reopen()`, `move_to_closed()`, `move_to_archive()`, `move_to_backlog()`, `keep_file(file)`, `keep_text(text)`, `add_tag(word)`, `set_parent(parent)`, `mark_pulled_out()`, `open_child(title, scope)`, and `from_project(path)`. A backlog item reads and writes its file through an `IdeaFile` (`space/session/idea_file.py`), the same as a session's idea file. Its `log` is a `SessionLog` (`space/session/session_log.py`), whose `entries` are `LogEntry`s with `time`, `verb`, `stage`, `words`, and `names(fidelity)`, and whose `record(line)` writes a move or a review; `latest(*verbs, stage)` answers a ticket's latest move and its latest mark in a stage.
+`space/session/session.py`, sent whole as a ticket's `session` data field. The board reads `name`, `title`, `parent`, `is_pulled_out`, `tags`, `text`, `is_closed`, `workpath`, `practices`, `reports_folder`, and `log`, and calls `close()`, `remove()`, `reopen()`, `move_to_closed()`, `move_to_archive()`, `move_to_backlog()`, `keep_file(file)`, `keep_text(text)`, `add_tag(word)`, `set_parent(parent)`, `mark_pulled_out()`, `open_child(title, scope)`, and `from_project(path)`. A backlog item reads and writes its file through an `IdeaFile` (`space/session/idea_file.py`), the same as a session's idea file. Its `log` is a `SessionLog` (`space/session/session_log.py`), whose `entries` are `LogEntry`s with `time`, `verb`, `stage`, `words`, and `names(fidelity)`, and whose `record(line)` writes a move or a mark; `latest(*verbs, stage)` answers a ticket's latest move and its latest mark in a stage.
 
 ## IdeaFile
 

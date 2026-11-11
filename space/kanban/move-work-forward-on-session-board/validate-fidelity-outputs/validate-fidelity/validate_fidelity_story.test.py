@@ -55,11 +55,11 @@ with story("Validate Fidelity"):
         with then("validate is off"):
             pass
     with scenario("Allow Validate again on the same output"):
-        # Evidence: observed: kanban_tools_spec 'should allow Validate and Review again on the same output'.
+        # Evidence: observed: kanban_tools_spec 'should allow Validate again on the same output'.
         with given("checkout-flow's story map has violations"):
             pass
         with when("the session board reads checkout-flow"):
-            # Ticket -> data_of(Ticket) <- allowed_actions: generate, validate, review
+            # Ticket -> data_of(Ticket) <- allowed_actions: generate, validate
             pass
         with then("validate is on for story_map"):
             pass
