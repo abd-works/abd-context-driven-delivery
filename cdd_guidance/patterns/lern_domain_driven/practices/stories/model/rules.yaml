@@ -1,3 +1,6 @@
+story:
+  rules:
+    - user-stories-have-a-front-end
 share:
   rules:
     - reduce-story-overlap

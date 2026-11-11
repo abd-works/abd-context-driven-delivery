@@ -989,6 +989,7 @@ class Story(StoryNode):
         at = recording.span_of(self, file)
         self.load_map_facts()
         node = recording.add(self, f"stories:Story:{file}:{self.name}", at, recording.facts_of(file))
+        node.set_fact("story_type", self.story_type.value)
         recording.graph.link("decomposedInto", parent, node)
         for background in self.backgrounds:
             background.record(recording, file, node)
