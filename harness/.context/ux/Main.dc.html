@@ -2352,7 +2352,8 @@ class Component extends DCLogic {
   pullOut(child) {
     const rest = this.state.tickets.filter(entry => entry.id !== child.id);
     const at = rest.findIndex(entry => entry.id === child.parent);
-    rest.splice(at + 1, 0, { ...child, pulledOut: true });
+    // Pulled out, the child sits right under its parent, in the parent's column and list.
+    rest.splice(at + 1, 0, { ...child, pulledOut: true, column: rest[at].column, done: !!rest[at].done });
     this.setState({ tickets: rest });
     this.arrive(child.id, 'slides-right');
     const parent = rest[at];
