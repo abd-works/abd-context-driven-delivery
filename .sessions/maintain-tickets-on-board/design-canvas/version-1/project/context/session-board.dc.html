@@ -45,6 +45,12 @@ Then pet-visits.md in pet-visits&#x27; session folder holds Book a visit for a p
 When the Person edits Gift cards&#x27; text to Sell gift cards at the till.
 Then .sessions/_backlog/gift-cards.md holds Sell gift cards at the till.
     And the Backlog shows Gift cards with the text Sell gift cards at the till.</div>
+<div class="cx-scenario">Edit a child&#x27;s text inside its parent</div>
+<div class="cx-steps">Given the ticket checkout-flow holds its child ticket confirm-order
+    And confirm-order&#x27;s text is Show the order and take the payment.
+When the Person edits confirm-order&#x27;s text inside checkout-flow&#x27;s card to Show the order, then take the payment.
+Then confirm-order.md in confirm-order&#x27;s session folder holds Show the order, then take the payment.
+    And confirm-order&#x27;s tooltip in checkout-flow&#x27;s card shows Show the order, then take the payment.</div>
 <div class="cx-story cx-on">Reorder Tickets In Column</div>
 <div class="cx-scenario">Keep a ticket where it was moved in its column</div>
 <div class="cx-steps">Given the Discovery column shows the ticket pet-visits above sign-up
@@ -85,6 +91,12 @@ Then pet-visits&#x27; card shows the tags billing and urgent</div>
 When the Person adds the child ticket Enter card details to checkout-flow
 Then the ticket enter-card-details is In progress in Discovery with the parent checkout-flow
     And checkout-flow&#x27;s card holds enter-card-details (Display Child Tickets In Parent)</div>
+<div class="cx-scenario">Drag a ticket onto a parent</div>
+<div class="cx-steps">Given the ticket pet-visits is In progress in Discovery with no parent
+    And the ticket checkout-flow is In progress in Discovery
+When the Person drags pet-visits onto checkout-flow
+Then checkout-flow&#x27;s card holds pet-visits
+    And no column shows pet-visits as a card of its own</div>
 <div class="cx-story cx-on">Display Child Tickets In Parent</div>
 <div class="cx-scenario">Stack a parent&#x27;s children inside its card</div>
 <div class="cx-steps">Given the ticket checkout-flow is in Discovery
@@ -92,12 +104,18 @@ Then the ticket enter-card-details is In progress in Discovery with the parent c
 When the board shows Discovery
 Then checkout-flow&#x27;s card holds enter-card-details and confirm-order stacked inside it
     And checkout-flow&#x27;s title sits small above them
-    And neither child shows as a card of its own in Discovery</div>
+    And neither child shows as a card of its own in Discovery
+    And neither child row names a stage of its own</div>
 <div class="cx-scenario">Keep a dashed row for a child pulled out of its parent</div>
 <div class="cx-steps">Given the ticket checkout-flow is in Discovery
     And its child ticket enter-card-details was pulled out of it and is in Specification
 When the board shows checkout-flow
 Then checkout-flow&#x27;s card holds a dashed row for enter-card-details</div>
+<div class="cx-scenario">Show a child&#x27;s text when the pointer rests on it</div>
+<div class="cx-steps">Given the ticket checkout-flow holds its child ticket confirm-order
+    And confirm-order&#x27;s text is Show the order and take the payment.
+When the Person rests the pointer on confirm-order in checkout-flow&#x27;s card
+Then a tooltip shows Show the order and take the payment.</div>
 <div class="cx-story cx-on">Expand Parent Ticket</div>
 <div class="cx-scenario">Expand a parent to show its children</div>
 <div class="cx-steps">Given the ticket checkout-flow is collapsed with the child tickets enter-card-details and confirm-order
@@ -113,7 +131,7 @@ Then checkout-flow&#x27;s card shows no child rows
 <div class="cx-story cx-on">Detach Child Ticket</div>
 <div class="cx-scenario">Pull a child out of its parent</div>
 <div class="cx-steps">Given the ticket checkout-flow holds its child ticket enter-card-details in Discovery
-When the Person pulls enter-card-details out of checkout-flow
+When the Person drags enter-card-details out of checkout-flow
 Then enter-card-details shows as a card of its own beside checkout-flow, titled Checkout flow.Enter card details
     And enter-card-details still has the parent checkout-flow
     And checkout-flow&#x27;s card holds a dashed row for enter-card-details</div>
@@ -126,13 +144,13 @@ Then the Specification column shows enter-card-details
 <div class="cx-scenario">Move a child to another parent</div>
 <div class="cx-steps">Given the ticket enter-card-details is a child of checkout-flow
     And the ticket billing-report is In progress in Discovery
-When the Person makes enter-card-details a child of billing-report
+When the Person drags enter-card-details onto billing-report
 Then billing-report&#x27;s card holds enter-card-details
     And checkout-flow&#x27;s card no longer holds enter-card-details
     And enter-card-details&#x27; session.json names billing-report as its parent</div>
 <div class="cx-scenario">Take a child off its parent</div>
 <div class="cx-steps">Given the ticket enter-card-details is a child of checkout-flow
-When the Person takes enter-card-details off checkout-flow
+When the Person Alt-drags enter-card-details out of checkout-flow
 Then enter-card-details shows as a card of its own with no parent
     And checkout-flow&#x27;s card holds no row for enter-card-details, dashed or not
     And enter-card-details&#x27; session.json names no parent</div>

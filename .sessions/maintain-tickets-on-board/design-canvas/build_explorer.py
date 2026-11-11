@@ -141,6 +141,7 @@ const PLAYS = {
     "Show a ticket's text from its session file": { act: () => ({ selected: IDS.flow }) },
     "Edit a ticket's text": { act: s => ({ tickets: change(s.tickets, IDS.flow, { text: 'Pay for the basket by card.' }), message: 'Saved to .sessions/checkout-flow/checkout-flow.md' }) },
     'Write the text file for a ticket that has none': { act: s => ({ tickets: change(s.tickets, IDS.pets, { text: 'Book a visit for a pet.' }), message: 'Wrote .sessions/pet-visits/pet-visits.md' }) },
+    "Edit a child's text inside its parent": { given: () => ({ selected: IDS.flow, openCard: IDS.flow }), act: s => ({ tickets: change(s.tickets, IDS.order, { text: 'Show the order, then take the payment.' }), message: 'Saved to .sessions/confirm-order/confirm-order.md' }) },
     "Edit a backlog item's text": { act: s => ({ backlog: s.backlog.map(b => (b.path === GIFT ? Object.assign({}, b, { body: 'Sell gift cards at the till.' }) : b)), message: 'Saved to .sessions/_backlog/gift-cards.md' }) },
   },
   'Reorder Tickets In Column': {
@@ -156,6 +157,7 @@ const PLAYS = {
     'Add a second tag': { given: s => ({ tickets: change(s.tickets, IDS.pets, { tags: ['billing'] }) }), act: s => ({ tickets: change(s.tickets, IDS.pets, { tags: ['billing', 'urgent'] }) }) },
   },
   'Add Child Ticket': {
+    'Drag a ticket onto a parent': { given: () => ({ selected: IDS.pets }), act: s => ({ tickets: change(s.tickets, IDS.pets, { parent: IDS.flow, pulledOut: false }), selected: IDS.flow, openCard: IDS.flow, message: 'pet-visits is inside checkout-flow and off the column' }) },
     'Add a child ticket by hand': {
       given: s => ({ tickets: s.tickets.filter(t => t.parent !== IDS.flow), selected: IDS.flow, openCard: IDS.flow }),
       act: s => ({ tickets: [...s.tickets, { id: IDS.card, title: 'Enter card details', column: 'Discovery', age: 'just now', progress: [IDLE, IDLE, IDLE], handoff: '', text: '', tags: [], parent: IDS.flow }], message: 'Opened enter-card-details in Discovery as a child of checkout-flow' }),
@@ -164,6 +166,7 @@ const PLAYS = {
   'Display Child Tickets In Parent': {
     "Stack a parent's children inside its card": { given: s => ({ tickets: stacked(s.tickets), openCard: null }), act: () => ({ selected: IDS.flow, openCard: IDS.flow }) },
     'Keep a dashed row for a child pulled out of its parent': { given: () => ({ openCard: null }), act: () => ({ selected: IDS.flow, openCard: IDS.flow }) },
+    "Show a child's text when the pointer rests on it": { given: () => ({ selected: IDS.flow, openCard: IDS.flow }), act: () => ({ message: 'Tooltip on confirm-order: Show the order and take the payment.' }) },
   },
   'Expand Parent Ticket': {
     'Expand a parent to show its children': { given: s => ({ tickets: stacked(s.tickets), selected: IDS.flow, openCard: null }), act: () => ({ openCard: IDS.flow }) },
