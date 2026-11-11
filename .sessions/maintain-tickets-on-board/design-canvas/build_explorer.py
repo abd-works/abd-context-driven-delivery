@@ -186,6 +186,60 @@ const PLAYS = {
     "Nest a child's session and branch under its parent's": { act: () => ({ selected: IDS.card, openCard: IDS.card, message: 'enter-card-details: session .sessions/checkout-flow/enter-card-details, branch checkout-flow.enter-card-details' }) },
   },
 };
+// The board's built stories, where the mockup can show the change itself. The board has no fixture tickets such as
+// move-me or ready-to-move, so billing-report and sign-up stand in for them. A play with no message of its own shows
+// the scenario's Thens as the message.
+const R = IDS.billing, ACTIVE = 'checkout-example';
+const activate = () => ({ active: R, selected: R, openCard: R });
+const BOARD_PLAYS = {
+  'Display Board': { 'Announce a ticket that moved': { act: s => ({ tickets: change(s.tickets, R, { column: 'Specification' }), selected: R }) } },
+  'Arrange Board And Details': { 'Give the board more height': { act: () => ({ boardHeight: 640 }) } },
+  'Set Stage WIP Limit': {
+    "Set a stage's limit": { act: s => ({ wipLimits: Object.assign({}, s.wipLimits, { Discovery: 4 }) }) },
+    'Give every stage a limit of 3 until a person sets one': { act: () => ({ wipLimits: { Discovery: 3, Specification: 3, Implementation: 3 } }) },
+    'Show a stage over its limit': { given: s => ({ wipLimits: Object.assign({}, s.wipLimits, { Discovery: 2 }) }), act: () => ({ selected: null }) },
+  },
+  'Display Ticket Card': { 'Outline the active ticket': { act: () => ({ active: ACTIVE, selected: ACTIVE }) } },
+  'Display Ticket Details': {
+    'Show the ticket of a card pressed anywhere': { act: () => ({ selected: R }) },
+    'Show the active ticket with no card pressed': { given: () => ({ selected: R }), act: () => ({ selected: null }) },
+    "Expand one ticket's card at a time": { given: () => ({ openCard: IDS.flow, selected: IDS.flow }), act: () => ({ openCard: R, selected: R }) },
+    'Open a card on the fidelity of a pressed segment': { act: () => ({ openCard: R, selected: R }) },
+  },
+  'Restrict Actions To Active Session': {
+    'Lock tickets that are not the active session': { given: () => ({ onlyActive: false }), act: () => ({ onlyActive: true, selected: R, openCard: R }) },
+    'Keep information and moves open on a locked ticket': { given: () => ({ onlyActive: true }), act: () => ({ selected: R, openCard: R }) },
+    'Unlock every ticket': { given: () => ({ onlyActive: true }), act: () => ({ onlyActive: false, selected: R, openCard: R }) },
+  },
+  'Activate Ticket': Object.fromEntries(['Open a ticket in its own worktree', 'Save the session folders on main before opening', 'Open a ticket again in the worktree it has', 'Work on the ticket from a chat in its worktree', 'Find a branch and worktree made outside CDD', 'Correct a branch the session records wrongly', 'Say which branches could be the session\'s rather than guess'].map(name => [name, { act: activate }])),
+  'Move Ticket': {
+    'Move a ticket on to the next column': { act: s => ({ tickets: change(s.tickets, R, { column: 'Specification', done: false }), selected: R }) },
+    "Drag a ticket into a stage's Done whatever its work": { act: s => ({ tickets: change(s.tickets, IDS.signUp, { done: true }), selected: IDS.signUp }) },
+    'Move a ticket back to the previous column': { given: s => ({ tickets: change(s.tickets, R, { column: 'Specification' }) }), act: s => ({ tickets: change(s.tickets, R, { column: 'Discovery' }), selected: R }) },
+    'Move a ticket into the Backlog with its work': { act: s => ({ tickets: s.tickets.filter(t => t.id !== IDS.signUp), backlog: [...s.backlog, { title: 'sign-up', path: '.sessions/_backlog/sign-up/sign-up.md', age: 'just now', body: 'Open an account with an email address.' }], selected: '.sessions/_backlog/sign-up/sign-up.md' }) },
+    'Close a ticket moved on past Implementation': { given: s => ({ tickets: change(s.tickets, R, { column: 'Implementation', done: true }) }), act: s => ({ tickets: change(s.tickets, R, { column: 'Complete', done: false }), selected: R }) },
+    'Reopen a ticket moved back out of Complete': { given: s => ({ tickets: change(s.tickets, R, { column: 'Complete' }) }), act: s => ({ tickets: change(s.tickets, R, { column: 'Implementation', done: false }), selected: R }) },
+  },
+  'Close Active Session': {
+    'Close the session with its work committed': { act: s => ({ tickets: change(s.tickets, ACTIVE, { column: 'Complete', done: false }), selected: ACTIVE }) },
+    'Close a session whose work is on main': { act: s => ({ tickets: change(s.tickets, ACTIVE, { column: 'Complete', done: false }), selected: ACTIVE }) },
+  },
+  'Add Backlog Item': {
+    'Add an idea to the Backlog': { given: s => ({ backlog: s.backlog.filter(b => b.path !== GIFT) }), act: s => ({ backlog: [...s.backlog, { title: 'Gift cards', path: GIFT, age: 'just now', body: 'Sell gift cards.' }], selected: GIFT }) },
+    'Start a backlog item in a chosen folder': { act: s => ({ backlog: s.backlog.filter(b => b.path !== GIFT), tickets: [...s.tickets, { id: 'gift-cards', title: 'Gift cards', column: 'Discovery', age: 'just now', progress: [IDLE, IDLE, IDLE], handoff: '', text: 'Sell gift cards.', tags: [] }], selected: 'gift-cards' }) },
+    'Keep the idea file with the new ticket': { act: s => ({ backlog: s.backlog.filter(b => b.path !== GIFT), tickets: [...s.tickets, { id: 'gift-cards', title: 'Gift cards', column: 'Discovery', age: 'just now', progress: [IDLE, IDLE, IDLE], handoff: '', text: 'Sell gift cards.', tags: [] }], selected: 'gift-cards' }) },
+    'Bring a ticket back from the Backlog with its work': {
+      given: s => ({ tickets: s.tickets.filter(t => t.id !== IDS.signUp), backlog: [...s.backlog, { title: 'sign-up', path: '.sessions/_backlog/sign-up/sign-up.md', age: '3 days ago', body: 'Open an account with an email address.' }] }),
+      act: s => ({ backlog: s.backlog.filter(b => b.title !== 'sign-up'), tickets: [...s.tickets, { id: IDS.signUp, title: 'sign-up', column: 'Discovery', age: 'just now', progress: [IDLE, IDLE, IDLE], handoff: '', text: 'Open an account with an email address.', tags: [] }], selected: IDS.signUp }),
+    },
+  },
+  'Archive Ticket': { 'Archive a ticket off the board': { act: s => ({ tickets: s.tickets.filter(t => t.id !== IDS.pets), selected: null, openCard: null }) } },
+  'Mark Ticket Done In Stage': {
+    'Mark a ticket done in its stage': { act: s => ({ tickets: change(s.tickets, R, { done: true }), selected: R }) },
+    'Mark a ticket back in progress': { given: s => ({ tickets: change(s.tickets, R, { done: true }) }), act: s => ({ tickets: change(s.tickets, R, { done: false }), selected: R }) },
+  },
+};
+Object.entries(BOARD_PLAYS).forEach(([story, plays]) => { PLAYS[story] = Object.assign({}, PLAYS[story], plays); });
 '''
 
 
@@ -222,23 +276,40 @@ def board_screen(project: Path, model: StoryModel) -> None:
               '  const at = steps.findIndex(line => line === shown);\n'
               '  const when = steps.findIndex(line => line.startsWith("When "));\n'
               '  return { at, when };\n'
+              '}\n'
+              '// A scenario with no play of its own: select the first ticket of the board its steps name, and say what the\n'
+              '// Givens hold before the When and what the Thens expect from the When on.\n'
+              'function namedFocus(steps, tickets) {\n'
+              '  const text = " " + steps.join(" ") + " ";\n'
+              '  const named = tickets.find(t => text.includes(" " + t.id + " ") || text.includes(" " + t.id + "\'") || text.includes(" " + t.id + ","));\n'
+              '  return { selected: named ? named.id : null, openCard: null };\n'
+              '}\n'
+              'function outcome(steps, acted) {\n'
+              '  const when = steps.findIndex(line => line.startsWith("When "));\n'
+              '  const part = acted ? steps.slice(when + 1) : steps.slice(0, Math.max(when, 0));\n'
+              '  return part.join(" · ");\n'
               '}\n')
     board = board.replace('class Component extends DCLogic {', follow + 'class Component extends DCLogic {', 1)
     hooks = ('  pinnedPlace = null;\n\n'
-             '  componentDidMount() { this.seed = { tickets: this.state.tickets, backlog: this.state.backlog }; this.followStory(); }\n'
+             '  componentDidMount() { const st = this.state; this.seed = { tickets: st.tickets, backlog: st.backlog, wipLimits: st.wipLimits, onlyActive: st.onlyActive, active: st.active, boardHeight: st.boardHeight }; this.followStory(); }\n'
              '  componentDidUpdate(previous) {\n'
              '    const { story, scenario, step } = this.props;\n'
              '    if (previous.story !== story || previous.scenario !== scenario || previous.step !== step) this.followStory();\n'
              '  }\n'
              '  followStory() {\n'
              '    const { story, scenario, step } = this.props;\n'
-             '    const focus = storyFocus(story, scenario);\n'
-             '    if (!focus) return;\n'
-             '    let s = { tickets: (this.seed || this.state).tickets, backlog: (this.seed || this.state).backlog, selected: focus.selected, openCard: focus.openCard, message: "" };\n'
+             '    const steps = (SCENARIO_STEPS[story] || {})[scenario];\n'
+             '    if (!steps) return;\n'
+             '    const seed = this.seed || this.state;\n'
+             '    const focus = storyFocus(story, scenario) || namedFocus(steps, seed.tickets);\n'
+             '    let s = { tickets: seed.tickets, backlog: seed.backlog, wipLimits: seed.wipLimits, onlyActive: seed.onlyActive, active: seed.active, boardHeight: seed.boardHeight, selected: focus.selected, openCard: focus.openCard, message: "" };\n'
              '    const play = (PLAYS[story] || {})[scenario];\n'
              '    if (play && play.given) s = Object.assign(s, play.given(s));\n'
              '    const { at, when } = stepPlace(story, scenario, step);\n'
-             '    if (play && play.act && when >= 0 && at >= when) s = Object.assign(s, play.act(s));\n'
+             '    const acted = when >= 0 && at >= when;\n'
+             '    if (play && play.act && acted) s = Object.assign(s, play.act(s));\n'
+             '    if (!play) s.message = outcome(steps, acted);\n'
+             '    else if (acted && !s.message) s.message = outcome(steps, true);\n'
              '    this.setState(Object.assign({}, s, { tickets: settleParents(s.tickets), cardClosing: false, expansion: null, editingText: null }));\n'
              '  }\n')
     assert board.count('  pinnedPlace = null;\n') == 1
