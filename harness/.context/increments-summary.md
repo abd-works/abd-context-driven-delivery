@@ -4,7 +4,7 @@ What each increment delivers and why it matters, in build priority order. Drawn 
 
 | # | Increment | Stories |
 |---|---|---|
-| 0 | Built Today (baseline) | 248 |
+| 0 | Built Today (baseline) | 244 |
 | 1 | Maintain Tickets On Board | 11 |
 | 2 | Integrate Practice Content Editor Apps | 9 |
 | 3 | Sync Design Canvas With Production | 21 |
@@ -21,14 +21,15 @@ What each increment delivers and why it matters, in build priority order. Drawn 
 | 14 | Bring Chat Bar Level With Board | 10 |
 | 15 | Draw Linked Models On The Canvas | 8 |
 | 16 | Suggest The Next Step | 5 |
-| 17 | Maybe Later | 1 |
-| | **Planned (1–17)** | **175** |
+| 17 | Repair Guidance From Mistakes | 3 |
+| 18 | Maybe Later | 1 |
+| | **Planned (1–18)** | **178** |
 
 ---
 
-## 0. Built Today — 248 stories
+## 0. Built Today — 244 stories
 
-The starting line, not a slice to build: what the framework, the CDD Kanban, the Chat Bar and the apps do now, grouped as the 27 lessons of the [Learning plan](#learning-plan) below, each topic leaning only on the ones before it.
+The starting line, not a slice to build: what the framework, the CDD Kanban, the Chat Bar and the apps do now, grouped as the 26 lessons of the [Learning plan](#learning-plan) below, each topic leaning only on the ones before it.
 
 | Topic | Lessons |
 |---|---|
@@ -38,7 +39,7 @@ The starting line, not a slice to build: what the framework, the CDD Kanban, the
 | Bring in real context | Index and segment a source · Capture documents into a searchable index · Sandbox a live app · Meeting notes |
 | Take the work to code | Move a ticket through Specification and Implementation · Hand a stubborn bug to a background agent |
 | The CDD Kanban and the visual apps | CDD Kanban · Kanban fidelity work · Story UI editor · Design canvas and story demo · Knowledge graph · Catalog and project approach |
-| Improve and extend CDD | Guidance repair · Pattern overlays · Builders and annotations · Agent BDD and prompt log |
+| Extend CDD | Pattern overlays · Builders and annotations · Agent BDD and prompt log |
 
 ## 1. Maintain Tickets On Board — 11 stories - IN PROGRESS
 
@@ -136,7 +137,13 @@ The chat proposes the next command, writes a handoff when a session ends, shows 
 
 The benefit is less "what now?" between steps, and knowledge that would otherwise be lost in a chat is captured as it happens.
 
-## 17. Maybe Later — 1 story
+## 17. Repair Guidance From Mistakes — 3 stories
+
+`/repair` traces a violation back to the guidance that let it happen (its context, example, template or scanner) and fixes that guidance, `/improve` captures a mistake and its correction as a regression example, and a failed example becomes a new named rule.
+
+The benefit is learning that compounds: each error makes every later run better, instead of the same thing being fixed again by hand.
+
+## 18. Maybe Later — 1 story
 
 Work set aside because it is complicated and not needed yet: nesting a child ticket's own branch and session under its parent. Picked up only when asked.
 
@@ -144,7 +151,7 @@ Work set aside because it is complicated and not needed yet: nesting a child tic
 
 ## Learning plan
 
-How to teach what is built today (Increment 0): what the framework, the CDD Kanban, the Chat Bar and the apps do now. The 27 lessons below are drawn from the README, `catalog/workflow.md`, `.context/cdd-approach.md`, every module's `.context/module-context.md`, the installed skills, and the Built Today stories in the story map. Each lesson is one feature a person can be taught on its own, told from their point of view. They are grouped by topic, and each lesson leans only on the ones before it.
+How to teach what is built today (Increment 0): what the framework, the CDD Kanban, the Chat Bar and the apps do now. The 26 lessons below are drawn from the README, `catalog/workflow.md`, `.context/cdd-approach.md`, every module's `.context/module-context.md`, the installed skills, and the Built Today stories in the story map. Each lesson is one feature a person can be taught on its own, told from their point of view. They are grouped by topic, and each lesson leans only on the ones before it.
 
 Each lesson has the same parts: **What you do**, **What you get** (the benefit), **Try it** (a command or place to start), **Or from the chat bar** (where the chat bar can do it), **Under the hood** (where it lives in the code) and, for the ones the chat bar or board drive, **What happens underneath** (the steps the system takes). The CDD Kanban does everything the chat bar does for every ticket at once, so it is taught later, in its own topic.
 
@@ -432,22 +439,14 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
 - *What you get:* a self-contained, brandable website of every practice, fidelity, rule and action, plus a one-page approach built from your own project's example artifacts, to share with a team or a client.
 - *Under the hood:* `harness/catalog_generator`.
 
-### Improve and extend CDD
+### Extend CDD
 
-**Lesson 24. Make the guidance learn from mistakes**
-- *What you do:*
-  - `/repair` traces a violation back to the guidance that let it happen and fixes that guidance.
-  - Improve guidance from a mistake, and add a rule from a failed example.
-  - `/verify_fix` re-runs the regression check.
-- *What you get:* each error makes every later run better. You compound learning instead of fixing the same thing again.
-- *Under the hood:* `cdd_guidance/actions/improvement`, `Validate.create_rule`, and each practice's `rules/rule_examples.py`.
-
-**Lesson 25. Add your stack: pattern overlays**
+**Lesson 24. Add your stack: pattern overlays**
 - *What you do:* apply a pattern such as LERN or MERN domain-driven, CDD web domain access, or a Claude Code mod on top of the practices.
 - *What you get:* stack-specific guidance and graph rules (acceptance tests first, then the code they drive) without changing a practice.
 - *Under the hood:* `cdd_guidance/patterns` (*DomainDrivenStack*, *LernDomainDriven*, *MernDomainDriven*, *CddWebDomainAccess*, *CddClaudeMod*).
 
-**Lesson 26. Build your own toolsets and practices**
+**Lesson 25. Build your own toolsets and practices**
 - *What you do:*
   - Use the builders `builders-create-agent-toolset` and `builders-create-practice-guidance`.
   - Annotate a plain class with `@agent_toolset`, `@agent_tool`, `@agent_instructions`, `@skill`, `@mcp`, `@hook` or `@Toast`.
@@ -455,7 +454,7 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
 - *What you get:* a team turns its own practices, tools and quality bar into commands, skills, MCP tools and hooks that work with every existing action on the first try.
 - *Under the hood:* `cdd_guidance/builders`, `harness/annotations`, `harness/agent_tools`, and `harness/guidance` (*PracticeGuidance*, *PracticeCatalogue*).
 
-**Lesson 27. Test agents and audit what they see**
+**Lesson 26. Test agents and audit what they see**
 - *What you do:*
   - Write agent BDD specs that drive a real agent and judge its output with an AI rubric.
   - Turn on the prompt log to record every prompt, file read and tool call.

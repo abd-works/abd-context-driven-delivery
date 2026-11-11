@@ -148,19 +148,15 @@ Observed: `/satisfy` validates, fixes every reported violation in the artifact, 
 
 ### (S) Agent --> Repair Guidance Behind Violation
 
-Observed: `/repair` fixes why the practice produced the violation, in its context, example, template or scanner, rather than the artifact alone, and waits for approval (`actions/improvement`).
+Intended (increment 17, Repair Guidance From Mistakes; the person, 2026-11-11: not built yet): `/repair` fixes why the practice produced the violation, in its context, example, template or scanner, rather than the artifact alone, and waits for approval (`actions/improvement`).
 
 ### (S) Agent --> Improve Guidance From Mistake
 
-Observed: `/improve` logs the mistake and the correction, runs repair, and captures a regression example so the same failure does not come back (`catalog/workflow.md` Scenario 4).
+Intended (increment 17, Repair Guidance From Mistakes; the person, 2026-11-11: not built yet): `/improve` logs the mistake and the correction, runs repair, and captures a regression example so the same failure does not come back (`catalog/workflow.md` Scenario 4).
 
 ### (S) Agent --> Add Rule From Failed Example
 
-Observed: validate adds a named rule from an example that failed, so the next validation catches the same mistake (`actions/validate` purpose).
-
-### (S) Person --> Review Fidelity Output
-
-Observed: `/review` records that a person reviewed and approved each listed guidance at its fidelity, which completes that fidelity on the board and chat bar (`actions/review`).
+Intended (increment 17, Repair Guidance From Mistakes; the person, 2026-11-11: not built yet): validate adds a named rule from an example that failed, so the next validation catches the same mistake (`actions/validate` purpose).
 
 ## (E) Inject Guidance Into Chat Lifecycle
 
@@ -530,10 +526,6 @@ Observed: the folder mode of the files panel groups the files under their folder
 
 Observed: one tab per format the fidelity offers, generated or not; × closes one.
 
-#### (S) Person --> [Review Fidelity](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-review-fidelity)
-
-Observed: Reviewed is off until a clean validate; when every fidelity of a stage is reviewed, the ticket shows in that stage's Done.
-
 #### (S) Person --> List Ticket Context Files
 
 Intended (`.sessions/_backlog/review-work-in-board-files.md` "include ticket context file and folders with list - folder-files; separate section"): the files panel lists the ticket's own context file and folders in a section of their own.
@@ -686,7 +678,7 @@ Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add fe
 
 ### (S) Person --> [Move Session To Next Stage](../../chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/move-session-to-next-stage/move_session_to_next_stage_story.test.ts)
 
-Observed: once every fidelity of the stage is reviewed, the action button shows ➜ and pressing it calls `ticket.move_next` (`action-button-view.tsx` `actionOf`).
+Observed: once every fidelity of the stage has passed validate, the action button shows ➜ and pressing it calls `ticket.move_next` (`action-button-view.tsx` `actionOf`).
 
 ### (S) Person --> Move Session To Previous Stage
 
@@ -777,10 +769,6 @@ Observed (chat-ui story map, View Fidelity Files): pressing a fidelity's red vio
 #### (S) Person --> Fix Violations From Chat Bar
 
 Requested (2026-11-06, as the CDD Kanban does): the chat bar sends Fix and Fix all for the report it opens.
-
-#### (S) Person --> [Review Session Fidelity](../../chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/review-fidelity/review_fidelity_story.test.ts)
-
-Observed: pressing the button on review records the person's approval through `fidelity-progress.finish_review`, which refuses it until the fidelity's latest Validate passed (`chat-bar-client.ts` `reviewFidelity`).
 
 ### (E) Integrate Practice Content Editor Apps In Chat Bar
 

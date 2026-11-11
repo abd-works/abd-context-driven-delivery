@@ -13,7 +13,7 @@ section: body
 
 **Slicing intent:** Increment 0 is what the code does today. The Intended and Requested stories follow the order set on 2026-11-06.
 
-**Spine vs optional:** the increments run in the order they are built, as set on 2026-11-10: ticket management and the editor-app stories first, then syncing the design canvas with production and integrating stories with the canvas explorer, then faster command entry and the Clean Engineering checks (metrics on the model, then checks across files), then the fully integrated flow, then the board's file review, workflow customizing and the Story UI editor's own stories; guards, a faster board, chat bar parity and linked models on the canvas follow, and next-step suggestions come last.
+**Spine vs optional:** the increments run in the order they are built, as set on 2026-11-10: ticket management and the editor-app stories first, then syncing the design canvas with production and integrating stories with the canvas explorer, then faster command entry and the Clean Engineering checks (metrics on the model, then checks across files), then the fully integrated flow, then the board's file review, workflow customizing and the Story UI editor's own stories; guards, a faster board, chat bar parity and linked models on the canvas follow, next-step suggestions follow, and repairing guidance from mistakes comes last.
 
 ## Increments
 
@@ -63,10 +63,6 @@ section: body
 - *Generate Several Practices In One Command*
 - *Validate Artifact Against Rules*
 - *Satisfy Violations Until Clean*
-- *Repair Guidance Behind Violation*
-- *Improve Guidance From Mistake*
-- *Add Rule From Failed Example*
-- *Review Fidelity Output*
 - *Start CDD Server On Session Start*
 - *Inject Action Rules After Action Call*
 - *Inject Practice Rules After File Edit*
@@ -592,7 +588,19 @@ section: body
 - *Offer Correction Log Entry*
 - *Offer Decision Record*
 
-### Increment 17: Maybe Later
+### Increment 17: Repair Guidance From Mistakes
+
+**Outcome:** a violation is traced back to the guidance that let it happen and that guidance is fixed, a mistake and its correction are captured as a regression example, and a failed example becomes a new named rule, so each error makes every later run better.
+
+**Slicing notes:** the person, 2026-11-11: repair is not built yet, so it is taken out of Built Today and planned as its own increment.
+
+**Stories in this increment:**
+
+- *Repair Guidance Behind Violation*
+- *Improve Guidance From Mistake*
+- *Add Rule From Failed Example*
+
+### Increment 18: Maybe Later
 
 **Outcome:** work set aside for now because it is complicated and not needed yet; picked up only when asked.
 
