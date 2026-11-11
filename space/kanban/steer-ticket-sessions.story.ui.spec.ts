@@ -157,46 +157,20 @@ test.describe('with no chat connected', () => {
   })
 
   test.describe('Activate Ticket', () => {
-    test.describe('Switch to another ticket, committing, pushing, and merging the one left', () => {
-      test.beforeEach(async ({ page }) => {
-        checkOutMainAlone()
-        git('checkout', '-b', 'checkout-flow')
-        await openBoard(page)
-        await card(page, 'billing-report').getByRole('button', { name: 'Activate' }).first().click()
-      })
-
-      test.afterEach(async ({ page }) => {
-        await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click()
-        checkOutMainAlone()
-      })
-
-      test('Then a dialog headed Switch from Checkout flow to Billing report offers commit and push, chosen, and merge, not chosen', async ({ page }) => {
-        const dialog = page.getByRole('dialog')
-        await expect(dialog.getByRole('heading', { name: 'Switch from Checkout flow to Billing report' })).toBeVisible()
-        await expect(dialog.getByRole('checkbox', { name: 'Commit changes on checkout-flow' })).toBeChecked()
-        await expect(dialog.getByRole('checkbox', { name: 'Push checkout-flow to origin' })).toBeChecked()
-        await expect(dialog.getByRole('checkbox', { name: 'Merge checkout-flow into main' })).not.toBeChecked()
-      })
-
-      test('And it offers a branch for billing-report, chosen', async ({ page }) => {
-        await expect(page.getByRole('dialog').getByRole('checkbox', { name: 'Create branch billing-report' })).toBeChecked()
-      })
-    })
-
-    test.describe('Cancel the switch', () => {
+    // Activating opens the ticket in its own worktree in one press: no chat moves between folders, so there is nothing
+    // to ask first.
+    test.describe('Open a ticket in its own worktree', () => {
       test.beforeEach(async ({ page }) => {
         await openBoard(page)
         await card(page, 'billing-report').getByRole('button', { name: 'Activate' }).first().click()
-        await expect(page.getByRole('dialog').getByRole('heading', { name: 'Switch from Checkout flow to Billing report' })).toBeVisible()
-        await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click()
       })
 
-      test('Then the dialog is closed', async ({ page }) => {
+      test('Then no dialog opens', async ({ page }) => {
         await expect(page.getByRole('dialog')).toHaveCount(0)
       })
 
-      test('And checkout-flow is still the active ticket', async ({ page }) => {
-        await expect(page.locator('.header-active')).toHaveText('Checkout flow')
+      test('And a toast names the worktree of Billing report, where its chat can be opened', async ({ page }) => {
+        await expect(toast(page, /^Billing report is open in its worktree .+ · open its chat from its card$/)).toBeVisible({ timeout: 8_000 })
       })
     })
   })

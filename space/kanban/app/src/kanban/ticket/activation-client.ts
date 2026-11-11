@@ -1,59 +1,56 @@
 import type { BoardPage } from '../board/board-page'
-import type { Activation } from '../shared/board-store'
+import type { Closing } from '../shared/board-store'
 import type { TicketClient } from './ticket-client'
 
 const LEFT_STEPS: Record<string, string> = { handoff: 'handoff written', commit: 'committed', push: 'pushed', merge: 'merged to main', delete_branch: 'branch deleted', delete_worktree: 'worktree deleted' }
-const OPENED_STEPS: Record<string, string> = { branch: 'branch created', worktree: 'worktree created' }
 
 const toggled = (chosen: string[], option: string): string[] => (chosen.includes(option) ? chosen.filter(entry => entry !== option) : [...chosen, option])
 
-const stepsOf = (steps: Record<string, string>, chosen: string[]): string[] =>
-  Object.keys(steps)
-    .filter(step => chosen.includes(step))
-    .map(step => steps[step] ?? step)
-
-// What leaving did, in the canvas's words, ahead of what came of the session.
-function reportOf(open: Activation, outcome: string, opened: string[]): string {
-  const left = stepsOf(LEFT_STEPS, open.leaving)
-  return [left.length ? `${open.leavingTitle}: ${left.join(', ')}` : '', opened.length ? `${open.ticket.title}: ${opened.join(', ')}` : '', outcome].filter(Boolean).join(' · ')
+// What closing did with the work, in the canvas's words, ahead of the session closed.
+function closedReport(closing: Closing): string {
+  const left = Object.keys(LEFT_STEPS)
+    .filter(step => closing.leaving.includes(step))
+    .map(step => LEFT_STEPS[step] ?? step)
+  return [left.length ? `${closing.ticket.title}: ${left.join(', ')}` : '', `Session ${closing.ticket.title} closed`].filter(Boolean).join(' · ')
 }
 
-export const activationHeading = (open: Activation): string => {
-  const { title } = open.ticket
-  if (open.isClosing) return `Close session ${title}`
-  return open.leavingTitle ? `Switch from ${open.leavingTitle} to ${title}` : `Activate ${title}`
-}
+export const closingHeading = (closing: Closing): string => `Close session ${closing.ticket.title}`
 
-// The dialog asked before the session changes, because leaving can commit, push, and merge work.
+// Activating a ticket opens it in its own worktree in one press, since it changes nothing the chats have open. Closing
+// asks first, in a dialog, because it can commit, push, and merge the ticket's work.
 export class ActivationClient {
   constructor(private readonly page: BoardPage) {}
 
-  private get open(): Activation | null {
-    return this.page.store.state.activation
+  private get closing(): Closing | null {
+    return this.page.store.state.closing
   }
 
-  private show(activation: Activation | null): void {
-    this.page.store.change({ activation })
+  private show(closing: Closing | null): void {
+    this.page.store.change({ closing })
   }
 
-  async start(ticket: TicketClient, isClosing: boolean): Promise<void> {
+  // The board then sends the person to the chat working in that worktree, or names the folder for a chat to open in.
+  async activate(ticket: TicketClient): Promise<void> {
     ticket.select()
-    const left = isClosing ? ticket : this.page.board.activeTicket
-    // Python says what leaving the ticket left can do with its work now, closing it or switching away, and what opening
-    // this one can create now, with those chosen at first. A read that failed offers nothing, since the page has shown
-    // the failure.
-    const [opening, leaving] = await Promise.all([ticket.openChoices(), left ? (isClosing ? left.closeChoices() : left.leaveChoices()) : null])
-    this.show({
-      ticket,
-      isClosing,
-      leavingTitle: left?.title ?? '',
-      leaving: leaving?.chosen ?? [],
-      opening: opening?.choices ?? [],
-      offeredLeaving: leaving?.choices ?? [],
-      offeredOpening: opening?.choices ?? [],
-      leavingBranch: leaving?.branch ?? '',
-      hasBranch: opening?.has_branch ?? false,
-    })
+    const activated = await ticket.activate()
+    await this.page.reader.refresh()
+    if (!activated) return
+    const opened = this.page.ticket(activated.toJSON())
+    opened.choose()
+    this.page.store.toast(this.openedReport(opened))
+  }
+
+  private openedReport(opened: TicketClient): string {
+    const place = `${opened.title} is open in its worktree ${opened.worktree}`
+    return opened.chat.found ? `${place} · its chat is chosen` : `${place} · open its chat from its card`
+  }
+
+  // Python says what closing the ticket can do with its work now, with those chosen at first. A read that failed
+  // offers nothing, since the page has shown the failure.
+  async startClosing(ticket: TicketClient): Promise<void> {
+    ticket.select()
+    const choices = await ticket.closeChoices()
+    this.show({ ticket, leaving: choices?.chosen ?? [], offeredLeaving: choices?.choices ?? [], leavingBranch: choices?.branch ?? '' })
   }
 
   cancel(): void {
@@ -61,31 +58,17 @@ export class ActivationClient {
   }
 
   toggleLeaving(option: string): void {
-    if (this.open) this.show({ ...this.open, leaving: toggled(this.open.leaving, option) })
-  }
-
-  toggleOpening(option: string): void {
-    if (this.open) this.show({ ...this.open, opening: toggled(this.open.opening, option) })
+    if (this.closing) this.show({ ...this.closing, leaving: toggled(this.closing.leaving, option) })
   }
 
   async confirm(): Promise<void> {
-    const open = this.open
-    if (!open) return
+    const closing = this.closing
+    if (!closing) return
     this.show(null)
-    await (open.isClosing ? this.closeSession(open) : this.activateSession(open))
-  }
-
-  private async closeSession(open: Activation): Promise<void> {
-    const closed = await open.ticket.close(open.leaving)
+    const closed = await closing.ticket.close(closing.leaving)
     await this.page.reader.refresh()
     if (!closed) return
     this.page.ticket(closed.toJSON()).select()
-    this.page.store.toast(reportOf(open, `Session ${open.ticket.title} closed`, []))
-  }
-
-  private async activateSession(open: Activation): Promise<void> {
-    const activated = await open.ticket.activate(open.leaving, open.opening)
-    await this.page.reader.refresh()
-    if (activated) this.page.store.toast(reportOf(open, `${open.ticket.title} is now active`, stepsOf(OPENED_STEPS, open.opening)))
+    this.page.store.toast(closedReport(closing))
   }
 }

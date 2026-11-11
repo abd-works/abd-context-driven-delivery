@@ -119,7 +119,7 @@ function SessionActionsView({ ticket }: { ticket: TicketClient }) {
       {ticket.isActive ? (
         <SessionActionView action="close" label="Close" hint="Close this session in the chat" isOff={cannotFill} onPress={() => ticket.closeSession()} />
       ) : (
-        <SessionActionView action="activate" label="Activate" hint="Activate this session" isOff={ticket.isClosed} onPress={() => page.activation.start(ticket, false)} />
+        <SessionActionView action="activate" label="Activate" hint="Open this ticket in its own worktree" isOff={ticket.isClosed} onPress={() => page.activation.activate(ticket)} />
       )}
     </span>
   )
