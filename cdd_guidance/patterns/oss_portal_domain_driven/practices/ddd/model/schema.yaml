@@ -1,0 +1,64 @@
+# OSS Portal overlay on ddd. Extend only.
+# is: names the supertype. ddd.type is already defined in practices/ddd — do not restate it.
+# A bare name is one. A bracket list is the collection.
+service:
+  - name: string
+  - path: "src/{service}-service/"
+  - aggregates: [aggregate]
+  - proxy: proxy
+  - migrations: [migration]
+
+aggregate:
+  - is: ddd.aggregate
+  - path: "src/{service}-service/{aggregate}/"
+  - belongsTo: service
+  - view: [view]
+  - clientRoot: clientRoot
+  - bffRoot: bffRoot
+  - bffRoute: bffRoute
+  - serviceRoot: serviceRoot
+  - serviceRoute: serviceRoute
+  - entityRoot: ddd.entityRoot
+  - entities: [ddd.entities]
+  - repository: repository
+
+view:
+  - is: class
+  - name: string
+  - path: "{screen}.view"
+  - clientRoot: clientRoot
+clientRoot:
+  - is: ddd.entityRoot
+  - name: string
+  - path: "{aggregate}-client"
+  - calls: bffRoute
+bffRoute:
+  - is: class
+  - name: string
+  - path: "{aggregate}-bff-routes"
+  - bffRoot: bffRoot
+bffRoot:
+  - is: ddd.entityRoot
+  - name: string
+  - path: "{aggregate}-bff"
+  - views: [view]
+  - routesTo: serviceRoute
+serviceRoute:
+  - is: class
+  - name: string
+  - path: "{aggregate}-service-routes"
+  - serviceRoot: serviceRoot
+serviceRoot:
+  - is: ddd.entityRoot
+  - name: string
+  - path: "{aggregate}-service"
+  - repository: repository
+
+proxy:
+  - name: string
+  - path: "{service}-service-proxy/"
+  - belongsTo: service
+migration:
+  - name: string
+  - path: "migrations/{number}-{step}-{change}"
+  - belongsTo: service

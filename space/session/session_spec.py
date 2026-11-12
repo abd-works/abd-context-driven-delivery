@@ -251,6 +251,11 @@ with description("a session"):
             with it("should log into the ticket's folder in the repository's own .sessions"):
                 expect(Sessions(self.called).current().session_path).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
 
+            # The board and the chat bar name the active ticket by the open session's name, so it follows the worktree
+            # as current does: the ticket's own chat shows the ticket, not main.
+            with it("should name that ticket as the session open"):
+                expect(Sessions(self.called).open_name).to(equal("alpha"))
+
             with context("that a chat in the repository's own folder switches to"):
                 with before.each:
                     self.instructions = Sessions(self.repo).switch("alpha", call=ToolCall({}, self.repo))

@@ -26,7 +26,7 @@ section: body
 *Given* billing-report's story map is generated in markdown and its bounded context is not
 *When* the Person opens the Discovery stage head on story_map and bounded_context
 *Then* the bar shows a diagram chip and a markdown chip
-*And* the markdown chip reads 1 of 2 with the hint markdown: 1 of 2 done
+*And* the markdown chip reads 1 of 2 with the hint markdown: 1 of 2 done, selected
 
 #### Scenario: Keep Run off with no format picked
 

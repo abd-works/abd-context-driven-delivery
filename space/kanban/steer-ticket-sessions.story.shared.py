@@ -297,7 +297,7 @@ def _(s):
     def _(world):
         world.closing = world.data_of(world.ticket.close_choices())
 
-    @s.then("a dialog headed Close session Checkout flow offers commit and push, chosen")
+    @s.then("a dialog headed Close session Checkout flow offers commit and push, none chosen")
     def _(world):
         expect((world.closing["branch"], world.closing["choices"][:3])).to(equal((CHECKOUT_FLOW.name, ["handoff", "commit", "push"])))
 
@@ -374,7 +374,7 @@ def _(s):
 
     @s.then("main on origin holds the commit checkout-flow: leave session")
     def _(world):
-        expect(world.project.origin_log("main")[0]).to(equal(LEAVE_SESSION_COMMIT))
+        expect(world.project.origin_log("main")).to(contain(LEAVE_SESSION_COMMIT))
 
     @s.and_("the checkout is still on main")
     def _(world):

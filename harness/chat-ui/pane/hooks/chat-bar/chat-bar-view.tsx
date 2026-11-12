@@ -10,9 +10,9 @@ import { askChatToFix, dismissFailure, fixFailure, runHandoff, type ChatBarClien
 import { openFilesOf, openReport } from './fidelity-files-client'
 import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
-import { openClose } from './session-client'
+import { openClose, toggleRepoListWithRepos } from './session-client'
 import { toggleCard, toggleSessionList } from './session-dialogs-client'
-import { CloseView, SessionListView } from './session-dialogs-view'
+import { CloseView, RepoListView, SessionListView } from './session-dialogs-view'
 import { selectStage, toggleStagePicker, type StageClient } from './stage-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
@@ -105,6 +105,7 @@ function SessionNameView($: EngineInterface, { Box, Button, Text }: ElementTable
         </Button>
       </Box>
       {chatBar.isMain ? GlyphButtonView({ Box, Button, Text }, 'session-list-button', '+', BRAND.muted, () => toggleSessionList($)) : null}
+      {chatBar.isMain ? GlyphButtonView({ Box, Button, Text }, 'repo-list-button', '⑂', BRAND.muted, () => toggleRepoListWithRepos($)) : null}
     </Box>
   )
 }
@@ -251,6 +252,7 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
       {draw.busy.doing ? <Text key="busy" color={BRAND.accent}>{`${draw.busy.wheel} ${draw.busy.doing}…`}</Text> : null}
       {CloseView($, elements, draw)}
       {SessionListView($, elements, draw)}
+      {RepoListView($, elements, draw)}
       {SessionCardView($, elements, draw)}
       {StagePickerView($, elements, draw)}
       {PickerView($, elements, draw)}

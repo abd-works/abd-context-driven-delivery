@@ -274,7 +274,12 @@ class Sessions:
         return WorkState(self.root, chat)
 
     def open_name_for(self, chat: str = "") -> str:
-        """The name of the session chat has open; main when none is."""
+        """The name of the session chat works on: the ticket of the worktree these sessions serve, whatever any chat
+        chose to open, as ``current`` answers; else the session chat has open; main when none is. The board names its
+        active ticket from this, so a ticket's own chat bar shows that ticket rather than main."""
+        ticket = self._ticket_of_worktree()
+        if ticket is not None:
+            return ticket.name
         return self.open_state(chat).session or MAIN_SESSION_NAME
 
     @property
@@ -305,9 +310,6 @@ class Sessions:
     @agent_tool
     def current(self, call: ToolCall | None = None) -> Session:
         """The open session of this chat; the main session, which works on the whole repository, when none is named."""
-        ticket = self._ticket_of_worktree()
-        if ticket is not None:
-            return ticket
         return self.load(self.folder_of(self.open_name_for(call.chat_id if call is not None else "")))
 
     def _ticket_of_worktree(self) -> Session | None:

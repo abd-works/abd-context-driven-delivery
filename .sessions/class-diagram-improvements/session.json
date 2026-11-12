@@ -1,5 +1,7 @@
 {
   "name": "class-diagram-improvements",
   "title": "class diagram improvements",
-  "scope": "feature"
+  "scope": "feature",
+  "branch": "class-diagram-improvements",
+  "worktree": "C:\\dev\\abd-cdd-class-diagram-improvemen"
 }

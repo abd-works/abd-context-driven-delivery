@@ -163,6 +163,8 @@ test.describe('with no chat connected', () => {
       test.beforeEach(async ({ page }) => {
         await openBoard(page)
         await card(page, 'billing-report').getByRole('button', { name: 'Activate' }).first().click()
+        // Activating makes a worktree in the background; the next scenario's reset must not start while it still runs.
+        await expect(toast(page, /^Billing report is open in its worktree/)).toBeVisible({ timeout: 15_000 })
       })
 
       test('Then no dialog opens', async ({ page }) => {
@@ -189,11 +191,11 @@ test.describe('with no chat connected', () => {
         checkOutMainAlone()
       })
 
-      test('Then a dialog headed Close session Checkout flow offers commit and push, chosen', async ({ page }) => {
+      test('Then a dialog headed Close session Checkout flow offers commit and push, none chosen', async ({ page }) => {
         const dialog = page.getByRole('dialog')
         await expect(dialog.getByRole('heading', { name: 'Close session Checkout flow' })).toBeVisible({ timeout: 8_000 })
-        await expect(dialog.getByRole('checkbox', { name: 'Commit changes on checkout-flow' })).toBeChecked()
-        await expect(dialog.getByRole('checkbox', { name: 'Push checkout-flow to origin' })).toBeChecked()
+        await expect(dialog.getByRole('checkbox', { name: 'Commit changes on checkout-flow' })).not.toBeChecked()
+        await expect(dialog.getByRole('checkbox', { name: 'Push checkout-flow to origin' })).not.toBeChecked()
       })
     })
   })
@@ -222,7 +224,7 @@ test.describe('with a chat connected', () => {
       })
 
       test("Then the chat's prompt holds Open a new ticket with ticket.create, titled: for the Person to finish", async () => {
-        await expect.poll(() => receivedBy(chat)).toContain('Open a new ticket with ticket.create, titled: ')
+        await expect.poll(() => receivedBy(chat)).toContain('Open a new ticket with ticket.create session=.sessions/checkout-flow/session.json, titled: ')
       })
     })
   })
@@ -234,11 +236,11 @@ test.describe('with a chat connected', () => {
       })
 
       test('Then the chat is sent /space:session:close-session', async () => {
-        await expect.poll(() => receivedBy(chat)).toContain('/space:session:close-session')
+        await expect.poll(() => receivedBy(chat)).toContain('/space:session:close-session session=.sessions/checkout-flow/session.json')
       })
 
       test('And checkout-flow stays In progress in Discovery', async ({ page }) => {
-        await expect.poll(() => receivedBy(chat)).toContain('/space:session:close-session')
+        await expect.poll(() => receivedBy(chat)).toContain('/space:session:close-session session=.sessions/checkout-flow/session.json')
         await expect(column(page, 'Discovery').locator('.card-list').first().locator('[data-ticket="checkout-flow"]')).toBeVisible()
       })
     })
@@ -251,7 +253,7 @@ test.describe('with a chat connected', () => {
       })
 
       test("Then the chat's prompt holds Split ticket checkout-flow into child tickets, one per story on its story map: call ticket.create with parent checkout-flow for each story.", async () => {
-        await expect.poll(() => receivedBy(chat)).toContain('Split ticket checkout-flow into child tickets, one per story on its story map: call ticket.create with parent checkout-flow for each story.')
+        await expect.poll(() => receivedBy(chat)).toContain('Split ticket checkout-flow into child tickets, one per story on its story map: call ticket.create with parent checkout-flow for each story. session=.sessions/checkout-flow/session.json')
       })
     })
 
@@ -279,7 +281,7 @@ test.describe('with a chat connected', () => {
       })
 
       test("Then the chat's prompt holds Write a handoff for ticket checkout-flow with /space-session-handoff-session.", async () => {
-        await expect.poll(() => receivedBy(chat)).toContain('Write a handoff for ticket checkout-flow with /space-session-handoff-session.')
+        await expect.poll(() => receivedBy(chat)).toContain('Write a handoff for ticket checkout-flow with /space-session-handoff-session session=.sessions/checkout-flow/session.json')
       })
 
       // The toast also names the chat: "Queued for the prompt of Steer chat, for you to review: …".
@@ -303,7 +305,7 @@ test.describe('with a chat connected', () => {
         await expect(toast(page, 'It goes in when this turn ends.')).toBeVisible()
         const before = chat.received.length
         chat.isBusy = false
-        await expect.poll(() => receivedBy(chat).slice(before)).toContain('Write a handoff for ticket checkout-flow with /space-session-handoff-session.')
+        await expect.poll(() => receivedBy(chat).slice(before)).toContain('Write a handoff for ticket checkout-flow with /space-session-handoff-session session=.sessions/checkout-flow/session.json')
       })
     })
   })

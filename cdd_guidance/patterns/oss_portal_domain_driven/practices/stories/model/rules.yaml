@@ -1,0 +1,25 @@
+# OSS Portal rule slugs for story test nodes (see oss_portal_domain_driven.md § Shared rules, Testing).
+share:
+  rules:
+    - reduce-story-overlap
+    - no-expect-in-given
+    - outline-entries-loop-over-examples
+    - scaffold-test-scripts
+    - ask-cross-aggregate-sync
+domain:
+  rules:
+    - reduce-story-overlap
+serviceSpec:
+  rules:
+    - reduce-story-overlap
+    - service-tier-runs-a-real-database
+bffSpec:
+  rules:
+    - reduce-story-overlap
+playwright:
+  rules:
+    - outline-entries-loop-over-examples
+    - reduce-story-overlap
+journeySpec:
+  rules:
+    - journey-test-per-release

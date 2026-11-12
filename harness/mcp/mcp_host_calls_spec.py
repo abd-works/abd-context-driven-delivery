@@ -111,6 +111,57 @@ with description("a cdd server answering a chat's tool calls") as self:
         with it("should answer for the session that process runs now"):
             expect(_call(self.host, "call-outcomes.clerk", self.project, "unnamed", _CHAT_PROCESS).content[0].text).to(equal(_MOVED_CHAT))
 
+    # Right after the desktop app moves a chat, its process can still record the spare folder while its transcript
+    # already records the folder it moved to.
+    with context("from a Claude Code chat process still recorded in a desktop spare folder"):
+        with before.each:
+            self.config = Path(tempfile.mkdtemp())
+            self.prior_config = os.environ.get("CLAUDE_CONFIG_DIR")
+            os.environ["CLAUDE_CONFIG_DIR"] = str(self.config)
+            self.spare = self.config / "spares" / "spare-AbCdEf"
+            self.spare.mkdir(parents=True)
+            self.moved_to = ThrowawayProject().root
+            session_file = self.config / "sessions" / f"{_CHAT_PROCESS}.json"
+            session_file.parent.mkdir(parents=True)
+            session_file.write_text(json.dumps({"pid": int(_CHAT_PROCESS), "sessionId": _MOVED_CHAT, "cwd": str(self.spare)}), encoding="utf-8")
+            transcript = self.config / "projects" / "C--moved" / f"{_MOVED_CHAT}.jsonl"
+            transcript.parent.mkdir(parents=True)
+            events = ({"type": "user", "cwd": str(folder)} for folder in (self.spare, self.moved_to))
+            transcript.write_text("".join(json.dumps(event) + "\n" for event in events), encoding="utf-8")
+
+        with after.each:
+            if self.prior_config is None:
+                os.environ.pop("CLAUDE_CONFIG_DIR", None)
+            else:
+                os.environ["CLAUDE_CONFIG_DIR"] = self.prior_config
+
+        with it("should work on the folder the transcript records, not the spare folder"):
+            answer = _call(self.host, "call-outcomes.ledger_folder", self.spare, "unnamed", _CHAT_PROCESS).content[0].text
+            expect(answer).to(equal(str(self.moved_to.resolve())))
+
+        with it("should write nothing in the spare folder"):
+            _call(self.host, "call-outcomes.ledger_folder", self.spare, "unnamed", _CHAT_PROCESS)
+            expect((self.spare / ".sessions").exists()).to(equal(False))
+
+    with context("from a chat that names only a desktop spare folder"):
+        with before.each:
+            self.config = Path(tempfile.mkdtemp())
+            self.prior_config = os.environ.get("CLAUDE_CONFIG_DIR")
+            os.environ["CLAUDE_CONFIG_DIR"] = str(self.config)
+            self.spare = self.config / "spares" / "spare-GhIjKl"
+            self.spare.mkdir(parents=True)
+
+        with after.each:
+            if self.prior_config is None:
+                os.environ.pop("CLAUDE_CONFIG_DIR", None)
+            else:
+                os.environ["CLAUDE_CONFIG_DIR"] = self.prior_config
+
+        with it("should refuse the call rather than work in the spare folder"):
+            result = _call(self.host, "call-outcomes.ledger_folder", self.spare)
+            expect(result.isError).to(equal(True))
+            expect((self.spare / ".sessions").exists()).to(equal(False))
+
     # Two chats in one checkout each keep their own open session, so the call is answered for the chat that sent it.
     with context("from a chat its request names, though its arguments do not"):
         with it("should answer for that chat"):

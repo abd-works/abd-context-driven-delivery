@@ -3545,7 +3545,7 @@ with no chat connected
     Complete the active ticket with its work committed
       ```
       // the graph holds no operation this observation calls
-      it Then a dialog headed Close session Checkout flow offers commit and push, chosen
+      it Then a dialog headed Close session Checkout flow offers commit and push, none chosen
       ```
 
 

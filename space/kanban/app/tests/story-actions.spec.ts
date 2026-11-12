@@ -17,8 +17,12 @@ let chat: FakeChat
 
 const column = (page: Page, name: string) => page.locator(`.board-column[data-column="${name}"]`)
 
+// The board picks no chat on its own, so the Person picks the one that checked in.
 async function waitForChat(page: Page): Promise<void> {
-  await expect(page.getByRole('combobox', { name: 'Chat to send commands to' })).toHaveValue(chat.id, { timeout: 10_000 })
+  const picker = page.getByRole('combobox', { name: 'Chat to send commands to' })
+  await expect(picker.locator(`option[value="${chat.id}"]`)).toBeAttached({ timeout: 10_000 })
+  await picker.selectOption(chat.id)
+  await expect(picker).toHaveValue(chat.id)
 }
 
 async function showTicket(page: Page, ticket: string): Promise<void> {
@@ -97,11 +101,11 @@ test.describe('Send commands to a chat', () => {
     await expect(page.getByRole('option', { name: 'Surface chat' })).toHaveAttribute('value', 'surface-chat')
   })
 
-  test('should pick the only chat and say a fill is queued', async ({ page }) => {
+  test('should say a fill is queued for the picked chat', async ({ page }) => {
     await waitForChat(page)
     await card(page, 'checkout-flow').getByRole('button', { name: 'Handoff' }).first().click()
     await expect(toast(page, /^Queued for the prompt/)).toBeVisible()
-    await lastReceived('Write a handoff for ticket checkout-flow with /space-session-handoff-session.')
+    await lastReceived('Write a handoff for ticket checkout-flow with /space-session-handoff-session session=.sessions/checkout-flow/session.json')
     expect(chat.received.at(-1)?.kind).toBe('fill')
   })
 
@@ -418,17 +422,18 @@ test.describe('Activate Ticket', () => {
   })
 })
 
+// Close sends the close command to the chat only for the active ticket, checkout-flow; any other opens the Close dialog.
 test.describe('Close Active Session', () => {
   test('should send the close session command to the chat', async ({ page }) => {
     await waitForChat(page)
-    await card(page, 'billing-report').getByRole('button', { name: 'Close' }).first().click()
-    await lastReceived('/space:session:close-session')
+    await card(page, 'checkout-flow').getByRole('button', { name: 'Close' }).first().click()
+    await lastReceived('/space:session:close-session session=.sessions/checkout-flow/session.json')
   })
 
   test('should leave the ticket in its column', async ({ page }) => {
     await waitForChat(page)
-    await card(page, 'billing-report').getByRole('button', { name: 'Close' }).first().click()
-    await lastReceived('/space:session:close-session')
-    await expect(column(page, 'Complete').locator('[data-ticket="billing-report"]')).toHaveCount(0)
+    await card(page, 'checkout-flow').getByRole('button', { name: 'Close' }).first().click()
+    await lastReceived('/space:session:close-session session=.sessions/checkout-flow/session.json')
+    await expect(column(page, 'Complete').locator('[data-ticket="checkout-flow"]')).toHaveCount(0)
   })
 })

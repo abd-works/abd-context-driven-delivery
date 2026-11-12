@@ -8,7 +8,7 @@ import { PracticeClient } from './practice-client'
 
 const standingOf = ({ column, isClosed, isDone }: TicketClient): string => (isClosed ? column.name : `${column.name} · ${isDone ? 'Done' : 'In progress'}`)
 
-function changesOf(was: TicketClient, ticket: TicketClient): string[] {
+export function changesOf(was: TicketClient, ticket: TicketClient): string[] {
   const moved = standingOf(was) === standingOf(ticket) ? [] : [`${ticket.title} moved to ${standingOf(ticket)}`]
   const done = ticket.progress
     .filter(progress => progress.state === 'done' && was.progressNamed(progress.fidelity.slug)?.state !== 'done')
@@ -129,25 +129,12 @@ export class BoardClient extends BoardClientGenerated {
   }
 
   // A ticket moved back into the Backlog leaves the columns and comes back as the backlog item that, Python says, holds it.
-  private returnsSince(before: BoardClient): string[] {
+  returnsSince(before: BoardClient): string[] {
     const names = new Set(this.tickets.map(ticket => ticket.name))
     const earlierHeld = before.backlogItems.map(item => item.ticket)
     const held = this.backlogItems.map(item => item.ticket)
     return before.tickets
       .filter(ticket => !names.has(ticket.name) && held.includes(ticket.name) && !earlierHeld.includes(ticket.name))
       .map(ticket => `${ticket.title} moved to Backlog`)
-  }
-
-  // What changed since an earlier read, in the words a toast says. A name held by an open and a closed session cannot
-  // be compared across reads, so it announces nothing.
-  announcementsSince(before: BoardClient): string[] {
-    const earlier = new Map(before.tickets.map(ticket => [ticket.name, ticket]))
-    const named = this.tickets.map(ticket => ticket.name)
-    const isUnique = (ticket: TicketClient) => named.indexOf(ticket.name) === named.lastIndexOf(ticket.name)
-    const changes = this.tickets.flatMap(ticket => {
-      const was = earlier.get(ticket.name)
-      return was && isUnique(ticket) ? changesOf(was, ticket) : []
-    })
-    return [...changes, ...this.returnsSince(before)]
   }
 }

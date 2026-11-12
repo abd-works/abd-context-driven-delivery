@@ -22,7 +22,7 @@ from mcp.server.models import InitializationOptions
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetReference
 from harness.agent_tools.chat_pointer import ChatPointer
-from harness.agent_tools.claude_chat_process import ClaudeChatProcess
+from harness.agent_tools.claude_chat_process import ClaudeChatProcess, is_desktop_spare
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.destination import ServerInstallation, SkippedTool, SkippedTools
 from harness.installation.data_class import data_of
@@ -708,7 +708,8 @@ class McpHost:
     def _requested_project(self, tool: str) -> Path | None:
         """The project the calling chat works on: the folder its session works in now, read on every call. That is the
         folder Claude Code records for the process ``X-CDD-Chat-Process`` names, else the folder the transcript of the
-        chat ``X-CDD-Chat`` names records last, else the ``X-CDD-Project`` header. Headers are sent once, when the chat
+        session that process runs records last, else that of the chat ``X-CDD-Chat`` names, else the ``X-CDD-Project``
+        header. A desktop spare folder counts as no folder at any step. Headers are sent once, when the chat
         connects, so the project header holds the folder the chat started in, such as the desktop app's spare folder,
         which is wrong once the chat moves. Only ``cdd.ping`` and ``cdd.restart`` work without
         one; anything else would act on whichever folder the server started in."""
@@ -716,10 +717,14 @@ class McpHost:
         named = headers.get(PROJECT_HEADER)
         if tool in (BUILTIN_PING_TOOL, BUILTIN_RESTART_TOOL):
             return Path(named) if named else None
+        # A desktop spare folder is never the project: it only means the chat has not reached its folder yet.
+        connected_from = Path(named) if named and not is_desktop_spare(Path(named)) else None
+        process = ClaudeChatProcess.from_header(headers.get(CHAT_PROCESS_HEADER))
         project = (
-            self._folder_of_chat_process(headers.get(CHAT_PROCESS_HEADER))
+            (process.working_folder if process is not None else None)
+            or self._folder_of_chat(process.session_id if process is not None else None)
             or self._folder_of_chat(headers.get(CHAT_HEADER))
-            or (Path(named) if named else None)
+            or connected_from
         )
         if project is None:
             raise ProjectNotNamed(tool)
@@ -734,10 +739,6 @@ class McpHost:
         except LookupError:
             return {}
         return request.headers if request is not None else {}
-
-    def _folder_of_chat_process(self, pid: str | None) -> Path | None:
-        process = ClaudeChatProcess.from_header(pid)
-        return process.working_folder if process is not None else None
 
     def _folder_of_chat(self, chat_id: str | None) -> Path | None:
         chat = ChatPointer.from_claude_session(chat_id or "")

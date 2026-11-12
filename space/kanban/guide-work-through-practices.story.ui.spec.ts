@@ -13,7 +13,7 @@
  * the system prompt, not the board app.
  */
 
-import { card, expect, FakeChat, fixtureRoot, generatedLine, openBoard, openCardOf, receivedBy, resetSessions, seedActive, test, toast, turnOffActiveSessionOnly, waitForChat, waitForNoChat, writeSession } from './app/tests/story-ui'
+import { card, dragCard, expect, FakeChat, fixtureRoot, generatedLine, openBoard, openCardOf, receivedBy, resetSessions, seedActive, test, toast, turnOffActiveSessionOnly, waitForChat, waitForNoChat, writeSession } from './app/tests/story-ui'
 import type { Locator, Page } from './app/tests/story-ui'
 
 const RESTING_MILLISECONDS = 500
@@ -27,17 +27,6 @@ const pressTile = (where: Locator, slug: string) => tileIn(where, slug).locator(
 async function selectTicket(page: Page, ticket: string, title: string): Promise<void> {
   await card(page, ticket).getByRole('button', { name: `Show ${title}` }).click({ position: { x: 4, y: 4 } })
   await expect(page.locator('.details-title h2')).toHaveText(title)
-}
-
-// A card low in a stage drags onto the part of the Done list the board region shows, since the list's own middle can
-// be scrolled out of sight.
-async function dragIntoView(page: Page, dragged: Locator, target: Locator): Promise<void> {
-  const [from, to, shown] = [(await dragged.boundingBox())!, (await target.boundingBox())!, (await page.locator('.board-region').boundingBox())!]
-  await page.mouse.move(from.x + 24, from.y + 14)
-  await page.mouse.down()
-  await page.mouse.move(from.x + 44, from.y + 24, { steps: 10 })
-  await page.mouse.move(to.x + to.width / 2, Math.max(to.y, shown.y) + 40, { steps: 10 })
-  await page.mouse.up()
 }
 
 test.beforeEach(() => resetSessions(fixtureRoot))
@@ -217,8 +206,7 @@ test.describe('with no chat connected', () => {
       test.beforeEach(async ({ page }) => {
         writeSession(fixtureRoot, { name: 'pet-visits', title: 'Pet visits', log: [generatedLine('stories', 'story_map')] })
         await openBoard(page)
-        await card(page, 'pet-visits').scrollIntoViewIfNeeded()
-        await dragIntoView(page, card(page, 'pet-visits'), page.locator('.board-column[data-column="Discovery"] .card-list').nth(1))
+        await dragCard(page, card(page, 'pet-visits'), page.locator('.board-column[data-column="Discovery"] .card-list').nth(1))
       })
 
       test('Then a toast says Pet visits moved to Discovery · Done', async ({ page }) => {

@@ -146,7 +146,7 @@ test.describe('Reassign Ticket Parent', () => {
     await dragCard(page, row(page, 'checkout-flow', 'enter-card-details'), card(page, 'billing-report'), BY_ITS_ROW)
     await expect(row(page, 'billing-report', 'enter-card-details')).toBeVisible({ timeout: 10_000 })
     await expect(row(page, 'checkout-flow', 'enter-card-details')).toHaveCount(0)
-    expect(sessionJson('enter-card-details').parent).toBe('billing-report')
+    await expect.poll(() => sessionJson('enter-card-details').parent).toBe('billing-report')
   })
 
   test('Take a child off its parent', async ({ page }) => {
@@ -157,7 +157,7 @@ test.describe('Reassign Ticket Parent', () => {
     await page.keyboard.up('Alt')
     await expect(card(page, 'enter-card-details').locator(':scope > .ticket-title-line .ticket-title')).toHaveText('Enter card details', { timeout: 10_000 })
     await expect(row(page, 'checkout-flow', 'enter-card-details')).toHaveCount(0)
-    expect(sessionJson('enter-card-details').parent ?? '').toBe('')
+    await expect.poll(() => sessionJson('enter-card-details').parent ?? '').toBe('')
   })
 
   test('Start a Backlog item under a ticket', async ({ page }) => {

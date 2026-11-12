@@ -136,7 +136,7 @@ section: body
 
 *Given* checkout-flow is open in its own worktree
 *When* the Person moves checkout-flow into Complete
-*Then* a dialog headed Close session Checkout flow offers commit and push, chosen
+*Then* a dialog headed Close session Checkout flow offers commit and push, none chosen
 *When* the Person confirms
 *Then* checkout-flow shows in Complete and is selected
 *And* a toast says Checkout flow: committed, pushed · Session Checkout flow closed

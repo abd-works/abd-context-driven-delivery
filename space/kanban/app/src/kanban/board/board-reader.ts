@@ -1,5 +1,7 @@
 import { BoardClientGenerated, type BoardData } from '@cdd/space/kanban/board'
 
+import { BoardClient, changesOf } from './board-client'
+import type { TicketClient } from '../ticket/ticket-client'
 import type { BoardPage } from './board-page'
 import { PendingChanges, type PendingChange } from '../shared/pending-changes'
 
@@ -52,8 +54,29 @@ export class BoardReader {
     this.latestRead = shown
     store.change({ board: this.pending.over(shown), now: Date.now() })
     const after = this.page.board
-    for (const announcement of before ? after.announcementsSince(before) : []) store.toast(announcement)
+    for (const announcement of this.announcementsOf(shown)) store.toast(announcement)
     if (JSON.stringify(before) !== JSON.stringify(after)) await this.page.reloadOpen()
+  }
+
+  // Announcements compare server reads, not the page: a person's own move already shows there before the server
+  // answers, so the page never sees it change. A read taken while a move is being saved can show a ticket in two
+  // places, so each ticket is compared with the last read that showed it once.
+  private lastSeen = new Map<string, TicketClient>()
+  private lastRead: BoardClient | null = null
+
+  private announcementsOf(shown: BoardData): string[] {
+    const read = new BoardClient(shown, this.page)
+    const names = read.tickets.map(ticket => ticket.name)
+    const changes = read.tickets
+      .filter(ticket => names.indexOf(ticket.name) === names.lastIndexOf(ticket.name))
+      .flatMap(ticket => {
+        const was = this.lastSeen.get(ticket.name)
+        this.lastSeen.set(ticket.name, ticket)
+        return was ? changesOf(was, ticket) : []
+      })
+    const returns = this.lastRead ? read.returnsSince(this.lastRead) : []
+    this.lastRead = read
+    return [...changes, ...returns]
   }
 
   startPolling(): () => void {

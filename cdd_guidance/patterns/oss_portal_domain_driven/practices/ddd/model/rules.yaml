@@ -1,0 +1,82 @@
+# OSS Portal rule slugs for graph nodes (see oss_portal_domain_driven.md § Shared rules).
+service:
+  rules:
+    - service-is-the-bounded-context
+    - one-database-per-service
+    - register-every-service
+    - build-once-promote-digest
+    - label-every-resource
+aggregate:
+  rules:
+    - aggregate-folder-holds-every-tier
+    - screens-live-in-their-domain
+    - bff-decides-next-page
+    - maintain-layer-purity
+view:
+  rules:
+    - views-render-only
+    - browser-calls-only-the-bff
+    - tokens-stay-on-the-server
+    - maintain-layer-purity
+    - content-from-system-config
+clientRoot:
+  rules:
+    - browser-calls-only-the-bff
+    - tokens-stay-on-the-server
+    - tier-classes-extend-the-domain
+    - maintain-layer-purity
+    - gov-bm-blocked-at-four-layers
+    - secrets-from-secret-manager
+bffRoute:
+  rules:
+    - bff-decides-next-page
+    - maintain-layer-purity
+    - repository-owns-aggregate-lifecycle
+    - secrets-from-secret-manager
+    - no-personal-data-in-logs
+bffRoot:
+  rules:
+    - bff-decides-next-page
+    - tokens-stay-on-the-server
+    - tier-classes-extend-the-domain
+    - maintain-layer-purity
+    - gov-bm-blocked-at-four-layers
+    - repository-owns-aggregate-lifecycle
+    - publish-events-from-the-owning-service
+    - secrets-from-secret-manager
+    - no-personal-data-in-logs
+serviceRoute:
+  rules:
+    - sanitised-errors-only
+    - repository-owns-aggregate-lifecycle
+    - no-cross-service-tables
+    - least-data-in-responses
+    - no-personal-data-in-logs
+serviceRoot:
+  rules:
+    - tier-classes-extend-the-domain
+    - one-database-per-service
+    - no-cross-service-tables
+    - repository-owns-aggregate-lifecycle
+    - sanitised-errors-only
+    - publish-events-from-the-owning-service
+    - idempotent-subscribers
+    - integrate-through-application-integration
+    - attachments-in-cloud-storage
+    - cache-holds-nothing-authoritative
+    - revision-rollback-safe
+    - secrets-from-secret-manager
+    - no-personal-data-in-logs
+proxy:
+  rules:
+    - one-proxy-per-service
+    - standard-policy-chain
+    - version-breaking-changes
+migration:
+  rules:
+    - expand-and-contract-migrations
+    - revision-rollback-safe
+entityRoot:
+  rules:
+    - tier-classes-extend-the-domain
+    - repository-owns-aggregate-lifecycle

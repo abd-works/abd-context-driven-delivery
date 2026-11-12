@@ -30,7 +30,7 @@ with story("Close Active Session"):
         with when("the Person moves checkout-flow into Complete"):
             # Person -> Ticket.close_choices()
             pass
-        with then("a dialog headed Close session Checkout flow offers commit and push, chosen"):
+        with then("a dialog headed Close session Checkout flow offers commit and push, none chosen"):
             pass
         with when("the Person confirms"):
             # Person -> Ticket.close(['commit', 'push'])

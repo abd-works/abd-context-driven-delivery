@@ -36,6 +36,10 @@ export async function waitForNoChat(page: Page): Promise<void> {
   await expect(page.getByText('No chat connected: load the cdd-board mod in a chat to send commands')).toBeVisible({ timeout: CHAT_GONE_MILLISECONDS })
 }
 
+// The board picks no chat on its own, since its list reorders as chats work, so the Person picks the one that checked in.
 export async function waitForChat(page: Page, chat: FakeChat): Promise<void> {
-  await expect(page.getByRole('combobox', { name: 'Chat to send commands to' })).toHaveValue(chat.id, { timeout: CHAT_CHECKED_IN_MILLISECONDS })
+  const picker = page.getByRole('combobox', { name: 'Chat to send commands to' })
+  await expect(picker.locator(`option[value="${chat.id}"]`)).toBeAttached({ timeout: CHAT_CHECKED_IN_MILLISECONDS })
+  await picker.selectOption(chat.id)
+  await expect(picker).toHaveValue(chat.id)
 }

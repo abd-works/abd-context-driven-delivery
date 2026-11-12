@@ -1,0 +1,1 @@
+<VerifyJWT name="verify-jwt"><Algorithm>RS256</Algorithm></VerifyJWT>
