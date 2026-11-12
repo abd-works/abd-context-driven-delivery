@@ -250,6 +250,8 @@ Observed: the report, files and help panels resize, expand one at a time and clo
 
 Intended (`.sessions/_backlog/maintain-tickets-on-board.md` "click any empty area to expand ticket"): a press anywhere on a card that is not a control expands it. Built today (checked 2026-11-11): a press on a card chooses it and shows its details (`ticket-card-view.tsx:198`); only the expand mark opens the card's actions (`ticket-card-view.tsx:57`). Missing: expanding from an empty area.
 
+Built (2026-11-12): on the board, driven by its screen story in `space/kanban/see-work-on-session-board.story.ui.spec.ts`, and by the domain and server tiers.
+
 ## (E) Steer Ticket Sessions
 
 ### (S) Person --> [Open Ticket Session](move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-open-ticket-session)
@@ -298,9 +300,13 @@ Observed: the + on the Backlog heading writes a title and text to one markdown f
 
 Intended (`.sessions/session-board/ticket-enhancements.md`; `harness/.context/ux/ticket-ui.drawio` "edit text in markdown file"): a double click on a card's text edits it; a session ticket's text is a markdown file in its session folder that the session's instructions refer to, so the board and the agent read the same text; the agent's half, naming the file in the system prompt, is a scenario of Add Active Ticket To System Prompt. Built today (checked 2026-11-11): starting a backlog item moves its markdown file, text and all, into the ticket's session folder (`BacklogItem.start`, `backlog_item.py:121-128`), and a backlog card shows the file's text (`backlog-item-view.tsx:62`). Missing: a ticket's card does not show its file's text, no card edits text, and the agent's context (`Ticket.agent_context`, `ticket.py:217-226`) does not name the file.
 
+Built (2026-11-12): on the board, driven by its screen story in `space/kanban/maintain-tickets.story.ui.spec.ts`, and by the domain and server tiers.
+
 ### (S) Person --> [Reorder Tickets In Column](move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-reorder-tickets-in-column)
 
 Intended (`.sessions/session-board/ticket-enhancements.md`): a ticket dragged up or down within its column keeps that place. Built today (checked 2026-11-11): a drag moves a ticket between columns only; the Backlog lists its items by file name (`board.py:328`) and no column keeps a place a person chose.
+
+Built (2026-11-12): on the board, driven by its screen story in `space/kanban/maintain-tickets.story.ui.spec.ts`, and by the domain and server tiers.
 
 ### (S) Person --> [Archive Ticket](move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-archive-ticket)
 
@@ -310,9 +316,13 @@ Observed as the `ticket.archive` tool (`Ticket.archive`). Intended (`.sessions/s
 
 Intended (`.sessions/session-board/ticket-enhancements.md`): Delete on a card removes the ticket and its session folder. Built today (checked 2026-11-11): no delete operation on `Ticket` or `BacklogItem` (`ticket.py`, `backlog_item.py`); Archive is the nearest (`Ticket.archive`, `ticket.py:352`).
 
+Built (2026-11-12): on the board, driven by its screen story in `space/kanban/maintain-tickets.story.ui.spec.ts`, and by the domain and server tiers.
+
 ### (S) Person --> [Tag Ticket Session](move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-tag-ticket-session)
 
 Intended (`.sessions/_backlog/maintain-tickets-on-board.md` "tagging sessions"): a person adds tags to a ticket's session, and the card shows them. Built today (checked 2026-11-11): none; `session.json` holds no tags (`sessions.py:276`).
+
+Built (2026-11-12): on the board, driven by its screen story in `space/kanban/maintain-tickets.story.ui.spec.ts`, and by the domain and server tiers.
 
 ## (E) Organize Ticket Hierarchy
 
@@ -324,17 +334,25 @@ Observed: `Ticket.new` records the parent; Split fills the prompt through `fillS
 
 Built (2026-11-11): a person adds a child ticket to a parent by hand: the plus on its card opens a title field, and Enter calls `ticket.add_child` (`add-child-view.tsx`). Split still asks the chat for one child per story.
 
+Built (2026-11-12): on the board, driven by its screen story in `space/kanban/organize-ticket-hierarchy.story.ui.spec.ts`, and by the domain and server tiers.
+
 ### (S) Board App --> [Display Child Tickets In Parent](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-display-child-tickets-in-parent)
 
 Intended (`.sessions/session-board/ticket-enhancements.md`): a parent's card holds its child tickets stacked inside it, with the parent's title small above them. The drawing (`harness/.context/ux/ticket-ui.drawio`) adds: the parent's card counts its children, and a child pulled out of it keeps a dashed row there. Built today (checked 2026-11-11): a child's card names its scope and parent, such as "story of epic" (`ticket-client.tsx:97-98`), and sits in its column like any other ticket.
+
+Built (2026-11-12): on the board, driven by its screen story in `space/kanban/organize-ticket-hierarchy.story.ui.spec.ts`, and by the domain and server tiers.
 
 ### (S) Person --> [Expand Parent Ticket](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-expand-parent-ticket)
 
 Intended (`.sessions/session-board/ticket-enhancements.md`; `harness/.context/ux/ticket-ui.drawio`): a parent collapses to its own card and expands to show its children; collapsed it reads + N children, expanded - N children above the child rows.
 
+Built (2026-11-12): on the board, driven by its screen story in `space/kanban/organize-ticket-hierarchy.story.ui.spec.ts`, and by the domain and server tiers.
+
 ### (S) Person --> [Detach Child Ticket](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-detach-child-ticket)
 
 Intended (`.sessions/session-board/ticket-enhancements.md`; `harness/.context/ux/ticket-ui.drawio` "pull out of parent; and then drag and then move like regular ticket; remembers parent"): a child pulled out of its parent becomes a ticket of its own beside it, named parent.Child, that a person drags and moves like any ticket; it still has its parent. A person pulls a child out by dragging it out of its parent (the person, 2026-11-11).
+
+Built (2026-11-12): on the board, driven by its screen story in `space/kanban/organize-ticket-hierarchy.story.ui.spec.ts`, and by the domain and server tiers.
 
 ### (S) Person --> [Reassign Ticket Parent](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-reassign-ticket-parent)
 
@@ -342,9 +360,13 @@ Intended (`.sessions/session-board/ticket-enhancements.md` "Add a ticket as a ch
 
 Built (2026-11-11): dragging a ticket onto another card makes it that ticket's child (`TicketClient.takeAsChild` calls `ticket.reassign_parent`), and dropping a Backlog item on a ticket starts it as that ticket's child (`backlog-item.start_under`); the Alt-drag out of a parent is not built yet.
 
+Built (2026-11-12): on the board, driven by its screen story in `space/kanban/organize-ticket-hierarchy.story.ui.spec.ts`, and by the domain and server tiers.
+
 ### (S) Board App --> [Place Parent At Leftmost Child Stage](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-place-parent-at-leftmost-child-stage)
 
 Intended (`harness/.context/ux/ticket-ui.drawio` "parents cant be dragged; they change stage by taking on the stage of the leftmost ticket"): a parent sits in the stage of its child furthest back on the board and moves only as its children move; a person cannot drag a parent.
+
+Built (2026-11-12): on the board, driven by its screen story in `space/kanban/organize-ticket-hierarchy.story.ui.spec.ts`, and by the domain and server tiers.
 
 ### (S) Claude Code --> [Nest Child Branch And Session](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-nest-child-branch-and-session)
 

@@ -342,6 +342,6 @@ section: body
 #### Scenario: Leave a card's controls to do their own work
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow's card is collapsed on the [board](../../../../../space/kanban/.context/kanban-model.md#board)
-*When* the Person opens the stories tile on checkout-flow's card
-*Then* the stories tile is open
+*When* the Person opens checkout-flow's files from its card
+*Then* checkout-flow's files show
 *And* checkout-flow's card stays collapsed

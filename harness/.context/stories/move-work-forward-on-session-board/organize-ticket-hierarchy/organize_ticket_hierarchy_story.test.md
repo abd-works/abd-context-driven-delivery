@@ -310,7 +310,7 @@ Board.show()
 
 #### Scenario: Move a parent on when its last child moves on
 
-*Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow has the child tickets enter-card-details in Specification and confirm-order Done in Discovery
+*Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow has the child tickets enter-card-details in Specification and confirm-order, pulled out of it, Done in Discovery
 *When* the Person moves confirm-order to Specification
 
 ```realization
