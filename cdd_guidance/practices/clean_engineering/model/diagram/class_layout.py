@@ -358,14 +358,15 @@ class _ArrowSearch:
         push, pop, infinity = heapq.heappush, heapq.heappop, float("inf")
         best = {(self._begin, self._heading_out): 0}
         frontier = [(0, 0, self._begin, self._heading_out)]
-        # Each cell and heading is searched from once. The estimate counts the distance left twice over, so a cheaper way
-        # to a cell can turn up after it was searched from; searching from it again cost more time than it gained.
-        expanded: Set[Tuple[Point, Heading]] = set()
+        # The cost each cell and heading was searched from at. The estimate counts the distance left twice over, so a
+        # cheaper way to a cell can turn up after it was searched from. It is searched from again only when the new way
+        # saves a crossing: saving a turn or a few steps cost far more time than it gained.
+        expanded: Dict[Tuple[Point, Heading], int] = {}
         while frontier:
             _estimate, cost, cell, heading = pop(frontier)
-            if (cell, heading) in expanded:
+            if cost > best[(cell, heading)] or cost > expanded.get((cell, heading), infinity) - CROSSING_PRICE:
                 continue
-            expanded.add((cell, heading))
+            expanded[(cell, heading)] = cost
             if (cell == end and (heading == heading_in or any_heading_in)) or cell in trunk:
                 return self._walk_back((cell, heading))
             x, y = cell
@@ -403,7 +404,7 @@ class _ArrowSearch:
                 if following in near_cards and following not in trunk and following != end:
                     total += CLEARANCE_PRICE
                 key = (following, step)
-                if total < best.get(key, infinity) and key not in expanded:
+                if total < best.get(key, infinity) and total <= expanded.get(key, infinity) - CROSSING_PRICE:
                     best[key] = total
                     came_from[key] = (cell, heading)
                     distance = max(left - fx, 0, fx - right) + max(top - fy, 0, fy - bottom)
@@ -572,7 +573,7 @@ class ArrowRouter:
         leaves this box is one a reader would not follow anyway."""
         left, top = min(x for x, _ in cells), min(y for _, y in cells)
         right, bottom = max(x for x, _ in cells), max(y for _, y in cells)
-        spare = SEARCH_WINDOW_STEPS + (right - left + bottom - top) // 4
+        spare = SEARCH_WINDOW_STEPS + (right - left + bottom - top) // 2
         return (max(0, left - spare), max(0, top - spare), min(grid.columns - 1, right + spare), min(grid.lines - 1, bottom + spare))
 
     def _shared_bases(self) -> List[_InheritanceTrunk]:
