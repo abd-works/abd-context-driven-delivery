@@ -54,7 +54,8 @@ class DomainTier:
     name = "domain"
 
     def open(self) -> SimpleNamespace:
-        # Our Repo, Branch, and Worktrees are mocked, so no scenario here starts git; the server tier proves real git.
+        # Our Repo, Branch, and Worktrees are mocked, so no scenario here starts git; the heavy specs and the board app's
+        # page specs prove real git.
         project = SessionsProject(SURFACE_FIXTURE_PROJECT, mocks_git=True)
         on_project = {name: OnProject(domain_class, project.root) for name, domain_class in (("Board", Board), ("Stage", Stage), ("Ticket", Ticket), ("BacklogItem", BacklogItem))}
         # The cdd server makes each action for the session open in the call's project, among the sessions this process
@@ -97,7 +98,9 @@ class ServerTier:
     name = "cdd tools"
 
     def open(self) -> SimpleNamespace:
-        project = SessionsProject(SURFACE_FIXTURE_PROJECT)
+        # The cdd server runs in this process, so it works on the same mocked Repo, Branch, and Worktrees as the domain
+        # tier and starts no git; the heavy specs and the board app's page specs prove real git.
+        project = SessionsProject(SURFACE_FIXTURE_PROJECT, mocks_git=True)
         cdd = CddTools(project)
         return SimpleNamespace(
             project=project,
