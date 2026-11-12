@@ -134,3 +134,6 @@ sandbox/
 # Closed sessions are kept work too: every archived session in .sessions/_complete is tracked.
 !.sessions/_complete/
 !.sessions/_complete/**
+
+# The board keeps what is slow to work out for each ticket in its session folder; it is worked out again when missing
+.sessions/**/progress-cache.json

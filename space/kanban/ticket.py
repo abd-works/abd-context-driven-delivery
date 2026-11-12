@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -32,6 +33,7 @@ from space.kanban.ticket_checkout import LeaveChoices, TicketCheckout
 from space.repo.repo import Branch
 from space.session import Session
 from space.session.session import MAIN_SESSION_NAME
+from space.session.progress_cache import HAS_OUTPUT, VIOLATION_COUNT
 from space.session.session_log import LogEntry
 from space.session.file_manager import FileEntry
 
@@ -702,12 +704,15 @@ class FidelityProgress:
     # Validate is done when its latest line names no graph-rule violations and the latest report's judgment fails no
     # rule; a fidelity whose latest validate passes is done.
 
-    def __init__(self, fidelity: FidelityGuidance, stage: Stage, done_actions: list[str], has_violations: bool, ticket: Ticket) -> None:
+    def __init__(self, fidelity: FidelityGuidance, stage: Stage, done_actions: list[str], has_violations: bool, ticket: Ticket, lines_logged: int = 0) -> None:
         self._fidelity = fidelity
         self._stage = stage
         self._done_actions = list(done_actions)
         self._has_violations = has_violations
         self._ticket = ticket
+        # How many log lines name this fidelity: Generate and Validate each write one, so a change in it means the
+        # fidelity's files may have changed since they were last looked for.
+        self._lines_logged = lines_logged
 
     @classmethod
     def from_log(cls, fidelity: FidelityGuidance, stage: Stage, entries: list[LogEntry], ticket: Ticket) -> FidelityProgress:
@@ -722,7 +727,7 @@ class FidelityProgress:
         # Sketch prompt expands, logs nothing (GuidanceAction.log_running), so every generate line counts.
         done_verbs = {verb for _index, verb in naming if verb == GENERATE}
         done_verbs |= {VALIDATE} if validated else set()
-        read = cls(fidelity, stage, [action for action in stage.steps if action in done_verbs], has_violations, ticket)
+        read = cls(fidelity, stage, [action for action in stage.steps if action in done_verbs], has_violations, ticket, len(naming))
         return read.with_violations() if read._is_judged_failing else read
 
     @classmethod
@@ -810,8 +815,10 @@ class FidelityProgress:
 
     @cached_property
     def _has_files(self) -> bool:
-        """Read once per reading of the progress: the board and its stage's work both ask."""
-        return self._fidelity.has_declared_output()
+        """Read once per reading of the progress, since the board and its stage's work both ask, and looked for again
+        only after Generate or Validate logs a line on the fidelity or its session declares other paths for it."""
+        key = json.dumps([self._fidelity.output_paths(), self._lines_logged], sort_keys=True)
+        return self._ticket.session.progress_cache.answer(self._fidelity.slug, HAS_OUTPUT, key, self._fidelity.has_declared_output)
 
     @property
     @data_field
@@ -863,8 +870,12 @@ class FidelityProgress:
 
     @cached_property
     def _violation_count(self) -> int:
-        """Counted once per reading of the progress: the board and its stage's work both ask."""
-        return self.report().violation_count if self._has_violations else 0
+        """Counted once per reading of the progress, since the board and its stage's work both ask, and counted again
+        only once Validate writes a report in the session or the latest report or its saved graph changes."""
+        latest = self.latest_report
+        if not self._has_violations or latest is None:
+            return 0
+        return self._ticket.session.progress_cache.answer(self._fidelity.slug, VIOLATION_COUNT, latest.version, lambda: latest.report().violation_count)
 
     @mcp
     @agent_tool
@@ -892,7 +903,7 @@ class FidelityProgress:
     def with_violations(self) -> FidelityProgress:
         """This progress with its latest validate failed, so validate is to do again."""
         kept = [action for action in self._done_actions if action == GENERATE]
-        return FidelityProgress(self._fidelity, self._stage, kept, True, self._ticket)
+        return FidelityProgress(self._fidelity, self._stage, kept, True, self._ticket, self._lines_logged)
 
     @property
     def _is_judged_failing(self) -> bool:

@@ -26,6 +26,7 @@ from space.session.file_manager import FileEntry, FileText
 from space.session.handoffs import HANDOFF_FORMAT_FILE, Handoffs
 from space.session.idea_file import IdeaFile
 from space.session.practice_session_output import PracticeSessionOutput
+from space.session.progress_cache import ProgressCache
 from space.session.session_files import SessionFiles
 from space.session.session_log import HookLog, SessionLog
 
@@ -100,6 +101,8 @@ class Session:
         self._parts_lock = threading.RLock()
         self.decision_records = DecisionRecords(self.work_root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
         self.handoffs: Handoffs | None = None
+        # What a board read costs most to work out for each of its fidelities, kept in its folder between reads.
+        self.progress_cache = ProgressCache(None)
         self.log = SessionLog(self)
         self.session_files = SessionFiles(self)
         self.chat_injections = ChatInjections(self)
@@ -152,6 +155,7 @@ class Session:
     def session_path(self, folder: Path | None) -> None:
         self._session_path = folder
         self.handoffs = Handoffs(folder) if folder is not None else None
+        self.progress_cache = ProgressCache(folder)
 
     @property
     def is_closed(self) -> bool:
