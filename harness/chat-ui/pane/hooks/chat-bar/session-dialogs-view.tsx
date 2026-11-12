@@ -76,7 +76,8 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
       ))}
       <Input key="new-session" placeholder="New session name" value="" onSubmit={value => (value.trim() ? createSession($, value.trim()) : undefined)} />
       <Text key="repos-heading" color={BRAND.muted}>REPOS</Text>
-      {view.repos.map(repo => (
+      {/* A chat bar whose view was saved before repos existed has none. */}
+      {(view.repos ?? []).map(repo => (
         <Box key={`repo-row-${repo.name}`} flexDirection="row" gap={1}>
           <Text color={BRAND.muted}>{repo.has_cdd ? '◆' : '◇'}</Text>
           <Box key={`repo-name-${repo.name}`}>
