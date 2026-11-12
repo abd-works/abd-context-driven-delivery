@@ -1,6 +1,7 @@
 """A graph loaded from the account-credentials working copy."""
 
 import json
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -150,6 +151,12 @@ def nodes_in(graph: Graph, practice: str, scope: list[str]) -> set[str]:
 
 def violations_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[str, str]]:
     return {(slug, node.node_id) for node in _practice_nodes(graph, practice, scope) for slug in node.rules.failed_slugs}
+
+
+def judged_alone(hits: set[tuple[str, str]]) -> set[tuple[str, str]]:
+    """The hits a load of named files alone can find too: conforms-to-schema runs only on a graph of the whole working
+    copy, because links across practices cannot be judged on part of it."""
+    return {hit for hit in hits if hit[0] != "conforms-to-schema"}
 
 
 def edges_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[str, str, str]]:
@@ -918,7 +925,7 @@ with description("a graph"):
 
             with it("should find the same clean engineering rule violations"):
                 expect(violations_in(self.edited, "clean_engineering", self.scope)).to(
-                    equal(violations_in(self.full, "clean_engineering", self.scope))
+                    equal(judged_alone(violations_in(self.full, "clean_engineering", self.scope)))
                 )
 
             with it("should keep the edges to classes declared in files that were not edited"):
@@ -931,7 +938,7 @@ with description("a graph"):
 
             with it("should find the same ddd rule violations"):
                 expect(len(violations_in(self.edited, "ddd", self.scope))).to(be_above(0))
-                expect(violations_in(self.edited, "ddd", self.scope)).to(equal(violations_in(self.full, "ddd", self.scope)))
+                expect(violations_in(self.edited, "ddd", self.scope)).to(equal(judged_alone(violations_in(self.full, "ddd", self.scope))))
 
         with context("with an edited story file"):
             with before.all:
@@ -942,14 +949,17 @@ with description("a graph"):
                 expect(nodes_in(self.edited, "stories", self.scope)).to(equal(nodes_in(self.full, "stories", self.scope)))
 
             with it("should find the same story rule violations"):
-                # A Given is judged against the DDD aggregates read from the domain code, and conforms-to-schema holds
-                # a step to the code it invokes and the examples it observes, which a load of the story file alone does
-                # not read, so those rules are compared only by a full load.
+                # A Given is judged against the DDD aggregates read from the domain code, which a load of the story
+                # file alone does not read; and conforms-to-schema runs only on a graph holding the whole working copy,
+                # since a load of named files alone cannot judge links across practices. Both are compared by a full load.
                 read_elsewhere = {"given-names-complex-state-root-first", "conforms-to-schema"}
                 edited = {hit for hit in violations_in(self.edited, "stories", self.scope) if hit[0] not in read_elsewhere}
                 full = {hit for hit in violations_in(self.full, "stories", self.scope) if hit[0] not in read_elsewhere}
                 expect(len(edited)).to(be_above(0))
                 expect(edited).to(equal(full))
+
+            with it("should leave the schema's links across practices to the AI judge"):
+                expect({slug for slug, _ in violations_in(self.edited, "stories", self.scope)}).not_to(contain("conforms-to-schema"))
 
             with it("should judge each Given by its own step rules"):
                 expect({slug for slug, node_id in violations_in(self.full, "stories", self.scope) if ":Given:" in node_id}).to(
@@ -976,7 +986,7 @@ with description("a graph"):
 
             with it("should find the same bdd rule violations"):
                 expect(len(violations_in(self.edited, "bdd", self.scope))).to(be_above(0))
-                expect(violations_in(self.edited, "bdd", self.scope)).to(equal(violations_in(self.full, "bdd", self.scope)))
+                expect(violations_in(self.edited, "bdd", self.scope)).to(equal(judged_alone(violations_in(self.full, "bdd", self.scope))))
 
             with it("should leave the files that were not edited out"):
                 expect(nodes_in(self.edited, "clean_engineering", ["src"])).to(equal(set()))
@@ -1336,3 +1346,25 @@ with description("the language of a node's file"):
 
     with it("should be graph for a file no practice's format reads"):
         expect(_file_language(self.graph, "clean_engineering", "src/cart.unknown")).to(equal("graph"))
+
+
+with description("a graph a validate judges on") as self:
+    with context("that was opened on a folder with nothing saved"):
+        with before.all:
+            self.folder = Path(tempfile.mkdtemp(prefix="cdd-graph-whole-"))
+            shutil.copytree(_SAMPLE, self.folder, dirs_exist_ok=True, ignore=shutil.ignore_patterns(".context"))
+            self.graph = Graph()
+            self.graph.open(self.folder)
+
+        with it("should hold none of the working copy yet"):
+            expect(self.graph.scope.over_whole).to(be(False))
+
+        with context("that a validate makes hold the whole working copy"):
+            with before.all:
+                self.graph.hold_whole()
+
+            with it("should hold the whole working copy"):
+                expect(self.graph.scope.over_whole).to(be(True))
+
+            with it("should hold every practice's nodes, the clean engineering model among them"):
+                expect(len(self.graph.practices.held["clean_engineering"].reading.in_graph.nodes())).to(be_above(1))

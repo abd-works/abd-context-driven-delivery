@@ -8,7 +8,9 @@ from typing import Dict, Optional
 
 from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT, CodeLanguage
 from cdd_guidance.practices.stories.model.brace_story import BraceStoryModel, BraceStoryWriting
+from cdd_guidance.practices.stories.model.brace_story_file import BraceStoryFile
 from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel
+from cdd_guidance.practices.stories.model.typescript.screen_spec_file import SCREEN_SPEC_SUFFIX, ScreenSpecFile
 from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptEpic, TypeScriptStory, _story_test_text
 
 
@@ -28,7 +30,7 @@ class TypeScriptStoryWriting(BraceStoryWriting):
 
 class TypeScriptStoryModel(BraceStoryModel):
     LEAF_EXTENSION = ".ts"
-    story_file_suffixes = ("_story.test.ts", "_story.spec.ts", ".story.shared.ts")
+    story_file_suffixes = ("_story.test.ts", "_story.spec.ts", ".story.shared.ts", SCREEN_SPEC_SUFFIX)
     # A story test's examples module sits in its epic's examples folder and holds no story.
     not_story_paths = re.compile(r"(?:^|/)examples/")
     epic_type = TypeScriptEpic
@@ -66,6 +68,11 @@ class TypeScriptStoryModel(BraceStoryModel):
     def story_test_file_path(self) -> str:
         """Where the shared story-test.ts seed is written."""
         return f"{self.story_test_import_path}.ts"
+
+    def story_file(self, content: str) -> BraceStoryFile | None:
+        """The story file content is, read block by block; none for a screen spec, whose stories its story type reads
+        from its describes and tests."""
+        return None if ScreenSpecFile.holds(content) else super().story_file(content)
 
     def save(self) -> Dict[str, str]:
         # WHY: a tree read from TypeScript already brings its own story-test helper; only a new tree needs the seed.

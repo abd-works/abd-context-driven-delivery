@@ -7,6 +7,7 @@ from harness.annotations.name import Name
 
 from cdd_guidance.practices.stories.model.brace_story import BraceScenario, BraceStory
 from cdd_guidance.practices.stories.model.code_story_model import CodeEpic
+from cdd_guidance.practices.stories.model.typescript.screen_spec_file import ScreenSpecFile
 
 
 class TypeScriptScenario(BraceScenario):
@@ -15,6 +16,14 @@ class TypeScriptScenario(BraceScenario):
 
 class TypeScriptStory(BraceStory):
     scenario_type = TypeScriptScenario
+
+    @classmethod
+    def load_all(cls, content: str) -> list:
+        """Every story in one story file: a screen spec's, one for each `test.describe`; any other's, from its `story`
+        blocks."""
+        if ScreenSpecFile.holds(content):
+            return ScreenSpecFile(content).stories(cls)
+        return super().load_all(content)
 
 
 class TypeScriptEpic(CodeEpic):

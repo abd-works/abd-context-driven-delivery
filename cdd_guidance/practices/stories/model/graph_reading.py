@@ -11,8 +11,7 @@ from pathlib import Path
 from harness.graph.skipped_folders import scanned_files
 from harness.guidance.practice_reading import PracticeReading
 
-from cdd_guidance.practices.stories.model.python.nodes import PythonStory
-from cdd_guidance.practices.stories.model.python.shared_story_file import SHARED_SUFFIX
+from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
 
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 _STEP_TYPES = frozenset({"Step", "Given", "When", "Then"})
@@ -28,8 +27,6 @@ class StoriesReading(PracticeReading):
     classes and properties it shows, so it reads after Clean Engineering."""
 
     reads_after = ("clean_engineering",)
-    TEST_CODE_FIDELITY = "acceptance_tests"
-    """The fidelity whose stories are the test code that runs them."""
     source_ordered_types = frozenset({"Background", "Scenario", "Step", "Story"})
     # A step is recorded as the Given, When, or Then it is, while the schema keeps every step's rules on Step (its
     # given, when, and then types are each a Step), so each carries Step's rules; its check says which kind it judges.
@@ -80,9 +77,18 @@ class StoriesReading(PracticeReading):
         self.recorded_map = self._story_map()
         self.graph.report_progress("stories · record")
         self.recorded_map.record(self.practice, on_node=lambda detail: self.graph.report_progress(f"stories · record · {detail}"))
+        self._link_background_givens()
         clean = self.object_model
         if clean is not None:
             StoryLinks(self, clean, self.story_tree).link()
+
+    def _link_background_givens(self) -> None:
+        """Record the ``given`` edge from each background to the Given steps it holds: the step its schema says it is
+        given by, which a working copy's read records itself rather than leaving it to the schema's evidence."""
+        for background in self.in_graph.nodes("Background"):
+            for edge in self.graph.edges_from("steps", background):
+                if edge.child.type == "Given":
+                    self.graph.link("given", background, edge.child, "relationship")
 
     def _story_map(self):
         model = self._story_tests()
@@ -90,28 +96,35 @@ class StoriesReading(PracticeReading):
             return model
         self.graph.report_progress("stories · markdown")
         model = self._story_maps()
-        if self._reads_test_code:
-            self._take_shared_stories(model)
+        if not self._reads_markdown_scenarios:
+            model.drop_scenarios()
+            self._take_code_scenarios(model)
         return model
 
     @property
-    def _reads_test_code(self) -> bool:
-        """Whether the practice works at the fidelity whose stories are the test code: there a story's scenarios are
-        the ones its shared story file runs, not the ones its story test writes in words."""
+    def _reads_markdown_scenarios(self) -> bool:
+        """Whether the fidelity the practice works at lists markdown among the formats it writes: a story test written in
+        markdown is read only there. Code is a format of every fidelity, so a fidelity that lists no markdown reads its
+        scenarios from code alone; with no fidelity, every format is read."""
         current = self.practice.fidelities.current
-        return current is not None and current is self.practice.fidelities.entries.get(self.TEST_CODE_FIDELITY)
+        return current is None or "markdown" in current.outputs
 
-    def _take_shared_stories(self, model) -> None:
-        """Give each story of model the scenarios its Python shared story files under the root run, read from their
-        code; with edited files, only the shared story files among them."""
+    def _take_code_scenarios(self, model) -> None:
+        """Give each story of model the scenarios its story files in code under the root hold, in each code format the
+        practice reads: its story tests, its shared stories, and its screen specs, by the files each format names its
+        story files; with edited files, only those among them."""
+        readers = [reader for reader in (self.practice.formats.adapter(name) for name in self.practice.formats) if isinstance(reader, CodeStoryModel)]
+        suffixes = {Path(suffix).suffix for reader in readers for suffix in reader.story_file_suffixes}
         edited = self.graph.scope.edited_files
-        found = [path for path in scanned_files(self.root, {".py"}) if path.name.endswith(SHARED_SUFFIX)]
         project = Path(self.graph.scope.folder) if self.graph.scope.folder is not None else self.root
-        for path in (path for path in found if edited is None or path in edited):
+        for path in scanned_files(self.root, suffixes):
+            reader = next((reader for reader in readers if reader.is_story_file(path.as_posix())), None)
+            if reader is None or (edited is not None and path not in edited):
+                continue
             text = path.read_text(encoding="utf-8")
             file = path.relative_to(self.root).as_posix()
             model.source_texts[file] = text
-            model.take_scenarios(PythonStory.stories_in(text, project), file)
+            model.add_scenarios(reader.stories_of(text, file, project)[0], file)
 
     def _story_tests(self):
         sources = self._typescript_files()
