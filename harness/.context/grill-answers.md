@@ -8,3 +8,11 @@ Asked by the lern_domain_driven gate (`ask-cross-aggregate-sync`) while generati
 - **Chosen formats between the chat bar and the Story UI editor:** one owner, `FidelitySessionOutput.chosen_formats` in session.json; both read it on their next read. No copy in either page (`state-lives-behind-the-tool`).
 - **Ticket activation to the Graph app and the Story UI editor:** `Ticket.activate` records `Board.last_activated` in the same call; the apps read it on their next board read (the board already reads every two seconds). No push.
 - **App status:** read from the app's folder and ports on every `ServerHealth.report`; nothing is cached.
+
+## Decisions (2026-11-12, from the person)
+
+- **Where Story UI lives:** the Story UI editor moves from its own repo (`C:/dev/story-ui`) into `cdd_guidance/practices/stories/app`, the way other tools keep an `app` folder (`harness/graph/app`). It is closest to the Stories practice. Its model objects come from the Stories practice: they reuse or shape after the TypeScript model files already in `cdd_guidance/practices/stories/model/typescript` and the Python story model (`story_model.py`) through the generated adapter. This replaces the scenarios agent's proposal of `space/kanban/app`.
+- Not answered, so the proposals stand for now and are listed in the ticket report:
+  - Cross-aggregate sync: save and render in one operation; chosen formats live only in session.json; apps read activation on their next read (no push).
+  - `Board.last_activated` stored in `_board.json`.
+  - Editor tiles on story-map files and scenario (`*_story.test.md`) files, not acceptance-test code.
