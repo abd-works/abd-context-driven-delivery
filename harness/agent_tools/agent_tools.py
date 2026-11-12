@@ -799,7 +799,8 @@ class ToolSubjectLoader:
         @functools.wraps(operation)
         def on_subject(**arguments: Any) -> Any:
             call = arguments.get(SERVED_CALL)
-            from_call = {name: arguments[name] for name in taken if name in arguments and name != SERVED_CALL}
+            # What each object argument's loader takes from the call, the call itself included, as the subject's loader is handed it.
+            from_call = {name: arguments[name] for name in taken if name in arguments}
             for name, load_other in named_objects.items():
                 if name in arguments:
                     arguments[name] = self._object_named(load_other, arguments[name], from_call)
