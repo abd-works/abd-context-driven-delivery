@@ -597,7 +597,7 @@ class _ClassDiagramPage:
         arrows = self._arrows()
         cards = self._cards(arrows)
         self._place_cards_keeping(cards, arrows, positions)
-        if self._writer.channel.close_gaps and CardSpacing(list(cards.values()), arrows).close_gaps():
+        if self._writer.channel.kept_previous() and self._writer.channel.close_gaps and CardSpacing(list(cards.values()), arrows).close_gaps():
             # A card moved, so an arrow kept from the last drawing no longer meets it: every arrow is drawn again.
             previous_edges = {}
         for card in cards.values():
@@ -738,7 +738,10 @@ def _append_edge(root_el: ET.Element, arrow: DiagramArrow, cards: Dict[str, Draw
     cell = ET.SubElement(root_el, 'mxCell')
     cell.set('id', edge_id)
     cell.set('value', arrow.label)
-    cell.set('style', arrow_style(EDGE_STYLES.get(arrow.kind, DEFAULT_EDGE_STYLE), arrow, cards))
+    style = EDGE_STYLES.get(arrow.kind, DEFAULT_EDGE_STYLE)
+    if arrow.straight:
+        style = style.replace('edgeStyle=orthogonalEdgeStyle;', 'edgeStyle=none;')
+    cell.set('style', arrow_style(style, arrow, cards))
     cell.set('edge', '1')
     cell.set('source', arrow.source)
     cell.set('target', arrow.target)
