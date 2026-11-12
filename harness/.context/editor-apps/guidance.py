@@ -1,0 +1,47 @@
+"""Module: harness/guidance. Model delta (clean-engineering-model, python): *PracticeGuidance*, *FidelityGuidance*.
+Canonical: harness/.context/editor-apps/.context/editor-apps-model.md#harnessguidance"""
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any, ClassVar
+
+from harness.installation.app import App
+from harness.markdown.format import Format
+
+
+class PracticeGuidance:
+    _editor: ClassVar[App | None] = None
+
+    @classmethod
+    def edit_with(cls, app: App) -> None:
+        # a class operation on purpose: the editor belongs to the practice's kind, set once by space/kanban for Stories,
+        # so no practice imports space
+        # -> app.label
+        ...
+
+    @property
+    def editor(self) -> App | None:
+        ...
+
+    @property
+    def session_root(self) -> Path | None:
+        # -> self._session_output.folder; none outside a session
+        ...
+
+    def work_in(self, session_output: Any) -> None:
+        # session_output is space/session's PracticeSessionOutput, typed Any as today: harness imports nothing from space
+        # keeps session_output, then gives each fidelity its own
+        # -> FidelityGuidance.work_in
+        ...
+
+
+class FidelityGuidance:
+    @property
+    def format(self) -> Format:
+        # -> self.session_output.chosen_formats (the first), else the default
+        ...
+
+    @format.setter
+    def format(self, value: str | None) -> None:
+        # -> self.session_output.choose_format(value, True)
+        ...
