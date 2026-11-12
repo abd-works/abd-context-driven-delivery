@@ -96,14 +96,14 @@ function CardWorkView({ ticket, stage }: { ticket: TicketClient; stage: ColumnCl
   )
 }
 
-function CardFaceView({ ticket, stage }: { ticket: TicketClient; stage: ColumnClient }) {
+function CardFaceView({ ticket, stage, isOpen = false }: { ticket: TicketClient; stage: ColumnClient; isOpen?: boolean }) {
   const { state } = useBoard()
   return (
     <>
       <CardMarkView ticket={ticket} />
       <CardTitleLineView ticket={ticket} />
       <div className="ticket-meta">{ageOf(state.now, ticket.lastActivity)}</div>
-      <CardNotesView ticket={ticket} />
+      <CardNotesView ticket={ticket} showsText={isOpen} />
       <CardWorkView ticket={ticket} stage={stage} />
       <ChildRowsView ticket={ticket} />
       <div className="card-files">
@@ -194,7 +194,7 @@ function OpenCardView({ ticket, stage, spot }: { ticket: TicketClient; stage: Co
   useColumnsReachOpenCard(card)
   return (
     <div ref={card} className={opensLeft ? 'card-open grows-left' : 'card-open'} data-open-card={ticket.name} style={{ ...place, borderColor: borderColorOf(ticket), borderWidth: ticket.isActive ? ACTIVE_BORDER_WIDTH : 1 }}>
-      <CardFaceView ticket={ticket} stage={stage} />
+      <CardFaceView ticket={ticket} stage={stage} isOpen />
       <CardUpkeepView ticket={ticket} />
       {ticket.progressIn(stage).map(progress => (
         <TileView key={progress.fidelity.slug} ticket={ticket} stage={stage} progress={progress} hasPracticeChip opensOnHover />

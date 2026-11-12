@@ -24,8 +24,9 @@ const backlogCard = (page: Page, title: string) => page.locator(`.ticket-card[da
 const backlogFile = (slug: string) => join(sessions, '_backlog', `${slug}.md`)
 const inProgressOf = (page: Page, column: string) => page.locator(`.board-column[data-column="${column}"] .card-list`).first()
 
-// The text shown on a card under its title: the closed card's, not the open one's copy.
-const shownText = (page: Page, ticket: string) => card(page, ticket).locator(':scope > .ticket-text')
+// The text shown under a ticket's title: only its open card shows it, cut to its opening paragraphs.
+const shownText = (page: Page, ticket: string) => page.locator(`[data-open-card="${ticket}"] > .ticket-text`)
+const closedText = (page: Page, ticket: string) => card(page, ticket).locator(':scope > .ticket-text')
 
 async function writeInField(page: Page, opened: Locator, control: string, field: string, typed: string): Promise<void> {
   await opened.getByRole('button', { name: control }).first().click()
@@ -45,16 +46,28 @@ test.describe('Edit Ticket Text', () => {
   test("Show a ticket's text from its session file", async ({ page }) => {
     writeInto(sessionFile('checkout-flow', 'checkout-flow.md'), '# Checkout flow\n\nPay for the basket.\n')
     await openWholeBoard(page)
+    await expect(closedText(page, 'checkout-flow')).toHaveCount(0)
+    await openCardOf(page, 'checkout-flow')
     await expect(shownText(page, 'checkout-flow')).toHaveText('Pay for the basket.')
+  })
+
+  test("Show only the opening of a ticket's text, with a link to its file", async ({ page }) => {
+    writeInto(sessionFile('checkout-flow', 'checkout-flow.md'), '# Checkout flow\n\nPay for the basket.\n\nTake the card.\n\nSend the receipt.\n')
+    await openWholeBoard(page)
+    const opened = await openCardOf(page, 'checkout-flow')
+    await expect(shownText(page, 'checkout-flow')).toHaveText('Pay for the basket.\n\nTake the card.')
+    await opened.getByRole('button', { name: 'More in checkout-flow.md' }).click()
+    await expect(page.locator('[data-panel="files"]')).toContainText('Send the receipt.')
   })
 
   test("Edit a ticket's text", async ({ page }) => {
     writeInto(sessionFile('checkout-flow', 'checkout-flow.md'), '# Checkout flow\n\nPay for the basket.\n')
     await openWholeBoard(page)
+    await openCardOf(page, 'checkout-flow')
     await expect(shownText(page, 'checkout-flow')).toHaveText('Pay for the basket.')
     await writeInField(page, await openCardOf(page, 'checkout-flow'), 'Edit text', 'Ticket text', 'Pay for the basket by card.')
     await expect(shownText(page, 'checkout-flow')).toHaveText('Pay for the basket by card.')
-    expect(textOf(sessionFile('checkout-flow', 'checkout-flow.md'))).toContain('Pay for the basket by card.')
+    await expect.poll(() => textOf(sessionFile('checkout-flow', 'checkout-flow.md'))).toContain('Pay for the basket by card.')
   })
 
   test('Write the text file for a ticket that has none', async ({ page }) => {
@@ -63,16 +76,18 @@ test.describe('Edit Ticket Text', () => {
     expect(existsSync(sessionFile('pet-visits', 'pet-visits.md'))).toBe(false)
     await writeInField(page, await openCardOf(page, 'pet-visits'), 'Edit text', 'Ticket text', 'Book a visit for a pet.')
     await expect(shownText(page, 'pet-visits')).toHaveText('Book a visit for a pet.')
-    expect(textOf(sessionFile('pet-visits', 'pet-visits.md'))).toContain('Book a visit for a pet.')
+    await expect.poll(() => textOf(sessionFile('pet-visits', 'pet-visits.md'))).toContain('Book a visit for a pet.')
   })
 
   test("Edit a backlog item's text", async ({ page }) => {
     writeInto(backlogFile('gift-cards'), '# Gift cards\n\nSell gift cards.\n')
     await openWholeBoard(page)
+    await expect(backlogCard(page, 'Gift cards').locator('.ticket-text')).toHaveCount(0)
+    await backlogCard(page, 'Gift cards').getByRole('button', { name: 'Show Gift cards' }).click()
     await expect(backlogCard(page, 'Gift cards').locator('.ticket-text')).toHaveText('Sell gift cards.')
     await writeInField(page, backlogCard(page, 'Gift cards'), 'Edit text', 'Item text', 'Sell gift cards at the till.')
     await expect(backlogCard(page, 'Gift cards').locator('.ticket-text')).toHaveText('Sell gift cards at the till.')
-    expect(textOf(backlogFile('gift-cards'))).toContain('Sell gift cards at the till.')
+    await expect.poll(() => textOf(backlogFile('gift-cards'))).toContain('Sell gift cards at the till.')
   })
 
   test("Edit a child's text inside its parent", async ({ page }) => {

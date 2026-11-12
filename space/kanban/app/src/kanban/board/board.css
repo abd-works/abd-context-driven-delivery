@@ -338,6 +338,8 @@ ul.help-overview, ul.help-guidance { padding-left: 18px; }
 
 /* Keeping a ticket up to date: its text and tags under its title, and the open card's text, tag, and delete controls. */
 .ticket-text { position: relative; color: var(--muted); font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; pointer-events: none; white-space: pre-wrap; }
+.ticket-text-link { position: relative; z-index: 1; display: block; margin-top: 2px; align-self: flex-start; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; cursor: pointer; pointer-events: auto; text-decoration: underline; }
+.ticket-text-more { color: var(--muted); font: 11px var(--mono); overflow-wrap: anywhere; }
 .ticket-tags { position: relative; display: flex; flex-wrap: wrap; gap: 4px; pointer-events: none; }
 .ticket-tag { padding: 0 6px; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); font: 10px var(--mono); }
 .card-upkeep { position: relative; z-index: 1; display: flex; gap: 4px; align-items: center; }

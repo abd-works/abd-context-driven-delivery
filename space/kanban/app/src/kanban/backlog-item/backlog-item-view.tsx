@@ -1,3 +1,4 @@
+import { openingOf } from '../ticket/card-upkeep-view'
 import { useState } from 'react'
 import type { DragEvent, FormEvent } from 'react'
 
@@ -64,11 +65,14 @@ function useItemDrag(backlogItem: BacklogItemClient) {
 
 const EDIT_ITEM_TEXT: CardField = { action: 'text', label: 'Edit text', hint: 'Edit what this idea is about', field: 'Item text', placeholder: 'Text, then Enter' }
 
-// The item's text, shown on its card and rewritten in its file from a field there.
-function ItemTextView({ item }: { item: BacklogItemClient }) {
+// The item's text, shown only on its selected card and cut to its opening paragraphs, since the details bar shows it
+// whole; it is rewritten in its file from a field there.
+function ItemTextView({ item, isSelected }: { item: BacklogItemClient; isSelected: boolean }) {
+  const { opening, isCut } = openingOf(item.text)
   return (
     <div className="item-text-line">
-      {item.text ? <div className="ticket-text">{item.text}</div> : null}
+      {isSelected && item.text ? <div className="ticket-text">{opening}</div> : null}
+      {isSelected && isCut ? <div className="ticket-text-more">More in {item.path}</div> : null}
       <CardFieldView shape={EDIT_ITEM_TEXT} isOff={false} typedAtFirst={item.text} onEnter={text => item.editText(text)} />
     </div>
   )
@@ -87,7 +91,7 @@ export function BacklogCardView({ item }: { item: BacklogItemClient }) {
       <span className="expand-mark card-mark" aria-hidden="true" />
       <div className="ticket-title">{item.title}</div>
       <div className="ticket-meta">{ageOf(state.now, item.lastActivity)}</div>
-      <ItemTextView item={item} />
+      <ItemTextView item={item} isSelected={isSelected} />
     </div>
   )
 }
