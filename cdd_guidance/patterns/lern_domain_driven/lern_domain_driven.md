@@ -344,8 +344,8 @@ the one route file. Rules `use-valid-package-names` and
 ### Testing architecture
 
 One sub-epic folder under `tests/<epic-slug>/<sub-epic-slug>/` states each
-story once and runs it on the entity and on the node. Playwright is an
-optional screen check. The shape is the onboard-a-customer tests: Create
+story once and runs it on the entity and on the node, and its screen story
+drives every story a person does on a screen in the browser. The shape is the onboard-a-customer tests: Create
 Customer and Authenticate User.
 
 | File | What it does |
@@ -353,12 +353,12 @@ Customer and Authenticate User.
 | `<snake>.story.shared.ts` | States each story once. `shareStory` holds Given, When, and Then. It imports `examples/` and calls the domain operation. |
 | `<snake>.story.domain.spec.ts` | Runs that shared story with the domain repository. This proves the entity. |
 | `<snake>.story.server.spec.ts` | Runs that same shared story with the node repository. Adds a scenario only for a route result the shared story does not cover. |
-| `<snake>.story.playwright.ts` | Optional. Tests browser interaction the domain and server specs cannot see. States its own screen story. |
+| `<snake>.story.playwright.ts` | The screen story: one describe per story a person does on a screen, named as the story, one test per scenario. Drives the page the domain and server specs cannot see. Only a story no person does on a screen (a system or technical story) has none. |
 | `examples/<concept>.examples.ts` | Seed data for the entity. The shared story imports it. The file exports data, not a repository. |
 
 `shared-states-story` is the shared file. `domain-runs-entity` and
-`server-runs-node` run that file. A Playwright file covers browser interaction
-the other two leave unseen.
+`server-runs-node` run that file. The Playwright file covers browser interaction
+the other two leave unseen, for every story a person does on a screen.
 
 `tests/` holds only story-map folders. The shared step library sits in
 `test-utils/story-test/`, and stories import it through the `test-utils/...`
@@ -481,8 +481,8 @@ Content is held to this pattern when the `.context/patterns.md` at the root of i
    continue from step 4. Otherwise call guidance on the Stories companion. For each sub-epic write
    `<snake>.story.shared.ts`, then `<snake>.story.domain.spec.ts` and
    `<snake>.story.server.spec.ts` that run that shared story, plus
-   `examples/`. Add `<snake>.story.playwright.ts` only for browser interaction
-   those specs cannot see. Specs first — small RED cycles before production.
+   `examples/`, and `<snake>.story.playwright.ts` with a describe for every
+   story a person does on a screen, driving what those specs cannot see. Specs first — small RED cycles before production.
    Pass that companion to this action as a separate tools run.
 4. Cite the ux screen/navigation artifact for this slice under **Sources /
    context** on the touched view files — this tool does not call `ux` itself.
@@ -544,7 +544,7 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 
 - **`reduce-story-overlap`** — Each sub-epic states each story once in `<snake>.story.shared.ts`. The domain spec runs that story on the entity repository. The server spec runs that same story on the node repository. A scenario's Given, When, and Then stay in the shared story; domain and server specs run it with `.run()`, `runAll()`, or `withScenario().run()`. When two files would assert the same outcome, keep that assertion in the shared story and run it from both tiers. A server spec adds a scenario only for an HTTP or route result the shared story does not cover. A Playwright file adds a screen story only for interaction the shared story does not cover.
 - **`scaffold-test-scripts`** — `scripts/test.sh`, `test.ps1`, `test-e2e.sh`, `test-e2e.ps1` at the workspace root; Vitest and Playwright stay separate.
-- **`playwright-tests-browser-interaction`** — Playwright tests interaction the domain spec and the server spec cannot see: a rendered screen, navigation, and controls the user operates in the browser. The file is optional. It states its own screen story. It leaves the shared story to the domain spec and the server spec.
+- **`playwright-tests-browser-interaction`** — Playwright tests interaction the domain spec and the server spec cannot see: a rendered screen, navigation, and controls the user operates in the browser. Every story a person does on a screen has one: a describe named as the story, a test per scenario; only a system or technical story has none. It states its own screen story. It leaves the shared story to the domain spec and the server spec.
 - **`tier-bound-repository-accessor`** — Shared stories reach repositories through the accessor each tier binds (`repositories.subscriptions`, …), never by casting the story context (`ctx.x as X`).
 - **`no-expect-in-given`** — A Given sets up state; it does not assert. Checks belong in a Then.
 - **`outline-entries-loop-over-examples`** — A Scenario Outline runs as `examples.forEach(row => scenario(`Name: ${row.example}`, …))` over its examples export, in the shared story and in the Playwright screen story alike. Never hand-write one `scenario('Name: entry', …)` per example entry: a hand-written entry drops the other entries silently.
