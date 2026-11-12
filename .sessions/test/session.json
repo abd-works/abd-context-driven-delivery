@@ -3,5 +3,7 @@
   "title": "test",
   "scope": "feature",
   "parent": "integrated-harness-flow",
-  "pulled_out": false
+  "pulled_out": false,
+  "branch": "test",
+  "worktree": "C:\\dev\\abd-cdd-test"
 }
