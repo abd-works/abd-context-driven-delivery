@@ -3,6 +3,7 @@ import type { DragEvent, KeyboardEvent, ReactNode } from 'react'
 
 import type { BacklogItemClient } from '../backlog-item/backlog-item-client'
 import { BacklogCardView, ComposerView } from '../backlog-item/backlog-item-view'
+import { leaveParent } from '../ticket/card-drag'
 import { TicketCardView } from '../ticket/ticket-card-view'
 import type { CardSpot } from '../ticket/ticket-card-view'
 import type { TicketClient } from '../ticket/ticket-client'
@@ -83,16 +84,16 @@ type DropProps = {
 }
 
 // A list a dragged card can be dropped on. Only a list that would change where the card is accepts it, and only a list
-// given onItemDrop takes a backlog item.
+// given onItemDrop takes a backlog item. Any list takes a child dragged out of its parent's card, which leaves it there.
 function DropZoneView({ accepts, onDrop, onItemDrop, className, children }: DropProps) {
   const { page, state } = useBoard()
   const [isOver, setOver] = useState(false)
   // Read when each event arrives, not from the last drawing: a quick drag reaches the list before the page redraws.
   const draggedNow = () => {
     const address = page.store.state.dragged
-    const ticket = page.board.tickets.find(entry => entry.address === address)
+    const ticket = page.board.ticketAt(address)
     const item = onItemDrop ? page.board.backlogItems.find(entry => entry.address === address) : undefined
-    return { ticket, item, isAccepted: (ticket !== undefined && accepts(ticket)) || item !== undefined }
+    return { ticket, item, isAccepted: (ticket !== undefined && (ticket.isStacked || accepts(ticket))) || item !== undefined }
   }
   const isAccepted = state.dragged !== null && draggedNow().isAccepted
   const draggedOver = (event: DragEvent) => {
@@ -106,6 +107,7 @@ function DropZoneView({ accepts, onDrop, onItemDrop, className, children }: Drop
     const { ticket, item, isAccepted: wasAccepted } = draggedNow()
     page.store.change({ dragged: null })
     if (item && onItemDrop) void onItemDrop(item)
+    else if (ticket?.isStacked) void leaveParent(ticket, event)
     else if (ticket && wasAccepted) void onDrop(ticket)
   }
   const shown = [className, isAccepted ? 'is-drop-zone' : '', isAccepted && isOver ? 'is-drop-over' : ''].filter(Boolean).join(' ')

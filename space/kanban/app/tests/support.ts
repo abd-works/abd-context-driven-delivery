@@ -31,30 +31,51 @@ export async function openBoard(page: Page): Promise<void> {
   await expect(page.locator('.board-column').first()).toBeVisible({ timeout: 20_000 })
 }
 
+// A board whose columns hold more cards than its region shows scrolls them under the details, where no drag can reach
+// them, so a spec that drags between far cards opens the board over the whole of a tall page.
+const TALL_PAGE = { width: 1600, height: 1600 }
+
+export async function openWholeBoard(page: Page): Promise<void> {
+  await page.setViewportSize(TALL_PAGE)
+  await openBoard(page)
+  await page.getByRole('button', { name: 'Expand board' }).click()
+}
+
 export const card = (page: Page, ticket: string): Locator => page.locator(`.ticket-card[data-ticket="${ticket}"]`)
 
 // A person grabs a card by its title; a drag cannot start on the buttons further down it.
 const BY_ITS_TITLE = { x: 24, y: 14 }
 const DRAG_STEPS = 10
 
+// Where a drag grabs what it drags, and where on the target it lets go: by default a card by its title, onto the
+// target's middle; a child's row is grabbed near its left end, and a card dropped above another lets go on its top edge.
+export type DragPlaces = { grab?: { x: number; y: number }; onTop?: boolean }
+const NEAR_THE_TOP_EDGE = 4
+
 // Drags a card by its title onto a list the way a person does, in small moves. Playwright's dragTo jumps to the target
 // in one move, and a drag made that way was sometimes never dropped against the whole stack.
-export async function dragCard(page: Page, dragged: Locator, target: Locator): Promise<void> {
-  const from = (await dragged.boundingBox())!
-  const to = (await target.boundingBox())!
-  await page.mouse.move(from.x + BY_ITS_TITLE.x, from.y + BY_ITS_TITLE.y)
-  await page.mouse.down()
-  await page.mouse.move(from.x + BY_ITS_TITLE.x + 20, from.y + BY_ITS_TITLE.y + 10, { steps: DRAG_STEPS })
-  await page.mouse.move(to.x + to.width / 2, to.y + Math.min(to.height / 2, 60), { steps: DRAG_STEPS })
+export async function dragCard(page: Page, dragged: Locator, target: Locator, { grab = BY_ITS_TITLE, onTop = false }: DragPlaces = {}): Promise<void> {
+  await holdOver(page, dragged, target, { grab, onTop })
   await page.mouse.up()
+}
+
+// Leaves the drag held over the target, before the drop, so a spec can see what the target shows while it is dragged over.
+export async function holdOver(page: Page, dragged: Locator, target: Locator, { grab = BY_ITS_TITLE, onTop = false }: DragPlaces = {}): Promise<void> {
+  const from = (await dragged.boundingBox())!
+  await page.mouse.move(from.x + grab.x, from.y + grab.y)
+  await page.mouse.down()
+  await page.mouse.move(from.x + grab.x + 20, from.y + grab.y + 10, { steps: DRAG_STEPS })
+  const to = (await target.boundingBox())!
+  await page.mouse.move(to.x + to.width / 2, to.y + (onTop ? NEAR_THE_TOP_EDGE : Math.min(to.height / 2, 60)), { steps: DRAG_STEPS })
 }
 
 export const openCard = (page: Page, ticket: string): Locator => page.locator(`[data-open-card="${ticket}"]`)
 
 export const toast = (page: Page, text: string | RegExp): Locator => page.locator('.toast').filter({ hasText: text })
 
+// A press on a card's empty area opens it as well, so a card already open is left open.
 export async function openCardOf(page: Page, ticket: string): Promise<Locator> {
-  await card(page, ticket).locator('.card-mark').first().click()
+  if (!(await openCard(page, ticket).isVisible())) await card(page, ticket).locator('.card-mark').first().click()
   const opened = openCard(page, ticket)
   await expect(opened).toBeVisible()
   return opened

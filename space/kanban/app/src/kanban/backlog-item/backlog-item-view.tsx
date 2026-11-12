@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import type { DragEvent, FormEvent } from 'react'
 
 import { ageOf } from '../shared/board-brand'
 import { useBoard } from '../shared/board-context'
+import { CardFieldView } from '../shared/card-field-view'
+import type { CardField } from '../shared/card-field-view'
 import type { BacklogItemClient } from './backlog-item-client'
 
 export function ComposerView() {
@@ -27,23 +30,64 @@ export function ComposerView() {
   )
 }
 
-// A backlog item starts when it is dragged into Discovery's In progress.
-export function BacklogCardView({ item }: { item: BacklogItemClient }) {
-  const { page, state } = useBoard()
-  const isSelected = page.board.selectedItem?.title === item.title
-  const dragStarted = (event: DragEvent) => {
+// Another backlog item dragged onto this one is put just above it, and the Backlog keeps that order. Read when each event
+// arrives, not from the last drawing: a quick drag reaches the card before the page redraws.
+function useItemDrop(item: BacklogItemClient) {
+  const { page } = useBoard()
+  const [isOver, setOver] = useState(false)
+  const draggedItem = () => page.board.backlogItems.find(entry => entry.address === page.store.state.dragged && entry.address !== item.address)
+  const onDragOver = (event: DragEvent) => {
+    if (!draggedItem()) return
+    event.preventDefault()
+    setOver(true)
+  }
+  const onDrop = (event: DragEvent) => {
+    setOver(false)
+    const dragged = draggedItem()
+    if (!dragged) return
+    event.preventDefault()
+    page.store.change({ dragged: null })
+    void dragged.moveBefore(item.title)
+  }
+  return { isOver, onDragOver, onDragLeave: () => setOver(false), onDrop }
+}
+
+function useItemDrag(item: BacklogItemClient) {
+  const { page } = useBoard()
+  const onDragStart = (event: DragEvent) => {
     event.dataTransfer.setData('text/plain', item.title)
     event.dataTransfer.effectAllowed = 'move'
     page.store.change({ dragged: item.address })
   }
-  const className = state.dragged === item.address ? 'ticket-card is-dragged' : 'ticket-card'
+  return { onDragStart, onDragEnd: () => page.store.change({ dragged: null }) }
+}
+
+const EDIT_ITEM_TEXT: CardField = { action: 'text', label: 'Edit text', hint: 'Edit what this idea is about', field: 'Item text', placeholder: 'Text, then Enter' }
+
+// The item's text, shown on its card and rewritten in its file from a field there.
+function ItemTextView({ item }: { item: BacklogItemClient }) {
   return (
-    <div className={className} data-item={item.title} draggable onDragStart={dragStarted} onDragEnd={() => page.store.change({ dragged: null })} onClick={() => item.select()} style={{ borderColor: isSelected ? 'var(--text)' : 'var(--border)' }}>
+    <div className="item-text-line">
+      {item.text ? <div className="ticket-text">{item.text}</div> : null}
+      <CardFieldView shape={EDIT_ITEM_TEXT} isOff={false} typedAtFirst={item.text} onEnter={text => item.editText(text)} />
+    </div>
+  )
+}
+
+// A backlog item starts when it is dragged into Discovery's In progress, and keeps its place when dragged onto another.
+export function BacklogCardView({ item }: { item: BacklogItemClient }) {
+  const { page, state } = useBoard()
+  const isSelected = page.board.selectedItem?.title === item.title
+  const { isOver, ...drop } = useItemDrop(item)
+  const className = ['ticket-card', state.dragged === item.address ? 'is-dragged' : '', isOver ? 'is-drop-before' : ''].filter(Boolean).join(' ')
+  return (
+    <div className={className} data-item={item.title} draggable {...useItemDrag(item)} {...drop} onClick={() => item.select()} style={{ borderColor: isSelected ? 'var(--text)' : 'var(--border)' }}>
       {/* Chrome starts no drag on a button, and this one covers the card, so it carries the card's drag. */}
       <button className="card-hit" aria-label={`Show ${item.title}`} draggable />
       <span className="expand-mark card-mark" aria-hidden="true" />
       <div className="ticket-title">{item.title}</div>
       <div className="ticket-meta">{ageOf(state.now, item.lastActivity)}</div>
+      <ItemTextView item={item} />
     </div>
   )
 }

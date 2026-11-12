@@ -61,6 +61,8 @@ export type BoardState = {
   now: number
   selected: string | null
   openCard: string | null
+  // The parents a person folded to their own card, by name: their child rows are hidden until they are unfolded.
+  foldedParents: string[]
   dragged: string | null
   tiles: Tile[]
   closing: Closing | null
@@ -103,6 +105,7 @@ const initialState = (): BoardState => ({
   now: Date.now(),
   selected: null,
   openCard: null,
+  foldedParents: [],
   dragged: null,
   tiles: [],
   closing: null,
