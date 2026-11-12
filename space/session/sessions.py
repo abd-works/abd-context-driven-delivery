@@ -18,6 +18,7 @@ from harness.mcp.mcp_server import mcp
 from harness.annotations.name import Name
 from space.repo.repo import Repo
 from space.session.file_manager import FileManager
+from space.session.session_saves import SERVED_SAVES, SessionSaves
 from space.session.session import COMPLETE_FOLDER, MAIN_SESSION_NAME, SESSION_FILE, Session, SessionNotFoundError
 from space.work_state import SESSIONS_FOLDER, WorkState
 
@@ -139,6 +140,11 @@ class Sessions:
         main clone, whichever checkout these sessions serve. A ticket's record stays on main, and its worktree's branch
         carries only the work."""
         return self.repo.main_clone.root / SESSIONS_FOLDER
+
+    @property
+    def saves(self) -> SessionSaves:
+        """The commits that keep the sessions' records on main, shared with every checkout of the repository."""
+        return SERVED_SAVES.of(self.repo.main_clone, self.folder)
 
     @property
     def backlog_folder(self) -> Path:

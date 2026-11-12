@@ -134,10 +134,13 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 	// `board.set_sends_fixes_directly`: keeps sends in `_board.json`, committed on main and pushed
 	// `board.help`: the help of the board's practice named practice, such as `stories`; a fidelity's help comes from its progress, `fidelity-progress.help`
 	-> BoardPractices.keyed
-+ save_sessions_on_main(message: str)
-	// commits the session folders not yet committed on main and pushes main, while the repository's own folder has main checked out: every ticket's record is kept on main, so each change to one is committed and pushed as it is made
-	-> Repo.commit
-	-> Repo.push_upstream
++ unsaved: SaveFailure
+	// the latest save of the tickets' records on main that git refused, naming each change not yet saved; none while every save went through
+	-> Sessions.saves
+	-> SessionSaves.failure
++ save_again(): Board
+	// `board.save_again`: queues again the changes whose save git refused, as the board's Save again does
+	-> SessionSaves.retry
 + open_ticket(title: str, scope: str, parent: str, path: str): Ticket
 	// a new ticket in Discovery, its session working on path, a folder in the repository; the session takes its name from the title
 	-> Sessions.create
@@ -359,7 +362,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// `ticket.create`: a new ticket in Discovery, in progress; it does not become the current session. scope is feature, story, or slice; parent names the ticket it was split from; path is its workpath
 	-> Board.load
 	-> Board.open_ticket
-	-> Board.save_sessions_on_main
+	-> Session.save_on_main
 + branch(): Branch
 	// `ticket.branch`: its own branch, named as the ticket, with whether the repository has it and whether it is checked out, so activating a ticket offers only what is missing and leaving one commits, pushes, and merges only its own branch
 	-> TicketCheckout.branch
@@ -391,14 +394,14 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> Session.move_to_backlog
 	-> BacklogItem.from_ticket
 	-> BacklogItem.write_if_missing
-	-> Board.save_sessions_on_main
+	-> SessionSaves.later
 + close(leaving: list[str]): Ticket
 	// `ticket.close`: does with its work what leaving names (handoff, commit, push, merge, delete_branch, delete_worktree); its session closes, its folder moves to `_complete/`, and that move is committed on main and pushed
 	-> TicketCheckout.free_worktree
 	-> TicketCheckout.keep_landing_release
 	-> Session.close
 	-> Session.move_to_closed
-	-> Board.save_sessions_on_main
+	-> SessionSaves.now
 + assign_chat(chat: str): Ticket
 	// `ticket.assign_chat`: keeps the chat's id in its session.json, committed on main and pushed
 	-> TicketCheckout.assign_chat
@@ -406,7 +409,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// `ticket.archive`: its session closes and its folder moves to `_archive/`, off the board; the move is committed on main and pushed
 	-> Session.close
 	-> Session.move_to_archive
-	-> Board.save_sessions_on_main
+	-> SessionSaves.now
 + edit_text(text: str): Ticket
 	// `ticket.edit_text`: writes text under its idea file's heading, making the file when it has none; committed on main and pushed
 	-> Session.keep_text
@@ -417,7 +420,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// `ticket.delete`: its session closes and its folder is removed, that removal committed on main and pushed; main raises `MainStaysOpenError`
 	-> Session.close
 	-> Session.remove
-	-> Board.save_sessions_on_main
+	-> SessionSaves.later
 + add_child(title: str): Ticket
 	// `ticket.add_child`: a new child ticket, a story In progress in Discovery, working where it works; committed on main and pushed
 	-> Session.open_child
@@ -484,14 +487,14 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 	// `ticket.close_choices`: a handoff, a commit and push of its work branch while a checkout has it, and a merge, branch delete, and worktree delete for its own branch; none chosen at first
 + open()
 	// opens the ticket in its own worktree: the one it has, else a new one on its own branch, after the session folders not yet committed are committed on main and pushed; records the branch and worktree in its session, and commits that record on main and pushes it, every time; refuses with TicketBranchUnclearError when several branches could each be the ticket's
-	-> Board.save_sessions_on_main
+	-> SessionSaves.now
 	-> Branch.open_in_worktree
 	-> Board.reread
 	-> Session.save_fields
 + assign_chat(chat: str)
 	// keeps chat's id in the ticket's session.json, committed on main and pushed
 	-> Session.save_fields
-	-> Board.save_sessions_on_main
+	-> Session.save_on_main
 + keep_landing_release(leaving: list[str])
 	// a ticket closed with its branch merged keeps its end-to-end results only
 	-> LatestRelease.keep
@@ -515,7 +518,7 @@ The moves and marks a person made on one ticket's stages, made once with the tic
 + mark(mark: str, stage: Stage): Ticket
 	// writes `done <stage>` or `in-progress <stage>` to session.json and the log, then commits on main and pushes
 	-> TicketWork.record
-	-> Board.save_sessions_on_main
+	-> Session.save_on_main
 + place(stage: Stage, mark: str): Ticket
 	// enters stage unless the ticket is there, then marks it there: one commit on main, pushed, for both
 
@@ -664,7 +667,7 @@ Marked `@identity("title")`.
 + create(title: str, text: str, project: Path): BacklogItem
 	// `backlog-item.create`: writes one markdown file to `_backlog/`, the title as its heading and the text under it, committed on main and pushed
 	-> Sessions.backlog_folder
-	-> Board.save_sessions_on_main
+	-> SessionSaves.later
 + from_ticket(ticket: Ticket): BacklogItem
 	// the item a ticket moved into the Backlog waits in: `_backlog/<name>/<name>.md`, inside the ticket's kept folder on the ticket's board
 + write_if_missing(title: str)
@@ -675,7 +678,7 @@ Marked `@identity("title")`.
 	-> Session.reopen
 	-> Board.open_ticket
 	-> Session.keep_file
-	-> Board.save_sessions_on_main
+	-> Session.save_on_main
 + start_under(parent: Ticket): Ticket
 	// `backlog-item.start_under`: starts the item, as dropping it on parent's card does, and gives its ticket parent as its parent
 	-> BacklogItem.start

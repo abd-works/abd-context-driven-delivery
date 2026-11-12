@@ -113,7 +113,7 @@ class Ticket(Card):
         """Open a new ticket titled title in Discovery, its record committed on main and pushed. scope is feature, story, or slice; parent names the ticket it was split from; path is the folder in the repository its session works on. Then run ticket.activate to open the ticket's own worktree, and do its work in a chat started there (start_session with cwd set to the ticket's worktree), not in this chat."""
         board = Board.load(project)
         opened = board.open_ticket(title, scope, parent, path)
-        board.save_sessions_on_main(f"sessions: create {opened.name}")
+        opened.session.save_on_main(f"create {opened.name}")
         return opened
 
     @property
@@ -450,7 +450,7 @@ class Ticket(Card):
         self.checkout.save_work(chosen)
         self.checkout.return_to_default_branch()
         # The ticket's record is kept on main, so its move among the closed sessions is committed and pushed there.
-        self._board.save_sessions_on_main(f"sessions: close {self.name}")
+        self._board.sessions.saves.now(f"sessions: close {self.name}")
         return closed
 
     @mcp
@@ -462,7 +462,7 @@ class Ticket(Card):
             raise MainStaysOpenError("archive")
         self._session.close()
         archived = self._board.ticket_of(self._session.move_to_archive())
-        self._board.save_sessions_on_main(f"sessions: archive {self.name}")
+        self._board.sessions.saves.now(f"sessions: archive {self.name}")
         return archived
 
     @mcp
@@ -500,7 +500,7 @@ class Ticket(Card):
         self._session.close()
         self._session.remove()
         self._board.reread()
-        self._board.save_sessions_on_main(f"sessions: delete {self.name}")
+        self._board.sessions.saves.later(f"sessions: delete {self.name}")
 
     @mcp
     @agent_tool
@@ -508,7 +508,7 @@ class Ticket(Card):
     def add_child(self, title: str) -> Ticket:
         """Open a child ticket of ticket titled title, a story In progress in Discovery, working where ticket works. Committed on main and pushed."""
         child = self._board.ticket_of(self._session.open_child(title, scope="story"))
-        self._board.save_sessions_on_main(f"sessions: add {child.name} to {self.name}")
+        self._session.save_on_main(f"add {child.name} to {self.name}")
         return child
 
     @mcp
@@ -551,8 +551,8 @@ class Ticket(Card):
             raise ParentMovesWithChildrenError(self.name)
 
     def _saved(self, change: str) -> Ticket:
-        """This ticket, its change committed on main and pushed."""
-        self._board.save_sessions_on_main(f"sessions: {change}")
+        """This ticket, its change queued to be committed on main and pushed."""
+        self._session.save_on_main(change)
         return self
 
     def _return_to_backlog(self) -> BacklogItem:
@@ -564,7 +564,7 @@ class Ticket(Card):
         kept_in_backlog = self._board.ticket_of(self._session.move_to_backlog())
         item = self._board.backlog_item_of(kept_in_backlog)
         item.write_if_missing(kept_in_backlog.title)
-        self._board.save_sessions_on_main(f"sessions: return {self.name} to the Backlog")
+        self._board.sessions.saves.later(f"sessions: return {self.name} to the Backlog")
         return item
 
 
@@ -691,7 +691,7 @@ class StageMarks:
         self._ticket.work.record(f"{mark} {stage.name}")
 
     def _saved(self, change: str) -> Ticket:
-        self._ticket.board.save_sessions_on_main(f"sessions: {self._ticket.name} {change}")
+        self._ticket.session.save_on_main(f"{self._ticket.name} {change}")
         return self._ticket
 
 
@@ -815,10 +815,16 @@ class FidelityProgress:
 
     @cached_property
     def _has_files(self) -> bool:
-        """Read once per reading of the progress, since the board and its stage's work both ask, and looked for again
-        only after Generate or Validate logs a line on the fidelity or its session declares other paths for it."""
+        """Read once per reading of the progress, since the board and its stage's work both ask. A file named by its
+        whole path, such as one a person wrote, is looked for on every read; a pattern's search walks folders, so it runs
+        again only after Generate or Validate logs a line on the fidelity or its session declares other paths for it."""
+        output = self._fidelity.session_output
+        if output is None:
+            return False
+        if output.has_named_output():
+            return True
         key = json.dumps([self._fidelity.output_paths(), self._lines_logged], sort_keys=True)
-        return self._ticket.session.progress_cache.answer(self._fidelity.slug, HAS_OUTPUT, key, self._fidelity.has_declared_output)
+        return self._ticket.session.progress_cache.answer(self._fidelity.slug, HAS_OUTPUT, key, output.has_found_output)
 
     @property
     @data_field

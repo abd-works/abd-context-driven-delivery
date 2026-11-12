@@ -257,11 +257,23 @@ class FidelitySessionOutput:
 
     def has_output(self) -> bool:
         """Whether a file this fidelity declares is already in the session, such as one a person wrote. Unlike
-        ``files`` it never asks git: a pattern counts only in a session with a folder of its own, since on the whole
-        repository a pattern also finds other sessions' files, and the board asks this of every fidelity."""
-        own_folder = self._session.work_root != self._session.repo.root
-        declared = [(label, self._declared(path)) for label, paths in self.output_paths().items() for path in paths]
-        return any(self._exists(label, file) for label, file in declared if own_folder or file.names_one_path)
+        ``files`` it never asks git, and the board asks this of every fidelity."""
+        return self.has_named_output() or self.has_found_output()
+
+    def has_named_output(self) -> bool:
+        """Whether a file this fidelity names by its whole path is there: one look each, quick enough for every read."""
+        return any(self._exists(label, file) for label, file in self._declared_outputs() if file.names_one_path)
+
+    def has_found_output(self) -> bool:
+        """Whether a pattern this fidelity declares finds a file, which searches the session's folders: slow enough that
+        the board keeps the answer. A pattern counts only in a session with a folder of its own, since on the whole
+        repository a pattern also finds other sessions' files."""
+        if self._session.work_root == self._session.repo.root:
+            return False
+        return any(self._exists(label, file) for label, file in self._declared_outputs() if not file.names_one_path)
+
+    def _declared_outputs(self) -> list[tuple[str, DeclaredFile]]:
+        return [(label, self._declared(path)) for label, paths in self.output_paths().items() for path in paths]
 
     def _declared(self, path: str) -> DeclaredFile:
         """A declared path under this fidelity's root, as a path from the project."""

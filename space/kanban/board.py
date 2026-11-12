@@ -21,6 +21,7 @@ from harness.guidance.stages import STAGES, ApproachStage, StageScope
 from space.kanban.board_app import BOARD_APP_PORTS
 from space.repo.repo import Repo
 from space.session.session_log import LogTimestamp
+from space.session.session_saves import SaveFailure
 from space.session.sessions import BoardPractices, Sessions
 
 if TYPE_CHECKING:
@@ -168,6 +169,14 @@ class Board:
         person turns it on."""
         return bool(self._shared.get("sends_fixes_directly", False))
 
+    @property
+    @data_field
+    def unsaved(self) -> SaveFailure | None:
+        """The latest save of the tickets' records on main that git refused, such as a push origin would not take,
+        naming each change not yet saved; none while every save went through. The changes are on disk, so the board
+        works on them, and save_again commits and pushes them."""
+        return self.sessions.saves.failure
+
     @cached_property
     def _shared(self) -> dict:
         """Everything the board's file holds, read once per board read; the board is its one reader and writer."""
@@ -309,20 +318,6 @@ class Board:
             raise BacklogItemNotFoundError(title)
         return found
 
-    def save_sessions_on_main(self, message: str) -> None:
-        """Commit the session folders not yet committed on main with message, and push main, while the repository's own
-        folder has main checked out: every ticket's record is kept on main, so each change to one is committed and pushed
-        as it is made, and every chat and worktree reads the same board."""
-        repository = self._repo.main_clone
-        folder = self.sessions.folder
-        if not repository.branch_named(repository.default_branch).is_checked_out or not folder.is_dir():
-            return
-        if not repository.is_dirty(folder):
-            return
-        repository.commit([str(folder)], message, untracked=True)
-        if repository.has_origin:
-            repository.push_upstream()
-
     def open_ticket(self, title: str, scope: str, parent: str, path: str) -> Ticket:
         """A new ticket titled title in Discovery, its session working on path, a folder in the repository (its top when
         empty)."""
@@ -335,6 +330,14 @@ class Board:
     @noSessionLog
     def show(self) -> Board:
         """Return the session board: Backlog, Discovery, Specification, Implementation, and Complete, with every ticket's progress through Generate and Validate, and the active ticket."""
+        return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def save_again(self) -> Board:
+        """Commit and push again the tickets' changes whose save on main git refused, as the board's Save again does; the save runs on the saving thread, and the board shows whether it went through."""
+        self.sessions.saves.retry()
         return self
 
     @mcp
@@ -625,7 +628,7 @@ class Card(ABC):
         """A person's move of this card just above other in their column: the column keeps that order, committed on
         main and pushed."""
         column = self.column.place_before(self, other)
-        self._board.save_sessions_on_main(f"sessions: move {self.key} before {other.key} in {column.name}")
+        self._board.sessions.saves.later(f"sessions: move {self.key} before {other.key} in {column.name}")
         return self
 
     @abstractmethod

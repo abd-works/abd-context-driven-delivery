@@ -55,7 +55,12 @@ class JsonFile:
         staged = self.path.with_name(f"{self.path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
         text = json.dumps(dict(data), separators=(",", ":")) if self._compact else json.dumps(dict(data), indent=2)
         staged.write_text(text + "\n", encoding="utf-8")
-        os.replace(staged, self.path)
+        try:
+            os.replace(staged, self.path)
+        except OSError:
+            # Windows refuses the swap while another process holds the file open; the staged copy goes, the error stays.
+            staged.unlink(missing_ok=True)
+            raise
         return self.path
 
 

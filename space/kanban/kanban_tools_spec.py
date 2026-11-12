@@ -1002,7 +1002,7 @@ with description("the board tools") as self:
         with it("should name each tool after its object"):
             names = set(self.project.server.tools)
             expect(names).to(equal({
-                "board.show", "board.overview", "board.help", "board.folders", "board.set_sends_fixes_directly", "stage.set_wip_limit",
+                "board.show", "board.overview", "board.help", "board.folders", "board.set_sends_fixes_directly", "board.save_again", "stage.set_wip_limit",
                 "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.format_choices", "ticket.overlay_choices", "ticket.choose_overlays", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations", "ticket.assign_chat",
                 "ticket.edit_text", "ticket.tag", "ticket.delete", "ticket.add_child", "ticket.pull_out", "ticket.reassign_parent", "ticket.move_before",
                 "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",

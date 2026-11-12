@@ -341,6 +341,11 @@ class Session:
         held = self._session_json
         (held if held is not None else JsonFile(self.session_file)).write({**self.fields, **values})
 
+    def save_on_main(self, change: str) -> None:
+        """Queue the save on main of change, such as ``checkout-flow move Specification``: the session folders are
+        committed and pushed on the saving thread, so the change is kept for every chat without the caller waiting."""
+        self._sessions.saves.later(f"sessions: {change}")
+
     def save(self) -> None:
         """Save this session's name, workpath, and repository in its ``session.json``, creating its folder, and keep
         the fields others store there, such as a board ticket's title, scope, and parent."""

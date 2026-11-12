@@ -45,7 +45,7 @@ class BacklogItem(Card):
         board = Board.load(project)
         item = cls(board.sessions.backlog_folder / f"{Name(title).title_slug}.md", board)
         item._idea.write(title, text)
-        board.save_sessions_on_main(f"sessions: add {title} to the Backlog")
+        board.sessions.saves.later(f"sessions: add {title} to the Backlog")
         return item
 
     @classmethod
@@ -113,7 +113,7 @@ class BacklogItem(Card):
         # An item kept inside its folder went back with the folder; a file beside it or on its own moves in now.
         if self._path.exists():
             ticket.session.keep_file(self._path)
-        self._board.save_sessions_on_main(f"sessions: start {ticket.name} from the Backlog")
+        ticket.session.save_on_main(f"start {ticket.name} from the Backlog")
         return ticket
 
     @mcp
@@ -129,7 +129,7 @@ class BacklogItem(Card):
     def edit_text(self, text: str) -> BacklogItem:
         """Write text as the backlog item's idea, under its heading in its file, which keeps its title. Committed on main and pushed."""
         self._idea.rewrite_text(text)
-        self._board.save_sessions_on_main(f"sessions: edit {self.title}'s text in the Backlog")
+        self._board.sessions.saves.later(f"sessions: edit {self.title}'s text in the Backlog")
         return self
 
     @mcp

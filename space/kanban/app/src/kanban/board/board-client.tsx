@@ -41,6 +41,14 @@ export class BoardClient extends BoardClientGenerated {
     return saved
   }
 
+  // A save git refused stays on disk; saving again runs on Python's saving thread, so the board is read again to show
+  // whether it went through.
+  override async saveAgain(): Promise<this | null> {
+    const saved = await super.saveAgain()
+    await this.page.reader.refresh()
+    return saved
+  }
+
   practiceNamed(key: string): PracticeClient | undefined {
     return this.shownPractices.find(practice => practice.key === key)
   }

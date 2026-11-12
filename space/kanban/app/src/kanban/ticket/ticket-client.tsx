@@ -7,6 +7,7 @@ import { SessionClientGenerated } from '@cdd/space/session/session'
 
 import type { BoardPage } from '../board/board-page'
 import type { ColumnClient } from '../board/column-client'
+import { TicketMove, TicketPlacedBefore, TicketTextEdit } from '../shared/pending-changes'
 import { TicketChat } from '../chat/chat-client'
 import { FidelityProgressClient } from './fidelity-progress-client'
 import { ReportClient } from './report-client'
@@ -215,8 +216,20 @@ export class TicketClient extends TicketClientGenerated {
     return this.followed(await super.moveNext())
   }
 
+  // Dropped on a stage, the card shows there at once; moved to the Backlog it becomes an item, which only Python can show.
   override async moveTo(stage: string, done?: boolean): Promise<TicketData | BacklogItemData | null> {
-    return this.landed(await super.moveTo(stage, done))
+    const moved = this.page.board.columnNamed(stage)?.isStage
+      ? await this.page.reader.change(new TicketMove(this.name, stage, done ?? false), () => super.moveTo(stage, done))
+      : await super.moveTo(stage, done)
+    return this.landed(moved)
+  }
+
+  override async moveBefore(other: string): Promise<this | null> {
+    return this.page.reader.change(new TicketPlacedBefore(this.name, other), () => super.moveBefore(other))
+  }
+
+  override async editText(text: string): Promise<this | null> {
+    return this.page.reader.change(new TicketTextEdit(this.name, text), () => super.editText(text))
   }
 
   // The card stays open on the ticket wherever it moved.

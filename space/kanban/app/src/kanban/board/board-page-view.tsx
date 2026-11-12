@@ -35,6 +35,20 @@ function ServerBandView({ failure, hasBoard }: { failure: string; hasBoard: bool
   )
 }
 
+// A change git refused to save on main is still on disk and on the board, but no other chat or checkout sees it until it
+// is saved; the band names the changes and saves them again.
+function UnsavedBandView({ changes, error }: { changes: string[]; error: string }) {
+  const { page } = useBoard()
+  return (
+    <div className="band band-failure" role="alert" aria-label="Changes not saved">
+      Not saved on main: {changes.join('; ')} · {headlineOf(error)}
+      <button className="action" onClick={() => void page.board.saveAgain()}>
+        Save again
+      </button>
+    </div>
+  )
+}
+
 function ViolationsBandView({ ticket }: { ticket: TicketClient }) {
   return (
     <div className="band" role="status" aria-label="Active ticket's violations">
@@ -51,6 +65,7 @@ function BandsView() {
   return (
     <>
       {state.serverFailure ? <ServerBandView failure={state.serverFailure} hasBoard={state.board !== null} /> : null}
+      {page.board.unsaved ? <UnsavedBandView changes={page.board.unsaved.changes} error={page.board.unsaved.error} /> : null}
       {active?.violatedSlugs.length ? <ViolationsBandView ticket={active} /> : null}
     </>
   )

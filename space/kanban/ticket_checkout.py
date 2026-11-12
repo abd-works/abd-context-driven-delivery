@@ -116,7 +116,7 @@ class TicketCheckout:
         """Make chat, a chat's id, the ticket's chat from now on; an empty chat gives it back to the chat named after
         it. The record is committed on main and pushed."""
         self._ticket.session.save_fields(**{ASSIGNED_CHAT: chat})
-        self._ticket.board.save_sessions_on_main(f"sessions: assign a chat to {self._ticket.name}")
+        self._ticket.session.save_on_main(f"assign a chat to {self._ticket.name}")
 
     def _chat_in_worktree(self, chats: list[Chat]) -> Chat | None:
         worktree = self.worktree
@@ -151,11 +151,11 @@ class TicketCheckout:
         board = self._ticket.board
         if not self.worktree:
             self._refuse_unclear_branch()
-            board.save_sessions_on_main(f"sessions: save before opening {self._ticket.name}")
+            board.sessions.saves.now(f"sessions: save before opening {self._ticket.name}")
             self.branch.open_in_worktree()
             board.reread()
         self._ticket.session.save_fields(branch=self.branch.name, worktree=self.worktree)
-        board.save_sessions_on_main(f"sessions: open {self._ticket.name}")
+        board.sessions.saves.now(f"sessions: open {self._ticket.name}")
 
     def _refuse_unclear_branch(self) -> None:
         candidates = [] if self.branch.exists else self.candidate_branches
