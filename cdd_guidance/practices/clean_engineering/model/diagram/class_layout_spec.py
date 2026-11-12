@@ -184,8 +184,11 @@ with description("a class diagram page"):
         with it("should still route every arrow"):
             expect(all(arrow.routed for arrow in self.arrows)).to(be_true)
 
-        with it("should give each arrow its own point on the base"):
-            expect(self.arrows[0].entry_point).not_to(equal(self.arrows[1].entry_point))
+        with it("should still end both arrows at one point on the base"):
+            expect(self.arrows[0].entry_point).to(equal(self.arrows[1].entry_point))
+
+        with it("should run one shared line into the base"):
+            expect({tuple(arrow.path[-2:]) for arrow in self.arrows}).to(equal({tuple(self.arrows[0].path[-2:])}))
 
         with it("should keep every arrow out of the card in the way"):
             expect([_passes_through(arrow.path, self.cards[2]) for arrow in self.arrows]).to(equal([False, False]))
