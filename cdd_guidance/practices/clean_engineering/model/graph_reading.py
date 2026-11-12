@@ -9,6 +9,7 @@ with the folders that read takes, for each read: what one read finds stays on th
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 from harness.graph.graph import Node
@@ -21,6 +22,10 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import Clea
 from cdd_guidance.practices.clean_engineering.model.code_read import CodeRead
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
+
+# A member called on another object (`board.select(`), and a property read on one (`board.shown`, no call after it).
+_MEMBER_CALL = re.compile(r"\.([A-Za-z_$][\w$]*)\s*\(")
+_MEMBER_READ = re.compile(r"\.([A-Za-z_$][\w$]*)\b(?!\s*\()")
 
 
 class GraphReading(PracticeReading):
@@ -53,6 +58,42 @@ class GraphReading(PracticeReading):
         with schema_sync_paused():
             CodeRead(self).read()
             self.model_documents.read()
+        CallLinks(self).link()
+
+
+class CallLinks:
+    """The ``invokes`` edges of the code read: each operation and property to the operations and properties its body
+    calls, found by the name each call ends in (``board.show()`` calls ``show``), a member of its own class before
+    another class's member of that name."""
+
+    def __init__(self, reading: GraphReading) -> None:
+        self._reading = reading
+        self._graph = reading.graph
+
+    def link(self) -> None:
+        """Record an ``invokes`` edge from every member the graph holds to each member it calls."""
+        in_graph = self._reading.in_graph
+        for caller in [*in_graph.nodes("Operation"), *in_graph.nodes("Property")]:
+            for called in self._called_by(caller):
+                self._graph.link("invokes", caller, called, "relationship")
+
+    def _called_by(self, caller: Node) -> list[Node]:
+        """The members caller calls, by the names its callees end in and the members its source calls on another object
+        (``this.board.select()``, which its callees leave out when it shares caller's name), and the properties its
+        source reads (``this.board.shown``); its own class's member of a name when its class has one."""
+        text = caller.source.text if caller.source.file else ""
+        calls = {str(callee).rsplit(".", 1)[-1] for callee in caller.get_fact("callees") or [] if callee}
+        calls.update(_MEMBER_CALL.findall(text))
+        reads = set(_MEMBER_READ.findall(text)) - calls
+        found = [member for name in calls for member in self._named(name, caller)]
+        found.extend(member for name in reads for member in self._named(name, caller) if member.type == "Property")
+        return found
+
+    def _named(self, name: str, caller: Node) -> list[Node]:
+        """The members called name other than caller, only its own class's when its class has one."""
+        owner = self._graph.direct_parent(caller)
+        members = [member for member in self._reading.code_index.members_named(name) if member is not caller]
+        return [member for member in members if self._graph.direct_parent(member) is owner] or members
 
 
 class CodeIndex:

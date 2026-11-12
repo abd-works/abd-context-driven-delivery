@@ -130,3 +130,61 @@ with description("Clean Engineering reading code into its graph"):
 
         with it("should be the index the class rules ask"):
             expect(ClassGraph(self.fixture.context).named("Till")).to(equal(self.index.classes_named("Till")))
+
+    with context("with members that call and read another object's members"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    "app/board.ts": (
+                        "export class Board {\n"
+                        "  get shown(): string[] { return [] }\n"
+                        "  select(name: string): void { this.picked = name }\n"
+                        "}\n\n"
+                        "export class BoardClient {\n"
+                        "  constructor(private board: Board) {}\n"
+                        "  select(): void {\n"
+                        "    this.board.select('x')\n"
+                        "  }\n"
+                        "  opensLeft(): boolean {\n"
+                        "    return this.board.shown.length > 2\n"
+                        "  }\n"
+                        "}\n"
+                    ),
+                }
+            )
+
+        with it("should record that an operation invokes the member of its name it calls on another object"):
+            expect(_targets(self.fixture, "invokes", "select")).to(equal(["select"]))
+
+        with it("should record that an operation invokes the property it reads"):
+            expect(_targets(self.fixture, "invokes", "opensLeft")).to(equal(["shown"]))
+
+    with context("with a class whose heritage clause holds braced type arguments"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    "app/page.tsx": (
+                        "export class PageFailureView extends Component<{ children: ReactNode }, { failure: string }> {\n"
+                        "  render() {\n"
+                        "    return this.props.children\n"
+                        "  }\n"
+                        "}\n"
+                    ),
+                }
+            )
+
+        with it("should read the members of the class body, not of the type arguments"):
+            expect(_targets(self.fixture, "owns", "PageFailureView")).to(equal(["render"]))
+
+    with context("with a folder holding only story tests"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    "shop/cart.py": _CART,
+                    "shop/pay/pay_story.test.py": "with story('Pay'):\n    pass\n",
+                }
+            )
+
+        with it("should hold no package for the folder"):
+            packages = [node.name for node in self.fixture.practice.reading.in_graph.nodes("Package")]
+            expect(packages).to(equal(["shop"]))

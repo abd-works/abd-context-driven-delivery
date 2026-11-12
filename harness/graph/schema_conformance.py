@@ -71,7 +71,10 @@ class ConformsToSchema(PracticeGraphRule):
         slug=slug,
         body=(
             "Content conforms to its schema: every node has each relationship its schema type requires, up to the "
-            "fidelity being worked."
+            "fidelity being worked. It checks only what the schema requires (a field written `name?:` is optional) and "
+            "only for the fidelities worked so far: a relationship whose target a later fidelity creates is not "
+            "required yet. Validate keeps only the findings inside the work's scope: the session's stories and "
+            "everything under them, and the files the call names."
         ),
     )
 

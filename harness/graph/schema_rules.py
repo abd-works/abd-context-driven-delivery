@@ -170,18 +170,37 @@ class PracticeSchema:
         stages = [self.stage_of(reference) for reference in references]
         return None if None in stages else min(stages)
 
-    @staticmethod
-    def _node_types_named(references: tuple[str, ...]) -> tuple[str, ...]:
-        """Every node type a node of the types references names may be read as, once each."""
-        return tuple(dict.fromkeys(node_type for reference in references for node_type in SchemaKey(reference.rpartition(".")[2]).node_types))
+    def _node_types_named(self, references: tuple[str, ...]) -> tuple[str, ...]:
+        """Every node type a node of the types references names may be read as, with those of their subtypes (a
+        scenario's ``steps`` hold ``Given``, ``When``, and ``Then`` steps), once each."""
+        keys = [key for reference in references for key in self._with_subtypes(reference.rpartition(".")[2])]
+        return tuple(dict.fromkeys(node_type for key in keys for node_type in SchemaKey(key).node_types))
+
+    def _with_subtypes(self, key: str) -> list[str]:
+        """key, then each type of the practice's or the patterns' schemas whose ``is:`` chain in this practice reaches it."""
+        found = [key]
+        for known in found:
+            found.extend(sub for sub, supertype in self._local_supertypes.items() if supertype == known and sub not in found)
+        return found
+
+    @cached_property
+    def _local_supertypes(self) -> dict[str, str]:
+        """Each schema key with the key of the supertype its ``is:`` names in this practice (``when`` is a ``step``)."""
+        found: dict[str, str] = {}
+        for schema in (self._base, *self._added.schemas):
+            for key, kind in schema.types.items():
+                prefix, _, supertype = kind.supertype.rpartition(".")
+                if supertype and prefix in ("", self.key):
+                    found.setdefault(key, supertype)
+        return found
 
     def _fidelity_named(self, key: str, seen: frozenset[str]) -> str:
         """The fidelity the practice's or the patterns' schemas give the type key, else the one its ``is:`` supertype in
         this practice has; empty when none says."""
         kinds = [schema.types[key] for schema in (self._base, *self._added.schemas) if key in schema.types]
         fidelity = next((kind.fidelity for kind in kinds if kind.fidelity), "")
-        prefix, _, supertype = next((kind.supertype for kind in kinds if kind.supertype), "").rpartition(".")
-        if fidelity or not supertype or (prefix and prefix != self.key) or supertype in seen:
+        supertype = self._local_supertypes.get(key, "")
+        if fidelity or not supertype or supertype in seen:
             return fidelity
         return self._fidelity_named(supertype, seen | {key})
 
