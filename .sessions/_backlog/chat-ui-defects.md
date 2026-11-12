@@ -22,3 +22,16 @@ a message the chat bar typed. A message the person types themselves starts it.
 
 Open: turn Remote Control off on the main chat while working at the desktop, or have the chat bar start the chat some way
 that does not depend on the agent's turn.
+
+## Dragging a Backlog item onto another puts it above, never makes it a child
+
+Reported 2026-11-12, ticket `ticket-maintanance-defects`. In the Backlog, dragging one card onto another put it just
+above the other card instead of making it the other's child: a backlog item had no parent, so the drop only called
+`backlog-item.move_before`.
+
+Fixed on branch `ticket-maintanance-defects`: a drop near a Backlog card's top edge puts the item above it, near its
+bottom edge below it (`backlog-item.move_after`), and in the middle makes it the card's child (`backlog-item.nest_under`).
+A parent is a folder, `_backlog/<parent>/`, whose `<parent>.md` holds its text; every other markdown file in it is a child,
+stacked as a row in the parent's card. Dragging a child onto the Backlog list takes it out (`backlog-item.leave_parent`),
+and starting the parent starts its children as its child tickets. A folder kept with a ticket's work (a session.json)
+neither takes children nor becomes one. Live once the branch is merged and the cdd server repinned.
