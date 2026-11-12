@@ -32,10 +32,10 @@ export function ComposerView() {
 
 // Another backlog item dragged onto this one is put just above it, and the Backlog keeps that order. Read when each event
 // arrives, not from the last drawing: a quick drag reaches the card before the page redraws.
-function useItemDrop(item: BacklogItemClient) {
+function useItemDrop(backlogItem: BacklogItemClient) {
   const { page } = useBoard()
   const [isOver, setOver] = useState(false)
-  const draggedItem = () => page.board.backlogItems.find(entry => entry.address === page.store.state.dragged && entry.address !== item.address)
+  const draggedItem = () => page.board.backlogItems.find(entry => entry.address === page.store.state.dragged && entry.address !== backlogItem.address)
   const onDragOver = (event: DragEvent) => {
     if (!draggedItem()) return
     event.preventDefault()
@@ -47,17 +47,17 @@ function useItemDrop(item: BacklogItemClient) {
     if (!dragged) return
     event.preventDefault()
     page.store.change({ dragged: null })
-    void dragged.moveBefore(item.title)
+    void dragged.moveBefore(backlogItem.title)
   }
   return { isOver, onDragOver, onDragLeave: () => setOver(false), onDrop }
 }
 
-function useItemDrag(item: BacklogItemClient) {
+function useItemDrag(backlogItem: BacklogItemClient) {
   const { page } = useBoard()
   const onDragStart = (event: DragEvent) => {
-    event.dataTransfer.setData('text/plain', item.title)
+    event.dataTransfer.setData('text/plain', backlogItem.title)
     event.dataTransfer.effectAllowed = 'move'
-    page.store.change({ dragged: item.address })
+    page.store.change({ dragged: backlogItem.address })
   }
   return { onDragStart, onDragEnd: () => page.store.change({ dragged: null }) }
 }
