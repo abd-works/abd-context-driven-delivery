@@ -15,12 +15,12 @@ from contextlib import contextmanager
 from functools import cached_property
 
 from harness.graph.edge import EdgeType
-from harness.guidance.schema import Schema
+from harness.guidance.schema import VALUE_TYPES, Schema
 from harness.annotations.name import Name
 
 
 # Child-list edges. A model object's child list records these itself.
-_CHILD_LISTS = frozenset(
+CHILD_LISTS = frozenset(
     {
         "decomposedInto",
         "background",
@@ -42,7 +42,7 @@ _CHILD_LISTS = frozenset(
 )
 
 # The explorer leaves scopes out of the serialized graph.
-_SKIPPED = _CHILD_LISTS | {"scopes"}
+_SKIPPED = CHILD_LISTS | {"scopes"}
 
 # Schema keys whose node type is not the key capitalised, in the order the reverse lookup reads them.
 _NODE_TYPES = {
@@ -70,8 +70,6 @@ _EVIDENCE_KINDS = frozenset(
     {"invokes", "observes", "demonstrates", "retrievedUsing", "uses", "specifiedBy", "given", "dependsOn", "hasType", "returnType"}
 )
 
-# Field values that name a value type rather than another schema type.
-_VALUE_TYPES = frozenset({"string", "number", "dotPath"})
 
 
 class SchemaKey:
@@ -89,7 +87,23 @@ class SchemaKey:
 
     @property
     def node_type(self) -> str:
-        return _NODE_TYPES.get(self.key) or self.key[:1].upper() + self.key[1:]
+        return _NODE_TYPES.get(self.key) or self._capitalised
+
+    @property
+    def node_types(self) -> tuple[str, ...]:
+        """Every node type a node of this key may be read as: ``node_type``, and the key capitalised, which a practice's
+        reading may name it instead (a story map's sub-epic is a ``SubEpic``, a given step a ``Given``)."""
+        return tuple(dict.fromkeys((self.node_type, self._capitalised)))
+
+    @property
+    def _capitalised(self) -> str:
+        return self.key[:1].upper() + self.key[1:]
+
+    @property
+    def phase(self) -> str:
+        """The step phase the key names (``given``, ``when``, ``then``), whose nodes are steps of that phase; empty for
+        any other key."""
+        return _PHASES.get(self.key, "")
 
 
 class SchemaField:
@@ -138,9 +152,9 @@ class SchemaFields:
         found: list[SchemaField] = []
         for key, kind in schema.types.items():
             for name, value in kind.fields:
-                targets = [target for target in re.findall(r"[A-Za-z]\w*", value.strip()) if target not in _VALUE_TYPES]
+                targets = [target for target in re.findall(r"[A-Za-z]\w*", value.strip()) if target not in VALUE_TYPES]
                 if targets and '"' not in value:
-                    found.append(SchemaField(SchemaKey(key).node_type, name, tuple(SchemaKey(target).node_type for target in targets), _PHASES.get(key, "")))
+                    found.append(SchemaField(SchemaKey(key).node_type, name, tuple(SchemaKey(target).node_type for target in targets), SchemaKey(key).phase))
         return found
 
 
