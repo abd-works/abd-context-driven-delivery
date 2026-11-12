@@ -50,9 +50,11 @@ class SessionSaves:
     succeeds clears it. Work that needs main committed before it goes on, such as opening a ticket's worktree, saves
     ``now``, which waits for the queued saves and makes its own in the caller's thread."""
 
-    def __init__(self, repository: Repo, folder: Path) -> None:
+    def __init__(self, repository: Repo, folder: Path, settle_seconds: float = SETTLE_SECONDS) -> None:
         self._repository = repository
         self._folder = folder
+        # How long a queued save waits before it commits; a spec that queues one change at a time waits less.
+        self._settle_seconds = settle_seconds
         self._pending: list[str] = []
         self._worker: threading.Thread | None = None
         # One commit on main at a time, whether queued or made now: two at once fight over git's index.
@@ -89,7 +91,7 @@ class SessionSaves:
 
     def _work(self) -> None:
         while True:
-            time.sleep(SETTLE_SECONDS)
+            time.sleep(self._settle_seconds)
             with self._queue:
                 if not self._pending:
                     self._worker = None

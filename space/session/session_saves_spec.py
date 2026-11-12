@@ -19,6 +19,7 @@ from space.repo.repo import Repo
 from space.session.session_saves import SessionSaves
 
 _WAIT_SECONDS = 20
+_SETTLE_SECONDS = 0.05
 
 
 def _git(folder: Path, *args: str) -> str:
@@ -62,7 +63,8 @@ with description("the saves of a repository's session folders on main"):
         self.folder = self.clone / ".sessions"
         (self.folder / "checkout-flow").mkdir(parents=True)
         (self.folder / "checkout-flow" / "session.json").write_text('{"stage": "Specification"}\n', encoding="utf-8")
-        self.saves = SessionSaves(Repo(self.clone), self.folder)
+        # Every example queues its changes before the save settles, so a short settle commits them together all the same.
+        self.saves = SessionSaves(Repo(self.clone), self.folder, settle_seconds=_SETTLE_SECONDS)
 
     with after.each:
         shutil.rmtree(self.clone.parent, ignore_errors=True)

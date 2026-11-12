@@ -187,6 +187,7 @@ class MockRepo(Repo):
         self.default_branch = held.default_branch
         self.git = _NoGit()
         self.worktrees = MockWorktrees(self, held)
+        self._from_top: dict[Path, str] = {}
         self._held = held
 
     @property

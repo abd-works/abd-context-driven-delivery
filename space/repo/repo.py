@@ -83,6 +83,9 @@ class Repo:
         self.git = Git(self.root)
         # The checkouts of this repository: the main clone and the linked worktrees beside it.
         self.worktrees = Worktrees(self)
+        # Each path already written from the top. The board names every session file this way thousands of times a
+        # refresh, and the answer depends only on the path and this repository's root, which never changes.
+        self._from_top: dict[Path, str] = {}
 
     @classmethod
     @tool_subject
@@ -143,6 +146,11 @@ class Repo:
         """path as written from the repository's top, empty for the top itself, or as it is when it lies outside the
         repository, where a session may work."""
         given = Path(path)
+        if given not in self._from_top:
+            self._from_top[given] = self._written_from_top(given)
+        return self._from_top[given]
+
+    def _written_from_top(self, given: Path) -> str:
         if not given.is_relative_to(self.root):
             return given.as_posix()
         relative = given.relative_to(self.root).as_posix()

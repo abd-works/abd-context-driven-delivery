@@ -37,7 +37,7 @@ class ProgressCache:
     cache: a missing or unreadable file, or one another reader holds open while it is written, only means the answers
     are worked out again."""
 
-    def __init__(self, folder: Path | None) -> None:
+    def __init__(self, folder: Path | None, save_seconds: float = SAVE_SECONDS) -> None:
         # A session with no folder yet, such as a project's main before anything is saved in it, keeps its answers only
         # while it is held.
         self._file = JsonFile(folder / PROGRESS_CACHE_FILE) if folder is not None else None
@@ -46,6 +46,8 @@ class ProgressCache:
         self._lock = threading.Lock()
         # The write of the new answers, waiting for the read that works them out to finish; none while all are saved.
         self._saving: threading.Timer | None = None
+        # How long the write waits for the read that works the answers out; a spec that reads once waits less.
+        self._save_seconds = save_seconds
 
     def answer(self, fidelity: str, question: str, key: str, work_out: Callable[[], Kept]) -> Kept:
         """The answer to question on fidelity, worked out with work_out only when it was last kept under another key,
@@ -63,7 +65,7 @@ class ProgressCache:
     def _save_soon(self) -> None:
         if self._file is None or self._saving is not None:
             return
-        self._saving = threading.Timer(SAVE_SECONDS, self._save)
+        self._saving = threading.Timer(self._save_seconds, self._save)
         self._saving.daemon = True
         self._saving.start()
 
