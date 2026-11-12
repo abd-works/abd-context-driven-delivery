@@ -1,0 +1,3 @@
+<MessageLogging name="audit-log">
+  <CloudLogging><LogName>oss-audit</LogName><Message>{messageid} {request.path} {response.status.code}</Message></CloudLogging>
+</MessageLogging>

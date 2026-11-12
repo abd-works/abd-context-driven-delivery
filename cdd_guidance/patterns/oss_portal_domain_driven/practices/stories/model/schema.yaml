@@ -1,0 +1,26 @@
+# OSS Portal overlay on stories. Extend only.
+share:
+  - fidelity: acceptance_tests
+  - is: stories.story
+  - states: stories.story
+  - links?: ddd.aggregate
+domain:
+  - fidelity: acceptance_tests
+  - is: stories.story
+  - executes: share
+serviceSpec:
+  - fidelity: acceptance_tests
+  - is: stories.story
+  - executes: share
+bffSpec:
+  - fidelity: acceptance_tests
+  - is: stories.story
+  - executes: share
+playwright:
+  - fidelity: acceptance_tests
+  - is: stories.story
+  - executes: share
+journeySpec:
+  - fidelity: acceptance_tests
+  - is: stories.story
+  - executes: share

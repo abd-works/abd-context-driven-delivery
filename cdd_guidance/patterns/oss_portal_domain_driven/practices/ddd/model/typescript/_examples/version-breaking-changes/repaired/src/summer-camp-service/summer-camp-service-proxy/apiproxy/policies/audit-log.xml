@@ -1,0 +1,1 @@
+<MessageLogging name="audit-log"><CloudLogging><LogName>oss-audit</LogName></CloudLogging></MessageLogging>

@@ -1,0 +1,3 @@
+<RaiseFault name="sanitise-error">
+  <FaultResponse><Set><Payload contentType="application/json">{"code":"{error.code}","message":"{error.catalogueMessage}"}</Payload></Set></FaultResponse>
+</RaiseFault>
