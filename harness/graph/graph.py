@@ -24,7 +24,7 @@ from harness.graph.pattern_overlays import GraphOverlay, PatternOverlays
 from harness.graph.rule_context import RuleCheckContext
 from harness.graph.schema_edges import SchemaEdges
 from harness.graph.schema_rules import PracticeSchema
-from harness.graph.saved_graph import PracticeChanges, SavedGraph, SavedGraphFile, SavedNode, SavedPractice
+from harness.graph.saved_graph import GRAPH_FILE_NAME, PracticeChanges, SavedGraph, SavedGraphFile, SavedNode, SavedPractice
 
 if TYPE_CHECKING:
     from harness.agent_tools.tool_call import ToolCall
@@ -1264,6 +1264,9 @@ class Graph:
         self.scope = LoadScope(None)
         # The saved graph file of the folder last loaded, with that folder.
         self._saved_graph_file: tuple[Path, SavedGraphFile] | None = None
+        # The folder a session's graph is saved in, the session's own folder; none for a graph no session holds, such as
+        # the graph tool's, which saves in the folder it loads.
+        self.kept_in: Path | None = None
         # The pattern overlays this graph applies, each pattern made once.
         self.applied_patterns = PatternOverlays()
         self.schema_edges = SchemaEdges(self)
@@ -1462,9 +1465,10 @@ class Graph:
         """The saved graph file of the loaded folder, made once for each folder the graph loads; a validate that checks
         the session's saved graph reads it here."""
         folder = self.scope.folder or Path()
+        path = self.kept_in / GRAPH_FILE_NAME if self.kept_in is not None else None
         held = self._saved_graph_file
         if held is None or held[0] != folder:
-            held = self._saved_graph_file = (folder, SavedGraphFile(folder, self.report_progress))
+            held = self._saved_graph_file = (folder, SavedGraphFile(folder, self.report_progress, path))
         return held[1]
 
     @long_call

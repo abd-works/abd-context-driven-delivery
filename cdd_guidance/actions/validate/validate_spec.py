@@ -176,6 +176,9 @@ with description("a validate action on practice guidance") as self:
             self.folder = Path(__file__).with_name("fixtures") / "saved-graph"
             self.action = Validate(session=_working_in(self.project, self.folder, self.folder))
             self.session = Path(self.action.session.session_path)
+            # A session's graph is the one created for it in its own folder, so the fixture's graph is put there.
+            self.session.mkdir(parents=True, exist_ok=True)
+            shutil.copy(self.folder / ".context" / "graph.json", self.session / "graph.json")
 
         with it("should report the guidance practice's graph hits from graph.json when graph is true"):
             prose = _expanded_validate(self.action, {"guidance": ["ddd-tactics"], "graph": True})

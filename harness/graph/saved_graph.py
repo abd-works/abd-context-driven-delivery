@@ -293,8 +293,8 @@ class SavedGraph:
 class SavedGraphFile:
     """The ``.context/graph.json`` a folder's graph is saved in, and whether it holds the practices a load asks for."""
 
-    def __init__(self, folder: Path, report_progress: Callable[[str], None]) -> None:
-        self.path = folder / ".context" / GRAPH_FILE_NAME
+    def __init__(self, folder: Path, report_progress: Callable[[str], None], path: Path | None = None) -> None:
+        self.path = path if path is not None else folder / ".context" / GRAPH_FILE_NAME
         self._report_progress = report_progress
         # Written whole and swapped in, so a chat reading it never meets half a graph another chat's worker is saving.
         self._file = JsonFile(self.path, compact=True)
