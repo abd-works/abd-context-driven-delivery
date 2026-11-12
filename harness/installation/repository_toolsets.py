@@ -4,6 +4,7 @@ from __future__ import annotations
 import ast
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Iterable
@@ -11,6 +12,9 @@ from typing import Iterable
 from harness.agent_tools.agent_tools import ToolsetReference
 from harness.annotations.annotation import annotation_kinds
 from harness.annotations.name import Name
+
+# The last name of every decorator a source file could carry, ``@mcp`` and ``@Hook("...")`` alike.
+_DECORATOR_NAME = re.compile(r"@\s*(?:\w+\s*\.\s*)*(\w+)")
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +157,10 @@ class RepositoryToolsets:
 
     def _toolset_refs_in_file(self, py_file: Path) -> list[ToolsetReference]:
         try:
-            tree = ast.parse(py_file.read_text(encoding="utf-8"))
+            text = py_file.read_text(encoding="utf-8")
+            if not self._may_install(text):
+                return []
+            tree = ast.parse(text)
         except (OSError, SyntaxError, UnicodeDecodeError):
             return []
         module = self._module_name(py_file)
@@ -166,6 +173,12 @@ class RepositoryToolsets:
             and not self._is_hosted_only(node)
             and self._class_is_installable(node)
         ]
+
+    def _may_install(self, text: str) -> bool:
+        """Whether text names a decorator that can make a class installable. Most source files name none, and reading
+        their text this way is far quicker than parsing it; a file that does name one is parsed to find its classes."""
+        installing = annotation_kinds.installing_names
+        return any(name == "agent_toolset" or Name(name).snake in installing for name in set(_DECORATOR_NAME.findall(text)))
 
     def _collected_files(self) -> Iterable[Path]:
         skip = {name.lower() for name in self._SKIP_DIRS}

@@ -5,6 +5,7 @@ call says where its build runs; a call made in process builds in its own process
 import json
 import shutil
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from expects import contain, equal, expect
@@ -271,12 +272,15 @@ with description("a graph built for a chat's call"):
             self.fresh = {key: _practice_state(fresh, key) for key in _EVERY_PRACTICE}
             self.reopened = Graph()
             self.reopened.open_saved(self.every)
-            self.refreshed = {}
-            for file in _READ_BY_EACH_PRACTICE:
+            # Each refresh opens a graph of its own and saves nothing, so their workers run side by side.
+            def refreshed_with(file: str) -> Graph:
                 held = Graph()
                 held.open_saved(self.every)
                 held.refresh([file], _FROM_A_CHAT)
-                self.refreshed[file] = held
+                return held
+
+            with ThreadPoolExecutor(len(_READ_BY_EACH_PRACTICE)) as refreshing:
+                self.refreshed = dict(zip(_READ_BY_EACH_PRACTICE, refreshing.map(refreshed_with, _READ_BY_EACH_PRACTICE)))
 
         with after.all:
             shutil.rmtree(self.every.parent, ignore_errors=True)
