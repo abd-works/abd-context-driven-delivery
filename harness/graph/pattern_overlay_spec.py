@@ -7,22 +7,13 @@ _HERE = Path(__file__).resolve().parent
 
 from expects import equal, expect
 from harness.installation.data_class import data_of  # noqa: E402
-from mamba import description, it
+from mamba import before, description, it
 
 from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.pattern_overlays import PatternOverlays
+from space.session.sample_project import SampleProject
 import cdd_guidance.patterns  # noqa: F401 - registers the patterns with the graph's overlays
-
-
-def _sample_copy() -> Path:
-    """A throwaway copy of the example working copy, so the graph a load saves in its ``.context`` never lands in the
-    shared sample that other specs, such as validate's, copy and read back."""
-    import shutil
-
-    copy = Path(tempfile.mkdtemp(prefix="cdd-graph-spec-")) / "input"
-    shutil.copytree(_HERE / "_examples" / "input", copy, ignore=shutil.ignore_patterns("graph.json"))
-    return copy
 
 
 with description("pattern overlays"):
@@ -49,52 +40,43 @@ with description("pattern overlays"):
         expect(len(root.children)).to(equal(1))
         expect(root.children[0].node_id).to(equal(child.node_id))
 
-    with it("should add the lern nodes when that overlay is applied to the example"):
-        from harness.graph.graph import Graph
+    with description("applied with the LERN overlay to the shared sample project"):
+        with before.all:
+            # The one sample project the specs share, read once with the overlay for every example here. A session keeps
+            # its graph in its own folder, so the graph this load saves in the copy is read back by no session.
+            sample = SampleProject.shared().root
+            self.graph = Graph()
+            roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
+            data_of(self.graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True))
 
-        sample = _sample_copy()
-        graph = Graph()
-        roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
-        data_of(graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True))
-        names = {node.type for node in graph.practice("ddd").reading.in_graph.nodes()}
-        expect("NodeRoot" in names).to(equal(True))
-        expect("ClientRoot" in names).to(equal(True))
-        story_types = {node.type for node in graph.practice("stories").reading.in_graph.nodes()}
-        expect("StoryShared" in story_types).to(equal(True))
+        with it("should add the lern nodes"):
+            names = {node.type for node in self.graph.practice("ddd").reading.in_graph.nodes()}
+            expect("NodeRoot" in names).to(equal(True))
+            expect("ClientRoot" in names).to(equal(True))
+            story_types = {node.type for node in self.graph.practice("stories").reading.in_graph.nodes()}
+            expect("StoryShared" in story_types).to(equal(True))
 
-    with it("should load the full source file for a lern domain node"):
-        from harness.graph.graph import Graph
+        with it("should load the full source file for a lern domain node"):
+            domain_nodes = [node for node in self.graph.practice("ddd").reading.in_graph.nodes() if node.type == "NodeRoot"]
+            expect(len(domain_nodes) > 0).to(equal(True))
+            node = domain_nodes[0]
+            expect(node.source.end_line > 1).to(equal(True))
+            expect(len(node.source.text.splitlines()) > 1).to(equal(True))
 
-        sample = _sample_copy()
-        graph = Graph()
-        roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
-        data_of(graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True))
-        domain_nodes = [node for node in graph.practice("ddd").reading.in_graph.nodes() if node.type == "NodeRoot"]
-        expect(len(domain_nodes) > 0).to(equal(True))
-        node = domain_nodes[0]
-        expect(node.source.end_line > 1).to(equal(True))
-        expect(len(node.source.text.splitlines()) > 1).to(equal(True))
+        with it("should parent lern tier files on their aggregate in the explorer tree"):
+            ddd_tree = data_of(self.graph.practice("ddd").reading.in_graph.root.serialize())
 
-    with it("should parent lern tier files on their aggregate in the explorer tree"):
-        from harness.graph.graph import Graph
+            def walk(node):
+                yield node
+                for child in node.get("children") or []:
+                    yield from walk(child)
 
-        sample = _sample_copy()
-        graph = Graph()
-        roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
-        data_of(graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True))
-        ddd_tree = data_of(graph.practice("ddd").reading.in_graph.root.serialize())
-
-        def walk(node):
-            yield node
-            for child in node.get("children") or []:
-                yield from walk(child)
-
-        aggregate = next(
-            item for item in walk(ddd_tree) if item.get("type") == "Aggregate" and item.get("name") == "account-credentials"
-        )
-        child_names = [child.get("name") for child in aggregate.get("children") or []]
-        expect("account-credentials-node" in child_names).to(equal(True))
-        expect("account-credentials-client" in child_names).to(equal(True))
+            aggregate = next(
+                item for item in walk(ddd_tree) if item.get("type") == "Aggregate" and item.get("name") == "account-credentials"
+            )
+            child_names = [child.get("name") for child in aggregate.get("children") or []]
+            expect("account-credentials-node" in child_names).to(equal(True))
+            expect("account-credentials-client" in child_names).to(equal(True))
 
 
 with description("pattern overlays recording what content is generated with") as self:

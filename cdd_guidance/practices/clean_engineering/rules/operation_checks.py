@@ -148,9 +148,10 @@ def operation_label(operation: "Node") -> str:
 
 
 def operation_line_count(operation: "Node") -> int:
-    """The parser's count; for a node without one, the lines its source span covers."""
+    """The parser's count, read from the node's own facts (an ancestor's count is another member's); for a node without
+    one, the lines its source span covers."""
     span = operation.source.end_line - operation.source.start_line + 1
-    return operation.get_fact("line_count") or (span if span > 1 else 0)
+    return operation.facts.get("line_count") or (span if span > 1 else 0)
 
 
 class KeepOperationsSmall(OperationMeasureRule):

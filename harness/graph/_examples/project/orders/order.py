@@ -7,6 +7,7 @@ class Order:
     def __init__(self, shopper: str) -> None:
         self.shopper = shopper
         self.lines: list[str] = []
+        self._shopper_cache: str | None = None
 
     def place(self, a: str, b: str, c: str, d: str, e: str) -> None:
         self.lines.extend([a, b, c, d, e])

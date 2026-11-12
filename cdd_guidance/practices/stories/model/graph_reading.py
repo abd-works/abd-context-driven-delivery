@@ -233,7 +233,7 @@ class StoryLinks:
     def _link_step(self, step) -> None:
         body = self._step_body(step)
         called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
-        matched = [member for name in called for member in self.clean.code_index.members_named(name)]
+        matched = [member for name in sorted(called) for member in self.clean.code_index.members_named(name)]
         epic = self.tree.epic_of(step) if matched else None
         for operation in matched:
             self.graph.link("invokes", step, operation, "relationship")
