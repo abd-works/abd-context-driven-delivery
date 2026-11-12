@@ -13,6 +13,8 @@ from harness.graph.violation import Violation
 from cdd_guidance.actions.validate.report_files import ReportFiles
 
 _STORIES = "stories"
+# The story map's own node types; the test files a pattern reads into the practice are scoped by the paths named.
+_STORY_MAP_TYPES = frozenset({"Epic", "SubEpic", "Story", "Scenario", "Step", "Given", "When", "Then", "Example", "Background"})
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -77,13 +79,15 @@ class CheckedGraph:
         return [violation for violation in found if violation.location not in self.unchecked_files]
 
     def _on_session_stories(self, found: list[Violation]) -> list[Violation]:
-        """The story map's violations only on the stories the session's ticket names, when it names any: the other
-        stories, and the epics holding them, are other increments' work. Every other practice's violations stay."""
+        """The violations inside the work's scope, when the session's ticket names its stories: on those stories and on
+        everything held under them (their scenarios, steps, and examples). A violation on any other epic, story,
+        scenario, step, or example is another increment's work and is left out; files, and every other practice's
+        nodes, are already scoped by the paths the call names."""
         stories = getattr(self.session, "stories", None) or []
         if not stories or self._checked is None:
             return found
-        kept = self._checked.node_ids_named(_STORIES, stories)
-        return [violation for violation in found if violation.practice != _STORIES or violation.node_id in kept]
+        outside = self._checked.outside(_STORIES, stories, _STORY_MAP_TYPES)
+        return [violation for violation in found if violation.node_id not in outside]
 
     @property
     def held_beside(self) -> list[str]:

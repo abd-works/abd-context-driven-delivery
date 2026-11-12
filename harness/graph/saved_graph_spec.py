@@ -137,3 +137,31 @@ with description("a graph's pattern overlays asked which rules a practice checks
 
     with it("should leave the graph's own overlays as they were"):
         expect(self.graph.overlays).to(equal([]))
+
+
+def _node(node_id: str, name: str, type: str) -> dict:
+    return {"node_id": node_id, "name": name, "type": type, "practice": "stories"}
+
+
+def _edge(parent: str, child: str) -> dict:
+    return {"parent": parent, "child": child, "kind": "decomposedInto"}
+
+
+with description("a saved graph scoping a practice to the work some names cover") as self:
+    with before.each:
+        from harness.graph.saved_graph import SAVED_SHAPE_VERSION
+        nodes = [_node("e", "Maintain Tickets", "Epic"), _node("s1", "Add Child Ticket", "Story"), _node("c1", "Add a child", "Scenario"),
+                 _node("t1", "then the card holds it", "Then"), _node("s2", "Open Board", "Story"), _node("c2", "Open it", "Scenario"),
+                 _node("f", "organize.story.ui.spec.ts", "PlaywrightSpec")]
+        edges = [_edge("e", "s1"), _edge("s1", "c1"), _edge("c1", "t1"), _edge("e", "s2"), _edge("s2", "c2"), _edge("e", "f")]
+        document = {"version": SAVED_SHAPE_VERSION, "practices": {"stories": {"nodes": nodes, "edges": edges}}}
+        self.outside = SavedGraph.from_document(document).outside("stories", ["add child ticket"], frozenset({"Epic", "Story", "Scenario", "Then"}))
+
+    with it("should leave the named story and everything under it inside"):
+        expect(self.outside & {"s1", "c1", "t1"}).to(equal(set()))
+
+    with it("should put the other stories, their scenarios, and the epic outside"):
+        expect(self.outside).to(equal({"e", "s2", "c2"}))
+
+    with it("should leave nodes of other types to be scoped some other way"):
+        expect(self.outside).not_to(contain("f"))

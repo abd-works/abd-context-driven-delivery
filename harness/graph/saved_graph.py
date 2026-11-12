@@ -149,6 +149,19 @@ class SavedPractice:
         """The folder the practice's source was read from; folder when it was saved with none."""
         return Path(self.source_root) if self.source_root else folder
 
+    def held_under(self, roots: set[str]) -> set[str]:
+        """roots and every node an edge of the practice leads to from them, at any depth."""
+        children: dict[str, list[str]] = {}
+        for edge in self.edges:
+            children.setdefault(edge.parent, []).append(edge.child)
+        found, todo = set(), list(roots)
+        while todo:
+            node_id = todo.pop()
+            if node_id not in found:
+                found.add(node_id)
+                todo.extend(children.get(node_id, []))
+        return found
+
     @property
     def violations_by_node(self) -> dict[str, list[Violation]]:
         """The practice's violations, by the id of the node each was found on."""
@@ -262,11 +275,15 @@ class SavedGraph:
                 return False
         return self.overlays == list(overlays)
 
-    def node_ids_named(self, practice: str, names: list[str]) -> set[str]:
-        """The ids of the practice's nodes with one of names, matched ignoring case and spacing."""
+    def outside(self, practice: str, names: list[str], types: frozenset[str]) -> set[str]:
+        """The ids of the practice's nodes of types that are neither named one of names (matched ignoring case and
+        spacing) nor held under one, through the practice's edges: what lies outside the work those names scope."""
         saved = self.practices.get(practice)
+        if saved is None:
+            return set()
         wanted = {_name_key(name) for name in names}
-        return {node.node_id for node in saved.nodes if _name_key(node.name) in wanted} if saved is not None else set()
+        inside = saved.held_under({node.node_id for node in saved.nodes if _name_key(node.name) in wanted})
+        return {node.node_id for node in saved.nodes if node.type in types and node.node_id not in inside}
 
     def violations(self, practices: list[str] | None = None) -> list[Violation]:
         """Every violation the saved practices hold; with practices, only those the named practices found."""
