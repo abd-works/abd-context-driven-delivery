@@ -6,7 +6,10 @@
   "repo_path": "C:\\dev\\abd-cdd-integrate-practice-conte",
   "outputs": {
     "ux": {
-      "root": "../../../abd-context-driven-delivery/harness/.context/ux"
+      "root": "ux"
+    },
+    "stories": {
+      "root": "stories"
     }
   },
   "branch": "integrate-practice-content-editor-apps",
