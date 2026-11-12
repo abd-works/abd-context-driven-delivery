@@ -32,7 +32,9 @@ export type ChatBarViewJson = {
   // The session's own branch, which merge and delete branch act on, checked out or not; empty while git has none.
   leaveOwnBranch: string
   leaving: string[]
-  // The repositories beside this one, as repos.siblings answers them when the session list opens.
+  // Whether the repo list, opened from its own button beside the session list's +, is open.
+  isRepoListOpen: boolean
+  // The repositories beside this one, as repos.siblings answers them when the repo list opens.
   repos: RepoRowJson[]
 }
 

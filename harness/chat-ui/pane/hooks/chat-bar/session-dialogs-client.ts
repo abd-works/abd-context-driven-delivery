@@ -18,9 +18,10 @@ const chatBarView = atom(
     leaveBranch: '',
     leaveOwnBranch: '',
     leaving: [],
+    isRepoListOpen: false,
     repos: [],
   } as ChatBarViewJson,
-  { shape: 'chat-bar-view-8' },
+  { shape: 'chat-bar-view-9' },
 )
 
 // A press turns choice on or off; the chosen stay in the order the Ticket offers them, so a choice sent reads the same
@@ -34,10 +35,19 @@ export function currentChatBarView($: EngineInterface) {
 }
 
 export async function toggleSessionList($: EngineInterface): Promise<void> {
-  await update($, chatBarView, view => ({ ...view, isSessionListOpen: !view.isSessionListOpen, isCardOpen: false }))
+  await update($, chatBarView, view => ({ ...view, isSessionListOpen: !view.isSessionListOpen, isRepoListOpen: false, isCardOpen: false }))
 }
 
-// The repositories the session list offers below the tickets, read each time it opens.
+// The repo list opens alone, so the bar below it stays in view.
+export async function toggleRepoList($: EngineInterface): Promise<void> {
+  await update($, chatBarView, view => ({ ...view, isRepoListOpen: !view.isRepoListOpen, isSessionListOpen: false, isCardOpen: false }))
+}
+
+export async function closeRepoList($: EngineInterface): Promise<void> {
+  await update($, chatBarView, view => ({ ...view, isRepoListOpen: false }))
+}
+
+// The repositories the repo list offers, read each time it opens.
 export async function showRepos($: EngineInterface, repos: RepoRowJson[]): Promise<void> {
   await update($, chatBarView, view => ({ ...view, repos }))
 }

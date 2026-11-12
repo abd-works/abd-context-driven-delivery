@@ -7,7 +7,7 @@ import { callTool, callToolText, currentChatBar, refreshChatBar, showFailure, ty
 import { whileBusy } from './busy-client'
 import { startedChatIn } from './chat-folder-client'
 import type { RepoRowJson } from '../../types'
-import { cancelClose, closeSessionList, currentChatBarView, showClose, showRepos, toggleSessionList } from './session-dialogs-client'
+import { cancelClose, closeRepoList, closeSessionList, currentChatBarView, showClose, showRepos, toggleRepoList } from './session-dialogs-client'
 
 // The person's moves between sessions: open a ticket from the main chat, create one, close the active one. Each is one
 // ticket tool; the dialogs they open and close, and what they chose, are in session-dialogs-client.ts. Sessions open
@@ -51,11 +51,11 @@ export async function createSession($: EngineInterface, sessionName: string): Pr
   }
 }
 
-// The main chat's + opens the session list, and with it the repositories beside this one; a list that cannot read them
-// still opens, with the tickets alone.
-export async function toggleSessionListWithRepos($: EngineInterface): Promise<void> {
-  await toggleSessionList($)
-  if (!(await currentChatBarView($)).isSessionListOpen) return
+// The main chat's repo button opens the repositories beside this one, read afresh each time; a list that cannot read
+// them opens empty, with the field for a new one.
+export async function toggleRepoListWithRepos($: EngineInterface): Promise<void> {
+  await toggleRepoList($)
+  if (!(await currentChatBarView($)).isRepoListOpen) return
   try {
     await showRepos($, await callTool<RepoRowJson[]>($, 'repos.siblings', {}))
   } catch (failure) {
@@ -68,7 +68,7 @@ export async function toggleSessionListWithRepos($: EngineInterface): Promise<vo
 // chat there, where the person opens its main session.
 export async function openRepo($: EngineInterface, name: string): Promise<void> {
   $.ui.toast(`Opening repository ${name}…`)
-  await closeSessionList($)
+  await closeRepoList($)
   try {
     const answer = await whileBusy($, `Opening repository ${name}`, () => callToolText($, 'repos.open', { name, visibility: 'private' }))
     $.ui.toast(`${name}: ${answer.split('\n').pop()?.replace(/^- /, '') ?? 'opened'}`)
