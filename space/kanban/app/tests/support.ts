@@ -62,7 +62,10 @@ export async function dragCard(page: Page, dragged: Locator, target: Locator, { 
 
 // Leaves the drag held over the target, before the drop, so a spec can see what the target shows while it is dragged over.
 export async function holdOver(page: Page, dragged: Locator, target: Locator, { grab = BY_ITS_TITLE, onTop = false }: DragPlaces = {}): Promise<void> {
-  // The board region scrolls, and a card below its visible part cannot be grabbed where it is drawn.
+  // The board region scrolls, and a card below its visible part cannot be grabbed where it is drawn; a list's label,
+  // where a drop lands on no card, is brought into view first, then the card if that left it out of view.
+  const labels = target.locator(':scope.card-list > .list-label')
+  if (await labels.count()) await labels.first().scrollIntoViewIfNeeded()
   await dragged.scrollIntoViewIfNeeded()
   const from = (await dragged.boundingBox())!
   await page.mouse.move(from.x + grab.x, from.y + grab.y)
@@ -73,7 +76,6 @@ export async function holdOver(page: Page, dragged: Locator, target: Locator, { 
   // A drop on a card makes the dragged ticket its child, so a drag onto a list drops where no card is: on the list's
   // label while the board shows it, else below the list's cards.
   const isList = await target.evaluate(element => element.classList.contains('card-list'))
-  const labels = target.locator(':scope > .list-label')
   const label = isList && (await labels.count()) ? await labels.first().boundingBox() : null
   const down = onTop ? NEAR_THE_TOP_EDGE : isList ? await belowTheLastCard(target, to) : Math.min(to.height / 2, 60)
   const y = label && label.y >= top && label.y + label.height <= bottom ? label.y + label.height / 2 : Math.max(top, Math.min(to.y + down, bottom))

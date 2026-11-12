@@ -1,10 +1,11 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { ACCENT, card, dragCard, openBoard, openCard, openCardOf, openTileBarOf } from './support'
+import { ACCENT, card, openBoard, openCard, openCardOf, openTileBarOf } from './support'
 
-// Dropping the active ticket on Complete asks, in the Close dialog, what to do with its work.
+// Close on the active ticket's card, with no chat connected, asks in the Close dialog what to do with its work. A drag
+// onto Complete asks the same, but at phone width Complete is off the page.
 async function openCloseDialog(page: Page): Promise<void> {
-  await dragCard(page, card(page, 'checkout-flow'), page.locator('.board-column[data-column="Complete"] .card-list').first())
+  await card(page, 'checkout-flow').getByRole('button', { name: 'Close' }).first().click()
   await expect(page.getByRole('dialog')).toBeVisible({ timeout: 8_000 })
 }
 
