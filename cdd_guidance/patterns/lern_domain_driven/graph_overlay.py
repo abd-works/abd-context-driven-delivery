@@ -214,7 +214,7 @@ class _LernReading:
             return "ServerSpec"
         if file.name.endswith(".story.domain.spec.ts"):
             return "DomainSpec"
-        if "playwright" in file.name and file.suffix == ".ts":
+        if ("playwright" in file.name or file.name.endswith(".story.ui.spec.ts")) and file.suffix == ".ts":
             return "PlaywrightSpec"
         return None
 
