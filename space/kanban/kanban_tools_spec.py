@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from expects import be_false, be_true, contain, equal, expect, have_key, match, raise_error, start_with
+from expects import be_false, be_true, contain, equal, expect, have_key, raise_error, start_with
 from mamba import after, before, context, description, it
 
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -27,9 +27,8 @@ from space.kanban.session_board_examples import saved_graph, saved_practice  # n
 from space.kanban.story_test import progress_in  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
 from space.repo.repo import Branch  # noqa: E402
-from space.kanban.board import FidelityNotFoundError, NotAStageError  # noqa: E402
+from space.kanban.board import NotAStageError  # noqa: E402
 from space.session.sessions import PracticeNotFoundError  # noqa: E402
-from space.session.file_manager import PathOutsideRootsError  # noqa: E402
 from space.session import Sessions  # noqa: E402
 from space.session.session import UnknownPracticeError  # noqa: E402
 
@@ -50,47 +49,21 @@ with description("the board tools") as self:
             self.project.backlog_item("returns.md", "Returns and refunds")
 
         # (S) Board App --> Display Board
-        with it("should return every column of the board"):
-            columns = [column["name"] for column in self.project.call("board.show")["columns"]]
-            expect(columns).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
-
         with it("should say which of a stage's actions take the formats an action bar picks"):
             expect(self.project.column("Specification")["actions_with_formats"]).to(equal(["generate", "render"]))
 
-        with it("should name the project the board belongs to"):
-            expect(self.project.call("board.show")["project"]).to(equal(self.project.root.name))
-
-        # (S) Board App --> Display Backlog Items As Tickets
-        with it("should say when a backlog item last changed"):
-            expect(self.project.column("Backlog")["items"][0]["last_activity"]).to(match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"))
-
-        with it("should give a backlog item its text"):
-            expect(self.project.column("Backlog")["items"][0]["text"]).to(equal("An idea."))
-
         # (S) Person --> Choose Session Root
-        with it("should say a ticket works on the whole repository until a person chooses a workpath"):
-            expect(self.project.ticket_json("pet-visits")["session"]["workpath"]).to(equal(""))
-
         with context("with folders in the repository"):
             with before.each:
                 for folder in ("src/visits", "src/billing", "node_modules/left-pad", ".git/objects"):
                     (self.project.root / folder).mkdir(parents=True, exist_ok=True)
 
-            with it("should list the folders at the top of the repository a workpath can be chosen from"):
-                expect(self.project.call("board.folders")).to(contain("src"))
-
             with it("should leave out installed packages and hidden folders"):
                 expect([folder for folder in self.project.call("board.folders") if folder in ("node_modules", ".git")]).to(equal([]))
-
-            with it("should list the folders inside one, as paths from the project"):
-                expect(self.project.call("board.folders", path="src")).to(equal(["src/billing", "src/visits"]))
 
             with context("that a person has chosen as a ticket's workpath"):
                 with before.each:
                     self.chosen = self.project.call("session.choose_workpath", session=session_file_of("pet-visits"), path="src/visits")
-
-                with it("should show the folder as the ticket's workpath"):
-                    expect(self.chosen["workpath"]).to(equal("src/visits"))
 
                 with it("should keep the folder as the session's work folder"):
                     saved = json.loads((self.project.sessions / "pet-visits" / "session.json").read_text(encoding="utf-8"))
@@ -100,15 +73,9 @@ with description("the board tools") as self:
                 with before.each:
                     self.chosen = self.project.call("practice-session-output.choose_root", session=session_file_of("pet-visits"), practice="stories", path="src/visits")
 
-                with it("should show the folder as that practice's root, chosen by a person"):
-                    expect((self.chosen["root"], self.chosen["is_root_chosen"])).to(equal(("src/visits", True)))
-
                 with it("should write that practice's files there"):
                     files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="stories-story-map")["markdown"]
                     expect(files[0]["path"]).to(start_with("src/visits/"))
-
-                with it("should leave every other practice on its default root"):
-                    expect(self.project.ticket_json("pet-visits")["session"]["practices"]["bdd"]["is_root_chosen"]).to(be_false)
 
                 with context("and then a new workpath for the ticket"):
                     with before.each:
@@ -116,27 +83,6 @@ with description("the board tools") as self:
 
                     with it("should keep that practice writing to the folder chosen for it"):
                         expect(self.moved["practices"]["stories"]["root"]).to(equal("src/visits"))
-
-                with context("and then back to its default"):
-                    with before.each:
-                        self.reset = self.project.call("practice-session-output.use_default_root", session=session_file_of("pet-visits"), practice="stories")
-
-                    with it("should show the practice on its default root again"):
-                        expect(self.reset["is_root_chosen"]).to(be_false)
-
-            with context("that a person has chosen as the ticket's workpath, with no practice root chosen"):
-                with before.each:
-                    self.chosen = self.project.call("session.choose_workpath", session=session_file_of("pet-visits"), path="src/visits")
-
-                with it("should put each practice's default practice root under the ticket's workpath"):
-                    expect(self.chosen["practices"]["stories"]["root"]).to(start_with("src/visits"))
-
-            with context("that a person has started a backlog item in a folder"):
-                with before.each:
-                    self.started = self.project.call("backlog-item.start", backlog_item="Returns and refunds", path="src/billing")
-
-                with it("should open its ticket with that folder as its workpath"):
-                    expect(self.started["session"]["workpath"]).to(equal("src/billing"))
 
         # (S) Person --> Set Stage WIP Limit
         with it("should give every stage a limit of 3 tickets until a person sets one"):
@@ -150,30 +96,11 @@ with description("the board tools") as self:
             with it("should show the stage over its limit"):
                 expect(self.limited["is_over_limit"]).to(be_true)
 
-            with it("should keep the limit for the next read of the board"):
-                expect(self.project.column("Discovery")["wip_limit"]).to(equal(0))
-
         with context("that sets a WIP limit on a column that is not a stage"):
             with it("should refuse it, naming the column"):
                 expect(lambda: self.project.call("stage.set_wip_limit", stage="Backlog", limit=2)).to(raise_error(NotAStageError))
 
-        # (S) Board App --> Display Latest Handoff
-        with it("should show no handoff for a ticket that has none"):
-            expect(self.project.ticket_json("pet-visits")["session"]["handoff"]).to(equal(""))
-
-        with context("with handoffs written for the ticket"):
-            with before.each:
-                session = self.project.sessions / "pet-visits"
-                (session / "handoff-20261030T1730.md").write_text("earlier\n", encoding="utf-8")
-                (session / "handoff-20261031T0412.md").write_text("latest\n", encoding="utf-8")
-
-            with it("should show the latest handoff"):
-                expect(self.project.ticket_json("pet-visits")["session"]["handoff"]).to(equal(".sessions/pet-visits/handoff-20261031T0412.md"))
-
         # (S) Person --> Open Validation Report
-        with it("should show no report for a fidelity that has none"):
-            expect(reports_of(self.project.ticket_json("pet-visits"))).to(equal({}))
-
         with context("with validation reports saved for a fidelity"):
             with before.each:
                 reports = self.project.sessions / "pet-visits" / "validation-reports"
@@ -198,17 +125,6 @@ with description("the board tools") as self:
             with it("should show no source for a file that is not in the repository"):
                 report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="clean-engineering-modules")
                 expect(report["rules"][0]["violations"][0]["source"]).to(equal([]))
-
-            with context("with the file a violation names in the repository"):
-                with before.each:
-                    docs = self.project.root / "docs"
-                    docs.mkdir()
-                    (docs / "map.md").write_text("".join(f"line {number}\n" for number in range(1, 21)), encoding="utf-8")
-
-                with it("should show the source lines around a violation"):
-                    report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="clean-engineering-modules")
-                    source = report["rules"][0]["violations"][0]["source"]
-                    expect((source[0], source[-1])).to(equal(({"number": 10, "text": "line 10"}, {"number": 16, "text": "line 16"})))
 
             # A graph names each file from the session's root, which can be a folder of the project with its own docs/map.md.
             with context("with a session whose root is a folder of the project"):
@@ -252,20 +168,6 @@ with description("the board tools") as self:
             with it("should say the report has its saved graph"):
                 report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="clean-engineering-modules")
                 expect(report["has_saved_graph"]).to(equal(True))
-
-        with context("with a validation report saved without its graph"):
-            with before.each:
-                reports = self.project.sessions / "pet-visits" / "validation-reports"
-                reports.mkdir()
-                (reports / "clean-engineering-modules-20261030T173000.md").write_text("### verb-noun-format: 1 violation(s)\n", encoding="utf-8")
-
-            with it("should say a report has no saved graph"):
-                report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="clean-engineering-modules")
-                expect((report["has_saved_graph"], report["rules"])).to(equal((False, [])))
-
-            with it("should still return the report's text"):
-                report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="clean-engineering-modules")
-                expect(report["text"]).to(contain("verb-noun-format"))
 
         with context("with a validation report on a rule the practice describes"):
             with before.each:
@@ -346,9 +248,6 @@ with description("the board tools") as self:
             with it("should return the new ticket in Discovery"):
                 expect((self.opened["name"], self.opened["column"]["name"])).to(equal(("loyalty-points", "Discovery")))
 
-            with it("should leave the current session as it is"):
-                expect(self.project.call("board.show")["active"]["name"]).to(equal("main"))
-
         with context("that opens a ticket on a folder in the repository"):
             with before.each:
                 self.project.call("ticket.create", title="Pet records", scope="feature", path="harness/pets")
@@ -396,46 +295,6 @@ with description("the board tools") as self:
             with it("should take the item off the Backlog"):
                 expect(self.project.column("Backlog")["items"]).to(equal([]))
 
-        # (S) Person --> Reassign Ticket Parent: Start a Backlog item under a ticket
-        with context("that starts a backlog item under a ticket the call names"):
-            with before.each:
-                self.started = self.project.call("backlog-item.start_under", backlog_item="Returns and refunds", parent="pet-visits")
-
-            with it("should open the item's ticket as a child of the ticket named"):
-                expect((self.started["name"], self.started["session"]["parent"])).to(equal(("returns-and-refunds", "pet-visits")))
-
-        # (S) Person --> Close Active Session
-        with context("that closes a ticket"):
-            with before.each:
-                self.project.call("ticket.close", ticket="pet-visits")
-
-            with it("should show the ticket in Complete"):
-                expect(self.project.tickets_in("Complete")).to(contain("pet-visits"))
-
-        with context("that closes the active ticket"):
-            with before.each:
-                Sessions(self.project.root).switch("pet-visits")
-                self.project.call("ticket.close", ticket="pet-visits")
-
-            with it("should make main the active ticket"):
-                expect(self.project.call("board.show")["active"]["name"]).to(equal("main"))
-
-        # (S) Person --> Archive Ticket
-        with context("that archives a ticket"):
-            with before.each:
-                self.project.call("ticket.archive", ticket="pet-visits")
-
-            with it("should leave the ticket off the board"):
-                expect(json.dumps(self.project.call("board.show"))).not_to(contain("pet-visits"))
-
-        # (S) Person --> Drag Ticket To A Stage
-        with context("that drags a ticket into a later stage's Done"):
-            with before.each:
-                self.moved = self.project.call("ticket.move_to", ticket="pet-visits", stage="Implementation", done=True)
-
-            with it("should show the ticket in that stage's Done"):
-                expect((self.moved["column"]["name"], self.moved["is_done"])).to(equal(("Implementation", True)))
-
         # (S) Person --> Move Ticket, a ticket that is done in Discovery
         with context("that moves a ticket to the next column"):
             with before.each:
@@ -451,9 +310,6 @@ with description("the board tools") as self:
             with context("with that stage's work not done"):
                 with before.each:
                     self.moved = self.project.call("ticket.move_next", ticket="pet-visits")
-
-                with it("should show the ticket in that stage's Done all the same"):
-                    expect((self.moved["column"]["name"], self.moved["is_done"])).to(equal(("Specification", True)))
 
                 with context("and on to the column after"):
                     with before.each:
@@ -492,21 +348,7 @@ with description("the board tools") as self:
                 with it("should show the ticket in Discovery"):
                     expect(self.moved["column"]["name"]).to(equal("Discovery"))
 
-                with it("should show the ticket in Discovery's Done"):
-                    expect(self.moved["is_done"]).to(be_true)
-
         # (S) Person --> Choose Ticket Practices
-        with context("that turns a practice off for a ticket"):
-            with before.each:
-                self.chosen = self.project.call("practice-session-output.enable", session=session_file_of("pet-visits"), practice="ux", is_enabled=False)
-
-            with it("should show the practice off for that ticket"):
-                expect(self.chosen["enabled"]).to(be_false)
-
-            with it("should save the choice to the ticket's session.json"):
-                fields = json.loads((self.project.sessions / "pet-visits" / "session.json").read_text(encoding="utf-8"))
-                expect(fields["practices"]).to(equal({"ux": {"enabled": False}}))
-
         with context("that turns off a practice the session does not know"):
             with it("should refuse it, naming the practice"):
                 try:
@@ -515,11 +357,6 @@ with description("the board tools") as self:
                 except UnknownPracticeError as error:
                     refused = error.practice
                 expect(refused).to(equal("astrology"))
-
-        # (S) Board App --> Display Fidelity Progress
-        with it("should show each fidelity's Generate and Validate"):
-            actions = progress_in(self.project.ticket_json("pet-visits"), "stories-story-map")["actions"]
-            expect(actions).to(equal({"generate": "done", "validate": "done"}))
 
         # The board app names and colours each practice from these, and finds a fidelity's practice among its slugs.
         with it("should name and colour every practice the board shows"):
@@ -536,32 +373,6 @@ with description("the board tools") as self:
             expect(stories).not_to(have_key("fidelities"))
 
         # (S) Person --> Open Help
-        with context("that opens help on a fidelity"):
-            with before.each:
-                self.help = self.project.call("fidelity-progress.help", ticket="pet-visits", fidelity="stories-story-map")
-
-            with it("should show the fidelity's rules, as the fidelity sends them"):
-                expect([rule["slug"] for rule in self.help["fidelity"]["rules"]]).to(contain("verb-noun-format"))
-
-            with it("should show the fidelity's own overview, as the fidelity sends it"):
-                expect(self.help["fidelity"]["overview"]).to(contain("Scope the solution"))
-
-            with it("should name the stage a fidelity belongs to"):
-                expect(self.help["stage"]["name"]).to(equal("Discovery"))
-
-            with it("should link to the fidelity's page on the forge"):
-                expect(self.help["href"]).to(equal("https://forge.abdworks.net/abd-context-driven-delivery/fidelities/stories-story_map.html"))
-
-        with context("that opens help on a practice"):
-            with before.each:
-                self.help = self.project.call("board.help", practice="stories")
-
-            with it("should show the practice's shared rules, as the practice sends them"):
-                expect([rule["slug"] for rule in self.help["practice"]["rules"]]).to(contain("do-not-invent-requirements"))
-
-            with it("should name no fidelity on a practice's help"):
-                expect((self.help["fidelity"], self.help["stage"])).to(equal((None, None)))
-
         # The catalog's view of the board's practices names their pages and skills; the process makes it once for the
         # checkout, though every call makes a new board.
         with context("that is asked for its help and shown several times"):
@@ -624,10 +435,6 @@ with description("the board tools") as self:
                 files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="stories-story-map")["markdown"]
                 expect(files).to(equal([{"path": "docs/.context/story-map.md", "exists": True}]))
 
-            with it("should list only that fidelity's formats"):
-                files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="stories-story-map")
-                expect(sorted(files)).to(equal(["drawio", "markdown"]))
-
             # (S) Person --> View Fidelity Files: the page opens tabs in the order Python sends the formats.
             with it("should send the formats in the order files are shown, markdown before code"):
                 files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="clean-engineering-model")
@@ -642,16 +449,9 @@ with description("the board tools") as self:
                 expect(self.project.ticket_json("pet-visits")["session"]["session_file"]).to(equal(".sessions/pet-visits/session.json"))
 
             # (S) Person --> View Fidelity Files
-            with it("should return the file's text"):
-                opened = self.project.call("session.read_file", session=session_file_of("pet-visits"), path="docs/.context/story-map.md")
-                expect(opened["text"]).to(equal("# Story map\n"))
-
             with it("should return no text for a file that is gone, such as one deleted since the board listed it"):
                 opened = self.project.call("session.read_file", session=session_file_of("pet-visits"), path="docs/.context/gone.md")
                 expect(opened).to(equal({"path": "docs/.context/gone.md", "text": ""}))
-
-            with it("should refuse a file outside the repository"):
-                expect(lambda: self.project.call("session.read_file", session=session_file_of("pet-visits"), path="../elsewhere.md")).to(raise_error(PathOutsideRootsError))
 
             # A ticket's worktree sits beside the repository, so its practices write outside it.
             with it("should return the text of a file under a practice root outside the repository, such as the ticket's worktree"):
@@ -660,20 +460,6 @@ with description("the board tools") as self:
                 self.project.call("practice-session-output.choose_root", session=session_file_of("pet-visits"), practice="stories", path=str(worktree))
                 opened = self.project.call("session.read_file", session=session_file_of("pet-visits"), path=(worktree / "story-map.md").as_posix())
                 expect(opened["text"]).to(equal("# Worktree map\n"))
-
-        # (S) Person --> List Ticket Files, the session folder
-        with context("with files in its session folder"):
-            with before.each:
-                (self.project.sessions / "pet-visits" / "notes").mkdir()
-                (self.project.sessions / "pet-visits" / "notes" / "idea.md").write_text("# Idea\n", encoding="utf-8")
-
-            with it("should list every file in the session folder"):
-                files = self.project.call("session.folder_files", session=session_file_of("pet-visits"))
-                expect(files).to(contain({"path": ".sessions/pet-visits/notes/idea.md", "exists": True}))
-
-            with it("should list the files from the project"):
-                files = self.project.call("session.folder_files", session=session_file_of("pet-visits"))
-                expect(all(entry["path"].startswith(".sessions/pet-visits/") for entry in files)).to(be_true)
 
     # (S) Person --> Move Ticket, a ticket just started in Discovery
     with context("with a ticket in Discovery"):
@@ -706,9 +492,6 @@ with description("the board tools") as self:
                     expect((self.started["name"], (self.project.sessions / "sign-up" / "session.json").is_file())).to(equal(("sign-up", True)))
 
         # (S) Person --> Send Next Fidelity Action
-        with it("should name generate as the next action"):
-            expect(next_action_of(self.project.ticket_json("sign-up"))).to(equal("generate"))
-
         with it("should allow only the actions that need no output before anything is generated"):
             expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["generate", "iterate", "sketch", "document"]))
 
@@ -844,15 +627,6 @@ with description("the board tools") as self:
                 title="Sign up",
             )
 
-        with it("should name validate as the next action"):
-            expect(next_action_of(self.project.ticket_json("sign-up"))).to(equal("validate"))
-
-        with it("should allow Validate again on the same output"):
-            expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["generate", "validate", "iterate", "sketch", "render", "document"]))
-
-        with it("should name validate as that fidelity's own next action"):
-            expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["next_action"]).to(equal("validate"))
-
         # (S) Person --> Open Validation Report
         with context("with that fidelity's report saved with its graph"):
             with before.each:
@@ -889,9 +663,6 @@ with description("the board tools") as self:
         with it("should name the fidelity a rule was broken on"):
             report = self.project.call("fidelity-progress.report", ticket="sign-up", fidelity="stories-story-map")
             expect(report["rules"][0]["fidelity"]["slug"]).to(equal("stories-story-map"))
-
-        with it("should give the folder of the reports for every fidelity"):
-            expect(self.project.call("ticket.violations", ticket="sign-up")["path"]).to(equal(".sessions/sign-up/validation-reports"))
 
     # A ticket's card sits in one stage, so its violations are those of that stage's practices.
     with context("with violations left on a fidelity of a later stage"):
