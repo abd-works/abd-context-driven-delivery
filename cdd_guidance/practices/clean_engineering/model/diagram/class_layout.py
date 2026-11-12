@@ -309,10 +309,16 @@ class _ArrowSearch:
         heading_out: Heading,
         heading_in: Heading,
         respect_held_ports: bool = True,
+        trunk: Iterable[Point] = (),
     ) -> None:
         self._grid = grid
         self._owner = owner
         self._respect_held_ports = respect_held_ports
+        # The lines of the arrow's own inheritance trunk: the search ends where it meets them, and may come up to them.
+        self._trunk = set(trunk)
+        self._beside_trunk = {(x + across, y + along) for x, y in self._trunk for across in (-1, 0, 1) for along in (-1, 0, 1)}
+        goals = self._trunk | {end}
+        self._goal_box = (min(x for x, _ in goals), min(y for _, y in goals), max(x for x, _ in goals), max(y for _, y in goals))
         self._begin = begin
         self._end = end
         self._heading_out = heading_out
@@ -327,7 +333,7 @@ class _ArrowSearch:
             _estimate, cost, cell, heading = heapq.heappop(frontier)
             if cost > best[(cell, heading)]:
                 continue
-            if cell == self._end and heading == self._heading_in:
+            if (cell == self._end and heading == self._heading_in) or cell in self._trunk:
                 return self._walk_back((cell, heading))
             for step in self._steps(cell, heading):
                 following = (cell[0] + step[0], cell[1] + step[1])
@@ -340,7 +346,10 @@ class _ArrowSearch:
         return None
 
     def _distance_left(self, cell: Point) -> int:
-        return abs(cell[0] - self._end[0]) + abs(cell[1] - self._end[1])
+        """How far the nearest place this arrow may end can be at least: the box around its port on the base and every
+        cell of its trunk."""
+        left, top, right, bottom = self._goal_box
+        return max(left - cell[0], 0, cell[0] - right) + max(top - cell[1], 0, cell[1] - bottom)
 
     def _steps(self, cell: Point, heading: Heading) -> List[Heading]:
         reverse = (-heading[0], -heading[1])
@@ -349,18 +358,31 @@ class _ArrowSearch:
     def _can_step(self, cell: Point, heading: Heading, step: Heading) -> bool:
         grid = self._grid
         following = (cell[0] + step[0], cell[1] + step[1])
-        if not grid.contains(following) or (following in grid.blocked and following != self._end):
+        if not grid.contains(following):
+            return False
+        if following in self._trunk:
+            return True
+        if following in grid.blocked and following != self._end:
             return False
         if self._respect_held_ports and grid.is_held_against(following, step, self._owner):
             return False
+        if following in self._beside_trunk:
+            return step == heading and self._heads_into_trunk(following, step)
         along = grid.horizontal if step[0] else grid.vertical
         if following in along or cell in along:
             return False
         return step == heading or not grid.carries_arrow(cell)
 
+    def _heads_into_trunk(self, cell: Point, step: Heading) -> bool:
+        """True when going on straight meets the trunk within its spacing, so the arrow joins it head-on instead of
+        running alongside it."""
+        reach = range(1, ARROW_SPACING_STEPS + 2)
+        return any((cell[0] + step[0] * distance, cell[1] + step[1] * distance) in self._trunk for distance in reach)
+
     def _price(self, following: Point, heading: Heading, step: Heading) -> int:
         across = self._grid.vertical if step[0] else self._grid.horizontal
-        return 1 + (TURN_PRICE if step != heading else 0) + (CROSSING_PRICE if following in across else 0)
+        crossing = following in across and following not in self._beside_trunk
+        return 1 + (TURN_PRICE if step != heading else 0) + (CROSSING_PRICE if crossing else 0)
 
     def _walk_back(self, last: Tuple[Point, Heading]) -> List[Point]:
         steps = [last]
@@ -454,18 +476,45 @@ class ArrowRouter:
     def _grid_with_trunks(self) -> _RouteGrid:
         """Lay every inheritance trunk before the other arrows, so they find their way around it.
 
-        A trunk whose lines would cross a card or run along another arrow breaks up into its own arrows, each with its
-        own point on the base, and the ports are shared out again."""
+        A trunk whose straight bar would cross a card or run along another arrow is searched instead, around what is in
+        its way. Only a trunk no search can lay breaks up into its own arrows, each with its own point on the base, and
+        the ports are shared out again."""
         self._trunks = self._shared_bases()
         while True:
             self._assign_ports()
             for arrow in self._arrows:
                 arrow.routed, arrow.corners, arrow.cells = False, [], []
             grid = self._grid_without(None)
-            broken = [trunk for trunk in self._trunks if not trunk.draw(grid)]
+            broken = [trunk for trunk in self._trunks if not trunk.draw(grid) and not self._search_trunk(trunk, grid)]
             if not broken:
                 return grid
             self._trunks = [trunk for trunk in self._trunks if trunk not in broken]
+
+    def _search_trunk(self, trunk: _InheritanceTrunk, grid: _RouteGrid) -> bool:
+        """Grow the tree one subclass at a time, nearest the base first: the first arrow searches its way to the base,
+        and each later one searches until it meets a line already laid, then follows that line to the base."""
+        to_base: Dict[Point, List[Point]] = {}
+        for arrow in sorted(trunk.arrows, key=self._length_between_cards):
+            cells = self._search_cells(arrow, grid, id(trunk), to_base)
+            if cells is None:
+                return False
+            whole = cells + to_base.get(cells[-1], [cells[-1]])[1:]
+            for index, cell in enumerate(whole):
+                to_base.setdefault(cell, whole[index:])
+            grid.claim(cells)
+            arrow.cells, arrow.routed = whole, True
+            arrow.corners = self._corners(arrow.exit_point, whole, arrow.entry_point)
+        return True
+
+    def _search_cells(self, arrow: DiagramArrow, grid: _RouteGrid, owner: int, trunk: Iterable[Point] = ()) -> Optional[List[Point]]:
+        """The cells of this arrow's cheapest way, keeping clear of other arrows' ports when it can."""
+        out, into = _HEADINGS[arrow.exit_side], _HEADINGS[arrow.entry_side]
+        begin, end = self._stub_end(arrow.exit_point, out), self._stub_end(arrow.entry_point, into)
+        heading_in = (-into[0], -into[1])
+        cells = _ArrowSearch(grid, owner, begin, end, out, heading_in, trunk=trunk).run()
+        if cells is None:
+            cells = _ArrowSearch(grid, owner, begin, end, out, heading_in, respect_held_ports=False, trunk=trunk).run()
+        return cells
 
     def _shared_bases(self) -> List[_InheritanceTrunk]:
         """One trunk for each base two or more subclasses reach from the same side. One subclass keeps its own arrow."""
@@ -601,13 +650,7 @@ class ArrowRouter:
         return (int(card.x + (card.width if side == "right" else 0)), int(along))
 
     def _route_one(self, arrow: DiagramArrow, grid: _RouteGrid) -> None:
-        out, into = _HEADINGS[arrow.exit_side], _HEADINGS[arrow.entry_side]
-        begin = self._stub_end(arrow.exit_point, out)
-        end = self._stub_end(arrow.entry_point, into)
-        heading_in = (-into[0], -into[1])
-        cells = _ArrowSearch(grid, id(arrow), begin, end, out, heading_in).run()
-        if cells is None:
-            cells = _ArrowSearch(grid, id(arrow), begin, end, out, heading_in, respect_held_ports=False).run()
+        cells = self._search_cells(arrow, grid, id(arrow))
         arrow.routed = cells is not None
         arrow.corners = []
         arrow.cells = cells or []
