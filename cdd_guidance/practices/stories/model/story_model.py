@@ -1081,6 +1081,24 @@ class StoryModel(StoryNode):
                     story.backgrounds = list(read.backgrounds)
                     story.scenarios = list(read.scenarios)
 
+    def add_scenarios(self, stories: List["Story"], file: str) -> None:
+        """Add the scenarios of each of stories, read from the story file at file, to every Story of the same name in
+        this model, after the ones it holds: a story whose scenarios are written in several files, such as its shared
+        story file and its screen spec, holds them all."""
+        for read in stories:
+            for scenario in read.scenarios:
+                scenario.source = source_at(file)
+            for story in self.every_story():
+                if story.name == read.name:
+                    story.scenarios = [*story.scenarios, *read.scenarios]
+
+    def drop_scenarios(self) -> None:
+        """Take every story's scenarios and backgrounds away, leaving the map: at a fidelity whose scenarios come from
+        other files, the ones the map's own story tests hold are not read."""
+        for story in self.every_story():
+            story.scenarios = []
+            story.backgrounds = []
+
     def every_epic(self) -> List[Epic]:
         """Every epic and nested epic, each before its own children."""
         return [found for epic in self.epics for found in epic.every_epic()]

@@ -631,9 +631,7 @@ class CodeStoryModel(StoryModel):
 
     def _take_stories(self, holder: Epic, content: str, source_file: str) -> None:
         """The file's stories onto the sub-epic that holds them, each with where it is and the code it was written with."""
-        code = self.story_file(content)
-        read = code.stories(self.story_type, source_file) if code is not None else None
-        stories, written = read if read is not None else (self.story_type.load_all(content), None)
+        stories, written = self.stories_of(content, source_file)
         for story in stories:
             if source_file and not story.has_source_file:
                 line = _quoted_name_line(content, story.name)
@@ -642,6 +640,14 @@ class CodeStoryModel(StoryModel):
         if written is not None:
             written.key = holder.name
             holder.written = written
+
+    def stories_of(self, content: str, source_file: str, project: Optional[Path] = None) -> tuple:
+        """The stories of one story file at source_file, each with the code its scenarios and steps are written with,
+        and the file's own code around them; none of that code when this language does not read a file's blocks. A
+        story file that reads other files of project, such as an examples module, finds them there."""
+        code = self.story_file(content)
+        read = code.stories(self.story_type, source_file) if code is not None else None
+        return read if read is not None else (self.story_type.stories_in(content, project), None)
 
     def sub_epic_for(self, epic: Epic, slugs: List[str]) -> Epic:
         parent = epic
