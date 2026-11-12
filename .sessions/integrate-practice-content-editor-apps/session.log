@@ -1,3 +1,5 @@
 2026-11-12T21:59:31Z --- 1
 2026-11-12T21:59:31Z backlog C:\dev\abd-context-driven-delivery\.sessions\_backlog\integrate-practice-content-editor-apps.md
 2026-11-12T22:28:34Z tool sessions.switch 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-63
+2026-11-12T22:33:33Z error session.read_file C:\dev\abd-context-driven-delivery\.sessions\integrate-practice-content-editor-apps\session.err 1 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-158
+2026-11-12T22:36:19Z tool ticket.choose_overlays 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-158

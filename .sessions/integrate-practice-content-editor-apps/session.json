@@ -18,5 +18,8 @@
     "stories": {
       "enabled": true
     }
-  }
+  },
+  "overlays": [
+    "cdd_web_domain_access"
+  ]
 }
