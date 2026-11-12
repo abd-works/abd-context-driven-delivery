@@ -319,8 +319,12 @@ class _ArrowSearch:
         respect_held_ports: bool = True,
         trunk: Iterable[Point] = (),
         window: Optional[Tuple[int, int, int, int]] = None,
+        may_run_along: bool = False,
     ) -> None:
         self._grid = grid
+        # A last resort: the arrow may run along or turn on another arrow, at the price of a crossing, when cards a person
+        # placed close together leave the only gap already taken.
+        self._may_run_along = may_run_along
         # The cells the search may use, as left, top, right, bottom; the whole page when None.
         self._window = window if window is not None else (0, 0, grid.columns - 1, grid.lines - 1)
         self._owner = owner
@@ -346,6 +350,7 @@ class _ArrowSearch:
         held_vertical, held_horizontal = self._cells_held_against()
         left, top, right, bottom = self._goal_box
         heading_in, came_from = self._heading_in, self._came_from
+        may_run_along = self._may_run_along
         # A card a person placed right against the port leaves no cell to come straight in from, so the arrow may
         # come in from the side for its last step.
         any_heading_in = (end[0] - heading_in[0], end[1] - heading_in[1]) in inside_cards
@@ -375,6 +380,7 @@ class _ArrowSearch:
                 if not (window_left <= fx <= window_right and window_top <= fy <= window_bottom):
                     continue
                 straight = step == heading
+                running_along = False
                 if following not in trunk:
                     if following in inside_cards and following != end:
                         continue
@@ -385,11 +391,15 @@ class _ArrowSearch:
                             continue
                     else:
                         if (following in horizontal or cell_in_horizontal) if step_x else (following in vertical or cell_in_vertical):
-                            continue
+                            if not may_run_along:
+                                continue
+                            running_along = True
                         if not straight and cell_carries_arrow:
-                            continue
+                            if not may_run_along:
+                                continue
+                            running_along = True
                 crossing = following in (vertical if step_x else horizontal) and following not in beside_trunk
-                total = cost + 1 + (0 if straight else TURN_PRICE) + (CROSSING_PRICE if crossing else 0)
+                total = cost + 1 + (0 if straight else TURN_PRICE) + (CROSSING_PRICE if crossing or running_along else 0)
                 if following in near_cards and following not in trunk and following != end:
                     total += CLEARANCE_PRICE
                 key = (following, step)
@@ -546,12 +556,15 @@ class ArrowRouter:
         begin, end = self._clear_stub_end(arrow.exit_point, out, grid), self._clear_stub_end(arrow.entry_point, into, grid)
         heading_in = (-into[0], -into[1])
         trunk = list(trunk)
-        for window in (self._window_around(grid, [begin, end] + trunk), None):
-            for respect_held_ports in (True, False):
-                cells = _ArrowSearch(grid, owner, begin, end, out, heading_in, respect_held_ports, trunk, window).run()
-                if cells is not None:
-                    return cells
-        return None
+        window = self._window_around(grid, [begin, end] + trunk)
+        # In the window round the arrow: clear of other arrows' ports, then past them, then along other arrows; only then
+        # over the whole page. A search that finds no way walks its whole area, so the page is searched last.
+        tries = ((window, True, False), (window, False, False), (window, False, True), (None, False, False))
+        for area, respect_held_ports, may_run_along in tries:
+            cells = _ArrowSearch(grid, owner, begin, end, out, heading_in, respect_held_ports, trunk, area, may_run_along).run()
+            if cells is not None:
+                return cells
+        return _ArrowSearch(grid, owner, begin, end, out, heading_in, False, trunk, None, True).run()
 
     def _window_around(self, grid: _RouteGrid, cells: List[Point]) -> Tuple[int, int, int, int]:
         """The part of the page an arrow is searched in first: the box round its ends and its trunk, with room to go
