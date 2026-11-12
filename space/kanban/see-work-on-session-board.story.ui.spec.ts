@@ -302,6 +302,27 @@ test.describe('Display Ticket Details', () => {
   })
 })
 
+// Scenarios: see_work_on_session_board_story.test.md, story Expand Ticket From Empty Area; one test per scenario.
+test.describe('Expand Ticket From Empty Area', () => {
+  test('Expand a card from an empty area', async ({ page }) => {
+    await openBoard(page)
+    await expect(openCard(page, 'checkout-flow')).toHaveCount(0)
+    await card(page, 'checkout-flow').getByRole('button', { name: 'Show Checkout flow' }).click({ position: { x: 4, y: 4 } })
+    await expect(openCard(page, 'checkout-flow').locator('[data-tile]')).toHaveCount(DISCOVERY_FIDELITIES.length)
+    await expect(page.locator('.details-title h2')).toHaveText('Checkout flow')
+  })
+
+  // The card's own controls each do their work without opening the card. The scenario names the stories tile; a
+  // collapsed card holds no tiles, and its segments open the card on purpose (Open a card on the fidelity of a pressed
+  // segment), so this presses the card's folder control, which opens the files panel on the card's fidelities.
+  test("Leave a card's controls to do their own work", async ({ page }) => {
+    await openBoard(page)
+    await openFilesOf(page, 'checkout-flow')
+    await expect(page.locator('[data-panel="files"]')).toBeVisible()
+    await expect(openCard(page, 'checkout-flow')).toHaveCount(0)
+  })
+})
+
 test.describe('Set Stage WIP Limit', () => {
   test.describe('Change nothing for a limit that is not a whole number', () => {
     test.beforeEach(async ({ page }) => {
