@@ -25,6 +25,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
 from harness.mcp.mcp_server import McpServer
 from space.session import Sessions
 from space.session.throwaway_project import ThrowawayProject
+import cdd_guidance.patterns  # noqa: F401 - registers the patterns a session can overlay
 
 
 def _made_for(project):
@@ -108,6 +109,18 @@ with description("a generate action on practice guidance") as self:
         with it("should say where each format of the artifact is saved"):
             prose = _expanded_generate(self.action, {"guidance": ["stories-story-map"]}).instructions
             expect(prose).to(contain(f"{self.project.resolve().as_posix()}/.context/story-map.md"))
+
+        with context("whose session overlays a pattern"):
+            with before.each:
+                session = Sessions(self.project).current()
+                session.choose_overlays(["lern_domain_driven"])
+                self.prose = _expanded_generate(_made_for(self.project), {"guidance": ["stories-story-map"]}).instructions
+
+            with it("should record the pattern in the patterns file of the folder it writes"):
+                expect((self.project / ".context" / "patterns.md").read_text(encoding="utf-8")).to(contain("- lern_domain_driven"))
+
+            with it("should name the roles a folder can hold of the pattern"):
+                expect(self.prose).to(contain("- lern_domain_driven: Boot, View, Client, Routes, Node, Domain, Store"))
 
         with context("that generates a fidelity in a format its earlier fidelity has no file in, but another format it has"):
             with before.each:

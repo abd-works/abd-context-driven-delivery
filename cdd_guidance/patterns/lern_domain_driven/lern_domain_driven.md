@@ -465,7 +465,7 @@ heading and skip the question.
 
 ## Generate
 
-A session that overlays this pattern applies it to every story its ticket names, unless a story says `Overlays: none`.
+Content is held to this pattern when the `.context/patterns.md` at the root of its folder names it. Generate in a session that overlays this pattern records it there, with the layers the folder holds (its roles) when the aggregate's layers sit in several folders.
 
 1. Follow **session_guidance**. Scaffold each aggregate under
    `src/<boundedContext>/<aggregate>/` (`<aggregate>.ts`, `<aggregate>-node.ts`,

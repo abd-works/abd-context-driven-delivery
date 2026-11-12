@@ -7,7 +7,6 @@ from pathlib import Path
 
 _HEADING = "# "
 _STORY = re.compile(r"^#+\s*Story:\s*(.+?)\s*$")
-_NO_OVERLAYS = re.compile(r"^\s*\**overlays:?\**:?\s*none\b", re.IGNORECASE)
 
 
 class IdeaFile:
@@ -42,11 +41,6 @@ class IdeaFile:
     def stories(self) -> list[str]:
         """The stories it names under its `Story:` headings, in order: the stories its work is about."""
         return [story for story, _ in self._story_sections()]
-
-    @property
-    def stories_without_overlays(self) -> list[str]:
-        """The stories whose section says `Overlays: none`: the ones the session's pattern overlays do not apply to."""
-        return [story for story, lines in self._story_sections() if any(_NO_OVERLAYS.match(line) for line in lines)]
 
     def _story_sections(self) -> list[tuple[str, list[str]]]:
         """Each `Story:` heading's name and the lines under it, up to the next heading."""

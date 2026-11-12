@@ -19,7 +19,6 @@ _TICKET = """# Maintain Tickets On Board
 #### Story: Tag Ticket Session
 
 *Person*. Tags show on the card.
-Overlays: none
 
 ### Feature: Organize Ticket Hierarchy
 
@@ -36,9 +35,6 @@ with description("an idea file") as self:
 
         with it("should list its stories in order"):
             expect(self.idea.stories).to(equal(["Edit Ticket Text", "Tag Ticket Session", "Add Child Ticket"]))
-
-        with it("should name the stories that leave out the session's overlays"):
-            expect(self.idea.stories_without_overlays).to(equal(["Tag Ticket Session"]))
 
     with context("that is not there"):
         with it("should name no stories"):
