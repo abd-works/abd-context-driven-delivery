@@ -15,13 +15,14 @@ from __future__ import annotations
 
 import json
 
-from expects import be_none, equal, expect
+from expects import be_none, contain, equal, expect
 
 from space.kanban.session_board_examples import (
     BILLING_REPORT,
     CHECKOUT_FLOW,
     CONFIRM_ORDER_CHILD,
     CONFIRM_ORDER_DONE_IN_DISCOVERY,
+    GIFT_CARDS_IN_BACKLOG,
     ENTER_CARD_DETAILS,
     ENTER_CARD_DETAILS_CHILD,
     ENTER_CARD_DETAILS_IN_SPECIFICATION,
@@ -29,10 +30,13 @@ from space.kanban.session_board_examples import (
     PET_VISITS,
     PULLED_OUT_TITLE,
 )
-from space.kanban.story_test import SharedStories, children_in, expect_placed, expect_refused, refusal_of, ticket_in
-from space.kanban.ticket import ParentMovesWithChildrenError
+from space.kanban.story_test import SharedStories, children_in, column_in, expect_placed, expect_refused, refusal_of, ticket_in
+from space.kanban.ticket import ParentLoopError, ParentMovesWithChildrenError
 
 shared_stories = SharedStories("Organize Ticket Hierarchy")
+
+# The ticket Gift cards opens as, named from its idea file.
+GIFT_CARDS_TICKET = "gift-cards"
 
 
 def board_of(world) -> dict:
@@ -89,7 +93,7 @@ def _(s):
     def _(world):
         world.project.seed_session(CHECKOUT_FLOW)
 
-    @s.when('the Person drags pet-visits onto checkout-flow')
+    @s.when('the Person makes pet-visits a child of checkout-flow')
     def _(world):
         # Board.ticket("pet-visits")
         #   <- pet-visits
@@ -116,7 +120,7 @@ def _(s):
         world.project.seed_session(CHECKOUT_FLOW)
         world.project.seed_session(ENTER_CARD_DETAILS_CHILD)
 
-    @s.when('the Person drags enter-card-details out of checkout-flow')
+    @s.when('the Person pulls enter-card-details out of checkout-flow')
     def _(world):
         # Board.ticket("enter-card-details")
         #   <- enter-card-details
@@ -175,7 +179,7 @@ def _(s):
     def _(world):
         world.project.seed_session(BILLING_REPORT)
 
-    @s.when('the Person drags enter-card-details onto billing-report')
+    @s.when('the Person makes billing-report the parent of enter-card-details')
     def _(world):
         # Board.ticket("enter-card-details")
         #   <- enter-card-details
@@ -206,7 +210,7 @@ def _(s):
         world.project.seed_session(CHECKOUT_FLOW)
         world.project.seed_session(ENTER_CARD_DETAILS_CHILD)
 
-    @s.when('the Person Alt-drags enter-card-details out of checkout-flow')
+    @s.when('the Person takes enter-card-details off checkout-flow')
     def _(world):
         # Board.ticket("enter-card-details")
         #   <- enter-card-details
@@ -227,6 +231,65 @@ def _(s):
     @s.and_("enter-card-details' session.json names no parent")
     def _(world):
         expect(saved_parent(world, ENTER_CARD_DETAILS_CHILD)).to(equal(""))
+
+
+@shared_stories.scenario("Reassign Ticket Parent", "Start a Backlog item under a ticket")
+def _(s):
+    @s.given('the backlog item Gift cards is in the Backlog')
+    def _(world):
+        world.project.seed_backlog_file(GIFT_CARDS_IN_BACKLOG)
+
+    @s.and_('the ticket checkout-flow is In progress in Discovery')
+    def _(world):
+        world.project.seed_session(CHECKOUT_FLOW)
+
+    @s.when('the Person starts Gift cards as a child of checkout-flow')
+    def _(world):
+        # Board.backlog_item("Gift cards")
+        #   <- Gift cards
+        # Board.ticket("checkout-flow")
+        #   <- checkout-flow
+        # Gift cards.start_under(checkout-flow)
+        #   -> self.start()
+        #   -> gift-cards.reassign_parent(checkout-flow)
+        #   <- gift-cards In progress in Discovery, its parent checkout-flow
+        world.BacklogItem.load(GIFT_CARDS_IN_BACKLOG.heading).start_under(world.Ticket.load(CHECKOUT_FLOW.name))
+
+    @s.then("checkout-flow's card holds gift-cards")
+    def _(world):
+        expect(children_in(card_of(world, CHECKOUT_FLOW.name))).to(equal([GIFT_CARDS_TICKET]))
+
+    @s.and_('the Backlog no longer shows Gift cards')
+    def _(world):
+        expect([item["title"] for item in column_in(board_of(world), "Backlog")["items"]]).not_to(contain(GIFT_CARDS_IN_BACKLOG.heading))
+
+
+@shared_stories.scenario("Reassign Ticket Parent", "Refuse to make a ticket a child of its own child")
+def _(s):
+    @s.given('the ticket checkout-flow holds its child ticket enter-card-details')
+    def _(world):
+        world.project.seed_session(CHECKOUT_FLOW)
+        world.project.seed_session(ENTER_CARD_DETAILS_CHILD)
+
+    @s.when('the Person tries to make checkout-flow a child of enter-card-details')
+    def _(world):
+        # Board.ticket("checkout-flow")
+        #   <- checkout-flow
+        # Board.ticket("enter-card-details")
+        #   <- enter-card-details
+        # checkout-flow.reassign_parent(enter-card-details)
+        #   -> self._can_be_child_of(enter-card-details)
+        #   <- refused: ParentLoopError
+        world.refusal = refusal_of(lambda: world.Ticket.load(CHECKOUT_FLOW.name).reassign_parent(world.Ticket.load(ENTER_CARD_DETAILS_CHILD.name)))
+
+    @s.then('checkout-flow keeps no parent')
+    def _(world):
+        expect_refused(world.refusal, ParentLoopError, "enter-card-details cannot be the parent of checkout-flow: it is checkout-flow or one of its children")
+        expect(saved_parent(world, CHECKOUT_FLOW)).to(equal(""))
+
+    @s.and_("enter-card-details' card does not offer itself as a place to drop checkout-flow")
+    def _(world):
+        expect(card_of(world, CHECKOUT_FLOW.name)["parent_choices"]).not_to(contain(ENTER_CARD_DETAILS_CHILD.name))
 
 
 @shared_stories.scenario("Place Parent At Leftmost Child Stage", "Show a parent in its earliest child's stage")
