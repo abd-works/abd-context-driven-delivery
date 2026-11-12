@@ -75,6 +75,15 @@ with description("the saves of a repository's session folders on main"):
         with it("should be pushed to origin"):
             expect(_until(lambda: _subject(self.origin) == "sessions: checkout-flow move Specification")).to(equal(True))
 
+    with context("that is queued beside a session's progress cache"):
+        with before.each:
+            (self.folder / "checkout-flow" / "progress-cache.json").write_text("{}\n", encoding="utf-8")
+            self.saves.later("sessions: checkout-flow move Specification")
+            _until(lambda: _subject(self.clone) == "sessions: checkout-flow move Specification")
+
+        with it("should leave the cache out of the commit, in a project whose own .gitignore does not name it"):
+            expect(_git(self.clone, "ls-files", ".sessions").splitlines()).to(equal([".sessions/.gitignore", ".sessions/checkout-flow/session.json"]))
+
     with context("that origin refuses the push"):
         with before.each:
             _git(self.clone, "remote", "set-url", "origin", str(self.clone.parent / "missing.git"))

@@ -9,12 +9,15 @@ from pathlib import Path
 from harness.installation.data_class import data_field
 from harness.process.git import RepoConnectError
 from space.repo.repo import Repo
+from space.session.progress_cache import PROGRESS_CACHE_FILE
 
 logger = logging.getLogger(__name__)
 
 # How long a queued save waits before it commits, so every file one change writes, such as a ticket's folder moved to
 # the Backlog and then its item file, goes into the one commit. Also how often it looks again while a merge is going on.
 SETTLE_SECONDS = 0.5
+# The line in the session folders' .gitignore that keeps every session's progress cache out of the saves.
+_IGNORED_CACHES = f"**/{PROGRESS_CACHE_FILE}"
 
 
 class SaveFailure:
@@ -118,6 +121,7 @@ class SessionSaves:
         repository = self._repository
         if not repository.branch_named(repository.default_branch).is_checked_out or not self._folder.is_dir():
             return
+        self._keep_caches_out()
         if repository.is_dirty(self._folder):
             repository.commit([str(self._folder)], "\n".join(changes), untracked=True)
             self._is_unpushed = True
@@ -125,6 +129,16 @@ class SessionSaves:
             repository.push_upstream()
         self._is_unpushed = False
         self._failure = None
+
+    def _keep_caches_out(self) -> None:
+        """List the board's progress caches in the session folders' own .gitignore, so a save never commits one, in a
+        project whose own .gitignore does not name them: a cache is worked out again wherever it is missing."""
+        ignore = self._folder / ".gitignore"
+        written = ignore.read_text(encoding="utf-8") if ignore.is_file() else ""
+        if _IGNORED_CACHES in written.splitlines():
+            return
+        lead = "" if not written or written.endswith("\n") else "\n"
+        ignore.write_text(f"{written}{lead}{_IGNORED_CACHES}\n", encoding="utf-8")
 
 
 class ServedSaves:
