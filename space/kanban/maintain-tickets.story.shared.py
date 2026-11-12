@@ -141,7 +141,7 @@ def _(s):
         #   <- Gift cards with the text Sell gift cards at the till.
         world.BacklogItem.load(GIFT_CARDS_IN_BACKLOG.heading).edit_text(text=EDITED_GIFT_CARDS_TEXT)
 
-    @s.then('.sessions/_backlog/gift-cards.md holds Sell gift cards at the till.')
+    @s.then("Gift cards' file, .sessions/_backlog/gift-cards.md, holds Sell gift cards at the till.")
     def _(world):
         held = (world.project.sessions / "_backlog" / GIFT_CARDS_IN_BACKLOG.file_name).read_text(encoding="utf-8")
         expect(held).to(equal(idea_file_text(GIFT_CARDS_IN_BACKLOG.heading, EDITED_GIFT_CARDS_TEXT)))
@@ -274,7 +274,7 @@ def _(s):
     def _(world):
         expect_refused(world.refusal, TicketNotFoundError, "no ticket named 'no-such-ticket' on the board")
 
-    @s.and_('no session folder is removed')
+    @s.and_('deleting no-such-ticket removes no session folder')
     def _(world):
         expect(sorted(path.name for path in world.project.sessions.iterdir())).to(equal(world.folders))
 
