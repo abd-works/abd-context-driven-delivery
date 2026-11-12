@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from harness.graph.practice_rule import PracticeGraphRule
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
+    from harness.graph.rule_context import RuleCheckContext
 
 
 class TierBoundRepositoryAccessor(PracticeGraphRule):
@@ -11,7 +17,7 @@ class TierBoundRepositoryAccessor(PracticeGraphRule):
     slug = "tier-bound-repository-accessor"
     node_types = ("StoryShared",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         return [
             f"{node.source.file}:{line}: `{cast}` casts the story context; "
             f"read the repository through the tier-bound `repositories` accessor."
@@ -25,7 +31,7 @@ class NoExpectInGiven(PracticeGraphRule):
     slug = "no-expect-in-given"
     node_types = ("StoryShared",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         return [
             f"{node.source.file}:{line}: Given {name!r} asserts; move the check to a Then or drop it."
             for line, name in node.get_fact("asserting_givens", [])
@@ -38,7 +44,7 @@ class DomainOperationsInlineInSteps(PracticeGraphRule):
     slug = "domain-operations-inline-in-steps"
     node_types = ("StoryShared", "DomainSpec", "ServerSpec", "PlaywrightSpec")
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         return [
             f"{node.source.file}:{line}: `{helper}` wraps domain operations ({', '.join(calls)}); call them in the "
             f"step that relies on them, or seed the state with a fixture in the examples file."
@@ -52,7 +58,7 @@ class OutlineEntriesLoopOverExamples(PracticeGraphRule):
     slug = "outline-entries-loop-over-examples"
     node_types = ("StoryShared", "PlaywrightSpec")
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         return [
             f"{node.source.file}:{line}: scenario {outline!r} entry {entry!r} is written by hand; "
             f"loop over the outline's examples export instead."
@@ -67,15 +73,14 @@ class PlaywrightTestsBrowserInteraction(PracticeGraphRule):
     slug = "playwright-tests-browser-interaction"
     node_types = ("Story",)
 
-    def check_practice(self, context) -> list[tuple[str, str]]:
-        driven = {_story_key(name) for spec in context.nodes("PlaywrightSpec") for name in spec.get_fact("screen_stories", [])}
+    def check_practice(self, context: RuleCheckContext) -> list[tuple[str, str]]:
+        driven = {self._story_key(name) for spec in context.nodes("PlaywrightSpec") for name in spec.get_fact("screen_stories", [])}
         return [
             (story.node_id, f"{story.source.file}: story `{story.name}` has no screen story: no Playwright file "
                             f"(`*.story.ui.spec.ts`) has a describe named for it; write one that drives its screen.")
             for story in context.nodes("Story")
-            if _story_key(story.name) not in driven
+            if self._story_key(story.name) not in driven
         ]
 
-
-def _story_key(name: str) -> str:
-    return " ".join(name.lower().split())
+    def _story_key(self, name: str) -> str:
+        return " ".join(name.lower().split())

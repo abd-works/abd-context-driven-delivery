@@ -53,8 +53,7 @@ class IdeaFile:
                 sections[-1][1].append(line)
         return [(story, lines) for story, lines in sections if story]
 
-    @staticmethod
-    def _story_heading(line: str) -> str | None:
+    def _story_heading(self, line: str) -> str | None:
         """The story a `Story:` heading names; empty for any other heading, which ends a story's section; none for a
         line that is no heading."""
         story = _STORY.match(line)
