@@ -3,8 +3,8 @@ import type { EngineInterface } from 'claude-code'
 import { after } from '../board-chat/board'
 import { reasonOf } from '../shared/failure'
 
-// The draw.io viewer in tools/drawio_viewer serves the real draw.io editor on this port, and its Save writes the file
-// back. A diagram opens there in the person's browser, with no message to the chat.
+// The draw.io viewer (tools/drawio_viewer in a CDD checkout, published inside this mod by the cdd home) serves the real
+// draw.io editor on this port, and its Save writes the file back. A diagram opens there in the person's browser, with no message to the chat.
 const VIEWER_PORT = 8791
 const VIEWER_URL = `http://127.0.0.1:${VIEWER_PORT}`
 const STARTED_WITHIN_MILLISECONDS = 10_000
@@ -19,13 +19,21 @@ function isViewerUp($: EngineInterface): Promise<boolean> {
     .catch(() => false)
 }
 
+// The viewer published with this mod, so a chat in any project has one; a mod loaded straight from a CDD checkout
+// runs the checkout's own.
+async function viewerScriptOf($: EngineInterface, top: string): Promise<string> {
+  const published = `${$.plugin.root}/drawio-viewer/drawio_viewer.py`
+  return (await $.fs.exists(published)) ? published : `${top}/tools/drawio_viewer/drawio_viewer.py`
+}
+
 // The viewer lives as long as this chat's mod, started from the repository's top so a path from the project opens.
 async function startViewer($: EngineInterface): Promise<boolean> {
   const { exitCode, stdout } = await $.process.run(['git', 'rev-parse', '--show-toplevel'])
   if (exitCode !== 0) return false
   const top = stdout.trim()
+  const script = await viewerScriptOf($, top)
   void (async () => {
-    const viewer = $.process.spawn({ argv: ['python', 'tools/drawio_viewer/drawio_viewer.py', '.', String(VIEWER_PORT)], cwd: top })
+    const viewer = $.process.spawn({ argv: ['python', script, '.', String(VIEWER_PORT)], cwd: top })
     for await (const { text } of viewer) $.ui.log(text, { to: 'debug' })
   })().catch(error => $.ui.log(`The draw.io viewer stopped: ${reasonOf(error)}`, { to: 'debug' }))
   for (let waited = 0; waited < STARTED_WITHIN_MILLISECONDS; waited += STARTED_CHECK_MILLISECONDS) {
