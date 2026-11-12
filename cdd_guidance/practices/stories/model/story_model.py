@@ -229,8 +229,12 @@ class Example(StoryNode):
         """Add this example to the graph under scenario, the node of the scenario that uses it, at that scenario's
         lines; an example two scenarios of one file share is one node. Its graph parent is the scenario that uses it,
         not its scope, so the scenario is handed in."""
-        node = recording.add(self, f"stories:Example:{at.file}:{self.name}", at, recording.example_facts(at.file, self.name))
+        node = recording.add(self, f"stories:Example:{at.file}:{self.name}", at, self.recorded_facts(recording, at.file))
         recording.graph.link("examples", scenario, node)
+
+    def recorded_facts(self, recording: StoryRecording, file: str) -> dict:
+        """The facts this example records with: those the story file at file gives the example of its name."""
+        return recording.example_facts(file, self.name)
 
     def clone(self) -> "Example":
         value = dict(self.value) if isinstance(self.value, dict) else self.value

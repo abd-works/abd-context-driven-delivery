@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import re
+import sys
+from pathlib import Path
 from typing import List
 
 from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory, unescaped
+from cdd_guidance.practices.stories.model.python.shared_story_file import SharedStoryFile
 from cdd_guidance.practices.stories.model.story_model import Background
 
 
@@ -41,6 +44,21 @@ class PythonStory(CodeStory):
     _STORY_START = re.compile(r"(?=^# Story:)", re.M)
     _STORY_MARK = re.compile(r'with story\("')
     _NAME = re.compile(r'with story\("(?P<name>[^"]+)"\)')
+
+    @classmethod
+    def load_all(cls, content: str) -> List["CodeStory"]:
+        """Every story in one story file: a shared story file's, read from its scenario and step functions; any other
+        story file's, from its `with story` blocks."""
+        return cls.stories_in(content, None)
+
+    @classmethod
+    def stories_in(cls, content: str, project: Path | None) -> List["CodeStory"]:
+        """Every story in one story file of project: a shared story file's examples module is looked for there first,
+        then in the folders Python imports from."""
+        if SharedStoryFile.holds(content):
+            search = [*([project] if project is not None else []), Path.cwd(), *map(Path, sys.path)]
+            return SharedStoryFile(content, search).stories(cls)
+        return super().load_all(content)
 
 
 class PythonEpic(CodeEpic):

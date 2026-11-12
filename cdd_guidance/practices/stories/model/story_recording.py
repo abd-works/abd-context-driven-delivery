@@ -74,11 +74,30 @@ def _java_imports(text: str) -> list[tuple[str, str]]:
     return found
 
 
-_FUNCTION_DECLARATION = re.compile(r"\bfunction\s+([\w$]+)\b")
+# What each language declares an example as, by the suffix of the file: a TypeScript or JavaScript function or constant,
+# a Python module-level function or constant, a Java static method or field (of an `*Examples` class).
+_SCRIPT_DECLARATION = re.compile(r"\bfunction\s+([\w$]+)\b|\b(?:const|let|var)\s+([\w$]+)\s*[:=]")
+_EXAMPLE_DECLARATIONS = {
+    ".ts": _SCRIPT_DECLARATION,
+    ".tsx": _SCRIPT_DECLARATION,
+    ".js": _SCRIPT_DECLARATION,
+    ".jsx": _SCRIPT_DECLARATION,
+    ".mjs": _SCRIPT_DECLARATION,
+    ".py": re.compile(r"^(?:async\s+)?def\s+(\w+)|^([A-Za-z_]\w*)\s*(?::[^=\n]+)?=(?!=)", re.M),
+    ".java": re.compile(r"\bstatic\s+(?:final\s+)?[\w<>\[\],.?]+(?:\s*<[^>]*>)?\s+(\w+)\s*[(=;]"),
+}
 _IDENTIFIER = re.compile(r"\w+")
 _MEMBER_READ = re.compile(r"\.(\w+)")
 
 _EVIDENCE_LINE = re.compile(r"\*\s*Evidence:\s*([A-Za-z][A-Za-z ,-]*)")
+
+
+def _declared_examples(file: str, text: str) -> list[str]:
+    """The names the code of file declares the way its language declares an example; none for a file in no language
+    that declares them."""
+    declaration = _EXAMPLE_DECLARATIONS.get(PurePosixPath(file).suffix)
+    found = declaration.findall(text) if declaration is not None else []
+    return [name for match in found for name in (match if isinstance(match, tuple) else (match,)) if name]
 
 
 def _opening_docblock(lines: list[str]) -> str:
@@ -111,10 +130,18 @@ def example_source_file(story_test: str, imported_modules: dict[str, str], name:
 
 
 def imported_example_files(story_test: str, text: str) -> list[str]:
-    """The files story_test imports names from by a relative import, named from the project: where its examples can
-    come from."""
+    """The files story_test imports names from, named from the project: where its examples can come from. A relative
+    import names one file; a module named from a package root (a Python or Java import) may sit under any folder above
+    story_test, so each of those is a place it can be, and only the ones that are there are read."""
     imported = _imported_modules(text)
-    return sorted({example_source_file(story_test, imported, name) for name, module in imported.items() if module.startswith(".")})
+    relative = {example_source_file(story_test, imported, name) for name, module in imported.items() if module.startswith(".")}
+    suffix = PurePosixPath(story_test).suffix
+    rooted = {
+        (folder / f"{module}{suffix}").as_posix().removeprefix("./")
+        for module in set(imported.values()) if not module.startswith(".")
+        for folder in PurePosixPath(story_test).parents
+    }
+    return sorted(relative | rooted)
 
 
 def step_node_id(kind: str, file: str, line: int, name: str) -> str:
@@ -191,22 +218,21 @@ class StoryRecording:
 
     @cached_property
     def _example_files(self) -> list[Path]:
-        """The TypeScript files an example's export is looked for in: the ones the story map was read from, so a read of
-        the files being edited opens no file it did not read, and nothing outside the folders a read scans."""
+        """The code files an example's export is looked for in: the ones the story map was read from, so a read of the
+        files being edited opens no file it did not read, and nothing outside the folders a read scans."""
         root = self.practice.reading.in_graph.source_root
         if not root:
             return []
-        return [Path(root) / file for file in sorted(self.story_map.source_texts) if file.endswith(".ts")]
+        return [Path(root) / file for file in sorted(self.story_map.source_texts) if PurePosixPath(file).suffix in _EXAMPLE_DECLARATIONS]
 
     @cached_property
     def _function_sources(self) -> dict[str, str]:
-        """Each declared ``function name`` in the TypeScript the story map was read from, mapped to the first file's
-        text that declares it."""
+        """Each example the code the story map was read from declares, in the way its language declares one (a
+        function or a constant), mapped to the first file's text that declares it."""
         sources: dict[str, str] = {}
         for file, text in sorted(self.story_map.source_texts.items()):
-            if file.endswith(".ts"):
-                for name in _FUNCTION_DECLARATION.findall(text):
-                    sources.setdefault(name, text)
+            for name in _declared_examples(file, text):
+                sources.setdefault(name, text)
         return sources
 
     def facts_of(self, file: str) -> dict:
@@ -217,8 +243,9 @@ class StoryRecording:
         reader in any process has them:
 
         - ``source_names`` and ``source_reads``: every identifier, and every name read as a member (``.name``), in the
-          first TypeScript file the map was read from that declares ``function name``, so an example is linked to the
-          classes it shows and the properties it reads;
+          first code file the map was read from that declares name as its language declares an example (a TypeScript or
+          JavaScript function or constant, a Python function or constant, a Java static method or field), so an example
+          is linked to the classes it shows and the properties it reads;
         - ``export_names``: the names exported by the file the example comes from, when that is another file the map
           read (an examples module the story test imports); otherwise the story file's own apply."""
         text = self._function_sources.get(name, "")

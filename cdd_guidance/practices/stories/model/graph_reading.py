@@ -11,7 +11,8 @@ from pathlib import Path
 from harness.graph.skipped_folders import scanned_files
 from harness.guidance.practice_reading import PracticeReading
 
-from cdd_guidance.practices.stories.model.shared_step_calls import SharedStepCalls
+from cdd_guidance.practices.stories.model.python.nodes import PythonStory
+from cdd_guidance.practices.stories.model.python.shared_story_file import SHARED_SUFFIX
 
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 _STEP_TYPES = frozenset({"Step", "Given", "When", "Then"})
@@ -27,6 +28,8 @@ class StoriesReading(PracticeReading):
     classes and properties it shows, so it reads after Clean Engineering."""
 
     reads_after = ("clean_engineering",)
+    TEST_CODE_FIDELITY = "acceptance_tests"
+    """The fidelity whose stories are the test code that runs them."""
     source_ordered_types = frozenset({"Background", "Scenario", "Step", "Story"})
     # A step is recorded as the Given, When, or Then it is, while the schema keeps every step's rules on Step (its
     # given, when, and then types are each a Step), so each carries Step's rules; its check says which kind it judges.
@@ -86,7 +89,29 @@ class StoriesReading(PracticeReading):
         if model.epics:
             return model
         self.graph.report_progress("stories · markdown")
-        return self._story_maps()
+        model = self._story_maps()
+        if self._reads_test_code:
+            self._take_shared_stories(model)
+        return model
+
+    @property
+    def _reads_test_code(self) -> bool:
+        """Whether the practice works at the fidelity whose stories are the test code: there a story's scenarios are
+        the ones its shared story file runs, not the ones its story test writes in words."""
+        current = self.practice.fidelities.current
+        return current is not None and current is self.practice.fidelities.entries.get(self.TEST_CODE_FIDELITY)
+
+    def _take_shared_stories(self, model) -> None:
+        """Give each story of model the scenarios its Python shared story files under the root run, read from their
+        code; with edited files, only the shared story files among them."""
+        edited = self.graph.scope.edited_files
+        found = [path for path in scanned_files(self.root, {".py"}) if path.name.endswith(SHARED_SUFFIX)]
+        project = Path(self.graph.scope.folder) if self.graph.scope.folder is not None else self.root
+        for path in (path for path in found if edited is None or path in edited):
+            text = path.read_text(encoding="utf-8")
+            file = path.relative_to(self.root).as_posix()
+            model.source_texts[file] = text
+            model.take_scenarios(PythonStory.stories_in(text, project), file)
 
     def _story_tests(self):
         sources = self._typescript_files()
@@ -174,12 +199,6 @@ class StoryLinks:
         self.graph = stories.graph
 
     @cached_property
-    def shared_steps(self) -> SharedStepCalls:
-        """What the steps of the shared story files beside the code call, which a story test's steps written in words
-        call too."""
-        return SharedStepCalls(Path(self.clean.in_graph.source_root))
-
-    @cached_property
     def modules(self) -> set:
         """Clean Engineering's modules, read from the graph once."""
         return set(self.clean.in_graph.nodes("Module"))
@@ -200,7 +219,7 @@ class StoryLinks:
 
     def _link_step(self, step) -> None:
         body = self._step_body(step)
-        called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body)) | self._shared_calls(step)
+        called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
         matched = [member for name in called for member in self.clean.code_index.members_named(name)]
         epic = self.tree.epic_of(step) if matched else None
         for operation in matched:
@@ -211,9 +230,8 @@ class StoryLinks:
                 self.graph.link("usedBy", module, epic, "relationship")
                 self.graph.link("uses", epic, module, "relationship")
         if step.get_fact("phase"):
-            for example in self.examples:
-                if re.search(rf"\b{re.escape(example.name)}\b", body):
-                    self.graph.link("observes", step, example, "relationship")
+            for example in self._observed_by(step, body):
+                self.graph.link("observes", step, example, "relationship")
 
     def _link_example(self, example) -> None:
         names = set(example.get_fact("source_names") or [])
@@ -228,16 +246,23 @@ class StoryLinks:
                 self.graph.link("retrievedUsing", example, prop, "relationship")
                 self.graph.link("retrievedUsing", prop, example, "relationship")
 
-    def _shared_calls(self, step) -> set[str]:
-        """What the shared story file's step of the same story, scenario, and words calls; none for a step under no
-        scenario."""
+    def _observed_by(self, step, body: str) -> list:
+        """The examples step observes: those its own text and body name, and for a Then, those its scenario's Givens
+        name, the state whose outcome it observes."""
+        texts = [body]
+        if step.get_fact("phase") == "then":
+            texts.extend(self._step_body(given) for given in self._givens_of(step))
+        return [example for example in self.examples if any(re.search(rf"\b{re.escape(example.name)}\b", text) for text in texts)]
+
+    def _givens_of(self, step) -> list:
+        """The Given steps of the scenario step sits in, with the steps chained onto them."""
         scenario = self.graph.direct_parent(step)
         while scenario is not None and scenario.type != "Scenario":
             scenario = self.graph.direct_parent(scenario)
-        story = self.graph.direct_parent(scenario) if scenario is not None else None
-        if story is None:
-            return set()
-        return self.shared_steps.called_by(story.name, scenario.name, step.name)
+        if scenario is None:
+            return []
+        givens = [found for found in self.tree.steps(scenario) if found.get_fact("phase") == "given"]
+        return [*givens, *(edge.child for given in givens for edge in self.graph.edges_from("ands", given))]
 
     def _step_body(self, step) -> str:
         """The step's own text and the body its story test gives it."""

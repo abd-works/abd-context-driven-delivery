@@ -27,6 +27,8 @@ from cdd_guidance.practices.clean_engineering.model.property import Property
 # A member called on another object (`board.select(`), and a property read on one (`board.shown`, no call after it).
 _ABSTRACT_MARK = re.compile(r"@abstractmethod|^\s*(?:public\s+|protected\s+)?abstract\s", re.MULTILINE)
 _DOCSTRING = re.compile(r'(?s)\A\s*(?:"""|\'\'\').*?(?:"""|\'\'\')')
+# The marker the source view puts after a line for each call on it, `/* call:show */`, which is no code.
+_CALL_MARKER = re.compile(r"\s*/\* call:[^*]*\*/")
 _NO_BODY = {"", "...", "pass", "raise NotImplementedError", "raise NotImplementedError()"}
 _MEMBER_CALL = re.compile(r"\.([A-Za-z_$][\w$]*)\s*\(")
 _MEMBER_READ = re.compile(r"\.([A-Za-z_$][\w$]*)\b(?!\s*\()")
@@ -93,9 +95,16 @@ class CallLinks:
         """An abstract member: marked so (`@abstractmethod`, `abstract`), or with no body but `...`, `pass`, or a raise of
         NotImplementedError under its signature and docstring."""
         text = caller.source.text if caller.source.file else ""
-        if _ABSTRACT_MARK.search(text):
+        if _ABSTRACT_MARK.search(text) or self._declared_without_body(text):
             return True
         return _DOCSTRING.sub("", self._python_body(text)).strip() in _NO_BODY
+
+    @staticmethod
+    def _declared_without_body(text: str) -> bool:
+        """A C-family member with no body: its signature ends in `;` and no brace opens a body (an interface's method,
+        `draw(scale: number): void;`, or `void draw(double scale);`)."""
+        code = _CALL_MARKER.sub("", text).strip()
+        return bool(code) and "{" not in code and code.endswith(";")
 
     def _python_body(self, text: str) -> str:
         """What follows a Python member's signature, the line that ends its `def` with a colon; none for other code."""

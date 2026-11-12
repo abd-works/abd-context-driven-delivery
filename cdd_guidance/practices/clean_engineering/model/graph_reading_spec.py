@@ -176,6 +176,33 @@ with description("Clean Engineering reading code into its graph"):
         with it("should read the members of the class body, not of the type arguments"):
             expect(_targets(self.fixture, "owns", "PageFailureView")).to(equal(["render"]))
 
+    with context("with members declared with no body"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    "ts/shape.ts": "export abstract class Shape {\n  abstract area(width: number): number;\n}\n",
+                    "ts/drawable.ts": "export interface Drawable {\n  draw(scale: number): void;\n}\n",
+                    "java/Solid.java": "public abstract class Solid {\n  public abstract double volume(double depth);\n}\n",
+                    "java/Printable.java": "public interface Printable {\n  void print(double scale);\n}\n",
+                }
+            )
+
+        def _exempt(self, name: str) -> list:
+            member = next(node for node in self.fixture.practice.reading.in_graph.nodes("Operation") if node.name == name)
+            return member.get_fact("exempt_relationships") or []
+
+        with it("should not hold a TypeScript abstract member to invokes"):
+            expect(self._exempt("area")).to(equal(["invokes"]))
+
+        with it("should read a TypeScript interface's method as an operation it does not hold to invokes"):
+            expect(self._exempt("draw")).to(equal(["invokes"]))
+
+        with it("should not hold a Java abstract member to invokes"):
+            expect(self._exempt("volume")).to(equal(["invokes"]))
+
+        with it("should read a Java interface's method as an operation it does not hold to invokes"):
+            expect(self._exempt("print")).to(equal(["invokes"]))
+
     with context("with a folder holding only story tests"):
         with before.all:
             self.fixture = practice_from_files(

@@ -9,6 +9,7 @@ from typing import List
 from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
 from cdd_guidance.practices.stories.model.python.nodes import PythonEpic, PythonStory
+from cdd_guidance.practices.stories.model.python.shared_story_file import SHARED_SUFFIX, SharedStoryFile
 from cdd_guidance.practices.stories.model.python.story_file import PythonStoryFile
 from cdd_guidance.practices.stories.model.story_file import flat_steps
 from cdd_guidance.practices.stories.model.story_model import Background, Epic, Story
@@ -61,11 +62,13 @@ class PythonStoryWriting(StoryWriting):
 
 class PythonStoryModel(CodeStoryModel):
     LEAF_EXTENSION = "_story.test.py"
-    story_file_suffixes = (LEAF_EXTENSION,)
+    story_file_suffixes = (LEAF_EXTENSION, SHARED_SUFFIX)
     epic_type = PythonEpic
     story_type = PythonStory
     language = PYTHON
     writing_type = PythonStoryWriting
 
-    def story_file(self, content: str) -> PythonStoryFile:
-        return PythonStoryFile(self.language, content)
+    def story_file(self, content: str) -> PythonStoryFile | None:
+        """The story file content is, read block by block; none for a shared story file, whose stories its story type
+        reads from its scenario and step functions."""
+        return None if SharedStoryFile.holds(content) else PythonStoryFile(self.language, content)
