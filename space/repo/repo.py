@@ -269,10 +269,14 @@ class Repo:
             self.git.run("push", "-u", "origin", branch)
 
     def catch_up_with_origin(self) -> None:
-        """Merge origin's copy of the current branch into it when origin has commits this branch lacks; nothing when
-        origin has no copy yet or this branch already holds every commit of it."""
-        branch = self.current_branch.name
+        """Fetch origin, then merge its copy of the current branch in as ``merge_origin_copy`` does."""
         self.fetch()
+        self.merge_origin_copy()
+
+    def merge_origin_copy(self) -> None:
+        """Merge origin's copy of the current branch, as last fetched, into it when origin has commits this branch lacks;
+        nothing when origin has no copy yet or this branch already holds every commit of it."""
+        branch = self.current_branch.name
         tracked = f"origin/{branch}"
         if not self.has_ref(f"refs/remotes/{tracked}") or self.git.succeeds("merge-base", "--is-ancestor", tracked, "HEAD"):
             return
