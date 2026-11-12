@@ -181,7 +181,7 @@ test.describe('with no chat connected', () => {
         checkOutMainAlone()
         git('checkout', '-b', 'checkout-flow')
         await openBoard(page)
-        await dragCard(page, card(page, 'checkout-flow'), column(page, 'Complete').locator('.card-list').first(), { atTheEnd: true })
+        await dragCard(page, card(page, 'checkout-flow'), column(page, 'Complete').locator('.card-list').first())
       })
 
       test.afterEach(async ({ page }) => {
