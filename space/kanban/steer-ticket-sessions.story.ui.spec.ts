@@ -72,7 +72,10 @@ test.describe('with no chat connected', () => {
     })
 
     test.describe('Start a backlog item in a chosen folder', () => {
+      let links: string[] = []
+
       test.beforeEach(async ({ page }) => {
+        links = await catchClaudeLinks(page)
         writeInto(join(fixtureRoot, '.sessions', '_backlog', 'gift-cards.md'), '# Gift cards\n\nSell gift cards.\n')
         for (const folder of ['src/billing', 'src/visits']) mkdirSync(join(fixtureRoot, folder), { recursive: true })
         await openBoard(page)
@@ -82,6 +85,8 @@ test.describe('with no chat connected', () => {
         await dialog.getByRole('listitem').filter({ hasText: 'src/' }).click()
         await dialog.getByRole('listitem').filter({ hasText: 'visits/' }).click()
         await dialog.getByRole('button', { name: 'Use src/visits' }).click()
+        // Starting opens a worktree in the background; the next scenario's reset must not start while it still runs.
+        await expect(toast(page, 'Confirm the folder and send in the Claude app to start the chat of gift-cards')).toBeVisible({ timeout: 15_000 })
       })
 
       test.afterEach(() => rmSync(join(fixtureRoot, 'src'), { recursive: true, force: true }))
@@ -92,6 +97,10 @@ test.describe('with no chat connected', () => {
 
       test('And a toast says Gift cards started in Discovery', async ({ page }) => {
         await expect(toast(page, 'Gift cards started in Discovery')).toBeVisible({ timeout: 8_000 })
+      })
+
+      test("And a new chat opens on gift-cards' own worktree", async () => {
+        expect(links.map(link => new URL(link).searchParams.get('folder'))).toEqual([expect.stringContaining('gift-cards')])
       })
     })
   })

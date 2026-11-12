@@ -120,12 +120,22 @@ describe('Choose Session Root', () => {
     })
 
     describe('that a person has started in a folder', () => {
+      let opened: string[] = []
+
       async function started() {
         const page = await asked()
+        opened = []
+        page.openLink = link => opened.push(link)
         await page.roots.browse(TICKET_ROOT, 'src/visits')
         await page.roots.use()
         return page
       }
+
+      // Starting is beginning the work, so the new ticket opens in its own worktree with its chat started there.
+      it("should start the new ticket's chat in its own worktree", async () => {
+        const page = await started()
+        expect(opened.map(link => new URL(link).searchParams.get('folder'))).toEqual([ticketOn(page, 'gift-cards').worktree])
+      })
 
       it('should open its ticket with that folder as its workpath', async () => {
         expect(ticketOn(await started(), 'gift-cards').session.workpath).toBe('src/visits')
