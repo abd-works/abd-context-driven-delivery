@@ -33,7 +33,6 @@ _OUTSIDE_WORKTREE_NOTE = (
     "This chat works in {chat}, but {session}'s worktree is {worktree}. Do this session's work in a chat started there "
     "(start_session with cwd {worktree}), not in this chat.\n\n"
 )
-_BRANCH_REF = "refs/heads/"
 
 
 class SessionNameRequiredError(ValueError):
@@ -230,15 +229,13 @@ class Sessions:
             return listed
         main = self.repo.main_clone.root
         try:
-            listing = self.repo.main_clone.git.run("worktree", "list", "--porcelain")
+            listing = self.repo.main_clone.worktree_listing()
         except (RuntimeError, OSError):  # a folder in no repository has no worktrees
-            listing = ""
+            listing = []
         listed = {}
-        for block in listing.split("\n\n"):
-            fields = dict(line.split(" ", 1) for line in block.splitlines() if " " in line)
-            folder = Path(fields["worktree"]).resolve() if fields.get("worktree") else None
-            branch = fields.get("branch", "").removeprefix(_BRANCH_REF)
-            if folder is not None and branch and folder != main and folder.is_dir():
+        for path, branch in listing:
+            folder = path.resolve()
+            if branch and folder != main and folder.is_dir():
                 listed[branch] = folder
         self._worktree_listing = (time.monotonic(), listed)
         return listed
@@ -314,7 +311,7 @@ class Sessions:
     def _ticket_of_worktree(self) -> Session | None:
         """The ticket whose own worktree these sessions serve: a chat there works on that ticket, whatever any chat
         chose to open. None in the repository's own folder, and in a worktree whose branch names no ticket."""
-        if not self.repo.is_linked_worktree() or not self.repo.git.succeeds("symbolic-ref", "-q", "HEAD"):
+        if not self.repo.is_linked_worktree() or not self.repo.is_on_branch:
             # A worktree on no branch, such as one detached at a commit, names no ticket.
             return None
         branch = self.repo.current_branch.name

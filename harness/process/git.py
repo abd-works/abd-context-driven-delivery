@@ -3,6 +3,7 @@ framework that reads a checkout (the repository tools, the catalog citation, the
 
 from __future__ import annotations
 
+import functools
 import os
 import shutil
 import subprocess
@@ -15,6 +16,13 @@ _LONG_COMMAND_TIMEOUT_SECONDS = 180
 _LONG_COMMANDS = frozenset({"push", "fetch", "pull", "checkout", "merge", "worktree"})
 # Where Git for Windows installs git when it is not on the PATH, such as under the cdd server.
 _WINDOWS_GIT_INSTALLS = (Path(r"C:\Program Files\Git\cmd\git.exe"), Path(r"C:\Program Files\Git\bin\git.exe"))
+
+
+@functools.cache
+def _installed_git() -> str | None:
+    """Where git is installed, looked up once for the process: searching the PATH costs as much as a small git command,
+    and every git command asks."""
+    return shutil.which("git") or next((str(path) for path in _WINDOWS_GIT_INSTALLS if path.is_file()), None)
 
 
 class RepoConnectError(RuntimeError):
@@ -53,7 +61,7 @@ class Git:
 
     @staticmethod
     def _executable() -> str:
-        found = shutil.which("git") or next((str(path) for path in _WINDOWS_GIT_INSTALLS if path.is_file()), None)
+        found = _installed_git()
         if not found:
             raise RepoConnectError("Cannot connect git: `git` is not available.")
         return found

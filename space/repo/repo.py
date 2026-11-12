@@ -12,6 +12,7 @@ from harness.installation.data_class import data_field, language_adapter
 from harness.installation.files import command
 from harness.mcp.mcp_server import long_call, mcp
 from harness.process.git import Git, RepoConnectError
+from space.repo.git_folder import GitFolder
 from space.repo.worktree import Worktree, Worktrees
 
 # A file git reports as changed that is the hook server's running log, not work: it never blocks a switch or a close.
@@ -155,26 +156,57 @@ class Repo:
         """Every local branch of this repository; none for a project that is no clone."""
         if not self.is_clone:
             return []
-        names = self.git.run("for-each-ref", "--format=%(refname:short)", "refs/heads").splitlines()
+        folder = self._readable_folder
+        names = folder.branch_names() if folder is not None else self.git.run("for-each-ref", "--format=%(refname:short)", "refs/heads").splitlines()
         return [self.branch_named(name) for name in names if name.strip()]
 
     @property
     def current_branch(self) -> Branch:
         """The branch this checkout has checked out."""
-        return self.branch_named(self.git.run("rev-parse", "--abbrev-ref", "HEAD"))
+        folder = self._readable_folder
+        return self.branch_named(folder.head_branch() if folder is not None else self.git.run("rev-parse", "--abbrev-ref", "HEAD"))
+
+    @property
+    def is_on_branch(self) -> bool:
+        """Whether HEAD names a branch rather than being detached at a commit."""
+        folder = self._readable_folder
+        return folder.is_on_branch() if folder is not None else self.git.succeeds("symbolic-ref", "-q", "HEAD")
 
     @property
     def current_commit(self) -> str:
-        return self.git.run("rev-parse", "HEAD")
+        folder = self._readable_folder
+        read = folder.head_commit() if folder is not None else ""
+        return read or self.git.run("rev-parse", "HEAD")
 
     @property
     def default_start_point(self) -> str:
         """Where a branch origin has never seen starts: origin's default branch, else the local default branch."""
         candidates = (f"origin/{self.default_branch}", "origin/main", "origin/master")
-        return next((candidate for candidate in candidates if self.git.succeeds("rev-parse", "--verify", candidate)), self.default_branch)
+        return next((candidate for candidate in candidates if self.has_ref(f"refs/remotes/{candidate}")), self.default_branch)
 
     def has_ref(self, ref: str) -> bool:
-        return self.git.succeeds("show-ref", "--verify", "--quiet", ref)
+        folder = self._readable_folder
+        return folder.has_ref(ref) if folder is not None else self.git.succeeds("show-ref", "--verify", "--quiet", ref)
+
+    def worktree_listing(self) -> list[tuple[Path, str]]:
+        """Every checkout of the repository with the branch it has checked out (empty when none is), the main clone
+        first, as git lists them; read from the .git folder where it can be."""
+        folder = self._readable_folder
+        if folder is not None:
+            return folder.worktrees()
+        listed = []
+        for block in self.git.run("worktree", "list", "--porcelain").split("\n\n"):
+            fields = dict(line.split(" ", 1) for line in block.splitlines() if " " in line)
+            if "worktree" in fields:
+                listed.append((Path(fields["worktree"]), fields.get("branch", "").removeprefix("refs/heads/")))
+        return listed
+
+    @property
+    def _readable_folder(self) -> GitFolder | None:
+        """The checkout's .git, read from its files, so a lookup asked many times in one board read starts no git;
+        none where only git reads it, such as a project that is no clone or one whose refs are kept in a reftable."""
+        folder = GitFolder(self.checkout_folder)
+        return folder if folder.is_readable else None
 
     def is_dirty(self, path: str | Path | None = None, *, untracked: bool = True) -> bool:
         """Whether the working tree, or path in it, has changes other than the hook server's running log."""
@@ -209,13 +241,19 @@ class Repo:
     @property
     def has_origin(self) -> bool:
         """Whether this clone has a remote called origin to push to."""
-        return self.git.succeeds("remote", "get-url", "origin")
+        folder = self._readable_folder
+        return folder.has_remote("origin") if folder is not None else self.git.succeeds("remote", "get-url", "origin")
 
     def push_upstream(self) -> None:
-        """Push the current branch to origin, first merging in what origin's copy has that this branch lacks, so a push
-        never fails because work was pushed to the branch from elsewhere."""
-        self.catch_up_with_origin()
-        self.git.run("push", "-u", "origin", self.current_branch.name)
+        """Push the current branch to origin; when origin refuses because it has commits this branch lacks, merge them
+        in and push again, so a push never fails because work was pushed to the branch from elsewhere. Most pushes go
+        through at once, so origin is fetched only when it refuses."""
+        branch = self.current_branch.name
+        try:
+            self.git.run("push", "-u", "origin", branch)
+        except RepoConnectError:
+            self.catch_up_with_origin()
+            self.git.run("push", "-u", "origin", branch)
 
     def catch_up_with_origin(self) -> None:
         """Merge origin's copy of the current branch into it when origin has commits this branch lacks; nothing when

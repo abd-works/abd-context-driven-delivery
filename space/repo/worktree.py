@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_BRANCH_REF = "refs/heads/"
 # A worktree folder is named for its branch; a long branch name is cut to this many characters so the path stays short
 # enough for Windows.
 _FOLDER_BRANCH_LENGTH = 24
@@ -100,11 +99,8 @@ class Worktrees:
     def __iter__(self) -> Iterator[Worktree]:
         # Every checkout lists the same worktrees; the main clone lists them even after the checkout these were read
         # from is removed.
-        listing = self._repo.main_clone.git.run("worktree", "list", "--porcelain")
-        for block in listing.split("\n\n"):
-            fields = dict(line.split(" ", 1) for line in block.splitlines() if " " in line)
-            if "worktree" in fields:
-                yield self._listed(Path(fields["worktree"]), fields.get("branch", "").removeprefix(_BRANCH_REF))
+        for path, branch in self._repo.main_clone.worktree_listing():
+            yield self._listed(path, branch)
 
     def at(self, folder: Path | str) -> Worktree | None:
         """The checkout git lists at folder; none when git lists none there."""
