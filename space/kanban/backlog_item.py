@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -16,6 +19,14 @@ from space.kanban.ticket import Ticket
 from space.session.idea_file import IdeaFile
 from space.session.session import SESSION_FILE
 from harness.mcp.mcp_server import mcp
+
+
+def open_with_system(path: Path) -> None:
+    """Hand path to the app this computer opens its kind of file with, as a double-click in the file browser does."""
+    if sys.platform == "win32":
+        os.startfile(path)  # noqa: S606 - a file of the Backlog, opened as the person's own file browser would
+    else:
+        subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", str(path)], check=True, timeout=30)
 
 
 class BacklogNestingError(ValueError):
@@ -160,6 +171,14 @@ class BacklogItem(Card):
         """Write text as the backlog item's idea, under its heading in its file, which keeps its title. Committed on main and pushed."""
         self._idea.rewrite_text(text)
         self._board.sessions.saves.later(f"sessions: edit {self.title}'s text in the Backlog")
+        return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def open_file(self) -> BacklogItem:
+        """Open the backlog item titled backlog_item's file in the app this computer opens markdown files with, as the link under its text on the board does."""
+        open_with_system(self._path)
         return self
 
     @mcp

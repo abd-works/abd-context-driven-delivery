@@ -99,7 +99,11 @@ function ItemTextView({ item, isSelected }: { item: BacklogItemClient; isSelecte
   return (
     <div className="item-text-line">
       {isSelected && item.text ? <div className="ticket-text">{opening}</div> : null}
-      {isSelected && isCut ? <div className="ticket-text-more">More in {item.path}</div> : null}
+      {isSelected ? (
+        <button className="ticket-text-link" title={`Open ${item.path}`} onClick={withoutSelecting(() => item.openFile())}>
+          {isCut ? `More in ${item.path}` : item.path}
+        </button>
+      ) : null}
       <button className="file-view" aria-label={EDIT_ITEM_TEXT.label} title={EDIT_ITEM_TEXT.hint} onClick={withoutSelecting(() => setTyped(item.text))}>
         <SessionActionIcon action={EDIT_ITEM_TEXT.action} />
       </button>
