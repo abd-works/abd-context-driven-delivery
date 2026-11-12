@@ -116,6 +116,7 @@ class CardPlacement:
             return
         grid = self._best_grid()
         self._set_positions(self._without_empty_lines(grid))
+        CardSpacing(self._cards, self._links).close_gaps()
 
     def _starting_grid(self) -> Dict[str, GridCell]:
         return {
@@ -233,6 +234,73 @@ class CardPlacement:
         touching = {cell_id for cell_id, position in grid.items() if position[1] in (line, line + 1)}
         lanes = sum(1 for link in self._links if link.source in touching or link.target in touching)
         return ROW_GUTTER + ROW_GUTTER_PER_ARROW * lanes
+
+
+class CardSpacing:
+    """Closes up the empty space on a page without rearranging it, so a reader sees the cards side by side rather than
+    islands on a mostly empty page.
+
+    Every card keeps its place relative to its neighbours: what was left of it stays left, what was above stays above.
+    Only the gaps shrink, to the room the arrows between two cards need: a few grid lines, and one more lane for each
+    arrow either card sends or takes, up to MOST_GAP. A gap a person left smaller than that stays as it was.
+    """
+
+    GAP_ACROSS = 60
+    GAP_DOWN = 80
+    LANE_ROOM = 2 * GRID_STEP
+    MOST_GAP = 300
+
+    def __init__(self, cards: List[DiagramNode], arrows: List[DiagramArrow]) -> None:
+        self._cards = cards
+        self._arrow_counts: Dict[str, int] = {card.cell_id: 0 for card in cards}
+        for arrow in arrows:
+            for end in {arrow.source, arrow.target} & set(self._arrow_counts):
+                self._arrow_counts[end] += 1
+
+    def gap_between(self, first: str, second: str, across: bool) -> int:
+        """The room two cards next to each other keep between them, across the page or down it."""
+        lanes = self._arrow_counts.get(first, 0) + self._arrow_counts.get(second, 0)
+        return min(self.MOST_GAP, (self.GAP_ACROSS if across else self.GAP_DOWN) + self.LANE_ROOM * lanes)
+
+    def close_gaps(self) -> bool:
+        """Moves the cards closer together; True when any card moved."""
+        before = {card.cell_id: card.geometry for card in self._cards}
+        if len(self._cards) < 2:
+            return False
+        lefts = self._closed_up(before, across=True)
+        for card in self._cards:
+            card.geometry = card.geometry.moved_to(lefts[card.cell_id], card.geometry.y)
+        across = {card.cell_id: card.geometry for card in self._cards}
+        tops = self._closed_up(across, across=False, order=before)
+        for card in self._cards:
+            card.geometry = card.geometry.moved_to(card.geometry.x, tops[card.cell_id])
+        return any(card.geometry != before[card.cell_id] for card in self._cards)
+
+    def _closed_up(self, boxes: Dict[str, Geometry], across: bool, order: Optional[Dict[str, Geometry]] = None) -> Dict[str, float]:
+        """Each card's new start along one axis: as near the page's start as the cards before it on that axis allow.
+        ``order`` is where the cards were before any moved, which decides what comes before what."""
+        order = order or boxes
+        start, size = (0, 2) if across else (1, 3)
+        page_start = min(box[start] for box in order.values())
+        placed: Dict[str, float] = {}
+        for cell_id in sorted(boxes, key=lambda name: order[name][start]):
+            was = order[cell_id]
+            new_start = page_start
+            for other_id, other_start in placed.items():
+                other_was = order[other_id]
+                if other_was[start] + other_was[size] > was[start] or not self._side_by_side(boxes, cell_id, other_id, across):
+                    continue
+                kept_gap = min(self.gap_between(cell_id, other_id, across), was[start] - other_was[start] - other_was[size])
+                new_start = max(new_start, other_start + boxes[other_id][size] + kept_gap)
+            placed[cell_id] = math.ceil(new_start / GRID_STEP) * GRID_STEP
+        return placed
+
+    def _side_by_side(self, boxes: Dict[str, Geometry], cell_id: str, other_id: str, across: bool) -> bool:
+        """Two cards close enough on the other axis that closing the gap on this one would bring them too close."""
+        box, other = boxes[cell_id], boxes[other_id]
+        side_start, side_size = (1, 3) if across else (0, 2)
+        apart = max(other[side_start] - box[side_start] - box[side_size], box[side_start] - other[side_start] - other[side_size])
+        return apart < self.gap_between(cell_id, other_id, not across)
 
 
 class _RouteGrid:

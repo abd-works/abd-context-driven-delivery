@@ -5,6 +5,7 @@ from mamba import before, context, description, it
 from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import (
     ArrowRouter,
     CardPlacement,
+    CardSpacing,
     DiagramArrow,
     paths_cross,
 )
@@ -246,3 +247,56 @@ with description("a class diagram page"):
 
         with it("should keep it out of the card in the way"):
             expect(_passes_through(self.arrow.path, self.cards[1])).to(be_false)
+
+
+def _spread_out():
+    """Order with Line far to its right and Payment far below, Refund close beside Payment, and an arrow from Order to
+    Line."""
+    cards = {
+        "Order": _card("Order", box=(0, 0, 200, 100)),
+        "Line": _card("Line", box=(900, 0, 200, 100)),
+        "Payment": _card("Payment", box=(0, 800, 200, 100)),
+        "Refund": _card("Refund", box=(240, 800, 200, 100)),
+    }
+    spacing = CardSpacing(list(cards.values()), [DiagramArrow("Order", "Line", "association")])
+    spacing.close_gaps()
+    return cards, spacing
+
+
+with description("a page with empty space between its cards"):
+    with context("whose space is closed up"):
+        with before.each:
+            self.cards, self.spacing = _spread_out()
+
+        with it("should bring a card beside another to the gap between cards side by side"):
+            expect(self.cards["Line"].geometry.x).to(equal(200 + self.spacing.gap_between("Order", "Line", across=True)))
+
+        with it("should bring a card below another to the gap between cards one above the other"):
+            expect(self.cards["Payment"].geometry.y).to(equal(100 + self.spacing.gap_between("Order", "Payment", across=False)))
+
+        # Each arrow either card sends or takes needs its own lane through the gap between them.
+        with it("should leave more room between cards joined by arrows"):
+            expect(self.spacing.gap_between("Order", "Line", across=True)).to(be_above(self.spacing.gap_between("Payment", "Refund", across=True)))
+
+        with it("should keep a card on the side of its neighbour it was on"):
+            expect(self.cards["Line"].geometry.x > self.cards["Order"].geometry.x).to(be_true)
+
+        # A person who put two cards close together meant it, so a gap already smaller stays as it was.
+        with it("should keep a gap already smaller than the gap between cards"):
+            expect(self.cards["Refund"].geometry.x - 200).to(equal(40))
+
+        with it("should keep every card clear of every other"):
+            boxes = [card.geometry for card in self.cards.values()]
+            expect(any(first.overlaps(second) for index, first in enumerate(boxes) for second in boxes[index + 1:])).to(be_false)
+
+    with context("that a layout made itself"):
+        with before.each:
+            self.cards, _ = _laid_out()
+
+        with it("should leave no gap wider than the most room between cards"):
+            boxes = sorted((card.geometry for card in self.cards.values()), key=lambda box: box.x)
+            gaps = [
+                later.x - (earlier.x + earlier.width) for earlier, later in zip(boxes, boxes[1:])
+                if later.x > earlier.x + earlier.width and abs(later.y - earlier.y) < 100
+            ]
+            expect(all(gap <= CardSpacing.MOST_GAP for gap in gaps)).to(be_true)

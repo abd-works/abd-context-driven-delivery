@@ -1,6 +1,6 @@
 ## Overview
 
-Rules for rendering and auditing UML class diagrams in Draw.io under clean engineering. Prefer incremental edits when a `.drawio` already exists, because full regeneration replaces every position a person chose. Pass **`keep_positioning=true`** on `render` / `create_diagram` (or `transform` with `previous` XML) to update class contents in place, leave existing relationship routing, and layout only new classes.
+Rules for rendering and auditing UML class diagrams in Draw.io under clean engineering. Prefer incremental edits when a `.drawio` already exists, because full regeneration replaces every position a person chose. Pass **`keep_positioning=true`** on `render` / `create_diagram` (or `transform` with `previous` XML) to update class contents in place, leave existing relationship routing, and layout only new classes. Add **`close_gaps=true`** to also close up the empty space between the kept cards: every card keeps its place relative to its neighbours, each gap shrinks to the room the arrows between two cards need (more for cards with more arrows), and every arrow is routed again. A layout the renderer makes itself is always closed up this way.
 
 ## How the diagram is drawn
 
