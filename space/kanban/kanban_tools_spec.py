@@ -2,7 +2,6 @@
 
 A behavior the board app shares across its tiers keeps its sentence here, in `app/tests/kanban/**/*.spec.shared.ts`."""
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -33,6 +32,7 @@ from space.session import Sessions  # noqa: E402
 from space.session.session import UnknownPracticeError  # noqa: E402
 
 from space.kanban.board_tools_examples import CHECKED_GRAPH, DISCOVERY_DONE, JUDGED_REPORT, ProjectTools, STORY_MAP_GRAPH, WHOLE_STORIES_GRAPH, next_action_of, reports_of, session_file_of, violation_counts_of  # noqa: E402
+from space.session.throwaway_project import ThrowawayProject
 
 
 with description("the board tools") as self:
@@ -40,7 +40,7 @@ with description("the board tools") as self:
         self.project = ProjectTools()
 
     with after.each:
-        os.environ.pop("CDD_PROJECT", None)
+        ThrowawayProject.close_all()
 
     # (E) See Work On Session Board
     with context("with a project whose sessions folder holds a ticket and a backlog item"):

@@ -1,8 +1,6 @@
 """The board's tools as specs call them: a project with a sessions folder whose board tools run on a McpServer,
 and the examples the board tools specs share."""
 import json
-import os
-import tempfile
 from pathlib import Path
 
 
@@ -14,6 +12,7 @@ from harness.installation.data_class import data_of  # noqa: E402
 from space.kanban.session_board_examples import saved_graph, saved_practice  # noqa: E402
 from space.kanban.story_test import progress_in  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
+from space.session.throwaway_project import ThrowawayProject
 
 TOOLSETS = (
     "space.kanban.board:Board",
@@ -103,11 +102,10 @@ class ProjectTools:
     """A project with a sessions folder, and the board's tools called through the MCP server."""
 
     def __init__(self) -> None:
-        self.root = Path(tempfile.mkdtemp(prefix="kanban-tools-"))
+        self.root = ThrowawayProject().root
         self.sessions = self.root / ".sessions"
         self.sessions.mkdir()
         (self.root / ".git").mkdir()
-        os.environ["CDD_PROJECT"] = str(self.root)
         self.server = McpServer(project=self.root)
         self.server.start(TOOLSETS)
 

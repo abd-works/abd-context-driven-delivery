@@ -23,6 +23,7 @@ from space.session import Sessions  # noqa: E402
 from space.session.progress_cache import PROGRESS_CACHE_FILE  # noqa: E402
 
 from space.kanban.board_tools_examples import ProjectTools  # noqa: E402
+from space.session.throwaway_project import ThrowawayProject
 
 # The session records with nothing left off origin's main: none uncommitted, none unpushed.
 SAVED = {"uncommitted": "", "unpushed": ""}
@@ -36,7 +37,7 @@ with description("the board tools") as self:
         self.project = ProjectTools()
 
     with after.each:
-        os.environ.pop("CDD_PROJECT", None)
+        ThrowawayProject.close_all()
 
     # (E) See Work On Session Board
     # (S) Person --> Activate Ticket

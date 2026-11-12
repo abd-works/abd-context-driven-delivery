@@ -35,6 +35,7 @@ from space.session.sessions import SessionNameRequiredError
 from space.work_state import WorkState
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
+from space.session.throwaway_project import SpecRunHome
 
 
 def _chat_in(session: Session, chat_id: str = "spec-chat") -> ChatPointer:
@@ -54,6 +55,9 @@ def _chat_arguments(chat_id: str, transcript: Path) -> dict[str, str]:
 # (E) Open Work Session
 # (E) Hold Process Session
 with description("a session"):
+    with before.each:
+        SpecRunHome.ensure()
+
     # (S) Session --> Persist Hook Session
     with context("that a hook event reads"):
         with before.each:
@@ -567,6 +571,9 @@ with description("a session"):
 # (E) Open Named Session
 # (S) Session --> Open Session Loop
 with description("a loop"):
+    with before.each:
+        SpecRunHome.ensure()
+
     with context("that is opened"):
         with before.each:
             self.repo = Path(tempfile.mkdtemp())
@@ -623,6 +630,9 @@ with description("a loop"):
 # (E) Open Work Session
 # (E) Record Session Log
 with description("an action"):
+    with before.each:
+        SpecRunHome.ensure()
+
     with before.each:
         self.repo = Path(tempfile.mkdtemp())
         self.called = self.repo
@@ -730,6 +740,9 @@ with description("an action"):
 # (E) Hold Process Session
 # (S) Session --> Load Practice Guideline
 with description("a practice"):
+    with before.each:
+        SpecRunHome.ensure()
+
     with context("that a practice has been invoked"):
         with before.each:
             self.repo = Path(tempfile.mkdtemp())
@@ -964,6 +977,9 @@ with description("a practice"):
 
 with description("a session with no folder of its own, on a project inside its checkout") as self:
     with before.each:
+        SpecRunHome.ensure()
+
+    with before.each:
         self.repo = Path(tempfile.mkdtemp(prefix="session-root-")).resolve()
         (self.repo / ".git").mkdir()
         self.project = self.repo / "app"
@@ -982,6 +998,9 @@ with description("a session with no folder of its own, on a project inside its c
 
 
 with description("a session working in a folder of its own, holding an aggregate's files") as self:
+    with before.each:
+        SpecRunHome.ensure()
+
     with before.each:
         self.repo = Path(tempfile.mkdtemp(prefix="session-declared-")).resolve()
         (self.repo / ".git").mkdir()
@@ -1005,6 +1024,9 @@ with description("a session working in a folder of its own, holding an aggregate
 # (E) Open Work Session
 # (S) Session --> Switch Session
 with description("a session on an MCP host whose CDD_REPO is the CDD checkout, not the project"):
+    with before.each:
+        SpecRunHome.ensure()
+
     with before.each:
         self._prior_repo = os.environ.get("CDD_REPO")
         self._prior_project = os.environ.get("CDD_PROJECT")
@@ -1088,6 +1110,9 @@ with description("a session on an MCP host whose CDD_REPO is the CDD checkout, n
 
 
 with description("a session switched to without a name"):
+    with before.each:
+        SpecRunHome.ensure()
+
     with context("with nothing saved in .sessions/session.json"):
         with before.each:
             self.repo = Path(tempfile.mkdtemp())
@@ -1103,6 +1128,9 @@ with description("a session switched to without a name"):
 
 
 with description("a session read for a board") as self:
+    with before.each:
+        SpecRunHome.ensure()
+
     with before.each:
         self.repo = Path(tempfile.mkdtemp(prefix="session-board-"))
         (self.repo / ".git").mkdir()
@@ -1190,6 +1218,9 @@ with description("a session read for a board") as self:
 
 # One graph per session: two calls that first ask for it at once must not each make their own.
 with description("a session whose graph two calls first ask for at once"):
+    with before.each:
+        SpecRunHome.ensure()
+
     with before.each:
         self.repo = Path(tempfile.mkdtemp())
         session = Sessions(self.repo).current()

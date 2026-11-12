@@ -1,6 +1,5 @@
 """The session kanban board (model: space/kanban/.context/kanban-model.md)."""
 import json
-import os
 import tempfile
 from pathlib import Path
 
@@ -23,16 +22,16 @@ from harness.installation.data_class import data_of  # noqa: E402
 from space.kanban.board import Board, Card, ColumnNotFoundError, Help  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
 from space.repo.repo import Repo  # noqa: E402
+from space.session.throwaway_project import ThrowawayProject  # noqa: E402
 
 
 class SessionsFolder:
     """A temporary `.sessions/` folder: work sessions with their logs, closed sessions, backlog items."""
 
     def __init__(self) -> None:
-        self.project = Path(tempfile.mkdtemp(prefix="kanban-sessions-"))
+        self.project = ThrowawayProject().root
         self.root = self.project / ".sessions"
         self.root.mkdir()
-        os.environ["CDD_PROJECT"] = str(self.project)
 
     def session(self, name: str, *log_lines: str, closed: bool = False, **fields) -> Path:
         folder = self.root / ("_complete" if closed else "") / name
@@ -62,7 +61,7 @@ def names(items) -> list:
 
 with description("a board") as self:
     with after.each:
-        os.environ.pop("CDD_PROJECT", None)
+        ThrowawayProject.close_all()
 
     with context("loaded for a tool call"):
         with it("should work on the one repository its sessions hold"):
@@ -283,7 +282,7 @@ with description("a board") as self:
 
 with description("a backlog item") as self:
     with after.each:
-        os.environ.pop("CDD_PROJECT", None)
+        ThrowawayProject.close_all()
 
     # (S) Person --> Add Backlog Item, Start Backlog Item
     with context("that a person has added to the backlog folder"):
@@ -416,7 +415,7 @@ def story_map(ticket):
 
 with description("a ticket") as self:
     with after.each:
-        os.environ.pop("CDD_PROJECT", None)
+        ThrowawayProject.close_all()
 
     # (S) Person --> Open Ticket Session
     with context("that has just been started"):

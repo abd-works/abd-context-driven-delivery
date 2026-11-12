@@ -13,6 +13,7 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from space.repo.repo import Repo  # noqa: E402
+from space.session.throwaway_project import SpecRunHome
 
 
 def _git(root: Path, *args: str) -> str:
@@ -113,6 +114,9 @@ with description("a branch on a clone") as self:
 
 
 with description("a Repo and its checkouts") as self:
+    with before.each:
+        SpecRunHome.ensure()
+
     with before.each:
         self.tmp = Path(tempfile.mkdtemp(prefix="repo-parts-spec-"))
         self.origin, self.clone = _clone_with_origin(self.tmp)
