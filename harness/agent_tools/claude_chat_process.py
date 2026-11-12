@@ -17,6 +17,19 @@ from pathlib import Path
 _ANCESTORS_SEARCHED = 8
 
 
+def claude_config_folder() -> Path:
+    """Claude Code's own settings folder: ``CLAUDE_CONFIG_DIR``, else ``~/.claude``."""
+    return Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
+
+
+def is_desktop_spare(folder: Path) -> bool:
+    """Whether folder is one of the desktop app's spare folders (``<config>/spares/...``), which a chat starts in before
+    the app moves it to its project. It is never a project: work done there is lost when the app reuses it."""
+    spares = (claude_config_folder() / "spares").resolve()
+    resolved = folder.resolve()
+    return resolved == spares or spares in resolved.parents
+
+
 class ClaudeChatProcess:
     """A running Claude Code chat process, known by its process id."""
 
@@ -53,7 +66,7 @@ class ClaudeChatProcess:
         that is still there."""
         recorded = self._recorded("cwd")
         folder = Path(recorded) if recorded else None
-        if folder is None or not folder.is_dir():
+        if folder is None or not folder.is_dir() or is_desktop_spare(folder):
             return None
         resolved = folder.resolve()
         return next((above for above in (resolved, *resolved.parents) if (above / ".git").exists()), resolved)

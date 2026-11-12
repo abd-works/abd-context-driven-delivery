@@ -3,7 +3,7 @@ import type { EngineInterface } from 'claude-code'
 import { BRAND } from '../shared/brand'
 import type { ChatBarDraw } from './chat-bar-view'
 import { MAIN_SESSION } from './chat-bar-client'
-import { activateTicket, closeSession, createSession } from './session-client'
+import { activateTicket, closeSession, createSession, openRepo } from './session-client'
 import { cancelClose, toggleLeaving } from './session-dialogs-client'
 import { stageIconOf } from './stage-client'
 
@@ -75,6 +75,28 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
         </Box>
       ))}
       <Input key="new-session" placeholder="New session name" value="" onSubmit={value => (value.trim() ? createSession($, value.trim()) : undefined)} />
+    </Box>
+  )
+}
+
+// In the main chat, the repositories beside this one, opened from their own button after the session list's +, alone,
+// so the bar stays in view. Opening one starts a top-level chat on it; a new name creates the repository, private.
+export function RepoListView($: EngineInterface, { Box, Button, Input, Text }: ElementTable, { chatBar, view }: ChatBarDraw) {
+  if (!view.isRepoListOpen || !chatBar.isMain) return null
+  return (
+    <Box key="repo-list" flexDirection="column" alignSelf="flex-end" paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
+      <Text key="repos-heading" color={BRAND.muted}>REPOS</Text>
+      {/* A chat bar whose view was saved before repos existed has none. Each repository is a whole button: a
+          see-through one laid over its name took no press. */}
+      {(view.repos ?? []).map(repo => (
+        <Button
+          key={`repo-${repo.name}`}
+          plain
+          label={`${repo.has_cdd ? '◆' : '◇'} ${repo.name}${repo.branch ? ` · ${repo.branch}` : ''}`}
+          onPress={() => openRepo($, repo.name)}
+        />
+      ))}
+      <Input key="new-repo" placeholder="New repo name (private)" value="" onSubmit={value => (value.trim() ? openRepo($, value.trim()) : undefined)} />
     </Box>
   )
 }
