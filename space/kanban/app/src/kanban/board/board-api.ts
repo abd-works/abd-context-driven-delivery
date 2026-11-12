@@ -1,6 +1,9 @@
 import type { BoardStore } from '../shared/board-store'
 
 const BOARD_HEADER = 'X-CDD-Board'
+// The repository the page shows, from its ?project= link, sent with every call so the server reads that repository's board.
+const PROJECT_HEADER = 'X-CDD-Project'
+const PROJECT_QUERY = 'project'
 const API_ROOT = '/api'
 const NOT_CONNECTED = 503
 // A call still running after this long says so: the shared cdd server can be busy for minutes.
@@ -14,23 +17,31 @@ const sendWithFetch: Send = (path, init) => fetch(path, init)
 
 export const pathPart = (text: string): string => encodeURIComponent(text)
 
+// The folder the page's ?project= link names; empty for a page opened without one, which shows the server's own project.
+export const projectOfPage = (search: string = typeof location === 'undefined' ? '' : location.search): string => new URLSearchParams(search).get(PROJECT_QUERY) ?? ''
+
 // Every call the page makes to its server, so a failure is shown to the person in one place. A failed call answers null.
 export class BoardApi {
   constructor(
     private readonly store: BoardStore,
     private readonly send: Send = sendWithFetch,
+    private readonly project: string = projectOfPage(),
   ) {}
 
   // A route the board server answers itself, such as its build: the answer says nothing about whether cdd is back.
   get<T>(path: string): Promise<T | null> {
-    return this.call<T>(path, undefined, false)
+    return this.call<T>(path, { headers: this.projectHeader() }, false)
   }
 
   post<T>(path: string, body: unknown = {}): Promise<T | null> {
-    return this.call<T>(path, { method: 'POST', headers: { [BOARD_HEADER]: '1', 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, true)
+    return this.call<T>(path, { method: 'POST', headers: { [BOARD_HEADER]: '1', 'Content-Type': 'application/json', ...this.projectHeader() }, body: JSON.stringify(body) }, true)
   }
 
-  private async call<T>(path: string, init: RequestInit | undefined, reachesCdd: boolean): Promise<T | null> {
+  private projectHeader(): Record<string, string> {
+    return this.project ? { [PROJECT_HEADER]: this.project } : {}
+  }
+
+  private async call<T>(path: string, init: RequestInit, reachesCdd: boolean): Promise<T | null> {
     const slow = path === BOARD_READ ? undefined : setTimeout(() => this.waitingOn(path), SLOW_CALL_MILLISECONDS)
     const response = await this.send(`${API_ROOT}${path}`, init)
       .catch(() => null)

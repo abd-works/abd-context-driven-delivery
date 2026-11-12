@@ -11,6 +11,7 @@ import type { CddApi } from '@cdd/cdd-shared'
 import { ChatClientGenerated, type ChatCommandData } from '@cdd/harness/chat/chat'
 import { createApp } from '../packages/session-board/app'
 import { BoardUpdate } from '@src/session-board/board-update'
+import { ProjectConnections } from '@src/session-board/project-connections'
 import type { Send } from '@src/kanban/board/board-api'
 import { BoardPage } from '@src/kanban/board/board-page'
 import type { TicketClient } from '@src/kanban/ticket/ticket-client'
@@ -86,7 +87,7 @@ export class RunningBoard {
     const port = await freePort()
     const updates = new UpdateRecord()
     const server = await new Promise<Server>(done => {
-      const listening = createApp(cdd, port, STATIC_ROOT, updates.boardUpdate()).listen(port, LOCAL, () => done(listening))
+      const listening = createApp(new ProjectConnections(cdd), port, STATIC_ROOT, updates.boardUpdate()).listen(port, LOCAL, () => done(listening))
     })
     return new RunningBoard(cdd, `http://${LOCAL}:${port}`, server, updates)
   }

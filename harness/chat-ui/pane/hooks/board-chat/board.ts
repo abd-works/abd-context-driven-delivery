@@ -6,6 +6,9 @@ import { currentServerHealth, ServerHealthClient } from '../health/server-health
 
 // The board refuses a POST without this header, so another page cannot act on it.
 const BOARD_HEADERS = { 'X-CDD-Board': '1', 'Content-Type': 'application/json' }
+// One board server serves every repository, so each call names this chat's repository, and the page's link does too.
+const PROJECT_HEADER = 'X-CDD-Project'
+const PROJECT_QUERY = 'project'
 
 // One call on the board's chat routes, each with the body that chat tool takes.
 export type ChatRequest = { chat: string } & (
@@ -25,9 +28,27 @@ export async function boardUrl($: EngineInterface): Promise<string> {
   return new ServerHealthClient(report as ServerHealthData | null).kanbanAppUrl
 }
 
+// The repository's own folder, which a chat in a ticket's worktree reaches through the git folder they share: the
+// project whose board this chat shows, where the board is installed and built, and what a path from the project is named
+// from. Empty outside a repository.
+export async function repositoryFolder($: EngineInterface): Promise<string> {
+  const { exitCode, stdout } = await $.process.run(['git', 'rev-parse', '--path-format=absolute', '--git-common-dir'])
+  return exitCode === 0 ? stdout.trim().replace(/[\\/]\.git$/, '') : ''
+}
+
+// The board page showing this chat's repository, at url, with any further query the link carries, such as a report to
+// open. Outside a repository the page shows the board server's own project.
+export async function boardPageUrl($: EngineInterface, url: string, query: Record<string, string> = {}): Promise<string> {
+  const project = await repositoryFolder($)
+  const search = new URLSearchParams({ ...(project ? { [PROJECT_QUERY]: project } : {}), ...query }).toString()
+  return search ? `${url}/?${search}` : url
+}
+
 // A chat with no board address yet has nothing to post to, which reads as a board that did not answer.
 export async function post($: EngineInterface, { chat, operation, body }: ChatRequest): Promise<{ ok: boolean; text: string }> {
   const url = await boardUrl($)
   if (!url) return { ok: false, text: '' }
-  return $.http.fetch(`${url}/api/chat/${encodeURIComponent(chat)}/${operation}`, { method: 'POST', headers: BOARD_HEADERS, body: JSON.stringify(body) })
+  const project = await repositoryFolder($)
+  const headers = project ? { ...BOARD_HEADERS, [PROJECT_HEADER]: project } : BOARD_HEADERS
+  return $.http.fetch(`${url}/api/chat/${encodeURIComponent(chat)}/${operation}`, { method: 'POST', headers, body: JSON.stringify(body) })
 }

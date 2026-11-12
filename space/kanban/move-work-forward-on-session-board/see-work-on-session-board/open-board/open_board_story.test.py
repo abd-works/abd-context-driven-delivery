@@ -36,5 +36,7 @@ with story("Open Board"):
             # chat mod -> board server start when it does not answer
             # chat mod <- the board's address
             pass
-        with then("the chat answers The board is at http://127.0.0.1:8778, and starts the board first when nothing answers on that port"):
+        with then("the chat answers The board is at http://127.0.0.1:8778/?project=<the chat's repository folder>, and starts the board first when nothing answers on that port"):
+            # board page -> every call names that repository in its X-CDD-Project header
+            # board server -> the cdd connection made for that repository
             pass

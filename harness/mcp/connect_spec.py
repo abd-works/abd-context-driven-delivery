@@ -54,3 +54,11 @@ with description("what a chat's connect script prints") as self:
     with context("for a language adapter, asked for the server's address in the project's folder"):
         with it("should be the server's address with the headers naming the folder it runs in"):
             expect(connect.answer(["--address"], _URL, "x-cdd-project", "x-cdd-chat")).to(equal({"url": _URL, "headers": {"x-cdd-project": os.getcwd(), "x-cdd-chat": connect.UNNAMED_CHAT}}))
+
+        # A board or graph server started from a chat serves every chat, so it never takes on the chat that started it:
+        # the server would otherwise follow that chat to its folder and show that repository to everyone.
+        with context("that a Claude Code chat started"):
+            with it("should name only the project, never the chat or its process"):
+                os.environ[connect.CHAT_ID_VARIABLE] = "chat-7"
+                answer = connect.answer(["--address"], _URL, "x-cdd-project", "x-cdd-chat", {"x-cdd-chat-process": "40364"})
+                expect(answer["headers"]).to(equal({"x-cdd-project": os.getcwd(), "x-cdd-chat": connect.UNNAMED_CHAT}))

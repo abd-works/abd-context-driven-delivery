@@ -21,7 +21,8 @@ section: body
 
 *Given* a Claude Code chat has the cdd-board mod loaded
 *When* the Person asks the chat where the session board is
-*Then* the chat answers The board is at http://127.0.0.1:8778, and starts the board first when nothing answers on that port
+*Then* the chat answers The board is at http://127.0.0.1:8778/?project=<the chat's repository folder>, and starts the board first when nothing answers on that port
+*And* the board shows that repository's tickets, whichever repository the board server was started from
 
 ## Story: Display Board
 

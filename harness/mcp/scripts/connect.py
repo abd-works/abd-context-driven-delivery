@@ -39,13 +39,16 @@ def answer(arguments: list[str], url: str, project_header: str, chat_header: str
     """What the script prints: the headers alone for an IDE's ``headersHelper``, or, asked with ``--address``, the
     server's address with the headers, for a language adapter that connects on its own. A Claude Code chat's id goes
     in the chat header, and chat_process, the header naming the Claude Code process that runs this script, goes with
-    it, so the server reads the folder the chat's session works in now on every call."""
+    it, so the server reads the folder the chat's session works in now on every call. A language adapter is a server
+    of its own, such as the session board, that serves every chat, so it names only its project: carrying the chat
+    that happened to start it would make the cdd server follow that chat's folder instead."""
+    is_language_adapter = ADDRESS_FLAG in arguments
     headers = {
         project_header: project_folder([word for word in arguments if word != ADDRESS_FLAG]),
-        chat_header: os.environ.get(CHAT_ID_VARIABLE, "").strip() or UNNAMED_CHAT,
-        **(chat_process or {}),
+        chat_header: UNNAMED_CHAT if is_language_adapter else os.environ.get(CHAT_ID_VARIABLE, "").strip() or UNNAMED_CHAT,
+        **({} if is_language_adapter else chat_process or {}),
     }
-    return {"url": url, "headers": headers} if ADDRESS_FLAG in arguments else headers
+    return {"url": url, "headers": headers} if is_language_adapter else headers
 
 
 def project_folder(arguments: list[str]) -> str:

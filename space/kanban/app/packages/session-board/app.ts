@@ -3,7 +3,6 @@ import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import type { CddConnection } from '@cdd/cdd-connection'
 import { backlogItemRoutes } from '@cdd/space/kanban/backlog-item'
 import { boardRoutes } from '@cdd/space/kanban/board'
 import { fidelityProgressRoutes } from '@cdd/space/kanban/fidelity-progress'
@@ -17,6 +16,7 @@ import type { BoardUpdate } from '@src/session-board/board-update'
 import { cddRoutes } from '@src/session-board/cdd-routes'
 import { ClaudeLink } from '@src/session-board/claude-link'
 import { answerFailure, HttpException } from '@src/session-board/http-exception'
+import type { ProjectConnections } from '@src/session-board/project-connections'
 
 // The header forces a preflight, which this server never answers, so a page on another site cannot post here.
 export const BOARD_HEADER = 'x-cdd-board'
@@ -32,7 +32,7 @@ const onlyThisMachine = (port: number) => (request: Request, _response: Response
   next(isLocalHost && !isForeignPost ? undefined : new HttpException(FORBIDDEN, 'Refused: this server answers only its own page and mod on this machine.'))
 }
 
-export function createApp(cdd: CddConnection, port: number, staticRoot: string, boardUpdate: BoardUpdate, claudeLink = new ClaudeLink()): Express {
+export function createApp(projects: ProjectConnections, port: number, staticRoot: string, boardUpdate: BoardUpdate, claudeLink = new ClaudeLink()): Express {
   const app = express()
   app.use(onlyThisMachine(port))
   app.use(express.json())
@@ -55,7 +55,7 @@ export function createApp(cdd: CddConnection, port: number, staticRoot: string, 
     const build = existsSync(index) ? createHash('sha256').update(readFileSync(index)).digest('hex') : ''
     response.json({ build })
   })
-  app.use('/api', cddRoutes(cdd, [...boardRoutes, ...stageRoutes, ...ticketRoutes, ...fidelityProgressRoutes, ...sessionRoutes, ...practiceSessionOutputRoutes, ...backlogItemRoutes, ...chatRoutes]))
+  app.use('/api', cddRoutes(projects, [...boardRoutes, ...stageRoutes, ...ticketRoutes, ...fidelityProgressRoutes, ...sessionRoutes, ...practiceSessionOutputRoutes, ...backlogItemRoutes, ...chatRoutes]))
   app.use(express.static(staticRoot))
   app.get('*', (_request, response) => {
     response.sendFile(join(staticRoot, 'index.html'))

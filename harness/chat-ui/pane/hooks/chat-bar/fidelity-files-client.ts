@@ -5,7 +5,8 @@ import type { FileEntryData } from '@cdd/space/kanban/fidelity-progress'
 import type { FileTextData } from '@cdd/space/session/session'
 
 import type { FidelityFilesJson } from '../../types'
-import { openInBrowser, repositoryFolder, runningBoardUrl } from '../board-chat/board-server'
+import { boardPageUrl, repositoryFolder } from '../board-chat/board'
+import { openInBrowser, runningBoardUrl } from '../board-chat/board-server'
 import { reasonOf } from '../shared/failure'
 import { callTool, currentChatBar } from './chat-bar-client'
 import { runAction, type FidelityProgressClient } from './fidelity-progress-client'
@@ -57,7 +58,7 @@ export async function openFilesOf($: EngineInterface, fidelities: FidelityProgre
 // holds. With no board to open, the toast says so and names the report's file.
 export async function openReport($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
   const url = await runningBoardUrl($).catch(() => '')
-  const link = url && `${url}/?report=${encodeURIComponent(fidelity.progress.ticket.name)}&fidelity=${encodeURIComponent(fidelity.slug)}`
+  const link = url && (await boardPageUrl($, url, { report: fidelity.progress.ticket.name, fidelity: fidelity.slug }))
   if (link && (await openInBrowser($, link))) return
   const why = url ? `the browser did not open ${link}` : 'the board is not running and did not start'
   $.ui.toast(`${fidelity.slug} report: ${why}. The report is ${fidelity.progress.report_file || 'not saved yet'}`)

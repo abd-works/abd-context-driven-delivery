@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 import { CddConnection } from '@cdd/cdd-connection'
 import { BoardUpdate } from '@src/session-board/board-update'
+import { ProjectConnections } from '@src/session-board/project-connections'
 
 import { createApp } from './app'
 // The board's port, written once for this server and for the Python that reports it to a chat.
@@ -15,9 +16,9 @@ const SERVE_ARGUMENTS = ['--import', 'tsx', 'packages/session-board/serve.ts']
 const here = dirname(fileURLToPath(import.meta.url))
 const appRoot = resolve(here, '..', '..')
 const port = Number(process.env.BOARD_PORT ?? ports.board[0])
-// The board's project defaults to the checkout cdd was installed from.
-const cdd = new CddConnection(process.env.BOARD_PROJECT)
-const app = createApp(cdd, port, join(appRoot, 'dist'), new BoardUpdate(appRoot, () => restartOnNewCode()))
+// A call that names no project is about BOARD_PROJECT, which defaults to the checkout cdd was installed from.
+const projects = new ProjectConnections(new CddConnection(process.env.BOARD_PROJECT))
+const app = createApp(projects, port, join(appRoot, 'dist'), new BoardUpdate(appRoot, () => restartOnNewCode()))
 
 const server = app.listen(port, HOST, () => {
   console.log(`Session board at http://${HOST}:${port}`)
@@ -29,13 +30,13 @@ function restartOnNewCode(): void {
   server.closeAllConnections()
   server.close(() => {
     spawn(process.execPath, SERVE_ARGUMENTS, { cwd: appRoot, detached: true, stdio: 'ignore', windowsHide: true }).unref()
-    void cdd.close().finally(() => process.exit(0))
+    void projects.close().finally(() => process.exit(0))
   })
 }
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
     server.close()
-    void cdd.close().finally(() => process.exit(0))
+    void projects.close().finally(() => process.exit(0))
   })
 }

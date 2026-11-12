@@ -2,7 +2,7 @@ import type { EngineInterface } from 'claude-code'
 
 import { reasonOf } from '../shared/failure'
 import { refreshHealth } from '../health/server-health-client'
-import { after, boardUrl } from './board'
+import { after, boardPageUrl, boardUrl, repositoryFolder } from './board'
 
 // /board opens the session board, starting its server from this repository when nothing answers on its port.
 const BOARD_APP = 'space/kanban/app'
@@ -16,13 +16,6 @@ function isBoardUp($: EngineInterface, url: string): Promise<boolean> {
     .fetch(`${url}/api/build`)
     .then(answer => answer.ok)
     .catch(() => false)
-}
-
-// The repository's own folder, which a chat in a ticket's worktree reaches through the git folder they share: where the
-// board is installed and built, and what a path from the project is named from. Empty outside a repository.
-export async function repositoryFolder($: EngineInterface): Promise<string> {
-  const { exitCode, stdout } = await $.process.run(['git', 'rev-parse', '--path-format=absolute', '--git-common-dir'])
-  return exitCode === 0 ? stdout.trim().replace(/[\\/]\.git$/, '') : ''
 }
 
 // The board app in the repository's own folder, so a chat in a ticket's worktree, which holds no build, starts it too.
@@ -71,14 +64,15 @@ export async function openInBrowser($: EngineInterface, url: string): Promise<bo
 }
 
 // Starts the board when nothing answers on its port, so /board always ends with a board to open. cdd's server health
-// gives the board's address, so the chat names no port of the board's.
+// gives the board's address, so the chat names no port of the board's. The link names this chat's repository, so the
+// page shows this chat's tickets whichever repository the server was started from.
 export async function openedBoard($: EngineInterface): Promise<string> {
   await refreshHealth($)
   const url = await boardUrl($)
   if (!url) return NO_ADDRESS
-  if (await isBoardUp($, url)) return `The board is at ${url}.`
+  if (await isBoardUp($, url)) return `The board is at ${await boardPageUrl($, url)}.`
   const folder = await boardAppFolder($)
   if (!folder || !(await $.fs.exists(`${folder}/node_modules`)) || !(await $.fs.exists(`${folder}/dist`))) return `The board is not running and is not installed here. ${START_BY_HAND}`
   startServer($, folder)
-  return (await cameUp($, url)) ? `Started the board at ${url}. It stops when this chat ends.` : `The board did not start within ${STARTED_WITHIN_MILLISECONDS / 1000} s. ${START_BY_HAND}`
+  return (await cameUp($, url)) ? `Started the board at ${await boardPageUrl($, url)}. It stops when this chat ends.` : `The board did not start within ${STARTED_WITHIN_MILLISECONDS / 1000} s. ${START_BY_HAND}`
 }
