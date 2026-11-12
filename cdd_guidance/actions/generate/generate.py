@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.guidance import FidelityGuidance, Guidance, PracticeGuidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.installation.files import skill
@@ -70,23 +70,24 @@ class Generate(GuidanceAction):
             f"and paths {', '.join(made[source])}. Then follow place_rendered, so {earlier.slug} has its {wanted} file."
         )
 
-    def _fidelity_before(self, practice: PracticeGuidance, current):
+    def _fidelity_before(self, practice: PracticeGuidance, current: FidelityGuidance) -> FidelityGuidance | None:
         """The practice's fidelity in the stage before current's; none for its first fidelity."""
         fidelities = list(practice.fidelities.entries.values())
         position = next((index for index, fidelity in enumerate(fidelities) if fidelity is current), 0)
         return fidelities[position - 1] if position > 0 else None
 
-    def _existing_files(self, fidelity) -> dict[str, list[str]]:
+    def _existing_files(self, fidelity: FidelityGuidance) -> dict[str, list[str]]:
         """The files fidelity has in this session, by the format it declares them in, each a path from the project."""
         return {label: [entry.path for entry in entries if entry.exists] for label, entries in fidelity.files().items()}
 
 
-    def _generate_item(self, item) -> str:
+    def _generate_item(self, worked: Guidance | str) -> str:
         """What generating one listed guidance asks for: the text itself, or the instructions of the fidelity this
-        generate works at and what its practice says about writing the artifact. The recipe reads the text returned."""
-        if isinstance(item, str):
-            return item
-        return "\n\n".join(part.strip() for part in (item.instructions, item.generate_output()) if part and part.strip())
+        generate works at (worked) and what its practice says about writing the artifact. The recipe reads the text
+        returned."""
+        if isinstance(worked, str):
+            return worked
+        return "\n\n".join(part.strip() for part in (worked.instructions, worked.generate_output()) if part and part.strip())
 
     def _where_outputs_go(self) -> str:
         worked = [self.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
@@ -97,20 +98,14 @@ class Generate(GuidanceAction):
         return f"Save each format you write at its path, filling any {{name}} from the work: {'; '.join(places)}"
 
     def _output_folders(self) -> list[Path]:
-        """The folder at the root of each place a listed fidelity writes: the folder holding the `.context` a file sits
-        under, at any depth, else the file's own folder. A templated path's folder is left to the agent."""
+        """The folder of each file a listed fidelity writes, once each; the pattern overlays record their patterns at
+        the root of each. A templated path's folder is left to the agent."""
         worked = [self.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
         paths = [path for fidelity in worked if fidelity is not None for listed in fidelity.output_paths().values() for path in listed]
-        return list(dict.fromkeys(_content_root(self.session.path_named(path).parent) for path in paths if "{" not in path))
+        return list(dict.fromkeys(self.session.path_named(path).parent for path in paths if "{" not in path))
 
     @agent_instructions
     def generate_fixes_from_validate(self) -> str:
         """The fixes step that follows a validate, which an action such as Satisfy names after asking for validate."""
         "Apply the fixes the latest validate report names before considering generate done, in every format of the fidelity: its documents, its diagrams, and its code, so they still mirror each other."
         return ""
-
-
-def _content_root(folder: Path) -> Path:
-    """The folder holding the `.context` that folder sits in, at any depth; folder itself when it sits in none."""
-    held = next((ancestor for ancestor in [folder, *folder.parents] if ancestor.name == ".context"), None)
-    return held.parent if held is not None else folder

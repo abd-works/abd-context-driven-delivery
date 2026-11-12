@@ -58,3 +58,24 @@ class OutlineEntriesLoopOverExamples(PracticeGraphRule):
             f"loop over the outline's examples export instead."
             for line, outline, entry in node.get_fact("hand_written_entries", [])
         ]
+
+
+class PlaywrightTestsBrowserInteraction(PracticeGraphRule):
+    """Every story has a screen story: a Playwright file whose describe names it drives the page the domain and server
+    specs cannot see. Validate keeps only the stories the session's ticket names."""
+
+    slug = "playwright-tests-browser-interaction"
+    node_types = ("Story",)
+
+    def check_practice(self, context) -> list[tuple[str, str]]:
+        driven = {_story_key(name) for spec in context.nodes("PlaywrightSpec") for name in spec.get_fact("screen_stories", [])}
+        return [
+            (story.node_id, f"{story.source.file}: story `{story.name}` has no screen story: no Playwright file "
+                            f"(`*.story.ui.spec.ts`) has a describe named for it; write one that drives its screen.")
+            for story in context.nodes("Story")
+            if _story_key(story.name) not in driven
+        ]
+
+
+def _story_key(name: str) -> str:
+    return " ".join(name.lower().split())

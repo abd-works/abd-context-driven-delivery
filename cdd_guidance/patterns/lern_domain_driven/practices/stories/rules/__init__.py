@@ -4,6 +4,7 @@ from cdd_guidance.patterns.lern_domain_driven.practices.stories.rules.shared_sto
     DomainOperationsInlineInSteps,
     NoExpectInGiven,
     OutlineEntriesLoopOverExamples,
+    PlaywrightTestsBrowserInteraction,
     TierBoundRepositoryAccessor,
 )
 
@@ -12,6 +13,7 @@ RULES: tuple = (
     NoExpectInGiven(),
     DomainOperationsInlineInSteps(),
     OutlineEntriesLoopOverExamples(),
+    PlaywrightTestsBrowserInteraction(),
 )
 
 BY_SLUG = {rule.slug: rule for rule in RULES}

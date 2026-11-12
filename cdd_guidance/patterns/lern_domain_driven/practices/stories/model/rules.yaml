@@ -22,3 +22,6 @@ playwright:
     - domain-operations-inline-in-steps
     - playwright-tests-browser-interaction
     - reduce-story-overlap
+story:
+  rules:
+    - playwright-tests-browser-interaction

@@ -4,12 +4,15 @@ import type { TicketData } from '@cdd/space/kanban/ticket'
 import type { BoardPage } from '../board/board-page'
 import { EMPTY_DRAFT } from '../shared/board-store'
 
+// A backlog item as the page knows it. A tool that answers the item changed, such as editText or moveBefore, has the
+// board read again, so the page shows it.
 export class BacklogItemClient extends BacklogItemClientGenerated {
   constructor(
     json: BacklogItemData,
     private readonly page: BoardPage,
   ) {
     super(page.api, json)
+    this.onChanged(() => void page.reader.refresh())
   }
 
   get address(): string {

@@ -4,18 +4,18 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.annotations.name import Name
 from space.kanban.board import BACKLOG_COLUMN, Board, Card, Column
+# Imported for real, not only for type checking: the backlog-item.start_under tool reads its parent's type to load the
+# ticket the call names.
+from space.kanban.ticket import Ticket
 from space.session.idea_file import IdeaFile
 from harness.mcp.mcp_server import mcp
 
-if TYPE_CHECKING:
-    from space.kanban.ticket import Ticket
 
 
 @identity("title")

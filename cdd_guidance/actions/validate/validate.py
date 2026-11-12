@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
+from harness.guidance.guidance import Guidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset
+from harness.agent_tools.tool_call import ToolCall
 from harness.installation.destination import noDeploy
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
@@ -13,6 +16,9 @@ from harness.guidance.rule import Rule
 
 from cdd_guidance.actions.validate.checked_graph import CheckedGraph, NamedToCheck
 from cdd_guidance.actions.validate.report_files import ReportFiles
+
+if TYPE_CHECKING:
+    from space.session.session import Session
 
 _VALIDATE_MARKDOWN = Path(__file__).with_name("validate.md").read_text(encoding="utf-8")
 
@@ -24,7 +30,7 @@ _LOGGED_VIOLATIONS = 40
 class Validate(GuidanceAction):
     """Validate artifacts for provided context tools."""
 
-    def __init__(self, session=None, call=None) -> None:
+    def __init__(self, session: Session | None = None, call: ToolCall | None = None) -> None:
         super().__init__(session, call)
         # What this call checks, made by each validate; the cdd server makes a new action for each call.
         self._graph: CheckedGraph | None = None
@@ -50,38 +56,58 @@ class Validate(GuidanceAction):
         run on them; the saved graph is not read or rebuilt. A path that is not there, or not under the session's root, is refused.
         With no paths and no graph, the folders holding the fidelity's written output are checked."""
         self._work_on(guidance)
-        sections: list[str] = [_VALIDATE_MARKDOWN]
-        fidelities = self._fidelities()
-        self._graph = CheckedGraph(self.session, fidelities, NamedToCheck(paths, graph, self.call))
-        self._reports = ReportFiles(self.session, fidelities)
-        graph_paths = self._graph.check_beside(self._reports)
-        if fidelities:
-            sections.append(self._judging_instruction())
-        if graph_paths:
-            sections.append(self._graph_and_ai_rule_report())
-        elif graph:
-            sections.append(
-                "No saved graph found. Run graph.load_working_copy on the session's folder, which saves "
-                ".context/graph.json there, or pass graph as a path to graph_return_nodes JSON."
-            )
-
-        def on(item) -> str:
-            if rule is not None:
-                return rule.validate()
-            if isinstance(item, str):
-                return item
-            if graph_paths:
-                return ""
-            return item.checked_rules_text()
-
-        parts = [part for part in self.run(on, action="validate") if part]
-        sections.extend(parts)
-        overlay_rules = self._overlay_rules(self._graph.edited or self._graph.prefixes)
-        if overlay_rules:
-            sections.append(f"Judge the work against these overlaid patterns' rules too, as you judge the practices' rules.\n\n{overlay_rules}")
-        report = "\n\n".join(sections)
+        self._check(NamedToCheck(paths, graph, self.call))
+        report = self._report(rule, graph_named=bool(graph))
         self._reports.save(report, self._graph)
         return f"{report}\n\nValidation report for these artifacts: {self._reports.where()}"
+
+    def _check(self, to_check: NamedToCheck) -> None:
+        """Claim this call's report files and build, or read, the graph it checks beside them."""
+        fidelities = self._fidelities()
+        self._graph = CheckedGraph(self.session, fidelities, to_check)
+        self._reports = ReportFiles(self.session, fidelities)
+        self._graph.check_beside(self._reports)
+
+    def _report(self, rule: Rule | None, graph_named: bool) -> str:
+        """The report: how to validate, what the judge judges, the graph's violations, each listed guidance's rules
+        (or the one rule named), and the overlaid patterns' rules."""
+        sections = [
+            _VALIDATE_MARKDOWN,
+            self._judging_instruction(),
+            self._graph_section(graph_named),
+            *self.run(lambda worked: self._rules_text(worked, rule), action="validate"),
+            self._overlay_section(),
+        ]
+        return "\n\n".join(section for section in sections if section)
+
+    def _graph_section(self, graph_named: bool) -> str:
+        """The graph rules' report when this call checks a graph; when it named one and none was found, how to make one."""
+        if self._graph.files:
+            return self._graph_and_ai_rule_report()
+        if not graph_named:
+            return ""
+        return (
+            "No saved graph found. Run graph.load_working_copy on the session's folder, which saves "
+            ".context/graph.json there, or pass graph as a path to graph_return_nodes JSON."
+        )
+
+    def _rules_text(self, worked: Guidance | str, rule: Rule | None) -> str:
+        """What the judge checks worked against: the one rule named, the text itself, or the fidelity's rules; none
+        when the graph's report already gives them."""
+        if rule is not None:
+            return rule.validate()
+        if isinstance(worked, str):
+            return worked
+        if self._graph.files:
+            return ""
+        return worked.checked_rules_text()
+
+    def _overlay_section(self) -> str:
+        """The rules of the patterns the checked content was generated with; none when it names none."""
+        overlay_rules = self._overlay_rules(self._graph.edited or self._graph.prefixes)
+        if not overlay_rules:
+            return ""
+        return f"Judge the work against these overlaid patterns' rules too, as you judge the practices' rules.\n\n{overlay_rules}"
 
     def _fidelities(self) -> list:
         """The fidelity each listed guidance is validated at. A listed practice is the one this action's session holds,
@@ -96,22 +122,31 @@ class Validate(GuidanceAction):
         built; otherwise the checked format's files. Validate checks one format of each fidelity, the one the guidance
         names, else the one its fidelity last used, else the fidelity's default: the formats mirror each other, so
         checking every one reports each finding once per format."""
-        graph_judged = self._graph.judged_files(on_graph=True)
-        file_judged = self._graph.judged_files(on_graph=False)
-        sentences = []
-        if graph_judged:
-            sentences.append(
-                f"Judge the graph validate built from the checked format's files ({graph_judged}), "
-                f"saved at {', '.join(str(path) for path in self._graph.files)}: its classes, operations, parameters, "
-                "properties, relationships, and dependencies, against each rule. Read a file only to see what a node "
-                "stands for; whether a model document matches the code is a separate, secondary check."
-            )
-        if file_judged:
-            sentences.append(
-                f"Judge only the checked format's files ({file_judged}). The other formats mirror "
-                "them, so judging those too reports every finding twice."
-            )
-        return "\n\n".join(sentences)
+        sentences = [
+            self._graph_judging(self._graph.judged_files(on_graph=True)),
+            self._files_judging(self._graph.judged_files(on_graph=False)),
+        ]
+        return "\n\n".join(sentence for sentence in sentences if sentence)
+
+    def _graph_judging(self, judged: str) -> str:
+        """How to judge the fidelities judged on the graph, whose checked files are judged; none when there are none."""
+        if not judged:
+            return ""
+        return (
+            f"Judge the graph validate built from the checked format's files ({judged}), "
+            f"saved at {', '.join(str(path) for path in self._graph.files)}: its classes, operations, parameters, "
+            "properties, relationships, and dependencies, against each rule. Read a file only to see what a node "
+            "stands for; whether a model document matches the code is a separate, secondary check."
+        )
+
+    def _files_judging(self, judged: str) -> str:
+        """How to judge the fidelities judged on their files, the judged ones; none when there are none."""
+        if not judged:
+            return ""
+        return (
+            f"Judge only the checked format's files ({judged}). The other formats mirror "
+            "them, so judging those too reports every finding twice."
+        )
 
     def _graph_and_ai_rule_report(self) -> str:
         from cdd_guidance.actions.validate.validation_report import ValidationReport

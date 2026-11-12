@@ -88,6 +88,8 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 	-> Sessions.folder
 + project: str
 	// data field: the repository folder's name
++ sends_fixes_directly: bool
+	// data field: whether a report's Fix sends its prompt straight to the chat, or, by default, fills the chat's box for the person to edit; read from `_board.json`, set once per repository
 + << aggregation >> practices: list[PracticeGuidance]
 	// data field: the practices every ticket works through, each with its key, slug, short name, and colour: the practice each held catalog view is of
 + << aggregation >> catalogued_practices: BoardPractices
@@ -128,6 +130,8 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 	-> Sessions.file_manager
 	-> FileManager.list
 + help(practice: str): Help
++ set_sends_fixes_directly(sends: bool): Board
+	// `board.set_sends_fixes_directly`: keeps sends in `_board.json`, committed on main and pushed
 	// `board.help`: the help of the board's practice named practice, such as `stories`; a fidelity's help comes from its progress, `fidelity-progress.help`
 	-> BoardPractices.keyed
 + save_sessions_on_main(message: str)
@@ -328,6 +332,8 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> TicketCheckout.worktree
 + drop_targets: list[str]
 	// data field: the columns besides the stages it can be dropped on: the Backlog always, Complete from Implementation's Done or while it is open
++ parent_choices: list[str]
+	// data field: the tickets it can be dropped on to become their child: any on the board but its parent, itself, and the tickets under it, which would make a loop; none for main. `reassign_parent` refuses the same loop with `ParentLoopError`
 + is_done: bool
 	// data field: true only in a stage: a parent's when every child of it in that stage is done; else when a person marked it done there or, with no mark since entering, when all its enabled work there is done
 + next_fidelity: FidelityProgress
@@ -670,6 +676,10 @@ Marked `@identity("title")`.
 	-> Board.open_ticket
 	-> Session.keep_file
 	-> Board.save_sessions_on_main
++ start_under(parent: Ticket): Ticket
+	// `backlog-item.start_under`: starts the item, as dropping it on parent's card does, and gives its ticket parent as its parent
+	-> BacklogItem.start
+	-> Ticket.reassign_parent
 + move_next(): Ticket
 	// a person's move forward out of the Backlog: starting the item
 	-> BacklogItem.start

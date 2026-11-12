@@ -335,6 +335,10 @@ class BacklogItemHandle:
     def edit_text(self, text: str) -> BacklogItemHandle:
         return _handle_of(self._cdd, self._cdd.call("backlog-item.edit_text", backlog_item=self.title, text=text))
 
+    def start_under(self, parent: TicketHandle) -> TicketHandle:
+        """``backlog-item.start_under``, naming the parent as the tool names any ticket."""
+        return _handle_of(self._cdd, self._cdd.call("backlog-item.start_under", backlog_item=self.title, parent=parent.name))
+
     def move_before(self, other: BacklogItemHandle) -> BacklogItemHandle:
         """``backlog-item.move_before``, naming the other item by its title as the tool names any backlog item."""
         return _handle_of(self._cdd, self._cdd.call("backlog-item.move_before", backlog_item=self.title, other=other.title))

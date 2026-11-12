@@ -32,11 +32,12 @@ export function writeInto(path: string, text: string): void {
   writeFileSync(path, text, 'utf-8')
 }
 
-export type Session = { name: string; title: string; log?: string[]; folder?: string }
+// A session as its session.json keeps it: a child names its parent, and one pulled out of its parent says so.
+export type Session = { name: string; title: string; log?: string[]; folder?: string; parent?: string; pulledOut?: boolean; tags?: string[] }
 
-export function writeSession(root: string, { name, title, log = [], folder = name }: Session): void {
+export function writeSession(root: string, { name, title, log = [], folder = name, parent = '', pulledOut = false, tags = [] }: Session): void {
   const session = join(root, '.sessions', folder)
-  writeInto(join(session, 'session.json'), JSON.stringify({ name, title, scope: 'feature', workpath: root, repo_path: root }))
+  writeInto(join(session, 'session.json'), JSON.stringify({ name, title, scope: parent ? 'story' : 'feature', parent, pulled_out: pulledOut, tags, workpath: root, repo_path: root }))
   writeInto(join(session, 'session.log'), log.map(line => `${line}\n`).join(''))
 }
 

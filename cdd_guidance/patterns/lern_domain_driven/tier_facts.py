@@ -42,6 +42,8 @@ _STUBBED_REQUEST = re.compile(r"\bpage\.route\(|\bcontext\.route\(")
 _PATHS_MODULE_SUFFIX = "-paths.ts"
 
 
+# A describe block, `test.describe('Add Child Ticket', …)`: in a screen story file, the story it drives.
+_DESCRIBED = re.compile(r"""(?:test\.)?describe\(\s*(['"`])(.+?)\1""")
 
 class TierFile:
     """One LERN file read once — a tier file, a behavior file, or a story file — with the SourceText that gives each
@@ -134,6 +136,7 @@ class TierFile:
                 [self._source.line_of(match.start()), match.group("outline"), match.group("entry")]
                 for match in _HAND_WRITTEN_ENTRY.finditer(text)
             ],
+            "screen_stories": [match.group(2) for match in _DESCRIBED.finditer(text)],
         }
 
     def _domain_wrapping_helpers(self) -> list[list]:

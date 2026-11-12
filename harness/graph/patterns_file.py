@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+_CONTEXT = ".context"
 _ENTRY = re.compile(r"^-\s*`?([\w-]+)`?\s*(?::\s*(.*))?$")
 _HEADER = (
     "# Patterns\n\n"
@@ -24,17 +25,23 @@ class PatternsFile:
 
     @property
     def path(self) -> Path:
-        return self.folder / ".context" / "patterns.md"
+        return self.folder / _CONTEXT / "patterns.md"
+
+    @classmethod
+    def for_content(cls, folder: Path) -> PatternsFile:
+        """The patterns file of content written in folder: the one at the folder holding the `.context` folder sits in,
+        at any depth; folder's own when it sits in none."""
+        folder = Path(folder)
+        context = next((ancestor for ancestor in [folder, *folder.parents] if ancestor.name == _CONTEXT), None)
+        return cls(context.parent if context is not None else folder)
 
     @classmethod
     def nearest(cls, path: Path, root: Path) -> PatternsFile | None:
         """The patterns file of the closest folder holding path, from path up to root; none when no folder has one."""
         root = Path(root).resolve()
-        folder = Path(path).resolve()
-        folder = folder if folder.is_dir() else folder.parent
+        start = Path(path).resolve()
+        folder = cls.for_content(start if start.is_dir() else start.parent).folder
         while True:
-            if folder.name == ".context":
-                folder = folder.parent
             found = cls(folder)
             if found.path.is_file():
                 return found

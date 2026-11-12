@@ -396,6 +396,14 @@ with description("the board tools") as self:
             with it("should take the item off the Backlog"):
                 expect(self.project.column("Backlog")["items"]).to(equal([]))
 
+        # (S) Person --> Reassign Ticket Parent: Start a Backlog item under a ticket
+        with context("that starts a backlog item under a ticket the call names"):
+            with before.each:
+                self.started = self.project.call("backlog-item.start_under", backlog_item="Returns and refunds", parent="pet-visits")
+
+            with it("should open the item's ticket as a child of the ticket named"):
+                expect((self.started["name"], self.started["session"]["parent"])).to(equal(("returns-and-refunds", "pet-visits")))
+
         # (S) Person --> Close Active Session
         with context("that closes a ticket"):
             with before.each:
