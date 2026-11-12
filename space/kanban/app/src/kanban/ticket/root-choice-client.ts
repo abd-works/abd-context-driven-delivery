@@ -21,8 +21,12 @@ export class RootChoiceClient {
     this.page.store.change(state => ({ rootChoice: state.rootChoice ? { ...state.rootChoice, ...changed } : null }))
   }
 
+  // The ticket as the board read it last, not as it was when the dialog opened, so a root just chosen shows at once.
   get ticket(): TicketClient | undefined {
-    return this.choice?.ticket ?? undefined
+    const opened = this.choice?.ticket
+    if (!opened) return undefined
+    const everyTicket = this.page.board.tickets.flatMap(ticket => [ticket, ...ticket.childTickets])
+    return everyTicket.find(ticket => ticket.name === opened.name) ?? opened
   }
 
   openFor(ticket: TicketClient): void {
