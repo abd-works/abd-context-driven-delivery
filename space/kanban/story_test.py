@@ -238,11 +238,6 @@ def expect_session_folder(sessions: Path, folder: str, name: str) -> None:
         raise AssertionError(f"expected the folder of {name} in .sessions/{folder}")
 
 
-def expect_commit_count(project: Any, branch: str, count: int) -> None:
-    """The branch holds count commits: the fixture's own, and one more for each commit the board made on it."""
-    _expect_equal(project.git("rev-list", "--count", branch), str(count), f"the commits on {branch}")
-
-
 def _expect_equal(actual: Any, expected: Any, subject: str) -> None:
     if actual != expected:
         raise AssertionError(f"expected {subject} to be {expected!r}, but it is {actual!r}")

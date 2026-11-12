@@ -503,6 +503,13 @@ class ServedCheckouts:
                 held = self._at[root] = Repo(root)
             return held
 
+    def serve(self, repo: Repo) -> Repo:
+        """Hold repo as the repository of the checkout at its root from now on, such as a mocked one a spec works on, so
+        every tool call and session of that checkout works on it."""
+        with self._lock:
+            self._at[repo.root] = repo
+            return repo
+
 
 # The checkouts this process works in, held for as long as it runs.
 SERVED_CHECKOUTS = ServedCheckouts()

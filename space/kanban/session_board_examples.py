@@ -28,6 +28,7 @@ from harness.process.git import Git
 from harness.graph.saved_graph import SavedGraph, SavedNode, SavedPractice
 from harness.graph.violation import Violation
 from space.kanban.board import Board
+from space.repo.mock_repo import MockGit
 from space.session.throwaway_project import ThrowawayProject
 from space.work_state import WorkState
 
@@ -246,10 +247,12 @@ def _empty_repository() -> Path:
 class SessionsProject(ThrowawayProject):
     """A throwaway project named by CDD_PROJECT while a scenario runs, whose `.sessions/` and files a scenario seeds."""
 
-    def __init__(self, name: str = "project") -> None:
+    def __init__(self, name: str = "project", mocks_git: bool = False) -> None:
         super().__init__(name)
         self.sessions = self.root / ".sessions"
         self.sessions.mkdir(parents=True)
+        # Real git for the tiers that prove it, else our Repo, Branch, and Worktrees mocked in memory.
+        self.checkout: GitCheckout | MockCheckout = MockCheckout(self) if mocks_git else GitCheckout(self)
 
     def seed_session(self, seed: SessionSeed) -> Path:
         folder = self.sessions / seed.folder / seed.name
@@ -316,38 +319,144 @@ class SessionsProject(ThrowawayProject):
         """A file of the graph's example project, copied to the same path in this project."""
         return self.seed_file(relative, (GRAPH_EXAMPLES / relative).read_text(encoding="utf-8"))
 
+    # Git: each seeds or asks the project's checkout, real git or the mocked one.
+
     def seed_git_checkout(self) -> None:
         """The project as a git checkout on main, its files committed. Session folders are the board's record and belong
         on main, so .sessions/ is tracked, as in a CDD repository; only the hook logs and chat injections are ignored."""
         self.seed_file(".gitignore", ".sessions/**/logs/\n.sessions/**/chat-injections/\n")
-        shutil.copytree(_empty_repository(), self.root / ".git")
-        self.git("add", "-A")
-        self.git("commit", "-q", "-m", "Fixture")
+        self.checkout.seed_git_checkout()
 
     def seed_origin(self) -> None:
-        """A bare repository beside the project as its origin, holding main."""
-        origin = self.folder / "origin.git"
-        Git(self.folder).run("init", "-q", "--bare", str(origin))
-        self.git("remote", "add", "origin", str(origin))
-        self.git("push", "-q", "-u", "origin", "main")
+        """An origin beside the project, holding main."""
+        self.checkout.seed_origin()
 
     def seed_branch(self, name: str, checked_out: bool = True, pushed: bool = False) -> None:
-        self.git("branch", name)
-        if checked_out:
-            self.git("checkout", "-q", name)
-        if pushed:
-            self.git("push", "-q", "-u", "origin", name)
+        self.checkout.seed_branch(name, checked_out, pushed)
 
-    def seed_commit(self, message: str) -> None:
-        self.git("add", "-A")
-        self.git("commit", "-q", "-m", message)
+    def seed_worktree(self, branch: str, folder: Path) -> None:
+        """A new branch checked out in its own worktree at folder, as the Claude desktop app makes one."""
+        self.checkout.seed_worktree(branch, folder)
 
-    def git(self, *arguments: str, repository: Path | None = None) -> str:
-        return Git(repository or self.root).run(*arguments)
+    def current_branch(self, folder: Path | None = None) -> str:
+        """The branch the project, or the checkout at folder, has checked out."""
+        return self.checkout.current_branch(folder or self.root)
+
+    def uncommitted(self, path: str = "") -> list[str]:
+        """The files, or the file at path, the project has changed and not committed, as paths from its top."""
+        return self.checkout.uncommitted(path)
 
     def origin_log(self, branch: str) -> list[str]:
         """The commit subjects origin holds on branch, newest first."""
-        return self.git("log", "--format=%s", branch, repository=self.folder / "origin.git").splitlines()
+        return self.checkout.origin_log(branch)
+
+    def origin_files(self, branch: str, under: str) -> list[str]:
+        """The files origin's branch holds under the path under, as paths from the top."""
+        return self.checkout.origin_files(branch, under)
+
+    def has_branch(self, name: str) -> bool:
+        return self.checkout.has_branch(name)
+
+    def origin_has_branch(self, name: str) -> bool:
+        return self.checkout.origin_has_branch(name)
+
+
+class GitCheckout:
+    """The project's git, for real: the tiers that prove what the board does to a repository."""
+
+    def __init__(self, project: SessionsProject) -> None:
+        self._project = project
+
+    def seed_git_checkout(self) -> None:
+        shutil.copytree(_empty_repository(), self._project.root / ".git")
+        self._git("add", "-A")
+        self._git("commit", "-q", "-m", "Fixture")
+
+    def seed_origin(self) -> None:
+        Git(self._project.folder).run("init", "-q", "--bare", str(self._origin))
+        self._git("remote", "add", "origin", str(self._origin))
+        self._git("push", "-q", "-u", "origin", "main")
+
+    def seed_branch(self, name: str, checked_out: bool, pushed: bool) -> None:
+        self._git("branch", name)
+        if checked_out:
+            self._git("checkout", "-q", name)
+        if pushed:
+            self._git("push", "-q", "-u", "origin", name)
+
+    def seed_worktree(self, branch: str, folder: Path) -> None:
+        self._git("worktree", "add", "-q", "-b", branch, str(folder))
+
+    def current_branch(self, folder: Path) -> str:
+        return Git(folder).run("rev-parse", "--abbrev-ref", "HEAD")
+
+    def uncommitted(self, path: str) -> list[str]:
+        listed = self._git("status", "--porcelain", *(["--", path] if path else [])).splitlines()
+        return [line[3:].strip('"') for line in listed if line.strip()]
+
+    def origin_log(self, branch: str) -> list[str]:
+        return Git(self._origin).run("log", "--format=%s", branch).splitlines()
+
+    def origin_files(self, branch: str, under: str) -> list[str]:
+        return self._git("ls-tree", "-r", "--name-only", f"origin/{branch}", under).splitlines()
+
+    def has_branch(self, name: str) -> bool:
+        return bool(self._git("branch", "--list", name).strip())
+
+    def origin_has_branch(self, name: str) -> bool:
+        return bool(self._git("ls-remote", "--heads", "origin", name).strip())
+
+    @property
+    def _origin(self) -> Path:
+        return self._project.folder / "origin.git"
+
+    def _git(self, *arguments: str) -> str:
+        return Git(self._project.root).run(*arguments)
+
+
+class MockCheckout:
+    """The project's git mocked: our Repo, Branch, and Worktrees answered from a *MockGit* held in memory, for the quick
+    tiers, so no scenario starts git; what they do to a repository is proven against real git by the heavy tiers."""
+
+    def __init__(self, project: SessionsProject) -> None:
+        self._project = project
+        self.held = MockGit(project.root)
+        # The board finds the project's repository where it finds every checkout's, so it works on the mock from now on.
+        self.held.serve(project.root)
+
+    def seed_git_checkout(self) -> None:
+        self.held.make_clone()
+
+    def seed_origin(self) -> None:
+        self.held.add_origin()
+
+    def seed_branch(self, name: str, checked_out: bool, pushed: bool) -> None:
+        self.held.add_branch(name)
+        if checked_out:
+            self.held.check_out(self.held.root, name)
+        if pushed:
+            self.held.push(name)
+
+    def seed_worktree(self, branch: str, folder: Path) -> None:
+        self.held.add_worktree(branch, folder)
+
+    def current_branch(self, folder: Path) -> str:
+        return self.held.branch_of(folder.resolve())
+
+    def uncommitted(self, path: str) -> list[str]:
+        return self.held.uncommitted(self.held.root, self.held.root / path if path else None)
+
+    def origin_log(self, branch: str) -> list[str]:
+        return list(reversed(self.held.origin_logs.get(branch, [])))
+
+    def origin_files(self, branch: str, under: str) -> list[str]:
+        return sorted(path for path in self.held.origin_trees.get(branch, {}) if path == under or path.startswith(f"{under}/"))
+
+    def has_branch(self, name: str) -> bool:
+        return self.held.has_branch(name)
+
+    def origin_has_branch(self, name: str) -> bool:
+        return self.held.origin_has_branch(name)
 
 
 def seed_surface_fixture(project: SessionsProject) -> None:

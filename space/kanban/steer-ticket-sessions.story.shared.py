@@ -59,7 +59,6 @@ from space.kanban.story_test import (
     column_in,
     expect_active,
     expect_backlog,
-    expect_commit_count,
     expect_placed,
     expect_refused,
     expect_session_folder,
@@ -70,7 +69,6 @@ from space.kanban.story_test import (
 )
 from space.kanban.board import NotAStageError
 from space.kanban.ticket_checkout import TicketBranchUnclearError
-from space.repo.repo import Repo
 from space.session import Sessions
 from space.kanban.board import TicketNotFoundError
 
@@ -332,11 +330,11 @@ def _(s):
 
     @s.then("nothing is left uncommitted")
     def _(world):
-        expect(world.project.git("status", "--porcelain").strip()).to(equal(""))
+        expect(world.project.uncommitted()).to(equal([]))
 
     @s.and_("the checkout is back on main")
     def _(world):
-        expect(world.project.git("branch", "--show-current").strip()).to(equal("main"))
+        expect(world.project.current_branch()).to(equal("main"))
 
 
 @shared_stories.scenario("Close Active Session", "Offer to commit a branch open in its worktree")
@@ -380,7 +378,7 @@ def _(s):
 
     @s.and_("the checkout is still on main")
     def _(world):
-        expect(world.project.git("branch", "--show-current").strip()).to(equal("main"))
+        expect(world.project.current_branch()).to(equal("main"))
 
     @s.and_("checkout-flow shows in Complete")
     def _(world):
@@ -433,7 +431,7 @@ def _(s):
     # The ticket's record is kept on main, so its move into the closed sessions is committed; its work is not.
     @s.but_("checkout-flow's work is not committed")
     def _(world):
-        expect(world.project.git("status", "--porcelain", "--", "work.txt")).to(contain("work.txt"))
+        expect(world.project.uncommitted("work.txt")).to(contain("work.txt"))
 
 
 @shared_stories.scenario("Move Ticket", "Move a ticket on to the next column")
@@ -587,11 +585,11 @@ def _(s):
     @s.then("billing-report has its own worktree, on the branch billing-report")
     def _(world):
         worktree = Path(world.data_of(world.Ticket.load(BILLING_REPORT.name))["worktree"])
-        expect(Repo(worktree).current_branch.name).to(equal(BILLING_REPORT.name))
+        expect(world.project.current_branch(worktree)).to(equal(BILLING_REPORT.name))
 
     @s.and_("the repository's own folder stays on main")
     def _(world):
-        expect(world.project.git("rev-parse", "--abbrev-ref", "HEAD")).to(equal("main"))
+        expect(world.project.current_branch()).to(equal("main"))
 
     @s.and_("main is still the session of the chat that activated it")
     def _(world):
@@ -611,8 +609,7 @@ def _(s):
 
     @s.then("main on origin holds billing-report's session folder")
     def _(world):
-        held = world.project.git("ls-tree", "-r", "--name-only", "origin/main", f".sessions/{BILLING_REPORT.name}")
-        expect(held).to(contain(f".sessions/{BILLING_REPORT.name}/session.json"))
+        expect(world.project.origin_files("main", f".sessions/{BILLING_REPORT.name}")).to(contain(f".sessions/{BILLING_REPORT.name}/session.json"))
 
 
 def open_billing_report_in_its_worktree(world) -> Path:
@@ -663,7 +660,7 @@ def seed_checkout_flow_on_an_outside_worktree(project) -> Path:
     checkout-flow's session recording neither."""
     seed_checkout_flow_open_on_pushed_main(project)
     folder = project.folder / "checkout-flow-cef4bc"
-    project.git("worktree", "add", "-q", "-b", OUTSIDE_BRANCH, str(folder))
+    project.seed_worktree(OUTSIDE_BRANCH, folder)
     return folder
 
 
@@ -721,8 +718,8 @@ def _(s):
     @s.given("the repository has the branches claude/checkout-flow-cef4bc and claude/checkout-flow-9a1b2c")
     def _(world):
         seed_checkout_flow_open_on_pushed_main(world.project)
-        world.project.git("branch", OUTSIDE_BRANCH)
-        world.project.git("branch", OTHER_OUTSIDE_BRANCH)
+        world.project.seed_branch(OUTSIDE_BRANCH, checked_out=False)
+        world.project.seed_branch(OTHER_OUTSIDE_BRANCH, checked_out=False)
 
     @s.when("the Person activates checkout-flow")
     def _(world):
@@ -738,11 +735,11 @@ def _(s):
 
 
 def has_branch(world, name: str) -> bool:
-    return bool(world.project.git("branch", "--list", name).strip())
+    return world.project.has_branch(name)
 
 
 def origin_has_branch(world, name: str) -> bool:
-    return bool(world.project.git("ls-remote", "--heads", "origin", name).strip())
+    return world.project.origin_has_branch(name)
 
 
 def open_checkout_flow_in_its_worktree(world) -> Path:
@@ -773,7 +770,7 @@ def _(s):
 
     @s.but_("main on origin does not hold checkout-flow's work")
     def _(world):
-        expect(world.project.git("ls-tree", "--name-only", "origin/main", "worked.txt")).to(equal(""))
+        expect(world.project.origin_files("main", "worked.txt")).to(equal([]))
 
     @s.and_("checkout-flow shows in Complete")
     def _(world):
@@ -848,7 +845,7 @@ def _(s):
 
     @s.then("the checkout is back on main")
     def _(world):
-        expect(world.project.git("rev-parse", "--abbrev-ref", "HEAD")).to(equal("main"))
+        expect(world.project.current_branch()).to(equal("main"))
 
     @s.and_("main is the active ticket")
     def _(world):
