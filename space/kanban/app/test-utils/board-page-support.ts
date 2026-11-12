@@ -21,6 +21,9 @@ import { STAMP, writeInto, writeSession, type Session } from './fixture-repo'
 // Windows holds a folder a moment after the process using it lets go.
 const REMOVE_RETRIES = 20
 const REMOVE_RETRY_MILLISECONDS = 250
+// How often a reset starts again while a session's commit on the cdd server's own thread finishes, and how long it waits.
+const RESET_ATTEMPTS = 5
+const RESET_RETRY_MILLISECONDS = 1000
 const LOCAL = '127.0.0.1'
 const BOARD_HEADER = { 'X-CDD-Board': '1', 'Content-Type': 'application/json' }
 const APP_FOLDER = resolve(fileURLToPath(new URL('.', import.meta.url)), '..')
@@ -270,8 +273,21 @@ export class BoardOnProject {
     return execFileSync('git', args, { cwd: this.root, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] })
   }
 
-  // Sessions, chats, branches, and the origin back to how they started, for a spec that changed them.
+  // Sessions, chats, branches, and the origin back to how they started, for a spec that changed them. The cdd server
+  // commits a session's change on its own thread a moment after the change, so git or Windows can refuse a step of the
+  // reset while that commit runs; the reset then starts again once the commit has had time to finish.
   reset(): void {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return this.resetOnce()
+      } catch (refused) {
+        if (attempt >= RESET_ATTEMPTS) throw refused
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, RESET_RETRY_MILLISECONDS)
+      }
+    }
+  }
+
+  private resetOnce(): void {
     const hadOrigin = this.origin !== null
     this.removeOrigin()
     this.removeWorktrees()
