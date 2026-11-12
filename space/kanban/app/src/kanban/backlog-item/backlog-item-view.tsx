@@ -4,8 +4,9 @@ import type { DragEvent, FormEvent, MouseEvent } from 'react'
 
 import { ageOf } from '../shared/board-brand'
 import { useBoard } from '../shared/board-context'
-import { CardFieldView } from '../shared/card-field-view'
+import { useTypedField, withoutSelecting } from '../shared/card-field-view'
 import type { CardField } from '../shared/card-field-view'
+import { SessionActionIcon } from '../shared/icons'
 import type { BacklogItemClient, ItemDrop } from './backlog-item-client'
 
 export function ComposerView() {
@@ -79,15 +80,29 @@ function useItemDrag(backlogItem: BacklogItemClient) {
 
 const EDIT_ITEM_TEXT: CardField = { action: 'text', label: 'Edit text', hint: 'Edit what this idea is about', field: 'Item text', placeholder: 'Text, then Enter' }
 
+// The most lines the text box grows to before it scrolls.
+const EDITOR_MOST_LINES = 10
+
 // The item's text, shown only on its selected card and cut to its opening paragraphs, since the details bar shows it
-// whole; it is rewritten in its file from a field there.
+// whole. Edit text opens a box in the text's place, holding the whole text, which Enter writes back to its file.
 function ItemTextView({ item, isSelected }: { item: BacklogItemClient; isSelected: boolean }) {
+  const { typed, setTyped, pressed } = useTypedField(text => item.editText(text))
   const { opening, isCut } = openingOf(item.text)
+  if (typed !== null) {
+    const rows = Math.min(Math.max(typed.split('\n').length, 3), EDITOR_MOST_LINES)
+    return (
+      <div className="item-text-line">
+        <textarea className="card-field item-text-editor" aria-label={EDIT_ITEM_TEXT.field} placeholder="Text; Enter saves, Shift+Enter adds a line" rows={rows} value={typed} autoFocus onClick={event => event.stopPropagation()} onChange={event => setTyped(event.target.value)} onKeyDown={pressed} onBlur={() => setTyped(null)} />
+      </div>
+    )
+  }
   return (
     <div className="item-text-line">
       {isSelected && item.text ? <div className="ticket-text">{opening}</div> : null}
       {isSelected && isCut ? <div className="ticket-text-more">More in {item.path}</div> : null}
-      <CardFieldView shape={EDIT_ITEM_TEXT} isOff={false} typedAtFirst={item.text} onEnter={text => item.editText(text)} />
+      <button className="file-view" aria-label={EDIT_ITEM_TEXT.label} title={EDIT_ITEM_TEXT.hint} onClick={withoutSelecting(() => setTyped(item.text))}>
+        <SessionActionIcon action={EDIT_ITEM_TEXT.action} />
+      </button>
     </div>
   )
 }
