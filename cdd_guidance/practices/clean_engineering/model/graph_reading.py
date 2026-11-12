@@ -17,6 +17,7 @@ from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.practice_reading import PracticeReading
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
+from harness.graph.schema_conformance import EXEMPT_FACT
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.code_read import CodeRead
@@ -24,6 +25,9 @@ from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
 # A member called on another object (`board.select(`), and a property read on one (`board.shown`, no call after it).
+_ABSTRACT_MARK = re.compile(r"@abstractmethod|^\s*(?:public\s+|protected\s+)?abstract\s", re.MULTILINE)
+_DOCSTRING = re.compile(r'(?s)\A\s*(?:"""|\'\'\').*?(?:"""|\'\'\')')
+_NO_BODY = {"", "...", "pass", "raise NotImplementedError", "raise NotImplementedError()"}
 _MEMBER_CALL = re.compile(r"\.([A-Za-z_$][\w$]*)\s*\(")
 _MEMBER_READ = re.compile(r"\.([A-Za-z_$][\w$]*)\b(?!\s*\()")
 
@@ -74,8 +78,32 @@ class CallLinks:
         """Record an ``invokes`` edge from every member the graph holds to each member it calls."""
         in_graph = self._reading.in_graph
         for caller in [*in_graph.nodes("Operation"), *in_graph.nodes("Property")]:
-            for called in self._called_by(caller):
-                self._graph.link("invokes", caller, called, "relationship")
+            called = self._called_by(caller)
+            for member in called:
+                self._graph.link("invokes", caller, member, "relationship")
+            if not called and self._calls_nothing_by_design(caller):
+                caller.set_fact(EXEMPT_FACT, ["invokes"])
+
+    def _calls_nothing_by_design(self, caller: Node) -> bool:
+        """Whether caller is a member that has nothing to call: an abstract one, whose subclasses do the work, or one
+        that takes nothing and answers a value, which is a property in all but name."""
+        return self._is_abstract(caller) or not self._graph.edges_from("hasParameter", caller)
+
+    def _is_abstract(self, caller: Node) -> bool:
+        """An abstract member: marked so (`@abstractmethod`, `abstract`), or with no body but `...`, `pass`, or a raise of
+        NotImplementedError under its signature and docstring."""
+        text = caller.source.text if caller.source.file else ""
+        if _ABSTRACT_MARK.search(text):
+            return True
+        return _DOCSTRING.sub("", self._python_body(text)).strip() in _NO_BODY
+
+    def _python_body(self, text: str) -> str:
+        """What follows a Python member's signature, the line that ends its `def` with a colon; none for other code."""
+        lines = text.splitlines()
+        if not any(line.lstrip().startswith(("def ", "async def ")) for line in lines[:4]):
+            return ""
+        end = next((index for index, line in enumerate(lines) if line.rstrip().endswith(":")), len(lines))
+        return "\n".join(lines[end + 1:])
 
     def _called_by(self, caller: Node) -> list[Node]:
         """The members caller calls, by the names its callees end in and the members its source calls on another object

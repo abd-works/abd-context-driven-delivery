@@ -188,3 +188,37 @@ with description("Clean Engineering reading code into its graph"):
         with it("should hold no package for the folder"):
             packages = [node.name for node in self.fixture.practice.reading.in_graph.nodes("Package")]
             expect(packages).to(equal(["shop"]))
+
+
+def _exempt(fixture, name: str) -> list[str]:
+    """The relationships the member called name is not held to."""
+    member = next(node for node in fixture.practice.reading.in_graph.nodes("Operation") if node.name == name)
+    return member.get_fact("exempt_relationships") or []
+
+
+with description("Clean Engineering marking members that call nothing by design"):
+    with before.all:
+        self.fixture = practice_from_files(
+            {
+                "app/kinds.py": (
+                    "from abc import ABC, abstractmethod\n\n\n"
+                    "class Kind(ABC):\n"
+                    "    @abstractmethod\n"
+                    "    def move_next(self, steps: int) -> None:\n"
+                    '        """Move on."""\n\n'
+                    "    def limit(self) -> int:\n"
+                    "        return 3\n\n"
+                    "    def keep(self, value: int) -> None:\n"
+                    "        self.value = value\n"
+                ),
+            }
+        )
+
+    with it("should not hold an abstract member to invoking anything"):
+        expect(_exempt(self.fixture, "move_next")).to(equal(["invokes"]))
+
+    with it("should not hold a member that takes nothing and answers a value to invoking anything"):
+        expect(_exempt(self.fixture, "limit")).to(equal(["invokes"]))
+
+    with it("should still hold a member that takes a value and calls nothing to invoking something"):
+        expect(_exempt(self.fixture, "keep")).to(equal([]))

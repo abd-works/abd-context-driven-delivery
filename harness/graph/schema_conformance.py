@@ -20,6 +20,11 @@ if TYPE_CHECKING:
     from harness.graph.rule_context import RuleCheckContext
 
 
+EXEMPT_FACT = "exempt_relationships"
+"""The fact in which a practice's reader names the relationships one node is not held to, such as an abstract member's
+``invokes``: the reader knows what the node is; the schema only says what its type requires."""
+
+
 @dataclass(frozen=True)
 class RequiredRelationship:
     """One relationship a schema type requires of its nodes: the owner type, the field naming the relationship, the
@@ -54,6 +59,8 @@ class RequiredRelationship:
     def gap_on(self, node: Any, context: RuleCheckContext) -> str:
         """What node lacks of this relationship: none when an edge of the field leads from it to a node of a target type,
         or, for a child list, when it holds a node of a target type under any kind its practice records it."""
+        if self.field in (node.get_fact(EXEMPT_FACT) or []):
+            return ""
         linked = context.held_by(node) if self.field in CHILD_LISTS else context.targets(node, self.field)
         if any(target.type in self.targets for target in linked):
             return ""
