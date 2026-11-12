@@ -72,12 +72,16 @@ export class RootChoiceClient {
     await this.page.reader.refresh()
   }
 
-  // Started, the dialog stays open on the new ticket so its practices' roots can be set too.
+  // Started, the dialog stays open on the new ticket so its practices' roots can be set too, while the ticket opens in
+  // its own worktree with its chat started there, as Activate does: starting an item is beginning its work.
   private async start(path: string): Promise<void> {
     const item = this.choice?.startingItem
     if (!item) return
-    const ticket = await this.page.item(item).start(undefined, path)
-    if (ticket) this.page.store.change({ rootChoice: { ticket: this.page.ticket(ticket), startingItem: null, browsing: null } })
+    const started = await this.page.item(item).start(undefined, path)
+    if (!started) return
+    const ticket = this.page.ticket(started)
+    this.page.store.change({ rootChoice: { ticket, startingItem: null, browsing: null } })
+    await this.page.activation.activate(ticket)
   }
 
   close(): void {
