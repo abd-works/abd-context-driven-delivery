@@ -73,13 +73,16 @@ class Stories(PracticeGuidance):
 
     def read_folder(self, root: Path, *, on_file=None):
         """The story map in the folder root: the nearest story map at or above it, else its story-graph.json, else the
-        markdown story maps under it, with their scenarios and increments."""
+        markdown story maps under it, with their scenarios and increments. A map under root names its files from root,
+        as a read of the files being edited names them, so the two reads place each node in the same file; a map above
+        root names them from its own folder."""
         from cdd_guidance.practices.stories.model.story_model import StoryModel
 
         files = StoryMapFiles(root)
         nearest = files.nearest()
         if nearest is not None:
-            return self._story_map_file(nearest, nearest.parent, on_file)
+            inside = Path(root).resolve() in nearest.resolve().parents
+            return self._story_map_file(nearest, Path(root) if inside else nearest.parent, on_file)
         return (
             self.formats.adapter_class("json").from_workspace(files.folder)
             or self.formats.adapter_class("markdown").from_workspace(files.folder, on_file=on_file)
