@@ -4,7 +4,7 @@ Scenarios: harness/.context/stories/move-work-forward-on-session-board/maintain-
 Map: harness/.context/stories/story-map.md. Model: .context/kanban-model.md.
 
 Only the stories of ticket maintain-tickets-on-board are here; the sub-epic's built stories stay in
-steer-ticket-sessions.story.shared.py. Steps reach the board only through the World a tier hands them (`world.Ticket`,
+steer-ticket-sessions.story.shared.py. Steps reach the board only through the namespace a tier hands them (`world.Ticket`,
 `world.BacklogItem`, `world.Board`), so the domain spec and the cdd tools spec replay the same steps. Each When carries
 its scenario's realization as comments.
 """

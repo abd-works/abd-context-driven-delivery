@@ -5,7 +5,7 @@ Scenarios: harness/.context/stories/move-work-forward-from-chat-bar/guide-work-t
 guide_work_through_practices_story.test.md (List Available Patterns, Choose Graph Overlays, Display Overlay Icons).
 Map: harness/.context/stories/story-map.md#e-guide-work-through-practices-in-chat-bar.
 
-Steps reach the ticket only through the World a tier hands them (`world.Ticket`), so the domain spec and the cdd tools
+Steps reach the ticket only through the namespace a tier hands them (`world.Ticket`), so the domain spec and the cdd tools
 spec replay the same steps. Display Overlay Icons is drawn by the chat bar's TypeScript, whose story tests were removed
 (commit 8c56ab052); its icons come from the overlay choices the Thens here assert.
 """

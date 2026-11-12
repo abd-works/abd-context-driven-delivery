@@ -5,7 +5,7 @@ Scenarios: harness/.context/stories/move-work-forward-from-chat-bar/generate-fid
 generate_fidelity_outputs_in_chat_bar_story.test.md (Run Fidelity Action With Overlays).
 Map: harness/.context/stories/story-map.md#e-generate-fidelity-outputs-in-chat-bar.
 
-Steps reach the session and Generate only through the World a tier hands them, so the domain spec and the cdd tools
+Steps reach the session and Generate only through the namespace a tier hands them, so the domain spec and the cdd tools
 spec replay the same steps. "Name the chosen overlays in the command" is the chat bar's TypeScript, whose story tests
 were removed (commit 8c56ab052), so it is not replayed here.
 """
