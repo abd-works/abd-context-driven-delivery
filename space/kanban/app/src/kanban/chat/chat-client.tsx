@@ -11,7 +11,7 @@ const NEW_CHAT_LINK = 'claude://code/new'
 
 // The link that opens a ticket's new chat on its worktree. The link names no title, so its prompt asks for the ticket's.
 export const newChatLink = (ticket: string, worktree: string): string => {
-  const prompt = `Title this session "${ticket}". You are the chat of the session board's ticket ${ticket}; work on that ticket.`
+  const prompt = `Title this session "${ticket}". You are the chat of the session board's ticket ${ticket}; work on that ticket. First call sessions.switch with name ${ticket}, so every tool works on its session, then read the session's latest handoff.`
   return `${NEW_CHAT_LINK}?folder=${encodeURIComponent(worktree)}&q=${encodeURIComponent(prompt)}`
 }
 

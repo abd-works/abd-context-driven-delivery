@@ -3,7 +3,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from expects import be, be_false, be_none, be_true, contain, equal, expect
+from expects import be, be_false, be_none, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -19,6 +19,8 @@ from space.work_state import WorkState
 from space.session.sessions import BoardPractices  # noqa: E402
 from harness.guidance.guidance import FidelityGuidance  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
+import space.kanban.backlog_item as backlog_item_module  # noqa: E402
+from space.kanban.backlog_item import BacklogNestingError  # noqa: E402
 from space.kanban.board import Board, Card, ColumnNotFoundError, Help  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
 from space.repo.repo import Repo  # noqa: E402
@@ -382,6 +384,99 @@ with description("a backlog item") as self:
 
         with it("should be off the stages"):
             expect(names(self.board.tickets)).to(equal(["main"]))
+
+    # (S) Person --> Reassign Ticket Parent: in the Backlog, a parent's folder keeps its children's idea files.
+    with context("that a person drops on another backlog item"):
+        with before.each:
+            self.sessions = SessionsFolder()
+            self.sessions.backlog_item("checkout.md", "Checkout")
+            self.sessions.backlog_item("gift-cards.md", "Gift cards")
+            self.board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+            self.board.backlog_item_called("Gift cards").nest_under(self.board.backlog_item_called("Checkout"))
+            self.backlog = self.sessions.root / "_backlog"
+
+        with it("should make the other item a folder that keeps its own text in a file of its name"):
+            expect((self.backlog / "checkout" / "checkout.md").read_text(encoding="utf-8")).to(contain("# Checkout"))
+
+        with it("should keep the dropped item's file in that folder"):
+            expect((self.backlog / "checkout" / "gift-cards.md").read_text(encoding="utf-8")).to(contain("# Gift cards"))
+
+        with it("should show only the parent as a card of its own in the Backlog"):
+            expect([card.title for card in self.board.column("Backlog").cards]).to(equal(["Checkout"]))
+
+        with it("should stack the child inside its parent's card"):
+            expect([child.title for child in self.board.backlog_item_called("Checkout").children]).to(equal(["Gift cards"]))
+
+        with it("should name the child's parent"):
+            expect(self.board.backlog_item_called("Gift cards").parent).to(equal("Checkout"))
+
+        with it("should send the parent's children whole, with the Backlog"):
+            backlog = data_of(self.board)["columns"][0]
+            expect([child["title"] for child in backlog["items"][0]["children"]]).to(equal(["Gift cards"]))
+
+        with context("that a person drops on another's bottom edge"):
+            with before.each:
+                self.sessions.backlog_item("returns.md", "Returns")
+                self.board.reread()
+                self.board.backlog_item_called("Checkout").move_after(self.board.backlog_item_called("Returns"))
+
+            with it("should put it just below the other in the Backlog"):
+                expect([card.title for card in self.board.column("Backlog").cards]).to(equal(["Returns", "Checkout"]))
+
+        with it("should refuse to make the parent a child of its own child"):
+            expect(lambda: self.board.backlog_item_called("Checkout").nest_under(self.board.backlog_item_called("Gift cards"))).to(raise_error(BacklogNestingError))
+
+        with context("that a person drags back out onto the Backlog"):
+            with before.each:
+                self.board.backlog_item_called("Gift cards").leave_parent()
+
+            with it("should move its file back into the Backlog folder"):
+                expect((self.backlog / "gift-cards.md").is_file()).to(be_true)
+
+            with it("should show it as a card of its own again"):
+                expect([card.title for card in self.board.column("Backlog").cards]).to(equal(["Checkout", "Gift cards"]))
+
+        with context("whose parent has been started"):
+            with before.each:
+                self.parent = self.board.backlog_item_called("Checkout").start("feature")
+
+            with it("should start the child as a child ticket of the parent's ticket"):
+                expect(self.board.ticket("gift-cards").session.parent).to(equal("checkout"))
+
+            with it("should keep the child's file in its own ticket's session folder"):
+                expect((self.sessions.root / "gift-cards" / "gift-cards.md").read_text(encoding="utf-8")).to(contain("# Gift cards"))
+
+            with it("should leave no folder behind in the Backlog"):
+                expect((self.backlog / "checkout").exists()).to(be_false)
+
+    # (S) Person --> Display Backlog Items As Tickets: the link under an item's text opens its file.
+    with context("whose file a person opens from its card"):
+        with before.each:
+            self.sessions = SessionsFolder()
+            self.path = self.sessions.backlog_item("checkout.md", "Checkout")
+            self.opened = []
+            self.system_opener = backlog_item_module.open_with_system
+            backlog_item_module.open_with_system = self.opened.append
+            board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+            board.backlog_item_called("Checkout").open_file()
+
+        with after.each:
+            backlog_item_module.open_with_system = self.system_opener
+
+        with it("should hand its file to the app the computer opens it with"):
+            expect([path.resolve() for path in self.opened]).to(equal([self.path.resolve()]))
+
+    with context("that a person drops on a ticket moved back into the Backlog"):
+        with before.each:
+            self.sessions = SessionsFolder()
+            self.sessions.backlog_item("returns.md", "Returns")
+            folder = self.sessions.folder("_backlog/gift-cards")
+            (folder / "gift-cards.md").write_text("# Gift cards\n\nSell them at the till.\n", encoding="utf-8")
+            (folder / "session.json").write_text(json.dumps({"name": "gift-cards", "title": "Gift cards"}), encoding="utf-8")
+            self.board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+
+        with it("should refuse it, since that folder keeps the ticket's work"):
+            expect(lambda: self.board.backlog_item_called("Returns").nest_under(self.board.backlog_item_called("Gift cards"))).to(raise_error(BacklogNestingError))
 
 GENERATE_STORY_MAP = "generate /work, /work/docs stories story_map markdown stories no-chat"
 VALIDATE_STORY_MAP_WITH_VIOLATIONS = "validate Stories story_map graph-rule actor-named-in-step map.md:12 no-chat"

@@ -3,5 +3,7 @@
   "title": "class diagram improvements",
   "scope": "feature",
   "branch": "class-diagram-improvements",
-  "worktree": "C:\\dev\\abd-cdd-class-diagram-improvemen"
+  "worktree": "C:\\dev\\abd-cdd-class-diagram-improvemen",
+  "stage": "Implementation",
+  "stage_mark": "in-progress"
 }

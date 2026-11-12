@@ -70,6 +70,10 @@ describe('Choose Session Root', () => {
         it('should go back to the list of roots', async () => {
           expect(browsing(await used())).toBeNull()
         })
+
+        it('should show the new workpath in the list of roots', async () => {
+          expect((await used()).roots.ticket?.session.workpath).toBe('src/visits')
+        })
       })
     })
 
@@ -83,6 +87,10 @@ describe('Choose Session Root', () => {
 
       it("should show it as that practice's chosen root", async () => {
         expect(ticketOn(await chosen(), TICKET).session.practices.stories).toMatchObject({ root: 'src/billing', is_root_chosen: true })
+      })
+
+      it('should show the chosen root in the list of roots', async () => {
+        expect((await chosen()).roots.ticket?.session.practices.stories).toMatchObject({ root: 'src/billing', is_root_chosen: true })
       })
 
       describe('and then goes back to its default', () => {

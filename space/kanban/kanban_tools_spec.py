@@ -782,6 +782,7 @@ with description("the board tools") as self:
                 "session.write_handoff", "session.read_handoff_format", "session.read_cdr_format", "session.list_cdrs", "session.write_cdr",
                 "practice-session-output.enable", "practice-session-output.choose_root", "practice-session-output.use_default_root",
                 "backlog-item.create", "backlog-item.start", "backlog-item.start_under", "backlog-item.edit_text", "backlog-item.move_before",
+                "backlog-item.move_after", "backlog-item.nest_under", "backlog-item.leave_parent", "backlog-item.open_file",
             }))
 
         # An agent that opens a ticket must work in the ticket's own worktree, not in the chat that opened it.
