@@ -5,7 +5,7 @@ import time
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.tool_call import ToolCall
-from harness.mcp.mcp_server import long_call, mcp
+from harness.mcp.mcp_annotations import long_call, mcp
 
 
 MONTH_END_SECONDS = 2

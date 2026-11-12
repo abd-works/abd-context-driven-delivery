@@ -5,7 +5,7 @@ from __future__ import annotations
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.diagnostics.call_diagnostics import CallDiagnostics
 from harness.installation.files import command, skill
-from harness.mcp.mcp_server import long_call, mcp
+from harness.mcp.mcp_annotations import long_call, mcp
 
 
 @agent_toolset

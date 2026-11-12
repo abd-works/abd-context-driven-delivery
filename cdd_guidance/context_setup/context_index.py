@@ -11,7 +11,7 @@ from harness.agent_tools.agent_tools import agent_tool
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.files import skill
 from harness.markdown.front_matter import FrontMatter
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 
 # ── Index entries and results ────────────────────────────────────────────────
 

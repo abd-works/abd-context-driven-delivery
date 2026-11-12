@@ -9,7 +9,7 @@ from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.installation.files import skill
 from harness.markdown.format import Format
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 from cdd_guidance.actions.render.render import Render
 from cdd_guidance.actions.validate.validate import Validate
 

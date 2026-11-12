@@ -15,7 +15,7 @@ from harness.graph.pattern_overlays import PatternOverlays
 from harness.guidance.stages import GENERATE, RENDER, VALIDATE
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.markdown.format import Format
-from harness.mcp.mcp_server import long_call, mcp
+from harness.mcp.mcp_annotations import long_call, mcp
 from space.kanban.board import (
     BACKLOG_COLUMN,
     COMPLETE_COLUMN,

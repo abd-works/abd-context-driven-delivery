@@ -12,7 +12,7 @@ from harness.markdown import markdown
 from harness.agent_tools.agent_tools import agent_tool
 from harness.agent_tools.recipe import RecipePlaceholders
 from harness.installation.files import skill
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 
 @agent_toolset
 class Partition(GuidanceAction):

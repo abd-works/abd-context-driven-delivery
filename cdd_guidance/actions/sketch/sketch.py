@@ -12,7 +12,7 @@ from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.files import skill
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 
 _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 

@@ -14,7 +14,7 @@ from space.kanban.board import BACKLOG_COLUMN, Board, Card, Column
 # ticket the call names.
 from space.kanban.ticket import Ticket
 from space.session.idea_file import IdeaFile
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 
 
 

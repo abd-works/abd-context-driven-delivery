@@ -32,7 +32,7 @@ from harness.guidance.action_catalogue import Action, ActionCatalogue
 from harness.installation.destination import NoCatalog
 from harness.installation.files import skill
 from harness.installation.repository_toolsets import RepositoryToolsets
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 from harness.annotations.class_folder import class_folder
 from harness.annotations.name import Name
 

@@ -10,7 +10,7 @@ from harness.agent_tools import agent_instructions, agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, tools
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.files import skill
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 from cdd_guidance.actions.partition.partition import Partition
 from cdd_guidance.context_setup.context_index import ContextIndex
 from cdd_guidance.context_setup.live_app_capture import (

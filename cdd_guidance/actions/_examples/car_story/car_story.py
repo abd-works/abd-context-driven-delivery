@@ -5,7 +5,7 @@ from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, tools, instructions
 from harness.installation.files import skill
 from harness.hooks.hooks import Hooks
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 
 @Hooks(disabled=True, deploy=False)
 @agent_toolset

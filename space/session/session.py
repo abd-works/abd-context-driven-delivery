@@ -17,7 +17,7 @@ from harness.guidance.documents import load_document
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.files import command, skill
 from harness.installation.json_file import HeldJsonFile, JsonFile
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 from harness.installation.context_config import CONTEXT_FOLDER, ContextConfig
 from space.repo.repo import Repo
 from space.session.chat_injections import ChatInjections

@@ -10,7 +10,7 @@ from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import tool_subject
 from harness.installation.data_class import data_field, language_adapter
 from harness.installation.files import command
-from harness.mcp.mcp_server import long_call, mcp
+from harness.mcp.mcp_annotations import long_call, mcp
 from harness.process.git import Git, RepoConnectError
 from space.repo.git_folder import GitFolder
 from space.repo.worktree import Worktree, Worktrees

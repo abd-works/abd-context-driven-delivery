@@ -27,7 +27,7 @@ from harness.agent_tools.agent_tools import (
 from harness.installation.files import rules, skill
 from harness.installation.data_class import data_field, identity
 from harness.hooks.hooks import Hook
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 from harness.markdown import (
     Markdown,
     MarkdownCollection,

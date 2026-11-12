@@ -16,7 +16,7 @@ from harness.diagnostics.server_health import ServerHealth
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
 from space.kanban.board_app import BOARD_APP_PORTS
 from space.repo.repo import Repo

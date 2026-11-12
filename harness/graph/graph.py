@@ -13,7 +13,7 @@ from harness.agent_tools.progress import report_progress
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.data_class import data_field, language_adapter
 from harness.installation.files import command, skill
-from harness.mcp.mcp_server import long_call, mcp
+from harness.mcp.mcp_annotations import long_call, mcp
 from harness.graph.edge import Display, Edge, EdgeIndex, EdgeType
 from harness.graph.explorer import ExplorerEntry, FilteredNode, GraphLoaded, GraphSaved, NodeSource, Overlay, PracticeInventory
 from harness.graph.graph_build import BuildStep, CheckedFiles, GraphBuild

@@ -7,7 +7,7 @@ from harness.agent_tools.agent_tools import (
     agent_toolset,
 )
 from harness.installation.files import command, skill
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 
 
 @agent_toolset
