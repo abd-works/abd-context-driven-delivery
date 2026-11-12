@@ -186,7 +186,10 @@ class Repo:
 
     def has_ref(self, ref: str) -> bool:
         folder = self._readable_folder
-        return folder.has_ref(ref) if folder is not None else self.git.succeeds("show-ref", "--verify", "--quiet", ref)
+        if folder is not None:
+            return folder.has_ref(ref)
+        # A folder git does not know has no refs; asking git would only fail.
+        return self.is_clone and self.git.succeeds("show-ref", "--verify", "--quiet", ref)
 
     def worktree_listing(self) -> list[tuple[Path, str]]:
         """Every checkout of the repository with the branch it has checked out (empty when none is), the main clone
@@ -194,6 +197,8 @@ class Repo:
         folder = self._readable_folder
         if folder is not None:
             return folder.worktrees()
+        if not self.is_clone:
+            return []
         listed = []
         for block in self.git.run("worktree", "list", "--porcelain").split("\n\n"):
             fields = dict(line.split(" ", 1) for line in block.splitlines() if " " in line)
