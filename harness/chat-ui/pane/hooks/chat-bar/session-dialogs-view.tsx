@@ -3,7 +3,7 @@ import type { EngineInterface } from 'claude-code'
 import { BRAND } from '../shared/brand'
 import type { ChatBarDraw } from './chat-bar-view'
 import { MAIN_SESSION } from './chat-bar-client'
-import { activateTicket, closeSession, createSession } from './session-client'
+import { activateTicket, closeSession, createSession, openRepo } from './session-client'
 import { cancelClose, toggleLeaving } from './session-dialogs-client'
 import { stageIconOf } from './stage-client'
 
@@ -75,6 +75,19 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
         </Box>
       ))}
       <Input key="new-session" placeholder="New session name" value="" onSubmit={value => (value.trim() ? createSession($, value.trim()) : undefined)} />
+      <Text key="repos-heading" color={BRAND.muted}>REPOS</Text>
+      {view.repos.map(repo => (
+        <Box key={`repo-row-${repo.name}`} flexDirection="row" gap={1}>
+          <Text color={BRAND.muted}>{repo.has_cdd ? '◆' : '◇'}</Text>
+          <Box key={`repo-name-${repo.name}`}>
+            <Text color={BRAND.text}>{`${repo.name}${repo.branch ? ` · ${repo.branch}` : ''}`}</Text>
+            <Box position="absolute" top={0} left={0} width={repo.name.length}>
+              <Button key={`repo-${repo.name}`} plain label=" " onPress={() => openRepo($, repo.name)} />
+            </Box>
+          </Box>
+        </Box>
+      ))}
+      <Input key="new-repo" placeholder="New repo name (private)" value="" onSubmit={value => (value.trim() ? openRepo($, value.trim()) : undefined)} />
     </Box>
   )
 }

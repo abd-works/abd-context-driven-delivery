@@ -10,8 +10,8 @@ import { askChatToFix, dismissFailure, fixFailure, runHandoff, type ChatBarClien
 import { openFilesOf, openReport } from './fidelity-files-client'
 import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
-import { openClose } from './session-client'
-import { toggleCard, toggleSessionList } from './session-dialogs-client'
+import { openClose, toggleSessionListWithRepos } from './session-client'
+import { toggleCard } from './session-dialogs-client'
 import { CloseView, SessionListView } from './session-dialogs-view'
 import { selectStage, toggleStagePicker, type StageClient } from './stage-client'
 
@@ -104,7 +104,7 @@ function SessionNameView($: EngineInterface, { Box, Button, Text }: ElementTable
           <Text weight="semibold" color={BRAND.text}>{chatBar.sessionName || 'main'}</Text>
         </Button>
       </Box>
-      {chatBar.isMain ? GlyphButtonView({ Box, Button, Text }, 'session-list-button', '+', BRAND.muted, () => toggleSessionList($)) : null}
+      {chatBar.isMain ? GlyphButtonView({ Box, Button, Text }, 'session-list-button', '+', BRAND.muted, () => toggleSessionListWithRepos($)) : null}
     </Box>
   )
 }

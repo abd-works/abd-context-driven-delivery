@@ -8,6 +8,8 @@ import os
 import re
 from pathlib import Path
 
+from harness.agent_tools.claude_chat_process import is_desktop_spare
+
 
 # A chat id becomes part of a file pattern, so only the letters, digits, and dashes of an id may reach it.
 _CHAT_ID = re.compile(r"[0-9A-Za-z-]+")
@@ -120,7 +122,7 @@ class ChatPointer:
             return None
         recorded = _RECORDED_FOLDER.findall(self._transcript_end())
         folders = [Path(json.loads(text)) for text in reversed(recorded)]
-        return next((folder for folder in folders if folder.is_dir()), None)
+        return next((folder for folder in folders if folder.is_dir() and not is_desktop_spare(folder)), None)
 
     def _transcript_end(self) -> str:
         with self.transcript.open("rb") as transcript:

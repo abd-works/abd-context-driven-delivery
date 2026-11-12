@@ -32,7 +32,12 @@ export type ChatBarViewJson = {
   // The session's own branch, which merge and delete branch act on, checked out or not; empty while git has none.
   leaveOwnBranch: string
   leaving: string[]
+  // The repositories beside this one, as repos.siblings answers them when the session list opens.
+  repos: RepoRowJson[]
 }
+
+// One repository in the repos folder, as repos.siblings answers it.
+export type RepoRowJson = { name: string; path: string; branch: string; is_published: boolean; has_cdd: boolean }
 
 // Whether the action picker's menu is open.
 // chosenAction: the action picked from the menu, which the action button shows and runs in place of the next one.

@@ -6,7 +6,8 @@ import { reasonOf } from '../shared/failure'
 import { callTool, currentChatBar, refreshChatBar, showFailure, type ChatBarClient } from './chat-bar-client'
 import { whileBusy } from './busy-client'
 import { startedChatIn } from './chat-folder-client'
-import { cancelClose, closeSessionList, currentChatBarView, showClose } from './session-dialogs-client'
+import type { RepoRowJson } from '../../types'
+import { cancelClose, closeSessionList, currentChatBarView, showClose, showRepos, toggleSessionList } from './session-dialogs-client'
 
 // The person's moves between sessions: open a ticket from the main chat, create one, close the active one. Each is one
 // ticket tool; the dialogs they open and close, and what they chose, are in session-dialogs-client.ts. Sessions open
@@ -47,6 +48,31 @@ export async function createSession($: EngineInterface, sessionName: string): Pr
   } catch (failure) {
     await showFailure($, `${sessionName} was not created: ${reasonOf(failure)}`)
     await refreshChatBar($)
+  }
+}
+
+// The main chat's + opens the session list, and with it the repositories beside this one; a list that cannot read them
+// still opens, with the tickets alone.
+export async function toggleSessionListWithRepos($: EngineInterface): Promise<void> {
+  await toggleSessionList($)
+  if (!(await currentChatBarView($)).isSessionListOpen) return
+  try {
+    await showRepos($, await callTool<RepoRowJson[]>($, 'repos.siblings', {}))
+  } catch (failure) {
+    await showRepos($, [])
+    $.ui.toast(`Repositories not listed: ${reasonOf(failure)}`)
+  }
+}
+
+// repos.open creates the repository when missing, publishes it private, installs CDD into it, and opens a new top-level
+// chat there, where the person opens its main session.
+export async function openRepo($: EngineInterface, name: string): Promise<void> {
+  await closeSessionList($)
+  try {
+    const answer = await whileBusy($, `Opening repository ${name}`, () => callTool<string>($, 'repos.open', { name, visibility: 'private' }))
+    $.ui.toast(`${name}: ${answer.split('\n').pop()?.replace(/^- /, '') ?? 'opened'}`)
+  } catch (failure) {
+    await showFailure($, `${name} did not open: ${reasonOf(failure)}`)
   }
 }
 
