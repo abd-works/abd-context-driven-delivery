@@ -27,9 +27,10 @@ export class BacklogItemClient extends BacklogItemClientGenerated {
     return `${this.column.name}/${this.title}`
   }
 
-  // The items kept in its folder, stacked inside its card.
+  // The items kept in its folder, stacked inside its card. Most items have none, and data read without the field holds
+  // none either, so a card shows no stack rather than failing the page.
   get childItems(): BacklogItemClient[] {
-    this.heldChildren ??= this.children.map(child => this.page.item(child))
+    this.heldChildren ??= (this.children ?? []).map(child => this.page.item(child))
     return this.heldChildren
   }
 
