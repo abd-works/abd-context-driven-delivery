@@ -16,7 +16,7 @@ from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.documents import load_document
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.files import command, skill
-from harness.installation.json_file import JsonFile
+from harness.installation.json_file import HeldJsonFile, JsonFile
 from harness.mcp.mcp_server import mcp
 from harness.installation.context_config import CONTEXT_FOLDER, ContextConfig
 from space.repo.repo import Repo
@@ -92,6 +92,8 @@ class Session:
         self.context_config = ContextConfig(self.repo_path)
         self._workpath: Path | None = None
         self._session_path: Path | None = None
+        # Its session.json, read again only once the file changes; none before it has a folder.
+        self._session_json: HeldJsonFile | None = None
         # The practices and graph this session keeps between calls, made when first asked for.
         self._outputs: dict[str, PracticeSessionOutput] | None = None
         self._graph: Graph | None = None
@@ -154,6 +156,7 @@ class Session:
     @session_path.setter
     def session_path(self, folder: Path | None) -> None:
         self._session_path = folder
+        self._session_json = HeldJsonFile(JsonFile(folder / SESSION_FILE)) if folder is not None else None
         self.handoffs = Handoffs(folder) if folder is not None else None
         self.progress_cache = ProgressCache(folder)
 
@@ -328,13 +331,15 @@ class Session:
 
     @property
     def fields(self) -> dict:
-        """What ``session.json`` in this session's folder holds, read each time; nothing before it has a folder."""
-        return JsonFile(self.session_file).read() if self.session_path else {}
+        """What ``session.json`` in this session's folder holds, read again only once the file changes; nothing before it
+        has a folder."""
+        return self._session_json.read() if self._session_json is not None else {}
 
     def save_fields(self, **values: object) -> None:
         """Merge ``values`` into ``session.json``, keeping what others store there, and make the session's folder when
         it has none yet, as a project's main session has none until something is saved in it."""
-        JsonFile(self.session_file).write({**self.fields, **values})
+        held = self._session_json
+        (held if held is not None else JsonFile(self.session_file)).write({**self.fields, **values})
 
     def save(self) -> None:
         """Save this session's name, workpath, and repository in its ``session.json``, creating its folder, and keep

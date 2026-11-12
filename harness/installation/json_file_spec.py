@@ -1,12 +1,13 @@
 """BDD spec for a JSON file its owner reads and writes whole."""
 
+import shutil
 import tempfile
 from pathlib import Path
 
 from expects import be_a, contain, equal, expect, raise_error
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 
-from harness.installation.json_file import JsonFile, JsonFileUnreadable
+from harness.installation.json_file import HeldJsonFile, JsonFile, JsonFileUnreadable
 
 
 class _OwnersError(JsonFileUnreadable):
@@ -61,3 +62,35 @@ with description("a JSON file"):
                 self.file.read()
             except JsonFileUnreadable as failure:
                 expect(failure).to(be_a(_OwnersError))
+
+
+with description("a JSON file held between reads"):
+    with before.each:
+        self.folder = Path(tempfile.mkdtemp(prefix="cdd-held-json-"))
+        self.path = self.folder / "session.json"
+        JsonFile(self.path).write({"stage": "Discovery"})
+        self.held = HeldJsonFile(JsonFile(self.path))
+        self.held.read()
+
+    with after.each:
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    with context("that another process writes over"):
+        with it("should read what the other process wrote"):
+            JsonFile(self.path).write({"stage": "Specification", "stage_mark": "done"})
+            expect(self.held.read()).to(equal({"stage": "Specification", "stage_mark": "done"}))
+
+    with context("that a reader changes what it was given"):
+        with it("should keep what the file holds"):
+            self.held.read()["stage"] = "Implementation"
+            expect(self.held.read()).to(equal({"stage": "Discovery"}))
+
+    with context("that its owner writes"):
+        with it("should read back what was written"):
+            self.held.write({"stage": "Implementation"})
+            expect(self.held.read()).to(equal({"stage": "Implementation"}))
+
+    with context("that is deleted"):
+        with it("should read as empty"):
+            self.path.unlink()
+            expect(self.held.read()).to(equal({}))

@@ -57,3 +57,40 @@ class JsonFile:
         staged.write_text(text + "\n", encoding="utf-8")
         os.replace(staged, self.path)
         return self.path
+
+
+class HeldJsonFile:
+    """A *JsonFile* that many reads ask in quick succession, such as a session's ``session.json``, which one board read
+    asks thousands of times. It holds what it read and reads the file again only once the file's last-written time or
+    size changes, so a change another process writes is still seen, at the cost of one ``stat`` per read."""
+
+    def __init__(self, file: JsonFile) -> None:
+        self._file = file
+        # What the file held, and the time and size it had when it was read.
+        self._held: tuple[tuple[int, int], dict[str, Any]] | None = None
+
+    @property
+    def path(self) -> Path:
+        return self._file.path
+
+    def read(self) -> dict[str, Any]:
+        """A copy of the object the file holds, so a caller changing it changes nothing held; empty when there is no file."""
+        version = self._version()
+        held = self._held
+        if version is None:
+            return {}
+        if held is None or held[0] != version:
+            held = (version, self._file.read())
+            self._held = held
+        return dict(held[1])
+
+    def write(self, data: Mapping[str, Any]) -> Path:
+        self._held = None
+        return self._file.write(data)
+
+    def _version(self) -> tuple[int, int] | None:
+        try:
+            status = self._file.path.stat()
+        except FileNotFoundError:
+            return None
+        return status.st_mtime_ns, status.st_size
