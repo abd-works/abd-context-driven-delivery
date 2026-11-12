@@ -68,3 +68,11 @@ open its chat from its card.
 Fixed on branch `ticket-maintanance-defects`: with no chat working in the worktree, Activate starts one there, as the
 card's chat button does (`activation-client.ts`); the new chat's prompt asks it to call `sessions.switch` with the
 ticket's name first (`newChatLink` in `chat-client.tsx`).
+
+## Starting a Backlog item by dragging it into Discovery starts no chat
+
+Reported 2026-11-12, ticket `ticket-maintanance-defects`. Dragging a Backlog item into Discovery started its ticket, but
+no worktree or chat opened.
+
+Fixed on branch `ticket-maintanance-defects`: starting an item, by drag or by Start, now activates its ticket as Activate
+does, so its worktree opens and its chat starts there (`root-choice-client.ts`).
