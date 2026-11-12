@@ -4,7 +4,7 @@ from pathlib import Path
 from expects import be_none, equal, expect
 from mamba import before, context, description, it
 
-from harness.guidance.patterns_file import PatternsFile
+from harness.graph.patterns_file import PatternsFile
 
 
 with description("a folder's patterns file") as self:
