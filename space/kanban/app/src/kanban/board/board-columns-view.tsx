@@ -64,7 +64,13 @@ function EdgeColumnView({ column }: { column: ColumnClient }) {
       <EdgeHeadView column={column} />
       {column.isBacklog && state.draft.isOpen ? <ComposerView /> : null}
       <div className="card-lists is-single">
-        <DropZoneView className="card-list" accepts={ticket => ticket.canDropOn(column.name)} onDrop={ticket => ticket.dropOn(column.name)}>
+        <DropZoneView
+          className="card-list"
+          accepts={ticket => ticket.canDropOn(column.name)}
+          onDrop={ticket => ticket.dropOn(column.name)}
+          acceptsItem={item => column.isBacklog && item.isStacked}
+          onItemDrop={item => item.leaveParent()}
+        >
           {column.items.map(item => (
             <BacklogCardView key={item.path} item={item} />
           ))}
@@ -79,20 +85,23 @@ type DropProps = {
   accepts: (ticket: TicketClient) => boolean
   onDrop: (ticket: TicketClient) => unknown
   onItemDrop?: (item: BacklogItemClient) => unknown
+  acceptsItem?: (item: BacklogItemClient) => boolean
   className: string
   children: ReactNode
 }
 
 // A list a dragged card can be dropped on. Only a list that would change where the card is accepts it, and only a list
-// given onItemDrop takes a backlog item. Any list takes a child dragged out of its parent's card, which leaves it there.
-function DropZoneView({ accepts, onDrop, onItemDrop, className, children }: DropProps) {
+// given onItemDrop takes a backlog item, the ones acceptsItem names when it is given. Any list takes a child dragged out
+// of its parent's card, which leaves it there.
+function DropZoneView({ accepts, onDrop, onItemDrop, acceptsItem = () => true, className, children }: DropProps) {
   const { page, state } = useBoard()
   const [isOver, setOver] = useState(false)
   // Read when each event arrives, not from the last drawing: a quick drag reaches the list before the page redraws.
   const draggedNow = () => {
     const address = page.store.state.dragged
     const ticket = page.board.ticketAt(address)
-    const item = onItemDrop ? page.board.backlogItems.find(entry => entry.address === address) : undefined
+    const found = onItemDrop ? page.board.backlogItems.find(entry => entry.address === address) : undefined
+    const item = found && acceptsItem(found) ? found : undefined
     return { ticket, item, isAccepted: (ticket !== undefined && (ticket.isStacked || accepts(ticket))) || item !== undefined }
   }
   const isAccepted = state.dragged !== null && draggedNow().isAccepted

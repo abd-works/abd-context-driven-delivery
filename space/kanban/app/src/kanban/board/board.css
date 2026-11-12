@@ -349,6 +349,7 @@ ul.help-overview, ul.help-guidance { padding-left: 18px; }
 .card-field { pointer-events: auto; position: relative; z-index: 1; min-width: 0; width: 100%; font: inherit; font-size: 11px; padding: 1px 4px; background: var(--surface, transparent); color: inherit; border: 1px solid var(--border); border-radius: 3px; }
 /* A dragged ticket of the same column lands above the card whose top edge it is over. */
 .ticket-card.is-drop-before { box-shadow: 0 -3px 0 var(--accent); }
+.ticket-card.is-drop-after { box-shadow: 0 3px 0 var(--accent); }
 .ticket-card.is-drop-over { outline: 2px dashed var(--accent); outline-offset: 1px; }
 
 /* A parent's title sits small above its children, stacked in its card; a pulled-out child keeps a dashed row. */
