@@ -163,6 +163,8 @@ test.describe('with no chat connected', () => {
       test.beforeEach(async ({ page }) => {
         await openBoard(page)
         await card(page, 'billing-report').getByRole('button', { name: 'Activate' }).first().click()
+        // Activating makes a worktree in the background; the next scenario's reset must not start while it still runs.
+        await expect(toast(page, /^Billing report is open in its worktree/)).toBeVisible({ timeout: 15_000 })
       })
 
       test('Then no dialog opens', async ({ page }) => {
