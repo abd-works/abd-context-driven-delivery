@@ -58,3 +58,13 @@ session or a practice saved it, but the row still showed the old root ("harness 
 
 Fixed on branch `ticket-maintanance-defects`: the dialog drew the ticket object it was opened with; it now draws the ticket
 as the board read it last (`root-choice-client.ts`).
+
+## Activating a ticket on the board opens its worktree but starts no chat
+
+Reported 2026-11-12 through the main board's chat, ticket `ticket-maintanance-defects`. Pressing Activate on "Integrate
+Practice Content Editor Apps" made its worktree and recorded it, but no chat was started on it; the board only said to
+open its chat from its card.
+
+Fixed on branch `ticket-maintanance-defects`: with no chat working in the worktree, Activate starts one there, as the
+card's chat button does (`activation-client.ts`); the new chat's prompt asks it to call `sessions.switch` with the
+ticket's name first (`newChatLink` in `chat-client.tsx`).
