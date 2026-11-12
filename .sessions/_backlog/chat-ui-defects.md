@@ -42,3 +42,19 @@ under the item's read-only text, so the same text showed twice and the field cut
 
 Fixed on branch `ticket-maintanance-defects`: the field opens in the text's place, as a box of several lines holding the
 whole text; Enter saves, Shift+Enter adds a line, Escape puts it away (`backlog-item-view.tsx`, `ItemTextView`).
+## A Backlog card's "More in <file>" is plain text
+
+Reported 2026-11-12, ticket `ticket-maintanance-defects`. A selected Backlog card ends its text with "More in
+<file>", which could not be opened.
+
+Fixed on branch `ticket-maintanance-defects`: it is a link, on every selected Backlog card, that opens the item's file in
+the app the computer opens markdown with (`backlog-item.open_file`). Opening it in the Claude app's file viewer is not
+done: the board has no way to reach that viewer yet.
+
+## The roots dialog keeps showing the old root after Change
+
+Reported 2026-11-12, ticket `ticket-maintanance-defects`. In a ticket's Roots dialog, choosing a new folder for the
+session or a practice saved it, but the row still showed the old root ("harness · default").
+
+Fixed on branch `ticket-maintanance-defects`: the dialog drew the ticket object it was opened with; it now draws the ticket
+as the board read it last (`root-choice-client.ts`).
