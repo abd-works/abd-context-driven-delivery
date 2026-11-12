@@ -1,6 +1,7 @@
 """The running parts of CDD that a person needs to see are up: the Kanban app, the graph app, and the hook server."""
 from __future__ import annotations
 
+import functools
 import socket
 from pathlib import Path
 from typing import ClassVar
@@ -68,6 +69,11 @@ class ServerHealth:
     @property
     @data_field
     def kanban_app_port(self) -> int | None:
+        return self._kanban_answering
+
+    @functools.cached_property
+    def _kanban_answering(self) -> int | None:
+        """The port the Kanban app answers on, probed once for the report, which names it in its port and its URL."""
         return self._first_answering(self._kanban_ports)
 
     @property
