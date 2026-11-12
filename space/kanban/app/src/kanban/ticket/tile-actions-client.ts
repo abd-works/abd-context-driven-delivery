@@ -5,7 +5,7 @@ import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../shared/board-store'
 import type { FidelityProgressClient } from './fidelity-progress-client'
 import type { TicketClient, WorkStanding } from './ticket-client'
-import { headPlace } from './tile-client'
+import { headPlace, slugsOf } from './tile-client'
 import { chosenFormats } from './tile-formats'
 
 export type ChipFace = FormatChoiceData & { hint: string; isOn: boolean; isDone: boolean; count: string }
@@ -28,7 +28,7 @@ function reportOf(progress: FidelityProgressClient[]): FidelityProgressClient | 
 
 function chipFaceOf(tile: Tile, choice: FormatChoiceData): ChipFace {
   const { made, offered } = choice
-  const isOn = tile.picked.includes(choice.label)
+  const isOn = choice.is_chosen
   const standing = made === 0 ? 'not done' : made === offered ? 'done' : `${made} of ${offered} done`
   const count = made > 0 && made < offered ? `${made} of ${offered}` : ''
   return { ...choice, isOn, isDone: made > 0, count, hint: `${choice.label}: ${standing}${isOn ? ', selected' : ''}` }
@@ -61,8 +61,13 @@ export class TileActionsClient {
     this.save(tile, { action })
   }
 
-  toggleFormat(tile: Tile, chip: string): void {
-    this.save(tile, { picked: tile.picked.includes(chip) ? tile.picked.filter(entry => entry !== chip) : [...tile.picked, chip] })
+  // A press chooses the chip's formats in the ticket's session, or leaves them out, and the bar shows the chips Python
+  // answers.
+  async toggleFormat(tile: Tile, chip: string): Promise<void> {
+    const choice = tile.choices.find(each => each.label === chip)
+    if (!choice) return
+    const choices = await tile.ticket.chooseFormats(slugsOf(tile.fidelities), chip, !choice.is_chosen)
+    if (choices) this.save(tile, { choices })
   }
 
   // A stage head's bar acts on the ticket's work in that stage, which Python answers taken together; a tile's bar acts
@@ -79,7 +84,7 @@ export class TileActionsClient {
 
   private canRun(ticket: TicketClient, tile: Tile, work: WorkStanding | undefined): boolean {
     if (!this.chat.canSend || !tile.fidelities.length) return false
-    if (!chosenFormats(tile.choices, tile.picked).length) return false
+    if (!chosenFormats(tile.choices).length) return false
     return this.allows(ticket, work, tile.action)
   }
 
@@ -100,13 +105,12 @@ export class TileActionsClient {
   }
 
   // Python gives one command naming every fidelity the bar acts on, and the ticket's session, so a stage's work stays a
-  // single turn. The chips add the formats a person picked to an action that takes them.
+  // single turn. The chips add the formats chosen in the session to an action that takes them.
   async run(tile: Tile): Promise<void> {
     const command = this.commandOf(tile, tile.action)
     // The stage says which of its actions take the formats chosen; every other one writes or reads files without one.
     if (!tile.stage.actionsWithFormats.includes(tile.action)) return this.sendFor(tile, command)
-    const formats = chosenFormats(tile.choices, tile.picked)
-    this.save(tile, { picked: [] })
+    const formats = chosenFormats(tile.choices)
     await this.sendFor(tile, `${command} format=${formats.join(',')}`)
   }
 

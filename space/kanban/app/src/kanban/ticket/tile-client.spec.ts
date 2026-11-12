@@ -59,18 +59,25 @@ const spot = (page: BoardPage, fidelities = [STORY_MAP_FIDELITY], place = PLACE)
 const barAt = (page: BoardPage, place = PLACE) => page.tiles.openOn(TICKET, place)
 const openPlaces = (page: BoardPage) => page.store.state.tiles.map(tile => tile.place)
 
-// Python answers each chip of a bar; the page keeps what a person picks.
+// Python answers each chip of a bar, and whether the session keeps it chosen.
 describe('Choose Action And Formats', () => {
-  it('should give each fidelity its default format', async () => {
+  it('should show each fidelity's default format chosen', async () => {
     const { page } = await activeTicketPage()
     await page.tiles.open(spot(page), true)
-    expect(barAt(page)?.picked).toEqual(['markdown'])
+    expect(barAt(page)?.choices.filter(choice => choice.is_chosen).map(choice => choice.label)).toEqual(['markdown'])
   })
 
-  it('should not pick a format already generated', async () => {
+  it('should keep a format chosen once it is generated', async () => {
     const { page } = await activeTicketPage({ isMarkdownMade: true })
     await page.tiles.open(spot(page), true)
-    expect(barAt(page)?.picked).toEqual([])
+    expect(barAt(page)?.choices.filter(choice => choice.is_chosen).map(choice => choice.label)).toEqual(['markdown'])
+  })
+
+  it('should choose a format in the session when its chip is pressed', async () => {
+    const { page } = await activeTicketPage()
+    await page.tiles.open(spot(page), true)
+    await page.tileActions.toggleFormat(barAt(page)!, 'diagram')
+    expect(barAt(page)?.choices.filter(choice => choice.is_chosen).map(choice => choice.label)).toEqual(['diagram', 'markdown'])
   })
 
   it('should let a chip stand for a group', async () => {
@@ -82,7 +89,7 @@ describe('Choose Action And Formats', () => {
   it('should give each fidelity its default format from a chip', async () => {
     const { page } = await activeTicketPage()
     await page.tiles.open(spot(page, TWO_FIDELITIES, HEAD), true)
-    expect(chosenFormats(barAt(page, HEAD)!.choices, ['markdown'])).toEqual(['markdown'])
+    expect(chosenFormats(barAt(page, HEAD)!.choices)).toEqual(['markdown'])
   })
 
   describe('with a format generated on one fidelity of two', () => {
@@ -96,8 +103,8 @@ describe('Choose Action And Formats', () => {
       expect((await markdownChip())?.count).toBe('1 of 2')
     })
 
-    // The other fidelity has not made its default format yet, so the chip opens picked for it.
-    it('should say so in its hint, picked for the fidelity that has not made it', async () => {
+    // Both fidelities keep their default format chosen in the session.
+    it('should say so in its hint, selected while the session keeps it chosen', async () => {
       expect((await markdownChip())?.hint).toBe('markdown: 1 of 2 done, selected')
     })
   })
@@ -105,6 +112,7 @@ describe('Choose Action And Formats', () => {
   it('should keep Run off until a format is chosen', async () => {
     const { page, ticket } = await activeTicketPage({ isMarkdownMade: true })
     await page.tiles.open(spot(page), true)
+    await page.tileActions.toggleFormat(barAt(page)!, 'markdown')
     expect(page.tileActions.barOf(ticket, barAt(page)!).runOff).toBe(true)
   })
 
@@ -160,14 +168,14 @@ describe('Generate Fidelity Output', () => {
     return { page, chat }
   }
 
-  it('should send the generate command for the picked formats', async () => {
+  it('should send the generate command for the chosen formats', async () => {
     const { chat } = await ran()
     expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-generate stories-story-map session=.sessions/billing-report/session.json format=markdown' }])
   })
 
-  it('should clear the picks', async () => {
+  it('should keep the formats chosen', async () => {
     const { page } = await ran()
-    expect(barAt(page)?.picked).toEqual([])
+    expect(barAt(page)?.choices.filter(choice => choice.is_chosen).map(choice => choice.label)).toEqual(['markdown'])
   })
 })
 
@@ -176,7 +184,8 @@ describe('Render Fidelity Format', () => {
     const { page, chat } = await activeTicketPage({ isMarkdownMade: true })
     await page.tiles.open(spot(page), true)
     page.tileActions.chooseAction(barAt(page)!, 'render')
-    page.tileActions.toggleFormat(barAt(page)!, 'diagram')
+    await page.tileActions.toggleFormat(barAt(page)!, 'markdown')
+    await page.tileActions.toggleFormat(barAt(page)!, 'diagram')
     await page.tileActions.run(barAt(page)!)
     expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-render stories-story-map session=.sessions/billing-report/session.json format=drawio' }])
   })
@@ -240,10 +249,10 @@ describe('Open Practice Tile', () => {
     await opening
   })
 
-  it('should pick formats from the files once they are read', async () => {
+  it('should show the chips once the files are read', async () => {
     const { page } = await activeTicketPage({ isMarkdownMade: true })
     await page.tiles.open(spot(page), true)
-    expect(barAt(page)?.picked).toEqual([])
+    expect(barAt(page)?.choices.map(choice => choice.label)).toEqual(['diagram', 'markdown'])
   })
 
   it('should close it on leaving', async () => {

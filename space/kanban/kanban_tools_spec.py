@@ -507,8 +507,29 @@ with description("the board tools") as self:
             with it("should offer a chip for each group of formats the story map writes, diagram first"):
                 expect([chip["label"] for chip in self.chips]).to(equal(["diagram", "markdown"]))
 
-            with it("should open with the chip of its default format picked"):
-                expect([chip["label"] for chip in self.chips if chip["starts_picked"]]).to(equal(["markdown"]))
+            with it("should show the chip of its default format chosen until a person chooses"):
+                expect([chip["label"] for chip in self.chips if chip["is_chosen"]]).to(equal(["markdown"]))
+
+            with context("that turns the diagram chip on"):
+                with before.each:
+                    self.chips = self.project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="diagram", is_chosen=True)
+
+                with it("should show both chips chosen"):
+                    expect([chip["label"] for chip in self.chips if chip["is_chosen"]]).to(equal(["diagram", "markdown"]))
+
+                with it("should keep both chosen for the story map in the session, in the order chosen"):
+                    output = self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="markdown", is_chosen=True)
+                    expect(output["chosen_formats"]).to(equal(["markdown", "drawio"]))
+
+            with context("that turns the markdown chip off"):
+                with before.each:
+                    self.chips = self.project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="markdown", is_chosen=False)
+
+                with it("should show no chip chosen"):
+                    expect([chip["label"] for chip in self.chips if chip["is_chosen"]]).to(equal([]))
+
+            with it("should refuse a format the story map does not write"):
+                expect(lambda: self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="python", is_chosen=True)).to(raise_error(Exception, contain("does not write python")))
 
         with context("with an action bar opened on its UX mockup"):
             with before.each:
@@ -520,8 +541,8 @@ with description("the board tools") as self:
             with it("should send the claude_design format for the canvas chip"):
                 expect(next(chip["formats"] for chip in self.chips if chip["label"] == "canvas")).to(equal(["claude_design"]))
 
-            with it("should open with the canvas unpicked, since the mockup defaults to html"):
-                expect([chip["label"] for chip in self.chips if chip["starts_picked"]]).to(equal(["code"]))
+            with it("should show the canvas unchosen, since the mockup defaults to html"):
+                expect([chip["label"] for chip in self.chips if chip["is_chosen"]]).to(equal(["code"]))
 
         with context("with an action bar opened on its UX mockup, a canvas written in the UX root"):
             with before.each:
@@ -546,7 +567,7 @@ with description("the board tools") as self:
                 (self.project.root / ".context" / "story-map.md").write_text("# Story Map\n", encoding="utf-8")
                 chips = self.project.call("ticket.format_choices", ticket="sign-up", fidelities=["stories-story-map", "ddd-bounded-context"])
                 self.markdown = next(chip for chip in chips if chip["label"] == "markdown")
-                self.chips_named = lambda label: [chip for chip in chips if chip["label"] == label and chip["starts_picked"]]
+                self.chips_named = lambda label: [chip for chip in chips if chip["label"] == label and chip["is_chosen"]]
 
             with it("should count the fidelities that offer the markdown chip"):
                 expect(self.markdown["offered"]).to(equal(2))
@@ -554,11 +575,10 @@ with description("the board tools") as self:
             with it("should count the fidelities that have a file in it already"):
                 expect(self.markdown["made"]).to(equal(1))
 
-            # B6: the bounded context still has no markdown of its own, so a stage Run writes its default format.
-            with it("should open picked while a fidelity whose default it holds has not made it"):
-                expect(self.markdown["starts_picked"]).to(be_true)
+            with it("should show chosen while every fidelity it covers keeps the format chosen"):
+                expect(self.markdown["is_chosen"]).to(be_true)
 
-            with it("should open the code chip unpicked, since no fidelity here defaults to code"):
+            with it("should show the code chip unchosen, since no fidelity here defaults to code"):
                 expect(self.chips_named("code")).to(equal([]))
 
             with it("should send each fidelity's own format for the chip"):
@@ -571,8 +591,8 @@ with description("the board tools") as self:
                 chips = self.project.call("ticket.format_choices", ticket="sign-up", fidelities=["stories-story-map"])
                 self.markdown = next(chip for chip in chips if chip["label"] == "markdown")
 
-            with it("should open with a chip every fidelity has made left unpicked"):
-                expect(self.markdown["starts_picked"]).to(be_false)
+            with it("should keep a chip chosen once its file is written"):
+                expect(self.markdown["is_chosen"]).to(be_true)
 
         # A person can write a fidelity's file by hand, and checking it should not wait for a generate.
         with context("whose story map is already written, with nothing recorded"):
@@ -774,13 +794,13 @@ with description("the board tools") as self:
             names = set(self.project.server.tools)
             expect(names).to(equal({
                 "board.show", "board.overview", "board.help", "board.folders", "board.set_sends_fixes_directly", "board.save_again", "stage.set_wip_limit",
-                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.format_choices", "ticket.overlay_choices", "ticket.choose_overlays", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations", "ticket.assign_chat",
+                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.format_choices", "ticket.choose_formats", "ticket.overlay_choices", "ticket.choose_overlays", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations", "ticket.assign_chat",
                 "ticket.edit_text", "ticket.tag", "ticket.delete", "ticket.add_child", "ticket.pull_out", "ticket.reassign_parent", "ticket.move_before",
                 "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
                 "session.choose_workpath", "session.folder_files", "session.read_file",
                 "session.write_handoff", "session.read_handoff_format", "session.read_cdr_format", "session.list_cdrs", "session.write_cdr",
-                "practice-session-output.enable", "practice-session-output.choose_root", "practice-session-output.use_default_root",
+                "practice-session-output.enable", "practice-session-output.choose_root", "practice-session-output.use_default_root", "fidelity-session-output.choose_format",
                 "backlog-item.create", "backlog-item.start", "backlog-item.start_under", "backlog-item.edit_text", "backlog-item.move_before",
             }))
 

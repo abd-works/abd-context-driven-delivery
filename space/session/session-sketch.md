@@ -365,9 +365,11 @@ Sessions, a session, and its log
 + reports_folder: Path
 + root: Path
 	// the fidelity's own root when session.json names one, else the practice's output root
-+ kept_format: str
++ chosen_formats: list[str]
+	// data field: the formats chosen for the fidelity in the session, in the order chosen; its default until one is chosen
 ----
-+ keep_format(format: str): None
++ choose_format(format: str, is_chosen: bool): FidelitySessionOutput
+	// mcp; refuses a format the fidelity does not write with FormatNotOffered
 + output_paths(): dict[str, list[str]]
 	// declared paths under the fidelity's root
 + files(): dict[str, list[FileEntry]]

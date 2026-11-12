@@ -15,6 +15,7 @@ from harness.guidance.guidance import DeclaredFile
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
 from harness.installation.context_config import CONTEXT_FOLDER
+from harness.markdown.format import Format
 from space.session.file_manager import FileEntry
 
 if TYPE_CHECKING:
@@ -77,8 +78,8 @@ class PracticeSessionOutput:
 
     @property
     def saved(self) -> dict:
-        """What session.json's ``practices`` keeps for this practice: whether it is on, and the format each fidelity was
-        last given, which each fidelity's FidelitySessionOutput reads and saves for itself."""
+        """What session.json's ``practices`` keeps for this practice: whether it is on, and the formats chosen for each
+        fidelity, which each fidelity's FidelitySessionOutput reads and saves for itself."""
         return dict(self._session.fields.get("practices", {}).get(self.name, {}))
 
     def save(self, **values: object) -> None:
@@ -166,14 +167,84 @@ class PracticeSessionOutput:
         return self
 
 
+class FormatNotOffered(ValueError):
+    """A format was chosen for a fidelity that does not write it."""
+
+    def __init__(self, fidelity: FidelityGuidance, format: str) -> None:
+        super().__init__(f"{fidelity.name} does not write {format}; it writes {', '.join(fidelity.outputs) or 'nothing'}")
+        self.fidelity = fidelity
+        self.format = format
+
+
+@identity("session_file", "practice_name", "name")
+@language_adapter(language="typescript")
+@agent_toolset
 class FidelitySessionOutput:
     """What one fidelity of a practice has in one session: where it writes each format, the files it declares there,
-    the format it was last given, and the folder its validation reports go in. It reads and saves its own part of
+    the formats chosen for it, and the folder its validation reports go in. It reads and saves its own part of
     session.json, which its practice keeps under the fidelity's name."""
+
+    # chosen_formats only ever holds formats the fidelity offers, each once. The chat bar's chips, the board's chips
+    # and the Story UI's toggles all change them through choose_format, so every page shows one choice.
 
     def __init__(self, practice: PracticeSessionOutput, fidelity: FidelityGuidance) -> None:
         self._practice = practice
         self._fidelity = fidelity
+
+    @classmethod
+    @tool_subject
+    def load(cls, session: str, practice: str, fidelity: str, *, call: ToolCall) -> FidelitySessionOutput:
+        """The fidelity named fidelity, such as story_map, of the practice named practice in the session whose
+        session.json is session, a path from the project the call names."""
+        return call.session_named(session).practice(practice).guidance.fidelities.entries[fidelity].session_output
+
+    @property
+    @data_field
+    def session_file(self) -> str:
+        """Its session's session.json as a path from the project, which names the session this fidelity is in."""
+        return self._practice.session_file
+
+    @property
+    @data_field
+    def practice_name(self) -> str:
+        return self._practice.name
+
+    @property
+    @data_field
+    def name(self) -> str:
+        """The fidelity's name in its practice, such as story_map."""
+        return self._fidelity.name
+
+    @property
+    @data_field
+    def offered_formats(self) -> list[str]:
+        """The formats this fidelity writes, in the order its practice declares them: what a person can choose."""
+        return list(self._fidelity.outputs)
+
+    @property
+    @data_field
+    def chosen_formats(self) -> list[str]:
+        """The formats chosen for this fidelity in the session, in the order chosen: what a story map edit renders to
+        and what a chip shows picked. Its default format until a person or an action chooses."""
+        chosen = self._practice.saved.get("formats", {}).get(self._fidelity.name)
+        if chosen is None:
+            return [self._fidelity.default_format.name] if self._fidelity.default_format else []
+        # A session saved before formats were chosen kept the one format its fidelity was last given.
+        return [chosen] if isinstance(chosen, str) else list(chosen)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def choose_format(self, format: str, is_chosen: bool) -> FidelitySessionOutput:
+        """Choose format for this fidelity in its session, or leave it out when is_chosen is false, saved in its
+        session.json. A format the fidelity does not write is refused."""
+        named = Format(format).name
+        if named not in self.offered_formats:
+            raise FormatNotOffered(self._fidelity, format)
+        others = [each for each in self.chosen_formats if each != named]
+        chosen = self.chosen_formats if is_chosen and named in self.chosen_formats else others + ([named] if is_chosen else [])
+        self._practice.save(formats={**self._practice.saved.get("formats", {}), self._fidelity.name: chosen})
+        return self
 
     @property
     def _session(self) -> Session:
@@ -225,15 +296,6 @@ class FidelitySessionOutput:
         root."""
         chosen = self._chosen.get("root")
         return self._session.folder_under_root(chosen) if chosen else self._practice.output_root
-
-    @property
-    def kept_format(self) -> str:
-        """The format this fidelity was last given in the session; empty when none was kept."""
-        return self._practice.saved.get("formats", {}).get(self._fidelity.name, "")
-
-    def keep_format(self, format: str) -> None:
-        """Keep format as the one this fidelity works in, so the next action on it in the session works in it."""
-        self._practice.save(formats={**self._practice.saved.get("formats", {}), self._fidelity.name: format})
 
     def output_paths(self) -> dict[str, list[str]]:
         """Where this fidelity writes each format in the session: its declared paths under its root. session.json can

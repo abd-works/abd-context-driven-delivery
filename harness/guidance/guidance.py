@@ -684,18 +684,25 @@ class FidelityGuidance(Guidance):
 
     @property
     def format(self) -> Format:
-        """The format this fidelity works in: the one it last used, which it keeps in the session its practice works
-        in, else its default."""
-        kept = self.session_output.kept_format if self.session_output is not None else ""
-        return Format(kept) if kept else self._format
+        """The format this fidelity works in: the one it was last given while that is still chosen in the session its
+        practice works in, else the first format chosen there, else the one it was given or its default. A format it
+        does not write, such as one an action names for a practice of its own, is worked in for as long as it is held."""
+        chosen = self.session_output.chosen_formats if self.session_output is not None else []
+        if not chosen or self._format in chosen or not self.offers(self._format):
+            return self._format
+        return Format(chosen[0])
 
     @format.setter
     def format(self, value: str | None) -> None:
-        """Work in value from now on; in a session, the fidelity keeps it there, so the next action on it works in it
-        without being told."""
+        """Work in value from now on; in a session, a format the fidelity writes is chosen there too, so the next
+        action on it works in it without being told."""
         self._format = Format(value)
-        if self._format and self.session_output is not None:
-            self.session_output.keep_format(self._format)
+        if self._format and self.session_output is not None and self.offers(self._format):
+            self.session_output.choose_format(self._format, True)
+
+    def offers(self, format: str) -> bool:
+        """Whether this fidelity writes format: one of its outputs names it."""
+        return Format(format).name in self.outputs
 
     @property
     @data_field

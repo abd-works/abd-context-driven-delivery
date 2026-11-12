@@ -3104,11 +3104,11 @@ Where one fidelity writes in one session: its output paths by format, the files 
 + is_enabled: bool
 + reports_folder: Path
 + root: Path
-+ kept_format: str
++ chosen_formats: list[str]
 ----
 + reports(): list[Path]
 + new_report_path(): Path
-+ keep_format(format: str): None
++ choose_format(format: str, is_chosen: bool): FidelitySessionOutput
 + output_paths(): dict[str, list[str]]
 + files(): dict[str, list[FileEntry]]
 	-> SessionFiles.find

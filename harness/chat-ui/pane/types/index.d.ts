@@ -44,8 +44,8 @@ export type RepoRowJson = { name: string; path: string; branch: string; is_publi
 // Whether the action picker's menu is open.
 // chosenAction: the action picked from the menu, which the action button shows and runs in place of the next one.
 // One format chip as ticket.format_choices answers it, and the chips held for the fidelities they were read for.
-export type FormatChoiceJson = { label: string; formats: string[]; offered: number; made: number; starts_picked: boolean }
-export type FormatChoicesJson = { key: string; choices: FormatChoiceJson[]; picked: string[] | null }
+export type FormatChoiceJson = { label: string; formats: string[]; offered: number; made: number; is_chosen: boolean }
+export type FormatChoicesJson = { key: string; choices: FormatChoiceJson[] }
 export type ActionPickerJson = { isOpen: boolean; chosenAction: string | null }
 // The pattern overlays ticket.overlay_choices answers for the session the bar shows, and whether the + list box is open.
 export type OverlayChoiceJson = { pattern: string; icon: string; is_chosen: boolean }

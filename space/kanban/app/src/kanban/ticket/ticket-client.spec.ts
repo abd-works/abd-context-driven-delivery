@@ -230,7 +230,7 @@ describe('Choose Ticket Practices', () => {
     const { page } = await board.page()
     const discovery = page.board.stageNamed('Discovery')!
     const boundedContext = discovery.workRequired.find(fidelity => fidelity.slug === 'ddd-bounded-context')!
-    page.store.change({ tiles: [{ ticket: ticketOn(page, ACTIVE), place: 'cell-Discovery-ddd-bounded-context', stage: discovery, fidelities: [boundedContext], action: 'generate', picked: [], isPinned: true, choices: [] }] })
+    page.store.change({ tiles: [{ ticket: ticketOn(page, ACTIVE), place: 'cell-Discovery-ddd-bounded-context', stage: discovery, fidelities: [boundedContext], action: 'generate', isPinned: true, choices: [] }] })
     await ticketOn(page, ACTIVE).enablePractice('ddd', false)
     return page
   }
