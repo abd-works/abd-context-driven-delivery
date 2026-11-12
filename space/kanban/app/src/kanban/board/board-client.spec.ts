@@ -11,7 +11,6 @@ import { BoardOnProject, RunningBoard, ticketOn } from 'test-utils/board-page-su
 import type { Send } from './board-api'
 import { ageOf } from '../shared/board-brand'
 
-const LATER_STAMP = '2026-11-02T10:00:00Z'
 const WAIT_MILLISECONDS = 10
 
 let board: BoardOnProject
@@ -270,11 +269,10 @@ describe('Display Ticket Details', () => {
     expect(page.board.selectedTicket?.name).toBe('checkout-flow')
   })
 
-  it('should show the ticket worked on last with none active', async () => {
+  it('should show main, the default session, with no other ticket opened', async () => {
     await board.activate(null)
-    board.write('.sessions/billing-report/session.log', `${LATER_STAMP} handoff no-chat\n`)
     const { page } = await board.page()
-    expect(page.board.selectedTicket?.name).toBe('billing-report')
+    expect(page.board.selectedTicket?.name).toBe('main')
   })
 
   it('should tell a closed session from an open one of the same name', async () => {

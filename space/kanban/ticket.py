@@ -113,7 +113,6 @@ class Ticket(Card):
         """Open a new ticket titled title in Discovery, its record committed on main and pushed. scope is feature, story, or slice; parent names the ticket it was split from; path is the folder in the repository its session works on. Then run ticket.activate to open the ticket's own worktree, and do its work in a chat started there (start_session with cwd set to the ticket's worktree), not in this chat."""
         board = Board.load(project)
         opened = board.open_ticket(title, scope, parent, path)
-        opened.session.save_on_main(f"create {opened.name}")
         return opened
 
     @property
@@ -480,7 +479,7 @@ class Ticket(Card):
     def edit_text(self, text: str) -> Ticket:
         """Write text as what ticket's work is about, in the idea file its session folder keeps, <name>.md, under its heading; the file is made when ticket has none. Committed on main and pushed."""
         self._session.keep_text(text)
-        return self._saved(f"edit {self.name}'s text")
+        return self
 
     @mcp
     @agent_tool
@@ -488,7 +487,7 @@ class Ticket(Card):
     def tag(self, word: str) -> Ticket:
         """Tag ticket's session with word, kept in its session.json beside its other tags. Committed on main and pushed."""
         self._session.add_tag(word)
-        return self._saved(f"tag {self.name} {word}")
+        return self
 
     @mcp
     @agent_tool
@@ -500,7 +499,6 @@ class Ticket(Card):
         self._session.close()
         self._session.remove()
         self._board.reread()
-        self._board.sessions.saves.later(f"sessions: delete {self.name}")
 
     @mcp
     @agent_tool
@@ -508,7 +506,6 @@ class Ticket(Card):
     def add_child(self, title: str) -> Ticket:
         """Open a child ticket of ticket titled title, a story In progress in Discovery, working where ticket works. Committed on main and pushed."""
         child = self._board.ticket_of(self._session.open_child(title, scope="story"))
-        self._session.save_on_main(f"add {child.name} to {self.name}")
         return child
 
     @mcp
@@ -519,7 +516,7 @@ class Ticket(Card):
         if self.parent is None:
             raise NotAChildError(self.name)
         self._session.mark_pulled_out()
-        return self._saved(f"pull {self.name} out of {self._session.parent}")
+        return self
 
     @mcp
     @agent_tool
@@ -529,7 +526,7 @@ class Ticket(Card):
         if parent is not None and not self._can_be_child_of(parent):
             raise ParentLoopError(self.name, parent.name)
         self._session.set_parent(parent.session if parent is not None else None)
-        return self._saved(f"give {self.name} the parent {parent.name if parent is not None else 'none'}")
+        return self
 
     @mcp
     @agent_tool
@@ -550,11 +547,6 @@ class Ticket(Card):
         if self.children:
             raise ParentMovesWithChildrenError(self.name)
 
-    def _saved(self, change: str) -> Ticket:
-        """This ticket, its change queued to be committed on main and pushed."""
-        self._session.save_on_main(change)
-        return self
-
     def _return_to_backlog(self) -> BacklogItem:
         """Into the Backlog from any column: its session closes and its whole folder becomes a backlog item, so starting
         the item brings the ticket back with its work. The move is committed on main and pushed."""
@@ -564,7 +556,6 @@ class Ticket(Card):
         kept_in_backlog = self._board.ticket_of(self._session.move_to_backlog())
         item = self._board.backlog_item_of(kept_in_backlog)
         item.write_if_missing(kept_in_backlog.title)
-        self._board.sessions.saves.later(f"sessions: return {self.name} to the Backlog")
         return item
 
 
@@ -677,7 +668,7 @@ class StageMarks:
         """Mark the ticket done or in progress in stage, or move it into stage, keeping the result in session.json, which
         is committed on main and pushed."""
         self._write(mark, stage)
-        return self._saved(f"{mark} {stage.name}")
+        return self._ticket
 
     def place(self, stage: Stage, mark: str) -> Ticket:
         """Put the ticket in stage, entering it first unless it is there, then mark it there: one commit on main, pushed,
@@ -690,9 +681,6 @@ class StageMarks:
         self._ticket.session.save_fields(**{_STAGE_FIELD: stage.name, _STAGE_MARK_FIELD: "" if mark == MOVED_INTO else mark})
         self._ticket.work.record(f"{mark} {stage.name}")
 
-    def _saved(self, change: str) -> Ticket:
-        self._ticket.session.save_on_main(f"{self._ticket.name} {change}")
-        return self._ticket
 
 
 @identity("ticket", "fidelity")

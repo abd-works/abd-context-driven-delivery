@@ -173,7 +173,6 @@ export class BoardOnProject {
   static async start(): Promise<BoardOnProject> {
     const chatsHome = separateChats()
     const project = new CddProject()
-    await project.reset()
     return new BoardOnProject(project, await RunningBoard.on(project.cdd), chatsHome)
   }
 
@@ -225,8 +224,8 @@ export class BoardOnProject {
     appendFileSync(join(this.root, '.sessions', ticket, 'session.log'), entries.map(entry => `${STAMP} ${entry} no-chat\n`).join(''), 'utf-8')
   }
 
-  activate(ticket: string | null): Promise<void> {
-    return this.project.open(ticket)
+  activate(ticket: string | null): void {
+    this.project.open(ticket)
   }
 
   // A ticket's own worktree beside the project, as activating it with a worktree leaves it. Returns its folder.
@@ -272,7 +271,7 @@ export class BoardOnProject {
   }
 
   // Sessions, chats, branches, and the origin back to how they started, for a spec that changed them.
-  async reset(): Promise<void> {
+  reset(): void {
     const hadOrigin = this.origin !== null
     this.removeOrigin()
     this.removeWorktrees()
@@ -281,7 +280,7 @@ export class BoardOnProject {
     this.git('clean', '-fd')
     for (const branch of this.git('branch', '--format=%(refname:short)').split('\n').filter(name => name && name !== 'main')) this.git('branch', '-D', branch)
     rmSync(join(this.chatsHome, 'chats'), { recursive: true, force: true })
-    await this.project.reset()
+    this.project.reset()
     this.board.updates.clear()
     if (hadOrigin) this.addOrigin()
   }

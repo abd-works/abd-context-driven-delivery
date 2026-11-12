@@ -3,6 +3,7 @@
 import shutil
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 from expects import equal, expect
@@ -13,6 +14,16 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from space.session.progress_cache import HAS_OUTPUT, PROGRESS_CACHE_FILE, VIOLATION_COUNT, ProgressCache
+
+
+_WAIT_SECONDS = 10
+
+
+def _until(condition) -> bool:
+    deadline = time.monotonic() + _WAIT_SECONDS
+    while time.monotonic() < deadline and not condition():
+        time.sleep(0.05)
+    return condition()
 
 
 class _Counting:
@@ -51,7 +62,8 @@ with description("a session's progress cache"):
         with it("should keep another question's answer apart"):
             expect(self.cache.answer("stories-story-map", VIOLATION_COUNT, "two lines", lambda: 4)).to(equal(4))
 
-        with it("should give the kept answer to a cache made later for the same folder"):
+        with it("should give the kept answer to a cache made later for the same folder, once it has written them"):
+            _until((self.folder / PROGRESS_CACHE_FILE).is_file)
             later = ProgressCache(self.folder)
             later.answer("stories-story-map", HAS_OUTPUT, "two lines", self.files_found)
             expect(self.files_found.times).to(equal(1))

@@ -22,7 +22,6 @@ import type { Page } from './app/tests/story-ui'
 
 const PAGE_HEIGHT = 900
 // billing-report's latest session log line, a day after the fixture's own.
-const LATEST_STAMP = '2026-11-02T10:00:00Z'
 const BROKEN_BOARD_PORT = 8782
 const ACTIVE_BORDER = '3px'
 const DISCOVERY_FIDELITIES = ['stories-story-map', 'ddd-bounded-context', 'ux-ia', 'clean-engineering-modules', 'bdd-behavior']
@@ -250,15 +249,14 @@ test.describe('Display Ticket Details', () => {
     })
   })
 
-  test.describe('Show the ticket worked on last when none is active', () => {
+  test.describe('Show main when no other ticket is opened', () => {
     test.beforeEach(async ({ page }) => {
       seedActive('')
-      writeSession(fixtureRoot, { name: 'billing-report', title: 'Billing report', log: [generatedLine('stories', 'story_map', LATEST_STAMP)] })
       await openBoard(page)
     })
 
-    test('Then the details show Billing report', async ({ page }) => {
-      await expect(page.locator('.details-title h2')).toHaveText('Billing report')
+    test('Then the details show main', async ({ page }) => {
+      await expect(page.locator('.details-title h2')).toHaveText('main')
     })
   })
 

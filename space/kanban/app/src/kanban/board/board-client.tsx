@@ -90,14 +90,15 @@ export class BoardClient extends BoardClientGenerated {
     return this.tickets.find(ticket => ticket.isActive)
   }
 
-  private get latestTicket(): TicketClient | undefined {
-    return [...this.tickets].sort((one, other) => other.lastActivity.localeCompare(one.lastActivity))[0]
+  // Main is the default session: it is open whenever no other ticket is.
+  private get mainTicket(): TicketClient | undefined {
+    return this.tickets.find(ticket => ticket.isMain)
   }
 
-  // With nothing pressed, the details show the active ticket, or else the one worked on last.
+  // With nothing pressed, the details show the active ticket, which is main while no other ticket is opened.
   get selectedTicket(): TicketClient | undefined {
     if (this.selectedItem) return undefined
-    return this.ticketAt(this.page.store.state.selected) ?? this.activeTicket ?? this.latestTicket
+    return this.ticketAt(this.page.store.state.selected) ?? this.activeTicket ?? this.mainTicket
   }
 
   get selectedItem(): BacklogItemClient | undefined {

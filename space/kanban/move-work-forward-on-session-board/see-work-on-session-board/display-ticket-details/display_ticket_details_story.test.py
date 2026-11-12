@@ -42,17 +42,17 @@ with story("Display Ticket Details"):
             pass
         with then("the details show Checkout flow"):
             pass
-    with scenario("Show the ticket worked on last when none is active"):
-        # Evidence: observed: board-client.spec 'should show the ticket worked on last with none active'.
-        with given("no [ticket](../../../.context/kanban-model.md#ticket--card) is active"):
+    with scenario("Show main when no other ticket is opened"):
+        # Evidence: observed: board-client.spec 'should show main, the default session, with no other ticket opened'.
+        with given("no [ticket](../../../.context/kanban-model.md#ticket--card) is opened, so main, the default session, is the active ticket"):
             pass
-        with and_("billing-report has the latest line in its session log, at 2026-11-02T10:00:00Z"):
+        with but_("no card is pressed"):
             pass
         with when("the session board draws the details"):
             # Board page -> BoardClient.selectedTicket
-            # Board <- the ticket with the latest last_activity: billing-report
+            # Board <- active ticket main
             pass
-        with then("the details show Billing report"):
+        with then("the details show main"):
             pass
     with scenario("Name a split ticket by the ticket it came from"):
         # Evidence: observed: ticket-client.spec 'should name a split ticket by its parent'.

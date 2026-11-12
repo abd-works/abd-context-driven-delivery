@@ -124,3 +124,76 @@ export class TicketTextEdit implements PendingChange {
     return !shown || shown.text === this.text
   }
 }
+
+type TicketList = 'in_progress' | 'done' | 'tickets'
+const LISTS: TicketList[] = ['in_progress', 'done', 'tickets']
+
+// Every ticket the board sends: the cards of each column, and the children inside their parents' cards.
+function everyTicket(board: BoardData): TicketData[] {
+  const within = (tickets: TicketData[]): TicketData[] => tickets.flatMap(ticket => [ticket, ...within(ticket.children)])
+  return within(board.columns.flatMap(column => LISTS.flatMap(list => column[list] ?? [])))
+}
+
+const ticketNamed = (board: BoardData, name: string): TicketData | undefined => everyTicket(board).find(ticket => ticket.name === name)
+
+// The board with every ticket in every list, and every child inside its parent, given by changed.
+function withTickets(board: BoardData, changed: (tickets: TicketData[]) => TicketData[]): BoardData {
+  const inside = (tickets: TicketData[]): TicketData[] => changed(tickets).map(ticket => ({ ...ticket, children: inside(ticket.children) }))
+  return withColumns(board, column => Object.fromEntries(Object.entries(column).map(([key, value]) => [key, LISTS.includes(key as TicketList) && Array.isArray(value) ? inside(value as TicketData[]) : value])) as ColumnData)
+}
+
+// The board with the ticket taken off wherever it shows: a card in its column, or a row in its parent's card.
+const withoutTicket = (board: BoardData, name: string): BoardData => withTickets(board, tickets => tickets.filter(ticket => ticket.name !== name))
+
+// The board with the ticket as a card of its own in its column: In progress or Done on a stage, its list in Complete.
+function withCard(board: BoardData, card: TicketData): BoardData {
+  const list: TicketList = board.columns.find(column => column.name === card.column.name)?.kind === 'stage' ? (card.is_done ? 'done' : 'in_progress') : 'tickets'
+  return withColumns(board, column => (column.name === card.column.name ? { ...column, [list]: [...(column[list] ?? []), card] } : column))
+}
+
+// The board with child shown in parent's card, as a row there.
+const withChild = (board: BoardData, parent: string, child: TicketData): BoardData =>
+  withTickets(board, tickets => tickets.map(ticket => (ticket.name === parent ? { ...ticket, children: [...ticket.children.filter(row => row.name !== child.name), child] } : ticket)))
+
+// A ticket given a parent, which stacks it in the parent's card unless the parent is closed; or given none, which makes it
+// a card of its own in its column. Python says what a stacked child is (Ticket.is_stacked); the page only draws it early.
+export class TicketNewParent implements PendingChange {
+  constructor(
+    private readonly ticket: string,
+    private readonly parent: string | null,
+  ) {}
+
+  appliedTo(board: BoardData): BoardData {
+    const moved = ticketNamed(board, this.ticket)
+    if (!moved) return board
+    const cleared = withoutTicket(board, this.ticket)
+    if (this.parent === null) return withCard(cleared, { ...moved, is_stacked: false, is_pulled_out: false })
+    const parent = ticketNamed(board, this.parent)
+    if (!parent) return board
+    const child = { ...moved, is_stacked: !parent.is_closed, is_pulled_out: false }
+    const shown = withChild(cleared, this.parent, child)
+    return parent.is_closed ? withCard(shown, child) : shown
+  }
+
+  isShownIn(board: BoardData): boolean {
+    const holding = everyTicket(board).filter(ticket => ticket.children.some(child => child.name === this.ticket))
+    return this.parent === null ? holding.length === 0 : holding.some(ticket => ticket.name === this.parent)
+  }
+}
+
+// A child pulled out of its parent's card: a card of its own in its column, still a row in its parent's card.
+export class TicketPulledOut implements PendingChange {
+  constructor(private readonly ticket: string) {}
+
+  appliedTo(board: BoardData): BoardData {
+    const child = ticketNamed(board, this.ticket)
+    if (!child || child.is_pulled_out) return board
+    const pulled = { ...child, is_pulled_out: true, is_stacked: false }
+    const kept = withTickets(board, tickets => tickets.map(ticket => (ticket.name === this.ticket ? pulled : ticket)))
+    return withCard(kept, pulled)
+  }
+
+  isShownIn(board: BoardData): boolean {
+    return ticketNamed(board, this.ticket)?.is_pulled_out ?? true
+  }
+}

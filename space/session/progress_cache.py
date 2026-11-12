@@ -14,6 +14,9 @@ PROGRESS_CACHE_FILE = "progress-cache.json"
 # The questions it keeps answers to for each fidelity.
 HAS_OUTPUT = "has_output"
 VIOLATION_COUNT = "violation_count"
+# How long after its first new answer the file is written: one board read works out many answers, and they go into one
+# write rather than one each, which Windows refuses when it comes too fast.
+SAVE_SECONDS = 1.0
 
 Kept = TypeVar("Kept", bool, int)
 
@@ -29,7 +32,8 @@ class ProgressCache:
     and the latest report with its saved graph. A move changes none of them, so moving a ticket never works them out
     again.
 
-    The session holds one for its folder, as ``progress-cache.json`` there, so a closed session takes it along. It is a
+    The session holds one for its folder, as ``progress-cache.json`` there, so a closed session takes it along; the session
+    lasts as long as the cdd server, so its answers are held between reads and the file serves the next server. It is a
     cache: a missing or unreadable file, or one another reader holds open while it is written, only means the answers
     are worked out again."""
 
@@ -40,6 +44,8 @@ class ProgressCache:
         self._held: dict | None = None
         # Board reads run on several threads at once, and each can work out an answer for the same session.
         self._lock = threading.Lock()
+        # The write of the new answers, waiting for the read that works them out to finish; none while all are saved.
+        self._saving: threading.Timer | None = None
 
     def answer(self, fidelity: str, question: str, key: str, work_out: Callable[[], Kept]) -> Kept:
         """The answer to question on fidelity, worked out with work_out only when it was last kept under another key,
@@ -50,10 +56,21 @@ class ProgressCache:
             return kept["value"]
         value = work_out()
         with self._lock:
-            held = self._read()
-            held.setdefault(fidelity, {})[question] = {"key": key, "value": value}
-            self._write(held)
+            self._read().setdefault(fidelity, {})[question] = {"key": key, "value": value}
+            self._save_soon()
         return value
+
+    def _save_soon(self) -> None:
+        if self._file is None or self._saving is not None:
+            return
+        self._saving = threading.Timer(SAVE_SECONDS, self._save)
+        self._saving.daemon = True
+        self._saving.start()
+
+    def _save(self) -> None:
+        with self._lock:
+            self._saving = None
+            self._write(dict(self._read()))
 
     def _read(self) -> dict:
         if self._held is None:
@@ -76,4 +93,4 @@ class ProgressCache:
             self._file.write(held)
         except PermissionError as held_open:
             # Windows refuses to replace a file another process, such as a virus scanner, still has open.
-            logger.warning("%s was not saved (%s); it is saved with the next answer worked out", self._file.path, held_open)
+            logger.warning("%s was not saved (%s); it is saved after the next answer worked out", self._file.path, held_open)

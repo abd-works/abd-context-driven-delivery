@@ -247,7 +247,7 @@ Display Ticket Details
   -> BoardPage.board
   -> BoardClient.selectedTicket
   -> ColumnClient.name
-  it should show the ticket worked on last with none active
+  it should show main, the default session, with no other ticket opened
   ```
   ```
   -> BoardPage.board
@@ -3356,10 +3356,10 @@ Display Ticket Details
     // the graph holds no operation this observation calls
     it Then the details show Checkout flow
     ```
-  Show the ticket worked on last when none is active
+  Show main when no other ticket is opened
     ```
     // the graph holds no operation this observation calls
-    it Then the details show Billing report
+    it Then the details show main
     ```
   Say another session must be activated to act on a locked ticket
     ```

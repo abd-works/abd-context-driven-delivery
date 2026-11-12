@@ -362,7 +362,6 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// `ticket.create`: a new ticket in Discovery, in progress; it does not become the current session. scope is feature, story, or slice; parent names the ticket it was split from; path is its workpath
 	-> Board.load
 	-> Board.open_ticket
-	-> Session.save_on_main
 + branch(): Branch
 	// `ticket.branch`: its own branch, named as the ticket, with whether the repository has it and whether it is checked out, so activating a ticket offers only what is missing and leaving one commits, pushes, and merges only its own branch
 	-> TicketCheckout.branch
@@ -394,7 +393,6 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> Session.move_to_backlog
 	-> BacklogItem.from_ticket
 	-> BacklogItem.write_if_missing
-	-> SessionSaves.later
 + close(leaving: list[str]): Ticket
 	// `ticket.close`: does with its work what leaving names (handoff, commit, push, merge, delete_branch, delete_worktree); its session closes, its folder moves to `_complete/`, and that move is committed on main and pushed
 	-> TicketCheckout.free_worktree
@@ -420,7 +418,6 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// `ticket.delete`: its session closes and its folder is removed, that removal committed on main and pushed; main raises `MainStaysOpenError`
 	-> Session.close
 	-> Session.remove
-	-> SessionSaves.later
 + add_child(title: str): Ticket
 	// `ticket.add_child`: a new child ticket, a story In progress in Discovery, working where it works; committed on main and pushed
 	-> Session.open_child
@@ -494,7 +491,6 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 + assign_chat(chat: str)
 	// keeps chat's id in the ticket's session.json, committed on main and pushed
 	-> Session.save_fields
-	-> Session.save_on_main
 + keep_landing_release(leaving: list[str])
 	// a ticket closed with its branch merged keeps its end-to-end results only
 	-> LatestRelease.keep
@@ -518,7 +514,6 @@ The moves and marks a person made on one ticket's stages, made once with the tic
 + mark(mark: str, stage: Stage): Ticket
 	// writes `done <stage>` or `in-progress <stage>` to session.json and the log, then commits on main and pushes
 	-> TicketWork.record
-	-> Session.save_on_main
 + place(stage: Stage, mark: str): Ticket
 	// enters stage unless the ticket is there, then marks it there: one commit on main, pushed, for both
 
@@ -678,7 +673,6 @@ Marked `@identity("title")`.
 	-> Session.reopen
 	-> Board.open_ticket
 	-> Session.keep_file
-	-> Session.save_on_main
 + start_under(parent: Ticket): Ticket
 	// `backlog-item.start_under`: starts the item, as dropping it on parent's card does, and gives its ticket parent as its parent
 	-> BacklogItem.start

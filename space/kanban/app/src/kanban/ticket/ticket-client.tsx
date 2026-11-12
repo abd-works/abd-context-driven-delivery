@@ -7,7 +7,7 @@ import { SessionClientGenerated } from '@cdd/space/session/session'
 
 import type { BoardPage } from '../board/board-page'
 import type { ColumnClient } from '../board/column-client'
-import { TicketMove, TicketPlacedBefore, TicketTextEdit } from '../shared/pending-changes'
+import { TicketMove, TicketNewParent, TicketPlacedBefore, TicketPulledOut, TicketTextEdit } from '../shared/pending-changes'
 import { TicketChat } from '../chat/chat-client'
 import { FidelityProgressClient } from './fidelity-progress-client'
 import { ReportClient } from './report-client'
@@ -230,6 +230,15 @@ export class TicketClient extends TicketClientGenerated {
 
   override async editText(text: string): Promise<this | null> {
     return this.page.reader.change(new TicketTextEdit(this.name, text), () => super.editText(text))
+  }
+
+  // Given a parent, the ticket shows in the parent's card at once; given none, as a card of its own.
+  override async reassignParent(parent?: string): Promise<this | null> {
+    return this.page.reader.change(new TicketNewParent(this.name, parent ?? null), () => super.reassignParent(parent))
+  }
+
+  override async pullOut(): Promise<this | null> {
+    return this.page.reader.change(new TicketPulledOut(this.name), () => super.pullOut())
   }
 
   // The card stays open on the ticket wherever it moved.

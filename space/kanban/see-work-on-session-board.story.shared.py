@@ -12,7 +12,7 @@ operation: Arrange Board And Details (all three); Arrange Side Panel (all four);
 not connected", "Update the board and cdd to the latest code", "Say which update step failed", "Keep the newer board when an older read answers late", "Announce a
 ticket that moved", "Announce a fidelity done"; Display Ticket Card "Draw the card's title, age, and fidelity
 segments", "Name the active ticket on the chat's status line"; Display Ticket Details "Show the active ticket with no
-card pressed", "Show the ticket worked on last when none is active", "Say another session must be activated to act on
+card pressed", "Show main when no other ticket is opened", "Say another session must be activated to act on
 a locked ticket", "Expand one ticket's card at a time", "Open a card on the fidelity of a pressed segment"; Open Board
 "Find the board from a chat"; Restrict Actions To Active Session (all three: Active session only is the board app's
 own setting); Set Stage WIP Limit "Change nothing for a limit that is not a whole number". The Thens of the scenarios

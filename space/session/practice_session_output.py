@@ -121,14 +121,14 @@ class PracticeSessionOutput:
         """The folder this practice writes its code under: the root chosen or configured,
         else the practice's own default folder under the session's root, such as src for BDD."""
         relative = self._chosen_or_configured_root or self._guidance.default_workspace_folder
-        return (self._session.work_root / relative).resolve()
+        return self._session.folder_under_root(relative)
 
     @property
     def output_root(self) -> Path:
         """The folder this practice's fidelities declare their outputs under: the root chosen or configured, else the
         session's root itself. A declared output such as `.context/story-map.md` or `**/*_spec.py` is named from the
         workpath, so the practice's own default folder is not added."""
-        return (self._session.work_root / (self._chosen_or_configured_root or ".")).resolve()
+        return self._session.folder_under_root(self._chosen_or_configured_root or ".")
 
     @property
     @data_field
@@ -224,7 +224,7 @@ class FidelitySessionOutput:
         """The folder this fidelity writes under: its own root when session.json names one, else its practice's output
         root."""
         chosen = self._chosen.get("root")
-        return (self._session.work_root / chosen).resolve() if chosen else self._practice.output_root
+        return self._session.folder_under_root(chosen) if chosen else self._practice.output_root
 
     @property
     def kept_format(self) -> str:

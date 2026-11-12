@@ -52,6 +52,8 @@ class CatalogPractice:
         # Every practice of the catalog this one was made with, made once, whose formats name a file this one cannot.
         self._catalogue = catalogue
         self._skills = skills if skills is not None else self.skill_install()
+        # Each guidance's skill folder, worked out once: it is fixed for the install, and the board asks it on every read.
+        self._skill_names: dict[str, str] = {}
         self._card = self._card_of(type(practice))
 
     @staticmethod
@@ -147,8 +149,13 @@ class CatalogPractice:
     def skill_of(self, guidance: PracticeGuidance | FidelityGuidance) -> str:
         """The skill that runs guidance, the practice or one of its fidelities: the folder the skill install writes its
         skill into, such as ``practices-stories-stories-story-map``; empty when it installs no skill."""
-        tool = next((tool for tool in guidance.tools.values() if tool.install_to_skill), None)
-        return self._skills.relative_path(guidance, tool.deploy_name).parent.name if tool is not None else ""
+        named = guidance.slug if isinstance(guidance, FidelityGuidance) else type(guidance).__qualname__
+        held = self._skill_names.get(named)
+        if held is None:
+            tool = next((tool for tool in guidance.tools.values() if tool.install_to_skill), None)
+            held = self._skills.relative_path(guidance, tool.deploy_name).parent.name if tool is not None else ""
+            self._skill_names[named] = held
+        return held
 
     @property
     def fidelities(self) -> list[FidelityGuidance]:

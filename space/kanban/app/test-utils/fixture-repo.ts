@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -15,7 +15,7 @@ const STORY_MAP_FILE = '.context/story-map.md'
 const SOURCE_FILE = 'app/checkout/order.py'
 const STORY_MAP_TEXT = ['# Check Out Order', '', '## Payment', '', '- Enter Card Details', '- Handle Payment', '- Confirm Order', ''].join('\n')
 
-// The graph validate saved beside the story map's report, in the shape harness/graph/saved_graph.py writes (version 2).
+// The graph validate saved beside the story map's report, in the shape harness/graph/saved_graph.py writes (version 3).
 const STORY_MAP_NODE = { node_id: 'node-1', name: '', type: 'Story', practice: 'stories', file: STORY_MAP_FILE, line: 6, end_line: 6, stage: '', facts: {} }
 const STORY_MAP_HIT = { rule: 'verb-noun-format', message: 'Name the story with a verb', practice: 'stories', node_id: 'node-1', location: STORY_MAP_FILE, line: 6, end_line: 6 }
 const STORY_MAP_GRAPH = {
@@ -47,6 +47,26 @@ function writeReport(root: string, ticket: string): void {
   writeInto(join(reports, 'stories-story-map-20261101T100000.json'), JSON.stringify(STORY_MAP_GRAPH))
 }
 
+// Every behavior starts with this ticket open, as a chat that opened it leaves the sessions.
+const FIRST_OPEN = 'checkout-flow'
+// Where the cdd server keeps every chat's open session in its home (space/work_state.py, WorkState).
+const OPEN_SESSIONS_FILE = 'open-sessions.json'
+
+// Which session is open is kept by the cdd server in its home, never in the project, as WorkState writes it: an entry for
+// the project's folder, since the board's calls name no chat. An empty name opens main, the default session. Written here
+// rather than through WorkState, so a reset starts no Python. A run of specs sets CDD_HOME to a throwaway home; without
+// one this would write the person's own ~/.cdd, so it refuses.
+export function openSession(root: string, ticket: string): void {
+  const home = process.env.CDD_HOME
+  if (!home) throw new Error("openSession needs the run's throwaway CDD_HOME; it never writes the person's own ~/.cdd")
+  const file = join(home, OPEN_SESSIONS_FILE)
+  const folder = realpathSync.native(root)
+  const kept = existsSync(file) ? (JSON.parse(readFileSync(file, 'utf-8')) as Record<string, Record<string, string>>) : {}
+  const { session: _was, ...entry } = kept[`folder:${folder}`] ?? {}
+  kept[`folder:${folder}`] = { ...entry, ...(ticket ? { session: ticket } : {}), folder }
+  writeInto(file, JSON.stringify(kept, null, 2))
+}
+
 function writeSessions(root: string): void {
   writeSession(root, { name: 'checkout-flow', title: 'Checkout flow', log: [generated('stories', 'story_map'), `${STAMP} validate Stories story_map graph-rule verb-noun-format ${STORY_MAP_FILE}:6 no-chat`] })
   writeReport(root, 'checkout-flow')
@@ -59,6 +79,7 @@ function writeSessions(root: string): void {
   writeSession(root, { name: 'almost-shipped', title: 'Almost shipped', log: [`${STAMP} move Implementation no-chat`, `${STAMP} done Implementation no-chat`] })
   writeSession(root, { name: 'shipped-work', title: 'Shipped work', folder: join('_complete', 'shipped-work') })
   writeInto(join(root, '.sessions', '_backlog', 'search-the-catalog.md'), '# Search the catalog\n\nAn idea.\n')
+  openSession(root, FIRST_OPEN)
 }
 
 function commitAll(root: string): void {

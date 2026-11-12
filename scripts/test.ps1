@@ -96,6 +96,25 @@ function Get-BatchKey {
     return ($folders | Select-Object -First $batchDepth) -join '/'
 }
 
+# A folder with many spec files, such as space/kanban, would otherwise run them one after another in one process while
+# the other batches finish early; its files are dealt into several batches, each with its own cdd home.
+$filesPerBatch = 4
+
+function Split-LargeBatches {
+    param($Groups)
+    foreach ($group in $Groups) {
+        $files = [string[]]$group.Group
+        if ($files.Count -le $filesPerBatch) {
+            [pscustomobject]@{ Name = $group.Name; Group = $files; Count = $files.Count }
+            continue
+        }
+        for ($start = 0; $start -lt $files.Count; $start += $filesPerBatch) {
+            $part = [string[]]($files[$start..([Math]::Min($start + $filesPerBatch, $files.Count) - 1)])
+            [pscustomobject]@{ Name = "$($group.Name) #$($start / $filesPerBatch + 1)"; Group = $part; Count = $part.Count }
+        }
+    }
+}
+
 function Start-SpecBatch {
     param([string]$Executable, [string[]]$Arguments, [string]$Key, [string[]]$Relatives, [string]$OutputFolder)
     $env:CDD_HOME = Join-Path $OutputFolder ("home-" + [guid]::NewGuid().ToString("N"))
@@ -132,7 +151,7 @@ function Invoke-Reported {
     }
     $outputFolder = Join-Path ([IO.Path]::GetTempPath()) ("cdd-spec-run-" + [guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Force $outputFolder | Out-Null
-    $batches = $Files | ForEach-Object { Get-RelativePath $_ } | Group-Object { Get-BatchKey $_ } | Sort-Object Count -Descending
+    $batches = Split-LargeBatches ($Files | ForEach-Object { Get-RelativePath $_ } | Group-Object { Get-BatchKey $_ }) | Sort-Object Count -Descending
     $pending = [System.Collections.Generic.Queue[object]]::new([object[]]@($batches))
     $running = New-Object System.Collections.Generic.List[object]
     $finished = New-Object System.Collections.Generic.List[object]

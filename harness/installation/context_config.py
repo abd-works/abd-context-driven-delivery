@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping
 
-from harness.installation.json_file import JsonFile, JsonFileUnreadable
+from harness.installation.json_file import HeldJsonFile, JsonFile, JsonFileUnreadable
 
 CONTEXT_FOLDER = ".context"
 CONFIG_NAME = "config.json"
@@ -26,6 +26,8 @@ class ContextConfig:
     def __init__(self, root: Path | str) -> None:
         self.root = Path(root).resolve()
         self._file = JsonFile(self.root / CONTEXT_FOLDER / CONFIG_NAME, MalformedContextConfigError)
+        # Every practice's folder is asked of it on every board read, so it is read again only once the file changes.
+        self._held = HeldJsonFile(self._file)
 
     @property
     def path(self) -> Path:
@@ -37,10 +39,10 @@ class ContextConfig:
     def load(self) -> dict[str, Any]:
         """The whole configuration; empty when the project has none. Raises ``MalformedContextConfigError`` when
         ``config.json`` is unreadable, so ``update`` never saves a partial configuration over the project's file."""
-        return self._file.read()
+        return self._held.read()
 
     def save(self, configuration: Mapping[str, Any]) -> Path:
-        return self._file.write(configuration)
+        return self._held.write(configuration)
 
     def update(self, **sections: Any) -> dict[str, Any]:
         configuration = self.load()

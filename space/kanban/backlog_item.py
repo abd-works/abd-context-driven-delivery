@@ -113,7 +113,6 @@ class BacklogItem(Card):
         # An item kept inside its folder went back with the folder; a file beside it or on its own moves in now.
         if self._path.exists():
             ticket.session.keep_file(self._path)
-        ticket.session.save_on_main(f"start {ticket.name} from the Backlog")
         return ticket
 
     @mcp

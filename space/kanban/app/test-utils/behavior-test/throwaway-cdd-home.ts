@@ -12,11 +12,8 @@ const RUN_HOME = 'CDD_SPEC_RUN_HOME'
 
 const python = (): string => VENV_PYTHON.find(path => existsSync(path)) ?? 'python'
 
-// Python of this checkout, run in it with the spec file's environment, so it reaches the run's cdd home.
-export const runCheckoutPython = (...words: string[]): string =>
-  execFileSync(python(), words, { cwd: CHECKOUT, encoding: 'utf-8', env: { ...process.env, PYTHONUTF8: '1' } })
-
-const runSpecServer = (...words: string[]): string => runCheckoutPython(...SPEC_SERVER, ...words)
+const runSpecServer = (...words: string[]): string =>
+  execFileSync(python(), [...SPEC_SERVER, ...words], { cwd: CHECKOUT, encoding: 'utf-8', env: { ...process.env, PYTHONUTF8: '1' } })
 
 // A ~/.cdd of the spec file's own, serving this checkout as it is on disk, on a port of its own. The cdd server it starts
 // at the first call sees this checkout's code and the spec file's environment, such as its chats folder, and no other

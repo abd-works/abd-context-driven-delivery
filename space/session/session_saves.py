@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from pathlib import Path
 
 from harness.installation.data_class import data_field
@@ -10,6 +11,10 @@ from harness.process.git import RepoConnectError
 from space.repo.repo import Repo
 
 logger = logging.getLogger(__name__)
+
+# How long a queued save waits before it commits, so every file one change writes, such as a ticket's folder moved to
+# the Backlog and then its item file, goes into the one commit. Also how often it looks again while a merge is going on.
+SETTLE_SECONDS = 0.5
 
 
 class SaveFailure:
@@ -81,6 +86,7 @@ class SessionSaves:
 
     def _work(self) -> None:
         while True:
+            time.sleep(SETTLE_SECONDS)
             with self._queue:
                 if not self._pending:
                     self._worker = None
@@ -88,6 +94,9 @@ class SessionSaves:
             self._save_queued()
 
     def _save_queued(self) -> None:
+        # A commit during a merge concludes the merge with everything staged, so the saves wait for it to finish.
+        if self._repository.is_merging:
+            return
         with self._saving:
             changes = self._taken()
             if not changes:

@@ -3,11 +3,11 @@
  * sit beside the sub-epic's shared Python scenarios, outside this package, where `@playwright/test` cannot be resolved,
  * so the browser tier, its fixture project, and the Seed fixtures and page readings the sub-epics share come from here.
  */
-import { join } from 'node:path'
+
 
 import { expect, type Page } from '@playwright/test'
 
-import { fixtureRoot, STAMP, writeInto } from '../test-utils/fixture-repo'
+import { fixtureRoot, openSession, STAMP } from '../test-utils/fixture-repo'
 import type { FakeChat } from './support'
 
 export { expect, test } from '@playwright/test'
@@ -23,9 +23,9 @@ const CHAT_CHECKED_IN_MILLISECONDS = 10_000
 export const generatedLine = (practice: string, fidelity: string, stamp = STAMP): string => `${stamp} generate /work ${practice} ${fidelity} markdown ${practice} no-chat`
 export const validatedLine = (practiceClass: string, fidelity: string, stamp = STAMP): string => `${stamp} validate ${practiceClass} ${fidelity} no-chat`
 
-// Seed: the session saved as open in the fixture project, as Session.switch saves it.
+// Seed: the session open in the fixture project, kept by the cdd server as Session.switch keeps it.
 export function seedActive(ticket: string): void {
-  writeInto(join(fixtureRoot, '.sessions', 'session.json'), JSON.stringify({ session: ticket }))
+  openSession(fixtureRoot, ticket)
 }
 
 // What the chat was given, as the cdd-board mod took it at its check-ins.

@@ -116,7 +116,6 @@ class TicketCheckout:
         """Make chat, a chat's id, the ticket's chat from now on; an empty chat gives it back to the chat named after
         it. The record is committed on main and pushed."""
         self._ticket.session.save_fields(**{ASSIGNED_CHAT: chat})
-        self._ticket.session.save_on_main(f"assign a chat to {self._ticket.name}")
 
     def _chat_in_worktree(self, chats: list[Chat]) -> Chat | None:
         worktree = self.worktree

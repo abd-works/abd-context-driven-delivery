@@ -234,7 +234,7 @@ it should show the active ticket with no card pressed
 ```
 
 ```
-it should show the ticket worked on last with none active
+it should show main, the default session, with no other ticket opened
 -> BoardPage.board
 -> BoardClient.selectedTicket
 ```

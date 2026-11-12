@@ -44,6 +44,14 @@ _DECISION_RECORDS_FOLDER = "cdr"
 _PARENT_FIELD = "parent"
 _PULLED_OUT_FIELD = "pulled_out"
 _TAGS_FIELD = "tags"
+# How much of a saved value a save's commit message shows: a workpath or a list can be long.
+_SHOWN_CHARACTERS = 40
+
+
+def _shown(value: object) -> str:
+    """A saved value as a commit message names it, cut short."""
+    text = str(value)
+    return text if len(text) <= _SHOWN_CHARACTERS else f"{text[:_SHOWN_CHARACTERS]}…"
 
 
 class SessionNotFoundError(LookupError):
@@ -92,6 +100,8 @@ class Session:
         self.context_config = ContextConfig(self.repo_path)
         self._workpath: Path | None = None
         self._session_path: Path | None = None
+        # Each path text this session has resolved, with the folder it resolved to.
+        self._resolved_paths: dict[str, Path] = {}
         # Its session.json, read again only once the file changes; none before it has a folder.
         self._session_json: HeldJsonFile | None = None
         # The practices and graph this session keeps between calls, made when first asked for.
@@ -180,7 +190,20 @@ class Session:
         """The folder the session works in: its workpath, or the whole repository when it chose none. Actions write
         their sketches, grill answers, and partitions under it, each practice's folder is kept relative to it, and the
         file manager reads under it."""
-        return Path(self.workpath or self.repo_path).resolve()
+        return self._resolved(Path(self.workpath or self.repo_path))
+
+    def folder_under_root(self, relative: str) -> Path:
+        """The folder relative names under the session's root, such as a practice's chosen root, resolved."""
+        return self._resolved(self.work_root / relative)
+
+    def _resolved(self, path: Path) -> Path:
+        """path resolved, once for each path text: a board read asks the same few folders thousands of times, and on
+        Windows each resolve asks the disk."""
+        named = str(path)
+        held = self._resolved_paths.get(named)
+        if held is None:
+            held = self._resolved_paths[named] = path.resolve()
+        return held
 
     def context_folder(self, module: str = "") -> Path:
         """The .context folder of the session's root, or of a module folder under it, where sketches and grill answers
@@ -313,6 +336,7 @@ class Session:
         """Write text under its idea file's heading, making the file, headed with its title, when it has none."""
         idea = self.idea_file
         idea.write(idea.heading or self.title or self.name, text)
+        self._saved("text")
 
     @property
     def overlays(self) -> list[str]:
@@ -344,11 +368,13 @@ class Session:
         it has none yet, as a project's main session has none until something is saved in it."""
         held = self._session_json
         (held if held is not None else JsonFile(self.session_file)).write({**self.fields, **values})
+        self._saved(", ".join(f"{name} {_shown(value)}" for name, value in values.items()))
 
-    def save_on_main(self, change: str) -> None:
-        """Queue the save on main of change, such as ``checkout-flow move Specification``: the session folders are
-        committed and pushed on the saving thread, so the change is kept for every chat without the caller waiting."""
-        self._sessions.saves.later(f"sessions: {change}")
+    def _saved(self, change: str) -> None:
+        """Queue the save on main of change to this session, such as ``stage Specification``: every change to a session
+        is kept on main for every chat and worktree, committed and pushed on the saving thread, so its caller never
+        waits for git."""
+        self._sessions.saves.later(f"sessions: {self.name} {change}")
 
     def save(self) -> None:
         """Save this session's name, workpath, and repository in its ``session.json``, creating its folder, and keep
@@ -372,6 +398,7 @@ class Session:
         context, such as part of a story map. A started backlog item's text is the only copy of the idea."""
         kept = self.session_path / file.name
         file.replace(kept)
+        self._saved(f"keeps {file.name}")
         return kept
 
     def move_to_closed(self) -> Session:
@@ -392,6 +419,7 @@ class Session:
         """Delete this session's folder, log, files, and all; its sessions no longer hold it."""
         shutil.rmtree(self.session_path)
         self._sessions.removed(self)
+        self._saved("removed")
 
     def _move_folder_to(self, parent: Path) -> Session:
         """Move this session's folder under ``parent``, such as ``.sessions/_complete/``; this session, now kept there,
@@ -402,6 +430,7 @@ class Session:
         shutil.move(str(moved_from), str(destination))
         self.session_path = destination
         self._sessions.moved(self, moved_from)
+        self._saved(f"moves to {parent.name}")
         return self
 
     def practice(self, name: str) -> PracticeSessionOutput:

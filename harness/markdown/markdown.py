@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import functools
+import threading
 import html
 import inspect
 import re
@@ -97,6 +98,8 @@ class MarkdownText:
 
     def __init__(self, text: str) -> None:
         self._text = text
+        # Its headings, found once: the text never changes, and every section read of it asks for them.
+        self._found_headings: list[tuple[int, int, int, str]] | None = None
 
     @property
     def text(self) -> str:
@@ -125,27 +128,31 @@ class MarkdownText:
             return None, True
         return fence, True
 
-    def _heading_at(self, bare: str) -> tuple[int, int, int, str] | None:
-        if self._fence is not None:
-            return None
+    def _heading_at(self, bare: str, offset: int) -> tuple[int, int, int, str] | None:
         heading = re.match(r"^(#{1,6})\s+(.+?)\s*$", bare)
         if heading is None:
             return None
-        offset = self._offset
         return (offset, offset + len(bare), len(heading.group(1)), heading.group(2))
 
     def headings(self) -> list[tuple[int, int, int, str]]:
+        if self._found_headings is None:
+            self._found_headings = self._scanned_headings()
+        return list(self._found_headings)
+
+    def _scanned_headings(self) -> list[tuple[int, int, int, str]]:
+        # The position and the open code fence belong to the scan, not the document: a parsed document is shared, and two
+        # threads can scan it at once.
         headings: list[tuple[int, int, int, str]] = []
-        self._offset = 0
-        self._fence = None
+        offset = 0
+        fence: str | None = None
         for line in self._text.splitlines(keepends=True):
             bare = line.rstrip("\r\n")
-            self._fence, consumed = self._fence_update(self._fence, bare)
-            if not consumed:
-                recorded = self._heading_at(bare)
+            fence, consumed = self._fence_update(fence, bare)
+            if not consumed and fence is None:
+                recorded = self._heading_at(bare, offset)
                 if recorded is not None:
                     headings.append(recorded)
-            self._offset += len(line)
+            offset += len(line)
         return headings
 
     def slice_heading(self, heading: str) -> str:
@@ -231,6 +238,35 @@ class MarkdownText:
         return self.slice_heading(heading)
 
 
+class ReadDocuments:
+    """Every markdown file this process has read, parsed once and shared: a practice's document is read for each of its
+    sections, and again by every session that makes the practice. A file is read again once its last-written time or
+    size changes, so an edit is seen."""
+
+    def __init__(self) -> None:
+        self._held: dict[Path, tuple[tuple[int, int], MarkdownText]] = {}
+        self._lock = threading.Lock()
+
+    def of(self, path: Path) -> MarkdownText | None:
+        """The parsed document at path; none when there is no file."""
+        try:
+            status = path.stat()
+        except (FileNotFoundError, NotADirectoryError):
+            return None
+        version = (status.st_mtime_ns, status.st_size)
+        with self._lock:
+            held = self._held.get(path)
+            if held is not None and held[0] == version:
+                return held[1]
+        document = MarkdownText(path.read_text(encoding="utf-8"))
+        with self._lock:
+            self._held[path] = (version, document)
+        return document
+
+
+READ_DOCUMENTS = ReadDocuments()
+
+
 class MarkdownFile:
     """A markdown file on disk, optionally scoped to one heading."""
 
@@ -239,9 +275,7 @@ class MarkdownFile:
         self._heading = heading
 
     def _load(self) -> MarkdownText | None:
-        if not self._path.is_file():
-            return None
-        return MarkdownText(self._path.read_text(encoding="utf-8"))
+        return READ_DOCUMENTS.of(self._path) if self._path.is_file() else None
 
     def section_exists(self) -> bool:
         if not self._heading:

@@ -188,14 +188,18 @@ class Repo:
         name = raw.split(" -> ")[-1].replace("\\", "/").strip()
         return Path(name).name == _RUNTIME_LOG
 
+    @property
+    def is_merging(self) -> bool:
+        """Whether a merge is in progress in this checkout, so the next commit would conclude it with everything staged."""
+        return (self.root / ".git" / "MERGE_HEAD").is_file()
+
     def commit(self, paths: list[str], message: str, *, untracked: bool = False) -> str:
         """Commit the changes under paths with message, and with untracked also the new files there; the sha of HEAD
         afterwards, which is unchanged when there was nothing to commit. A merge in progress commits everything."""
         if not paths:
             raise CommitPathsRequiredError()
         add_flag = "-A" if untracked else "-u"
-        merging = (self.root / ".git" / "MERGE_HEAD").is_file()
-        named = [] if merging else ["--", *(self._relative(path) for path in paths)]
+        named = [] if self.is_merging else ["--", *(self._relative(path) for path in paths)]
         self.git.run("add", add_flag, *named)
         if not self.git.run("diff", "--cached", "--name-only", *named):
             return self.current_commit

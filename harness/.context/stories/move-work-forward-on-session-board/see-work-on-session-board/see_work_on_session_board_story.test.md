@@ -226,12 +226,12 @@ section: body
 *When* the session board draws the details
 *Then* the details show Checkout flow
 
-#### Scenario: Show the ticket worked on last when none is active
+#### Scenario: Show main when no other ticket is opened
 
-*Given* no [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) is active
-*And* billing-report has the latest line in its session log, at 2026-11-02T10:00:00Z
+*Given* no [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) is opened, so main, the default session, is the active ticket
+*But* no card is pressed
 *When* the session board draws the details
-*Then* the details show Billing report
+*Then* the details show main
 
 #### Scenario: Name a split ticket by the ticket it came from
 

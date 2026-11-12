@@ -12,7 +12,7 @@ The work sessions kept in the clone's `.sessions` folder are not the repository'
 The MCP tool `repo.push_commit` commits the working tree of the checkout its call names and pushes its branch; the command `/push` calls it.
 
 - **Purpose:** Give every caller one object graph for the clone, its branches and worktrees, and its commits, so version control is never reimplemented with raw `git` output.
-- **Seam (terms):** Repo, ServedCheckouts, Branch, Worktrees, Worktree, Commit, LatestRelease, `repo.git`, `repo.main_clone`, `repo.current_branch`, `repo.worktrees`, `worktrees.at(folder)`, `branch.open_in_worktree`, `branch.land_on_default`, `branch.delete`, `repo.catch_up_with_origin`, `repo.push_upstream`, CommitPathsRequiredError, CommitMessageRequiredError, WorktreeNotRemovedError, `Repo.of_project`, `repo.push_commit`
+- **Seam (terms):** Repo, ServedCheckouts, Branch, Worktrees, Worktree, Commit, LatestRelease, `repo.git`, `repo.main_clone`, `repo.current_branch`, `repo.worktrees`, `worktrees.at(folder)`, `branch.open_in_worktree`, `branch.land_on_default`, `branch.delete`, `repo.catch_up_with_origin`, `repo.push_upstream`, `repo.is_merging`, CommitPathsRequiredError, CommitMessageRequiredError, WorktreeNotRemovedError, `Repo.of_project`, `repo.push_commit`
 - **Dependencies (one-way):** `harness/agent_tools`, `harness/hooks` (*HookDaemon*, which a closing worktree asks to stop its checkout's hook daemon), `harness/installation`, `harness/mcp`, `harness/process` (*Git* and its *RepoConnectError*, which every repository operation raises when git fails), `space/work_state` (`SESSIONS_FOLDER` and `E2E_RESULTS_FOLDER`, where *LatestRelease* finds a release's results).
 
 ## Constraint
