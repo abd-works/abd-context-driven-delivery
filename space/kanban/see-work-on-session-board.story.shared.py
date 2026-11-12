@@ -3,7 +3,7 @@
 Scenarios: harness/.context/stories/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md; Restrict Actions To Active Session is in harness/.context/stories/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md.
 Map: .context/story-map.md#e-see-work-on-session-board. Model: .context/kanban-model.md.
 
-Steps reach the board only through the World a tier hands them (`world.Board`, `world.Ticket`), so the domain spec
+Steps reach the board only through the namespace a tier hands them (`world.Board`, `world.Ticket`), so the domain spec
 and the cdd tools spec replay the same steps. Every Then asserts what the board returns, as the data
 fields its classes mark, which the board app draws from.
 

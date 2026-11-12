@@ -197,7 +197,7 @@ with description("a graph"):
                     {"Module", "OoadClass", "Operation", "Property", "Parameter"} <= owned_types(self.clean_tree, "clean_engineering")
                 ).to(equal(True))
 
-            with it("should offer relative, owns, properties, hasParameter, hasType, invokedBy, and dependsOn to filter by, in that order"):
+            with it("should offer relative, owns, properties, hasParameter, hasType, invokedBy, invokes, and dependsOn to filter by, in that order"):
                 expect(PracticeInventory(self.graph, self.clean).edge_types).to(
                     equal(
                         [
@@ -211,6 +211,7 @@ with description("a graph"):
                             "invokedBy",
                             "returns",
                             "retrievedUsing",
+                            "invokes",
                             "dependsOn",
                             "usedBy",
                         ]
@@ -941,9 +942,10 @@ with description("a graph"):
                 expect(nodes_in(self.edited, "stories", self.scope)).to(equal(nodes_in(self.full, "stories", self.scope)))
 
             with it("should find the same story rule violations"):
-                # A Given is judged against the DDD aggregates read from the domain code, which a load of the story
-                # file alone does not read, so that one rule is compared only by a full load.
-                read_elsewhere = {"given-names-complex-state-root-first"}
+                # A Given is judged against the DDD aggregates read from the domain code, and conforms-to-schema holds
+                # a step to the code it invokes and the examples it observes, which a load of the story file alone does
+                # not read, so those rules are compared only by a full load.
+                read_elsewhere = {"given-names-complex-state-root-first", "conforms-to-schema"}
                 edited = {hit for hit in violations_in(self.edited, "stories", self.scope) if hit[0] not in read_elsewhere}
                 full = {hit for hit in violations_in(self.full, "stories", self.scope) if hit[0] not in read_elsewhere}
                 expect(len(edited)).to(be_above(0))

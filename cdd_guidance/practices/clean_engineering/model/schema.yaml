@@ -114,7 +114,7 @@ operation:
   id: dotPath
   name: string
   belongsTo: class
-  parameters: [parameter]
+  parameters?: [parameter]
   returnType: class | string
   body?: string
   invokes: [operation | property]

@@ -3,7 +3,7 @@
 Scenarios: harness/.context/stories/move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md; Add Active Ticket To System Prompt is in harness/.context/stories/move-work-forward-from-chat-bar/see-work-in-chat-bar/see_work_in_chat_bar_story.test.md.
 Map: .context/story-map.md#e-guide-work-through-practices. Model: .context/kanban-model.md.
 
-Steps reach the board only through the World a tier hands them (`world.Ticket`, `world.Board`), so the domain spec
+Steps reach the board only through the namespace a tier hands them (`world.Ticket`, `world.Board`), so the domain spec
 and the cdd tools spec replay the same steps. A fidelity's tile reads its Generate and Validate from the
 ticket's `actions`, and its segment colour from the ticket's `progress`, so the Thens assert those.
 

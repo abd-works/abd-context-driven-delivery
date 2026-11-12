@@ -9,6 +9,7 @@ with the folders that read takes, for each read: what one read finds stays on th
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 from harness.graph.graph import Node
@@ -16,11 +17,22 @@ from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.practice_reading import PracticeReading
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
+from harness.graph.schema_conformance import EXEMPT_FACT
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel
-from cdd_guidance.practices.clean_engineering.model.code_read import CodeRead
+from cdd_guidance.practices.clean_engineering.model.code_read import PRODUCTION_FACT, CodeRead
+from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
+
+# A member called on another object (`board.select(`), and a property read on one (`board.shown`, no call after it).
+_ABSTRACT_MARK = re.compile(r"@abstractmethod|^\s*(?:public\s+|protected\s+)?abstract\s", re.MULTILINE)
+_DOCSTRING = re.compile(r'(?s)\A\s*(?:"""|\'\'\').*?(?:"""|\'\'\')')
+# The marker the source view puts after a line for each call on it, `/* call:show */`, which is no code.
+_CALL_MARKER = re.compile(r"\s*/\* call:[^*]*\*/")
+_NO_BODY = {"", "...", "pass", "raise NotImplementedError", "raise NotImplementedError()"}
+_MEMBER_CALL = re.compile(r"\.([A-Za-z_$][\w$]*)\s*\(")
+_MEMBER_READ = re.compile(r"\.([A-Za-z_$][\w$]*)\b(?!\s*\()")
 
 
 class GraphReading(PracticeReading):
@@ -53,6 +65,85 @@ class GraphReading(PracticeReading):
         with schema_sync_paused():
             CodeRead(self).read()
             self.model_documents.read()
+        CallLinks(self).link()
+        self._exempt_test_code()
+
+    def _exempt_test_code(self) -> None:
+        """A spec, a test, or test support is no part of the model the schema describes, as no production rule judges it
+        either: none of its nodes, and no folder holding only them, is held to the relationships its type requires."""
+        requirements = self.in_graph.rule_run.schema.requirements
+        for node in self.in_graph.nodes():
+            if not is_test_code(node.source.file) and node.data.get(PRODUCTION_FACT, True):
+                continue
+            fields = {requirement.field for requirement in requirements if node.type in requirement.owner.node_types}
+            if fields:
+                node.set_fact(EXEMPT_FACT, sorted(fields | set(node.data.get(EXEMPT_FACT) or [])))
+
+
+class CallLinks:
+    """The ``invokes`` edges of the code read: each operation and property to the operations and properties its body
+    calls, found by the name each call ends in (``board.show()`` calls ``show``), a member of its own class before
+    another class's member of that name."""
+
+    def __init__(self, reading: GraphReading) -> None:
+        self._reading = reading
+        self._graph = reading.graph
+
+    def link(self) -> None:
+        """Record an ``invokes`` edge from every member the graph holds to each member it calls."""
+        in_graph = self._reading.in_graph
+        for caller in [*in_graph.nodes("Operation"), *in_graph.nodes("Property")]:
+            called = self._called_by(caller)
+            for member in called:
+                self._graph.link("invokes", caller, member, "relationship")
+            if not called and self._calls_nothing_by_design(caller):
+                caller.set_fact(EXEMPT_FACT, ["invokes"])
+
+    def _calls_nothing_by_design(self, caller: Node) -> bool:
+        """Whether caller is a member that has nothing to call: an abstract one, whose subclasses do the work, or one
+        that takes nothing and answers a value, which is a property in all but name."""
+        return self._is_abstract(caller) or not self._graph.edges_from("hasParameter", caller)
+
+    def _is_abstract(self, caller: Node) -> bool:
+        """An abstract member: marked so (`@abstractmethod`, `abstract`), or with no body but `...`, `pass`, or a raise of
+        NotImplementedError under its signature and docstring."""
+        text = caller.source.text if caller.source.file else ""
+        if _ABSTRACT_MARK.search(text) or self._declared_without_body(text):
+            return True
+        return _DOCSTRING.sub("", self._python_body(text)).strip() in _NO_BODY
+
+    @staticmethod
+    def _declared_without_body(text: str) -> bool:
+        """A C-family member with no body: its signature ends in `;` and no brace opens a body (an interface's method,
+        `draw(scale: number): void;`, or `void draw(double scale);`)."""
+        code = _CALL_MARKER.sub("", text).strip()
+        return bool(code) and "{" not in code and code.endswith(";")
+
+    def _python_body(self, text: str) -> str:
+        """What follows a Python member's signature, the line that ends its `def` with a colon; none for other code."""
+        lines = text.splitlines()
+        if not any(line.lstrip().startswith(("def ", "async def ")) for line in lines[:4]):
+            return ""
+        end = next((index for index, line in enumerate(lines) if line.rstrip().endswith(":")), len(lines))
+        return "\n".join(lines[end + 1:])
+
+    def _called_by(self, caller: Node) -> list[Node]:
+        """The members caller calls, by the names its callees end in and the members its source calls on another object
+        (``this.board.select()``, which its callees leave out when it shares caller's name), and the properties its
+        source reads (``this.board.shown``); its own class's member of a name when its class has one."""
+        text = caller.source.text if caller.source.file else ""
+        calls = {str(callee).rsplit(".", 1)[-1] for callee in caller.get_fact("callees") or [] if callee}
+        calls.update(_MEMBER_CALL.findall(text))
+        reads = set(_MEMBER_READ.findall(text)) - calls
+        found = [member for name in calls for member in self._named(name, caller)]
+        found.extend(member for name in reads for member in self._named(name, caller) if member.type == "Property")
+        return found
+
+    def _named(self, name: str, caller: Node) -> list[Node]:
+        """The members called name other than caller, only its own class's when its class has one."""
+        owner = self._graph.direct_parent(caller)
+        members = [member for member in self._reading.code_index.members_named(name) if member is not caller]
+        return [member for member in members if self._graph.direct_parent(member) is owner] or members
 
 
 class CodeIndex:

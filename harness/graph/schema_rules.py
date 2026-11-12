@@ -13,6 +13,7 @@ from functools import cached_property
 from pathlib import Path
 
 from harness.graph.pattern_overlays import GraphOverlay
+from harness.graph.schema_conformance import FRAMEWORK_RULES, RequiredRelationship
 from harness.graph.schema_edges import SchemaKey
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.schema import Schema
@@ -69,7 +70,7 @@ class PracticeSchema:
         """The rule slugs a node of this type carries, with those of each type its practice says it also carries."""
         table = self.rules
         listed = self.practice.reading.rule_types.get(node_type, ())
-        return merged(table.get(node_type, ()), *(table.get(other, ()) for other in listed))
+        return merged(table.get(node_type, ()), *(table.get(other, ()) for other in listed), tuple(FRAMEWORK_RULES))
 
     def anchor_type(self, node_type: str) -> str | None:
         """The extended practice's type this node type is, such as ``OoadClass`` for a DDD entity; a practice's own
@@ -95,6 +96,7 @@ class PracticeSchema:
         found: dict[str, list[str]] = {}
         carried = [(node_type, slugs) for node_type, slugs in self.rules.items()]
         carried.extend((node_type, self.slugs_for(node_type)) for node_type in self.practice.reading.rule_types)
+        carried.extend((node_type, tuple(FRAMEWORK_RULES)) for node_type in sorted(self.types))
         for node_type, slugs in carried:
             for slug in slugs:
                 types = found.setdefault(slug, [])
@@ -121,12 +123,86 @@ class PracticeSchema:
         """Each rule slug with its prose from the practice's guidance (shared and per fidelity) and the patterns'."""
         guidances = [self.practice]
         guidances.extend(overlay.pattern for overlay in self.overlays)
-        merged: dict[str, str] = {}
+        merged = {slug: check.rule.body for slug, check in FRAMEWORK_RULES.items()}
         for guidance in guidances:
             fidelities = getattr(getattr(guidance, "fidelities", None), "entries", None) or {}
             for collection in (getattr(guidance, "rules", None), *(getattr(fidelity, "rules", None) for fidelity in fidelities.values())):
                 merged.update(self._longest_prose(collection))
         return merged
+
+    @cached_property
+    def requirements(self) -> list[RequiredRelationship]:
+        """Every relationship the practice's schema and each applied pattern's schema for it require of a node of one
+        of their types, with the stage of the fidelity that creates the owner and the earliest target."""
+        sources = [(f"{self.key} practice", self._base), *((f"{name} pattern", schema) for name, schema in self._added.named_schemas)]
+        return [
+            RequiredRelationship(
+                SchemaKey(key), field, self._node_types_named(references),
+                source, self.stage_of(key), self._earliest_stage(references),
+            )
+            for source, schema in sources
+            for key, kind in schema.types.items()
+            for field, references in kind.required_relationships.items()
+        ]
+
+    @property
+    def current_stage(self) -> int | None:
+        """The place of the fidelity the practice works at now among its fidelities; none when it works at none."""
+        current = self.practice.fidelities.current
+        order = list(self.practice.fidelities.entries.values())
+        return next((index for index, fidelity in enumerate(order) if fidelity is current), None)
+
+    def stage_of(self, reference: str) -> int | None:
+        """The place among its practice's fidelities of the fidelity that creates the type reference names: a key of
+        this practice's schemas (``route``) or ``practice.type`` (``ddd.entityRoot``), read from that practice's schema
+        when another practice of the graph holds it. None when no schema says which fidelity creates it."""
+        practice_key, _, key = reference.rpartition(".")
+        if practice_key and practice_key != self.key:
+            graph = self.practice.reading.graph
+            other = graph.practices.held.get(practice_key) if graph is not None else None
+            return self._schema_of(other, self.overlays).stage_of(key) if other is not None else None
+        fidelity = self._fidelity_named(key, frozenset())
+        order = list(self.practice.fidelities.entries)
+        return order.index(fidelity) if fidelity in order else None
+
+    def _earliest_stage(self, references: tuple[str, ...]) -> int | None:
+        """The earliest stage among the types references names; none when any of them has none, so it is always due."""
+        stages = [self.stage_of(reference) for reference in references]
+        return None if None in stages else min(stages)
+
+    def _node_types_named(self, references: tuple[str, ...]) -> tuple[str, ...]:
+        """Every node type a node of the types references names may be read as, with those of their subtypes (a
+        scenario's ``steps`` hold ``Given``, ``When``, and ``Then`` steps), once each."""
+        keys = [key for reference in references for key in self._with_subtypes(reference.rpartition(".")[2])]
+        return tuple(dict.fromkeys(node_type for key in keys for node_type in SchemaKey(key).node_types))
+
+    def _with_subtypes(self, key: str) -> list[str]:
+        """key, then each type of the practice's or the patterns' schemas whose ``is:`` chain in this practice reaches it."""
+        found = [key]
+        for known in found:
+            found.extend(sub for sub, supertype in self._local_supertypes.items() if supertype == known and sub not in found)
+        return found
+
+    @cached_property
+    def _local_supertypes(self) -> dict[str, str]:
+        """Each schema key with the key of the supertype its ``is:`` names in this practice (``when`` is a ``step``)."""
+        found: dict[str, str] = {}
+        for schema in (self._base, *self._added.schemas):
+            for key, kind in schema.types.items():
+                prefix, _, supertype = kind.supertype.rpartition(".")
+                if supertype and prefix in ("", self.key):
+                    found.setdefault(key, supertype)
+        return found
+
+    def _fidelity_named(self, key: str, seen: frozenset[str]) -> str:
+        """The fidelity the practice's or the patterns' schemas give the type key, else the one its ``is:`` supertype in
+        this practice has; empty when none says."""
+        kinds = [schema.types[key] for schema in (self._base, *self._added.schemas) if key in schema.types]
+        fidelity = next((kind.fidelity for kind in kinds if kind.fidelity), "")
+        supertype = self._local_supertypes.get(key, "")
+        if fidelity or not supertype or supertype in seen:
+            return fidelity
+        return self._fidelity_named(supertype, seen | {key})
 
     @cached_property
     def _base(self) -> Schema:
@@ -203,6 +279,11 @@ class SchemaOverlays:
     def schemas(self) -> list[Schema]:
         """Each pattern's schema for the practice."""
         return [Schema.load(path) for path in self._files("schema.yaml")]
+
+    @cached_property
+    def named_schemas(self) -> list[tuple[str, Schema]]:
+        """Each applied pattern's name with its schema for the practice, for the patterns that keep one."""
+        return [(overlay.name, schema) for overlay, added in self._each for schema in added.schemas]
 
     @cached_property
     def types(self) -> set[str]:

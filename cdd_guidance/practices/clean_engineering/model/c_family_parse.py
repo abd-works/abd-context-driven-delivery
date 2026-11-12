@@ -17,6 +17,13 @@ from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_l
 _CLASS_RE = re.compile(
     r"(?:export\s+)?(?:abstract\s+)?(?:public\s+|private\s+|protected\s+)?class\s+(\w+)",
 )
+# A member declared with no body, ending its signature with `;`: an interface's method (`draw(scale: number): void;`,
+# `void draw(double scale);`) or an abstract one (`abstract area(width: number): number;`).
+_BODILESS_RE = re.compile(
+    r"^\s*(?:(?:public|protected|private|static|abstract|default|readonly)\s+)*(?:[\w<>\[\],.?]+\s+)?(\w+)\s*\(([^)]*)\)\s*(?::\s*([^;{=]+?))?\s*;\s*$",
+    re.M,
+)
+_NOT_MEMBERS = frozenset({"if", "for", "while", "switch", "catch", "return", "super", "this"})
 # A class's heritage clause: `extends Basket implements Auditable, ICart`.
 _HERITAGE_RE = re.compile(r"\b(?:extends|implements)\s+(.+?)(?=\s+implements\b|$)", re.S)
 _METHOD_RE = re.compile(
@@ -92,7 +99,7 @@ class CFamilyParse:
     def _append_classes(self, module: Module) -> None:
         class_order = 1
         for match in self._class_heads:
-            body, body_start = self._brace_body(self._text, match.end() - 1)
+            body, body_start = self._brace_body(self._text, self._body_open(match.end()))
             if body is None:
                 continue
             self._body_start = body_start
@@ -106,7 +113,7 @@ class CFamilyParse:
             oclass.stereotypes = head.stereotypes
             oclass.end_line = self._line_at(self._text, body_start + len(body))
             oclass.bases = self._bases(self._text[match.end() : body_start]) + head.implemented
-            oclass.operations = self._methods_from_body(body, match.group(1))
+            oclass.operations = self._methods_from_body(body, match.group(1)) + self._bodiless_members(body)
             self._prepend_constructors(oclass, body)
             oclass.properties = self._fields_from_body(oclass, body)
             self._derive_member_relationships(oclass)
@@ -183,7 +190,7 @@ class CFamilyParse:
     def _class_spans(self) -> list[tuple[int, int]]:
         spans: list[tuple[int, int]] = []
         for match in self._class_heads:
-            body, body_start = self._brace_body(self._text, match.end() - 1)
+            body, body_start = self._brace_body(self._text, self._body_open(match.end()))
             if body is not None:
                 spans.append((body_start, body_start + len(body)))
         return spans
@@ -222,6 +229,20 @@ class CFamilyParse:
                 filled.is_property = True
             filled.is_static = bool(re.search(r"\bstatic\b", prefix) or re.search(r"\bstatic\b", header))
             ops.append(filled)
+        return ops
+
+    def _bodiless_members(self, class_body: str) -> list[Operation]:
+        """The members the class declares with no body, on lines of its body's top level: an interface's methods and
+        its abstract ones. They call nothing: a class that implements one gives it its code."""
+        ops: list[Operation] = []
+        code = _COMMENT_OR_STRING_RE.sub(lambda found: re.sub(r"[^\n]", " ", found.group(0)), class_body)
+        for match in _BODILESS_RE.finditer(_top_level(code)):
+            if match.group(1) in _NOT_MEMBERS:
+                continue
+            op = self.operation_type(name=match.group(1), parameters=self._split_params(match.group(2) or ""), return_type=(match.group(3) or "").strip())
+            op.line = self._line_at(self._text, self._body_start + match.start(1))
+            op.end_line = op.line
+            ops.append(self._operation_from_body(op, ""))
         return ops
 
     def _operation_from_body(self, op: Operation, body: str) -> Operation:
@@ -352,6 +373,20 @@ class CFamilyParse:
         for prop in oclass.properties:
             prop.derive_relationship()
 
+    def _body_open(self, after: int) -> int:
+        """Where the class body opens: the first `{` after the class name outside the type arguments of its heritage
+        clause, whose braces (`extends Component<{ children: ReactNode }>`) open no body; the text's end for none."""
+        depth = 0
+        for index in range(after, len(self._text)):
+            char = self._text[index]
+            if char == "<":
+                depth += 1
+            elif char == ">" and depth:
+                depth -= 1
+            elif char == "{" and not depth:
+                return index
+        return len(self._text)
+
     def _brace_body(self, text: str, open_index: int) -> tuple[str | None, int]:
         """The text inside the first `{` at or after open_index and the `}` that closes it, with where it starts."""
         brace = text.find("{", open_index)
@@ -360,3 +395,13 @@ class CFamilyParse:
 
     def _line_at(self, text: str, index: int) -> int:
         return text.count("\n", 0, index) + 1
+
+
+def _top_level(body: str) -> str:
+    """body with everything inside its braces blanked, every line kept where it is, so only its top level is read."""
+    depth, kept = 0, []
+    for char in body:
+        depth += char == "{"
+        kept.append(char if depth == 0 or char == "\n" else " ")
+        depth -= char == "}" and depth > 0
+    return "".join(kept)

@@ -18,22 +18,51 @@ from pathlib import Path
 
 _TOP_TYPE = re.compile(r"^([A-Za-z]\w*):\s*$")
 _LISTED_TYPE = re.compile(r"^\s+-\s+([A-Za-z]\w*):\s*$")
-_FIELD = re.compile(r"^(\s+)(?:-\s+)?([A-Za-z]\w*)\??:\s*(.*?)\s*$")
+_FIELD = re.compile(r"^(\s+)(?:-\s+)?([A-Za-z]\w*)(\??):\s*(.*?)\s*$")
 _BULLET = re.compile(r"^\s+-\s+(\S+)\s*$")
 _BLOCKS = {"rules", "where"}
+# A reference to another schema type: a key of the same schema (``route``) or ``practice.type`` (``ddd.entityRoot``).
+_REFERENCE = re.compile(r"^[A-Za-z]\w*(?:\.[A-Za-z]\w*)?$")
+# Fields that describe the type itself, and the ``belongsTo`` back-edge of a child list: no relationship to require.
+_DESCRIBING = frozenset({"is", "fidelity", "path", "name", "text", "order", "id", "belongsTo"})
+# Field values that name a value type rather than another schema type.
+VALUE_TYPES = frozenset({"string", "number", "dotPath"})
 
 
 class SchemaType:
-    """One type a schema declares: its fields in the order written, and its rule slugs."""
+    """One type a schema declares: its fields in the order written, which of them are optional (written ``name?:``),
+    and its rule slugs."""
 
     def __init__(self, key: str) -> None:
         self.key = key
         self.fields: list[tuple[str, str]] = []
+        self.optional: set[str] = set()
         self.rules: list[str] = []
 
     def field(self, name: str) -> str:
         """The first value written for ``name``; empty when the type does not name it."""
         return next((value for field, value in self.fields if field == name), "")
+
+    @property
+    def required_relationships(self) -> dict[str, tuple[str, ...]]:
+        """Each field a node of this type must have, with the types it may lead to (``route`` or ``ddd.entityRoot``):
+        the fields not written optional whose value names only other schema types, one (``route``) or a list
+        (``[a | b]``). A field describing the type itself, the ``belongsTo`` back-edge, and a field a value such as a
+        string satisfies are no relationship to require."""
+        found: dict[str, tuple[str, ...]] = {}
+        for name, value in self.fields:
+            references = self._references(value)
+            if references and name not in self.optional and name not in _DESCRIBING:
+                found.setdefault(name, references)
+        return found
+
+    @staticmethod
+    def _references(value: str) -> tuple[str, ...]:
+        """The schema types value names, or none when any part of it is a value type, a quoted value, or no type."""
+        parts = tuple(part.strip() for part in value.strip().strip("[]").split("|"))
+        if not value.strip() or any(part in VALUE_TYPES or not _REFERENCE.match(part) for part in parts):
+            return ()
+        return parts
 
     @property
     def fidelity(self) -> str:
@@ -114,11 +143,13 @@ class Schema:
             field = _FIELD.match(line)
             if field is None:
                 continue
-            name, value = field.group(2), field.group(3)
+            name, value = field.group(2), field.group(4)
             if name in _BLOCKS and not value:
                 block, block_indent = name, indent
                 continue
             current.fields.append((name, value))
+            if field.group(3):
+                current.optional.add(name)
 
     def _read_block_item(self, current: SchemaType, block: str, line: str) -> None:
         bullet = _BULLET.match(line)

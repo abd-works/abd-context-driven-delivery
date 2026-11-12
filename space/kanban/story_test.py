@@ -3,7 +3,7 @@
 A sub-epic's `{sub_epic}.story.shared.py` registers its scenarios on one `SharedStories`. Each tier's spec file loads
 that file and replays the scenarios with its own tier: the domain tier hands the steps the domain classes themselves,
 and the server tier hands them the same operations reached through the cdd tools. A step reaches the board only
-through its `World`, so one step proves one behaviour on every tier.
+through the namespace its tier hands them, so one step proves one behaviour on every tier.
 
 Mamba collects example groups as classes, so `replay` builds one class per story and one per scenario, and the spec
 file binds them at module scope with `globals().update(...)` (the Python form CDR 0002 gives a tier file).
@@ -27,22 +27,19 @@ GIVEN, WHEN, THEN = "given", "when", "then"
 # Mamba runs the classes and functions of a group in the order of their names, so each name starts with its place.
 ORDER_DIGITS = 8
 
-StepBody = Callable[["World"], None]
-
-
-class World(SimpleNamespace):
-    """What one scenario's steps share: the throwaway project, the board's operations as the tier reaches them, and
-    whatever an earlier step answered. A tier builds a new one for every scenario, so no scenario sees another's state."""
+# A step body takes what one scenario's steps share: the throwaway project, the board's operations as the tier reaches
+# them, and whatever an earlier step answered. A tier makes a new one for every scenario.
+StepBody = Callable[[SimpleNamespace], None]
 
 
 class Tier(Protocol):
-    """How a spec file runs its scenarios: `open` wires a World on a new throwaway project, `close` takes it down."""
+    """How a spec file runs its scenarios: `open` wires a scenario's namespace on a new throwaway project, `close` takes it down."""
 
     name: str
 
-    def open(self) -> World: ...
+    def open(self) -> SimpleNamespace: ...
 
-    def close(self, world: World) -> None: ...
+    def close(self, world: SimpleNamespace) -> None: ...
 
 
 @dataclass
@@ -258,7 +255,7 @@ def expect_refused(refusal: Exception | None, kind: type[Exception], message: st
 
 
 def _scenario_group(scenario: Scenario, tier: Tier, place: int) -> type:
-    """A group whose before_all runs the scenario's steps in order on one World. A Then cannot wait for the examples to
+    """A group whose before_all runs the scenario's steps in order on one namespace. A Then cannot wait for the examples to
     run, since a later When changes what it sees, so each Then's outcome is kept and its example raises it."""
     outcomes: dict[int, BaseException | None] = {}
     thens = [index for index, step in enumerate(scenario.steps) if step.kind == THEN]

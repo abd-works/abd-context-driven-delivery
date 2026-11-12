@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Iterable
+from typing import TYPE_CHECKING, Callable, Iterable, Iterator
 
 
 from harness.agent_tools import agent_tool, agent_toolset
@@ -627,18 +627,39 @@ class Node:
         self.source = Source(file, start_line, end_line, self.practice.reading.in_graph.source_root)
 
     def populate(self, parent: Node | None = None) -> None:
+        """Put this node under parent in the explorer tree, then each node its edges lead to under it, depth first, in
+        the order its edges sit. The walk keeps its own stack: a chain of edges, such as operations each invoking the
+        next, runs deeper than Python's call stack would let a node populating its children call itself."""
+        pending: list[Iterator[tuple[Node, Node | None]]] = [iter([(self, parent)])]
+        while pending:
+            step = next(pending[-1], None)
+            if step is None:
+                pending.pop()
+                continue
+            node, holder = step
+            if node._placed_under(holder):
+                pending.append(node._placements())
+
+    def _placed_under(self, parent: Node | None) -> bool:
+        """Join parent's children, taking parent as this node's own unless it has a better one; whether this node's
+        own children are still to place, which is true only the first time."""
         if parent is not None:
             parent.children.append(self)
             if self.parent is None or (self._holder(self.parent) and not self._holder(parent)):
                 self.parent = parent
         if self._populated:
-            return
+            return False
         self._populated = True
-        # A kind no one filters by, the belongsTo back-edge and scopes, is no part of the explorer tree.
+        return True
+
+    def _placements(self) -> Iterator[tuple[Node, Node]]:
+        """Each node an edge leads to from this one, with the node it goes under: this one for a direct edge, else the
+        node named for the edge's kind, made when the first such edge is placed. A kind no one filters by, the
+        belongsTo back-edge and scopes, is no part of the explorer tree."""
         types = sorted((edge_type for edge_type in self.practice.reading.in_graph.edge_index.types.values() if edge_type.is_offered), key=lambda edge_type: edge_type.order)
         for edge_type in types:
             for edge in self._edges_in_source_order(edge_type.kind):
-                edge.child.populate(self if edge.display == "direct" else self._holder_for(edge.kind))
+                yield edge.child, self if edge.display == "direct" else self._holder_for(edge.kind)
 
     def _holder_for(self, kind: str) -> Node:
         """The child named for kind that grouped and relationship edges of that kind sit under, made the first time."""

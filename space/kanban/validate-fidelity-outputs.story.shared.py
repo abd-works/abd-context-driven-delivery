@@ -3,7 +3,7 @@
 Scenarios: harness/.context/stories/move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md.
 Map: .context/story-map.md#e-validate-fidelity-outputs. Model: .context/kanban-model.md.
 
-Steps reach the board, the session, and the Validate action only through the World a tier hands them
+Steps reach the board, the session, and the Validate action only through the namespace a tier hands them
 (`world.Ticket`, `world.Validate`, `world.sessions`), so the domain spec and the cdd tools spec replay the same steps.
 
 Covered by the board app's TypeScript client specs in space/kanban/app, not here, because they have no Python

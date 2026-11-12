@@ -13,6 +13,27 @@ section: body
 - ++child ticket++ — a ticket whose session.json names a parent.
 - ++pulled-out child++ — a child that moves on the board as a card of its own and still has its parent; its parent keeps a dashed row for it.
 
+## Examples
+
+Seed state from `space/kanban/session_board_examples.py`, which the shared stories and the screen specs seed from.
+
+### ticket
+
+| ticket | title | parent | text |
+| --- | --- | --- | --- |
+| ++checkout-flow++ | Checkout flow |  | Pay for the basket. |
+| ++enter-card-details++ | Enter card details | checkout-flow |  |
+| ++confirm-order++ | Confirm order | checkout-flow | Show the order and take the payment. |
+| ++pet-visits++ | Pet visits |  |  |
+| ++billing-report++ | Billing report |  |  |
+| ++gift-cards++ | Gift cards | checkout-flow, once started under it | Sell gift cards. |
+
+### backlog item
+
+| backlog item | text |
+| --- | --- |
+| ++Gift cards++ | Sell gift cards. |
+
 ## Story: Split Ticket Into Child Tickets
 
 #### Scenario: Ask the chat to split a ticket into child tickets
@@ -111,8 +132,8 @@ pet-visits.reassign_parent(checkout-flow)
 *When* the [board](../../../../../space/kanban/.context/kanban-model.md#board) shows Discovery
 *Then* checkout-flow's card holds enter-card-details and confirm-order stacked inside it
 *And* checkout-flow's title sits small above them
-*And* neither child shows as a card of its own in Discovery
-*And* neither child row names a stage of its own
+*And* neither enter-card-details nor confirm-order shows as a card of its own in Discovery
+*And* neither enter-card-details' row nor confirm-order's names a stage of its own
 
 #### Scenario: Keep a dashed row for a child pulled out of its parent
 
@@ -126,7 +147,7 @@ pet-visits.reassign_parent(checkout-flow)
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow holds its child ticket confirm-order
 *And* confirm-order's text is Show the order and take the payment.
 *When* the Person rests the pointer on confirm-order in checkout-flow's card
-*Then* a tooltip shows Show the order and take the payment.
+*Then* confirm-order's tooltip shows Show the order and take the payment.
 
 ## Story: Expand Parent Ticket
 
@@ -143,14 +164,14 @@ pet-visits.reassign_parent(checkout-flow)
 *And* checkout-flow's card reads + 2 children
 *When* the Person expands checkout-flow
 *Then* checkout-flow's card shows enter-card-details and confirm-order
-*And* it reads - 2 children
+*And* checkout-flow's card reads - 2 children
 
 #### Scenario: Collapse a parent to its own card
 
 *Given* the [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow is expanded to show enter-card-details and confirm-order
 *When* the Person collapses checkout-flow
 *Then* checkout-flow's card shows no child rows
-*And* it reads + 2 children
+*And* checkout-flow's card reads + 2 children
 
 ## Story: Detach Child Ticket
 

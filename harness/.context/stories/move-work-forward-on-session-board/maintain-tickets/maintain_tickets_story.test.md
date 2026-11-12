@@ -12,6 +12,34 @@ section: body
 - ++ticket text++ — what a ticket is about, kept in the markdown file in its session folder (checkout-flow.md), or in a backlog item's file.
 - ++tag++ — a word a person puts on a ticket's session; its card shows it.
 
+## Examples
+
+Seed state from `space/kanban/session_board_examples.py`, which the shared stories and the screen specs seed from.
+
+### ticket
+
+| ticket | title | text | tags |
+| --- | --- | --- | --- |
+| ++checkout-flow++ | Checkout flow | Pay for the basket. |  |
+| ++pet-visits++ | Pet visits | Book a visit for a pet. |  |
+| ++confirm-order++ | Confirm order | Show the order and take the payment. |  |
+| ++sign-up++ | Sign up |  |  |
+| ++no-such-ticket++ | (no session folder) |  |  |
+
+### backlog item
+
+| backlog item | text |
+| --- | --- |
+| ++Gift cards++ | Sell gift cards. |
+| ++Returns and refunds++ | Refund an order. |
+
+### tag
+
+| tag |
+| --- |
+| ++billing++ |
+| ++urgent++ |
+
 ## Story: Add Backlog Item
 
 #### Scenario: Add an idea to the Backlog
@@ -131,7 +159,7 @@ Gift cards.edit_text("Sell gift cards at the till.")
   <- Gift cards with the text Sell gift cards at the till.
 ```
 
-*Then* .sessions/_backlog/gift-cards.md holds Sell gift cards at the till.
+*Then* Gift cards' file, .sessions/_backlog/gift-cards.md, holds Sell gift cards at the till.
 *And* the Backlog shows Gift cards with the text Sell gift cards at the till.
 
 
@@ -249,7 +277,7 @@ Board.ticket("no-such-ticket")
 ```
 
 *Then* the board says no ticket named 'no-such-ticket' on the board
-*And* no session folder is removed
+*And* deleting no-such-ticket removes no session folder
 
 ## Story: Tag Ticket Session
 

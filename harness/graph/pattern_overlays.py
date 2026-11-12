@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from harness.annotations.class_folder import class_folder
 from harness.graph.patterns_file import PatternsFile
+from harness.graph.schema_conformance import FRAMEWORK_RULES
 from harness.guidance.practice_reading import rules_in
 
 if TYPE_CHECKING:
@@ -138,10 +139,10 @@ class PatternOverlays:
 
     def checks_of(self, practice: Any, overlays: list[str] | None = None) -> dict[str, Any]:
         """The graph rules practice checks with these overlays applied, or with the overlays named, such as those a
-        saved graph was saved with, by slug: its own, then those each pattern adds to it. Each pattern is the one this
-        object made, so asking again makes none."""
+        saved graph was saved with, by slug: the framework's own, which every practice checks, its own, then those each
+        pattern adds to it. Each pattern is the one this object made, so asking again makes none."""
         patterns = self.patterns if overlays is None else self._patterns_at(self._paths_of(overlays))
-        merged = dict(practice.reading.graph_checks)
+        merged = {**FRAMEWORK_RULES, **practice.reading.graph_checks}
         for pattern in patterns:
             merged.update(pattern.graph_overlay.rules_for(practice))
         return merged

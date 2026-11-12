@@ -302,6 +302,12 @@ class CodeStory(Story, CodeStoryNode):
         return stories or [cls.load(content)]
 
     @classmethod
+    def stories_in(cls, content: str, project: Optional[Path]) -> List["CodeStory"]:
+        """Every story in one story file of project, the folder its paths are named from; a language whose story files
+        read other files of the project, such as an examples module, finds them there."""
+        return cls.load_all(content)
+
+    @classmethod
     def load(cls, content: str, scenario_blocks: Optional[List[CodeBlock]] = None) -> "CodeStory":
         """The story the text of one story holds: its name, its description, then its backgrounds and scenarios, one
         for each of scenario_blocks when its story file found them, else as the text writes them."""

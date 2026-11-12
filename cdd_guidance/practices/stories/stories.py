@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from harness.agent_tools.agent_tools import agent_toolset
@@ -12,6 +13,9 @@ from cdd_guidance.practices.stories.model.sketch.sketch_story_model import Sketc
 from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, is_story_map_file
 from cdd_guidance.practices.stories.model.story_model import StoryNode
 from cdd_guidance.practices.stories.stories_formats import StoriesFormats
+
+# A story test names its story map: `# Map: ../../.context/story-map.md#story` or `Map: harness/.context/stories/story-map.md.`
+_MAP_LINE = re.compile(r"Map:\s*(\S+?\.md)\b")
 
 
 @agent_toolset
@@ -107,7 +111,7 @@ class Stories(PracticeGuidance):
                 on_file(file)
             text = path.read_text(encoding="utf-8")
             merged.source_texts.update(_texts_of_story_test(file, text, project))
-            merged.take_scenarios(self._story_test_reader(path).story_type.load_all(text), file)
+            merged.take_scenarios(self._story_test_reader(path).story_type.stories_in(text, project), file)
         return merged
 
     def _story_test_reader(self, path: Path):
@@ -125,8 +129,20 @@ class Stories(PracticeGuidance):
 
     def _maps_beside(self, tests: list[Path], project: Path) -> list[Path]:
         """The story map each story test belongs to: in its own folder, or the nearest folder above it inside project,
-        since story tests sit in epic folders below their map."""
-        return list(dict.fromkeys(found for path in tests for found in [StoryMapFiles(path.parent, top=project).nearest()] if found))
+        since story tests sit in epic folders below their map; else the map its text names on a ``Map:`` line, from its
+        own folder or from project, for a story test that sits beside the code rather than under its map."""
+        found = [StoryMapFiles(path.parent, top=project).nearest() or _named_map(path, project) for path in tests]
+        return list(dict.fromkeys(path for path in found if path))
+
+
+def _named_map(test: Path, project: Path) -> Path | None:
+    """The story map the story test at test names on a ``Map:`` line, from its own folder or from project; none when it
+    names none that is there."""
+    named = _MAP_LINE.search(test.read_text(encoding="utf-8"))
+    if named is None:
+        return None
+    relative = named.group(1).split("#", 1)[0]
+    return next((path for path in (test.parent / relative, project / relative) if path.is_file()), None)
 
 
 def _texts_of_story_test(file: str, text: str, project: Path) -> dict[str, str]:

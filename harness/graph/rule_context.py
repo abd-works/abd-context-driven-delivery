@@ -29,6 +29,12 @@ class RuleCheckContext:
         """The nodes an edge of kind leads to from node."""
         return [edge.child for edge in self.graph.edges_from(kind, node)]
 
+    def held_by(self, node) -> list:
+        """The nodes an edge of any kind leads to from node, but the ``belongsTo`` back-edge to the node holding it: what
+        node holds, whatever kind its practice records each under (an operation's parameters under ``hasParameter``)."""
+        kinds = [kind for kind in self.practice.reading.in_graph.edge_index.types if kind != "belongsTo"]
+        return [target for kind in kinds for target in self.targets(node, kind)]
+
     def nodes(self, type: str | None = None) -> list:
         """The checked practice's nodes, or only those of type."""
         return self.practice.reading.in_graph.nodes(type)

@@ -1,7 +1,7 @@
 """How Clean Engineering reads code into its graph: each class's properties and operations, and the edges that say which
 class a property's value is and which parameters an operation takes."""
 
-from expects import be_true, equal, expect, have_key
+from expects import be_true, contain, equal, expect, have_key
 from mamba import before, context, description, it
 
 from cdd_guidance.practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
@@ -130,3 +130,137 @@ with description("Clean Engineering reading code into its graph"):
 
         with it("should be the index the class rules ask"):
             expect(ClassGraph(self.fixture.context).named("Till")).to(equal(self.index.classes_named("Till")))
+
+    with context("with members that call and read another object's members"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    "app/board.ts": (
+                        "export class Board {\n"
+                        "  get shown(): string[] { return [] }\n"
+                        "  select(name: string): void { this.picked = name }\n"
+                        "}\n\n"
+                        "export class BoardClient {\n"
+                        "  constructor(private board: Board) {}\n"
+                        "  select(): void {\n"
+                        "    this.board.select('x')\n"
+                        "  }\n"
+                        "  opensLeft(): boolean {\n"
+                        "    return this.board.shown.length > 2\n"
+                        "  }\n"
+                        "}\n"
+                    ),
+                }
+            )
+
+        with it("should record that an operation invokes the member of its name it calls on another object"):
+            expect(_targets(self.fixture, "invokes", "select")).to(equal(["select"]))
+
+        with it("should record that an operation invokes the property it reads"):
+            expect(_targets(self.fixture, "invokes", "opensLeft")).to(equal(["shown"]))
+
+    with context("with a class whose heritage clause holds braced type arguments"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    "app/page.tsx": (
+                        "export class PageFailureView extends Component<{ children: ReactNode }, { failure: string }> {\n"
+                        "  render() {\n"
+                        "    return this.props.children\n"
+                        "  }\n"
+                        "}\n"
+                    ),
+                }
+            )
+
+        with it("should read the members of the class body, not of the type arguments"):
+            expect(_targets(self.fixture, "owns", "PageFailureView")).to(equal(["render"]))
+
+    with context("with members declared with no body"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    "ts/shape.ts": "export abstract class Shape {\n  abstract area(width: number): number;\n}\n",
+                    "ts/drawable.ts": "export interface Drawable {\n  draw(scale: number): void;\n}\n",
+                    "java/Solid.java": "public abstract class Solid {\n  public abstract double volume(double depth);\n}\n",
+                    "java/Printable.java": "public interface Printable {\n  void print(double scale);\n}\n",
+                }
+            )
+
+        def _exempt(self, name: str) -> list:
+            member = next(node for node in self.fixture.practice.reading.in_graph.nodes("Operation") if node.name == name)
+            return member.get_fact("exempt_relationships") or []
+
+        with it("should not hold a TypeScript abstract member to invokes"):
+            expect(self._exempt("area")).to(equal(["invokes"]))
+
+        with it("should read no TypeScript interface's method, so none is held to invokes"):
+            names = [node.name for node in self.fixture.practice.reading.in_graph.nodes("Operation")]
+            expect(names).not_to(contain("draw"))
+
+        with it("should not hold a Java abstract member to invokes"):
+            expect(self._exempt("volume")).to(equal(["invokes"]))
+
+        with it("should read no Java interface's method, so none is held to invokes"):
+            names = [node.name for node in self.fixture.practice.reading.in_graph.nodes("Operation")]
+            expect(names).not_to(contain("print"))
+
+    with context("with a spec beside the code"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    "shop/cart.py": _CART,
+                    "shop/cart_spec.py": "class CartSpec:\n    def check(self, cart) -> None:\n        assert cart\n",
+                }
+            )
+
+        with it("should hold none of the spec's members to the relationships the schema requires"):
+            check = next(node for node in self.fixture.practice.reading.in_graph.nodes("Operation") if node.name == "check")
+            expect(check.get_fact("exempt_relationships")).to(equal(["invokes"]))
+
+    with context("with a folder holding only story tests"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    "shop/cart.py": _CART,
+                    "shop/pay/pay_story.test.py": "with story('Pay'):\n    pass\n",
+                }
+            )
+
+        with it("should not hold the folder's package to the participants a package of production code needs"):
+            package = next(node for node in self.fixture.practice.reading.in_graph.nodes("Package") if node.name == "pay")
+            expect(package.get_fact("exempt_relationships")).to(equal(["participants"]))
+
+
+def _exempt(fixture, name: str) -> list[str]:
+    """The relationships the member called name is not held to."""
+    member = next(node for node in fixture.practice.reading.in_graph.nodes("Operation") if node.name == name)
+    return member.get_fact("exempt_relationships") or []
+
+
+with description("Clean Engineering marking members that call nothing by design"):
+    with before.all:
+        self.fixture = practice_from_files(
+            {
+                "app/kinds.py": (
+                    "from abc import ABC, abstractmethod\n\n\n"
+                    "class Kind(ABC):\n"
+                    "    @abstractmethod\n"
+                    "    def move_next(self, steps: int) -> None:\n"
+                    '        """Move on."""\n\n'
+                    "    def limit(self) -> int:\n"
+                    "        return 3\n\n"
+                    "    def keep(self, value: int) -> None:\n"
+                    "        self.value = value\n"
+                ),
+            }
+        )
+
+    with it("should not hold an abstract member to invoking anything"):
+        expect(_exempt(self.fixture, "move_next")).to(equal(["invokes"]))
+
+    with it("should not hold a member that takes nothing and answers a value to invoking anything"):
+        expect(_exempt(self.fixture, "limit")).to(equal(["invokes"]))
+
+    with it("should still hold a member that takes a value and calls nothing to invoking something"):
+        expect(_exempt(self.fixture, "keep")).to(equal([]))

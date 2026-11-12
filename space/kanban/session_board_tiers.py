@@ -12,6 +12,8 @@ JSON out, on a server started with the board's toolsets on the throwaway project
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import functools
 import json
 from pathlib import Path
@@ -26,7 +28,7 @@ from cdd_guidance.actions.generate.generate import Generate  # noqa: E402
 from space.kanban.backlog_item import BacklogItem  # noqa: E402
 from space.kanban.board import BacklogItemNotFoundError, Board, FidelityNotFoundError, Stage, TicketNotFoundError  # noqa: E402
 from space.kanban.session_board_examples import SURFACE_FIXTURE_PROJECT, SessionsProject  # noqa: E402
-from space.kanban.story_test import World, held_ticket_in, progress_in  # noqa: E402
+from space.kanban.story_test import held_ticket_in, progress_in  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
 from space.session import Session, Sessions  # noqa: E402
@@ -51,13 +53,13 @@ class DomainTier:
 
     name = "domain"
 
-    def open(self) -> World:
+    def open(self) -> SimpleNamespace:
         project = SessionsProject(SURFACE_FIXTURE_PROJECT)
         on_project = {name: OnProject(domain_class, project.root) for name, domain_class in (("Board", Board), ("Stage", Stage), ("Ticket", Ticket), ("BacklogItem", BacklogItem))}
         # The cdd server makes each action for the session open in the call's project, among the sessions this process
         # holds for the project, which the board reads too; so does this tier.
         sessions = Sessions.of_project(project.root)
-        return World(
+        return SimpleNamespace(
             project=project,
             **on_project,
             sessions=sessions,
@@ -66,7 +68,7 @@ class DomainTier:
             data_of=data_of,
         )
 
-    def close(self, world: World) -> None:
+    def close(self, world: SimpleNamespace) -> None:
         world.project.close()
 
 
@@ -93,10 +95,10 @@ class ServerTier:
 
     name = "cdd tools"
 
-    def open(self) -> World:
+    def open(self) -> SimpleNamespace:
         project = SessionsProject(SURFACE_FIXTURE_PROJECT)
         cdd = CddTools(project)
-        return World(
+        return SimpleNamespace(
             project=project,
             Board=BoardTools(cdd),
             Stage=StageTools(cdd),
@@ -107,7 +109,7 @@ class ServerTier:
             data_of=_server_data_of,
         )
 
-    def close(self, world: World) -> None:
+    def close(self, world: SimpleNamespace) -> None:
         world.project.close()
 
 

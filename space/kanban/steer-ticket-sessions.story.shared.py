@@ -3,7 +3,7 @@
 Scenarios: harness/.context/stories/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md, harness/.context/stories/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md and harness/.context/stories/move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md.
 Map: .context/story-map.md#e-steer-ticket-sessions. Model: .context/kanban-model.md.
 
-Steps reach the board only through the World a tier hands them (`world.Ticket`, `world.BacklogItem`, `world.Board`),
+Steps reach the board only through the namespace a tier hands them (`world.Ticket`, `world.BacklogItem`, `world.Board`),
 so the domain spec and the cdd tools spec replay the same steps.
 
 Covered by the board app's TypeScript client specs in space/kanban/app, not here, because they have no Python
