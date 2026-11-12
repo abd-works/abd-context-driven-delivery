@@ -159,6 +159,7 @@ outputs:
   python: "{module}/"
   typescript: "{module}/"
   markdown: "{module}/.context/{module}-model.md"
+  drawio: "{module}/.context/{module}-model.drawio"
 ```
 
 #### Overview

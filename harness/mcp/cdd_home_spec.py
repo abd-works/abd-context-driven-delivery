@@ -29,6 +29,9 @@ def _checkout_with_board_mod(root: Path) -> Path:
     (mod / "hooks" / "register.ts").write_text("export default {}\n", encoding="utf-8")
     (mod / "hooks" / "register.test.ts").write_text("test('x', () => {})\n", encoding="utf-8")
     (mod / "types" / "index.d.ts").write_text("export {}\n", encoding="utf-8")
+    viewer = root / "checkout" / "tools" / "drawio_viewer"
+    viewer.mkdir(parents=True)
+    (viewer / "drawio_viewer.py").write_text("# the viewer", encoding="utf-8")
     return root / "checkout"
 
 
@@ -69,6 +72,10 @@ with description("a cdd home's Claude Code plugins") as self:
 
         with it("should publish that checkout's board mod"):
             expect((self.board / "hooks" / "register.ts").read_text(encoding="utf-8")).to(equal("export default {}\n"))
+
+        # The chat bar opens diagrams in the viewer, so a chat outside a CDD checkout needs the viewer in the mod.
+        with it("should publish the draw.io viewer inside the board mod"):
+            expect((self.board / "drawio-viewer" / "drawio_viewer.py").read_text(encoding="utf-8")).to(equal("# the viewer"))
 
         with it("should leave the mod's tests out"):
             expect((self.board / "hooks" / "register.test.ts").exists()).to(equal(False))

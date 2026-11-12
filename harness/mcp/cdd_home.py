@@ -22,6 +22,10 @@ CLAUDE_PLUGIN_DESCRIPTION = "Connects every Claude Code chat to the one cdd serv
 BOARD_PLUGIN = "cdd-board"
 BOARD_MOD_FOLDER = Path("harness") / "chat-ui" / "pane"
 BOARD_MOD_PARTS = (".claude-plugin", "hooks", "types")
+# The chat bar opens a diagram in the draw.io viewer, so the viewer is published inside the mod: a chat in any project
+# finds it there, not only one in a CDD checkout. It is copied as a file; the harness does not import it.
+DRAWIO_VIEWER = Path("tools") / "drawio_viewer" / "drawio_viewer.py"
+BOARD_DRAWIO_VIEWER = Path("drawio-viewer") / "drawio_viewer.py"
 # A commit without the server cannot serve chats, so pinning one would leave every chat without cdd.
 SERVER_MODULE = "harness/mcp/mcp_daemon.py"
 # Claude Code, the IDE whose plugins this home publishes.
@@ -113,7 +117,8 @@ class CddHome:
         return [self._write_marketplace(), *files]
 
     def write_board_plugin(self) -> None:
-        """Publish the cdd-board mod from the code the server runs. Its version gains a hash of the mod's files:
+        """Publish the cdd-board mod from the code the server runs, with the draw.io viewer its chat bar opens diagrams
+        in. Its version gains a hash of the mod's files:
         Claude Code keeps a plugin it has already seen at the same version, so a changed mod needs a new one."""
         source = self.source / BOARD_MOD_FOLDER
         if not (source / ".claude-plugin" / "plugin.json").is_file():
@@ -124,6 +129,9 @@ class CddHome:
         for part in BOARD_MOD_PARTS:
             if (source / part).is_dir():
                 shutil.copytree(source / part, target / part, ignore=shutil.ignore_patterns("*.test.*"), dirs_exist_ok=True)
+        if (self.source / DRAWIO_VIEWER).is_file():
+            (target / BOARD_DRAWIO_VIEWER).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(self.source / DRAWIO_VIEWER, target / BOARD_DRAWIO_VIEWER)
         JsonFile(target / self.INSTALL_COMMAND).write({"command": self.install_command})
         manifest_file = JsonFile(target / ".claude-plugin" / "plugin.json")
         manifest = manifest_file.read()

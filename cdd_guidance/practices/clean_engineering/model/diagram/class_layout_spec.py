@@ -184,8 +184,11 @@ with description("a class diagram page"):
         with it("should still route every arrow"):
             expect(all(arrow.routed for arrow in self.arrows)).to(be_true)
 
-        with it("should give each arrow its own point on the base"):
-            expect(self.arrows[0].entry_point).not_to(equal(self.arrows[1].entry_point))
+        with it("should still end both arrows at one point on the base"):
+            expect(self.arrows[0].entry_point).to(equal(self.arrows[1].entry_point))
+
+        with it("should run one shared line into the base"):
+            expect({tuple(arrow.path[-2:]) for arrow in self.arrows}).to(equal({tuple(self.arrows[0].path[-2:])}))
 
         with it("should keep every arrow out of the card in the way"):
             expect([_passes_through(arrow.path, self.cards[2]) for arrow in self.arrows]).to(equal([False, False]))
@@ -200,3 +203,46 @@ with description("a class diagram page"):
         with it("should still arrive at right angles"):
             bends = zip(self.arrow.path, self.arrow.path[1:])
             expect(all(a[0] == b[0] or a[1] == b[1] for a, b in bends)).to(be_true)
+
+    with context("with subclasses both above and below their base"):
+        with before.each:
+            self.base = _card("Payment", box=(400, 300, 200, 100))
+            above = [_card("Gift", box=(400, 60, 200, 100))]
+            below = [_card(name, box=(x, 560, 200, 100)) for name, x in (("Card", 60), ("Cash", 400), ("Voucher", 740))]
+            self.cards = [self.base] + above + below
+            self.arrows = [DiagramArrow(card.cell_id, "Payment", "inheritance") for card in above + below]
+            ArrowRouter(self.cards, self.arrows).route()
+
+        with it("should route every arrow"):
+            expect(all(arrow.routed for arrow in self.arrows)).to(be_true)
+
+        with it("should end the whole family in one arrowhead"):
+            expect({arrow.entry_point for arrow in self.arrows}).to(equal({self.arrows[0].entry_point}))
+
+        with it("should bring it in on the side most of the subclasses face"):
+            expect(self.arrows[0].entry_side).to(equal("bottom"))
+
+        with it("should keep every arrow out of every card but its own two"):
+            through = [
+                (arrow.source, card.cell_id)
+                for arrow in self.arrows
+                for card in self.cards
+                if card.cell_id not in (arrow.source, arrow.target) and _passes_through(arrow.path, card)
+            ]
+            expect(through).to(equal([]))
+
+    with context("with a card a person placed right against another one's port"):
+        with before.each:
+            self.cards = [
+                _card("Payment", box=(400, 60, 200, 100)),
+                _card("Receipt", box=(380, 190, 240, 60)),
+                _card("Cash", box=(800, 400, 200, 100)),
+            ]
+            self.arrow = DiagramArrow("Cash", "Payment", "inheritance")
+            ArrowRouter(self.cards, [self.arrow]).route()
+
+        with it("should still route the arrow"):
+            expect(self.arrow.routed).to(be_true)
+
+        with it("should keep it out of the card in the way"):
+            expect(_passes_through(self.arrow.path, self.cards[1])).to(be_false)

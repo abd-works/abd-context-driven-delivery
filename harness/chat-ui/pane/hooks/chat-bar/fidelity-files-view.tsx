@@ -22,12 +22,17 @@ function FileTitleView($: EngineInterface, { Button }: ElementTable, path: strin
   return <Button key="file-title" plain label={path} onPress={() => openFileInEditor($, path)} />
 }
 
-function ShownFileView($: EngineInterface, elements: ElementTable, shown: { path: string; text: string | null }) {
-  const { Box, Text } = elements
+// A diagram no one has drawn yet says so, rather than offering an empty one to open.
+function DiagramNoteView({ Text }: ElementTable, shown: { path: string; exists: boolean }) {
+  return <Text color={BRAND.muted}>{shown.exists ? `${shown.path} is a diagram: open it in draw.io.` : `${shown.path} is not drawn yet.`}</Text>
+}
+
+function ShownFileView($: EngineInterface, elements: ElementTable, shown: { path: string; text: string | null; exists: boolean }) {
+  const { Box } = elements
   return (
     <Box key="shown-file" flexDirection="column">
       {FileTitleView($, elements, shown.path)}
-      {isDiagram(shown.path) ? <Text color={BRAND.muted}>{`${shown.path} is a diagram: open it in draw.io.`}</Text> : FileTextView(elements, shown.path, shown.text ?? '')}
+      {isDiagram(shown.path) ? DiagramNoteView(elements, shown) : FileTextView(elements, shown.path, shown.text ?? '')}
     </Box>
   )
 }
@@ -54,7 +59,7 @@ export function FidelityFilesView($: EngineInterface, elements: ElementTable, fi
         {files.tabs.map(tab => (
           <Button key={`file-${tab.path}`} label={tab.path.split('/').at(-1) ?? tab.path} variant={tab.path === files.shown ? 'primary' : undefined} onPress={() => showFile($, tab.path)} />
         ))}
-        {shown && isDiagram(shown.path) ? <Button key="file-drawio" label="Open in draw.io" variant="primary" onPress={() => openInDrawio($, shown.path)} /> : null}
+        {shown && isDiagram(shown.path) && shown.exists ? <Button key="file-drawio" label="Open in draw.io" variant="primary" onPress={() => openInDrawio($, shown.path)} /> : null}
         <Button key="files-close" label="✕" onPress={() => closeFiles($)} />
       </Box>
       {files.isOutOfDate ? OutOfDateView($, elements, files.fidelity) : null}
