@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
@@ -14,8 +13,10 @@ from space.kanban.board import BACKLOG_COLUMN, Board, Card, Column
 from space.session.idea_file import IdeaFile
 from harness.mcp.mcp_server import mcp
 
-if TYPE_CHECKING:
-    from space.kanban.ticket import Ticket
+# Imported at run time, not only for type checking: backlog-item.start_under names its parent ticket, and the tool loads
+# that ticket by the name a call sends only when it can read the parameter's class. ticket.py imports this module only
+# for type checking, so there is no cycle.
+from space.kanban.ticket import Ticket
 
 
 @identity("title")
