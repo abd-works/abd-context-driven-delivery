@@ -1,7 +1,7 @@
 import type { EngineInterface, Register } from 'claude-code'
 
 import { checkIn } from './board-chat/board-chat-client'
-import { turnCompleted, turnStarted } from './board-chat/chat-turns'
+import { isCheckInDue, turnCompleted, turnStarted } from './board-chat/chat-turns'
 import { readName } from './board-chat/chat-name'
 import { openedBoard } from './board-chat/board-server'
 import { currentChatBar, refreshChatBar } from './chat-bar/chat-bar-client'
@@ -75,6 +75,7 @@ export const register: Register = on => {
     const chat = await $.session.id()
     await readName($).catch(logged($, 'naming the chat'))
     $.clock.every(CHECK_IN_MILLISECONDS, () => {
+      if (!isCheckInDue()) return
       // The cdd server can still be connecting at session start; the next check-in tries again.
       void checkIn($, chat).catch(logged($, 'checking in with the board'))
     })

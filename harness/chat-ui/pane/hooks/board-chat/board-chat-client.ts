@@ -5,7 +5,7 @@ import { commandOf, filledPrompt, REFUSED_WITHIN_MILLISECONDS } from '../shared/
 import { reasonOf } from '../shared/failure'
 import { after, post } from './board'
 import { currentChatName } from './chat-name'
-import { awaitTurn, finish, forgetTurn, isChatBusy, turnsSoFar } from './chat-turns'
+import { awaitTurn, chatWorked, finish, forgetTurn, isChatBusy, turnsSoFar } from './chat-turns'
 
 // Connects this chat to cdd's chat tools, which the board sends commands through. The rules live in the cdd server.
 
@@ -62,5 +62,7 @@ async function run($: EngineInterface, chat: string, command: ChatCommandData): 
 export async function checkIn($: EngineInterface, chat: string): Promise<void> {
   const answer = await post($, { chat, operation: 'check-in', body: { is_busy: isChatBusy(), name: currentChatName(), folder: await $.session.root() } })
   if (!answer.ok) return
-  for (const command of JSON.parse(answer.text) as ChatCommandData[]) await run($, chat, command)
+  const commands = JSON.parse(answer.text) as ChatCommandData[]
+  if (commands.length) chatWorked()
+  for (const command of commands) await run($, chat, command)
 }

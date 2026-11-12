@@ -10,6 +10,27 @@ let isBusy = false
 const unfinished = new Map<string, number>()
 // Counts the chat's own turns, so a command that returned without starting one is known to be done.
 let turnsStarted = 0
+// Ticks of the one-second check-in clock since the chat last worked: a turn of its own, or a command from the board.
+let idleTicks = 0
+// While the chat works, and for this many ticks after, it checks in every tick, so a Run pressed on the board arrives
+// within a second; after that it checks in every IDLE_CHECK_IN_TICKS, since every open chat checking in every second
+// keeps the one cdd server every chat shares busy for nothing.
+const ACTIVE_TICKS = 60
+const IDLE_CHECK_IN_TICKS = 5
+
+export function isCheckInDue(): boolean {
+  if (isBusy) {
+    idleTicks = 0
+    return true
+  }
+  idleTicks += 1
+  return idleTicks <= ACTIVE_TICKS || idleTicks % IDLE_CHECK_IN_TICKS === 0
+}
+
+// The board gave the chat something to do, so it checks in every second again for a while.
+export function chatWorked(): void {
+  idleTicks = 0
+}
 
 export function isChatBusy(): boolean {
   return isBusy
@@ -35,6 +56,7 @@ export async function finish($: EngineInterface, chat: string, message: string):
 
 export function turnStarted(): void {
   isBusy = true
+  idleTicks = 0
   turnsStarted += 1
 }
 
