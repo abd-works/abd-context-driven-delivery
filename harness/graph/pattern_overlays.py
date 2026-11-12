@@ -67,10 +67,10 @@ class GraphOverlay:
             roles.append(row.strip().strip("|").split("|")[0].strip())
         return roles
 
-    def record_in(self, folder: Path) -> None:
-        """Record in folder's `.context/patterns.md` that its content is generated with this pattern, keeping the
-        patterns and roles it names already."""
-        PatternsFile(folder).record([self.name])
+    def record_in(self, patterns_file: PatternsFile) -> None:
+        """Record in patterns_file that its folder's content is generated with this pattern, keeping the patterns and
+        roles it names already."""
+        patterns_file.record([self.name])
 
     def rules_for(self, practice: Any) -> dict[str, Any]:
         """The graph rules this pattern adds to practice, by slug, read once from the pattern's own folder: its package
@@ -147,16 +147,26 @@ class PatternOverlays:
         return merged
 
     def record_content(self, folders: list[Path]) -> str:
-        """Record each applied pattern in the patterns file at the root of each folder content is generated in, and say
-        how to record them for any other folder and how to name the roles a folder holds; none when none is applied."""
-        overlays = [pattern.graph_overlay for pattern in self.patterns]
-        if not overlays:
+        """Record each applied pattern in the patterns file of each folder content is generated in, and say how to
+        record them for any other folder and how to name the roles a folder holds; none when none is applied."""
+        if not self.patterns:
             return ""
-        for folder in folders:
-            for overlay in overlays:
-                overlay.record_in(folder)
+        return self._recording_instructions(self._recorded_in(folders))
+
+    def _recorded_in(self, folders: list[Path]) -> list[PatternsFile]:
+        """The patterns file of each folder content is generated in, once each, with each applied pattern recorded."""
+        files = list({file.folder: file for file in map(PatternsFile.for_content, folders)}.values())
+        for file in files:
+            for overlay in self.graph_overlays:
+                overlay.record_in(file)
+        return files
+
+    def _recording_instructions(self, files: list[PatternsFile]) -> str:
+        """How the agent records the applied patterns in any other folder it writes content in, naming the files they
+        are recorded in already and the roles each pattern has."""
+        overlays = self.graph_overlays
         names = ", ".join(overlay.name for overlay in overlays)
-        written = ", ".join(PatternsFile(folder).path.as_posix() for folder in folders) or "none yet"
+        written = ", ".join(file.path.as_posix() for file in files) or "none yet"
         return "\n".join([
             "## Patterns this content is generated with",
             "",

@@ -46,14 +46,21 @@ class IdeaFile:
         """Each `Story:` heading's name and the lines under it, up to the next heading."""
         sections: list[tuple[str, list[str]]] = []
         for line in self._lines:
-            story = _STORY.match(line)
-            if story:
-                sections.append((story.group(1), []))
-            elif line.startswith("#"):
-                sections.append(("", []))
+            heading = self._story_heading(line)
+            if heading is not None:
+                sections.append((heading, []))
             elif sections:
                 sections[-1][1].append(line)
         return [(story, lines) for story, lines in sections if story]
+
+    @staticmethod
+    def _story_heading(line: str) -> str | None:
+        """The story a `Story:` heading names; empty for any other heading, which ends a story's section; none for a
+        line that is no heading."""
+        story = _STORY.match(line)
+        if story:
+            return story.group(1)
+        return "" if line.startswith("#") else None
 
     def write(self, heading: str, text: str) -> None:
         """Write the whole file: heading, when there is one, then text under it."""
