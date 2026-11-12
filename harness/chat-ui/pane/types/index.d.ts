@@ -46,7 +46,7 @@ export type OverlayChoicesJson = { ticket: string; choices: OverlayChoiceJson[];
 
 // The files view of the selected fidelity: one tab per file fidelity-progress.files declares, its text once session.read_file read it.
 // isOutOfDate: a report's saved graph is in a shape the graph no longer reads, so the tab offers Validate again.
-export type FidelityFilesJson = { fidelity: string; tabs: { path: string; text: string | null }[]; shown: string | null; isOutOfDate: boolean } | null
+export type FidelityFilesJson = { fidelity: string; tabs: { path: string; text: string | null; exists: boolean }[]; shown: string | null; isOutOfDate: boolean } | null
 
 // What the chat bar is doing while a ticket opens or closes, which the band shows with a turning wheel; empty when idle.
 export type BusyJson = { doing: string; frame: number }

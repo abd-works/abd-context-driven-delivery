@@ -43,8 +43,10 @@ export async function openFilesOf($: EngineInterface, fidelities: FidelityProgre
   const named = fidelities.map(fidelity => fidelity.slug).join(', ')
   try {
     const read = await Promise.all(fidelities.map(fidelity => callTool<Record<string, FileEntryData[]>>($, 'fidelity-progress.files', { ticket: fidelity.progress.ticket.name, fidelity: fidelity.slug })))
-    const paths = [...new Set(read.flatMap(files => Object.values(files).flat().map(entry => entry.path)))]
-    await update($, fidelityFiles, () => ({ fidelity: first.slug, tabs: paths.map(path => ({ path, text: null })), shown: paths[0] ?? null, isOutOfDate: false }))
+    const entries = read.flatMap(files => Object.values(files).flat())
+    const paths = [...new Set(entries.map(entry => entry.path))]
+    const exists = (path: string) => entries.some(entry => entry.path === path && entry.exists)
+    await update($, fidelityFiles, () => ({ fidelity: first.slug, tabs: paths.map(path => ({ path, text: null, exists: exists(path) })), shown: paths[0] ?? null, isOutOfDate: false }))
     await openPane($, `${named} files`)
     if (paths[0]) await showFile($, paths[0])
   } catch (failure) {
@@ -74,7 +76,7 @@ export async function showFile($: EngineInterface, path: string): Promise<void> 
   } catch (failure) {
     text = reasonOf(failure)
   }
-  await update($, fidelityFiles, files => (files ? { ...files, shown: path, tabs: files.tabs.map(tab => (tab.path === path ? { path, text } : tab)) } : files))
+  await update($, fidelityFiles, files => (files ? { ...files, shown: path, tabs: files.tabs.map(tab => (tab.path === path ? { ...tab, text } : tab)) } : files))
 }
 
 // A press on the shown file's title opens it in the editor the system opens its kind of file with, by its file:// link.
