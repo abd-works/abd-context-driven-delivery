@@ -1281,7 +1281,8 @@ class Graph:
     def open(self, folder: Path) -> None:
         """Open this graph on folder with every practice it holds rooted there, holding no node yet."""
         with self._changing:
-            self.scope = LoadScope(folder)
+            # Holding no node yet, the graph stands on none of the working copy until a load reads it.
+            self.scope = LoadScope(folder, [])
             self.practices.choose({practice: folder for practice in self.practices.held.values()})
             self.practices.open_chosen()
 
@@ -1297,6 +1298,8 @@ class Graph:
             if saved is not None:
                 self.overlays = list(saved.overlays)
                 self.practices.reopen(saved, folder)
+                if saved.holds(self.practices.roots_by_key, self.overlays):
+                    self.scope = LoadScope(folder)
 
     def report_progress(self, message: str) -> None:
         """Tell whoever called the running tool which practice, file, node, or rule is in progress."""
@@ -1423,6 +1426,16 @@ class Graph:
         source files under it. A file that is gone is dropped from the graph."""
         with self._changing:
             return self.build.refresh(paths, call)
+
+    def hold_whole(self, call: ToolCall | None = None) -> None:
+        """Make sure the graph holds the whole working copy across every practice it holds, reading it, or the saved
+        graph when that holds it, when it does not yet: a validate judges links across practices, which a graph holding
+        only some files cannot."""
+        with self._changing:
+            if self.scope.over_whole or self.scope.folder is None:
+                return
+            self.scope = LoadScope(self.scope.folder)
+            self.build.load(False, call)
 
     def refreshed(self, paths: list[str], checked: Path, call: ToolCall | None = None) -> None:
         """Refresh the graph with exactly the files at paths and write the nodes read from them, as they save, at

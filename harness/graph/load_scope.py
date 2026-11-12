@@ -19,8 +19,11 @@ class LoadScope:
     the practices' readers ask while they read: which source files to read, which of them were edited, and the folders
     holding those. A refresh names a file that is gone so that its nodes drop; only the files still there are read."""
 
-    def __init__(self, folder: Path | None, named: Iterable[Path] | None = None) -> None:
+    def __init__(self, folder: Path | None, named: Iterable[Path] | None = None, over_whole: bool = False) -> None:
         self.folder = folder
+        # Whether the read stands on a graph of the whole working copy: a load of it, or a refresh of named files in it.
+        # A load of named files alone (`graph.load_files`) does not, so links across practices cannot be judged there.
+        self.over_whole = named is None or over_whole
         # Every file the call names, gone or not; none when the whole folder is read.
         self.named = None if named is None else sorted(set(named))
         # The named files that are there to read.
@@ -49,7 +52,8 @@ class LoadScope:
         reads; none of them when no folder is loaded."""
         if self.folder is None:
             return LoadScope(None, [])
-        return self.of_paths(self.folder, paths, _REFRESH_SKIPPED_FOLDERS)
+        refreshed = self.of_paths(self.folder, paths, _REFRESH_SKIPPED_FOLDERS)
+        return LoadScope(refreshed.folder, refreshed.named, over_whole=self.over_whole)
 
     def source_files(self, root: Path, suffixes: set[str]) -> list[Path]:
         """The files with these suffixes under root; only the edited ones when the scope names files."""

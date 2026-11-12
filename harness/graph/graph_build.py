@@ -118,7 +118,11 @@ class BuildOrder:
     def from_text(cls, text: str) -> BuildOrder:
         document = json.loads(text)
         named = document.get("scope")
-        scope = LoadScope(Path(document["folder"]) if document.get("folder") else None, None if named is None else [Path(path) for path in named])
+        scope = LoadScope(
+            Path(document["folder"]) if document.get("folder") else None,
+            None if named is None else [Path(path) for path in named],
+            over_whole=bool(document.get("over_whole")),
+        )
         embedded = document.get("state")
         before = SavedGraph.from_document(embedded) if embedded is not None else Path(document["state_file"])
         roots = {key: Path(root) for key, root in (document.get("roots") or {}).items()}
@@ -160,6 +164,7 @@ class BuildOrder:
                 "roots": {key: str(root) for key, root in self.roots.items()},
                 "overlays": self.overlays,
                 "scope": None if self.scope.named is None else [str(path) for path in self.scope.named],
+                "over_whole": self.scope.over_whole,
                 "state": before.document if isinstance(before, SavedGraph) else None,
                 "state_file": str(before) if isinstance(before, Path) else "",
                 "modules": self.modules,

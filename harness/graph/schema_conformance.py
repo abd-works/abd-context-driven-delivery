@@ -81,7 +81,9 @@ class ConformsToSchema(PracticeGraphRule):
             "fidelity being worked. It checks only what the schema requires (a field written `name?:` is optional) and "
             "only for the fidelities worked so far: a relationship whose target a later fidelity creates is not "
             "required yet. Validate keeps only the findings inside the work's scope: the session's stories and "
-            "everything under them, and the files the call names."
+            "everything under them, and the files the call names. It runs only on a graph that holds the session's whole "
+            "working copy across its practices, so links across practices are judged; on a load of named files alone "
+            "the AI judge weighs them."
         ),
     )
 
@@ -91,11 +93,20 @@ class ConformsToSchema(PracticeGraphRule):
 
     def check_practice(self, context: RuleCheckContext) -> list[tuple[str, str]]:
         """Each node missing a relationship its schema requires at the practice's current fidelity, with what it lacks."""
+        if self._reads_only_named_files(context):
+            return []
         schema = context.practice.reading.in_graph.rule_run.schema
         stage = schema.current_stage
         due = [requirement for requirement in schema.requirements if requirement.required_at(stage)]
         found = ((node, requirement.gap_on(node, context)) for requirement in due for node in requirement.owners(context))
         return [(node.node_id, gap) for node, gap in found if gap]
+
+
+    def _reads_only_named_files(self, context: RuleCheckContext) -> bool:
+        """Whether the graph holds only the files a load named (`graph.load_files`), not the session's whole working
+        copy: links across practices cannot be judged there, so the AI judge weighs them instead. A refresh of a
+        session's graph names files too, but stands on the whole working copy, so it is judged."""
+        return not context.graph.scope.over_whole
 
 
 FRAMEWORK_RULES: dict[str, ConformsToSchema] = {ConformsToSchema.slug: ConformsToSchema()}
