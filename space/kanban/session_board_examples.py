@@ -166,6 +166,7 @@ ENTER_CARD_DETAILS_IN_SPECIFICATION = ENTER_CARD_DETAILS_CHILD.with_log(MOVED_IN
 ENTER_CARD_DETAILS_PULLED_OUT_DONE = replace(ENTER_CARD_DETAILS_CHILD.with_log(DONE_IN_DISCOVERY), fields={**ENTER_CARD_DETAILS_CHILD.fields, "pulled_out": True})
 CONFIRM_ORDER_CHILD = SessionSeed("confirm-order", "Confirm order", fields={"scope": "story", "parent": "checkout-flow"})
 CONFIRM_ORDER_DONE_IN_DISCOVERY = CONFIRM_ORDER_CHILD.with_log(DONE_IN_DISCOVERY)
+CONFIRM_ORDER_PULLED_OUT_DONE = replace(CONFIRM_ORDER_DONE_IN_DISCOVERY, fields={**CONFIRM_ORDER_CHILD.fields, "pulled_out": True})
 PULLED_OUT_TITLE = "Checkout flow.Enter card details"
 
 # The scenarios' own session log lines.

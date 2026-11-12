@@ -22,6 +22,7 @@ from space.kanban.session_board_examples import (
     CHECKOUT_FLOW,
     CONFIRM_ORDER_CHILD,
     CONFIRM_ORDER_DONE_IN_DISCOVERY,
+    CONFIRM_ORDER_PULLED_OUT_DONE,
     GIFT_CARDS_IN_BACKLOG,
     ENTER_CARD_DETAILS,
     ENTER_CARD_DETAILS_CHILD,
@@ -315,11 +316,11 @@ def _(s):
 
 @shared_stories.scenario("Place Parent At Leftmost Child Stage", "Move a parent on when its last child moves on")
 def _(s):
-    @s.given('the ticket checkout-flow has the child tickets enter-card-details in Specification and confirm-order Done in Discovery')
+    @s.given('the ticket checkout-flow has the child tickets enter-card-details in Specification and confirm-order, pulled out of it, Done in Discovery')
     def _(world):
         world.project.seed_session(CHECKOUT_FLOW)
         world.project.seed_session(ENTER_CARD_DETAILS_IN_SPECIFICATION)
-        world.project.seed_session(CONFIRM_ORDER_DONE_IN_DISCOVERY)
+        world.project.seed_session(CONFIRM_ORDER_PULLED_OUT_DONE)
 
     @s.when('the Person moves confirm-order to Specification')
     def _(world):
