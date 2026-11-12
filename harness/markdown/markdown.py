@@ -1,6 +1,7 @@
 """Co-located markdown extract and HTML conversion — not assembly."""
 from __future__ import annotations
 
+import copy
 import functools
 import threading
 import html
@@ -8,7 +9,7 @@ import inspect
 import re
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Callable, Literal, TypeVar, get_args, get_origin, get_type_hints
+from typing import Any, Callable, ClassVar, Literal, TypeVar, get_args, get_origin, get_type_hints
 
 from harness.annotations.class_folder import class_folder
 from harness.annotations.name import Name
@@ -469,7 +470,12 @@ class MarkdownScope:
 
 
 class AssetLocator:
-    """Finds where one label of an owner's markdown lives, from the scope the owner handed over."""
+    """Finds where one label of an owner's markdown lives, from the scope the owner handed over.
+
+    Every session and graph a process makes reads its practices' markdown again, so a location found once is kept
+    with the modification times of the folders searched for it, and searched for again only when one of them changes."""
+
+    _found: ClassVar[dict[tuple[MarkdownScope, str], tuple[tuple[int | None, ...], AssetLocation]]] = {}
 
     def __init__(self, scope: MarkdownScope, label: str) -> None:
         self._scope = scope
@@ -477,7 +483,6 @@ class AssetLocator:
         self._module_dir = scope.folder
         self._domain_slug = scope.slug
         self._search_root_path = scope.folder
-        self._active_format: str | None = None
 
     @property
     def fidelity(self) -> str | None:
@@ -499,7 +504,24 @@ class AssetLocator:
         )
 
     def locate(self) -> AssetLocation:
-        return self._stamp(self._locate())
+        key = (self._scope, self._label)
+        searched = self._searched_folders_changed_at()
+        held = self._found.get(key)
+        if held is not None and held[0] == searched:
+            return held[1]
+        location = self._stamp(self._locate())
+        self._found[key] = (searched, location)
+        return location
+
+    def _searched_folders_changed_at(self) -> tuple[int | None, ...]:
+        """When each folder a search looks in last had an entry added, removed, or renamed; none for one not there."""
+        changed_at: list[int | None] = []
+        for folder in (self._module_dir, *self._template_folders()):
+            try:
+                changed_at.append(folder.stat().st_mtime_ns)
+            except OSError:
+                changed_at.append(None)
+        return tuple(changed_at)
 
     def _locate(self) -> AssetLocation:
         if self._label == "templates":
@@ -507,7 +529,6 @@ class AssetLocator:
         return self._locate_under()
 
     def _locate_template_or_missing(self) -> AssetLocation:
-        self._active_format = self.format
         located = self._locate_templates()
         if located.path is not None and located.path.is_file():
             return located
@@ -592,7 +613,7 @@ class AssetLocator:
                 for slug in Name(name).spellings
                 for extra in (slug, f"{slug}-templates", f"{slug}-template")
             ]
-        extension = Format(self._active_format).template_extension
+        extension = Format(self.format).template_extension
         for folder in self._template_folders():
             located = self._template_in_folder(folder, stems, extension)
             if located is not None:
@@ -602,9 +623,9 @@ class AssetLocator:
     def _template_folders(self) -> list[Path]:
         folders: list[Path] = []
         shared = self._module_dir / "templates"
-        if self._active_format:
-            folders.append(shared / Format(self._active_format).short)
-            folders.append(self._module_dir / "formats" / self._active_format)
+        if self.format:
+            folders.append(shared / Format(self.format).short)
+            folders.append(self._module_dir / "formats" / self.format)
         folders.append(shared)
         return folders
 
@@ -624,9 +645,19 @@ _YAML_FENCE = re.compile(r"```ya?ml\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
 
 
 class YamlFields:
-    """The fields of the ```yaml blocks in a markdown text, merged in order. The owner of the text applies them."""
+    """The fields of the ```yaml blocks in a markdown text, merged in order. The owner of the text applies them.
+
+    A practice's markdown is read again for every session and graph a process makes, and parsing its YAML is the slow
+    part, so each body is parsed once per process; every caller gets its own copy of the fields to change."""
+
+    _parsed: ClassVar[dict[str, dict[str, Any]]] = {}
 
     def mapping(self, body: str) -> dict[str, Any]:
+        if body not in self._parsed:
+            self._parsed[body] = self._parse(body)
+        return copy.deepcopy(self._parsed[body])
+
+    def _parse(self, body: str) -> dict[str, Any]:
         try:
             import yaml
         except ImportError:
