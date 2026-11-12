@@ -1,0 +1,577 @@
+2026-11-11T15:15:55Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:55 `self._graph = CheckedGraph(self.session, fidelities, paths, graph, self.call)` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-context-driven-delivery\harness at C:/dev/abd-cdd-maintain-tickets-on-boar/harness/.context/stories/story-map.md, read from C:\dev\abd-cdd-maintain-tickets-on-boar; name paths from the project's root, or absolute
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 530, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in <lambda>
+    self._ran(lambda: exec(code, environment, environment), statement)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 23, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 42, in __init__
+    self.prefixes = self._prefixes(edited)
+                    ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 128, in _prefixes
+    named = [path for path in self._from_session_root(edited) if path not in self.unchecked_files]
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 137, in _from_session_root
+    return [self.session.session_files.from_root(item) for item in paths or []]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\session_files.py", line 88, in from_root
+    raise NamedPathNotFoundError(str(named), self._session.repo_path, self._session.work_root)
+space.session.session_files.NamedPathNotFoundError: nothing under the session's root C:\dev\abd-context-driven-delivery\harness at C:/dev/abd-cdd-maintain-tickets-on-boar/harness/.context/stories/story-map.md, read from C:\dev\abd-cdd-maintain-tickets-on-boar; name paths from the project's root, or absolute
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 786, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 495, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 502, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1071, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1075, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1093, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 306, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 322, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 558, in _walk
+    self._execute(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in _execute
+    self._ran(lambda: exec(code, environment, environment), statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 534, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:55 `self._graph = CheckedGraph(self.session, fidelities, paths, graph, self.call)` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-context-driven-delivery\harness at C:/dev/abd-cdd-maintain-tickets-on-boar/harness/.context/stories/story-map.md, read from C:\dev\abd-cdd-maintain-tickets-on-boar; name paths from the project's root, or absolute
+2026-11-11T15:16:00Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:55 `self._graph = CheckedGraph(self.session, fidelities, paths, graph, self.call)` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-context-driven-delivery\harness at harness/.context/stories/story-map.md, read from C:\dev\abd-cdd-maintain-tickets-on-boar; name paths from the project's root, or absolute
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 530, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in <lambda>
+    self._ran(lambda: exec(code, environment, environment), statement)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 23, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 42, in __init__
+    self.prefixes = self._prefixes(edited)
+                    ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 128, in _prefixes
+    named = [path for path in self._from_session_root(edited) if path not in self.unchecked_files]
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 137, in _from_session_root
+    return [self.session.session_files.from_root(item) for item in paths or []]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\session_files.py", line 88, in from_root
+    raise NamedPathNotFoundError(str(named), self._session.repo_path, self._session.work_root)
+space.session.session_files.NamedPathNotFoundError: nothing under the session's root C:\dev\abd-context-driven-delivery\harness at harness/.context/stories/story-map.md, read from C:\dev\abd-cdd-maintain-tickets-on-boar; name paths from the project's root, or absolute
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 786, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 495, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 502, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1071, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1075, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1093, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 306, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 322, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 558, in _walk
+    self._execute(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in _execute
+    self._ran(lambda: exec(code, environment, environment), statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 534, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:55 `self._graph = CheckedGraph(self.session, fidelities, paths, graph, self.call)` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-context-driven-delivery\harness at harness/.context/stories/story-map.md, read from C:\dev\abd-cdd-maintain-tickets-on-boar; name paths from the project's root, or absolute
+2026-11-11T15:16:14Z session.choose_workpath SessionNotFoundError: no session at 'maintain-tickets-on-board': name the session.json of the session to work on
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 787, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 491, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 502, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 952, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 789, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 812, in on_the_call
+    return function(owner, *arguments, **named)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\session.py", line 100, in from_file
+    return call.session_named(session)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\tool_call.py", line 168, in session_named
+    return ToolCall._sessions.named_in(session_file, self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\sessions.py", line 382, in named_in
+    return self.of_project(project).with_file(session_file)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\sessions.py", line 179, in with_file
+    raise SessionNotFoundError(session_file)
+space.session.session.SessionNotFoundError: no session at 'maintain-tickets-on-board': name the session.json of the session to work on
+2026-11-11T15:19:00Z generate.generate UnknownGuidance: no practice or fidelity has the slug 'stories-scenarios'; the slugs are stories, stories-story-map, stories-scenarios, stories-acceptance-tests, ddd, ddd-bounded-context, ddd-model, ddd-tactics, ux, ux-ia, ux-mockup, ux-front-end-code, clean-engineering, clean-engineering-modules, clean-engineering-model, clean-engineering-code, bdd, bdd-behavior, bdd-realization, bdd-development
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 786, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 495, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 502, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1067, in answer
+    tool = self.on(self.toolset.for_call(call))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 393, in for_call
+    action.work.take(guidance)
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 231, in take
+    self._items = argument.items if self.text is None else []
+                  ^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 113, in items
+    one = self._one_item() if not isinstance(self._guidance, list) else None
+          ^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 134, in _one_item
+    return self._item(self._guidance)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 155, in _item
+    return self._mapped(item) if isinstance(item, dict) else item
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 171, in _mapped
+    raise UnknownGuidance(toolset, self.slugs)
+harness.guidance_actions.guidance_actions.UnknownGuidance: no practice or fidelity has the slug 'stories-scenarios'; the slugs are stories, stories-story-map, stories-scenarios, stories-acceptance-tests, ddd, ddd-bounded-context, ddd-model, ddd-tactics, ux, ux-ia, ux-mockup, ux-front-end-code, clean-engineering, clean-engineering-modules, clean-engineering-model, clean-engineering-code, bdd, bdd-behavior, bdd-realization, bdd-development
+2026-11-11T15:38:48Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:55 `self._graph = CheckedGraph(self.session, fidelities, paths, graph, self.call)` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-cdd-maintain-tickets-on-boar\harness at space/kanban/maintain-tickets.story.shared.py, read from C:\dev\abd-cdd-maintain-tickets-on-boar; name paths from the project's root, or absolute
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 530, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in <lambda>
+    self._ran(lambda: exec(code, environment, environment), statement)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 23, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 42, in __init__
+    self.prefixes = self._prefixes(edited)
+                    ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 128, in _prefixes
+    named = [path for path in self._from_session_root(edited) if path not in self.unchecked_files]
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 137, in _from_session_root
+    return [self.session.session_files.from_root(item) for item in paths or []]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\session_files.py", line 88, in from_root
+    raise NamedPathNotFoundError(str(named), self._session.repo_path, self._session.work_root)
+space.session.session_files.NamedPathNotFoundError: nothing under the session's root C:\dev\abd-cdd-maintain-tickets-on-boar\harness at space/kanban/maintain-tickets.story.shared.py, read from C:\dev\abd-cdd-maintain-tickets-on-boar; name paths from the project's root, or absolute
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 786, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 495, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 502, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1071, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1075, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1093, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 306, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 322, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 558, in _walk
+    self._execute(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in _execute
+    self._ran(lambda: exec(code, environment, environment), statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 534, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:55 `self._graph = CheckedGraph(self.session, fidelities, paths, graph, self.call)` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-cdd-maintain-tickets-on-boar\harness at space/kanban/maintain-tickets.story.shared.py, read from C:\dev\abd-cdd-maintain-tickets-on-boar; name paths from the project's root, or absolute
+2026-11-11T16:54:40Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:55 `self._graph = CheckedGraph(self.session, fidelities, paths, graph, self.call)` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-cdd-maintain-tickets-on-boar\harness at C:/dev/abd-cdd-canvas-format-chip/harness/.context/stories/story-map.md, read from C:\dev\abd-cdd-maintain-tickets-on-boar; name paths from the project's root, or absolute
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 530, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in <lambda>
+    self._ran(lambda: exec(code, environment, environment), statement)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 23, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 42, in __init__
+    self.prefixes = self._prefixes(edited)
+                    ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 128, in _prefixes
+    named = [path for path in self._from_session_root(edited) if path not in self.unchecked_files]
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 137, in _from_session_root
+    return [self.session.session_files.from_root(item) for item in paths or []]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\session_files.py", line 88, in from_root
+    raise NamedPathNotFoundError(str(named), self._session.repo_path, self._session.work_root)
+space.session.session_files.NamedPathNotFoundError: nothing under the session's root C:\dev\abd-cdd-maintain-tickets-on-boar\harness at C:/dev/abd-cdd-canvas-format-chip/harness/.context/stories/story-map.md, read from C:\dev\abd-cdd-maintain-tickets-on-boar; name paths from the project's root, or absolute
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 786, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 495, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 502, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1071, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1075, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1093, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 306, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 322, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 558, in _walk
+    self._execute(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in _execute
+    self._ran(lambda: exec(code, environment, environment), statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 534, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:55 `self._graph = CheckedGraph(self.session, fidelities, paths, graph, self.call)` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-cdd-maintain-tickets-on-boar\harness at C:/dev/abd-cdd-canvas-format-chip/harness/.context/stories/story-map.md, read from C:\dev\abd-cdd-maintain-tickets-on-boar; name paths from the project's root, or absolute
+2026-11-11T16:54:48Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:55 `self._graph = CheckedGraph(self.session, fidelities, paths, graph, self.call)` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-cdd-maintain-tickets-on-boar\harness at C:/dev/abd-cdd-canvas-format-chip/harness/.context/stories/story-map.md, read from C:\dev\abd-cdd-maintain-tickets-on-boar; name paths from the project's root, or absolute
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 530, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in <lambda>
+    self._ran(lambda: exec(code, environment, environment), statement)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 23, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 42, in __init__
+    self.prefixes = self._prefixes(edited)
+                    ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 128, in _prefixes
+    named = [path for path in self._from_session_root(edited) if path not in self.unchecked_files]
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 137, in _from_session_root
+    return [self.session.session_files.from_root(item) for item in paths or []]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\session_files.py", line 88, in from_root
+    raise NamedPathNotFoundError(str(named), self._session.repo_path, self._session.work_root)
+space.session.session_files.NamedPathNotFoundError: nothing under the session's root C:\dev\abd-cdd-maintain-tickets-on-boar\harness at C:/dev/abd-cdd-canvas-format-chip/harness/.context/stories/story-map.md, read from C:\dev\abd-cdd-maintain-tickets-on-boar; name paths from the project's root, or absolute
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 786, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 495, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 502, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1071, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1075, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1093, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 306, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 322, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 558, in _walk
+    self._execute(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in _execute
+    self._ran(lambda: exec(code, environment, environment), statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 534, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:55 `self._graph = CheckedGraph(self.session, fidelities, paths, graph, self.call)` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-cdd-maintain-tickets-on-boar\harness at C:/dev/abd-cdd-canvas-format-chip/harness/.context/stories/story-map.md, read from C:\dev\abd-cdd-maintain-tickets-on-boar; name paths from the project's root, or absolute
+2026-11-11T16:54:56Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:55 `self._graph = CheckedGraph(self.session, fidelities, paths, graph, self.call)` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-cdd-maintain-tickets-on-boar\harness at C:/dev/abd-cdd-canvas-format-chip/harness/.context/stories/story-map.md, read from C:\dev\abd-cdd-maintain-tickets-on-boar; name paths from the project's root, or absolute
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 530, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in <lambda>
+    self._ran(lambda: exec(code, environment, environment), statement)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 23, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 42, in __init__
+    self.prefixes = self._prefixes(edited)
+                    ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 128, in _prefixes
+    named = [path for path in self._from_session_root(edited) if path not in self.unchecked_files]
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 137, in _from_session_root
+    return [self.session.session_files.from_root(item) for item in paths or []]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\session_files.py", line 88, in from_root
+    raise NamedPathNotFoundError(str(named), self._session.repo_path, self._session.work_root)
+space.session.session_files.NamedPathNotFoundError: nothing under the session's root C:\dev\abd-cdd-maintain-tickets-on-boar\harness at C:/dev/abd-cdd-canvas-format-chip/harness/.context/stories/story-map.md, read from C:\dev\abd-cdd-maintain-tickets-on-boar; name paths from the project's root, or absolute
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 786, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 495, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 502, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1071, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1075, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1093, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 306, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 322, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 558, in _walk
+    self._execute(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in _execute
+    self._ran(lambda: exec(code, environment, environment), statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 534, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:55 `self._graph = CheckedGraph(self.session, fidelities, paths, graph, self.call)` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-cdd-maintain-tickets-on-boar\harness at C:/dev/abd-cdd-canvas-format-chip/harness/.context/stories/story-map.md, read from C:\dev\abd-cdd-maintain-tickets-on-boar; name paths from the project's root, or absolute
+2026-11-11T21:39:53Z validate AttributeError: 'dict' object has no attribute 'validate'
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 577, in run
+    return self.each(operation)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 550, in each
+    return [operation(self.at_fidelity(item)) for item in self.listed()]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 38, in on
+AttributeError: 'dict' object has no attribute 'validate'
+2026-11-11T21:39:53Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:77 `parts = [part for part in self.run(on, action='validate') if part]` failed: AttributeError: 'dict' object has no attribute 'validate'
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 530, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in <lambda>
+    self._ran(lambda: exec(code, environment, environment), statement)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 45, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 577, in run
+    return self.each(operation)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 550, in each
+    return [operation(self.at_fidelity(item)) for item in self.listed()]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 38, in on
+AttributeError: 'dict' object has no attribute 'validate'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 786, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 495, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 502, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1135, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1139, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1157, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 306, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 322, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 558, in _walk
+    self._execute(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in _execute
+    self._ran(lambda: exec(code, environment, environment), statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 534, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:77 `parts = [part for part in self.run(on, action='validate') if part]` failed: AttributeError: 'dict' object has no attribute 'validate'
+2026-11-11T22:24:27Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:57 `graph_paths = self._graph.check_beside(self._reports)` failed: GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 343, in carry_out
+    self._carry_out(order.step)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 379, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 394, in _read_working_copy
+    graph.practices.check()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_practices.py", line 146, in check
+    practice.reading.in_graph.rule_run.check()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 1101, in check
+    for node_id, message in check.check_practice(context):
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\patterns\lern_domain_driven\practices\stories\rules\front_end_rules.py", line 26, in check_practice
+    (story.id, f"{story.source.file}: user story `{story.name}` has no front end: no screen story "
+     ^^^^^^^^
+AttributeError: 'MarkdownStory' object has no attribute 'id'
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 530, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in <lambda>
+    self._ran(lambda: exec(code, environment, environment), statement)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 25, in <module>
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 65, in check_beside
+    self.files = self._files(reports)
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 102, in _files
+    return [self._built_at(reports.graph_file())]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 136, in _built_at
+    self.session.graph.refreshed(self.prefixes, destination, self._call)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 1412, in refreshed
+    self.build.refresh(paths, call, CheckedFiles(paths, checked))
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 310, in refresh
+    self.run(BuildStep.REFRESH, call, checked=checked)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 324, in run
+    WorkerBuild(report_progress).carry_out(lambda: self._order(step, state, saves, checked), answer, self._hold, self.graph.practices.take)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 241, in carry_out
+    raise GraphBuildFailed(exit_code, errors_file.read_text(encoding="utf-8", errors="replace"))
+harness.graph.graph_build.GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 343, in carry_out
+    self._carry_out(order.step)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 379, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 394, in _read_working_copy
+    graph.practices.check()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_practices.py", line 146, in check
+    practice.reading.in_graph.rule_run.check()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 1101, in check
+    for node_id, message in check.check_practice(context):
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\patterns\lern_domain_driven\practices\stories\rules\front_end_rules.py", line 26, in check_practice
+    (story.id, f"{story.source.file}: user story `{story.name}` has no front end: no screen story "
+     ^^^^^^^^
+AttributeError: 'MarkdownStory' object has no attribute 'id'
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 786, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 495, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 502, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1135, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1139, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1157, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 306, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 322, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 558, in _walk
+    self._execute(statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 525, in _execute
+    self._ran(lambda: exec(code, environment, environment), statement)
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\recipe.py", line 534, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\runtime\cdd_guidance\actions\validate\validate.py:57 `graph_paths = self._graph.check_beside(self._reports)` failed: GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 343, in carry_out
+    self._carry_out(order.step)
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 379, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_build.py", line 394, in _read_working_copy
+    graph.practices.check()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph_practices.py", line 146, in check
+    practice.reading.in_graph.rule_run.check()
+  File "C:\Users\jeffa\.cdd\runtime\harness\graph\graph.py", line 1101, in check
+    for node_id, message in check.check_practice(context):
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\cdd_guidance\patterns\lern_domain_driven\practices\stories\rules\front_end_rules.py", line 26, in check_practice
+    (story.id, f"{story.source.file}: user story `{story.name}` has no front end: no screen story "
+     ^^^^^^^^
+AttributeError: 'MarkdownStory' object has no attribute 'id'
+

@@ -1,0 +1,446 @@
+2026-11-11T17:00:24Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T17:00:24Z NO_EVENT merged={}
+2026-11-11T17:11:19Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T17:11:19Z NO_EVENT merged={}
+2026-11-11T17:16:54Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T17:16:54Z NO_EVENT merged={}
+2026-11-11T17:17:46Z EVENT 'afterAgentResponse' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T17:17:46Z ENABLED ['(none)']
+2026-11-11T17:17:46Z MERGED {"permission": "allow"}
+2026-11-11T17:17:46Z EVENT 'afterAgentResponse' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T17:17:46Z HANDLER _DispatchFixture.on_after result={"permission": "allow", "agent_message": "ran"}
+2026-11-11T17:17:46Z ENABLED ['_DispatchFixture.on_after']
+2026-11-11T17:17:46Z MERGED {"permission": "allow", "agent_message": "ran"}
+2026-11-11T17:17:46Z EVENT 'stop' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T17:17:46Z HANDLER _StopFixture.on_stop result={"followup_message": "/turn"}
+2026-11-11T17:17:46Z ENABLED ['_StopFixture.on_stop']
+2026-11-11T17:17:46Z MERGED {"permission": "allow", "followup_message": "/turn"}
+2026-11-11T17:17:46Z EVENT 'beforeSubmitPrompt' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T17:17:46Z HANDLER _MessageFixture.on_before result={"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-11-11T17:17:46Z ENABLED ['_MessageFixture.on_before']
+2026-11-11T17:17:46Z MERGED {"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-11-11T17:17:46Z EVENT 'preToolUse' tool='Write' path='' conversation_id='' payload_keys=['hook_event_name', 'tool_name']
+2026-11-11T17:17:46Z HANDLER _FirstRules.on_first result={"permission": "allow", "additional_context": "clean engineering code rules"}
+2026-11-11T17:17:46Z HANDLER _SecondRules.on_second result={"permission": "allow", "additional_context": "ddd tactics rules"}
+2026-11-11T17:17:46Z ENABLED ['_FirstRules.on_first', '_SecondRules.on_second']
+2026-11-11T17:17:46Z MERGED {"permission": "allow", "additional_context": "clean engineering code rules\n\nddd tactics rules"}
+2026-11-11T17:17:46Z EVENT 'afterFileEdit' tool='' path='sandbox/mm3e/no-yaml/story-map.md' conversation_id='' payload_keys=['file_path', 'hook_event_name']
+2026-11-11T17:17:46Z HANDLER _FileEditRules.inject_rules result={"permission": "allow", "additional_context": "sandbox/mm3e/no-yaml/story-map.md"}
+2026-11-11T17:17:46Z ENABLED ['_FileEditRules.inject_rules']
+2026-11-11T17:17:46Z MERGED {"permission": "allow", "additional_context": "sandbox/mm3e/no-yaml/story-map.md"}
+2026-11-11T17:17:47Z EVENT 'postToolUse' tool='Write' path='' conversation_id='' payload_keys=['hook_event_name', 'tool_name']
+2026-11-11T17:17:47Z HANDLER _Once.on_first result={"permission": "allow", "additional_context": "keep-operations-small-focused"}
+2026-11-11T17:17:47Z HANDLER _Again.on_second result={"permission": "allow", "additional_context": "keep-operations-small-focused"}
+2026-11-11T17:17:47Z ENABLED ['_Once.on_first', '_Again.on_second']
+2026-11-11T17:17:47Z MERGED {"permission": "allow", "additional_context": "keep-operations-small-focused"}
+2026-11-11T17:17:47Z EVENT 'preToolUse' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T17:17:47Z HANDLER _DescribedFixture.on_pre_tool result={"permission": "allow", "agent_message": "Honor the hook operation description."}
+2026-11-11T17:17:47Z ENABLED ['_DescribedFixture.on_pre_tool']
+2026-11-11T17:17:47Z MERGED {"permission": "allow", "agent_message": "Honor the hook operation description."}
+2026-11-11T17:17:47Z EVENT 'sessionStart' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T17:17:47Z HANDLER _StatusFixture.on_session_start result={"permission": "allow"}
+2026-11-11T17:17:47Z ENABLED ['_StatusFixture.on_session_start']
+2026-11-11T17:17:47Z MERGED {"permission": "allow"}
+2026-11-11T17:17:47Z EVENT 'sessionStart' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T17:17:47Z HANDLER _StatusFixture.on_session_start result={"permission": "allow"}
+2026-11-11T17:17:47Z ENABLED ['_StatusFixture.on_session_start']
+2026-11-11T17:17:47Z MERGED {"permission": "allow"}
+2026-11-11T17:17:47Z EVENT 'stop' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T17:17:47Z ENABLED ['_RaisingFixture.on_stop']
+2026-11-11T17:17:47Z MERGED {"permission": "allow"}
+2026-11-11T17:17:47Z EVENT 'stop' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T17:17:47Z ENABLED ['_RaisingFixture.on_stop']
+2026-11-11T17:17:47Z MERGED {"permission": "allow"}
+2026-11-11T17:17:47Z EVENT 'stop' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T17:17:47Z ENABLED ['_RaisingFixture.on_stop']
+2026-11-11T17:17:47Z MERGED {"permission": "allow"}
+2026-11-11T17:17:47Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T17:17:47Z NO_EVENT merged={}
+2026-11-11T17:17:47Z EVENT 'postToolUse' tool='Write' path='space/kanban/.context/kanban-sketch.md' conversation_id='' payload_keys=['hook_event_name', 'tool_input', 'tool_name']
+2026-11-11T17:17:47Z ENABLED ['(none)']
+2026-11-11T17:17:47Z MERGED {"permission": "allow"}
+2026-11-11T17:17:48Z EVENT 'postToolUse' tool='Write' path='space/kanban/.context/kanban-sketch.md' conversation_id='' payload_keys=['hook_event_name', 'tool_input', 'tool_name']
+2026-11-11T17:17:48Z ENABLED ['(none)']
+2026-11-11T17:17:48Z MERGED {"permission": "allow"}
+2026-11-11T17:17:48Z EVENT 'postToolUse' tool='sketch.sketch' path='' conversation_id='' payload_keys=['hook_event_name', 'tool_input', 'tool_name']
+2026-11-11T17:17:48Z HANDLER Sketch.inject_rules result={"permission": "allow"}
+2026-11-11T17:17:48Z ENABLED ['Sketch.inject_rules']
+2026-11-11T17:17:48Z MERGED {"permission": "allow"}
+2026-11-11T17:17:48Z EVENT 'postToolUse' tool='_listed_inject_action' path='' conversation_id='' payload_keys=['hook_event_name', 'tool_input', 'tool_name']
+2026-11-11T17:17:48Z HANDLER _ListedInjectAction.inject_rules result={"permission": "allow"}
+2026-11-11T17:17:48Z ENABLED ['_ListedInjectAction.inject_rules']
+2026-11-11T17:17:48Z MERGED {"permission": "allow"}
+2026-11-11T17:22:22Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T17:22:22Z NO_EVENT merged={}
+2026-11-11T17:22:30Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T17:22:30Z NO_EVENT merged={}
+2026-11-11T17:22:31Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T17:22:31Z NO_EVENT merged={}
+2026-11-11T17:29:21Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T17:29:21Z NO_EVENT merged={}
+2026-11-11T17:49:51Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T17:49:51Z NO_EVENT merged={}
+2026-11-11T18:09:08Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:09:08Z NO_EVENT merged={}
+2026-11-11T18:09:11Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:09:11Z NO_EVENT merged={}
+2026-11-11T18:09:12Z EVENT 'afterAgentResponse' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T18:09:12Z ENABLED ['(none)']
+2026-11-11T18:09:12Z MERGED {"permission": "allow"}
+2026-11-11T18:09:12Z EVENT 'afterAgentResponse' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T18:09:12Z HANDLER _DispatchFixture.on_after result={"permission": "allow", "agent_message": "ran"}
+2026-11-11T18:09:12Z ENABLED ['_DispatchFixture.on_after']
+2026-11-11T18:09:12Z MERGED {"permission": "allow", "agent_message": "ran"}
+2026-11-11T18:09:12Z EVENT 'stop' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T18:09:12Z HANDLER _StopFixture.on_stop result={"followup_message": "/turn"}
+2026-11-11T18:09:12Z ENABLED ['_StopFixture.on_stop']
+2026-11-11T18:09:12Z MERGED {"permission": "allow", "followup_message": "/turn"}
+2026-11-11T18:09:12Z EVENT 'beforeSubmitPrompt' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T18:09:12Z HANDLER _MessageFixture.on_before result={"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-11-11T18:09:12Z ENABLED ['_MessageFixture.on_before']
+2026-11-11T18:09:12Z MERGED {"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-11-11T18:09:12Z EVENT 'preToolUse' tool='Write' path='' conversation_id='' payload_keys=['hook_event_name', 'tool_name']
+2026-11-11T18:09:12Z HANDLER _FirstRules.on_first result={"permission": "allow", "additional_context": "clean engineering code rules"}
+2026-11-11T18:09:12Z HANDLER _SecondRules.on_second result={"permission": "allow", "additional_context": "ddd tactics rules"}
+2026-11-11T18:09:12Z ENABLED ['_FirstRules.on_first', '_SecondRules.on_second']
+2026-11-11T18:09:12Z MERGED {"permission": "allow", "additional_context": "clean engineering code rules\n\nddd tactics rules"}
+2026-11-11T18:09:12Z EVENT 'afterFileEdit' tool='' path='sandbox/mm3e/no-yaml/story-map.md' conversation_id='' payload_keys=['file_path', 'hook_event_name']
+2026-11-11T18:09:12Z HANDLER _FileEditRules.inject_rules result={"permission": "allow", "additional_context": "sandbox/mm3e/no-yaml/story-map.md"}
+2026-11-11T18:09:12Z ENABLED ['_FileEditRules.inject_rules']
+2026-11-11T18:09:12Z MERGED {"permission": "allow", "additional_context": "sandbox/mm3e/no-yaml/story-map.md"}
+2026-11-11T18:09:13Z EVENT 'postToolUse' tool='Write' path='' conversation_id='' payload_keys=['hook_event_name', 'tool_name']
+2026-11-11T18:09:13Z HANDLER _Once.on_first result={"permission": "allow", "additional_context": "keep-operations-small-focused"}
+2026-11-11T18:09:13Z HANDLER _Again.on_second result={"permission": "allow", "additional_context": "keep-operations-small-focused"}
+2026-11-11T18:09:13Z ENABLED ['_Once.on_first', '_Again.on_second']
+2026-11-11T18:09:13Z MERGED {"permission": "allow", "additional_context": "keep-operations-small-focused"}
+2026-11-11T18:09:13Z EVENT 'preToolUse' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T18:09:13Z HANDLER _DescribedFixture.on_pre_tool result={"permission": "allow", "agent_message": "Honor the hook operation description."}
+2026-11-11T18:09:13Z ENABLED ['_DescribedFixture.on_pre_tool']
+2026-11-11T18:09:13Z MERGED {"permission": "allow", "agent_message": "Honor the hook operation description."}
+2026-11-11T18:09:13Z EVENT 'sessionStart' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T18:09:13Z HANDLER _StatusFixture.on_session_start result={"permission": "allow"}
+2026-11-11T18:09:13Z ENABLED ['_StatusFixture.on_session_start']
+2026-11-11T18:09:13Z MERGED {"permission": "allow"}
+2026-11-11T18:09:13Z EVENT 'sessionStart' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T18:09:13Z HANDLER _StatusFixture.on_session_start result={"permission": "allow"}
+2026-11-11T18:09:13Z ENABLED ['_StatusFixture.on_session_start']
+2026-11-11T18:09:13Z MERGED {"permission": "allow"}
+2026-11-11T18:09:13Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:09:13Z NO_EVENT merged={}
+2026-11-11T18:09:14Z EVENT 'stop' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T18:09:14Z ENABLED ['_RaisingFixture.on_stop']
+2026-11-11T18:09:14Z MERGED {"permission": "allow"}
+2026-11-11T18:09:14Z EVENT 'stop' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T18:09:14Z ENABLED ['_RaisingFixture.on_stop']
+2026-11-11T18:09:14Z MERGED {"permission": "allow"}
+2026-11-11T18:09:15Z EVENT 'stop' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T18:09:15Z ENABLED ['_RaisingFixture.on_stop']
+2026-11-11T18:09:15Z MERGED {"permission": "allow"}
+2026-11-11T18:09:15Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:09:15Z NO_EVENT merged={}
+2026-11-11T18:09:16Z EVENT 'postToolUse' tool='Write' path='space/kanban/.context/kanban-sketch.md' conversation_id='' payload_keys=['hook_event_name', 'tool_input', 'tool_name']
+2026-11-11T18:09:16Z ENABLED ['(none)']
+2026-11-11T18:09:16Z MERGED {"permission": "allow"}
+2026-11-11T18:09:16Z EVENT 'postToolUse' tool='Write' path='space/kanban/.context/kanban-sketch.md' conversation_id='' payload_keys=['hook_event_name', 'tool_input', 'tool_name']
+2026-11-11T18:09:16Z ENABLED ['(none)']
+2026-11-11T18:09:16Z MERGED {"permission": "allow"}
+2026-11-11T18:09:16Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:09:16Z NO_EVENT merged={}
+2026-11-11T18:09:17Z EVENT 'postToolUse' tool='sketch.sketch' path='' conversation_id='' payload_keys=['hook_event_name', 'tool_input', 'tool_name']
+2026-11-11T18:09:17Z HANDLER Sketch.inject_rules result={"permission": "allow"}
+2026-11-11T18:09:17Z ENABLED ['Sketch.inject_rules']
+2026-11-11T18:09:17Z MERGED {"permission": "allow"}
+2026-11-11T18:09:17Z EVENT 'postToolUse' tool='_listed_inject_action' path='' conversation_id='' payload_keys=['hook_event_name', 'tool_input', 'tool_name']
+2026-11-11T18:09:17Z HANDLER _ListedInjectAction.inject_rules result={"permission": "allow"}
+2026-11-11T18:09:17Z ENABLED ['_ListedInjectAction.inject_rules']
+2026-11-11T18:09:17Z MERGED {"permission": "allow"}
+2026-11-11T18:27:48Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:27:48Z NO_EVENT merged={}
+2026-11-11T18:27:51Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:27:51Z NO_EVENT merged={}
+2026-11-11T18:27:54Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:27:54Z NO_EVENT merged={}
+2026-11-11T18:27:58Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:27:58Z NO_EVENT merged={}
+2026-11-11T18:28:01Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:01Z NO_EVENT merged={}
+2026-11-11T18:28:04Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:04Z NO_EVENT merged={}
+2026-11-11T18:28:07Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:07Z NO_EVENT merged={}
+2026-11-11T18:28:10Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:10Z NO_EVENT merged={}
+2026-11-11T18:28:14Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:14Z NO_EVENT merged={}
+2026-11-11T18:28:17Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:17Z NO_EVENT merged={}
+2026-11-11T18:28:20Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:20Z NO_EVENT merged={}
+2026-11-11T18:28:23Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:23Z NO_EVENT merged={}
+2026-11-11T18:28:27Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:27Z NO_EVENT merged={}
+2026-11-11T18:28:30Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:30Z NO_EVENT merged={}
+2026-11-11T18:28:33Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:33Z NO_EVENT merged={}
+2026-11-11T18:28:37Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:37Z NO_EVENT merged={}
+2026-11-11T18:28:40Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:40Z NO_EVENT merged={}
+2026-11-11T18:28:43Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:43Z NO_EVENT merged={}
+2026-11-11T18:28:46Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:46Z NO_EVENT merged={}
+2026-11-11T18:28:50Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:50Z NO_EVENT merged={}
+2026-11-11T18:28:53Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:53Z NO_EVENT merged={}
+2026-11-11T18:28:56Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:56Z NO_EVENT merged={}
+2026-11-11T18:28:59Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:28:59Z NO_EVENT merged={}
+2026-11-11T18:29:02Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:29:02Z NO_EVENT merged={}
+2026-11-11T18:29:06Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:29:06Z NO_EVENT merged={}
+2026-11-11T18:29:09Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:29:09Z NO_EVENT merged={}
+2026-11-11T18:29:12Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:29:12Z NO_EVENT merged={}
+2026-11-11T18:29:15Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:29:15Z NO_EVENT merged={}
+2026-11-11T18:29:18Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:29:18Z NO_EVENT merged={}
+2026-11-11T18:29:22Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:29:22Z NO_EVENT merged={}
+2026-11-11T18:29:25Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:29:25Z NO_EVENT merged={}
+2026-11-11T18:29:28Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:29:28Z NO_EVENT merged={}
+2026-11-11T18:29:31Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:29:31Z NO_EVENT merged={}
+2026-11-11T18:29:34Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:29:34Z NO_EVENT merged={}
+2026-11-11T18:29:38Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:29:38Z NO_EVENT merged={}
+2026-11-11T18:29:41Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:29:41Z NO_EVENT merged={}
+2026-11-11T18:29:44Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:29:44Z NO_EVENT merged={}
+2026-11-11T18:29:47Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:29:47Z NO_EVENT merged={}
+2026-11-11T18:29:51Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:29:51Z NO_EVENT merged={}
+2026-11-11T18:29:54Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:29:54Z NO_EVENT merged={}
+2026-11-11T18:29:57Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:29:57Z NO_EVENT merged={}
+2026-11-11T18:30:00Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:00Z NO_EVENT merged={}
+2026-11-11T18:30:03Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:03Z NO_EVENT merged={}
+2026-11-11T18:30:07Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:07Z NO_EVENT merged={}
+2026-11-11T18:30:10Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:10Z NO_EVENT merged={}
+2026-11-11T18:30:13Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:13Z NO_EVENT merged={}
+2026-11-11T18:30:16Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:16Z NO_EVENT merged={}
+2026-11-11T18:30:20Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:20Z NO_EVENT merged={}
+2026-11-11T18:30:23Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:23Z NO_EVENT merged={}
+2026-11-11T18:30:26Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:26Z NO_EVENT merged={}
+2026-11-11T18:30:29Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:29Z NO_EVENT merged={}
+2026-11-11T18:30:32Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:32Z NO_EVENT merged={}
+2026-11-11T18:30:36Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:36Z NO_EVENT merged={}
+2026-11-11T18:30:39Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:39Z NO_EVENT merged={}
+2026-11-11T18:30:42Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:42Z NO_EVENT merged={}
+2026-11-11T18:30:45Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:45Z NO_EVENT merged={}
+2026-11-11T18:30:49Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:49Z NO_EVENT merged={}
+2026-11-11T18:30:52Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:52Z NO_EVENT merged={}
+2026-11-11T18:30:55Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:55Z NO_EVENT merged={}
+2026-11-11T18:30:58Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:30:58Z NO_EVENT merged={}
+2026-11-11T18:31:02Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:31:02Z NO_EVENT merged={}
+2026-11-11T18:31:05Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:31:05Z NO_EVENT merged={}
+2026-11-11T18:31:08Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:31:08Z NO_EVENT merged={}
+2026-11-11T18:31:11Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:31:11Z NO_EVENT merged={}
+2026-11-11T18:31:14Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:31:14Z NO_EVENT merged={}
+2026-11-11T18:31:18Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:31:18Z NO_EVENT merged={}
+2026-11-11T18:31:21Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:31:21Z NO_EVENT merged={}
+2026-11-11T18:31:24Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:31:24Z NO_EVENT merged={}
+2026-11-11T18:31:27Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:31:27Z NO_EVENT merged={}
+2026-11-11T18:31:31Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:31:31Z NO_EVENT merged={}
+2026-11-11T18:31:34Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:31:34Z NO_EVENT merged={}
+2026-11-11T18:31:37Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:31:37Z NO_EVENT merged={}
+2026-11-11T18:31:40Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:31:40Z NO_EVENT merged={}
+2026-11-11T18:31:43Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:31:43Z NO_EVENT merged={}
+2026-11-11T18:32:17Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:32:17Z NO_EVENT merged={}
+2026-11-11T18:32:22Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:32:22Z NO_EVENT merged={}
+2026-11-11T18:32:25Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:32:25Z NO_EVENT merged={}
+2026-11-11T18:32:29Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:32:29Z NO_EVENT merged={}
+2026-11-11T18:32:32Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:32:32Z NO_EVENT merged={}
+2026-11-11T18:32:35Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:32:35Z NO_EVENT merged={}
+2026-11-11T18:32:39Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:32:39Z NO_EVENT merged={}
+2026-11-11T18:32:42Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:32:42Z NO_EVENT merged={}
+2026-11-11T18:32:46Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:32:46Z NO_EVENT merged={}
+2026-11-11T18:32:49Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:32:49Z NO_EVENT merged={}
+2026-11-11T18:32:52Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:32:52Z NO_EVENT merged={}
+2026-11-11T18:32:55Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:32:55Z NO_EVENT merged={}
+2026-11-11T18:32:59Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:32:59Z NO_EVENT merged={}
+2026-11-11T18:33:02Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:33:02Z NO_EVENT merged={}
+2026-11-11T18:33:05Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:33:05Z NO_EVENT merged={}
+2026-11-11T18:33:08Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:33:08Z NO_EVENT merged={}
+2026-11-11T18:33:12Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:33:12Z NO_EVENT merged={}
+2026-11-11T18:33:15Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:33:15Z NO_EVENT merged={}
+2026-11-11T18:33:18Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:33:18Z NO_EVENT merged={}
+2026-11-11T18:33:22Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:33:22Z NO_EVENT merged={}
+2026-11-11T18:33:25Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:33:25Z NO_EVENT merged={}
+2026-11-11T18:33:28Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:33:28Z NO_EVENT merged={}
+2026-11-11T18:33:31Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:33:31Z NO_EVENT merged={}
+2026-11-11T18:33:35Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:33:35Z NO_EVENT merged={}
+2026-11-11T18:33:38Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:33:38Z NO_EVENT merged={}
+2026-11-11T18:33:41Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:33:41Z NO_EVENT merged={}
+2026-11-11T18:33:45Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:33:45Z NO_EVENT merged={}
+2026-11-11T18:33:48Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:33:48Z NO_EVENT merged={}
+2026-11-11T18:33:51Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:33:51Z NO_EVENT merged={}
+2026-11-11T18:33:54Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:33:54Z NO_EVENT merged={}
+2026-11-11T18:33:58Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:33:58Z NO_EVENT merged={}
+2026-11-11T18:34:01Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:34:01Z NO_EVENT merged={}
+2026-11-11T18:34:04Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:34:04Z NO_EVENT merged={}
+2026-11-11T18:34:08Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:34:08Z NO_EVENT merged={}
+2026-11-11T18:34:11Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:34:11Z NO_EVENT merged={}
+2026-11-11T18:34:14Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:34:14Z NO_EVENT merged={}
+2026-11-11T18:34:18Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:34:18Z NO_EVENT merged={}
+2026-11-11T18:34:21Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:34:21Z NO_EVENT merged={}
+2026-11-11T18:34:24Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:34:24Z NO_EVENT merged={}
+2026-11-11T18:34:27Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:34:27Z NO_EVENT merged={}
+2026-11-11T18:34:33Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:34:33Z NO_EVENT merged={}
+2026-11-11T18:34:36Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:34:36Z NO_EVENT merged={}
+2026-11-11T18:34:39Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:34:39Z NO_EVENT merged={}
+2026-11-11T18:34:43Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:34:43Z NO_EVENT merged={}
+2026-11-11T18:34:46Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:34:46Z NO_EVENT merged={}
+2026-11-11T18:34:49Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:34:49Z NO_EVENT merged={}
+2026-11-11T18:34:53Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:34:53Z NO_EVENT merged={}
+2026-11-11T18:34:56Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:34:56Z NO_EVENT merged={}
+2026-11-11T18:35:05Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:35:05Z NO_EVENT merged={}
+2026-11-11T18:35:09Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:35:09Z NO_EVENT merged={}
+2026-11-11T18:35:12Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:35:12Z NO_EVENT merged={}
+2026-11-11T18:35:15Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:35:15Z NO_EVENT merged={}
+2026-11-11T18:35:18Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:35:18Z NO_EVENT merged={}
+2026-11-11T18:35:22Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:35:22Z NO_EVENT merged={}
+2026-11-11T18:35:25Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:35:25Z NO_EVENT merged={}
+2026-11-11T18:35:28Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:35:28Z NO_EVENT merged={}
+2026-11-11T18:35:31Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:35:31Z NO_EVENT merged={}
+2026-11-11T18:35:34Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:35:34Z NO_EVENT merged={}
+2026-11-11T18:35:38Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:35:38Z NO_EVENT merged={}
+2026-11-11T18:35:41Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:35:41Z NO_EVENT merged={}
+2026-11-11T18:35:44Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:35:44Z NO_EVENT merged={}
+2026-11-11T18:35:47Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:35:47Z NO_EVENT merged={}
+2026-11-11T18:35:50Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:35:50Z NO_EVENT merged={}
+2026-11-11T18:35:54Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:35:54Z NO_EVENT merged={}
+2026-11-11T18:35:59Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:35:59Z NO_EVENT merged={}
+2026-11-11T18:36:02Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:36:02Z NO_EVENT merged={}
+2026-11-11T18:36:05Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:36:05Z NO_EVENT merged={}
+2026-11-11T18:36:14Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:36:14Z NO_EVENT merged={}
+2026-11-11T18:36:16Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-11T18:36:16Z NO_EVENT merged={}
+2026-11-11T18:40:56Z EVENT 'sessionStart' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-11T18:41:33Z HANDLER CddServerHooks.ensure_mcp_server_on_session_start result={"permission": "allow"}
+2026-11-11T18:41:33Z ENABLED ['CddServerHooks.ensure_mcp_server_on_session_start']
+2026-11-11T18:41:33Z MERGED {"permission": "allow"}
