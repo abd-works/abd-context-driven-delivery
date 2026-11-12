@@ -28,6 +28,11 @@ _TRANSCRIPT_ARGUMENTS = ("transcript_path", "agent_transcript_path", "_transcrip
 _LINES_ARGUMENTS = ("transcript_lines", "_transcript_lines")
 
 
+# Each chat's transcript as found under a Claude projects folder: a chat's transcript stays where it was made, so it is
+# searched for once, not on every call the chat makes.
+_FOUND_TRANSCRIPTS: dict[tuple[Path, str], Path] = {}
+
+
 class ChatPointer:
     """Which chat a tool call, and the session.log line it writes, came from, so ``read_loop`` can put that chat's words
     back under the line. Each *ToolCall* carries the chat it came from.
@@ -36,10 +41,20 @@ class ChatPointer:
     of transcript lines, such as ``1-40``, that the line covers. A chat the server cannot name is written ``no-chat``.
     """
 
-    def __init__(self, id: str, transcript: Path | None = None, lines: str = "") -> None:
+    def __init__(self, id: str, transcript: Path | None = None, lines: str = "", counts_lines: bool = False) -> None:
         self.id = id
         self.transcript = Path(transcript) if transcript is not None else None
-        self.lines = lines
+        self._lines = lines
+        # A pointer to every line so far counts them only when asked: a transcript can be tens of megabytes, and the
+        # server names the chat of every call, a chat's check-in every second among them, but writes few log lines.
+        self._counts_lines = counts_lines
+
+    @property
+    def lines(self) -> str:
+        """The range of transcript lines this pointer covers, such as ``1-40``."""
+        if not self._lines and self._counts_lines and self.transcript is not None:
+            self._lines = self._all_lines_of(self.transcript)
+        return self._lines
 
     @classmethod
     def of(cls, chat_id: str, transcript: str | Path | None, lines: str = "") -> ChatPointer | None:
@@ -49,8 +64,8 @@ class ChatPointer:
         transcript = str(transcript or "").strip()
         if not chat_id or not transcript:
             return None
-        path = Path(transcript)
-        return cls(chat_id, path, (lines or "").strip() or cls._all_lines_of(path))
+        given = (lines or "").strip()
+        return cls(chat_id, Path(transcript), given, counts_lines=not given)
 
     @classmethod
     def taken_from(cls, arguments: dict[str, object] | None) -> tuple[ChatPointer | None, dict[str, object]]:
@@ -123,7 +138,13 @@ class ChatPointer:
         if not _CHAT_ID.fullmatch(chat_id or ""):
             return None
         projects = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude") / "projects"
-        return next(projects.glob(f"*/{chat_id}.jsonl"), None) if projects.is_dir() else None
+        held = _FOUND_TRANSCRIPTS.get((projects, chat_id))
+        if held is not None and held.is_file():
+            return held
+        found = next(projects.glob(f"*/{chat_id}.jsonl"), None) if projects.is_dir() else None
+        if found is not None:
+            _FOUND_TRANSCRIPTS[(projects, chat_id)] = found
+        return found
 
     @classmethod
     def in_log_line(cls, line: str) -> ChatPointer | None:
@@ -137,11 +158,6 @@ class ChatPointer:
         if not path_text or not _LINE_RANGE.fullmatch(lines):
             return None
         return cls(match.group(1), Path(path_text), lines)
-
-    @staticmethod
-    def _lines_of(body: str) -> str:
-        count = len(body.splitlines()) if body else 1
-        return f"1-{count}" if count > 1 else "1"
 
     @property
     def is_missing(self) -> bool:
@@ -197,9 +213,14 @@ class ChatPointer:
             found = found or value
         return found
 
-    @classmethod
-    def _all_lines_of(cls, path: Path) -> str:
-        return cls._lines_of(path.read_text(encoding="utf-8")) if path.is_file() else "1"
+    @staticmethod
+    def _all_lines_of(path: Path) -> str:
+        """The range of every line of the file so far, counted as bytes, so a long transcript is never decoded for it."""
+        if not path.is_file():
+            return "1"
+        body = path.read_bytes()
+        count = body.count(b"\n") + (1 if body and not body.endswith(b"\n") else 0)
+        return f"1-{count}" if count > 1 else "1"
 
     @staticmethod
     def _event_text(line: str, line_no: int) -> str:
