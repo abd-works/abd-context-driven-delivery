@@ -26,8 +26,10 @@ describe('Activate Ticket', () => {
   describe('Open a ticket in its own worktree', () => {
     async function activated() {
       const { page, asked } = await board.page()
+      const opened: string[] = []
+      page.openLink = link => opened.push(link)
       await page.activation.activate(ticketOn(page, CHOSEN))
-      return { page, asked }
+      return { page, asked, opened }
     }
 
     it('should send the ticket alone, with no choices', async () => {
@@ -45,10 +47,20 @@ describe('Activate Ticket', () => {
       expect(page.store.state.selected).toBe(ticketOn(page, CHOSEN).address)
     })
 
-    it('should name its worktree, where a chat can be opened', async () => {
+    // With no chat working in its worktree yet, Activate starts one there, so the person is left with the ticket's chat.
+    it('should start a new chat on its worktree', async () => {
+      const { page, opened } = await activated()
+      expect(opened.map(link => new URL(link).searchParams.get('folder'))).toEqual([ticketOn(page, CHOSEN).worktree])
+    })
+
+    it("should show the ticket's chat as opening", async () => {
       const { page } = await activated()
-      const { worktree } = ticketOn(page, CHOSEN)
-      expect(page.store.state.toasts.at(-1)?.text).toBe(`Billing report is open in its worktree ${worktree} · open its chat from its card`)
+      expect(page.chat.isOpeningFor(CHOSEN)).toBe(true)
+    })
+
+    it('should ask the person to confirm the new chat in the Claude app', async () => {
+      const { page } = await activated()
+      expect(page.store.state.toasts.at(-1)?.text).toBe(`Confirm the folder and send in the Claude app to start the chat of ${CHOSEN}`)
     })
   })
 

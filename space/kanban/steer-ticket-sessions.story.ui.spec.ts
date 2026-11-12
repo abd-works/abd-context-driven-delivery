@@ -15,7 +15,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { card, dragCard, expect, FakeChat, fixtureRoot, openBoard, receivedBy, resetSessions, test, toast, waitForChat, waitForNoChat, writeInto } from './app/tests/story-ui'
+import { card, catchClaudeLinks, dragCard, expect, FakeChat, fixtureRoot, openBoard, receivedBy, resetSessions, test, toast, waitForChat, waitForNoChat, writeInto } from './app/tests/story-ui'
 import type { Page } from './app/tests/story-ui'
 
 const CHAT_CHECKED_IN_MILLISECONDS = 10_000
@@ -158,21 +158,24 @@ test.describe('with no chat connected', () => {
 
   test.describe('Activate Ticket', () => {
     // Activating opens the ticket in its own worktree in one press: no chat moves between folders, so there is nothing
-    // to ask first.
+    // to ask first. With no chat working there yet, it starts one there.
     test.describe('Open a ticket in its own worktree', () => {
+      let links: string[] = []
+
       test.beforeEach(async ({ page }) => {
+        links = await catchClaudeLinks(page)
         await openBoard(page)
         await card(page, 'billing-report').getByRole('button', { name: 'Activate' }).first().click()
         // Activating makes a worktree in the background; the next scenario's reset must not start while it still runs.
-        await expect(toast(page, /^Billing report is open in its worktree/)).toBeVisible({ timeout: 15_000 })
+        await expect(toast(page, 'Confirm the folder and send in the Claude app to start the chat of billing-report')).toBeVisible({ timeout: 15_000 })
       })
 
       test('Then no dialog opens', async ({ page }) => {
         await expect(page.getByRole('dialog')).toHaveCount(0)
       })
 
-      test('And a toast names the worktree of Billing report, where its chat can be opened', async ({ page }) => {
-        await expect(toast(page, /^Billing report is open in its worktree .+ · open its chat from its card$/)).toBeVisible({ timeout: 8_000 })
+      test("And a new chat opens on Billing report's worktree", async () => {
+        expect(links.map(link => new URL(link).searchParams.get('folder'))).toEqual([expect.stringContaining('billing-report')])
       })
     })
   })
