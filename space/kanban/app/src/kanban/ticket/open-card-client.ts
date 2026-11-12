@@ -24,6 +24,22 @@ export class OpenCardClient {
     this.store.change(state => ({ openCard: ticket.name, tiles: withoutBarsOf(withoutBarsOf(state.tiles, state.openCard), ticket.name) }))
   }
 
+  // A press on an empty area of a card chooses its ticket and opens its card; pressing again leaves it open.
+  open(ticket: TicketClient): void {
+    ticket.choose()
+    if (this.store.state.openCard !== ticket.name) this.toggle(ticket)
+  }
+
+  // A parent shows its child rows until a person folds it to its own card.
+  showsChildrenOf(parent: TicketClient): boolean {
+    return !this.store.state.foldedParents.includes(parent.name)
+  }
+
+  toggleChildrenOf(parent: TicketClient): void {
+    const folded = this.store.state.foldedParents.filter(name => name !== parent.name)
+    this.store.change({ foldedParents: this.showsChildrenOf(parent) ? [...folded, parent.name] : folded })
+  }
+
   private closeCard(): void {
     this.store.change(state => ({ openCard: null, tiles: withoutBarsOf(state.tiles, state.openCard) }))
   }

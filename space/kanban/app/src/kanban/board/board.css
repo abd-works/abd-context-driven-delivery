@@ -335,3 +335,26 @@ ul.help-overview, ul.help-guidance { padding-left: 18px; }
   .report-body, .help-body { padding: 16px; }
   .rule-head, .violation-head { flex-wrap: wrap; gap: 12px; }
 }
+
+/* Keeping a ticket up to date: its text and tags under its title, and the open card's text, tag, and delete controls. */
+.ticket-text { position: relative; color: var(--muted); font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; pointer-events: none; white-space: pre-wrap; }
+.ticket-tags { position: relative; display: flex; flex-wrap: wrap; gap: 4px; pointer-events: none; }
+.ticket-tag { padding: 0 6px; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); font: 10px var(--mono); }
+.card-upkeep { position: relative; z-index: 1; display: flex; gap: 4px; align-items: center; }
+.item-text-line { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.board-root .card-upkeep .file-view, .board-root .item-text-line .file-view { width: 18px; height: 18px; }
+.card-field { pointer-events: auto; position: relative; z-index: 1; min-width: 0; width: 100%; font: inherit; font-size: 11px; padding: 1px 4px; background: var(--surface, transparent); color: inherit; border: 1px solid var(--border); border-radius: 3px; }
+/* A dragged ticket of the same column lands above the card whose top edge it is over. */
+.ticket-card.is-drop-before { box-shadow: 0 -3px 0 var(--accent); }
+.ticket-card.is-drop-over { outline: 2px dashed var(--accent); outline-offset: 1px; }
+
+/* A parent's title sits small above its children, stacked in its card; a pulled-out child keeps a dashed row. */
+.ticket-card.is-parent > .ticket-title-line .ticket-title { font-size: 11px; font-weight: 500; color: var(--muted); }
+.child-rows { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 4px; }
+.board-root .children-toggle { align-self: flex-start; padding: 0; background: transparent; border: 0; color: var(--muted); font: 11px var(--mono); }
+.child-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 3px 6px; background: var(--raised); border: 1px solid var(--border); border-radius: 3px; font-size: 12px; font-weight: 600; cursor: grab; }
+.child-row.is-pulled-out { background: transparent; border-style: dashed; color: var(--muted); font-weight: 400; cursor: default; }
+.child-row.is-drop-over { outline: 2px dashed var(--accent); }
+.child-row.is-dragged { opacity: .4; }
+.board-root .child-row .file-view { width: 16px; height: 16px; }
+.child-row-title { min-width: 0; overflow-wrap: anywhere; }

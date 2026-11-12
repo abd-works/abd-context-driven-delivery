@@ -68,6 +68,44 @@ describe('Display Ticket Details', () => {
   })
 })
 
+describe('Display Child Tickets In Parent', () => {
+  function writeChild(name: string, fields: Record<string, unknown> = {}): void {
+    board.write(`.sessions/${name}/session.json`, JSON.stringify({ name, title: name, scope: 'story', parent: ACTIVE, workpath: board.root, repo_path: board.root, ...fields }))
+    board.write(`.sessions/${name}/session.log`, '')
+  }
+
+  it("should give a parent its children as the page's tickets", async () => {
+    writeChild('confirm-order')
+    const { page } = await board.page()
+    expect(ticketOn(page, ACTIVE).childTickets.map(child => [child.name, child.isStacked])).toEqual([['confirm-order', true]])
+  })
+
+  it('should find a child stacked in its parent by its address, though no column shows it', async () => {
+    writeChild('confirm-order')
+    const { page } = await board.page()
+    expect(page.board.ticketAt('Discovery/confirm-order')?.name).toBe('confirm-order')
+  })
+
+  it('should fold a parent to its own card and show its children again', async () => {
+    writeChild('confirm-order')
+    const { page } = await board.page()
+    const parent = ticketOn(page, ACTIVE)
+    page.cards.toggleChildrenOf(parent)
+    const folded = page.cards.showsChildrenOf(parent)
+    page.cards.toggleChildrenOf(parent)
+    expect([folded, page.cards.showsChildrenOf(parent)]).toEqual([false, true])
+  })
+})
+
+describe('Expand Ticket From Empty Area', () => {
+  it('should open the card and leave it open when pressed again', async () => {
+    const { page } = await board.page()
+    page.cards.open(ticketOn(page, OTHER))
+    page.cards.open(ticketOn(page, OTHER))
+    expect([page.store.state.openCard, page.store.state.selected]).toEqual([OTHER, 'Discovery/billing-report'])
+  })
+})
+
 describe('Move Ticket', () => {
   it('should read the board again and select the ticket where it landed', async () => {
     const { page } = await board.page()

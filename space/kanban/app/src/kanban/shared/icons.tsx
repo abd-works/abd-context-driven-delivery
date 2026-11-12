@@ -52,8 +52,8 @@ export function FileViewIcon({ mode }: { mode: string }) {
   return <ShapeIcon shape={FILE_VIEW_SHAPES[mode] ?? ''} size={14} />
 }
 
-// What a card does for its session: run the next step, hand off, split into child tickets, open its chat, and activate
-// or close it.
+// What a card does for its session: run the next step, hand off, split into child tickets, open its chat, activate or
+// close it, and keep it up to date: edit its text, tag it, or delete it.
 const SESSION_ACTION_SHAPES: Record<string, string> = {
   chat: 'M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z',
   next: 'M4.5 3v10l8-5z',
@@ -62,6 +62,9 @@ const SESSION_ACTION_SHAPES: Record<string, string> = {
   child: 'M8 3v10M3 8h10',
   activate: 'M8 2.5v5M4.8 4.5a4.5 4.5 0 1 0 6.4 0',
   close: 'M4 4l8 8M12 4l-8 8',
+  text: 'M3 13l1-3.5 7-7 2.5 2.5-7 7zM9.5 4l2.5 2.5',
+  tag: 'M2.5 2.5h5.5l5.5 5.5-5.5 5.5-5.5-5.5zM5.5 5.5h.01',
+  delete: 'M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5',
 }
 
 export function SessionActionIcon({ action }: { action: string }) {

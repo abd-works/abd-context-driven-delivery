@@ -63,6 +63,13 @@ export class BoardClient extends BoardClientGenerated {
     return this.shownColumns.flatMap(column => column.everyTicket)
   }
 
+  // The ticket at an address, such as the one being dragged: a card of its own, or a child stacked in its parent's card,
+  // which shows in no column.
+  ticketAt(address: string | null): TicketClient | undefined {
+    const shown = this.tickets.find(ticket => ticket.address === address)
+    return shown ?? this.tickets.flatMap(ticket => ticket.childTickets).find(child => child.address === address)
+  }
+
   get ticketCount(): number {
     return new Set(this.tickets.map(ticket => ticket.name)).size
   }
@@ -82,7 +89,7 @@ export class BoardClient extends BoardClientGenerated {
   // With nothing pressed, the details show the active ticket, or else the one worked on last.
   get selectedTicket(): TicketClient | undefined {
     if (this.selectedItem) return undefined
-    return this.tickets.find(ticket => ticket.address === this.page.store.state.selected) ?? this.activeTicket ?? this.latestTicket
+    return this.ticketAt(this.page.store.state.selected) ?? this.activeTicket ?? this.latestTicket
   }
 
   get selectedItem(): BacklogItemClient | undefined {

@@ -25,13 +25,20 @@ const isBacklogItem = (moved: TicketData | BacklogItemData): moved is BacklogIte
 export type WorkStanding = { actions: ActionStatesData; hasViolations: boolean; violationCount: number; allowedActions: string[]; commands: Record<string, string> }
 
 // A ticket as the page knows it, with what a person can do to it. Each operation reaches the ticket's tool through the
-// generated client it extends, then brings the rest of the page up to date.
+// generated client it extends, then brings the rest of the page up to date: a tool that answers the ticket changed, such
+// as editText, tag, pullOut, reassignParent, moveBefore, or addChild, has the board read again, so the page shows it.
 export class TicketClient extends TicketClientGenerated {
   constructor(
     json: TicketData,
     private readonly page: BoardPage,
   ) {
     super(page.api, json)
+    this.onChanged(() => void page.reader.refresh())
+  }
+
+  // Its children as tickets of the page: stacked inside its card, or pulled out and kept as dashed rows.
+  get childTickets(): TicketClient[] {
+    return this.children.map(child => this.page.ticket(child))
   }
 
   // A session can sit in closed/ under the name of an open one, so a column and name together say which ticket is meant.
@@ -133,12 +140,8 @@ export class TicketClient extends TicketClientGenerated {
     return report ? new ReportClient(report, this, this.page) : null
   }
 
-  get nextStepName(): string {
-    return this.nextAction
-  }
-
   get runNextLabel(): string {
-    return this.next ? `Run next: ${this.nextStepName}` : 'Run next'
+    return this.next ? `Run next: ${this.nextAction}` : 'Run next'
   }
 
   // The run-next icon's tooltip names the step and the fidelity it runs on, since the icon itself cannot.
@@ -149,7 +152,7 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   get nextNote(): string {
-    return this.next ? `Next: ${this.next.fidelity.slug}, ${this.nextStepName}` : ''
+    return this.next ? `Next: ${this.next.fidelity.slug}, ${this.nextAction}` : ''
   }
 
   get lockNote(): string {
@@ -170,11 +173,6 @@ export class TicketClient extends TicketClientGenerated {
   // Python names the tickets another can be dropped on to become their child.
   canTakeAsChild(other: TicketClient): boolean {
     return other.parentChoices.includes(this.name)
-  }
-
-  async takeAsChild(other: TicketClient): Promise<void> {
-    await other.reassignParent(this.name)
-    await this.page.reader.refresh()
   }
 
   // Python sends every practice of the ticket's session with whether it works on it.
@@ -236,16 +234,29 @@ export class TicketClient extends TicketClientGenerated {
   private async landed(moved: TicketData | BacklogItemData | null): Promise<TicketData | BacklogItemData | null> {
     await this.page.reader.refresh()
     if (!moved) return null
-    if (isBacklogItem(moved)) this.release(moved)
+    if (isBacklogItem(moved)) this.releaseInto(moved)
     else await this.page.cards.follow(this.page.ticket(moved))
     return moved
   }
 
-  // Moved to the Backlog, a ticket is off the board, so nothing stays open on it and its item is selected.
-  private release(item: BacklogItemData): void {
+  // Moved to the Backlog, a ticket is off the board, so nothing stays open on it and the item now holding it is selected.
+  private releaseInto(holdingItem: BacklogItemData): void {
+    this.letGo()
+    this.page.item(holdingItem).select()
+  }
+
+  private letGo(): void {
     this.page.cards.releaseTicket(this.name)
     this.page.panels.closeTicketPanels(this.name)
-    this.page.item(item).select()
+  }
+
+  // Deleted, the ticket and its session folder are gone, so nothing stays open on it. Python answers nothing either way,
+  // so the board is read again to show what is there.
+  override async delete(): Promise<null> {
+    await super.delete()
+    this.letGo()
+    await this.page.reader.refresh()
+    return null
   }
 
   async enablePractice(practice: string, isEnabled: boolean): Promise<boolean> {
@@ -262,13 +273,6 @@ export class TicketClient extends TicketClientGenerated {
   // ticket, such as a report's fix, names this ticket's session.json, as Python's action commands do.
   inSession(prompt: string): string {
     return `${prompt} session=${this.session.session_file}`
-  }
-
-  // The child opens in Discovery as a ticket of its own, so the board is read again to show it under this one.
-  override async addChild(title: string): Promise<this | null> {
-    const child = await super.addChild(title)
-    await this.page.reader.refresh()
-    return child
   }
 
   fillSplit(): Promise<void> {

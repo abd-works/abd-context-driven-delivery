@@ -1,0 +1,61 @@
+import { SessionActionIcon } from '../shared/icons'
+import { CardFieldView, withoutSelecting } from '../shared/card-field-view'
+import type { CardField } from '../shared/card-field-view'
+import type { TicketClient } from './ticket-client'
+
+const ADD_CHILD: CardField = { action: 'child', label: 'Add child', hint: 'Add a child ticket', field: 'Child title', placeholder: 'Child title, then Enter' }
+const EDIT_TEXT: CardField = { action: 'text', label: 'Edit text', hint: 'Edit what this ticket is about', field: 'Ticket text', placeholder: 'Text, then Enter' }
+const TAG: CardField = { action: 'tag', label: 'Tag', hint: "Tag this ticket's session", field: 'Tag', placeholder: 'Tag, then Enter' }
+
+// A child added by hand: the plus opens a title field on the card, Enter adds the child, Escape leaves it.
+export function AddChildView({ ticket }: { ticket: TicketClient }) {
+  return <CardFieldView shape={ADD_CHILD} isOff={ticket.isClosed || ticket.isMain} onEnter={title => ticket.addChild(title)} />
+}
+
+// What the ticket's work is about, written in the idea file its session folder keeps; the field starts from its text.
+export function EditTextView({ ticket }: { ticket: TicketClient }) {
+  return <CardFieldView shape={EDIT_TEXT} isOff={ticket.isMain} typedAtFirst={ticket.text} onEnter={text => ticket.editText(text)} />
+}
+
+function TagView({ ticket }: { ticket: TicketClient }) {
+  return <CardFieldView shape={TAG} isOff={ticket.isMain} onEnter={word => ticket.tag(word)} />
+}
+
+// Delete removes the ticket and its whole session folder, which cannot be undone, so the person confirms it first.
+function DeleteView({ ticket }: { ticket: TicketClient }) {
+  const deleted = () => window.confirm(`Delete ${ticket.title} and its session folder? This cannot be undone.`) && ticket.delete()
+  return (
+    <button className="file-view" aria-label="Delete" title="Delete this ticket and its session folder" disabled={ticket.isMain} onClick={withoutSelecting(deleted)}>
+      <SessionActionIcon action="delete" />
+    </button>
+  )
+}
+
+// What an open card offers for keeping its ticket up to date: its text, its tags, and deleting it.
+export function CardUpkeepView({ ticket }: { ticket: TicketClient }) {
+  return (
+    <div className="card-upkeep">
+      <EditTextView ticket={ticket} />
+      <TagView ticket={ticket} />
+      <DeleteView ticket={ticket} />
+    </div>
+  )
+}
+
+// What a ticket is about and the words it is tagged with, under its title on its card.
+export function CardNotesView({ ticket }: { ticket: TicketClient }) {
+  return (
+    <>
+      {ticket.text ? <div className="ticket-text">{ticket.text}</div> : null}
+      {ticket.tags.length ? (
+        <div className="ticket-tags" aria-label="Tags">
+          {ticket.tags.map(tag => (
+            <span key={tag} className="ticket-tag">
+              {tag}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </>
+  )
+}
