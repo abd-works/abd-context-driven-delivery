@@ -350,3 +350,6 @@ This session's increment is these stories, named in its ticket. Generate and val
 - Detach Child Ticket
 - Reassign Ticket Parent
 - Place Parent At Leftmost Child Stage
+## Judgment — `harness/.context/stories/move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md`
+
+Passes every rule; the graph found nothing. The three earlier Fails are fixed: Reassign Ticket Parent has "Start a Backlog item under a ticket" and "Refuse to make a ticket a child of its own child"; the four Whens name intent (makes a child of, pulls out of, makes the parent of, takes off); the notes on Add Child, Detach and Reassign say what is built, which the board now does (pull-out drag, Alt-drag off, drop on a card, Backlog drop). After this run two scenarios were reworded to match the board: "Leave a card's controls to do their own work" opens the card's files, and "Move a parent on when its last child moves on" moves a pulled-out child; both Python tiers pass 22 of 22 and the screen specs pass.
