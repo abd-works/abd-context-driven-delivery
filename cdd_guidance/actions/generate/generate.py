@@ -33,7 +33,7 @@ class Generate(GuidanceAction):
         self.run(self._generate_item, action="generate")
         places = self._where_outputs_go()
         instructions(places)
-        patterns = self.record_patterns(self._output_folders())
+        patterns = self.graph.applied_patterns.record_content(self._output_folders()) if self._session is not None else ""
         instructions(patterns)
         "After the artifact is written, call validate with this same guidance and paths set to the files you wrote: validate refreshes the session's graph with exactly those files, so the graph rules run on them as they are now."
         tools(self._validate().validate)

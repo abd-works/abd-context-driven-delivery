@@ -15,7 +15,6 @@ from harness.agent_tools.agent_tools import InstallDestination, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.action_catalogue import ActionCatalogue
 from harness.guidance.documents import document_in
-from harness.guidance.patterns_file import PatternsFile
 from harness.guidance.guidance import FidelityGuidance, Guidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.hooks.hook_server import rules_toast
@@ -441,61 +440,11 @@ class GuidanceAction:
         patterns the session overlays. None for an action made for no session."""
         if self._session is None:
             return ""
-        names = self._patterns_of(paths)
-        rules = [self._overlay_rules_of(self.graph.applied_patterns.pattern_named(name), name) for name in names if self._is_pattern(name)]
-        return "\n\n".join(part for part in [*rules, self._story_scope(names)] if part)
-
-    def _patterns_of(self, paths: list[str] | None) -> list[str]:
-        """The patterns the content at paths was generated with, from the `.context/patterns.md` nearest each path; the
-        session's overlays for no paths, or for content no patterns file names, which no generate has recorded yet."""
+        patterns = self.graph.applied_patterns
         root = self.session.work_root
-        found = [PatternsFile.nearest(root / path, root) for path in paths or []]
-        recorded = [name for patterns in found if patterns is not None for name in patterns.patterns]
-        return list(dict.fromkeys(recorded)) or list(self.session.overlays)
-
-    def _is_pattern(self, name: str) -> bool:
-        try:
-            self.graph.applied_patterns.pattern_named(name)
-        except KeyError:
-            return False
-        return True
-
-    def record_patterns(self, folders: list[Path]) -> str:
-        """Record the patterns the session overlays in `.context/patterns.md` at the root of each folder, so validate
-        later judges the content with the patterns it was generated with; and say how to name the roles a folder holds
-        of a pattern whose layers sit in several folders."""
-        overlays = list(self.session.overlays) if self._session is not None else []
-        if not overlays:
-            return ""
-        for folder in folders:
-            PatternsFile(folder).record(overlays)
-        written = ", ".join(PatternsFile(folder).path.as_posix() for folder in folders) or "none yet"
-        roles = [f"- {name}: {', '.join(self._roles_of(name))}" for name in overlays if self._is_pattern(name) and self._roles_of(name)]
-        return "\n".join([
-            "## Patterns this content is generated with",
-            "",
-            f"This generate uses {', '.join(overlays)}, and records them in `.context/patterns.md` at the root of each "
-            f"folder it writes ({written}). Write the same file, listing these patterns, at the root of any other folder "
-            "you write content in. When a pattern's layers sit in several folders, name after the pattern the roles this "
-            "folder holds (`- cdd_web_domain_access: Domain, Tool, Contract`); a folder that holds the whole pattern names "
-            "none. Keep the patterns and roles already there. The roles each pattern has:",
-            "",
-            *roles,
-        ])
-
-    def _roles_of(self, name: str) -> list[str]:
-        """The layers a pattern's table names (`| Layer | File | Role |`), the roles a folder can hold of it."""
-        text = self.graph.applied_patterns.pattern_named(name).section_text("Overview")
-        rows = text.splitlines()
-        header = next((index for index, row in enumerate(rows) if row.strip().startswith("| Layer |")), None)
-        if header is None:
-            return []
-        roles = []
-        for row in rows[header + 2:]:
-            if not row.strip().startswith("|"):
-                break
-            roles.append(row.strip().strip("|").split("|")[0].strip())
-        return roles
+        names = patterns.recorded_for([root / path for path in paths or []], root) or list(self.session.overlays)
+        rules = [self._overlay_rules_of(patterns.pattern_named(name), name) for name in names if name in patterns.names]
+        return "\n\n".join(part for part in [*rules, self._story_scope(names)] if part)
 
     def _story_scope(self, patterns: list[str]) -> str:
         """The stories this session's increment is about, which generate and validate work on, each with the patterns

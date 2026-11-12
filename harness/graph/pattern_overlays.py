@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from harness.annotations.class_folder import class_folder
+from harness.graph.patterns_file import PatternsFile
 from harness.guidance.practice_reading import rules_in
 
 if TYPE_CHECKING:
@@ -50,6 +51,26 @@ class GraphOverlay:
         """The file called name the pattern keeps beside its rules for the practice of practice_key, such as its
         ``schema.yaml``; it may not exist."""
         return Path(self.pattern.module_dir) / "practices" / practice_key / "model" / name
+
+    @property
+    def roles(self) -> list[str]:
+        """The layers the pattern's table names (`| Layer | File | Role |`): the roles a folder can hold of it when its
+        layers sit in several folders. None for a pattern with no such table."""
+        rows = self.pattern.section_text("Overview").splitlines()
+        header = next((index for index, row in enumerate(rows) if row.strip().startswith("| Layer |")), None)
+        if header is None:
+            return []
+        roles: list[str] = []
+        for row in rows[header + 2:]:
+            if not row.strip().startswith("|"):
+                break
+            roles.append(row.strip().strip("|").split("|")[0].strip())
+        return roles
+
+    def record_in(self, folder: Path) -> None:
+        """Record in folder's `.context/patterns.md` that its content is generated with this pattern, keeping the
+        patterns and roles it names already."""
+        PatternsFile(folder).record([self.name])
 
     def rules_for(self, practice: Any) -> dict[str, Any]:
         """The graph rules this pattern adds to practice, by slug, read once from the pattern's own folder: its package
@@ -124,6 +145,36 @@ class PatternOverlays:
         for pattern in patterns:
             merged.update(pattern.graph_overlay.rules_for(practice))
         return merged
+
+    def record_content(self, folders: list[Path]) -> str:
+        """Record each applied pattern in the patterns file at the root of each folder content is generated in, and say
+        how to record them for any other folder and how to name the roles a folder holds; none when none is applied."""
+        overlays = [pattern.graph_overlay for pattern in self.patterns]
+        if not overlays:
+            return ""
+        for folder in folders:
+            for overlay in overlays:
+                overlay.record_in(folder)
+        names = ", ".join(overlay.name for overlay in overlays)
+        written = ", ".join(PatternsFile(folder).path.as_posix() for folder in folders) or "none yet"
+        return "\n".join([
+            "## Patterns this content is generated with",
+            "",
+            f"This content is generated with {names}, recorded in `.context/patterns.md` at the root of each folder it is "
+            f"written in ({written}). Record the same patterns at the root of any other folder you write content in. When "
+            "a pattern's layers sit in several folders, name after the pattern the roles this folder holds "
+            "(`- cdd_web_domain_access: Domain, Tool, Contract`); a folder that holds the whole pattern names none. Keep "
+            "the patterns and roles already there. The roles each pattern has:",
+            "",
+            *(f"- {overlay.name}: {', '.join(overlay.roles)}" for overlay in overlays if overlay.roles),
+        ])
+
+    def recorded_for(self, paths: list[Path], root: Path) -> list[str]:
+        """The registered patterns the content at paths was generated with, from the patterns file nearest each path
+        up to root, once each; none when no folder records any."""
+        found = [PatternsFile.nearest(path, root) for path in paths]
+        recorded = [name for patterns in found if patterns is not None for name in patterns.patterns]
+        return [name for name in dict.fromkeys(recorded) if name in self._registered]
 
     @property
     def names(self) -> list[str]:

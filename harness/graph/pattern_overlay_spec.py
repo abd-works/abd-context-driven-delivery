@@ -95,3 +95,21 @@ with description("pattern overlays"):
         child_names = [child.get("name") for child in aggregate.get("children") or []]
         expect("account-credentials-node" in child_names).to(equal(True))
         expect("account-credentials-client" in child_names).to(equal(True))
+
+
+with description("pattern overlays recording what content is generated with") as self:
+    with it("should give each pattern's roles from its layer table"):
+        overlay = PatternOverlays(["cdd_web_domain_access"]).patterns[0].graph_overlay
+        expect(overlay.roles).to(equal(["Domain", "Tool", "Contract", "Annotation", "Language adapter", "Connection"]))
+
+    with it("should name the patterns recorded for content where it was generated"):
+        root = Path(tempfile.mkdtemp())
+        app = root / "app"
+        (app / "src").mkdir(parents=True)
+        overlays = PatternOverlays(["lern_domain_driven", "cdd_web_domain_access"])
+        overlays.record_content([app])
+        expect(PatternOverlays().recorded_for([app / "src" / "board.tsx"], root)).to(equal(["lern_domain_driven", "cdd_web_domain_access"]))
+
+    with it("should name none for content no folder records"):
+        root = Path(tempfile.mkdtemp())
+        expect(PatternOverlays().recorded_for([root / "board.tsx"], root)).to(equal([]))
