@@ -77,9 +77,18 @@ class StoriesReading(PracticeReading):
         self.recorded_map = self._story_map()
         self.graph.report_progress("stories · record")
         self.recorded_map.record(self.practice, on_node=lambda detail: self.graph.report_progress(f"stories · record · {detail}"))
+        self._link_background_givens()
         clean = self.object_model
         if clean is not None:
             StoryLinks(self, clean, self.story_tree).link()
+
+    def _link_background_givens(self) -> None:
+        """Record the ``given`` edge from each background to the Given steps it holds: the step its schema says it is
+        given by, which a working copy's read records itself rather than leaving it to the schema's evidence."""
+        for background in self.in_graph.nodes("Background"):
+            for edge in self.graph.edges_from("steps", background):
+                if edge.child.type == "Given":
+                    self.graph.link("given", background, edge.child, "relationship")
 
     def _story_map(self):
         model = self._story_tests()
