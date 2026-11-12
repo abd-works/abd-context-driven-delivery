@@ -7,13 +7,14 @@ import socket
 import tempfile
 from pathlib import Path
 
-from expects import be_false, be_none, equal, expect
+from expects import be_false, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
+from harness.diagnostics.app import App  # noqa: E402
 from harness.diagnostics.server_health import ServerHealth  # noqa: E402
 from harness.hooks.hook_daemon import HookDaemon  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
@@ -33,56 +34,26 @@ with description("server health") as self:
     with after.each:
         shutil.rmtree(self.root, ignore_errors=True)
 
-    with context("with the graph app listening on the second of its ports"):
+    # Each app registers itself; the report lists every one, read as it is now, so the status row shows each.
+    with context("with an app registered and answering on the second of its ports"):
         with before.each:
+            self.held = App.registered()
             self.listener = socket.socket()
             self.listener.bind(("127.0.0.1", 0))
             self.listener.listen()
             self.port = self.listener.getsockname()[1]
-            self.health = ServerHealth(self.root, graph_ports=(closed_port(), self.port), kanban_ports=(closed_port(),))
+            (self.root / "package.json").write_text("{}", encoding="utf-8")
+            (self.root / "node_modules").mkdir()
+            App("Graph", self.root, (closed_port(), self.port)).register()
 
         with after.each:
             self.listener.close()
+            for app in self.held:
+                app.register()
 
-        with it("should report the port the graph app answers on"):
-            expect(data_of(self.health.report())["graph_app_port"]).to(equal(self.port))
-
-    with context("with nothing listening on the graph app's ports"):
-        with it("should report no graph app port"):
-            health = ServerHealth(self.root, graph_ports=(closed_port(),), kanban_ports=(closed_port(),))
-            expect(data_of(health.report())["graph_app_port"]).to(be_none)
-
-    with context("with the Kanban app listening on its port"):
-        with before.each:
-            self.listener = socket.socket()
-            self.listener.bind(("127.0.0.1", 0))
-            self.listener.listen()
-            self.port = self.listener.getsockname()[1]
-
-        with after.each:
-            self.listener.close()
-
-        with it("should report the port the Kanban app answers on"):
-            health = ServerHealth(self.root, graph_ports=(closed_port(),), kanban_ports=(self.port,))
-            expect(data_of(health.report())["kanban_app_port"]).to(equal(self.port))
-
-        with it("should give the Kanban app's address on the port it answers on"):
-            health = ServerHealth(self.root, graph_ports=(closed_port(),), kanban_ports=(closed_port(), self.port))
-            expect(data_of(health.report())["kanban_app_url"]).to(equal(f"http://127.0.0.1:{self.port}"))
-
-    with context("with nothing listening on the Kanban app's port"):
-        with before.each:
-            self.board_port = closed_port()
-
-        with it("should report no Kanban app port"):
-            health = ServerHealth(self.root, graph_ports=(closed_port(),), kanban_ports=(self.board_port,))
-            expect(data_of(health.report())["kanban_app_port"]).to(be_none)
-
-        # A chat starts the board there, and checks in with it once it answers.
-        with it("should give the address the Kanban app answers on once started"):
-            health = ServerHealth(self.root, graph_ports=(closed_port(),), kanban_ports=(self.board_port,))
-            expect(data_of(health.report())["kanban_app_url"]).to(equal(f"http://127.0.0.1:{self.board_port}"))
-
+        with it("should list the app with its status and the port it answers on"):
+            graph = next(app for app in data_of(ServerHealth(self.root).report())["apps"] if app["label"] == "Graph")
+            expect((graph["status"], graph["port"])).to(equal(("running", self.port)))
 
     with context("with no hook server state in the project"):
         with it("should report the hook server is not running"):
@@ -103,7 +74,7 @@ with description("server health") as self:
         with it("should answer the band's call with every part"):
             result = self.server.invoke_tool("server-health.report", {})
             answer = json.loads(json.dumps(result, default=data_of))
-            expect(sorted(answer)).to(equal(["graph_app_port", "is_hook_server_running", "kanban_app_port", "kanban_app_url"]))
+            expect(sorted(answer)).to(equal(["apps", "is_hook_server_running"]))
 
         with it("should leave the session log alone"):
             self.server.invoke_tool("server-health.report", {})

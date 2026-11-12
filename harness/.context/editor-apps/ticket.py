@@ -4,7 +4,7 @@ Deleted: BoardPage and its rebuild (now App.install of the CDD Kanban's App)."""
 from __future__ import annotations
 
 from harness.agent_tools import agent_tool
-from harness.installation.app import App
+from harness.diagnostics.app import App
 from harness.installation.data_class import data_field
 from harness.mcp.mcp_server import mcp
 

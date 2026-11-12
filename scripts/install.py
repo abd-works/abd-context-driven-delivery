@@ -78,7 +78,7 @@ def main() -> int:
         print(f"cdd server: {server.serve_from_checkout() if args.serve_from_checkout else server.pin_server()}")
         if installer.layout.is_claude_code:
             print(f"cdd-board: {server.claude_plugins.install_board()}")
-        _rebuild_board_page()
+        _install_kanban()
         return 0
     if args.self:
         installer.install_self(replace=not args.no_replace)
@@ -88,16 +88,22 @@ def main() -> int:
         restarted = server.keep_pinned_current()
         if restarted:
             print(f"cdd server: {restarted}")
-        _rebuild_board_page()
+        _install_kanban()
     return 0
 
 
-def _rebuild_board_page() -> None:
+def _install_kanban() -> None:
     """The board's server serves a page built from this checkout, which a pull or a merge leaves as it was, so every
-    install rebuilds it and the open board reloads onto the new code."""
-    from space.kanban.board_app import BoardPage
+    install installs the Kanban app again and the open board reloads onto the new code. The board is a convenience on
+    top of the install, so a failure is told, never raised."""
+    from harness.diagnostics.app import AppNotStarted
+    from space.kanban.board_app import KANBAN_APP
 
-    print(f"board page: {BoardPage().rebuild()}")
+    try:
+        KANBAN_APP.install()
+        print(f"Kanban app: installed in {KANBAN_APP.folder}")
+    except AppNotStarted as failed:
+        print(f"Kanban app: {failed}")
 
 
 if __name__ == "__main__":

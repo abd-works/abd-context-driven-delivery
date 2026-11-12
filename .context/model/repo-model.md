@@ -2310,21 +2310,40 @@ This module reports whether CDD is running and answering: *ServerHealth* says wh
 
 ## ServerHealth
 
-Report the parts of CDD that run outside this MCP host, so a person can see what is up without opening a terminal. Each app a report probes is registered from the ports file its servers read: the graph app's here, the session board's from space/kanban.
+Report the parts of CDD that run outside this MCP host, so a person can see what is up without opening a terminal: every registered *App*, each read as it is now, and the hook server.
 
-+ ServerHealth(repo_root: Path | str, graph_ports: tuple[int, ...] | None = None, kanban_ports: tuple[int, ...] | None = None, hook_daemon: HookDaemon | None = None)
++ ServerHealth(repo_root: Path | str, hook_daemon: HookDaemon | None = None)
 ------
-+ kanban_app_port: int | None
-+ kanban_app_url: str
-+ graph_app_port: int | None
++ apps: list[App]
 + is_hook_server_running: bool
 ----
-+ reports_graph_app_on(ports: tuple[int, ...]): None
-+ reports_kanban_app_on(ports: tuple[int, ...]): None
 + load(project: Path | str): ServerHealth
 + report(): ServerHealth
 ---<<creates>>--> HookDaemon
----<<reads the graph app's ports from>>--> GRAPH_APP_PORTS
+---<<aggregation>>--> App
+---<<annotated with>>--> LanguageAdapter
+
+## App
+
+One CDD web app a person opens beside the chat (Kanban, Graph, Story UI), and the one registry of them. The module that owns each app makes it once and registers it: the Graph app here, from `GRAPH_APP_PORTS`; the CDD Kanban and the Story UI editor in space/kanban.
+
++ App(label: str, folder: Path, ports: tuple[int, ...], page: str = "/")
+------
++ label: str
++ status: AppStatus
++ port: int | None
++ url: str
++ is_installed: bool
+----
++ register(): App
++ registered(): list[App]
++ load(app: str, project: Path | str): App
++ open(): App
++ install(): App
++ launch(): App
+---<<raises>>--> AppNotRegistered
+---<<raises>>--> AppNotStarted
+---<<uses>>--> BackgroundStart
 ---<<annotated with>>--> LanguageAdapter
 
 ## CallDiagnostics

@@ -14,6 +14,7 @@ import os
 import sys
 import types
 from collections.abc import Mapping
+from enum import Enum
 from pathlib import Path, PurePosixPath
 from typing import Annotated, Any, Literal, NotRequired, Union, get_args, get_origin, get_type_hints
 
@@ -456,6 +457,8 @@ class TypeScriptToolset:
             return _TypeText(self.hint_type(get_args(hint)[0])).as_list
         if origin is dict:
             return f"Record<string, {self.hint_type(get_args(hint)[1])}>"
+        if isinstance(hint, type) and issubclass(hint, Enum):
+            return " | ".join(json.dumps(member.value).replace('"', "'") for member in hint)
         return _SCALAR_TYPES.get(hint, "unknown")
 
     def _reference_type(self, hint: object) -> str:

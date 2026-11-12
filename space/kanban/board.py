@@ -12,13 +12,11 @@ from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.catalog_generator.catalog_examples import CatalogFidelity
 from harness.chat.chat import Chat
-from harness.diagnostics.server_health import ServerHealth
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_server import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
-from space.kanban.board_app import BOARD_APP_PORTS
 from space.repo.repo import Repo
 from space.session.session_log import LogTimestamp
 from space.session.session_saves import SaveFailure
@@ -719,10 +717,6 @@ class BoardFidelity:
     def skill(self) -> str:
         """The slash command of its skill, such as /practices-stories-stories-story-map."""
         return f"/{self._catalogued.skill_of(self._shown.fidelity)}"
-
-
-# Server health probes the board where its server listens, so a chat finds the board without naming its port.
-ServerHealth.reports_kanban_app_on(BOARD_APP_PORTS.of("board"))
 
 
 class BoardOverview:

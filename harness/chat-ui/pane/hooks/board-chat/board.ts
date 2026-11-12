@@ -2,7 +2,7 @@ import type { EngineInterface } from 'claude-code'
 
 import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
-import { currentServerHealth, ServerHealthClient } from '../health/server-health-client'
+import { currentServerHealth, KANBAN, ServerHealthClient } from '../health/server-health-client'
 
 // The board refuses a POST without this header, so another page cannot act on it.
 const BOARD_HEADERS = { 'X-CDD-Board': '1', 'Content-Type': 'application/json' }
@@ -22,10 +22,11 @@ export function after($: EngineInterface, milliseconds: number, answer: string):
   return new Promise(resolve => $.clock.after(milliseconds, () => resolve(answer)))
 }
 
-// Where the session board answers, as cdd's server health last gave it; empty until cdd has answered.
+// Where the session board answers, whether or not it answers yet, as cdd's server health last listed the Kanban app;
+// empty until cdd has answered.
 export async function boardUrl($: EngineInterface): Promise<string> {
   const { report } = await currentServerHealth($)
-  return new ServerHealthClient(report as ServerHealthData | null).kanbanAppUrl
+  return new ServerHealthClient(report as ServerHealthData | null).appLabelled(KANBAN)?.url ?? ''
 }
 
 // The repository's own folder, which a chat in a ticket's worktree reaches through the git folder they share: the
@@ -36,12 +37,13 @@ export async function repositoryFolder($: EngineInterface): Promise<string> {
   return exitCode === 0 ? stdout.trim().replace(/[\\/]\.git$/, '') : ''
 }
 
-// The board page showing this chat's repository, at url, with any further query the link carries, such as a report to
-// open. Outside a repository the page shows the board server's own project.
-export async function boardPageUrl($: EngineInterface, url: string, query: Record<string, string> = {}): Promise<string> {
+// An app's page at url showing this chat's repository, with any further query the link carries, such as a report to
+// open. Outside a repository the page shows its server's own project.
+export async function projectPageUrl($: EngineInterface, url: string, query: Record<string, string> = {}): Promise<string> {
   const project = await repositoryFolder($)
-  const search = new URLSearchParams({ ...(project ? { [PROJECT_QUERY]: project } : {}), ...query }).toString()
-  return search ? `${url}/?${search}` : url
+  const page = new URL(url)
+  for (const [name, value] of Object.entries({ ...(project ? { [PROJECT_QUERY]: project } : {}), ...query })) page.searchParams.set(name, value)
+  return page.toString()
 }
 
 // A chat with no board address yet has nothing to post to, which reads as a board that did not answer.
@@ -50,5 +52,5 @@ export async function post($: EngineInterface, { chat, operation, body }: ChatRe
   if (!url) return { ok: false, text: '' }
   const project = await repositoryFolder($)
   const headers = project ? { ...BOARD_HEADERS, [PROJECT_HEADER]: project } : BOARD_HEADERS
-  return $.http.fetch(`${url}/api/chat/${encodeURIComponent(chat)}/${operation}`, { method: 'POST', headers, body: JSON.stringify(body) })
+  return $.http.fetch(`${new URL(url).origin}/api/chat/${encodeURIComponent(chat)}/${operation}`, { method: 'POST', headers, body: JSON.stringify(body) })
 }

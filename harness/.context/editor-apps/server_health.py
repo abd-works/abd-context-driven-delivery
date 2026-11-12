@@ -4,7 +4,7 @@ Deleted: kanban_app_port, kanban_app_url, graph_app_port, reports_graph_app_on, 
 constructor's graph_ports and kanban_ports parameters."""
 from __future__ import annotations
 
-from harness.installation.app import App
+from harness.diagnostics.app import App
 from harness.installation.data_class import data_field
 
 

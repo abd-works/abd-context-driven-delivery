@@ -16,8 +16,7 @@ This increment adds **three new types and three named failures** and extends **t
 
 | Module (partition) | New | Extended | Deleted names |
 |---|---|---|---|
-| `harness/installation` | *App*, *AppStatus*, *AppNotStarted*, *AppNotRegistered* | — | — |
-| `harness/diagnostics` | — | *ServerHealth* | `kanban_app_port`, `kanban_app_url`, `graph_app_port`, `reports_graph_app_on`, `reports_kanban_app_on` |
+| `harness/diagnostics` | *App*, *AppStatus*, *AppNotStarted*, *AppNotRegistered* | *ServerHealth* | `kanban_app_port`, `kanban_app_url`, `graph_app_port`, `reports_graph_app_on`, `reports_kanban_app_on` |
 | `harness/guidance` | — | *PracticeGuidance*, *FidelityGuidance* | — |
 | `harness/graph` | — | *Graph* | — |
 | `space/session` | *FormatNotOffered* | *Session*, *FidelitySessionOutput* | `kept_format`, `keep_format` |
@@ -26,32 +25,33 @@ This increment adds **three new types and three named failures** and extends **t
 
 ---
 
-## harness/installation
+## harness/diagnostics: App
 
-What an app is, how far it has got (installed, running), and how it is readied. Today the chat bar works this out in TypeScript (`board-server.ts`: `runningBoardUrl`, `openedBoard`) for the board only, and *BoardPage* rebuilds the board's page; both move here, so the chat bar, the board and an agent ready every app the same way.
+What an app is, how far it has got (installed, running), and how it is readied. Until this increment the chat bar worked this out in TypeScript (`board-server.ts`: `runningBoardUrl`, `openedBoard`) for the board only, and *BoardPage* rebuilt the board's page; both moved here, so the chat bar, the board and an agent ready every app the same way.
+
+Decided while coding (implementation, 2026-11-12): *App* lives in harness/diagnostics, beside *ServerHealth*, not in harness/installation, because `open` is an `@mcp` operation and harness/installation imports no harness/mcp (harness/mcp imports it). harness/graph sits below harness/diagnostics, so the Graph app is made and registered in `harness/diagnostics/app.py` from `GRAPH_APP_PORTS`. An *App* takes its folder and its server's ports rather than an *AppPorts*: a ports file names several servers (the Graph app's `app` and `web`), and the Story UI editor's folder (`cdd_guidance/practices/stories/app`) is not the folder of the board's ports file that it answers on.
 
 ### App
 
 <<Entity>> <<language_adapter typescript>> <<agent_toolset>>
 
-One CDD web app a person opens beside the chat: the Story UI editor, the Graph app, or the CDD Kanban. Three instances of one class; the module that owns each app makes its instance once, keeps it, and registers it (`app.register()`), as `GRAPH_APP_PORTS` and `BOARD_APP_PORTS` are kept today: harness/graph makes the Graph app, space/kanban makes the CDD Kanban and, since the board's server serves it, the Story UI editor. *App* keeps the one registry of apps, as *PracticeCatalogue* keeps the practices; nothing else lists them.
+One CDD web app a person opens beside the chat: the Story UI editor, the Graph app, or the CDD Kanban. Three instances of one class; the module that owns each app makes its instance once, keeps it, and registers it (`app.register()`), from the ports `GRAPH_APP_PORTS` and `BOARD_APP_PORTS` read: harness/diagnostics makes the Graph app, space/kanban (`board_app.py`) makes the CDD Kanban and, since the board's server serves it, the Story UI editor. *App* keeps the one registry of apps, as *PracticeCatalogue* keeps the practices; nothing else lists them.
 
-+ App(label: str, ports: AppPorts, page: str = "/")
-	// page: the path its page answers on, "/story-map" for the Story UI editor, which the board's server serves with the board's AppPorts
++ App(label: str, folder: Path, ports: tuple[int, ...], page: str = "/")
+	// folder: where its package.json, packages and built page sit; ports: its server's ports in the order it tries them (AppPorts.of(server)); page: the path its page answers on, "/story-map" for the Story UI editor, which the board's server serves on the board's ports
 ------
 + label: str  <<data_field>> <<identity>>
 	// "Story UI", "Graph", "Kanban": what the status row shows and what a tool call names to load it
 + status: AppStatus  <<data_field>>
-	// derived: NOT_INSTALLED while its folder has no node_modules or no built page; DOWN while installed and no port of its AppPorts answers; RUNNING otherwise
+	// derived: NOT_INSTALLED while its folder has no package.json, no node_modules, or, when its package has a build script, no built page (dist); DOWN while installed and none of its ports answers; RUNNING otherwise
 + port: int | None  <<data_field>>
 	// derived: the first of its ports that answers; none while it is not running
 + url: str  <<data_field>>
-	// derived: http://127.0.0.1:{port}{page}, on the first port of its AppPorts while it is not running
+	// derived: http://127.0.0.1:{port}{page}, on the first of its ports while it is not running
 + folder: Path
-	// derived: the nearest folder above its ports file that holds a package.json, where its packages and built page sit
-+ << composition >> ports: AppPorts
-+ registered: list[App]  <<classmethod property>>
-	// every app registered, in the order registered: Kanban, Graph, Story UI
++ ports: tuple[int, ...]
++ registered() -> list[App]  <<classmethod>>
+	// every app registered, in the order registered: Graph (harness/diagnostics is imported first), then Kanban and Story UI
 ----
 + register() -> App
 	// registering a label again replaces the earlier app rather than listing it twice
@@ -62,11 +62,11 @@ One CDD web app a person opens beside the chat: the Story UI editor, the Graph a
 	-> self.launch
 	// orchestration only: install while NOT_INSTALLED, launch while not RUNNING, then answer itself with its url, which the caller shows in a side panel
 + install() -> App
-	-> npm install in folder, then the page build (what BoardPage.rebuild did)
-	// raises AppNotStarted(self, "install", stderr) when either step fails; report_progress at each step
+	-> npm install in folder, then npm run build when its package has a build script (what BoardPage.rebuild did)
+	// raises AppNotStarted(self, "install", reason) when either step fails, or when its folder holds no package.json (the app is not there yet); report_progress at each step
 + launch() -> App
 	-> BackgroundStart.run (harness/process)
-	// starts the app's server from its folder and waits until a port answers; raises AppNotStarted(self, "launch", reason) when none answers within the wait
+	// starts the app's server (npm start) from its folder and waits until a port answers; raises AppNotStarted(self, "launch", "nothing answered on port {port}") when none answers within the wait or the server stops first
 
 **Invariants**
 
@@ -95,7 +95,7 @@ One CDD web app a person opens beside the chat: the Story UI editor, the Graph a
 ------
 + app: App
 + step: str  // "install" or "launch"
-+ reason: str  // the last lines of the step's output, which the status row shows with the fix ("Run npm install in {folder}")
++ reason: str  // the error lines of the step's output, which the status row shows with the fix: "The Story UI install failed: {reason}. Run npm install in {folder}." or "The Kanban did not start: {reason}. Run npm start in {folder}." 
 
 ---
 
@@ -213,7 +213,7 @@ Canonical: `space/session/practice_session_output.py`. It already keeps the one 
 
 ### BoardPage (deleted)
 
-Its `rebuild` is `App.install` of the CDD Kanban's *App*; `scripts/install.py` calls that instead.
+Its `rebuild` is `App.install` of the CDD Kanban's *App* (`KANBAN_APP`); `scripts/install.py` calls that instead and prints an *AppNotStarted* rather than raising it.
 
 ---
 

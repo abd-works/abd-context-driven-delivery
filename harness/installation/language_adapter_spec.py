@@ -332,6 +332,13 @@ with description("a language adapter"):
                     chat = (install_path / _ADAPTERS / "harness/chat/chat.ts").read_text(encoding="utf-8")
                     expect(chat).to(contain("  state: 'waiting' | 'taken' | 'shown' | 'done' | 'failed'\n"))
 
+            with context("with a field that holds a member of an enumeration"):
+                with it("should allow only the enumeration's values"):
+                    install_path = Path(tempfile.mkdtemp(prefix="language-adapter-"))
+                    _install(install_path, ("harness.diagnostics.app:App",))
+                    app = (install_path / _ADAPTERS / "harness/diagnostics/app.ts").read_text(encoding="utf-8")
+                    expect(app).to(contain("  status: 'not installed' | 'not running' | 'running'\n"))
+
         with description("its shared base"):
             with before.all:
                 self.base = _between(self.ticket, "export class Ticket {", "export class TicketClientGenerated")

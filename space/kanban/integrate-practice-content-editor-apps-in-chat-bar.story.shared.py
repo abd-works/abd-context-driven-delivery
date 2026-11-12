@@ -1,0 +1,137 @@
+"""Integrate Practice Content Editor Apps In Chat Bar: the shared scenarios the Python tiers replay for the apps the
+chat bar's status row lists and opens.
+
+Scenarios: harness/.context/stories/move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/
+integrate_practice_content_editor_apps_in_chat_bar_story.test.md (Open Story UI Side Panel From Chat Bar, Open Knowledge
+Graph Side Panel From Chat Bar, Open Kanban Side Panel From Chat Bar).
+Model: harness/.context/editor-apps/.context/editor-apps-model.md#app.
+
+The status row reads each app from the server health report and a press calls `app.open`, so a step reads the row from
+`report()` and presses through `open_app(label)`, which the tier hands it. Left to other increments: the story map, the
+graph's practice roots, and the outlined ticket the opened page shows, the Story UI's file-viewer tiles, and the side
+panel itself, which is the chat bar's TypeScript.
+"""
+
+from __future__ import annotations
+
+from expects import be_a, contain, equal, expect
+
+from harness.diagnostics.app import AppNotStarted, AppStatus
+from space.kanban.editor_apps_examples import CDD_KANBAN, FOUND_DEPENDENCY, GRAPH_APP, MISSING_DEPENDENCY, SERVE, STOPS_AT_ONCE, STORY_UI_EDITOR, AppExample, ThrowawayApp, app_in
+from space.kanban.story_test import SharedStories, refusal_of
+
+shared_stories = SharedStories("Integrate Practice Content Editor Apps In Chat Bar")
+
+OPEN_STORY_UI = "Open Story UI Side Panel From Chat Bar"
+OPEN_GRAPH = "Open Knowledge Graph Side Panel From Chat Bar"
+OPEN_KANBAN = "Open Kanban Side Panel From Chat Bar"
+
+# Interaction: what a press does to an app of each status, as the app statuses table has it.
+PRESS_DOES = {
+    AppStatus.NOT_INSTALLED: "is installed, launched and opened in the side panel",
+    AppStatus.DOWN: "is launched and opened in the side panel",
+    AppStatus.RUNNING: "is opened in the side panel",
+}
+
+
+def press_readies_by_status(story: str, example: AppExample, name: str, status: AppStatus) -> None:
+    """One row of a press-readies-by-status outline: the app reads status in the row, and a press opens it."""
+
+    @shared_stories.scenario(story, f"{name}: {status.value}")
+    def _(s):
+        @s.given(f"the app status row reads {example.label} {status.value}")
+        def _(world):
+            world.app = ThrowawayApp(example)
+            world.apps.append(world.app)
+            world.app.seed(status)
+
+        @s.when(f"the Person opens the {example.label} from the app status row")
+        def _(world):
+            world.opened = world.open_app(example.label)
+
+        @s.then(f"the {example.label} {PRESS_DOES[status]}")
+        def _(world):
+            expect(world.app.app.status).to(equal(AppStatus.RUNNING))
+
+        @s.and_(f"the side panel shows it at its url, on its page {example.page}")
+        def _(world):
+            expect(world.opened["url"]).to(equal(world.app.url))
+
+        @s.and_(f"the app status row reads {example.label} running on its port")
+        def _(world):
+            row = app_in(world.report(), example.label)
+            expect((row["status"], row["port"])).to(equal((AppStatus.RUNNING.value, world.app.port)))
+
+
+for app_status in PRESS_DOES:
+    press_readies_by_status(OPEN_STORY_UI, STORY_UI_EDITOR, "A press on the Story UI editor readies it by its status and opens it beside the chat", app_status)
+
+
+@shared_stories.scenario(OPEN_STORY_UI, "An install that fails says what failed and how to fix it")
+def _(s):
+    @s.given("the app status row reads Story UI not installed")
+    def _(world):
+        world.app = ThrowawayApp(STORY_UI_EDITOR)
+        world.apps.append(world.app)
+
+    @s.but_("npm install fails in the Story UI editor's folder with npm's ENOENT")
+    def _(world):
+        world.app.write_code(MISSING_DEPENDENCY, SERVE)
+
+    @s.when("the Person opens the Story UI editor from the app status row")
+    def _(world):
+        world.refusal = refusal_of(lambda: world.open_app(STORY_UI_EDITOR.label))
+
+    @s.then("the side panel stays closed")
+    def _(world):
+        expect(world.refusal).to(be_a(AppNotStarted))
+
+    @s.and_("the server health panel says the Story UI install failed, with npm's ENOENT")
+    def _(world):
+        expect(str(world.refusal)).to(contain("The Story UI install failed:", "ENOENT"))
+
+    @s.and_("it says to run npm install in the Story UI editor's folder")
+    def _(world):
+        expect(str(world.refusal)).to(contain(f"Run npm install in {world.app.folder}"))
+
+    @s.and_("the app status row still reads Story UI not installed")
+    def _(world):
+        expect(app_in(world.report(), STORY_UI_EDITOR.label)["status"]).to(equal(AppStatus.NOT_INSTALLED.value))
+
+
+for app_status in PRESS_DOES:
+    press_readies_by_status(OPEN_GRAPH, GRAPH_APP, "A press on the Graph app readies it by its status and opens it beside the chat", app_status)
+
+for app_status in PRESS_DOES:
+    press_readies_by_status(OPEN_KANBAN, CDD_KANBAN, "A press on the CDD Kanban readies it by its status and opens it beside the chat", app_status)
+
+
+@shared_stories.scenario(OPEN_KANBAN, "A board that does not come up says so instead of opening an empty panel")
+def _(s):
+    @s.given("the app status row reads Kanban not running")
+    def _(world):
+        world.app = ThrowawayApp(CDD_KANBAN)
+        world.apps.append(world.app)
+        world.app.seed(AppStatus.DOWN)
+
+    @s.but_("nothing answers on its port within the wait after the launch")
+    def _(world):
+        world.app.write_code(FOUND_DEPENDENCY, STOPS_AT_ONCE)
+
+    @s.when("the Person opens the CDD Kanban from the app status row")
+    def _(world):
+        world.refusal = refusal_of(lambda: world.open_app(CDD_KANBAN.label))
+
+    @s.then("the side panel stays closed")
+    def _(world):
+        expect(world.refusal).to(be_a(AppNotStarted))
+
+    @s.and_("the server health panel says the Kanban did not start: nothing answered on its port")
+    def _(world):
+        expect(str(world.refusal)).to(contain(f"The Kanban did not start: nothing answered on port {world.app.port}"))
+
+    @s.and_("the app status row still reads Kanban not running")
+    def _(world):
+        row = app_in(world.report(), CDD_KANBAN.label)
+        expect((row["status"], row["port"])).to(equal((AppStatus.DOWN.value, None)))
+

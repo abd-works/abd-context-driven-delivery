@@ -7,3 +7,6 @@ from space.kanban.backlog_item import BacklogItem
 from space.kanban.ticket import Ticket
 
 Board.places_cards(Ticket, BacklogItem)
+
+# The apps the board's server serves register with App when this package is imported, so the server health report lists them.
+import space.kanban.board_app  # noqa: E402,F401

@@ -1,4 +1,5 @@
-"""Module: harness/installation. Model (clean-engineering-model, python): *App*, its status and its failures.
+"""Module: harness/diagnostics. Model (clean-engineering-model, python): *App*, its status and its failures.
+Implemented: harness/diagnostics/app.py.
 Canonical: harness/.context/editor-apps/.context/editor-apps-model.md#app"""
 from __future__ import annotations
 
@@ -8,7 +9,6 @@ from typing import ClassVar
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import tool_subject
-from harness.installation.app_ports import AppPorts
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
 
@@ -46,9 +46,7 @@ class App:
 
     _registered: ClassVar[list[App]] = []
 
-    def __init__(self, label: str, ports: AppPorts, page: str = "/") -> None:
-        # its folder is the nearest folder above its ports file that holds a package.json
-        # -> ports.of
+    def __init__(self, label: str, folder: Path, ports: tuple[int, ...], page: str = "/") -> None:
         ...
 
     def register(self) -> App:
