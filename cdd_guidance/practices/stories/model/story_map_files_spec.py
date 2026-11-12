@@ -100,3 +100,21 @@ with description("the nearest story map of a folder"):
         with it("should find the project's map"):
             files = StoryMapFiles(self.root / "project" / "tests" / "place-order", top=self.root / "project")
             expect(_named(self.root, [files.nearest()])).to(equal(["project/.context/story-map.md"]))
+
+    with context("with no top named and a story map above a folder that sits in no git checkout"):
+        with before.each:
+            _write(self.root, ".context/story-map.md", _MAP)
+            (self.root / "loose").mkdir()
+
+        with it("should search the folder alone, not the folders above it"):
+            expect(StoryMapFiles(self.root / "loose").nearest()).to(equal(None))
+
+    with context("with no top named and a story map at the root of the git checkout the folder sits in"):
+        with before.each:
+            _write(self.root, "checkout/.context/story-map.md", _MAP)
+            (self.root / "checkout" / ".git").mkdir()
+            (self.root / "checkout" / "work").mkdir()
+
+        with it("should find the checkout's map"):
+            found = StoryMapFiles(self.root / "checkout" / "work").nearest()
+            expect(_named(self.root, [found])).to(equal(["checkout/.context/story-map.md"]))

@@ -103,15 +103,27 @@ class StoryMapFiles:
             yield from (Path(folder, name).resolve() for name in sorted(names) if name.lower().endswith(_MARKDOWN))
 
     def _this_and_above(self) -> List[Path]:
+        """This folder and those above it, up to the top folder; with none given, up to the project the folder sits
+        in (the nearest folder holding a git checkout), and this folder alone when it sits in no
+        project: a temporary folder's parent can hold hundreds of thousands of files."""
         folders = [self.folder, *self.folder.parents]
-        if self.top is None or self.top not in folders:
+        top = self.top if self.top is not None else next((folder for folder in folders if _is_project(folder)), self.folder)
+        if top not in folders:
             return folders
-        return folders[: folders.index(self.top) + 1]
+        return folders[: folders.index(top) + 1]
 
     def _maps_in(self, folder: Path) -> List[Path]:
         context = folder / CONTEXT_FOLDER
         beside = list(context.iterdir()) if context.is_dir() else []
         return sorted(path.resolve() for path in [*folder.iterdir(), *beside] if path.is_file() and is_story_map_file(path))
+
+
+# What marks a folder as a project's own: its git checkout. A folder holding `.sessions` need not be one: a home folder can.
+_PROJECT_MARKS = (".git",)
+
+
+def _is_project(folder: Path) -> bool:
+    return any((folder / mark).exists() for mark in _PROJECT_MARKS)
 
 
 # The folders and file names scenarios are written in, in the order a folder's scenario files are read.
