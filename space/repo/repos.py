@@ -237,7 +237,7 @@ class Repos:
 
     def _publish(self, root: Path, visibility: str) -> str:
         repo = Repo.of_project(root)
-        if repo.has_origin():
+        if repo.has_origin:
             if repo.needs_push():
                 repo.push_upstream()
                 return "Pushed main to its origin."

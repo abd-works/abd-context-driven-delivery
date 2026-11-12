@@ -87,6 +87,22 @@ with description("Repos") as self:
             expect(again).to(contain("is a repository already, on main"))
             expect(again).to(contain(".gitignore already ignores"))
 
+    with context("publishing a repository that has an origin already"):
+        with before.each:
+            self.root = _repository(self.top / "has-origin")
+            self.origin = self.top / "origin.git"
+            Git(self.top).run("init", "--bare", "-b", "main", str(self.origin))
+            Git(self.root).run("remote", "add", "origin", str(self.origin))
+
+        with it("should push main there instead of creating a GitHub repository"):
+            answer = self.repos.open("has-origin", install=False, start_chat=False)
+            expect(answer).to(contain("Pushed main to its origin"))
+            expect(Git(self.origin).run("rev-parse", "main")).to(equal(Git(self.root).run("rev-parse", "HEAD")))
+
+        with it("should say it is published once origin has main"):
+            self.repos.open("has-origin", install=False, start_chat=False)
+            expect(self.repos.open("has-origin", install=False, start_chat=False)).to(contain("Already published"))
+
     with context("opening a linked worktree as a repository"):
         with it("should refuse it"):
             Git(self.here).run("worktree", "add", "-b", "ticket-2", str(self.top / "wt"))
