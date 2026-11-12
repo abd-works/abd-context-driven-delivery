@@ -11,6 +11,8 @@ from pathlib import Path
 from harness.graph.skipped_folders import scanned_files
 from harness.guidance.practice_reading import PracticeReading
 
+from cdd_guidance.practices.stories.model.shared_step_calls import SharedStepCalls
+
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 _STEP_TYPES = frozenset({"Step", "Given", "When", "Then"})
 # A story map's epic is recorded as an Epic, or as a SubEpic under another epic; a map built on a graph without being
@@ -172,12 +174,10 @@ class StoryLinks:
         self.graph = stories.graph
 
     @cached_property
-    def operations(self) -> dict[str, list]:
-        """Clean Engineering's operations by name, read from the graph once."""
-        found: dict[str, list] = {}
-        for operation in self.clean.in_graph.nodes("Operation"):
-            found.setdefault(operation.name, []).append(operation)
-        return found
+    def shared_steps(self) -> SharedStepCalls:
+        """What the steps of the shared story files beside the code call, which a story test's steps written in words
+        call too."""
+        return SharedStepCalls(Path(self.clean.in_graph.source_root))
 
     @cached_property
     def modules(self) -> set:
@@ -200,8 +200,8 @@ class StoryLinks:
 
     def _link_step(self, step) -> None:
         body = self._step_body(step)
-        called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
-        matched = [operation for name in called for operation in self.operations.get(name, ())]
+        called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body)) | self._shared_calls(step)
+        matched = [member for name in called for member in self.clean.code_index.members_named(name)]
         epic = self.tree.epic_of(step) if matched else None
         for operation in matched:
             self.graph.link("invokes", step, operation, "relationship")
@@ -227,6 +227,17 @@ class StoryLinks:
             if prop.name in reads:
                 self.graph.link("retrievedUsing", example, prop, "relationship")
                 self.graph.link("retrievedUsing", prop, example, "relationship")
+
+    def _shared_calls(self, step) -> set[str]:
+        """What the shared story file's step of the same story, scenario, and words calls; none for a step under no
+        scenario."""
+        scenario = self.graph.direct_parent(step)
+        while scenario is not None and scenario.type != "Scenario":
+            scenario = self.graph.direct_parent(scenario)
+        story = self.graph.direct_parent(scenario) if scenario is not None else None
+        if story is None:
+            return set()
+        return self.shared_steps.called_by(story.name, scenario.name, step.name)
 
     def _step_body(self, step) -> str:
         """The step's own text and the body its story test gives it."""

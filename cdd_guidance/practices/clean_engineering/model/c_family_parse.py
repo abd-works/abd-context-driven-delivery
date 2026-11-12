@@ -92,7 +92,7 @@ class CFamilyParse:
     def _append_classes(self, module: Module) -> None:
         class_order = 1
         for match in self._class_heads:
-            body, body_start = self._brace_body(self._text, match.end() - 1)
+            body, body_start = self._brace_body(self._text, self._body_open(match.end()))
             if body is None:
                 continue
             self._body_start = body_start
@@ -183,7 +183,7 @@ class CFamilyParse:
     def _class_spans(self) -> list[tuple[int, int]]:
         spans: list[tuple[int, int]] = []
         for match in self._class_heads:
-            body, body_start = self._brace_body(self._text, match.end() - 1)
+            body, body_start = self._brace_body(self._text, self._body_open(match.end()))
             if body is not None:
                 spans.append((body_start, body_start + len(body)))
         return spans
@@ -351,6 +351,20 @@ class CFamilyParse:
         """A field relates only when its type names a domain class."""
         for prop in oclass.properties:
             prop.derive_relationship()
+
+    def _body_open(self, after: int) -> int:
+        """Where the class body opens: the first `{` after the class name outside the type arguments of its heritage
+        clause, whose braces (`extends Component<{ children: ReactNode }>`) open no body; the text's end for none."""
+        depth = 0
+        for index in range(after, len(self._text)):
+            char = self._text[index]
+            if char == "<":
+                depth += 1
+            elif char == ">" and depth:
+                depth -= 1
+            elif char == "{" and not depth:
+                return index
+        return len(self._text)
 
     def _brace_body(self, text: str, open_index: int) -> tuple[str | None, int]:
         """The text inside the first `{` at or after open_index and the `}` that closes it, with where it starts."""
