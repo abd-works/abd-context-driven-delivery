@@ -183,10 +183,12 @@ class Sessions:
     def with_file(self, session_file: str) -> Session:
         """The session whose session.json is session_file, a path from this checkout's top or an absolute one, read
         without opening it. A board command names its ticket's session this way, because it runs in whichever chat it
-        is sent to, and that chat's open session can be another."""
+        is sent to, and that chat's open session can be another. The main session always exists, as ``named`` and
+        ``switch`` treat it, so its own session.json path finds it before anything has written that file."""
         named = Path(session_file)
         found = named if named.is_absolute() else self.root / named
-        if not session_file or not found.is_file():
+        is_main = found.name == SESSION_FILE and found.parent.resolve() == self.folder_of(MAIN_SESSION_NAME).resolve()
+        if not session_file or not (found.is_file() or is_main):
             raise SessionNotFoundError(session_file)
         return self.load(found.parent)
 

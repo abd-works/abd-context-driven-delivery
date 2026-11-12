@@ -141,6 +141,11 @@ with description("a handoff asked for a board ticket's session"):
             self.tool.invoke({"session": ".sessions/checkout-flow/session.json", "content": "content"}, project=self.root)
             expect(list((self.root / ".sessions" / "billing-report").glob("handoff-*.md"))).to(equal([]))
 
+    with context("that names the main session before main has a session.json"):
+        with it("should write into the main session folder"):
+            path = Path(self.tool.invoke({"session": ".sessions/main/session.json", "content": "content"}, project=self.root))
+            expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "main"))
+
     with context("that names no session"):
         with it("should refuse rather than write into whichever session is open"):
             write = lambda: self.tool.invoke({"session": "", "content": "content"}, project=self.root)
