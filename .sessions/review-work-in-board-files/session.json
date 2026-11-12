@@ -1,0 +1,17 @@
+{
+  "name": "review-work-in-board-files",
+  "title": "Review Work In Board Files",
+  "scope": "feature",
+  "workpath": "C:\\dev\\abd-context-driven-delivery\\harness\\.context",
+  "repo_path": "C:\\dev\\abd-context-driven-delivery",
+  "outputs": {
+    "stories": {
+      "root": "stories"
+    },
+    "ux": {
+      "root": "ux"
+    }
+  },
+  "branch": "review-work-in-board-files",
+  "worktree": "C:\\dev\\abd-cdd-review-work-in-board-fil"
+}
