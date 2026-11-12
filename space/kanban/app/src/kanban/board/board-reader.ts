@@ -1,5 +1,6 @@
 import { BoardClientGenerated, type BoardData } from '@cdd/space/kanban/board'
 
+import { BoardClient } from './board-client'
 import type { BoardPage } from './board-page'
 import { PendingChanges, type PendingChange } from '../shared/pending-changes'
 
@@ -46,13 +47,16 @@ export class BoardReader {
     if (read) this.page.store.change({ board: this.pending.over(read) })
   }
 
+  // Announcements compare this read with the server's last one, not with the page: a person's own move already shows
+  // there before the server answers, so the page would never see it change.
   private async apply(shown: BoardData): Promise<void> {
     const { store } = this.page
     const before = store.state.board ? this.page.board : null
+    const lastRead = this.latestRead ? new BoardClient(this.latestRead, this.page) : null
     this.latestRead = shown
     store.change({ board: this.pending.over(shown), now: Date.now() })
     const after = this.page.board
-    for (const announcement of before ? after.announcementsSince(before) : []) store.toast(announcement)
+    for (const announcement of lastRead ? new BoardClient(shown, this.page).announcementsSince(lastRead) : []) store.toast(announcement)
     if (JSON.stringify(before) !== JSON.stringify(after)) await this.page.reloadOpen()
   }
 

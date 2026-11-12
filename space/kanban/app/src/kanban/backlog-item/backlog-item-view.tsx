@@ -1,4 +1,4 @@
-import { openingOf } from '../ticket/card-upkeep-view'
+import { openingOf } from '../shared/text-opening'
 import { useState } from 'react'
 import type { DragEvent, FormEvent } from 'react'
 

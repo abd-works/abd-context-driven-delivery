@@ -4,7 +4,7 @@ import { ACCENT, card, dragCard, openBoard, openCard, openCardOf, openTileBarOf 
 
 // Dropping the active ticket on Complete asks, in the Close dialog, what to do with its work.
 async function openCloseDialog(page: Page): Promise<void> {
-  await dragCard(page, card(page, 'checkout-flow'), page.locator('.board-column[data-column="Complete"] .card-list').first(), { atTheEnd: true })
+  await dragCard(page, card(page, 'checkout-flow'), page.locator('.board-column[data-column="Complete"] .card-list').first())
   await expect(page.getByRole('dialog')).toBeVisible({ timeout: 8_000 })
 }
 

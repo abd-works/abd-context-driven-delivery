@@ -30,13 +30,16 @@ async function selectTicket(page: Page, ticket: string, title: string): Promise<
 }
 
 // A card low in a stage drags onto the part of the Done list the board region shows, since the list's own middle can
-// be scrolled out of sight.
+// be scrolled out of sight. A drop on a card would make it that card's child, so it drops below the list's cards.
 async function dragIntoView(page: Page, dragged: Locator, target: Locator): Promise<void> {
   const [from, to, shown] = [(await dragged.boundingBox())!, (await target.boundingBox())!, (await page.locator('.board-region').boundingBox())!]
+  const cards = target.locator(':scope > .ticket-card')
+  const last = (await cards.count()) ? await cards.last().boundingBox() : null
+  const below = last ? last.y + last.height + 24 : Math.max(to.y, shown.y) + 40
   await page.mouse.move(from.x + 24, from.y + 14)
   await page.mouse.down()
   await page.mouse.move(from.x + 44, from.y + 24, { steps: 10 })
-  await page.mouse.move(to.x + to.width / 2, Math.max(to.y, shown.y) + 40, { steps: 10 })
+  await page.mouse.move(to.x + to.width / 2, Math.min(below, shown.y + shown.height - 24, to.y + to.height - 24), { steps: 10 })
   await page.mouse.up()
 }
 
