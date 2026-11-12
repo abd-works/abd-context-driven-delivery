@@ -340,7 +340,7 @@ Intended (`.sessions/session-board/ticket-enhancements.md`; `harness/.context/ux
 
 Intended (`.sessions/session-board/ticket-enhancements.md` "Add a ticket as a child of a different parent" and "Make a child independent of its parent"; `harness/.context/ux/ticket-ui.drawio` "add and remove a child"): a ticket made the child of a different parent leaves its old parent, and a child taken off its parent becomes a ticket with no parent. A person drags a ticket onto another to make it that ticket's child, and Alt-drags a child out of its parent to leave it with none (the person, 2026-11-11). Both change which parent the ticket has, so they are one story. Was: Move Child Ticket To Another Parent.
 
-Built (2026-11-11): dragging a ticket onto another card makes it that ticket's child (`TicketClient.takeAsChild` calls `ticket.reassign_parent`); the Alt-drag out of a parent is not built yet.
+Built (2026-11-11): dragging a ticket onto another card makes it that ticket's child (`TicketClient.takeAsChild` calls `ticket.reassign_parent`), and dropping a Backlog item on a ticket starts it as that ticket's child (`backlog-item.start_under`); the Alt-drag out of a parent is not built yet.
 
 ### (S) Board App --> [Place Parent At Leftmost Child Stage](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-place-parent-at-leftmost-child-stage)
 
