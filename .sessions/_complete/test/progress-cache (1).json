@@ -1,92 +1,92 @@
 {
   "stories-story-map": {
     "has_output": {
-      "key": "[{\"drawio\": [\"C:/dev/abd-context-driven-delivery/.context/story-map.drawio\"], \"markdown\": [\"C:/dev/abd-context-driven-delivery/.context/story-map.md\"]}, 0]",
+      "key": "[{\"drawio\": [\"C:/dev/abd-cdd-test/.context/story-map.drawio\"], \"markdown\": [\"C:/dev/abd-cdd-test/.context/story-map.md\"]}, 0]",
       "value": false
     }
   },
   "ddd-bounded-context": {
     "has_output": {
-      "key": "[{\"markdown\": [\"C:/dev/abd-context-driven-delivery/.context/bounded-context-map.md\"]}, 0]",
+      "key": "[{\"markdown\": [\"C:/dev/abd-cdd-test/.context/bounded-context-map.md\"]}, 0]",
       "value": false
     }
   },
   "ux-ia": {
     "has_output": {
-      "key": "[{\"drawio\": [\"C:/dev/abd-context-driven-delivery/{epic}/.context/information-architecture.drawio\"], \"markdown\": [\"C:/dev/abd-context-driven-delivery/{epic}/.context/ux-context.md\"]}, 0]",
-      "value": false
+      "key": "[{\"drawio\": [\"C:/dev/abd-cdd-test/{epic}/.context/information-architecture.drawio\"], \"markdown\": [\"C:/dev/abd-cdd-test/{epic}/.context/ux-context.md\"]}, 0]",
+      "value": true
     }
   },
   "clean-engineering-modules": {
     "has_output": {
-      "key": "[{\"drawio\": [\"C:/dev/abd-context-driven-delivery/.context/modules.drawio\"], \"markdown\": [\"C:/dev/abd-context-driven-delivery/{module}/.context/module-context.md\"]}, 0]",
-      "value": false
+      "key": "[{\"drawio\": [\"C:/dev/abd-cdd-test/.context/modules.drawio\"], \"markdown\": [\"C:/dev/abd-cdd-test/{module}/.context/module-context.md\"]}, 0]",
+      "value": true
     }
   },
   "bdd-behavior": {
     "has_output": {
-      "key": "[{\"java\": [\"C:/dev/abd-context-driven-delivery/**/*Spec.java\"], \"python\": [\"C:/dev/abd-context-driven-delivery/**/*_spec.py\"], \"typescript\": [\"C:/dev/abd-context-driven-delivery/**/*spec.ts\"]}, 0]",
-      "value": false
+      "key": "[{\"java\": [\"C:/dev/abd-cdd-test/**/*Spec.java\"], \"python\": [\"C:/dev/abd-cdd-test/**/*_spec.py\"], \"typescript\": [\"C:/dev/abd-cdd-test/**/*spec.ts\"]}, 0]",
+      "value": true
     }
   },
   "stories-scenarios": {
     "has_output": {
-      "key": "[{\"markdown\": [\"C:/dev/abd-context-driven-delivery/.context/{epic}/{sub-epic}/{story}/{story_snake}_story.test.md\"], \"python\": [\"C:/dev/abd-context-driven-delivery/{epic}/{sub-epic}/{story}/{story_snake}_story.test.py\"], \"realization\": [\"C:/dev/abd-context-driven-delivery/.context/{scope}-scenario-realization.md\"], \"typescript\": [\"C:/dev/abd-context-driven-delivery/{epic}/{sub-epic}/{story}/{story_snake}_story.test.ts\"]}, 0]",
-      "value": false
+      "key": "[{\"markdown\": [\"C:/dev/abd-cdd-test/.context/{epic}/{sub-epic}/{story}/{story_snake}_story.test.md\"], \"python\": [\"C:/dev/abd-cdd-test/{epic}/{sub-epic}/{story}/{story_snake}_story.test.py\"], \"realization\": [\"C:/dev/abd-cdd-test/.context/{scope}-scenario-realization.md\"], \"typescript\": [\"C:/dev/abd-cdd-test/{epic}/{sub-epic}/{story}/{story_snake}_story.test.ts\"]}, 0]",
+      "value": true
     }
   },
   "ddd-model": {
     "has_output": {
-      "key": "[{\"drawio\": [\"C:/dev/abd-context-driven-delivery/.context/domain-model.drawio\"], \"markdown\": [\"C:/dev/abd-context-driven-delivery/.context/domain-model.md\"], \"python\": [\"C:/dev/abd-context-driven-delivery/{bounded_context}/{aggregate}/{aggregate}.py\"], \"typescript\": [\"C:/dev/abd-context-driven-delivery/{bounded_context}/{aggregate}/{aggregate}.ts\"]}, 0]",
-      "value": false
+      "key": "[{\"drawio\": [\"C:/dev/abd-cdd-test/.context/domain-model.drawio\"], \"markdown\": [\"C:/dev/abd-cdd-test/.context/domain-model.md\"], \"python\": [\"C:/dev/abd-cdd-test/{bounded_context}/{aggregate}/{aggregate}.py\"], \"typescript\": [\"C:/dev/abd-cdd-test/{bounded_context}/{aggregate}/{aggregate}.ts\"]}, 0]",
+      "value": true
     }
   },
   "ux-mockup": {
     "has_output": {
-      "key": "[{\"claude_design\": [\"C:/dev/abd-context-driven-delivery/design-canvas/{version}/project/canvas.json\"], \"html\": [\"C:/dev/abd-context-driven-delivery/{epic}/{user_goal}.html\"]}, 0]",
-      "value": false
+      "key": "[{\"claude_design\": [\"C:/dev/abd-cdd-test/design-canvas/{version}/project/canvas.json\"], \"html\": [\"C:/dev/abd-cdd-test/{epic}/{user_goal}.html\"]}, 0]",
+      "value": true
     }
   },
   "clean-engineering-model": {
     "has_output": {
-      "key": "[{\"drawio\": [\"C:/dev/abd-context-driven-delivery/{module}/.context/{module}-model.drawio\"], \"markdown\": [\"C:/dev/abd-context-driven-delivery/{module}/.context/{module}-model.md\"], \"python\": [\"C:/dev/abd-context-driven-delivery/{module}/\"], \"typescript\": [\"C:/dev/abd-context-driven-delivery/{module}/\"]}, 0]",
-      "value": false
+      "key": "[{\"drawio\": [\"C:/dev/abd-cdd-test/{module}/.context/{module}-model.drawio\"], \"markdown\": [\"C:/dev/abd-cdd-test/{module}/.context/{module}-model.md\"], \"python\": [\"C:/dev/abd-cdd-test/{module}/\"], \"typescript\": [\"C:/dev/abd-cdd-test/{module}/\"]}, 0]",
+      "value": true
     }
   },
   "bdd-realization": {
     "has_output": {
-      "key": "[{\"markdown\": [\"C:/dev/abd-context-driven-delivery/.context/{scope}-bdd-realization.md\"], \"python\": [\"C:/dev/abd-context-driven-delivery/**/*_spec.py\"], \"typescript\": [\"C:/dev/abd-context-driven-delivery/**/*spec.ts\"]}, 0]",
-      "value": false
+      "key": "[{\"markdown\": [\"C:/dev/abd-cdd-test/.context/{scope}-bdd-realization.md\"], \"python\": [\"C:/dev/abd-cdd-test/**/*_spec.py\"], \"typescript\": [\"C:/dev/abd-cdd-test/**/*spec.ts\"]}, 0]",
+      "value": true
     }
   },
   "stories-acceptance-tests": {
     "has_output": {
-      "key": "[{\"python\": [\"C:/dev/abd-context-driven-delivery/{sub_epic_slug}.story.shared.py\", \"C:/dev/abd-context-driven-delivery/{sub_epic_slug}.story.domain.spec.py\", \"C:/dev/abd-context-driven-delivery/{sub_epic_slug}.story.server.spec.py\"], \"typescript\": [\"C:/dev/abd-context-driven-delivery/{sub_epic_slug}.story.shared.ts\", \"C:/dev/abd-context-driven-delivery/{sub_epic_slug}.story.domain.spec.ts\", \"C:/dev/abd-context-driven-delivery/{sub_epic_slug}.story.server.spec.ts\"]}, 0]",
+      "key": "[{\"python\": [\"C:/dev/abd-cdd-test/{sub_epic_slug}.story.shared.py\", \"C:/dev/abd-cdd-test/{sub_epic_slug}.story.domain.spec.py\", \"C:/dev/abd-cdd-test/{sub_epic_slug}.story.server.spec.py\"], \"typescript\": [\"C:/dev/abd-cdd-test/{sub_epic_slug}.story.shared.ts\", \"C:/dev/abd-cdd-test/{sub_epic_slug}.story.domain.spec.ts\", \"C:/dev/abd-cdd-test/{sub_epic_slug}.story.server.spec.ts\"]}, 0]",
       "value": false
     }
   },
   "ddd-tactics": {
     "has_output": {
-      "key": "[{\"python\": [\"C:/dev/abd-context-driven-delivery/{bounded_context}/{aggregate}/\"], \"typescript\": [\"C:/dev/abd-context-driven-delivery/{bounded_context}/{aggregate}/\"]}, 0]",
+      "key": "[{\"python\": [\"C:/dev/abd-cdd-test/{bounded_context}/{aggregate}/\"], \"typescript\": [\"C:/dev/abd-cdd-test/{bounded_context}/{aggregate}/\"]}, 0]",
       "value": false
     }
   },
   "ux-front-end-code": {
     "has_output": {
-      "key": "[{\"javascript\": [\"C:/dev/abd-context-driven-delivery/**/*View.jsx\"], \"typescript\": [\"C:/dev/abd-context-driven-delivery/**/*View.tsx\"]}, 0]",
-      "value": false
+      "key": "[{\"javascript\": [\"C:/dev/abd-cdd-test/**/*View.jsx\"], \"typescript\": [\"C:/dev/abd-cdd-test/**/*View.tsx\"]}, 0]",
+      "value": true
     }
   },
   "clean-engineering-code": {
     "has_output": {
-      "key": "[{\"python\": [\"C:/dev/abd-context-driven-delivery/{module}/\"], \"typescript\": [\"C:/dev/abd-context-driven-delivery/{module}/\"]}, 0]",
+      "key": "[{\"python\": [\"C:/dev/abd-cdd-test/{module}/\"], \"typescript\": [\"C:/dev/abd-cdd-test/{module}/\"]}, 0]",
       "value": false
     }
   },
   "bdd-development": {
     "has_output": {
-      "key": "[{\"java\": [\"C:/dev/abd-context-driven-delivery/**/*Spec.java\"], \"python\": [\"C:/dev/abd-context-driven-delivery/**/*_spec.py\"], \"typescript\": [\"C:/dev/abd-context-driven-delivery/**/*spec.ts\"]}, 0]",
-      "value": false
+      "key": "[{\"java\": [\"C:/dev/abd-cdd-test/**/*Spec.java\"], \"python\": [\"C:/dev/abd-cdd-test/**/*_spec.py\"], \"typescript\": [\"C:/dev/abd-cdd-test/**/*spec.ts\"]}, 0]",
+      "value": true
     }
   }
 }
