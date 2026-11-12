@@ -123,6 +123,7 @@ sandbox/
 
 # Saved graphs are a cache graph.load_working_copy writes; spec fixtures are kept
 **/.context/graph.json
+.sessions/**/graph.json
 !**/fixtures/**/.context/graph.json
 
 # The hook daemon of this checkout: its address, log, and start lock (harness/hooks/hook_daemon.py)

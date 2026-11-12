@@ -21,6 +21,7 @@ from mamba import after, before, context, description, it
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
 from space.session import Session, Sessions
+from space.session.sample_project import SampleProject
 from space.session.throwaway_project import ThrowawayProject
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
@@ -34,7 +35,6 @@ import cdd_guidance.practices  # noqa: F401 - registers the practices with the p
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 
-_SAMPLE = _REPO_ROOT / "harness" / "graph" / "_examples" / "input"
 _STORY_FOLDER = "tests/onboard-a-customer/authenticate-user"
 _ENTITY_ROOT_FILE = "src/account-credentials/account-credentials.ts"
 _STORY_FILE = f"{_STORY_FOLDER}/authenticate_user.story.shared.ts"
@@ -176,6 +176,9 @@ with description("a validate action on practice guidance") as self:
             self.folder = Path(__file__).with_name("fixtures") / "saved-graph"
             self.action = Validate(session=_working_in(self.project, self.folder, self.folder))
             self.session = Path(self.action.session.session_path)
+            # A session's graph is the one created for it in its own folder, so the fixture's graph is put there.
+            self.session.mkdir(parents=True, exist_ok=True)
+            shutil.copy(self.folder / ".context" / "graph.json", self.session / "graph.json")
 
         with it("should report the guidance practice's graph hits from graph.json when graph is true"):
             prose = _expanded_validate(self.action, {"guidance": ["ddd-tactics"], "graph": True})
@@ -427,11 +430,13 @@ with description("a validate action on practice guidance") as self:
                 expect((self.session / "validation-reports").exists()).to(equal(False))
 
     with context("with edited files of a working copy that every graph practice reads"):
+        with before.all:
+            # The one sample project the specs share, its session's graph read once for every example here.
+            self.sample = SampleProject.shared()
+
         with before.each:
-            # A copy of the sample in a folder of its own, so it is a project of its own as a checked-out one is.
-            sample = Path(tempfile.mkdtemp()) / "input"
-            shutil.copytree(_SAMPLE, sample)
-            self.action = Validate(session=_working_in(self.project, sample, sample))
+            self.sample.clear_reports()
+            self.action = Validate(session=self.sample.session)
             self.session = Path(self.action.session.session_path)
 
         with it("should report the private-method-naming violation on the edited entity root"):
@@ -443,6 +448,11 @@ with description("a validate action on practice guidance") as self:
             report = self.action.validate(guidance=["stories-scenarios"], paths=[_STORY_FILE])
             expect(report).to(contain("verb-noun-format"))
             expect(report).to(contain(f"[{_STORY_FILE}]("))
+
+        with it("should report the limit-operation-parameters violation on the edited Python class"):
+            report = self.action.validate(guidance=["clean-engineering-code"], paths=["orders/order.py"])
+            expect(report).to(contain("limit-operation-parameters"))
+            expect(report).to(contain("[orders/order.py]("))
 
         with it("should report the observable-behavior violation on the edited spec"):
             report = self.action.validate(guidance=["bdd-development"], paths=[_SPEC_FILE])
@@ -529,7 +539,7 @@ with description("a validate action on practice guidance") as self:
 
         with it("should leave an earlier report's saved graph as it was"):
             folder = self.session / "validation-reports"
-            folder.mkdir(parents=True)
+            folder.mkdir(parents=True, exist_ok=True)
             earlier = folder / "ddd-tactics-20200101T000000.json"
             earlier.write_text("[]", encoding="utf-8")
             self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])

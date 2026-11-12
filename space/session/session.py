@@ -203,7 +203,11 @@ class Session:
         in it before. A session whose root has moved gets a new graph, with new practices, on the new root."""
         with self._parts_lock:
             if self._graph is None:
-                graph = Graph(output.guidance for output in self._own_outputs.values())
+                # Only the practices the session works on: a practice turned off for it is never read into its graph.
+                graph = Graph(output.guidance for output in self._own_outputs.values() if output.enabled)
+                # A session uses a graph created for it and saved in its own folder; a graph saved anywhere else, such
+                # as the graph tool's, is not the session's.
+                graph.kept_in = self.session_path
                 graph.open_saved(self.work_root)
                 if self.overlays:
                     graph.overlays = self.overlays

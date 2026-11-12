@@ -48,8 +48,8 @@ class Validate(GuidanceAction):
     ) -> str:
         """Check artifacts against rules.
         rule: one Rule to check. Omit it to walk each guidance's rules.
-        graph: true for the saved graph of the session's folder (.context/graph.json, there only after graph.load_working_copy
-        has run on that folder), or path(s) to graph_return_nodes JSON
+        graph: true for the session's graph (graph.json in the session's own folder, created for the session and loaded
+        when it is missing), or path(s) to graph_return_nodes JSON
         or a saved graph.json. When set, append a graph-rule report for each guidance's practice and still run AI validation.
         paths: the files or folders being edited, named from the project's root or absolute (e.g. src/my-paradise/order.ts).
         For graph-backed guidance, the session's graph is refreshed with exactly these files as they are now and its rules
@@ -88,7 +88,7 @@ class Validate(GuidanceAction):
             return ""
         return (
             "No saved graph found. Run graph.load_working_copy on the session's folder, which saves "
-            ".context/graph.json there, or pass graph as a path to graph_return_nodes JSON."
+            "graph.json in the session's folder, or pass graph as a path to graph_return_nodes JSON."
         )
 
     def _rules_text(self, worked: Guidance | str, rule: Rule | None) -> str:
