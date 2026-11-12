@@ -136,7 +136,7 @@ class HookDaemonAddress:
         return self._call({"method": "handle_stdin", "raw": raw.decode("utf-8-sig")}, _CALL_TIMEOUT_SECONDS)
 
     def _call(self, payload: dict, timeout: float) -> dict:
-        with socket.create_connection((self.host, self.port), timeout=timeout) as conn:
+        with ExclusivePort(self.host, self.port).connect(timeout) as conn:
             _Wire(conn).write(payload)
             return _Wire(conn).read()
 

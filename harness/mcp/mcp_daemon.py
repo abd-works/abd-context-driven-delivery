@@ -1,13 +1,12 @@
 """The one cdd server process: started on demand, found through ``~/.cdd/server.json``, answering every chat over HTTP."""
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import socket
 import sys
 import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 from harness.mcp.cdd_home import CddHome
@@ -70,11 +69,16 @@ class McpDaemon:
     def ping(self) -> RunningServer | None:
         """Ask the running server about itself over HTTP: the server it describes, or ``None`` when nothing answers on
         the port."""
+        connection = http.client.HTTPConnection(self.HOST, self.port)
         try:
-            with urllib.request.urlopen(f"http://{self.HOST}:{self.port}{PING_PATH}", timeout=_PING_SECONDS) as reply:
-                answer = json.loads(reply.read().decode("utf-8"))
-        except (OSError, urllib.error.URLError, json.JSONDecodeError):
+            connection.sock = ExclusivePort(self.HOST, self.port).connect(_PING_SECONDS)
+            connection.request("GET", PING_PATH)
+            reply = connection.getresponse()
+            answer = json.loads(reply.read().decode("utf-8")) if reply.status == 200 else None
+        except (OSError, http.client.HTTPException, json.JSONDecodeError):
             return None
+        finally:
+            connection.close()
         return RunningServer(answer) if isinstance(answer, dict) and answer.get("ok") else None
 
     def is_running(self) -> bool:

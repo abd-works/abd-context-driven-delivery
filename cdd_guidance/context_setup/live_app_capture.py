@@ -2,12 +2,16 @@
 from __future__ import annotations
 
 import dataclasses
+import ipaddress
 import logging
 import re
 import socket
 import subprocess
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlsplit
+
+from harness.process.process import LOOPBACK_CONNECT_SECONDS
 
 _log = logging.getLogger(__name__)
 
@@ -15,7 +19,6 @@ _STUBS_DIR = ("tests", "stubs")
 _SCOUT_DIR = ("sandbox", "extracted-context", "app-extraction")
 _COMMON_PORTS = [3000, 8000, 8080, 5000, 4000, 5173, 4173]
 _FALLBACK_BASE_URL = "http://localhost:3000"
-_PORT_PROBE_SECONDS = 0.5
 _SMOKE_REQUEST_SECONDS = 5
 _PAGE_LOAD_MILLISECONDS = 30_000
 _ROOT_RENDER_MILLISECONDS = 10_000
@@ -170,7 +173,7 @@ class LiveAppCapture:
     def _detect_base_url(self) -> str:
         for port in _COMMON_PORTS:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(_PORT_PROBE_SECONDS)
+                s.settimeout(LOOPBACK_CONNECT_SECONDS)
                 if s.connect_ex(("localhost", port)) == 0:
                     return f"http://localhost:{port}"
         return _FALLBACK_BASE_URL
@@ -188,11 +191,21 @@ class LiveAppCapture:
         url = self._app_url() + path
         slug = path.strip("/").replace("/", "-") or "root"
         try:
-            status = requests.get(url, timeout=_SMOKE_REQUEST_SECONDS, allow_redirects=True).status_code
+            status = requests.get(url, timeout=(self._connect_seconds(), _SMOKE_REQUEST_SECONDS), allow_redirects=True).status_code
         except requests.RequestException as refused:
             _log.info("Smoke request to %s got no answer: %s", url, refused)
             return ScreenResult(slug=slug, url=url, reachable=False, status_code=0)
         return ScreenResult(slug=slug, url=url, reachable=status < 400, status_code=status)
+
+    def _connect_seconds(self) -> float:
+        """How long a smoke request waits to connect: an app on this computer accepts at once or not at all, so it gets
+        the short loopback wait; an app elsewhere gets the whole request time."""
+        host = urlsplit(self._app_url()).hostname or ""
+        try:
+            loopback = host == "localhost" or ipaddress.ip_address(host).is_loopback
+        except ValueError:
+            loopback = False
+        return LOOPBACK_CONNECT_SECONDS if loopback else _SMOKE_REQUEST_SECONDS
 
     def _desktop_smoke(self) -> ScreenResult:
         lister = "tasklist" if re.search(r"[A-Za-z]:\\", self.repo_path) else "ps"

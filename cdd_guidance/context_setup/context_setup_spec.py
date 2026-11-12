@@ -19,7 +19,8 @@ from cdd_guidance.context_setup.live_app_capture import LiveAppCapture
 
 
 def _closed_port_url() -> str:
-    """A localhost URL on a port nothing listens on, so a request to it is refused at once."""
+    """A localhost URL on a port nothing listens on, so a request to it is refused, or gives up after the short loopback
+    connect wait."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
         probe.bind(("localhost", 0))
         port = probe.getsockname()[1]
@@ -96,7 +97,8 @@ with description("a ContextSetup"):
             expect(lambda: ContextSetup().convert(tempfile.mkdtemp())).to(raise_error(ActionWorksInNoSession))
 
     with context("whose smoke_test is given a capture repository and an unreachable app"):
-        with before.each:
+        # Every example here only reads the one result, so the smoke test runs once for them all.
+        with before.all:
             self.throwaway = ThrowawayProject()
             self.app = Path(tempfile.mkdtemp())
             self.capture = Path(tempfile.mkdtemp())
@@ -108,7 +110,7 @@ with description("a ContextSetup"):
                 entry_paths=["/", "/login"],
             )
 
-        with after.each:
+        with after.all:
             self.throwaway.close()
 
         with it("should write the stub inventory under the capture repository"):
