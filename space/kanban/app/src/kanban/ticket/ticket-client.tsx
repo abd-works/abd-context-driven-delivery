@@ -212,8 +212,12 @@ export class TicketClient extends TicketClientGenerated {
     return opened?.worktree ?? ''
   }
 
+  // Python says where Move next and Move previous put the ticket while it stays on a stage, so the card shows there at
+  // once; a move that closes, reopens, or sends it to the Backlog waits for Python to show it.
   override async moveNext(): Promise<this | null> {
-    return this.followed(await super.moveNext())
+    const place = this.nextPlace
+    const moved = place ? await this.page.reader.change(new TicketMove(this.name, place.stage.name, place.is_done), () => super.moveNext()) : await super.moveNext()
+    return this.followed(moved)
   }
 
   // Dropped on a stage, the card shows there at once; moved to the Backlog it becomes an item, which only Python can show.
@@ -249,7 +253,9 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   override async movePrevious(): Promise<TicketData | BacklogItemData | null> {
-    return this.landed(await super.movePrevious())
+    const place = this.previousPlace
+    const moved = place ? await this.page.reader.change(new TicketMove(this.name, place.stage.name, place.is_done), () => super.movePrevious()) : await super.movePrevious()
+    return this.landed(moved)
   }
 
   // A move can land the ticket on a stage, where the card follows it, or in the Backlog, where its item is selected.

@@ -107,6 +107,8 @@ class Session:
         # The practices and graph this session keeps between calls, made when first asked for.
         self._outputs: dict[str, PracticeSessionOutput] | None = None
         self._graph: Graph | None = None
+        # The practices the graph was made with, so turning one on or off makes it again.
+        self._graph_practices: frozenset[str] = frozenset()
         # Calls from several chats reach this one object at once; the first to ask makes the practices and the graph,
         # and the others wait for them, so the session never holds two. Reentrant, because the graph asks for the
         # practices while it is being made.
@@ -223,11 +225,14 @@ class Session:
         practice, made once on its root, so every call in the session works on the same graph and the same practices
         and none rebuilds them; an action that writes files refreshes the graph with exactly those files. It reads back
         the graph saved on its root, so a session opened again, such as a ticket just activated, shows what was loaded
-        in it before. A session whose root has moved gets a new graph, with new practices, on the new root."""
+        in it before. A session whose root has moved gets a new graph, with new practices, on the new root. It holds only
+        the practices the session works on, so turning one on or off makes it again with those."""
         with self._parts_lock:
-            if self._graph is None:
+            working = frozenset(key for key, output in self._own_outputs.items() if output.enabled)
+            if self._graph is None or working != self._graph_practices:
                 # Only the practices the session works on: a practice turned off for it is never read into its graph.
-                graph = Graph(output.guidance for output in self._own_outputs.values() if output.enabled)
+                graph = Graph(self._own_outputs[key].guidance for key in self._own_outputs if key in working)
+                self._graph_practices = working
                 # A session uses a graph created for it and saved in its own folder; a graph saved anywhere else, such
                 # as the graph tool's, is not the session's.
                 graph.kept_in = self.session_path
@@ -434,16 +439,18 @@ class Session:
         return self
 
     def practice(self, name: str) -> PracticeSessionOutput:
-        """The practice called name in this session: the session's one instance of it."""
-        found = self.practices.get(name)
+        """The practice called name in this session, on or off for it: the session's one instance of it, so a practice
+        turned off can be turned on again. One the session works on is opened in its graph first."""
+        found = self.practices.get(name) or self._own_outputs.get(name)
         if found is None:
             raise UnknownPracticeError(name)
         return found
 
     @property
     def practices(self) -> dict[str, PracticeSessionOutput]:
-        """Every practice CDD has, by practice key, each the session's one instance of it: the ones its graph holds,
-        kept between calls with the graph, which opening here gives each practice to work in."""
+        """The practices the session works on, by practice key, each the session's one instance of it: the ones its
+        graph holds, kept between calls with the graph, which opening here gives each practice to work in. A practice
+        turned off for the session is in ``own_practices`` and ``practice(name)``, not here."""
         outputs = self._own_outputs
         return {key: outputs[key] for key in self.graph.practices.held}
 

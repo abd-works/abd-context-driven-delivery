@@ -376,14 +376,20 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 + activate(): Ticket
 	// `ticket.activate`: opens it in its own worktree, where its own chat works on it; the chat that asks keeps its session, and the repository's own folder stays on main
 	-> TicketCheckout.open
++ next_place: StagePlace
+	// where Move next puts it while it stays on a stage: its stage's Done, else the next stage's In progress; none when the move closes it, leaves it where it is, or is refused. The page shows the card there at once, and `move_next` goes where it says
+	-> Stage.next_stage
++ previous_place: StagePlace
+	// where Move previous puts it while it stays on a stage: its stage's In progress, else the previous stage's Done; none when the move reopens it, sends it to the Backlog, leaves it where it is, or is refused
+	-> Stage.previous_stage
 + move_next(): Ticket
 	// `ticket.move_next`: from In progress it writes `done <stage>`, from Done it writes `move <next stage>`, and out of Implementation it closes; a parent raises `ParentMovesWithChildrenError`, as `move_previous` and `move_to` do
-	-> Stage.next_stage
+	-> Ticket.next_place
 	-> StageMarks.mark
 	-> StageMarks.enter
 + move_previous(): Ticket | BacklogItem
 	// `ticket.move_previous`: from Done it writes `in-progress <stage>`, from In progress it writes `move <previous stage>` and `done <previous stage>`; out of Complete it reopens, and out of Discovery it returns to the Backlog
-	-> Stage.previous_stage
+	-> Ticket.previous_place
 	-> StageMarks.place
 	-> Session.reopen
 + move_to(stage: str, done: bool): Ticket | BacklogItem
@@ -494,6 +500,13 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 + keep_landing_release(leaving: list[str])
 	// a ticket closed with its branch merged keeps its end-to-end results only
 	-> LatestRelease.keep
+
+## StagePlace
+
+Where a move puts a ticket that stays on a stage: the stage, and whether in its Done or its In progress. The board sends it on each ticket for Move next and Move previous, so the page shows the card there the moment either is pressed.
+
++ stage: Stage
++ is_done: bool
 
 ## StageMarks
 

@@ -789,7 +789,17 @@ with description("a practice"):
 
             with it("should read as turned off from the same folder later"):
                 later = Sessions(self.repo).load(self.session.session_path)
-                expect(later.practices["ddd"].enabled).to(equal(False))
+                expect(later.practice("ddd").enabled).to(equal(False))
+
+            with it("should be left out of the practices the session works on"):
+                expect(sorted(self.session.practices)).to(equal(["bdd", "clean_engineering", "stories", "ux"]))
+
+            with context("that is turned on again"):
+                with before.each:
+                    self.session.practice("ddd").enable(True)
+
+                with it("should be among the practices the session works on"):
+                    expect(sorted(self.session.practices)).to(equal(["bdd", "clean_engineering", "ddd", "stories", "ux"]))
 
         with context("with the practice default folders"):
             with it("should point that practice's folder at its default workspace folder under workpath"):

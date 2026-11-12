@@ -16,7 +16,10 @@ The ticket names, titles, and log lines are those of `fixture-repo.ts` and of th
 from __future__ import annotations
 
 import json
+import shutil
+import tempfile
 from dataclasses import dataclass, field, replace
+from functools import cache
 from pathlib import Path
 
 import cdd_guidance.actions  # noqa: F401 - registers the actions and the practices, as the cdd server does when it loads every toolset
@@ -229,6 +232,17 @@ NO_SUCH_FIDELITY = "stories-no_such_fidelity"
 LEAVE_SESSION_COMMIT = "checkout-flow: leave session"
 
 
+@cache
+def _empty_repository() -> Path:
+    """An empty git repository on main, with the spec's committer in its config and no sample hooks, made once for the
+    process: every example that needs a checkout copies its .git folder rather than starting git to make one."""
+    folder = Path(tempfile.mkdtemp(prefix="cdd-empty-repository-"))
+    Git(folder).run("init", "-q", "-b", "main", "--template=")
+    with (folder / ".git" / "config").open("a", encoding="utf-8") as config:
+        config.write("[user]\n\tname = Story Spec\n\temail = story-spec@example.invalid\n")
+    return folder / ".git"
+
+
 class SessionsProject(ThrowawayProject):
     """A throwaway project named by CDD_PROJECT while a scenario runs, whose `.sessions/` and files a scenario seeds."""
 
@@ -306,9 +320,7 @@ class SessionsProject(ThrowawayProject):
         """The project as a git checkout on main, its files committed. Session folders are the board's record and belong
         on main, so .sessions/ is tracked, as in a CDD repository; only the hook logs and chat injections are ignored."""
         self.seed_file(".gitignore", ".sessions/**/logs/\n.sessions/**/chat-injections/\n")
-        self.git("init", "-q", "-b", "main")
-        self.git("config", "user.name", "Story Spec")
-        self.git("config", "user.email", "story-spec@example.invalid")
+        shutil.copytree(_empty_repository(), self.root / ".git")
         self.git("add", "-A")
         self.git("commit", "-q", "-m", "Fixture")
 

@@ -79,6 +79,27 @@ class ParentLoopError(ValueError):
         super().__init__(f"{parent} cannot be the parent of {ticket}: it is {ticket} or one of its children")
 
 
+class StagePlace:
+    """*StagePlace* is where a move puts a ticket that stays on a stage: the stage, and whether in its Done or its In
+    progress. The board sends it on each ticket for Move next and Move previous, so the page can show the card there
+    the moment either is pressed, and the move itself goes where it says."""
+
+    def __init__(self, stage: Stage, is_done: bool) -> None:
+        self._stage = stage
+        self._is_done = is_done
+
+    @property
+    @data_field(reference=True)
+    def stage(self) -> Stage:
+        """The stage, sent by its name."""
+        return self._stage
+
+    @property
+    @data_field
+    def is_done(self) -> bool:
+        return self._is_done
+
+
 @identity("name")
 @language_adapter(language="typescript")
 @agent_toolset
@@ -393,12 +414,23 @@ class Ticket(Card):
         column = self.column
         if not isinstance(column, Stage):
             return self
+        place = self.next_place
+        if place is None:
+            return self if self.is_main else self.close()
+        return self.marks.mark(MARKED_DONE, column) if place.is_done else self.marks.enter(place.stage)
+
+    @property
+    @data_field
+    def next_place(self) -> StagePlace | None:
+        """Where Move next puts the ticket while it stays on a stage: its stage's Done, else the next stage's In progress.
+        None when the move closes it, leaves it where it is, or is refused, which only the move itself can show."""
+        column = self.column
+        if self.children or not isinstance(column, Stage):
+            return None
         if not self.is_done:
-            return self.marks.mark(MARKED_DONE, column)
+            return StagePlace(column, True)
         following = column.next_stage
-        if following is None and self.is_main:
-            return self
-        return self.marks.enter(following) if following else self.close()
+        return StagePlace(following, False) if following is not None else None
 
     @mcp
     @agent_tool
@@ -411,12 +443,23 @@ class Ticket(Card):
             reopened, final = self._board.ticket_of(self._session.reopen()), self._board.stages[-1]
             reopened.marks.enter(final)
             return reopened.marks.mark(MARKED_DONE, final)
+        place = self.previous_place
+        if place is None:
+            return self if self.is_main else self._return_to_backlog()
+        return self.marks.place(place.stage, MARKED_DONE) if place.is_done else self.marks.mark(MARKED_IN_PROGRESS, column)
+
+    @property
+    @data_field
+    def previous_place(self) -> StagePlace | None:
+        """Where Move previous puts the ticket while it stays on a stage: its stage's In progress, else the previous
+        stage's Done. None when the move reopens it, sends it to the Backlog, leaves it where it is, or is refused."""
+        column = self.column
+        if self.children or not isinstance(column, Stage):
+            return None
         if self.is_done:
-            return self.marks.mark(MARKED_IN_PROGRESS, column)
+            return StagePlace(column, False)
         earlier = column.previous_stage
-        if earlier is None and self.is_main:
-            return self
-        return self.marks.place(earlier, MARKED_DONE) if earlier else self._return_to_backlog()
+        return StagePlace(earlier, True) if earlier is not None else None
 
     @mcp
     @agent_tool
@@ -567,6 +610,8 @@ class TicketWork:
         self._ticket = ticket
         # Its progress as last read from its session's log; none until asked for, and none again once a line is written.
         self._read: list[FidelityProgress] | None = None
+        # The enabled part of that reading, with the reading it was picked from.
+        self._enabled: tuple[list[FidelityProgress], list[FidelityProgress]] | None = None
 
     @cached_property
     def _required(self) -> list[tuple[Stage, FidelityGuidance]]:
@@ -584,8 +629,12 @@ class TicketWork:
 
     @property
     def enabled(self) -> list[FidelityProgress]:
-        """The progress of the fidelities whose practice the ticket's session works on."""
-        return [entry for entry in self.progress if entry.is_enabled]
+        """The progress of the fidelities whose practice the ticket's session works on, picked once for each reading
+        of the progress: a board read asks it for every stage and every mark."""
+        progress = self.progress
+        if self._enabled is None or self._enabled[0] is not progress:
+            self._enabled = (progress, [entry for entry in progress if entry.is_enabled])
+        return self._enabled[1]
 
     @property
     def stage_worked_since_latest_move(self) -> Stage | None:

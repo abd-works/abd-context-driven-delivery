@@ -238,9 +238,9 @@ class FidelitySessionOutput:
     def output_paths(self) -> dict[str, list[str]]:
         """Where this fidelity writes each format in the session: its declared paths under its root. session.json can
         name a file per format for a single-file output."""
-        chosen = self._chosen
+        chosen, root = self._chosen, self.root
         return {
-            label: [self._under_root(name) for name in self._output_names(declared, chosen.get(label))]
+            label: [self._under_root(name, root) for name in self._output_names(declared, chosen.get(label))]
             for label, declared in self._fidelity.outputs.items()
         }
 
@@ -309,12 +309,12 @@ class FidelitySessionOutput:
         is_single_file = len(names) == 1 and not set(names[0]) & _OUTPUT_PATTERN_MARKS
         return [PurePosixPath(names[0]).with_name(chosen_name).as_posix()] if chosen_name and is_single_file else names
 
-    def _under_root(self, name: str) -> str:
-        """A declared name under this fidelity's root. A root inside a ``.context`` folder, such as
+    def _under_root(self, name: str, root: Path) -> str:
+        """A declared name under root, this fidelity's root. A root inside a ``.context`` folder, such as
         ``harness/.context/stories``, holds the practice's documents itself, so a declared ``.context/story-map.md``
         lands in it as ``story-map.md`` rather than in a ``.context`` within the ``.context``."""
         folder_mark = "/" if name.endswith("/") else ""
         declared = PurePosixPath(name)
-        if CONTEXT_FOLDER in self.root.parts and declared.parts[:1] == (CONTEXT_FOLDER,):
+        if CONTEXT_FOLDER in root.parts and declared.parts[:1] == (CONTEXT_FOLDER,):
             declared = PurePosixPath(*declared.parts[1:])
-        return f"{(self.root / declared).as_posix()}{folder_mark}"
+        return f"{(root / declared).as_posix()}{folder_mark}"

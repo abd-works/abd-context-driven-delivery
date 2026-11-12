@@ -95,9 +95,18 @@
           "tells"
         ],
         "rules": [
+          "clean_engineering.Module.conforms-to-schema",
           "clean_engineering.Module.module-rule",
           "clean_engineering.OoadClass.class-rule",
+          "clean_engineering.OoadClass.conforms-to-schema",
+          "clean_engineering.Operation.conforms-to-schema",
           "clean_engineering.Operation.limit-operation-parameters",
+          "ddd.Aggregate.conforms-to-schema",
+          "ddd.BoundedContext.conforms-to-schema",
+          "ddd.EntityRoot.conforms-to-schema",
+          "ddd.Repository.conforms-to-schema",
+          "ddd.ValueObject.conforms-to-schema",
+          "stories.Epic.conforms-to-schema",
           "stories.Epic.verb-noun"
         ]
       }
@@ -129,6 +138,7 @@
           "invokes"
         ],
         "rules": [
+          "clean_engineering.Operation.conforms-to-schema",
           "clean_engineering.Operation.limit-operation-parameters"
         ]
       }
@@ -158,8 +168,11 @@
           "invokes"
         ],
         "rules": [
+          "clean_engineering.Module.conforms-to-schema",
           "clean_engineering.Module.module-rule",
           "clean_engineering.OoadClass.class-rule",
+          "clean_engineering.OoadClass.conforms-to-schema",
+          "clean_engineering.Operation.conforms-to-schema",
           "clean_engineering.Operation.limit-operation-parameters"
         ]
       }
@@ -187,6 +200,7 @@
           "contains"
         ],
         "rules": [
+          "clean_engineering.Module.conforms-to-schema",
           "clean_engineering.Module.module-rule"
         ]
       }
@@ -214,7 +228,8 @@
           "owns"
         ],
         "rules": [
-          "clean_engineering.OoadClass.class-rule"
+          "clean_engineering.OoadClass.class-rule",
+          "clean_engineering.OoadClass.conforms-to-schema"
         ]
       }
     },
@@ -247,7 +262,9 @@
           "contains"
         ],
         "rules": [
+          "clean_engineering.Module.conforms-to-schema",
           "clean_engineering.Module.module-rule",
+          "stories.Epic.conforms-to-schema",
           "stories.Epic.verb-noun"
         ]
       }
