@@ -19,7 +19,7 @@ const STORY_MAP_TEXT = ['# Check Out Order', '', '## Payment', '', '- Enter Card
 const STORY_MAP_NODE = { node_id: 'node-1', name: '', type: 'Story', practice: 'stories', file: STORY_MAP_FILE, line: 6, end_line: 6, stage: '', facts: {} }
 const STORY_MAP_HIT = { rule: 'verb-noun-format', message: 'Name the story with a verb', practice: 'stories', node_id: 'node-1', location: STORY_MAP_FILE, line: 6, end_line: 6 }
 const STORY_MAP_GRAPH = {
-  version: 2,
+  version: 3,
   overlays: [],
   practices: { stories: { source_root: '', root_facts: {}, nodes: [STORY_MAP_NODE], edges: [], violations: [STORY_MAP_HIT] } },
 }
@@ -59,7 +59,6 @@ function writeSessions(root: string): void {
   writeSession(root, { name: 'almost-shipped', title: 'Almost shipped', log: [`${STAMP} move Implementation no-chat`, `${STAMP} done Implementation no-chat`] })
   writeSession(root, { name: 'shipped-work', title: 'Shipped work', folder: join('_complete', 'shipped-work') })
   writeInto(join(root, '.sessions', '_backlog', 'search-the-catalog.md'), '# Search the catalog\n\nAn idea.\n')
-  writeInto(join(root, '.sessions', 'session.json'), JSON.stringify({ session: 'checkout-flow' }))
 }
 
 function commitAll(root: string): void {

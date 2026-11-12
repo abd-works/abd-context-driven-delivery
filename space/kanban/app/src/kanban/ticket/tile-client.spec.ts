@@ -41,9 +41,9 @@ beforeAll(async () => {
   TWO_FIDELITIES = [STORY_MAP_FIDELITY, OTHER_FIDELITY]
 })
 
-beforeEach(() => {
-  board.reset()
-  board.activate(TICKET)
+beforeEach(async () => {
+  await board.reset()
+  await board.activate(TICKET)
 })
 
 afterAll(() => board.close())

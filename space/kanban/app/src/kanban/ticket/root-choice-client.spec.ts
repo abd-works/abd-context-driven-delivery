@@ -15,8 +15,8 @@ beforeAll(async () => {
   board = await BoardOnProject.start()
 })
 
-beforeEach(() => {
-  board.reset()
+beforeEach(async () => {
+  await board.reset()
   board.write('src/visits/visit.ts', '')
   board.write('src/billing/bill.ts', '')
 })

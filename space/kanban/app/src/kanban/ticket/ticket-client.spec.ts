@@ -161,7 +161,7 @@ describe('Send Next Fidelity Action', () => {
 
   describe('with generate next', () => {
     async function ran() {
-      board.activate(OTHER)
+      await board.activate(OTHER)
       const { page, asked } = await board.page()
       const chat = await board.connectChat(page)
       await ticketOn(page, OTHER).runNext()
@@ -179,7 +179,7 @@ describe('Send Next Fidelity Action', () => {
   describe('with generate next on a fidelity of a stage the ticket has moved past', () => {
     async function ran() {
       board.logOn(OTHER, 'move Specification')
-      board.activate(OTHER)
+      await board.activate(OTHER)
       const { page } = await board.page()
       const chat = await board.connectChat(page)
       await ticketOn(page, OTHER).runNext()
@@ -198,7 +198,7 @@ describe('Send Next Fidelity Action', () => {
   })
 
   it('should fill the prompt on validate', async () => {
-    board.activate('back-to-backlog')
+    await board.activate('back-to-backlog')
     const { page } = await board.page()
     const chat = await board.connectChat(page)
     await ticketOn(page, 'back-to-backlog').runNext()
@@ -219,7 +219,7 @@ describe('Send Next Fidelity Action', () => {
   })
 
   it('should stay off with no chat to send to', async () => {
-    board.activate(OTHER)
+    await board.activate(OTHER)
     const { page } = await board.page()
     expect(ticketOn(page, OTHER).canRunNext).toBe(false)
   })

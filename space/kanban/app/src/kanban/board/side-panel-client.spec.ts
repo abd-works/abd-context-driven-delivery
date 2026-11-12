@@ -15,8 +15,8 @@ const SESSION = 'session=.sessions/checkout-flow/session.json'
 const SLUG = 'stories-story-map'
 const REPORT_PATH = '.sessions/checkout-flow/validation-reports/stories-story-map-20261101T100000.md'
 const FAILING_LINE = 12
-// A graph validate saved with no hits, in the shape harness/graph/saved_graph.py writes (version 2).
-const CLEAN_GRAPH = { version: 2, overlays: [], practices: { stories: { source_root: '', root_facts: {}, nodes: [], edges: [], violations: [] } } }
+// A graph validate saved with no hits, in the shape harness/graph/saved_graph.py writes (SAVED_SHAPE_VERSION 3).
+const CLEAN_GRAPH = { version: 3, overlays: [], practices: { stories: { source_root: '', root_facts: {}, nodes: [], edges: [], violations: [] } } }
 
 let board: BoardOnProject
 
@@ -175,7 +175,7 @@ describe('Open Validation Report', () => {
     expect(reportPanel(page).report.path).toBe('.sessions/checkout-flow/validation-reports')
   })
 
-  // A report saved before the graph's shape 2 keeps its graph as it was; the board says so instead of failing to read.
+  // A report saved before the graph's current shape keeps its graph as it was; the board says so instead of failing to read.
   describe("with a report whose saved graph is out of date", () => {
     beforeEach(() => board.write(REPORT_PATH.replace(/\.md$/, '.json'), JSON.stringify({ overlays: [], practices: CLEAN_GRAPH.practices })))
 

@@ -271,7 +271,7 @@ describe('Display Ticket Details', () => {
   })
 
   it('should show the ticket worked on last with none active', async () => {
-    board.activate(null)
+    await board.activate(null)
     board.write('.sessions/billing-report/session.log', `${LATER_STAMP} handoff no-chat\n`)
     const { page } = await board.page()
     expect(page.board.selectedTicket?.name).toBe('billing-report')
