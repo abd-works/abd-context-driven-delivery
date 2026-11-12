@@ -3,5 +3,10 @@
   "title": "Integrate Practice Content Editor Apps",
   "scope": "feature",
   "workpath": "C:\\dev\\abd-context-driven-delivery\\harness\\.context",
-  "repo_path": "C:\\dev\\abd-context-driven-delivery"
+  "repo_path": "C:\\dev\\abd-context-driven-delivery",
+  "outputs": {
+    "ux": {
+      "root": "ux"
+    }
+  }
 }
