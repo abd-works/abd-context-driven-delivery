@@ -37,11 +37,11 @@ def _checked(named):
 
 with description("a validate call's checked graph"):
     with context("that was named a saved graph document"):
-        with before.all:
+        with before.each:
             self.graph, self.throwaway = _checked(str(_SAVED_GRAPH))
             self.violations = self.graph.violations()
 
-        with after.all:
+        with after.each:
             self.throwaway.close()
 
         with it("should read every practice's violations"):
@@ -56,11 +56,11 @@ with description("a validate call's checked graph"):
             expect(self.violations[1].practice).to(equal("ddd"))
 
     with context("that was named the node list graph.return_nodes answers with"):
-        with before.all:
+        with before.each:
             self.graph, self.throwaway = _checked(str(_NODE_LIST))
             self.violations = self.graph.violations()
 
-        with after.all:
+        with after.each:
             self.throwaway.close()
 
         with it("should read the violation on each violating rule"):
@@ -70,12 +70,12 @@ with description("a validate call's checked graph"):
             expect(self.violations[0].practice).to(equal("clean_engineering"))
 
     with context("that was named several graph files and is kept beside a report"):
-        with before.all:
+        with before.each:
             self.graph, self.throwaway = _checked([str(_SAVED_GRAPH), str(_SAVED_GRAPH), str(_NODE_LIST)])
             self.saved = self.throwaway.root / "report.json"
             self.graph.save_at(self.saved)
 
-        with after.all:
+        with after.each:
             self.throwaway.close()
 
         with it("should keep every hit of every graph"):
