@@ -203,14 +203,20 @@ export class MoveRefused {
 // the sessions of that folder's branch and worktree, not of the folder the chat connected from, and names the chat as
 // conversation_id, so the server answers with the session this chat has open, as it does for the agent's own calls.
 export async function callTool<T>($: EngineInterface, tool: string, args: object): Promise<T> {
-  const result = await $.mcp.call(SERVER, tool, { ...args, chat_folder: await $.session.root(), conversation_id: await $.session.id() })
-  const text = result.content[0]?.text ?? ''
-  if (result.isError) throw new CddToolFailed(tool, text || `${tool} failed`)
+  const text = await callToolText($, tool, args)
   try {
     return JSON.parse(text) as T
   } catch {
     throw new CddToolFailed(tool, text || `${tool} sent back nothing`)
   }
+}
+
+// A tool that answers in prose, such as repos.open, read as its text; one flagged isError is a CddToolFailed.
+export async function callToolText($: EngineInterface, tool: string, args: object): Promise<string> {
+  const result = await $.mcp.call(SERVER, tool, { ...args, chat_folder: await $.session.root(), conversation_id: await $.session.id() })
+  const text = result.content[0]?.text ?? ''
+  if (result.isError) throw new CddToolFailed(tool, text || `${tool} failed`)
+  return text
 }
 
 // Atom chatBar, declared in pane/types/index.d.ts and kept in this file: the last board.overview answer.

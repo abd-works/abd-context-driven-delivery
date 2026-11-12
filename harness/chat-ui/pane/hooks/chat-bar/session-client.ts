@@ -3,7 +3,7 @@ import type { EngineInterface } from 'claude-code'
 import type { LeaveChoicesData, TicketData } from '@cdd/space/kanban/ticket'
 
 import { reasonOf } from '../shared/failure'
-import { callTool, currentChatBar, refreshChatBar, showFailure, type ChatBarClient } from './chat-bar-client'
+import { callTool, callToolText, currentChatBar, refreshChatBar, showFailure, type ChatBarClient } from './chat-bar-client'
 import { whileBusy } from './busy-client'
 import { startedChatIn } from './chat-folder-client'
 import type { RepoRowJson } from '../../types'
@@ -67,9 +67,10 @@ export async function toggleSessionListWithRepos($: EngineInterface): Promise<vo
 // repos.open creates the repository when missing, publishes it private, installs CDD into it, and opens a new top-level
 // chat there, where the person opens its main session.
 export async function openRepo($: EngineInterface, name: string): Promise<void> {
+  $.ui.toast(`Opening repository ${name}…`)
   await closeSessionList($)
   try {
-    const answer = await whileBusy($, `Opening repository ${name}`, () => callTool<string>($, 'repos.open', { name, visibility: 'private' }))
+    const answer = await whileBusy($, `Opening repository ${name}`, () => callToolText($, 'repos.open', { name, visibility: 'private' }))
     $.ui.toast(`${name}: ${answer.split('\n').pop()?.replace(/^- /, '') ?? 'opened'}`)
   } catch (failure) {
     await showFailure($, `${name} did not open: ${reasonOf(failure)}`)

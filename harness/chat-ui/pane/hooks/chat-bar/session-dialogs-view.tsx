@@ -77,16 +77,14 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
       <Input key="new-session" placeholder="New session name" value="" onSubmit={value => (value.trim() ? createSession($, value.trim()) : undefined)} />
       <Text key="repos-heading" color={BRAND.muted}>REPOS</Text>
       {/* A chat bar whose view was saved before repos existed has none. */}
+      {/* Each repository is a whole button: a see-through one laid over its name took no press. */}
       {(view.repos ?? []).map(repo => (
-        <Box key={`repo-row-${repo.name}`} flexDirection="row" gap={1}>
-          <Text color={BRAND.muted}>{repo.has_cdd ? '◆' : '◇'}</Text>
-          <Box key={`repo-name-${repo.name}`}>
-            <Text color={BRAND.text}>{`${repo.name}${repo.branch ? ` · ${repo.branch}` : ''}`}</Text>
-            <Box position="absolute" top={0} left={0} width={repo.name.length}>
-              <Button key={`repo-${repo.name}`} plain label=" " onPress={() => openRepo($, repo.name)} />
-            </Box>
-          </Box>
-        </Box>
+        <Button
+          key={`repo-${repo.name}`}
+          plain
+          label={`${repo.has_cdd ? '◆' : '◇'} ${repo.name}${repo.branch ? ` · ${repo.branch}` : ''}`}
+          onPress={() => openRepo($, repo.name)}
+        />
       ))}
       <Input key="new-repo" placeholder="New repo name (private)" value="" onSubmit={value => (value.trim() ? openRepo($, value.trim()) : undefined)} />
     </Box>
