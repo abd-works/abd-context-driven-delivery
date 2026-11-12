@@ -5,7 +5,7 @@ rather than picking from a list of route shapes. An arrow never passes through a
 arrow, and leaves and arrives at its own point on the card. It crosses another arrow only when no other way exists.
 
 The one exception is an inheritance trunk: when several subclasses share one base, their arrows join, the standard
-UML tree. Each subclass drops a short line to a shared horizontal bar, and one line with the hollow triangle runs from
+UML tree, and all of them arrive on one side of the base, so it shows one arrowhead. Each subclass drops a short line to a shared horizontal bar, and one line with the hollow triangle runs from
 the bar to the base, so a reader sees one family instead of a fan of arrowheads.
 """
 from __future__ import annotations
@@ -25,6 +25,9 @@ GridCell = Tuple[int, int]
 
 GRID_STEP = 10
 CARD_CLEARANCE = 20
+# What each step inside another card's clearance costs: enough that an arrow keeps clear when it can, but a way out
+# between cards a person placed close together, where a wall would leave the arrow no way at all.
+CLEARANCE_PRICE = 60
 PORT_STUB_STEPS = 3
 PORT_APPROACH_STEPS = 6
 ARROW_SPACING_STEPS = 1
@@ -32,7 +35,9 @@ ARROW_SPACING_STEPS = 1
 # so other arrows leaving the same side of a subclass still get out.
 TRUNK_BAR_STEPS = PORT_STUB_STEPS + 2 * ARROW_SPACING_STEPS
 TURN_PRICE = 40
-CROSSING_PRICE = 600
+# How far past an arrow's ends its first search reaches, in grid steps.
+SEARCH_WINDOW_STEPS = 30
+CROSSING_PRICE = 150
 REROUTING_ROUNDS = 4
 UNROUTED_TROUBLE = 1000
 ROW_GUTTER = 100
@@ -236,9 +241,12 @@ class _RouteGrid:
     def __init__(self, obstacles: Iterable[Geometry], width: float, height: float) -> None:
         self.columns = int(width) // GRID_STEP
         self.lines = int(height) // GRID_STEP
+        # Cells inside a card or its clearance, and the cells of the cards themselves, which no arrow ever enters.
         self.blocked: Set[Point] = set()
+        self.inside_cards: Set[Point] = set()
         for box in obstacles:
             self.blocked |= self.cells_around(box)
+            self.inside_cards |= self.cells_around(box, clearance=0)
         self.horizontal: Set[Point] = set()
         self.vertical: Set[Point] = set()
         self._held_for: Dict[Point, Set[int]] = {}
@@ -264,9 +272,9 @@ class _RouteGrid:
         approach = self._approach_vertical if step[0] == 0 else self._approach_horizontal
         return any(holders and owner not in holders for holders in (self._held_for.get(cell), approach.get(cell)))
 
-    def cells_around(self, box: Geometry) -> Set[Point]:
-        left, right = int(box.x - CARD_CLEARANCE) // GRID_STEP, int(box.x + box.width + CARD_CLEARANCE) // GRID_STEP
-        top, bottom = int(box.y - CARD_CLEARANCE) // GRID_STEP, int(box.y + box.height + CARD_CLEARANCE) // GRID_STEP
+    def cells_around(self, box: Geometry, clearance: int = CARD_CLEARANCE) -> Set[Point]:
+        left, right = int(box.x - clearance) // GRID_STEP, int(box.x + box.width + clearance) // GRID_STEP
+        top, bottom = int(box.y - clearance) // GRID_STEP, int(box.y + box.height + clearance) // GRID_STEP
         return {(x, y) for x in range(left, right + 1) for y in range(top, bottom + 1)}
 
     def is_open_for(self, cells: List[Point], owner: int, own_cards: Set[Point]) -> bool:
@@ -310,8 +318,11 @@ class _ArrowSearch:
         heading_in: Heading,
         respect_held_ports: bool = True,
         trunk: Iterable[Point] = (),
+        window: Optional[Tuple[int, int, int, int]] = None,
     ) -> None:
         self._grid = grid
+        # The cells the search may use, as left, top, right, bottom; the whole page when None.
+        self._window = window if window is not None else (0, 0, grid.columns - 1, grid.lines - 1)
         self._owner = owner
         self._respect_held_ports = respect_held_ports
         # The lines of the arrow's own inheritance trunk: the search ends where it meets them, and may come up to them.
@@ -326,63 +337,85 @@ class _ArrowSearch:
         self._came_from: Dict[Tuple[Point, Heading], Tuple[Point, Heading]] = {}
 
     def run(self) -> Optional[List[Point]]:
-        start = (self._begin, self._heading_out)
-        best = {start: 0}
+        """The search, written as one loop over local names: it visits hundreds of thousands of cells on a large page,
+        so each check is done here once rather than through a method call. It takes the same steps at the same prices
+        as `_steps` and `_price`, so it finds the same way they would."""
+        grid, trunk, beside_trunk, end = self._grid, self._trunk, self._beside_trunk, self._end
+        window_left, window_top, window_right, window_bottom = self._window
+        near_cards, inside_cards, horizontal, vertical = grid.blocked, grid.inside_cards, grid.horizontal, grid.vertical
+        held_vertical, held_horizontal = self._cells_held_against()
+        left, top, right, bottom = self._goal_box
+        heading_in, came_from = self._heading_in, self._came_from
+        # A card a person placed right against the port leaves no cell to come straight in from, so the arrow may
+        # come in from the side for its last step.
+        any_heading_in = (end[0] - heading_in[0], end[1] - heading_in[1]) in inside_cards
+        headings = tuple(_HEADINGS.values())
+        push, pop, infinity = heapq.heappush, heapq.heappop, float("inf")
+        best = {(self._begin, self._heading_out): 0}
         frontier = [(0, 0, self._begin, self._heading_out)]
+        # Each cell and heading is searched from once. The estimate counts the distance left twice over, so a cheaper way
+        # to a cell can turn up after it was searched from; searching from it again cost more time than it gained.
+        expanded: Set[Tuple[Point, Heading]] = set()
         while frontier:
-            _estimate, cost, cell, heading = heapq.heappop(frontier)
-            if cost > best[(cell, heading)]:
+            _estimate, cost, cell, heading = pop(frontier)
+            if (cell, heading) in expanded:
                 continue
-            if (cell == self._end and heading == self._heading_in) or cell in self._trunk:
+            expanded.add((cell, heading))
+            if (cell == end and (heading == heading_in or any_heading_in)) or cell in trunk:
                 return self._walk_back((cell, heading))
-            for step in self._steps(cell, heading):
-                following = (cell[0] + step[0], cell[1] + step[1])
-                total = cost + self._price(following, heading, step)
+            x, y = cell
+            cell_in_horizontal, cell_in_vertical = cell in horizontal, cell in vertical
+            cell_carries_arrow = cell_in_horizontal or cell_in_vertical
+            for step in headings:
+                step_x, step_y = step
+                if step_x == -heading[0] and step_y == -heading[1]:
+                    continue
+                following = (x + step_x, y + step_y)
+                fx, fy = following
+                if not (window_left <= fx <= window_right and window_top <= fy <= window_bottom):
+                    continue
+                straight = step == heading
+                if following not in trunk:
+                    if following in inside_cards and following != end:
+                        continue
+                    if following in (held_horizontal if step_x else held_vertical):
+                        continue
+                    if following in beside_trunk:
+                        if not (straight and self._heads_into_trunk(following, step)):
+                            continue
+                    else:
+                        if (following in horizontal or cell_in_horizontal) if step_x else (following in vertical or cell_in_vertical):
+                            continue
+                        if not straight and cell_carries_arrow:
+                            continue
+                crossing = following in (vertical if step_x else horizontal) and following not in beside_trunk
+                total = cost + 1 + (0 if straight else TURN_PRICE) + (CROSSING_PRICE if crossing else 0)
+                if following in near_cards and following not in trunk and following != end:
+                    total += CLEARANCE_PRICE
                 key = (following, step)
-                if total < best.get(key, float("inf")):
+                if total < best.get(key, infinity) and key not in expanded:
                     best[key] = total
-                    self._came_from[key] = (cell, heading)
-                    heapq.heappush(frontier, (total + ESTIMATE_WEIGHT * self._distance_left(following), total, following, step))
+                    came_from[key] = (cell, heading)
+                    distance = max(left - fx, 0, fx - right) + max(top - fy, 0, fy - bottom)
+                    push(frontier, (total + ESTIMATE_WEIGHT * distance, total, following, step))
         return None
 
-    def _distance_left(self, cell: Point) -> int:
-        """How far the nearest place this arrow may end can be at least: the box around its port on the base and every
-        cell of its trunk."""
-        left, top, right, bottom = self._goal_box
-        return max(left - cell[0], 0, cell[0] - right) + max(top - cell[1], 0, cell[1] - bottom)
-
-    def _steps(self, cell: Point, heading: Heading) -> List[Heading]:
-        reverse = (-heading[0], -heading[1])
-        return [step for step in _HEADINGS.values() if step != reverse and self._can_step(cell, heading, step)]
-
-    def _can_step(self, cell: Point, heading: Heading, step: Heading) -> bool:
-        grid = self._grid
-        following = (cell[0] + step[0], cell[1] + step[1])
-        if not grid.contains(following):
-            return False
-        if following in self._trunk:
-            return True
-        if following in grid.blocked and following != self._end:
-            return False
-        if self._respect_held_ports and grid.is_held_against(following, step, self._owner):
-            return False
-        if following in self._beside_trunk:
-            return step == heading and self._heads_into_trunk(following, step)
-        along = grid.horizontal if step[0] else grid.vertical
-        if following in along or cell in along:
-            return False
-        return step == heading or not grid.carries_arrow(cell)
+    def _cells_held_against(self) -> Tuple[Set[Point], Set[Point]]:
+        """The cells `is_held_against` closes to this arrow, for a vertical step and for a horizontal one; none when
+        the arrow may pass other arrows' ports."""
+        if not self._respect_held_ports:
+            return set(), set()
+        grid, owner = self._grid, self._owner
+        ports = {cell for cell, holders in grid._held_for.items() if owner not in holders}
+        vertical = ports | {cell for cell, holders in grid._approach_vertical.items() if owner not in holders}
+        horizontal = ports | {cell for cell, holders in grid._approach_horizontal.items() if owner not in holders}
+        return vertical, horizontal
 
     def _heads_into_trunk(self, cell: Point, step: Heading) -> bool:
         """True when going on straight meets the trunk within its spacing, so the arrow joins it head-on instead of
         running alongside it."""
         reach = range(1, ARROW_SPACING_STEPS + 2)
         return any((cell[0] + step[0] * distance, cell[1] + step[1] * distance) in self._trunk for distance in reach)
-
-    def _price(self, following: Point, heading: Heading, step: Heading) -> int:
-        across = self._grid.vertical if step[0] else self._grid.horizontal
-        crossing = following in across and following not in self._beside_trunk
-        return 1 + (TURN_PRICE if step != heading else 0) + (CROSSING_PRICE if crossing else 0)
 
     def _walk_back(self, last: Tuple[Point, Heading]) -> List[Point]:
         steps = [last]
@@ -465,6 +498,7 @@ class ArrowRouter:
             return []
         for arrow in self._arrows:
             arrow.exit_side, arrow.entry_side = self._facing_sides(arrow)
+        self._one_side_per_base()
         grid = self._grid_with_trunks()
         for arrow in sorted(self._arrows_alone(), key=self._length_between_cards):
             self._route_one(arrow, grid)
@@ -509,12 +543,24 @@ class ArrowRouter:
     def _search_cells(self, arrow: DiagramArrow, grid: _RouteGrid, owner: int, trunk: Iterable[Point] = ()) -> Optional[List[Point]]:
         """The cells of this arrow's cheapest way, keeping clear of other arrows' ports when it can."""
         out, into = _HEADINGS[arrow.exit_side], _HEADINGS[arrow.entry_side]
-        begin, end = self._stub_end(arrow.exit_point, out), self._stub_end(arrow.entry_point, into)
+        begin, end = self._clear_stub_end(arrow.exit_point, out, grid), self._clear_stub_end(arrow.entry_point, into, grid)
         heading_in = (-into[0], -into[1])
-        cells = _ArrowSearch(grid, owner, begin, end, out, heading_in, trunk=trunk).run()
-        if cells is None:
-            cells = _ArrowSearch(grid, owner, begin, end, out, heading_in, respect_held_ports=False, trunk=trunk).run()
-        return cells
+        trunk = list(trunk)
+        for window in (self._window_around(grid, [begin, end] + trunk), None):
+            for respect_held_ports in (True, False):
+                cells = _ArrowSearch(grid, owner, begin, end, out, heading_in, respect_held_ports, trunk, window).run()
+                if cells is not None:
+                    return cells
+        return None
+
+    def _window_around(self, grid: _RouteGrid, cells: List[Point]) -> Tuple[int, int, int, int]:
+        """The part of the page an arrow is searched in first: the box round its ends and its trunk, with room to go
+        round what is in between. Searching the whole page for every arrow took hours on a large diagram; a way that
+        leaves this box is one a reader would not follow anyway."""
+        left, top = min(x for x, _ in cells), min(y for _, y in cells)
+        right, bottom = max(x for x, _ in cells), max(y for _, y in cells)
+        spare = SEARCH_WINDOW_STEPS + (right - left + bottom - top) // 4
+        return (max(0, left - spare), max(0, top - spare), min(grid.columns - 1, right + spare), min(grid.lines - 1, bottom + spare))
 
     def _shared_bases(self) -> List[_InheritanceTrunk]:
         """One trunk for each base two or more subclasses reach from the same side. One subclass keeps its own arrow."""
@@ -570,6 +616,25 @@ class ArrowRouter:
         if self._card_between(source, target):
             return ("bottom", "bottom")
         return ("right", "left") if target.center[0] >= source.center[0] else ("left", "right")
+
+    def _one_side_per_base(self) -> None:
+        """Every subclass of a base arrives on the same side of it, the side most of them face, so the family ends in
+        one arrowhead. A subclass on the other side leaves the way it has to go to come round to that side."""
+        families: Dict[str, List[DiagramArrow]] = {}
+        for arrow in self._arrows:
+            if arrow.kind == INHERITANCE:
+                families.setdefault(arrow.target, []).append(arrow)
+        for target, arrows in families.items():
+            below = sum(1 for arrow in arrows if arrow.entry_side == "bottom")
+            side = "bottom" if 2 * below >= len(arrows) else "top"
+            base = self._cards[target].geometry
+            for arrow in arrows:
+                source = self._cards[arrow.source].geometry
+                if side == "bottom":
+                    arrow.exit_side = "top" if source.y >= base.y + base.height else "bottom"
+                else:
+                    arrow.exit_side = "bottom" if source.y + source.height <= base.y else "top"
+                arrow.entry_side = side
 
     def _card_between(self, source: Geometry, target: Geometry) -> bool:
         """True when two cards in one row have a third between them, so the arrow has to go under it."""
@@ -658,6 +723,18 @@ class ArrowRouter:
             return
         grid.claim(cells)
         arrow.corners = self._corners(arrow.exit_point, cells, arrow.entry_point)
+
+    def _clear_stub_end(self, point: Point, heading: Heading, grid: _RouteGrid) -> Point:
+        """Where the arrow's straight run from its port ends: the usual stub, or a shorter one when a card a person
+        placed close by sits within it, so the search starts outside that card and can find its way out."""
+        start = (point[0] // GRID_STEP, point[1] // GRID_STEP)
+        reached = start
+        for steps in range(1, PORT_STUB_STEPS + 1):
+            cell = (start[0] + heading[0] * steps, start[1] + heading[1] * steps)
+            if cell in grid.inside_cards:
+                break
+            reached = cell
+        return reached if reached != start else (start[0] + heading[0], start[1] + heading[1])
 
     def _stub_end(self, point: Point, heading: Heading) -> Point:
         return (point[0] // GRID_STEP + heading[0] * PORT_STUB_STEPS, point[1] // GRID_STEP + heading[1] * PORT_STUB_STEPS)
