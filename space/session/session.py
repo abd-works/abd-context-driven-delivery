@@ -293,6 +293,17 @@ class Session:
         """The text of its idea file; empty while it has none."""
         return self.idea_file.text
 
+    @property
+    def stories(self) -> list[str]:
+        """The stories its idea file names: this session's increment. Generate and validate work on these, with the
+        session's overlays applied to each unless it says `Overlays: none`."""
+        return self.idea_file.stories
+
+    @property
+    def stories_without_overlays(self) -> list[str]:
+        """Its stories that say `Overlays: none`."""
+        return self.idea_file.stories_without_overlays
+
     def keep_text(self, text: str) -> None:
         """Write text under its idea file's heading, making the file, headed with its title, when it has none."""
         idea = self.idea_file

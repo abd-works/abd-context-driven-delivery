@@ -439,9 +439,28 @@ class GuidanceAction:
         practices' rules for every action on its work, generate and validate alike; none for an action made for no
         session or a session that overlays none."""
         if self._session is None or not self.session.overlays:
-            return ""
+            return self._story_scope()
         patterns = self.graph.applied_patterns
-        return "\n\n".join(self._overlay_rules_of(patterns.pattern_named(name), name) for name in self.session.overlays)
+        rules = [self._overlay_rules_of(patterns.pattern_named(name), name) for name in self.session.overlays]
+        return "\n\n".join(part for part in [*rules, self._story_scope()] if part)
+
+    def _story_scope(self) -> str:
+        """The stories this session's increment is about, which generate and validate work on: each with every pattern
+        the session overlays unless the story says `Overlays: none`. Stories outside them are other increments' work."""
+        stories = list(getattr(self._session, "stories", None) or []) if self._session is not None else []
+        if not stories:
+            return ""
+        without = set(getattr(self._session, "stories_without_overlays", None) or [])
+        overlays = ", ".join(self.session.overlays) or "none"
+        return "\n".join([
+            "## Stories in this session",
+            "",
+            "This session's increment is these stories, named in its ticket. Generate and validate every one of them with "
+            f"each pattern the session overlays ({overlays}), unless the story says `Overlays: none`. Stories outside this "
+            "list belong to other increments: do not generate, judge, or report them.",
+            "",
+            *(f"- {story}" + (" (Overlays: none)" if story in without else "") for story in stories),
+        ])
 
     def _overlay_rules_of(self, pattern: PracticeGuidance, name: str) -> str:
         return (
