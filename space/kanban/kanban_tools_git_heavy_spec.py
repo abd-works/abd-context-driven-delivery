@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 from unittest.mock import patch
 
@@ -19,11 +20,15 @@ RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 from harness.chat.chat import Chat  # noqa: E402
 from space.repo.repo import Repo  # noqa: E402
 from space.session import Sessions  # noqa: E402
+from space.session.progress_cache import PROGRESS_CACHE_FILE  # noqa: E402
 
 from space.kanban.board_tools_examples import ProjectTools  # noqa: E402
 
 # The session records with nothing left off origin's main: none uncommitted, none unpushed.
 SAVED = {"uncommitted": "", "unpushed": ""}
+# How long a check waits for the saving thread to commit and push a change, and how often it looks.
+SAVE_WAIT_SECONDS = 20
+SAVE_POLL_SECONDS = 0.2
 
 
 with description("the board tools") as self:
@@ -38,8 +43,10 @@ with description("the board tools") as self:
     with context("with a git repository and two tickets"):
         with before.each:
             subprocess.run(["git", "init", "-q", "-b", "main"], cwd=self.project.root, check=False)
-            (self.project.root / ".git" / "HEAD").is_file()
-            subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "start"], cwd=self.project.root, check=True)
+            # A CDD project ignores the board's progress cache, which it writes beside each ticket's records after a read.
+            (self.project.root / ".gitignore").write_text(f".sessions/**/{PROGRESS_CACHE_FILE}\n", encoding="utf-8")
+            subprocess.run(["git", "add", ".gitignore"], cwd=self.project.root, check=True)
+            subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "start"], cwd=self.project.root, check=True)
             self.project.ticket("pet-visits", title="Pet visits")
             self.project.ticket("sign-up", title="Sign up")
 
@@ -107,10 +114,17 @@ with description("the board tools") as self:
                 shutil.rmtree(self.origin, ignore_errors=True)
 
             def records_on_origin(self) -> dict:
-                """What is left of the session records off origin's main: files not committed, and commits not pushed."""
-                status = subprocess.run(["git", "status", "--porcelain", "--", ".sessions"], cwd=self.project.root, check=True, capture_output=True, text=True)
-                unpushed = subprocess.run(["git", "rev-list", "origin/main..main"], cwd=self.project.root, check=True, capture_output=True, text=True)
-                return {"uncommitted": status.stdout.strip(), "unpushed": unpushed.stdout.strip()}
+                """What is left of the session records off origin's main: files not committed, and commits not pushed.
+                A session's change is committed and pushed on the saving thread a moment after the tool answers, so
+                this waits for it to land, up to SAVE_WAIT_SECONDS, before answering what is left."""
+                deadline = time.monotonic() + SAVE_WAIT_SECONDS
+                while True:
+                    status = subprocess.run(["git", "status", "--porcelain", "--", ".sessions"], cwd=self.project.root, check=True, capture_output=True, text=True)
+                    unpushed = subprocess.run(["git", "rev-list", "origin/main..main"], cwd=self.project.root, check=True, capture_output=True, text=True)
+                    left = {"uncommitted": status.stdout.strip(), "unpushed": unpushed.stdout.strip()}
+                    if left == SAVED or time.monotonic() > deadline:
+                        return left
+                    time.sleep(SAVE_POLL_SECONDS)
 
             with it("should commit and push a new ticket's record"):
                 self.project.call("ticket.create", title="Order history")
