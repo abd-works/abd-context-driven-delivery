@@ -20,6 +20,7 @@
     }
   },
   "overlays": [
-    "cdd_web_domain_access"
+    "cdd_web_domain_access",
+    "lern_domain_driven"
   ]
 }
