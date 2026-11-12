@@ -35,3 +35,10 @@ A parent is a folder, `_backlog/<parent>/`, whose `<parent>.md` holds its text; 
 stacked as a row in the parent's card. Dragging a child onto the Backlog list takes it out (`backlog-item.leave_parent`),
 and starting the parent starts its children as its child tickets. A folder kept with a ticket's work (a session.json)
 neither takes children nor becomes one. Live once the branch is merged and the cdd server repinned.
+## A Backlog card's Edit text field sits under the text, showing it twice
+
+Reported 2026-11-12, ticket `ticket-maintanance-defects`. On a selected Backlog card, Edit text opened a one-line field
+under the item's read-only text, so the same text showed twice and the field cut it to one line.
+
+Fixed on branch `ticket-maintanance-defects`: the field opens in the text's place, as a box of several lines holding the
+whole text; Enter saves, Shift+Enter adds a line, Escape puts it away (`backlog-item-view.tsx`, `ItemTextView`).
