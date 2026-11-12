@@ -8,4 +8,10 @@ LEFT_OUT = {
     "Draw the columns of the board": "board.show always shows every practice: no cdd tool chooses the practices of a board",
 }
 
-globals().update(replay(load_shared(__file__, "see-work-on-session-board"), ServerTier(), LEFT_OUT))
+# The domain tier proves every scenario's behaviour; this tier proves the cdd tools reach it, so it replays only
+# the fewest scenarios that between them call each tool these scenarios use once.
+WIRING = [
+    "Set a stage's limit",
+]
+
+globals().update(replay(load_shared(__file__, "see-work-on-session-board"), ServerTier(), LEFT_OUT, only=WIRING))

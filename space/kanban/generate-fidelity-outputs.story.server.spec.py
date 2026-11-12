@@ -14,4 +14,10 @@ LEFT_OUT = {
     "Rename a single-file output and keep a pattern": NO_TOOL_FOR_OUTPUT_PATHS,
 }
 
-globals().update(replay(load_shared(__file__, "generate-fidelity-outputs"), ServerTier(), LEFT_OUT))
+# The domain tier proves every scenario's behaviour; this tier proves the cdd tools reach it, so it replays only
+# the fewest scenarios that between them call each tool these scenarios use once.
+WIRING = [
+    'Count a generate line as Generate done',
+]
+
+globals().update(replay(load_shared(__file__, "generate-fidelity-outputs"), ServerTier(), LEFT_OUT, only=WIRING))

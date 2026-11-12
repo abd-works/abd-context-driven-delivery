@@ -120,16 +120,20 @@ def load_shared(spec_file: str, sub_epic_slug: str) -> SharedStories:
     return module.shared_stories
 
 
-def replay(shared: SharedStories, tier: Tier, left_out: dict[str, str] | None = None) -> dict[str, type]:
+def replay(shared: SharedStories, tier: Tier, left_out: dict[str, str] | None = None, only: list[str] | None = None) -> dict[str, type]:
     """Mamba example groups for every shared scenario this tier runs: one group per story, and in it one group per
-    scenario with one example per Then. left_out names each scenario the tier cannot reach and why."""
+    scenario with one example per Then. left_out names each scenario the tier cannot reach and why; only, when given,
+    names the scenarios the tier runs, such as the few that call each cdd tool once, where a tier proves wiring the
+    domain tier already proves the behaviour of."""
     skipped = left_out or {}
-    unknown = sorted(set(skipped) - {scenario.name for scenario in shared.scenarios})
+    names = {scenario.name for scenario in shared.scenarios}
+    unknown = sorted((set(skipped) | set(only or [])) - names)
     if unknown:
         raise LookupError(f"{shared.sub_epic} has no shared scenario named {', '.join(unknown)}")
+    runs = set(only) if only is not None else names
     groups: dict[str, type] = {}
     for index, story in enumerate(shared.stories):
-        scenarios = [scenario for scenario in shared.scenarios if scenario.story == story and scenario.name not in skipped]
+        scenarios = [scenario for scenario in shared.scenarios if scenario.story == story and scenario.name in runs and scenario.name not in skipped]
         if scenarios:
             name = _ordered(index, f"Story_{Name(story).title_snake}")
             groups[name] = _group(name, f"{story} ({tier.name})", {_ordered(place, f"Scenario_{Name(scenario.name).title_snake}"): _scenario_group(scenario, tier, place) for place, scenario in enumerate(scenarios)})
