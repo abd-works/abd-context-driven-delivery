@@ -3,7 +3,6 @@
 import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 from expects import equal, expect
@@ -13,6 +12,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from space.repo.built_once import BuiltOnce
 from space.repo.git_folder import GitFolder
 
 
@@ -24,9 +24,8 @@ def _succeeds(folder: Path, *args: str) -> bool:
     return subprocess.run(["git", *args], cwd=folder, capture_output=True).returncode == 0
 
 
-def _clone_with_history() -> Path:
+def _clone_with_history(top: Path) -> None:
     """A clone on main with two commits, a second branch, an origin, and its refs packed, as git gc leaves them."""
-    top = Path(tempfile.mkdtemp(prefix="cdd-git-folder-")).resolve()
     clone = top / "clone"
     _git(top, "init", "-q", "-b", "main", str(clone))
     _git(clone, "config", "user.email", "spec@example.invalid")
@@ -39,12 +38,14 @@ def _clone_with_history() -> Path:
     _git(clone, "remote", "add", "origin", str(top / "origin.git"))
     _git(clone, "pack-refs", "--all")
     _git(clone, "branch", "loose-one")
-    return clone
+
+
+_CLONE = BuiltOnce("cdd-git-folder-", _clone_with_history)
 
 
 with description("a checkout's git folder, read from its files"):
     with before.each:
-        self.clone = _clone_with_history()
+        self.clone = _CLONE.copy() / "clone"
         self.folder = GitFolder(self.clone)
 
     with after.each:
