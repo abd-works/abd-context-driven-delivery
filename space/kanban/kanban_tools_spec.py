@@ -436,9 +436,9 @@ with description("the board tools") as self:
                 expect(files).to(equal([{"path": "docs/.context/story-map.md", "exists": True}]))
 
             # (S) Person --> View Fidelity Files: the page opens tabs in the order Python sends the formats.
-            with it("should send the formats in the order files are shown, markdown before code"):
+            with it("should send the formats in the order files are shown, markdown before code, and the diagram last"):
                 files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="clean-engineering-model")
-                expect(list(files)).to(equal(["markdown", "python", "typescript"]))
+                expect(list(files)).to(equal(["markdown", "python", "typescript", "drawio"]))
 
             # One fidelity object per session: the progress's fidelity is the one an action on the ticket's session works with.
             with it("should give each progress the fidelity its ticket's session holds"):
