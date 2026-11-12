@@ -1,0 +1,6 @@
+# Patterns
+
+The patterns this folder's content was generated with. Validate judges the content against them. A pattern whose layers sit in several folders names the roles this folder holds after it.
+
+- lern_domain_driven
+- cdd_web_domain_access

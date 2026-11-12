@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
@@ -31,6 +33,8 @@ class Generate(GuidanceAction):
         self.run(self._generate_item, action="generate")
         places = self._where_outputs_go()
         instructions(places)
+        patterns = self.record_patterns(self._output_folders())
+        instructions(patterns)
         "After the artifact is written, call validate with this same guidance and paths set to the files you wrote: validate refreshes the session's graph with exactly those files, so the graph rules run on them as they are now."
         tools(self._validate().validate)
         return ""
@@ -92,8 +96,21 @@ class Generate(GuidanceAction):
             return ""
         return f"Save each format you write at its path, filling any {{name}} from the work: {'; '.join(places)}"
 
+    def _output_folders(self) -> list[Path]:
+        """The folder at the root of each place a listed fidelity writes: the folder holding the `.context` a file sits
+        under, at any depth, else the file's own folder. A templated path's folder is left to the agent."""
+        worked = [self.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
+        paths = [path for fidelity in worked if fidelity is not None for listed in fidelity.output_paths().values() for path in listed]
+        return list(dict.fromkeys(_content_root(self.session.path_named(path).parent) for path in paths if "{" not in path))
+
     @agent_instructions
     def generate_fixes_from_validate(self) -> str:
         """The fixes step that follows a validate, which an action such as Satisfy names after asking for validate."""
         "Apply the fixes the latest validate report names before considering generate done, in every format of the fidelity: its documents, its diagrams, and its code, so they still mirror each other."
         return ""
+
+
+def _content_root(folder: Path) -> Path:
+    """The folder holding the `.context` that folder sits in, at any depth; folder itself when it sits in none."""
+    held = next((ancestor for ancestor in [folder, *folder.parents] if ancestor.name == ".context"), None)
+    return held.parent if held is not None else folder

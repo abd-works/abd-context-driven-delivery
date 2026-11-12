@@ -15,6 +15,7 @@ from harness.agent_tools.agent_tools import InstallDestination, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.action_catalogue import ActionCatalogue
 from harness.guidance.documents import document_in
+from harness.guidance.patterns_file import PatternsFile
 from harness.guidance.guidance import FidelityGuidance, Guidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.hooks.hook_server import rules_toast
@@ -434,32 +435,82 @@ class GuidanceAction:
         whose agent writes files lists its ``refresh`` as the tool to call with exactly those files."""
         return self.session.graph
 
-    def _overlay_rules(self) -> str:
-        """The shared rules of each pattern the session overlays, such as lern_domain_driven, which apply on top of the
-        practices' rules for every action on its work, generate and validate alike; none for an action made for no
-        session or a session that overlays none."""
-        if self._session is None or not self.session.overlays:
-            return self._story_scope()
-        patterns = self.graph.applied_patterns
-        rules = [self._overlay_rules_of(patterns.pattern_named(name), name) for name in self.session.overlays]
-        return "\n\n".join(part for part in [*rules, self._story_scope()] if part)
+    def _overlay_rules(self, paths: list[str] | None = None) -> str:
+        """The shared rules of each pattern the work is held to, such as lern_domain_driven, which apply on top of the
+        practices' rules: for content paths names, the patterns it was generated with; otherwise, as for generate, the
+        patterns the session overlays. None for an action made for no session."""
+        if self._session is None:
+            return ""
+        names = self._patterns_of(paths)
+        rules = [self._overlay_rules_of(self.graph.applied_patterns.pattern_named(name), name) for name in names if self._is_pattern(name)]
+        return "\n\n".join(part for part in [*rules, self._story_scope(names)] if part)
 
-    def _story_scope(self) -> str:
-        """The stories this session's increment is about, which generate and validate work on: each with every pattern
-        the session overlays unless the story says `Overlays: none`. Stories outside them are other increments' work."""
-        stories = list(getattr(self._session, "stories", None) or []) if self._session is not None else []
+    def _patterns_of(self, paths: list[str] | None) -> list[str]:
+        """The patterns the content at paths was generated with, from the `.context/patterns.md` nearest each path; the
+        session's overlays for no paths, or for content no patterns file names, which no generate has recorded yet."""
+        root = self.session.work_root
+        found = [PatternsFile.nearest(root / path, root) for path in paths or []]
+        recorded = [name for patterns in found if patterns is not None for name in patterns.patterns]
+        return list(dict.fromkeys(recorded)) or list(self.session.overlays)
+
+    def _is_pattern(self, name: str) -> bool:
+        try:
+            self.graph.applied_patterns.pattern_named(name)
+        except KeyError:
+            return False
+        return True
+
+    def record_patterns(self, folders: list[Path]) -> str:
+        """Record the patterns the session overlays in `.context/patterns.md` at the root of each folder, so validate
+        later judges the content with the patterns it was generated with; and say how to name the roles a folder holds
+        of a pattern whose layers sit in several folders."""
+        overlays = list(self.session.overlays) if self._session is not None else []
+        if not overlays:
+            return ""
+        for folder in folders:
+            PatternsFile(folder).record(overlays)
+        written = ", ".join(PatternsFile(folder).path.as_posix() for folder in folders) or "none yet"
+        roles = [f"- {name}: {', '.join(self._roles_of(name))}" for name in overlays if self._is_pattern(name) and self._roles_of(name)]
+        return "\n".join([
+            "## Patterns this content is generated with",
+            "",
+            f"This generate uses {', '.join(overlays)}, and records them in `.context/patterns.md` at the root of each "
+            f"folder it writes ({written}). Write the same file, listing these patterns, at the root of any other folder "
+            "you write content in. When a pattern's layers sit in several folders, name after the pattern the roles this "
+            "folder holds (`- cdd_web_domain_access: Domain, Tool, Contract`); a folder that holds the whole pattern names "
+            "none. Keep the patterns and roles already there. The roles each pattern has:",
+            "",
+            *roles,
+        ])
+
+    def _roles_of(self, name: str) -> list[str]:
+        """The layers a pattern's table names (`| Layer | File | Role |`), the roles a folder can hold of it."""
+        text = self.graph.applied_patterns.pattern_named(name).section_text("Overview")
+        rows = text.splitlines()
+        header = next((index for index, row in enumerate(rows) if row.strip().startswith("| Layer |")), None)
+        if header is None:
+            return []
+        roles = []
+        for row in rows[header + 2:]:
+            if not row.strip().startswith("|"):
+                break
+            roles.append(row.strip().strip("|").split("|")[0].strip())
+        return roles
+
+    def _story_scope(self, patterns: list[str]) -> str:
+        """The stories this session's increment is about, which generate and validate work on, each with the patterns
+        its content was generated with. Stories outside them are other increments' work."""
+        stories = list(getattr(self._session, "stories", None) or [])
         if not stories:
             return ""
-        without = set(getattr(self._session, "stories_without_overlays", None) or [])
-        overlays = ", ".join(self.session.overlays) or "none"
         return "\n".join([
             "## Stories in this session",
             "",
             "This session's increment is these stories, named in its ticket. Generate and validate every one of them with "
-            f"each pattern the session overlays ({overlays}), unless the story says `Overlays: none`. Stories outside this "
-            "list belong to other increments: do not generate, judge, or report them.",
+            f"the patterns its content is generated with ({', '.join(patterns) or 'none'}). Stories outside this list "
+            "belong to other increments: do not generate, judge, or report them.",
             "",
-            *(f"- {story}" + (" (Overlays: none)" if story in without else "") for story in stories),
+            *(f"- {story}" for story in stories),
         ])
 
     def _overlay_rules_of(self, pattern: PracticeGuidance, name: str) -> str:
