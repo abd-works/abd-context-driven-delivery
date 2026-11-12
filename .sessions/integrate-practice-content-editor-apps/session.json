@@ -2,14 +2,14 @@
   "name": "integrate-practice-content-editor-apps",
   "title": "Integrate Practice Content Editor Apps",
   "scope": "feature",
-  "workpath": "C:\\dev\\abd-cdd-integrate-practice-conte\\harness\\.context",
+  "workpath": "C:\\dev\\abd-cdd-integrate-practice-conte",
   "repo_path": "C:\\dev\\abd-cdd-integrate-practice-conte",
   "outputs": {
     "ux": {
-      "root": "ux"
+      "root": "harness/.context/ux"
     },
     "stories": {
-      "root": "stories"
+      "root": "harness/.context/stories"
     }
   },
   "branch": "integrate-practice-content-editor-apps",
