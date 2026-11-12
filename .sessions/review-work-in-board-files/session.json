@@ -3,5 +3,10 @@
   "title": "Review Work In Board Files",
   "scope": "feature",
   "workpath": "C:\\dev\\abd-context-driven-delivery\\harness\\.context",
-  "repo_path": "C:\\dev\\abd-context-driven-delivery"
+  "repo_path": "C:\\dev\\abd-context-driven-delivery",
+  "outputs": {
+    "stories": {
+      "root": "stories"
+    }
+  }
 }
