@@ -132,11 +132,11 @@ class CallLinks:
         (``this.board.select()``, which its callees leave out when it shares caller's name), and the properties its
         source reads (``this.board.shown``); its own class's member of a name when its class has one."""
         text = caller.source.text if caller.source.file else ""
-        calls = {str(callee).rsplit(".", 1)[-1] for callee in caller.get_fact("callees") or [] if callee}
+        calls = {str(callee).rsplit(".", 1)[-1] for callee in caller.facts.get("callees") or [] if callee}
         calls.update(_MEMBER_CALL.findall(text))
         reads = set(_MEMBER_READ.findall(text)) - calls
-        found = [member for name in calls for member in self._named(name, caller)]
-        found.extend(member for name in reads for member in self._named(name, caller) if member.type == "Property")
+        found = [member for name in sorted(calls) for member in self._named(name, caller)]
+        found.extend(member for name in sorted(reads) for member in self._named(name, caller) if member.type == "Property")
         return found
 
     def _named(self, name: str, caller: Node) -> list[Node]:
