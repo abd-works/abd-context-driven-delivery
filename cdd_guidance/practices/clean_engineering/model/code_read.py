@@ -26,6 +26,8 @@ if TYPE_CHECKING:
     from cdd_guidance.practices.clean_engineering.model.operation import Operation
     from cdd_guidance.practices.clean_engineering.model.property import Property
 
+# The fact a folder's module or package keeps: whether any of its source is production code.
+PRODUCTION_FACT = "holds_production_code"
 _CLASS_NAMES = re.compile(r"\bclass\s+(\w+)")
 # A run of the characters a class name is spelled with: a type hint names a class when the class's name is one whole run.
 _HINT_WORD = re.compile(r"[A-Za-z0-9_]+")
@@ -373,17 +375,17 @@ class CodeFolders:
 
     def _folder_module(self, folder: Path, filenames: list[str]) -> Module | None:
         """The folder's Module, made once with its folder, which holds its card: typed ``Module`` when it holds a module
-        card and ``Package`` when it holds production source; none for a folder with neither. A folder of specs and
-        story tests alone holds no package: none of its files gives the package a class."""
+        card and ``Package`` when it holds only source; none for a folder with neither. It records whether any of its
+        source is production code: a folder of specs and story tests alone is test code, held to no relationship the
+        schema requires."""
         relative = folder.relative_to(self._root).as_posix() if folder != self._root else ""
-        has_code = any(
-            Path(name).suffix.lower() in self._suffixes and not is_test_code(f"{relative}/{name}".lstrip("/"))
-            for name in filenames
-        )
+        sources = [name for name in filenames if Path(name).suffix.lower() in self._suffixes]
+        has_code = bool(sources)
         if not has_code and not (folder / ".context").is_dir():
             return None
         module = Module(name=folder.name, sequential_order=1)
         module.load_folder_facts(folder)
+        module.set_fact(PRODUCTION_FACT, any(not is_test_code(f"{relative}/{name}".lstrip("/")) for name in sources))
         if module.has_module_context:
             module.type = "Module"
         elif has_code:

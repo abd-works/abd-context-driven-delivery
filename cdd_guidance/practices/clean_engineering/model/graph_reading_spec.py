@@ -1,7 +1,7 @@
 """How Clean Engineering reads code into its graph: each class's properties and operations, and the edges that say which
 class a property's value is and which parameters an operation takes."""
 
-from expects import be_true, equal, expect, have_key
+from expects import be_true, contain, equal, expect, have_key
 from mamba import before, context, description, it
 
 from cdd_guidance.practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
@@ -194,14 +194,29 @@ with description("Clean Engineering reading code into its graph"):
         with it("should not hold a TypeScript abstract member to invokes"):
             expect(self._exempt("area")).to(equal(["invokes"]))
 
-        with it("should read a TypeScript interface's method as an operation it does not hold to invokes"):
-            expect(self._exempt("draw")).to(equal(["invokes"]))
+        with it("should read no TypeScript interface's method, so none is held to invokes"):
+            names = [node.name for node in self.fixture.practice.reading.in_graph.nodes("Operation")]
+            expect(names).not_to(contain("draw"))
 
         with it("should not hold a Java abstract member to invokes"):
             expect(self._exempt("volume")).to(equal(["invokes"]))
 
-        with it("should read a Java interface's method as an operation it does not hold to invokes"):
-            expect(self._exempt("print")).to(equal(["invokes"]))
+        with it("should read no Java interface's method, so none is held to invokes"):
+            names = [node.name for node in self.fixture.practice.reading.in_graph.nodes("Operation")]
+            expect(names).not_to(contain("print"))
+
+    with context("with a spec beside the code"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    "shop/cart.py": _CART,
+                    "shop/cart_spec.py": "class CartSpec:\n    def check(self, cart) -> None:\n        assert cart\n",
+                }
+            )
+
+        with it("should hold none of the spec's members to the relationships the schema requires"):
+            check = next(node for node in self.fixture.practice.reading.in_graph.nodes("Operation") if node.name == "check")
+            expect(check.get_fact("exempt_relationships")).to(equal(["invokes"]))
 
     with context("with a folder holding only story tests"):
         with before.all:
@@ -212,9 +227,9 @@ with description("Clean Engineering reading code into its graph"):
                 }
             )
 
-        with it("should hold no package for the folder"):
-            packages = [node.name for node in self.fixture.practice.reading.in_graph.nodes("Package")]
-            expect(packages).to(equal(["shop"]))
+        with it("should not hold the folder's package to the participants a package of production code needs"):
+            package = next(node for node in self.fixture.practice.reading.in_graph.nodes("Package") if node.name == "pay")
+            expect(package.get_fact("exempt_relationships")).to(equal(["participants"]))
 
 
 def _exempt(fixture, name: str) -> list[str]:

@@ -197,7 +197,7 @@ with description("a graph"):
                     {"Module", "OoadClass", "Operation", "Property", "Parameter"} <= owned_types(self.clean_tree, "clean_engineering")
                 ).to(equal(True))
 
-            with it("should offer relative, owns, properties, hasParameter, hasType, invokedBy, and dependsOn to filter by, in that order"):
+            with it("should offer relative, owns, properties, hasParameter, hasType, invokedBy, invokes, and dependsOn to filter by, in that order"):
                 expect(PracticeInventory(self.graph, self.clean).edge_types).to(
                     equal(
                         [
@@ -211,6 +211,7 @@ with description("a graph"):
                             "invokedBy",
                             "returns",
                             "retrievedUsing",
+                            "invokes",
                             "dependsOn",
                             "usedBy",
                         ]

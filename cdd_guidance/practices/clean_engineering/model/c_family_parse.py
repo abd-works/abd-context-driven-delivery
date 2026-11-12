@@ -15,7 +15,7 @@ from cdd_guidance.practices.clean_engineering.model.bracket_structure import Bra
 from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
 
 _CLASS_RE = re.compile(
-    r"(?:export\s+)?(?:abstract\s+)?(?:public\s+|private\s+|protected\s+)?(?:class|interface)\s+(\w+)",
+    r"(?:export\s+)?(?:abstract\s+)?(?:public\s+|private\s+|protected\s+)?class\s+(\w+)",
 )
 # A member declared with no body, ending its signature with `;`: an interface's method (`draw(scale: number): void;`,
 # `void draw(double scale);`) or an abstract one (`abstract area(width: number): number;`).

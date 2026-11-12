@@ -20,7 +20,8 @@ from harness.graph.skipped_folders import skips_folder
 from harness.graph.schema_conformance import EXEMPT_FACT
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel
-from cdd_guidance.practices.clean_engineering.model.code_read import CodeRead
+from cdd_guidance.practices.clean_engineering.model.code_read import PRODUCTION_FACT, CodeRead
+from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
@@ -65,6 +66,18 @@ class GraphReading(PracticeReading):
             CodeRead(self).read()
             self.model_documents.read()
         CallLinks(self).link()
+        self._exempt_test_code()
+
+    def _exempt_test_code(self) -> None:
+        """A spec, a test, or test support is no part of the model the schema describes, as no production rule judges it
+        either: none of its nodes, and no folder holding only them, is held to the relationships its type requires."""
+        requirements = self.in_graph.rule_run.schema.requirements
+        for node in self.in_graph.nodes():
+            if not is_test_code(node.source.file) and node.data.get(PRODUCTION_FACT, True):
+                continue
+            fields = {requirement.field for requirement in requirements if node.type in requirement.owner.node_types}
+            if fields:
+                node.set_fact(EXEMPT_FACT, sorted(fields | set(node.data.get(EXEMPT_FACT) or [])))
 
 
 class CallLinks:
