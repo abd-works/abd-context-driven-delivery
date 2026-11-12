@@ -262,6 +262,12 @@ class SavedGraph:
                 return False
         return self.overlays == list(overlays)
 
+    def node_ids_named(self, practice: str, names: list[str]) -> set[str]:
+        """The ids of the practice's nodes with one of names, matched ignoring case and spacing."""
+        saved = self.practices.get(practice)
+        wanted = {_name_key(name) for name in names}
+        return {node.node_id for node in saved.nodes if _name_key(node.name) in wanted} if saved is not None else set()
+
     def violations(self, practices: list[str] | None = None) -> list[Violation]:
         """Every violation the saved practices hold; with practices, only those the named practices found."""
         return [violation for name, saved in self.practices.items() if not practices or name in practices for violation in saved.violations]
@@ -449,3 +455,7 @@ def _joins_kept(edge: Edge, files: list[str] | None) -> bool:
     """Whether edge joins two nodes read from files, or one of them to its practice's root."""
     ends = (edge.parent, edge.child)
     return all(_read_from(end, files) or end.type == "Practice" for end in ends) and any(_read_from(end, files) for end in ends)
+
+
+def _name_key(name: str) -> str:
+    return " ".join(name.lower().split())

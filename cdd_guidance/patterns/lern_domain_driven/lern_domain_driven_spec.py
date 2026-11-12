@@ -57,7 +57,6 @@ _ALL_RULE_SLUGS = (
     "reduce-story-overlap",
     "scaffold-test-scripts",
     "playwright-tests-browser-interaction",
-    "user-stories-have-a-front-end",
     "one-json-store-per-aggregate",
     "repository-owns-aggregate-lifecycle",
     "one-repository-per-aggregate",
