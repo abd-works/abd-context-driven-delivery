@@ -54,6 +54,17 @@ export type DragPlaces = { grab?: { x: number; y: number }; onTop?: boolean; onB
 const NEAR_THE_TOP_EDGE = 4
 const BELOW_THE_LAST_CARD = 24
 
+// Keeps the board from handing claude:// links to the system, which would open real chats in the Claude app; returns the
+// links the page asked to open.
+export async function catchClaudeLinks(page: Page): Promise<string[]> {
+  const links: string[] = []
+  await page.route('**/claude/open', async route => {
+    links.push((route.request().postDataJSON() as { link: string }).link)
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+  })
+  return links
+}
+
 // Drags a card by its title onto a list the way a person does, in small moves. Playwright's dragTo jumps to the target
 // in one move, and a drag made that way was sometimes never dropped against the whole stack.
 export async function dragCard(page: Page, dragged: Locator, target: Locator, places: DragPlaces = {}): Promise<void> {
