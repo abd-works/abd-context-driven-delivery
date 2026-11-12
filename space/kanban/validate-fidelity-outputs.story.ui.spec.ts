@@ -21,9 +21,9 @@ const STORY_MAP_REPORT = 'stories-story-map-20261101T100000'
 const JUDGED_REPORT = '# Graph rule validation\n\n## Judgment — `.context/story-map.md`\n\n### `do-not-invent-requirements` — Fail\n- story-map.md:7 `Confirm Order`: no source names this story.\n'
 const CLEAN_REPORT = 'stories-story-map-20261101T120000'
 const CLEAN_STAMP = '2026-11-01T12:00:00Z'
-// A graph validate saved with no hits, in the shape harness/graph/saved_graph.py writes (version 2).
+// A graph validate saved with no hits, in the shape harness/graph/saved_graph.py writes (SAVED_SHAPE_VERSION 3).
 const CLEAN_GRAPH = {
-  version: 2,
+  version: 3,
   overlays: [],
   practices: { stories: { source_root: '', root_facts: {}, nodes: [{ node_id: 'node-1', name: '', type: 'Story', practice: 'stories', file: '.context/story-map.md', line: 6, end_line: 6, stage: '', facts: {} }], edges: [], violations: [] } },
 }
@@ -127,7 +127,7 @@ test.describe('with a chat connected', () => {
       test("Then the chat's prompt is filled with one message, for the person to edit and send, naming the verb-noun-format rule, the error at .context/story-map.md:6, and the content that failed, with instructions to fix it", async () => {
         await expect.poll(() => sentSince(before).length).toBe(1)
         const [message] = sentSince(before)
-        expect(['verb-noun-format', '.context/story-map.md:6', 'Handle Payment'].every(part => message!.includes(part))).toBe(true)
+        for (const part of ['verb-noun-format', '.context/story-map.md:6', 'Handle Payment']) expect(message).toContain(part)
       })
     })
 
@@ -140,10 +140,10 @@ test.describe('with a chat connected', () => {
         await (await openStoryMapReport(page)).locator('.rule-head').getByRole('button', { name: 'Fix all', exact: true }).click()
       })
 
-      test("Then the chat's prompt is filled with one message, for the person to edit and send, with every verb-noun-format violation, each at its file and line with the content that failed, and instructions to fix them", async () => {
+      test("Then the chat's prompt is filled with one message, for the person to edit and send: Fix all violations of verb-noun-format found in this report, naming checkout-flow's story_map report", async () => {
         await expect.poll(() => sentSince(before).length).toBe(1)
         const [message] = sentSince(before)
-        expect(['verb-noun-format', '.context/story-map.md:6', 'Handle Payment'].every(part => message!.includes(part))).toBe(true)
+        expect(message).toContain(`Fix all violations of verb-noun-format found in this report: .sessions/checkout-flow/validation-reports/${STORY_MAP_REPORT}.md`)
       })
     })
 
@@ -159,10 +159,10 @@ test.describe('with a chat connected', () => {
         await opened.getByRole('button', { name: 'Fix all violations' }).click()
       })
 
-      test("Then the chat's prompt is filled with one message, for the person to edit and send, naming each rule with every violation of it, each at its file and line with the content that failed, and instructions to fix them all", async () => {
+      test("Then the chat's prompt is filled with one message, for the person to edit and send: Fix all violations found in this report, naming checkout-flow's report", async () => {
         await expect.poll(() => sentSince(before).length).toBe(1)
         const [message] = sentSince(before)
-        expect(['verb-noun-format', '.context/story-map.md:6', 'Handle Payment', 'do-not-invent-requirements', '.context/story-map.md:7', 'Confirm Order'].every(part => message!.includes(part))).toBe(true)
+        expect(message).toContain(`Fix all violations found in this report: .sessions/checkout-flow/validation-reports/${STORY_MAP_REPORT}.md`)
       })
     })
   })

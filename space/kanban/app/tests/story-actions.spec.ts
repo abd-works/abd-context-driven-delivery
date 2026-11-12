@@ -17,8 +17,12 @@ let chat: FakeChat
 
 const column = (page: Page, name: string) => page.locator(`.board-column[data-column="${name}"]`)
 
+// The board picks no chat on its own, so the Person picks the one that checked in.
 async function waitForChat(page: Page): Promise<void> {
-  await expect(page.getByRole('combobox', { name: 'Chat to send commands to' })).toHaveValue(chat.id, { timeout: 10_000 })
+  const picker = page.getByRole('combobox', { name: 'Chat to send commands to' })
+  await expect(picker.locator(`option[value="${chat.id}"]`)).toBeAttached({ timeout: 10_000 })
+  await picker.selectOption(chat.id)
+  await expect(picker).toHaveValue(chat.id)
 }
 
 async function showTicket(page: Page, ticket: string): Promise<void> {

@@ -110,14 +110,14 @@ section: body
 
 *Given* checkout-flow's story_map report lists verb-noun-format
 *When* the Person fixes every violation of verb-noun-format
-*Then* the chat's prompt is filled with one message, for the person to edit and send, with every verb-noun-format violation, each at its file and line with the content that failed, and instructions to fix them
+*Then* the chat's prompt is filled with one message, for the person to edit and send: Fix all violations of verb-noun-format found in this report, naming checkout-flow's story_map report
 
 #### Scenario: Fix every violation in the report
 
 *Given* checkout-flow's report lists violations of verb-noun-format and do-not-invent-requirements
 *And* a chat is connected
 *When* the Person fixes every violation in the report
-*Then* the chat's prompt is filled with one message, for the person to edit and send, naming each rule with every violation of it, each at its file and line with the content that failed, and instructions to fix them all
+*Then* the chat's prompt is filled with one message, for the person to edit and send: Fix all violations found in this report, naming checkout-flow's report
 
 #### Scenario: Read an open report again after the fix
 

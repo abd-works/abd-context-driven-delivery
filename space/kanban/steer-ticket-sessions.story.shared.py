@@ -297,7 +297,7 @@ def _(s):
     def _(world):
         world.closing = world.data_of(world.ticket.close_choices())
 
-    @s.then("a dialog headed Close session Checkout flow offers commit and push, chosen")
+    @s.then("a dialog headed Close session Checkout flow offers commit and push, none chosen")
     def _(world):
         expect((world.closing["branch"], world.closing["choices"][:3])).to(equal((CHECKOUT_FLOW.name, ["handoff", "commit", "push"])))
 

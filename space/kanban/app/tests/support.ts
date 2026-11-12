@@ -49,24 +49,34 @@ const DRAG_STEPS = 10
 
 // Where a drag grabs what it drags, and where on the target it lets go: by default a card by its title, onto the
 // target's middle; a child's row is grabbed near its left end, and a card dropped above another lets go on its top edge.
-export type DragPlaces = { grab?: { x: number; y: number }; onTop?: boolean }
+// A drop on a card makes the dragged ticket its child, so a move into a list that holds cards drops below them: atTheEnd.
+export type DragPlaces = { grab?: { x: number; y: number }; onTop?: boolean; atTheEnd?: boolean }
 const NEAR_THE_TOP_EDGE = 4
+const BELOW_THE_LAST_CARD = 24
 
 // Drags a card by its title onto a list the way a person does, in small moves. Playwright's dragTo jumps to the target
 // in one move, and a drag made that way was sometimes never dropped against the whole stack.
-export async function dragCard(page: Page, dragged: Locator, target: Locator, { grab = BY_ITS_TITLE, onTop = false }: DragPlaces = {}): Promise<void> {
-  await holdOver(page, dragged, target, { grab, onTop })
+export async function dragCard(page: Page, dragged: Locator, target: Locator, { grab = BY_ITS_TITLE, onTop = false, atTheEnd = false }: DragPlaces = {}): Promise<void> {
+  await holdOver(page, dragged, target, { grab, onTop, atTheEnd })
   await page.mouse.up()
 }
 
 // Leaves the drag held over the target, before the drop, so a spec can see what the target shows while it is dragged over.
-export async function holdOver(page: Page, dragged: Locator, target: Locator, { grab = BY_ITS_TITLE, onTop = false }: DragPlaces = {}): Promise<void> {
+export async function holdOver(page: Page, dragged: Locator, target: Locator, { grab = BY_ITS_TITLE, onTop = false, atTheEnd = false }: DragPlaces = {}): Promise<void> {
   const from = (await dragged.boundingBox())!
   await page.mouse.move(from.x + grab.x, from.y + grab.y)
   await page.mouse.down()
   await page.mouse.move(from.x + grab.x + 20, from.y + grab.y + 10, { steps: DRAG_STEPS })
   const to = (await target.boundingBox())!
-  await page.mouse.move(to.x + to.width / 2, to.y + (onTop ? NEAR_THE_TOP_EDGE : Math.min(to.height / 2, 60)), { steps: DRAG_STEPS })
+  const down = onTop ? NEAR_THE_TOP_EDGE : atTheEnd ? await belowTheLastCard(target, to) : Math.min(to.height / 2, 60)
+  await page.mouse.move(to.x + to.width / 2, to.y + down, { steps: DRAG_STEPS })
+}
+
+// Just under the list's last card, where the list itself takes the drop.
+async function belowTheLastCard(target: Locator, to: { y: number; height: number }): Promise<number> {
+  const cards = target.locator(':scope > .ticket-card')
+  const last = (await cards.count()) ? await cards.last().boundingBox() : null
+  return Math.min(last ? last.y + last.height - to.y + BELOW_THE_LAST_CARD : to.height / 2, to.height / 2 + 60)
 }
 
 export const openCard = (page: Page, ticket: string): Locator => page.locator(`[data-open-card="${ticket}"]`)
