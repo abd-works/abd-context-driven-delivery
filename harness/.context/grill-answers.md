@@ -21,3 +21,6 @@ Asked by the lern_domain_driven gate (`ask-cross-aggregate-sync`) while generati
 - **Examples:** examples are already part of the story model. Where Story UI's screens disagree with the model, fix the screens to the model.
 - **Increments:** add increments to the story model, shaped as the old Story UI's JSON had them: an ordered list of named increments, each a collection of stories that must exist in the story map. Edited through the model; the Story UI increment views come back on it.
 - **Ticket scope:** Story UI opened from the board on a ticket shows only the part of the story map the ticket's session covers.
+- **Instant moves (PendingChanges):** keep it. A person's own move shows on the board before the server answers.
+- **Graph app named 'Graph':** stays as it is for now; no framework change.
+- **Board server's own routes:** opening a Claude chat is core CDD chat communication, so `claude/open` moves out of the board's TypeScript server into the chat module (`harness/chat`), reached through the generated adapter, with a test seam so specs never open real `claude://` links. The board's Update (rebuild its page) reuses `App.install` instead of its own route.
