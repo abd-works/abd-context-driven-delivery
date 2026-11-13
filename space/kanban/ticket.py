@@ -365,32 +365,10 @@ class Ticket(Card):
 
     @property
     @data_field
-    def branch_name(self) -> str:
-        """The branch the ticket's chat works on, which the chat bar's status row names: its own while it has a
-        worktree, else the branch the repository has checked out."""
-        if self.worktree:
-            return self.checkout.branch.name
-        repo = self._board.repo
-        return repo.current_branch.name if repo.is_clone else ""
-
-    @property
-    @data_field
-    def root_folder(self) -> str:
-        """The folder the ticket's session works in, as a path from its repository's folder, which the status line below
-        the chat names after the repository; empty when the session works in the whole repository. A folder outside the
-        repository keeps its whole path."""
-        work_root = self._session.work_root
-        repository = Path(self._session.repo_path).resolve()
-        if not work_root.is_relative_to(repository):
-            return str(work_root)
-        relative = work_root.relative_to(repository)
-        return "" if relative == Path(".") else str(relative)
-
-    @property
-    @data_field
     def session_path(self) -> str:
         """The whole path of the folder the ticket's session works in: its workpath, else its repository's folder. The
-        chat bar opens the Graph app on it, so the graph a chat opens is its own session's."""
+        status line below the chat names it, and the chat bar opens the Graph app on it, so the graph a chat opens is its
+        own session's."""
         return str(self._session.work_root)
 
     @property

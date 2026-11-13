@@ -47,8 +47,8 @@ function logged($: EngineInterface, doing: string): (failure: unknown) => void {
   return failure => $.ui.log(`${PLUGIN}: ${doing} failed: ${reasonOf(failure)}`, { to: 'debug' })
 }
 
-// The status line below the chat, where the host draws a plugin's status: the repository, the branch the session's
-// chat works on, and the whole path of the folder the session works in. The host draws it at the right.
+// The status line below the chat, where the host draws a plugin's status: the whole path of the folder the session
+// works in. The host draws it at the right.
 async function showStatus($: EngineInterface): Promise<void> {
   $.ui.status((await currentChatBar($)).statusLine || undefined)
 }
@@ -150,7 +150,7 @@ export const register: Register = on => {
     return submitted
   })
 
-  // The status line, the repository, the session's branch and its folder, sits in the hint line under the prompt, after
+  // The status line, the whole path of the session's folder, sits in the hint line under the prompt, after
   // what the engine writes there, not in the chat bar above it.
   on('ui.render', { component: 'PromptHint' }, async ($, e, next) => {
     const status = (await currentChatBar($)).statusLine

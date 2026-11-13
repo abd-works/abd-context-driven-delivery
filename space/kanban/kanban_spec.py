@@ -543,16 +543,10 @@ with description("a ticket") as self:
         with it("should command every action its stage offers"):
             expect(list(self.ticket.next_fidelity.commands)).to(equal(["partition", "generate", "validate", "iterate", "sketch", "render", "document"]))
 
-        # (S) Chat bar --> status line: repository · branch · the folder the session works in, from the repository's folder.
-        with it("should name no folder while its session works in the whole repository"):
-            expect(data_of(self.ticket)["root_folder"]).to(equal(""))
-
-        # (S) Chat bar --> Open App From Health Panel: the Graph app opens on the folder the chat's session works in.
+        # (S) Chat bar --> status line, Open App From Health Panel: the status line names the folder the chat's session
+        # works in, and the Graph app opens on it.
         with it("should give its session's path as its repository's whole folder while its session works in the whole repository"):
             expect(data_of(self.ticket)["session_path"]).to(equal(str(Path(self.ticket.session.repo_path).resolve())))
-
-        with it("should name no branch while its project is no clone"):
-            expect(data_of(self.ticket)["branch_name"]).to(equal(""))
 
         # (S) Chat bar, Board App --> Open Ticket Chat: the Claude app opens a new chat from the link, and the person sends it.
         with it("should offer no link to a new chat while it has no worktree"):

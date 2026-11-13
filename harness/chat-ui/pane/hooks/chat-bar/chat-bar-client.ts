@@ -170,12 +170,10 @@ export class ChatBarClient {
     return Boolean(this.board) && !this.isClone
   }
 
-  // The status line below the chat: the repository, the branch the session's chat works on, and the folder the session
-  // works in from the repository's folder, which a session working in the whole repository leaves out.
+  // The status line below the chat: the whole path of the folder the session works in, which already names the
+  // repository, and a worktree's folder its branch.
   get statusLine(): string {
-    if (!this.ticket) return ''
-    const ticket = this.ticket as TicketData & { branch_name?: string; root_folder?: string }
-    return [this.repoName, ticket.branch_name ?? '', ticket.root_folder ?? ''].filter(Boolean).join(' · ')
+    return this.sessionPath
   }
 
   // The agent context: what the Python Ticket tells the agent about the active session in its system prompt, the same
