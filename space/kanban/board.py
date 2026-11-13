@@ -768,8 +768,9 @@ class BoardOverview:
     @property
     @data_field
     def active(self) -> Ticket | None:
-        """The ticket of the session saved as open, sent whole; none while main is."""
-        return self._board.active
+        """The ticket of the session saved as open, sent whole with its children by name; none while main is."""
+        active = self._board.active
+        return active.in_overview() if active is not None else None
 
 
 class BoardPractice:
