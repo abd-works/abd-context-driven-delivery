@@ -15,6 +15,10 @@ const OPEN_TOOL = 'app.open'
 // The Browser pane beside the chat in the Claude desktop app; where a session has none, the app opens in the browser.
 const SIDE_PANEL_SERVER = 'Claude_Browser'
 const SIDE_PANEL_TOOL = 'preview_start'
+// The desktop app's view tools: show_pane brings the Browser pane, its "preview", beside the conversation.
+const VIEW_SERVER = 'ccd_view'
+const SHOW_PANE_TOOL = 'show_pane'
+const PREVIEW_PANE = 'preview'
 
 const appOpening = atom({ plugin: 'cdd-board', key: 'appOpening' } as const, { label: '', state: 'idle', error: null, url: null } as AppOpeningJson)
 
@@ -54,7 +58,11 @@ async function openInSidePanel($: EngineInterface, url: string): Promise<void> {
   let panelWhy: string
   try {
     const shown = await $.mcp.call(SIDE_PANEL_SERVER, SIDE_PANEL_TOOL, { url })
-    if (!shown.isError) return
+    if (!shown.isError) {
+      // preview_start opens a tab in the Browser pane but leaves a hidden pane hidden, so the pane is shown after it.
+      await $.mcp.call(VIEW_SERVER, SHOW_PANE_TOOL, { pane: PREVIEW_PANE }).catch(() => null)
+      return
+    }
     panelWhy = shown.content[0]?.text ?? 'it answered with an error'
   } catch (failure) {
     panelWhy = reasonOf(failure)
