@@ -6,6 +6,7 @@
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { PROJECT_HEADER } from '@cdd/cdd-shared'
 import type { StoryModelData } from '@cdd/practices/stories/model/story-model'
 
 import { SERVER_DOWN, StoryMapApi } from './story-map-api'
@@ -96,6 +97,18 @@ describe('an edit through the story map tools', () => {
 })
 
 // An edit with the cdd server down says so and is not shown as saved.
+describe('a Story UI opened on a repository', () => {
+  it("should name the repository its page link names on every call, so the board's server answers from that repository", async () => {
+    const headers: HeadersInit[] = []
+    const send = async (_path: string, init: RequestInit): Promise<Response> => {
+      headers.push(init.headers ?? {})
+      return new Response(JSON.stringify(CHECKOUT_FLOW), { status: 200 })
+    }
+    await new StoryMapApi(() => {}, send, 'C:/dev/checkout').post('/story-model/show', {})
+    expect(headers[0]).toMatchObject({ [PROJECT_HEADER]: 'C:/dev/checkout' })
+  })
+})
+
 describe('with the cdd server not answering', () => {
   it('should say the cdd server is not answering and how to start it', async () => {
     const failures: string[] = []

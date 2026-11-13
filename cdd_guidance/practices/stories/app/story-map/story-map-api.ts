@@ -1,4 +1,4 @@
-import type { CddApi } from '@cdd/cdd-shared'
+import { PROJECT_HEADER, projectOfPage, type CddApi } from '@cdd/cdd-shared'
 
 import { STORY_MAP_API } from '../story-map-page'
 
@@ -12,15 +12,18 @@ export type FailureListener = (message: string) => void
 
 // Every call the Story UI makes to the board's server, which reaches the cdd server. A failed call shows the person
 // what failed and how to fix it, through the listener the page gives, and answers null, so the page keeps showing the
-// story map as Python last sent it rather than an edit that was never saved.
+// story map as Python last sent it rather than an edit that was never saved. One board server serves every repository,
+// so each call names the repository the page's ?project= link names, as the board's own page does.
 export class StoryMapApi implements CddApi {
   constructor(
     private readonly failed: FailureListener,
     private readonly send: Send = (path, init) => fetch(path, init),
+    private readonly project: string = projectOfPage(),
   ) {}
 
   async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
-    const init = { method: 'POST', headers: { [BOARD_HEADER]: 'story-ui', 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+    const headers = { [BOARD_HEADER]: 'story-ui', 'Content-Type': 'application/json', ...(this.project ? { [PROJECT_HEADER]: this.project } : {}) }
+    const init = { method: 'POST', headers, body: JSON.stringify(body) }
     const response = await this.send(`${STORY_MAP_API}${path}`, init).catch(() => null)
     if (!response) return this.refused(SERVER_DOWN)
     const answer = (await response.json().catch(() => null)) as (Result & { error?: string }) | null
