@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
-from harness.agent_tools.agent_tools import noSessionLog, tool_subject
+from harness.agent_tools.agent_tools import noSessionLog, subAgent, tool_subject
 from harness.agent_tools.tool_call import ToolCall
 from harness.graph.graph import Graph
 from harness.graph.pattern_overlays import PatternOverlays
@@ -570,17 +570,19 @@ class Session:
         write the approach for the next agent. Read this before drafting a handoff."""
         return HANDOFF_FORMAT_FILE.read_text(encoding="utf-8")
 
+    @subAgent
     @mcp
     @skill
     @agent_instructions
     def handoff_session(self, next_focus: str = "") -> str:
-        """Write a compact handoff for this session so the next agent can continue. Tailor it to {{next_focus}} when provided. Pass the same session argument to every session tool this calls."""
+        """Write a compact handoff for this session so the next agent can continue, then commit and push it. Tailor it to {{next_focus}} when provided. Pass the same session argument to every session tool this calls. The caller hands the sub-agent the conversation's outcome, open work, corrections and decisions in the prompt, since the sub-agent cannot read this chat."""
         """Step 1 - Read the handoff format once via read_handoff_format."""
         tools(self.read_handoff_format)
-        """Step 2 - Draft the handoff markdown from this conversation in that format, tailored to {{next_focus}} when provided."""
-        """Step 3 - Write the handoff markdown to a file and call write_handoff with paths set to that file. Do not pass the handoff body. Report the returned path to the user."""
+        """Step 2 - Draft the handoff markdown from what the caller passed in that format, tailored to {{next_focus}} when provided."""
+        """Step 3 - Write the handoff markdown to a file and call write_handoff with paths set to that file. Do not pass the handoff body."""
         tools(self.write_handoff)
-        return "Handoff written."
+        """Step 4 - Commit and push the handoff on the current branch with repo.push_commit (message: "Handoff: {session}"). Report the handoff path and the pushed commit."""
+        return "Handoff written, committed and pushed."
 
     @mcp
     @skill
