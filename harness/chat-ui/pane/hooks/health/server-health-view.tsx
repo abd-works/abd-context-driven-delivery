@@ -99,6 +99,7 @@ function ExpandedView(elements: ElementTable, band: Band) {
       key="card-health"
       flexDirection="column"
       paddingX={1}
+      paddingY={1}
       backgroundColor={look.wash}
     >
       {HeadlineView(elements, health)}
