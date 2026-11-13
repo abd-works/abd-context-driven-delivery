@@ -15,6 +15,7 @@
   "branch": "review-work-in-board-files",
   "worktree": "C:\\dev\\abd-cdd-review-work-in-board-fil",
   "overlays": [
-    "lern_domain_driven"
+    "lern_domain_driven",
+    "cdd_web_domain_access"
   ]
 }
