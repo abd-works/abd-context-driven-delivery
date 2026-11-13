@@ -1,7 +1,7 @@
 # harness/chat-ui/pane
 The *cdd-board* plugin connects a Claude Code chat to the CDD Kanban, so the board's buttons can put a prompt in that chat or run a command there. It also tells the agent which ticket it is working on, and draws the chat bar above the prompt, which starts with the server health mark and ends with a status row: repository · branch · the whole path of the folder the session works in. The bar's design and decisions are in `harness/chat-ui`.
 
-`/board` readies the CDD Kanban through `app.open` and says where it is, or what failed and how to fix it. The server health panel's status row lists every app the report lists with its status; a press on one calls `app.open`, which installs and launches it as needed, and opens it in the side panel (the desktop app's Browser pane, else the browser), or shows why it did not open.
+`/board` readies the CDD Kanban through `app.open` and says where it is, or what failed and how to fix it. The server health panel's status row lists every app the report lists with its status; a press on one calls `app.open`, which installs and launches it as needed, and opens it in the side panel (the desktop app's Browser pane, never the person's own browser), or shows why it did not open with its link.
 
 - **Purpose:** let a person drive the agent from the board, and keep the chat aware of the active ticket.
 - **Seam (terms):** `cdd-board` plugin; `/board`; the chat bar's status row; the active ticket section of the system prompt; the server health band

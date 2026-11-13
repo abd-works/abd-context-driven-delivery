@@ -4,7 +4,6 @@ import type { EngineInterface } from 'claude-code'
 import type { AppData } from '@cdd/harness/diagnostics/app'
 
 import type { AppOpeningJson } from '../../types'
-import { openInBrowser } from '../shared/browser'
 import { reasonOf } from '../shared/failure'
 import { refreshHealth, SERVER } from './server-health-client'
 
@@ -12,7 +11,7 @@ import { refreshHealth, SERVER } from './server-health-client'
 // not running, and answers it with its url, or refuses saying which step failed and how to fix it. The status row only
 // shows what that answer says. Atom appOpening, declared in pane/types/index.d.ts.
 const OPEN_TOOL = 'app.open'
-// The Browser pane beside the chat in the Claude desktop app; where a session has none, the app opens in the browser.
+// The Browser pane beside the chat in the Claude desktop app, the only place an app opens.
 const SIDE_PANEL_SERVER = 'Claude_Browser'
 const SIDE_PANEL_TOOL = 'preview_start'
 // The desktop app's view tools: show_pane brings the Browser pane, its "preview", beside the conversation.
@@ -53,7 +52,7 @@ export async function openAppBesideChat($: EngineInterface, label: string, pageU
   await refreshHealth($)
 }
 
-// Says why each way failed: the side panel's own answer, and whether a browser opener ran.
+// The app opens only in Claude's Browser pane, never in the person's own browser; a refusal says the pane's reason.
 async function openInSidePanel($: EngineInterface, url: string): Promise<void> {
   let panelWhy: string
   try {
@@ -67,6 +66,5 @@ async function openInSidePanel($: EngineInterface, url: string): Promise<void> {
   } catch (failure) {
     panelWhy = reasonOf(failure)
   }
-  const isOpened = await openInBrowser($, url).catch(() => false)
-  if (!isOpened) throw new AppNotOpened(`${url} is running but did not open. Side panel: ${panelWhy}. Browser: no opener ran here. Open the link below.`)
+  throw new AppNotOpened(`${url} is running, but Claude's Browser pane did not open it: ${panelWhy}`)
 }
