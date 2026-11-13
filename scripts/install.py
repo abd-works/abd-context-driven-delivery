@@ -78,6 +78,7 @@ def main() -> int:
         print(f"cdd server: {server.serve_from_checkout() if args.serve_from_checkout else server.pin_server()}")
         if installer.layout.is_claude_code:
             print(f"cdd-board: {server.claude_plugins.install_board()}")
+        print(f"language adapters: {len(installer.write_language_adapters())} written")
         _install_kanban()
         return 0
     if args.self:

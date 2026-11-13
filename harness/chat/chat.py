@@ -140,12 +140,24 @@ class Chat:
     @noSessionLog
     def send(self, kind: CommandKind, text: str) -> Chat:
         """Send chat a command: a fill puts text in its prompt for the person to review, a submit sends it, and a command runs a slash command. A fill waits until the chat's turn has ended."""
+        self.queue(kind, text)
+        return self
+
+    def queue(self, kind: CommandKind, text: str) -> ChatMessage:
+        """Queue a command for chat, as ``send`` does, and answer with the message it waits in, so the sender can follow
+        the message to done."""
         if not self.is_connected:
             raise ChatNotConnectedError(self.id)
         waiting = self._folder / WAITING
         waiting.mkdir(parents=True, exist_ok=True)
-        JsonFile(waiting / self._next_file_name()).write({"kind": kind, "text": text, "sent_at": self.clock()})
-        return self
+        path = waiting / self._next_file_name()
+        JsonFile(path).write({"kind": kind, "text": text, "sent_at": self.clock()})
+        return self._message(path, WAITING)
+
+    def message(self, message: str) -> ChatMessage | None:
+        """The message sent to chat with this id, in whatever state it is; none once it was removed or forgotten."""
+        found = next(((path, state) for state in MESSAGE_STATES if (path := self._folder / state / f"{message}.json").is_file()), None)
+        return self._message(*found) if found is not None else None
 
     @mcp
     @agent_tool

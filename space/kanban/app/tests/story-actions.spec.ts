@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
 import { fixtureRoot, resetSessions } from '../test-utils/fixture-repo'
-import { BOARD_POST_HEADERS, card, FakeChat, openBoard, openCardOf, openTileBarOf, startBoard, toast, turnOffActiveSessionOnly } from './support'
+import { BOARD_POST_HEADERS, card, catchClaudeLinks, FakeChat, openBoard, openCardOf, openTileBarOf, startBoard, toast, turnOffActiveSessionOnly } from './support'
 
 const BROKEN_BOARD_PORT = 8781
 
@@ -57,7 +57,7 @@ test.describe('Restrict Actions To Active Session', () => {
     const billing = card(page, 'billing-report')
     await expect(billing).toHaveAttribute('draggable', 'true')
     await expect(billing.getByRole('button', { name: 'Activate' })).toBeEnabled()
-    await billing.getByRole('button', { name: 'folder' }).click()
+    await billing.getByRole('button', { name: 'files', exact: true }).click()
     await expect(page.locator('[data-panel="files"]')).toBeVisible()
   })
 
@@ -334,13 +334,12 @@ test.describe('Display Violations Band', () => {
 })
 
 test.describe('List, browse, and view files', () => {
-  test('should show the two modes of the files panel', async ({ page }) => {
-    await card(page, 'checkout-flow').getByRole('button', { name: 'folder' }).first().click()
+  test("should show the files panel's practice filters and its tabs", async ({ page }) => {
+    await card(page, 'checkout-flow').getByRole('button', { name: 'files', exact: true }).first().click()
     const files = page.locator('[data-panel="files"]')
-    await expect(files.getByText('.context/', { exact: true })).toBeVisible()
-    await files.getByRole('button', { name: 'files', exact: true }).click()
+    await expect(files.getByRole('button', { name: 'Stories', pressed: true })).toBeVisible()
     await expect(files.getByRole('tab', { name: 'story-map.md' })).toBeVisible()
-    await expect(files.locator('.file-lines')).toContainText('Check Out Order')
+    await expect(files.locator('.file-viewer')).toContainText('Check Out Order')
   })
 
   test('should offer a tab for a format not generated yet and say so', async ({ page }) => {
@@ -360,12 +359,12 @@ test.describe('Refresh Board After Tool Calls', () => {
   })
 
   test('should read an open files list again when the board changes', async ({ page }) => {
-    await card(page, 'checkout-flow').getByRole('button', { name: 'folder' }).first().click()
+    await card(page, 'checkout-flow').getByRole('button', { name: 'files', exact: true }).first().click()
     const files = page.locator('[data-panel="files"]')
-    await expect(files.getByRole('button', { name: 'story-map.md', exact: true })).toBeVisible()
+    await expect(files.getByRole('tab', { name: 'story-map.md', exact: true })).toBeVisible()
     writeFileSync(join(fixtureRoot, '.context', 'story-map.drawio'), `<mxfile />${EOL}`, 'utf-8')
     appendFileSync(join(fixtureRoot, '.sessions', 'checkout-flow', 'session.log'), `2026-11-01T11:00:00Z generate /work stories story_map drawio stories no-chat${EOL}`, 'utf-8')
-    await expect(files.getByRole('button', { name: 'story-map.drawio', exact: true })).toBeVisible({ timeout: 8_000 })
+    await expect(files.locator('[role="tab"][title=".context/story-map.drawio"]:not(.is-missing)')).toBeVisible({ timeout: 8_000 })
   })
 })
 
@@ -404,7 +403,7 @@ test.describe('Display Connected Status', () => {
 test.describe('Choose Session Root', () => {
   // Choosing a root changes the shared fixture's session, so this only browses and cancels.
   test("should open the roots from the details bar and browse the repository's folders for the session root", async ({ page }) => {
-    await page.locator('.details-bar').getByRole('button', { name: 'whole repository' }).click()
+    await page.locator('.details-bar').getByRole('button', { name: 'roots', exact: true }).click()
     const roots = page.getByRole('dialog')
     await expect(roots.getByRole('heading', { name: 'Roots of Checkout flow' })).toBeVisible()
     await roots.getByRole('button', { name: 'Change the root of Session' }).click()
@@ -415,10 +414,12 @@ test.describe('Choose Session Root', () => {
 })
 
 test.describe('Activate Ticket', () => {
-  test('should open the ticket in its own worktree with one press, asking nothing', async ({ page }) => {
+  test('should open the ticket in its own worktree with one press, asking nothing, and start its chat there', async ({ page }) => {
+    const links = await catchClaudeLinks(page)
     await card(page, 'billing-report').getByRole('button', { name: 'Activate' }).first().click()
-    await expect(toast(page, /^Billing report is open in its worktree .+/)).toBeVisible({ timeout: 15_000 })
+    await expect(toast(page, 'Confirm the folder and send in the Claude app to start the chat of billing-report')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('dialog')).toHaveCount(0)
+    expect(links).toHaveLength(1)
   })
 })
 

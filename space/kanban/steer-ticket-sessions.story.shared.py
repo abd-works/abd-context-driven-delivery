@@ -220,7 +220,7 @@ def _(s):
     @s.then("billing-report's session works in src/billing")
     def _(world):
         saved = json.loads((world.project.sessions / "billing-report" / "session.json").read_text(encoding="utf-8"))
-        expect(saved["workpath"]).to(equal(str((world.project.root / BILLING_ROOT).resolve())))
+        expect(saved["workpath"]).to(equal(BILLING_ROOT))
 
     @s.and_("the details show its root as src/billing")
     def _(world):

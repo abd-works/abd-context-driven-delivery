@@ -58,3 +58,66 @@ session or a practice saved it, but the row still showed the old root ("harness 
 
 Fixed on branch `ticket-maintanance-defects`: the dialog drew the ticket object it was opened with; it now draws the ticket
 as the board read it last (`root-choice-client.ts`).
+
+## Activating a ticket on the board opens its worktree but starts no chat
+
+Reported 2026-11-12 through the main board's chat, ticket `ticket-maintanance-defects`. Pressing Activate on "Integrate
+Practice Content Editor Apps" made its worktree and recorded it, but no chat was started on it; the board only said to
+open its chat from its card.
+
+Fixed on branch `ticket-maintanance-defects`: with no chat working in the worktree, Activate starts one there, as the
+card's chat button does (`activation-client.ts`); the new chat's prompt asks it to call `sessions.switch` with the
+ticket's name first (`newChatLink` in `chat-client.tsx`).
+
+## Starting a Backlog item by dragging it into Discovery starts no chat
+
+Reported 2026-11-12, ticket `ticket-maintanance-defects`. Dragging a Backlog item into Discovery started its ticket, but
+no worktree or chat opened.
+
+Fixed on branch `ticket-maintanance-defects`: starting an item, by drag or by Start, now activates its ticket as Activate
+does, so its worktree opens and its chat starts there (`root-choice-client.ts`).
+
+## The chat bar's + and ⑂ are separate from what they open
+
+Reported 2026-11-12, ticket `ticket-maintanance-defects`. In the main chat the bar showed the session name, then a bare +
+for the ticket list and a bare ⑂ for the repo list, three controls for two lists.
+
+Fixed on branch `ticket-maintanance-defects`: "main +" is one button that opens the ticket list (its card still shows on
+hover), and "repo +" one button that opens the repo list (`WordPlusButtonView` in `chat-bar-view.tsx`).
+
+## The chat bar's status sits at the right and is cut off
+
+Reported 2026-11-12, ticket `ticket-maintanance-defects`. The host draws a plugin's status line at the right, where
+"cdd-board abd-cdd-ticket-maintanance-defec · t…" was cut off; it named the session, not the branch, and the root by its
+short path.
+
+Fixed on branch `ticket-maintanance-defects`: the host's status line cannot be set left, so the bar draws its own status
+row under its line, from the left: repository · branch · the whole path of the folder the session works in. The Ticket
+sends `branch_name` and `root_folder` for it (`ticket.py`); the host's status line is cleared.
+
+## A fidelity's hover tip opens nothing
+
+Reported 2026-11-12, ticket `ticket-maintanance-defects`. Hovering a fidelity dot shows its name; pressing the name did
+nothing, where the board's ? opens that fidelity's help.
+
+Fixed on branch `ticket-maintanance-defects`: pressing the tip opens the fidelity's help panel on the board in the
+browser, by a new `?help=<ticket>&fidelity=<slug>` link (`openLinkedHelp` in `board-page.ts`, `openHelp` in
+`fidelity-files-client.ts`).
+
+## The chat bar's list boxes do not line up with their buttons
+
+Reported 2026-11-12, ticket `ticket-maintanance-defects`. The action picker opened at the overlay +, not the action
+button, and the ticket and repo lists sat at the bar's right edge, not under their buttons.
+
+Fixed on branch `ticket-maintanance-defects`: each list box is placed from the cells the line draws before its button
+(`bar-columns.ts`): the stage list at the stage button, the overlay list at the +, the action picker at the action
+button past the overlay and format chips, and the ticket and repo lists ending under "main +" and "repo +".
+
+## A chat bar list box stays open after a click elsewhere
+
+Reported 2026-11-12, ticket `ticket-maintanance-defects`. An open list of options stayed open until its own button was
+pressed again.
+
+Fixed on branch `ticket-maintanance-defects`: a press anywhere else on the bar, or typing or sending in the prompt,
+closes every open list box but the pressed one's (`option-lists-client.ts`). The host sends no event for a click in the
+transcript, so a click there still leaves it open.

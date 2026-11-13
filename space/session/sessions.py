@@ -196,6 +196,7 @@ class Sessions:
         """The session kept in folder, read without opening it: the one object these sessions hold for that folder,
         working in the root ``root_of`` derives now, so a worktree opened or a workpath chosen since is seen."""
         session = self._held_at(Path(folder))
+        session.repo_path = self.checkout_of(session)
         workpath = self.root_of(session)
         if session.workpath is None or session.work_root != workpath:
             session.workpath = workpath
@@ -203,17 +204,40 @@ class Sessions:
 
     def root_of(self, session: Session) -> Path:
         """Where session writes, derived when asked and never saved on a switch: a workpath a person chose by hand in
-        its session.json, else its own worktree as git lists it, else this checkout."""
+        its session.json, else its own worktree as git lists it, else this checkout. A session's root is always in its
+        own checkout, so a chosen workpath that lies in another checkout of the repository names the same folder in it."""
         stored = str(session.fields.get("workpath", "") or "").strip()
-        chosen = Path(stored).resolve() if stored else None
+        checkout = self.checkout_of(session)
+        chosen = self.in_checkout(checkout, checkout / stored) if stored else None
         # WHY: older switches saved the checkout itself, or a worktree since removed, as the workpath; neither was chosen.
-        if chosen is not None and chosen.is_dir() and chosen not in (self.root, self.repo.main_clone.root):
+        if chosen is not None and chosen.is_dir() and chosen not in (self.root, self.repo.main_clone.root, checkout):
             return chosen
-        if session.name and session.name != MAIN_SESSION_NAME:
-            worktree = self._worktree_of(session.name)
-            if worktree is not None:
-                return worktree
-        return self.root
+        return checkout
+
+    def checkout_of(self, session: Session) -> Path:
+        """The checkout session works in: its own worktree, the one its ticket opened or the one git lists for its
+        branch, else this checkout."""
+        if not session.name or session.name == MAIN_SESSION_NAME:
+            return self.root
+        kept = str(session.fields.get("worktree", "") or "").strip()
+        if kept and Path(kept).is_dir():
+            return Path(kept).resolve()
+        worktree = self._worktree_of(session.name)
+        return worktree if worktree is not None else self.root
+
+    def in_checkout(self, checkout: Path, path: Path | str) -> Path:
+        """path, resolved, moved into checkout when it lies in another checkout of this repository, its main clone or
+        another worktree, at the same place from that checkout's top: ``<main>/harness/.context`` becomes
+        ``<checkout>/harness/.context``. A path outside every checkout is kept as it is."""
+        resolved = Path(path).resolve()
+        if resolved.is_relative_to(checkout):
+            return resolved
+        others = [self.repo.main_clone.root.resolve(), self.root.resolve(), *self._worktrees_by_branch().values()]
+        holding = [other for other in others if other != checkout and resolved.is_relative_to(other)]
+        if not holding:
+            return resolved
+        top = max(holding, key=lambda other: len(other.parts))
+        return (checkout / resolved.relative_to(top)).resolve()
 
     def _worktree_of(self, name: str) -> Path | None:
         """The linked worktree of the branch called name, else of the one branch whose name holds name as a whole word,
@@ -293,9 +317,10 @@ class Sessions:
         opened, because a session made for later, such as a board ticket, is not the one being worked on."""
         session = self._held_at(self.folder / Name(name).title_slug)
         chosen = Path(workpath).resolve() if workpath is not None else None
-        kept = chosen if chosen is not None and chosen != self.root else None
-        fields = (("name", session.name), ("title", title), ("scope", scope), ("parent", parent), ("workpath", str(kept) if kept else ""))
+        kept = self.repo.path_from_top(chosen) if chosen is not None and chosen != self.root else ""
+        fields = (("name", session.name), ("title", title), ("scope", scope), ("parent", parent), ("workpath", kept))
         session.save_fields(**{key: value for key, value in fields if value})
+        session.repo_path = self.checkout_of(session)
         session.workpath = self.root_of(session)
         session.log.seed_first_loop()
         return session

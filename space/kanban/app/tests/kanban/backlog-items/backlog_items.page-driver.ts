@@ -4,7 +4,7 @@
  */
 import { expect, type Locator, type Page } from '@playwright/test'
 
-import { card, dragCard, openBoard, turnOffActiveSessionOnly } from '../../support'
+import { card, catchClaudeLinks, dragCard, openBoard, toast, turnOffActiveSessionOnly } from '../../support'
 import type { BacklogItemsDriver } from './backlog_items.spec.shared'
 
 // A segment names its skill and the state of that fidelity's work, as `/practices-stories-stories-story-map: in progress`.
@@ -17,7 +17,9 @@ export class BacklogItemsPageDriver implements BacklogItemsDriver {
     this.page = page
   }
 
+  // Starting an item starts its chat; the link is caught, so a run opens no real chat in the Claude app.
   static async fromPage(page: Page): Promise<BacklogItemsPageDriver> {
+    await catchClaudeLinks(page)
     await openBoard(page)
     await turnOffActiveSessionOnly(page)
     return new BacklogItemsPageDriver(page)
@@ -44,6 +46,8 @@ export class BacklogItemsPageDriver implements BacklogItemsDriver {
     await dragCard(this.page, this.item(title), this.page.locator('[data-column="Discovery"] .card-list').first())
     const roots = this.page.getByRole('dialog')
     await roots.getByRole('button', { name: 'Use whole repository' }).click()
+    // Starting opens the ticket's worktree and its chat in the background; the next scenario's reset must wait for it.
+    await expect(toast(this.page, /^Confirm the folder and send in the Claude app/)).toBeVisible({ timeout: 15_000 })
     await roots.getByRole('button', { name: 'Done' }).click()
     await expect(this.ticketTitled(title)).toBeVisible()
   }

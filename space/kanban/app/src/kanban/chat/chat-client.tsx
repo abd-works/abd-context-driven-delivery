@@ -11,7 +11,7 @@ const NEW_CHAT_LINK = 'claude://code/new'
 
 // The link that opens a ticket's new chat on its worktree. The link names no title, so its prompt asks for the ticket's.
 export const newChatLink = (ticket: string, worktree: string): string => {
-  const prompt = `Title this session "${ticket}". You are the chat of the session board's ticket ${ticket}; work on that ticket.`
+  const prompt = `Title this session "${ticket}". You are the chat of the session board's ticket ${ticket}; work on that ticket. First call sessions.switch with name ${ticket}, so every tool works on its session, then read the session's latest handoff.`
   return `${NEW_CHAT_LINK}?folder=${encodeURIComponent(worktree)}&q=${encodeURIComponent(prompt)}`
 }
 
@@ -30,6 +30,11 @@ export class ChatClient {
   // A chat is connected to send to; which one is decided per send: the ticket's own, else the one a person picked.
   get canSend(): boolean {
     return this.store.state.chats.length > 0
+  }
+
+  // The chat a person picked, by its id; empty with none picked.
+  get pickedId(): string {
+    return this.store.state.targetChat ?? ''
   }
 
   private get target(): ChatData | undefined {
@@ -195,6 +200,12 @@ export class TicketChat {
   get found(): ChatData | undefined {
     const chat = this.chats.chatOf(this.ticket, this.working?.id ?? '')
     return chat ? this.chats.connected(chat) : undefined
+  }
+
+  // The chat a file comment is sent to: the one working on the ticket, else the one a person picked, else the chat named
+  // after the ticket, which Python says is not connected when it has not checked in.
+  get id(): string {
+    return this.found?.id || this.working?.id || this.chats.pickedId || this.ticket
   }
 
   get isOpening(): boolean {

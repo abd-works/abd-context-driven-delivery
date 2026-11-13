@@ -2,6 +2,7 @@ import type { RequiredFidelity } from '../board/column-client'
 import type { BacklogItemData } from '@cdd/space/kanban/backlog-item'
 import type { BoardData, HelpData } from '@cdd/space/kanban/board'
 import type { FormatChoiceData } from '@cdd/space/kanban/ticket'
+import type { SessionFileData } from '@cdd/space/session/session'
 
 import type { ChatData, ChatMessageData } from '@cdd/harness/chat/chat'
 import type { FidelityProgressClient } from '../ticket/fidelity-progress-client'
@@ -38,17 +39,21 @@ export type RootChoice = {
 
 // A report panel holds the progress whose report it shows, or none for the violations of every fidelity of its ticket.
 export type ReportPanel = { kind: 'report'; ticket: TicketClient; progress: FidelityProgressClient | null; report: ReportClient; closedRules: string[]; isExpanded: boolean }
+// Where a files panel's tabs come from: the fidelities of the ticket's stage, its session folder, or its workpath.
+export type FilesSource = 'fidelities' | 'session' | 'workpath'
 export type FilesPanel = {
   kind: 'files'
   ticket: TicketClient
-  // A session folder's files, or the files of the fidelities whose progress it holds.
-  isSession: boolean
+  source: FilesSource
+  // The fidelities of the ticket's stage, whose practices the panel offers as filters; none for a folder.
   progress: FidelityProgressClient[]
   files: FilesByFidelity
-  mode: string
-  tabs: string[]
+  // The practices whose files show as tabs, and whether only the files the ticket's branch changed show.
+  practicesOn: string[]
+  changedOnly: boolean
   activeTab: string
-  texts: Record<string, string>
+  // The open file as the session reads it, with its comments, folds and violations; none for a file not there yet.
+  shown: SessionFileData | null
   lines: Record<string, number>
   isExpanded: boolean
 }

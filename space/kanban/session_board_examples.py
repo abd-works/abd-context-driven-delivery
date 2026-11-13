@@ -244,6 +244,90 @@ def _empty_repository() -> Path:
     return folder / ".git"
 
 
+# --- Review Files In Viewer: checkout-flow working in src/checkout, its order.py, and the comments on it -----------
+
+CHECKOUT_FLOW_IN_SRC_CHECKOUT = SessionSeed("checkout-flow", "Checkout flow", workpath="src/checkout")
+CHECKOUT_FLOW_IN_CONTEXT = SessionSeed("checkout-flow", "Checkout flow", workpath="harness/.context")
+ORDER_FILE = "src/checkout/order.py"
+PLACE_LINES = (
+    "    def place(self, cart: Cart) -> Order:",
+    "        if not cart.items:",
+    "            raise EmptyCartError(cart.id)",
+)
+# Seed: order.py, the place lines at 12 to 14 and other code below them, so comments can sit on lines 30 and 40 too.
+ORDER_TEXT = "".join(f"{line}\n" for line in (*[f"# order line {number}" for number in range(1, 12)], *PLACE_LINES, *[f"# order line {number}" for number in range(15, 42)]))
+EDITED_LINE_14 = '            raise EmptyCartError(cart.id, "a cart needs one item to be placed")'
+README_FILE = "src/checkout/README.md"
+README_TEXT = "# Checkout\n"
+CHECKOUT_CHAT = "checkout-chat"
+# Seed: the graph checkout-flow saved in its folder, naming files from its root src/checkout: class Order on lines 5 to
+# 41 of order.py, its operation place on 12 to 14, and one rule broken on place.
+ORDER_CLASS_LINES = (5, 41)
+ORDER_RULE = ("vocabulary-traces-to-source", "EmptyCartError should say which cart and why")
+ORDER_GRAPH = SavedGraph([], {"clean_engineering": SavedPractice("clean_engineering", "", {}, [
+    SavedNode("order", "Order", "OoadClass", "clean_engineering", "order.py", *ORDER_CLASS_LINES, "", {}),
+    SavedNode("order-place", "place", "Operation", "clean_engineering", "order.py", 12, 14, "", {"owner": "Order"}),
+], [], [Violation(*ORDER_RULE, practice="clean_engineering", node_id="order-place", location="order.py", line=12, end_line=14)])}).document
+
+
+@dataclass(frozen=True)
+class FileCommentExample:
+    """Interaction: what a person selected in a file and the comment they wrote on it."""
+
+    path: str
+    start_line: int
+    end_line: int
+    selected_text: str
+    text: str
+
+    @property
+    def anchor(self) -> str:
+        return f"{self.path}:L{self.start_line}-L{self.end_line}"
+
+
+EMPTY_CART_COMMENT = FileCommentExample(ORDER_FILE, 12, 14, "\n".join(PLACE_LINES), "an empty cart should say which cart and why")
+LINE_30_COMMENT = FileCommentExample(ORDER_FILE, 30, 31, "# order line 30\n# order line 31", "name these lines")
+LINE_40_COMMENT = FileCommentExample(ORDER_FILE, 40, 41, "# order line 40\n# order line 41", "drop these lines")
+EMPTY_CART_FILL = "\n".join([
+    "src/checkout/order.py:12-14: an empty cart should say which cart and why",
+    *(f"> {12 + offset} | {line}" for offset, line in enumerate(PLACE_LINES)),
+    "",
+    "session=.sessions/checkout-flow/session.json",
+])
+
+
+
+def seed_checkout_flow(world) -> None:
+    """Seed: checkout-flow working in src/checkout, holding order.py."""
+    world.project.seed_session(CHECKOUT_FLOW_IN_SRC_CHECKOUT)
+    world.project.seed_file(ORDER_FILE, ORDER_TEXT)
+
+
+def seed_connected_chat(world) -> None:
+    """Seed: the chat checkout-chat checked in, and assigned to checkout-flow."""
+    world.Chat.load(CHECKOUT_CHAT).check_in(is_busy=False)
+    world.Ticket.load(CHECKOUT_FLOW_IN_SRC_CHECKOUT.name).assign_chat(chat=CHECKOUT_CHAT)
+
+
+def seed_file_comments(world, *comments: FileCommentExample, sent_to: str = "") -> None:
+    """Seed: checkout-flow's file comments holding comments, each sent to the chat sent_to when it names one."""
+    file_comments = world.Ticket.load(CHECKOUT_FLOW_IN_SRC_CHECKOUT.name).session.file_comments
+    for comment in comments:
+        file_comments.add(path=comment.path, start_line=comment.start_line, end_line=comment.end_line, text=comment.text)
+        if sent_to:
+            file_comments.send(anchor=comment.anchor, chat=sent_to)
+
+
+def seed_comment_shown_in_chat(world) -> None:
+    """Seed: the empty-cart comment sent to checkout-chat, which took it, showed it, and started a turn on it."""
+    seed_checkout_flow(world)
+    seed_connected_chat(world)
+    seed_file_comments(world, EMPTY_CART_COMMENT, sent_to=CHECKOUT_CHAT)
+    chat = world.Chat.load(CHECKOUT_CHAT)
+    taken = world.data_of(chat.check_in(is_busy=False))
+    chat.confirm(message=taken[0]["message"], is_shown=True)
+    chat.check_in(is_busy=True)
+
 class SessionsProject(ThrowawayProject):
     """A throwaway project named by CDD_PROJECT while a scenario runs, whose `.sessions/` and files a scenario seeds."""
 

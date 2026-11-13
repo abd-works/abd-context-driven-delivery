@@ -14,13 +14,16 @@ export type CardField = { action: string; label: string; hint: string; field: st
 
 type CardFieldProps = { shape: CardField; isOff: boolean; typedAtFirst?: string; onEnter: (typed: string) => unknown }
 
-// What is typed in a field while it is open, none while it is put away: Enter writes it, Escape puts it away unwritten.
-function useTypedField(onEnter: (typed: string) => unknown) {
+// What is typed in a field while it is open, none while it is put away: Enter writes it, Escape puts it away unwritten;
+// in a box of several lines, Shift+Enter starts a new line.
+export function useTypedField(onEnter: (typed: string) => unknown) {
   const [typed, setTyped] = useState<string | null>(null)
-  const pressed = (event: KeyboardEvent<HTMLInputElement>) => {
+  const pressed = (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     event.stopPropagation()
     if (event.key === 'Escape') setTyped(null)
-    if (event.key !== 'Enter' || !typed?.trim()) return
+    if (event.key !== 'Enter' || event.shiftKey) return
+    event.preventDefault()
+    if (!typed?.trim()) return
     void onEnter(typed.trim())
     setTyped(null)
   }

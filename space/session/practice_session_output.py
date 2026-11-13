@@ -307,13 +307,12 @@ class FidelitySessionOutput:
         }
 
     def files(self) -> dict[str, list[FileEntry]]:
-        """The files this fidelity declares in the session, by format, each with its path from the project and whether
-        it exists. A pattern lists the files the session worked on, not every match in the repository."""
-        # Asking git what the branch changed is slow, and a project that is no repository has no branch, so it is asked
-        # only once a pattern finds files.
-        worked_on = cache(self._session.session_files.worked_on)
+        """The files this fidelity declares in the session, by format, each with its path from the project, whether it
+        exists, and whether the session's branch changed it, so a page can show only the changed ones."""
+        # Asking git what the branch changed is slow, so it is asked only once a file is there.
+        changed = cache(self._session.session_files.changed)
         return {
-            label: [entry for path in paths for entry in self._declared_files(label, path, worked_on)]
+            label: [entry for path in paths for entry in self._declared_files(label, path, changed)]
             for label, paths in self.output_paths().items()
         }
 
@@ -341,17 +340,16 @@ class FidelitySessionOutput:
         """A declared path under this fidelity's root, as a path from the project."""
         return DeclaredFile(self._session.repo.path_from_top(path))
 
-    def _declared_files(self, label: str, path: str, worked_on: Callable[[], set[Path] | None]) -> list[FileEntry]:
-        """A declared path, or each file of this session's that the fidelity declares where a pattern searches; a
-        pattern that finds none stays as its search, not yet there."""
+    def _declared_files(self, label: str, path: str, changed: Callable[[], set[Path]]) -> list[FileEntry]:
+        """A declared path, or each file the fidelity declares where a pattern searches, each marked when the session's
+        branch changed it; a pattern that finds none stays as its search, not yet there."""
         repo = self._session.repo
         declared = self._declared(path)
         if declared.names_one_path:
-            return [FileEntry(declared.glob, (repo.root / declared.glob).exists())]
+            named = repo.root / declared.glob
+            return [FileEntry(declared.glob, named.exists(), named.exists() and named.resolve() in changed())]
         found = self._found(label, declared)
-        mine = worked_on() if found else None
-        found = [file for file in found if mine is None or file.resolve() in mine]
-        return [FileEntry(repo.path_from_top(file), True) for file in found] or [FileEntry(declared.glob, False)]
+        return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed()) for file in found] or [FileEntry(declared.glob, False)]
 
     def _found(self, label: str, declared: DeclaredFile) -> list[Path]:
         """The files a declared pattern's search finds that this fidelity declares in the format label: a name used

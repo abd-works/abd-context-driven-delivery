@@ -8,13 +8,13 @@ import { currentChatBar, refreshChatBar } from './chat-bar/chat-bar-client'
 import { ChatBarView } from './chat-bar/chat-bar-view'
 import { clearBusy, currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
-import { shownActionOf } from './chat-bar/action-button-view'
 import { isStagePickerOpen } from './chat-bar/stage-client'
 import { currentFormatChips, forgetFormatChips, loadFormatChips } from './chat-bar/format-choices-client'
 import { currentOverlayChips, loadOverlayChoices } from './chat-bar/overlay-choices-client'
 import { currentFidelityFiles, FILES_PANE, forgetFiles } from './chat-bar/fidelity-files-client'
 import { FidelityFilesView } from './chat-bar/fidelity-files-view'
 import { currentChatBarView } from './chat-bar/session-dialogs-client'
+import { closeOptionListsOutside } from './chat-bar/option-lists-client'
 import { reasonOf } from './shared/failure'
 import {
   currentHealthView,
@@ -48,14 +48,13 @@ function logged($: EngineInterface, doing: string): (failure: unknown) => void {
   return failure => $.ui.log(`${PLUGIN}: ${doing} failed: ${reasonOf(failure)}`, { to: 'debug' })
 }
 
-// The status line below the chat, where the host draws a plugin's status: the repository, the session, the folder it
-// works in, and the action the button runs with its fidelities.
-async function showStatus($: EngineInterface): Promise<void> {
-  const chatBar = await currentChatBar($)
-  $.ui.status(chatBar.statusLine(shownActionOf(chatBar, (await currentActionPicker($)).chosenAction)) || undefined)
+// The host draws a plugin's status at the right of the line below the chat and cannot set it left, so the chat bar
+// draws its own status row instead, and the host's line is cleared of what an earlier version showed there.
+function clearStatus($: EngineInterface): void {
+  $.ui.status(undefined)
 }
 
-// The status line, the system prompt and the chat bar read the same ChatBarClient. The cdd server can still be
+// The system prompt and the chat bar read the same ChatBarClient. The cdd server can still be
 // connecting at session start; the chat bar then shows why, and the next event reads again.
 async function readActive($: EngineInterface): Promise<void> {
   await refreshChatBar($)
@@ -66,8 +65,6 @@ async function readActive($: EngineInterface): Promise<void> {
   // The system prompt is cached; when the active session's summary changes, it is composed again next turn.
   if (chatBar.agentContext !== shownContext) await $.ui.invalidate('prompt.section')
   shownContext = chatBar.agentContext
-  // empty.
-  await showStatus($)
 }
 
 export const register: Register = on => {
@@ -81,6 +78,7 @@ export const register: Register = on => {
       // The cdd server can still be connecting at session start; the next check-in tries again.
       void checkIn($, chat).catch(logged($, 'checking in with the board'))
     })
+    clearStatus($)
     await readActive($)
     refreshHealthSoon($)
     return next(e)
@@ -112,16 +110,23 @@ export const register: Register = on => {
     return ran
   })
 
-  // A press can change which fidelities or stage the action button acts on, so the format chips are read again after it,
-  // and the status line names the action the button now runs.
+  // A press can change which fidelities or stage the action button acts on, so the format chips are read again after it.
+  // A press anywhere else on the bar closes an open list box of options, as a click outside a menu does.
   on('ui.press', async ($, e, next) => {
     const pressed = await next(e)
+    if (e.plugin === PLUGIN) await closeOptionListsOutside($, e.element)
     if (e.plugin === PLUGIN && CHANGES_FIDELITIES.test(e.element)) void loadFormatChips($, await currentChatBar($)).catch(logged($, 'reading the format chips'))
-    if (e.plugin === PLUGIN) await showStatus($)
     return pressed
   })
 
+  // Typing in the prompt is a click outside the bar's list boxes: any one open closes.
+  on('prompt.change', async ($, e, next) => {
+    await closeOptionListsOutside($)
+    return next(e)
+  })
+
   on('prompt.submit', async ($, e, next) => {
+    await closeOptionListsOutside($)
     await Promise.all([refreshHealth($), refreshChatBar($)])
     return next(e)
   })

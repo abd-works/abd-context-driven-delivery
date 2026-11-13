@@ -275,6 +275,34 @@ with description("a session"):
                     instructions = Sessions(self.worktree).switch("alpha", call=ToolCall({}, self.worktree))
                     expect(instructions).not_to(contain("This chat works in"))
 
+            # A session's root has to be in its own worktree: a workpath saved into the repository's own folder, as
+            # older saves wrote it, names the same folder in the ticket's worktree.
+            with context("with a workpath stored in the repository's own folder"):
+                with before.each:
+                    (self.repo / "harness").mkdir()
+                    (self.worktree / "harness").mkdir()
+                    stored = self.repo / ".sessions" / "alpha" / "session.json"
+                    fields = json.loads(stored.read_text(encoding="utf-8"))
+                    fields.update(workpath=str(self.repo.resolve() / "harness"), repo_path=str(self.repo.resolve()))
+                    stored.write_text(json.dumps(fields), encoding="utf-8")
+                    self.session = Sessions(self.repo).named("alpha")
+
+                with it("should work in that folder in the ticket's worktree"):
+                    expect(self.session.work_root).to(equal(self.worktree.resolve() / "harness"))
+
+                with it("should take the ticket's worktree as its repository"):
+                    expect(self.session.repo_path).to(equal(self.worktree.resolve()))
+
+                with context("that is saved"):
+                    with before.each:
+                        self.session.save()
+
+                    with it("should keep its workpath from the repository's top"):
+                        expect(self.session.fields["workpath"]).to(equal("harness"))
+
+                    with it("should keep working in that folder in the ticket's worktree"):
+                        expect(Sessions(self.repo).named("alpha").work_root).to(equal(self.worktree.resolve() / "harness"))
+
         with context("with a repo path"):
             with before.each:
                 self.instructions = Sessions(self.repo).switch("alpha")

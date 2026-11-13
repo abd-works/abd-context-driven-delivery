@@ -153,12 +153,12 @@ export class ChatBarClient {
     return this.ticket ? this.ticket.session.workpath || this.repoName : ''
   }
 
-  // The status row under the strip: the repository, the session, the folder it works in, and the action the button
-  // runs with the fidelities it runs on.
-  statusLine(action: string): string {
+  // The status row under the line, from the left: the repository, the branch the session's chat works on, and the
+  // whole path of the folder the session works in.
+  get statusLine(): string {
     if (!this.ticket) return ''
-    const acting = action ? [action, ...this.actionFidelities.map(fidelity => fidelity.slug)].join(' ') : ''
-    return [this.repoName, this.ticket.name, this.rootPath, acting].filter(Boolean).join(' · ')
+    const ticket = this.ticket as TicketData & { branch_name?: string; root_folder?: string }
+    return [this.repoName, ticket.branch_name ?? '', ticket.root_folder || this.rootPath].filter(Boolean).join(' · ')
   }
 
   // The agent context: what the Python Ticket tells the agent about the active session in its system prompt, the same

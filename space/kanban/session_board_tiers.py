@@ -16,6 +16,9 @@ from types import SimpleNamespace
 
 import functools
 import json
+import os
+import shutil
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +34,7 @@ from space.kanban.session_board_examples import SURFACE_FIXTURE_PROJECT, Session
 from space.kanban.story_test import held_ticket_in, progress_in  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
+from harness.chat.chat import Chat  # noqa: E402
 from space.session import Session, Sessions  # noqa: E402
 from cdd_guidance.actions.validate.validate import Validate  # noqa: E402
 
@@ -42,6 +46,8 @@ TOOLSETS = (
     "space.session.session:Session",
     "space.session.sessions:Sessions",
     "space.session.practice_session_output:PracticeSessionOutput",
+    "space.session.file_comments:FileComments",
+    "harness.chat.chat:Chat",
     "space.kanban.backlog_item:BacklogItem",
     "cdd_guidance.actions.validate.validate:Validate",
     "cdd_guidance.actions.generate.generate:Generate",
@@ -63,7 +69,9 @@ class DomainTier:
         sessions = Sessions.of_project(project.root)
         return SimpleNamespace(
             project=project,
+            chats=ThrowawayChats(),
             **on_project,
+            Chat=Chat,
             sessions=sessions,
             Validate=lambda: Validate(sessions.current()),
             Generate=lambda: Generate(sessions.current()),
@@ -71,7 +79,25 @@ class DomainTier:
         )
 
     def close(self, world: SimpleNamespace) -> None:
+        world.chats.close()
         world.project.close()
+
+
+class ThrowawayChats:
+    """A folder of chats of its own for one scenario, named by CDD_CHATS_FOLDER while it runs, so a scenario's chats are
+    never the person's."""
+
+    def __init__(self) -> None:
+        self._folder = Path(tempfile.mkdtemp(prefix="cdd-chats-"))
+        self._before = os.environ.get("CDD_CHATS_FOLDER")
+        os.environ["CDD_CHATS_FOLDER"] = str(self._folder)
+
+    def close(self) -> None:
+        if self._before is None:
+            os.environ.pop("CDD_CHATS_FOLDER", None)
+        else:
+            os.environ["CDD_CHATS_FOLDER"] = self._before
+        shutil.rmtree(self._folder, ignore_errors=True)
 
 
 class OnProject:
@@ -101,9 +127,12 @@ class ServerTier:
         # The cdd server runs in this process, so it works on the same mocked Repo, Branch, and Worktrees as the domain
         # tier and starts no git; the heavy specs and the board app's page specs prove real git.
         project = SessionsProject(SURFACE_FIXTURE_PROJECT, mocks_git=True)
+        chats = ThrowawayChats()
         cdd = CddTools(project)
         return SimpleNamespace(
             project=project,
+            chats=chats,
+            Chat=ChatTools(cdd),
             Board=BoardTools(cdd),
             Stage=StageTools(cdd),
             Ticket=TicketTools(cdd),
@@ -114,6 +143,7 @@ class ServerTier:
         )
 
     def close(self, world: SimpleNamespace) -> None:
+        world.chats.close()
         world.project.close()
 
 
@@ -279,6 +309,10 @@ class SessionHandle:
         return PracticeHandle(self._cdd, self, name)
 
     @property
+    def file_comments(self) -> FileCommentsHandle:
+        return FileCommentsHandle(self._cdd, self)
+
+    @property
     def practices(self) -> dict[str, PracticeHandle]:
         return {name: PracticeHandle(self._cdd, self, name) for name in self.data()["practices"]}
 
@@ -313,6 +347,46 @@ class PracticeHandle:
             return self
 
         return called
+
+
+class FileCommentsHandle:
+    """A session's file comments: the file-comments tools, each called with the session's file."""
+
+    def __init__(self, cdd: CddTools, session: SessionHandle) -> None:
+        self._cdd = cdd
+        self._session = session
+
+    def __getattr__(self, operation: str) -> Any:
+        if operation.startswith("_"):
+            raise AttributeError(operation)
+
+        def called(**arguments: Any) -> Any:
+            return self._cdd.call(f"file-comments.{operation}", session=self._session.data()["session_file"], **arguments)
+
+        return called
+
+
+class ChatTools:
+    """The chat tools: each takes the chat by its id."""
+
+    def __init__(self, cdd: CddTools) -> None:
+        self._cdd = cdd
+
+    def load(self, chat: str) -> ChatHandle:
+        return ChatHandle(self._cdd, chat)
+
+
+class ChatHandle:
+    """One chat by id. Each operation is the chat tool of its name, called with the chat's id."""
+
+    def __init__(self, cdd: CddTools, chat: str) -> None:
+        self._cdd = cdd
+        self.id = chat
+
+    def __getattr__(self, operation: str) -> Any:
+        if operation.startswith("_"):
+            raise AttributeError(operation)
+        return lambda **arguments: self._cdd.call(f"chat.{operation}", chat=self.id, **arguments)
 
 
 class BacklogItemTools:
