@@ -2,5 +2,7 @@
   "name": "open-app-from-health-panel",
   "title": "Open App From Health Panel",
   "scope": "story",
-  "workpath": "harness/chat-ui"
+  "workpath": "harness/chat-ui",
+  "branch": "open-app-from-health-panel",
+  "worktree": "C:\\dev\\abd-cdd-open-app-from-health-pan"
 }
