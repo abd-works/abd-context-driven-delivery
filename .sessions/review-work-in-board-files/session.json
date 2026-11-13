@@ -15,13 +15,14 @@
   "branch": "review-work-in-board-files",
   "worktree": "C:\\dev\\abd-cdd-review-work-in-board-fil",
   "overlays": [
-    "lern_domain_driven",
-    "cdd_web_domain_access"
+    "cdd_web_domain_access",
+    "lern_domain_driven"
   ],
   "practices": {
     "stories": {
       "formats": {
-        "story_map": "drawio"
+        "story_map": "drawio",
+        "scenarios": "markdown"
       }
     }
   }
