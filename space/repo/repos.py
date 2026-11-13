@@ -60,12 +60,12 @@ class FolderIsAWorktreeError(ValueError):
         self.folder = folder
 
 
-class FolderNotFoundError(ValueError):
-    """Raised when the folder a chat is to open on is not a folder that is there."""
+class PathIsAFileError(ValueError):
+    """Raised when the folder a chat is to open on is a file: it cannot be made a folder without losing the file."""
 
-    def __init__(self, folder: Path) -> None:
-        super().__init__(f"{folder} is not a folder; choose one that is there")
-        self.folder = folder
+    def __init__(self, path: Path) -> None:
+        super().__init__(f"{path} is a file, not a folder; choose a folder")
+        self.path = path
 
 
 class UnknownVisibilityError(ValueError):
@@ -214,13 +214,14 @@ class Repos:
     @agent_tool
     @noSessionLog
     def open_folder(self, path: str, start_chat: bool = True) -> str:
-        """Open the folder at path, any folder on disk, in a chat of its own, as it is: no repository is created, nothing
-        is published or installed, and a folder that is not a git repository stays one. start_chat opens a new top-level
-        Claude chat on it; the person sends its first prompt, which opens the folder's main session. With no git there,
-        its tickets get no worktree or chat of their own."""
+        """Open the folder at path, any folder on disk, in a chat of its own, as it is, making it first when it is not
+        there yet: no repository is created, nothing is published or installed, and a folder that is not a git
+        repository stays one. start_chat opens a new top-level Claude chat on it; the person sends its first prompt,
+        which opens the folder's main session. With no git there, its tickets get no worktree or chat of their own."""
         root = Path(path).expanduser().resolve()
-        if not root.is_dir():
-            raise FolderNotFoundError(root)
+        if root.is_file():
+            raise PathIsAFileError(root)
+        root.mkdir(parents=True, exist_ok=True)
         return self._open_chat(root, root.name) if start_chat else self._chat_instructions(root, root.name)
 
     def _create(self, root: Path) -> str:

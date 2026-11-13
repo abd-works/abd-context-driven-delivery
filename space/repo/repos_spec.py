@@ -13,7 +13,7 @@ from mamba import after, before, context, description, it
 
 from harness.mcp.cdd_home import CddHome
 from harness.process.git import Git
-from space.repo.repos import CddConfig, FolderIsAWorktreeError, FolderNotFoundError, NotAReposFolderError, Repos, RepoNameRequiredError
+from space.repo.repos import CddConfig, FolderIsAWorktreeError, PathIsAFileError, NotAReposFolderError, Repos, RepoNameRequiredError
 
 
 def _repository(folder: Path) -> Path:
@@ -124,6 +124,12 @@ with description("Repos") as self:
         with it("should say how to start the folder's own chat"):
             expect(self.answer).to(contain(f"cwd {self.plain}"))
 
-    with context("opening a folder that is not there"):
+    with context("opening a folder that is not there yet"):
+        with it("should make the folder"):
+            self.repos.open_folder(str(self.top / "new" / "notes"), start_chat=False)
+            expect((self.top / "new" / "notes").is_dir()).to(equal(True))
+
+    with context("opening a file as a folder"):
         with it("should refuse it"):
-            expect(lambda: self.repos.open_folder(str(self.top / "missing"), start_chat=False)).to(raise_error(FolderNotFoundError))
+            (self.top / "notes.txt").write_text("x", encoding="utf-8")
+            expect(lambda: self.repos.open_folder(str(self.top / "notes.txt"), start_chat=False)).to(raise_error(PathIsAFileError))
