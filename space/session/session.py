@@ -386,7 +386,18 @@ class Session:
         the fields others store there, such as a board ticket's title, scope, and parent."""
         if self.session_path is None:
             return
-        self.save_fields(name=self.name, workpath=str(self.work_root), repo_path=str(self.repo_path))
+        self.save_fields(name=self.name, workpath=self.workpath_from_checkout, repo_path=str(self.repo_path))
+
+    @property
+    def workpath_from_checkout(self) -> str:
+        """The session's root as saved in its session.json: from its checkout's top, so it can never name a folder in
+        another checkout of the repository; empty for the whole checkout, and absolute when it lies outside it."""
+        root = self.work_root
+        checkout = self._resolved(self.repo_path)
+        if not root.is_relative_to(checkout):
+            return str(root)
+        relative = root.relative_to(checkout).as_posix()
+        return "" if relative == "." else relative
 
     @property
     def reports_folder(self) -> Path:
@@ -487,7 +498,7 @@ class Session:
         # and still names the same folder.
         # The practices on the new workpath are kept again with it, so each root is kept by the practice that works there.
         chosen = {key: practice.folder for key, practice in self.practices.items() if practice.is_root_chosen}
-        self.workpath = (self.repo_path / path).resolve()
+        self.workpath = self._sessions.in_checkout(self.repo_path, self.repo_path / path)
         self.save()
         moved = self.practices
         for key, root in chosen.items():

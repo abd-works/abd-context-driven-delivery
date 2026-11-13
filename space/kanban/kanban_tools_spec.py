@@ -65,9 +65,10 @@ with description("the board tools") as self:
                 with before.each:
                     self.chosen = self.project.call("session.choose_workpath", session=session_file_of("pet-visits"), path="src/visits")
 
+                # Kept from the repository's top, so it can never name a folder in another checkout of the repository.
                 with it("should keep the folder as the session's work folder"):
                     saved = json.loads((self.project.sessions / "pet-visits" / "session.json").read_text(encoding="utf-8"))
-                    expect(Path(saved["workpath"])).to(equal((self.project.root / "src" / "visits").resolve()))
+                    expect(saved["workpath"]).to(equal("src/visits"))
 
             with context("that a person has chosen as one practice's root"):
                 with before.each:
@@ -254,7 +255,7 @@ with description("the board tools") as self:
 
             with it("should save that folder as the session's workpath"):
                 fields = json.loads((self.project.sessions / "pet-records" / "session.json").read_text(encoding="utf-8"))
-                expect(fields["workpath"]).to(equal(str((self.project.root / "harness" / "pets").resolve())))
+                expect(fields["workpath"]).to(equal("harness/pets"))
 
         with context("that opens a ticket with no folder"):
             with before.each:
