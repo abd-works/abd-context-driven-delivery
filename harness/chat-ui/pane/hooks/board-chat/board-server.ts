@@ -75,6 +75,14 @@ export async function openInBrowser($: EngineInterface, url: string): Promise<bo
 // The Claude desktop app's own browser pane, as /mcp lists it, and its tool that opens a tab at a URL.
 const BROWSER_PANE = 'Claude_Browser'
 const OPEN_PANE_TAB = 'preview_start'
+// The desktop app's view of this chat, and its tool that shows a side pane, the browser pane being 'preview'.
+const DESKTOP_VIEW = 'ccd_view'
+const SHOW_PANE = 'show_pane'
+
+// What an MCP answer says, its text blocks joined.
+function saidBy(answer: { content: { type: string; text?: string }[] }): string {
+  return answer.content.map(block => block.text ?? '').join(' ').trim()
+}
 
 // Opens a page in a tab of the Claude desktop app's browser pane, beside the chat, calling the pane's server directly:
 // a tool call would go through the desktop's permission hooks, which refuse a plugin's call. Returns why it did not
@@ -82,10 +90,12 @@ const OPEN_PANE_TAB = 'preview_start'
 export async function openInBrowserPane($: EngineInterface, url: string): Promise<string> {
   try {
     const opened = await $.mcp.call(BROWSER_PANE, OPEN_PANE_TAB, { url })
-    const said = opened.content.map(block => ('text' in block ? block.text : '')).join(' ').trim()
+    const said = saidBy(opened)
     // The pane answers without isError when it opened a tab but the page did not load in it, saying "navOk": false.
-    if (!opened.isError && !/"navOk":\s*false/.test(said)) return ''
-    return `${BROWSER_PANE} ${OPEN_PANE_TAB} failed: ${said || 'no reason given'}`
+    if (opened.isError || /"navOk":\s*false/.test(said)) return `${BROWSER_PANE} ${OPEN_PANE_TAB} failed: ${said || 'no reason given'}`
+    // A tab opens in the pane even while the pane is hidden, so the pane is then shown beside the chat.
+    const shown = await $.mcp.call(DESKTOP_VIEW, SHOW_PANE, { pane: 'preview' })
+    return shown.isError ? `the tab opened, but ${DESKTOP_VIEW} ${SHOW_PANE} failed: ${saidBy(shown) || 'no reason given'}` : ''
   } catch (failure) {
     return `${BROWSER_PANE} ${OPEN_PANE_TAB} could not be called: ${reasonOf(failure)}`
   }

@@ -15,6 +15,7 @@ type World = {
   isBoardUp: boolean
   hasPane: boolean
   unloadable: string[]
+  shownPanes: string[]
   tabs: string[]
   runs: string[][]
   spawns: string[][]
@@ -37,7 +38,7 @@ const BAR = {
 const answer = (text: string, isError = false) => ({ value: { content: [{ type: 'text', text }], isError } })
 
 function engine(on: any, health: Record<string, unknown>): World {
-  const world: World = { health, isBoardUp: true, hasPane: true, unloadable: [], tabs: [], runs: [], spawns: [], toasts: [], started: {} }
+  const world: World = { health, isBoardUp: true, hasPane: true, unloadable: [], shownPanes: [], tabs: [], runs: [], spawns: [], toasts: [], started: {} }
   on('command.register', () => ({ value: undefined }))
   on('session.start', (_: unknown, e: { cwd: string }) => ({ cwd: e.cwd }))
   on('session.id', () => ({ value: 'chat-1' }))
@@ -56,6 +57,10 @@ function engine(on: any, health: Record<string, unknown>): World {
       const isLoaded = !world.unloadable.includes(e.args?.url ?? '')
       return answer(`{ "type": "browser", "navOk": ${isLoaded} }
 Browser pane opened${isLoaded ? '.' : ' at about:blank; navigation was denied or failed.'}`)
+    }
+    if (e.server === 'ccd_view' && e.tool === 'show_pane') {
+      world.shownPanes.push((e.args as { pane?: string } | undefined)?.pane ?? '')
+      return answer('Showing the preview pane.')
     }
     return e.tool === 'server-health.report' ? answer(JSON.stringify(world.health)) : answer(`${e.tool} is not part of this story`, true)
   })
@@ -142,6 +147,8 @@ test('Open App From Health Panel › Open the Graph app while it runs', async ($
   await ui.press({ key: 'health-open-graph-app' })
   // Then the Graph app opens in the browser pane, and no start script runs
   expect(opened(world)).toEqual(['http://localhost:5173'])
+  // And the browser pane is shown beside the chat
+  expect(world.shownPanes).toEqual(['preview'])
   expect(scriptsRun(world)).toEqual([])
   await ui.unmount()
 })
