@@ -72,16 +72,20 @@ export async function openInBrowser($: EngineInterface, url: string): Promise<bo
   return false
 }
 
-// The Claude desktop app's own browser pane, as /mcp lists it, and its call that opens a tab at a URL.
-const BROWSER_PANE = 'Claude_Browser'
-const OPEN_TAB = 'preview_start'
+// The Claude desktop app's own browser pane: its tool that opens a tab at a URL, called as the model calls it.
+const OPEN_PANE_TAB = 'mcp__Claude_Browser__preview_start'
 
-// Opens a page in a tab of the Claude desktop app's browser pane, beside the chat; where the chat has no pane, such as
-// in a terminal, or the pane refuses, in the person's browser instead.
-export async function openInBrowserPane($: EngineInterface, url: string): Promise<boolean> {
-  const opened = await $.mcp.call(BROWSER_PANE, OPEN_TAB, { url }).catch(() => null)
-  if (opened && !opened.isError) return true
-  return openInBrowser($, url)
+// Opens a page in a tab of the Claude desktop app's browser pane, beside the chat. Returns why it did not, empty once it
+// did; it never opens the page anywhere else, so a pane that does not answer is seen and fixed.
+export async function openInBrowserPane($: EngineInterface, url: string): Promise<string> {
+  try {
+    const opened = (await $.tool.call({ tool: OPEN_PANE_TAB, url } as never)) as { deny?: string; isError?: boolean; text?: string }
+    if (opened.deny) return `the browser pane refused it: ${opened.deny}`
+    if (opened.isError) return `the browser pane failed: ${opened.text ?? 'no reason given'}`
+    return ''
+  } catch (failure) {
+    return `${OPEN_PANE_TAB} could not be called: ${reasonOf(failure)}`
+  }
 }
 
 // Starts the board when nothing answers on its port, so /board always ends with a board to open. cdd's server health

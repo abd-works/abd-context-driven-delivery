@@ -4,7 +4,7 @@ import { expect, test } from 'claude-code/testing'
 // Sub-epic: Check CDD Server Health
 // Map: ../../../../../../.context/stories/story-map.md#s-person----open-app-from-health-panel
 // Realizations: inline under each step, along the mod's line: PartsView press -> openApp($, app) -> board server or the
-// repository's start scripts -> the Claude desktop app's browser pane, else the system's opener
+// repository's start scripts -> the Claude desktop app's browser pane
 
 // The engine beneath the mod: cdd answers server-health.report with `health`; anything else cdd is asked is refused, so
 // the chat bar shows its problem line and the panel still draws. The board answers once it has been started, when
@@ -46,15 +46,14 @@ function engine(on: any, health: Record<string, unknown>): World {
   on('clock.every', () => ({ value: undefined }))
   on('clock.after', () => ({ value: undefined }))
   on('tool.list', () => ({ value: [] }))
-  on('tool.call', () => ({ result: {} }))
-  on('mcp.call', (_: unknown, e: { server: string; tool: string; args?: { url?: string } }) => {
-    if (e.server === 'Claude_Browser' && e.tool === 'preview_start') {
-      if (!world.hasPane) return answer('no browser pane in this chat', true)
-      world.tabs.push(e.args?.url ?? '')
-      return answer('opened')
-    }
-    return e.tool === 'server-health.report' ? answer(JSON.stringify(world.health)) : answer(`${e.tool} is not part of this story`, true)
+  // The model's tool that opens a tab in the desktop app's browser pane; a chat without the pane has no such tool.
+  on('tool.call', (_: unknown, e: { tool: string; url?: string }) => {
+    if (e.tool !== 'mcp__Claude_Browser__preview_start') return { result: {} }
+    if (!world.hasPane) throw new Error('No such tool available: mcp__Claude_Browser__preview_start')
+    world.tabs.push(e.url ?? '')
+    return { result: {}, text: 'opened', isError: false }
   })
+  on('mcp.call', (_: unknown, e: { tool: string }) => (e.tool === 'server-health.report' ? answer(JSON.stringify(world.health)) : answer(`${e.tool} is not part of this story`, true)))
   on('ui.toast', (_: unknown, e: { text: string }) => {
     world.toasts.push(e.text)
     return { value: undefined }
@@ -178,16 +177,18 @@ test('Open App From Health Panel › Say why the Graph app did not start', async
   await ui.unmount()
 })
 
-test('Open App From Health Panel › Open the app in the browser when the chat has no browser pane', async ($, on) => {
+test('Open App From Health Panel › Say why the app did not open when the chat has no browser pane', async ($, on) => {
   // Given the Graph app is running, and the chat has no browser pane, as in a terminal
   const world = engine(on, HEALTHY)
   world.hasPane = false
   const ui = await openPanel($)
   // When the Person presses the Graph app on the server health panel
-  // openApp($, 'Graph app') -> openInBrowserPane -> Claude_Browser refuses -> openInBrowser
+  // openApp($, 'Graph app') -> openInBrowserPane -> mcp__Claude_Browser__preview_start is not there
   await ui.press({ key: 'health-open-graph-app' })
-  // Then the Graph app opens in the person's browser instead
+  // Then nothing opens anywhere else
   expect(world.tabs).toEqual([])
-  expect(openedOutside(world)).toEqual(['http://localhost:5173'])
+  expect(openedOutside(world)).toEqual([])
+  // And the Person is told where the app is and why it did not open
+  expect(world.toasts.at(-1)).toContain('The Graph app is at http://localhost:5173 but did not open: mcp__Claude_Browser__preview_start could not be called')
   await ui.unmount()
 })
