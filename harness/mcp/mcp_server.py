@@ -522,13 +522,15 @@ class _ProjectNamedOnly:
 
 
 class ProjectNotNamed(Exception):
-    """A tool call arrived without the ``X-CDD-Project`` header, so the server cannot tell which project it is for."""
+    """A tool call arrived from a chat whose folder the server cannot find, so it cannot tell which project it is for."""
 
     def __init__(self, tool: str) -> None:
         super().__init__(
-            f"{tool} was called without naming a project: this chat's X-CDD-Project header is missing or names a "
-            "desktop spare folder, and it names no Claude Code process or chat the server can follow. Run "
-            "/reload-plugins so the cdd header helper runs again, or python scripts/install.py when it still fails."
+            f"{tool} was called from a chat whose folder the server cannot find: the X-CDD-Project header names none or "
+            "only a desktop spare folder, and neither the chat's Claude Code process, the process holding its "
+            "connection, nor its transcript records one. Open the chat in a project folder and run /reload-plugins so "
+            "the cdd header helper runs again; when it still fails, run python scripts/install.py from a CDD checkout "
+            "to write the cdd entry again."
         )
         self.tool = tool
 
@@ -664,7 +666,7 @@ class McpHost:
         same folder: the session the Claude Code process ``X-CDD-Chat-Process`` names runs now, else the chat
         ``X-CDD-Chat`` names; none when the request names neither."""
         headers = self._request_headers()
-        process = ClaudeChatProcess.from_header(headers.get(CHAT_PROCESS_HEADER))
+        process = self._requesting_process(headers)
         running = process.session_id if process is not None else ""
         return ChatPointer.from_request(running or headers.get(CHAT_HEADER) or "")
 
@@ -719,8 +721,8 @@ class McpHost:
         if tool in (BUILTIN_PING_TOOL, BUILTIN_RESTART_TOOL):
             return Path(named) if named else None
         # A desktop spare folder is never the project: it only means the chat has not reached its folder yet.
-        connected_from = Path(named) if named and not is_desktop_spare(Path(named)) else None
-        process = ClaudeChatProcess.from_header(headers.get(CHAT_PROCESS_HEADER))
+        connected_from = Path(named) if self._names_a_project(headers) else None
+        process = self._requesting_process(headers)
         project = (
             (process.working_folder if process is not None else None)
             or self._folder_of_chat(process.session_id if process is not None else None)
@@ -733,13 +735,37 @@ class McpHost:
             raise ProjectIsClaudeSettings(tool, project)
         return project
 
+    def _requesting_process(self, headers: Any) -> ClaudeChatProcess | None:
+        """The Claude Code process the request comes from: the one ``X-CDD-Chat-Process`` names, else, when the request
+        names no project either, the one holding the request's connection. Claude Code runs the headers helper once,
+        when a chat connects, and the desktop app can connect a chat from its spare folder before it records the
+        chat's process, so those headers stay that way for the whole connection."""
+        named = ClaudeChatProcess.from_header(headers.get(CHAT_PROCESS_HEADER))
+        if named is not None or self._names_a_project(headers):
+            return named
+        return ClaudeChatProcess.from_connection(self._request_client_port())
+
+    def _names_a_project(self, headers: Any) -> bool:
+        """Whether ``X-CDD-Project`` names a folder to work in: a desktop spare folder only means the chat has not
+        reached its folder yet."""
+        named = headers.get(PROJECT_HEADER)
+        return bool(named) and not is_desktop_spare(Path(named))
+
     def _request_headers(self) -> Any:
         """The headers of the request being answered; none for a call made outside a request."""
-        try:
-            request = self._protocol.request_context.request
-        except LookupError:
-            return {}
+        request = self._current_request()
         return request.headers if request is not None else {}
+
+    def _request_client_port(self) -> int | None:
+        """The port the caller's end of the request's connection uses; none outside a request or over no connection."""
+        client = getattr(self._current_request(), "client", None)
+        return client[1] if client else None
+
+    def _current_request(self) -> Any:
+        try:
+            return self._protocol.request_context.request
+        except LookupError:
+            return None
 
     def _folder_of_chat(self, chat_id: str | None) -> Path | None:
         chat = ChatPointer.from_claude_session(chat_id or "")

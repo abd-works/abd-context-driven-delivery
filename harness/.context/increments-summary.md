@@ -342,10 +342,10 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
   6. `mode` is `one_go` (all three steps), `pause` (stop after the index for you to check it), or `index_only`.
 
 **Lesson 13. Capture documents into a searchable index**
-- *What you do:* run the Context Setup skill `context-setup-capture-from-documents` on a folder of Word, PDF, slide, HTML or text files, naming the practices that should index it. Then ask questions with `context-setup-ask`. You can also use the Context agent to run the whole thing.
+- *What you do:* run the Partition action (`/actions-partition`, or partition on the chat bar's action button) on a folder of Word, PDF, slide, HTML or text files, naming the practices that should index it. Then ask questions with `context-setup-ask`. You can also use the Context agent to run the whole thing.
 - *What you get:* one searchable index over all the documents, which answers in plain language and cites the segment each answer came from.
 - *Try it:* capture a product handbook with Stories and DDD, then ask "what happens when a customer ports a number?"
-- *Under the hood:* `cdd_guidance/context_setup` (`convert`, `capture_from_documents`, `embed`, `search`, `ask`) and `cdd_guidance/agents/context.md`.
+- *Under the hood:* `cdd_guidance/actions/partition` (`partition`), `cdd_guidance/context_setup` (`convert`, `embed`, `search`, `ask`) and `cdd_guidance/agents/context.md`.
 - *What happens underneath:*
   1. **Convert:** each supported document is converted to `markdown/<name>.md`, with notes on its heading depth and size.
   2. **Partition:** the markdown is partitioned through each practice you chose, with the first practice going first.

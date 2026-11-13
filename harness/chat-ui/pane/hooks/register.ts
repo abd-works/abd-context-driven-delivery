@@ -12,6 +12,8 @@ import { isStagePickerOpen } from './chat-bar/stage-client'
 import { currentFormatChips, forgetFormatChips, loadFormatChips } from './chat-bar/format-choices-client'
 import { currentOverlayChips, loadOverlayChoices } from './chat-bar/overlay-choices-client'
 import { currentFidelityFiles, FILES_PANE, forgetFiles } from './chat-bar/fidelity-files-client'
+import { currentFidelityHelp, forgetHelp, HELP_PANE } from './chat-bar/fidelity-help-client'
+import { FidelityHelpView } from './chat-bar/fidelity-help-view'
 import { FidelityFilesView } from './chat-bar/fidelity-files-view'
 import { currentChatBarView } from './chat-bar/session-dialogs-client'
 import { closeOptionListsOutside } from './chat-bar/option-lists-client'
@@ -28,6 +30,7 @@ import {
   runInstall,
 } from './health/server-health-client'
 import { ServerHealthBandView, ServerHealthPanelView } from './health/server-health-view'
+import { openApp, type AppName } from './health/open-app-client'
 import { CARD_SCOPE } from './chat-bar/session-card-view'
 import { toggleCard } from './chat-bar/session-dialogs-client'
 import { withChatNamed } from './session/session-log-client'
@@ -131,6 +134,14 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // The status line, the repository, the session's branch and its folder, sits in the hint line under the prompt, after
+  // what the engine writes there, not in the chat bar above it.
+  on('ui.render', { component: 'PromptHint' }, async ($, e, next) => {
+    const status = (await currentChatBar($)).statusLine
+    if (!status) return next(e)
+    return next({ ...e, props: { ...e.props, hint: e.props.hint ? `${e.props.hint} · ${status}` : status } })
+  })
+
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
     // A press on the health mark reads the board and the server again, and shows the card with the diagnostics open.
@@ -143,6 +154,8 @@ export const register: Register = on => {
       hideDetails: () => hideDetails($),
       reconnect: () => reconnect($, () => readActive($)),
       runInstall: () => runInstall($),
+      // Starting the Graph app can take a minute, so the press returns at once and the app opens when it answers.
+      openApp: (app: AppName) => void openApp($, app).catch(logged($, `opening the ${app}`)),
     }
     const band = { health: await currentServerHealth($), view: await currentHealthView($), install: await currentInstall($), actions }
     const elements = $.ui.resolve(e)
@@ -171,6 +184,14 @@ ${failure.stack ?? ''}` : String(failure)}`)
 
   on('ui.close', { id: FILES_PANE }, async ($, e, next) => {
     if (e.origin.kind === 'person') await forgetFiles($)
+    return next(e)
+  })
+
+  // The help pane beside the chat: a fidelity's help, as the ? beside a practice on a board ticket shows it.
+  on('ui.render', { component: 'Pane', requestId: HELP_PANE }, async ($, e) => FidelityHelpView($.ui.resolve(e), await currentFidelityHelp($)))
+
+  on('ui.close', { id: HELP_PANE }, async ($, e, next) => {
+    if (e.origin.kind === 'person') await forgetHelp($)
     return next(e)
   })
 

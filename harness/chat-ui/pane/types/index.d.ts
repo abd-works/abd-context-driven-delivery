@@ -55,6 +55,9 @@ export type OverlayChoicesJson = { ticket: string; choices: OverlayChoiceJson[];
 // isOutOfDate: a report's saved graph is in a shape the graph no longer reads, so the tab offers Validate again.
 export type FidelityFilesJson = { fidelity: string; tabs: { path: string; text: string | null; exists: boolean }[]; shown: string | null; isOutOfDate: boolean } | null
 
+// The help pane's fidelity and its help as one markdown page, as fidelity-progress.help answers it; null when closed.
+export type FidelityHelpJson = { fidelity: string; markdown: string } | null
+
 // What the chat bar is doing while a ticket opens or closes, which the band shows with a turning wheel; empty when idle.
 export type BusyJson = { doing: string; frame: number }
 
@@ -69,6 +72,7 @@ declare module 'claude-code' {
       selectedFidelities: string[]
       actionPicker: ActionPickerJson
       fidelityFiles: FidelityFilesJson
+      fidelityHelp: FidelityHelpJson
       shownStage: string | null
       stagePicker: boolean
       formatChoices: FormatChoicesJson

@@ -1,12 +1,13 @@
-"""Capturing documents end to end, each step answered the way the MCP host answers it, with the arguments the step
-before tells the agent to pass: convert, then partition, then the segment files the partition wrote, then embed. Each
+"""Partitioning documents end to end, each step answered the way the MCP host answers it, with the arguments the
+partition's recipe tells the agent to pass: convert, then partition, then the segment files the partition wrote, then
+embed. Each
 step must read what the step before wrote, so a recipe that restates another action's output location wrongly fails
 here instead of building an empty index with no error."""
 import re
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 import mcp.types  # noqa: F401 - the SDK, before harness/mcp is on the import path
@@ -45,16 +46,16 @@ def _answered(toolset, name: str, arguments: dict, project: Path):
     return toolset.tools[name].answer(ToolCall(arguments, project))
 
 
-with description("documents captured into an index"):
+with description("documents partitioned into an index"):
     with before.all:
         self.throwaway = ThrowawayProject()
         self.root = self.throwaway.root
         documents = self.root / _FOLDER
         documents.mkdir()
         (documents / "brief.md").write_text("# Checkout\n\nA shopper pays for the order in the cart.\n", encoding="utf-8")
-        self.recipe = _answered(ContextSetup(), "capture_from_documents", {"folder_path": _FOLDER}, self.root)
+        self.recipe = _answered(Partition(), "partition", {"guidance": ["stories"], "paths": [_FOLDER], "out_root": _FOLDER}, self.root)
         self.converted = _answered(ContextSetup(), "convert", {"folder_path": _FOLDER}, self.root)
-        # Step 3 as the recipe says: the files convert returned, out_root the documents' folder.
+        # As the recipe says: partition the files convert returned, out_root the documents' folder.
         arguments = {"guidance": ["stories"], "paths": list(self.converted.markdown_files), "out_root": _FOLDER}
         self.partitioned = _answered(Partition(), "partition", arguments, self.root)
         # The agent writes one segment where the partition's reply places it.
@@ -70,18 +71,18 @@ with description("documents captured into an index"):
     with after.all:
         self.throwaway.close()
 
-    with context("whose capture recipe is answered with only the folder"):
-        with it("should tell the agent to partition the files convert returned"):
-            expect(self.recipe).to(contain("paths = the markdown_files convert returned"))
+    with context("whose partition recipe is answered with the folder"):
+        with it("should tell the agent to convert documents before partitioning them"):
+            expect(self.recipe).to(contain("call context_setup.convert with the folder that holds them"))
 
-        with it("should tell the agent to write the partition beside the documents"):
-            expect(self.recipe).to(contain(f"out_root = {_FOLDER}"))
+        with it("should tell the agent to partition the files convert returned"):
+            expect(self.recipe).to(contain("partition the markdown_files it returns in their place"))
 
         with it("should tell the agent to embed the segment files the partition lists"):
-            expect(self.recipe).to(contain(f"Call partition.segment_files with out_root={_FOLDER}"))
+            expect(self.recipe).to(contain("call segment_files with the same out_root"))
 
-        with it("should not tell the agent to partition with no guidance"):
-            expect(self.recipe).not_to(contain("with no guidance"))
+        with it("should tell the agent to write the searchable index beside the documents"):
+            expect(self.recipe).to(contain(f"out_path={(self.root / _FOLDER).resolve().as_posix()}/rag"))
 
     with context("whose partition is answered with the converted files"):
         with it("should name every file convert wrote as the corpus"):
@@ -102,9 +103,6 @@ with description("documents captured into an index"):
             expect(Path(self.embedded.index_path).resolve()).to(equal((self.root / _FOLDER / "rag").resolve()))
 
 
-_OPTIONS = re.compile(r"Options: (.+)")
-
-
 def _partitioned(word: str, project: Path) -> str:
     """The partition's reply to a call naming word as its one guidance, or the error it raised."""
     try:
@@ -113,21 +111,20 @@ def _partitioned(word: str, project: Path) -> str:
         return f"raised {type(failure).__name__}: {failure}"
 
 
-# The agent offers the user exactly the words the recipe lists and passes the choice to partition, so each must partition.
-with description("the indexers a capture recipe offers"):
+# A person picks the practices to partition by from the ones partition names, so each must partition.
+with description("the practices partition indexes by"):
     with before.all:
         self.throwaway = ThrowawayProject()
-        recipe = _answered(ContextSetup(), "capture_from_documents", {"folder_path": _FOLDER}, self.throwaway.root)
-        self.offered = [word.strip() for word in _OPTIONS.search(recipe).group(1).split("|")]
+        self.offered = list(Partition().practice_slugs)
         self.replies = {word: _partitioned(word, self.throwaway.root) for word in self.offered}
 
     with after.all:
         self.throwaway.close()
 
-    with it("should offer every practice partition indexes by"):
+    with it("should name every practice"):
         expect(self.offered).to(equal(["stories", "ddd", "ux", "clean-engineering", "bdd"]))
 
-    with it("should offer only words partition accepts"):
+    with it("should name only words partition accepts"):
         expect([word for word, reply in self.replies.items() if reply.startswith("raised")]).to(equal([]))
 
 

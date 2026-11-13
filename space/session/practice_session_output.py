@@ -228,8 +228,12 @@ class FidelitySessionOutput:
 
     @property
     def kept_format(self) -> str:
-        """The format this fidelity was last given in the session; empty when none was kept."""
-        return self._practice.saved.get("formats", {}).get(self._fidelity.name, "")
+        """The format this fidelity was last given in the session; empty when none was kept. A session can keep a list
+        of chosen formats for the fidelity, as the story editor's format chips save them, and then works in the first."""
+        kept = self._practice.saved.get("formats", {}).get(self._fidelity.name, "")
+        if isinstance(kept, list):
+            return str(kept[0]) if kept else ""
+        return kept
 
     def keep_format(self, format: str) -> None:
         """Keep format as the one this fidelity works in, so the next action on it in the session works in it."""

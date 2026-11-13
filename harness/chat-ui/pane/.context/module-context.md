@@ -5,7 +5,7 @@ The *cdd-board* plugin connects a Claude Code chat to the CDD Kanban, so the boa
 
 - **Purpose:** let a person drive the agent from the board, and keep the chat aware of the active ticket.
 - **Seam (terms):** `cdd-board` plugin; `/board`; the status line below the chat; the active ticket section of the system prompt; the server health band
-- **Dependencies (one-way):** harness/chat (the chat tools it checks in with, through the board's `/api/chat/:chat/check-in` route), space/kanban (the board it reads, and ticket types from the language adapter at compile time only), harness/diagnostics (`server-health.report`, which also gives the board's address the chat checks in at, and its types from the language adapter at compile time only), harness/mcp (`install.json`, the install command the cdd home publishes in the mod, which Run install runs)
+- **Dependencies (one-way):** harness/chat (the chat tools it checks in with, through the board's `/api/chat/:chat/check-in` route), space/kanban (the board it reads, and ticket types from the language adapter at compile time only), harness/diagnostics (`server-health.report`, which also gives the board's address the chat checks in at, and its types from the language adapter at compile time only), harness/mcp (`install.json`, the install command the cdd home publishes in the mod, which Run install runs), harness/graph and scripts (`scripts/start_graph_web.py` and `scripts/start_graph_app.py`, run from the repository's own folder when a press on the health panel's Graph app finds it not running)
 
 ## Constraint
 

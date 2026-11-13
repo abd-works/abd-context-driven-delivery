@@ -234,18 +234,22 @@ export async function refreshChatBar($: EngineInterface): Promise<void> {
   }
 }
 
-// A restart of the cdd server, as an install does, cuts off a call in flight. board.overview only reads, so a read cut
-// off that way is asked again once the server is back, before the bar says the board did not answer.
-const CUT_OFF = 'connection closed'
-const RESTART_WAIT_MILLISECONDS = 3000
+// The cdd server is sometimes not there for a moment: a restart, as an install does, cuts off a call in flight, and at
+// session start Claude Code is still connecting it, so it answers that it has no connected tool board.overview.
+// board.overview only reads, so a read refused either way is asked again while the server comes up, before the bar
+// says the board did not answer.
+const SERVER_NOT_THERE_YET = ['connection closed', 'no connected MCP tool']
+const SERVER_WAIT_MILLISECONDS = 3000
+const READ_TRIES = 3
 
-async function readBoard($: EngineInterface): Promise<BoardOverviewData> {
+async function readBoard($: EngineInterface, attempt = 1): Promise<BoardOverviewData> {
   try {
     return await callTool<BoardOverviewData>($, 'board.overview', {})
   } catch (failure) {
-    if (!reasonOf(failure).includes(CUT_OFF)) throw failure
-    await $.clock.sleep(RESTART_WAIT_MILLISECONDS)
-    return callTool<BoardOverviewData>($, 'board.overview', {})
+    const reason = reasonOf(failure)
+    if (attempt >= READ_TRIES || !SERVER_NOT_THERE_YET.some(sign => reason.includes(sign))) throw failure
+    await $.clock.sleep(SERVER_WAIT_MILLISECONDS)
+    return readBoard($, attempt + 1)
   }
 }
 
@@ -260,7 +264,38 @@ export async function dismissFailure($: EngineInterface): Promise<void> {
 
 // Fix sends what the chat bar shows to this chat's agent to find its cause and fix it.
 export async function askChatToFix($: EngineInterface, shown: string): Promise<void> {
-  await $.prompt.submit({ text: `The chat bar shows this; find its cause and fix it: ${shown}`, asUser: true })
+  await $.prompt.submit({ text: `The CDD chat bar above the prompt shows this; find its cause and fix it: ${shown}`, asUser: true })
+}
+
+// What Fix on a board that did not answer sends: the chat bar reads the board from the cdd MCP server, which runs a
+// pinned copy of CDD, so most of these failures are a server or install older than the CDD checkout.
+export const BOARD_PROBLEM_STEPS = [
+  'Context: the chat bar reads the session board from the cdd MCP server. That server runs a pinned copy of the CDD '
+    + 'repository at ~/.cdd/runtime, and ~/.cdd/runtime.json names its commit. This chat reaches it through its cdd entry '
+    + '(.mcp.json and ~/.claude.json), whose header helper names the chat\'s project and Claude Code process. Read '
+    + 'harness/mcp/.context/module-context.md and harness/installation/.context/module-context.md in the CDD checkout first.',
+  'Check versions: in the CDD checkout, git fetch, then compare the commit in ~/.cdd/runtime.json with HEAD of the '
+    + 'checkout\'s branch and with origin/main. Search the commits between them for a fix to this error.',
+  'Get the latest: pull the latest from the checkout\'s branch; on main, git pull origin main. Stop and tell me if the '
+    + 'pull conflicts with uncommitted work.',
+  'Reinstall: python scripts/install.py --ide Claude from the CDD checkout. It runs harness/installation/installer.py, '
+    + 'which writes the cdd entry and plugins again and pins the server to the checkout\'s commit when it runs an older one. '
+    + 'Other chats share that server, so message their sessions before --pin-runtime or cdd.restart. If the install '
+    + 'fails, follow "When install fails" in harness/installation/installer.md: log it in the open session\'s '
+    + '.sessions/{session}/install-failures.md, run /harness-diagnostics-agent-tools-diagnostics with the error, and '
+    + 'update the themes in .sessions/_backlog/install-failure-themes.md.',
+  'Ask me to run /reload-plugins, so this chat loads the new cdd entry and header helper, then check that the chat bar '
+    + 'reads the board again.',
+]
+
+export function boardProblemPrompt(shown: string): string {
+  const steps = BOARD_PROBLEM_STEPS.map((step, index) => `${index + 1}. ${step}`).join('\n')
+  return `The CDD chat bar above the prompt shows: ${shown}\n\nFind its cause and fix it:\n${steps}\n\nThen tell me what was wrong and what you changed.`
+}
+
+// Fix on a board that did not answer sends the chat the context and the steps that usually clear it.
+export async function askChatToFixBoard($: EngineInterface, shown: string): Promise<void> {
+  await $.prompt.submit({ text: boardProblemPrompt(shown), asUser: true })
 }
 
 // Fix on a failure sends it to the chat and clears it from the line.
