@@ -71,9 +71,9 @@ From the person, 2026-11-12:
 
 ### Feature: Work Fidelity Outputs On Board → Review Fidelity Outputs On Board
 
-#### Story: List Ticket Context Files
+#### Story: List Ticket Files
 
-*Person*. Intended (`.sessions/_backlog/review-work-in-board-files.md` "include ticket context file and folders with list - folder-files; separate section"): the files panel lists the ticket's own context file and folders in a section of their own.
+*Person*. Requested (2026-11-12, "this is a filter eg a checkbox on the file viewer at the top where tabs are; you click only changed files listed"): the tabs list every file of the fidelity, changed or not, and a checkbox at the top filters them to the files the ticket's branch changed. List Ticket Context Files, the ticket's own context file and folders, stays out of this ticket ("done already", `harness/.context/grill-answers.md`).
 
 #### Story: Browse Ticket Files By Practice
 
