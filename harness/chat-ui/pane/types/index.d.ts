@@ -16,7 +16,8 @@ export type InstallJson = { state: 'idle' | 'running' | 'installed' | 'failed'; 
 
 // The app a person last pressed in the status row: opening while App.open readies it, failed with what failed and how to
 // fix it, idle once it opened in the side panel.
-export type AppOpeningJson = { label: string; state: 'idle' | 'opening' | 'failed'; error: string | null }
+// url: where the app answers once it is ready, drawn as a link; null until then.
+export type AppOpeningJson = { label: string; state: 'idle' | 'opening' | 'failed'; error: string | null; url?: string | null }
 
 // What the chat bar keeps between draws: board.overview's answer, and the server's own text when the last call failed.
 // problem is why the last board read failed, cleared by the next read that works. failure is an action the person ran

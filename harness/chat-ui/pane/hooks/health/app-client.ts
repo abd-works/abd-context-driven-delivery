@@ -16,7 +16,7 @@ const OPEN_TOOL = 'app.open'
 const SIDE_PANEL_SERVER = 'Claude_Browser'
 const SIDE_PANEL_TOOL = 'preview_start'
 
-const appOpening = atom({ plugin: 'cdd-board', key: 'appOpening' } as const, { label: '', state: 'idle', error: null } as AppOpeningJson)
+const appOpening = atom({ plugin: 'cdd-board', key: 'appOpening' } as const, { label: '', state: 'idle', error: null, url: null } as AppOpeningJson)
 
 export class AppNotOpened extends Error {}
 
@@ -34,20 +34,31 @@ export async function openApp($: EngineInterface, label: string): Promise<AppDat
 
 // A press on an app in the status row opens it in the side panel, readied first; a refusal stays in the server health
 // panel, and the side panel stays closed.
+// The app's url stays in the panel as a link either way, so a page neither the side panel nor the browser took is one
+// click away.
 export async function openAppBesideChat($: EngineInterface, label: string, pageUrlOf: (url: string) => Promise<string>): Promise<void> {
-  await update($, appOpening, () => ({ label, state: 'opening', error: null }))
+  await update($, appOpening, () => ({ label, state: 'opening', error: null, url: null }))
+  let url: string | null = null
   try {
-    const app = await openApp($, label)
-    await openInSidePanel($, await pageUrlOf(app.url))
-    await update($, appOpening, () => ({ label, state: 'idle', error: null }))
+    url = await pageUrlOf((await openApp($, label)).url)
+    await openInSidePanel($, url)
+    await update($, appOpening, () => ({ label, state: 'idle', error: null, url }))
   } catch (failure) {
-    await update($, appOpening, () => ({ label, state: 'failed', error: reasonOf(failure) }))
+    await update($, appOpening, () => ({ label, state: 'failed', error: reasonOf(failure), url }))
   }
   await refreshHealth($)
 }
 
+// Says why each way failed: the side panel's own answer, and whether a browser opener ran.
 async function openInSidePanel($: EngineInterface, url: string): Promise<void> {
-  const shown = await $.mcp.call(SIDE_PANEL_SERVER, SIDE_PANEL_TOOL, { url }).catch(() => null)
-  if (shown && !shown.isError) return
-  if (!(await openInBrowser($, url))) throw new AppNotOpened(`${url} did not open: no side panel or browser took it`)
+  let panelWhy: string
+  try {
+    const shown = await $.mcp.call(SIDE_PANEL_SERVER, SIDE_PANEL_TOOL, { url })
+    if (!shown.isError) return
+    panelWhy = shown.content[0]?.text ?? 'it answered with an error'
+  } catch (failure) {
+    panelWhy = reasonOf(failure)
+  }
+  const isOpened = await openInBrowser($, url).catch(() => false)
+  if (!isOpened) throw new AppNotOpened(`${url} is running but did not open. Side panel: ${panelWhy}. Browser: no opener ran here. Open the link below.`)
 }
