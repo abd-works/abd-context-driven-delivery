@@ -97,15 +97,18 @@ def main() -> int:
 
 def _write_runtime_adapters(installer, server) -> None:
     """The apps the server launches run from the pinned runtime, and their pages import the CDD domain through the
-    language adapters under its IDE folder, which git never copies there, so a pin writes them there too."""
-    from harness.installation.installer import Installer
+    language adapters under its IDE folder, which git never copies there. The runtime is this checkout's commit, so a pin
+    copies the adapters this checkout's install wrote, in place of any an earlier pin left."""
+    import shutil
 
     home = server.daemon.home
     if home.mode != home.PINNED:
         return
-    runtime = home.pinned_checkout
-    written = Installer(ide=installer.ide, path=runtime / installer.layout.folder_name, repo=runtime).write_language_adapters()
-    print(f"runtime language adapters: {len(written)} written in {runtime}")
+    source = Path(installer.path) / "language-adapters"
+    target = home.pinned_checkout / installer.layout.folder_name / "language-adapters"
+    shutil.rmtree(target, ignore_errors=True)
+    shutil.copytree(source, target)
+    print(f"runtime language adapters: copied to {target}")
 
 
 def _install_kanban() -> None:
