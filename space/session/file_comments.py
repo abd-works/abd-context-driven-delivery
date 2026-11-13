@@ -14,7 +14,7 @@ from harness.chat.chat import DONE, FAILED, Chat
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_server import mcp
-from space.session.session_file import Range, SessionFile
+from space.session.file_range import Range
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -149,7 +149,7 @@ class FileComments:
     @noSessionLog
     def add(self, path: str, start_line: int, end_line: int, text: str) -> FileComments:
         """Comment text on lines start_line to end_line of path, a file named from the project, keeping what those lines hold now; a new comment on the same lines replaces the one there. Returns every comment, the new one last."""
-        added = FileComment(SessionFile(self._session, path).range(start_line, end_line), text)
+        added = FileComment(self._session.file(path).range(start_line, end_line), text)
         self._save([*(comment for comment in self.comments if comment.anchor != added.anchor), added])
         return self
 
