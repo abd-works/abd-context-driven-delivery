@@ -46,7 +46,7 @@ async function resizePanelTo(page: Page, kind: string, wanted: number): Promise<
   await page.mouse.up()
 }
 
-const openFilesOf = (page: Page, ticket: string) => card(page, ticket).getByRole('button', { name: 'folder' }).first().click()
+const openFilesOf = (page: Page, ticket: string) => card(page, ticket).getByRole('button', { name: 'files', exact: true }).first().click()
 const openReportOf = (page: Page, ticket: string) => card(page, ticket).locator('.card-violations').click()
 
 test.beforeEach(() => resetSessions(fixtureRoot))
@@ -456,7 +456,7 @@ test.describe('Restrict Actions To Active Session', () => {
     })
 
     test("Then the files panel lists billing-report's files", async ({ page }) => {
-      await expect(page.locator('[data-panel="files"] .files-subject')).toContainText('stories-story-map')
+      await expect(page.locator('[data-panel="files"] .files-subject')).toContainText('billing-report')
     })
 
     test.describe('the Person moves billing-report to Specification', () => {

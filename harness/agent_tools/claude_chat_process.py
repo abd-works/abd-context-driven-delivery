@@ -11,7 +11,10 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
+# The name Claude Code's own executable runs under, without its extension.
+CLAUDE_EXECUTABLE = "claude"
 # How far up the process tree the connect script looks for the Claude Code process it was started by: Claude Code may
 # run it through a shell or two.
 _ANCESTORS_SEARCHED = 8
@@ -43,14 +46,18 @@ class ClaudeChatProcess:
         return cls(int(value)) if value.isdigit() else None
 
     @classmethod
-    def from_ancestors(cls) -> ClaudeChatProcess | None:
-        """The nearest process above this one that Claude Code records as a chat; none when no ancestor is one."""
+    def from_ancestors(cls, processes: _ProcessTree | None = None) -> ClaudeChatProcess | None:
+        """The nearest process above this one that is a Claude Code chat: one Claude Code records in its sessions folder,
+        or one running Claude Code's own executable before that record is written. The desktop app runs a chat's header
+        helpers while the chat still waits in a spare folder, before the record exists; the server reads the record on
+        every call, so a process named that early still leads to the chat's folder. None when no ancestor is one."""
+        tree = processes or _ProcessTree()
         pid = os.getpid()
         for _ in range(_ANCESTORS_SEARCHED):
-            pid = _ProcessTree().parent_of(pid)
+            pid = tree.parent_of(pid)
             if pid is None:
                 return None
-            if cls(pid).session_file.is_file():
+            if cls(pid).session_file.is_file() or tree.runs_claude(pid):
                 return cls(pid)
         return None
 
@@ -88,19 +95,32 @@ class ClaudeChatProcess:
 
 
 class _ProcessTree:
-    """The parent of a running process, read from the operating system."""
+    """The parent of a running process, and the executable it runs, read from the operating system."""
 
     def parent_of(self, pid: int) -> int | None:
         if pid == os.getpid():
             return os.getppid() or None
-        return self._windows_parent(pid) if sys.platform == "win32" else self._posix_parent(pid)
-
-    def _posix_parent(self, pid: int) -> int | None:
-        answer = subprocess.run(["ps", "-o", "ppid=", "-p", str(pid)], capture_output=True, text=True, check=False)
-        text = answer.stdout.strip()
+        if sys.platform == "win32":
+            entry = self._windows_entry(pid)
+            return (entry.th32ParentProcessID or None) if entry is not None else None
+        text = self._posix_field(pid, "ppid=")
         return int(text) if text.isdigit() and int(text) > 0 else None
 
-    def _windows_parent(self, pid: int) -> int | None:
+    def runs_claude(self, pid: int) -> bool:
+        """Whether pid runs Claude Code's own executable, ``claude`` or ``claude.exe``."""
+        return Path(self._executable_of(pid)).stem.lower() == CLAUDE_EXECUTABLE
+
+    def _executable_of(self, pid: int) -> str:
+        if sys.platform != "win32":
+            return self._posix_field(pid, "comm=")
+        entry = self._windows_entry(pid)
+        return entry.szExeFile.decode(errors="replace") if entry is not None else ""
+
+    def _posix_field(self, pid: int, field: str) -> str:
+        answer = subprocess.run(["ps", "-o", field, "-p", str(pid)], capture_output=True, text=True, check=False)
+        return answer.stdout.strip()
+
+    def _windows_entry(self, pid: int) -> Any:
         import ctypes
         from ctypes import wintypes
 
@@ -122,7 +142,7 @@ class _ProcessTree:
             found = kernel.Process32First(snapshot, ctypes.byref(entry))
             while found:
                 if entry.th32ProcessID == pid:
-                    return entry.th32ParentProcessID or None
+                    return entry
                 found = kernel.Process32Next(snapshot, ctypes.byref(entry))
             return None
         finally:

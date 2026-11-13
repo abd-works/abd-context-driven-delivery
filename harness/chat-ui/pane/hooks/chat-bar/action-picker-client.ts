@@ -17,6 +17,10 @@ export async function toggleActionPicker($: EngineInterface): Promise<void> {
   await update($, actionPicker, picker => ({ ...picker, isOpen: !picker.isOpen }))
 }
 
+export async function closeActionPicker($: EngineInterface): Promise<void> {
+  await update($, actionPicker, picker => ({ ...picker, isOpen: false }))
+}
+
 // Picking from the menu closes it and puts the action on the button; it runs when the button is pressed.
 export async function chooseAction($: EngineInterface, action: string): Promise<void> {
   await update($, actionPicker, () => ({ isOpen: false, chosenAction: action }))

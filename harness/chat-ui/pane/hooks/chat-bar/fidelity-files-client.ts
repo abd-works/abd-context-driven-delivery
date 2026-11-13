@@ -54,6 +54,21 @@ export async function openFilesOf($: EngineInterface, fidelities: FidelityProgre
   }
 }
 
+// Every file in the chat's session folder, .sessions/<session>, as tabs of the files pane: the session button opens it.
+export async function openSessionFolder($: EngineInterface): Promise<void> {
+  const chatBar = await currentChatBar($)
+  const named = `.sessions/${chatBar.sessionName}`
+  try {
+    const entries = await callTool<FileEntryData[]>($, 'session.folder_files', { session: chatBar.sessionFile })
+    const paths = entries.map(entry => entry.path)
+    await update($, fidelityFiles, () => ({ fidelity: named, tabs: entries.map(entry => ({ path: entry.path, text: null, exists: entry.exists })), shown: paths[0] ?? null, isOutOfDate: false }))
+    await openPane($, `${named} files`)
+    if (paths[0]) await showFile($, paths[0])
+  } catch (failure) {
+    $.ui.toast(`${named} files: ${reasonOf(failure)}`)
+  }
+}
+
 // The fidelity's latest validation report in the board's own report panel, with its findings and Fix buttons, opened in
 // the person's browser by the board's ?report=&fidelity= link, the board started first when it is not running. The
 // report's text never comes into the chat: a report can run to many thousands of characters, past what one tool answer
@@ -64,6 +79,15 @@ export async function openReport($: EngineInterface, fidelity: FidelityProgressC
   if (link && (await openInBrowser($, link))) return
   const why = url ? `the browser did not open ${link}` : 'the board is not running and did not start'
   $.ui.toast(`${fidelity.slug} report: ${why}. The report is ${fidelity.progress.report_file || 'not saved yet'}`)
+}
+
+// The fidelity's help in the board's own help panel, as the ? on its board tile opens it, by the board's
+// ?help=&fidelity= link, the board started first when it is not running.
+export async function openHelp($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
+  const url = await runningBoardUrl($).catch(() => '')
+  const link = url && (await boardPageUrl($, url, { help: fidelity.progress.ticket.name, fidelity: fidelity.slug }))
+  if (link && (await openInBrowser($, link))) return
+  $.ui.toast(`${fidelity.slug} help: ${url ? `the browser did not open ${link}` : 'the board is not running and did not start'}`)
 }
 
 // A file the server refuses shows the server's reason in its tab. A diagram's tab shows only its draw.io button.

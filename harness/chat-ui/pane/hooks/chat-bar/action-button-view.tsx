@@ -3,6 +3,7 @@ import type { EngineInterface } from 'claude-code'
 import { BRAND } from '../shared/brand'
 import { GlyphButtonView } from '../shared/glyph-button-view'
 import { chooseAction, clearChosenAction, toggleActionPicker } from './action-picker-client'
+import { actionColumnOf } from './bar-columns'
 import { moveNext, type ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
 import { runActionOn } from './fidelity-progress-client'
@@ -62,21 +63,14 @@ export function ActionButtonView($: EngineInterface, elements: ElementTable, dra
   )
 }
 
-// The column the action button starts at on the line: the health mark and its gap, the stage chip and its gap, │ and
-// its gap, then each dot with its violation count and a gap. The menu opens at it, so it reads as the button's list box.
-const HEALTH_STAGE_AND_SEPARATOR = 9
-export function actionColumnOf(chatBar: ChatBarClient): number {
-  const dots = chatBar.fidelities.reduce((cells, fidelity) => cells + 1 + (fidelity.violationCount ? String(fidelity.violationCount).length : 0) + 1, 0)
-  return HEALTH_STAGE_AND_SEPARATOR + dots
-}
-
 // Every action the shown stage sends, as a menu above the button: its icon, its name, and next beside the fidelity's
-// next one. The one on the button is highlighted; picking another puts it on the button in place of the next.
-export function PickerView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar, picker }: ChatBarDraw) {
+// next one, opening at the button's column so it reads as the button's list box. The one on the button is
+// highlighted; picking another puts it on the button in place of the next.
+export function PickerView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar, picker, overlays, formats }: ChatBarDraw) {
   const fidelity = chatBar.actionFidelity
   if (!picker.isOpen || !fidelity) return null
   return (
-    <Box key="picker" flexDirection="column" alignSelf="flex-start" marginLeft={actionColumnOf(chatBar)} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
+    <Box key="picker" flexDirection="column" alignSelf="flex-start" marginLeft={actionColumnOf(chatBar, overlays, formats)} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
       {chatBar.actions.map(action => {
         const isNext = action === fidelity.nextAction
         const isShown = action === shownActionOf(chatBar, picker.chosenAction)

@@ -34,8 +34,8 @@ export class FilesAndReportsPageDriver implements FilesAndReportsDriver {
   private async openFilesList(ticket: string, fidelity: string): Promise<void> {
     await card(this.page, ticket).locator('.card-hit').click()
     await this.tileOf(fidelity).locator('.tile-name').click()
-    await this.tileOf(fidelity).locator('.expansion').getByRole('button', { name: 'folder', exact: true }).click()
-    await expect(this.filesPanel.locator('.file-link').first()).toBeVisible()
+    await this.tileOf(fidelity).locator('.expansion').getByRole('button', { name: 'files', exact: true }).click()
+    await expect(this.filesPanel.getByRole('tab').first()).toBeVisible()
   }
 
   private async openReport(ticket: string, fidelity: string): Promise<void> {
@@ -46,16 +46,16 @@ export class FilesAndReportsPageDriver implements FilesAndReportsDriver {
 
   async generatedFilesOf(ticket: string, fidelity: string): Promise<string[]> {
     await this.openFilesList(ticket, fidelity)
-    // The folder view shows each file by its name within its folder; its path from the project is on the entry.
-    const entries = await this.filesPanel.locator('.folder-entry').all()
-    return Promise.all(entries.map(async entry => (await entry.getAttribute('data-path')) ?? ''))
+    // A tab shows each file by its name; its path from the project is its title, and a file not there yet is marked missing.
+    const tabs = await this.filesPanel.locator('[role="tab"]:not(.is-missing)').all()
+    return Promise.all(tabs.map(async tab => (await tab.getAttribute('title')) ?? ''))
   }
 
   async textOfFile(ticket: string, fidelity: string, path: string): Promise<string> {
     await this.openFilesList(ticket, fidelity)
-    await this.filesPanel.locator(`.folder-entry[data-path="${path}"]`).click()
-    await expect(this.filesPanel.locator('.line-text').first()).not.toHaveText('Not generated yet.')
-    return this.filesPanel.locator('.file-lines').innerText()
+    await this.filesPanel.locator(`[role="tab"][title="${path}"]`).click()
+    await expect(this.filesPanel.locator('.file-viewer')).toBeVisible()
+    return this.filesPanel.locator('.file-viewer').innerText()
   }
 
   async reportPathOf(ticket: string, fidelity: string): Promise<string> {

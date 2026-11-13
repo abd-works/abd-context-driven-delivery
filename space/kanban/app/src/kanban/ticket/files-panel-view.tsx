@@ -1,111 +1,75 @@
-import { useEffect, useRef } from 'react'
-
 import { useBoard } from '../shared/board-context'
 import type { FilesPanel } from '../shared/board-store'
-import { folderGroupsOf, generatedPaths } from './files-panel-client'
-
-const FILE_MODES = ['folder', 'files']
-const NOT_GENERATED = ['Not generated yet.', 'Pick this format on the card, then generate or render it.']
+import { FileViewerView } from './file-viewer-view'
+import { practicesOf, shownTabs } from './files-panel-client'
+import type { FileTab } from './files-panel-client'
 
 const fileNameOf = (path: string): string => path.split('/').at(-1) ?? path
 
-export function FilesPanelHeadView({ panel }: { panel: FilesPanel }) {
+function subjectOf(panel: FilesPanel): string {
+  if (panel.source === 'session') return `${panel.ticket.name} session folder`
+  if (panel.source === 'workpath') return panel.ticket.session.workpath || 'whole repository'
+  return `${panel.ticket.name} · ${panel.ticket.stagePlace}`
+}
+
+// A toggle per practice of the ticket's stage, by its short form and in its colour, then the changed-files filter.
+function FileFiltersView({ panel }: { panel: FilesPanel }) {
   const { page } = useBoard()
+  return (
+    <div className="file-filters" role="group" aria-label="File filters">
+      {practicesOf(panel).map(key => {
+        const practice = page.board.practiceNamed(key)
+        const isOn = panel.practicesOn.includes(key)
+        return (
+          <button key={key} className={isOn ? 'practice-filter is-on' : 'practice-filter'} aria-pressed={isOn} title={`Show ${practice?.name ?? key} files`} style={{ borderColor: practice?.color, background: isOn ? practice?.color : undefined }} onClick={() => void page.files.togglePractice(key)}>
+            {practice?.name ?? key}
+          </button>
+        )
+      })}
+      <label className="changed-filter">
+        <input type="checkbox" checked={panel.changedOnly} onChange={event => void page.files.filterChanged(event.target.checked)} />
+        only changed files
+      </label>
+    </div>
+  )
+}
+
+export function FilesPanelHeadView({ panel }: { panel: FilesPanel }) {
   return (
     <div className="panel-words">
       <div className="panel-kind">
         FILES<span className="accent-mark">_</span>
       </div>
-      <div className="files-subject">{panel.isSession ? `${panel.ticket.name} session folder` : panel.progress.map(progress => progress.fidelity.slug).join(', ')}</div>
-      <div className="file-modes">
-        {FILE_MODES.map(mode => (
-          <button key={mode} className={panel.mode === mode ? 'file-mode is-chosen' : 'file-mode'} onClick={() => void page.files.chooseMode(mode)}>
-            {mode}
-          </button>
-        ))}
-      </div>
+      <div className="files-subject">{subjectOf(panel)}</div>
+      <FileFiltersView panel={panel} />
     </div>
   )
 }
 
-function FolderGroupsView({ paths }: { paths: string[] }) {
+function FileTabView({ panel, tab }: { panel: FilesPanel; tab: FileTab }) {
   const { page } = useBoard()
+  const color = tab.practice ? page.board.practiceNamed(tab.practice)?.color : undefined
+  const isActive = tab.path === panel.activeTab
   return (
-    <div className="folder-groups">
-      {folderGroupsOf(paths).map(folder => (
-        <div key={folder.root} className="folder-group">
-          <div className="folder-root">{folder.root}</div>
-          {folder.entries.map(entry => (
-            <button key={entry.path} className="file-link folder-entry" data-path={entry.path} onClick={() => void page.files.openTab(entry.path)}>
-              {entry.name}
-            </button>
-          ))}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function FileTabView({ panel, path }: { panel: FilesPanel; path: string }) {
-  const { page } = useBoard()
-  const name = fileNameOf(path)
-  const isActive = path === panel.activeTab
-  return (
-    <div className={isActive ? 'file-tab is-active' : 'file-tab'}>
-      <button role="tab" aria-selected={isActive} title={path} className="file-tab-name" onClick={() => void page.files.openTab(path)}>
-        {name}
+    <div className={isActive ? 'file-tab is-active' : 'file-tab'} data-practice={tab.practice || undefined} style={{ borderTopColor: color }}>
+      <button role="tab" aria-selected={isActive} title={tab.path} className={tab.exists ? 'file-tab-name' : 'file-tab-name is-missing'} onClick={() => void page.files.openTab(tab.path)}>
+        {fileNameOf(tab.path)}
       </button>
-      <button aria-label={`Close ${name}`} className="file-tab-close" onClick={() => page.files.closeTab(path)}>
-        ×
-      </button>
-    </div>
-  )
-}
-
-// A file opened from a violation shows its failing line, in the middle of the panel.
-function FileLinesView({ text, marked }: { text: string; marked: number }) {
-  const line = useRef<HTMLDivElement>(null)
-  // Braces matter: newer browsers return a promise from scrollIntoView, and React would call it as the effect's cleanup.
-  useEffect(() => {
-    line.current?.scrollIntoView({ block: 'center' })
-  }, [marked, text])
-  const lines = text ? text.split('\n') : NOT_GENERATED
-  return (
-    <div className="file-lines">
-      {lines.map((entry, index) => {
-        const isMarked = index + 1 === marked
-        return (
-          <div key={index} ref={isMarked ? line : undefined} className={isMarked ? 'code-line is-failing' : 'code-line'}>
-            <span className="line-number">{index + 1}</span>
-            <span className="line-text">{entry}</span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-function FileTabsView({ panel }: { panel: FilesPanel }) {
-  return (
-    <div className="file-tabs-body">
-      <div role="tablist" className="file-tabs">
-        {panel.tabs.map(path => (
-          <FileTabView key={path} panel={panel} path={path} />
-        ))}
-      </div>
-      <div className="active-file">{panel.activeTab}</div>
-      <FileLinesView text={panel.texts[panel.activeTab] ?? ''} marked={panel.lines[panel.activeTab] ?? 0} />
     </div>
   )
 }
 
 export function FilesPanelBodyView({ panel }: { panel: FilesPanel }) {
-  const paths = generatedPaths(panel)
-  if (panel.mode === 'files' && panel.tabs.length) return <FileTabsView panel={panel} />
-  if (panel.mode === 'files' || !paths.length) return <p className="panel-note files-empty">Nothing generated yet for this fidelity.</p>
+  const tabs = shownTabs(panel)
   return (
-    <div className="panel-body files-body">
-      <FolderGroupsView paths={paths} />
+    <div className="file-tabs-body">
+      <div role="tablist" className="file-tabs">
+        {tabs.map(tab => (
+          <FileTabView key={tab.path} panel={panel} tab={tab} />
+        ))}
+      </div>
+      {tabs.length ? <div className="active-file">{panel.activeTab}</div> : <p className="panel-note files-empty">No files to show: turn a filter on.</p>}
+      {panel.activeTab ? <FileViewerView key={panel.activeTab} file={panel.shown} marked={panel.lines[panel.activeTab] ?? 0} /> : null}
     </div>
   )
 }

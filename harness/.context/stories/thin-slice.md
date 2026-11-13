@@ -106,7 +106,6 @@ section: body
 - *Fix Report Violations*
 - *Display Violations Band*
 - *List Ticket Files*
-- *Browse Ticket Folder*
 - *View Fidelity Files*
 - *Review Fidelity*
 - *Display Server Health Mark*
@@ -462,7 +461,13 @@ section: body
 - *List Ticket Context Files*
 - *Open Session Files From Details*
 - *View Files In Rich Viewer*
-- *Comment On File Selection*
+- *Save Edited File*
+- *Add Comment To File Selection*
+- *Send File Comments To Chat*
+- *Browse Ticket Files By Practice*
+- *Mark File Comment Processed*
+- *Show Changed File In Viewer*
+- *Clear Processed File Comments*
 - *Show AI Changes As Diff*
 
 ### Increment 10: Customize Board Workflow
