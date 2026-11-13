@@ -100,8 +100,11 @@ class ClaudePlugins:
             return str(error)
         return run.stdout + run.stderr
 
+    # Adding a marketplace Claude Code already has reads nothing new, and an update compares against the listing it last
+    # read, so the marketplace is read again before the update, or a newly published board stays uninstalled.
     def _install(self, claude: str, plugin: str) -> str:
         self.run(claude, "plugin", "marketplace", "add", str(self._home.claude_plugins))
+        self.run(claude, "plugin", "marketplace", "update", CLAUDE_MARKETPLACE)
         self.run(claude, "plugin", "install", plugin, "--scope", "user")
         self.run(claude, "plugin", "update", plugin, "--scope", "user")
         if plugin in self.run(claude, "plugin", "list"):

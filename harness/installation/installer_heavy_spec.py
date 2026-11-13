@@ -43,7 +43,7 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 
-from expects import be_true, contain, equal, expect, have_key, raise_error, start_with
+from expects import be_below, be_true, contain, equal, expect, have_key, raise_error, start_with
 from mamba import after, before, context, description, it
 from harness.guidance.fixtures.agentic_ops.agentic_ops import (
     SampleAgenticOps,
@@ -1420,6 +1420,13 @@ with description("toolsets installed for Claude Code") as self:
                 self.plugins.plugins_installed = {"cdd-board@cdd-home": "0.6.3-old"}
                 self.plugins.install_board()
                 expect(("plugin", "update", "cdd-board@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
+
+            # Adding a marketplace Claude Code already has reads nothing new, so the update would find the old board.
+            with it("should read the cdd home's marketplace again before it updates"):
+                self.plugins.plugins_installed = {"cdd-board@cdd-home": "0.6.3-old"}
+                self.plugins.install_board()
+                refresh = self.plugins.calls.index(("plugin", "marketplace", "update", "cdd-home"))
+                expect(refresh).to(be_below(self.plugins.calls.index(("plugin", "update", "cdd-board@cdd-home", "--scope", "user"))))
 
         with it("should install the board mod the cdd home publishes, at user scope"):
             expect(self.plugins.install_board()).to(equal("installed"))
