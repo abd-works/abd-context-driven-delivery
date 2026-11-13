@@ -68,7 +68,7 @@ function FidelityRowView($: EngineInterface, elements: ElementTable, fidelity: F
   )
 }
 
-// The session card above the line, as wide as the chat with a line of space above and below it: the server health panel on top,
+// The session card above the line, as wide as the chat with a line of space below it: the server health panel on top,
 // then, once there is a session, the shown stage's fidelities directly under it. Hovering the session name or the
 // health mark shows it; a press on either pins it, and ✕ or another press closes it.
 export function SessionCardView($: EngineInterface, elements: ElementTable, { chatBar, view, health }: ChatBarDraw) {
@@ -77,7 +77,7 @@ export function SessionCardView($: EngineInterface, elements: ElementTable, { ch
   const columns = cardColumnsOf(chatBar)
   return (
     <Box key="session-card" flexDirection="column">
-      <Box flexDirection="column" marginTop={1} marginBottom={1} {...shown}>
+      <Box flexDirection="column" marginBottom={1} {...shown}>
         {health.panel}
         {chatBar.hasSession ? (
           <Box key="card-grid" flexDirection="column" paddingX={1} paddingY={1} borderStyle="round" borderColor={BRAND.card} backgroundColor={BRAND.card}>
