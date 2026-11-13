@@ -323,8 +323,8 @@ class WorkList:
         practice = named.practice
         fidelity = named.guidance if named.guidance is not practice else practice.fidelities.current
         if named.format:
-            # The fidelity keeps the format it is given in its session, so the next action on it works in it without
-            # being told: the kept format is the session's choice, which every chat of the session reads.
+            # The fidelity chooses the format it is given in its session, so the next action on it works in it without
+            # being told: the chosen formats are the session's choice, which every chat and page of the session reads.
             (fidelity if fidelity is not None else practice).format = named.format
         if self._session is not None:
             self._session.practice(practice.key)

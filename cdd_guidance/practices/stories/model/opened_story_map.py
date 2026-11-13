@@ -27,19 +27,21 @@ class StoryMapEditRefused(Exception):
 
 
 class OpenedStoryMap:
-    """*OpenedStoryMap* is where one story map was read from in a session: the file, the session's Stories practice that
-    reads and writes it, and the session that names the file's fidelity and refreshes its graph. It owns the writes of
-    that file and of the files rendered beside it.
+    """*OpenedStoryMap* is where one story map was read from in a session: the map, the file, the session's Stories
+    practice that reads and writes it, and the session that names the file's fidelity and refreshes its graph. It owns
+    the writes of that file and of the files rendered beside it.
 
     A map is edited only while its file reads back exactly as its format writes it: a scenario or an acceptance-test
     file, which the map is merged onto, is opened to be read, and a hand-laid map would lose the text around it.
     ``refusal`` says why an edit is refused."""
 
-    def __init__(self, path: Path, stories: PracticeGuidance, session: Any) -> None:
+    def __init__(self, story_map: StoryModel, path: Path, stories: PracticeGuidance, session: Any) -> None:
+        self._story_map = story_map
         self._path = Path(path).resolve()
         self._stories = stories
         self._session = session
-        self._read_back = ""
+        # The map as its own format writes it before any edit: a save writes the file only while the file still reads so.
+        self._read_back = self._rendered(self.own_format)
 
     @property
     def file(self) -> str:
@@ -57,11 +59,6 @@ class OpenedStoryMap:
         """The format the file is written in, which reads its extension."""
         return Format(self._stories.formats.reading(self._path))
 
-    def keep_read_back(self, model: StoryModel) -> None:
-        """Keep the map as its own format writes it now, before any edit: a save writes the file only while the file
-        still reads that way."""
-        self._read_back = self._rendered(model, self.own_format)
-
     @property
     def refusal(self) -> str:
         """Why an edit is not saved; empty when it is: the file must read back exactly as its format writes the map, so
@@ -70,23 +67,23 @@ class OpenedStoryMap:
             return ""
         return f"saving would rewrite {self.file}, a {self.fidelity.name} file, beyond the edit: its text is not laid out as {self.own_format} writes a story map"
 
-    def write(self, model: StoryModel) -> list[Path]:
-        """Write model to its own file, then to each other format chosen for its fidelity, beside it with that format's
+    def write(self) -> list[Path]:
+        """Write the map to its own file, then to each other format chosen for its fidelity, beside it with that format's
         extension; refresh the session's graph with the files written. An edit its own format would not read back, such
         as a scenario on a story map, is refused before anything is written."""
-        own = self._rendered(model, self.own_format)
+        own = self._rendered(self.own_format)
         if self._read_again(own).strip() != own.strip():
-            raise StoryMapEditRefused(model, "save", f"{self.file} would not keep the edit: {self.own_format} does not read it back")
-        written = [self._write(model, self.own_format, self._path)]
+            raise StoryMapEditRefused(self._story_map, "save", f"{self.file} would not keep the edit: {self.own_format} does not read it back")
+        written = [self._write(self.own_format, self._path)]
         for chosen in self.fidelity.session_output.chosen_formats:
             if Format(chosen) != self.own_format:
-                written.append(self._write(model, Format(chosen), self._path.with_suffix(Format(chosen).extension)))
+                written.append(self._write(Format(chosen), self._path.with_suffix(Format(chosen).extension)))
         self._session.graph.refresh([str(path) for path in written])
-        self.keep_read_back(model)
+        self._read_back = own
         return written
 
-    def _write(self, model: StoryModel, format: Format, path: Path) -> Path:
-        path.write_text(self._rendered(model, format, path), encoding="utf-8")
+    def _write(self, format: Format, path: Path) -> Path:
+        path.write_text(self._rendered(format, path), encoding="utf-8")
         return path
 
     def _read_again(self, text: str) -> str:
@@ -94,10 +91,10 @@ class OpenedStoryMap:
         model = self._stories.formats.parse(self.own_format, text)
         return self._stories.formats.render(RenderRequest(self.own_format, model, previous=text))["content"]
 
-    def _rendered(self, model: StoryModel, format: Format, path: Path | None = None) -> str:
-        """model as format writes it, over the file at path as it is now; a format that writes several files, as code
+    def _rendered(self, format: Format, path: Path | None = None) -> str:
+        """The map as format writes it, over the file at path as it is now; a format that writes several files, as code
         does, writes none here, so its text reads back as nothing."""
         target = path or self._path
         previous = target.read_text(encoding="utf-8") if target.is_file() else ""
-        content = self._stories.formats.render(RenderRequest(format, model, previous=previous))["content"]
+        content = self._stories.formats.render(RenderRequest(format, self._story_map, previous=previous))["content"]
         return content if isinstance(content, str) else ""

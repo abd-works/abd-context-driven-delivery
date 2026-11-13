@@ -1264,7 +1264,7 @@ class StoryModel(StoryNode):
         files.read(os.path.relpath(path, files.workpath))
         stories = session.graph.practices.of(cls.practice_kind())
         model = stories.read_files([path], session.repo_path)
-        model.open_from(OpenedStoryMap(path, stories, session))
+        model._opened = OpenedStoryMap(model, path, stories, session)
         return model
 
     @classmethod
@@ -1279,11 +1279,6 @@ class StoryModel(StoryNode):
         if not made:
             raise StoryNodeNotFound(f"{call.session.name}: no story map", cls)
         return cls.load(made[0], call=call)
-
-    def open_from(self, opened: OpenedStoryMap) -> None:
-        """Keep opened as the file this map was read from, which every edit saves to."""
-        self._opened = opened
-        opened.keep_read_back(self)
 
     @property
     @data_field
@@ -1309,7 +1304,7 @@ class StoryModel(StoryNode):
         file cannot take is refused with StoryMapEditRefused, and nothing is written."""
         if self.refusal:
             raise StoryMapEditRefused(self, "save", self.refusal)
-        self._opened.write(self)
+        self._opened.write()
         return self
 
     @mcp

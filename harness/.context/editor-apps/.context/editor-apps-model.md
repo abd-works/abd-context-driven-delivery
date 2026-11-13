@@ -283,7 +283,7 @@ Every edit answers the **story map**, not the node it changed (`standard-mutatio
 + load(file: str, *, call) -> StoryModel  <<classmethod>> <<tool_subject>>
 	-> call.session.session_files.file_manager.read (refuses a file outside the session's roots with PathOutsideRootsError)
 	-> call.session.graph.practices.of(Stories).read_files
-	-> self.open_from(OpenedStoryMap)
+	-> OpenedStoryMap(the map read, the file, Stories, the session), which the map keeps
 + open_in_session(*, call) -> StoryModel  <<classmethod>> <<mcp>> <<agent_tool>>
 	// the first story map file the open session's Stories practice declares: the page with no file follows the session open in the project, so a ticket activated on the board shows its own map on the next read
 + show() -> StoryModel  <<mcp>> <<agent_tool>>
@@ -298,7 +298,8 @@ Every edit answers the **story map**, not the node it changed (`standard-mutatio
 
 The file a story map was opened from in a session, and the one owner of its writes.
 
-+ OpenedStoryMap(path: Path, stories: PracticeGuidance, session)
++ OpenedStoryMap(story_map: StoryModel, path: Path, stories: PracticeGuidance, session)
+	// it keeps the map as its own format writes it on opening, which a save compares the file with
 ------
 + file: str
 + fidelity: FidelityGuidance
@@ -307,8 +308,7 @@ The file a story map was opened from in a session, and the one owner of its writ
 + refusal: str
 	// empty while the file reads back exactly as its format writes the map; otherwise why a save would change it beyond the edit
 ----
-+ keep_read_back(model: StoryModel) -> None
-+ write(model: StoryModel) -> list[Path]
++ write() -> list[Path]
 	-> Stories.formats.render (its own format, then each of fidelity.session_output.chosen_formats, beside the file with that format's extension)
 	-> session.graph.refresh (the files written)
 	// an edit its own format would not read back, such as a scenario on a story map, is refused before anything is written
