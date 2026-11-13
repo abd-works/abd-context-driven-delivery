@@ -139,7 +139,9 @@ function StageListView({ column, done, children }: { column: ColumnClient; done:
   )
 }
 
-function TicketListView({ tickets, spot }: { tickets: TicketClient[]; spot: CardSpot }) {
+// Main, the default session, is no ticket of its own, so the board draws no card for it.
+function TicketListView({ tickets: listed, spot }: { tickets: TicketClient[]; spot: CardSpot }) {
+  const tickets = listed.filter(ticket => !ticket.isMain)
   return (
     <>
       {tickets.map(ticket => (

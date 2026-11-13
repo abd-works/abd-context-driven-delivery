@@ -197,12 +197,13 @@ export class TicketClient extends TicketClientGenerated {
     this.page.board.select(this.address)
   }
 
-  // A person clicking the ticket: it opens in the details, and the board's commands go to its chat, the one working in
-  // its worktree, when it has one. A press only selects: opening a worktree and a chat is the card's own button.
+  // A person clicking the ticket: it opens in the details, and the chat at the top of the board is its chat, the one
+  // working in its worktree; with none open, main's chat when main has one; else no chat, so the top never shows another
+  // ticket's chat. A press only selects: opening a worktree and a chat is the card's own button.
   choose(): void {
     this.select()
-    const found = this.chat.found
-    if (found) this.page.chat.choose(found.id)
+    const chat = this.chat.found ?? this.page.board.mainTicket?.chat.found
+    this.page.chat.choose(chat?.id ?? '')
   }
 
   get canOpenChat(): boolean {
