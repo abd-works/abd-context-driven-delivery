@@ -13,6 +13,6 @@ class Graph:
     @mcp
     @agent_tool
     def load_practice_roots(self, call: ToolCall | None = None) -> GraphLoaded:
-        # -> practice.session_root (each practice held; one with none is left out)
+        # -> practice.session_root (each practice held; one with none, or whose folder is not written yet, is left out)
         # -> self.build.load
         ...

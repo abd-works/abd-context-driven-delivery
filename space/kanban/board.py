@@ -12,6 +12,7 @@ from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.catalog_generator.catalog_examples import CatalogFidelity
 from harness.chat.chat import Chat
+from harness.diagnostics.app import App
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
@@ -729,6 +730,14 @@ class BoardFidelity:
         """The slash command of its skill, such as /practices-stories-stories-story-map."""
         return f"/{self._catalogued.skill_of(self._shown.fidelity)}"
 
+    @property
+    @data_field
+    def editor(self) -> App | None:
+        """The app the small editor widget on this fidelity's row of every ticket opens: its practice's editor on the
+        practice's first fidelity (the Stories story map), none on every other fidelity."""
+        practice = self._catalogued.practice
+        return practice.editor if self._shown.fidelity is next(iter(practice.fidelities), None) else None
+
 
 class BoardOverview:
     """*BoardOverview* is the board as a reader that draws the active session sees it, such as the chat bar, which reads
@@ -787,6 +796,13 @@ class BoardPractice:
     @data_field
     def colour(self) -> str:
         return self._practice.colour
+
+    @property
+    @data_field
+    def editor(self) -> App | None:
+        """The app that edits the practice's files, which a file of the practice opens in from the chat bar's file viewer:
+        the Story UI editor for Stories; none for a practice no app edits."""
+        return self._practice.editor
 
 
 class ColumnOverview:

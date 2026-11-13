@@ -26,10 +26,8 @@ describe('Activate Ticket', () => {
   describe('Open a ticket in its own worktree', () => {
     async function activated() {
       const { page, asked } = await board.page()
-      const opened: string[] = []
-      page.openLink = link => opened.push(link)
       await page.activation.activate(ticketOn(page, CHOSEN))
-      return { page, asked, opened }
+      return { page, asked, opened: board.openedChats() }
     }
 
     it('should send the ticket alone, with no choices', async () => {

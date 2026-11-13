@@ -784,8 +784,8 @@ with description("the board tools") as self:
             discovery = next(column for column in self.overview["columns"] if column["name"] == "Discovery")
             expect(discovery["work_required"][0]).to(equal({"slug": "stories-story-map"}))
 
-        with it("should send each practice's colour under its key"):
-            expect(sorted(self.overview["practices"][0])).to(equal(["colour", "practice", "short_name"]))
+        with it("should send each practice's colour and editor under its key"):
+            expect(sorted(self.overview["practices"][0])).to(equal(["colour", "editor", "practice", "short_name"]))
 
         with it("should stay well inside an MCP answer with a dozen tickets"):
             expect(len(json.dumps(self.overview)) < 40_000).to(be_true)

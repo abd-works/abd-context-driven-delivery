@@ -12,6 +12,10 @@ import type { Send } from './board-api'
 import { ageOf } from '../shared/board-brand'
 
 const WAIT_MILLISECONDS = 10
+// The generated route of App.install on the Kanban app, and what the install answers.
+const KANBAN_INSTALL = '/app/Kanban/install'
+const KANBAN_INSTALLED = { label: 'Kanban', status: 'running', port: 3020, url: 'http://127.0.0.1:3020/', server: { folder: '', command: [] } }
+const NPM_FAILED = 'The Kanban install failed: npm error code ENOENT. Run npm install in the board folder.'
 
 let board: BoardOnProject
 
@@ -84,47 +88,39 @@ describe('Display Board', () => {
       })
     })
 
+    // Update installs the board again through Python's App.install, which really runs npm install and build in the board's
+    // own folder, so the page's half is shown here with the install's answer given to the page; app_spec.py covers the
+    // install itself.
     describe('that a person has pressed Update', () => {
-      const updated = async () => {
-        const { page } = await board.page()
-        page.pause = async () => undefined
-        await page.update()
-        return page
-      }
-
-      // The installer gets the latest code, pins cdd to it, and rebuilds the page, so an install outside the board
-      // rebuilds it too.
-      it('should have the installer get the latest code, pin cdd to it, and rebuild the page', async () => {
-        await updated()
-        expect(board.board.updates.steps).toEqual([expect.stringMatching(/scripts\/install\.py --ide Claude --update$/)])
-      })
-
-      it('should restart the board server once the update has answered', async () => {
-        await updated()
-        await until(() => board.board.updates.restarts === 1)
-        expect(board.board.updates.restarts).toBe(1)
-      })
-
-      it('should load the page again from the restarted server', async () => {
-        expect((await updated()).store.state.isNewBuild).toBe(true)
-      })
-
-      describe('with a step that fails', () => {
-        beforeEach(() => {
-          board.board.updates.failingStep = '--update'
+      const updated = async (answer: Response) => {
+        const installs: string[] = []
+        const { page } = board.unreadPage(send => (path, init) => {
+          if (!path.endsWith(KANBAN_INSTALL)) return send(path, init)
+          installs.push(path)
+          return Promise.resolve(answer.clone())
         })
+        await page.reader.refresh()
+        await page.update()
+        return { page, installs }
+      }
+      const installed = () => new Response(JSON.stringify(KANBAN_INSTALLED), { status: 200 })
+      const failed = () => new Response(JSON.stringify({ error: NPM_FAILED }), { status: 500 })
 
-        it('should say in a toast which step failed', async () => {
-          expect(toastsOf(await updated()).at(-1)).toBe('Update failed at get latest and re-pin: --update could not run')
+      it('should install the Kanban app through its generated client', async () => {
+        expect((await updated(installed())).installs).toEqual([`/api${KANBAN_INSTALL}`])
+      })
+
+      it('should load the page again from the new build', async () => {
+        expect((await updated(installed())).page.store.state.isNewBuild).toBe(true)
+      })
+
+      describe('with an install that fails', () => {
+        it('should say in a toast why it failed', async () => {
+          expect(toastsOf((await updated(failed())).page).at(-1)).toBe(NPM_FAILED)
         })
 
         it('should keep the page it has', async () => {
-          expect((await updated()).store.state.isNewBuild).toBe(false)
-        })
-
-        it('should keep the board server running', async () => {
-          await updated()
-          expect(board.board.updates.restarts).toBe(0)
+          expect((await updated(failed())).page.store.state.isNewBuild).toBe(false)
         })
       })
     })

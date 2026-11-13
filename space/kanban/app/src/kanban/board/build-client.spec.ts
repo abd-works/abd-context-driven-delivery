@@ -24,7 +24,7 @@ describe('Reload Page On New Build', () => {
   describe('with a new build deployed after the page loaded', () => {
     it('should ask for the page to be loaded again', async () => {
       let served = 'index-first.js'
-      const { page } = board.unreadPage(send => (path, init) => (path === '/api/build' ? Promise.resolve(Response.json({ build: served })) : send(path, init)))
+      const { page } = board.unreadPage(send => (path, init) => (path === '/' ? Promise.resolve(new Response(`<script src="${served}">`)) : send(path, init)))
       await page.build.check()
       served = 'index-second.js'
       await page.build.check()
@@ -32,7 +32,7 @@ describe('Reload Page On New Build', () => {
     })
   })
 
-  // The board server answers the build itself, so its answer says nothing about whether cdd is back.
+  // The board server serves its page itself, so its answer says nothing about whether cdd is back.
   describe('with cdd not connected', () => {
     it('should keep saying so after checking the build', async () => {
       const { page } = board.unreadPage()

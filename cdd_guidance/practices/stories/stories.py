@@ -117,6 +117,34 @@ class Stories(PracticeGuidance):
             merged.take_scenarios(self._story_test_reader(path).story_type.stories_in(text, project), file)
         return merged
 
+    def open_file(self, path: Path, project: Path):
+        """The story map an edit to the Stories file at path writes back: a markdown story map or scenarios file read
+        by itself (``MarkdownStoryModel.opened_from``), so a save keeps every line it does not change; a story map in
+        another format read by the format that reads its extension; a story test, which is read and not edited, merged
+        onto its story map (``read_files``)."""
+        from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
+
+        if self._story_test_reader(Path(path)) is not None:
+            return self.read_files([path], project)
+        adapter = self.formats.for_file(Path(path))
+        if isinstance(adapter, MarkdownStoryModel):
+            return adapter.opened_from(Path(path), project)
+        return adapter.from_workspace(Path(path), project=project) or adapter
+
+    def story_tests(self, project: Path) -> dict[str, list[str]]:
+        """Each story test its fidelities declare in the session it works in, by its path from project, with the names
+        of the stories it holds: the acceptance tests a story map links each story to."""
+        from cdd_guidance.practices.stories.model.story_map_files import path_from
+
+        project = Path(project).resolve()
+        outputs = [fidelity.session_output for fidelity in self.fidelities if fidelity.session_output is not None]
+        held = {}
+        for path in sorted({file.resolve() for output in outputs for file in output.every_file()}):
+            reader = self._story_test_reader(path)
+            if reader is not None:
+                held[path_from(project, path)] = [story.name for story in reader.story_type.stories_in(path.read_text(encoding="utf-8"), project)]
+        return held
+
     def _story_test_reader(self, path: Path):
         """The code format whose story type reads the story test at path; none for any other file."""
         from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel

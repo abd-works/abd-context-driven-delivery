@@ -2327,12 +2327,13 @@ Report the parts of CDD that run outside this MCP host, so a person can see what
 
 One CDD web app a person opens beside the chat (Kanban, Graph, Story UI), and the one registry of them. The module that owns each app makes it once and registers it: the Graph app here, from `GRAPH_APP_PORTS`; the CDD Kanban and the Story UI editor in space/kanban.
 
-+ App(label: str, folder: Path, ports: tuple[int, ...], page: str = "/")
++ App(label: str, folder: Path, server: AppServer, page: str = "/")
 ------
 + label: str
 + status: AppStatus
 + port: int | None
 + url: str
++ server: AppServer
 + is_installed: bool
 ----
 + register(): App
@@ -2340,11 +2341,20 @@ One CDD web app a person opens beside the chat (Kanban, Graph, Story UI), and th
 + load(app: str, project: Path | str): App
 + open(): App
 + install(): App
-+ launch(): App
 ---<<raises>>--> AppNotRegistered
 ---<<raises>>--> AppNotStarted
----<<uses>>--> BackgroundStart
+---<<aggregation>>--> AppServer
 ---<<annotated with>>--> LanguageAdapter
+
+## AppServer
+
+The server an app answers from, which the chat that opens the app starts and its end stops: the folder it runs in, the command that starts it (node on its script, through tsx for TypeScript), and the ports it tries in turn.
+
++ AppServer(folder: Path, script: str, ports: tuple[int, ...])
+------
++ folder: str
++ command: list[str]
++ port: int | None
 
 ## CallDiagnostics
 

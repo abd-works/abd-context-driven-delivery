@@ -6,14 +6,9 @@ import type { BoardStore } from '../shared/board-store'
 const SHOWN_COMMAND = 80
 // A ticket's new chat is not opened again for this long, while the person confirms it and it checks in.
 const STARTING_CHAT_MILLISECONDS = 120_000
-// The Claude app opens a new session on a folder from this link, with its prompt filled in for the person to send.
-const NEW_CHAT_LINK = 'claude://code/new'
 
-// The link that opens a ticket's new chat on its worktree. The link names no title, so its prompt asks for the ticket's.
-export const newChatLink = (ticket: string, worktree: string): string => {
-  const prompt = `Title this session "${ticket}". You are the chat of the session board's ticket ${ticket}; work on that ticket. First call sessions.switch with name ${ticket}, so every tool works on its session, then read the session's latest handoff.`
-  return `${NEW_CHAT_LINK}?folder=${encodeURIComponent(worktree)}&q=${encodeURIComponent(prompt)}`
-}
+// The prompt a ticket's new chat opens with. The Claude app gives a new chat no title, so the prompt asks for the ticket's.
+const newChatPrompt = (ticket: string): string => `Title this session "${ticket}". You are the chat of the session board's ticket ${ticket}; work on that ticket. First call sessions.switch with name ${ticket}, so every tool works on its session, then read the session's latest handoff.`
 
 type CommandKind = 'submit' | 'fill' | 'command'
 
@@ -24,7 +19,6 @@ export class ChatClient {
   constructor(
     private readonly store: BoardStore,
     private readonly api: BoardApi,
-    private readonly openLink: (link: string) => void,
   ) {}
 
   // A chat is connected to send to; which one is decided per send: the ticket's own, else the one a person picked.
@@ -73,15 +67,15 @@ export class ChatClient {
     return asked !== undefined && Date.now() - asked < STARTING_CHAT_MILLISECONDS
   }
 
-  // A ticket's new chat opens in the Claude app on the ticket's worktree; the app asks the person to confirm the folder and send.
-  startFor(ticket: string, worktree: string): void {
+  // A ticket's new chat opens in the Claude app on the ticket's worktree, through Python's chat.open; the app asks the
+  // person to confirm the folder and send.
+  async startFor(ticket: string, worktree: string): Promise<void> {
     if (!worktree) {
       const { [ticket]: _given, ...starting } = this.store.state.startingChats
       this.store.change({ startingChats: starting })
       return
     }
-    this.openLink(newChatLink(ticket, worktree))
-    this.store.toast(`Confirm the folder and send in the Claude app to start the chat of ${ticket}`)
+    if (await ChatClientGenerated.open(this.api, worktree, newChatPrompt(ticket))) this.store.toast(`Confirm the folder and send in the Claude app to start the chat of ${ticket}`)
   }
 
   get hasPicked(): boolean {
@@ -237,7 +231,7 @@ export class TicketChat {
   }
 
   // The new chat opens on the worktree given, which can have been opened only now.
-  start(worktree: string): void {
-    this.chats.startFor(this.ticket, worktree)
+  start(worktree: string): Promise<void> {
+    return this.chats.startFor(this.ticket, worktree)
   }
 }

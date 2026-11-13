@@ -307,6 +307,11 @@ class PracticeGuidance(Guidance):
     """The Clean Engineering practice whose fidelities accompany this practice's: the one of the set this practice was
     made with, which the catalogue hands it, so a companion works in the same session; none for a practice made apart
     from any set."""
+    editor: ClassVar[Any] = None
+    """The app that edits this practice's files beside the chat (an *App* of harness/diagnostics, which sits above this
+    module, so it is not named here): the Story UI editor for Stories, none for every other practice. Every instance of the practice, in every session, edits with the same app, so the module that makes the
+    app sets it on the practice's class (``Stories.editor = STORY_UI_APP``), and the framework and the practice import no
+    app."""
 
     def __init__(
         self,
@@ -463,8 +468,18 @@ class PracticeGuidance(Guidance):
         knows that session, and each of its fidelities is given what it has there, so it answers its outputs, files and
         reports itself."""
         self.session = session_output.session
+        self._session_output = session_output
         for fidelity in self.fidelities:
             fidelity.work_in(session_output.of_fidelity(fidelity))
+
+    # The PracticeSessionOutput it works in, which work_in gives it; none until a session works on it.
+    _session_output: Any = None
+
+    @property
+    def session_root(self) -> Path | None:
+        """The folder the session this practice works in names for it, where it writes and the Graph app reads it from;
+        none outside a session."""
+        return None if self._session_output is None else self._session_output.folder
 
     @agent_instructions
     def generate_output(self) -> str:

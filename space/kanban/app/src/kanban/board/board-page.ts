@@ -1,3 +1,4 @@
+import { projectOfPage } from '@cdd/cdd-shared'
 import type { BacklogItemData } from '@cdd/space/kanban/backlog-item'
 import type { BoardData } from '@cdd/space/kanban/board'
 import type { TicketData } from '@cdd/space/kanban/ticket'
@@ -12,21 +13,17 @@ import { RootChoiceClient } from '../ticket/root-choice-client'
 import { TicketClient } from '../ticket/ticket-client'
 import { TileActionsClient } from '../ticket/tile-actions-client'
 import { TileClient } from '../ticket/tile-client'
-import { BoardApi } from './board-api'
+import { BoardApi, sendWithFetch } from './board-api'
 import type { Send } from './board-api'
 import { BoardClient } from './board-client'
 import { BoardLayoutClient } from './board-layout-client'
 import { BoardReader } from './board-reader'
 import { BoardStore } from '../shared/board-store'
 import { BuildClient } from './build-client'
+import { EditorAppClient } from './editor-app-client'
 import { SidePanelClient } from './side-panel-client'
 
 const CHAT_POLL_MILLISECONDS = 2000
-const UPDATE_PATH = '/update'
-const BUILD_PATH = '/build'
-const SERVER_BACK_WITHIN_MILLISECONDS = 30_000
-const SERVER_BACK_CHECK_MILLISECONDS = 1000
-const CLAUDE_OPEN_PATH = '/claude/open'
 const REPORT_QUERY = 'report'
 const HELP_QUERY = 'help'
 const FIDELITY_QUERY = 'fidelity'
@@ -39,10 +36,13 @@ const SHOWN_CHAT_ID = 8
 export class BoardPage {
   readonly store = new BoardStore()
   readonly api: BoardApi
+  // The api the board's own two-second read posts through, which says nothing when slow.
+  readonly readingApi: BoardApi
   readonly chat: ChatClient
   readonly panels: SidePanelClient
   readonly files: FilesPanelClient
   readonly build: BuildClient
+  readonly editorApp: EditorAppClient
   readonly layout = new BoardLayoutClient(this.store)
   readonly reader = new BoardReader(this)
   readonly tiles = new TileClient(this)
@@ -52,18 +52,14 @@ export class BoardPage {
   readonly roots = new RootChoiceClient(this)
   readonly draft = new BacklogDraftClient(this)
 
-  // Opens a claude:// link through the board server, because the Browser pane does not pass the link to the Claude app.
-  // A spec replaces it to see the link.
-  openLink: (link: string) => void = link => void this.api.post(CLAUDE_OPEN_PATH, { link })
-  // How long the page waits between checks for the restarted server. A spec replaces it so it does not wait.
-  pause: (milliseconds: number) => Promise<void> = milliseconds => new Promise(done => setTimeout(done, milliseconds))
-
-  constructor(send?: Send) {
+  constructor(send: Send = sendWithFetch) {
     this.api = new BoardApi(this.store, send)
-    this.chat = new ChatClient(this.store, this.api, link => this.openLink(link))
+    this.readingApi = new BoardApi(this.store, send, projectOfPage(), false)
+    this.chat = new ChatClient(this.store, this.api)
     this.panels = new SidePanelClient(this.store, this.api)
     this.files = new FilesPanelClient(this.store)
-    this.build = new BuildClient(this.store, this.api)
+    this.build = new BuildClient(this.store, send)
+    this.editorApp = new EditorAppClient(this.store, this.api)
   }
 
   // The board as last read, made once for that read and again only when the store holds a new read, since the views
@@ -108,25 +104,14 @@ export class BoardPage {
     return new BacklogItemClient(json, this)
   }
 
-  // Brings the board and every chat onto the latest code: the installer pulls and pins cdd, the server rebuilds and restarts itself, and
-  // the page loads again from it.
+  // Installs the board again through Python's App.install, which installs its packages and rebuilds its page, then loads
+  // the page again from the new build. A failed install says why in a toast and keeps the page.
   async update(): Promise<void> {
     if (this.store.state.isUpdating) return
     this.store.change({ isUpdating: true })
-    this.store.toast('Updating: getting the latest code, re-pinning cdd, and rebuilding')
-    const updated = await this.api.post<{ is_updated: boolean }>(UPDATE_PATH)
-    if (updated && (await this.boardServerIsBack())) this.store.change({ isNewBuild: true })
+    this.store.toast('Updating: installing the board and rebuilding its page')
+    if (await this.editorApp.kanban.install()) this.store.change({ isNewBuild: true })
     this.store.change({ isUpdating: false })
-  }
-
-  // The server restarts after it answers, so the page waits for it to go away and then for the new one to answer.
-  private async boardServerIsBack(): Promise<boolean> {
-    for (let waited = 0; waited < SERVER_BACK_WITHIN_MILLISECONDS; waited += SERVER_BACK_CHECK_MILLISECONDS) {
-      await this.pause(SERVER_BACK_CHECK_MILLISECONDS)
-      if (await this.api.get<{ build: string }>(BUILD_PATH)) return true
-    }
-    this.store.toast('The board server did not come back after the update; run /board in a chat to start it.', true)
-    return false
   }
 
   openNewTicket(): Promise<void> {

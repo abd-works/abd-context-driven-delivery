@@ -11,6 +11,9 @@ const PROJECT_HEADER = 'X-CDD-Project'
 const PROJECT_QUERY = 'project'
 // The folder an app's page opens on, such as the session's workpath the Graph loads.
 export const FOLDER_QUERY = 'folder'
+// A page this chat opens names the chat in its link, so it can show a file in this chat's file viewer (cdd-shared's
+// CHAT_QUERY; the mod takes only types from the language adapter, so the word is spelled here as PROJECT_QUERY is).
+export const CHAT_QUERY = 'chat'
 
 // One call on the board's chat routes, each with the body that chat tool takes.
 export type ChatRequest = { chat: string } & (

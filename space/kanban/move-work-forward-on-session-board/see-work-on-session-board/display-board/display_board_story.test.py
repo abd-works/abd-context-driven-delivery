@@ -59,33 +59,30 @@ with story("Display Board"):
             pass
         with but_("no band says the cdd server is lost"):
             pass
-    with scenario("Update the board and cdd to the latest code"):
-        # Evidence: observed: board-client.spec 'that a person has pressed Update'; board-page.ts update; packages/session-board/app.ts /api/update runs BoardUpdate (src/session-board/board-update.ts), then serve.ts restarts the board server.
-        with given("the band says the cdd server is lost"):
+    with scenario("Install the board again"):
+        # Evidence: observed: board-client.spec 'that a person has pressed Update'; board-page.ts update posts App.install of the Kanban app through its generated client (editor-app-client.ts kanban).
+        with given("the board is open"):
             pass
         with when("the Person presses Update"):
-            # Board page -> session board server: update
-            # session board server -> git pull --ff-only  [External: git]
-            # session board server -> vite build  [External: vite]
-            # session board server -> install.py --pin-runtime  [External: cdd installer]
+            # Board page -> App: install (app.install, the Kanban app)
+            # App -> npm install  [External: npm]
+            # App -> npm run build  [External: npm]
             pass
-        with then("the session board server gets the latest code, rebuilds the page, and pins the cdd server to it"):
+        with then("the Kanban app is installed again through App.install, which installs its packages and rebuilds its page"):
             pass
-        with and_("the session board server restarts on the new code"):
+        with and_("the page loads again from the new build"):
             pass
-        with and_("the page loads again from the restarted server"):
-            pass
-    with scenario("Say which update step failed"):
-        # Evidence: observed: board-client.spec 'with a step that fails'; board-update.ts UpdateStepFailed.
-        with given("the latest code cannot be pulled"):
+    with scenario("Say why the board's install failed"):
+        # Evidence: observed: board-client.spec 'with an install that fails'; app.py AppNotStarted.
+        with given("npm cannot install the Kanban app"):
             pass
         with when("the Person presses Update"):
-            # Board page -> session board server: update
-            # session board server <- UpdateStepFailed
+            # Board page -> App: install
+            # App <- AppNotStarted
             pass
-        with then("a toast says Update failed at get latest, with the reason"):
+        with then("a toast says the Kanban install failed, with the reason and the fix"):
             pass
-        with and_("the page and the session board server keep running as they were"):
+        with and_("the page keeps running as it was"):
             pass
     with scenario("Keep the newer board when an older read answers late"):
         # Evidence: observed: board-client.spec 'Refresh Board After Tool Calls' — 'should keep the newer board when an older read answers late'; board-reader.ts refresh.

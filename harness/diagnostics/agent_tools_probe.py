@@ -26,6 +26,8 @@ _SKIP_INVOKE: dict[str, str] = {
     "repo.push_commit": "ping only (git)",
     "installer.install": "use /install shell",
     "installer.clean": "use /clean shell",
+    "app.install": "ping only (npm install and build)",
+    "chat.open": "ping only (opens the Claude app)",
 }
 # The diagnostics tools themselves: probing them would run the probe inside itself.
 _NEVER_PROBE = frozenset({"agent-tools-diagnostics.agent_tools_diagnostics", "guidance-diagnostics.guidance_diagnostics"})

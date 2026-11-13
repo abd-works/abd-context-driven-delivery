@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Callable
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
 from harness.agent_tools.tool_call import ToolCall
+from harness.design_canvas.versions import CanvasVersions
 from harness.guidance.guidance import DeclaredFile
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
@@ -130,6 +131,17 @@ class PracticeSessionOutput:
         session's root itself. A declared output such as `.context/story-map.md` or `**/*_spec.py` is named from the
         workpath, so the practice's own default folder is not added."""
         return self._session.folder_under_root(self._chosen_or_configured_root or ".")
+
+    @property
+    @data_field
+    def design_view(self) -> str:
+        """The Claude Design link recorded for the latest version of the design canvas kept under the folder this
+        practice writes under (the UX practice's, ``CanvasVersions.in_practice_root``), which the chat bar's file viewer
+        opens; empty while the practice is off or no link is recorded."""
+        if not self.enabled:
+            return ""
+        canvas = CanvasVersions.in_practice_root(self.output_root)
+        return canvas.link(canvas.latest) or ""
 
     @property
     @data_field
@@ -315,6 +327,18 @@ class FidelitySessionOutput:
             label: [entry for path in paths for entry in self._declared_files(label, path, changed)]
             for label, paths in self.output_paths().items()
         }
+
+    def every_file(self) -> list[Path]:
+        """Every file this fidelity declares that is in the session's checkout, worked on by the session or not: what a
+        reader links to, such as each acceptance test of a story."""
+        repo = self._session.repo
+        found: list[Path] = []
+        for label, paths in self.output_paths().items():
+            for path in paths:
+                declared = self._declared(path)
+                named = [repo.root / declared.glob] if declared.names_one_path else self._found(label, declared)
+                found += [file for file in named if file.is_file()]
+        return found
 
     def has_output(self) -> bool:
         """Whether a file this fidelity declares is already in the session, such as one a person wrote. Unlike

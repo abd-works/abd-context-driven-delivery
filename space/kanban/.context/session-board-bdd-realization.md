@@ -94,40 +94,28 @@ Display Connected Status
   that a person has pressed Update
     ```
     -> BoardPage.update()
-    -> BoardUpdate.update()
-      -> git pull --ff-only  [External: git]
-      -> vite build  [External: vite]
-      -> scripts/install.py --ide Claude --pin-runtime  [External: cdd installer]
-    it should get the latest code, rebuild the page, then pin cdd to it
+    -> EditorAppClient.kanban.install()
+      -> App.install()  [app.install]
+        -> npm install  [External: npm]
+        -> npm run build  [External: npm]
+    it should install the Kanban app through its generated client
     ```
     ```
     -> BoardPage.update()
-    -> BoardUpdate.restart()
-    it should restart the board server once the update has answered
-    ```
-    ```
-    -> BoardPage.update()
-    -> BoardPage.boardServerIsBack()
     -> BoardStore.change({ isNewBuild: true })
-    it should load the page again from the restarted server
+    it should load the page again from the new build
     ```
-    with a step that fails
+    with an install that fails
       ```
       -> BoardPage.update()
-      -> BoardUpdate.update()
-      <- UpdateStepFailed
-      it should say in a toast which step failed
+      -> EditorAppClient.kanban.install()
+      <- AppNotStarted
+      it should say in a toast why it failed
       ```
       ```
       -> BoardPage.update()
       <- null
       it should keep the page it has
-      ```
-      ```
-      -> BoardPage.update()
-      -> BoardUpdate.update()
-      <- UpdateStepFailed
-      it should keep the board server running
       ```
 
 Refresh Board After Tool Calls

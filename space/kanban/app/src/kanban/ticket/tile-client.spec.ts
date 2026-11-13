@@ -61,7 +61,7 @@ const openPlaces = (page: BoardPage) => page.store.state.tiles.map(tile => tile.
 
 // Python answers each chip of a bar, and whether the session keeps it chosen.
 describe('Choose Action And Formats', () => {
-  it('should show each fidelity's default format chosen', async () => {
+  it("should show each fidelity's default format chosen", async () => {
     const { page } = await activeTicketPage()
     await page.tiles.open(spot(page), true)
     expect(barAt(page)?.choices.filter(choice => choice.is_chosen).map(choice => choice.label)).toEqual(['markdown'])

@@ -206,7 +206,7 @@ Requested (2026-11-06, as the Chat Bar does): the board runs the installer and s
 
 ### (S) Person --> Update Board And CDD
 
-Observed: Update in the header (`board-update.ts` `BoardUpdate.update`, `/api/update`) gets the latest commit, rebuilds the board, installs with the cdd server pinned to that commit, then restarts the board and refreshes the page; a failed step says which step and why (`UpdateStepFailed`).
+Observed (2026-11-12): Update in the header installs the Kanban app again through its generated client (`App.install`, `app.install`): npm install and build in the board's folder, then the page loads the new build; a failed install says why and how to fix it (`AppNotStarted`). It no longer gets the latest commit or re-pins cdd; `scripts/install.py --update` does that.
 
 ### (S) Person --> Reload Everything With One Button
 
@@ -284,7 +284,7 @@ Observed: with Active session only on, a ticket that is not the active session d
 
 ### (S) Board App --> Open Ticket Chat On Session Open
 
-Observed (checked 2026-11-10): a press on a card points the board at the ticket's own chat (`ticket-client.tsx:184-188`), and the card's chat button opens the worktree, making it first if needed, then a new Claude chat on it through `/api/claude/open` and `ClaudeLink` (`ticket-client.tsx:196-205`, `chat-client.tsx:72-80`, `claude-link.ts`). It opens a new chat rather than the one the ticket ran in, and Activate opens none. Was: Intended (`.sessions/_backlog/suggest-the-next-step.md` "open associated chat on session open / manually"): opening a ticket's session opens the Claude Code chat it ran in. Observed today: a press on a ticket switches to its chat by hand (`/api/claude/open`, `ClaudeLink`).
+Observed (checked 2026-11-10): a press on a card points the board at the ticket's own chat (`ticket-client.tsx:184-188`), and the card's chat button opens the worktree, making it first if needed, then a new Claude chat on it through Python's `chat.open` (`Chat.open`, `harness/chat/chat.py`) (`ticket-client.tsx:196-205`, `chat-client.tsx:72-80`, `claude-link.ts`). It opens a new chat rather than the one the ticket ran in, and Activate opens none. Was: Intended (`.sessions/_backlog/suggest-the-next-step.md` "open associated chat on session open / manually"): opening a ticket's session opens the Claude Code chat it ran in. Observed today: a press on a ticket switches to its chat by hand (`chat.open`).
 
 ### (S) Person --> Choose Where A Backlog Item Works
 

@@ -14,7 +14,7 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
-from harness.diagnostics.app import App  # noqa: E402
+from harness.diagnostics.app import App, AppServer  # noqa: E402
 from harness.diagnostics.server_health import ServerHealth  # noqa: E402
 from harness.hooks.hook_daemon import HookDaemon  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
@@ -44,7 +44,7 @@ with description("server health") as self:
             self.port = self.listener.getsockname()[1]
             (self.root / "package.json").write_text("{}", encoding="utf-8")
             (self.root / "node_modules").mkdir()
-            App("Graph", self.root, (closed_port(), self.port)).register()
+            App("Graph", self.root, AppServer(self.root, "serve.js", (closed_port(), self.port))).register()
 
         with after.each:
             self.listener.close()

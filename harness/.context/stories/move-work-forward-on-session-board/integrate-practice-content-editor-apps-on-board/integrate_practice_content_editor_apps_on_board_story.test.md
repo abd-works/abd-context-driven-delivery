@@ -15,7 +15,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 - ++session++ — the ticket's folder of work, with the practices enabled for it and the stories it names: the ticket's scope.
 - ++practice++ — a lens enabled on a session: Stories, DDD, UX, Clean Engineering or BDD.
 - ++practice row++ — one fidelity's row in a ticket's practice grid ([FidelityProgress](../../../editor-apps/.context/editor-apps-model.md#fidelityprogress-extended)).
-- ++editor widget++ — the small control on the Stories story-map row that opens the Story UI editor ([FidelityProgress.editor](../../../editor-apps/.context/editor-apps-model.md#fidelityprogress-extended)).
+- ++editor widget++ — the small control on the Stories story-map row that opens the Story UI editor ([BoardFidelity.editor](../../../editor-apps/.context/editor-apps-model.md#boardfidelity-extended)).
 - ++graph widget++ — the control on a ticket, beside its folder and file icons, that opens the Graph app on the ticket ([Graph.load_practice_roots](../../../editor-apps/.context/editor-apps-model.md#graph-extended)).
 - ++story map++ — the session's epics, sub-epics and stories, shown by the Story UI editor ([StoryModel](../../../editor-apps/.context/editor-apps-model.md#storymodel-extended)).
 - ++knowledge graph++ — the practice trees the Graph app loads from a session's practice roots.
@@ -34,7 +34,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 | ++billing-report++ | Discovery | Stories, DDD | billing/.context/stories, billing/.context | Report Billing By Month |
 | ++search-orders++ | Backlog | none: no session yet | none | none |
 
-### practice rows ([FidelityProgress.editor](../../../editor-apps/.context/editor-apps-model.md#fidelityprogress-extended))
+### practice rows ([BoardFidelity.editor](../../../editor-apps/.context/editor-apps-model.md#boardfidelity-extended))
 
 | practice row | editor widget |
 | --- | --- |
@@ -78,6 +78,13 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 *Then* the Story UI editor opens on harness/.context/stories/story-map.md  
   *And* it shows Open Story UI Side Panel From Chat Bar and Open Kanban Side Panel From Chat Bar under Integrate Practice Content Editor Apps In Chat Bar  
   *And* it shows no other story of the map
+
+#### Scenario: The person turns the ticket's scope off to see the whole map
+
+*Given* the Story UI editor is open on ++checkout-flow++'s story map, showing the ticket's stories  
+*When* the Person turns Ticket scope off  
+*Then* the Story UI editor shows every story of the map  
+  *And* a session that names no story shows the whole map with no Ticket scope toggle
 
 #### Scenario Outline: Only the Stories story-map row carries the editor widget
 
@@ -185,10 +192,12 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 
 #### Scenario: The Graph app shares the board's state
 
-*Given* the CDD Kanban runs on port 8778  
+*Given* ++checkout-flow++ is the board's active ticket  
 *When* the Agent deploys the Graph app with the board's state  
-*Then* the Graph app runs on the same app server and instance as the board's state  
-  *And* a ticket activated on the board is the ticket whose practice roots the graph shows, without a reload
+*Then* the Graph app works on the same session and graph as the board's active ticket  
+*When* the session open in the project becomes ++billing-report++'s, which the board then shows as active  
+*Then* the board's active ticket is ++billing-report++  
+  *And* the graph shows ++billing-report++'s practice roots on its next read, without a reload
 
 ## Story: Refactor Kanban Board To Web Domain Access
 
@@ -199,6 +208,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 | `harness/.context/stories/story-map.md:591-593` | Requested (2026-11-12, non-functional, "like above but for kanban board"): the CDD Kanban follows cdd_web_domain_access and lern_domain_driven; its backend is the MCP-generated domain objects through the TypeScript adapter, not calls of its own |
 | `space/kanban/app/src/kanban/board/board-api.ts` | Observed: *BoardApi* is the board's own call layer, posting to `/api/...` paths it names itself |
 | `space/kanban/app/packages/session-board/app.ts:41-60` | Observed: hand-written routes `/api/update`, `/api/claude/open`, `/api/build` beside the generated ones |
+| `harness/.context/grill-answers.md` (Board server's own routes) | Decided (2026-11-12): `claude/open` becomes `chat.open` on *Chat* in harness/chat, and Update reuses `app.install` of the Kanban app; the board's server keeps no route of its own |
 | `harness/graph/app/graph/GraphClient.ts:1-6` | Observed: the Graph app's finished shape (`GraphApi implements CddApi`, the server mounting the generated routes) |
 
 #### Scenario: Every board call reaches the domain through its generated adapter

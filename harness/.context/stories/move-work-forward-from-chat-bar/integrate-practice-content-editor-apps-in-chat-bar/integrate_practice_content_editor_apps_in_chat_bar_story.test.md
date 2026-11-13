@@ -18,7 +18,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 - ++file viewer++ — the chat bar's files pane: one tab per file a fidelity declares.
 - ++story map++ — a Stories file read as epics, sub-epics, stories and scenarios ([StoryModel](../../../editor-apps/.context/editor-apps-model.md#storymodel-extended)).
 - ++chosen formats++ — the formats kept for a fidelity in the session, which the chat bar's chips and the Story UI's toggles both change ([FidelitySessionOutput.chosen_formats](../../../editor-apps/.context/editor-apps-model.md#fidelitysessionoutput-extended)).
-- ++design view++ — the Claude Design link recorded for the latest version of the session's design canvas ([Session.design_view](../../../editor-apps/.context/editor-apps-model.md#session-extended)).
+- ++design view++ — the Claude Design link recorded for the latest version of the session's design canvas ([PracticeSessionOutput.design_view](../../../editor-apps/.context/editor-apps-model.md#practicesessionoutput-extended)).
 - ++practice root++ — the folder a session names for one of its enabled practices ([PracticeGuidance.session_root](../../../editor-apps/.context/editor-apps-model.md#practiceguidance-extended)).
 - ++violation++ — a rule a node in the latest graph breaks, with its file and the lines it covers.
 
@@ -57,6 +57,8 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 | ++story-map.drawio++ | Stories | story map | Story UI editor |
 | ++chat bar scenarios++ (`move-work-forward-from-chat-bar/.../integrate_practice_content_editor_apps_in_chat_bar_story.test.md`) | Stories | scenarios | Story UI editor |
 | ++canvas.json++ (`harness/.context/ux/canvas.json`) | UX | mockup | none |
+| ++this repository's story map++ (`harness/.context/stories/story-map.md`, laid out by hand) | Stories | story map | Story UI editor |
+| ++this repository's thin slice++ (`harness/.context/stories/thin-slice.md`) | Stories | story map | none: its increments are edited on the story map |
 
 ### chosen formats ([FidelitySessionOutput.chosen_formats](../../../editor-apps/.context/editor-apps-model.md#fidelitysessionoutput-extended))
 
@@ -65,7 +67,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 | ++story map, markdown and drawio++ | markdown, drawio | story-map.md, story-map.drawio |
 | ++story map, markdown only++ | markdown | story-map.md |
 
-### design views ([Session.design_view](../../../editor-apps/.context/editor-apps-model.md#session-extended))
+### design views ([PracticeSessionOutput.design_view](../../../editor-apps/.context/editor-apps-model.md#practicesessionoutput-extended))
 
 | session | design canvas version | design view |
 | --- | --- | --- |
@@ -145,13 +147,13 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 
 | Source | Note |
 |--------|------|
-| `harness/.context/stories/story-map.md:807-809` | Requested (2026-11-12, "same but for KG"): the status row lists the Graph app; a press installs, launches and opens it; the graph loads the folders the session's practice roots name and follows the session activated last |
+| `harness/.context/stories/story-map.md:807-809` | Requested (2026-11-12, "same but for KG"): the status row lists the Graph app; a press installs, launches and opens it; the graph loads the folders the session's practice roots name and follows the session open in the project |
 | `harness/graph/app/ports.json` | the Graph app's ports, 5173 to 5176 |
-| `space/kanban/ticket_checkout.py:144-156` | Observed: activating a ticket changes no chat's open session, so the session activated last is kept on the board ([Board.last_activated](../../../editor-apps/.context/editor-apps-model.md#board-extended)) |
+| `space/session/sessions.py:268-313` | Observed: a call that names no chat, as the Graph app's do, works in the session open in its project: the ticket of the worktree it names, else the project's own open session, the one the board shows as active. Decided (2026-11-12): no field records the session activated last ([Graph](../../../editor-apps/.context/editor-apps-model.md#graph-extended)) |
 
 #### Scenario Outline: A press on the Graph app readies it by its status and opens it beside the chat
 
-*Given* ++checkout-flow++ is the session activated last  
+*Given* ++checkout-flow++ is the session open in the project  
   *And* the app status row reads Graph ${status row reads}  
 *When* the Person opens the ++Graph app++ from the app status row  
 *Then* the Graph app ${a press does}  
@@ -168,7 +170,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 
 #### Scenario: The graph loads the folders the session's practice roots name
 
-*Given* ++checkout-flow++ is the session activated last  
+*Given* ++checkout-flow++ is the session open in the project  
   *And* its practice roots are harness/.context/stories, harness/.context/ux and harness/.context  
 *When* the Person opens the ++Graph app++ from the app status row  
 *Then* the knowledge graph shows the Stories tree read from harness/.context/stories  
@@ -176,10 +178,10 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
   *And* it shows the Clean Engineering tree read from harness/.context  
   *And* it shows no folder of ++billing-report++
 
-#### Scenario: The open graph follows the session activated last
+#### Scenario: The open graph follows the session open in the project
 
 *Given* the knowledge graph is open in the side panel on ++checkout-flow++'s practice roots  
-*When* the Person activates ++billing-report++'s ticket  
+*When* ++billing-report++'s session is opened in the project  
 *Then* the knowledge graph shows the Stories tree read from billing/.context/stories  
   *And* it shows the DDD tree read from billing/.context  
   *And* it shows no folder of ++checkout-flow++
@@ -276,6 +278,8 @@ Deferred (still Intended on the map, 2026-11-06): the story explorer opening bel
 | `harness/.context/stories/story-map.md:823-825` | Requested (2026-11-12): the story map's backend moves out of TypeScript into the MCP-generated domain objects, not a JSON story map; each edit is saved and rendered to the formats chosen in the chat bar, which the Story UI app can toggle |
 | `../story-ui/packages/story-map-workspace/stories/stories.ts` | Observed: today the domain (`StoryMapModel`, `EpicModel`, `ScenarioModel`, `StoryMapRepository`) is TypeScript over a JSON story map |
 | `cdd_guidance/patterns/cdd_web_domain_access` | `domain-lives-in-python`, `state-lives-behind-the-tool`, `fail-loud-on-mcp` |
+| `harness/.context/grill-answers.md` (Decisions 2026-11-12, from the person) | Requested: descriptions on epics, sub-epics and stories, saved unchanged so hand-written maps are editable; scenario files editable; acceptance tests shown as links; examples as the model holds them; increments in the story model |
+| `harness/.context/grill-answers.md` (Decided while closing the three Story UI gaps) | Decided (2026-11-12): an acceptance-test link opens the file in the chat bar's file viewer through `Chat.send` (`open_file`); example rows are edited through `Example`'s own tools and written back in their row; epic and sub-epic descriptions are edited on screen |
 
 #### Scenario: An edit is saved in the story map file and rendered to the chosen formats
 
@@ -309,6 +313,84 @@ Deferred (still Intended on the map, 2026-11-06): the story explorer opening bel
 *When* the Person renames the story Trace Story Through Artifacts  
 *Then* the Story UI editor says the cdd server is not answering and how to start it  
   *And* it still shows Trace Story Through Artifacts
+
+#### Scenario: A story map laid out by hand is saved with every line an edit does not touch
+
+*Given* the Story UI editor is open on ++this repository's story map++  
+*When* the Person renames the story Open Story UI Side Panel From Chat Bar to Open Story UI Beside The Chat  
+*Then* ++this repository's story map++ changes only that story's heading  
+  *And* the paragraphs under each heading, the lines above the first epic and every other heading stay as written
+
+#### Scenario: A story's description is the paragraph under its heading and is edited there
+
+*Given* the Story UI editor is open on ++this repository's story map++  
+*When* the Person changes the description of Open Story UI Side Panel From Chat Bar  
+*Then* the Story UI editor shows the new description on the story  
+  *And* ++this repository's story map++ changes only the paragraph under that story's heading
+
+#### Scenario: A scenario file is edited in the Story UI editor through the story model
+
+*Given* the Story UI editor is open on ++chat bar scenarios++  
+*When* the Person adds the step "the story map file keeps its other lines" to a scenario  
+*Then* ++chat bar scenarios++ holds the step under that scenario  
+  *And* every other line of ++chat bar scenarios++ stays as written  
+  *And* the Story UI editor shows each scenario's examples as the story model's one table, a row per example
+
+#### Scenario: An example's cell is edited in the Story UI editor and written back in its row
+
+*Given* the Story UI editor is open on ++chat bar scenarios++  
+*When* the Person changes the lines of the Ticket Archive name example of Trace Story Through Artifacts from 86 to 88 to 86 to 90  
+*Then* ++chat bar scenarios++ changes only that example's row  
+  *And* the Story UI editor shows 86 to 90 in that row
+
+#### Scenario: An example named by its example column is renamed in that cell
+
+*Given* the Story UI editor is open on a scenario file whose examples are named by their example column  
+*When* the Person changes the example not running to stopped  
+*Then* the scenario file changes only that cell of its row  
+  *And* the Story UI editor names the example stopped
+
+#### Scenario: An example keeps the place its table gives it
+
+*Given* the Story UI editor is open on ++chat bar scenarios++  
+*When* the Agent moves the second example of Trace Story Through Artifacts before the first  
+*Then* the story map refuses the move, saying an example keeps the place its table gives it  
+  *And* ++chat bar scenarios++ stays as written
+
+#### Scenario: An epic's and a sub-epic's description are edited on screen
+
+*Given* the Story UI editor is open on ++this repository's story map++  
+*When* the Person opens the epic Move Work Forward From Chat Bar and changes its description  
+*Then* ++this repository's story map++ changes only the paragraph under that epic's heading  
+*When* the Person opens the sub-epic Integrate Practice Content Editor Apps In Chat Bar and gives it a description  
+*Then* ++this repository's story map++ adds only that paragraph under that sub-epic's heading
+
+#### Scenario: A story's acceptance tests are links, not edited
+
+*Given* the Story UI editor is open on ++story-map.md++ beside ++checkout-flow++'s chat  
+  *And* the session holds an acceptance-test file for Open Story UI Side Panel From Chat Bar  
+*When* the Person opens the story Open Story UI Side Panel From Chat Bar  
+*Then* the Story UI editor links the story to its acceptance-test file  
+  *And* a press on the link shows the file in the chat bar's file viewer of ++checkout-flow++'s chat  
+  *But* the Story UI editor opens no file of its own  
+  *And* no other story links to it
+
+#### Scenario: A Story UI editor no chat opened says where to read a story's acceptance tests
+
+*Given* the Story UI editor is open on ++story-map.md++ in a window no chat opened  
+  *And* the session holds an acceptance-test file for Open Story UI Side Panel From Chat Bar  
+*When* the Person opens the story Open Story UI Side Panel From Chat Bar  
+*Then* the Story UI editor names the acceptance-test file without a link  
+  *And* it says to open the Story UI from the chat bar, or from a ticket with a chat, to read it in the chat's file viewer
+
+#### Scenario: Increments are edited through the story map and kept in its thin slice
+
+*Given* the Story UI editor is open on ++this repository's story map++  
+  *And* ++this repository's thin slice++ orders its increments  
+*When* the Person adds the increment Edit Story Maps In Story UI and gives it Open Story UI Side Panel From Chat Bar  
+*Then* ++this repository's thin slice++ lists Edit Story Maps In Story UI after its last increment, with that story  
+  *And* the increment that delivered the story no longer lists it  
+  *And* every other line of ++this repository's thin slice++ stays as written
 
 ## Story: Open UX Design In Claude Design
 

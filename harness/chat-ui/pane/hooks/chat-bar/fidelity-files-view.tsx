@@ -3,7 +3,7 @@ import type { EngineInterface } from 'claude-code'
 import type { FidelityFilesJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { openInDrawio } from './drawio-viewer-client'
-import { closeFiles, isDiagram, openFileInEditor, showFile, validateAgain } from './fidelity-files-client'
+import { closeFiles, isDiagram, openDesignView, openFileInEditor, openInEditorApp, showFile, validateAgain } from './fidelity-files-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
@@ -60,6 +60,8 @@ export function FidelityFilesView($: EngineInterface, elements: ElementTable, fi
           <Button key={`file-${tab.path}`} label={tab.path.split('/').at(-1) ?? tab.path} variant={tab.path === files.shown ? 'primary' : undefined} onPress={() => showFile($, tab.path)} />
         ))}
         {shown && isDiagram(shown.path) && shown.exists ? <Button key="file-drawio" label="Open in draw.io" variant="primary" onPress={() => openInDrawio($, shown.path)} /> : null}
+        {shown?.editor ? <Button key="file-editor" label={`Open in ${shown.editor}`} variant="primary" onPress={() => openInEditorApp($, shown.editor ?? '', shown.path)} /> : null}
+        {files.designView ? <Button key="design-view" label="Design view" onPress={() => openDesignView($, files.designView)} /> : null}
         <Button key="files-close" label="✕" onPress={() => closeFiles($)} />
       </Box>
       {files.isOutOfDate ? OutOfDateView($, elements, files.fidelity) : null}

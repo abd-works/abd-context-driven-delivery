@@ -5,6 +5,7 @@ import type { CddProgress } from '@cdd/cdd-shared';
 import type { ExplorerEntryData, FilterData, GraphRuleData, NodeSourceData } from '@cdd/harness/graph/graph';
 import { nodeFilter, type FilterSelection } from './filter/filter-selection';
 import { FilterView } from './filter/FilterView';
+import { GraphApi } from './graph/graph-api';
 import { GraphClient } from './graph/GraphClient';
 import { GraphView } from './graph/GraphView';
 import { childrenOf, isRule, ruleHits, selectionForRule, type GraphSelection, type TreeItem } from './graph/graph-selection';
@@ -25,7 +26,11 @@ const EMPTY: FilterSelection = {
 };
 const NO_CHOICES: FilterData = { node_types: [], offered_node_types: [], relationships: [], rules: [] };
 
-const graphs = new GraphClient();
+// A page opened with ?folder= (the chat bar names the session's workpath) loads that folder; one opened on a project
+// (?project=, from a ticket's graph widget) shows the graph of the session open there, loaded on its practice roots; a
+// page opened with neither shows the folder a person last chose.
+const api = new GraphApi();
+const graphs = new GraphClient(api);
 const FOLDER_QUERY = 'folder';
 
 function openedOnFolder(): string {
@@ -34,8 +39,7 @@ function openedOnFolder(): string {
 
 export function App() {
   const [theme, setTheme] = useState(() => document.documentElement.dataset.theme ?? '');
-  // A page opened with ?folder= (the chat bar names the session's workpath) loads that folder, else the one last loaded.
-  const [folder, setFolder] = useState(() => openedOnFolder() || (window.localStorage.getItem(LAST_FOLDER) ?? ''));
+  const [folder, setFolder] = useState(() => openedOnFolder() || api.project || (window.localStorage.getItem(LAST_FOLDER) ?? ''));
   const [loadedFolder, setLoadedFolder] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [selection, setSelection] = useState<FilterSelection>(EMPTY);
@@ -72,10 +76,25 @@ export function App() {
   }
 
   useEffect(() => {
-    const saved = openedOnFolder() || window.localStorage.getItem(LAST_FOLDER)?.trim();
+    const saved = (openedOnFolder() || api.project || window.localStorage.getItem(LAST_FOLDER))?.trim();
     if (saved) {
       void load(saved);
     }
+  }, []);
+
+  // The session open in the project can change while the page is open, as when the board makes another ticket active, so
+  // a page opened on a project reads it again whenever the person comes back to it; nothing is pushed to it.
+  useEffect(() => {
+    if (!api.project) {
+      return;
+    }
+    const reread = () => {
+      if (!loadingRef.current) {
+        void load(api.project);
+      }
+    };
+    window.addEventListener('focus', reread);
+    return () => window.removeEventListener('focus', reread);
   }, []);
 
   useEffect(() => {
@@ -114,6 +133,17 @@ export function App() {
     return Object.fromEntries(names.map((name) => [name, root]));
   }
 
+  // The project's open session loads on the roots its practices name, and holds only the practices it works on; a chosen
+  // folder loads every practice from that folder.
+  async function read(root: string, force: boolean) {
+    if (api.project) {
+      setPractices((await graphs.practiceNames()) ?? []);
+      await graphs.loadPracticeRoots();
+      return;
+    }
+    await graphs.loadWorkingCopy(root, await practiceRoots(root), root, readSavedOverlays(), force);
+  }
+
   async function browse() {
     const chosen = await graphs.chooseFolder();
     if (!chosen) {
@@ -135,7 +165,7 @@ export function App() {
     setLoadingLog([]);
     setError('');
     try {
-      await graphs.loadWorkingCopy(trimmed, await practiceRoots(trimmed), trimmed, readSavedOverlays(), force);
+      await read(trimmed, force);
       if (generation !== loadGeneration.current) {
         return;
       }
@@ -148,7 +178,9 @@ export function App() {
       await offerChoices(synced);
       await showFilter(synced);
       setLoadedFolder(trimmed);
-      window.localStorage.setItem(LAST_FOLDER, trimmed);
+      if (!api.project) {
+        window.localStorage.setItem(LAST_FOLDER, trimmed);
+      }
       window.localStorage.setItem(LAST_OVERLAYS, JSON.stringify(bundle.overlays));
       setLoadingLog([]);
     } catch (cause) {
