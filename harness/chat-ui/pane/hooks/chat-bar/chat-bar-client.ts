@@ -154,24 +154,18 @@ export class ChatBarClient {
     return this.board?.project ?? ''
   }
 
-  // The folder the session works in, its workpath; a session that chose none works in the whole repository.
-  get rootPath(): string {
-    return this.ticket ? this.ticket.session.workpath || this.repoName : ''
-  }
-
-  // The folder an app's page loads: the whole path of the session's root folder, as the status row shows it, else its
-  // workpath; empty while no ticket's session is open.
+  // The folder an app's page loads: the whole path of the folder the session works in, its workpath; empty while no
+  // ticket's session is open or it works in the whole repository.
   get workpath(): string {
-    const ticket = this.ticket as (TicketData & { root_folder?: string }) | null
-    return ticket?.root_folder || ticket?.session.workpath || ''
+    return this.ticket?.session.workpath ?? ''
   }
 
-  // The status row under the line, from the left: the repository, the branch the session's chat works on, and the
-  // whole path of the folder the session works in.
+  // The status line below the chat: the repository, the branch the session's chat works on, and the folder the session
+  // works in from the repository's folder, which a session working in the whole repository leaves out.
   get statusLine(): string {
     if (!this.ticket) return ''
     const ticket = this.ticket as TicketData & { branch_name?: string; root_folder?: string }
-    return [this.repoName, ticket.branch_name ?? '', ticket.root_folder || this.rootPath].filter(Boolean).join(' · ')
+    return [this.repoName, ticket.branch_name ?? '', ticket.root_folder ?? ''].filter(Boolean).join(' · ')
   }
 
   // The agent context: what the Python Ticket tells the agent about the active session in its system prompt, the same

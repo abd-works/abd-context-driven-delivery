@@ -358,9 +358,15 @@ class Ticket(Card):
     @property
     @data_field
     def root_folder(self) -> str:
-        """The whole path of the folder the ticket's session works in, its workpath or else its repository's folder,
-        which the chat bar's status row names."""
-        return str(self._session.work_root)
+        """The folder the ticket's session works in, as a path from its repository's folder, which the status line below
+        the chat names after the repository; empty when the session works in the whole repository. A folder outside the
+        repository keeps its whole path."""
+        work_root = self._session.work_root
+        repository = Path(self._session.repo_path).resolve()
+        if not work_root.is_relative_to(repository):
+            return str(work_root)
+        relative = work_root.relative_to(repository)
+        return "" if relative == Path(".") else str(relative)
 
     @property
     @data_field(key="working_chat", reference=True)

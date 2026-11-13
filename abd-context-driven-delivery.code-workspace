@@ -13,5 +13,7 @@
 			"path": "../pml-web"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"claudeCode.preferredLocation": "sidebar"
+	}
 }
