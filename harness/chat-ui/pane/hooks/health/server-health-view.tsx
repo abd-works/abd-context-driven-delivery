@@ -54,7 +54,8 @@ function PartView({ Box, Button, Text }: ElementTable, part: Part, actions: Acti
 function PartsView(elements: ElementTable, health: ServerHealthJson, actions: Actions) {
   const { Box } = elements
   return (
-    <Box flexDirection="row" columnGap={3}>
+    // The parts spread across the panel's width, as wide as the text above them.
+    <Box flexDirection="row" columnGap={3} width="100%" justifyContent="space-between">
       {partsOf(health).map(part => PartView(elements, part, actions))}
     </Box>
   )
