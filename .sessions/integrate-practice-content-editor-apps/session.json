@@ -16,7 +16,13 @@
   "worktree": "C:\\dev\\abd-cdd-integrate-practice-conte",
   "practices": {
     "stories": {
-      "enabled": true
+      "enabled": true,
+      "formats": {
+        "scenarios": [
+          "python",
+          "markdown"
+        ]
+      }
     }
   },
   "overlays": []

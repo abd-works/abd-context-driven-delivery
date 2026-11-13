@@ -30,12 +30,12 @@ Judge only the checked format's files (markdown: harness/.context/stories/story-
 
 # Graph rule validation
 
-**Generated:** 2026-11-13 06:55:09 UTC
+**Generated:** 2026-11-13 07:21:30 UTC
 **Project:** abd-cdd-integrate-practice-conte
 **Action:** validate (graph JSON + AI rules)
 
 **Graph sources:**
-- `C:\dev\abd-context-driven-delivery\.sessions\integrate-practice-content-editor-apps\validation-reports\stories-story-map-20261113T065024.json`
+- `C:\dev\abd-context-driven-delivery\.sessions\integrate-practice-content-editor-apps\validation-reports\stories-story-map-20261113T071643.json`
 
 **The session's graph also held, and practice-wide rules compared against:**
 - `.`
@@ -107,8 +107,7 @@ Judge only the checked format's files (markdown: harness/.context/stories/story-
 
 ## Summary
 
-**Total graph violations:** 12
-**Rules with graph hits:** 1
+**No graph rule violations.** All scanned graph rules passed.
 **AI rules in scope:** 12
 
 ## Rules
@@ -186,25 +185,6 @@ Evaluate the current context against this rule (kebab-case-paths):
 Link every Epic, Sub-Epic, and Story on the map to its entry in `story-map.md`, and link a Story to its own markdown file when one exists. Anchor an entry link at the node's heading (`story-map.md#e-get-sim`); in drawio, put the link on the cell's `link`. Never indent a heading: write each at column 0 and let the `#` count carry the depth. Write plain text when the target file does not exist, because a reader should move from a map node to the behaviour it names without searching, and a link to a missing file misleads.
 
 Evaluate the current context against this rule (story-map-links-to-markdown):
-
-### `playwright-tests-browser-interaction`
-
-**Graph violations:** 12
-
-- [X] **ERROR** **[graph rule]** - [harness/.context/stories/story-map.md](C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories\story-map.md#L597): Story `Open Story UI On Ticket Scope`: harness/.context/stories/story-map.md: story `Open Story UI On Ticket Scope` has no screen story: no Playwright file (`*.story.ui.spec.ts`) has a describe named for it; write one that drives its screen.
-- [X] **ERROR** **[graph rule]** - [harness/.context/stories/story-map.md](C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories\story-map.md#L601): Story `Filter Knowledge Graph To Ticket Scope`: harness/.context/stories/story-map.md: story `Filter Knowledge Graph To Ticket Scope` has no screen story: no Playwright file (`*.story.ui.spec.ts`) has a describe named for it; write one that drives its screen.
-- [X] **ERROR** **[graph rule]** - [harness/.context/stories/story-map.md](C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories\story-map.md#L605): Story `Filter Knowledge Graph To Ticket Practices`: harness/.context/stories/story-map.md: story `Filter Knowledge Graph To Ticket Practices` has no screen story: no Playwright file (`*.story.ui.spec.ts`) has a describe named for it; write one that drives its screen.
-- [X] **ERROR** **[graph rule]** - [harness/.context/stories/story-map.md](C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories\story-map.md#L609): Story `Deploy Knowledge Graph App With Board State`: harness/.context/stories/story-map.md: story `Deploy Knowledge Graph App With Board State` has no screen story: no Playwright file (`*.story.ui.spec.ts`) has a describe named for it; write one that drives its screen.
-- [X] **ERROR** **[graph rule]** - [harness/.context/stories/story-map.md](C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories\story-map.md#L613): Story `Refactor Kanban Board To Web Domain Access`: harness/.context/stories/story-map.md: story `Refactor Kanban Board To Web Domain Access` has no screen story: no Playwright file (`*.story.ui.spec.ts`) has a describe named for it; write one that drives its screen.
-- [X] **ERROR** **[graph rule]** - [harness/.context/stories/story-map.md](C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories\story-map.md#L825): Story `Open Story UI Side Panel From Chat Bar`: harness/.context/stories/story-map.md: story `Open Story UI Side Panel From Chat Bar` has no screen story: no Playwright file (`*.story.ui.spec.ts`) has a describe named for it; write one that drives its screen.
-- [X] **ERROR** **[graph rule]** - [harness/.context/stories/story-map.md](C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories\story-map.md#L829): Story `Open Knowledge Graph Side Panel From Chat Bar`: harness/.context/stories/story-map.md: story `Open Knowledge Graph Side Panel From Chat Bar` has no screen story: no Playwright file (`*.story.ui.spec.ts`) has a describe named for it; write one that drives its screen.
-- [X] **ERROR** **[graph rule]** - [harness/.context/stories/story-map.md](C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories\story-map.md#L833): Story `Open Kanban Side Panel From Chat Bar`: harness/.context/stories/story-map.md: story `Open Kanban Side Panel From Chat Bar` has no screen story: no Playwright file (`*.story.ui.spec.ts`) has a describe named for it; write one that drives its screen.
-- [X] **ERROR** **[graph rule]** - [harness/.context/stories/story-map.md](C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories\story-map.md#L837): Story `Invoke Claude Design Story Explorer From Chat Bar`: harness/.context/stories/story-map.md: story `Invoke Claude Design Story Explorer From Chat Bar` has no screen story: no Playwright file (`*.story.ui.spec.ts`) has a describe named for it; write one that drives its screen.
-- [X] **ERROR** **[graph rule]** - [harness/.context/stories/story-map.md](C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories\story-map.md#L841): Story `Deploy Story UI App With Board State`: harness/.context/stories/story-map.md: story `Deploy Story UI App With Board State` has no screen story: no Playwright file (`*.story.ui.spec.ts`) has a describe named for it; write one that drives its screen.
-- [X] **ERROR** **[graph rule]** - [harness/.context/stories/story-map.md](C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories\story-map.md#L845): Story `Refactor Story UI App To Web Domain Access`: harness/.context/stories/story-map.md: story `Refactor Story UI App To Web Domain Access` has no screen story: no Playwright file (`*.story.ui.spec.ts`) has a describe named for it; write one that drives its screen.
-- [X] **ERROR** **[graph rule]** - [harness/.context/stories/story-map.md](C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories\story-map.md#L853): Story `Trace Story Through Artifacts`: harness/.context/stories/story-map.md: story `Trace Story Through Artifacts` has no screen story: no Playwright file (`*.story.ui.spec.ts`) has a describe named for it; write one that drives its screen.
-
-Evaluate the current context against this rule (playwright-tests-browser-interaction):
 
 
 Judge the work against these overlaid patterns' rules too, as you judge the practices' rules.
@@ -344,3 +324,28 @@ This session's increment is these stories, named in its ticket. Generate and val
 - Filter Knowledge Graph To Ticket Practices
 - Deploy Knowledge Graph App With Board State
 - Refactor Kanban Board To Web Domain Access
+## Judgment — `harness/.context/stories/story-map.md`
+
+### `story-map-links-to-markdown` — Fail
+- story-map.md:597 `Open Story UI On Ticket Scope`: no link to its entry in `move-work-forward-on-session-board/integrate-practice-content-editor-apps-on-board/integrate_practice_content_editor_apps_on_board_story.test.md`, which exists; the same holds for the board sub-epic's other stories (lines 601, 605, 609, 613).
+- story-map.md:825 `Open Story UI Side Panel From Chat Bar`: no link to its entry in `move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/integrate_practice_content_editor_apps_in_chat_bar_story.test.md`, which exists; the same holds for the chat-bar sub-epic's other stories (lines 829, 833, 837, 841, 845, 853).
+- story-map.md:595 `Integrate Practice Content Editor Apps On Board`: its scenarios file holds a story the map does not list, Invoke Story Explorer In Session Context.
+
+### `branch-on-mechanical-uniqueness` — Fail
+- story-map.md:825 `Open Story UI Side Panel From Chat Bar`: this story, Open Knowledge Graph Side Panel From Chat Bar (829) and Open Kanban Side Panel From Chat Bar (833) restate one mechanic, a press on the app status row that installs, launches and opens the app; their scenarios are one outline per app. One story with the apps as examples fits, with the parts that differ in stories of their own.
+
+### `right-size-story-nodes` — Fail
+- story-map.md:825 `Open Story UI Side Panel From Chat Bar`: two interactions at two boundaries, the status row press and the file viewer's story-map editor tile.
+- story-map.md:829 `Open Knowledge Graph Side Panel From Chat Bar`: the press, plus loading the session's practice roots, plus following the session activated last.
+
+### `behaviours-not-one-time-tasks` — Fail
+- story-map.md:613 `Refactor Kanban Board To Web Domain Access`: a one-time migration of the board's backend, not a repeatable interaction.
+- story-map.md:845 `Refactor Story UI App To Web Domain Access`: a one-time migration; the repeatable behaviour (an edit is saved through the domain and rendered) is what the story should name.
+- story-map.md:609 `Deploy Knowledge Graph App With Board State`: a one-time deployment change.
+- story-map.md:841 `Deploy Story UI App With Board State`: a one-time deployment change.
+
+### `vocabulary-traces-to-domain-source` — Fail
+- story-map.md:601 `Filter Knowledge Graph To Ticket Scope`: the model and the status row name the app Graph (`App("Graph", ...)` in `harness/diagnostics/app.py`); the stories say Knowledge Graph (also 605, 609, 829) and the bodies switch between "Graph app" and "Knowledge Graph".
+- story-map.md:613 `Refactor Kanban Board To Web Domain Access`: the app is Kanban, the CDD Kanban (`space/kanban/board_app.py`), not Kanban Board.
+
+**Passes:** `read-all-source-context-in-full`, `do-not-invent-requirements` (each story cites Requested, Intended or Observed with its source), `verb-noun-format`, `story-name-captures-system-mechanic`, `four-to-nine-children` (the board sub-epic has 6 children, the chat-bar sub-epic 8), `story-scenarios-at-most-seven` (at most 4 a story), `kebab-case-paths`. The graph reports no violations. The overlay rules (cdd_web_domain_access, lern_domain_driven) govern code and tests, not the story map, so none applies at this fidelity; `playwright-tests-browser-interaction` no longer runs on story-map stories (commit 652e59558).
