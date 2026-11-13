@@ -547,6 +547,10 @@ with description("a ticket") as self:
         with it("should name no folder while its session works in the whole repository"):
             expect(data_of(self.ticket)["root_folder"]).to(equal(""))
 
+        # (S) Chat bar --> Open App From Health Panel: the Graph app opens on the folder the chat's session works in.
+        with it("should give its session's path as its repository's whole folder while its session works in the whole repository"):
+            expect(data_of(self.ticket)["session_path"]).to(equal(str(Path(self.ticket.session.repo_path).resolve())))
+
         with it("should name no branch while its project is no clone"):
             expect(data_of(self.ticket)["branch_name"]).to(equal(""))
 

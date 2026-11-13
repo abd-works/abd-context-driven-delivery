@@ -14,6 +14,13 @@ import { overlayPathLabel } from './labels/overlay-labels';
 import type { ViolationFocus } from './source/violation-prompt';
 
 const LAST_FOLDER = 'cdd-graph-folder';
+// A link such as ?folder=<session path>, which the chat bar opens from its health panel, loads that chat's session path
+// in place of the folder last loaded here.
+const LINKED_FOLDER = 'folder';
+
+function linkedFolder(): string {
+  return new URLSearchParams(window.location.search).get(LINKED_FOLDER)?.trim() ?? '';
+}
 const LAST_OVERLAYS = 'cdd-graph-overlays';
 const EMPTY: FilterSelection = {
   practices: [],
@@ -29,7 +36,7 @@ const graphs = new GraphClient();
 
 export function App() {
   const [theme, setTheme] = useState(() => document.documentElement.dataset.theme ?? '');
-  const [folder, setFolder] = useState(() => window.localStorage.getItem(LAST_FOLDER) ?? '');
+  const [folder, setFolder] = useState(() => linkedFolder() || (window.localStorage.getItem(LAST_FOLDER) ?? ''));
   const [loadedFolder, setLoadedFolder] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [selection, setSelection] = useState<FilterSelection>(EMPTY);
@@ -66,9 +73,9 @@ export function App() {
   }
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(LAST_FOLDER)?.trim();
-    if (saved) {
-      void load(saved);
+    const opening = linkedFolder() || window.localStorage.getItem(LAST_FOLDER)?.trim();
+    if (opening) {
+      void load(opening);
     }
   }, []);
 
@@ -294,10 +301,10 @@ export function App() {
               type="button"
               className="btn-primary"
               data-testid="working-folder"
-              title="Select a repo folder to load the Knowledge Graph"
+              title="Select the session path, the folder the session works in, to load the Knowledge Graph"
               onClick={() => void browse()}
             >
-              Repo folder
+              Session path
             </button>
             <button
               type="button"
@@ -313,7 +320,7 @@ export function App() {
               className="chosen-folder"
               data-testid="chosen-folder"
               value={folder}
-              placeholder="Repository folder"
+              placeholder="Session path"
               spellCheck={false}
               onChange={(event) => setFolder(event.target.value)}
               onKeyDown={(event) => {

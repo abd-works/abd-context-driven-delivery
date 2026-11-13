@@ -29,6 +29,7 @@ const SERVER_BACK_CHECK_MILLISECONDS = 1000
 const CLAUDE_OPEN_PATH = '/claude/open'
 const REPORT_QUERY = 'report'
 const HELP_QUERY = 'help'
+const TICKET_QUERY = 'ticket'
 const FIDELITY_QUERY = 'fidelity'
 const NOT_READ_YET: BoardData = { project: '', practices: [], open_tickets: [], active: null, columns: [], fidelities: [], sends_fixes_directly: false, unsaved: null }
 
@@ -165,8 +166,20 @@ export class BoardPage {
     await this.panels.openFidelityHelp(progress)
   }
 
+  // A link such as ?ticket=<ticket>, which the chat bar opens from its health panel, selects the chat's ticket once the
+  // board has been read, so its details show beside the board. A link naming a ticket the board does not show says so.
+  async openLinkedTicket(search: string): Promise<void> {
+    const name = new URLSearchParams(search).get(TICKET_QUERY)
+    if (!name) return
+    if (!this.store.state.board) await this.reader.refresh()
+    const ticket = this.board.tickets.find(shown => shown.name === name)
+    if (!ticket) return this.store.toast(`The board has no ticket ${name}.`, true)
+    this.store.change({ selected: ticket.address })
+  }
+
   start(): () => void {
     const search = typeof location === 'undefined' ? '' : location.search
+    void this.openLinkedTicket(search)
     void this.openLinkedReport(search)
     void this.openLinkedHelp(search)
     const stopBoard = this.reader.startPolling()
