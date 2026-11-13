@@ -280,7 +280,10 @@ export const BOARD_PROBLEM_STEPS = [
     + 'pull conflicts with uncommitted work.',
   'Reinstall: python scripts/install.py --ide Claude from the CDD checkout. It runs harness/installation/installer.py, '
     + 'which writes the cdd entry and plugins again and pins the server to the checkout\'s commit when it runs an older one. '
-    + 'Other chats share that server, so message their sessions before --pin-runtime or cdd.restart.',
+    + 'Other chats share that server, so message their sessions before --pin-runtime or cdd.restart. If the install '
+    + 'fails, follow "When install fails" in harness/installation/installer.md: log it in the open session\'s '
+    + '.sessions/{session}/install-failures.md, run /harness-diagnostics-agent-tools-diagnostics with the error, and '
+    + 'update the themes in .sessions/_backlog/install-failure-themes.md.',
   'Ask me to run /reload-plugins, so this chat loads the new cdd entry and header helper, then check that the chat bar '
     + 'reads the board again.',
 ]
