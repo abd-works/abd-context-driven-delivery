@@ -62,7 +62,9 @@ class ApproachStage:
     # The steps every fidelity goes through, then the other actions a person can run on a fidelity in place of the
     # next step. Each is an operation in the action catalogue; a fidelity is done once its latest validate passes.
     _STEPS = (GENERATE, VALIDATE)
-    _OTHER_ACTIONS = ("iterate", "sketch", RENDER, "document", "partition")
+    # Partition comes first: it turns the source into the index and segments that generate then works from.
+    _BEFORE_STEPS = ("partition",)
+    _OTHER_ACTIONS = ("iterate", "sketch", RENDER, "document")
     # Generate writes a fidelity in the formats a person picks, and render converts it into them; every other action
     # writes or reads a fidelity's files in the formats they already have.
     _ACTIONS_WITH_FORMATS = (GENERATE, RENDER)
@@ -97,8 +99,8 @@ class ApproachStage:
     @property
     @data_field
     def actions(self) -> list[str]:
-        """Every action a person can run on a fidelity in this stage: its steps first, then the others."""
-        return [*self._STEPS, *self._OTHER_ACTIONS]
+        """Every action a person can run on a fidelity in this stage: partition, then its steps, then the others."""
+        return [*self._BEFORE_STEPS, *self._STEPS, *self._OTHER_ACTIONS]
 
     @property
     @data_field

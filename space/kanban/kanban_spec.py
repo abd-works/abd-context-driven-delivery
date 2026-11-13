@@ -538,7 +538,7 @@ with description("a ticket") as self:
             expect(self.ticket.next_fidelity.commands["generate"]).to(equal("/actions-generate stories-story-map session=.sessions/pet-visits/session.json"))
 
         with it("should command every action its stage offers"):
-            expect(list(self.ticket.next_fidelity.commands)).to(equal(["generate", "validate", "iterate", "sketch", "render", "document", "partition"]))
+            expect(list(self.ticket.next_fidelity.commands)).to(equal(["partition", "generate", "validate", "iterate", "sketch", "render", "document"]))
 
         # (S) Chat bar --> status row: repository · branch · the whole path of the folder the session works in.
         with it("should name the whole path of the folder its session works in"):

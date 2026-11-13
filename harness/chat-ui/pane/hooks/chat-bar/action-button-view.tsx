@@ -18,12 +18,13 @@ const ACTION_ICONS: Record<string, string> = { generate: '▶', validate: '✓',
 const iconOf = (action: string): string => ACTION_ICONS[action] ?? '•'
 
 // The action the button shows: advance once the stage is done, else the action fidelity's next action, else, for a
-// fidelity with nothing next, such as one already done, the stage's first action, so ▶ and its ▾ list stay on the band.
+// fidelity with nothing next, such as one already done, generate, so ▶ and its ▾ list stay on the band. Partition heads
+// the stage's actions but is run only when there is a source to partition, so it is never the default.
 export function actionOf(chatBar: ChatBarClient): string {
   if (chatBar.canMoveNext) return 'advance'
   const fidelity = chatBar.actionFidelity
   if (!fidelity) return ''
-  return fidelity.nextAction || (chatBar.actions[0] ?? '')
+  return fidelity.nextAction || (chatBar.actions.includes('generate') ? 'generate' : (chatBar.actions[0] ?? ''))
 }
 
 // What the button shows and runs: the action picked from the menu, else the next one.

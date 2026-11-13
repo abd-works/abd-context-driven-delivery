@@ -49,7 +49,7 @@ with description("the stages of the approach"):
 
         with it("should offer the other actions after the steps"):
             expect(STAGES.of("discovery").actions).to(
-                equal(["generate", "validate", "iterate", "sketch", "render", "document", "partition"])
+                equal(["partition", "generate", "validate", "iterate", "sketch", "render", "document"])
             )
 
         with it("should name only actions in the action catalogue"):
@@ -61,5 +61,5 @@ with description("the stages of the approach"):
 
         with it("should leave validate out of the actions that write a fidelity's files"):
             expect(STAGES.of("implementation").producing_actions).to(
-                equal(["generate", "iterate", "sketch", "render", "document", "partition"])
+                equal(["partition", "generate", "iterate", "sketch", "render", "document"])
             )
