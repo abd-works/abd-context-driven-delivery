@@ -1,5 +1,7 @@
 {
   "name": "olg-demo",
   "title": "olg-demo",
-  "scope": "feature"
+  "scope": "feature",
+  "branch": "olg-demo",
+  "worktree": "/Users/andrewlarosa/dev/abd-cdd-olg-demo"
 }
