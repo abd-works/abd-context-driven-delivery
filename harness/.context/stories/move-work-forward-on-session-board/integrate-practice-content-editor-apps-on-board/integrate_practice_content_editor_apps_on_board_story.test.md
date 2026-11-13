@@ -79,6 +79,13 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
   *And* it shows Open Story UI Side Panel From Chat Bar and Open Kanban Side Panel From Chat Bar under Integrate Practice Content Editor Apps In Chat Bar  
   *And* it shows no other story of the map
 
+#### Scenario: The person turns the ticket's scope off to see the whole map
+
+*Given* the Story UI editor is open on ++checkout-flow++'s story map, showing the ticket's stories  
+*When* the Person turns Ticket scope off  
+*Then* the Story UI editor shows every story of the map  
+  *And* a session that names no story shows the whole map with no Ticket scope toggle
+
 #### Scenario Outline: Only the Stories story-map row carries the editor widget
 
 *Given* ++checkout-flow++'s card is open on the board  
@@ -201,6 +208,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 | `harness/.context/stories/story-map.md:591-593` | Requested (2026-11-12, non-functional, "like above but for kanban board"): the CDD Kanban follows cdd_web_domain_access and lern_domain_driven; its backend is the MCP-generated domain objects through the TypeScript adapter, not calls of its own |
 | `space/kanban/app/src/kanban/board/board-api.ts` | Observed: *BoardApi* is the board's own call layer, posting to `/api/...` paths it names itself |
 | `space/kanban/app/packages/session-board/app.ts:41-60` | Observed: hand-written routes `/api/update`, `/api/claude/open`, `/api/build` beside the generated ones |
+| `harness/.context/grill-answers.md` (Board server's own routes) | Decided (2026-11-12): `claude/open` becomes `chat.open` on *Chat* in harness/chat, and Update reuses `app.install` of the Kanban app; the board's server keeps no route of its own |
 | `harness/graph/app/graph/GraphClient.ts:1-6` | Observed: the Graph app's finished shape (`GraphApi implements CddApi`, the server mounting the generated routes) |
 
 #### Scenario: Every board call reaches the domain through its generated adapter

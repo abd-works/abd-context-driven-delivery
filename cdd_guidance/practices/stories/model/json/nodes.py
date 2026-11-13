@@ -298,7 +298,7 @@ class JsonStoryModel(StoryModel):
         self._guard_schema(payload)
         self.epics = [JsonEpic.from_record(record) for record in payload.get("epics", [])]
         _take_examples(self.examples, payload)
-        self.increments = [JsonIncrement.from_record(record, self) for record in payload.get("increments", [])]
+        self.increments.refill([JsonIncrement.from_record(record, self) for record in payload.get("increments", [])])
         return self
 
     @classmethod

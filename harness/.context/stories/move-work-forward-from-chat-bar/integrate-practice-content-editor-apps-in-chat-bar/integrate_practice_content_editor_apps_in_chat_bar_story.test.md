@@ -57,6 +57,8 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 | ++story-map.drawio++ | Stories | story map | Story UI editor |
 | ++chat bar scenarios++ (`move-work-forward-from-chat-bar/.../integrate_practice_content_editor_apps_in_chat_bar_story.test.md`) | Stories | scenarios | Story UI editor |
 | ++canvas.json++ (`harness/.context/ux/canvas.json`) | UX | mockup | none |
+| ++this repository's story map++ (`harness/.context/stories/story-map.md`, laid out by hand) | Stories | story map | Story UI editor |
+| ++this repository's thin slice++ (`harness/.context/stories/thin-slice.md`) | Stories | story map | none: its increments are edited on the story map |
 
 ### chosen formats ([FidelitySessionOutput.chosen_formats](../../../editor-apps/.context/editor-apps-model.md#fidelitysessionoutput-extended))
 
@@ -276,6 +278,7 @@ Deferred (still Intended on the map, 2026-11-06): the story explorer opening bel
 | `harness/.context/stories/story-map.md:823-825` | Requested (2026-11-12): the story map's backend moves out of TypeScript into the MCP-generated domain objects, not a JSON story map; each edit is saved and rendered to the formats chosen in the chat bar, which the Story UI app can toggle |
 | `../story-ui/packages/story-map-workspace/stories/stories.ts` | Observed: today the domain (`StoryMapModel`, `EpicModel`, `ScenarioModel`, `StoryMapRepository`) is TypeScript over a JSON story map |
 | `cdd_guidance/patterns/cdd_web_domain_access` | `domain-lives-in-python`, `state-lives-behind-the-tool`, `fail-loud-on-mcp` |
+| `harness/.context/grill-answers.md` (Decisions 2026-11-12, from the person) | Requested: descriptions on epics, sub-epics and stories, saved unchanged so hand-written maps are editable; scenario files editable; acceptance tests shown as links; examples as the model holds them; increments in the story model |
 
 #### Scenario: An edit is saved in the story map file and rendered to the chosen formats
 
@@ -309,6 +312,46 @@ Deferred (still Intended on the map, 2026-11-06): the story explorer opening bel
 *When* the Person renames the story Trace Story Through Artifacts  
 *Then* the Story UI editor says the cdd server is not answering and how to start it  
   *And* it still shows Trace Story Through Artifacts
+
+#### Scenario: A story map laid out by hand is saved with every line an edit does not touch
+
+*Given* the Story UI editor is open on ++this repository's story map++  
+*When* the Person renames the story Open Story UI Side Panel From Chat Bar to Open Story UI Beside The Chat  
+*Then* ++this repository's story map++ changes only that story's heading  
+  *And* the paragraphs under each heading, the lines above the first epic and every other heading stay as written
+
+#### Scenario: A story's description is the paragraph under its heading and is edited there
+
+*Given* the Story UI editor is open on ++this repository's story map++  
+*When* the Person changes the description of Open Story UI Side Panel From Chat Bar  
+*Then* the Story UI editor shows the new description on the story  
+  *And* ++this repository's story map++ changes only the paragraph under that story's heading
+
+#### Scenario: A scenario file is edited in the Story UI editor through the story model
+
+*Given* the Story UI editor is open on ++chat bar scenarios++  
+*When* the Person adds the step "the story map file keeps its other lines" to a scenario  
+*Then* ++chat bar scenarios++ holds the step under that scenario  
+  *And* every other line of ++chat bar scenarios++ stays as written  
+  *And* the Story UI editor shows each scenario's examples as the story model's one table, read only
+
+#### Scenario: A story's acceptance tests are links, not edited
+
+*Given* the Story UI editor is open on ++story-map.md++  
+  *And* the session holds an acceptance-test file for Open Story UI Side Panel From Chat Bar  
+*When* the Person opens the story Open Story UI Side Panel From Chat Bar  
+*Then* the Story UI editor links the story to its acceptance-test file  
+  *And* a press on the link shows the file read only  
+  *But* no other story links to it
+
+#### Scenario: Increments are edited through the story map and kept in its thin slice
+
+*Given* the Story UI editor is open on ++this repository's story map++  
+  *And* ++this repository's thin slice++ orders its increments  
+*When* the Person adds the increment Edit Story Maps In Story UI and gives it Open Story UI Side Panel From Chat Bar  
+*Then* ++this repository's thin slice++ lists Edit Story Maps In Story UI after its last increment, with that story  
+  *And* the increment that delivered the story no longer lists it  
+  *And* every other line of ++this repository's thin slice++ stays as written
 
 ## Story: Open UX Design In Claude Design
 

@@ -3,6 +3,7 @@ format chosen for the fidelity that declares the file, beside it."""
 
 from __future__ import annotations
 
+import functools
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -32,9 +33,10 @@ class OpenedStoryMap:
     practice that reads and writes it, and the session that names the file's fidelity and refreshes its graph. It owns
     the writes of that file and of the files rendered beside it.
 
-    A map is edited only while its file reads back exactly as its format writes it: a scenario or an acceptance-test
-    file, which the map is merged onto, is opened to be read, and a hand-laid map would lose the text around it.
-    ``refusal`` says why an edit is refused."""
+    A map is edited only while its file reads back exactly as its format writes it: a story map and a scenarios file
+    are read by themselves and written back with every line an edit does not touch, so a map laid out by hand is
+    edited too, while an acceptance-test file, which is merged onto its story map, is opened to be read. ``refusal``
+    says why an edit is refused."""
 
     def __init__(self, story_map: StoryModel, path: Path, session: Session) -> None:
         self._story_map = story_map
@@ -74,9 +76,11 @@ class OpenedStoryMap:
         extension; refresh the session's graph with the files written. An edit its own format would not read back, such
         as a scenario on a story map, is refused before anything is written."""
         own = self._rendered(self.own_format)
-        if self._read_again(own).strip() != own.strip():
+        if not self._reads_back(own):
             raise StoryMapEditRefused(self._story_map, "save", f"{self.file} would not keep the edit: {self.own_format} does not read it back")
         written = [self._write(self.own_format, self._path)]
+        if self._story_map.slicing is not None:
+            written += self._story_map.slicing.write(self._story_map.increments)
         for chosen in self.fidelity.session_output.chosen_formats:
             if Format(chosen) != self.own_format:
                 written.append(self._write(Format(chosen), self._path.with_suffix(Format(chosen).extension)))
@@ -84,14 +88,30 @@ class OpenedStoryMap:
         self._read_back = own
         return written
 
+    @property
+    def session_stories(self) -> list[str]:
+        """The stories the session names: the part of the map its ticket covers."""
+        return self._session.stories
+
+    def acceptance_tests_of(self, story) -> list[str]:
+        """The acceptance-test files the session's Stories practice declares that hold story, as paths from the
+        project."""
+        return [file for file, names in self._acceptance_tests.items() if story.name in names]
+
+    @functools.cached_property
+    def _acceptance_tests(self) -> dict[str, list[str]]:
+        """The session's story tests with the stories each holds, read once for the map."""
+        return self._stories.story_tests(self._session.repo_path)
+
     def _write(self, format: Format, path: Path) -> Path:
         path.write_text(self._rendered(format, path), encoding="utf-8")
         return path
 
-    def _read_again(self, text: str) -> str:
-        """text as its own format reads it and writes it again."""
+    def _reads_back(self, text: str) -> bool:
+        """Whether text, as its own format reads it, holds the map's nodes and is written as text again."""
         model = self._stories.formats.parse(self.own_format, text)
-        return self._stories.formats.render(RenderRequest(self.own_format, model, previous=text))["content"]
+        again = self._stories.formats.render(RenderRequest(self.own_format, model, previous=text))["content"]
+        return _nodes_held(model) == _nodes_held(self._story_map) and again.strip() == text.strip()
 
     def _rendered(self, format: Format, path: Path | None = None) -> str:
         """The map as format writes it, over the file at path as it is now; a format that writes several files, as code
@@ -100,3 +120,15 @@ class OpenedStoryMap:
         previous = target.read_text(encoding="utf-8") if target.is_file() else ""
         content = self._stories.formats.render(RenderRequest(format, self._story_map, previous=previous))["content"]
         return content if isinstance(content, str) else ""
+
+
+def _nodes_held(story_map: StoryModel) -> list[tuple]:
+    """Every epic, story, scenario and step under story_map's epics, as its kind and name, in map order: what a file must
+    read back as for an edit to be kept."""
+    held: list[tuple] = []
+    pending = list(reversed(story_map.epics))
+    while pending:
+        node = pending.pop()
+        held.append((node.semantic_type(), node.name))
+        pending.extend(reversed(node.parts))
+    return held

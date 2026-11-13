@@ -329,6 +329,18 @@ class FidelitySessionOutput:
             for label, paths in self.output_paths().items()
         }
 
+    def every_file(self) -> list[Path]:
+        """Every file this fidelity declares that is in the session's checkout, worked on by the session or not: what a
+        reader links to, such as each acceptance test of a story."""
+        repo = self._session.repo
+        found: list[Path] = []
+        for label, paths in self.output_paths().items():
+            for path in paths:
+                declared = self._declared(path)
+                named = [repo.root / declared.glob] if declared.names_one_path else self._found(label, declared)
+                found += [file for file in named if file.is_file()]
+        return found
+
     def has_output(self) -> bool:
         """Whether a file this fidelity declares is already in the session, such as one a person wrote. Unlike
         ``files`` it never asks git, and the board asks this of every fidelity."""

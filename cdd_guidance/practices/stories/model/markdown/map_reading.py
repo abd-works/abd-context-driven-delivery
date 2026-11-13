@@ -11,6 +11,7 @@ import re
 from typing import List, Optional
 
 
+from cdd_guidance.practices.stories.model.markdown.links import unlink
 from cdd_guidance.practices.stories.model.markdown.markup import strip_backticks
 from cdd_guidance.practices.stories.model.markdown.scenario_file import HEADING_PATTERN
 from cdd_guidance.practices.stories.model.story_map_files import source_at
@@ -201,23 +202,81 @@ class HeadingMapReading(MapReading):
         return sub
 
 
+class OutlineLines:
+    """The lines a node of an outline story map was read with: the line that heads it, and the lines under it up to the
+    next outline line, which hold its description. A node written back unchanged is written as read, so a story map
+    laid out by hand keeps every line an edit does not touch."""
+
+    def __init__(self, heading: str = "") -> None:
+        self.heading = heading
+        self.lines: List[str] = []
+        self.description = ""
+
+    def read_from(self, node) -> None:
+        """Give node the description its lines hold, and keep that description as read."""
+        self.description = "\n".join(self.lines).strip()
+        node.description_text = self.description
+
+    def written(self, node, heading: Optional[str]) -> List[str]:
+        """The heading, as read while it says what heading says, the links it was written with aside; then the lines
+        under it, as read while node's description is unchanged, else its description between blank lines. No heading
+        for the story map, which has none."""
+        under = self.lines if node.description_text == self.description else described(node.description_text)
+        if heading is None:
+            return under
+        return [self.heading if unlink(self.heading).strip() == heading else heading, *under]
+
+
+def described(description: str) -> List[str]:
+    """A description as the lines under a heading: between blank lines, none when there is none."""
+    return ["", *description.splitlines(), ""] if description.strip() else []
+
+
 class OutlineMapReading(MapReading):
     """A story map written as an outline: `(E)` epics and `(S)` stories, nested by their `#` marks, each story's
-    evidence labels below it, and an epic's estimate as a `*` line."""
+    evidence labels below it, and an epic's estimate as a `*` line. The lines under a heading are the description of
+    the epic or story it heads, and the lines before the first epic the story map's own; each node keeps the lines it
+    was read with (``outline``)."""
 
     def __init__(self, format, file: str) -> None:
         super().__init__(format, file)
         self.story = None
+        self.described = self.story_map
+        self.story_map.outline = OutlineLines()
+
+    def read(self, lines: List[str]):
+        """The story map the lines write, every line kept by the node it is under, blank lines too."""
+        for self.number, self.raw in enumerate(lines, start=1):
+            self._read_line()
+        for node in [self.story_map, *self.story_map.every_epic(), *self.story_map.every_story()]:
+            node.outline.read_from(node)
+        return self.story_map
 
     def _read_line(self) -> None:
-        if not (self._accept_epic() or self._accept_story() or self._accept_estimate()):
+        under = self.described
+        if (self._accept_epic() or self._accept_story()) and self.described is not under:
+            self.described.outline = OutlineLines(self.raw)
+        elif self.described is under and not self._accept_estimate():
+            self.described.outline.lines.append(self.raw)
             self._accept_evidence()
+
+    def _open_epic(self, name: str) -> None:
+        super()._open_epic(name)
+        self.described = self.epic
+
+    def _open_sub_epic(self, name: str, depth: int) -> None:
+        super()._open_sub_epic(name, depth)
+        self.described = self.sub_epics[-1]
+
+    def _story(self, name: str, parent, story_type: StoryType = StoryType.USER):
+        self.described = super()._story(name, parent, story_type)
+        return self.described
 
     def _accept_epic(self) -> bool:
         match = _OUTLINE_EPIC_PATTERN.match(self.raw)
         if match is None:
             return False
-        depth, name = _outline_depth(match), strip_backticks(match.group("name"))
+        depth, name = _outline_depth(match), strip_backticks(unlink(match.group("name")))
         self.story = None
         if depth <= 0:
             self._open_epic(name)
@@ -249,6 +308,7 @@ class OutlineMapReading(MapReading):
                 evidence.append(label.lower())
 
     def _actor_and_name(self, raw_text: str) -> tuple[str, str]:
+        raw_text = unlink(raw_text)
         if "-->" not in raw_text:
             return "", strip_backticks(raw_text)
         actor, name = raw_text.split("-->", 1)

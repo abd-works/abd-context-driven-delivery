@@ -249,7 +249,7 @@ class SketchStoryModel(StoryModel):
     def parse(self, text: str) -> "SketchStoryModel":
         """Read the sketch's stories section into this map, and return it."""
         self.epics = []
-        self.increments = []
+        self.increments.refill([])
         body = SketchOutline(text, _NESTING_INDENT).body_for(self.lens)
         self.read_lines(self._story_lines(body))
         return self

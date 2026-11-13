@@ -6,7 +6,6 @@ A nested epic is an epic whose parent is an epic. Each node type implements clon
 from __future__ import annotations
 
 import os
-import re
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any, Callable, Dict, List, Optional
@@ -25,11 +24,15 @@ from harness.mcp.mcp_server import mcp
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, WrittenBlock
 
+from . import name_facts
 from .opened_story_map import OpenedStoryMap, StoryMapEditRefused
+from .story_copies import StoryCopies
 from .story_map_files import source_at
 from .story_recording import StoryRecording, declared_evidence, file_of, folder_of, step_node_id, step_semantic
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from space.session.practice_session_output import FidelitySessionOutput
 
 # Pairs the schema names with belongsTo. The facade does not grow a method for them.
@@ -79,42 +82,6 @@ class StoryNode(ModelNode, ABC):
     )
     _belongs = _BELONGS
 
-    _GENERIC_VERBS = frozenset({"handle", "process", "manage", "perform", "do", "execute", "run"})
-    _ACTOR_NOUNS = frozenset({
-        "customer", "user", "system", "admin", "operator", "treasurer", "approver",
-        "auditor", "merchant", "partner", "service", "api", "backend", "frontend",
-        "database", "browser", "client", "server",
-    })
-    _VERBS = frozenset({
-        "access", "activate", "add", "allow", "apply", "approve", "assign",
-        "attach", "authenticate", "authorize", "block", "browse", "build", "cancel",
-        "capture", "change", "check", "choose", "clear", "close", "collect",
-        "compare", "complete", "compose", "confirm", "connect", "convert", "create",
-        "delete", "deliver", "deny", "deploy", "detect", "determine", "disable",
-        "display", "download", "draft", "drop", "edit", "email", "enable", "enter",
-        "expire", "export", "extend", "extract", "fetch", "filter", "fix", "flag",
-        "generate", "get", "grant", "group", "hide", "hold", "import", "index",
-        "initiate", "invite", "issue", "join", "know", "leave", "list", "load", "lock",
-        "log", "map", "match", "merge", "move", "notify", "onboard", "open",
-        "order", "pause", "pay", "pick", "place", "post", "print", "provide",
-        "publish", "purchase", "query", "queue", "read", "record", "redeem", "refresh",
-        "refund", "register", "reject", "release", "remove", "rename", "render",
-        "reply", "report", "request", "reset", "resolve", "retry", "return",
-        "revert", "review", "revoke", "route", "save", "scan", "schedule", "search",
-        "select", "send", "serve", "set", "settle", "share", "show", "sign",
-        "split", "start", "stop", "store", "submit", "subscribe", "sync", "toggle",
-        "track", "translate", "trigger", "unlock", "update", "upload", "use",
-        "validate", "verify", "view", "vote", "wait",
-    })
-    _GERUND = re.compile(r"^[a-z]+ing$")
-    _NOMINALISATION = re.compile(r"^[a-z]+(?:tion|sion|ment|ance|ence|ity|ness)$")
-    _KEBAB_FILE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*\.(md|ts|tsx|js|jsx)$")
-    _CAMEL_FILE = re.compile(r"[A-Z][a-zA-Z0-9]*(?:Story|Test|Spec)")
-    _ONE_OFF = re.compile(
-        r"\b(once|one[- ]time|initial setup|bootstrap only|migrate legacy)\b",
-        re.IGNORECASE,
-    )
-
     @property
     def slug(self) -> str:
         """The node's name as a cell id or a folder spells it, `place-order`; `node` for a node whose name has no
@@ -126,6 +93,9 @@ class StoryNode(ModelNode, ABC):
         # Shaping outline sizing (e.g. "approx 2-3 more stories (...)").
         # Meaningful on Epic; empty on Story and below.
         self.estimate: str = ""
+        # What the story map says about this node in prose: the paragraphs under its heading in a story map. A save
+        # writes it back unchanged.
+        self.description_text: str = ""
         self.opening_token = ""
         self.opening_class = ""
         self.child_count = 0
@@ -145,61 +115,21 @@ class StoryNode(ModelNode, ABC):
         """Fill the name, evidence, and child-count facts this node already owns."""
         self._load_opening()
         self._load_path_case()
-        self.generic_handler = self._names_generic_handler()
+        self.generic_handler = name_facts.names_generic_handler(self.name)
         self.near_duplicate = False
         self.shared_verb = ""
-        self.one_time_task = bool(self._ONE_OFF.search(self.name or ""))
+        self.one_time_task = name_facts.names_one_time_task(self.name)
         self.load_child_band(0, "children")
 
-    def _load_path_case(self) -> None:
-        source = getattr(self, "source", None)
-        relative = str(getattr(source, "file", "") or "") if source is not None else ""
-        name = relative.replace("\\", "/").rsplit("/", 1)[-1]
-        self.artifact_name = name
-        self.camel_case_path = self._camel_case_file(name)
-
-    def _camel_case_file(self, name: str) -> bool:
-        if not name or name in {"."}:
-            return False
-        if self._KEBAB_FILE.match(name):
-            return False
-        stem = name.split(".")[0]
-        return bool(self._CAMEL_FILE.search(name) or re.search(r"[A-Z]", stem))
-
     def _load_opening(self) -> None:
-        stripped = (self.name or "").strip().strip("`").strip("*").strip()
-        match = re.match(r"[A-Za-z][A-Za-z\-']*", stripped)
-        self.opening_token = match.group(0).lower() if match else ""
-        # One word ("CartStuff") has no object to follow a verb, whatever the word is.
-        single_word = bool(stripped) and len(stripped.split()) == 1
-        self.opening_class = "single-word" if single_word else self._classify_opening(self.opening_token)
+        self.opening_token, self.opening_class = name_facts.opening_of(self.name)
+
+    def _load_path_case(self) -> None:
+        self.artifact_name, self.camel_case_path = name_facts.file_name_facts(getattr(self, "source", None))
 
     def opens_with_verb(self) -> bool:
         """The name's first word is a verb the story map knows, generic or not."""
-        words = (self.name or "").split()
-        token = words[0].lower() if words else ""
-        return token in self._VERBS or token in self._GENERIC_VERBS
-
-    def _names_generic_handler(self) -> bool:
-        """A generic verb such as Handle or Process followed by its object: the name hides what happens."""
-        words = (self.name or "").split()
-        return len(words) > 1 and words[0].lower() in self._GENERIC_VERBS and words[1][:1].isalpha()
-
-    def _classify_opening(self, token: str) -> str:
-        if not token:
-            return "unknown-noun"
-        if token in self._GENERIC_VERBS:
-            return "generic-verb"
-        if token in self._VERBS:
-            return "verb"
-        if token in self._ACTOR_NOUNS:
-            return "actor-noun"
-        if self._GERUND.match(token):
-            return "gerund"
-        if self._NOMINALISATION.match(token):
-            return "nominalisation"
-        # A word the verb list lacks is not evidence of a noun ("Carry Plan ..."); only the classes above are flagged.
-        return "unlisted"
+        return name_facts.opens_with_verb(self.name)
 
     def load_child_band(self, count: int, label: str) -> None:
         self.child_count = count
@@ -256,10 +186,12 @@ class StoryNode(ModelNode, ABC):
         """The list of its own that holds part, which an edit inserts into and takes from."""
         raise StoryMapEditRefused(part, "move", f"{self.name} holds no {type(part).__name__}")
 
+    segment_prefix = ""
+
     @property
     def segment(self) -> str:
-        """Its step on a path: its slug."""
-        return self.slug
+        """Its step on a path: its slug, after the prefix its kind of node goes by."""
+        return f"{self.segment_prefix}{self.slug}"
 
     @property
     def path(self) -> str:
@@ -280,12 +212,24 @@ class StoryNode(ModelNode, ABC):
     def shown_name(self) -> str:
         return self.name
 
+    @property
+    @data_field(key="description")
+    def written_description(self) -> str:
+        return self.description_text
+
     @mcp
     @agent_tool
     def rename(self, name: str) -> "StoryModel":
         """Rename this node of its story map, save the map, and return it."""
         self.name = name
-        return self.story_map.save()
+        return self.story_map.write_back()
+
+    @mcp
+    @agent_tool
+    def edit_description(self, description: str) -> "StoryModel":
+        """Change what the story map says about this node under its heading, save the map, and return it."""
+        self.description_text = description.strip()
+        return self.story_map.write_back()
 
     @mcp
     @agent_tool
@@ -299,7 +243,7 @@ class StoryNode(ModelNode, ABC):
         siblings = target.parent.holding(target)
         siblings.insert(siblings.index(target), self)
         _renumber(siblings)
-        return self.story_map.save()
+        return self.story_map.write_back()
 
     @mcp
     @agent_tool
@@ -307,7 +251,7 @@ class StoryNode(ModelNode, ABC):
         """Take this node, and everything under it, off its story map; save the map and return it."""
         story_map = self.story_map
         self._leave()
-        return story_map.save()
+        return story_map.write_back()
 
     def _leave(self) -> None:
         parent = getattr(self, "parent", None)
@@ -424,11 +368,15 @@ class Examples(dict):
         ]
 
 
+@language_adapter(language="typescript")
+@agent_toolset
 class Increment(StoryNode):
     """A thin slice of the story map: the stories one release delivers. The increment refers to the map's own Story
-    objects, which stay under their epics."""
+    objects, which stay under their epics; a story is delivered by one increment at most."""
 
     _semantic_type_name = "Increment"
+    # An increment goes by its slug after `increment:`, so it never shares a path with an epic of the same name.
+    segment_prefix = "increment:"
 
     def __init__(
         self,
@@ -437,15 +385,17 @@ class Increment(StoryNode):
         stories: Optional[List["Story"]] = None,
     ) -> None:
         source = name if isinstance(name, Increment) else None
-        super().__init__(
-            name=source.name if source is not None else name,
-            sequential_order=source.sequential_order if source is not None else sequential_order,
-        )
+        if source is not None:
+            name, sequential_order = source.name, source.sequential_order
+        super().__init__(name=name, sequential_order=sequential_order)
         self.parent: Optional["StoryModel"] = None
-        self.outcome: str = source.outcome if source is not None else ""
-        self.slicing_notes: str = source.slicing_notes if source is not None else ""
-        self.decision_prompt: str = source.decision_prompt if source is not None else ""
-        self.source: Optional["Source"] = source.source if source is not None else None
+        self.outcome: str = ""
+        self.slicing_notes: str = ""
+        self.decision_prompt: str = ""
+        self.source: Optional["Source"] = None
+        if source is not None:
+            self.outcome, self.slicing_notes, self.decision_prompt = source.outcome, source.slicing_notes, source.decision_prompt
+            self.description_text, self.source = source.description_text, source.source
         self._stories = ModelReferences(self, "stories")
         self.stories = stories or []
 
@@ -456,6 +406,31 @@ class Increment(StoryNode):
     @stories.setter
     def stories(self, stories: List["Story"]) -> None:
         self._stories.refill(stories)
+
+    @property
+    @data_field(key="stories")
+    def delivered(self) -> List[str]:
+        """The stories it delivers, by the address each one's tools take."""
+        return [story.address for story in self.stories]
+
+    @mcp
+    @agent_tool
+    def add_story(self, story: "Story") -> "StoryModel":
+        """Deliver story, a story of the same story map, in this increment, taking it off the increment that delivered
+        it before; save the map and return it."""
+        found = self.story_map.node_at(story.path)
+        for increment in self.story_map.increments:
+            increment.stories = [each for each in increment.stories if each is not found]
+        self.stories = [*self.stories, found]
+        return self.story_map.write_back()
+
+    @mcp
+    @agent_tool
+    def remove_story(self, story: "Story") -> "StoryModel":
+        """Stop delivering story in this increment; the story stays on its story map. Save the map and return it."""
+        found = self.story_map.node_at(story.path)
+        self.stories = [each for each in self.stories if each is not found]
+        return self.story_map.write_back()
 
     def clone(self) -> "Increment":
         """A copy delivering the same stories; a map that copies its stories as well hands the copy those."""
@@ -532,7 +507,7 @@ class Step(StoryNode):
         """Change what this step says, save its story map, and return it."""
         self.text = text
         self.name = text.strip()[:80] or self.name
-        return self.story_map.save()
+        return self.story_map.write_back()
 
     @property
     def body_text(self) -> str:
@@ -745,6 +720,12 @@ class Scenario(StoryNode):
         self._steps.refill(steps)
 
     @property
+    @data_field(key="examples")
+    def example_rows(self) -> List[Dict[str, str]]:
+        """Its examples as one table: a row per example, its name under `example`, then its fields."""
+        return self.examples.table()
+
+    @property
     def parts(self) -> List["StoryNode"]:
         return list(self.steps)
 
@@ -757,7 +738,7 @@ class Scenario(StoryNode):
         """Add a step saying text, of step_type (given, when or then), after this scenario's steps; save its story map
         and return it."""
         self.steps.append(type(self).step_type(text, StepType(step_type), len(self.steps) + 1))
-        return self.story_map.save()
+        return self.story_map.write_back()
 
     def steps_in(self, step_type: StepType) -> List[Step]:
         return [step for step in self.steps if step.step_type == step_type]
@@ -870,6 +851,7 @@ class Epic(StoryNode):
         if source is None:
             return
         self.estimate = source.estimate or ""
+        self.description_text = source.description_text
         self.take_code_from(source)
         build_story = story_class or Story
         for child in source.epics:
@@ -907,14 +889,14 @@ class Epic(StoryNode):
     def new_epic(self, name: str) -> "StoryModel":
         """Add a sub-epic called name after this epic's sub-epics; save its story map and return it."""
         self.append_epic(type(self)(name, len(self.epics) + 1))
-        return self.story_map.save()
+        return self.story_map.write_back()
 
     @mcp
     @agent_tool
     def new_story(self, name: str) -> "StoryModel":
         """Add a story called name after this epic's stories; save its story map and return it."""
-        self.append_story(Story(name, len(self.stories) + 1))
-        return self.story_map.save()
+        self.append_story(self.story_map.story_type(name, len(self.stories) + 1))
+        return self.story_map.write_back()
 
     @property
     def has_epics(self) -> bool:
@@ -985,6 +967,7 @@ class Epic(StoryNode):
     def clone(self) -> "Epic":
         cloned = type(self)(self.name, self.sequential_order)
         cloned.estimate = self.estimate or ""
+        cloned.description_text = self.description_text
         cloned.take_code_from(self)
         for child in self.epics:
             cloned.epics.append(child.clone())
@@ -1108,6 +1091,7 @@ class Story(StoryNode):
         self._scenarios = ModelChildren(self, "scenarios")
         if source is None:
             return
+        self.description_text = source.description_text
         self.take_code_from(source)
         for background in source.backgrounds:
             self.backgrounds.append(type(self).background_type(background))
@@ -1138,6 +1122,13 @@ class Story(StoryNode):
         return StoryType(self.story_type).value
 
     @property
+    @data_field
+    def acceptance_tests(self) -> List[str]:
+        """The acceptance-test files of its story map's session that hold this story, as paths from the project: they
+        are read, not edited, through the story map; none for a map opened in no session."""
+        return self.story_map.acceptance_tests_of(self)
+
+    @property
     def parts(self) -> List["StoryNode"]:
         return list(self.scenarios)
 
@@ -1149,13 +1140,13 @@ class Story(StoryNode):
     def new_scenario(self, name: str) -> "StoryModel":
         """Add a scenario called name after this story's scenarios; save its story map and return it."""
         self.scenarios.append(type(self).scenario_type(name, len(self.scenarios) + 1))
-        return self.story_map.save()
+        return self.story_map.write_back()
 
     def load_map_facts(self) -> None:
         self._load_opening()
         self._load_path_case()
-        self.generic_handler = self._names_generic_handler()
-        self.one_time_task = bool(self._ONE_OFF.search(self.name or ""))
+        self.generic_handler = name_facts.names_generic_handler(self.name)
+        self.one_time_task = name_facts.names_one_time_task(self.name)
         self.shared_verb = ""
         self.scenario_count = len(self.scenarios)
         self.child_count = self.scenario_count
@@ -1210,6 +1201,7 @@ class Story(StoryNode):
 
     def clone(self) -> "Story":
         cloned = type(self)(self.name, self.sequential_order, self.story_type)
+        cloned.description_text = self.description_text
         cloned.actors = list(self.actors)
         cloned.domain_terms = list(self.domain_terms)
         cloned.evidence = list(self.evidence)
@@ -1249,8 +1241,15 @@ class StoryModel(StoryNode):
         # Where each node links in the folder this map was placed in to be drawn; none until a render places it.
         self.links = None
         self._opened: Optional[OpenedStoryMap] = None
+        # The file that keeps its increments and writes them on a save (``write(increments)``), such as the thin slice
+        # beside a markdown story map; None for a map that keeps none.
+        self.slicing = None
         if isinstance(source, StoryModel):
-            self._copy_map(source)
+            self.description_text = source.description_text
+            self.examples = source.examples.clone(self)
+            for epic in source.epics:
+                self.append_epic(self.epic_type(epic, story_class=self.story_type))
+            StoryCopies(source, self).copy_increments(self.increment_type)
 
     @classmethod
     @tool_subject
@@ -1263,7 +1262,7 @@ class StoryModel(StoryNode):
         files = session.session_files.file_manager
         files.read(os.path.relpath(path, files.workpath))
         stories = session.graph.practices.of(cls.practice_kind())
-        model = stories.read_files([path], session.repo_path)
+        model = stories.open_file(path, session.repo_path)
         model._opened = OpenedStoryMap(model, path, session)
         return model
 
@@ -1299,7 +1298,7 @@ class StoryModel(StoryNode):
         """Why an edit to it is not saved, such as a scenario file opened to be read; empty when edits are saved."""
         return self._opened.refusal if self._opened is not None else "it was opened from no file"
 
-    def save(self) -> "StoryModel":
+    def write_back(self) -> "StoryModel":
         """Write it to the file it was opened from and to the formats chosen beside it, then answer itself. An edit its
         file cannot take is refused with StoryMapEditRefused, and nothing is written."""
         if self.refusal:
@@ -1319,14 +1318,39 @@ class StoryModel(StoryNode):
     def new_epic(self, name: str) -> "StoryModel":
         """Add an epic called name after the map's epics; save the map and return it."""
         self.append_epic(self.epic_type(name, len(self.epics) + 1))
-        return self.save()
+        return self.write_back()
+
+    @mcp
+    @agent_tool
+    def new_increment(self, name: str) -> "StoryModel":
+        """Add an increment called name after the map's increments, delivering no story yet; save the map and return
+        it. A map that keeps no increments, such as a scenario file, refuses it with StoryMapEditRefused."""
+        if self.slicing is None:
+            raise StoryMapEditRefused(self, "new_increment", f"{self.file} keeps no increments")
+        self.append_increment(self.increment_type(name, len(self.increments) + 1))
+        return self.write_back()
+
+    increment_type = Increment
+    """The increment type this format's maps are sliced by."""
+
+    @property
+    @data_field
+    def scope(self) -> List[str]:
+        """The stories of this map the session it was opened in names, by address: the part of the map that session's
+        ticket covers. None when the session names no story, or the map was opened in no session."""
+        names = self._opened.session_stories if self._opened is not None else []
+        return [story.address for story in self.stories_named(names)]
+
+    def acceptance_tests_of(self, story: "Story") -> List[str]:
+        """The acceptance-test files of the session it was opened in that hold story; none outside a session."""
+        return self._opened.acceptance_tests_of(story) if self._opened is not None else []
 
     @property
     def parts(self) -> List["StoryNode"]:
-        return list(self.epics)
+        return [*self.epics, *self.increments]
 
     def holding(self, part: "StoryNode") -> List["StoryNode"]:
-        return self._epics
+        return self._increments if isinstance(part, Increment) else self._epics
 
     def node_at(self, path: str) -> StoryNode:
         """The node path names on this map; the map itself for an empty path. StoryNodeNotFound for one it does not
@@ -1353,25 +1377,9 @@ class StoryModel(StoryNode):
         self._epics.refill(epics)
 
     @property
+    @data_field
     def increments(self) -> List[Increment]:
         return self._increments
-
-    @increments.setter
-    def increments(self, increments: List[Increment]) -> None:
-        self._increments.refill(increments)
-
-    def _copy_map(self, source: "StoryModel") -> None:
-        self.examples = source.examples.clone(self)
-        for epic in source.epics:
-            self.append_epic(self.epic_type(epic, story_class=self.story_type))
-        increment_type = getattr(type(self), "increment_type", Increment)
-        copies = self._copies_of(source)
-        for increment in source.increments:
-            self.append_increment(increment_type(increment, stories=copies.delivered_by(increment)))
-
-    def _copies_of(self, source: "StoryModel") -> "_StoryCopies":
-        """This map's copy of each of source's stories, which this map copied in the same order."""
-        return _StoryCopies(source.every_story(), self.every_story())
 
     def take_scenarios(self, stories: List["Story"], file: str) -> None:
         """Give the scenarios of each of stories, read from the story test file, to every Story of the same name in
@@ -1448,12 +1456,9 @@ class StoryModel(StoryNode):
         cloned = type(self)()
         for epic in self.epics:
             cloned.append_epic(epic.clone())
-        copies = cloned._copies_of(self)
-        for increment in self.increments:
-            copied = increment.clone()
-            copied.stories = copies.delivered_by(increment)
-            cloned.append_increment(copied)
+        StoryCopies(self, cloned).copy_increments(lambda increment, stories: type(increment)(increment, stories=stories))
         cloned.examples = self.examples.clone(cloned)
+        cloned.description_text = self.description_text
         return cloned
 
 
@@ -1462,14 +1467,3 @@ def _renumber(nodes: List[StoryNode]) -> None:
     """Number nodes in the order they stand, from 1."""
     for i, node in enumerate(nodes, start=1):
         node.sequential_order = i
-
-
-class _StoryCopies:
-    """Each story of one map beside its copy in another map that copied the first map's stories in order."""
-
-    def __init__(self, originals: List["Story"], copies: List["Story"]) -> None:
-        self._copies = {id(original): copy for original, copy in zip(originals, copies)}
-
-    def delivered_by(self, increment: Increment) -> List["Story"]:
-        """The copies of the stories increment delivers."""
-        return [self._copies[id(story)] for story in increment.stories if id(story) in self._copies]
