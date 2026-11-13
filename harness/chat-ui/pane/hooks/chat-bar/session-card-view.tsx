@@ -4,7 +4,7 @@ import { BRAND } from '../shared/brand'
 import { GlyphButtonView } from '../shared/glyph-button-view'
 import type { ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
-import { openFiles } from './fidelity-files-client'
+import { openFiles, openReport } from './fidelity-files-client'
 import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
 import { closeCard } from './session-dialogs-client'
 
@@ -39,21 +39,24 @@ function HeaderView($: EngineInterface, elements: ElementTable, chatBar: ChatBar
   )
 }
 
-// One fidelity under the dots: its square, its name and its state, underlined when selected, the whole line one press
-// that selects it; its folder beside it as a small chip, a press showing its files, on the first line of that folder.
+// One fidelity under the dots: its square and its name, underlined when selected, one press that selects it as a press on
+// its dot does; its state beside them, a press on violations opening the validation report as the count on the line does;
+// its folder beside it as a small chip, a press showing its files, on the first line of that folder.
 function FidelityRowView($: EngineInterface, elements: ElementTable, fidelity: FidelityProgressClient, columns: CardColumns, isFolderShown: boolean) {
   const { Box, Button, Text } = elements
   const nameColour = fidelity.state === 'not_started' ? BRAND.muted : BRAND.text
+  const state = <Text key={`card-state-words-${fidelity.slug}`} color={fidelity.lookColour} underline={fidelity.isSelected}>{`${fidelity.mark} ${fidelity.word}`}</Text>
   return (
     <Box key={`card-${fidelity.slug}`} flexDirection="row" alignItems="center">
       <Box width={columns.fidelities}>
         <Box key={`card-cell-${fidelity.slug}`} flexDirection="row" gap={1} alignItems="center">
-          <Text color={fidelity.shade}>■</Text>
-          <Text color={nameColour} underline={fidelity.isSelected}>{fidelity.name}</Text>
-          <Text color={fidelity.lookColour} underline={fidelity.isSelected}>{`${fidelity.mark} ${fidelity.word}`}</Text>
-          <Box position="absolute" top={0} left={0} width={rowWidthOf(fidelity)}>
-            <Button key={`card-pick-${fidelity.slug}`} plain label=" " onPress={() => selectFidelity($, fidelity)} />
-          </Box>
+          <Button key={`card-pick-${fidelity.slug}`} plain onPress={() => selectFidelity($, fidelity)}>
+            <Text key="card-square" color={fidelity.shade}>{'■ '}</Text>
+            <Text key="card-name" color={nameColour} underline={fidelity.isSelected}>{fidelity.name}</Text>
+          </Button>
+          {fidelity.violationCount ? (
+            <Button key={`card-report-${fidelity.slug}`} plain onPress={() => openReport($, fidelity)}>{state}</Button>
+          ) : state}
         </Box>
       </Box>
       {isFolderShown ? (
@@ -77,7 +80,7 @@ export function SessionCardView($: EngineInterface, elements: ElementTable, { ch
       <Box flexDirection="column" marginTop={1} marginBottom={1} {...shown}>
         {health.panel}
         {chatBar.hasSession ? (
-          <Box key="card-grid" flexDirection="column" paddingX={1} paddingY={1} borderStyle="round" borderColor={BRAND.raised} backgroundColor={BRAND.raised}>
+          <Box key="card-grid" flexDirection="column" paddingX={1} paddingY={1} borderStyle="round" borderColor={BRAND.card} backgroundColor={BRAND.card}>
             {HeaderView($, elements, chatBar)}
             {chatBar.fidelities.map(fidelity => FidelityRowView($, elements, fidelity, columns, chatBar.foldersListedBeside.has(fidelity.slug)))}
           </Box>
