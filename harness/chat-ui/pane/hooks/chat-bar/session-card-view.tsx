@@ -13,16 +13,20 @@ type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 // The hover group of the session name and its card: the pointer on either keeps the card shown.
 export const CARD_SCOPE = 'session-card'
 
-// The width of the fidelity column, fitting the widest row, so every folder chip starts in one column.
-type CardColumns = { fidelities: number }
+// The widths of the card's columns, each fitting its widest entry: the box and name, so every state starts in one
+// column, and the whole row, so every folder chip does.
+type CardColumns = { names: number; fidelities: number }
 const FOLDER_GAP = 3
+const STATE_GAP = 2
 
-function rowWidthOf(fidelity: FidelityProgressClient): number {
-  return `■ ${fidelity.name} ${fidelity.mark} ${fidelity.word}`.length
-}
+// The box before a fidelity's name: ticked while it is selected, empty otherwise.
+const boxOf = (fidelity: FidelityProgressClient): string => (fidelity.isSelected ? '☑' : '☐')
+const nameWidthOf = (fidelity: FidelityProgressClient): number => `☐ ${fidelity.name}`.length
+const stateWidthOf = (fidelity: FidelityProgressClient): number => `${fidelity.mark} ${fidelity.word}`.length
 
 function cardColumnsOf(chatBar: ChatBarClient): CardColumns {
-  return { fidelities: Math.max(0, ...chatBar.fidelities.map(rowWidthOf)) + FOLDER_GAP }
+  const names = Math.max(0, ...chatBar.fidelities.map(nameWidthOf)) + STATE_GAP
+  return { names, fidelities: names + Math.max(0, ...chatBar.fidelities.map(stateWidthOf)) + FOLDER_GAP }
 }
 
 // The shown stage in orange over the fidelities, and at the right end the session name and a ✕ that closes a card
@@ -39,21 +43,23 @@ function HeaderView($: EngineInterface, elements: ElementTable, chatBar: ChatBar
   )
 }
 
-// One fidelity under the dots: its square and its name, underlined when selected, one press that selects it as a press on
-// its dot does; its state beside them, a press on violations opening the validation report as the count on the line does;
-// its folder beside it as a small chip, a press showing its files, on the first line of that folder.
+// One fidelity under the dots: its box, ticked when selected, and its name, one press that selects it as a press on its
+// dot does; its state in the next column, a press on violations opening the validation report as the count on the line
+// does; its folder beside it as a small chip, a press showing its files, on the first line of that folder.
 function FidelityRowView($: EngineInterface, elements: ElementTable, fidelity: FidelityProgressClient, columns: CardColumns, isFolderShown: boolean) {
   const { Box, Button, Text } = elements
   const nameColour = fidelity.state === 'not_started' ? BRAND.muted : BRAND.text
-  const state = <Text key={`card-state-words-${fidelity.slug}`} color={fidelity.lookColour} underline={fidelity.isSelected}>{`${fidelity.mark} ${fidelity.word}`}</Text>
+  const state = <Text key={`card-state-words-${fidelity.slug}`} color={fidelity.lookColour}>{`${fidelity.mark} ${fidelity.word}`}</Text>
   return (
     <Box key={`card-${fidelity.slug}`} flexDirection="row" alignItems="center">
       <Box width={columns.fidelities}>
-        <Box key={`card-cell-${fidelity.slug}`} flexDirection="row" gap={1} alignItems="center">
-          <Button key={`card-pick-${fidelity.slug}`} plain onPress={() => selectFidelity($, fidelity)}>
-            <Text key="card-square" color={fidelity.shade}>{'■ '}</Text>
-            <Text key="card-name" color={nameColour} underline={fidelity.isSelected}>{fidelity.name}</Text>
-          </Button>
+        <Box key={`card-cell-${fidelity.slug}`} flexDirection="row" alignItems="center">
+          <Box width={columns.names}>
+            <Button key={`card-pick-${fidelity.slug}`} plain onPress={() => selectFidelity($, fidelity)}>
+              <Text key="card-square" color={fidelity.shade}>{`${boxOf(fidelity)} `}</Text>
+              <Text key="card-name" color={nameColour}>{fidelity.name}</Text>
+            </Button>
+          </Box>
           {fidelity.violationCount ? (
             <Button key={`card-report-${fidelity.slug}`} plain onPress={() => openReport($, fidelity)}>{state}</Button>
           ) : state}

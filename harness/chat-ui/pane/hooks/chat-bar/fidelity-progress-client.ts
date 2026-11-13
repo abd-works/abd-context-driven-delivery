@@ -20,6 +20,9 @@ const LOOKS: Record<string, { mark: string; word: string; colour: string; shade:
   done: { mark: '✓', word: 'done', colour: '#22C55E', shade: 'FF' },
 }
 
+// Names too long for the session card's fidelity column, by the short form the card shows.
+const SHORT_NAMES: Record<string, string> = { 'Information architecture': 'Info architecture' }
+
 // One fidelity's progress on the active session, as the Python FidelityProgress sends it, drawn as a dot of its
 // practice's colour shaded by its state. It holds the progress itself and reads every answer from it.
 export class FidelityProgressClient {
@@ -37,10 +40,12 @@ export class FidelityProgressClient {
     return this.progress.fidelity.slug
   }
 
-  // The fidelity's own name as the session card shows it, such as Scenarios or Front end code, from the board's label.
+  // The fidelity's own name as the session card shows it, such as Scenarios or Front end code, from the board's label;
+  // a name too long for the card's column is shortened, so every state lines up after it.
   get name(): string {
     const words = this.label.replace(/[-_]/g, ' ')
-    return words.charAt(0).toUpperCase() + words.slice(1)
+    const name = words.charAt(0).toUpperCase() + words.slice(1)
+    return SHORT_NAMES[name] ?? name
   }
 
   get word(): string {
