@@ -22,6 +22,12 @@ describe('Linked Ticket', () => {
       await page.openLinkedTicket(`?ticket=${OTHER}`)
       expect(page.board.selectedTicket?.name).toBe(OTHER)
     })
+
+    it('should open that ticket’s card, as a click on it does', async () => {
+      const { page } = board.unreadPage()
+      await page.openLinkedTicket(`?ticket=${OTHER}`)
+      expect(page.store.state.openCard).toBe(OTHER)
+    })
   })
 
   with_link('naming a ticket the board does not show', () => {

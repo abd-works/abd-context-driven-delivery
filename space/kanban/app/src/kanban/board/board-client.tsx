@@ -91,7 +91,7 @@ export class BoardClient extends BoardClientGenerated {
   }
 
   // Main is the default session: it is open whenever no other ticket is.
-  private get mainTicket(): TicketClient | undefined {
+  get mainTicket(): TicketClient | undefined {
     return this.tickets.find(ticket => ticket.isMain)
   }
 

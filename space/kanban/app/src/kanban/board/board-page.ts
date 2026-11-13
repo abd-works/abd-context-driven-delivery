@@ -166,15 +166,15 @@ export class BoardPage {
     await this.panels.openFidelityHelp(progress)
   }
 
-  // A link such as ?ticket=<ticket>, which the chat bar opens from its health panel, selects the chat's ticket once the
-  // board has been read, so its details show beside the board. A link naming a ticket the board does not show says so.
+  // A link such as ?ticket=<ticket>, which the chat bar opens from its health panel, opens the chat's ticket once the
+  // board has been read, as a click on its card does. A link naming a ticket the board does not show says so.
   async openLinkedTicket(search: string): Promise<void> {
     const name = new URLSearchParams(search).get(TICKET_QUERY)
     if (!name) return
     if (!this.store.state.board) await this.reader.refresh()
     const ticket = this.board.tickets.find(shown => shown.name === name)
     if (!ticket) return this.store.toast(`The board has no ticket ${name}.`, true)
-    this.store.change({ selected: ticket.address })
+    this.cards.open(ticket)
   }
 
   start(): () => void {

@@ -98,7 +98,7 @@ export class ColumnClient {
   }
 
   get count(): number {
-    return this.isBacklog ? this.items.length : this.everyTicket.length
+    return this.isBacklog ? this.items.length : this.everyTicket.filter(ticket => !ticket.isMain).length
   }
 
   // A stage's column holds every field of its stage, so its tools act on the stage the column shows.
