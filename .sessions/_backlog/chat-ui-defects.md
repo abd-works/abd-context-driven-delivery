@@ -132,3 +132,14 @@ until its running turn ends. Stopping that turn clears the queue, so the request
 
 Fixed on main: a request dropped from the queue is sent once more (`requestChatStart` in `chat-folder-client.ts`); a
 second drop says the turn was stopped while the request waited.
+
+## Pressing an app on the health panel does nothing
+
+Reported 2026-11-13, ticket `optimize-unit-tests`. Pressing "▦ not running" (Kanban app) or "◈ not running" (Graph app)
+on the chat bar's health panel neither starts nor opens the app.
+
+Cause: never built. `PartsView` in `harness/chat-ui/pane/hooks/health/server-health-view.tsx` draws each part as plain
+text with no press handler. The story "Open App From Health Panel" (`harness/.context/stories/story-map.md`,
+`guard-work-and-recover-fast.md`) is still Intended: pressing an app that is down starts it then opens it, and pressing
+one that is up opens it. The `/board` command (`board-server.ts`) already starts and opens the board, so the Kanban part
+can reuse it; the Graph app needs its own start and open.
