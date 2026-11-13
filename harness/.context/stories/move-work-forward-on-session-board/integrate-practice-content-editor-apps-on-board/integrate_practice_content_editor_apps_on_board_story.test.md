@@ -15,7 +15,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 - ++session++ — the ticket's folder of work, with the practices enabled for it and the stories it names: the ticket's scope.
 - ++practice++ — a lens enabled on a session: Stories, DDD, UX, Clean Engineering or BDD.
 - ++practice row++ — one fidelity's row in a ticket's practice grid ([FidelityProgress](../../../editor-apps/.context/editor-apps-model.md#fidelityprogress-extended)).
-- ++editor widget++ — the small control on the Stories story-map row that opens the Story UI editor ([FidelityProgress.editor](../../../editor-apps/.context/editor-apps-model.md#fidelityprogress-extended)).
+- ++editor widget++ — the small control on the Stories story-map row that opens the Story UI editor ([BoardFidelity.editor](../../../editor-apps/.context/editor-apps-model.md#boardfidelity-extended)).
 - ++graph widget++ — the control on a ticket, beside its folder and file icons, that opens the Graph app on the ticket ([Graph.load_practice_roots](../../../editor-apps/.context/editor-apps-model.md#graph-extended)).
 - ++story map++ — the session's epics, sub-epics and stories, shown by the Story UI editor ([StoryModel](../../../editor-apps/.context/editor-apps-model.md#storymodel-extended)).
 - ++knowledge graph++ — the practice trees the Graph app loads from a session's practice roots.
@@ -34,7 +34,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 | ++billing-report++ | Discovery | Stories, DDD | billing/.context/stories, billing/.context | Report Billing By Month |
 | ++search-orders++ | Backlog | none: no session yet | none | none |
 
-### practice rows ([FidelityProgress.editor](../../../editor-apps/.context/editor-apps-model.md#fidelityprogress-extended))
+### practice rows ([BoardFidelity.editor](../../../editor-apps/.context/editor-apps-model.md#boardfidelity-extended))
 
 | practice row | editor widget |
 | --- | --- |

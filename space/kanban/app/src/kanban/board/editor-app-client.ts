@@ -5,7 +5,7 @@ import type { BoardStore } from '../shared/board-store'
 
 // The editor a practice row's widget opens, in a window of its own, on a ticket's worktree, where that ticket's session
 // is the open one: the Story UI editor on the Stories story-map row, which then shows the ticket's story map. Python's
-// FidelityProgress.editor names the app; App.open readies it (installs it while it is not installed) and says where it
+// BoardFidelity.editor names the app; App.open readies it (installs it while it is not installed) and says where it
 // answers. The Story UI editor answers on this board's own server, so it runs whenever the board does.
 export class EditorAppClient {
   constructor(

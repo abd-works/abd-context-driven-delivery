@@ -93,10 +93,10 @@ export class ChatBarClient {
 
   // Every action a person can run on a fidelity of the shown stage, its steps first, as the stage sends them.
   // The ticket the session works on, by name; empty with none.
-  // The Claude Design link recorded for the latest version of the session's design canvas, which the file viewer opens;
-  // empty when none is recorded.
+  // The Claude Design link recorded for the latest version of the session's design canvas, as the practice that keeps
+  // one answers it (UX), which the file viewer opens; empty when none is recorded or that practice is off.
   get designView(): string {
-    return this.ticket?.session.design_view ?? ''
+    return Object.values(this.ticket?.session.practices ?? {}).find(practice => practice.design_view)?.design_view ?? ''
   }
 
   get ticketName(): string {

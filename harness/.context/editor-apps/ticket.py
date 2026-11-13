@@ -1,4 +1,4 @@
-"""Module: space/kanban. Model delta (clean-engineering-model, python): *Ticket*, *FidelityProgress*.
+"""Module: space/kanban. Model delta (clean-engineering-model, python): *Ticket*, *BoardPractice*, *BoardFidelity*.
 Canonical: harness/.context/editor-apps/.context/editor-apps-model.md#ticket-extended
 Deleted: BoardPage and its rebuild (now App.install of the CDD Kanban's App)."""
 from __future__ import annotations
@@ -17,10 +17,19 @@ class Ticket:
         ...
 
 
-class FidelityProgress:
+class BoardPractice:
     @property
     @data_field
     def editor(self) -> App | None:
-        # its practice's editor on the practice's first fidelity row only; none on every other row
-        # -> self.practice.editor
+        # the app that edits the practice's files, which the chat bar's file viewer opens every file of the practice in
+        # -> self._practice.editor
+        ...
+
+
+class BoardFidelity:
+    @property
+    @data_field
+    def editor(self) -> App | None:
+        # its practice's editor on the practice's first fidelity only; none on every other fidelity
+        # -> self._catalogued.practice.editor
         ...

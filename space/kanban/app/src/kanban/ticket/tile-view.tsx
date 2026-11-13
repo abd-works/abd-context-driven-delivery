@@ -38,12 +38,12 @@ function TileHelpView({ progress }: { progress: FidelityProgressClient }) {
   )
 }
 
-// The small widget on a row whose practice an app edits, which Python puts on the practice's first fidelity row only
-// (FidelityProgress.editor): the Story UI editor on the Stories story-map row. It opens the editor on the ticket's
+// The small widget on a row whose practice an app edits, which Python puts on the practice's first fidelity only
+// (BoardFidelity.editor): the Story UI editor on the Stories story-map row. It opens the editor on the ticket's
 // worktree, where the ticket's session is the open one; a ticket not yet activated has no worktree to open it on.
 function EditorWidgetView({ ticket, progress }: { ticket: TicketClient; progress: FidelityProgressClient }) {
   const { page } = useBoard()
-  const { editor } = progress
+  const editor = page.board.fidelityShown(progress.fidelity.slug)?.editor
   if (!editor) return null
   const hint = ticket.worktree ? `Open the ${editor.label} editor on this ticket's stories` : `Activate this ticket to open it in the ${editor.label} editor`
   return (

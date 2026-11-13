@@ -38,3 +38,12 @@ class FidelitySessionOutput:
         # raises FormatNotOffered for a format the fidelity does not offer
         # -> self.chosen_formats
         ...
+
+
+class PracticeSessionOutput:
+    @property
+    @data_field
+    def design_view(self) -> str:
+        # the Claude Design link of the latest design canvas version under this practice's output root; empty while off
+        # -> CanvasVersions.in_practice_root(self.output_root).link(latest)
+        ...

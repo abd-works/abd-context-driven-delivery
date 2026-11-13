@@ -719,6 +719,14 @@ class BoardFidelity:
         """The slash command of its skill, such as /practices-stories-stories-story-map."""
         return f"/{self._catalogued.skill_of(self._shown.fidelity)}"
 
+    @property
+    @data_field
+    def editor(self) -> App | None:
+        """The app the small editor widget on this fidelity's row of every ticket opens: its practice's editor on the
+        practice's first fidelity (the Stories story map), none on every other fidelity."""
+        practice = self._catalogued.practice
+        return practice.editor if self._shown.fidelity is next(iter(practice.fidelities), None) else None
+
 
 class BoardOverview:
     """*BoardOverview* is the board as a reader that draws the active session sees it, such as the chat bar, which reads

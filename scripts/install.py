@@ -78,7 +78,7 @@ def main() -> int:
         print(f"cdd server: {server.serve_from_checkout() if args.serve_from_checkout else server.pin_server()}")
         if installer.layout.is_claude_code:
             print(f"cdd-board: {server.claude_plugins.install_board()}")
-        _install_kanban()
+        _install_board_apps()
         return 0
     if args.self:
         installer.install_self(replace=not args.no_replace)
@@ -88,22 +88,23 @@ def main() -> int:
         restarted = server.keep_pinned_current()
         if restarted:
             print(f"cdd server: {restarted}")
-        _install_kanban()
+        _install_board_apps()
     return 0
 
 
-def _install_kanban() -> None:
-    """The board's server serves a page built from this checkout, which a pull or a merge leaves as it was, so every
-    install installs the Kanban app again and the open board reloads onto the new code. The board is a convenience on
-    top of the install, so a failure is told, never raised."""
+def _install_board_apps() -> None:
+    """The board's server serves pages built from this checkout, the Kanban's and the Story UI editor's, which a pull or
+    a merge leaves as they were, so every install installs both apps again and an open page reloads onto the new code.
+    The apps are a convenience on top of the install, so a failure is told, never raised."""
     from harness.diagnostics.app import AppNotStarted
-    from space.kanban.board_app import KANBAN_APP
+    from space.kanban.board_app import KANBAN_APP, STORY_UI_APP
 
-    try:
-        KANBAN_APP.install()
-        print(f"Kanban app: installed in {KANBAN_APP.folder}")
-    except AppNotStarted as failed:
-        print(f"Kanban app: {failed}")
+    for app in (KANBAN_APP, STORY_UI_APP):
+        try:
+            app.install()
+            print(f"{app.label} app: installed in {app.folder}")
+        except AppNotStarted as failed:
+            print(f"{app.label} app: {failed}")
 
 
 if __name__ == "__main__":

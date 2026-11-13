@@ -112,6 +112,11 @@ class PracticeRow:
     has_editor: bool
 
 
+def row_shown(board, row: PracticeRow):
+    """Interaction: the row's fidelity as the board shows it on every ticket's practice grid (a *BoardFidelity*)."""
+    return next(shown for shown in board.fidelities if shown.fidelity.slug == row.fidelity)
+
+
 # The practice rows table: only the Stories story-map row carries the Story UI editor's widget.
 PRACTICE_ROWS = [
     PracticeRow("Stories story map", "stories-story-map", True),

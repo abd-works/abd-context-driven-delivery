@@ -18,7 +18,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 - ++file viewer++ — the chat bar's files pane: one tab per file a fidelity declares.
 - ++story map++ — a Stories file read as epics, sub-epics, stories and scenarios ([StoryModel](../../../editor-apps/.context/editor-apps-model.md#storymodel-extended)).
 - ++chosen formats++ — the formats kept for a fidelity in the session, which the chat bar's chips and the Story UI's toggles both change ([FidelitySessionOutput.chosen_formats](../../../editor-apps/.context/editor-apps-model.md#fidelitysessionoutput-extended)).
-- ++design view++ — the Claude Design link recorded for the latest version of the session's design canvas ([Session.design_view](../../../editor-apps/.context/editor-apps-model.md#session-extended)).
+- ++design view++ — the Claude Design link recorded for the latest version of the session's design canvas ([PracticeSessionOutput.design_view](../../../editor-apps/.context/editor-apps-model.md#practicesessionoutput-extended)).
 - ++practice root++ — the folder a session names for one of its enabled practices ([PracticeGuidance.session_root](../../../editor-apps/.context/editor-apps-model.md#practiceguidance-extended)).
 - ++violation++ — a rule a node in the latest graph breaks, with its file and the lines it covers.
 
@@ -65,7 +65,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 | ++story map, markdown and drawio++ | markdown, drawio | story-map.md, story-map.drawio |
 | ++story map, markdown only++ | markdown | story-map.md |
 
-### design views ([Session.design_view](../../../editor-apps/.context/editor-apps-model.md#session-extended))
+### design views ([PracticeSessionOutput.design_view](../../../editor-apps/.context/editor-apps-model.md#practicesessionoutput-extended))
 
 | session | design canvas version | design view |
 | --- | --- | --- |

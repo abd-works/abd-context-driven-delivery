@@ -171,8 +171,13 @@ Decided while coding (implementation, 2026-11-12): no *Board* field records the 
 
 Canonical: `space/session/session.py`.
 
+Decided while coding (implementation, 2026-11-12): *Session* gains nothing. The design view moved to *PracticeSessionOutput.design_view* (below): Session is the class with the most methods in the repository, and the metrics gate refuses a change that grows it.
+
+### PracticeSessionOutput (extended)
+
 + design_view: str  <<data_field>>
-	// derived: the claude.ai link recorded for the latest version of the design canvas under an enabled practice's folder (CanvasVersions.in_practice_root(output.folder).link(latest)); empty when none is recorded
+	-> CanvasVersions.in_practice_root(self.output_root).link(latest)
+	// the claude.ai link recorded for the latest version of the design canvas under the folder this practice writes under (the UX practice's); empty while the practice is off or none is recorded. The chat bar's file viewer opens the first practice's that has one
 
 ### FidelitySessionOutput (extended)
 
@@ -222,10 +227,10 @@ Canonical: `space/session/practice_session_output.py`. It kept the one format a 
 + choose(is_chosen: bool) -> None
 	-> fidelity.session_output.choose_format (each fidelity the chip covers, with the format it uses from the group)
 
-### FidelityProgress (extended)
+### BoardFidelity (extended)
 
 + editor: App | None  <<data_field>>
-	// its practice's editor on the practice's first fidelity row (Stories: the story map), none on every other row: the board's small editor widget sits on that row only
+	// its practice's editor on the practice's first fidelity (Stories: the story map), none on every other fidelity: the board's small editor widget sits on that row of every ticket only
 
 ### BoardPractice (extended)
 
@@ -233,7 +238,7 @@ Canonical: `space/session/practice_session_output.py`. It kept the one format a 
 	-> practice.editor
 	// the app that edits the practice's files, on every practice the board overview sends: the chat bar's file viewer shows the Story UI editor tile on every file of a fidelity whose practice has one (the person's decision: every Stories file)
 
-Decided while coding (implementation, 2026-11-12): the chat bar's file viewer shows a tile on every Stories file, not only the story map's, so it reads the editor from the practice the board overview sends (*BoardPractice.editor*), not from *FidelityProgress.editor*, which stays on the first row for the board's widget. *PracticeGuidance.editor* is a class field that space/kanban sets (`Stories.editor = STORY_UI_APP`), since every session makes its own practice instances and all of them edit with the same app; the `edit_with` classmethod the model first named was dropped (prefer-instance-operations).
+Decided while coding (implementation, 2026-11-12): the chat bar's file viewer shows a tile on every Stories file, not only the story map's, so it reads the editor from the practice the board overview sends (*BoardPractice.editor*), not from the row's own editor. The row's editor, first named *FidelityProgress.editor*, is *BoardFidelity.editor*: it is the same for every ticket, so the board sends it once with the fidelity rather than with each ticket's progress, and *FidelityProgress* stays under the metrics gate's limit of classes it depends on. *PracticeGuidance.editor* is a class field that space/kanban sets (`Stories.editor = STORY_UI_APP`), since every session makes its own practice instances and all of them edit with the same app; the `edit_with` classmethod the model first named was dropped (prefer-instance-operations).
 
 ### BoardPage (deleted)
 
@@ -373,10 +378,10 @@ The Story UI editor, moved from its own repository (`C:/dev/story-ui`) beside th
 |---|---|---|
 | chat bar status row press | `App.open` | harness/installation |
 | chat bar file viewer tile | `StoryModel.load(file)` | stories model |
-| chat bar file viewer link | `Session.design_view` | space/session |
+| chat bar file viewer link | `PracticeSessionOutput.design_view` | space/session |
 | Story UI edit | `StoryNode.rename` and the other edits, then `StoryModel.save` | stories model |
 | Story UI with no file | `StoryModel.open_in_session`, read every two seconds | stories model |
 | Story UI format toggle, chat bar chip | `FidelitySessionOutput.choose_format`, `Ticket.choose_formats` | space/session, space/kanban |
 | Graph app open | `Graph.load_practice_roots` on the session open in the project (the chat's open session) | harness/graph, space/session |
-| board story-map row widget | `FidelityProgress.editor` then `App.open` and `StoryModel.load` | space/kanban, harness/installation |
+| board story-map row widget | `BoardFidelity.editor` then `App.open`, opened on the ticket's worktree, where `StoryModel.open_in_session` shows the ticket's story map | space/kanban, harness/diagnostics |
 | board graph widget | `Graph.load_practice_roots` on the ticket's session graph | harness/graph |

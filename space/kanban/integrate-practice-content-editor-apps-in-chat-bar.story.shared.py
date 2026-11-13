@@ -13,8 +13,8 @@ bar's TypeScript.
 
 The file viewer's editor tile is the Python's decision: a Stories file's tab carries its practice's editor, the Story UI
 app (`BoardPractice.editor`, which the chat bar reads from the board overview), and the editor opens the file through
-`StoryModel.load`. The file viewer's design view link is `Session.design_view`, which the chat bar reads from the active
-ticket's session. The Story UI editor follows the session open in the project through `StoryModel.open_in_session`.
+`StoryModel.load`. The file viewer's design view link is the one the session's UX practice answers
+(`PracticeSessionOutput.design_view`), which the chat bar reads from the active ticket's session. The Story UI editor follows the session open in the project through `StoryModel.open_in_session`.
 Left to other increments: the story-map.drawio and chat bar scenarios rows of the editor tile outline, which need a
 rendered diagram and a scenario file seeded beside the story map. So is "A board that does not come up says so instead of opening an
 empty panel": the chat bar starts the server and says when nothing answers, so no Python tier replays it.
@@ -29,8 +29,9 @@ from harness.design_canvas.versions import CanvasVersions
 from harness.diagnostics.app import AppNotStarted, AppStatus
 from space.kanban.board import BoardPractice
 from space.kanban.board_app import STORY_UI_APP
+from space.kanban.ticket import FidelityProgress
 from space.kanban.editor_apps_examples import CDD_KANBAN, CHECKOUT_FLOW_DESIGN, GRAPH_APP, MISSING_DEPENDENCY, SERVE, STORY_UI_EDITOR, AppExample, ThrowawayApp, app_in
-from space.kanban.knowledge_graph_examples import BILLING_REPORT, CHECKOUT_FLOW, STORIES, STORY_MAP, files_read, roots_loaded
+from space.kanban.knowledge_graph_examples import BILLING_REPORT, CHECKOUT_FLOW, STORIES, STORY_MAP, UX, files_read, roots_loaded
 from space.kanban.story_test import SharedStories, refusal_of
 
 shared_stories = SharedStories("Integrate Practice Content Editor Apps In Chat Bar")
@@ -176,7 +177,7 @@ def _(s):
     def _(world):
         CHECKOUT_FLOW.seed_into(world.sessions_project)
         world.sessions_project.seed_active(CHECKOUT_FLOW.seed)
-        world.row = world.board().active.work.progress_of("stories-story-map")
+        world.row = FidelityProgress.load(CHECKOUT_FLOW.name, "stories-story-map", project=world.project)
 
     @s.and_("the Story UI editor is running")
     def _(world):
@@ -204,7 +205,7 @@ def _(s):
     def _(world):
         CHECKOUT_FLOW.seed_into(world.sessions_project)
         world.sessions_project.seed_active(CHECKOUT_FLOW.seed)
-        world.row = world.board().active.work.progress_of("ux-mockup")
+        world.row = FidelityProgress.load(CHECKOUT_FLOW.name, "ux-mockup", project=world.project)
 
     @s.when("the Person looks at canvas.json in the file viewer")
     def _(world):
@@ -227,11 +228,11 @@ def _(s):
 
     @s.and_("the file viewer is open on checkout-flow")
     def _(world):
-        world.session = world.board().ticket(CHECKOUT_FLOW.name).session
+        world.session = world.sessions.named(CHECKOUT_FLOW.name)
 
     @s.when("the Person opens the design view from the file viewer")
     def _(world):
-        world.design_view = world.session.design_view
+        world.design_view = world.session.practice(UX).design_view
 
     @s.then("https://claude.ai/design/checkout-flow-v2 opens in Claude Design")
     def _(world):
@@ -246,11 +247,11 @@ def _(s):
 
     @s.but_("no design view is recorded for billing-report")
     def _(world):
-        world.session = world.board().ticket(BILLING_REPORT.name).session
+        world.session = world.sessions.named(BILLING_REPORT.name)
 
     @s.when("the Person opens billing-report's file viewer")
     def _(world):
-        world.design_view = world.session.design_view
+        world.design_view = world.session.practice(UX).design_view
 
     @s.then("the file viewer shows no design view link")
     def _(world):

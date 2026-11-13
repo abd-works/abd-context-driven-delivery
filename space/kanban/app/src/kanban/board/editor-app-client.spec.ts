@@ -6,7 +6,7 @@ import type { AppData } from '@cdd/harness/diagnostics/app'
 import { BoardStore } from '../shared/board-store'
 import { EditorAppClient } from './editor-app-client'
 
-// The Story UI editor as FidelityProgress.editor sends it on the Stories story-map row.
+// The Story UI editor as BoardFidelity.editor sends it for the Stories story-map row.
 const STORY_UI: AppData = {
   label: 'Story UI',
   status: 'running',
