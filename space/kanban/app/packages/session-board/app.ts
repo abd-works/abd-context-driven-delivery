@@ -19,6 +19,9 @@ import { cddRoutes } from '@src/session-board/cdd-routes'
 import { ClaudeLink } from '@src/session-board/claude-link'
 import { answerFailure, HttpException } from '@src/session-board/http-exception'
 
+import { STORY_MAP_PAGE } from '../../../../../cdd_guidance/practices/stories/app/story-map-page'
+import { storyMapBuild, storyMapRoutes } from '../../../../../cdd_guidance/practices/stories/app/story-map-routes'
+
 // The header forces a preflight, which this server never answers, so a page on another site cannot post here.
 export const BOARD_HEADER = 'x-cdd-board'
 const CHANGING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE']
@@ -56,7 +59,13 @@ export function createApp(projects: ProjectConnections, port: number, staticRoot
     const build = existsSync(index) ? createHash('sha256').update(readFileSync(index)).digest('hex') : ''
     response.json({ build })
   })
-  app.use('/api', cddRoutes(projects, [...boardRoutes, ...stageRoutes, ...ticketRoutes, ...fidelityProgressRoutes, ...sessionRoutes, ...practiceSessionOutputRoutes, ...backlogItemRoutes, ...chatRoutes, ...appRoutes]))
+  app.use('/api', cddRoutes(projects, [...boardRoutes, ...stageRoutes, ...ticketRoutes, ...fidelityProgressRoutes, ...sessionRoutes, ...practiceSessionOutputRoutes, ...backlogItemRoutes, ...chatRoutes, ...appRoutes, ...storyMapRoutes]))
+  // The Story UI editor answers on this server too, at its own page, so it shares the board's port and the board's
+  // state: its calls are the story map's generated routes above, and its page is the one its own folder builds.
+  app.use(STORY_MAP_PAGE, express.static(storyMapBuild))
+  app.get(`${STORY_MAP_PAGE}/*`, (_request, response) => {
+    response.sendFile(join(storyMapBuild, 'index.html'))
+  })
   app.use(express.static(staticRoot))
   app.get('*', (_request, response) => {
     response.sendFile(join(staticRoot, 'index.html'))
