@@ -753,7 +753,7 @@ class Scenario(StoryNode):
 
     @mcp
     @agent_tool
-    def new_step(self, step_type: StepType, text: str) -> "StoryModel":
+    def new_step(self, step_type: str, text: str) -> "StoryModel":
         """Add a step saying text, of step_type (given, when or then), after this scenario's steps; save its story map
         and return it."""
         self.steps.append(type(self).step_type(text, StepType(step_type), len(self.steps) + 1))
@@ -1266,6 +1266,19 @@ class StoryModel(StoryNode):
         model = stories.read_files([path], session.repo_path)
         model.open_from(OpenedStoryMap(path, stories, session))
         return model
+
+    @classmethod
+    @mcp
+    @agent_tool
+    def open_in_session(cls, *, call: ToolCall) -> "StoryModel":
+        """Return the story map of the session open in the project: the first story map file its Stories practice
+        declares there, so a page that follows the open session shows the ticket activated last."""
+        stories = call.session.graph.practices.of(cls.practice_kind())
+        story_map = next(iter(stories.fidelities))
+        made = [entry.path for entries in story_map.files().values() for entry in entries if entry.exists]
+        if not made:
+            raise StoryNodeNotFound(f"{call.session.name}: no story map", cls)
+        return cls.load(made[0], call=call)
 
     def open_from(self, opened: OpenedStoryMap) -> None:
         """Keep opened as the file this map was read from, which every edit saves to."""

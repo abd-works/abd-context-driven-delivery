@@ -10,7 +10,7 @@ format: md
 
 **Python model files:** `harness/.context/editor-apps/*.py`, one family file per class family, each naming the module it belongs to in its first line; this document is canonical.
 
-**Patterns:** cdd_web_domain_access (every rule below stays in Python and is reached through the generated `{Object}ClientGenerated`), lern_domain_driven (the pages that compose these clients live in the CDD Kanban app, `space/kanban/app`).
+**Patterns:** cdd_web_domain_access (every rule below stays in Python and is reached through the generated `{Object}ClientGenerated`), lern_domain_driven (the pages that compose these clients live in their app folders: the Story UI editor in `cdd_guidance/practices/stories/app`, beside the Stories practice whose model it edits, as the Graph app lives in `harness/graph/app`; the board's server serves it at `/story-map`).
 
 This increment adds **three new types and three named failures** and extends **thirteen existing classes**; everything else the scenarios touch is reused as it is. It does not restate the classes it extends: each section names the canonical document of the class and lists only what this increment adds, changes, or deletes there.
 
@@ -20,8 +20,9 @@ This increment adds **three new types and three named failures** and extends **t
 | `harness/guidance` | — | *PracticeGuidance*, *FidelityGuidance* | — |
 | `harness/graph` | — | *Graph* | — |
 | `space/session` | *FormatNotOffered* | *Session*, *FidelitySessionOutput* | `kept_format`, `keep_format` |
-| `space/kanban` | — | *Board*, *Ticket*, *FidelityProgress*, *FormatChoice* | `starts_picked`; *BoardPage* and its `rebuild` (moved onto *App*) |
-| `cdd_guidance/practices/stories/model` | *StoryMapEditRefused* | *StoryNode*, *StoryModel*, *Epic*, *Story*, *Scenario*, *Step* | — |
+| `space/kanban` | — | *Ticket*, *FidelityProgress*, *FormatChoice* | `starts_picked`; *BoardPage* and its `rebuild` (moved onto *App*) |
+| `cdd_guidance/practices/stories/model` | *OpenedStoryMap*, *StoryMapEditRefused*, *StoryNodeNotFound* | *StoryNode*, *StoryModel*, *Epic*, *Story*, *Scenario*, *Step* | — |
+| `cdd_guidance/practices/stories/app` | the Story UI editor's page: *StoryMapClient*, *StoryMapApi*, its views | — | the Story UI's TypeScript domain (`stories.ts`, `stories-server.ts`, the JSON and MongoDB stores) |
 
 ---
 
@@ -139,7 +140,12 @@ Canonical: `harness/guidance/.context/practice-guidance-model.md`.
 ### FidelityGuidance (extended)
 
 + format: Format  (changed)
-	// the first of session_output.chosen_formats, else its default; the setter calls session_output.choose_format(value, True) instead of keep_format
+	// the format it was last given while that is still chosen in the session, else the first chosen there, else its default; a format the fidelity does not write is worked in while held
+	-> session_output.chosen_formats
++ offers(format: str) -> bool
+	// whether one of its outputs names format
++ format = value  (changed)
+	-> session_output.choose_format(value, True)  (a format it writes only; keep_format is deleted)
 
 ---
 
@@ -171,14 +177,22 @@ Canonical: `space/session/session.py`.
 
 ### FidelitySessionOutput (extended)
 
-Canonical: `space/session/practice_session_output.py`. It already keeps the one format a fidelity was last given; it now keeps the formats chosen for it, which the chat bar's chips and the Story UI's toggles both change, so the two show one choice.
+<<language_adapter typescript>> <<agent_toolset>> <<identity session_file, practice_name, name>>
 
+Canonical: `space/session/practice_session_output.py`. It kept the one format a fidelity was last given; it now keeps the formats chosen for it, which the chat bar's chips, the board's chips and the Story UI's toggles all change, so every page shows one choice.
+
++ session_file: str  <<data_field>>
++ practice_name: str  <<data_field>>
++ name: str  <<data_field>>
+	// the fidelity's name, such as story_map
++ offered_formats: list[str]  <<data_field>>
+	// the formats the fidelity writes (`fidelity.outputs`): what a person can choose
 + chosen_formats: list[str]  <<data_field>>
-	// the formats session.json keeps for this fidelity, in the order chosen; replaces kept_format (deleted)
+	// the formats session.json keeps for this fidelity, in the order chosen; the fidelity's default until one is chosen. Replaces kept_format (deleted); a session saved with one kept format reads it as that one
 ----
 + load(session: str, practice: str, fidelity: str, *, call) -> FidelitySessionOutput  <<classmethod>> <<tool_subject>>
 + choose_format(format: str, is_chosen: bool) -> FidelitySessionOutput  <<mcp>> <<agent_tool>>
-	// replaces keep_format (deleted); a format the fidelity does not offer is refused with FormatNotOffered
+	// replaces keep_format (deleted); a format chosen again keeps its place; a format the fidelity does not offer is refused with FormatNotOffered
 
 ### FormatNotOffered
 
@@ -194,26 +208,20 @@ Canonical: `space/session/practice_session_output.py`. It already keeps the one 
 
 ## space/kanban
 
-### Board (extended)
-
-+ last_activated: Ticket | None  <<data_field>>
-	// the ticket activated last, kept in .sessions/_board.json, because activation changes no open session and cannot be read from the work; the Graph app follows it
-----
-+ keep_activated(ticket: Ticket) -> None
-
 ### Ticket (extended)
 
-+ activate() -> Ticket  (changed)
-	-> self.checkout.open
-	-> board.keep_activated(self)
 + choose_formats(fidelities: list[str], label: str, is_chosen: bool) -> list[FormatChoice]  <<mcp>> <<agent_tool>>
 	-> fidelity.session_output.choose_format (each fidelity the chip covers)
+	-> FormatChoice.choose (the chip labelled label)
 	// one call per chip press, so the chat bar and the board turn a chip on or off the same way; answers the chips again, as format_choices does
 
 ### FormatChoice (extended)
 
 + is_chosen: bool  <<data_field>>
 	// whether every fidelity in the chip has the chip's format chosen; replaces starts_picked (deleted), so a chip shows what is kept rather than what a bar opens with
+----
++ choose(is_chosen: bool) -> None
+	-> fidelity.session_output.choose_format (each fidelity the chip covers, with the format it uses from the group)
 
 ### FidelityProgress (extended)
 
@@ -228,85 +236,128 @@ Its `rebuild` is `App.install` of the CDD Kanban's *App* (`KANBAN_APP`); `script
 
 ## cdd_guidance/practices/stories/model
 
-Canonical: `cdd_guidance/practices/stories/model/.context/story-model.md`. The story map's backend moves out of TypeScript: the Story UI's `StoryMapModel`, `EpicModel`, `SubEpicModel`, `StoryModel`, `ScenarioModel` and `StoryMapRepository` (`stories.ts`, `stories-server.ts`) are deleted, and the page uses the generated clients of these Python classes. No JSON story map is kept: an edit saves the map in the file it was read from and renders it to the chosen formats.
+Canonical: `cdd_guidance/practices/stories/model/story_model.py`, `opened_story_map.py`; spec `story_map_edits_spec.py`. The story map's backend moves out of TypeScript: the Story UI's `StoryMapModel`, `EpicModel`, `SubEpicModel`, `StoryModel`, `ScenarioModel` and `StoryMapRepository` (`stories.ts`, `stories-server.ts`) are not carried into `cdd_guidance/practices/stories/app`, and the page uses the generated clients of these Python classes. No JSON story map is kept: an edit saves the map in the file it was read from and renders it to the chosen formats.
+
+Every edit answers the **story map**, not the node it changed (`standard-mutation-response`): the page redraws the whole map as its file now holds it.
 
 ### StoryNode (extended)
 
+<<hosted_only>> <<identity node>>: each concrete kind below is a toolset of its own, with its own generated adapter.
+
++ address: str  <<data_field key="node">>
+	// `{file}#{path}`: the file its map was opened from, and the slugs from its top epic down (`checkout.pay.pay-by-card`), a step by its place (`step-2`)
++ shown_name: str  <<data_field key="name">>
 + story_map: StoryModel
 	// derived: the story map at the top of its parent chain
++ parts: list[StoryNode]
+	// the nodes a path goes through below it
++ segment: str
++ path: str
 ----
-+ load(file: str, node: str, *, call) -> StoryNode  <<classmethod>> <<tool_subject>>
-	-> StoryModel.load
-	// node is the node's dot-path id on the map; each node class (Epic, Story, Scenario, Step) has its own generated adapter through this
-+ rename(name: str) -> StoryNode  <<mcp>> <<agent_tool>>
++ load(node: str, *, call) -> StoryNode  <<classmethod>> <<tool_subject>>
+	-> StoryModel.load (the file the node names)
+	-> StoryModel.node_at
+	// a node of another kind than the toolset's is refused with StoryNodeNotFound
++ holding(part: StoryNode) -> list[StoryNode]
+	// the list of its own that holds part; each kind answers its own
++ rename(name: str) -> StoryModel  <<mcp>> <<agent_tool>>
 	-> self.story_map.save
-+ move_before(other: StoryNode) -> StoryNode  <<mcp>> <<agent_tool>>
++ move_before(other: StoryNode) -> StoryModel  <<mcp>> <<agent_tool>>
+	-> self.story_map.node_at(other.path)
 	-> self.story_map.save
-	// refuses with StoryMapEditRefused when other is not a node of its own kind; it then takes other's parent and the order before it
+	// refuses with StoryMapEditRefused when other is not a node of its own kind; it then takes other's parent and the place before it
 + remove() -> StoryModel  <<mcp>> <<agent_tool>>
 	-> self.story_map.save
 
 ### StoryModel (extended)
 
-<<language_adapter typescript>> <<agent_toolset>>
+<<language_adapter typescript>> <<agent_toolset>> <<identity file>>
 
-+ StoryModel(source, graph, fidelity: FidelityGuidance | None = None)
-	// fidelity: the story-map fidelity of the session's Stories practice; none for a map read outside a session
-------
 + file: Annotated[str, SourceFile]  <<data_field>>
-+ session_stories: list[Story]  <<data_field>>
-	// derived: stories_named(session.stories), the stories the session the map was opened in names: the ticket's scope
-+ chosen_formats: list[str]  <<data_field>>
-	// derived: fidelity.session_output.chosen_formats
++ formats: FidelitySessionOutput  <<data_field>>
+	// what the fidelity declaring its file keeps in the session: offered_formats and chosen_formats, which the Story UI's toggles change
++ refusal: str  <<data_field>>
+	// why an edit is not saved, such as a scenario or an acceptance-test file opened to be read; empty when edits are saved
++ epics: list[Epic]  <<data_field>>
 ----
 + load(file: str, *, call) -> StoryModel  <<classmethod>> <<tool_subject>>
-	-> call.session.file_manager.read(file)
-	-> Stories.read_files (the session's Stories practice, from call.session.graph)
-	// a file outside the session's roots is refused by FileManager (PathOutsideRootsError)
-+ new_epic(name: str) -> Epic  <<mcp>> <<agent_tool>>
-	-> self.append_epic
+	-> call.session.session_files.file_manager.read (refuses a file outside the session's roots with PathOutsideRootsError)
+	-> call.session.graph.practices.of(Stories).read_files
+	-> self.open_from(OpenedStoryMap)
++ open_in_session(*, call) -> StoryModel  <<classmethod>> <<mcp>> <<agent_tool>>
+	// the first story map file the open session's Stories practice declares: the page with no file follows the session open in the project, so a ticket activated on the board shows its own map on the next read
++ show() -> StoryModel  <<mcp>> <<agent_tool>>
++ new_epic(name: str) -> StoryModel  <<mcp>> <<agent_tool>>
 	-> self.save
++ node_at(path: str) -> StoryNode
 + save() -> StoryModel
-	-> fidelity.practice_guidance.formats.render (its own file's format, then each of chosen_formats)
-	-> self.graph.refresh (the files written; the map was read into the session's graph)
-	// writes its own file first; a render that fails leaves its own file written and names the format that failed
+	-> OpenedStoryMap.write
+	// refuses with StoryMapEditRefused, writing nothing, while refusal says why
+
+### OpenedStoryMap (new)
+
+The file a story map was opened from in a session, and the one owner of its writes.
+
++ OpenedStoryMap(path: Path, stories: PracticeGuidance, session)
+------
++ file: str
++ fidelity: FidelityGuidance
+	// derived: the fidelity of the session's Stories practice that declares the file
++ own_format: Format
++ refusal: str
+	// empty while the file reads back exactly as its format writes the map; otherwise why a save would change it beyond the edit
+----
++ keep_read_back(model: StoryModel) -> None
++ write(model: StoryModel) -> list[Path]
+	-> Stories.formats.render (its own format, then each of fidelity.session_output.chosen_formats, beside the file with that format's extension)
+	-> session.graph.refresh (the files written)
+	// an edit its own format would not read back, such as a scenario on a story map, is refused before anything is written
 
 ### Epic (extended)
 
-+ new_epic(name: str) -> Epic  <<mcp>> <<agent_tool>>
-	-> self.append_epic
-	-> self.story_map.save
-+ new_story(name: str) -> Story  <<mcp>> <<agent_tool>>
-	-> self.append_story
-	-> self.story_map.save
++ epics, stories  <<data_field>>
++ new_epic(name: str) -> StoryModel  <<mcp>> <<agent_tool>>
++ new_story(name: str) -> StoryModel  <<mcp>> <<agent_tool>>
 
 ### Story (extended)
 
-+ new_scenario(name: str) -> Scenario  <<mcp>> <<agent_tool>>
-	-> self.story_map.save
++ scenarios  <<data_field>>; kind: str  <<data_field key="story_type">>
++ new_scenario(name: str) -> StoryModel  <<mcp>> <<agent_tool>>
 
 ### Scenario (extended)
 
-+ new_step(step_type: StepType, text: str) -> Step  <<mcp>> <<agent_tool>>
-	-> self.story_map.save
++ steps  <<data_field>>
++ new_step(step_type: str, text: str) -> StoryModel  <<mcp>> <<agent_tool>>
+	// step_type is given, when or then (StepType)
 
 ### Step (extended)
 
-+ edit_text(text: str) -> Step  <<mcp>> <<agent_tool>>
-	-> self.story_map.save
++ keyword, ands  <<data_field>>; written_text: str  <<data_field key="text">>
++ edit_text(text: str) -> StoryModel  <<mcp>> <<agent_tool>>
 
-### StoryMapEditRefused
+### StoryMapEditRefused, StoryNodeNotFound
 
 <<Domain Exception>>
 
 + StoryMapEditRefused(node: StoryNode, operation: str, reason: str)
++ StoryNodeNotFound(node: str, kind: type)  // a LookupError
 
 **Invariants**
 
 - Every edit operation saves through its story map before it answers, so the file, the rendered formats and the graph never lag behind the answer the page shows.
-- A story map opened in a session writes only under the session's roots.
+- A story map opened in a session writes only its own file and the formats chosen beside it, under the session's roots.
+- A save never changes its file beyond the edit: a file not laid out as its format writes the map, or an edit its format would not read back, is refused and nothing is written.
 
 ---
+
+## cdd_guidance/practices/stories/app
+
+The Story UI editor, moved from its own repository (`C:/dev/story-ui`) beside the Stories practice. It keeps no domain, no store and no routes of its own:
+
+- `story-map/story-map-client.ts` — *StoryMapClient* extends the generated `StoryModelClientGenerated` with what only the page knows: which node client an id the views hand back takes, and how a drag the views report as a new order becomes one `move_before`.
+- `story-map/story-map-api.ts` — *StoryMapApi*, the page's `CddApi` over the board's server; a failed call says what failed and how to fix it, answers null, and the page keeps the map Python last sent (`fail-loud-on-mcp`).
+- `story-map/story-map-view-models.ts`, `story-map/story-map-views.tsx` — the Story UI's views, drawing the generated data.
+- `story-map-routes.ts` — `storyMapRoutes` (the generated routes of StoryModel, Epic, Story, Scenario, Step and FidelitySessionOutput) and `storyMapBuild` (the built page), which the board's server mounts; `story-map-page.ts` — the page's path, `/story-map`.
 
 ## Interactions across modules
 
@@ -316,7 +367,8 @@ Canonical: `cdd_guidance/practices/stories/model/.context/story-model.md`. The s
 | chat bar file viewer tile | `StoryModel.load(file)` | stories model |
 | chat bar file viewer link | `Session.design_view` | space/session |
 | Story UI edit | `StoryNode.rename` and the other edits, then `StoryModel.save` | stories model |
+| Story UI with no file | `StoryModel.open_in_session`, read every two seconds | stories model |
 | Story UI format toggle, chat bar chip | `FidelitySessionOutput.choose_format`, `Ticket.choose_formats` | space/session, space/kanban |
-| Graph app open | `Graph.load_practice_roots` on `Board.last_activated.session.graph` | harness/graph, space/kanban |
+| Graph app open | `Graph.load_practice_roots` on the session open in the project (the chat's open session) | harness/graph, space/session |
 | board story-map row widget | `FidelityProgress.editor` then `App.open` and `StoryModel.load` | space/kanban, harness/installation |
 | board graph widget | `Graph.load_practice_roots` on the ticket's session graph | harness/graph |

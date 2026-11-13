@@ -95,6 +95,11 @@ with description("a story map edited through its tools") as self:
     with before.each:
         self.project = StoryMapProject()
 
+    # (S) Deploy Story UI App With Board State: the editor follows the session open in the project.
+    with context("opened on the session open in the project"):
+        with it("should show that session's story map"):
+            expect(self.project.call("story-model.open_in_session")["file"]).to(equal(MAP_FILE))
+
     with context("opened on story-map.md"):
         with before.each:
             self.shown = self.project.call("story-model.show", file=MAP_FILE)

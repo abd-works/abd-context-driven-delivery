@@ -1,0 +1,1228 @@
+/* workspace.css — Story Map Workspace
+   Sources / context: abd-works-brand/css/brand.css tokens
+   ──────────────────────────────────────────────────────── */
+
+/* ── 1. Brand tokens (inline; loaded before any other sheet) ── */
+*, ::before, ::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:           #F6F5F3;
+  --surface:      #FFFFFF;
+  --raised:       #F0ECE4;
+  --faint:        #EFECE6;
+  --border:       #DDD8CF;
+  --border-sub:   #E7E1D6;
+  --text:         #111113;
+  --muted:        #595A61;
+  --accent:       #E5531A;
+  --accent-deep:  #C64514;
+  --accent-soft:  #F2A07A;
+  --accent-dim:   rgba(229,83,26,0.10);
+  --accent-dim2:  rgba(229,83,26,0.18);
+  --success:      #22C55E;
+  --warning:      #F59E0B;
+  --error:        #EF4444;
+  --font-sans:    'Inter', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+
+  --text-xs:   clamp(10px, 1.2vw, 11px);
+  --text-sm:   clamp(12px, 1.4vw, 13px);
+  --text-base: clamp(14px, 1.7vw, 15px);
+  --text-md:   clamp(16px, 2vw, 18px);
+
+  --radius-sm:   4px;
+  --radius-md:   12px;
+  --radius-pill: 999px;
+
+  --space-2xs: 4px;
+  --space-xs:  8px;
+  --space-sm:  12px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  32px;
+
+  /* workspace-specific */
+  --node-min-w:  120px;
+  --card-min-w:  1px;
+  --card-radius: var(--radius-md);
+  --row-gap:     6px;
+  --toolbar-bg:  rgba(246,245,243,0.92);
+}
+
+/* Engineering (dark) — accent stays identical in both modes (brand signal). */
+html[data-theme="engineering"] {
+  --bg:           #0B0B0B;
+  --surface:      #111113;
+  --raised:       #1B1B20;
+  --faint:        #1B1B20;
+  --border:       #2A2A2A;
+  --border-sub:   #232328;
+  --text:         #F4F4F5;
+  --muted:        #9B9BA8;
+  --accent-dim:   rgba(229,83,26,0.16);
+  --accent-dim2:  rgba(229,83,26,0.26);
+  --toolbar-bg:   rgba(11,11,11,0.85);
+}
+
+/* ── 2. Base ─────────────────────────────────────────────── */
+html {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+/* ── 3. App shell ────────────────────────────────────────── */
+.story-map-workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-size: var(--text-md);
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+/* ── 4. Top nav / toolbar ────────────────────────────────── */
+.workspace-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--toolbar-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 60;
+}
+
+/* Logo mark — real abd.works wordmark asset (logo/abd.works.wordmark.{black,white}.svg),
+   swapped by data-theme; positioned at start of toolbar. */
+.brand-logo {
+  height: 18px;
+  width: auto;
+  display: block;
+  margin-right: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: 5px var(--space-sm);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 120ms, background 120ms, border-color 120ms;
+}
+
+.toolbar-btn:hover {
+  color: var(--text);
+  background: var(--raised);
+  border-color: var(--border-sub);
+}
+
+.toolbar-btn.active {
+  color: var(--accent);
+  background: var(--accent-dim);
+  border-color: var(--accent-soft);
+}
+
+.toolbar-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* Executive/Engineering mode switch — same pattern as every abd.works brand page */
+.mode-switch {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 2px;
+  gap: 2px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.mode-switch button {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: none;
+  background: none;
+  color: var(--muted);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+.mode-switch button.active { background: var(--accent); color: #0B0B0B; }
+.mode-switch button:not(.active):hover { color: var(--text); }
+
+/* Drag handles — shared affordance for every reorderable row (Epic/SubEpic/Story/
+   Scenario/Step/Example row). Whole row is draggable; handle glyph is the visual cue. */
+.drag-handle {
+  cursor: grab;
+  cursor: -moz-grab;
+  cursor: -webkit-grab;
+  color: inherit;
+  opacity: 0.55;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.drag-handle:active { 
+  cursor: grabbing;
+  cursor: -moz-grabbing;
+  cursor: -webkit-grabbing; 
+}
+
+/* Increment assignment — inline select on each Story card header */
+.increment-select {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  max-width: 132px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--muted);
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.scenario-row-drag { cursor: grab; }
+.scenario-row-drag:active { cursor: grabbing; }
+
+.row-drag-handle, .row-drag-handle-header {
+  width: 16px;
+  text-align: center;
+  color: var(--border);
+  cursor: grab;
+}
+.example-block tr:active .row-drag-handle { cursor: grabbing; }
+
+/* ── 5. Map canvas ───────────────────────────────────────── */
+.story-map-canvas {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-md) var(--space-lg) var(--space-xl);
+}
+
+/* ── 6. Rows ─────────────────────────────────────────────── */
+/* ---------------------------------------------------------------------------
+   story-hierarchy-view — the single shared CSS Grid that owns ALL rows.
+   Epic lanes, sub-epic lanes, spine story cards, and increment rows are all
+   direct children so that expanding a story card automatically pushes every
+   element to its right (across ALL rows) without needing separate column sync.
+   Column template and explicit gridRow/gridColumn are set inline in JS.
+   --------------------------------------------------------------------------- */
+.story-hierarchy-view {
+  /* layout is fully inline — nothing to override */
+}
+
+/* Epic lane — sits at gridRow: 1 */
+.epic-lane {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--text);
+  color: var(--surface);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  gap: var(--space-xs);
+  cursor: pointer;
+  user-select: none;
+  justify-self: stretch;
+  width: 100%;
+  transition: background 160ms ease-out, box-shadow 160ms ease-out, transform 160ms ease-out;
+}
+
+.epic-lane .type-label-row {
+  /* first row - centered type label with rule, icons on sides */
+}
+
+.epic-lane .node-label {
+  /* second row - name input */
+}
+/* Neutral (not accent) hover — Epic's own color already differs from SubEpic's
+   permanent orange; hovering must not make it *look* like a SubEpic. A lift +
+   shadow (not just a background swap) keeps the feedback visible even though
+   the base color is already dark. */
+.epic-lane:hover {
+  background: var(--muted);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+  transform: translateY(-1px);
+}
+
+/* SubEpic lane — sits at gridRow: 2 */
+.sub-epic-lane {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--accent);
+  color: var(--surface);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  gap: var(--space-xs);
+  cursor: pointer;
+  user-select: none;
+  justify-self: stretch;
+  width: 100%;
+  transition: filter 160ms ease-out, box-shadow 160ms ease-out, transform 160ms ease-out;
+}
+
+.sub-epic-lane .type-label-row {
+  /* first row - centered type label with rule, icons on sides */
+}
+
+.sub-epic-lane .node-label {
+  /* second row - name input */
+}
+.sub-epic-lane:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+  transform: translateY(-1px);
+}
+
+/* Increment row header — sits at even grid rows (4,6,8…), spans all columns */
+.increment-row {
+  border-top: 1px dashed var(--border-sub);
+  padding-top: var(--space-xs);
+  cursor: default;
+}
+/* Highlights together with .increment-cards-dropzone.drag-over below as ONE
+   continuous zone (shared React state, not independent DOM toggles) — only the
+   outer corners round so the shared inner edge reads as a seamless panel. */
+.increment-row.drag-over {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+/* Unassigned drop zone — row 4, Increment View only */
+.unassigned-drop-zone {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs) var(--space-sm);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: center;
+  cursor: default;
+  user-select: none;
+  transition: background 100ms, border-color 100ms;
+}
+.unassigned-drop-zone.drag-over {
+  background: var(--faint);
+  border-color: var(--accent-soft);
+  color: var(--text);
+}
+
+/* Cross-parent drag visuals — Epic lanes, SubEpic lanes, and Story cards (see
+   makeEpicDragHandlers/makeSubEpicDragHandlers/makeStoryDragHandlers in
+   stories-client.tsx). No floating cursor-following ghost — the dragged node
+   itself renders full-size, in place, at its would-land position. */
+
+/* The node currently being dragged — grayed out and dashed at its live drop
+   position while every sibling reflows around it (see computeColumnLayout). */
+.being-dragged {
+  opacity: 0.5;
+  border-style: dashed !important;
+  box-shadow: none !important;
+  transform: none !important;
+  pointer-events: none;
+}
+/* Lanes carry their own solid fill, so a transparent placeholder reads as "the lane
+   vanished". Keep each lane's permanent color, just lightened toward the surface, and
+   opt out of the shared opacity so the tint stays predictable and the label legible. */
+.epic-lane.being-dragged,
+.sub-epic-lane.being-dragged {
+  opacity: 1;
+  border: 2px dashed currentColor;
+}
+.epic-lane.being-dragged {
+  background: color-mix(in srgb, var(--text) 65%, var(--surface));
+}
+.sub-epic-lane.being-dragged {
+  background: color-mix(in srgb, var(--accent) 65%, var(--surface));
+}
+
+/* Precise "insert before" edge — nudges the target card/lane aside so the
+   drop position reads as a reflow, not just a highlight. */
+.drop-indicator {
+  box-shadow: inset 3px 0 0 var(--accent);
+  transform: translateX(6px);
+}
+.sub-epic-lane.drop-indicator { transform: translateX(6px); }
+
+/* Active cross-parent drop target — empty SubEpic/Epic "+" placeholder while
+   a Story/SubEpic from elsewhere is dragged over it. */
+.drop-target-active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* Full-height drop band behind an Increment's story cards — lets a Story be
+   dropped anywhere in the Increment's row, not just on its thin label bar. */
+.increment-cards-dropzone.drag-over {
+  background: var(--accent-dim);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  /* Pull up by the grid rowGap so the highlight visually connects with
+     .increment-row.drag-over above — they share React state and should read
+     as ONE continuous zone, not two separated by the 6px rowGap. */
+  margin-top: calc(var(--row-gap) * -1);
+}
+
+/* Legacy row class kept for backward compatibility with any remaining uses */
+.row { min-height: 40px; }
+
+.increment-label {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  text-transform: uppercase;
+  border-left: 2px solid var(--accent-dim2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  white-space: nowrap;
+  cursor: grab;
+}
+.increment-label:active { cursor: grabbing; }
+
+.increment-name-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  width: 140px;
+  /* Same drag-source reasoning as .story-name-input below. */
+  pointer-events: none;
+  cursor: grab;
+}
+.increment-name-input:focus { pointer-events: auto; cursor: text; }
+
+/* [+] Epic / [+] Increment — top-level create controls (no existing parent
+   card to attach to) */
+.add-root-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: var(--space-xs);
+  padding: 5px var(--space-sm);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+.add-root-btn:hover { color: var(--accent); border-color: var(--accent-soft); }
+
+.plus-btn:hover { color: var(--success); border-color: var(--success); }
+.minus-btn:hover { color: var(--error); border-color: var(--error); }
+
+/* ── 7. Story cards ──────────────────────────────────────── */
+.story-card {
+  min-width: var(--card-min-w);
+  width: fit-content;
+  max-width: 280px;           /* cap width so long titles wrap instead of stretching the column */
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  margin: 0;
+  transition: box-shadow 140ms, border-color 140ms, transform 140ms;
+  flex-shrink: 0;
+}
+
+.story-card:hover {
+  border-color: var(--accent-soft);
+  box-shadow: 0 2px 8px var(--accent-dim);
+  transform: translateY(-1px);
+}
+
+.story-card.expanded {
+  min-width: 280px;
+  max-width: none;   /* let example tables dictate width when expanded */
+  width: max-content;
+  min-height: auto;    /* no fixed height when expanded — content dictates */
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-dim2), 0 4px 16px rgba(0,0,0,0.10);
+  z-index: 10;
+  position: relative;
+}
+
+.story-card.expanded .story-name-input {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: unset;
+}
+
+.story-card-header {
+  display: flex;
+  flex-direction: column;   /* type label row on top, name input below */
+  align-items: stretch;
+  gap: var(--space-xs);
+  padding: 0 6px 4px;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  overflow: visible;
+  width: 100%;
+  min-width: 0;
+  min-height: calc(var(--text-sm) * 1.6 * 5);  /* minimum 5 lines total: type label row + 4 lines text */
+}
+
+.story-card-header .type-label-row {
+  /* first row - centered type label with rule, icons on sides */
+}
+
+.story-name-input {
+  order: 1;                   /* second row - takes remaining space */
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text);
+  padding: 0;
+  /* Pointer-transparent until focused: a mousedown landing inside a text input
+     starts text selection and cancels the ancestor's HTML5 drag, which would leave
+     the card draggable only by its ~8px handle. Double-clicking the card focuses
+     this field (focusNameFieldOnDoubleClick), restoring caret and selection. */
+  pointer-events: none;
+  cursor: grab;
+  white-space: normal;        /* allow wrapping within the card's max-width */
+  overflow: visible;          /* show all wrapped text */
+  text-overflow: clip;
+  display: block;             /* ensure block layout for wrapping */
+  min-height: calc(var(--text-sm) * 1.6 * 4);  /* minimum 4 lines of text */
+}
+
+.story-name-input:focus,
+.story-name-input[contenteditable="true"]:focus {
+  pointer-events: auto;
+  cursor: text;
+}
+
+/* ── Type labels with centered row + horizontal rule ───────────────────── */
+/* Shared base for Epic / SubEpic / Story type labels */
+.type-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-2xs) 0;
+  border-bottom: 1px solid var(--border-sub);
+  margin-bottom: var(--space-2xs);
+}
+
+.type-label-row .type-label-center {
+  display: flex;
+  justify-content: center;
+  flex: 1;
+  padding: 0 var(--space-sm);  /* minimum padding around label text */
+}
+
+.type-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.5;
+  white-space: nowrap;
+}
+
+.type-label-epic-subepic {
+  color: var(--faint);
+}
+
+.type-label-row .type-label-left,
+.type-label-row .type-label-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  flex-shrink: 0;
+}
+
+.type-label-row .type-label-left {
+  justify-content: flex-start;
+}
+
+.type-label-row .type-label-right {
+  justify-content: flex-end;
+}
+
+/* Story card header — type label row sits above the name input */
+.story-card-header .type-label-row {
+  order: 0;  /* first row */
+  flex: 0 0 100%;
+}
+
+/* Epic / SubEpic lanes — type label row sits above the name input */
+.epic-lane .type-label-row,
+.sub-epic-lane .type-label-row {
+  order: 0;
+  flex: 0 0 100%;
+  margin-bottom: var(--space-xs);
+}
+
+/* [+-] inline controls */
+.node-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 100ms, background 100ms, border-color 100ms;
+}
+
+.node-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent-soft);
+  background: var(--accent-dim);
+}
+
+.expand-btn {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 100ms;
+}
+
+.expand-btn:hover { color: var(--accent); }
+
+.save-inline-btn {
+  padding: 3px var(--space-xs);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: white;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 100ms;
+}
+
+.save-inline-btn:hover { background: var(--accent-deep); }
+
+/* ── 8. Expansion panel ──────────────────────────────────── */
+.story-expansion-panel {
+  border-top: 1px solid var(--border);
+  padding: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.scenario-panel {
+  background: var(--faint);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm);
+}
+
+.scenario-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: var(--space-xs);
+}
+
+.step-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: var(--space-xs);
+}
+
+.step-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  font-size: var(--text-xs);
+  padding: 3px var(--space-xs);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border-sub);
+}
+
+.step-row::before {
+  content: ':::';
+  color: var(--border);
+  font-size: 10px;
+  letter-spacing: -1px;
+  flex-shrink: 0;
+  cursor: grab;
+}
+
+.step-type {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--accent);
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── 9. Example tables ───────────────────────────────────── */
+.example-block {
+  margin-top: var(--space-xs);
+}
+
+.example-block strong {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  margin-bottom: var(--space-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.example-block table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+}
+
+.example-block th {
+  background: var(--raised);
+  border: 1px solid var(--border);
+  padding: 3px var(--space-xs);
+  text-align: left;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.example-block td {
+  border: 1px solid var(--border-sub);
+  padding: 3px var(--space-xs);
+  color: var(--text);
+}
+
+/* ── 10. Slice board ─────────────────────────────────────── */
+.story-slice-board {
+  padding: var(--space-md) var(--space-lg);
+}
+
+.slice-header {
+  display: flex;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: var(--space-xs);
+  margin-bottom: var(--space-sm);
+}
+
+.epic-header-cell {
+  flex: 1;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--surface);
+  background: var(--text);
+  border-radius: var(--radius-sm);
+  margin-right: var(--row-gap);
+}
+
+.sub-epic-header-cell {
+  flex: 1;
+  padding: var(--space-2xs) var(--space-xs);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--surface);
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  margin-right: var(--row-gap);
+  margin-top: var(--space-2xs);
+  display: inline-block;
+}
+
+.slice-lane {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-xs) 0;
+  border-top: 1px dashed var(--border-sub);
+}
+
+.slice-label {
+  flex-shrink: 0;
+  width: 140px;
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  text-transform: uppercase;
+  padding-top: var(--space-xs);
+}
+
+.slice-stories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  flex: 1;
+}
+
+.story-card.slice-card {
+  cursor: pointer;
+  max-width: 180px;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+/* ── 11. Status rail ─────────────────────────────────────── */
+.status-rail {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-xs) var(--space-lg);
+  border-top: 1px solid var(--border);
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  color: var(--muted);
+  background: var(--surface);
+}
+
+.status-rail span { display: flex; align-items: center; gap: var(--space-2xs); }
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  flex-shrink: 0;
+}
+
+.status-dot.pending { background: var(--warning); }
+.status-dot.error   { background: var(--error); }
+
+/* ── 12. Node name label (Epic/SubEpic) — inline-editable via NodeNameInput */
+.node-label {
+  flex: 0 0 auto;
+  /* Never shrink so far the name becomes unreadable — matters most for an
+     empty SubEpic/Epic, which otherwise reserves only one card-width column
+     shared with several icon buttons. */
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  /* Same drag-source reasoning as .story-name-input above. */
+  pointer-events: none;
+  cursor: grab;
+}
+.node-label:focus { pointer-events: auto; cursor: text; }
+
+.node-actions {
+  margin-left: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+/* Story card: no title-to-actions gap; card width should be text + controls only. */
+.story-card .node-actions {
+  margin-left: 0;
+  gap: 0;
+}
+
+/* Lanes span child width; keep controls aligned to lane end there. */
+.epic-lane .node-actions,
+.sub-epic-lane .node-actions {
+  margin-left: auto;
+}
+
+.add-node-popover {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.add-node-popover-card {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 120;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+}
+
+.add-node-popover-input {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px 6px;
+  min-width: 24ch;
+  max-width: 48ch;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--text);
+  background: var(--surface);
+}
+/* ── 13. Inline save controls ────────────────────────────── */
+.inline-controls {
+  display: flex;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border-top: 1px solid var(--border-sub);
+}
+
+.cancel-inline-btn {
+  padding: 3px var(--space-xs);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 100ms;
+}
+
+.cancel-inline-btn:hover { background: var(--raised); }
+
+/* ── 14. Responsive ─────────────────────────────────────── */
+@media (max-width: 720px) {
+  .workspace-toolbar { gap: var(--space-2xs); padding: var(--space-xs) var(--space-md); }
+  .toolbar-btn { font-size: 11px; padding: 4px var(--space-xs); }
+  .row-label { display: none; }
+}
+
+/* ── 15. Per-group leading + buttons ─────────────────────── */
+/* Small + button rendered as a grid cell at the first column of each
+   epic/sub-epic group. Unlike the old row-wide leading-plus, these are
+   actual grid items so they align under the correct parent column. */
+.row-lead-plus {
+  width: 22px !important;
+  height: 22px !important;
+  border-style: dashed !important;
+  opacity: 0.55;
+  transition: opacity 100ms;
+}
+.row-lead-plus:hover { opacity: 1; }
+
+/* Wraps an empty Epic/SubEpic's "+" placeholder — the button stays small, but this
+   wrapper spans the whole reserved grid cell so a drag can be dropped anywhere in
+   that area, not just directly on the tiny button. */
+.empty-parent-dropzone {
+  display: flex;
+  align-items: center;
+}
+
+/* ── 16. Hierarchy row wrapper + old leading-plus column ─────
+   (kept for any legacy wrappers that may still reference them) */
+.hierarchy-row-wrapper {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin-bottom: var(--row-gap);
+}
+.hierarchy-row-wrapper > .row {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+}
+.hierarchy-row-wrapper > .increment-row {
+  flex: 1;
+  min-width: 0;
+}
+.leading-plus {
+  flex-shrink: 0;
+  width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--border);
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 100ms;
+  border-right: 1px solid var(--border-sub);
+  margin-right: var(--space-xs);
+}
+.leading-plus:hover { color: var(--accent); }
+.leading-plus-spacer {
+  flex-shrink: 0;
+  width: 32px;
+  margin-right: var(--space-xs);
+  border-right: 1px solid var(--border-sub);
+}
+
+/* ── 16. Empty-state placeholders ───────────────────────── */
+.sub-epic-placeholder,
+.story-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  margin: var(--space-2xs);
+}
+
+/* ── 17. Scenario panel CRUD ────────────────────────────── */
+.scenario-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-xs);
+}
+
+.scenario-header .scenario-name {
+  flex: 1;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0;
+}
+
+.scenario-name-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text);
+  padding: 0;
+  cursor: pointer;
+}
+.scenario-name-input:focus {
+  cursor: text;
+  background: var(--faint);
+  border-radius: 2px;
+  padding: 1px 4px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: var(--space-2xs);
+}
+
+.section-heading.indent { padding-left: var(--space-sm); }
+
+.steps-section, .examples-section {
+  margin-top: var(--space-xs);
+}
+
+/* ── 18. Step editor (inline type + text) ───────────────── */
+.step-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 3px var(--space-xs);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border-sub);
+}
+
+/* override old ::before pseudo-element that just showed ':::' */
+.step-row::before { content: none; }
+
+.step-editor {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.step-type-select {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--accent);
+  background: transparent;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0;
+}
+
+.step-text-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--text);
+  padding: 0;
+}
+.step-text-input:focus { background: var(--faint); border-radius: 2px; padding: 1px 3px; }
+
+/* ── 19. Example block CRUD additions ───────────────────── */
+.example-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-2xs);
+}
+
+.example-header strong { margin-bottom: 0; }
+
+.field-remove-btn {
+  width: 14px !important;
+  height: 14px !important;
+  font-size: 10px !important;
+  border-radius: 2px !important;
+  vertical-align: middle;
+  margin-left: 2px;
+}
+
+.add-field-col { min-width: 80px; }
+
+.new-field-input {
+  width: 60px;
+  font-size: var(--text-xs);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  padding: 1px 3px;
+}
+
+.example-cell-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--text-xs);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+.example-cell-input:focus { background: var(--faint); border-radius: 2px; padding: 1px 3px; }
+
+/* The Story UI over the story map tools: the file open, an edit that failed, and a file opened to be read. */
+.toolbar-file {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  opacity: 0.75;
+  max-width: 28rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.edit-failure,
+.edit-refusal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  font-size: 13px;
+}
+
+.edit-failure {
+  background: rgba(220, 53, 69, 0.12);
+}
+
+.edit-refusal {
+  background: rgba(255, 193, 7, 0.14);
+}
