@@ -121,3 +121,14 @@ pressed again.
 Fixed on branch `ticket-maintanance-defects`: a press anywhere else on the bar, or typing or sending in the prompt,
 closes every open list box but the pressed one's (`option-lists-client.ts`). The host sends no event for a click in the
 transcript, so a click there still leaves it open.
+
+## Opening a ticket while the main chat is busy starts no chat
+
+Reported 2026-11-13, ticket `optimize-unit-tests`. The chat bar showed "No chat started for optimize-unit-tests: the
+prompt was removed from the queue before it ran".
+
+Cause: the chat bar asks the main chat's agent to call start_session, and that request waits in the main chat's queue
+until its running turn ends. Stopping that turn clears the queue, so the request never ran.
+
+Fixed on main: a request dropped from the queue is sent once more (`requestChatStart` in `chat-folder-client.ts`); a
+second drop says the turn was stopped while the request waited.
