@@ -9,9 +9,11 @@ Model: harness/.context/editor-apps/.context/editor-apps-model.md#graph-extended
 A ticket's graph widget opens the Graph app on the ticket's worktree, where the ticket's session is the open one, so the
 graph it loads is the ticket's session graph (`ticket.session.graph`); the board header opens it on the board's own
 project. The Stories story-map row carries the Story UI editor's widget (`BoardFidelity.editor`), which opens the
-row's file in the editor (`StoryModel.load`). Left to other increments: Invoke Story Explorer In Session Context, the
-refactors to web domain access, which are the pages' TypeScript, and the Story UI showing only the stories the ticket's
-session names ("it shows ... and it shows no other story of the map"), which the story model has no scope for yet.
+row's file in the editor (`StoryModel.load`). Refactor Kanban Board To Web Domain Access replays here only its move the
+agent makes, which the board's next read (`Board.show`) shows; its other two scenarios are the page's TypeScript, in
+space/kanban/app/src/kanban/board/web-domain-access.spec.ts. Left to other increments: Invoke Story Explorer In Session
+Context, the Graph app's refactor, and the Story UI showing only the stories the ticket's session names ("it shows ...
+and it shows no other story of the map"), which the story model has no scope for yet.
 """
 
 from __future__ import annotations
@@ -30,6 +32,8 @@ shared_stories = SharedStories("Integrate Practice Content Editor Apps On Board"
 TICKET_SCOPE = "Filter Knowledge Graph To Ticket Scope"
 TICKET_PRACTICES = "Filter Knowledge Graph To Ticket Practices"
 BOARD_STATE = "Deploy Knowledge Graph App With Board State"
+WEB_DOMAIN_ACCESS = "Refactor Kanban Board To Web Domain Access"
+IMPLEMENTATION = "Implementation"
 STORY_UI_ON_TICKET = "Open Story UI On Ticket Scope"
 STORY_MAP_ROW = PRACTICE_ROWS[0]
 
@@ -201,3 +205,20 @@ def _(s):
     @s.then("search-orders shows no practice rows and no editor widget")
     def _(world):
         expect(sorted({"progress", "editor"} & set(world.shown))).to(equal([]))
+
+
+@shared_stories.scenario(WEB_DOMAIN_ACCESS, "A move the agent makes shows on the board without a copy kept in the page")
+def _(s):
+    @s.given("the CDD Kanban shows checkout-flow in Implementation In progress")
+    def _(world):
+        CHECKOUT_FLOW.seed_into(world.project)
+        world.board().ticket(CHECKOUT_FLOW.name).move_to(IMPLEMENTATION)
+
+    @s.when("the Agent moves checkout-flow to Implementation Done through the ticket's tools")
+    def _(world):
+        world.board().ticket(CHECKOUT_FLOW.name).move_to(IMPLEMENTATION, done=True)
+
+    @s.then("the CDD Kanban shows checkout-flow in Implementation Done on its next read of the board")
+    def _(world):
+        shown = world.board().show().ticket(CHECKOUT_FLOW.name)
+        expect((shown.column.name, shown.is_done)).to(equal((IMPLEMENTATION, True)))
