@@ -1,7 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 
 import { reasonOf } from '../shared/failure'
-import { openedWithSystem } from '../shared/system-link'
 import { refreshHealth } from '../health/server-health-client'
 import { after, boardPageUrl, boardUrl, repositoryFolder } from './board'
 
@@ -90,16 +89,6 @@ export async function openInBrowserPane($: EngineInterface, url: string): Promis
   } catch (failure) {
     return `${BROWSER_PANE} ${OPEN_PANE_TAB} could not be called: ${reasonOf(failure)}`
   }
-}
-
-// Opens a page beside the chat in the browser pane, else in the person's own browser: the desktop app refuses a mod's
-// call to the pane's tools in some chats, and a page that opens nowhere helps no one. Returns what the person should be
-// told: nothing once the pane opened it, where it went and why when the pane refused, or why it opened nowhere.
-export async function openPage($: EngineInterface, url: string): Promise<string> {
-  const paneProblem = await openInBrowserPane($, url)
-  if (!paneProblem) return ''
-  if (await openedWithSystem($, url)) return `opened in your browser, since the browser pane did not: ${paneProblem}`
-  return `the browser pane did not open it (${paneProblem}), and the system did not open it either`
 }
 
 // Starts the board when nothing answers on its port, so /board always ends with a board to open. cdd's server health

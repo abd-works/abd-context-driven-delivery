@@ -199,32 +199,32 @@ test('Open App From Health Panel › Say why the Graph app did not start', async
   await ui.unmount()
 })
 
-test('Open App From Health Panel › Open the app in the person’s browser when the chat has no browser pane', async ($, on) => {
+test('Open App From Health Panel › Say why the app did not open when the chat has no browser pane', async ($, on) => {
   // Given the Graph app is running, and the chat has no browser pane, as in a terminal
   const world = engine(on, HEALTHY)
   world.hasPane = false
   const ui = await openPanel($)
   // When the Person presses the Graph app on the server health panel
-  // openApp($, 'Graph app') -> openPage -> openInBrowserPane: Claude_Browser is not there -> openedWithSystem -> rundll32
+  // openApp($, 'Graph app') -> openInBrowserPane -> Claude_Browser is not there
   await ui.press({ key: 'health-open-graph-app' })
-  // Then the Graph app opens in the person's own browser
-  expect(openedOutside(world)).toEqual(['http://localhost:5173'])
-  // And the Person is told why it did not open in the browser pane
-  expect(world.toasts.at(-1)).toContain('opened in your browser, since the browser pane did not: Claude_Browser preview_start could not be called')
+  // Then nothing opens anywhere else
+  expect(world.tabs).toEqual([])
+  expect(openedOutside(world)).toEqual([])
+  // And the Person is told where the app is and why it did not open
+  expect(world.toasts.at(-1)).toContain('The Graph app is at http://localhost:5173 but did not open: Claude_Browser preview_start could not be called')
   await ui.unmount()
 })
 
-test('Open App From Health Panel › Open the app in the person’s browser when its page does not load in the pane', async ($, on) => {
+test('Open App From Health Panel › Say why the app did not open when its page does not load in the pane', async ($, on) => {
   // Given the Graph app is running, but its page does not load in the browser pane
   const world = engine(on, HEALTHY)
   world.unloadable = ['http://localhost:5173']
   const ui = await openPanel($)
   // When the Person presses the Graph app on the server health panel
-  // openApp($, 'Graph app') -> openPage -> openInBrowserPane: preview_start answers navOk false -> openedWithSystem
+  // openApp($, 'Graph app') -> openInBrowserPane -> Claude_Browser preview_start answers navOk false
   await ui.press({ key: 'health-open-graph-app' })
-  // Then the Graph app opens in the person's own browser
-  expect(openedOutside(world)).toEqual(['http://localhost:5173'])
-  // And the Person is told the page did not load in the pane, in the pane's own words
+  // Then the Person is told the page did not load, in the pane's own words
+  expect(world.toasts.at(-1)).toContain('The Graph app is at http://localhost:5173 but did not open: Claude_Browser preview_start failed')
   expect(world.toasts.at(-1)).toContain('navigation was denied or failed')
   await ui.unmount()
 })
