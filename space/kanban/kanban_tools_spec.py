@@ -770,6 +770,20 @@ with description("the board tools") as self:
         with it("should stay well inside an MCP answer with a dozen tickets"):
             expect(len(json.dumps(self.overview)) < 40_000).to(be_true)
 
+        # Each child sent whole carries its own progress and its own children, so a ticket two levels of children deep
+        # tripled the answer past the chat bar's size limit.
+        with context("that has children two levels deep"):
+            with before.each:
+                self.project.ticket("child-1", *DISCOVERY_DONE, title="Child 1", parent="ticket-0")
+                self.project.ticket("grandchild-1", *DISCOVERY_DONE, title="Grandchild 1", parent="child-1")
+                self.overview = self.project.call("board.overview")
+
+            with it("should send the active ticket's children by name alone"):
+                expect(self.overview["active"]["children"]).to(equal([{"name": "child-1"}]))
+
+            with it("should stay as small as a ticket with no children"):
+                expect(len(json.dumps(self.overview)) < 40_000).to(be_true)
+
     with context("that are published through the cdd server"):
         with it("should name each tool after its object"):
             names = set(self.project.server.tools)
