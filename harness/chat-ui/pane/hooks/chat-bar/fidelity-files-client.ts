@@ -1,21 +1,21 @@
 import type { EngineInterface } from 'claude-code'
 
 import { boardPageUrl } from '../board-chat/board'
-import { openInBrowserPane, runningBoardUrl } from '../board-chat/board-server'
+import { openPage, runningBoardUrl } from '../board-chat/board-server'
 import { currentChatBar } from './chat-bar-client'
 import type { FidelityProgressClient } from './fidelity-progress-client'
 
 // A fidelity's files, a session's folder and a fidelity's report open in the board's own panels, in the desktop app's
 // browser pane beside the chat: the board's file viewer, with its practice filters, comments and change marks, is the
 // one viewer, so the chat bar never draws a second. Each opens by a board link, the board started first when it is not
-// running. When the pane does not open, the toast says why.
+// running. When the pane does not open it, it opens in the person's own browser, and the toast says why.
 
 async function openBoardLink($: EngineInterface, what: string, query: Record<string, string>): Promise<void> {
   const url = await runningBoardUrl($).catch(() => '')
   if (!url) return $.ui.toast(`${what} did not open: the board is not running and did not start`)
   const link = await boardPageUrl($, url, query)
-  const problem = await openInBrowserPane($, link)
-  if (problem) $.ui.toast(`${what} did not open at ${link}: ${problem}`)
+  const said = await openPage($, link)
+  if (said) $.ui.toast(`${what} at ${link}: ${said}`)
 }
 
 // One fidelity's files: the files button of a fidelity's folder on the session card.

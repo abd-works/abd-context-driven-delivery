@@ -4,7 +4,7 @@ import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
 import { boardPageUrl, repositoryFolder } from '../board-chat/board'
 import { currentChatBar } from '../chat-bar/chat-bar-client'
-import { openInBrowserPane, startedBoard } from '../board-chat/board-server'
+import { openPage, startedBoard } from '../board-chat/board-server'
 import { reasonOf } from '../shared/failure'
 import { currentServerHealth, refreshHealth, ServerHealthClient } from './server-health-client'
 
@@ -82,7 +82,7 @@ async function openingKanbanApp($: EngineInterface): Promise<Opening> {
   return { url: await boardPageUrl($, url, ticket ? { ticket } : {}), problem: '' }
 }
 
-// Opens app in the browser pane, or says why it did not: as it is when it runs, else once it has started. The panel reads the server
+// Opens app in the browser pane, else in the person's browser, saying why: as it is when it runs, else once it has started. The panel reads the server
 // health again after, so a started app shows running.
 export async function openApp($: EngineInterface, app: AppName): Promise<void> {
   if (starting.has(app)) return
@@ -93,8 +93,8 @@ export async function openApp($: EngineInterface, app: AppName): Promise<void> {
       $.ui.toast(problem)
       return
     }
-    const why = await openInBrowserPane($, url)
-    if (why) $.ui.toast(`The ${app} is at ${url} but did not open: ${why}`)
+    const said = await openPage($, url)
+    if (said) $.ui.toast(`The ${app} at ${url}: ${said}`)
   } catch (failure) {
     $.ui.toast(`The ${app} did not open: ${reasonOf(failure)}`)
   } finally {
