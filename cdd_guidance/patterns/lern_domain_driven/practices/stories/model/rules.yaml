@@ -22,6 +22,7 @@ playwright:
     - domain-operations-inline-in-steps
     - playwright-tests-browser-interaction
     - reduce-story-overlap
-story:
-  rules:
-    - playwright-tests-browser-interaction
+# Off for now: a story's screen spec is an acceptance-tests check, not a story-map one.
+# story:
+#   rules:
+#     - playwright-tests-browser-interaction
