@@ -106,7 +106,6 @@ section: body
 - *Fix Report Violations*
 - *Display Violations Band*
 - *List Ticket Files*
-- *Browse Ticket Files By Practice*
 - *View Fidelity Files*
 - *Review Fidelity*
 - *Display Server Health Mark*

@@ -47,7 +47,7 @@ Evidence:
 - Requested (the person, 2026-11-12): "these are just filters on left; all files are shown in tabs above grouped by practice colored by practice color", then "just put the filter toggles on the top, it will waste less space". So the filters sit along the top with the tabs, and nothing is on the left.
 - Requested (the person, 2026-11-12): "list a shortened form/image of each practice top to bottom on left side, filters preset when clicking files button in chat ui, user can toggle them; top has file tabs like now but colored to practice".
 
-None of this is built. That the chat bar's Files button presets the filters to the practice the chat bar is on is my reading of "filters preset", and needs confirming.
+None of this is built. Confirmed (the person, 2026-11-12): the chat bar's Files button presets the filters to the practice the chat bar is on, "it works like it currently does".
 
 #### Scenario: Show the practice filters and every file as a tab along the top
 

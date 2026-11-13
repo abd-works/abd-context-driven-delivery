@@ -41,7 +41,7 @@ From the person, 2026-11-12, on the same files panel:
 > list a shoterend form/ image of each practice stop to bottom on left side , filters preset when clicking fiels buttin in vhat ui , user can toggle them top has file tabls like now but colored to practice
 
 - Along the top (the person, 2026-11-12: "just put the filter toggles on the top it will waste less space"), a filter for each practice the ticket works on, by a short form or image. Every file is a tab along the top, grouped by practice and colored by practice (the person, 2026-11-12: "these are just filters on left; all files are shown in tabs above grouped by practice colored by practice color"). This replaces grouping by folder.
-- Opening the files from the chat bar's Files button presets the practice filters. The person can toggle each one.
+- Opening the files from the chat bar's Files button presets the practice filters to the practice the chat bar is on, as it works today ("it works like it currently does", 2026-11-12). The person can toggle each one.
 - Open files are tabs along the top, as now, each colored by its practice.
 - Story: Browse Ticket Files By Practice (was Browse Ticket Folder).
 
