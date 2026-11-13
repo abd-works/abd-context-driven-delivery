@@ -23,4 +23,4 @@ BOARD_SERVER = AppServer(APP_FOLDER, "packages/session-board/serve.ts", BOARD_AP
 KANBAN_APP = App("Kanban", APP_FOLDER, BOARD_SERVER).register()
 STORY_UI_APP = App("Story UI", STORY_UI_FOLDER, BOARD_SERVER, page="/story-map").register()
 # The Story UI editor edits the Stories practice's files, so every Stories file the chat bar and the board show opens in it.
-Stories.edit_with(STORY_UI_APP)
+Stories.editor = STORY_UI_APP

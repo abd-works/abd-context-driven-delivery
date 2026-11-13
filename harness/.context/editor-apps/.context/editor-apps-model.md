@@ -127,11 +127,8 @@ Canonical: `harness/diagnostics/server_health.py`. It already reports the Kanban
 
 Canonical: `harness/guidance/.context/practice-guidance-model.md`.
 
-+ editor: App | None
-	// the app that edits this practice's files: the Story UI editor for Stories, none for every other practice
-----
-+ edit_with(app: App) -> None  <<classmethod>>
-	// space/kanban, which makes the Story UI editor's App, gives it to Stories (Stories.edit_with(STORY_UI_APP)), so no practice imports space
++ editor: App | None  <<class field>>
+	// the app that edits this practice's files: the Story UI editor for Stories, none for every other practice; space/kanban, which makes the Story UI editor's App, sets it on Stories (Stories.editor = STORY_UI_APP), so no practice imports space
 + session_root: Path | None
 	// derived: the folder the session this practice works in names for it (its PracticeSessionOutput.folder); none outside a session. work_in keeps the session output it is given so this reads it
 ----
@@ -236,7 +233,7 @@ Canonical: `space/session/practice_session_output.py`. It kept the one format a 
 	-> practice.editor
 	// the app that edits the practice's files, on every practice the board overview sends: the chat bar's file viewer shows the Story UI editor tile on every file of a fidelity whose practice has one (the person's decision: every Stories file)
 
-Decided while coding (implementation, 2026-11-12): the chat bar's file viewer shows a tile on every Stories file, not only the story map's, so it reads the editor from the practice the board overview sends (*BoardPractice.editor*), not from *FidelityProgress.editor*, which stays on the first row for the board's widget. *PracticeGuidance.editor* is a class-level value that `edit_with` sets, since every session makes its own practice instances and all of them edit with the same app.
+Decided while coding (implementation, 2026-11-12): the chat bar's file viewer shows a tile on every Stories file, not only the story map's, so it reads the editor from the practice the board overview sends (*BoardPractice.editor*), not from *FidelityProgress.editor*, which stays on the first row for the board's widget. *PracticeGuidance.editor* is a class field that space/kanban sets (`Stories.editor = STORY_UI_APP`), since every session makes its own practice instances and all of them edit with the same app; the `edit_with` classmethod the model first named was dropped (prefer-instance-operations).
 
 ### BoardPage (deleted)
 

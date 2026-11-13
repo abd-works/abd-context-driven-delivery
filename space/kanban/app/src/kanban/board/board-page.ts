@@ -19,6 +19,7 @@ import { BoardLayoutClient } from './board-layout-client'
 import { BoardReader } from './board-reader'
 import { BoardStore } from '../shared/board-store'
 import { BuildClient } from './build-client'
+import { EditorAppClient } from './editor-app-client'
 import { GraphAppClient } from './graph-app-client'
 import { SidePanelClient } from './side-panel-client'
 
@@ -44,6 +45,7 @@ export class BoardPage {
   readonly files: FilesPanelClient
   readonly build: BuildClient
   readonly graphApp: GraphAppClient
+  readonly editorApp: EditorAppClient
   readonly layout = new BoardLayoutClient(this.store)
   readonly reader = new BoardReader(this)
   readonly tiles = new TileClient(this)
@@ -66,6 +68,7 @@ export class BoardPage {
     this.files = new FilesPanelClient(this.store)
     this.build = new BuildClient(this.store, this.api)
     this.graphApp = new GraphAppClient(this.store, this.api)
+    this.editorApp = new EditorAppClient(this.store, this.api)
   }
 
   // The board as last read, made once for that read and again only when the store holds a new read, since the views

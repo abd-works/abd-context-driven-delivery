@@ -10,18 +10,9 @@ from harness.markdown.format import Format
 
 
 class PracticeGuidance:
-    _editor: ClassVar[App | None] = None
-
-    @classmethod
-    def edit_with(cls, app: App) -> None:
-        # a class operation on purpose: the editor belongs to the practice's kind, set once by space/kanban for Stories,
-        # so no practice imports space
-        # -> app.label
-        ...
-
-    @property
-    def editor(self) -> App | None:
-        ...
+    # a class field: the editor belongs to the practice's kind, set once by space/kanban for Stories
+    # (Stories.editor = STORY_UI_APP), so no practice imports space
+    editor: ClassVar[App | None] = None
 
     @property
     def session_root(self) -> Path | None:

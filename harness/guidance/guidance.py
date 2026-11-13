@@ -5,7 +5,7 @@ import functools
 import re
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from harness.annotations.annotation import hosted_only
 from harness.annotations.class_folder import class_folder
@@ -37,6 +37,10 @@ from harness.markdown import (
     markdownCollection,
 )
 from harness.markdown.format import Format
+
+if TYPE_CHECKING:
+    # Only named in a type: harness/diagnostics sits above this module and makes the apps.
+    from harness.diagnostics.app import App
 
 
 # The practice whose fidelities accompany other practices' fidelities, by its key: a fidelity's ``clean_engineering:``
@@ -307,16 +311,11 @@ class PracticeGuidance(Guidance):
     """The Clean Engineering practice whose fidelities accompany this practice's: the one of the set this practice was
     made with, which the catalogue hands it, so a companion works in the same session; none for a practice made apart
     from any set."""
-    editor: ClassVar[Any] = None
-    """The app that edits this practice's files beside the chat (an *App* of harness/diagnostics): the Story UI editor
-    for Stories, none for every other practice. The module that makes the app gives it (``edit_with``), so the framework
-    and the practice import no app."""
-
-    @classmethod
-    def edit_with(cls, app: Any) -> None:
-        """Edit this practice's files with app: every instance of the practice, in every session, answers it as its
-        editor."""
-        cls.editor = app
+    editor: ClassVar[App | None] = None
+    """The app that edits this practice's files beside the chat: the Story UI editor for Stories, none for every other
+    practice. Every instance of the practice, in every session, edits with the same app, so the module that makes the
+    app sets it on the practice's class (``Stories.editor = STORY_UI_APP``), and the framework and the practice import no
+    app."""
 
     def __init__(
         self,
