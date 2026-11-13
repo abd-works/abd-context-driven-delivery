@@ -87,8 +87,16 @@ export async function openInBrowserPane($: EngineInterface, url: string): Promis
     const shown = await $.mcp.call(DESKTOP_VIEW, SHOW_PANE, { pane: 'preview' })
     return shown.isError ? `the tab opened, but ${DESKTOP_VIEW} ${SHOW_PANE} failed: ${saidBy(shown) || 'no reason given'}` : ''
   } catch (failure) {
-    return `${BROWSER_PANE} ${OPEN_PANE_TAB} could not be called: ${reasonOf(failure)}`
+    return `${BROWSER_PANE} ${OPEN_PANE_TAB} could not be called: ${hookReasonOf(reasonOf(failure))}`
   }
+}
+
+// The engine wraps a hook's refusal as "<plugin>: $.mcp.call(<server>, <tool>) refused: PreToolUse:<tool> hook error:
+// <reason>", and a toast shows only its start, so the hook's own reason is put first, where the toast shows it.
+const HOOK_REFUSAL = /^.*?refused:\s*PreToolUse:(\S+) hook error:\s*/s
+function hookReasonOf(refusal: string): string {
+  const wrapped = HOOK_REFUSAL.exec(refusal)
+  return wrapped ? `${refusal.slice(wrapped[0].length)} (a PreToolUse hook on ${wrapped[1]})` : refusal
 }
 
 // Starts the board when nothing answers on its port, so /board always ends with a board to open. cdd's server health
