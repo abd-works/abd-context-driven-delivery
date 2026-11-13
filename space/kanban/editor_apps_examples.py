@@ -17,12 +17,8 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from harness.diagnostics.app import App, AppStatus
-from harness.process.process import ListeningPorts
+from harness.diagnostics.app import App, AppServer, AppStatus
 import space.kanban  # noqa: F401 - registers the Kanban and Story UI apps, as the cdd server does when it loads every toolset
-
-STOP_SECONDS = 5
-
 
 @dataclass(frozen=True)
 class AppExample:
@@ -42,7 +38,6 @@ CDD_KANBAN = AppExample("Kanban", "/")
 # the page, and its server answers on the port its ports file names.
 SERVE = "require('http').createServer((q, a) => a.end('app')).listen(require('./ports.json').app[0], '127.0.0.1');\n"
 BUILD = "require('fs').mkdirSync('dist', {recursive: true}); require('fs').writeFileSync('dist/index.html', 'built');\n"
-STOPS_AT_ONCE = "process.exit(0);\n"
 # Seed: a dependency npm cannot find, so its install fails with npm's own ENOENT.
 MISSING_DEPENDENCY = "file:./missing.tgz"
 FOUND_DEPENDENCY = "file:./part"
@@ -63,12 +58,12 @@ class ThrowawayApp:
         self.port = free_port()
         self._replaced = App.load(example.label, project=self.folder)
         self._listener: socket.socket | None = None
-        self.app = App(example.label, self.folder, (self.port,), example.page).register()
+        self.app = App(example.label, self.folder, AppServer(self.folder, "serve.js", (self.port,)), example.page).register()
         self.write_code(FOUND_DEPENDENCY, SERVE)
 
     def write_code(self, dependency: str, server: str) -> None:
-        """Seed: its package, with dependency as its one dependency and server as what npm start runs."""
-        package = {"name": "throwaway-app", "private": True, "scripts": {"build": "node build.js", "start": "node serve.js"}, "dependencies": {"part": dependency}}
+        """Seed: its package, with dependency as its one dependency, and server as the script its server runs."""
+        package = {"name": "throwaway-app", "private": True, "scripts": {"build": "node build.js"}, "dependencies": {"part": dependency}}
         (self.folder / "package.json").write_text(json.dumps(package), encoding="utf-8")
         (self.folder / "ports.json").write_text(json.dumps({"app": [self.port]}), encoding="utf-8")
         (self.folder / "build.js").write_text(BUILD, encoding="utf-8")
@@ -93,12 +88,9 @@ class ThrowawayApp:
         return f"http://127.0.0.1:{self.port}{self.example.page}"
 
     def close(self) -> None:
-        """Stop what answers on its port, put the real app back, and remove the folder."""
+        """Put the real app back and remove the folder."""
         if self._listener is not None:
             self._listener.close()
-        server = ListeningPorts().holder(self.port)
-        if server is not None:
-            server.stop(STOP_SECONDS)
         self._replaced.register()
         shutil.rmtree(self.folder, ignore_errors=True)
 

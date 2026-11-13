@@ -9,7 +9,8 @@ Model: harness/.context/editor-apps/.context/editor-apps-model.md#app.
 The status row reads each app from the server health report and a press calls `app.open`, so a step reads the row from
 `report()` and presses through `open_app(label)`, which the tier hands it. Left to other increments: the story map, the
 graph's practice roots, and the outlined ticket the opened page shows, the Story UI's file-viewer tiles, and the side
-panel itself, which is the chat bar's TypeScript.
+panel itself, which is the chat bar's TypeScript. So is "A board that does not come up says so instead of opening an
+empty panel": the chat bar starts the server and says when nothing answers, so no Python tier replays it.
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from __future__ import annotations
 from expects import be_a, contain, equal, expect
 
 from harness.diagnostics.app import AppNotStarted, AppStatus
-from space.kanban.editor_apps_examples import CDD_KANBAN, FOUND_DEPENDENCY, GRAPH_APP, MISSING_DEPENDENCY, SERVE, STOPS_AT_ONCE, STORY_UI_EDITOR, AppExample, ThrowawayApp, app_in
+from space.kanban.editor_apps_examples import CDD_KANBAN, GRAPH_APP, MISSING_DEPENDENCY, SERVE, STORY_UI_EDITOR, AppExample, ThrowawayApp, app_in
 from space.kanban.story_test import SharedStories, refusal_of
 
 shared_stories = SharedStories("Integrate Practice Content Editor Apps In Chat Bar")
@@ -104,34 +105,3 @@ for app_status in PRESS_DOES:
 
 for app_status in PRESS_DOES:
     press_readies_by_status(OPEN_KANBAN, CDD_KANBAN, "A press on the CDD Kanban readies it by its status and opens it beside the chat", app_status)
-
-
-@shared_stories.scenario(OPEN_KANBAN, "A board that does not come up says so instead of opening an empty panel")
-def _(s):
-    @s.given("the app status row reads Kanban not running")
-    def _(world):
-        world.app = ThrowawayApp(CDD_KANBAN)
-        world.apps.append(world.app)
-        world.app.seed(AppStatus.DOWN)
-
-    @s.but_("nothing answers on its port within the wait after the launch")
-    def _(world):
-        world.app.write_code(FOUND_DEPENDENCY, STOPS_AT_ONCE)
-
-    @s.when("the Person opens the CDD Kanban from the app status row")
-    def _(world):
-        world.refusal = refusal_of(lambda: world.open_app(CDD_KANBAN.label))
-
-    @s.then("the side panel stays closed")
-    def _(world):
-        expect(world.refusal).to(be_a(AppNotStarted))
-
-    @s.and_("the server health panel says the Kanban did not start: nothing answered on its port")
-    def _(world):
-        expect(str(world.refusal)).to(contain(f"The Kanban did not start: nothing answered on port {world.app.port}"))
-
-    @s.and_("the app status row still reads Kanban not running")
-    def _(world):
-        row = app_in(world.report(), CDD_KANBAN.label)
-        expect((row["status"], row["port"])).to(equal((AppStatus.DOWN.value, None)))
-

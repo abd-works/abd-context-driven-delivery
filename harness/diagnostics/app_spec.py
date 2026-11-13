@@ -1,7 +1,8 @@
-"""An app a person opens beside the chat: the one registry of apps, and the status each reads from its folder and ports.
+"""An app a person opens beside the chat: the one registry of apps, the status each reads from its folder and ports,
+and the server a chat starts it with.
 
-Installing and launching start npm and a server, so they are proved by the heavy story tiers of Integrate Practice
-Content Editor Apps In Chat Bar (space/kanban); this spec proves what needs no process."""
+Installing runs npm, so it is proved by the heavy story tiers of Integrate Practice Content Editor Apps In Chat Bar
+(space/kanban); this spec proves what needs no process."""
 import json
 import shutil
 import socket
@@ -11,7 +12,7 @@ from pathlib import Path
 from expects import be_a, be_none, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.diagnostics.app import App, AppNotRegistered, AppNotStarted, AppStatus
+from harness.diagnostics.app import App, AppNotRegistered, AppNotStarted, AppServer, AppStatus
 from harness.installation.data_class import data_of
 
 
@@ -29,7 +30,7 @@ with description("an app") as self:
     with before.each:
         self.folder = Path(tempfile.mkdtemp(prefix="app-"))
         self.port = free_port()
-        self.app = App("Throwaway", self.folder, (self.port,), "/story-map")
+        self.app = App("Throwaway", self.folder, AppServer(self.folder, "serve.js", (self.port,)), "/story-map")
 
     with after.each:
         shutil.rmtree(self.folder, ignore_errors=True)
@@ -81,11 +82,20 @@ with description("an app") as self:
             with it("should read running"):
                 expect(self.app.status).to(equal(AppStatus.RUNNING))
 
-            with it("should open by answering itself, installing and launching nothing"):
+            with it("should open by answering itself, installing nothing"):
                 expect(self.app.open()).to(be_a(App))
 
-            with it("should send its label, status, port and url as its data"):
-                expect(data_of(self.app)).to(equal({"label": "Throwaway", "status": "running", "port": self.port, "url": f"http://127.0.0.1:{self.port}/story-map"}))
+            with it("should send its label, status, port, url and server as its data"):
+                server = {"folder": self.folder.as_posix(), "command": ["node", "serve.js"]}
+                expect(data_of(self.app)).to(equal({"label": "Throwaway", "status": "running", "port": self.port, "url": f"http://127.0.0.1:{self.port}/story-map", "server": server}))
+
+
+with description("an app's server"):
+    with it("should start a TypeScript script with node through tsx"):
+        expect(AppServer(Path("app"), "packages/session-board/serve.ts", (8778,)).command).to(equal(["node", "--import", "tsx", "packages/session-board/serve.ts"]))
+
+    with it("should start a JavaScript script with node alone"):
+        expect(AppServer(Path("app"), "serve.js", (8778,)).command).to(equal(["node", "serve.js"]))
 
 
 with description("the registry of apps") as self:
@@ -103,11 +113,11 @@ with description("the registry of apps") as self:
 
     # Each spec registers its app under the Graph app's label, so putting the apps held before back leaves none behind.
     with it("should load a registered app by its label"):
-        registered = App("Graph", self.folder, (free_port(),)).register()
+        registered = App("Graph", self.folder, AppServer(self.folder, "serve.js", (free_port(),))).register()
         expect(App.load("Graph", project=self.folder)).to(equal(registered))
 
     with it("should replace an app registered again under its label rather than list it twice"):
-        again = App("Graph", self.folder, (free_port(),)).register()
+        again = App("Graph", self.folder, AppServer(self.folder, "serve.js", (free_port(),))).register()
         expect([app for app in App.registered() if app.label == "Graph"]).to(equal([again]))
 
     with it("should refuse a label no module registered"):

@@ -6,9 +6,9 @@ import { projectPageUrl } from './board'
 import { KANBAN } from '../health/server-health-client'
 
 // /board readies the CDD Kanban as a press on it in the status row does: Python's App.open installs it while it is not
-// installed and launches it while it is not running, so the chat starts no server of its own.
+// installed, and this chat starts the board's server while it is not running, which stops when the chat ends.
 
-// The board's address once it answers, readied first; empty when it could not be readied.
+// The board's address once it answers, readied first; a refusal says what failed and how to fix it.
 export async function runningBoardUrl($: EngineInterface): Promise<string> {
   return (await openApp($, KANBAN)).url
 }

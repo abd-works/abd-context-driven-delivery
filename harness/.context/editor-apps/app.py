@@ -28,12 +28,29 @@ class AppNotRegistered(KeyError):
         self.label = label
 
 
+class AppServer:
+    """The server an app answers from: what the chat that opens the app starts, and its end stops."""
+
+    def __init__(self, folder: Path, script: str, ports: tuple[int, ...]) -> None:
+        ...
+
+    @property
+    @data_field
+    def folder(self) -> str:
+        ...
+
+    @property
+    @data_field
+    def command(self) -> list[str]:
+        # node on its script, through tsx for a TypeScript one
+        ...
+
+
 class AppNotStarted(Exception):
     """An app could not be installed or launched: which app, which step, and the output that says why."""
 
-    def __init__(self, app: App, step: str, reason: str) -> None:
+    def __init__(self, app: App, reason: str) -> None:
         self.app = app
-        self.step = step
         self.reason = reason
 
 
@@ -46,7 +63,7 @@ class App:
 
     _registered: ClassVar[list[App]] = []
 
-    def __init__(self, label: str, folder: Path, ports: tuple[int, ...], page: str = "/") -> None:
+    def __init__(self, label: str, folder: Path, server: AppServer, page: str = "/") -> None:
         ...
 
     def register(self) -> App:
@@ -90,15 +107,10 @@ class App:
     @agent_tool
     def open(self) -> App:
         # -> self.install (while NOT_INSTALLED)
-        # -> self.launch (while not RUNNING)
+        # the chat that pressed it starts self.server while it is not running, and its end stops it
         ...
 
     def install(self) -> App:
         # npm install, then the page build (what BoardPage.rebuild did); report_progress at each step
         # raises AppNotStarted(self, "install", reason)
-        ...
-
-    def launch(self) -> App:
-        # -> BackgroundStart.run
-        # raises AppNotStarted(self, "launch", reason) when no port answers within the wait
         ...

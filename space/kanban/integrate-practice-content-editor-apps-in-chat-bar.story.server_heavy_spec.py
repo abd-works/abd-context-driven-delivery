@@ -7,7 +7,7 @@ from space.kanban.story_test import load_shared, replay
 
 WIRING = [
     "A press on the CDD Kanban readies it by its status and opens it beside the chat: not installed",
-    "A board that does not come up says so instead of opening an empty panel",
+    "An install that fails says what failed and how to fix it",
 ]
 
 globals().update(replay(load_shared(__file__, "integrate-practice-content-editor-apps-in-chat-bar"), ServerTier(), only=WIRING))

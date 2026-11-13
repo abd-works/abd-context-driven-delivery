@@ -37,8 +37,8 @@ Decided while coding (implementation, 2026-11-12): *App* lives in harness/diagno
 
 One CDD web app a person opens beside the chat: the Story UI editor, the Graph app, or the CDD Kanban. Three instances of one class; the module that owns each app makes its instance once, keeps it, and registers it (`app.register()`), from the ports `GRAPH_APP_PORTS` and `BOARD_APP_PORTS` read: harness/diagnostics makes the Graph app, space/kanban (`board_app.py`) makes the CDD Kanban and, since the board's server serves it, the Story UI editor. *App* keeps the one registry of apps, as *PracticeCatalogue* keeps the practices; nothing else lists them.
 
-+ App(label: str, folder: Path, ports: tuple[int, ...], page: str = "/")
-	// folder: where its package.json, packages and built page sit; ports: its server's ports in the order it tries them (AppPorts.of(server)); page: the path its page answers on, "/story-map" for the Story UI editor, which the board's server serves on the board's ports
++ App(label: str, folder: Path, server: AppServer, page: str = "/")
+	// folder: where its package.json, packages and built page sit; server: what answers for it (the Story UI editor and the CDD Kanban share the board's); page: the path its page answers on, "/story-map" for the Story UI editor
 ------
 + label: str  <<data_field>> <<identity>>
 	// "Story UI", "Graph", "Kanban": what the status row shows and what a tool call names to load it
@@ -49,7 +49,7 @@ One CDD web app a person opens beside the chat: the Story UI editor, the Graph a
 + url: str  <<data_field>>
 	// derived: http://127.0.0.1:{port}{page}, on the first of its ports while it is not running
 + folder: Path
-+ ports: tuple[int, ...]
++ server: AppServer  <<data_field>> <<aggregation>>
 + registered() -> list[App]  <<classmethod>>
 	// every app registered, in the order registered: Graph (harness/diagnostics is imported first), then Kanban and Story UI
 ----
@@ -59,18 +59,28 @@ One CDD web app a person opens beside the chat: the Story UI editor, the Graph a
 	// the registered app whose label the call names (the adapter's identity, as Ticket.load names a ticket); a label no module registered is refused with AppNotRegistered
 + open() -> App  <<mcp>> <<agent_tool>>
 	-> self.install
-	-> self.launch
-	// orchestration only: install while NOT_INSTALLED, launch while not RUNNING, then answer itself with its url, which the caller shows in a side panel
+	// install while NOT_INSTALLED, then answer itself with its url and its server; the chat that pressed it starts the server while it is not running ($.process.spawn in the chat bar's mod, as /board did), so the server stops when that chat ends and an app the chat did not start keeps running (decided 2026-11-12 by the person)
 + install() -> App
 	-> npm install in folder, then npm run build when its package has a build script (what BoardPage.rebuild did)
 	// raises AppNotStarted(self, "install", reason) when either step fails, or when its folder holds no package.json (the app is not there yet); report_progress at each step
-+ launch() -> App
-	-> BackgroundStart.run (harness/process)
-	// starts the app's server (npm start) from its folder and waits until a port answers; raises AppNotStarted(self, "launch", "nothing answered on port {port}") when none answers within the wait or the server stops first
+
+### AppServer
+
+<<Value Object>>
+
+The server an app answers from: what the chat that opens the app starts, and its end stops.
+
++ AppServer(folder: Path, script: str, ports: tuple[int, ...])
+------
++ folder: str  <<data_field>>
++ command: list[str]  <<data_field>>
+	// derived: node on its script, through tsx (--import tsx) for a TypeScript one
++ port: int | None
+	// derived: the first of its ports that answers
 
 **Invariants**
 
-- `open` never launches an app that is not installed, and never answers a url before one of its ports answers.
+- `open` answers an installed app or refuses; the chat never starts the server of an app that is not installed, and opens no side panel before one of its ports answers.
 - `status` is read from the folder and the ports every time it is asked; the app keeps no copy of it.
 
 ### AppStatus
@@ -91,11 +101,10 @@ One CDD web app a person opens beside the chat: the Story UI editor, the Graph a
 
 <<Domain Exception>>
 
-+ AppNotStarted(app: App, step: str, reason: str)
++ AppNotStarted(app: App, reason: str)
 ------
 + app: App
-+ step: str  // "install" or "launch"
-+ reason: str  // the error lines of the step's output, which the status row shows with the fix: "The Story UI install failed: {reason}. Run npm install in {folder}." or "The Kanban did not start: {reason}. Run npm start in {folder}." 
++ reason: str  // the error lines of the step's output, which the status row shows with the fix: "The Story UI install failed: {reason}. Run npm install in {folder}." A server that does not come up is the chat bar's to say: "The Kanban did not start: nothing answered on port 8778. Run {command} in {folder}." 
 
 ---
 
