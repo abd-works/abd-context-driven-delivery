@@ -90,6 +90,7 @@ function InstallLineView({ Text }: ElementTable, install: InstallJson) {
   return line ? <Text color={BRAND.text}>{line}</Text> : null
 }
 
+// Its border is drawn in its own background colour, so the panel has the round corners of the app's cards and no line.
 function ExpandedView(elements: ElementTable, band: Band) {
   const { Box } = elements
   const { health, view, install } = band
@@ -100,6 +101,8 @@ function ExpandedView(elements: ElementTable, band: Band) {
       flexDirection="column"
       paddingX={1}
       paddingY={1}
+      borderStyle="round"
+      borderColor={look.wash}
       backgroundColor={look.wash}
     >
       {HeadlineView(elements, health)}
