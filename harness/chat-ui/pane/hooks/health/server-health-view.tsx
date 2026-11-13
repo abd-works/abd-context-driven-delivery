@@ -1,5 +1,5 @@
-import type { HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
-import { colourOf, detailsOf, headlineOf, installLineOf, partsOf } from './server-health-wording'
+import type { AppOpeningJson, HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
+import { appLineOf, colourOf, detailsOf, headlineOf, installLineOf, partsOf, type Part } from './server-health-wording'
 import type { EngineInterface } from 'claude-code'
 
 import { BRAND } from '../shared/brand'
@@ -13,11 +13,13 @@ type Actions = {
   hideDetails: () => unknown
   reconnect: () => unknown
   runInstall: () => unknown
+  openApp: (label: string) => unknown
 }
 type Band = {
   health: ServerHealthJson
   view: HealthViewJson
   install: InstallJson
+  opening: AppOpeningJson
   actions: Actions
 }
 const LOOKS = {
@@ -29,20 +31,40 @@ const LOOKS = {
 
 
 // The surface has no tooltip, so the part's name is a card revealed while the pointer is over its icon and value.
-function PartsView({ Box, Text }: ElementTable, health: ServerHealthJson) {
+function PartView({ Box, Text }: ElementTable, part: Part) {
   return (
-    <Box flexDirection="row" columnGap={3}>
-      {partsOf(health).map(part => (
-        <Box key={part.label} flexDirection="row" gap={1}>
-          <Text color={colourOf(part)}>{part.icon}</Text>
-          <Text color={colourOf(part)}>{part.value}</Text>
-          <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
-            <Text color={BRAND.text}>{part.label}</Text>
-          </Box>
-        </Box>
-      ))}
+    <Box flexDirection="row" gap={1}>
+      <Text color={colourOf(part)}>{part.icon}</Text>
+      <Text color={colourOf(part)}>{part.value}</Text>
+      <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
+        <Text color={BRAND.text}>{part.label}</Text>
+      </Box>
     </Box>
   )
+}
+
+// An app's part is a button: a press readies the app and opens it in the side panel.
+function PartsView(elements: ElementTable, health: ServerHealthJson, actions: Actions) {
+  const { Box, Button } = elements
+  return (
+    <Box flexDirection="row" columnGap={3}>
+      {partsOf(health).map(part => {
+        const { app } = part
+        if (app === undefined) return <Box key={part.label}>{PartView(elements, part)}</Box>
+        return (
+          <Button key={`health-app-${app}`} plain onPress={() => actions.openApp(app)}>
+            {PartView(elements, part)}
+          </Button>
+        )
+      })}
+    </Box>
+  )
+}
+
+// Opening the Story UI., or why an app did not open and how to fix it, once a person pressed one.
+function AppLineView({ Text }: ElementTable, opening: AppOpeningJson) {
+  const line = appLineOf(opening)
+  return line ? <Text color={opening.state === 'failed' ? BRAND.error : BRAND.text}>{line}</Text> : null
 }
 
 function DetailsView({ Box, Text }: ElementTable, health: ServerHealthJson, install: InstallJson) {
@@ -106,7 +128,8 @@ function ExpandedView(elements: ElementTable, band: Band) {
     >
       {HeadlineView(elements, health)}
       {InstallLineView(elements, install)}
-      {health.connection === 'connected' ? PartsView(elements, health) : null}
+      {health.connection === 'connected' ? PartsView(elements, health, band.actions) : null}
+      {AppLineView(elements, band.opening)}
       {view.areDetailsOpen && health.connection !== 'connected' ? DetailsView(elements, health, install) : null}
       {ButtonsView(elements, band)}
     </Box>

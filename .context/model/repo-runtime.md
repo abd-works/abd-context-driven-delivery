@@ -1277,8 +1277,6 @@ No class of this module acts on another class of the model at run time.
   - `-> PracticeGuidance.fidelities` reads fidelities of · space/session/practice_session_output.py:147
 - `PracticeSessionOutput.working_format`
   - `-> PracticeGuidance.format` reads format of · space/session/practice_session_output.py:158
-- `PracticeSessionOutput.keep_format`
-  - `-> PracticeGuidance.format` reads format of · space/session/practice_session_output.py:164
 - `PracticeSessionOutput.log_validation`
   - `-> Session.log` reads log of · space/session/practice_session_output.py:178
 - `PracticeSessionOutput._chosen_outputs`

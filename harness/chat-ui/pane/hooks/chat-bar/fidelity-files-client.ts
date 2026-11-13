@@ -5,8 +5,10 @@ import type { FileEntryData } from '@cdd/space/kanban/fidelity-progress'
 import type { FileTextData } from '@cdd/space/session/session'
 
 import type { FidelityFilesJson } from '../../types'
-import { boardPageUrl, repositoryFolder } from '../board-chat/board'
-import { openInBrowser, runningBoardUrl } from '../board-chat/board-server'
+import { projectPageUrl, repositoryFolder } from '../board-chat/board'
+import { runningBoardUrl } from '../board-chat/board-server'
+import { openAppBesideChat } from '../health/app-client'
+import { openInBrowser } from '../shared/browser'
 import { reasonOf } from '../shared/failure'
 import { callTool, currentChatBar } from './chat-bar-client'
 import { runAction, type FidelityProgressClient } from './fidelity-progress-client'
@@ -14,7 +16,7 @@ import { runAction, type FidelityProgressClient } from './fidelity-progress-clie
 // The files view of one fidelity: a tab per file fidelity-progress.files declares, each tab's text read by session.read_file.
 // It opens in a pane of its own beside the chat, as the board's files panel does, never above the prompt in the chat.
 export const FILES_PANE = 'cdd-files'
-const fidelityFiles = atom({ plugin: 'cdd-board', key: 'fidelityFiles' } as const, null as FidelityFilesJson, { shape: 'fidelity-files-2' })
+const fidelityFiles = atom({ plugin: 'cdd-board', key: 'fidelityFiles' } as const, null as FidelityFilesJson, { shape: 'fidelity-files-3' })
 
 // A diagram is drawn in the draw.io editor, not as text, so its XML, often too long for one tool answer, is never read.
 export const isDiagram = (path: string): boolean => path.endsWith('.drawio')
@@ -43,10 +45,13 @@ export async function openFilesOf($: EngineInterface, fidelities: FidelityProgre
   const named = fidelities.map(fidelity => fidelity.slug).join(', ')
   try {
     const read = await Promise.all(fidelities.map(fidelity => callTool<Record<string, FileEntryData[]>>($, 'fidelity-progress.files', { ticket: fidelity.progress.ticket.name, fidelity: fidelity.slug })))
-    const entries = read.flatMap(files => Object.values(files).flat())
+    const entries = read.flatMap((files, index) => Object.values(files).flat().map(entry => ({ ...entry, editor: fidelities[index]?.editor?.label ?? null })))
     const paths = [...new Set(entries.map(entry => entry.path))]
     const exists = (path: string) => entries.some(entry => entry.path === path && entry.exists)
-    await update($, fidelityFiles, () => ({ fidelity: first.slug, tabs: paths.map(path => ({ path, text: null, exists: exists(path) })), shown: paths[0] ?? null, isOutOfDate: false }))
+    const editor = (path: string) => entries.find(entry => entry.path === path)?.editor ?? null
+    const tabs = paths.map(path => ({ path, text: null, exists: exists(path), editor: editor(path) }))
+    const { designView } = await currentChatBar($)
+    await update($, fidelityFiles, () => ({ fidelity: first.slug, tabs, shown: paths[0] ?? null, isOutOfDate: false, designView }))
     await openPane($, `${named} files`)
     if (paths[0]) await showFile($, paths[0])
   } catch (failure) {
@@ -60,7 +65,7 @@ export async function openFilesOf($: EngineInterface, fidelities: FidelityProgre
 // holds. With no board to open, the toast says so and names the report's file.
 export async function openReport($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
   const url = await runningBoardUrl($).catch(() => '')
-  const link = url && (await boardPageUrl($, url, { report: fidelity.progress.ticket.name, fidelity: fidelity.slug }))
+  const link = url && (await projectPageUrl($, url, { report: fidelity.progress.ticket.name, fidelity: fidelity.slug }))
   if (link && (await openInBrowser($, link))) return
   const why = url ? `the browser did not open ${link}` : 'the board is not running and did not start'
   $.ui.toast(`${fidelity.slug} report: ${why}. The report is ${fidelity.progress.report_file || 'not saved yet'}`)
@@ -86,6 +91,18 @@ export async function showFile($: EngineInterface, path: string): Promise<void> 
     text = reasonOf(failure)
   }
   await update($, fidelityFiles, files => (files ? { ...files, shown: path, tabs: files.tabs.map(tab => (tab.path === path ? { ...tab, text } : tab)) } : files))
+}
+
+// A press on a file's editor tile opens the file in that app beside the chat, readied as a press on it in the status
+// row readies it (App.open): the Story UI editor opens a Stories file at its page's ?file= link. A refusal shows in the
+// server health panel, as a status row press's does.
+export async function openInEditorApp($: EngineInterface, editor: string, path: string): Promise<void> {
+  await openAppBesideChat($, editor, url => projectPageUrl($, url, { file: path }))
+}
+
+// The session's design view opens in Claude Design, in the browser, by its claude.ai link.
+export async function openDesignView($: EngineInterface, link: string): Promise<void> {
+  if (!(await openInBrowser($, link))) $.ui.toast(`The design view did not open: no program took ${link}`)
 }
 
 // A press on the shown file's title opens it in the editor the system opens its kind of file with, by its file:// link.

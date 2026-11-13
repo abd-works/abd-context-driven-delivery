@@ -307,6 +307,11 @@ class PracticeGuidance(Guidance):
     """The Clean Engineering practice whose fidelities accompany this practice's: the one of the set this practice was
     made with, which the catalogue hands it, so a companion works in the same session; none for a practice made apart
     from any set."""
+    editor: ClassVar[Any] = None
+    """The app that edits this practice's files beside the chat (an *App* of harness/diagnostics, which sits above this
+    module, so it is not named here): the Story UI editor for Stories, none for every other practice. Every instance of the practice, in every session, edits with the same app, so the module that makes the
+    app sets it on the practice's class (``Stories.editor = STORY_UI_APP``), and the framework and the practice import no
+    app."""
 
     def __init__(
         self,
@@ -463,8 +468,18 @@ class PracticeGuidance(Guidance):
         knows that session, and each of its fidelities is given what it has there, so it answers its outputs, files and
         reports itself."""
         self.session = session_output.session
+        self._session_output = session_output
         for fidelity in self.fidelities:
             fidelity.work_in(session_output.of_fidelity(fidelity))
+
+    # The PracticeSessionOutput it works in, which work_in gives it; none until a session works on it.
+    _session_output: Any = None
+
+    @property
+    def session_root(self) -> Path | None:
+        """The folder the session this practice works in names for it, where it writes and the Graph app reads it from;
+        none outside a session."""
+        return None if self._session_output is None else self._session_output.folder
 
     @agent_instructions
     def generate_output(self) -> str:
@@ -684,18 +699,25 @@ class FidelityGuidance(Guidance):
 
     @property
     def format(self) -> Format:
-        """The format this fidelity works in: the one it last used, which it keeps in the session its practice works
-        in, else its default."""
-        kept = self.session_output.kept_format if self.session_output is not None else ""
-        return Format(kept) if kept else self._format
+        """The format this fidelity works in: the one it was last given while that is still chosen in the session its
+        practice works in, else the first format chosen there, else the one it was given or its default. A format it
+        does not write, such as one an action names for a practice of its own, is worked in for as long as it is held."""
+        chosen = self.session_output.chosen_formats if self.session_output is not None else []
+        if not chosen or self._format in chosen or not self.offers(self._format):
+            return self._format
+        return Format(chosen[0])
 
     @format.setter
     def format(self, value: str | None) -> None:
-        """Work in value from now on; in a session, the fidelity keeps it there, so the next action on it works in it
-        without being told."""
+        """Work in value from now on; in a session, a format the fidelity writes is chosen there too, so the next
+        action on it works in it without being told."""
         self._format = Format(value)
-        if self._format and self.session_output is not None:
-            self.session_output.keep_format(self._format)
+        if self._format and self.session_output is not None and self.offers(self._format):
+            self.session_output.choose_format(self._format, True)
+
+    def offers(self, format: str) -> bool:
+        """Whether this fidelity writes format: one of its outputs names it."""
+        return Format(format).name in self.outputs
 
     @property
     @data_field

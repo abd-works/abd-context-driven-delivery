@@ -14,6 +14,10 @@ export type HealthViewJson = { areDetailsOpen: boolean }
 
 export type InstallJson = { state: 'idle' | 'running' | 'installed' | 'failed'; error: string | null }
 
+// The app a person last pressed in the status row: opening while App.open readies it, failed with what failed and how to
+// fix it, idle once it opened in the side panel.
+export type AppOpeningJson = { label: string; state: 'idle' | 'opening' | 'failed'; error: string | null }
+
 // What the chat bar keeps between draws: board.overview's answer, and the server's own text when the last call failed.
 // problem is why the last board read failed, cleared by the next read that works. failure is an action the person ran
 // that failed, such as opening a ticket or a close, kept until they dismiss it, so a refresh never hides it.
@@ -44,16 +48,18 @@ export type RepoRowJson = { name: string; path: string; branch: string; is_publi
 // Whether the action picker's menu is open.
 // chosenAction: the action picked from the menu, which the action button shows and runs in place of the next one.
 // One format chip as ticket.format_choices answers it, and the chips held for the fidelities they were read for.
-export type FormatChoiceJson = { label: string; formats: string[]; offered: number; made: number; starts_picked: boolean }
-export type FormatChoicesJson = { key: string; choices: FormatChoiceJson[]; picked: string[] | null }
+export type FormatChoiceJson = { label: string; formats: string[]; offered: number; made: number; is_chosen: boolean }
+export type FormatChoicesJson = { key: string; choices: FormatChoiceJson[] }
 export type ActionPickerJson = { isOpen: boolean; chosenAction: string | null }
 // The pattern overlays ticket.overlay_choices answers for the session the bar shows, and whether the + list box is open.
 export type OverlayChoiceJson = { pattern: string; icon: string; is_chosen: boolean }
 export type OverlayChoicesJson = { ticket: string; choices: OverlayChoiceJson[]; isOpen: boolean }
 
 // The files view of the selected fidelity: one tab per file fidelity-progress.files declares, its text once session.read_file read it.
+// editor: the label of the app that edits a tab's file, as the board sends its practice (Story UI for a Stories file), or null.
 // isOutOfDate: a report's saved graph is in a shape the graph no longer reads, so the tab offers Validate again.
-export type FidelityFilesJson = { fidelity: string; tabs: { path: string; text: string | null; exists: boolean }[]; shown: string | null; isOutOfDate: boolean } | null
+// designView: the Claude Design link of the session's latest design canvas version, empty when none is recorded.
+export type FidelityFilesJson = { fidelity: string; tabs: { path: string; text: string | null; exists: boolean; editor: string | null }[]; shown: string | null; isOutOfDate: boolean; designView: string } | null
 
 // What the chat bar is doing while a ticket opens or closes, which the band shows with a turning wheel; empty when idle.
 export type BusyJson = { doing: string; frame: number }
@@ -64,6 +70,7 @@ declare module 'claude-code' {
       serverHealth: ServerHealthJson
       healthView: HealthViewJson
       install: InstallJson
+      appOpening: AppOpeningJson
       chatBar: ChatBarJson
       chatBarView: ChatBarViewJson
       selectedFidelities: string[]

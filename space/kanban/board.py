@@ -12,13 +12,12 @@ from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.catalog_generator.catalog_examples import CatalogFidelity
 from harness.chat.chat import Chat
-from harness.diagnostics.server_health import ServerHealth
+from harness.diagnostics.app import App
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_server import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
-from space.kanban.board_app import BOARD_APP_PORTS
 from space.repo.repo import Repo
 from space.session.session import SESSION_FILE
 from space.session.session_log import LogTimestamp
@@ -731,9 +730,13 @@ class BoardFidelity:
         """The slash command of its skill, such as /practices-stories-stories-story-map."""
         return f"/{self._catalogued.skill_of(self._shown.fidelity)}"
 
-
-# Server health probes the board where its server listens, so a chat finds the board without naming its port.
-ServerHealth.reports_kanban_app_on(BOARD_APP_PORTS.of("board"))
+    @property
+    @data_field
+    def editor(self) -> App | None:
+        """The app the small editor widget on this fidelity's row of every ticket opens: its practice's editor on the
+        practice's first fidelity (the Stories story map), none on every other fidelity."""
+        practice = self._catalogued.practice
+        return practice.editor if self._shown.fidelity is next(iter(practice.fidelities), None) else None
 
 
 class BoardOverview:
@@ -793,6 +796,13 @@ class BoardPractice:
     @data_field
     def colour(self) -> str:
         return self._practice.colour
+
+    @property
+    @data_field
+    def editor(self) -> App | None:
+        """The app that edits the practice's files, which a file of the practice opens in from the chat bar's file viewer:
+        the Story UI editor for Stories; none for a practice no app edits."""
+        return self._practice.editor
 
 
 class ColumnOverview:

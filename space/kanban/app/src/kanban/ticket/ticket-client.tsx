@@ -202,7 +202,7 @@ export class TicketClient extends TicketClientGenerated {
   async openChat(): Promise<void> {
     const chat = this.chat
     if (!this.canOpenChat || !chat.beginOpening()) return
-    chat.start(await this.worktreeOpened())
+    await chat.start(await this.worktreeOpened())
   }
 
   private async worktreeOpened(): Promise<string> {

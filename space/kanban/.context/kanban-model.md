@@ -370,6 +370,9 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> TicketCheckout.work_branch
 + format_choices(fidelities: list[str]): list[FormatChoice]
 	// `ticket.format_choices`: the chips of an action bar over those fidelities, each fidelity's files read once
++ choose_formats(fidelities: list[str], label: str, is_chosen: bool): list[FormatChoice]
+	// `ticket.choose_formats`: one press on a chip, in the chat bar or on the board, chooses or leaves out its formats in the session
+	-> FormatChoice.choose
 	-> TicketWork.progress_of
 	-> FidelityProgress.files
 	-> FormatChoice.offered_by
@@ -640,9 +643,11 @@ A ticket's work in one stage taken together: the progress of each fidelity the s
 	// data field
 + made: int
 	// data field: how many of the fidelities have a file in the group already
-+ starts_picked: bool
-	// data field: it holds a fidelity's default format and nothing is made in it
++ is_chosen: bool
+	// data field: every fidelity the chip covers has the format it uses from the group chosen in the session (FidelitySessionOutput.chosen_formats)
 ----
++ choose(is_chosen: bool): None
+	-> FidelitySessionOutput.choose_format (each fidelity the chip covers)
 + offered_by(read: list[tuple[FidelityGuidance, dict[str, list[FileEntry]]]]): list[FormatChoice]
 	// a chip per group the fidelities offer, in the order of `Format.GROUPS`
 	-> Format.group

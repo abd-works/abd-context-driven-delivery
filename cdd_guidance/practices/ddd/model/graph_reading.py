@@ -7,6 +7,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path, PurePosixPath
+from typing import TYPE_CHECKING
 
 from harness.graph.graph import Node
 from harness.guidance.practice_reading import PracticeReading
@@ -16,6 +17,9 @@ from harness.graph.skipped_folders import skips_folder
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext
 from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS, KIND_OF_STEREOTYPE, TacticalClass, kind_named_by, marks_another_system, root_kept_by
+
+if TYPE_CHECKING:
+    from harness.guidance.guidance import PracticeGuidance
 
 _FOREIGN_KEY = re.compile(r"//\s*foreign\s+(\w+)")
 _DERIVE_PREFIX = re.compile(r"^derive\w*", re.IGNORECASE)
@@ -156,10 +160,17 @@ class DddReading(PracticeReading):
                 context = _context_for(folder, contexts) or self.in_graph.root
                 aggregate = self._aggregate(folder, held, context) if held else self.in_graph.node(_aggregate_id(folder))
                 if aggregate is not None:
-                    held_classes = self.practice.extended.reading.in_graph.nodes("OoadClass")
+                    held_classes = self._clean_engineering.reading.in_graph.nodes("OoadClass")
                     aggregate.set_fact("bare_classes", _bare_classes(folder, self.in_graph.nodes(), held_classes))
             self._link_blocks()
             _map_contexts(self, marked, contexts)
+
+    @property
+    def _clean_engineering(self) -> PracticeGuidance | None:
+        """The Clean Engineering practice DDD builds its building blocks from, when this graph holds it open; none in a
+        graph without it, such as a session that works on DDD with Clean Engineering turned off."""
+        extended = self.practice.extended
+        return None if extended is None else self.graph.practices.loaded(type(extended))
 
     def _contexts(self, marked: list[tuple]) -> dict[str, Node]:
         """Each bounded context by its folder, under the context of the folder around it: the marked ones, else the
@@ -205,7 +216,7 @@ class DddReading(PracticeReading):
         names, and the building blocks of every other class stay as DDD built them before; whether a folder holds a
         domain, and which root a repository names, both read every class Clean Engineering holds, restored ones too,
         so a root is named by its repository whichever file holds the repository."""
-        clean = self.practice.extended
+        clean = self._clean_engineering
         if clean is None:
             return {}
         every = clean.reading.in_graph.nodes("OoadClass")

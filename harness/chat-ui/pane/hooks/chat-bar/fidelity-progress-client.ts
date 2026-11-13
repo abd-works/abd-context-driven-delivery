@@ -1,6 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
+import type { AppData } from '@cdd/harness/diagnostics/app'
 import type { BoardPracticeData } from '@cdd/space/kanban/board'
 import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/space/kanban/ticket'
@@ -83,6 +84,12 @@ export class FidelityProgressClient {
   // The practice root this fidelity's files are written under, as the ticket's session holds it.
   get folder(): string {
     return this.ticket.session.practices[this.progress.practice.key]?.root ?? ''
+  }
+
+  // The app that edits this fidelity's files, as the board sends its practice: the Story UI editor for every Stories
+  // file, none for a practice no app edits.
+  get editor(): AppData | null {
+    return this.practice?.editor ?? null
   }
 
   // The command the Python FidelityProgress gives for action on this fidelity. It names the ticket's session, because the

@@ -28,6 +28,8 @@ import {
   runInstall,
 } from './health/server-health-client'
 import { ServerHealthBandView, ServerHealthPanelView } from './health/server-health-view'
+import { currentAppOpening, openAppBesideChat } from './health/app-client'
+import { projectPageUrl } from './board-chat/board'
 import { CARD_SCOPE } from './chat-bar/session-card-view'
 import { toggleCard } from './chat-bar/session-dialogs-client'
 import { withChatNamed } from './session/session-log-client'
@@ -141,8 +143,9 @@ export const register: Register = on => {
       hideDetails: () => hideDetails($),
       reconnect: () => reconnect($, () => readActive($)),
       runInstall: () => runInstall($),
+      openApp: (label: string) => openAppBesideChat($, label, url => projectPageUrl($, url)),
     }
-    const band = { health: await currentServerHealth($), view: await currentHealthView($), install: await currentInstall($), actions }
+    const band = { health: await currentServerHealth($), view: await currentHealthView($), install: await currentInstall($), opening: await currentAppOpening($), actions }
     const elements = $.ui.resolve(e)
     try {
     const chatBar = await currentChatBar($)

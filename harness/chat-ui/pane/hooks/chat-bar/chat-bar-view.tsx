@@ -162,18 +162,19 @@ function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBa
 }
 
 // One chip per format group the fidelities offer, just before the action button, as on a board ticket's action bar:
-// orange while picked, green when every fidelity has a file in it already, grey otherwise; a press turns it on or off.
-function FormatChipsView($: EngineInterface, elements: ElementTable, { formats }: ChatBarDraw) {
+// orange while chosen in the session, green when every fidelity has a file in it already, grey otherwise; a press turns
+// it on or off in the session.
+function FormatChipsView($: EngineInterface, elements: ElementTable, { chatBar, formats }: ChatBarDraw) {
   const { Box } = elements
   if (!formats.choices.length) return null
   return (
     <Box key="format-chips" flexDirection="row" gap={0} marginX={1}>
       {formats.choices.map(choice => {
-        const isOn = formats.picked.includes(choice.label)
+        const isOn = choice.is_chosen
         const colour = isOn ? BRAND.onAccent : choice.made && choice.made === choice.offered ? BRAND.success : BRAND.muted
         return (
           <Box key={`format-${choice.label}`} paddingX={1} backgroundColor={isOn ? BRAND.accent : undefined}>
-            {GlyphButtonView(elements, `format-chip-${choice.label}`, formatGlyphOf(choice.label), colour, () => toggleFormat($, formats, choice.label))}
+            {GlyphButtonView(elements, `format-chip-${choice.label}`, formatGlyphOf(choice.label), colour, () => toggleFormat($, chatBar, formats, choice.label))}
             {TipView(elements, choice.label, `${choice.made}/${choice.offered} made`, BRAND.muted)}
           </Box>
         )

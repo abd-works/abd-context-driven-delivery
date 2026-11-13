@@ -9,6 +9,7 @@ import { BoardColumnsView } from './board-columns-view'
 import { BoardContext, useBoard } from '../shared/board-context'
 import { BoardHeaderView } from './board-header-view'
 import type { BoardPage } from './board-page'
+import { BOARD_SERVER_DOWN } from './board-api'
 import { useDragGrip } from './drag-grip'
 import { SidePanelsView } from './side-panels-view'
 
@@ -19,12 +20,15 @@ export function headlineOf(failure: string): string {
   return (lines[0]?.startsWith('Traceback') ? lines.at(-1) : lines[0]) ?? ''
 }
 
-function ServerBandView({ failure, hasBoard }: { failure: string; hasBoard: boolean }) {
-  const consequence = hasBoard ? 'this board may be out of date. It reads again every two seconds' : 'there is no board to show yet. It tries again every two seconds'
+// What starts the server that is not answering: the board's own server, or the cdd server behind it.
+const startingOf = (failure: string): string =>
+  failure === BOARD_SERVER_DOWN ? "The session board server is not answering: open the Kanban from the chat bar's status row to start it." : 'The cdd server is not answering: start it again with /cdd-restart in a chat, or open the Kanban from the chat bar.'
+
+function ServerBandView({ failure }: { failure: string }) {
   const headline = headlineOf(failure)
   return (
     <div className="band band-failure" role="alert">
-      cdd is not connected, so {consequence} · {headline}
+      {startingOf(failure)} The board shows no columns until it answers, and tries again every two seconds · {headline}
       {headline !== failure.trim() ? (
         <details className="band-details">
           <summary>Details</summary>
@@ -61,10 +65,10 @@ function ViolationsBandView({ ticket }: { ticket: TicketClient }) {
 
 function BandsView() {
   const { page, state } = useBoard()
+  if (state.serverFailure) return <ServerBandView failure={state.serverFailure} />
   const active = page.board.activeTicket
   return (
     <>
-      {state.serverFailure ? <ServerBandView failure={state.serverFailure} hasBoard={state.board !== null} /> : null}
       {page.board.unsaved ? <UnsavedBandView changes={page.board.unsaved.changes} error={page.board.unsaved.error} /> : null}
       {active?.violatedSlugs.length ? <ViolationsBandView ticket={active} /> : null}
     </>
@@ -103,13 +107,13 @@ function ToastsView() {
 function MainView() {
   const { state } = useBoard()
   const isCovered = state.panels.some(panel => panel.isExpanded)
-  const { expandedRegion } = state
+  const { expandedRegion, serverFailure } = state
   return (
     <main className={isCovered ? 'board-main is-covered' : 'board-main'}>
       <BoardHeaderView />
       {expandedRegion !== 'details' ? <BoardColumnsView /> : null}
       {expandedRegion ? null : <SplitGripView />}
-      {expandedRegion !== 'board' ? <DetailsView /> : null}
+      {expandedRegion !== 'board' && !serverFailure ? <DetailsView /> : null}
     </main>
   )
 }

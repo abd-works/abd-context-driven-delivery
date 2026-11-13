@@ -10,6 +10,14 @@ export type CddApi = { post<Result>(path: string, body: Record<string, unknown>)
 // One tool's route, as plain data any server framework can mount.
 export type CddRoute = { path: string; run: (cdd: CddConnection, request: CddRequest) => Promise<unknown> }
 
+// The repository a page shows, which its ?project= link names; every call the page makes names it in this header, so
+// the server answers the call on that repository's cdd connection (ProjectConnections), in the session open there.
+export const PROJECT_QUERY = 'project'
+export const PROJECT_HEADER = 'x-cdd-project'
+
+// The folder the page's ?project= link names; empty for a page opened without one, which shows the server's own project.
+export const projectOfPage = (search: string = (globalThis as { location?: { search: string } }).location?.search ?? ''): string => new URLSearchParams(search).get(PROJECT_QUERY) ?? ''
+
 // The newest step a running call has reported, such as which file a long load is reading.
 export type CddProgress = { tool: string; message: string }
 
