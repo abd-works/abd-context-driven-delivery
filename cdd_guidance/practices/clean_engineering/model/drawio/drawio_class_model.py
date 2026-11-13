@@ -43,6 +43,7 @@ from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import 
     SMALLEST_PORT_SPACING,
     ArrowRouter,
     CardPlacement,
+    CardSpacing,
     DiagramArrow,
 )
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
@@ -100,6 +101,8 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         # The diagram as it is now; with keep_positioning, cards and arrows already on it stay where they are.
         self.previous = None
         self.keep_positioning = False
+        # With keep_positioning, also close up the empty space between the kept cards, keeping their arrangement.
+        self.close_gaps = False
 
     def save(self) -> str:
         return self.render(self)
@@ -588,11 +591,15 @@ class _ClassDiagramPage:
         self._import_ids = import_ids
 
     def write(self, graph: ET.Element, positions: Dict[str, Tuple[float, float]], previous_edges: Dict[Tuple[str, str], ET.Element]) -> None:
-        """Place the cards, keeping any a person already placed, then draw arrows, keeping the routes already drawn."""
+        """Place the cards, keeping any a person already placed (closing up the space between them when the render asks
+        to), then draw arrows, keeping the routes already drawn."""
         root_el = _add_graph_root(graph)
         arrows = self._arrows()
         cards = self._cards(arrows)
         self._place_cards_keeping(cards, arrows, positions)
+        if self._writer.channel.kept_previous() and self._writer.channel.close_gaps and CardSpacing(list(cards.values()), arrows).close_gaps():
+            # A card moved, so an arrow kept from the last drawing no longer meets it: every arrow is drawn again.
+            previous_edges = {}
         for card in cards.values():
             card.append_to(root_el)
         kept_pairs = self._copy_kept_edges(root_el, previous_edges)
@@ -731,7 +738,10 @@ def _append_edge(root_el: ET.Element, arrow: DiagramArrow, cards: Dict[str, Draw
     cell = ET.SubElement(root_el, 'mxCell')
     cell.set('id', edge_id)
     cell.set('value', arrow.label)
-    cell.set('style', arrow_style(EDGE_STYLES.get(arrow.kind, DEFAULT_EDGE_STYLE), arrow, cards))
+    style = EDGE_STYLES.get(arrow.kind, DEFAULT_EDGE_STYLE)
+    if arrow.straight:
+        style = style.replace('edgeStyle=orthogonalEdgeStyle;', 'edgeStyle=none;')
+    cell.set('style', arrow_style(style, arrow, cards))
     cell.set('edge', '1')
     cell.set('source', arrow.source)
     cell.set('target', arrow.target)

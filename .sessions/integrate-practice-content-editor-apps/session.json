@@ -1,0 +1,26 @@
+{
+  "name": "integrate-practice-content-editor-apps",
+  "title": "Integrate Practice Content Editor Apps",
+  "scope": "feature",
+  "workpath": "C:\\dev\\abd-cdd-integrate-practice-conte",
+  "repo_path": "C:\\dev\\abd-cdd-integrate-practice-conte",
+  "outputs": {
+    "ux": {
+      "root": "harness/.context/ux"
+    },
+    "stories": {
+      "root": "harness/.context/stories"
+    }
+  },
+  "branch": "integrate-practice-content-editor-apps",
+  "worktree": "C:\\dev\\abd-cdd-integrate-practice-conte",
+  "practices": {
+    "stories": {
+      "enabled": true
+    }
+  },
+  "overlays": [
+    "cdd_web_domain_access",
+    "lern_domain_driven"
+  ]
+}

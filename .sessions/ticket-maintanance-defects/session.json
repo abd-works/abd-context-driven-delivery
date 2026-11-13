@@ -1,5 +1,9 @@
 {
   "name": "ticket-maintanance-defects",
   "title": "ticket-maintanance-defects",
-  "scope": "feature"
+  "scope": "feature",
+  "branch": "ticket-maintanance-defects",
+  "worktree": "C:\\dev\\abd-cdd-ticket-maintanance-defec",
+  "stage": "Implementation",
+  "stage_mark": "in-progress"
 }

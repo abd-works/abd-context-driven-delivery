@@ -35,6 +35,14 @@ Built today: Refactor Knowledge Graph App To Web Domain Access (the Graph app ru
 
 *Person*. Intended (`.sessions/_backlog/integrate-practice-content-editor-apps.md` "Trace pane"): picking a story shows its scenarios, tests and code from `harness/graph`, with the domain, class and bounded-context diagrams. Built today (checked 2026-11-10): the Graph app folds story, scenario and step and shows a step's invokes, observes and demonstrates with its source (`harness/graph/app/app.test.tsx:429,746`). Missing: one trace view of a picked story's scenarios, tests and code, and the diagrams.
 
+#### Story: Open Knowledge Graph Side Panel From Chat Bar
+
+*Person*. Requested (2026-11-12, "same but for KG"): the app status row lists the Graph app with its status; clicking it installs it when not installed, launches it when down, and opens it in the side panel. The graph loads the folders the session's practice roots name, and follows the session activated last.
+
+#### Story: Open Kanban Side Panel From Chat Bar
+
+*Person*. Requested (2026-11-12): the app status row lists the CDD Kanban with its status; clicking it installs it when not installed, launches it when down, and opens it in the side panel.
+
 #### Story: Invoke Claude Design Story Explorer From Chat Bar
 
 *Person*. Intended (requested on 2026-11-06, as the CDD Kanban): the chat bar opens the Claude Design story explorer the design canvas draws today (`explorer.dc.html`) on the active session's story map and screens.
@@ -66,3 +74,7 @@ Built today: Refactor Knowledge Graph App To Web Domain Access (the Graph app ru
 #### Story: Deploy Knowledge Graph App With Board State
 
 *Agent*. Requested (2026-11-06, non-functional): the Graph app runs on the same app server and instance as the board's state, so the graph and the board share one state for the active ticket.
+
+#### Story: Refactor Kanban Board To Web Domain Access
+
+*Agent*. Requested (2026-11-12, non-functional, "like above but for kanban board"): the CDD Kanban, like the Story UI app, follows the cdd_web_domain_access and lern_domain_driven patterns: its backend is the MCP-generated domain objects through the TypeScript adapter, not calls of its own.

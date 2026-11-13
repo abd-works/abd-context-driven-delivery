@@ -4,7 +4,7 @@ import type { ActionPickerJson, ChatBarViewJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { GlyphButtonView } from '../shared/glyph-button-view'
 import { ActionButtonView, PickerView } from './action-button-view'
-import { formatGlyphOf, overlayColumnOf, REPO_BUTTON, stageColumn } from './bar-columns'
+import { formatGlyphOf, overlayColumnOf, REPO_GLYPH, repoWordOf, stageColumn } from './bar-columns'
 import { toggleFormat, type FormatChips } from './format-choices-client'
 import { toggleOverlay, toggleOverlayList, type OverlayChips } from './overlay-choices-client'
 import { askChatToFix, dismissFailure, fixFailure, runHandoff, type ChatBarClient } from './chat-bar-client'
@@ -37,16 +37,14 @@ const SEPARATOR = '│'
 // A label shown above an element while the pointer is on its keyed Box, as the canvas's hover tips. A tip given onPress
 // is a button too: a see-through Button over its words takes the press.
 function TipView({ Box, Button, Text }: ElementTable, words: string, detail: string, detailColour: string, onPress?: () => unknown, key = '') {
-  const shown = detail ? `${words} ${detail}` : words
+  const tip = [
+    <Text key="tip-words" color={BRAND.text}>{detail ? `${words} ` : words}</Text>,
+    detail ? <Text key="tip-detail" color={detailColour}>{detail}</Text> : null,
+  ]
+  // A pressable tip is one whole Button holding its words: a see-through one laid over them takes no press.
   return (
     <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
-      <Text color={BRAND.text}>{detail ? `${words} ` : words}</Text>
-      {detail ? <Text color={detailColour}>{detail}</Text> : null}
-      {onPress ? (
-        <Box position="absolute" top={0} left={1} width={shown.length}>
-          <Button key={key} plain label=" " onPress={onPress} />
-        </Box>
-      ) : null}
+      {onPress ? <Button key={key} plain onPress={onPress}>{tip}</Button> : tip}
     </Box>
   )
 }
@@ -102,32 +100,29 @@ export function StagePickerView($: EngineInterface, { Box, Button, Text }: Eleme
   )
 }
 
-// A word and a + as one button: the words drawn as Text in their own colours, and one see-through Button laid over the
-// whole width takes the press, as GlyphButtonView does for a single glyph.
-function WordPlusButtonView({ Box, Button, Text }: ElementTable, key: string, word: string, onPress: () => unknown) {
+// A word and its glyph as one whole button, the word in the text colour and the glyph muted. A see-through Button laid
+// over text takes no press in the desktop app, so the words are the Button's own children.
+function WordGlyphButtonView({ Button, Text }: ElementTable, key: string, word: string, glyph: string, onPress: () => unknown) {
   return (
-    <Box key={`${key}-mark`} flexDirection="row">
+    <Button key={key} plain onPress={onPress}>
       <Text weight="semibold" color={BRAND.text}>{word}</Text>
-      <Text color={BRAND.muted}> +</Text>
-      <Box position="absolute" top={0} left={0} width={`${word} +`.length}>
-        <Button key={key} plain label=" " onPress={onPress} />
-      </Box>
-    </Box>
+      <Text color={BRAND.muted}>{` ${glyph}`}</Text>
+    </Button>
   )
 }
 
-// In the main chat, "main +" is one button that opens the list of tickets to open, its card showing on hover, and
-// "repo +" one button that opens the list of repositories. A ticket's own chat works only on that ticket, so it shows
-// the name alone, a press pinning its card open.
+// In the main chat, "main +" is one button that opens the list of tickets to open, its card showing on hover, and the
+// repository's name with its ⑂ one button that opens the list of repositories. A ticket's own chat works only on that
+// ticket, so it shows the name alone, a press pinning its card open.
 function SessionNameView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
   const { Box, Button, Text } = elements
   if (chatBar.isMain) {
     return (
       <Box key="session-name" flexDirection="row" gap={1}>
         <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
-          {WordPlusButtonView(elements, 'session-list-button', chatBar.sessionName || 'main', () => toggleSessionList($))}
+          {WordGlyphButtonView(elements, 'session-list-button', chatBar.sessionName || 'main', '+', () => toggleSessionList($))}
         </Box>
-        {WordPlusButtonView(elements, 'repo-list-button', REPO_BUTTON.replace(' +', ''), () => toggleRepoListWithRepos($))}
+        {WordGlyphButtonView(elements, 'repo-list-button', repoWordOf(chatBar), REPO_GLYPH, () => toggleRepoListWithRepos($))}
       </Box>
     )
   }

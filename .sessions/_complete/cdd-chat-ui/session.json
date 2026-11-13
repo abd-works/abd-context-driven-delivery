@@ -1,0 +1,22 @@
+{
+  "name": "cdd-chat-ui",
+  "workpath": "C:\\dev\\abd-cdd-cdd-chat-ui\\harness\\chat-ui",
+  "repo_path": "C:\\dev\\abd-context-driven-delivery",
+  "title": "cdd-chat-ui",
+  "practices": {
+    "stories": {
+      "enabled": true
+    },
+    "ddd": {
+      "enabled": false
+    },
+    "ux": {
+      "enabled": true
+    },
+    "bdd": {
+      "enabled": false
+    }
+  },
+  "branch": "cdd-chat-ui",
+  "worktree": "C:\\dev\\abd-cdd-cdd-chat-ui"
+}
