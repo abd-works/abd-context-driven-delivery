@@ -69,20 +69,38 @@ async function readActive($: EngineInterface): Promise<void> {
   shownContext = chatBar.agentContext
 }
 
+// The hooks below hand the event on first and then call one of these without waiting, so a failure goes to the debug log.
+async function readBoardAfterStart($: EngineInterface): Promise<void> {
+  await readName($).catch(logged($, 'naming the chat'))
+  await readActive($).catch(logged($, 'reading the board'))
+  refreshHealthSoon($)
+}
+
+async function readBoardAfterTurn($: EngineInterface, isMainChat: boolean): Promise<void> {
+  if (isMainChat) await turnCompleted($).catch(logged($, 'finishing the turn'))
+  await readName($).catch(logged($, 'naming the chat'))
+  await Promise.all([readActive($), refreshHealth($)]).catch(logged($, 'reading the board'))
+}
+
+async function readBoardAfterSubmit($: EngineInterface): Promise<void> {
+  await Promise.all([refreshHealth($), refreshChatBar($)]).catch(logged($, 'reading the board'))
+  await showStatus($).catch(logged($, 'showing the status'))
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'board', description: 'Open the CDD session board, starting it when it is not running' })
     await clearBusy($)
     const chat = await $.session.id()
-    await readName($).catch(logged($, 'naming the chat'))
     $.clock.every(CHECK_IN_MILLISECONDS, () => {
       if (!isCheckInDue()) return
       // The cdd server can still be connecting at session start; the next check-in tries again.
       void checkIn($, chat).catch(logged($, 'checking in with the board'))
     })
-    await readActive($)
-    refreshHealthSoon($)
-    return next(e)
+    // The chat opens first and the bar fills in after it, so a slow or still-connecting cdd server never holds the chat up.
+    const started = await next(e)
+    void readBoardAfterStart($)
+    return started
   })
 
   on('command.run', { command: 'board' }, async $ => ({ text: await openedBoard($) }))
@@ -92,11 +110,10 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // The turn ends first and the bar is read again after it, so the next prompt does not wait on the cdd server.
   on('turn.complete', async ($, e, next) => {
     const finished = await next(e)
-    if (!e.agentId) await turnCompleted($)
-    await readName($).catch(logged($, 'naming the chat'))
-    await Promise.all([readActive($), refreshHealth($)])
+    void readBoardAfterTurn($, !e.agentId)
     return finished
   })
 
@@ -127,11 +144,12 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // The prompt goes to the agent first and the bar is read again after it, so a prompt never waits on the cdd server.
   on('prompt.submit', async ($, e, next) => {
     await closeOptionListsOutside($)
-    await Promise.all([refreshHealth($), refreshChatBar($)])
-    await showStatus($)
-    return next(e)
+    const submitted = await next(e)
+    void readBoardAfterSubmit($)
+    return submitted
   })
 
   // The status line, the repository, the session's branch and its folder, sits in the hint line under the prompt, after
