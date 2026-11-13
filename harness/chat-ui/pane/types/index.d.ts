@@ -51,10 +51,6 @@ export type ActionPickerJson = { isOpen: boolean; chosenAction: string | null }
 export type OverlayChoiceJson = { pattern: string; icon: string; is_chosen: boolean }
 export type OverlayChoicesJson = { ticket: string; choices: OverlayChoiceJson[]; isOpen: boolean }
 
-// The files view of the selected fidelity: one tab per file fidelity-progress.files declares, its text once session.read_file read it.
-// isOutOfDate: a report's saved graph is in a shape the graph no longer reads, so the tab offers Validate again.
-export type FidelityFilesJson = { fidelity: string; tabs: { path: string; text: string | null; exists: boolean }[]; shown: string | null; isOutOfDate: boolean } | null
-
 // The help pane's fidelity and its help as one markdown page, as fidelity-progress.help answers it; null when closed.
 export type FidelityHelpJson = { fidelity: string; markdown: string } | null
 
@@ -71,7 +67,6 @@ declare module 'claude-code' {
       chatBarView: ChatBarViewJson
       selectedFidelities: string[]
       actionPicker: ActionPickerJson
-      fidelityFiles: FidelityFilesJson
       fidelityHelp: FidelityHelpJson
       shownStage: string | null
       stagePicker: boolean

@@ -11,10 +11,8 @@ import { currentActionPicker } from './chat-bar/action-picker-client'
 import { isStagePickerOpen } from './chat-bar/stage-client'
 import { currentFormatChips, forgetFormatChips, loadFormatChips } from './chat-bar/format-choices-client'
 import { currentOverlayChips, loadOverlayChoices } from './chat-bar/overlay-choices-client'
-import { currentFidelityFiles, FILES_PANE, forgetFiles } from './chat-bar/fidelity-files-client'
 import { currentFidelityHelp, forgetHelp, HELP_PANE } from './chat-bar/fidelity-help-client'
 import { FidelityHelpView } from './chat-bar/fidelity-help-view'
-import { FidelityFilesView } from './chat-bar/fidelity-files-view'
 import { currentChatBarView } from './chat-bar/session-dialogs-client'
 import { closeOptionListsOutside } from './chat-bar/option-lists-client'
 import { reasonOf } from './shared/failure'
@@ -195,14 +193,6 @@ export const register: Register = on => {
       return h(elements.Text, { color: '#EF4444' }, `chat bar failed to draw: ${failure instanceof Error ? `${failure.message}
 ${failure.stack ?? ''}` : String(failure)}`)
     }
-  })
-
-  // The files pane beside the chat: a fidelity's files or its validation report, never drawn in the chat itself.
-  on('ui.render', { component: 'Pane', requestId: FILES_PANE }, async ($, e) => FidelityFilesView($, $.ui.resolve(e), await currentFidelityFiles($)))
-
-  on('ui.close', { id: FILES_PANE }, async ($, e, next) => {
-    if (e.origin.kind === 'person') await forgetFiles($)
-    return next(e)
   })
 
   // The help pane beside the chat: a fidelity's help, as the ? beside a practice on a board ticket shows it.

@@ -62,16 +62,6 @@ export async function runningBoardUrl($: EngineInterface): Promise<string> {
   return (await startedBoard($)).url
 }
 
-// Opens a page in the person's browser with the system's own opener, since mods have no call that opens a link.
-export async function openInBrowser($: EngineInterface, url: string): Promise<boolean> {
-  const openers = [['rundll32', 'url.dll,FileProtocolHandler', url], ['open', url], ['xdg-open', url]]
-  for (const argv of openers) {
-    const opened = await $.process.run(argv).catch(() => null)
-    if (opened?.exitCode === 0) return true
-  }
-  return false
-}
-
 // The Claude desktop app's own browser pane, as /mcp lists it, and its tool that opens a tab at a URL.
 const BROWSER_PANE = 'Claude_Browser'
 const OPEN_PANE_TAB = 'preview_start'

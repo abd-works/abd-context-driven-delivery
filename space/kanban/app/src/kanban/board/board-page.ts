@@ -29,6 +29,8 @@ const SERVER_BACK_CHECK_MILLISECONDS = 1000
 const CLAUDE_OPEN_PATH = '/claude/open'
 const REPORT_QUERY = 'report'
 const HELP_QUERY = 'help'
+const FILES_QUERY = 'files'
+const SESSION_FOLDER_QUERY = 'session-folder'
 const TICKET_QUERY = 'ticket'
 const FIDELITY_QUERY = 'fidelity'
 const NOT_READ_YET: BoardData = { project: '', practices: [], open_tickets: [], active: null, columns: [], fidelities: [], sends_fixes_directly: false, unsaved: null }
@@ -166,6 +168,34 @@ export class BoardPage {
     await this.panels.openFidelityHelp(progress)
   }
 
+  // A link such as ?files=<ticket>&fidelity=<slug>,<slug>, which the chat bar's files button opens, opens the files panel
+  // on that ticket's stage with those fidelities' practices turned on, as their files button on the tile does. A link
+  // naming no fidelity the ticket has opens nothing.
+  async openLinkedFiles(search: string): Promise<void> {
+    const query = new URLSearchParams(search)
+    const name = query.get(FILES_QUERY)
+    const slugs = (query.get(FIDELITY_QUERY) ?? '').split(',').filter(Boolean)
+    if (!name || !slugs.length) return
+    if (!this.store.state.board) await this.reader.refresh()
+    const ticket = this.board.tickets.find(shown => shown.name === name)
+    const progress = slugs.flatMap(slug => ticket?.progressNamed(slug) ?? [])
+    if (!ticket || !progress.length) return this.store.toast(`The board has no ${slugs.join(', ')} files for ${name}.`, true)
+    this.store.change({ selected: ticket.address })
+    await this.files.openFiles(ticket, progress)
+  }
+
+  // A link such as ?session-folder=<ticket>, which the chat bar's session name opens, opens the files panel on that
+  // ticket's session folder, as the details' session link does. A link naming a ticket the board does not show says so.
+  async openLinkedSessionFolder(search: string): Promise<void> {
+    const name = new URLSearchParams(search).get(SESSION_FOLDER_QUERY)
+    if (!name) return
+    if (!this.store.state.board) await this.reader.refresh()
+    const ticket = this.board.tickets.find(shown => shown.name === name)
+    if (!ticket) return this.store.toast(`The board has no ticket ${name}.`, true)
+    this.store.change({ selected: ticket.address })
+    await this.files.openSessionFolder(ticket)
+  }
+
   // A link such as ?ticket=<ticket>, which the chat bar opens from its health panel, opens the chat's ticket once the
   // board has been read, as a click on its card does. A link naming a ticket the board does not show says so.
   async openLinkedTicket(search: string): Promise<void> {
@@ -182,6 +212,8 @@ export class BoardPage {
     void this.openLinkedTicket(search)
     void this.openLinkedReport(search)
     void this.openLinkedHelp(search)
+    void this.openLinkedFiles(search)
+    void this.openLinkedSessionFolder(search)
     const stopBoard = this.reader.startPolling()
     const chatTimer = setInterval(() => void this.pollChats(), CHAT_POLL_MILLISECONDS)
     void this.pollChats()
