@@ -30,6 +30,7 @@ import {
   runInstall,
 } from './health/server-health-client'
 import { ServerHealthBandView, ServerHealthPanelView } from './health/server-health-view'
+import { openApp, type AppName } from './health/open-app-client'
 import { CARD_SCOPE } from './chat-bar/session-card-view'
 import { toggleCard } from './chat-bar/session-dialogs-client'
 import { withChatNamed } from './session/session-log-client'
@@ -151,6 +152,8 @@ export const register: Register = on => {
       hideDetails: () => hideDetails($),
       reconnect: () => reconnect($, () => readActive($)),
       runInstall: () => runInstall($),
+      // Starting the Graph app can take a minute, so the press returns at once and the app opens when it answers.
+      openApp: (app: AppName) => void openApp($, app).catch(logged($, `opening the ${app}`)),
     }
     const band = { health: await currentServerHealth($), view: await currentHealthView($), install: await currentInstall($), actions }
     const elements = $.ui.resolve(e)

@@ -40,17 +40,26 @@ async function cameUp($: EngineInterface, url: string): Promise<boolean> {
   return false
 }
 
+// The board's address once it answers, or why there is none: cdd has not said where it answers, it is not installed
+// in the repository's own folder, or it did not start. wasStarted says this call started it.
+export type BoardStart = { url: string; wasStarted: boolean; problem: string }
+
+export async function startedBoard($: EngineInterface): Promise<BoardStart> {
+  await refreshHealth($)
+  const url = await boardUrl($)
+  if (!url) return { url: '', wasStarted: false, problem: NO_ADDRESS }
+  if (await isBoardUp($, url)) return { url, wasStarted: false, problem: '' }
+  const folder = await boardAppFolder($)
+  if (!folder || !(await $.fs.exists(`${folder}/node_modules`)) || !(await $.fs.exists(`${folder}/dist`))) return { url: '', wasStarted: false, problem: `The board is not running and is not installed here. ${START_BY_HAND}` }
+  startServer($, folder)
+  if (await cameUp($, url)) return { url, wasStarted: true, problem: '' }
+  return { url: '', wasStarted: false, problem: `The board did not start within ${STARTED_WITHIN_MILLISECONDS / 1000} s. ${START_BY_HAND}` }
+}
+
 // The board's address once it answers, starting it from this repository when nothing answers on its port; empty when
 // cdd has not said where it answers or it does not start.
 export async function runningBoardUrl($: EngineInterface): Promise<string> {
-  await refreshHealth($)
-  const url = await boardUrl($)
-  if (!url) return ''
-  if (await isBoardUp($, url)) return url
-  const folder = await boardAppFolder($)
-  if (!folder || !(await $.fs.exists(`${folder}/node_modules`)) || !(await $.fs.exists(`${folder}/dist`))) return ''
-  startServer($, folder)
-  return (await cameUp($, url)) ? url : ''
+  return (await startedBoard($)).url
 }
 
 // Opens a page in the person's browser with the system's own opener, since mods have no call that opens a link.
@@ -67,12 +76,8 @@ export async function openInBrowser($: EngineInterface, url: string): Promise<bo
 // gives the board's address, so the chat names no port of the board's. The link names this chat's repository, so the
 // page shows this chat's tickets whichever repository the server was started from.
 export async function openedBoard($: EngineInterface): Promise<string> {
-  await refreshHealth($)
-  const url = await boardUrl($)
-  if (!url) return NO_ADDRESS
-  if (await isBoardUp($, url)) return `The board is at ${await boardPageUrl($, url)}.`
-  const folder = await boardAppFolder($)
-  if (!folder || !(await $.fs.exists(`${folder}/node_modules`)) || !(await $.fs.exists(`${folder}/dist`))) return `The board is not running and is not installed here. ${START_BY_HAND}`
-  startServer($, folder)
-  return (await cameUp($, url)) ? `Started the board at ${await boardPageUrl($, url)}. It stops when this chat ends.` : `The board did not start within ${STARTED_WITHIN_MILLISECONDS / 1000} s. ${START_BY_HAND}`
+  const { url, wasStarted, problem } = await startedBoard($)
+  if (!url) return problem
+  const page = await boardPageUrl($, url)
+  return wasStarted ? `Started the board at ${page}. It stops when this chat ends.` : `The board is at ${page}.`
 }

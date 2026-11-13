@@ -1,5 +1,7 @@
 import type { HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
+import type { AppName } from './open-app-client'
 import { colourOf, detailsOf, headlineOf, installLineOf, partsOf } from './server-health-wording'
+import type { Part } from './server-health-wording'
 import type { EngineInterface } from 'claude-code'
 
 import { BRAND } from '../shared/brand'
@@ -13,6 +15,7 @@ type Actions = {
   hideDetails: () => unknown
   reconnect: () => unknown
   runInstall: () => unknown
+  openApp: (app: AppName) => unknown
 }
 type Band = {
   health: ServerHealthJson
@@ -28,8 +31,25 @@ const LOOKS = {
 }
 
 
-// The surface has no tooltip, so the part's name is a card revealed while the pointer is over its icon and value.
-function PartsView({ Box, Text }: ElementTable, health: ServerHealthJson) {
+// The key of the see-through Button over an app's part, such as health-open-kanban-app.
+export const openKeyOf = (app: AppName): string => `health-open-${app.toLowerCase().replace(/ /g, '-')}`
+
+// The desktop draws everything inside a Button in its own colour and padding, so an app's icon and value are drawn as
+// Text in the part's colour and a see-through Button as wide as them, laid over them, takes the press.
+function OpenAppView({ Box, Button }: ElementTable, part: Part, openApp: Actions['openApp']) {
+  if (!part.app) return null
+  const app = part.app
+  return (
+    <Box position="absolute" top={0} left={0}>
+      <Button key={openKeyOf(app)} plain label={' '.repeat(`${part.icon} ${part.value}`.length)} onPress={() => openApp(app)} />
+    </Box>
+  )
+}
+
+// The surface has no tooltip, so the part's name is a card revealed while the pointer is over its icon and value. A
+// press on the Kanban app or the Graph app opens it, starting it first when it is not running.
+function PartsView(elements: ElementTable, health: ServerHealthJson, openApp: Actions['openApp']) {
+  const { Box, Text } = elements
   return (
     <Box flexDirection="row" columnGap={3}>
       {partsOf(health).map(part => (
@@ -39,6 +59,7 @@ function PartsView({ Box, Text }: ElementTable, health: ServerHealthJson) {
           <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
             <Text color={BRAND.text}>{part.label}</Text>
           </Box>
+          {OpenAppView(elements, part, openApp)}
         </Box>
       ))}
     </Box>
@@ -107,7 +128,7 @@ function ExpandedView(elements: ElementTable, band: Band) {
     >
       {HeadlineView(elements, health)}
       {InstallLineView(elements, install)}
-      {health.connection === 'connected' ? PartsView(elements, health) : null}
+      {health.connection === 'connected' ? PartsView(elements, health, band.actions.openApp) : null}
       {view.areDetailsOpen && health.connection !== 'connected' ? DetailsView(elements, health, install) : null}
       {ButtonsView(elements, band)}
     </Box>

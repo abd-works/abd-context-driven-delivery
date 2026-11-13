@@ -2,12 +2,14 @@ import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
 import type { InstallJson, ServerHealthJson } from '../../types'
 import { BRAND } from '../shared/brand'
+import type { AppName } from './open-app-client'
 import { RECONNECT_TRIES, REPORT_TOOL, SERVER, ServerHealthClient } from './server-health-client'
 
 // The server health panel's words: what each part reads, the headline, the details and the install line. The panel's
 // view paints them; ServerHealthClient carries the report they are read from.
 
-export type Part = { icon: string; label: string; value: string; isUp: boolean }
+// app names the app a press on the part opens, starting it first when it is not running; null for a part with no app.
+export type Part = { icon: string; label: string; value: string; isUp: boolean; app: AppName | null }
 
 // A part reads green while it runs and grey while it does not.
 export function colourOf(part: Part): string {
@@ -19,11 +21,11 @@ const runningOn = (port: number | null): string => (port === null ? 'not running
 export function partsOf({ report, toolCount }: ServerHealthJson): Part[] {
   const { kanbanAppPort, graphAppPort, isHookServerRunning: isHookRunning } = new ServerHealthClient(report as ServerHealthData | null)
   return [
-    { icon: '⬢', label: 'MCP host', value: 'running', isUp: true },
-    { icon: '⚒', label: 'Tools', value: `${toolCount} loaded`, isUp: true },
-    { icon: '▦', label: 'Kanban app', value: runningOn(kanbanAppPort), isUp: kanbanAppPort !== null },
-    { icon: '◈', label: 'Graph app', value: runningOn(graphAppPort), isUp: graphAppPort !== null },
-    { icon: '↪', label: 'Hook server', value: isHookRunning ? 'running' : 'not installed', isUp: isHookRunning },
+    { icon: '⬢', label: 'MCP host', value: 'running', isUp: true, app: null },
+    { icon: '⚒', label: 'Tools', value: `${toolCount} loaded`, isUp: true, app: null },
+    { icon: '▦', label: 'Kanban app', value: runningOn(kanbanAppPort), isUp: kanbanAppPort !== null, app: 'Kanban app' },
+    { icon: '◈', label: 'Graph app', value: runningOn(graphAppPort), isUp: graphAppPort !== null, app: 'Graph app' },
+    { icon: '↪', label: 'Hook server', value: isHookRunning ? 'running' : 'not installed', isUp: isHookRunning, app: null },
   ]
 }
 
