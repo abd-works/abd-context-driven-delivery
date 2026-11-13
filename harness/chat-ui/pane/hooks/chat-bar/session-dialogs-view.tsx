@@ -50,6 +50,13 @@ function leaveHeadingOf(session: string, branch: string): string {
   return `LEAVE ${session}${branch ? ` on ${branch}` : ''}`
 }
 
+// Each open ticket's label, its stage icon and name, padded to the longest so the buttons share one width.
+function sessionLabels(tickets: { name: string; stage: string }[]): { name: string; label: string }[] {
+  const labels = tickets.map(ticket => ({ name: ticket.name, label: `${stageIconOf(ticket.stage)} ${ticket.name}` }))
+  const width = Math.max(0, ...labels.map(({ label }) => label.length))
+  return labels.map(({ name, label }) => ({ name, label: label.padEnd(width) }))
+}
+
 // In the main chat, the tickets a person can open, each after its stage's orange icon, and a field to name a new one.
 // Main is listed first as the session this chat works on; opening a ticket finds its chat or starts one in its worktree.
 // A ticket's own chat works only on that ticket, so it has no list.
@@ -61,18 +68,11 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
         <Text color={BRAND.muted}>⌂</Text>
         <Text color={BRAND.accent}>{MAIN_SESSION}</Text>
       </Box>
-      {chatBar.openTickets.map(ticket => (
-        <Box key={`session-row-${ticket.name}`} flexDirection="row" gap={1}>
-          <Text color={BRAND.accent}>{stageIconOf(ticket.stage)}</Text>
-          {/* The desktop pads a Button and draws it in its own colour, so the name is Text in main's column and a
-              see-through Button over it takes the press. */}
-          <Box key={`session-name-${ticket.name}`}>
-            <Text color={BRAND.text}>{ticket.name}</Text>
-            <Box position="absolute" top={0} left={0} width={ticket.name.length}>
-              <Button key={`session-${ticket.name}`} plain label=" " onPress={() => activateTicket($, ticket.name)} />
-            </Box>
-          </Box>
-        </Box>
+      {/* Each ticket is a whole button, its stage icon in its label: a see-through Button laid over the name took no
+          press in the desktop app, which left the list open and deaf. Every label is padded to the longest, so each
+          button spans the list and a press anywhere on its line opens it. */}
+      {sessionLabels(chatBar.openTickets).map(({ name, label }) => (
+        <Button key={`session-${name}`} plain label={label} onPress={() => activateTicket($, name)} />
       ))}
       <Input key="new-session" placeholder="New session name" value="" onSubmit={value => (value.trim() ? createSession($, value.trim()) : undefined)} />
     </Box>

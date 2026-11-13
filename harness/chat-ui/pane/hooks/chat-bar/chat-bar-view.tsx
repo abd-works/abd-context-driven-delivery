@@ -94,17 +94,24 @@ export function StagePickerView($: EngineInterface, { Box, Button, Text }: Eleme
   )
 }
 
-// The session name; in the main chat a ▾ beside it opens the list of tickets to open. A ticket's own chat works only on
-// that ticket, so it shows the name alone.
+// The session name, then in the main chat its + and the repository's name before its ⑂. In the main chat the name and
+// + both open the list of tickets, and the repository's name and ⑂ both open the list of repositories, so each name
+// opens what its button does. A ticket's own chat works only on that ticket, so its name opens the session card.
 function SessionNameView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar }: ChatBarDraw) {
+  const openSessions = chatBar.isMain ? () => toggleSessionList($) : () => toggleCard($)
   return (
     <Box key="session-name" flexDirection="row" gap={1}>
       <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
-        <Button key="session-name-button" plain onPress={() => toggleCard($)}>
+        <Button key="session-name-button" plain onPress={openSessions}>
           <Text weight="semibold" color={BRAND.text}>{chatBar.sessionName || 'main'}</Text>
         </Button>
       </Box>
       {chatBar.isMain ? GlyphButtonView({ Box, Button, Text }, 'session-list-button', '+', BRAND.muted, () => toggleSessionList($)) : null}
+      {chatBar.isMain && chatBar.repoName ? (
+        <Button key="repo-name-button" plain onPress={() => toggleRepoListWithRepos($)}>
+          <Text color={BRAND.text}>{chatBar.repoName}</Text>
+        </Button>
+      ) : null}
       {chatBar.isMain ? GlyphButtonView({ Box, Button, Text }, 'repo-list-button', '⑂', BRAND.muted, () => toggleRepoListWithRepos($)) : null}
     </Box>
   )
