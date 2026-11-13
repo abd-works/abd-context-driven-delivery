@@ -46,7 +46,7 @@ export class CddConnection {
     const result = (await this.request(session, 'tools/call', { name: tool, arguments: args }, tool)) as ToolResult
     const text = result.content?.[0]?.text
     if (result.isError || text === undefined) throw new CddToolError(tool, text ?? 'no result')
-    return this.parsed<Result>(tool, text)
+    return this.parsed<Result>(text)
   }
 
   // The newest step each running call has reported, for a page waiting on one; a finished call reports nothing.
@@ -163,12 +163,13 @@ export class CddConnection {
     if (call && notification.params?.message) call.step = notification.params.message
   }
 
-  // The server sends a failed operation's error as plain text, and every successful operation as JSON.
-  private parsed<Result>(tool: string, text: string): Result {
+  // The server marks a failed operation's answer as an error, read before this. A successful one is JSON, except an
+  // operation that answers a string, such as chat.open's link: the server sends that as the text itself.
+  private parsed<Result>(text: string): Result {
     try {
       return JSON.parse(text) as Result
     } catch {
-      throw new CddToolError(tool, text)
+      return text as Result
     }
   }
 }
