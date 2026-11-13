@@ -101,6 +101,20 @@ section: body
 *When* a chat in that worktree asks which session it works on
 *Then* the answer is billing-report
 
+#### Scenario: Start the ticket's new chat on the ticket's session
+
+*Given* billing-report is open in its own worktree and no chat works on it
+*When* the main chat starts a new chat for billing-report in that worktree
+*Then* the new chat's first step is to switch to the session billing-report
+*And* its chat bar shows billing-report, not main
+
+#### Scenario: Switching a chat in a ticket's worktree always opens that ticket's session
+
+*Given* billing-report is open in its own worktree
+*When* a chat in that worktree switches session, naming no session, main, or another ticket
+*Then* the session it opens is billing-report
+*And* when it named another session, it is told that its worktree belongs to billing-report
+
 #### Scenario: Find a branch and worktree made outside CDD
 
 *Given* checkout-flow's work is on claude/checkout-flow-cef4bc, open in its own worktree

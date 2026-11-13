@@ -3,6 +3,7 @@ the chat waits."""
 import asyncio
 import json
 import os
+import socket
 import sys
 import tempfile
 from pathlib import Path
@@ -27,9 +28,10 @@ _MOVED_CHAT = "7a2d9c4e-1111-2222-3333-444455556666"
 _CHAT_PROCESS = "40364"
 
 
-def _call(host: McpHost, name: str, project: Path, chat_id: str = "", chat_process: str = "") -> types.CallToolResult:
+def _call(host: McpHost, name: str, project: Path, chat_id: str = "", chat_process: str = "", client: tuple[str, int] | None = None) -> types.CallToolResult:
     """Send one tools/call request to the host's protocol handler, as a chat that started on project sends it; with
-    chat_id, as the Claude Code chat of that id; with chat_process, from the Claude Code process of that id."""
+    chat_id, as the Claude Code chat of that id; with chat_process, from the Claude Code process of that id; with
+    client, over the connection whose caller's end is that address."""
     handler = host._protocol.request_handlers[types.CallToolRequest]
     request = types.CallToolRequest(method="tools/call", params=types.CallToolRequestParams(name=name, arguments={}))
     headers = {
@@ -37,7 +39,7 @@ def _call(host: McpHost, name: str, project: Path, chat_id: str = "", chat_proce
         **({CHAT_HEADER: chat_id} if chat_id else {}),
         **({CHAT_PROCESS_HEADER: chat_process} if chat_process else {}),
     }
-    chat = SimpleNamespace(headers=headers)
+    chat = SimpleNamespace(headers=headers, client=client)
     token = request_ctx.set(RequestContext(request_id=1, meta=None, session=None, lifespan_context=None, request=chat))
     try:
         return asyncio.run(handler(request)).root
@@ -142,6 +144,39 @@ with description("a cdd server answering a chat's tool calls") as self:
         with it("should write nothing in the spare folder"):
             _call(self.host, "call-outcomes.ledger_folder", self.spare, "unnamed", _CHAT_PROCESS)
             expect((self.spare / ".sessions").exists()).to(equal(False))
+
+    # The desktop app can connect a chat while it is still in its spare folder, before it records the chat's id or
+    # process, and Claude Code keeps the headers it sent then for the whole connection.
+    with context("from a Claude Code chat whose connection named only the spare folder it started in"):
+        with before.each:
+            self.config = Path(tempfile.mkdtemp())
+            self.prior_config = os.environ.get("CLAUDE_CONFIG_DIR")
+            os.environ["CLAUDE_CONFIG_DIR"] = str(self.config)
+            self.spare = self.config / "spares" / "spare-MnOpQr"
+            self.spare.mkdir(parents=True)
+            self.moved_to = ThrowawayProject().root
+            session_file = self.config / "sessions" / f"{os.getpid()}.json"
+            session_file.parent.mkdir(parents=True)
+            session_file.write_text(json.dumps({"pid": os.getpid(), "sessionId": _MOVED_CHAT, "cwd": str(self.moved_to)}), encoding="utf-8")
+            self.listener = socket.create_server(("127.0.0.1", 0))
+            self.connection = socket.create_connection(self.listener.getsockname())
+            self.accepted, _ = self.listener.accept()
+            self.client = self.connection.getsockname()
+
+        with after.each:
+            for held in (self.accepted, self.connection, self.listener):
+                held.close()
+            if self.prior_config is None:
+                os.environ.pop("CLAUDE_CONFIG_DIR", None)
+            else:
+                os.environ["CLAUDE_CONFIG_DIR"] = self.prior_config
+
+        with it("should work on the folder the process holding the connection works in now"):
+            answer = _call(self.host, "call-outcomes.ledger_folder", self.spare, "unnamed", client=self.client).content[0].text
+            expect(answer).to(equal(str(self.moved_to.resolve())))
+
+        with it("should answer for the session that process runs now"):
+            expect(_call(self.host, "call-outcomes.clerk", self.spare, "unnamed", client=self.client).content[0].text).to(equal(_MOVED_CHAT))
 
     with context("from a chat that names only a desktop spare folder"):
         with before.each:

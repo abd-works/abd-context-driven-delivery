@@ -33,6 +33,10 @@ _OUTSIDE_WORKTREE_NOTE = (
     "This chat works in {chat}, but {session}'s worktree is {worktree}. Do this session's work in a chat started there "
     "(start_session with cwd {worktree}), not in this chat.\n\n"
 )
+_WORKTREE_TICKET_NOTE = (
+    "This chat works in {ticket}'s own worktree, so its session is {ticket}, not {asked}. To work on {asked}, open it "
+    "from the main chat.\n\n"
+)
 
 
 class SessionNameRequiredError(ValueError):
@@ -366,13 +370,27 @@ class Sessions:
         ``name`` defaults to the session this chat has open, then to its open ``branch``.
         ``workpath`` is a folder a new session works in; without one its root is derived: its worktree, else the checkout.
         A switch writes nothing in the checkout and does not touch branches or worktrees: when the session has its own
-        worktree and the call's chat works elsewhere, the answer opens by saying to start a chat in that worktree."""
+        worktree and the call's chat works elsewhere, the answer opens by saying to start a chat in that worktree.
+        A chat in a ticket's own worktree always opens that ticket's session, whatever name it asks for, because the
+        worktree holds only that ticket's work; the answer says so when it asked for another."""
         chat = call.chat_id if call is not None else ""
+        ticket = self._ticket_of_worktree()
+        if ticket is not None:
+            return self._worktree_ticket_note(ticket, name) + self.open(ticket, chat).log.instructions()
         wanted = self._name_to_switch_to(name, chat)
         folder = self.folder_of(wanted)
         is_kept = (folder / SESSION_FILE).is_file() or wanted == MAIN_SESSION_NAME
         session = self.load(folder) if is_kept else self.create(wanted, workpath)
         return self._outside_worktree_note(session, call) + self.open(session, chat).log.instructions()
+
+    @staticmethod
+    def _worktree_ticket_note(ticket: Session, asked: str) -> str:
+        """What a chat in ticket's worktree that asked for another session is told; nothing when it asked for none or
+        for ticket."""
+        cleaned = Name(asked).title_slug if asked else ""
+        if not cleaned or cleaned == ticket.name:
+            return ""
+        return _WORKTREE_TICKET_NOTE.format(ticket=ticket.name, asked=cleaned)
 
     def _outside_worktree_note(self, session: Session, call: ToolCall | None) -> str:
         """What a chat working outside session's own worktree must do instead; nothing when it works there, or the

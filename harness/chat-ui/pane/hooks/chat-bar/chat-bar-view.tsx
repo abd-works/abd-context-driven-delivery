@@ -7,7 +7,7 @@ import { ActionButtonView, PickerView } from './action-button-view'
 import { formatGlyphOf, overlayColumnOf, REPO_GLYPH, repoWordOf, stageColumn } from './bar-columns'
 import { toggleFormat, type FormatChips } from './format-choices-client'
 import { toggleOverlay, toggleOverlayList, type OverlayChips } from './overlay-choices-client'
-import { askChatToFix, dismissFailure, fixFailure, runHandoff, type ChatBarClient } from './chat-bar-client'
+import { askChatToFixBoard, dismissFailure, fixFailure, runHandoff, type ChatBarClient } from './chat-bar-client'
 import { openFilesOf, openHelp, openReport, openSessionFolder } from './fidelity-files-client'
 import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
@@ -246,7 +246,7 @@ function ProblemView($: EngineInterface, { Box, Button, Text }: ElementTable, sh
   return (
     <Box key="problem" flexDirection="row" gap={1} alignItems="center">
       <Text color={BRAND.error}>{shown}</Text>
-      <Button key="fix-problem" label="Fix" variant="primary" onPress={() => askChatToFix($, shown)} />
+      <Button key="fix-problem" label="Fix" variant="primary" onPress={() => askChatToFixBoard($, shown)} />
     </Box>
   )
 }

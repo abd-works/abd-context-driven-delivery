@@ -303,6 +303,38 @@ with description("a session"):
                     with it("should keep working in that folder in the ticket's worktree"):
                         expect(Sessions(self.repo).named("alpha").work_root).to(equal(self.worktree.resolve() / "harness"))
 
+            # The worktree holds only its ticket's work, so a chat there always opens the ticket's session.
+            with context("that a chat in the ticket's worktree switches naming no session"):
+                with before.each:
+                    self.instructions = Sessions(self.worktree).switch(call=ToolCall({}, self.worktree))
+
+                with it("should open the ticket's session"):
+                    expect(Sessions(self.worktree).current().name).to(equal("alpha"))
+
+                with it("should return how to keep its log"):
+                    expect(self.instructions).to(contain("Keeping the session log"))
+
+            with context("that a chat in the ticket's worktree switches to main"):
+                with before.each:
+                    self.instructions = Sessions(self.worktree).switch("main", call=ToolCall({}, self.worktree))
+
+                with it("should open the ticket's session"):
+                    expect(Sessions(self.worktree).current().name).to(equal("alpha"))
+
+                with it("should say the worktree belongs to the ticket"):
+                    expect(self.instructions).to(contain("This chat works in alpha's own worktree, so its session is alpha, not main"))
+
+            with context("that a chat in the ticket's worktree switches to another ticket"):
+                with before.each:
+                    Sessions(self.repo).create("beta")
+                    self.instructions = Sessions(self.worktree).switch("beta", call=ToolCall({}, self.worktree))
+
+                with it("should open the worktree's ticket"):
+                    expect(Sessions(self.worktree).current().name).to(equal("alpha"))
+
+                with it("should say the worktree belongs to the ticket"):
+                    expect(self.instructions).to(contain("so its session is alpha, not beta"))
+
         with context("with a repo path"):
             with before.each:
                 self.instructions = Sessions(self.repo).switch("alpha")
