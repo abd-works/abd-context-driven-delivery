@@ -1264,7 +1264,7 @@ class StoryModel(StoryNode):
         files.read(os.path.relpath(path, files.workpath))
         stories = session.graph.practices.of(cls.practice_kind())
         model = stories.read_files([path], session.repo_path)
-        model._opened = OpenedStoryMap(model, path, stories, session)
+        model._opened = OpenedStoryMap(model, path, session)
         return model
 
     @classmethod

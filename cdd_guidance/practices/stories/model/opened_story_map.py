@@ -4,23 +4,24 @@ format chosen for the fidelity that declares the file, beside it."""
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from harness.guidance.practice_formats import RenderRequest
 from harness.markdown.format import Format
 
 if TYPE_CHECKING:
-    from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
+    from harness.guidance.guidance import FidelityGuidance
+    from space.session.session import Session
 
-    from cdd_guidance.practices.stories.model.story_model import StoryModel
+    from cdd_guidance.practices.stories.model.story_model import StoryModel, StoryNode
 
 
 class StoryMapEditRefused(Exception):
     """An edit the story map will not save: the node cannot take it, or writing the map would change its file beyond
     the edit."""
 
-    def __init__(self, node: Any, operation: str, reason: str) -> None:
-        super().__init__(f"{operation} on {getattr(node, 'name', node)} refused: {reason}")
+    def __init__(self, node: StoryNode, operation: str, reason: str) -> None:
+        super().__init__(f"{operation} on {node.name} refused: {reason}")
         self.node = node
         self.operation = operation
         self.reason = reason
@@ -35,11 +36,12 @@ class OpenedStoryMap:
     file, which the map is merged onto, is opened to be read, and a hand-laid map would lose the text around it.
     ``refusal`` says why an edit is refused."""
 
-    def __init__(self, story_map: StoryModel, path: Path, stories: PracticeGuidance, session: Any) -> None:
+    def __init__(self, story_map: StoryModel, path: Path, session: Session) -> None:
         self._story_map = story_map
         self._path = Path(path).resolve()
-        self._stories = stories
         self._session = session
+        # The session's own Stories practice, the one its graph holds, reads and writes the file.
+        self._stories = session.graph.practices.of(type(story_map).practice_kind())
         # The map as its own format writes it before any edit: a save writes the file only while the file still reads so.
         self._read_back = self._rendered(self.own_format)
 

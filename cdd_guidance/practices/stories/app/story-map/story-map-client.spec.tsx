@@ -60,12 +60,12 @@ afterEach(() => {
 
 describe('the story map the Story UI draws', () => {
   it('should draw each sub-epic under its epic', () => {
-    const map = new StoryMapViewModel(CHECKOUT_FLOW)
+    const map = StoryMapViewModel.of(CHECKOUT_FLOW)
     expect(map.epics[0]!.sub_epics.map(sub => sub.name)).toEqual(['Integrate Practice Content Editor Apps In Chat Bar'])
   })
 
   it('should draw each story under its sub-epic, named by the node its tools take', () => {
-    const map = new StoryMapViewModel(CHECKOUT_FLOW)
+    const map = StoryMapViewModel.of(CHECKOUT_FLOW)
     expect(map.epics[0]!.sub_epics[0]!.stories.map(each => each.id)).toEqual([`${SUB_EPIC}.open-story-ui-side-panel-from-chat-bar`, `${SUB_EPIC}.trace-story-through-artifacts`])
   })
 })
@@ -106,7 +106,7 @@ describe('with the cdd server not answering', () => {
   it('should keep the story map as Python last sent it', async () => {
     const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({})), CHECKOUT_FLOW)
     await client.renameNode(`${SUB_EPIC}.trace-story-through-artifacts`, 'story', 'Trace Story Across Artifacts')
-    expect(new StoryMapViewModel(client.toJSON()).epics[0]!.sub_epics[0]!.stories[1]!.name).toBe('Trace Story Through Artifacts')
+    expect(StoryMapViewModel.of(client.toJSON()).epics[0]!.sub_epics[0]!.stories[1]!.name).toBe('Trace Story Through Artifacts')
   })
 
   it('should show the page what failed, still showing the story as it was', async () => {

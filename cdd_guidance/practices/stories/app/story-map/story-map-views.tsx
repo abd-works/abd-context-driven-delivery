@@ -6,7 +6,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStoryModel } from '@cdd/practices/stories/model/story-model-views';
 
 import { StoryMapApi } from './story-map-api';
-import { StoryMapClient } from './story-map-client';
+import { StoryMapClient, type NodeKind } from './story-map-client';
 import {
   StoryMapViewModel,
   type EpicViewModel,
@@ -39,7 +39,7 @@ export function useStoryMapPage(file: string | null) {
     let held: StoryMapClient | null = null;
     const read = async () => {
       if (editing.current) return;
-      const next = file ? await (held ?? new StoryMapClient(api, null, file)).read() : await StoryMapClient.inOpenSession(api);
+      const next = file ? await (held ?? new StoryMapClient(api, null, file)).show() : await StoryMapClient.inOpenSession(api);
       if (stopped || !next) return;
       if (held && held.file === next.file) {
         if (next !== held) held.takeOn(next);
@@ -1811,8 +1811,8 @@ type StoryMapCanvasProps = Omit<ReturnType<typeof useStoryMapPage>, 'client'> & 
 
 function StoryMapCanvasView({ client, failure, status, edit, dismissFailure, showScenarios, toggleShowScenarios, expandedNodeIds, expandNode, collapseNode, expandDescendants, collapseAll, theme, setTheme, panning }: StoryMapCanvasProps) {
   const map = useStoryModel(client);
-  const storyMap = useMemo(() => new StoryMapViewModel(map.toJSON()), [map, map.toJSON()]);
-  const kindOf = (id: string): SemanticType => storyMap.kinds.get(id) ?? 'epic';
+  const storyMap = useMemo(() => StoryMapViewModel.of(map.toJSON()), [map, map.toJSON()]);
+  const kindOf = (node: string): NodeKind => (storyMap.kinds.get(node) ?? 'epic') as NodeKind;
   const lastOf = <T extends { id: string }>(nodes: T[]): string | undefined => nodes[nodes.length - 1]?.id;
   const subEpicsOf = (epic: string) => storyMap.epics.find((each) => each.id === epic)?.sub_epics ?? [];
   const storiesOf = (sub: string) => storyMap.epics.flatMap((each) => each.sub_epics).find((each) => each.id === sub)?.stories ?? [];
@@ -1821,7 +1821,7 @@ function StoryMapCanvasView({ client, failure, status, edit, dismissFailure, sho
   const addThenPlace = (add: (held: StoryMapClient) => Promise<StoryMapClient | null>, siblings: (read: StoryMapViewModel) => { id: string }[], after: string | null) => edit(async (held) => {
     const added = await add(held);
     if (!added) return null;
-    const placed = siblings(new StoryMapViewModel(added.toJSON()));
+    const placed = siblings(StoryMapViewModel.of(added.toJSON()));
     const created = lastOf(placed);
     const next = after === null ? placed[0]?.id : placed[placed.findIndex((each) => each.id === after) + 1]?.id;
     return created && next && next !== created ? held.moveBeforeNode(created, kindOf(next) === 'story' ? 'story' : 'epic', next) : added;
@@ -1874,13 +1874,13 @@ function StoryMapCanvasView({ client, failure, status, edit, dismissFailure, sho
           onMoveStory={(story, _sub, order) => { const next = order[order.indexOf(story) + 1]; if (next) void edit((held) => held.moveBeforeNode(story, 'story', next)); }}
           onMoveSubEpic={(sub, _epic, order) => { const next = order[order.indexOf(sub) + 1]; if (next) void edit((held) => held.moveBeforeNode(sub, 'sub-epic', next)); }}
           onReorderScenarios={(story, order) => void edit((held) => held.reorder(storyMap.epics.flatMap((e) => e.sub_epics.flatMap((s) => s.stories)).find((s) => s.id === story)?.scenarios.map((sc) => sc.id) ?? [], order, 'scenario'))}
-          onAppendEpic={(name) => void edit((held) => held.newTopEpic(name?.trim() || NEW_NAMES.epic))}
+          onAppendEpic={(name) => void edit((held) => held.newEpic(name?.trim() || NEW_NAMES.epic))}
           onRemoveEpic={(epic) => void edit((held) => held.removeNode(epic, 'epic'))}
           onAppendSubEpic={(epic, name) => void edit((held) => held.newSubEpic(epic, name?.trim() || NEW_NAMES.subEpic))}
           onRemoveSubEpic={(_epic, sub) => void edit((held) => held.removeNode(sub, 'sub-epic'))}
           onAppendStory={(sub, name) => void edit((held) => held.newStory(sub, name?.trim() || NEW_NAMES.story))}
           onRemoveStory={(_sub, story) => void edit((held) => held.removeNode(story, 'story'))}
-          onInsertEpicAfter={(after, name) => void addThenPlace((held) => held.newTopEpic(name?.trim() || NEW_NAMES.epic), (read) => read.epics, after)}
+          onInsertEpicAfter={(after, name) => void addThenPlace((held) => held.newEpic(name?.trim() || NEW_NAMES.epic), (read) => read.epics, after)}
           onPrependSubEpic={(epic, name) => void addThenPlace((held) => held.newSubEpic(epic, name?.trim() || NEW_NAMES.subEpic), (read) => read.epics.find((e) => e.id === epic)?.sub_epics ?? [], null)}
           onInsertSubEpicAfter={(epic, after, name) => void addThenPlace((held) => held.newSubEpic(epic, name?.trim() || NEW_NAMES.subEpic), (read) => read.epics.find((e) => e.id === epic)?.sub_epics ?? [], after)}
           onPrependStory={(sub, name) => void addThenPlace((held) => held.newStory(sub, name?.trim() || NEW_NAMES.story), (read) => read.epics.flatMap((e) => e.sub_epics).find((s) => s.id === sub)?.stories ?? [], null)}
@@ -1889,7 +1889,7 @@ function StoryMapCanvasView({ client, failure, status, edit, dismissFailure, sho
           onRemoveScenario={(_story, scenario) => void edit((held) => held.removeNode(scenario, 'scenario'))}
           onAddStep={(_story, scenario) => void edit((held) => held.newStep(scenario, 'given', NEW_NAMES.step))}
           onUpdateStep={(_story, _scenario, step, values) => { if (values.text !== undefined) void edit((held) => held.editStep(step, values.text!)); }}
-          onRemoveStep={(_story, _scenario, step) => void edit((held) => held.removeStep(step))}
+          onRemoveStep={(_story, _scenario, step) => void edit((held) => held.removeNode(step, 'step'))}
         />
       </div>
 

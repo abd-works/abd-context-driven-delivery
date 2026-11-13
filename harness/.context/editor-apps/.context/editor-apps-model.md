@@ -285,7 +285,7 @@ Every edit answers the **story map**, not the node it changed (`standard-mutatio
 + load(file: str, *, call) -> StoryModel  <<classmethod>> <<tool_subject>>
 	-> call.session.session_files.file_manager.read (refuses a file outside the session's roots with PathOutsideRootsError)
 	-> call.session.graph.practices.of(Stories).read_files
-	-> OpenedStoryMap(the map read, the file, Stories, the session), which the map keeps
+	-> OpenedStoryMap(the map read, the file, the session), which the map keeps
 + open_in_session(*, call) -> StoryModel  <<classmethod>> <<mcp>> <<agent_tool>>
 	// the first story map file the open session's Stories practice declares: the page with no file follows the session open in the project, so a ticket activated on the board shows its own map on the next read
 + show() -> StoryModel  <<mcp>> <<agent_tool>>
@@ -300,7 +300,8 @@ Every edit answers the **story map**, not the node it changed (`standard-mutatio
 
 The file a story map was opened from in a session, and the one owner of its writes.
 
-+ OpenedStoryMap(story_map: StoryModel, path: Path, stories: PracticeGuidance, session)
++ OpenedStoryMap(story_map: StoryModel, path: Path, session: Session)
+	// the session's own Stories practice (session.graph.practices.of(Stories)) reads and writes the file
 	// it keeps the map as its own format writes it on opening, which a save compares the file with
 ------
 + file: str
