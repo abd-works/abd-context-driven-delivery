@@ -62,7 +62,7 @@ class ApproachStage:
     # The steps every fidelity goes through, then the other actions a person can run on a fidelity in place of the
     # next step. Each is an operation in the action catalogue; a fidelity is done once its latest validate passes.
     _STEPS = (GENERATE, VALIDATE)
-    _OTHER_ACTIONS = ("iterate", "sketch", RENDER, "document")
+    _OTHER_ACTIONS = ("iterate", "sketch", RENDER, "document", "partition")
     # Generate writes a fidelity in the formats a person picks, and render converts it into them; every other action
     # writes or reads a fidelity's files in the formats they already have.
     _ACTIONS_WITH_FORMATS = (GENERATE, RENDER)

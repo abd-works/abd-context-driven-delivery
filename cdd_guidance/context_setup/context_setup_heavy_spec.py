@@ -117,8 +117,8 @@ class SpecFixture:
         ThrowawayProject.close_all()
 
     def context_setup_for_a_call(self) -> ContextSetup:
-        """A ContextSetup made for a call on a throwaway project, as the cdd server makes one for each call, so the
-        partition it hands documents to works in the session open in that project."""
+        """A ContextSetup made for a call on a throwaway project, as the cdd server makes one for each call, so it works
+        in the session open in that project."""
         call = ToolCall(project=ThrowawayProject().root)
         self.session_root = call.session.work_root
         return ContextSetup().for_call(call)
@@ -283,43 +283,6 @@ with description("a ContextSetup"):
 
         with it("should produce one structure note per file"):
             expect(self._result.structure_notes).to(have_len(2))
-
-    # ── AgentTool: capture_from_documents (expansion tests) ─────────────────────
-
-    with context("that is made for a call on a project"):
-        with before.each:
-            self.instructions = fixture.instructions_for(fixture.context_setup_for_a_call(), "capture_from_documents")
-            self.prose = "\n".join(self.instructions.prompt)
-
-        with after.each:
-            fixture.release()
-
-        with context("whose capture_from_documents action is expanded"):
-            with it("should list convert as a tool to call"):
-                expect("convert" in self.prose).to(be_true)
-
-            with it("should instruct the AI to ask the user to choose indexers"):
-                expect("AskQuestion" in self.prose or "indexer" in self.prose.lower()).to(be_true)
-
-            with it("should mention partition delegation to context tools"):
-                expect("partition" in self.prose).to(be_true)
-
-            with it("should tell the AI to pass the context tools chosen in Step 2 as guidance"):
-                expect(self.prose).to(contain("guidance = the context tools selected in Step 2"))
-
-            with it("should mention embed as the final step"):
-                expect("embed" in self.prose).to(be_true)
-
-        with context("whose capture_from_documents action tools are resolved"):
-            with it("should include convert"):
-                expect("convert" in self.instructions.tools).to(be_true)
-
-            with it("should include embed from ContextIndex"):
-                expect("embed" in self.instructions.tools).to(be_true)
-
-            # Practices no longer carry partition; one Partition action takes the selected ones as guidance.
-            with it("should include partition"):
-                expect("partition" in self.instructions.tools).to(be_true)
 
     # ── AgentTool: capture_from_live_app (expansion tests) ──────────────────────
 

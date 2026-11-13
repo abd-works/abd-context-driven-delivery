@@ -94,7 +94,7 @@ Observed: `/document` records what code, tests or docs already do for the listed
 
 ### (S) Agent --> Capture Documents Into Searchable Context
 
-Observed: `context-setup.capture_from_documents` converts a folder of documents to markdown, partitions them through the chosen practices, and embeds the segments into one index that `context-index.ask` answers from with citations.
+Observed: `partition.partition` converts a folder of documents to markdown with `context-setup.convert`, partitions them through the practices it is given, and embeds the segments into one index that `context-index.ask` answers from with citations.
 
 ### (S) Agent --> Capture Live App Context
 

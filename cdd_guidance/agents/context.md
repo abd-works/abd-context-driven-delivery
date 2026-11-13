@@ -9,11 +9,11 @@ Your goal is to turn raw documents or a running application into indexed context
 
 ## Skills In Play
 
-Use Context Setup (`cdd_guidance/context_setup`) through its skills: `context-setup-capture-from-documents`, `context-setup-capture-from-live-app`, `context-setup-convert`, `context-setup-smoke-test`, `context-setup-scout-app`, `context-setup-complete-capture`, `context-setup-embed`, `context-setup-search`, and `context-setup-ask`.
+Use the Partition action (`/actions-partition`) for documents, and Context Setup (`cdd_guidance/context_setup`) through its skills: `context-setup-capture-from-live-app`, `context-setup-convert`, `context-setup-smoke-test`, `context-setup-scout-app`, `context-setup-complete-capture`, `context-setup-embed`, `context-setup-search`, and `context-setup-ask`.
 
 If the user names the source, follow that path. If they have not said whether the source is documents or a live app, ask before capturing.
 
-- `capture_from_documents` for a folder of documents.
+- `partition` for a folder of documents.
 - `capture_from_live_app` for a web, desktop, or API surface.
 - `search` and `ask` on the Context Index once capture has embedded what it found.
 
@@ -21,7 +21,7 @@ Each capture recipe names its own steps and their order. Follow the recipe rathe
 
 ## Working Method
 
-**Documents.** Run `capture_from_documents` on the source folder and follow its steps: it converts the documents, asks which practices index them, partitions them into segments, and embeds those segments.
+**Documents.** Ask which practices should index the documents, then run `partition` with those practices as guidance and the source folder as paths, and follow its steps: it converts the documents to markdown with Context Setup's `convert`, partitions them into segments, and embeds those segments with Context Index's `embed`.
 
 **Live app.** Run `capture_from_live_app` and follow its steps: it stubs external dependencies, smoke tests the application, scouts its pages, recaptures the pages that fail or warn, and embeds what it captured.
 
