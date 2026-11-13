@@ -1,4 +1,5 @@
 import type { EpicData } from '@cdd/practices/stories/model/epic'
+import type { IncrementData } from '@cdd/practices/stories/model/increment'
 import type { ScenarioData } from '@cdd/practices/stories/model/scenario'
 import type { StepData } from '@cdd/practices/stories/model/step'
 import type { StoryData } from '@cdd/practices/stories/model/story'
@@ -11,13 +12,12 @@ import type { StoryModelData } from '@cdd/practices/stories/model/story-model'
 export type SemanticType = 'story-map' | 'epic' | 'sub-epic' | 'story' | 'scenario' | 'increment'
 export type StepKeyword = 'given' | 'when' | 'then' | 'and' | 'but'
 export type StepRowDto = { id: string; parent_id: string; step_type: StepKeyword; text: string; sequential_order: number }
-// The Python story model sends no examples or increments to the editor yet, so the views draw none.
-export type ExampleFieldDto = { name: string; sequential_order: number }
-export type ExampleRowDto = { id: string; example_id: string; values: Record<string, string>; sequential_order: number }
-export type ExampleDto = { id: string; parent_id: string; name: string; sequential_order: number; fields: ExampleFieldDto[]; rows: ExampleRowDto[] }
+// A scenario's examples as the story model holds them: one table, a row per example, its name under `example`, then
+// its fields. Python has no operation that edits an example, so the views show the table read only.
+export type ExampleTable = { columns: string[]; rows: Record<string, string>[] }
 
-// A node as Python sends it: the address its tools take, and its name.
-type SentNode = { node: string; name: string }
+// A node as Python sends it: the address its tools take, its name, and what the story map says about it.
+type SentNode = { node: string; name: string; description: string }
 // Where a node stands: the node it sits under, and its place among its siblings, from 1.
 export type NodePlace = { parent: string | null; order: number }
 
@@ -25,19 +25,32 @@ export class StoryNodeViewModel {
   readonly id: string
   readonly parent_id: string | null
   readonly name: string
+  readonly description: string
   readonly sequential_order: number
 
   constructor(sent: SentNode, readonly semantic_type: SemanticType, place: NodePlace) {
     this.id = sent.node
     this.name = sent.name
+    this.description = sent.description
     this.parent_id = place.parent
     this.sequential_order = place.order
   }
 }
 
+// An increment and the stories it delivers, by their addresses.
 export class IncrementViewModel extends StoryNodeViewModel {
-  readonly stories: string[] = []
+  constructor(increment: IncrementData, place: NodePlace, readonly stories: string[]) {
+    super(increment, 'increment', place)
+  }
+
+  static of(increment: IncrementData, place: NodePlace): IncrementViewModel {
+    return new IncrementViewModel(increment, place, increment.stories)
+  }
 }
+
+// A view model as Python sent its node, and where it stands, so a part of the map is drawn from the same nodes.
+const sent = (view: StoryNodeViewModel): SentNode => ({ node: view.id, name: view.name, description: view.description })
+const placeOf = (view: StoryNodeViewModel): NodePlace => ({ parent: view.parent_id, order: view.sequential_order })
 
 const KEYWORDS: readonly StepKeyword[] = ['given', 'when', 'then', 'and', 'but']
 const placesUnder = (parent: string) => (index: number): NodePlace => ({ parent, order: index + 1 })
@@ -49,28 +62,29 @@ function stepRowsOf(steps: StepData[], scenario: string): StepRowDto[] {
   })
 }
 
-export class ScenarioViewModel extends StoryNodeViewModel {
-  readonly examples: ExampleDto[] = []
+function exampleTableOf(rows: Record<string, string>[]): ExampleTable {
+  return { columns: [...new Set(rows.flatMap(row => Object.keys(row)))], rows }
+}
 
-  constructor(scenario: SentNode, place: NodePlace, readonly steps: StepRowDto[]) {
+export class ScenarioViewModel extends StoryNodeViewModel {
+  constructor(scenario: SentNode, place: NodePlace, readonly steps: StepRowDto[], readonly examples: ExampleTable) {
     super(scenario, 'scenario', place)
   }
 
   static of(scenario: ScenarioData, place: NodePlace): ScenarioViewModel {
-    return new ScenarioViewModel(scenario, place, stepRowsOf(scenario.steps, scenario.node))
+    return new ScenarioViewModel(scenario, place, stepRowsOf(scenario.steps, scenario.node), exampleTableOf(scenario.examples))
   }
 }
 
 export class StoryViewModel extends StoryNodeViewModel {
-  readonly users: string[] = []
-
-  constructor(story: SentNode, place: NodePlace, readonly story_type: string, readonly scenarios: ScenarioViewModel[]) {
+  constructor(story: SentNode, place: NodePlace, readonly story_type: string, readonly scenarios: ScenarioViewModel[], readonly acceptance_tests: string[]) {
     super(story, 'story', place)
   }
 
   static of(story: StoryData, place: NodePlace): StoryViewModel {
     const under = placesUnder(story.node)
-    return new StoryViewModel(story, place, story.story_type, story.scenarios.map((scenario, index) => ScenarioViewModel.of(scenario, under(index))))
+    const scenarios = story.scenarios.map((scenario, index) => ScenarioViewModel.of(scenario, under(index)))
+    return new StoryViewModel(story, place, story.story_type, scenarios, story.acceptance_tests)
   }
 }
 
@@ -101,26 +115,43 @@ export class EpicViewModel extends StoryNodeViewModel {
     const own = epic.stories.length ? [SubEpicViewModel.of(epic, { parent: epic.node, order: 0 }, epic.stories)] : []
     return new EpicViewModel(epic, place, [...own, ...epic.epics.map((subEpic, index) => SubEpicViewModel.of(subEpic, under(index)))])
   }
+
+  // This epic with only the stories scope names, and only the sub-epics that keep one; none when it keeps none.
+  within(scope: ReadonlySet<string>): EpicViewModel | null {
+    const subEpics = this.sub_epics
+      .map(sub => new SubEpicViewModel(sent(sub), placeOf(sub), sub.stories.filter(story => scope.has(story.id))))
+      .filter(sub => sub.stories.length)
+    return subEpics.length ? new EpicViewModel(sent(this), placeOf(this), subEpics) : null
+  }
 }
 
 export class StoryMapViewModel extends StoryNodeViewModel {
-  readonly increments: IncrementViewModel[] = []
   readonly kinds: ReadonlyMap<string, SemanticType>
 
-  constructor(storyMap: StoryModelData, readonly epics: EpicViewModel[]) {
-    super({ node: storyMap.node, name: storyMap.file }, 'story-map', { parent: null, order: 0 })
+  constructor(storyMap: StoryModelData, readonly epics: EpicViewModel[], readonly increments: IncrementViewModel[]) {
+    super({ node: storyMap.node, name: storyMap.file, description: storyMap.description }, 'story-map', { parent: null, order: 0 })
     this.kinds = new Map(this.nodes().map(node => [node.id, node.semantic_type]))
   }
 
-  static of(storyMap: StoryModelData): StoryMapViewModel {
+  // The map as Python sent it; scoped, only the part the session's ticket covers (its `scope`), when the session names
+  // any of its stories.
+  static of(storyMap: StoryModelData, scoped = false): StoryMapViewModel {
     const under = placesUnder(storyMap.node)
-    return new StoryMapViewModel(storyMap, storyMap.epics.map((epic, index) => EpicViewModel.of(epic, under(index))))
+    const scope = new Set(storyMap.scope)
+    const epics = storyMap.epics.map((epic, index) => EpicViewModel.of(epic, under(index)))
+    const shown = scoped && scope.size ? epics.flatMap(epic => epic.within(scope) ?? []) : epics
+    return new StoryMapViewModel(storyMap, shown, storyMap.increments.map((increment, index) => IncrementViewModel.of(increment, under(index))))
+  }
+
+  // The increment that delivers story, if one does: a story is delivered by one increment at most.
+  incrementOf(story: string): IncrementViewModel | undefined {
+    return this.increments.find(increment => increment.stories.includes(story))
   }
 
   // Every node the map draws, so an edit knows which kind of node an id names.
   private nodes(): StoryNodeViewModel[] {
     const stories = this.epics.flatMap(epic => epic.sub_epics.flatMap(sub => sub.stories))
     const scenarios = stories.flatMap(story => story.scenarios)
-    return [...this.epics, ...this.epics.flatMap(epic => epic.sub_epics), ...stories, ...scenarios]
+    return [...this.epics, ...this.epics.flatMap(epic => epic.sub_epics), ...stories, ...scenarios, ...this.increments]
   }
 }

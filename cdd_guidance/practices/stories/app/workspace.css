@@ -1226,3 +1226,48 @@ body {
 .edit-refusal {
   background: rgba(255, 193, 7, 0.14);
 }
+
+/* A node's description, edited where the story map says it, under its heading. */
+.description-input {
+  width: 100%;
+  min-height: 4em;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  resize: vertical;
+}
+
+/* A story's acceptance tests: read, not edited, opened read only beside the map. */
+.acceptance-test-links { list-style: none; margin: 0 0 6px; padding: 0; }
+.acceptance-test-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent-deep);
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+  text-align: left;
+  word-break: break-all;
+}
+.acceptance-test-file {
+  position: fixed;
+  top: 48px;
+  right: 0;
+  bottom: 0;
+  width: min(640px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  z-index: 20;
+}
+.acceptance-test-file .cdd-source { flex: 1; min-height: 0; display: flex; flex-direction: column; }

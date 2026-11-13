@@ -1,5 +1,6 @@
 import type { CddApi } from '@cdd/cdd-shared'
 import { EpicClientGenerated } from '@cdd/practices/stories/model/epic'
+import { IncrementClientGenerated } from '@cdd/practices/stories/model/increment'
 import { ScenarioClientGenerated } from '@cdd/practices/stories/model/scenario'
 import { StepClientGenerated } from '@cdd/practices/stories/model/step'
 import { StoryClientGenerated } from '@cdd/practices/stories/model/story'
@@ -9,9 +10,9 @@ import { FidelitySessionOutputClientGenerated } from '@cdd/space/session/fidelit
 import type { SemanticType, StepKeyword } from './story-map-view-models'
 
 // The kind of node an edit names, which picks the generated client of that node's own tools.
-export type NodeKind = Exclude<SemanticType, 'story-map' | 'increment'> | 'step'
+export type NodeKind = Exclude<SemanticType, 'story-map'> | 'step'
 
-type NodeClient = EpicClientGenerated | StoryClientGenerated | ScenarioClientGenerated | StepClientGenerated
+type NodeClient = EpicClientGenerated | StoryClientGenerated | ScenarioClientGenerated | StepClientGenerated | IncrementClientGenerated
 type Edit = Promise<StoryModelData | null>
 
 // The story map the Story UI shows: the one the Python story model holds in its file, which every edit changes through
@@ -40,11 +41,17 @@ export class StoryMapClient extends StoryModelClientGenerated {
     if (kind === 'story') return StoryClientGenerated.named(this.api, node)
     if (kind === 'scenario') return ScenarioClientGenerated.named(this.api, node)
     if (kind === 'step') return StepClientGenerated.named(this.api, node)
+    if (kind === 'increment') return IncrementClientGenerated.named(this.api, node)
     return EpicClientGenerated.named(this.api, node)
   }
 
   renameNode(node: string, kind: NodeKind, name: string): Promise<this | null> {
     return this.took(this.nodeOf(node, kind).rename(name))
+  }
+
+  // What the story map says about a node, under its heading in the map's file.
+  describeNode(node: string, kind: NodeKind, description: string): Promise<this | null> {
+    return this.took(this.nodeOf(node, kind).editDescription(description))
   }
 
   removeNode(node: string, kind: NodeKind): Promise<this | null> {
@@ -88,6 +95,15 @@ export class StoryMapClient extends StoryModelClientGenerated {
 
   editStep(step: string, text: string): Promise<this | null> {
     return this.took(StepClientGenerated.named(this.api, step).editText(text))
+  }
+
+  // A story given to an increment leaves the increment that delivered it, as the story model keeps it in one at most.
+  deliverIn(increment: string, story: string): Promise<this | null> {
+    return this.took(IncrementClientGenerated.named(this.api, increment).addStory(story))
+  }
+
+  stopDelivering(increment: string, story: string): Promise<this | null> {
+    return this.took(IncrementClientGenerated.named(this.api, increment).removeStory(story))
   }
 
   // A format turned on or off here is the session's choice for the fidelity, the one the chat bar's chips show, and the

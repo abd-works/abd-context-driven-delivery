@@ -3,6 +3,7 @@
 // that client, which saves it through the node's own tool; nothing here holds a story map of its own.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { SourceViewGenerated } from '@cdd/cdd-files';
 import { useStoryModel } from '@cdd/practices/stories/model/story-model-views';
 
 import { StoryMapApi } from './story-map-api';
@@ -10,8 +11,7 @@ import { StoryMapClient, type NodeKind } from './story-map-client';
 import {
   StoryMapViewModel,
   type EpicViewModel,
-  type ExampleDto,
-  type ExampleRowDto,
+  type ExampleTable,
   type IncrementViewModel,
   type ScenarioViewModel,
   type SemanticType,
@@ -76,7 +76,8 @@ export function useStoryMapPage(file: string | null) {
 export function useStoryMapViewState() {
   const [viewMode, setViewMode] = useState<'map' | 'increment'>('map');
   const [showScenarios, setShowScenarios] = useState(false);
-  const [showExamples, setShowExamples] = useState(false);
+  // A map opened on a ticket shows the part its session covers until the person asks for the whole map.
+  const [scoped, setScoped] = useState(true);
   const [expandedNodeIds, setExpandedNodeIds] = useState<ReadonlySet<string>>(new Set());
 
   const toggleViewMode = useCallback(() => setViewMode((m) => (m === 'map' ? 'increment' : 'map')), []);
@@ -102,11 +103,11 @@ export function useStoryMapViewState() {
   return {
     viewMode,
     showScenarios,
-    showExamples,
+    scoped,
     expandedNodeIds,
     toggleViewMode,
     toggleShowScenarios: () => setShowScenarios((v) => !v),
-    toggleShowExamples: () => setShowExamples((v) => !v),
+    toggleScoped: () => setScoped((v) => !v),
     expandNode,
     collapseNode,
     expandDescendants,
@@ -562,7 +563,6 @@ interface StoryHierarchyViewProps {
   storyMap: StoryMapViewModel;
   expandedNodeIds: ReadonlySet<string>;
   showScenarios: boolean;
-  showExamples: boolean;
   /** false = Map View (no increment rows, no assign combobox); true = Increment View */
   showIncrements?: boolean;
   onNodeClick: (id: string, semantic_type: SemanticType) => void;
@@ -577,7 +577,6 @@ interface StoryHierarchyViewProps {
   onMoveSubEpic?: (subEpicId: string, targetEpicId: string, subEpicOrders: string[]) => void;
   onReorderScenarios?: (storyId: string, scenarioOrders: string[]) => void;
   onReorderSteps?: (storyId: string, scenarioId: string, stepOrders: string[]) => void;
-  onReorderExampleRows?: (storyId: string, scenarioId: string, exampleId: string, rowOrders: string[]) => void;
   onAssignToIncrement?: (storyId: string, incrementId: string) => void;
   onUnassignFromIncrement?: (storyId: string) => void;
   onAppendEpic?: (name?: string) => void;
@@ -601,20 +600,14 @@ interface StoryHierarchyViewProps {
   onAddStep?: (storyId: string, scenarioId: string) => void;
   onUpdateStep?: (storyId: string, scenarioId: string, stepId: string, values: Partial<Pick<StepRowDto, 'text' | 'step_type'>>) => void;
   onRemoveStep?: (storyId: string, scenarioId: string, stepId: string) => void;
-  onAddExample?: (storyId: string, scenarioId: string) => void;
-  onRemoveExample?: (storyId: string, scenarioId: string, exampleId: string) => void;
-  onAddExampleRow?: (storyId: string, scenarioId: string, exampleId: string) => void;
-  onUpdateExampleRow?: (storyId: string, scenarioId: string, exampleId: string, rowId: string, values: Partial<Pick<ExampleRowDto, 'values'>>) => void;
-  onRemoveExampleRow?: (storyId: string, scenarioId: string, exampleId: string, rowId: string) => void;
-  onAddExampleField?: (storyId: string, scenarioId: string, exampleId: string, fieldName: string) => void;
-  onRemoveExampleField?: (storyId: string, scenarioId: string, exampleId: string, fieldName: string) => void;
+  onEditDescription?: (nodeId: string, description: string) => void;
+  onOpenFile?: (path: string) => void;
 }
 
 export function StoryHierarchyView({
   storyMap,
   expandedNodeIds,
   showScenarios,
-  showExamples,
   showIncrements = true,
   onNodeClick,
   onExpand,
@@ -626,7 +619,6 @@ export function StoryHierarchyView({
   onMoveSubEpic = () => {},
   onReorderScenarios = () => {},
   onReorderSteps = () => {},
-  onReorderExampleRows = () => {},
   onAssignToIncrement = () => {},
   onUnassignFromIncrement = () => {},
   onAppendEpic = () => {},
@@ -648,13 +640,8 @@ export function StoryHierarchyView({
   onAddStep = () => {},
   onUpdateStep = () => {},
   onRemoveStep = () => {},
-  onAddExample = () => {},
-  onRemoveExample = () => {},
-  onAddExampleRow = () => {},
-  onUpdateExampleRow = () => {},
-  onRemoveExampleRow = () => {},
-  onAddExampleField = () => {},
-  onRemoveExampleField = () => {},
+  onEditDescription = () => {},
+  onOpenFile = () => {},
 }: StoryHierarchyViewProps) {
   const assignedStoryIds = new Set(storyMap.increments.flatMap((i) => i.stories));
   const dragRef = useRef<string | null>(null);
@@ -783,7 +770,6 @@ export function StoryHierarchyView({
         increments={storyMap.increments}
         isExpanded={expandedNodeIds.has(story.id)}
         showScenarios={showScenarios}
-        showExamples={showExamples}
         showIncrements={showIncrements}
         onNodeClick={onNodeClick}
         onExpand={onExpand}
@@ -792,7 +778,6 @@ export function StoryHierarchyView({
         onUnassignFromIncrement={onUnassignFromIncrement}
         onReorderScenarios={onReorderScenarios}
         onReorderSteps={onReorderSteps}
-        onReorderExampleRows={onReorderExampleRows}
         onRemoveStory={(storyId) => onRemoveStory(subEpicId, storyId)}
         onAppendStory={(name) => onInsertStoryAfter(subEpicId, story.id, name)}
         onPrepend={isFirst ? (name) => onPrependStory(subEpicId, name) : undefined}
@@ -801,13 +786,8 @@ export function StoryHierarchyView({
         onAddStep={onAddStep}
         onUpdateStep={onUpdateStep}
         onRemoveStep={onRemoveStep}
-        onAddExample={onAddExample}
-        onRemoveExample={onRemoveExample}
-        onAddExampleRow={onAddExampleRow}
-        onUpdateExampleRow={onUpdateExampleRow}
-        onRemoveExampleRow={onRemoveExampleRow}
-        onAddExampleField={onAddExampleField}
-        onRemoveExampleField={onRemoveExampleField}
+        onEditDescription={onEditDescription}
+        onOpenFile={onOpenFile}
         dragHandlers={dragHandlers}
         dropIndicatorClass={
           dropIndicatorClass(dropEdge, subEpicId, story.id) +
@@ -1229,7 +1209,6 @@ interface StoryCardProps {
   increments: IncrementViewModel[];
   isExpanded: boolean;
   showScenarios: boolean;
-  showExamples: boolean;
   /** When false (Map View) the increment assign combobox is hidden */
   showIncrements: boolean;
   onNodeClick: (id: string, semantic_type: SemanticType) => void;
@@ -1239,7 +1218,6 @@ interface StoryCardProps {
   onUnassignFromIncrement: (storyId: string) => void;
   onReorderScenarios: (storyId: string, scenarioOrders: string[]) => void;
   onReorderSteps: (storyId: string, scenarioId: string, stepOrders: string[]) => void;
-  onReorderExampleRows: (storyId: string, scenarioId: string, exampleId: string, rowOrders: string[]) => void;
   onRemoveStory: (storyId: string) => void;
   onAppendStory: (name?: string) => void;
   /** When provided, renders a prepend-sibling + button as the very first element
@@ -1254,13 +1232,8 @@ interface StoryCardProps {
   onAddStep: (storyId: string, scenarioId: string) => void;
   onUpdateStep: (storyId: string, scenarioId: string, stepId: string, values: Partial<Pick<StepRowDto, 'text' | 'step_type'>>) => void;
   onRemoveStep: (storyId: string, scenarioId: string, stepId: string) => void;
-  onAddExample: (storyId: string, scenarioId: string) => void;
-  onRemoveExample: (storyId: string, scenarioId: string, exampleId: string) => void;
-  onAddExampleRow: (storyId: string, scenarioId: string, exampleId: string) => void;
-  onUpdateExampleRow: (storyId: string, scenarioId: string, exampleId: string, rowId: string, values: Partial<Pick<ExampleRowDto, 'values'>>) => void;
-  onRemoveExampleRow: (storyId: string, scenarioId: string, exampleId: string, rowId: string) => void;
-  onAddExampleField: (storyId: string, scenarioId: string, exampleId: string, fieldName: string) => void;
-  onRemoveExampleField: (storyId: string, scenarioId: string, exampleId: string, fieldName: string) => void;
+  onEditDescription: (nodeId: string, description: string) => void;
+  onOpenFile: (path: string) => void;
 }
 
 function StoryCard({
@@ -1268,7 +1241,6 @@ function StoryCard({
   increments,
   isExpanded,
   showScenarios: _showScenarios,
-  showExamples,
   showIncrements,
   onNodeClick,
   onExpand,
@@ -1277,7 +1249,6 @@ function StoryCard({
   onUnassignFromIncrement,
   onReorderScenarios,
   onReorderSteps,
-  onReorderExampleRows,
   onRemoveStory,
   onAppendStory,
   onPrepend,
@@ -1288,13 +1259,8 @@ function StoryCard({
   onAddStep,
   onUpdateStep,
   onRemoveStep,
-  onAddExample,
-  onRemoveExample,
-  onAddExampleRow,
-  onUpdateExampleRow,
-  onRemoveExampleRow,
-  onAddExampleField,
-  onRemoveExampleField,
+  onEditDescription,
+  onOpenFile,
 }: StoryCardProps) {
   const [editName, setEditName] = useState(story.name);
   const scenarioDragRef = useRef<string | null>(null);
@@ -1367,6 +1333,8 @@ function StoryCard({
       {/* Expansion panel — always visible when expanded, regardless of Show Scenarios toggle */}
       {isExpanded && (
         <div className="story-expansion-panel">
+          <DescriptionEditor key={story.description} node={story} onSave={(description) => onEditDescription(story.id, description)} />
+          <AcceptanceTestsView files={story.acceptance_tests} onOpen={onOpenFile} />
           <div className="section-heading">
             <span>Scenarios</span>
             <button className="node-btn plus-btn" title="Add Scenario" onClick={() => onAppendScenario(story.id)}>+</button>
@@ -1380,21 +1348,12 @@ function StoryCard({
               <ScenarioPanel
                 scenario={sc}
                 storyId={story.id}
-                showExamples={showExamples}
                 onSaveInline={onSaveInline}
                 onReorderSteps={onReorderSteps}
-                onReorderExampleRows={onReorderExampleRows}
                 onRemoveScenario={() => onRemoveScenario(story.id, sc.id)}
                 onAddStep={() => onAddStep(story.id, sc.id)}
                 onUpdateStep={(stepId, values) => onUpdateStep(story.id, sc.id, stepId, values)}
                 onRemoveStep={(stepId) => onRemoveStep(story.id, sc.id, stepId)}
-                onAddExample={() => onAddExample(story.id, sc.id)}
-                onRemoveExample={(exId) => onRemoveExample(story.id, sc.id, exId)}
-                onAddExampleRow={(exId) => onAddExampleRow(story.id, sc.id, exId)}
-                onUpdateExampleRow={(exId, rowId, values) => onUpdateExampleRow(story.id, sc.id, exId, rowId, values)}
-                onRemoveExampleRow={(exId, rowId) => onRemoveExampleRow(story.id, sc.id, exId, rowId)}
-                onAddExampleField={(exId, fieldName) => onAddExampleField(story.id, sc.id, exId, fieldName)}
-                onRemoveExampleField={(exId, fieldName) => onRemoveExampleField(story.id, sc.id, exId, fieldName)}
               />
             </div>
           ))}
@@ -1477,39 +1436,21 @@ function AddNodePopoverButton({
 function ScenarioPanel({
   scenario,
   storyId,
-  showExamples: _showExamples,
   onSaveInline,
   onReorderSteps,
-  onReorderExampleRows,
   onRemoveScenario,
   onAddStep,
   onUpdateStep,
   onRemoveStep,
-  onAddExample,
-  onRemoveExample,
-  onAddExampleRow,
-  onUpdateExampleRow,
-  onRemoveExampleRow,
-  onAddExampleField,
-  onRemoveExampleField,
 }: {
   scenario: ScenarioViewModel;
   storyId: string;
-  showExamples?: boolean;
   onSaveInline: (nodeId: string, patch: { name?: string }) => void;
   onReorderSteps: (storyId: string, scenarioId: string, stepOrders: string[]) => void;
-  onReorderExampleRows: (storyId: string, scenarioId: string, exampleId: string, rowOrders: string[]) => void;
   onRemoveScenario: () => void;
   onAddStep: () => void;
   onUpdateStep: (stepId: string, values: Partial<Pick<StepRowDto, 'text' | 'step_type'>>) => void;
   onRemoveStep: (stepId: string) => void;
-  onAddExample: () => void;
-  onRemoveExample: (exId: string) => void;
-  onAddExampleRow: (exId: string) => void;
-  onUpdateExampleRow: (exId: string, rowId: string, values: Partial<Pick<ExampleRowDto, 'values'>>) => void;
-  onRemoveExampleRow: (exId: string, rowId: string) => void;
-  onAddExampleField: (exId: string, fieldName: string) => void;
-  onRemoveExampleField: (exId: string, fieldName: string) => void;
 }) {
   const stepDragRef = useRef<string | null>(null);
   const [scenarioName, setScenarioName] = useState(scenario.name);
@@ -1555,28 +1496,7 @@ function ScenarioPanel({
         </ol>
       </div>
 
-      {/* Examples always visible — no showExamples gate */}
-      <div className="examples-section">
-        <div className="section-heading indent">
-          <span>Examples</span>
-          <button className="node-btn plus-btn" title="Add Example" onClick={onAddExample}>+</button>
-        </div>
-        {scenario.examples.map((ex) => (
-          <ExampleBlock
-            key={ex.id}
-            example={ex}
-            storyId={storyId}
-            scenarioId={scenario.id}
-            onReorderExampleRows={onReorderExampleRows}
-            onRemoveExample={() => onRemoveExample(ex.id)}
-            onAddExampleRow={() => onAddExampleRow(ex.id)}
-            onUpdateExampleRow={(rowId, values) => onUpdateExampleRow(ex.id, rowId, values)}
-            onRemoveExampleRow={(rowId) => onRemoveExampleRow(ex.id, rowId)}
-            onAddExampleField={(fieldName) => onAddExampleField(ex.id, fieldName)}
-            onRemoveExampleField={(fieldName) => onRemoveExampleField(ex.id, fieldName)}
-          />
-        ))}
-      </div>
+      <ExampleTableView examples={scenario.examples} />
     </div>
   );
 }
@@ -1622,102 +1542,61 @@ function StepEditor({
   );
 }
 
-function ExampleBlock({
-  example,
-  storyId,
-  scenarioId,
-  onReorderExampleRows,
-  onRemoveExample,
-  onAddExampleRow,
-  onUpdateExampleRow,
-  onRemoveExampleRow,
-  onAddExampleField,
-  onRemoveExampleField,
-}: {
-  example: ExampleDto;
-  storyId: string;
-  scenarioId: string;
-  onReorderExampleRows: (storyId: string, scenarioId: string, exampleId: string, rowOrders: string[]) => void;
-  onRemoveExample: () => void;
-  onAddExampleRow: () => void;
-  onUpdateExampleRow: (rowId: string, values: Partial<Pick<ExampleRowDto, 'values'>>) => void;
-  onRemoveExampleRow: (rowId: string) => void;
-  onAddExampleField: (fieldName: string) => void;
-  onRemoveExampleField: (fieldName: string) => void;
-}) {
-  const rowDragRef = useRef<string | null>(null);
-  const [newFieldName, setNewFieldName] = useState('');
-
+// A scenario's examples as the story model holds them: a row per example, read only, since no operation edits one.
+function ExampleTableView({ examples }: { examples: ExampleTable }) {
+  if (!examples.rows.length) return null;
   return (
-    <div className="example-block">
-      <div className="example-header">
-        <strong>{example.name}</strong>
-        <button className="node-btn minus-btn" title="Delete Example" onClick={onRemoveExample}>−</button>
-      </div>
+    <div className="examples-section">
+      <div className="section-heading indent"><span>Examples</span></div>
+      <div className="example-block">
       <table>
         <thead>
-          <tr>
-            <th className="row-drag-handle-header" aria-hidden="true" />
-            {example.fields.map((f) => (
-              <th key={f.name}>
-                {f.name}
-                <button className="node-btn minus-btn field-remove-btn" title={`Remove field ${f.name}`} onClick={() => onRemoveExampleField(f.name)}>−</button>
-              </th>
-            ))}
-            <th className="add-field-col">
-              <input
-                className="new-field-input"
-                placeholder="field…"
-                value={newFieldName}
-                onChange={(e) => setNewFieldName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newFieldName.trim()) {
-                    onAddExampleField(newFieldName.trim());
-                    setNewFieldName('');
-                  }
-                }}
-              />
-              <button className="node-btn plus-btn" title="Add Field" onClick={() => { if (newFieldName.trim()) { onAddExampleField(newFieldName.trim()); setNewFieldName(''); } }}>+</button>
-            </th>
-          </tr>
+          <tr>{examples.columns.map((column) => <th key={column}>{column}</th>)}</tr>
         </thead>
         <tbody>
-          {example.rows.map((row) => (
-            <tr
-              key={row.id}
-              {...makeDragHandlers(rowDragRef, row.id, () => example.rows.map((r) => r.id), (ids) => onReorderExampleRows(storyId, scenarioId, example.id, ids))}
-            >
-              <td className="row-drag-handle" aria-hidden="true">⠿</td>
-              {example.fields.map((f) => (
-                <td key={f.name}>
-                  <ExampleCellEditor
-                    value={row.values[f.name] ?? ''}
-                    onSave={(val) => onUpdateExampleRow(row.id, { values: { ...row.values, [f.name]: val } })}
-                  />
-                </td>
-              ))}
-              <td>
-                <button className="node-btn minus-btn" title="Delete Row" onClick={() => onRemoveExampleRow(row.id)}>−</button>
-              </td>
-            </tr>
+          {examples.rows.map((row, index) => (
+            <tr key={row.example ?? index}>{examples.columns.map((column) => <td key={column}>{row[column] ?? ''}</td>)}</tr>
           ))}
         </tbody>
       </table>
-      <button className="add-root-btn" title="Add Example Row" onClick={onAddExampleRow}>+ Row</button>
+      </div>
     </div>
   );
 }
 
-function ExampleCellEditor({ value, onSave }: { value: string; onSave: (v: string) => void }) {
-  const [val, setVal] = useState(value);
+// What the story map says about a node, under its heading; saved through the node's edit_description when it changes.
+function DescriptionEditor({ node, onSave }: { node: { name: string; description: string }; onSave: (description: string) => void }) {
+  const [text, setText] = useState(node.description);
+  const save = () => { if (text.trim() !== node.description) onSave(text); };
   return (
-    <input
-      className="example-cell-input"
-      value={val}
-      onChange={(e) => setVal(e.target.value)}
-      onBlur={() => { if (val !== value) onSave(val); }}
-      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (val !== value) onSave(val); } }}
-    />
+    <div className="description-section">
+      <div className="section-heading"><span>Description</span></div>
+      <textarea
+        className="description-input"
+        aria-label={`Description of ${node.name}`}
+        value={text}
+        placeholder="What the story map says about it…"
+        onChange={(e) => setText(e.target.value)}
+        onClick={(e) => e.stopPropagation()}
+        onBlur={save}
+        onKeyDown={(e) => { if (e.key === 'Escape') setText(node.description); }}
+      />
+    </div>
+  );
+}
+
+// A story's acceptance tests are read, not edited, here: each opens read only beside the map.
+function AcceptanceTestsView({ files, onOpen }: { files: string[]; onOpen: (path: string) => void }) {
+  if (!files.length) return null;
+  return (
+    <div className="acceptance-tests-section">
+      <div className="section-heading"><span>Acceptance tests</span></div>
+      <ul className="acceptance-test-links">
+        {files.map((file) => (
+          <li key={file}><button type="button" className="acceptance-test-link" onClick={(e) => { e.stopPropagation(); onOpen(file); }}>{file}</button></li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -1732,7 +1611,7 @@ interface StoryMapWorkspaceViewProps {
 
 type ColorMode = 'executive' | 'engineering';
 const THEME_STORAGE_KEY = 'story-map-theme';
-const NEW_NAMES = { epic: 'New Epic', subEpic: 'New SubEpic', story: 'New Story', scenario: 'New Scenario', step: 'New step' } as const;
+const NEW_NAMES = { epic: 'New Epic', subEpic: 'New SubEpic', story: 'New Story', scenario: 'New Scenario', step: 'New step', increment: 'New Increment' } as const;
 
 // The formats chosen for the fidelity of the open file in the session: the chat bar's chips show the same choice, and
 // the next edit renders to the formats on.
@@ -1785,7 +1664,7 @@ function useCanvasPanning() {
 
 export function StoryMapWorkspaceView({ file }: StoryMapWorkspaceViewProps) {
   const { client, failure, status, edit, dismissFailure } = useStoryMapPage(file);
-  const { showScenarios, expandedNodeIds, toggleShowScenarios, expandNode, collapseNode, expandDescendants, collapseAll } = useStoryMapViewState();
+  const { viewMode, toggleViewMode, scoped, toggleScoped, showScenarios, expandedNodeIds, toggleShowScenarios, expandNode, collapseNode, expandDescendants, collapseAll } = useStoryMapViewState();
   const [theme, setTheme] = useState<ColorMode>(themeOnOpen);
   const panning = useCanvasPanning();
 
@@ -1799,19 +1678,20 @@ export function StoryMapWorkspaceView({ file }: StoryMapWorkspaceViewProps) {
       ? <div className="loading"><span className="status-dot error" />{failure}</div>
       : <div className="loading"><span className="status-dot pending" />Loading story map…</div>;
   }
-  return <StoryMapCanvasView client={client} failure={failure} status={status} edit={edit} dismissFailure={dismissFailure} showScenarios={showScenarios} toggleShowScenarios={toggleShowScenarios} expandedNodeIds={expandedNodeIds} expandNode={expandNode} collapseNode={collapseNode} expandDescendants={expandDescendants} collapseAll={collapseAll} theme={theme} setTheme={setTheme} panning={panning} />;
+  return <StoryMapCanvasView client={client} failure={failure} status={status} edit={edit} dismissFailure={dismissFailure} viewMode={viewMode} toggleViewMode={toggleViewMode} scoped={scoped} toggleScoped={toggleScoped} showScenarios={showScenarios} toggleShowScenarios={toggleShowScenarios} expandedNodeIds={expandedNodeIds} expandNode={expandNode} collapseNode={collapseNode} expandDescendants={expandDescendants} collapseAll={collapseAll} theme={theme} setTheme={setTheme} panning={panning} />;
 }
 
-type StoryMapCanvasProps = Omit<ReturnType<typeof useStoryMapPage>, 'client'> & Pick<ReturnType<typeof useStoryMapViewState>, 'showScenarios' | 'toggleShowScenarios' | 'expandedNodeIds' | 'expandNode' | 'collapseNode' | 'expandDescendants' | 'collapseAll'> & {
+type StoryMapCanvasProps = Omit<ReturnType<typeof useStoryMapPage>, 'client'> & Pick<ReturnType<typeof useStoryMapViewState>, 'viewMode' | 'toggleViewMode' | 'scoped' | 'toggleScoped' | 'showScenarios' | 'toggleShowScenarios' | 'expandedNodeIds' | 'expandNode' | 'collapseNode' | 'expandDescendants' | 'collapseAll'> & {
   client: StoryMapClient;
   theme: ColorMode;
   setTheme: (theme: ColorMode) => void;
   panning: ReturnType<typeof useCanvasPanning>;
 };
 
-function StoryMapCanvasView({ client, failure, status, edit, dismissFailure, showScenarios, toggleShowScenarios, expandedNodeIds, expandNode, collapseNode, expandDescendants, collapseAll, theme, setTheme, panning }: StoryMapCanvasProps) {
+function StoryMapCanvasView({ client, failure, status, edit, dismissFailure, viewMode, toggleViewMode, scoped, toggleScoped, showScenarios, toggleShowScenarios, expandedNodeIds, expandNode, collapseNode, expandDescendants, collapseAll, theme, setTheme, panning }: StoryMapCanvasProps) {
   const map = useStoryModel(client);
-  const storyMap = useMemo(() => StoryMapViewModel.of(map.toJSON()), [map, map.toJSON()]);
+  const storyMap = useMemo(() => StoryMapViewModel.of(map.toJSON(), scoped), [map, map.toJSON(), scoped]);
+  const [openFile, setOpenFile] = useState<string | null>(null);
   const kindOf = (node: string): NodeKind => (storyMap.kinds.get(node) ?? 'epic') as NodeKind;
   const lastOf = <T extends { id: string }>(nodes: T[]): string | undefined => nodes[nodes.length - 1]?.id;
   const subEpicsOf = (epic: string) => storyMap.epics.find((each) => each.id === epic)?.sub_epics ?? [];
@@ -1839,6 +1719,10 @@ function StoryMapCanvasView({ client, failure, status, edit, dismissFailure, sho
         <span className="toolbar-file" title={map.file}>{map.file}</span>
         <span className="toolbar-sep" />
         <button className={`toolbar-btn${showScenarios ? ' active' : ''}`} onClick={toggleShowScenarios}>Show Scenarios</button>
+        <button className={`toolbar-btn${viewMode === 'increment' ? ' active' : ''}`} aria-pressed={viewMode === 'increment'} onClick={toggleViewMode}>Increments</button>
+        {map.scope.length > 0 && (
+          <button className={`toolbar-btn${scoped ? ' active' : ''}`} aria-pressed={scoped} onClick={toggleScoped} title="The stories the ticket's session names">Ticket scope</button>
+        )}
         <span className="toolbar-sep" />
         <button className="toolbar-btn" onClick={() => expandDescendants('all-epics', storyMap.epics.flatMap((e) => [e.id, ...e.sub_epics.flatMap((s) => [s.id, ...s.stories.map((st) => st.id)])]))}>Expand All</button>
         <button className="toolbar-btn" onClick={collapseAll}>Collapse All</button>
@@ -1863,8 +1747,7 @@ function StoryMapCanvasView({ client, failure, status, edit, dismissFailure, sho
           storyMap={storyMap}
           expandedNodeIds={expandedNodeIds}
           showScenarios={showScenarios}
-          showExamples={false}
-          showIncrements={false}
+          showIncrements={viewMode === 'increment'}
           onNodeClick={expandNode}
           onExpand={handleExpand}
           onSaveInline={(nodeId, patch) => { if (patch.name) void edit((held) => held.renameNode(nodeId, kindOf(nodeId), patch.name!)); }}
@@ -1890,8 +1773,22 @@ function StoryMapCanvasView({ client, failure, status, edit, dismissFailure, sho
           onAddStep={(_story, scenario) => void edit((held) => held.newStep(scenario, 'given', NEW_NAMES.step))}
           onUpdateStep={(_story, _scenario, step, values) => { if (values.text !== undefined) void edit((held) => held.editStep(step, values.text!)); }}
           onRemoveStep={(_story, _scenario, step) => void edit((held) => held.removeNode(step, 'step'))}
+          onEditDescription={(node, description) => void edit((held) => held.describeNode(node, kindOf(node), description))}
+          onOpenFile={setOpenFile}
+          onAppendIncrement={() => void edit((held) => held.newIncrement(NEW_NAMES.increment))}
+          onRemoveIncrement={(increment) => void edit((held) => held.removeNode(increment, 'increment'))}
+          onReorderIncrements={(order) => void edit((held) => held.reorder(storyMap.increments.map((each) => each.id), order, 'increment'))}
+          onAssignToIncrement={(story, increment) => void edit((held) => held.deliverIn(increment, story))}
+          onUnassignFromIncrement={(story) => { const increment = storyMap.incrementOf(story); if (increment) void edit((held) => held.stopDelivering(increment.id, story)); }}
         />
       </div>
+
+      {openFile && (
+        <aside className="acceptance-test-file" aria-label={`Acceptance test ${openFile}`}>
+          <button type="button" className="toolbar-btn" onClick={() => setOpenFile(null)}>Close</button>
+          <SourceViewGenerated api={client.api} path={openFile} />
+        </aside>
+      )}
 
       <div className="status-rail">
         {status === 'synced' && <span><span className="status-dot" />saved in {map.formats.chosen_formats.join(' and ')}</span>}
