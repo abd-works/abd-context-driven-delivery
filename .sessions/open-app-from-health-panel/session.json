@@ -1,0 +1,6 @@
+{
+  "name": "open-app-from-health-panel",
+  "title": "Open App From Health Panel",
+  "scope": "story",
+  "workpath": "harness/chat-ui"
+}
