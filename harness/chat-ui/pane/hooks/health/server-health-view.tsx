@@ -31,18 +31,23 @@ const LOOKS = {
 }
 
 
-// The key of the see-through Button over an app's part, such as health-open-kanban-app.
+// The key of the Button that is an app's part, such as health-open-kanban-app.
 export const openKeyOf = (app: AppName): string => `health-open-${app.toLowerCase().replace(/ /g, '-')}`
 
-// The desktop draws everything inside a Button in its own colour and padding, so an app's icon and value are drawn as
-// Text in the part's colour and a see-through Button as wide as them, laid over them, takes the press.
-function OpenAppView({ Box, Button }: ElementTable, part: Part, openApp: Actions['openApp']) {
-  if (!part.app) return null
+// An app's icon and value, drawn in the part's colour. For the Kanban app and the Graph app they are the children of one
+// plain Button, so a press anywhere on them, not only on the icon, opens the app.
+function PartFaceView({ Button, Text }: ElementTable, part: Part, openApp: Actions['openApp']) {
+  const face = [
+    <Text key="health-part-icon" color={colourOf(part)}>{part.icon}</Text>,
+    ' ',
+    <Text key="health-part-value" color={colourOf(part)}>{part.value}</Text>,
+  ]
+  if (!part.app) return face
   const app = part.app
   return (
-    <Box position="absolute" top={0} left={0}>
-      <Button key={openKeyOf(app)} plain label={' '.repeat(`${part.icon} ${part.value}`.length)} onPress={() => openApp(app)} />
-    </Box>
+    <Button key={openKeyOf(app)} plain onPress={() => openApp(app)}>
+      {face}
+    </Button>
   )
 }
 
@@ -53,13 +58,11 @@ function PartsView(elements: ElementTable, health: ServerHealthJson, openApp: Ac
   return (
     <Box flexDirection="row" columnGap={3}>
       {partsOf(health).map(part => (
-        <Box key={part.label} flexDirection="row" gap={1}>
-          <Text color={colourOf(part)}>{part.icon}</Text>
-          <Text color={colourOf(part)}>{part.value}</Text>
+        <Box key={part.label} flexDirection="row">
+          {PartFaceView(elements, part, openApp)}
           <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
             <Text color={BRAND.text}>{part.label}</Text>
           </Box>
-          {OpenAppView(elements, part, openApp)}
         </Box>
       ))}
     </Box>

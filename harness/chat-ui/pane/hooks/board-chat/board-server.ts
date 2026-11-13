@@ -72,6 +72,18 @@ export async function openInBrowser($: EngineInterface, url: string): Promise<bo
   return false
 }
 
+// The Claude desktop app's own browser pane, as /mcp lists it, and its call that opens a tab at a URL.
+const BROWSER_PANE = 'Claude_Browser'
+const OPEN_TAB = 'preview_start'
+
+// Opens a page in a tab of the Claude desktop app's browser pane, beside the chat; where the chat has no pane, such as
+// in a terminal, or the pane refuses, in the person's browser instead.
+export async function openInBrowserPane($: EngineInterface, url: string): Promise<boolean> {
+  const opened = await $.mcp.call(BROWSER_PANE, OPEN_TAB, { url }).catch(() => null)
+  if (opened && !opened.isError) return true
+  return openInBrowser($, url)
+}
+
 // Starts the board when nothing answers on its port, so /board always ends with a board to open. cdd's server health
 // gives the board's address, so the chat names no port of the board's. The link names this chat's repository, so the
 // page shows this chat's tickets whichever repository the server was started from.

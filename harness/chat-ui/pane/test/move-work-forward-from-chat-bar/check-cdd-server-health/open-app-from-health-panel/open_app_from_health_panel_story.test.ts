@@ -4,14 +4,17 @@ import { expect, test } from 'claude-code/testing'
 // Sub-epic: Check CDD Server Health
 // Map: ../../../../../../.context/stories/story-map.md#s-person----open-app-from-health-panel
 // Realizations: inline under each step, along the mod's line: PartsView press -> openApp($, app) -> board server or the
-// repository's start scripts -> the system's opener
+// repository's start scripts -> the Claude desktop app's browser pane, else the system's opener
 
 // The engine beneath the mod: cdd answers server-health.report with `health`; anything else cdd is asked is refused, so
 // the chat bar shows its problem line and the panel still draws. The board answers once it has been started, when
-// `isBoardUp` is false at first. Every process the mod runs or spawns is kept, in order.
+// `isBoardUp` is false at first. The desktop app's browser pane opens a tab at each URL it is given, unless `hasPane` is
+// false, as in a terminal. Every tab opened and every process the mod runs or spawns is kept, in order.
 type World = {
   health: Record<string, unknown>
   isBoardUp: boolean
+  hasPane: boolean
+  tabs: string[]
   runs: string[][]
   spawns: string[][]
   toasts: string[]
@@ -33,7 +36,7 @@ const BAR = {
 const answer = (text: string, isError = false) => ({ value: { content: [{ type: 'text', text }], isError } })
 
 function engine(on: any, health: Record<string, unknown>): World {
-  const world: World = { health, isBoardUp: true, runs: [], spawns: [], toasts: [], started: {} }
+  const world: World = { health, isBoardUp: true, hasPane: true, tabs: [], runs: [], spawns: [], toasts: [], started: {} }
   on('command.register', () => ({ value: undefined }))
   on('session.start', (_: unknown, e: { cwd: string }) => ({ cwd: e.cwd }))
   on('session.id', () => ({ value: 'chat-1' }))
@@ -44,7 +47,14 @@ function engine(on: any, health: Record<string, unknown>): World {
   on('clock.after', () => ({ value: undefined }))
   on('tool.list', () => ({ value: [] }))
   on('tool.call', () => ({ result: {} }))
-  on('mcp.call', (_: unknown, e: { tool: string }) => (e.tool === 'server-health.report' ? answer(JSON.stringify(world.health)) : answer(`${e.tool} is not part of this story`, true)))
+  on('mcp.call', (_: unknown, e: { server: string; tool: string; args?: { url?: string } }) => {
+    if (e.server === 'Claude_Browser' && e.tool === 'preview_start') {
+      if (!world.hasPane) return answer('no browser pane in this chat', true)
+      world.tabs.push(e.args?.url ?? '')
+      return answer('opened')
+    }
+    return e.tool === 'server-health.report' ? answer(JSON.stringify(world.health)) : answer(`${e.tool} is not part of this story`, true)
+  })
   on('ui.toast', (_: unknown, e: { text: string }) => {
     world.toasts.push(e.text)
     return { value: undefined }
@@ -85,7 +95,8 @@ async function openPanel($: any) {
   return ui
 }
 
-const opened = (world: World) => world.runs.filter(argv => argv[0] === OPENER).map(argv => argv[2])
+const opened = (world: World) => world.tabs
+const openedOutside = (world: World) => world.runs.filter(argv => argv[0] === OPENER).map(argv => argv[2])
 const scriptsRun = (world: World) => world.runs.filter(argv => argv[0].endsWith('python.exe')).map(argv => argv[1])
 
 // (S) Person --> Open App From Health Panel
@@ -94,9 +105,9 @@ test('Open App From Health Panel › Open the Kanban app while it runs', async (
   const world = engine(on, HEALTHY)
   const ui = await openPanel($)
   // When the Person presses the Kanban app on the server health panel
-  // PartsView -> OpenAppView press -> openApp($, 'Kanban app') -> startedBoard($) -> openInBrowser
+  // PartsView -> OpenAppView press -> openApp($, 'Kanban app') -> startedBoard($) -> openInBrowserPane
   await ui.press({ key: 'health-open-kanban-app' })
-  // Then the board page for this repository opens in the browser
+  // Then the board page for this repository opens in the browser pane
   expect(opened(world)).toEqual([BOARD_PAGE])
   // And nothing was started
   expect(world.spawns).toEqual([])
@@ -113,7 +124,7 @@ test('Open App From Health Panel › Start the Kanban app, then open it, when it
   await ui.press({ key: 'health-open-kanban-app' })
   // Then the board server starts from the repository's own folder
   expect(world.spawns).toEqual([['node', '--import', 'tsx', 'packages/session-board/serve.ts']])
-  // And once it answers, the board page opens in the browser
+  // And once it answers, the board page opens in the browser pane
   expect(opened(world)).toEqual([BOARD_PAGE])
   await ui.unmount()
 })
@@ -123,9 +134,9 @@ test('Open App From Health Panel › Open the Graph app while it runs', async ($
   const world = engine(on, HEALTHY)
   const ui = await openPanel($)
   // When the Person presses the Graph app on the server health panel
-  // PartsView -> OpenAppView press -> openApp($, 'Graph app') -> openInBrowser
+  // PartsView -> OpenAppView press -> openApp($, 'Graph app') -> openInBrowserPane
   await ui.press({ key: 'health-open-graph-app' })
-  // Then the Graph app opens in the browser, and no start script runs
+  // Then the Graph app opens in the browser pane, and no start script runs
   expect(opened(world)).toEqual(['http://localhost:5173'])
   expect(scriptsRun(world)).toEqual([])
   await ui.unmount()
@@ -140,7 +151,7 @@ test('Open App From Health Panel › Start the Graph app, then open it, when it 
   }
   const ui = await openPanel($)
   // When the Person presses the Graph app on the server health panel
-  // openApp($, 'Graph app') -> python scripts/start_graph_web.py, scripts/start_graph_app.py -> openInBrowser
+  // openApp($, 'Graph app') -> python scripts/start_graph_web.py, scripts/start_graph_app.py -> openInBrowserPane
   await ui.press({ key: 'health-open-graph-app' })
   // Then its web server and its app start, with the repository's Python, in that order
   expect(scriptsRun(world)).toEqual(['scripts/start_graph_web.py', 'scripts/start_graph_app.py'])
@@ -164,5 +175,19 @@ test('Open App From Health Panel › Say why the Graph app did not start', async
   // Then nothing opens, and the Person is told which script failed and where its log is
   expect(opened(world)).toEqual([])
   expect(world.toasts.at(-1)).toContain('scripts/start_graph_app.py failed, see scripts/.run/graph-app.log')
+  await ui.unmount()
+})
+
+test('Open App From Health Panel › Open the app in the browser when the chat has no browser pane', async ($, on) => {
+  // Given the Graph app is running, and the chat has no browser pane, as in a terminal
+  const world = engine(on, HEALTHY)
+  world.hasPane = false
+  const ui = await openPanel($)
+  // When the Person presses the Graph app on the server health panel
+  // openApp($, 'Graph app') -> openInBrowserPane -> Claude_Browser refuses -> openInBrowser
+  await ui.press({ key: 'health-open-graph-app' })
+  // Then the Graph app opens in the person's browser instead
+  expect(world.tabs).toEqual([])
+  expect(openedOutside(world)).toEqual(['http://localhost:5173'])
   await ui.unmount()
 })
