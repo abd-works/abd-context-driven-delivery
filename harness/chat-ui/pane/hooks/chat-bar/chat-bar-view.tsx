@@ -283,7 +283,6 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
       {PickerView($, elements, draw)}
       {OverlayListView($, elements, draw)}
       {LineView($, elements, draw)}
-      {chatBar.statusLine ? <Text key="status-row" color={BRAND.muted} wrap="truncate-start">{chatBar.statusLine}</Text> : null}
     </Box>
   )
 }

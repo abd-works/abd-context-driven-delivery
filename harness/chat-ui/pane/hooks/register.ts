@@ -131,6 +131,14 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // The status line, the repository, the session's branch and its folder, sits in the hint line under the prompt, after
+  // what the engine writes there, not in the chat bar above it.
+  on('ui.render', { component: 'PromptHint' }, async ($, e, next) => {
+    const status = (await currentChatBar($)).statusLine
+    if (!status) return next(e)
+    return next({ ...e, props: { ...e.props, hint: e.props.hint ? `${e.props.hint} · ${status}` : status } })
+  })
+
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
     // A press on the health mark reads the board and the server again, and shows the card with the diagnostics open.
