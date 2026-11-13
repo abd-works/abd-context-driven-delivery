@@ -397,6 +397,109 @@ def _(s):
         expect(states_on_order(world)).to(equal({EMPTY_CART_COMMENT.anchor: "processed"}))
 
 
+# --- Show AI Changes As Diff --------------------------------------------------------------------------------------
+
+ADDED_LINES = ("            # a cart needs one item", "            # to be placed")
+
+
+def changes_on_order(world) -> list[tuple[str, int, int, list[str]]]:
+    """The changes the viewer marks on order.py: each one's kind, its lines, and the lines it removed."""
+    opened = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file(path=ORDER_FILE))
+    return [(change["kind"], change["range"]["start_line"], change["range"]["end_line"], change["removed"]) for change in opened["changes"]]
+
+
+def chat_turn_writes(world, text: str) -> None:
+    """The chat's turn writes order.py as text; the comment it worked on is processed once the turn ends."""
+    world.project.seed_file(ORDER_FILE, text)
+
+
+@shared_stories.scenario("Show AI Changes As Diff", "Mark the line the chat changed, with the line it replaced")
+def _(s):
+    @s.given("checkout-flow's file comment order.py:L12-L14 was sent while line 14 read raise EmptyCartError(cart.id)")
+    def _(world):
+        seed_comment_shown_in_chat(world)
+
+    @s.and_('the chat\'s turn changed line 14 to raise EmptyCartError(cart.id, "a cart needs one item to be placed")')
+    def _(world):
+        chat_turn_writes(world, ORDER_TEXT.replace(PLACE_LINES[2], EDITED_LINE_14))
+
+    @s.when("the file comment order.py:L12-L14 is marked processed")
+    def _(world):
+        world.Chat.load(CHECKOUT_CHAT).check_in(is_busy=False)
+
+    @s.then("the viewer marks line 14 as changed by the chat")
+    def _(world):
+        expect([change[:3] for change in changes_on_order(world)]).to(equal([("changed", 14, 14)]))
+
+    @s.and_("shows the line it replaced, raise EmptyCartError(cart.id), as removed above it")
+    def _(world):
+        expect(changes_on_order(world)[0][3]).to(equal([PLACE_LINES[2]]))
+
+
+@shared_stories.scenario("Show AI Changes As Diff", "Mark the lines the chat added")
+def _(s):
+    @s.given("checkout-flow's file comment order.py:L12-L14 was sent")
+    def _(world):
+        seed_comment_shown_in_chat(world)
+
+    @s.and_("the chat's turn added two lines after line 14")
+    def _(world):
+        chat_turn_writes(world, ORDER_TEXT.replace(f"{PLACE_LINES[2]}\n", "".join(f"{line}\n" for line in (PLACE_LINES[2], *ADDED_LINES))))
+
+    @s.when("the file comment order.py:L12-L14 is marked processed")
+    def _(world):
+        world.Chat.load(CHECKOUT_CHAT).check_in(is_busy=False)
+
+    @s.then("the viewer marks lines 15 and 16 as added by the chat")
+    def _(world):
+        expect(changes_on_order(world)).to(equal([("added", 15, 16, [])]))
+
+    @s.but_("marks no line before them as changed")
+    def _(world):
+        expect([change for change in changes_on_order(world) if change[1] < 15]).to(equal([]))
+
+
+@shared_stories.scenario("Show AI Changes As Diff", "Mark nothing when the chat left the file as it was")
+def _(s):
+    @s.given("checkout-flow's file comment order.py:L12-L14 was sent")
+    def _(world):
+        seed_comment_shown_in_chat(world)
+
+    @s.and_("the chat's turn changed no line of order.py")
+    def _(world):
+        # The turn ends without writing order.py.
+        pass
+
+    @s.when("the file comment order.py:L12-L14 is marked processed")
+    def _(world):
+        world.Chat.load(CHECKOUT_CHAT).check_in(is_busy=False)
+
+    @s.then("the viewer marks no line of order.py as changed")
+    def _(world):
+        expect(changes_on_order(world)).to(equal([]))
+
+
+@shared_stories.scenario("Show AI Changes As Diff", "Stop marking the changes once the processed comment is cleared")
+def _(s):
+    @s.given("the viewer marks line 14 of order.py as changed by the chat for the processed comment order.py:L12-L14")
+    def _(world):
+        seed_comment_shown_in_chat(world)
+        chat_turn_writes(world, ORDER_TEXT.replace(PLACE_LINES[2], EDITED_LINE_14))
+        world.Chat.load(CHECKOUT_CHAT).check_in(is_busy=False)
+
+    @s.when("the Person clears checkout-flow's processed file comments")
+    def _(world):
+        world.Ticket.load(CHECKOUT_FLOW.name).session.file_comments.clear_processed()
+
+    @s.then("the viewer marks no line of order.py as changed")
+    def _(world):
+        expect(changes_on_order(world)).to(equal([]))
+
+    @s.and_('line 14 still reads raise EmptyCartError(cart.id, "a cart needs one item to be placed")')
+    def _(world):
+        expect((world.project.root / ORDER_FILE).read_text(encoding="utf-8").splitlines()[13]).to(equal(EDITED_LINE_14))
+
+
 # --- Clear Processed File Comments --------------------------------------------------------------------------------
 
 

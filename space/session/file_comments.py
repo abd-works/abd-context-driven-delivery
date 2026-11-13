@@ -38,20 +38,21 @@ class FileCommentNotFoundError(LookupError):
 
 class FileComment:
     """One comment on a range of a file, with the text the range held when the comment was written; the chat and
-    message it was sent in once it is sent."""
+    message it was sent in, and the whole file's text then, once it is sent."""
 
     # A comment's state is read from the chat's message, never kept twice: sent until the chat is done with the message.
 
-    def __init__(self, range: Range, text: str, chat: str = "", message: str = "") -> None:
+    def __init__(self, range: Range, text: str, chat: str = "", message: str = "", sent_text: str = "") -> None:
         self._range = range
         self._text = text
         self._chat = chat
         self._message = message
+        self._sent_text = sent_text
 
     @classmethod
     def from_record(cls, record: dict) -> FileComment:
         range = Range(record["path"], record["start_line"], record["end_line"], record["selected_text"])
-        return cls(range, record["text"], record.get("chat", ""), record.get("message", ""))
+        return cls(range, record["text"], record.get("chat", ""), record.get("message", ""), record.get("sent_text", ""))
 
     @property
     @data_field
@@ -93,9 +94,15 @@ class FileComment:
         marked = [f"> {start + offset} | {line}" for offset, line in enumerate(self._range.content.splitlines())]
         return "\n".join([f"{self.path}:{start}-{self._range.end_line}: {self._text}", *marked])
 
-    def sent_in(self, chat: str, message: str) -> FileComment:
-        """This comment, sent to chat in message."""
-        return FileComment(self._range, self._text, chat, message)
+    @property
+    def sent_text(self) -> str:
+        """The whole file's text as it read when the comment was sent; empty before it is sent. What the chat changed
+        is told from it once the comment is processed."""
+        return self._sent_text
+
+    def sent_in(self, chat: str, message: str, sent_text: str) -> FileComment:
+        """This comment, sent to chat in message while its file read sent_text."""
+        return FileComment(self._range, self._text, chat, message, sent_text)
 
     @property
     def record(self) -> dict:
@@ -107,6 +114,7 @@ class FileComment:
             "text": self._text,
             "chat": self._chat,
             "message": self._message,
+            "sent_text": self._sent_text,
         }
 
 
@@ -188,12 +196,13 @@ class FileComments:
         return self
 
     def _sent(self, sending: list[FileComment], chat: str) -> None:
-        """Queue the comments for chat in one message, then keep each as sent in it; a chat that is not connected
-        refuses the message, and the comments stay not sent."""
+        """Queue the comments for chat in one message, then keep each as sent in it, with its file's text as it reads
+        now; a chat that is not connected refuses the message, and the comments stay not sent."""
         prompt = "\n\n".join([*(comment.prompt for comment in sending), f"session={self.session_file}"])
         message = Chat.load(chat).queue("fill", prompt).message
         anchors = {comment.anchor for comment in sending}
-        kept = [comment.sent_in(chat, message) if comment.anchor in anchors else comment for comment in self.comments]
+        texts = {path: self._session.session_files.read(path).text for path in {comment.path for comment in sending}}
+        kept = [comment.sent_in(chat, message, texts[comment.path]) if comment.anchor in anchors else comment for comment in self.comments]
         self._save(kept)
 
     def _held(self, anchor: str) -> FileComment:

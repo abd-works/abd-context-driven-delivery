@@ -251,7 +251,8 @@ FileView sees FileComment{anchor: "src/checkout/order.py:L12-L14"} turn processe
 ## Show AI Changes As Diff
 
 The comment keeps the file's text as it was sent (`FileComment.sent_text`), and the session's file compares it with the
-text now once the comment is processed. Proposed, not built.
+text now once the comment is processed, through difflib's opcodes: replace is changed, insert is added, delete is
+removed, sitting on the line now after the removed lines.
 
 ### Scenario: Mark the line the chat changed, with the line it replaced
 

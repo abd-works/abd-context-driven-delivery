@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { MouseEvent } from 'react'
 
-import type { FileCommentData, FileViolationData, FoldData, SessionFileData } from '@cdd/space/session/session'
+import type { FileChangeData, FileCommentData, FileViolationData, FoldData, SessionFileData } from '@cdd/space/session/session'
 
 import { useBoard } from '../shared/board-context'
 import { markdownBlocksOf } from '../shared/markdown-text'
@@ -11,6 +11,7 @@ const NOT_GENERATED = ['Not generated yet.', 'Pick this format on the card, then
 // While a comment is with a chat, the file is read again this often, so the chat's change and the comment's processed
 // state show without a reload.
 const SENT_REFRESH_MILLISECONDS = 2_000
+const CHANGE_WORDS: Record<FileChangeData['kind'], string> = { changed: 'Changed by the chat', added: 'Added by the chat', removed: 'Removed by the chat' }
 const STATE_WORDS: Record<FileCommentData['state'], string> = { not_sent: 'not sent', sent: 'sent', processed: 'processed' }
 
 type Lines = { start: number; end: number }
@@ -77,6 +78,22 @@ function CommentComposerView({ lines, onDone }: { lines: Lines; onDone: () => vo
   )
 }
 
+// The lines a chat's change replaced or removed, struck through above the line now in their place.
+function RemovedLinesView({ change }: { change: FileChangeData }) {
+  return (
+    <div className="removed-lines" role="group" aria-label={`Lines removed above line ${change.range.start_line}`}>
+      {change.removed.map((text, index) => (
+        <div key={index} className="removed-line">
+          <span className="line-gutter" />
+          <span className="line-number">−</span>
+          <span className="fold-gutter" />
+          <span className="line-text">{text}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function ViolationNoteView({ found }: { found: FileViolationData }) {
   return (
     <div className="violation-note" role="note">
@@ -126,10 +143,16 @@ function CodeLinesView({ file, marked }: { file: SessionFileData; marked: number
         const comments = file.comments.filter(comment => comment.range.start_line === line)
         const broken = file.violations.filter(found => line >= found.range.start_line && line <= found.range.end_line)
         const opened = comments.find(comment => comment.anchor === state.opened)
-        const classes = ['code-line', line === marked ? 'is-failing' : '', broken.length ? 'is-violated' : '', covers(state.selected, line) ? 'is-selected' : ''].filter(Boolean).join(' ')
+        const replaced = file.changes.filter(change => change.range.start_line === line && change.removed.length)
+        const changed = file.changes.find(change => change.kind !== 'removed' && line >= change.range.start_line && line <= change.range.end_line)
+        const classes = ['code-line', line === marked ? 'is-failing' : '', broken.length ? 'is-violated' : '', changed ? `is-${changed.kind}` : '', covers(state.selected, line) ? 'is-selected' : ''].filter(Boolean).join(' ')
+        const notes = [changed ? CHANGE_WORDS[changed.kind] : '', ...broken.map(found => `${found.violation.rule}: ${found.violation.message}`)].filter(Boolean)
         return (
-          <div key={line} className="code-row" data-line={line}>
-            <div ref={line === marked ? markedLine : undefined} className={classes} title={broken.map(found => `${found.violation.rule}: ${found.violation.message}`).join('\n') || undefined} onContextMenu={compose(line)}>
+          <div key={line} className="code-row" data-line={line} data-change={changed?.kind}>
+            {replaced.map(change => (
+              <RemovedLinesView key={change.range.anchor} change={change} />
+            ))}
+            <div ref={line === marked ? markedLine : undefined} className={classes} title={notes.join('\n') || undefined} onContextMenu={compose(line)}>
               <span className="line-gutter">
                 {comments.map(comment => (
                   <CommentMarkerView key={comment.anchor} comment={comment} onOpen={() => change({ opened: state.opened === comment.anchor ? '' : comment.anchor })} />

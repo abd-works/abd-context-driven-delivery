@@ -1,9 +1,10 @@
-"""A file of a session, as the viewer shows it: its text, the comments a person wrote on it, the folds its classes and
-members make, and the rules broken in it. Each of those sits on a Range of the file's lines, which returns the text
+"""A file of a session, as the viewer shows it: its text, the comments a person wrote on it, what a chat changed in it
+for those comments, the folds its classes and members make, and the rules broken in it. Each of those sits on a Range of the file's lines, which returns the text
 between them."""
 
 from __future__ import annotations
 
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Literal
 
@@ -11,13 +12,16 @@ from harness.graph.saved_graph import GRAPH_FILE_NAME, SavedGraph, SavedGraphOut
 from harness.graph.violation import Violation
 from harness.installation.data_class import SourceFile, data_field
 
-from space.session.file_comments import FileComment
+from space.session.file_comments import PROCESSED, FileComment
 from space.session.file_range import Range
 
 if TYPE_CHECKING:
     from space.session.session import Session
 
 FoldKind = Literal["class", "block"]
+FileChangeKind = Literal["changed", "added", "removed"]
+# How difflib names each kind of change, from the text sent to the text now.
+_CHANGE_KINDS: dict[str, FileChangeKind] = {"replace": "changed", "insert": "added", "delete": "removed"}
 # The node types a graph folds on, as the graph's source view does: a class folds whole, each operation and property as
 # a block (harness/graph/app/source/call-expansion.ts). The classes are Clean Engineering's and DDD's class types.
 CLASS_TYPES = frozenset({"OoadClass", "Aggregate", "DomainEvent", "EntityRoot", "Entity", "ValueObject", "Repository", "DomainService", "Factory", "Specification"})
@@ -48,6 +52,32 @@ class Fold:
     def name(self) -> str:
         """The class, operation, or property the fold holds."""
         return self._name
+
+
+class FileChange:
+    """Lines a chat changed in the file, as VS Code and Cursor mark an agent's change: the lines as they read now, and
+    the lines they replaced. Lines the chat removed sit on the line now after them, which holds none of their text."""
+
+    def __init__(self, kind: FileChangeKind, range: Range, removed: list[str]) -> None:
+        self._kind = kind
+        self._range = range
+        self._removed = removed
+
+    @property
+    @data_field
+    def kind(self) -> FileChangeKind:
+        return self._kind
+
+    @property
+    @data_field
+    def range(self) -> Range:
+        return self._range
+
+    @property
+    @data_field
+    def removed(self) -> list[str]:
+        """The lines the change replaced or removed, as they read when the comment was sent; none for added lines."""
+        return self._removed
 
 
 class FileViolation:
@@ -96,6 +126,24 @@ class SessionFile:
     @data_field
     def comments(self) -> list[FileComment]:
         return self._session.file_comments.on(self._path)
+
+    @property
+    @data_field
+    def changes(self) -> list[FileChange]:
+        """What the chat changed in this file for the processed comments on it: the file as it read when the first of
+        them was sent, against the file now. A change made by hand meanwhile is not told apart from the chat's; none
+        once the processed comments are cleared."""
+        sent = next((comment.sent_text for comment in self.comments if comment.state == PROCESSED and comment.sent_text), None)
+        if sent is None:
+            return []
+        before, now = sent.splitlines(), self.text.splitlines()
+        opcodes = SequenceMatcher(None, before, now, autojunk=False).get_opcodes()
+        return [self._change(_CHANGE_KINDS[tag], before[i1:i2], j1, j2) for tag, i1, i2, j1, j2 in opcodes if tag != "equal"]
+
+    def _change(self, kind: FileChangeKind, removed: list[str], start: int, end: int) -> FileChange:
+        """The change on the lines now from start to end, counted from 0 and end excluded; removed lines hold none, so
+        they sit on the line after them."""
+        return FileChange(kind, self.range(start + 1, end if end > start else start + 1), removed)
 
     @property
     @data_field

@@ -288,7 +288,10 @@ a:hover { color: #C64514; }
 .markdown-text { margin: 0 0 10px; font-size: 13px; line-height: 1.55; }
 .selection-bar { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 4px 14px; background: var(--surface); border-bottom: 1px solid var(--border); font: 11px var(--mono); }
 .code-line.is-violated { background: rgba(245, 158, 11, 0.12); box-shadow: inset 3px 0 0 var(--progress); }
+.code-line.is-changed, .code-line.is-added { background: rgba(34, 197, 94, 0.14); box-shadow: inset 3px 0 0 var(--done); }
 .code-line.is-selected { background: rgba(59, 130, 246, 0.16); }
+.removed-line { display: flex; min-width: max-content; font: 12px/20px var(--mono); background: rgba(239, 68, 68, 0.12); box-shadow: inset 3px 0 0 var(--error); color: var(--muted); }
+.removed-line .line-text { text-decoration: line-through; text-decoration-color: rgba(239, 68, 68, 0.6); }
 .board-root .code-line .line-number { padding: 0 14px 0 0; background: transparent; border: 0; font: inherit; cursor: pointer; }
 .line-gutter, .fold-gutter { width: 16px; flex-shrink: 0; display: flex; justify-content: center; }
 .board-root .comment-marker, .board-root .fold-toggle { padding: 0; background: transparent; border: 0; font: 11px var(--mono); line-height: 20px; cursor: pointer; color: var(--muted); }

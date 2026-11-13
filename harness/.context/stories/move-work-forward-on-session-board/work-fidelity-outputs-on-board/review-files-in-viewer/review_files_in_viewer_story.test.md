@@ -189,7 +189,7 @@ session=.sessions/checkout-flow/session.json
 
 ## Story: Show AI Changes As Diff
 
-Evidence: intended, not built (`.sessions/_backlog/review-work-in-board-files.md`, "change viewer from ai change like vscode / cursor"). The viewer marks what the chat changed in the file, as VS Code and Cursor do. What counts as the chat's change is the difference between the file as it read when the comment was sent and the file once the comment is processed. That is the turn Mark File Comment Processed waits on, so a change the Person made by hand meanwhile is not told apart from the chat's.
+Evidence: intended (`.sessions/_backlog/review-work-in-board-files.md`, "change viewer from ai change like vscode / cursor"); built on the review-work-in-board-files branch (`SessionFile.changes`, `space/session/session_file.py`; `file-viewer-view.tsx`). The viewer marks what the chat changed in the file, as VS Code and Cursor do. What counts as the chat's change is the difference between the file as it read when the comment was sent and the file once the comment is processed. That is the turn Mark File Comment Processed waits on, so a change the Person made by hand meanwhile is not told apart from the chat's.
 
 #### Scenario: Mark the line the chat changed, with the line it replaced
 

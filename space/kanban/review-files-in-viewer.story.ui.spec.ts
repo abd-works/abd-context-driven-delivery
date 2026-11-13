@@ -9,8 +9,6 @@
  * fixture project, so its order.py is kept in its own session folder, where the files panel opens from the ticket's name
  * in the details; a Given seeds that folder: the file, the graph the session saved, or the comments it keeps.
  * A chat is `FakeChat`, which checks in through the board's server as the cdd-board mod does.
- *
- * Left out here: Show AI Changes As Diff, whose scenarios are written and not built.
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -65,9 +63,16 @@ const row = (page: Page, line: number): Locator => files(page).locator(`.code-ro
 const marker = (page: Page, line: number): Locator => row(page, line).locator('.comment-marker')
 
 // Seed: order.py in checkout-flow's session folder; with comments, the session's file-comments.json, as FileComments keeps it.
-function seedOrder(...comments: { start: number; end: number; text: string; chat?: string; message?: string }[]): void {
-  writeInto(join(SESSION, 'order.py'), `${ORDER_LINES.join('\n')}\n`)
-  const records = comments.map(({ start, end, text, chat = '', message = '' }) => ({ path: ORDER, start_line: start, end_line: end, selected_text: ORDER_LINES.slice(start - 1, end).join('\n'), text, chat, message }))
+type SeededComment = { start: number; end: number; text: string; chat?: string; message?: string; sent_text?: string }
+
+function seedOrder(...comments: SeededComment[]): void {
+  seedOrderAs(ORDER_LINES, ...comments)
+}
+
+// order.py reading `lines`, as a chat's turn left it; a sent comment keeps the file's text as it read when sent.
+function seedOrderAs(lines: string[], ...comments: SeededComment[]): void {
+  writeInto(join(SESSION, 'order.py'), `${lines.join('\n')}\n`)
+  const records = comments.map(({ start, end, text, chat = '', message = '', sent_text = '' }) => ({ path: ORDER, start_line: start, end_line: end, selected_text: ORDER_LINES.slice(start - 1, end).join('\n'), text, chat, message, sent_text }))
   if (comments.length) writeInto(join(SESSION, 'file-comments.json'), JSON.stringify({ comments: records }))
 }
 
@@ -359,6 +364,77 @@ test.describe('Clear Processed File Comments', () => {
 
     test('And the marker beside line 40 still shows, not sent', async ({ page }) => {
       await expect(marker(page, 40)).toHaveAccessibleName(`Comment on ${ORDER}:L40-L41, not sent`)
+    })
+  })
+})
+
+// The comment the chat processed, sent while order.py read ORDER_LINES; each Given seeds order.py as the turn left it.
+const PROCESSED_ON_SENT = { start: 12, end: 14, text: COMMENT, ...PROCESSED, sent_text: `${ORDER_LINES.join('\n')}\n` }
+const CHANGED_LINES = ORDER_LINES.map(line => (line === LINE_14 ? CHANGED_14 : line))
+const ADDED_LINES = [...ORDER_LINES.slice(0, 14), '            # a cart needs one item', '            # to be placed', ...ORDER_LINES.slice(14)]
+const changedRows = (page: Page): Locator => files(page).locator('.code-row[data-change]')
+const lineOf = (page: Page, line: number): Locator => row(page, line).locator('.code-line')
+
+test.describe('Show AI Changes As Diff', () => {
+  test.describe('Mark the line the chat changed, with the line it replaced', () => {
+    test.beforeEach(async ({ page }) => {
+      seedOrderAs(CHANGED_LINES, PROCESSED_ON_SENT)
+      await viewOrder(page)
+    })
+
+    test('Then the viewer marks line 14 as changed by the chat', async ({ page }) => {
+      await expect(lineOf(page, 14)).toHaveAttribute('title', /Changed by the chat/)
+      await expect(changedRows(page)).toHaveCount(1)
+    })
+
+    test(`And shows the line it replaced, ${LINE_14.trim()}, as removed above it`, async ({ page }) => {
+      await expect(row(page, 14).getByRole('group', { name: 'Lines removed above line 14' }).locator('.line-text')).toHaveText([LINE_14])
+    })
+  })
+
+  test.describe('Mark the lines the chat added', () => {
+    test.beforeEach(async ({ page }) => {
+      seedOrderAs(ADDED_LINES, PROCESSED_ON_SENT)
+      await viewOrder(page)
+    })
+
+    test('Then the viewer marks lines 15 and 16 as added by the chat', async ({ page }) => {
+      await expect(lineOf(page, 15)).toHaveAttribute('title', /Added by the chat/)
+      await expect(lineOf(page, 16)).toHaveAttribute('title', /Added by the chat/)
+    })
+
+    test('But marks no line before them as changed', async ({ page }) => {
+      await expect(changedRows(page)).toHaveCount(2)
+      await expect(files(page).locator('.removed-lines')).toHaveCount(0)
+    })
+  })
+
+  test.describe('Mark nothing when the chat left the file as it was', () => {
+    test.beforeEach(async ({ page }) => {
+      seedOrderAs(ORDER_LINES, PROCESSED_ON_SENT)
+      await viewOrder(page)
+      await expect(marker(page, 12)).toHaveAccessibleName(`Comment on ${ANCHOR}, processed`)
+    })
+
+    test('Then the viewer marks no line of order.py as changed', async ({ page }) => {
+      await expect(changedRows(page)).toHaveCount(0)
+    })
+  })
+
+  test.describe('Stop marking the changes once the processed comment is cleared', () => {
+    test.beforeEach(async ({ page }) => {
+      seedOrderAs(CHANGED_LINES, PROCESSED_ON_SENT)
+      await viewOrder(page)
+      await expect(changedRows(page)).toHaveCount(1)
+      await files(page).getByRole('button', { name: 'Clear processed comments' }).click()
+    })
+
+    test('Then the viewer marks no line of order.py as changed', async ({ page }) => {
+      await expect(changedRows(page)).toHaveCount(0)
+    })
+
+    test(`And line 14 still reads ${CHANGED_14.trim()}`, async ({ page }) => {
+      await expect(lineOf(page, 14).locator('.line-text')).toHaveText(CHANGED_14)
     })
   })
 })
