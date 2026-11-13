@@ -55,8 +55,14 @@ class OpenedStoryMap:
     @property
     def fidelity(self) -> FidelityGuidance:
         """The fidelity of the session's Stories practice that declares the file: the story map for story-map.md,
-        scenarios for a scenario file, acceptance tests for a story test."""
-        return next(fidelity for fidelity in self._stories.fidelities if fidelity.declares(self.file))
+        scenarios for a scenario file, acceptance tests for a story test. A session that moved the practice's root
+        (outputs.<practice>.root) puts the file under that root, so a fidelity whose files the session lists there
+        declares it too."""
+        return next(fidelity for fidelity in self._stories.fidelities if fidelity.declares(self.file) or self._lists(fidelity))
+
+    def _lists(self, fidelity: FidelityGuidance) -> bool:
+        """Whether the session lists the file among the fidelity's files, which are paths from the project."""
+        return any(Path(entry.path).as_posix() == Path(self.file).as_posix() for entries in fidelity.files().values() for entry in entries)
 
     @property
     def own_format(self) -> Format:

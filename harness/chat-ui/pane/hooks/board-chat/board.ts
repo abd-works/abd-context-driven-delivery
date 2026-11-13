@@ -8,7 +8,7 @@ import { currentServerHealth, KANBAN, ServerHealthClient } from '../health/serve
 const BOARD_HEADERS = { 'X-CDD-Board': '1', 'Content-Type': 'application/json' }
 // One board server serves every repository, so each call names this chat's repository, and the page's link does too.
 const PROJECT_HEADER = 'X-CDD-Project'
-const PROJECT_QUERY = 'project'
+export const PROJECT_QUERY = 'project'
 // The folder an app's page opens on, such as the session's workpath the Graph loads.
 export const FOLDER_QUERY = 'folder'
 // A page this chat opens names the chat in its link, so it can show a file in this chat's file viewer (cdd-shared's
