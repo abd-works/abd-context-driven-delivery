@@ -4,7 +4,7 @@
 
 - **Purpose:** Give `cdd_guidance/`, `space/` and `tools/` one framework to build on, which can change and be tested without the code built on it.
 - **Seam (terms):** each module's own seam, named in its card.
-- **Dependencies (one-way):** none outside `harness/`. `harness/` imports nothing from `space/`, `tools/`, or `cdd_guidance/`, neither directly nor through `importlib` strings; they register with the framework instead (`ToolCall.open_sessions_with`, `HookServer.show_toasts_with`, `PracticeCatalogue.register`, `ActionCatalogue.register` and `run_actions_with`).
+- **Dependencies (one-way):** `space/` and `tools/`. `harness/`, `space/`, and `tools/` are the lower layer together and may import each other, so something they share, such as the file viewer beside `space/session/file_manager.py`, is written once. `harness/` imports nothing from `cdd_guidance/`, neither directly nor through `importlib` strings; cdd_guidance registers with the framework instead, as space and tools still do through the seams already in place (`ToolCall.open_sessions_with`, `HookServer.show_toasts_with`, `PracticeCatalogue.register`, `ActionCatalogue.register` and `run_actions_with`).
 
 ## The layers, from the bottom up
 

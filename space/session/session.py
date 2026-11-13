@@ -31,6 +31,8 @@ from space.session.session_files import SessionFiles
 from space.session.session_log import HookLog, SessionLog
 
 if TYPE_CHECKING:
+    # Named only for typing: a toolset the module holds at run time would be published again as this toolset's tools.
+    from space.session.file_comments import FileComments
     from space.session.sessions import Sessions
 
 MAIN_SESSION_NAME = "main"
@@ -518,6 +520,20 @@ class Session:
     def read_file(self, path: str = "") -> FileText:
         """Return the text of path, a file in this repository or under a folder this session's practices write to, such as its ticket's worktree; no text when the file is gone, such as one deleted since the board listed it."""
         return self.session_files.read(path)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def write_file(self, path: str, text: str) -> FileText:
+        """Save text as the whole of path, a file in this repository or under a folder this session's practices write to, named as read_file names it; the file as saved."""
+        return self.session_files.write(path, text)
+
+    @property
+    def file_comments(self) -> FileComments:
+        """The comments a person wrote on this session's files, kept in its folder."""
+        from space.session.file_comments import FileComments
+
+        return FileComments(self)
 
     @mcp
     @command(name="mark-loop")

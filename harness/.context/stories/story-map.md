@@ -540,11 +540,11 @@ Observed (checked 2026-11-10): each violation that names a file and line shows a
 
 #### (S) Person --> [List Ticket Files](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-list-ticket-files)
 
-Observed: `fidelity-progress.files` lists the tile's or ticket's fidelities' files; on a ticket working in the whole repository, only what its branch changed.
+Observed: `fidelity-progress.files` lists the tile's or ticket's fidelities' files; on a ticket working in the whole repository, only what its branch changed. Intended (the person, 2026-11-12, "this is a filter eg a checkbox on the file viewer at the top where tabs are; you click only changed files listed"): the list shows every file of the fidelity, and a changed-files-only check box at the top beside the tabs filters it to what the ticket's branch changed.
 
-#### (S) Person --> [Browse Ticket Folder](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-browse-ticket-folder)
+#### (S) Person --> [Browse Ticket Files By Practice](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-browse-ticket-files-by-practice)
 
-Observed: the folder mode of the files panel groups the files under their folders.
+Observed: the folder mode of the files panel groups the files under their folders. Requested (2026-11-12, "list a shortened form/image of each practice top to bottom on left side, filters preset when clicking files button in chat ui, user can toggle them; top has file tabs like now but colored to practice"): the practice filters sit along the top of the files panel, each by its short form (2026-11-12: "put the filter toggles on the top, it will waste less space"). Every file is a tab along the top, grouped by practice and colored in its practice's color. Opening the files from the chat bar presets the filters, which the person can toggle ("these are just filters on left; all files are shown in tabs above grouped by practice colored by practice color"). This replaces grouping by folder, and builds on the person's 2026-11-11 notes (groupings by knowledge-graph root such as practice, click to select, check box to select several).
 
 #### (S) Person --> [View Fidelity Files](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-view-fidelity-files)
 
@@ -556,15 +556,37 @@ Intended (`.sessions/_backlog/review-work-in-board-files.md` "include ticket con
 
 #### (S) Person --> Open Session Files From Details
 
-Intended (`.sessions/_backlog/review-work-in-board-files.md` "session information -> link to file or folders"): each file or folder the session information names opens from where it is named. Built today (checked 2026-11-10): the details open the session folder, the stage's files and the latest handoff (`details-view.tsx:37-55`). Missing: the workpath link opens the root chooser rather than the folder.
+Intended (`.sessions/_backlog/review-work-in-board-files.md` "session information -> link to file or folders"): each file or folder the session information names opens from where it is named. Built today (checked 2026-11-10): the details open the session folder, the stage's files and the latest handoff (`details-view.tsx:37-55`). Missing: the workpath link opens the root chooser rather than the folder. Requested (2026-11-12, "clicking on a session button when the button is in session mode eg no expand no main; opens the file view on .session/session"): pressing a ticket's session button, not main and not expanded, opens the file view on its .sessions/<session> folder.
 
-#### (S) Person --> View Files In Rich Viewer
+### (E) Review Files In Viewer
 
-Intended (`.sessions/_backlog/review-work-in-board-files.md` "integrate with monaco viewer OR native file rendering"): files open in an editor-grade viewer, or rendered as the file type.
+#### (S) Person --> [View Files In Rich Viewer](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-view-files-in-rich-viewer)
 
-#### (S) Person --> Comment On File Selection
+Intended (`.sessions/_backlog/review-work-in-board-files.md` "integrate with monaco viewer OR native file rendering"): files open in an editor-grade viewer, or rendered as the file type. Requested (2026-11-12, "use the graph app file viewer for this - make this a common component ... with a typed file shape along with typescript monaco viewer that renders"): one Monaco file viewer in `space/`, beside `space/session/file_manager.py`, shared by the board and the graph app, typed on the file manager's `FileText` (`.sessions/review-work-in-board-files/file-viewer-research.md`).
 
-Intended (`.sessions/_backlog/review-work-in-board-files.md` "select some text in file view and add comment that gets sent to chat like in design view"): a person selects text in a file and sends a comment on it to the chat.
+#### (S) Person --> [Save Edited File](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-save-edited-file)
+
+Requested (2026-11-12, "clicking edit opens in edit mode and can be saved"): Edit turns the viewer's file editable, and Save writes the text to the file on disk through the file manager, kept to the workpath's folders as reading is. No MCP operation writes a file's content today (`file-viewer-research.md`, "The file viewer today").
+
+#### (S) Person --> [Add Comment To File Selection](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-add-comment-to-file-selection)
+
+Intended (`.sessions/_backlog/review-work-in-board-files.md` "select some text in file view and add comment that gets sent to chat like in design view"): a person selects text in a file and sends a comment on it to the chat. Requested (2026-11-12, "select text, right click -> add comment, type the comment; comment widget appears beside the line number of beginning of comment; click to open, press delete to delete selected comment"): Add comment on the right-click menu opens a comment box at the selection; the comment shows as a marker beside the selection's first line number; clicking the marker opens the comment, and Delete removes it.
+
+#### (S) Person --> [Send File Comments To Chat](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-send-file-comments-to-chat)
+
+Requested (2026-11-12, "finish editing press enter; added to chat q"): Enter finishes a comment and adds it to the chat queue, carrying the file's path, the selected lines, the selected text and the comment, as the report's Fix sends a file and line (`chat.send`, `report-client.ts`; `file-viewer-research.md`, "Recommendation"). Requested (2026-11-12, "a send all open comment button top left of viewer"): Send all sends every comment not yet sent in one message.
+
+#### (S) Chat --> [Mark File Comment Processed](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-mark-file-comment-processed)
+
+Requested (2026-11-12, "chat process comment and changes files then ... comment is at processed stage; comment --> not sent, sent, processed"): a sent comment becomes processed once the chat's turn that worked on its message has ended, as `chat.check_in` moves a shown message to done (`harness/chat/chat.py:279-286`).
+
+#### (S) Board App --> [Show Changed File In Viewer](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-show-changed-file-in-viewer)
+
+Requested (2026-11-12, "then viewer is updated to reflect changes"): when a comment on the open file is processed, the viewer reads the file again and shows the agent's changes.
+
+#### (S) Person --> [Clear Processed File Comments](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-clear-processed-file-comments)
+
+Requested (2026-11-12, "a clear processed comments button"): clearing removes the processed comments and keeps the ones not sent or still sent.
 
 #### (S) Board App --> Show AI Changes As Diff
 

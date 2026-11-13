@@ -244,6 +244,49 @@ def _empty_repository() -> Path:
     return folder / ".git"
 
 
+# --- Review Files In Viewer: checkout-flow working in src/checkout, its order.py, and the comments on it -----------
+
+CHECKOUT_FLOW_IN_SRC_CHECKOUT = SessionSeed("checkout-flow", "Checkout flow", workpath="src/checkout")
+ORDER_FILE = "src/checkout/order.py"
+PLACE_LINES = (
+    "    def place(self, cart: Cart) -> Order:",
+    "        if not cart.items:",
+    "            raise EmptyCartError(cart.id)",
+)
+# Seed: order.py, the place lines at 12 to 14 and other code below them, so comments can sit on lines 30 and 40 too.
+ORDER_TEXT = "".join(f"{line}\n" for line in (*[f"# order line {number}" for number in range(1, 12)], *PLACE_LINES, *[f"# order line {number}" for number in range(15, 42)]))
+EDITED_LINE_14 = '            raise EmptyCartError(cart.id, "a cart needs one item to be placed")'
+README_FILE = "src/checkout/README.md"
+README_TEXT = "# Checkout\n"
+CHECKOUT_CHAT = "checkout-chat"
+
+
+@dataclass(frozen=True)
+class FileCommentExample:
+    """Interaction: what a person selected in a file and the comment they wrote on it."""
+
+    path: str
+    start_line: int
+    end_line: int
+    selected_text: str
+    text: str
+
+    @property
+    def anchor(self) -> str:
+        return f"{self.path}:L{self.start_line}-L{self.end_line}"
+
+
+EMPTY_CART_COMMENT = FileCommentExample(ORDER_FILE, 12, 14, "\n".join(PLACE_LINES), "an empty cart should say which cart and why")
+LINE_30_COMMENT = FileCommentExample(ORDER_FILE, 30, 31, "# order line 30\n# order line 31", "name these lines")
+LINE_40_COMMENT = FileCommentExample(ORDER_FILE, 40, 41, "# order line 40\n# order line 41", "drop these lines")
+EMPTY_CART_FILL = "\n".join([
+    "src/checkout/order.py:12-14: an empty cart should say which cart and why",
+    *(f"> {12 + offset} | {line}" for offset, line in enumerate(PLACE_LINES)),
+    "",
+    "session=.sessions/checkout-flow/session.json",
+])
+
+
 class SessionsProject(ThrowawayProject):
     """A throwaway project named by CDD_PROJECT while a scenario runs, whose `.sessions/` and files a scenario seeds."""
 

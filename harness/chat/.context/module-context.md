@@ -3,10 +3,10 @@
 
 *ChatCommand* is a command a chat takes at its check-in: submit a prompt, fill the prompt box, or run a slash command. *ChatMessage* is a command as the board lists it — when it was sent and where it stands (waiting, taken, shown, done, or failed, with the reason it failed).
 
-The MCP tools are `chat.list`, `chat.send(kind, text)`, `chat.messages`, `chat.remove`, and `chat.resend` for the sender, and `chat.check_in`, `chat.confirm`, and `chat.finish`, which the cdd-board mod calls from inside the chat. The board's TypeScript reaches them through the language adapter the installer deploys.
+The MCP tools are `chat.list`, `chat.send(kind, text)`, `chat.messages`, `chat.remove`, and `chat.resend` for the sender, and `chat.check_in`, `chat.confirm`, and `chat.finish`, which the cdd-board mod calls from inside the chat. The board's TypeScript reaches them through the language adapter the installer deploys. In Python, `chat.queue(kind, text)` sends as `send` does and answers with the *ChatMessage* it waits in, and `chat.message(id)` finds a sent message in whatever state it is, so a sender such as a session's file comments can follow its message to done.
 
 - **Purpose:** Let the board drive any connected chat — send it a command and follow that command until the chat has shown and finished it — without the chats and the board sharing a process.
-- **Seam (terms):** Chat, ChatCommand, ChatMessage, ChatNotConnectedError, `chat.list`, `chat.send`, `chat.messages`, `chat.remove`, `chat.resend`, `chat.check_in`, `chat.confirm`, `chat.finish`
+- **Seam (terms):** Chat (`queue`, `message`), ChatCommand, ChatMessage, ChatNotConnectedError, `chat.list`, `chat.send`, `chat.messages`, `chat.remove`, `chat.resend`, `chat.check_in`, `chat.confirm`, `chat.finish`
 - **Dependencies (one-way):** `harness/agent_tools` (the toolset annotations, and *ChatPointer*, which finds a chat's transcript by its id; the chat finds it once and keeps its path in `chat.json`, so reading its title again does not search the Claude projects folder), `harness/installation`, `harness/mcp`. It imports nothing from space, tools, or cdd_guidance, so it sits in harness above harness/mcp.
 
 ## Constraint

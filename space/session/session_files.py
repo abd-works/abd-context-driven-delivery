@@ -72,6 +72,11 @@ class SessionFiles:
         ticket's worktree beside the repository; no text when the file is gone."""
         return self._from_project.read(path)
 
+    def write(self, path: str, text: str) -> FileText:
+        """Save text as path, a file in the session's repository or under a folder its practices write to, named from
+        the project's top as ``read`` names it."""
+        return self._from_project.write(path, text)
+
     def existing(self, named: str | Path) -> Path:
         """The path named, read as the session reads every path its agent writes (``Session.path_named``), once
         something is there; refused otherwise."""
@@ -93,10 +98,10 @@ class SessionFiles:
         root = self._session.work_root
         return path == root or root in path.parents
 
-    def worked_on(self) -> set[Path] | None:
-        """The files that are the session's work: every file when it works in a folder of its own, which holds only its
-        work; on the whole repository, only the files its branch changed."""
+    def changed(self) -> set[Path]:
+        """The files the session's branch changed since it left the default branch, with its uncommitted changes when
+        it is checked out; none for a project that is no clone, or a session with no branch of its own."""
         repo = self._session.repo
-        if self._session.work_root != repo.root:
-            return None
+        if not repo.is_clone:
+            return set()
         return {(repo.root / path).resolve() for path in repo.branch_named(self._session.name).changed_files()}
