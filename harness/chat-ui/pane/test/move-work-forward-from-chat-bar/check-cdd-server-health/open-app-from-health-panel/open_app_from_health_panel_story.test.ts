@@ -14,6 +14,7 @@ type World = {
   health: Record<string, unknown>
   isBoardUp: boolean
   hasPane: boolean
+  unloadable: string[]
   tabs: string[]
   runs: string[][]
   spawns: string[][]
@@ -36,7 +37,7 @@ const BAR = {
 const answer = (text: string, isError = false) => ({ value: { content: [{ type: 'text', text }], isError } })
 
 function engine(on: any, health: Record<string, unknown>): World {
-  const world: World = { health, isBoardUp: true, hasPane: true, tabs: [], runs: [], spawns: [], toasts: [], started: {} }
+  const world: World = { health, isBoardUp: true, hasPane: true, unloadable: [], tabs: [], runs: [], spawns: [], toasts: [], started: {} }
   on('command.register', () => ({ value: undefined }))
   on('session.start', (_: unknown, e: { cwd: string }) => ({ cwd: e.cwd }))
   on('session.id', () => ({ value: 'chat-1' }))
@@ -52,7 +53,9 @@ function engine(on: any, health: Record<string, unknown>): World {
     if (e.server === 'Claude_Browser' && e.tool === 'preview_start') {
       if (!world.hasPane) throw new Error('no MCP server named Claude_Browser')
       world.tabs.push(e.args?.url ?? '')
-      return answer('opened')
+      const isLoaded = !world.unloadable.includes(e.args?.url ?? '')
+      return answer(`{ "type": "browser", "navOk": ${isLoaded} }
+Browser pane opened${isLoaded ? '.' : ' at about:blank; navigation was denied or failed.'}`)
     }
     return e.tool === 'server-health.report' ? answer(JSON.stringify(world.health)) : answer(`${e.tool} is not part of this story`, true)
   })
@@ -192,5 +195,19 @@ test('Open App From Health Panel › Say why the app did not open when the chat 
   expect(openedOutside(world)).toEqual([])
   // And the Person is told where the app is and why it did not open
   expect(world.toasts.at(-1)).toContain('The Graph app is at http://localhost:5173 but did not open: Claude_Browser preview_start could not be called')
+  await ui.unmount()
+})
+
+test('Open App From Health Panel › Say why the app did not open when its page does not load in the pane', async ($, on) => {
+  // Given the Graph app is running, but its page does not load in the browser pane
+  const world = engine(on, HEALTHY)
+  world.unloadable = ['http://localhost:5173']
+  const ui = await openPanel($)
+  // When the Person presses the Graph app on the server health panel
+  // openApp($, 'Graph app') -> openInBrowserPane -> Claude_Browser preview_start answers navOk false
+  await ui.press({ key: 'health-open-graph-app' })
+  // Then the Person is told the page did not load, in the pane's own words
+  expect(world.toasts.at(-1)).toContain('The Graph app is at http://localhost:5173 but did not open: Claude_Browser preview_start failed')
+  expect(world.toasts.at(-1)).toContain('navigation was denied or failed')
   await ui.unmount()
 })

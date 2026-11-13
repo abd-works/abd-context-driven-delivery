@@ -82,8 +82,9 @@ const OPEN_PANE_TAB = 'preview_start'
 export async function openInBrowserPane($: EngineInterface, url: string): Promise<string> {
   try {
     const opened = await $.mcp.call(BROWSER_PANE, OPEN_PANE_TAB, { url })
-    if (!opened.isError) return ''
     const said = opened.content.map(block => ('text' in block ? block.text : '')).join(' ').trim()
+    // The pane answers without isError when it opened a tab but the page did not load in it, saying "navOk": false.
+    if (!opened.isError && !/"navOk":\s*false/.test(said)) return ''
     return `${BROWSER_PANE} ${OPEN_PANE_TAB} failed: ${said || 'no reason given'}`
   } catch (failure) {
     return `${BROWSER_PANE} ${OPEN_PANE_TAB} could not be called: ${reasonOf(failure)}`
