@@ -112,10 +112,20 @@ def _chats_folder() -> Path:
 
 
 class ChatLinks:
-    """Hands a new chat's link to the Claude app through the system, which passes it to the app registered for its
-    scheme. A page in the app's Browser pane cannot, so the board opens a ticket's chat through the cdd server."""
+    """Opens a new chat in the Claude app by handing its link to the system, which passes it to the app registered for
+    its scheme. A page in the app's Browser pane cannot, so the board opens a ticket's chat through the cdd server."""
 
-    def open(self, link: str) -> None:
+    def open_new(self, folder: str, prompt: str) -> str:
+        """Open a new chat on folder with prompt filled in, and answer the link it opened."""
+        link = self.link_to_new(folder, prompt)
+        self.hand_over(link)
+        return link
+
+    def link_to_new(self, folder: str, prompt: str) -> str:
+        """The link that opens a new chat on folder with prompt filled in."""
+        return f"{NEW_CHAT_LINK}?folder={quote(folder, safe='')}&q={quote(prompt, safe='')}"
+
+    def hand_over(self, link: str) -> None:
         if sys.platform == "win32":
             os.startfile(link)  # noqa: S606 - the link names the desktop app's own scheme
         else:
@@ -129,7 +139,7 @@ class RecordedChatLinks(ChatLinks):
     def __init__(self, file: Path) -> None:
         self._file = file
 
-    def open(self, link: str) -> None:
+    def hand_over(self, link: str) -> None:
         self._file.parent.mkdir(parents=True, exist_ok=True)
         with self._file.open("a", encoding="utf-8") as kept:
             kept.write(f"{link}\n")
@@ -137,12 +147,6 @@ class RecordedChatLinks(ChatLinks):
     @property
     def links(self) -> list[str]:
         return self._file.read_text(encoding="utf-8").splitlines() if self._file.is_file() else []
-
-
-def _chat_links() -> ChatLinks:
-    """The system's links, unless the run names a file to keep them in."""
-    kept = os.environ.get(OPENED_CHATS_VARIABLE)
-    return RecordedChatLinks(Path(kept)) if kept else ChatLinks()
 
 
 @identity("id")
@@ -157,8 +161,8 @@ class Chat:
 
     # Seconds since the epoch; a spec sets its own.
     clock = staticmethod(time.time)
-    # What a new chat's link is handed to.
-    opener: ChatLinks = _chat_links()
+    # What a new chat's link is handed to: the system's, unless the run names a file to keep the links in.
+    opener: ChatLinks = RecordedChatLinks(Path(os.environ[OPENED_CHATS_VARIABLE])) if os.environ.get(OPENED_CHATS_VARIABLE) else ChatLinks()
 
     def __init__(self, folder: Path) -> None:
         self._folder = folder
@@ -185,14 +189,7 @@ class Chat:
     @agent_tool
     def open(cls, folder: str, prompt: str) -> str:
         """Open a new chat in the Claude app on folder, with prompt filled in; the app asks the person to confirm the folder and send. Answers the link it opened."""
-        link = cls.link_to_new(folder, prompt)
-        cls.opener.open(link)
-        return link
-
-    @staticmethod
-    def link_to_new(folder: str, prompt: str) -> str:
-        """The link that opens a new chat on folder with prompt filled in."""
-        return f"{NEW_CHAT_LINK}?folder={quote(folder, safe='')}&q={quote(prompt, safe='')}"
+        return cls.opener.open_new(folder, prompt)
 
     @mcp
     @agent_tool

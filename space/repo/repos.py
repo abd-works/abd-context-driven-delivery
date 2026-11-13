@@ -276,6 +276,6 @@ class Repos:
     def _chat_instructions(self, root: Path, name: str) -> str:
         return (
             f"Start a top-level chat on {root}: start_session with initiation user_asked, context fresh, cwd {root}, "
-            f"use_worktree false, title {name!r}, and prompt {_FIRST_PROMPT!r}. Or open {Chat.link_to_new(str(root), _FIRST_PROMPT)}"
+            f"use_worktree false, title {name!r}, and prompt {_FIRST_PROMPT!r}. Or open {Chat.opener.link_to_new(str(root), _FIRST_PROMPT)}"
         )
 
