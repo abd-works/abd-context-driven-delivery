@@ -135,7 +135,9 @@ class CddHome:
         JsonFile(target / self.INSTALL_COMMAND).write({"command": self.install_command})
         manifest_file = JsonFile(target / ".claude-plugin" / "plugin.json")
         manifest = manifest_file.read()
-        manifest["version"] = f"{manifest.get('version', '0.0.0')}-{self._content_hash(target)}"
+        # The source is hashed, not the copy: with the board folder watched, Claude Code writes type files into the copy
+        # while it is read, and a file it renames away mid-read failed the install.
+        manifest["version"] = f"{manifest.get('version', '0.0.0')}-{self._content_hash(source)}"
         manifest_file.write(manifest)
         self._write_marketplace()
 
