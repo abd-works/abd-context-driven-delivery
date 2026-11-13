@@ -185,10 +185,12 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 
 #### Scenario: The Graph app shares the board's state
 
-*Given* the CDD Kanban runs on port 8778  
+*Given* ++checkout-flow++ is the board's active ticket  
 *When* the Agent deploys the Graph app with the board's state  
-*Then* the Graph app runs on the same app server and instance as the board's state  
-  *And* a ticket activated on the board is the ticket whose practice roots the graph shows, without a reload
+*Then* the Graph app works on the same session and graph as the board's active ticket  
+*When* the session open in the project becomes ++billing-report++'s, which the board then shows as active  
+*Then* the board's active ticket is ++billing-report++  
+  *And* the graph shows ++billing-report++'s practice roots on its next read, without a reload
 
 ## Story: Refactor Kanban Board To Web Domain Access
 

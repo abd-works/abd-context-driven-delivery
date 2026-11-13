@@ -12,13 +12,6 @@ from harness.mcp.mcp_server import mcp
 class Ticket:
     @mcp
     @agent_tool
-    def activate(self) -> Ticket:
-        # -> self.checkout.open
-        # -> self._board.keep_activated(self)
-        ...
-
-    @mcp
-    @agent_tool
     def choose_formats(self, fidelities: list[str], label: str, is_chosen: bool) -> list[FormatChoice]:
         # -> fidelity.session_output.choose_format (each fidelity the chip covers)
         ...

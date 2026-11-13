@@ -158,11 +158,13 @@ Canonical: `harness/graph/.context/module-context.md`.
 + load_practice_roots(call: ToolCall | None = None) -> GraphLoaded  <<mcp>> <<agent_tool>>
 	-> practice.session_root (each practice it holds)
 	-> self.build.load
-	// opens each practice it holds on the root its session names, applies the session's overlays, and builds: the Graph app's whole load, with no folder or practice key passed in. A practice with no session_root is left out
+	// opens each practice it holds on the root its session names, applies the session's overlays, and builds: the Graph app's whole load, with no folder or practice key passed in. A practice with no session_root, or whose root folder is not written yet, is left out
 
 **Invariants**
 
 - A session's graph holds only the practices the session has enabled (already true of `Session.graph`), so `load_practice_roots` never reads a practice the ticket turned off.
+
+Decided while coding (implementation, 2026-11-12): no *Board* field records the ticket activated last (grill answer). The Graph app names its project as the board does (`?project=`, the `X-CDD-Project` header, one cdd connection per project in its server), so each of its calls works in the session open in that project (`ToolCall.session`, `Graph.for_call`): the same *Session* object, and so the same graph, as the board's active ticket (`Board.active`), read again on every call, with nothing pushed. A ticket's graph widget opens the app on the ticket's worktree, where the ticket's session is the open one; the board header opens it on the board's project. DDD builds its building blocks from Clean Engineering only when the graph holds Clean Engineering (`DddReading._clean_engineering`), so a session with DDD on and Clean Engineering off loads.
 
 ---
 

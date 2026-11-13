@@ -145,13 +145,13 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 
 | Source | Note |
 |--------|------|
-| `harness/.context/stories/story-map.md:807-809` | Requested (2026-11-12, "same but for KG"): the status row lists the Graph app; a press installs, launches and opens it; the graph loads the folders the session's practice roots name and follows the session activated last |
+| `harness/.context/stories/story-map.md:807-809` | Requested (2026-11-12, "same but for KG"): the status row lists the Graph app; a press installs, launches and opens it; the graph loads the folders the session's practice roots name and follows the session open in the project |
 | `harness/graph/app/ports.json` | the Graph app's ports, 5173 to 5176 |
-| `space/kanban/ticket_checkout.py:144-156` | Observed: activating a ticket changes no chat's open session, so the session activated last is kept on the board ([Board.last_activated](../../../editor-apps/.context/editor-apps-model.md#board-extended)) |
+| `space/session/sessions.py:268-313` | Observed: a call that names no chat, as the Graph app's do, works in the session open in its project: the ticket of the worktree it names, else the project's own open session, the one the board shows as active. Decided (2026-11-12): no field records the session activated last ([Graph](../../../editor-apps/.context/editor-apps-model.md#graph-extended)) |
 
 #### Scenario Outline: A press on the Graph app readies it by its status and opens it beside the chat
 
-*Given* ++checkout-flow++ is the session activated last  
+*Given* ++checkout-flow++ is the session open in the project  
   *And* the app status row reads Graph ${status row reads}  
 *When* the Person opens the ++Graph app++ from the app status row  
 *Then* the Graph app ${a press does}  
@@ -168,7 +168,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 
 #### Scenario: The graph loads the folders the session's practice roots name
 
-*Given* ++checkout-flow++ is the session activated last  
+*Given* ++checkout-flow++ is the session open in the project  
   *And* its practice roots are harness/.context/stories, harness/.context/ux and harness/.context  
 *When* the Person opens the ++Graph app++ from the app status row  
 *Then* the knowledge graph shows the Stories tree read from harness/.context/stories  
@@ -176,10 +176,10 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
   *And* it shows the Clean Engineering tree read from harness/.context  
   *And* it shows no folder of ++billing-report++
 
-#### Scenario: The open graph follows the session activated last
+#### Scenario: The open graph follows the session open in the project
 
 *Given* the knowledge graph is open in the side panel on ++checkout-flow++'s practice roots  
-*When* the Person activates ++billing-report++'s ticket  
+*When* ++billing-report++'s session is opened in the project  
 *Then* the knowledge graph shows the Stories tree read from billing/.context/stories  
   *And* it shows the DDD tree read from billing/.context  
   *And* it shows no folder of ++checkout-flow++

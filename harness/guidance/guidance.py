@@ -463,8 +463,18 @@ class PracticeGuidance(Guidance):
         knows that session, and each of its fidelities is given what it has there, so it answers its outputs, files and
         reports itself."""
         self.session = session_output.session
+        self._session_output = session_output
         for fidelity in self.fidelities:
             fidelity.work_in(session_output.of_fidelity(fidelity))
+
+    # The PracticeSessionOutput it works in, which work_in gives it; none until a session works on it.
+    _session_output: Any = None
+
+    @property
+    def session_root(self) -> Path | None:
+        """The folder the session this practice works in names for it, where it writes and the Graph app reads it from;
+        none outside a session."""
+        return None if self._session_output is None else self._session_output.folder
 
     @agent_instructions
     def generate_output(self) -> str:

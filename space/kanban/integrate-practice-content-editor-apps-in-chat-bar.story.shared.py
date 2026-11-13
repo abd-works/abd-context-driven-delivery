@@ -19,6 +19,7 @@ from expects import be_a, contain, equal, expect
 
 from harness.diagnostics.app import AppNotStarted, AppStatus
 from space.kanban.editor_apps_examples import CDD_KANBAN, GRAPH_APP, MISSING_DEPENDENCY, SERVE, STORY_UI_EDITOR, AppExample, ThrowawayApp, app_in
+from space.kanban.knowledge_graph_examples import BILLING_REPORT, CHECKOUT_FLOW, STORIES, STORY_MAP, files_read, roots_loaded
 from space.kanban.story_test import SharedStories, refusal_of
 
 shared_stories = SharedStories("Integrate Practice Content Editor Apps In Chat Bar")
@@ -102,6 +103,55 @@ def _(s):
 
 for app_status in PRESS_DOES:
     press_readies_by_status(OPEN_GRAPH, GRAPH_APP, "A press on the Graph app readies it by its status and opens it beside the chat", app_status)
+
+
+@shared_stories.scenario(OPEN_GRAPH, "The graph loads the folders the session's practice roots name")
+def _(s):
+    @s.given("checkout-flow is the session open in the project")
+    def _(world):
+        BILLING_REPORT.seed_into(world.sessions_project)
+        world.sessions_project.seed_active(CHECKOUT_FLOW.seed)
+
+    @s.and_("its practice roots are harness/.context/stories, harness/.context/ux and harness/.context")
+    def _(world):
+        CHECKOUT_FLOW.seed_into(world.sessions_project)
+
+    @s.when("the Person opens the Graph app from the app status row")
+    def _(world):
+        world.graph = world.app_call().session.graph
+        world.graph.load_practice_roots(world.app_call())
+
+    @s.then("the knowledge graph shows the Stories tree read from harness/.context/stories, the UX tree from harness/.context/ux and the Clean Engineering tree from harness/.context")
+    def _(world):
+        expect(roots_loaded(world.graph, world.project)).to(equal(CHECKOUT_FLOW.roots))
+
+    @s.and_("it shows no folder of billing-report")
+    def _(world):
+        expect(files_read(world.graph, world.project)).to(equal([f"{CHECKOUT_FLOW.roots[STORIES]}/{STORY_MAP}"]))
+
+
+@shared_stories.scenario(OPEN_GRAPH, "The open graph follows the session open in the project")
+def _(s):
+    @s.given("the knowledge graph is open in the side panel on checkout-flow's practice roots")
+    def _(world):
+        CHECKOUT_FLOW.seed_into(world.sessions_project)
+        BILLING_REPORT.seed_into(world.sessions_project)
+        world.sessions_project.seed_active(CHECKOUT_FLOW.seed)
+        world.app_call().session.graph.load_practice_roots(world.app_call())
+
+    @s.when("billing-report's session is opened in the project")
+    def _(world):
+        world.sessions.switch(BILLING_REPORT.name)
+        world.graph = world.app_call().session.graph
+        world.graph.load_practice_roots(world.app_call())
+
+    @s.then("the knowledge graph shows the Stories tree read from billing/.context/stories and the DDD tree from billing/.context")
+    def _(world):
+        expect(roots_loaded(world.graph, world.project)).to(equal(BILLING_REPORT.roots))
+
+    @s.and_("it shows no folder of checkout-flow")
+    def _(world):
+        expect(files_read(world.graph, world.project)).to(equal([f"{BILLING_REPORT.roots[STORIES]}/{STORY_MAP}"]))
 
 for app_status in PRESS_DOES:
     press_readies_by_status(OPEN_KANBAN, CDD_KANBAN, "A press on the CDD Kanban readies it by its status and opens it beside the chat", app_status)

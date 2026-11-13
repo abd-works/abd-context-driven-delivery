@@ -21,10 +21,13 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+from harness.agent_tools.tool_call import ToolCall
 from harness.diagnostics.app import App
 from harness.diagnostics.server_health import ServerHealth
 from harness.installation.data_class import data_of
 from harness.mcp.mcp_server import McpServer
+from space.kanban.session_board_examples import SessionsProject
+from space.session.sessions import Sessions
 
 TOOLSETS = ("harness.diagnostics.app:App", "harness.diagnostics.server_health:ServerHealth")
 # As long as the chat bar waits for a server it started to answer, and how often it looks.
@@ -60,16 +63,21 @@ class ChatLaunch:
 
 
 class DomainTier:
-    """*App* and *ServerHealth* on a throwaway project, with nothing between a step and the domain."""
+    """*App* and *ServerHealth* on a throwaway project, with nothing between a step and the domain. The project keeps
+    sessions, as the Graph app's calls work in the session open in it (`app_call`)."""
 
     name = "domain"
 
     def open(self) -> SimpleNamespace:
-        project = Path(tempfile.mkdtemp(prefix="editor-apps-"))
+        sessions_project = SessionsProject(mocks_git=True)
+        project = sessions_project.root
         chat = ChatLaunch()
         report = lambda: data_of(ServerHealth.load(project=project).report())  # noqa: E731
         return SimpleNamespace(
             project=project,
+            sessions_project=sessions_project,
+            sessions=Sessions.of_project(project),
+            app_call=lambda: ToolCall(project=project),
             apps=[],
             chat=chat,
             open_app=lambda label: chat.opened(data_of(App.load(label, project=project).open()), report),
@@ -78,6 +86,7 @@ class DomainTier:
 
     def close(self, world: SimpleNamespace) -> None:
         _close(world)
+        world.sessions_project.close()
 
 
 class ServerTier:
