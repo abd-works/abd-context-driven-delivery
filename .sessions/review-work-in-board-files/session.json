@@ -17,5 +17,12 @@
   "overlays": [
     "lern_domain_driven",
     "cdd_web_domain_access"
-  ]
+  ],
+  "practices": {
+    "stories": {
+      "formats": {
+        "story_map": "drawio"
+      }
+    }
+  }
 }
