@@ -62,25 +62,43 @@ export async function runningBoardUrl($: EngineInterface): Promise<string> {
   return (await startedBoard($)).url
 }
 
-// The Claude desktop app's browser pane, as its MCP server is named; a terminal chat has none.
-const BROWSER_PANE = 'Claude_Browser'
-
-// Opens a page in the desktop app's own browser pane, beside the chat, as a tab of its own.
-async function openInBrowserPane($: EngineInterface, url: string): Promise<boolean> {
-  const opened = await $.mcp.call(BROWSER_PANE, 'preview_start', { url }).catch(() => null)
-  return opened !== null && !opened.isError
-}
-
-// Opens a page in the desktop app's browser pane, else, where the chat has no pane, in the person's own browser with the
-// system's opener, since mods have no call that opens a link.
+// Opens a page in the person's browser with the system's own opener, since mods have no call that opens a link.
 export async function openInBrowser($: EngineInterface, url: string): Promise<boolean> {
-  if (await openInBrowserPane($, url)) return true
   const openers = [['rundll32', 'url.dll,FileProtocolHandler', url], ['open', url], ['xdg-open', url]]
   for (const argv of openers) {
     const opened = await $.process.run(argv).catch(() => null)
     if (opened?.exitCode === 0) return true
   }
   return false
+}
+
+// The Claude desktop app's own browser pane, as /mcp lists it, and its tool that opens a tab at a URL.
+const BROWSER_PANE = 'Claude_Browser'
+const OPEN_PANE_TAB = 'preview_start'
+// The desktop app's view of this chat, and its tool that shows a side pane, the browser pane being 'preview'.
+const DESKTOP_VIEW = 'ccd_view'
+const SHOW_PANE = 'show_pane'
+
+// What an MCP answer says, its text blocks joined.
+function saidBy(answer: { content: { type: string; text?: string }[] }): string {
+  return answer.content.map(block => block.text ?? '').join(' ').trim()
+}
+
+// Opens a page in a tab of the Claude desktop app's browser pane, beside the chat, calling the pane's server directly:
+// a tool call would go through the desktop's permission hooks, which refuse a plugin's call. Returns why it did not
+// open, empty once it did; it never opens the page anywhere else, so a pane that does not answer is seen and fixed.
+export async function openInBrowserPane($: EngineInterface, url: string): Promise<string> {
+  try {
+    const opened = await $.mcp.call(BROWSER_PANE, OPEN_PANE_TAB, { url })
+    const said = saidBy(opened)
+    // The pane answers without isError when it opened a tab but the page did not load in it, saying "navOk": false.
+    if (opened.isError || /"navOk":\s*false/.test(said)) return `${BROWSER_PANE} ${OPEN_PANE_TAB} failed: ${said || 'no reason given'}`
+    // A tab opens in the pane even while the pane is hidden, so the pane is then shown beside the chat.
+    const shown = await $.mcp.call(DESKTOP_VIEW, SHOW_PANE, { pane: 'preview' })
+    return shown.isError ? `the tab opened, but ${DESKTOP_VIEW} ${SHOW_PANE} failed: ${saidBy(shown) || 'no reason given'}` : ''
+  } catch (failure) {
+    return `${BROWSER_PANE} ${OPEN_PANE_TAB} could not be called: ${reasonOf(failure)}`
+  }
 }
 
 // Starts the board when nothing answers on its port, so /board always ends with a board to open. cdd's server health

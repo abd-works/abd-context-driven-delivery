@@ -4,17 +4,19 @@ import { expect, test } from 'claude-code/testing'
 // Sub-epic: Check CDD Server Health
 // Map: ../../../../../../.context/stories/story-map.md#s-person----open-app-from-health-panel
 // Realizations: inline under each step, along the mod's line: PartsView press -> openApp($, app) -> board server or the
-// repository's start scripts -> the desktop app's browser pane, else the system's opener
+// repository's start scripts -> the Claude desktop app's browser pane
 
 // The engine beneath the mod: cdd answers server-health.report with `health`; anything else cdd is asked is refused, so
 // the chat bar shows its problem line and the panel still draws. The board answers once it has been started, when
-// `isBoardUp` is false at first. The desktop app's browser pane opens each page it is given while `hasBrowserPane`;
-// a chat without one refuses. Every process the mod runs or spawns is kept, in order.
+// `isBoardUp` is false at first. The desktop app's browser pane opens a tab at each URL it is given, unless `hasPane` is
+// false, as in a terminal. Every tab opened and every process the mod runs or spawns is kept, in order.
 type World = {
   health: Record<string, unknown>
   isBoardUp: boolean
-  hasBrowserPane: boolean
-  paneOpened: string[]
+  hasPane: boolean
+  unloadable: string[]
+  shownPanes: string[]
+  tabs: string[]
   runs: string[][]
   spawns: string[][]
   toasts: string[]
@@ -25,7 +27,6 @@ const REPOSITORY = '/repo'
 const HEALTHY = { kanban_app_port: 8778, kanban_app_url: 'http://127.0.0.1:8778', graph_app_port: 5173, is_hook_server_running: false }
 const BOARD_PAGE = `http://127.0.0.1:8778/?project=${encodeURIComponent(REPOSITORY)}`
 const OPENER = 'rundll32'
-const BROWSER_PANE = 'Claude_Browser'
 
 const BAR = {
   plugin: 'cdd-board',
@@ -37,7 +38,7 @@ const BAR = {
 const answer = (text: string, isError = false) => ({ value: { content: [{ type: 'text', text }], isError } })
 
 function engine(on: any, health: Record<string, unknown>): World {
-  const world: World = { health, isBoardUp: true, hasBrowserPane: true, paneOpened: [], runs: [], spawns: [], toasts: [], started: {} }
+  const world: World = { health, isBoardUp: true, hasPane: true, unloadable: [], shownPanes: [], tabs: [], runs: [], spawns: [], toasts: [], started: {} }
   on('command.register', () => ({ value: undefined }))
   on('session.start', (_: unknown, e: { cwd: string }) => ({ cwd: e.cwd }))
   on('session.id', () => ({ value: 'chat-1' }))
@@ -48,11 +49,18 @@ function engine(on: any, health: Record<string, unknown>): World {
   on('clock.after', () => ({ value: undefined }))
   on('tool.list', () => ({ value: [] }))
   on('tool.call', () => ({ result: {} }))
-  on('mcp.call', (_: unknown, e: { server: string; tool: string; args: { url?: string } }) => {
-    if (e.server === BROWSER_PANE) {
-      if (!world.hasBrowserPane) return answer(`no MCP server named ${BROWSER_PANE}`, true)
-      world.paneOpened.push(e.args.url ?? '')
-      return answer('opened')
+  // The desktop app's browser pane opens a tab at each URL it is given; a chat without the pane has no such server.
+  on('mcp.call', (_: unknown, e: { server: string; tool: string; args?: { url?: string } }) => {
+    if (e.server === 'Claude_Browser' && e.tool === 'preview_start') {
+      if (!world.hasPane) throw new Error('no MCP server named Claude_Browser')
+      world.tabs.push(e.args?.url ?? '')
+      const isLoaded = !world.unloadable.includes(e.args?.url ?? '')
+      return answer(`{ "type": "browser", "navOk": ${isLoaded} }
+Browser pane opened${isLoaded ? '.' : ' at about:blank; navigation was denied or failed.'}`)
+    }
+    if (e.server === 'ccd_view' && e.tool === 'show_pane') {
+      world.shownPanes.push((e.args as { pane?: string } | undefined)?.pane ?? '')
+      return answer('Showing the preview pane.')
     }
     return e.tool === 'server-health.report' ? answer(JSON.stringify(world.health)) : answer(`${e.tool} is not part of this story`, true)
   })
@@ -96,7 +104,7 @@ async function openPanel($: any) {
   return ui
 }
 
-const opened = (world: World) => world.paneOpened
+const opened = (world: World) => world.tabs
 const openedOutside = (world: World) => world.runs.filter(argv => argv[0] === OPENER).map(argv => argv[2])
 const scriptsRun = (world: World) => world.runs.filter(argv => argv[0].endsWith('python.exe')).map(argv => argv[1])
 
@@ -106,12 +114,10 @@ test('Open App From Health Panel › Open the Kanban app while it runs', async (
   const world = engine(on, HEALTHY)
   const ui = await openPanel($)
   // When the Person presses the Kanban app on the server health panel
-  // PartsView -> OpenAppView press -> openApp($, 'Kanban app') -> startedBoard($) -> openInBrowser
+  // PartsView -> OpenAppView press -> openApp($, 'Kanban app') -> startedBoard($) -> openInBrowserPane -> Claude_Browser preview_start
   await ui.press({ key: 'health-open-kanban-app' })
-  // Then the board page for this repository opens in the desktop app's browser pane
+  // Then the board page for this repository opens in the browser pane
   expect(opened(world)).toEqual([BOARD_PAGE])
-  // And no window opens outside the app
-  expect(openedOutside(world)).toEqual([])
   // And nothing was started
   expect(world.spawns).toEqual([])
   await ui.unmount()
@@ -127,7 +133,7 @@ test('Open App From Health Panel › Start the Kanban app, then open it, when it
   await ui.press({ key: 'health-open-kanban-app' })
   // Then the board server starts from the repository's own folder
   expect(world.spawns).toEqual([['node', '--import', 'tsx', 'packages/session-board/serve.ts']])
-  // And once it answers, the board page opens in the browser
+  // And once it answers, the board page opens in the browser pane
   expect(opened(world)).toEqual([BOARD_PAGE])
   await ui.unmount()
 })
@@ -137,10 +143,12 @@ test('Open App From Health Panel › Open the Graph app while it runs', async ($
   const world = engine(on, HEALTHY)
   const ui = await openPanel($)
   // When the Person presses the Graph app on the server health panel
-  // PartsView -> OpenAppView press -> openApp($, 'Graph app') -> openInBrowser
+  // PartsView -> OpenAppView press -> openApp($, 'Graph app') -> openInBrowserPane -> Claude_Browser preview_start
   await ui.press({ key: 'health-open-graph-app' })
-  // Then the Graph app opens in the browser, and no start script runs
+  // Then the Graph app opens in the browser pane, and no start script runs
   expect(opened(world)).toEqual(['http://localhost:5173'])
+  // And the browser pane is shown beside the chat
+  expect(world.shownPanes).toEqual(['preview'])
   expect(scriptsRun(world)).toEqual([])
   await ui.unmount()
 })
@@ -154,7 +162,7 @@ test('Open App From Health Panel › Start the Graph app, then open it, when it 
   }
   const ui = await openPanel($)
   // When the Person presses the Graph app on the server health panel
-  // openApp($, 'Graph app') -> python scripts/start_graph_web.py, scripts/start_graph_app.py -> openInBrowser
+  // openApp($, 'Graph app') -> python scripts/start_graph_web.py, scripts/start_graph_app.py -> openInBrowserPane -> Claude_Browser preview_start
   await ui.press({ key: 'health-open-graph-app' })
   // Then its web server and its app start, with the repository's Python, in that order
   expect(scriptsRun(world)).toEqual(['scripts/start_graph_web.py', 'scripts/start_graph_app.py'])
@@ -181,15 +189,32 @@ test('Open App From Health Panel › Say why the Graph app did not start', async
   await ui.unmount()
 })
 
-test(`Open App From Health Panel › Open the Kanban app in the person's browser when the chat has no browser pane`, async ($, on) => {
-  // Given the Kanban app is running on port 8778, and the chat has no browser pane
+test('Open App From Health Panel › Say why the app did not open when the chat has no browser pane', async ($, on) => {
+  // Given the Graph app is running, and the chat has no browser pane, as in a terminal
   const world = engine(on, HEALTHY)
-  world.hasBrowserPane = false
+  world.hasPane = false
   const ui = await openPanel($)
-  // When the Person presses the Kanban app on the server health panel
-  // openApp($, 'Kanban app') -> openInBrowser -> Claude_Browser refuses -> the system's opener
-  await ui.press({ key: 'health-open-kanban-app' })
-  // Then the board page opens in the person's own browser
-  expect(openedOutside(world)).toEqual([BOARD_PAGE])
+  // When the Person presses the Graph app on the server health panel
+  // openApp($, 'Graph app') -> openInBrowserPane -> Claude_Browser is not there
+  await ui.press({ key: 'health-open-graph-app' })
+  // Then nothing opens anywhere else
+  expect(world.tabs).toEqual([])
+  expect(openedOutside(world)).toEqual([])
+  // And the Person is told where the app is and why it did not open
+  expect(world.toasts.at(-1)).toContain('The Graph app is at http://localhost:5173 but did not open: Claude_Browser preview_start could not be called')
+  await ui.unmount()
+})
+
+test('Open App From Health Panel › Say why the app did not open when its page does not load in the pane', async ($, on) => {
+  // Given the Graph app is running, but its page does not load in the browser pane
+  const world = engine(on, HEALTHY)
+  world.unloadable = ['http://localhost:5173']
+  const ui = await openPanel($)
+  // When the Person presses the Graph app on the server health panel
+  // openApp($, 'Graph app') -> openInBrowserPane -> Claude_Browser preview_start answers navOk false
+  await ui.press({ key: 'health-open-graph-app' })
+  // Then the Person is told the page did not load, in the pane's own words
+  expect(world.toasts.at(-1)).toContain('The Graph app is at http://localhost:5173 but did not open: Claude_Browser preview_start failed')
+  expect(world.toasts.at(-1)).toContain('navigation was denied or failed')
   await ui.unmount()
 })

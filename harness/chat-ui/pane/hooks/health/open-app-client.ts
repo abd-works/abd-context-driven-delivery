@@ -3,11 +3,11 @@ import type { EngineInterface } from 'claude-code'
 import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
 import { boardPageUrl, repositoryFolder } from '../board-chat/board'
-import { openInBrowser, startedBoard } from '../board-chat/board-server'
+import { openInBrowserPane, startedBoard } from '../board-chat/board-server'
 import { reasonOf } from '../shared/failure'
 import { currentServerHealth, refreshHealth, ServerHealthClient } from './server-health-client'
 
-// Pressing an app on the server health panel opens it in the person's browser, starting it first when it is not running.
+// Pressing an app on the server health panel opens it in the Claude desktop app's browser pane, starting it first when it is not running.
 export type AppName = 'Kanban app' | 'Graph app'
 
 // The graph app is the explorer in harness/graph/app: its web server and its Vite app, each started by the repository's
@@ -75,7 +75,7 @@ async function openingKanbanApp($: EngineInterface): Promise<Opening> {
   return { url: await boardPageUrl($, url), problem: '' }
 }
 
-// Opens app in the person's browser: as it is when it runs, else once it has started. The panel reads the server
+// Opens app in the browser pane, or says why it did not: as it is when it runs, else once it has started. The panel reads the server
 // health again after, so a started app shows running.
 export async function openApp($: EngineInterface, app: AppName): Promise<void> {
   if (starting.has(app)) return
@@ -86,7 +86,8 @@ export async function openApp($: EngineInterface, app: AppName): Promise<void> {
       $.ui.toast(problem)
       return
     }
-    if (!(await openInBrowser($, url))) $.ui.toast(`The ${app} is at ${url}, but no program opened it.`)
+    const why = await openInBrowserPane($, url)
+    if (why) $.ui.toast(`The ${app} is at ${url} but did not open: ${why}`)
   } catch (failure) {
     $.ui.toast(`The ${app} did not open: ${reasonOf(failure)}`)
   } finally {
