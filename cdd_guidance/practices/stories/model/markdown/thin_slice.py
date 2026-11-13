@@ -134,7 +134,7 @@ class _ThinSliceReading:
     """One read of a thin slice's lines onto a story map: the lines above its first increment, the increments read, and
     whether the stories of the last one are being read."""
 
-    def __init__(self, story_map, file: str) -> None:
+    def __init__(self, story_map: "StoryModel", file: str) -> None:
         self.story_map = story_map
         self.file = file
         self.above: List[str] = []

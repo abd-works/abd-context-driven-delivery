@@ -135,7 +135,7 @@ export class StoryMapViewModel extends StoryNodeViewModel {
 
   // The map as Python sent it; scoped, only the part the session's ticket covers (its `scope`), when the session names
   // any of its stories.
-  static of(storyMap: StoryModelData, scoped = false): StoryMapViewModel {
+  static of(storyMap: StoryModelData, scoped: boolean = false): StoryMapViewModel {
     const under = placesUnder(storyMap.node)
     const scope = new Set(storyMap.scope)
     const epics = storyMap.epics.map((epic, index) => EpicViewModel.of(epic, under(index)))

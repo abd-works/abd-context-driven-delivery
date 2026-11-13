@@ -8,7 +8,7 @@ story it is in) and names on each node the line of the file it was read on, so t
 from __future__ import annotations
 
 import re
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 
 from cdd_guidance.practices.stories.model.markdown.links import unlink
@@ -16,6 +16,9 @@ from cdd_guidance.practices.stories.model.markdown.markup import strip_backticks
 from cdd_guidance.practices.stories.model.markdown.scenario_file import HEADING_PATTERN
 from cdd_guidance.practices.stories.model.story_map_files import source_at
 from cdd_guidance.practices.stories.model.story_model import StoryType
+
+if TYPE_CHECKING:
+    from cdd_guidance.practices.stories.model.story_model import StoryNode
 
 _BULLET_PATTERN = re.compile(r"^(\s*)-\s+(.+)$")
 _NUMBERED_PATTERN = re.compile(r"^(\s*)\d+\.\s+(.+)$")
@@ -212,12 +215,12 @@ class OutlineLines:
         self.lines: List[str] = []
         self.description = ""
 
-    def read_from(self, node) -> None:
+    def read_from(self, node: "StoryNode") -> None:
         """Give node the description its lines hold, and keep that description as read."""
         self.description = "\n".join(self.lines).strip()
         node.description_text = self.description
 
-    def written(self, node, heading: Optional[str]) -> List[str]:
+    def written(self, node: "StoryNode", heading: Optional[str]) -> List[str]:
         """The heading, as read while it says what heading says, the links it was written with aside; then the lines
         under it, as read while node's description is unchanged, else its description between blank lines. No heading
         for the story map, which has none."""
@@ -268,7 +271,7 @@ class OutlineMapReading(MapReading):
         super()._open_sub_epic(name, depth)
         self.described = self.sub_epics[-1]
 
-    def _story(self, name: str, parent, story_type: StoryType = StoryType.USER):
+    def _story(self, name: str, parent: "StoryNode", story_type: StoryType = StoryType.USER) -> "StoryNode":
         self.described = super()._story(name, parent, story_type)
         return self.described
 

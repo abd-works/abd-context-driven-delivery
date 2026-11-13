@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance
     from space.session.session import Session
 
-    from cdd_guidance.practices.stories.model.story_model import StoryModel, StoryNode
+    from cdd_guidance.practices.stories.model.story_model import Story, StoryModel, StoryNode
 
 
 class StoryMapEditRefused(Exception):
@@ -93,7 +93,7 @@ class OpenedStoryMap:
         """The stories the session names: the part of the map its ticket covers."""
         return self._session.stories
 
-    def acceptance_tests_of(self, story) -> list[str]:
+    def acceptance_tests_of(self, story: "Story") -> list[str]:
         """The acceptance-test files the session's Stories practice declares that hold story, as paths from the
         project."""
         return [file for file, names in self._acceptance_tests.items() if story.name in names]
