@@ -1,6 +1,4 @@
 import express, { type Express, type NextFunction, type Request, type Response } from 'express'
-import { createHash } from 'node:crypto'
-import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import type { ProjectConnections } from '@cdd/cdd-connection'
@@ -17,6 +15,7 @@ import { answer } from '@src/session-board/answer'
 import type { BoardUpdate } from '@src/session-board/board-update'
 import { cddRoutes } from '@src/session-board/cdd-routes'
 import { ClaudeLink } from '@src/session-board/claude-link'
+import { API_ROOT, CLAUDE_OPEN_PATH, UPDATE_PATH } from '@src/session-board/board-server-paths'
 import { answerFailure, HttpException } from '@src/session-board/http-exception'
 
 import { STORY_MAP_PAGE } from '../../../../../cdd_guidance/practices/stories/app/story-map-page'
@@ -42,30 +41,25 @@ export function createApp(projects: ProjectConnections, port: number, staticRoot
   app.use(express.json())
   // The cdd server and this server both keep the code they started with, so one press gets the latest, rebuilds the page,
   // pins cdd to it, and then restarts this server once the page has its answer.
-  app.post('/api/update', (_request, response, next) => {
+  app.post(`${API_ROOT}${UPDATE_PATH}`, (_request, response, next) => {
     response.on('finish', () => {
       if (response.statusCode < BAD_REQUEST) boardUpdate.restart()
     })
     answer(() => boardUpdate.update())(_request, response, next)
   })
-  app.post('/api/claude/open', (request, response) => {
+  app.post(`${API_ROOT}${CLAUDE_OPEN_PATH}`, (request, response) => {
     claudeLink.open(request.body?.link)
     response.json({ is_opened: true })
   })
-  // The built page names its hashed script, so the text of index.html changes with every build. An open page compares it
-  // with the build it loaded and reloads itself on a new one.
-  app.get('/api/build', (_request, response) => {
-    const index = join(staticRoot, 'index.html')
-    const build = existsSync(index) ? createHash('sha256').update(readFileSync(index)).digest('hex') : ''
-    response.json({ build })
-  })
-  app.use('/api', cddRoutes(projects, [...boardRoutes, ...stageRoutes, ...ticketRoutes, ...fidelityProgressRoutes, ...sessionRoutes, ...practiceSessionOutputRoutes, ...backlogItemRoutes, ...chatRoutes, ...appRoutes, ...storyMapRoutes]))
+  app.use(API_ROOT, cddRoutes(projects, [...boardRoutes, ...stageRoutes, ...ticketRoutes, ...fidelityProgressRoutes, ...sessionRoutes, ...practiceSessionOutputRoutes, ...backlogItemRoutes, ...chatRoutes, ...appRoutes, ...storyMapRoutes]))
   // The Story UI editor answers on this server too, at its own page, so it shares the board's port and the board's
   // state: its calls are the story map's generated routes above, and its page is the one its own folder builds.
   app.use(STORY_MAP_PAGE, express.static(storyMapBuild))
   app.get(`${STORY_MAP_PAGE}/*`, (_request, response) => {
     response.sendFile(join(storyMapBuild, 'index.html'))
   })
+  // The built page names its hashed script, so its index changes with every build: an open page compares the page
+  // served here with the one it loaded, and reloads itself on a new one.
   app.use(express.static(staticRoot))
   app.get('*', (_request, response) => {
     response.sendFile(join(staticRoot, 'index.html'))

@@ -47,7 +47,7 @@ function EditorWidgetView({ ticket, progress }: { ticket: TicketClient; progress
   if (!editor) return null
   const hint = ticket.worktree ? `Open the ${editor.label} editor on this ticket's stories` : `Activate this ticket to open it in the ${editor.label} editor`
   return (
-    <button className="help-link editor-widget" title={hint} aria-label={`Open in ${editor.label}`} disabled={!ticket.worktree} onClick={() => void page.editorApp.openOn(editor, ticket.worktree)}>
+    <button className="help-link editor-widget" title={hint} aria-label={`Open in ${editor.label}`} disabled={!ticket.worktree} onClick={() => void page.editorApp.openOn(page.editorApp.editorOf(editor), ticket.worktree)}>
       ✎
     </button>
   )

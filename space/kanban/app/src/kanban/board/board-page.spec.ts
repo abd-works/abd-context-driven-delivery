@@ -1,8 +1,11 @@
+import { createElement } from 'react'
+import { renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { BoardData } from '@cdd/space/kanban/board'
 
 import { BoardPage } from './board-page'
+import { BoardPageView } from './board-page-view'
 
 // A cdd server that has not answered yet: every request the page sends stays pending, and each one is counted.
 function slowServer() {
@@ -20,12 +23,12 @@ describe('Board Page', () => {
 
   // Each pending poll holds a connection on the cdd server, so a slow server must not collect one per tick.
   describe('that polls the chats while the cdd server answers slowly', () => {
-    it('should ask for the build again only once the last answer came back', () => {
+    it('should ask for the page it serves again only once the last answer came back', () => {
       const server = slowServer()
       const stop = new BoardPage(server.send).start()
       vi.advanceTimersByTime(20_000)
       stop()
-      expect(server.asked.filter(path => path.endsWith('/build')).length).toBe(1)
+      expect(server.asked.filter(path => path === '/').length).toBe(1)
     })
   })
 
@@ -62,6 +65,29 @@ describe('Board Page', () => {
     it("should answer the same progress each time a ticket's fidelity is named", () => {
       const ticket = readPage().board.tickets[0]!
       expect(ticket.progressNamed('stories-story-map')).toBe(ticket.progressNamed('stories-story-map'))
+    })
+  })
+})
+
+// Refactor Kanban Board To Web Domain Access: a board whose cdd server is down says so instead of drawing old state.
+describe('Refactor Kanban Board To Web Domain Access', () => {
+  describe('A board whose cdd server is down says so instead of drawing old state', () => {
+    function drawnWithCddDown(): string {
+      const page = new BoardPage(slowServer().send)
+      page.store.change({ board: boardRead(), serverFailure: 'The cdd server is not connected: connect.py failed' })
+      return renderToString(createElement(BoardPageView, { page }))
+    }
+
+    it('should say the cdd server is not answering and how to start it', () => {
+      expect(drawnWithCddDown()).toContain('The cdd server is not answering: start it again with /cdd-restart in a chat')
+    })
+
+    it('should show no column as current', () => {
+      expect(drawnWithCddDown()).not.toContain('IN PROGRESS')
+    })
+
+    it("should show none of the last read's tickets", () => {
+      expect(drawnWithCddDown()).not.toContain('Sign up')
     })
   })
 })

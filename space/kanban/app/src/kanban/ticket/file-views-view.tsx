@@ -37,7 +37,7 @@ function GraphWidgetView({ ticket }: { ticket: TicketClient }) {
   const hint = ticket.worktree ? "Open the knowledge graph on this ticket's practice roots" : 'Activate this ticket to open its knowledge graph'
   const opened = (event: MouseEvent) => {
     if (event.currentTarget.closest('.ticket-card')) event.stopPropagation()
-    void page.graphApp.openOn(ticket.worktree)
+    void page.editorApp.openOn(page.editorApp.graph, ticket.worktree)
   }
   return (
     <button className="file-view" aria-label="graph" title={hint} disabled={!ticket.worktree} onClick={opened}>

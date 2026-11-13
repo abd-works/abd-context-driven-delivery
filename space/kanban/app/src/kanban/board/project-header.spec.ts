@@ -23,8 +23,7 @@ describe('Show The Board Of The Linked Repository', () => {
       sent.length = 0
       const api = new BoardApi(new BoardStore(), recording, 'C:/dev/sandbox')
       await api.post('/board/show')
-      await api.get('/build')
-      expect(sent.map(headers => headers.get('X-CDD-Project'))).toEqual(['C:/dev/sandbox', 'C:/dev/sandbox'])
+      expect(sent.map(headers => headers.get('X-CDD-Project'))).toEqual(['C:/dev/sandbox'])
     })
   })
 

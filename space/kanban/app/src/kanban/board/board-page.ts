@@ -1,3 +1,4 @@
+import { projectOfPage } from '@cdd/cdd-shared'
 import type { BacklogItemData } from '@cdd/space/kanban/backlog-item'
 import type { BoardData } from '@cdd/space/kanban/board'
 import type { TicketData } from '@cdd/space/kanban/ticket'
@@ -12,7 +13,7 @@ import { RootChoiceClient } from '../ticket/root-choice-client'
 import { TicketClient } from '../ticket/ticket-client'
 import { TileActionsClient } from '../ticket/tile-actions-client'
 import { TileClient } from '../ticket/tile-client'
-import { BoardApi } from './board-api'
+import { BoardApi, sendWithFetch } from './board-api'
 import type { Send } from './board-api'
 import { BoardClient } from './board-client'
 import { BoardLayoutClient } from './board-layout-client'
@@ -20,15 +21,12 @@ import { BoardReader } from './board-reader'
 import { BoardStore } from '../shared/board-store'
 import { BuildClient } from './build-client'
 import { EditorAppClient } from './editor-app-client'
-import { GraphAppClient } from './graph-app-client'
 import { SidePanelClient } from './side-panel-client'
+import { CLAUDE_OPEN_PATH, UPDATE_PATH } from '@src/session-board/board-server-paths'
 
 const CHAT_POLL_MILLISECONDS = 2000
-const UPDATE_PATH = '/update'
-const BUILD_PATH = '/build'
 const SERVER_BACK_WITHIN_MILLISECONDS = 30_000
 const SERVER_BACK_CHECK_MILLISECONDS = 1000
-const CLAUDE_OPEN_PATH = '/claude/open'
 const REPORT_QUERY = 'report'
 const FIDELITY_QUERY = 'fidelity'
 const NOT_READ_YET: BoardData = { project: '', practices: [], open_tickets: [], active: null, columns: [], fidelities: [], sends_fixes_directly: false, unsaved: null }
@@ -40,11 +38,12 @@ const SHOWN_CHAT_ID = 8
 export class BoardPage {
   readonly store = new BoardStore()
   readonly api: BoardApi
+  // The api the board's own two-second read posts through, which says nothing when slow.
+  readonly readingApi: BoardApi
   readonly chat: ChatClient
   readonly panels: SidePanelClient
   readonly files: FilesPanelClient
   readonly build: BuildClient
-  readonly graphApp: GraphAppClient
   readonly editorApp: EditorAppClient
   readonly layout = new BoardLayoutClient(this.store)
   readonly reader = new BoardReader(this)
@@ -61,13 +60,13 @@ export class BoardPage {
   // How long the page waits between checks for the restarted server. A spec replaces it so it does not wait.
   pause: (milliseconds: number) => Promise<void> = milliseconds => new Promise(done => setTimeout(done, milliseconds))
 
-  constructor(send?: Send) {
+  constructor(send: Send = sendWithFetch) {
     this.api = new BoardApi(this.store, send)
+    this.readingApi = new BoardApi(this.store, send, projectOfPage(), false)
     this.chat = new ChatClient(this.store, this.api, link => this.openLink(link))
     this.panels = new SidePanelClient(this.store, this.api)
     this.files = new FilesPanelClient(this.store)
-    this.build = new BuildClient(this.store, this.api)
-    this.graphApp = new GraphAppClient(this.store, this.api)
+    this.build = new BuildClient(this.store, send)
     this.editorApp = new EditorAppClient(this.store, this.api)
   }
 
@@ -128,7 +127,7 @@ export class BoardPage {
   private async boardServerIsBack(): Promise<boolean> {
     for (let waited = 0; waited < SERVER_BACK_WITHIN_MILLISECONDS; waited += SERVER_BACK_CHECK_MILLISECONDS) {
       await this.pause(SERVER_BACK_CHECK_MILLISECONDS)
-      if (await this.api.get<{ build: string }>(BUILD_PATH)) return true
+      if ((await this.build.served()) !== null) return true
     }
     this.store.toast('The board server did not come back after the update; run /board in a chat to start it.', true)
     return false
