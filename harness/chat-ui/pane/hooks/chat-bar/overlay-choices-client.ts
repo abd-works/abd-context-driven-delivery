@@ -38,6 +38,14 @@ export async function toggleOverlayList($: EngineInterface): Promise<void> {
   await update($, overlayChoices, held => ({ ...(held ?? { ticket: '', choices: [] }), isOpen: !held?.isOpen }))
 }
 
+export async function isOverlayListOpen($: EngineInterface): Promise<boolean> {
+  return Boolean((await read($, overlayChoices))?.isOpen)
+}
+
+export async function closeOverlayList($: EngineInterface): Promise<void> {
+  await update($, overlayChoices, held => ({ ...(held ?? { ticket: '', choices: [] }), isOpen: false }))
+}
+
 // A press on a pattern in the list box adds it to the session's overlays or takes it out; the list stays open so a
 // person can pick several. A refusal shows as a toast and leaves the choices as they were.
 export async function toggleOverlay($: EngineInterface, chips: OverlayChips, pattern: string): Promise<void> {

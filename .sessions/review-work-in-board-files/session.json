@@ -21,8 +21,14 @@
   "practices": {
     "stories": {
       "formats": {
+        "story_map": "drawio",
         "scenarios": "markdown",
         "acceptance_tests": "python"
+      }
+    },
+    "clean_engineering": {
+      "formats": {
+        "model": "markdown"
       }
     }
   }

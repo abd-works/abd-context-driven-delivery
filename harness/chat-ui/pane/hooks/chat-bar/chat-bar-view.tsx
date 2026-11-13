@@ -3,15 +3,16 @@ import type { EngineInterface } from 'claude-code'
 import type { ActionPickerJson, ChatBarViewJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { GlyphButtonView } from '../shared/glyph-button-view'
-import { ActionButtonView, actionColumnOf, PickerView } from './action-button-view'
+import { ActionButtonView, PickerView } from './action-button-view'
+import { formatGlyphOf, overlayColumnOf, REPO_GLYPH, repoWordOf, stageColumn } from './bar-columns'
 import { toggleFormat, type FormatChips } from './format-choices-client'
 import { toggleOverlay, toggleOverlayList, type OverlayChips } from './overlay-choices-client'
 import { askChatToFix, dismissFailure, fixFailure, runHandoff, type ChatBarClient } from './chat-bar-client'
-import { openFilesOf, openReport, openSessionFolder } from './fidelity-files-client'
+import { openFilesOf, openHelp, openReport, openSessionFolder } from './fidelity-files-client'
 import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
 import { openClose, toggleRepoListWithRepos } from './session-client'
-import { toggleCard, toggleSessionList } from './session-dialogs-client'
+import { toggleSessionList } from './session-dialogs-client'
 import { CloseView, RepoListView, SessionListView } from './session-dialogs-view'
 import { selectStage, toggleStagePicker, type StageClient } from './stage-client'
 
@@ -33,26 +34,31 @@ export type ChatBarDraw = {
 
 const SEPARATOR = '│'
 
-// A label shown above an element while the pointer is on its keyed Box, as the canvas's hover tips.
-function TipView({ Box, Text }: ElementTable, words: string, detail: string, detailColour: string) {
+// A label shown above an element while the pointer is on its keyed Box, as the canvas's hover tips. A tip given onPress
+// is a button too: a see-through Button over its words takes the press.
+function TipView({ Box, Button, Text }: ElementTable, words: string, detail: string, detailColour: string, onPress?: () => unknown, key = '') {
+  const tip = [
+    <Text key="tip-words" color={BRAND.text}>{detail ? `${words} ` : words}</Text>,
+    detail ? <Text key="tip-detail" color={detailColour}>{detail}</Text> : null,
+  ]
+  // A pressable tip is one whole Button holding its words: a see-through one laid over them takes no press.
   return (
     <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
-      <Text color={BRAND.text}>{detail ? `${words} ` : words}</Text>
-      {detail ? <Text color={detailColour}>{detail}</Text> : null}
+      {onPress ? <Button key={key} plain onPress={onPress}>{tip}</Button> : tip}
     </Box>
   )
 }
 
 // One square in its practice colour, fainter the less is done, underlined on a light tint when selected, with the
 // violation count in red beside it, a press on the count opening the validation report; the fidelity's name shows above
-// it on hover, its state being on the session card.
+// it on hover, its state being on the session card, and a press on that name opens the fidelity's help on the board.
 export function FidelityView($: EngineInterface, elements: ElementTable, fidelity: FidelityProgressClient) {
   const { Box } = elements
   return (
     <Box key={`fidelity-${fidelity.slug}`} flexDirection="row" gap={0} backgroundColor={fidelity.isSelected ? BRAND.selectedTint : undefined}>
       {GlyphButtonView(elements, `dot-${fidelity.slug}`, '■', fidelity.shade, () => selectFidelity($, fidelity), fidelity.isSelected)}
       {fidelity.violationCount ? GlyphButtonView(elements, `violations-${fidelity.slug}`, String(fidelity.violationCount), BRAND.error, () => openReport($, fidelity)) : null}
-      {TipView(elements, fidelity.slug, '', BRAND.muted)}
+      {TipView(elements, fidelity.slug, '', BRAND.muted, () => openHelp($, fidelity), `help-${fidelity.slug}`)}
     </Box>
   )
 }
@@ -78,7 +84,7 @@ function StageButtonView($: EngineInterface, elements: ElementTable, { chatBar }
 export function StagePickerView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar, isStagePickerOpen }: ChatBarDraw) {
   if (!isStagePickerOpen) return null
   return (
-    <Box key="stage-list" flexDirection="column" alignSelf="flex-start" marginLeft={2} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
+    <Box key="stage-list" flexDirection="column" alignSelf="flex-start" marginLeft={stageColumn} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
       {chatBar.stages.filter(stage => stage.canShow).map((stage: StageClient) => {
         const isShown = stage.stage === chatBar.shownStage
         return (
@@ -94,20 +100,39 @@ export function StagePickerView($: EngineInterface, { Box, Button, Text }: Eleme
   )
 }
 
-// The session name; in the main chat a ▾ beside it opens the list of tickets to open. A ticket's own chat works only on
-// that ticket, so it shows the name alone.
-// The session's name: in a ticket's session it opens the session's folder in the files pane, and its card shows on hover;
-// on main it opens the card.
-function SessionNameView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar }: ChatBarDraw) {
+// A word and its glyph as one whole button, the word in the text colour and the glyph muted. A see-through Button laid
+// over text takes no press in the desktop app, so the words are the Button's own children.
+function WordGlyphButtonView({ Button, Text }: ElementTable, key: string, word: string, glyph: string, onPress: () => unknown) {
+  return (
+    <Button key={key} plain onPress={onPress}>
+      <Text weight="semibold" color={BRAND.text}>{word}</Text>
+      <Text color={BRAND.muted}>{` ${glyph}`}</Text>
+    </Button>
+  )
+}
+
+// In the main chat, "main +" is one button that opens the list of tickets to open, its card showing on hover, and the
+// repository's name with its ⑂ one button that opens the list of repositories. A ticket's own chat works only on that
+// ticket, so it shows the name alone: a press opens the session's folder in the files pane, its card showing on hover.
+function SessionNameView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
+  const { Box, Button, Text } = elements
+  if (chatBar.isMain) {
+    return (
+      <Box key="session-name" flexDirection="row" gap={1}>
+        <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
+          {WordGlyphButtonView(elements, 'session-list-button', chatBar.sessionName || 'main', '+', () => toggleSessionList($))}
+        </Box>
+        {WordGlyphButtonView(elements, 'repo-list-button', repoWordOf(chatBar), REPO_GLYPH, () => toggleRepoListWithRepos($))}
+      </Box>
+    )
+  }
   return (
     <Box key="session-name" flexDirection="row" gap={1}>
       <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
-        <Button key="session-name-button" plain onPress={() => (chatBar.isMain ? toggleCard($) : openSessionFolder($))}>
-          <Text weight="semibold" color={BRAND.text}>{chatBar.sessionName || 'main'}</Text>
+        <Button key="session-name-button" plain onPress={() => openSessionFolder($)}>
+          <Text weight="semibold" color={BRAND.text}>{chatBar.sessionName}</Text>
         </Button>
       </Box>
-      {chatBar.isMain ? GlyphButtonView({ Box, Button, Text }, 'session-list-button', '+', BRAND.muted, () => toggleSessionList($)) : null}
-      {chatBar.isMain ? GlyphButtonView({ Box, Button, Text }, 'repo-list-button', '⑂', BRAND.muted, () => toggleRepoListWithRepos($)) : null}
     </Box>
   )
 }
@@ -136,9 +161,6 @@ function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBa
   )
 }
 
-// The canvas's glyph for each format group; a group with none shows its name.
-const FORMAT_GLYPHS: Record<string, string> = { markdown: 'M↓', diagram: '◇', code: '</>', canvas: '▦' }
-
 // One chip per format group the fidelities offer, just before the action button, as on a board ticket's action bar:
 // orange while picked, green when every fidelity has a file in it already, grey otherwise; a press turns it on or off.
 function FormatChipsView($: EngineInterface, elements: ElementTable, { formats }: ChatBarDraw) {
@@ -151,7 +173,7 @@ function FormatChipsView($: EngineInterface, elements: ElementTable, { formats }
         const colour = isOn ? BRAND.onAccent : choice.made && choice.made === choice.offered ? BRAND.success : BRAND.muted
         return (
           <Box key={`format-${choice.label}`} paddingX={1} backgroundColor={isOn ? BRAND.accent : undefined}>
-            {GlyphButtonView(elements, `format-chip-${choice.label}`, FORMAT_GLYPHS[choice.label] ?? choice.label, colour, () => toggleFormat($, formats, choice.label))}
+            {GlyphButtonView(elements, `format-chip-${choice.label}`, formatGlyphOf(choice.label), colour, () => toggleFormat($, formats, choice.label))}
             {TipView(elements, choice.label, `${choice.made}/${choice.offered} made`, BRAND.muted)}
           </Box>
         )
@@ -183,7 +205,7 @@ function OverlayChipsView($: EngineInterface, elements: ElementTable, { overlays
 function OverlayListView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar, overlays }: ChatBarDraw) {
   if (!overlays.isOpen) return null
   return (
-    <Box key="overlay-list-box" flexDirection="column" alignSelf="flex-start" marginLeft={actionColumnOf(chatBar)} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
+    <Box key="overlay-list-box" flexDirection="column" alignSelf="flex-start" marginLeft={overlayColumnOf(chatBar)} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
       {overlays.choices.map(choice => (
         <Box key={`overlay-row-${choice.pattern}`} flexDirection="row" gap={1} alignItems="center" backgroundColor={choice.is_chosen ? BRAND.accentTint : undefined}>
           <Text color={choice.is_chosen ? BRAND.accent : BRAND.muted}>{choice.is_chosen ? '✓' : ' '}</Text>
@@ -260,6 +282,7 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
       {PickerView($, elements, draw)}
       {OverlayListView($, elements, draw)}
       {LineView($, elements, draw)}
+      {chatBar.statusLine ? <Text key="status-row" color={BRAND.muted} wrap="truncate-start">{chatBar.statusLine}</Text> : null}
     </Box>
   )
 }

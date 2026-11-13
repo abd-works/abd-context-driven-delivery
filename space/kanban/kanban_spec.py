@@ -540,6 +540,13 @@ with description("a ticket") as self:
         with it("should command every action its stage offers"):
             expect(list(self.ticket.next_fidelity.commands)).to(equal(["generate", "validate", "iterate", "sketch", "render", "document"]))
 
+        # (S) Chat bar --> status row: repository · branch · the whole path of the folder the session works in.
+        with it("should name the whole path of the folder its session works in"):
+            expect(data_of(self.ticket)["root_folder"]).to(equal(str(self.ticket.session.work_root)))
+
+        with it("should name no branch while its project is no clone"):
+            expect(data_of(self.ticket)["branch_name"]).to(equal(""))
+
     # (S) Board App --> Display Ticket Card, Place Ticket In Column
     with context("with its first logged work on a Specification fidelity"):
         with it("should be in Specification"):
