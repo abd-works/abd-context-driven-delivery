@@ -60,18 +60,12 @@ function PartsView(elements: ElementTable, health: ServerHealthJson, actions: Ac
   )
 }
 
-// Opening the Story UI., or why an app did not open and how to fix it, once a person pressed one.
-// The app's url follows as a link the surface opens itself, so a page the side panel did not take is one click away.
-function AppLineView({ Box, Link, Text }: ElementTable, opening: AppOpeningJson) {
+// Opening the Story UI., or why an app did not open and how to fix it, once a person pressed one. The app's url is
+// not shown: the app opens in the Browser pane, and a failure says why.
+function AppLineView({ Text }: ElementTable, opening: AppOpeningJson) {
   const line = appLineOf(opening)
-  const { url } = opening
-  if (!line && !url) return null
-  return (
-    <Box flexDirection="column">
-      {line ? <Text color={opening.state === 'failed' ? BRAND.error : BRAND.text}>{line}</Text> : null}
-      {url ? <Text color={BRAND.text}>{`${opening.label}: `}<Link href={url} label={url} /></Text> : null}
-    </Box>
-  )
+  if (!line) return null
+  return <Text color={opening.state === 'failed' ? BRAND.error : BRAND.text}>{line}</Text>
 }
 
 function DetailsView({ Box, Text }: ElementTable, health: ServerHealthJson, install: InstallJson) {
