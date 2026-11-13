@@ -143,3 +143,26 @@ text with no press handler. The story "Open App From Health Panel" (`harness/.co
 `guard-work-and-recover-fast.md`) is still Intended: pressing an app that is down starts it then opens it, and pressing
 one that is up opens it. The `/board` command (`board-server.ts`) already starts and opens the board, so the Kanban part
 can reuse it; the Graph app needs its own start and open.
+
+Fixed on branch `open-app-from-health-panel`: each app's icon and value carry a see-through press (`OpenAppView` in
+`server-health-view.tsx`) that runs `openApp` (`health/open-app-client.ts`). The Kanban app starts as `/board` starts it
+and opens on this repository's board page; the Graph app starts with `scripts/start_graph_web.py` then
+`scripts/start_graph_app.py` and opens where they say it answers; one already running just opens. Story test:
+`harness/chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/open-app-from-health-panel/`. Live once
+the branch is merged and the mod is republished.
+
+## The chat bar froze while a ticket was created
+
+Reported 2026-11-13 ("frozen bar"), while the chat for `open-app-from-health-panel` ran `board.show` and `ticket.create`.
+`board.show` answered 960,699 characters on one line, and `ticket.create` ran past its 10 s wait; the first
+`ticket.activate` after it failed on `C:/dev/abd-context-driven-delivery/.git/index.lock`, left behind with no git
+process running. Removing the stale lock let `ticket.activate` finish. Not yet diagnosed: whether the bar froze on the
+long cdd calls, on the lock, or on both, and why `ticket.create` left the lock.
+
+## The status line under the prompt went missing after a cdd reinstall
+
+Reported 2026-11-13 ("what happened to footer put below chat input"), right after the cdd server was repinned to
+13b227107 and restarted, and the chat was asked to run `/reload-plugins`. The line under the prompt (repository · branch
+· folder) was gone. The `PromptHint` hook in `register.ts` draws it from the active session's ticket in the chat bar's
+last board read (`ChatBarClient.statusLine`), and draws nothing while that read holds no active ticket. Not yet
+diagnosed: whether the read after the restart or reload failed or had not happened yet, or whether the hook was skipped.
