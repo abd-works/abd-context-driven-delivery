@@ -526,8 +526,9 @@ class ProjectNotNamed(Exception):
 
     def __init__(self, tool: str) -> None:
         super().__init__(
-            f"{tool} was called without naming a project: this chat's cdd entry sends no X-CDD-Project header. "
-            "Run python scripts/install.py from a CDD checkout to write the entry again."
+            f"{tool} was called without naming a project: this chat's X-CDD-Project header is missing or names a "
+            "desktop spare folder, and it names no Claude Code process or chat the server can follow. Run "
+            "/reload-plugins so the cdd header helper runs again, or python scripts/install.py when it still fails."
         )
         self.tool = tool
 
