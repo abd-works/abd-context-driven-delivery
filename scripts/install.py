@@ -79,6 +79,7 @@ def main() -> int:
         if installer.layout.is_claude_code:
             print(f"cdd-board: {server.claude_plugins.install_board()}")
         print(f"language adapters: {len(installer.write_language_adapters())} written")
+        _write_runtime_adapters(installer, server)
         _install_kanban()
         return 0
     if args.self:
@@ -89,8 +90,22 @@ def main() -> int:
         restarted = server.keep_pinned_current()
         if restarted:
             print(f"cdd server: {restarted}")
+            _write_runtime_adapters(installer, server)
         _install_kanban()
     return 0
+
+
+def _write_runtime_adapters(installer, server) -> None:
+    """The apps the server launches run from the pinned runtime, and their pages import the CDD domain through the
+    language adapters under its IDE folder, which git never copies there, so a pin writes them there too."""
+    from harness.installation.installer import Installer
+
+    home = server.daemon.home
+    if home.mode != home.PINNED:
+        return
+    runtime = home.pinned_checkout
+    written = Installer(ide=installer.ide, path=runtime / installer.layout.folder_name, repo=runtime).write_language_adapters()
+    print(f"runtime language adapters: {len(written)} written in {runtime}")
 
 
 def _install_kanban() -> None:
