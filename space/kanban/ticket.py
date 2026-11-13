@@ -387,6 +387,13 @@ class Ticket(Card):
         return "" if relative == Path(".") else str(relative)
 
     @property
+    @data_field
+    def session_path(self) -> str:
+        """The whole path of the folder the ticket's session works in: its workpath, else its repository's folder. The
+        chat bar opens the Graph app on it, so the graph a chat opens is its own session's."""
+        return str(self._session.work_root)
+
+    @property
     @data_field(key="working_chat", reference=True)
     def chat(self) -> Chat | None:
         """The connected chat the ticket works in, which every command the board sends for it goes to, sent by its id as

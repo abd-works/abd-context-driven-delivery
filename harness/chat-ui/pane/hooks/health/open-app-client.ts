@@ -3,6 +3,7 @@ import type { EngineInterface } from 'claude-code'
 import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
 import { boardPageUrl, repositoryFolder } from '../board-chat/board'
+import { currentChatBar } from '../chat-bar/chat-bar-client'
 import { openInBrowserPane, startedBoard } from '../board-chat/board-server'
 import { reasonOf } from '../shared/failure'
 import { currentServerHealth, refreshHealth, ServerHealthClient } from './server-health-client'
@@ -61,18 +62,24 @@ async function startGraphApp($: EngineInterface): Promise<Opening> {
   return url ? { url, problem: '' } : { url: '', problem: `The Graph app started but did not say where it answers. ${GRAPH_START_BY_HAND}` }
 }
 
+// The Graph app on this chat's session path, so the graph it loads is the chat's own session's.
 async function openingGraphApp($: EngineInterface): Promise<Opening> {
   await refreshHealth($)
   const port = await graphAppPort($)
-  return port !== null ? { url: `http://localhost:${port}`, problem: '' } : startGraphApp($)
+  const opening = port !== null ? { url: `http://localhost:${port}`, problem: '' } : await startGraphApp($)
+  const sessionPath = (await currentChatBar($)).sessionPath
+  if (!opening.url || !sessionPath) return opening
+  return { url: `${opening.url}/?${new URLSearchParams({ folder: sessionPath })}`, problem: '' }
 }
 
-// The board page showing this chat's repository, starting the board when nothing answers on its port, as /board does.
+// The board page showing this chat's repository with the chat's ticket selected, starting the board when nothing answers
+// on its port, as /board does.
 async function openingKanbanApp($: EngineInterface): Promise<Opening> {
   const { url, wasStarted, problem } = await startedBoard($)
   if (!url) return { url: '', problem }
   if (wasStarted) $.ui.toast('Started the Kanban app. It stops when this chat ends.')
-  return { url: await boardPageUrl($, url), problem: '' }
+  const ticket = (await currentChatBar($)).ticketName
+  return { url: await boardPageUrl($, url, ticket ? { ticket } : {}), problem: '' }
 }
 
 // Opens app in the browser pane, or says why it did not: as it is when it runs, else once it has started. The panel reads the server

@@ -16,6 +16,7 @@ type World = {
   hasPane: boolean
   unloadable: string[]
   shownPanes: string[]
+  board: Record<string, unknown> | null
   tabs: string[]
   runs: string[][]
   spawns: string[][]
@@ -38,7 +39,7 @@ const BAR = {
 const answer = (text: string, isError = false) => ({ value: { content: [{ type: 'text', text }], isError } })
 
 function engine(on: any, health: Record<string, unknown>): World {
-  const world: World = { health, isBoardUp: true, hasPane: true, unloadable: [], shownPanes: [], tabs: [], runs: [], spawns: [], toasts: [], started: {} }
+  const world: World = { health, isBoardUp: true, hasPane: true, unloadable: [], shownPanes: [], board: null, tabs: [], runs: [], spawns: [], toasts: [], started: {} }
   on('command.register', () => ({ value: undefined }))
   on('session.start', (_: unknown, e: { cwd: string }) => ({ cwd: e.cwd }))
   on('session.id', () => ({ value: 'chat-1' }))
@@ -62,6 +63,7 @@ Browser pane opened${isLoaded ? '.' : ' at about:blank; navigation was denied or
       world.shownPanes.push((e.args as { pane?: string } | undefined)?.pane ?? '')
       return answer('Showing the preview pane.')
     }
+    if (e.tool === 'board.overview' && world.board) return answer(JSON.stringify(world.board))
     return e.tool === 'server-health.report' ? answer(JSON.stringify(world.health)) : answer(`${e.tool} is not part of this story`, true)
   })
   on('ui.toast', (_: unknown, e: { text: string }) => {
@@ -102,6 +104,14 @@ async function openPanel($: any) {
   const ui = await $.ui.mount(BAR)
   await ui.press({ key: 'health-icon' })
   return ui
+}
+
+// The chat works on ticket pet-visits, whose session works in the repository's harness/graph folder.
+const TICKET = 'pet-visits'
+const SESSION_PATH = `${REPOSITORY}/harness/graph`
+const ON_TICKET = {
+  project: REPOSITORY, practices: [], open_tickets: [], columns: [], fidelities: [], sends_fixes_directly: false, unsaved: null,
+  active: { name: TICKET, title: 'Pet visits', is_main: false, column: { name: 'Discovery' }, progress: [], session: { name: TICKET, session_file: `${REPOSITORY}/.sessions/${TICKET}/session.json`, practices: {} }, session_path: SESSION_PATH },
 }
 
 const opened = (world: World) => world.tabs
@@ -216,5 +226,31 @@ test('Open App From Health Panel › Say why the app did not open when its page 
   // Then the Person is told the page did not load, in the pane's own words
   expect(world.toasts.at(-1)).toContain('The Graph app is at http://localhost:5173 but did not open: Claude_Browser preview_start failed')
   expect(world.toasts.at(-1)).toContain('navigation was denied or failed')
+  await ui.unmount()
+})
+
+test('Open App From Health Panel › Open the Kanban app on the chat’s ticket', async ($, on) => {
+  // Given the Kanban app is running, and the chat works on ticket pet-visits
+  const world = engine(on, HEALTHY)
+  world.board = ON_TICKET
+  const ui = await openPanel($)
+  // When the Person presses the Kanban app on the server health panel
+  // openApp($, 'Kanban app') -> currentChatBar($).ticketName -> boardPageUrl($, url, { ticket })
+  await ui.press({ key: 'health-open-kanban-app' })
+  // Then the board page opens with the chat's ticket selected
+  expect(opened(world)).toEqual([`${BOARD_PAGE}&ticket=${TICKET}`])
+  await ui.unmount()
+})
+
+test('Open App From Health Panel › Open the Graph app on the chat’s session path', async ($, on) => {
+  // Given the Graph app is running, and the chat works on ticket pet-visits, whose session works in harness/graph
+  const world = engine(on, HEALTHY)
+  world.board = ON_TICKET
+  const ui = await openPanel($)
+  // When the Person presses the Graph app on the server health panel
+  // openApp($, 'Graph app') -> currentChatBar($).sessionPath -> ?folder=<session path>
+  await ui.press({ key: 'health-open-graph-app' })
+  // Then the Graph app opens on the session's path
+  expect(opened(world)).toEqual([`http://localhost:5173/?folder=${encodeURIComponent(SESSION_PATH)}`])
   await ui.unmount()
 })

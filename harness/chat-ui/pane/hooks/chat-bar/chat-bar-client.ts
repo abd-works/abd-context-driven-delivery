@@ -97,6 +97,11 @@ export class ChatBarClient {
     return this.ticket?.name ?? ''
   }
 
+  // The whole path of the folder the session works in, which the Graph app opens on; empty with no session.
+  get sessionPath(): string {
+    return (this.ticket as (TicketData & { session_path?: string }) | null)?.session_path ?? ''
+  }
+
   // The actions of the shown stage whose command takes the formats the chips pick, generate and render.
   get actionsWithFormats(): string[] {
     const column = this.board?.columns.find(column => column.name === this.shownStage) as { actions_with_formats?: string[] } | undefined
