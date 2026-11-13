@@ -1,5 +1,7 @@
 {
   "name": "us-taxes",
   "workpath": "C:\\dev\\sandbox-us-tax-two",
-  "repo_path": "C:\\dev\\sandbox-two"
+  "repo_path": "C:\\dev\\sandbox-two",
+  "branch": "us-taxes",
+  "worktree": "C:\\dev\\abd-cdd-us-taxes"
 }
