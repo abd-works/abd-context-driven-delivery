@@ -24,18 +24,32 @@ const inWindowsSpelling = (folder: string): string => (DRIVE_PATH.test(folder) ?
 // The desktop app starts a new chat only through its start_session tool, which only the agent can call, so the agent is
 // asked to start one in the ticket's worktree and to do nothing else. While Remote Control is on for the main chat, the
 // app refuses to start a chat from a message it did not see the person type, and the chat bar cannot see Remote Control,
-// so the agent is told what to say when that happens.
-async function askAgentToStartChat($: EngineInterface, ticket: TicketData): Promise<void> {
+// so the agent is told what to say when that happens. The new chat's first step is sessions.switch to the
+// ticket's session, so its chat bar, its log and every tool it calls work on the ticket from its first turn, not on main.
+async function askAgentToStartChat($: EngineInterface, ticket: TicketData): Promise<string | undefined> {
   const folder = inWindowsSpelling(ticket.worktree)
   const text = [
     `Start a new chat for ticket ${ticket.name} in its worktree ${folder}: call the start_session tool with initiation "user_asked", context "fresh", cwd "${folder}", use_worktree false and title "${ticket.name}",`,
-    `with a prompt saying it works on ticket ${ticket.name} (${ticket.title}) and should read the session's latest handoff first, and a background saying the chat bar opened this ticket from the main chat.`,
+    `with a prompt saying it works on ticket ${ticket.name} (${ticket.title}), that its first step is to call sessions.switch with name ${ticket.name} before anything else, and that it should then read the session's latest handoff,`,
+    'and a background saying the chat bar opened this ticket from the main chat.',
     'If start_session refuses because the user is working over Remote Control, say in one line that Remote Control is on for this chat,',
     'so the app will not start a chat from a request the chat bar typed: turn it off with the Remote Control switch, or type "start it" and the chat starts.',
     'Do nothing else, and stay in this chat.',
   ].join(' ')
   const answer = await $.prompt.submit({ text, asUser: true })
-  if (answer.drop !== undefined) throw new Error(answer.drop || 'the chat did not take the request')
+  return answer.drop === undefined ? undefined : answer.drop || 'the chat did not take the request'
+}
+
+// The request waits in this chat's queue until the running turn ends, and stopping that turn clears the queue, so a
+// request dropped from the queue is sent once more: the person stopped the turn, not the chat they asked for.
+const DROPPED_FROM_QUEUE = /queue/i
+
+async function requestChatStart($: EngineInterface, ticket: TicketData): Promise<void> {
+  const dropped = await askAgentToStartChat($, ticket)
+  if (dropped === undefined) return
+  if (!DROPPED_FROM_QUEUE.test(dropped)) throw new Error(dropped)
+  const droppedAgain = await askAgentToStartChat($, ticket)
+  if (droppedAgain !== undefined) throw new Error(`${droppedAgain}, twice: this chat's turn was stopped while the request waited for it to end`)
 }
 
 // Where a ticket that ticket.activate opened is worked on: its chat when one is open, else a new chat in its worktree.
@@ -56,7 +70,7 @@ export async function startedChatIn($: EngineInterface, ticket: TicketData): Pro
     return
   }
   try {
-    await askAgentToStartChat($, ticket)
+    await requestChatStart($, ticket)
     $.ui.toast(`Starting a chat for ${ticket.name} in ${ticket.worktree}`)
   } catch (failure) {
     await showFailure($, `No chat started for ${ticket.name}: ${reasonOf(failure)}. Open a chat in ${ticket.worktree} to work on it`)

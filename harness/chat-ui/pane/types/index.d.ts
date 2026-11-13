@@ -62,6 +62,9 @@ export type OverlayChoicesJson = { ticket: string; choices: OverlayChoiceJson[];
 // designView: the Claude Design link of the session's latest design canvas version, empty when none is recorded.
 export type FidelityFilesJson = { fidelity: string; tabs: { path: string; text: string | null; exists: boolean; editor: string | null }[]; shown: string | null; isOutOfDate: boolean; designView: string } | null
 
+// The help pane's fidelity and its help as one markdown page, as fidelity-progress.help answers it; null when closed.
+export type FidelityHelpJson = { fidelity: string; markdown: string } | null
+
 // What the chat bar is doing while a ticket opens or closes, which the band shows with a turning wheel; empty when idle.
 export type BusyJson = { doing: string; frame: number }
 
@@ -77,6 +80,7 @@ declare module 'claude-code' {
       selectedFidelities: string[]
       actionPicker: ActionPickerJson
       fidelityFiles: FidelityFilesJson
+      fidelityHelp: FidelityHelpJson
       shownStage: string | null
       stagePicker: boolean
       formatChoices: FormatChoicesJson

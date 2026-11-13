@@ -12,7 +12,6 @@ from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance_actions import ActionWorksInNoSession
 from space.session.throwaway_project import ThrowawayProject
-from cdd_guidance.actions.partition.partition import Partition
 from cdd_guidance.context_setup.context_index import ContextIndex
 from cdd_guidance.context_setup.context_setup import ContextSetup
 from cdd_guidance.context_setup.live_app_capture import LiveAppCapture
@@ -30,9 +29,6 @@ with description("a ContextSetup"):
     with context("that the cdd server builds with no arguments"):
         with before.each:
             self.setup = ContextSetup()
-
-        with it("should hold a Partition to hand documents to"):
-            expect(self.setup.partition).to(be_a(Partition))
 
         with it("should hold a ContextIndex to embed captured pages into"):
             expect(self.setup.context_index).to(be_a(ContextIndex))
@@ -54,26 +50,6 @@ with description("a ContextSetup"):
                 equal([(self.throwaway.root / "docs" / "markdown").resolve()])
             )
 
-    # Step 3 tells the agent to call partition.partition with the practices the user picked, which only the call knows.
-    with context("whose capture_from_documents is expanded for a call, as the MCP host expands it"):
-        with before.each:
-            self.throwaway = ThrowawayProject()
-            arguments = {"folder_path": "docs"}
-            setup = ContextSetup().for_call(ToolCall(arguments, self.throwaway.root))
-            self.expansion = AgentInstructions.for_callable(ContextSetup.capture_from_documents, setup).expand(arguments)
-
-        with after.each:
-            self.throwaway.close()
-
-        with it("should list partition as a tool to call"):
-            expect(self.expansion.tools).to(contain("partition"))
-
-        with it("should not paste Partition's recipe in with no guidance"):
-            expect(self.expansion.instructions).not_to(contain("Partition of  finished"))
-
-        with it("should name the folder the call gives"):
-            expect(self.expansion.instructions).to(contain("folder_path=docs"))
-
     with context("whose capture_from_live_app is expanded for a call"):
         with it("should name the application folder the call gives"):
             throwaway = ThrowawayProject()
@@ -84,10 +60,10 @@ with description("a ContextSetup"):
             expect(prose).to(contain("repo_path=shop"))
 
     with context("that is made for a call on a project"):
-        with it("should work in the session its partition works in"):
+        with it("should work in the session the call works in"):
             throwaway = ThrowawayProject()
-            setup = ContextSetup().for_call(ToolCall(project=throwaway.root))
-            same = setup.session is setup.partition.session
+            call = ToolCall(project=throwaway.root)
+            same = ContextSetup().for_call(call).session is call.session
             throwaway.close()
             expect(same).to(equal(True))
 

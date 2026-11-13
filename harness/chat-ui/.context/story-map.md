@@ -27,6 +27,10 @@ Observed: `ServerHealthBandView` draws one glyph for the connection, ✓ connect
 
 Observed: the panel opens with the session card, stacked on top of it, while the pointer is over the mark. Connected, it shows MCP host, Tools with the loaded count, Kanban app and Graph app with their ports, and Hook server on one line, colour alone saying running and each part's name on hover (asked by the person on 2026-11-04); otherwise a headline says what is wrong. Requested: pressing the mark pins the card and its panel open after the pointer leaves.
 
+### (S) Person --> [Open App From Health Panel](../pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/open-app-from-health-panel/open_app_from_health_panel_story.test.ts)
+
+Observed: pressing the Kanban app or the Graph app on the server health panel opens it in the browser, and starts it first when it reads not running (requested 2026-11-10, "clicking on app in chat ui starts it if down, opens it if up"). The Kanban app starts as `/board` starts it (`startedBoard` in `board-server.ts`) and opens on this repository's board page; the Graph app starts with the repository's own `scripts/start_graph_web.py` and `scripts/start_graph_app.py` and opens where the second says it answers. A start that fails says why in a toast (`health/open-app-client.ts`).
+
 ### (S) Person --> [Reconnect CDD Server](../pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/reconnect-cdd-server/reconnect_cdd_server_story.test.ts)
 
 Observed: when disconnected, the panel's Reconnect retries `cdd` up to three times (`RECONNECT_TRIES`), then reads the active session again.

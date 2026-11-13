@@ -1,6 +1,6 @@
 # Partition
 
-Reads source material, builds an index of what matters for this context tool, extracts the relevant passages as chunk files, and checks that nothing was missed.
+Reads source material, converting documents to markdown with Context Setup first, builds an index of what matters for this context tool, extracts the relevant passages as chunk files, checks that nothing was missed, and embeds the chunks with Context Index so later work can search them.
 
 Read `partition_guidance.md` before indexing — it references `{slug}.md § Scaffold` and `{slug}.md § Overview` for what to look for. If those don't exist, use the user's description or the surrounding material.
 
@@ -16,8 +16,17 @@ Read `partition_guidance.md` before indexing — it references `{slug}.md § Sca
 - Index → `{root}/.context/{subject}-index.md`
 - Chunks → `{root}/{artifact}/.context/{artifact}-segment.md` (folder name = the top-level artifact defined in `{slug}.md § Scaffold`)
 - `segment_files` lists every chunk file under `{root}`, so a later step, such as embedding, reads exactly the chunks written.
+- Searchable index → `{root}/rag/index.faiss` and `{root}/rag/meta.json`, written by `context_index.embed` from the chunks `segment_files` lists.
 
 `{subject}` = the source file or folder name (e.g. `HeroesHandbook.md` → `HeroesHandbook-index.md`). Not the context tool name.
+
+---
+
+# Step 0 — Convert
+
+Partition reads markdown and code. When the source holds other documents — `.docx`, `.doc`, `.pdf`, `.pptx`, `.ppt`, `.txt`, `.html`, `.htm` — call `context_setup.convert` with the folder that holds them first. It writes each one to `{folder}/markdown/{stem}.md`; partition the `markdown_files` it returns in place of the originals, because the index and chunks must quote text an agent can read.
+
+Read the `structure_notes` it returns. A note with `heading_depth` 0 and a `word_count` over 200 is a long document with no headings: tell the user it may need a pass that adds headings before the index groups it well, and carry on.
 
 ---
 
@@ -89,6 +98,14 @@ Call `verify_segment_completeness` on any chunk that covers a list of named entr
 - Layout noise configuration belongs in the `<!-- partition-config -->` block in the index — not hardcoded in the tool.
 - **A chunk that covers the right length of text can still be missing entries.** Completeness failure is a hard fail — fix the chunk before running the context tool's generate step.
 - After verification, update the index so every entry with a chunk links to it.
+
+---
+
+# Step 4 — Embed
+
+Call `segment_files` with the same `out_root`, and pass the list it returns as `segments_paths` to `context_index.embed`, with `out_path` set to `{root}/rag`. Embedding indexes the chunks by meaning, so `context_index.search` and `context_index.ask` can find the passage a later question needs without reading every chunk.
+
+If `segment_files` returns no files, the partition wrote no chunks: say so and embed nothing, because an empty index answers every search with nothing and hides that the partition failed. Report the `index_path` embed returns. Embedding calls the embedding service (OpenAI by default); when it fails, tell the user what failed rather than skipping the step.
 
 ---
 

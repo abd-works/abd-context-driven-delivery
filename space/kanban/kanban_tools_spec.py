@@ -494,7 +494,7 @@ with description("the board tools") as self:
 
         # (S) Person --> Send Next Fidelity Action
         with it("should allow only the actions that need no output before anything is generated"):
-            expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["generate", "iterate", "sketch", "document"]))
+            expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["partition", "generate", "iterate", "sketch", "document"]))
 
         # The board's Run sends render only once there is output to convert; Python says so, not the page.
         with it("should not allow Render before anything is generated"):
@@ -602,7 +602,7 @@ with description("the board tools") as self:
                 (self.project.root / ".context" / "story-map.md").write_text("# Story Map\n", encoding="utf-8")
 
             with it("should allow Validate and Render on that file"):
-                expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["generate", "validate", "iterate", "sketch", "render", "document"]))
+                expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["partition", "generate", "validate", "iterate", "sketch", "render", "document"]))
 
             with it("should still name generate as the next action"):
                 expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["next_action"]).to(equal("generate"))

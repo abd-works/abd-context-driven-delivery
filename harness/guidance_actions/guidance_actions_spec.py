@@ -321,6 +321,16 @@ with description("a guidance action"):
             action = served.for_call(_call(f"stories-story-map {self.session_word}", self.project))
             expect([action.fidelity_of(item).format for item in action.listed()]).to(equal(["drawio"]))
 
+        # The story editor's format chips save the formats chosen for a fidelity as a list.
+        with it("should work in the first of the formats a session keeps as a list"):
+            from harness.guidance_actions import GuidanceAction
+            from space.session import Sessions
+
+            session = Sessions(self.project).load(self.project / ".sessions" / "sign-up")
+            session.practices["stories"].save(formats={"story_map": ["drawio", "markdown"]})
+            action = GuidanceAction().for_call(_call(f"stories-story-map {self.session_word}", self.project))
+            expect([action.fidelity_of(item).format for item in action.listed()]).to(equal(["drawio"]))
+
         with it("should keep the practice turned on when it keeps a format"):
             from harness.guidance_actions import GuidanceAction
             from space.session import Sessions

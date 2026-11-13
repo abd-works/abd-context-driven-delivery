@@ -1,8 +1,10 @@
-"""Partition action: index a corpus, cut it into verbatim segments, and check each segment's named entries."""
+"""Partition action: convert a corpus to markdown, index it, cut it into verbatim segments, check each segment's named
+entries, and embed the segments into a searchable index."""
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from cdd_guidance.actions.partition.partition_index import PartitionIndex
@@ -11,15 +13,41 @@ from harness.agent_tools import agent_instructions, agent_toolset, instructions,
 from harness.markdown import markdown
 from harness.agent_tools.agent_tools import agent_tool
 from harness.agent_tools.recipe import RecipePlaceholders
+from harness.agent_tools.tool_call import ToolCall
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
+from cdd_guidance.context_setup.context_setup import ContextSetup
 
 @agent_toolset
 class Partition(GuidanceAction):
     """Corpus partition: index, segment, completeness.
 
-    Slash ``/partition`` runs this action once for each listed guidance, in the session the call works in.
+    Slash ``/partition`` runs this action once for each listed guidance, in the session the call works in. It runs the
+    whole documents pipeline: Context Setup's convert turns documents that are not markdown or code into markdown first,
+    and Context Index's embed indexes the segments it wrote, so they can be searched.
     """
+
+    def __init__(self, session: Any = None, call: ToolCall | None = None, context_setup: ContextSetup | None = None) -> None:
+        """A ContextSetup left out is made here; the one held works in this partition's session, and its ContextIndex
+        embeds the segments."""
+        super().__init__(session, call)
+        self._context_setup = context_setup if context_setup is not None else ContextSetup()
+
+    def made_for(self, session: Any, call: ToolCall | None = None) -> Partition:
+        """A partition made for session and call, holding the same ContextSetup, so its embedding provider carries over."""
+        return type(self)(session=session, call=call, context_setup=self._context_setup)
+
+    # The two below answer Any, not their classes: a property typed as a toolset is a collection whose tools the
+    # installer publishes again under partition, and Context Setup and Context Index publish their own.
+    @property
+    def context_setup(self) -> Any:
+        """Context Setup working in this partition's session: its convert turns documents into markdown to partition."""
+        return self._context_setup.in_session(self._session)
+
+    @property
+    def context_index(self) -> Any:
+        """Context Index working in this partition's session: its embed indexes the segments the partition wrote."""
+        return self.context_setup.context_index
 
     @mcp
     @agent_tool
@@ -101,19 +129,25 @@ class Partition(GuidanceAction):
         out_root: str | None = None,
         paths: list[str] | str | None = None,
     ) -> str:
-        """Split the given context into an index plus verbatim segments for each listed guidance. Fail if any new chunk misses a named entry the index required.
+        """Split the given context into an index plus verbatim segments for each listed guidance, converting documents to markdown first and embedding the segments into a searchable index after. Fail if any new chunk misses a named entry the index required.
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the corpus in context.
         context: in-process text. Leave this empty on an MCP call.
         mode: one_go, or the named partition mode.
         out_root: folder for the index and segments. Omit it to use the session's root, the folder it works in."""
         self._work_on(guidance)
         source = self.source_label(context, paths)
+        folder = self._folder(out_root).as_posix()
+        "Step 0 — Convert: when the corpus holds documents that are not markdown or code (.docx, .doc, .pdf, .pptx, .ppt, .txt, .html, .htm), call context_setup.convert with the folder that holds them, and partition the markdown_files it returns in their place. A structure note with heading_depth 0 and word_count over 200 is a document with no headings: tell the user it may need a semantic pass, and carry on."
+        tools(self.context_setup.convert)
         self.run(self._guidance_to_index_by, action="partition")
         instructions(self.index(context, out_root, paths))
         instructions(self.segment(out_root))
         "After writing the index and segments, call refresh with exactly the files you wrote, so the session's graph holds them as they are now; nothing watches the files."
         if self._session is not None:
             tools(self.graph.refresh)
+        f"Step 4 — Embed: call segment_files with the same out_root, and pass the list it returns as segments_paths to context_index.embed, with out_path={folder}/rag, so the segments can be searched. If the list is empty, the partition wrote no segments: say so and embed nothing. Report the index_path embed returns."
+        tools(self.segment_files)
+        tools(self.context_index.embed)
         return (
             f"Partition{f' of {source}' if source else ''} finished (mode {mode}); "
             f"docs under {self._folder(out_root).as_posix()}/.context/. "

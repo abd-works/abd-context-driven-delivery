@@ -61,6 +61,16 @@ class ClaudeChatProcess:
                 return cls(pid)
         return None
 
+    @classmethod
+    def from_connection(cls, client_port: int | None) -> ClaudeChatProcess | None:
+        """The chat process that opened a loopback connection itself, known by the port its own end of the connection
+        uses. None when no port is given, or the process holding it is not one Claude Code records as a chat: a tool a
+        chat started, such as the session board, connects on its own behalf, not the chat's."""
+        owner = _ProcessTree().owner_of_port(client_port) if client_port else None
+        if owner is None or not cls(owner).session_file.is_file():
+            return None
+        return cls(owner)
+
     @property
     def session_file(self) -> Path:
         """The file Claude Code keeps for this process while it runs."""
@@ -95,7 +105,8 @@ class ClaudeChatProcess:
 
 
 class _ProcessTree:
-    """The parent of a running process, and the executable it runs, read from the operating system."""
+    """The parent of a running process, the executable it runs, and the process holding a loopback TCP port, read from
+    the operating system."""
 
     def parent_of(self, pid: int) -> int | None:
         if pid == os.getpid():
@@ -105,6 +116,60 @@ class _ProcessTree:
             return (entry.th32ParentProcessID or None) if entry is not None else None
         text = self._posix_field(pid, "ppid=")
         return int(text) if text.isdigit() and int(text) > 0 else None
+
+    def owner_of_port(self, port: int) -> int | None:
+        """The process whose end of an IPv4 TCP connection uses port; none when no process holds it."""
+        return self._windows_owner_of_port(port) if sys.platform == "win32" else self._posix_owner_of_port(port)
+
+    def _posix_owner_of_port(self, port: int) -> int | None:
+        # lsof lists both ends of a loopback connection; the client's end is the one whose own address ends in port.
+        try:
+            answer = subprocess.run(["lsof", "-nP", f"-iTCP:{port}", "-Fpn"], capture_output=True, text=True, check=False)
+        except FileNotFoundError:
+            return None
+        pid = None
+        for line in answer.stdout.splitlines():
+            if line.startswith("p"):
+                pid = int(line[1:])
+            elif line.startswith("n") and line[1:].split("->")[0].endswith(f":{port}"):
+                return pid
+        return None
+
+    def _windows_owner_of_port(self, port: int) -> int | None:
+        import ctypes
+        import socket
+        from ctypes import wintypes
+
+        class TcpRow(ctypes.Structure):
+            _fields_ = [("state", wintypes.DWORD), ("local_address", wintypes.DWORD), ("local_port", wintypes.DWORD),
+                        ("remote_address", wintypes.DWORD), ("remote_port", wintypes.DWORD), ("owning_pid", wintypes.DWORD)]
+
+        table = self._windows_tcp_table()
+        if table is None:
+            return None
+        count = ctypes.cast(table, ctypes.POINTER(wintypes.DWORD))[0]
+        rows = ctypes.cast(ctypes.addressof(table) + ctypes.sizeof(wintypes.DWORD), ctypes.POINTER(TcpRow * count)).contents
+        wanted = socket.htons(port)
+        return next((row.owning_pid for row in rows if row.local_port & 0xFFFF == wanted), None)
+
+    def _windows_tcp_table(self) -> object | None:
+        """Every IPv4 TCP connection with the process that owns it (``TCP_TABLE_OWNER_PID_CONNECTIONS``); none when
+        Windows will not give it. The table can grow between asking its size and reading it, so it is asked again."""
+        import ctypes
+        from ctypes import wintypes
+
+        ipv4, connections_with_owner, buffer_too_small = 2, 4, 122
+        size = wintypes.DWORD(0)
+        get_table = ctypes.windll.iphlpapi.GetExtendedTcpTable
+        get_table(None, ctypes.byref(size), False, ipv4, connections_with_owner, 0)
+        for _ in range(3):
+            table = ctypes.create_string_buffer(size.value)
+            status = get_table(table, ctypes.byref(size), False, ipv4, connections_with_owner, 0)
+            if status == 0:
+                return table
+            if status != buffer_too_small:
+                return None
+        return None
 
     def runs_claude(self, pid: int) -> bool:
         """Whether pid runs Claude Code's own executable, ``claude`` or ``claude.exe``."""

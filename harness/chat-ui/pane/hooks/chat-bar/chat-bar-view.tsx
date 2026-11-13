@@ -7,8 +7,9 @@ import { ActionButtonView, PickerView } from './action-button-view'
 import { formatGlyphOf, overlayColumnOf, REPO_GLYPH, repoWordOf, stageColumn } from './bar-columns'
 import { toggleFormat, type FormatChips } from './format-choices-client'
 import { toggleOverlay, toggleOverlayList, type OverlayChips } from './overlay-choices-client'
-import { askChatToFix, dismissFailure, fixFailure, runHandoff, type ChatBarClient } from './chat-bar-client'
-import { openFilesOf, openHelp, openReport, openSessionFolder } from './fidelity-files-client'
+import { askChatToFixBoard, dismissFailure, fixFailure, runHandoff, type ChatBarClient } from './chat-bar-client'
+import { openFilesOf, openReport, openSessionFolder } from './fidelity-files-client'
+import { openHelp } from './fidelity-help-client'
 import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
 import { openClose, toggleRepoListWithRepos } from './session-client'
@@ -51,7 +52,7 @@ function TipView({ Box, Button, Text }: ElementTable, words: string, detail: str
 
 // One square in its practice colour, fainter the less is done, underlined on a light tint when selected, with the
 // violation count in red beside it, a press on the count opening the validation report; the fidelity's name shows above
-// it on hover, its state being on the session card, and a press on that name opens the fidelity's help on the board.
+// it on hover, its state being on the session card, and a press on that name opens the fidelity's help in a pane beside the chat.
 export function FidelityView($: EngineInterface, elements: ElementTable, fidelity: FidelityProgressClient) {
   const { Box } = elements
   return (
@@ -247,7 +248,7 @@ function ProblemView($: EngineInterface, { Box, Button, Text }: ElementTable, sh
   return (
     <Box key="problem" flexDirection="row" gap={1} alignItems="center">
       <Text color={BRAND.error}>{shown}</Text>
-      <Button key="fix-problem" label="Fix" variant="primary" onPress={() => askChatToFix($, shown)} />
+      <Button key="fix-problem" label="Fix" variant="primary" onPress={() => askChatToFixBoard($, shown)} />
     </Box>
   )
 }
@@ -283,7 +284,6 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
       {PickerView($, elements, draw)}
       {OverlayListView($, elements, draw)}
       {LineView($, elements, draw)}
-      {chatBar.statusLine ? <Text key="status-row" color={BRAND.muted} wrap="truncate-start">{chatBar.statusLine}</Text> : null}
     </Box>
   )
 }

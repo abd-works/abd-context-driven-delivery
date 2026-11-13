@@ -121,3 +121,48 @@ pressed again.
 Fixed on branch `ticket-maintanance-defects`: a press anywhere else on the bar, or typing or sending in the prompt,
 closes every open list box but the pressed one's (`option-lists-client.ts`). The host sends no event for a click in the
 transcript, so a click there still leaves it open.
+
+## Opening a ticket while the main chat is busy starts no chat
+
+Reported 2026-11-13, ticket `optimize-unit-tests`. The chat bar showed "No chat started for optimize-unit-tests: the
+prompt was removed from the queue before it ran".
+
+Cause: the chat bar asks the main chat's agent to call start_session, and that request waits in the main chat's queue
+until its running turn ends. Stopping that turn clears the queue, so the request never ran.
+
+Fixed on main: a request dropped from the queue is sent once more (`requestChatStart` in `chat-folder-client.ts`); a
+second drop says the turn was stopped while the request waited.
+
+## Pressing an app on the health panel does nothing
+
+Reported 2026-11-13, ticket `optimize-unit-tests`. Pressing "▦ not running" (Kanban app) or "◈ not running" (Graph app)
+on the chat bar's health panel neither starts nor opens the app.
+
+Cause: never built. `PartsView` in `harness/chat-ui/pane/hooks/health/server-health-view.tsx` draws each part as plain
+text with no press handler. The story "Open App From Health Panel" (`harness/.context/stories/story-map.md`,
+`guard-work-and-recover-fast.md`) is still Intended: pressing an app that is down starts it then opens it, and pressing
+one that is up opens it. The `/board` command (`board-server.ts`) already starts and opens the board, so the Kanban part
+can reuse it; the Graph app needs its own start and open.
+
+Fixed on branch `open-app-from-health-panel`: each app's icon and value carry a see-through press (`OpenAppView` in
+`server-health-view.tsx`) that runs `openApp` (`health/open-app-client.ts`). The Kanban app starts as `/board` starts it
+and opens on this repository's board page; the Graph app starts with `scripts/start_graph_web.py` then
+`scripts/start_graph_app.py` and opens where they say it answers; one already running just opens. Story test:
+`harness/chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/open-app-from-health-panel/`. Live once
+the branch is merged and the mod is republished.
+
+## The chat bar froze while a ticket was created
+
+Reported 2026-11-13 ("frozen bar"), while the chat for `open-app-from-health-panel` ran `board.show` and `ticket.create`.
+`board.show` answered 960,699 characters on one line, and `ticket.create` ran past its 10 s wait; the first
+`ticket.activate` after it failed on `C:/dev/abd-context-driven-delivery/.git/index.lock`, left behind with no git
+process running. Removing the stale lock let `ticket.activate` finish. Not yet diagnosed: whether the bar froze on the
+long cdd calls, on the lock, or on both, and why `ticket.create` left the lock.
+
+## The status line under the prompt went missing after a cdd reinstall
+
+Reported 2026-11-13 ("what happened to footer put below chat input"), right after the cdd server was repinned to
+13b227107 and restarted, and the chat was asked to run `/reload-plugins`. The line under the prompt (repository · branch
+· folder) was gone. The `PromptHint` hook in `register.ts` draws it from the active session's ticket in the chat bar's
+last board read (`ChatBarClient.statusLine`), and draws nothing while that read holds no active ticket. Not yet
+diagnosed: whether the read after the restart or reload failed or had not happened yet, or whether the hook was skipped.
