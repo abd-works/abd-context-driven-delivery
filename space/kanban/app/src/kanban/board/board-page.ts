@@ -28,6 +28,7 @@ const SERVER_BACK_WITHIN_MILLISECONDS = 30_000
 const SERVER_BACK_CHECK_MILLISECONDS = 1000
 const CLAUDE_OPEN_PATH = '/claude/open'
 const REPORT_QUERY = 'report'
+const HELP_QUERY = 'help'
 const FIDELITY_QUERY = 'fidelity'
 const NOT_READ_YET: BoardData = { project: '', practices: [], open_tickets: [], active: null, columns: [], fidelities: [], sends_fixes_directly: false, unsaved: null }
 
@@ -149,8 +150,25 @@ export class BoardPage {
     await this.panels.openReport(ticket, progress)
   }
 
+  // A link such as ?help=<ticket>&fidelity=<slug>, which the chat bar opens from a fidelity's hover tip, opens that
+  // fidelity's help panel, as its ? on the ticket's tile does. A link naming nothing the board shows opens nothing.
+  async openLinkedHelp(search: string): Promise<void> {
+    const query = new URLSearchParams(search)
+    const name = query.get(HELP_QUERY)
+    const slug = query.get(FIDELITY_QUERY)
+    if (!name || !slug) return
+    if (!this.store.state.board) await this.reader.refresh()
+    const ticket = this.board.tickets.find(shown => shown.name === name)
+    const progress = ticket?.progressNamed(slug)
+    if (!ticket || !progress) return this.store.toast(`The board has no ${slug} help for ${name}.`, true)
+    this.store.change({ selected: ticket.address })
+    await this.panels.openFidelityHelp(progress)
+  }
+
   start(): () => void {
-    void this.openLinkedReport(typeof location === 'undefined' ? '' : location.search)
+    const search = typeof location === 'undefined' ? '' : location.search
+    void this.openLinkedReport(search)
+    void this.openLinkedHelp(search)
     const stopBoard = this.reader.startPolling()
     const chatTimer = setInterval(() => void this.pollChats(), CHAT_POLL_MILLISECONDS)
     void this.pollChats()
