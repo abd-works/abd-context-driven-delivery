@@ -8,8 +8,8 @@ import { expect, test } from 'claude-code/testing'
 
 // The engine beneath the mod: cdd answers server-health.report with `health`; anything else cdd is asked is refused, so
 // the chat bar shows its problem line and the panel still draws. The board answers once it has been started, when
-// `isBoardUp` is false at first. The agent is asked to open each URL in the desktop app's browser pane, unless `hasPane`
-// is false and the chat takes no prompts. Every tab opened and every process the mod runs or spawns is kept, in order.
+// `isBoardUp` is false at first. The desktop app's browser pane opens a tab at each URL it is given, unless `hasPane` is
+// false, as in a terminal. Every tab opened and every process the mod runs or spawns is kept, in order.
 type World = {
   health: Record<string, unknown>
   isBoardUp: boolean
@@ -47,7 +47,15 @@ function engine(on: any, health: Record<string, unknown>): World {
   on('clock.after', () => ({ value: undefined }))
   on('tool.list', () => ({ value: [] }))
   on('tool.call', () => ({ result: {} }))
-  on('mcp.call', (_: unknown, e: { tool: string }) => (e.tool === 'server-health.report' ? answer(JSON.stringify(world.health)) : answer(`${e.tool} is not part of this story`, true)))
+  // The desktop app's browser pane opens a tab at each URL it is given; a chat without the pane has no such server.
+  on('mcp.call', (_: unknown, e: { server: string; tool: string; args?: { url?: string } }) => {
+    if (e.server === 'Claude_Browser' && e.tool === 'preview_start') {
+      if (!world.hasPane) throw new Error('no MCP server named Claude_Browser')
+      world.tabs.push(e.args?.url ?? '')
+      return answer('opened')
+    }
+    return e.tool === 'server-health.report' ? answer(JSON.stringify(world.health)) : answer(`${e.tool} is not part of this story`, true)
+  })
   on('ui.toast', (_: unknown, e: { text: string }) => {
     world.toasts.push(e.text)
     return { value: undefined }
@@ -55,15 +63,7 @@ function engine(on: any, health: Record<string, unknown>): World {
   on('ui.status', () => ({ value: undefined }))
   on('ui.invalidate', () => ({ value: undefined }))
   on('ui.log', () => ({ value: undefined }))
-  // The agent is asked, by a prompt, to open each tab of the desktop app's browser pane; a chat whose prompts cannot be
-  // submitted refuses it.
-  on('prompt.submit', (_: unknown, e: { text: string }) => {
-    const tab = /^Open (\S+) in the browser pane: call mcp__Claude_Browser__preview_start with url \1,/.exec(e.text)
-    if (!tab) return { text: e.text }
-    if (!world.hasPane) throw new Error('this chat takes no prompts')
-    world.tabs.push(tab[1])
-    return { text: e.text }
-  })
+  on('prompt.submit', (_: unknown, e: { text: string }) => ({ text: e.text }))
   on('env.get', () => ({ value: undefined }))
   on('http.fetch', () => ({ value: { ok: world.isBoardUp, status: world.isBoardUp ? 200 : 503, text: '' } }))
   // The board and the graph app are installed in the repository's own folder, and it has its own Python.
@@ -106,7 +106,7 @@ test('Open App From Health Panel › Open the Kanban app while it runs', async (
   const world = engine(on, HEALTHY)
   const ui = await openPanel($)
   // When the Person presses the Kanban app on the server health panel
-  // PartsView -> OpenAppView press -> openApp($, 'Kanban app') -> startedBoard($) -> openInBrowserPane -> prompt asking the agent to call preview_start
+  // PartsView -> OpenAppView press -> openApp($, 'Kanban app') -> startedBoard($) -> openInBrowserPane -> Claude_Browser preview_start
   await ui.press({ key: 'health-open-kanban-app' })
   // Then the board page for this repository opens in the browser pane
   expect(opened(world)).toEqual([BOARD_PAGE])
@@ -135,7 +135,7 @@ test('Open App From Health Panel › Open the Graph app while it runs', async ($
   const world = engine(on, HEALTHY)
   const ui = await openPanel($)
   // When the Person presses the Graph app on the server health panel
-  // PartsView -> OpenAppView press -> openApp($, 'Graph app') -> openInBrowserPane -> prompt asking the agent to call preview_start
+  // PartsView -> OpenAppView press -> openApp($, 'Graph app') -> openInBrowserPane -> Claude_Browser preview_start
   await ui.press({ key: 'health-open-graph-app' })
   // Then the Graph app opens in the browser pane, and no start script runs
   expect(opened(world)).toEqual(['http://localhost:5173'])
@@ -152,7 +152,7 @@ test('Open App From Health Panel › Start the Graph app, then open it, when it 
   }
   const ui = await openPanel($)
   // When the Person presses the Graph app on the server health panel
-  // openApp($, 'Graph app') -> python scripts/start_graph_web.py, scripts/start_graph_app.py -> openInBrowserPane -> prompt asking the agent to call preview_start
+  // openApp($, 'Graph app') -> python scripts/start_graph_web.py, scripts/start_graph_app.py -> openInBrowserPane -> Claude_Browser preview_start
   await ui.press({ key: 'health-open-graph-app' })
   // Then its web server and its app start, with the repository's Python, in that order
   expect(scriptsRun(world)).toEqual(['scripts/start_graph_web.py', 'scripts/start_graph_app.py'])
@@ -179,18 +179,18 @@ test('Open App From Health Panel › Say why the Graph app did not start', async
   await ui.unmount()
 })
 
-test('Open App From Health Panel › Say why the app did not open when the agent cannot be asked', async ($, on) => {
-  // Given the Graph app is running, and the chat takes no prompts
+test('Open App From Health Panel › Say why the app did not open when the chat has no browser pane', async ($, on) => {
+  // Given the Graph app is running, and the chat has no browser pane, as in a terminal
   const world = engine(on, HEALTHY)
   world.hasPane = false
   const ui = await openPanel($)
   // When the Person presses the Graph app on the server health panel
-  // openApp($, 'Graph app') -> openInBrowserPane -> prompt.submit refused
+  // openApp($, 'Graph app') -> openInBrowserPane -> Claude_Browser is not there
   await ui.press({ key: 'health-open-graph-app' })
   // Then nothing opens anywhere else
   expect(world.tabs).toEqual([])
   expect(openedOutside(world)).toEqual([])
   // And the Person is told where the app is and why it did not open
-  expect(world.toasts.at(-1)).toContain('The Graph app is at http://localhost:5173 but did not open: the agent could not be asked to open it in the browser pane')
+  expect(world.toasts.at(-1)).toContain('The Graph app is at http://localhost:5173 but did not open: Claude_Browser preview_start could not be called')
   await ui.unmount()
 })
