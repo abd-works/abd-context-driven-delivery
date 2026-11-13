@@ -21,6 +21,10 @@
         "scenarios": [
           "python",
           "markdown"
+        ],
+        "story_map": [
+          "markdown",
+          "drawio"
         ]
       }
     }
