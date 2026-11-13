@@ -362,15 +362,13 @@ describe('Open Ticket Chat', () => {
   describe("with a chat titled by the ticket that names no folder", () => {
     async function clicked() {
       const { page } = await board.page()
-      const opened: string[] = []
-      page.openLink = link => opened.push(link)
       await board.connectChat(page, 'other-chat')
       board.openWorktree(ACTIVE)
       await board.chat('ticket-chat', ACTIVE, '').checkIn()
       await page.chat.refresh()
       await page.reader.refresh()
       await ticketOn(page, ACTIVE).choose()
-      return { page, opened }
+      return { page, opened: board.openedChats() }
     }
 
     it("should send the board's commands to that chat", async () => {
@@ -386,10 +384,8 @@ describe('Open Ticket Chat', () => {
   describe("with no chat working on the ticket and none picked", () => {
     it('should open no worktree and no chat on a press', async () => {
       const { page } = await board.page()
-      const opened: string[] = []
-      page.openLink = link => opened.push(link)
       await ticketOn(page, ACTIVE).choose()
-      expect([ticketOn(page, ACTIVE).worktree, opened]).toEqual(['', []])
+      expect([ticketOn(page, ACTIVE).worktree, board.openedChats()]).toEqual(['', []])
     })
 
     it("should send none of the ticket's commands and ask for its chat", async () => {
@@ -401,16 +397,14 @@ describe('Open Ticket Chat', () => {
     })
   })
 
-  // The app opens a new session on a folder from a claude://code/new link; the person confirms the folder and sends.
+  // Python's chat.open hands the Claude app a claude://code/new link on a folder; the person confirms the folder and sends.
   describe("with no chat working in the ticket's worktree, and its chat opened", () => {
     async function clicked(times = 1) {
       const { page } = await board.page()
-      const opened: string[] = []
-      page.openLink = link => opened.push(link)
       const worktree = board.openWorktree(ACTIVE)
       await page.reader.refresh()
       for (let click = 0; click < times; click++) await ticketOn(page, ACTIVE).openChat()
-      return { worktree, opened }
+      return { worktree, opened: board.openedChats() }
     }
 
     it("should open a new chat on the ticket's worktree", async () => {
@@ -426,7 +420,6 @@ describe('Open Ticket Chat', () => {
     // Opening the worktree and the Claude app takes a while, so the click shows at once that the chat is on its way.
     it("should show the ticket's chat as opening", async () => {
       const { page } = await board.page()
-      page.openLink = () => undefined
       board.openWorktree(ACTIVE)
       await page.reader.refresh()
       await ticketOn(page, ACTIVE).openChat()
@@ -441,10 +434,8 @@ describe('Open Ticket Chat', () => {
   describe('with a ticket that has no worktree yet', () => {
     async function clicked() {
       const { page } = await board.page()
-      const opened: string[] = []
-      page.openLink = link => opened.push(link)
       await ticketOn(page, ACTIVE).openChat()
-      return { page, opened }
+      return { page, opened: board.openedChats() }
     }
 
     it('should open its worktree', async () => {
@@ -462,10 +453,8 @@ describe('Open Ticket Chat', () => {
   describe('with a ticket in Complete', () => {
     it('should open no new chat', async () => {
       const { page } = await board.page()
-      const opened: string[] = []
-      page.openLink = link => opened.push(link)
       await page.board.tickets.find(ticket => ticket.name === 'shipped-work')!.openChat()
-      expect(opened).toEqual([])
+      expect(board.openedChats()).toEqual([])
     })
   })
 })

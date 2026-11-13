@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { appendFileSync, mkdtempSync, rmSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import type { Server } from 'node:http'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -10,7 +10,6 @@ import { ProjectConnections, type CddConnection } from '@cdd/cdd-connection'
 import type { CddApi } from '@cdd/cdd-shared'
 import { ChatClientGenerated, type ChatCommandData } from '@cdd/harness/chat/chat'
 import { createApp } from '../packages/session-board/app'
-import { BoardUpdate } from '@src/session-board/board-update'
 import type { Send } from '@src/kanban/board/board-api'
 import { BoardPage } from '@src/kanban/board/board-page'
 import type { TicketClient } from '@src/kanban/ticket/ticket-client'
@@ -36,6 +35,8 @@ const separateChats = (): string => {
   return home
 }
 
+const openedChatsFile = (): string => process.env.CDD_OPENED_CHATS ?? ''
+
 const freePort = (): Promise<number> =>
   new Promise((done, failed) => {
     const probe = createServer().listen(0, LOCAL, () => {
@@ -43,32 +44,6 @@ const freePort = (): Promise<number> =>
       probe.close(() => (typeof address === 'object' && address ? done(address.port) : failed(new Error('no port'))))
     })
   })
-
-// An update really pulls, builds, and installs, so the test server records each step it would run and when it would
-// restart, and a spec can make one step fail.
-export class UpdateRecord {
-  readonly steps: string[] = []
-  restarts = 0
-  failingStep: string | null = null
-
-  boardUpdate(): BoardUpdate {
-    return new BoardUpdate(
-      APP_FOLDER,
-      () => this.restarts++,
-      async (command, args) => {
-        const step = [command, ...args].join(' ')
-        this.steps.push(step)
-        if (this.failingStep && step.includes(this.failingStep)) throw new Error(`${this.failingStep} could not run`)
-      },
-    )
-  }
-
-  clear(): void {
-    this.steps.length = 0
-    this.restarts = 0
-    this.failingStep = null
-  }
-}
 
 export type Asked = { method: string; path: string; body: Record<string, unknown> | undefined }
 
@@ -79,16 +54,14 @@ export class RunningBoard {
     readonly cdd: CddConnection,
     private readonly origin: string,
     private readonly server: Server,
-    readonly updates: UpdateRecord,
   ) {}
 
   static async on(cdd: CddConnection): Promise<RunningBoard> {
     const port = await freePort()
-    const updates = new UpdateRecord()
     const server = await new Promise<Server>(done => {
-      const listening = createApp(new ProjectConnections(cdd), port, STATIC_ROOT, updates.boardUpdate()).listen(port, LOCAL, () => done(listening))
+      const listening = createApp(new ProjectConnections(cdd), port, STATIC_ROOT).listen(port, LOCAL, () => done(listening))
     })
-    return new RunningBoard(cdd, `http://${LOCAL}:${port}`, server, updates)
+    return new RunningBoard(cdd, `http://${LOCAL}:${port}`, server)
   }
 
   // A page that has not read the board yet, for what a page does before its first read. timed lets a spec decide when
@@ -205,6 +178,13 @@ export class BoardOnProject {
     return chat
   }
 
+  // The links the run's cdd server handed the Claude app, one a line: Python's chat.open keeps them in the file the run
+  // names (see run-cdd-home.ts) instead of opening the app.
+  openedChats(): string[] {
+    const kept = openedChatsFile()
+    return existsSync(kept) ? readFileSync(kept, 'utf-8').split('\n').filter(Boolean) : []
+  }
+
   // A chat whose mod has gone: its state is gone with it.
   forgetChat(id: string): void {
     rmSync(join(this.chatsHome, 'chats', id), { recursive: true, force: true })
@@ -297,7 +277,7 @@ export class BoardOnProject {
     for (const branch of this.git('branch', '--format=%(refname:short)').split('\n').filter(name => name && name !== 'main')) this.git('branch', '-D', branch)
     rmSync(join(this.chatsHome, 'chats'), { recursive: true, force: true })
     this.project.reset()
-    this.board.updates.clear()
+    rmSync(openedChatsFile(), { force: true })
     if (hadOrigin) this.addOrigin()
   }
 

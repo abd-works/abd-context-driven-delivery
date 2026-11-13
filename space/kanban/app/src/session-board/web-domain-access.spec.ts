@@ -8,8 +8,7 @@ import { describe, expect, it } from 'vitest'
 import { CddConnection, ProjectConnections } from '@cdd/cdd-connection'
 
 import { createApp } from '../../packages/session-board/app'
-import { BoardUpdate } from './board-update'
-import { API_ROOT, BOARD_SERVER_PATHS } from './board-server-paths'
+import { API_ROOT } from './board-server-paths'
 
 // Refactor Kanban Board To Web Domain Access: the page reaches the CDD domain only through the generated clients, and the
 // board's server mounts only the generated routes for it. No request is sent here, so the connection never starts.
@@ -34,7 +33,7 @@ const sourcesMatching = (pattern: RegExp): string[] => pageSources(KANBAN).filte
 
 function boardServer(): Express {
   const projects = new ProjectConnections(new CddConnection(APP_FOLDER))
-  return createApp(projects, 0, join(APP_FOLDER, 'dist'), new BoardUpdate(APP_FOLDER))
+  return createApp(projects, 0, join(APP_FOLDER, 'dist'))
 }
 
 const stackOf = (app: Express): Layer[] => (app as unknown as { _router: { stack: Layer[] } })._router.stack
@@ -53,9 +52,9 @@ describe('Refactor Kanban Board To Web Domain Access', () => {
       expect(sourcesMatching(/\bfetch\(/)).toEqual([join('board', 'board-api.ts')])
     })
 
-    it("should mount no route of the server's own under /api but Update and claude/open, which reach no domain tool", () => {
+    it("should mount no route of the server's own under /api", () => {
       const own = stackOf(boardServer()).flatMap(layer => (layer.route?.path.startsWith(API_ROOT) ? [layer.route.path] : []))
-      expect(own).toEqual(BOARD_SERVER_PATHS.map(path => `${API_ROOT}${path}`))
+      expect(own).toEqual([])
     })
 
     it('should mount the generated routes as one router under /api', () => {

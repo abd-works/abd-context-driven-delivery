@@ -87,7 +87,7 @@ export type BoardState = {
   isMessagesOpen: boolean
   // The server serves a newer build than the page was loaded from.
   isNewBuild: boolean
-  // An update is getting the latest code, rebuilding, and re-pinning cdd, which takes a while; one press at a time.
+  // An update installs the board again and rebuilds its page, which takes a while; one press at a time.
   isUpdating: boolean
 }
 

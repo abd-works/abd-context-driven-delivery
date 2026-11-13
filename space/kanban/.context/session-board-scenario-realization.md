@@ -54,42 +54,30 @@ it should show a toast
 ##### that a person has restarted cdd
 
 ```
-it should get the latest code, rebuild the page, then pin cdd to it
+it should install the Kanban app through its generated client
 -> BoardPage.update()
--> BoardUpdate.update()
+-> EditorAppClient.kanban.install()
+-> App.install()
 ```
 
 ```
-it should restart the board server once the update has answered
--> BoardPage.update()
--> BoardUpdate.restart()
-```
-
-```
-it should load the page again from the restarted server
+it should load the page again from the new build
 -> BoardPage.update()
 -> BoardStore.change({ isNewBuild: true })
 ```
 
-###### with a step that fails
+###### with an install that fails
 
 ```
-it should say in a toast which step failed
+it should say in a toast why it failed
 -> BoardPage.update()
--> BoardUpdate.update()
-<- UpdateStepFailed
+-> EditorAppClient.kanban.install()
+<- AppNotStarted
 ```
 
 ```
 it should keep the page it has
 -> BoardPage.update()
-```
-
-```
-it should keep the board server running
--> BoardPage.update()
--> BoardUpdate.update()
-<- UpdateStepFailed
 ```
 
 ```

@@ -209,6 +209,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 | `space/kanban/app/src/kanban/board/board-api.ts` | Observed: *BoardApi* is the board's own call layer, posting to `/api/...` paths it names itself |
 | `space/kanban/app/packages/session-board/app.ts:41-60` | Observed: hand-written routes `/api/update`, `/api/claude/open`, `/api/build` beside the generated ones |
 | `harness/.context/grill-answers.md` (Board server's own routes) | Decided (2026-11-12): `claude/open` becomes `chat.open` on *Chat* in harness/chat, and Update reuses `app.install` of the Kanban app; the board's server keeps no route of its own |
+| `harness/.context/grill-answers.md` (Board server's own routes) | Decided (2026-11-12): `claude/open` becomes `chat.open` on *Chat* in harness/chat, and Update reuses `app.install` of the Kanban app; the board's server keeps no route of its own |
 | `harness/graph/app/graph/GraphClient.ts:1-6` | Observed: the Graph app's finished shape (`GraphApi implements CddApi`, the server mounting the generated routes) |
 
 #### Scenario: Every board call reaches the domain through its generated adapter

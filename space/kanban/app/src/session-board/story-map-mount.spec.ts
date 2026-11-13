@@ -11,7 +11,6 @@ import { CddConnection, ProjectConnections } from '@cdd/cdd-connection'
 import { STORY_MAP_PAGE } from '../../../../../cdd_guidance/practices/stories/app/story-map-page'
 import { storyMapBuild } from '../../../../../cdd_guidance/practices/stories/app/story-map-routes'
 import { createApp } from '../../packages/session-board/app'
-import { BoardUpdate } from './board-update'
 
 // Deploy Story UI App With Board State: the board's server serves the Story UI editor's built page at /story-map, on its
 // own port, beside the board's page. The page is the one `npm run build` writes in the Stories practice's app folder,
@@ -37,7 +36,7 @@ describe('Deploy Story UI App With Board State', () => {
     const port = await freePort()
     const projects = new ProjectConnections(new CddConnection(APP_FOLDER))
     server = await new Promise<Server>(done => {
-      const listening = createApp(projects, port, join(APP_FOLDER, 'dist'), new BoardUpdate(APP_FOLDER)).listen(port, LOCAL, () => done(listening))
+      const listening = createApp(projects, port, join(APP_FOLDER, 'dist')).listen(port, LOCAL, () => done(listening))
     })
     origin = `http://${LOCAL}:${port}`
   })

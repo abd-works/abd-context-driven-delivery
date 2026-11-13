@@ -17,7 +17,7 @@ export const BOARD_SERVER_DOWN = 'The session board server is not answering.'
 
 
 // Every call the page makes to its server, so a failure is shown to the person in one place. A failed call answers null.
-// The generated clients post through it, and so do the board server's own two routes (board-server-paths.ts).
+// The generated clients post through it.
 export class BoardApi implements CddApi {
   constructor(
     private readonly store: BoardStore,
