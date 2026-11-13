@@ -14,7 +14,7 @@ from harness.agent_tools.progress import report_progress
 from harness.graph.graph_app import GRAPH_APP_PORTS
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_server import long_call, mcp
 
 _HOST = "127.0.0.1"
 # A server listening on this machine takes a connection at once: the system completes it, not the server.
@@ -171,8 +171,11 @@ class App:
             self.install()
         return self
 
+    @long_call
+    @mcp
+    @agent_tool
     def install(self) -> App:
-        """Install its packages, then build its page when its package builds one."""
+        """Install the app's packages, then build its page when its package builds one; a page open on it loads the new build."""
         if not self._package.exists():
             raise AppNotStarted(self, f"{self.folder} holds no package.json, so the {self.label} app is not there yet")
         report_progress(f"{self.label}: npm install in {self.folder}")

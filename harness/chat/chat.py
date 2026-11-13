@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
 from typing import Callable, Literal, TypeVar
+from urllib.parse import quote
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
@@ -36,6 +39,12 @@ FAILED = "failed"
 MESSAGE_STATES = (WAITING, TAKEN, SHOWN, DONE, FAILED)
 # The board shows a chat's latest messages; older ones are not worth keeping.
 KEPT_MESSAGES = 20
+# The Claude app opens a new chat on a folder from this link, with its prompt filled in for the person to send.
+NEW_CHAT_LINK = "claude://code/new"
+# How long the system may take to hand a link to the app registered for its scheme.
+OPEN_LINK_SECONDS = 30
+# A file that keeps every link a new chat was opened with instead of opening the Claude app, as a test run names it.
+OPENED_CHATS_VARIABLE = "CDD_OPENED_CHATS"
 
 CommandKind = Literal["submit", "fill", "command"]
 MessageState = Literal["waiting", "taken", "shown", "done", "failed"]
@@ -102,6 +111,40 @@ def _chats_folder() -> Path:
     return Path(os.environ.get("CDD_CHATS_FOLDER") or Path.home() / ".claude" / "cdd-chats")
 
 
+class ChatLinks:
+    """Hands a new chat's link to the Claude app through the system, which passes it to the app registered for its
+    scheme. A page in the app's Browser pane cannot, so the board opens a ticket's chat through the cdd server."""
+
+    def open(self, link: str) -> None:
+        if sys.platform == "win32":
+            os.startfile(link)  # noqa: S606 - the link names the desktop app's own scheme
+        else:
+            subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", link], check=True, timeout=OPEN_LINK_SECONDS)
+
+
+class RecordedChatLinks(ChatLinks):
+    """Keeps each link in a file, one a line, instead of opening the Claude app: a test run's chats open through it, so
+    no spec opens a chat on this machine, and the spec reads the links back."""
+
+    def __init__(self, file: Path) -> None:
+        self._file = file
+
+    def open(self, link: str) -> None:
+        self._file.parent.mkdir(parents=True, exist_ok=True)
+        with self._file.open("a", encoding="utf-8") as kept:
+            kept.write(f"{link}\n")
+
+    @property
+    def links(self) -> list[str]:
+        return self._file.read_text(encoding="utf-8").splitlines() if self._file.is_file() else []
+
+
+def _chat_links() -> ChatLinks:
+    """The system's links, unless the run names a file to keep them in."""
+    kept = os.environ.get(OPENED_CHATS_VARIABLE)
+    return RecordedChatLinks(Path(kept)) if kept else ChatLinks()
+
+
 @identity("id")
 @language_adapter(language="typescript")
 @agent_toolset
@@ -114,6 +157,8 @@ class Chat:
 
     # Seconds since the epoch; a spec sets its own.
     clock = staticmethod(time.time)
+    # What a new chat's link is handed to.
+    opener: ChatLinks = _chat_links()
 
     def __init__(self, folder: Path) -> None:
         self._folder = folder
@@ -132,8 +177,22 @@ class Chat:
     def list(cls) -> list[Chat]:
         """List the chats whose cdd-board mod has checked in lately: each one's id, the title the app shows for it, and whether a turn is running."""
         folder = _chats_folder()
-        chats = [cls(entry) for entry in sorted(folder.iterdir())] if folder.is_dir() else []
+        chats = [cls.load(entry.name) for entry in sorted(folder.iterdir())] if folder.is_dir() else []
         return [chat for chat in chats if chat.is_connected]
+
+    @classmethod
+    @mcp
+    @agent_tool
+    def open(cls, folder: str, prompt: str) -> str:
+        """Open a new chat in the Claude app on folder, with prompt filled in; the app asks the person to confirm the folder and send. Answers the link it opened."""
+        link = cls.link_to_new(folder, prompt)
+        cls.opener.open(link)
+        return link
+
+    @staticmethod
+    def link_to_new(folder: str, prompt: str) -> str:
+        """The link that opens a new chat on folder with prompt filled in."""
+        return f"{NEW_CHAT_LINK}?folder={quote(folder, safe='')}&q={quote(prompt, safe='')}"
 
     @mcp
     @agent_tool

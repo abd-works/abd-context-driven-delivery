@@ -5,15 +5,14 @@ asked, where the person switches to or creates sessions as usual."""
 
 from __future__ import annotations
 
-import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-from urllib.parse import quote
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
+from harness.chat.chat import Chat
 from harness.installation.data_class import data_field
 from harness.installation.files import command
 from harness.installation.json_file import JsonFile
@@ -28,8 +27,6 @@ _CONFIG_FILE = "config.json"
 _REPOS_FOLDER = "repos_folder"
 _DEFAULT_BRANCH = "main"
 _VISIBILITIES = ("private", "public", "internal")
-# Where a new chat opens in the Claude desktop app: the person confirms the folder and sends the first prompt.
-_NEW_CHAT_LINK = "claude://code/new"
 _FIRST_PROMPT = "Open this repository's CDD main session: call sessions.switch with name main."
 _GITIGNORE_HEADER = "# Ignored as the CDD checkout ignores (written by repos.open)"
 _INSTALL_SECONDS = 600
@@ -267,18 +264,11 @@ class Repos:
             raise InstallFailedError(f"installing CDD into {root / '.claude'} failed: {(answer.stderr or answer.stdout).strip()[-2000:]}")
         return f"Installed CDD into {root / '.claude'}."
 
-    def _chat_link(self, root: Path) -> str:
-        return f"{_NEW_CHAT_LINK}?folder={quote(str(root), safe='')}&q={quote(_FIRST_PROMPT, safe='')}"
-
     def _open_chat(self, root: Path, name: str) -> str:
         """Open a new top-level chat on root in the Claude desktop app. The app asks the person to confirm the folder and
         send the first prompt; when the link cannot be opened, the agent is told to start the chat itself."""
-        link = self._chat_link(root)
         try:
-            if sys.platform == "win32":
-                os.startfile(link)  # noqa: S606 - the link names the desktop app's own scheme
-            else:
-                subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", link], check=True, timeout=30)
+            Chat.open(str(root), _FIRST_PROMPT)
         except (OSError, subprocess.SubprocessError):
             return self._chat_instructions(root, name)
         return f"Opened a new chat on {root} in the Claude app: send its first prompt there to open the main session."
@@ -286,6 +276,6 @@ class Repos:
     def _chat_instructions(self, root: Path, name: str) -> str:
         return (
             f"Start a top-level chat on {root}: start_session with initiation user_asked, context fresh, cwd {root}, "
-            f"use_worktree false, title {name!r}, and prompt {_FIRST_PROMPT!r}. Or open {self._chat_link(root)}"
+            f"use_worktree false, title {name!r}, and prompt {_FIRST_PROMPT!r}. Or open {Chat.link_to_new(str(root), _FIRST_PROMPT)}"
         )
 
