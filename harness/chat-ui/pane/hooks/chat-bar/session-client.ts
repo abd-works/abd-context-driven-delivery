@@ -3,6 +3,7 @@ import type { EngineInterface } from 'claude-code'
 import type { LeaveChoicesData, TicketData } from '@cdd/space/kanban/ticket'
 
 import { reasonOf } from '../shared/failure'
+import { chosenFolder } from '../shared/folder-dialog'
 import { callTool, callToolText, currentChatBar, refreshChatBar, showFailure, type ChatBarClient } from './chat-bar-client'
 import { whileBusy } from './busy-client'
 import { startedChatIn } from './chat-folder-client'
@@ -75,6 +76,24 @@ export async function openRepo($: EngineInterface, name: string): Promise<void> 
   } catch (failure) {
     await showFailure($, `${name} did not open: ${reasonOf(failure)}`)
   }
+}
+
+// repos.open_folder opens any folder as it is, git or not, in a new top-level chat, where the person opens its main
+// session; nothing is created there.
+export async function openFolder($: EngineInterface, path: string): Promise<void> {
+  await closeRepoList($)
+  try {
+    const answer = await whileBusy($, `Opening folder ${path}`, () => callToolText($, 'repos.open_folder', { path }))
+    $.ui.toast(answer)
+  } catch (failure) {
+    await showFailure($, `${path} did not open: ${reasonOf(failure)}`)
+  }
+}
+
+// The folder button asks the system's folder picker; cancelling it leaves the list open as it was.
+export async function chooseFolder($: EngineInterface): Promise<void> {
+  const path = await chosenFolder($)
+  if (path) await openFolder($, path)
 }
 
 // The close dialog offers what the Python Ticket answers closing can do with the session's work.

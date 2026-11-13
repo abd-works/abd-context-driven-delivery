@@ -30,7 +30,7 @@ _DEFAULT_BRANCH = "main"
 _VISIBILITIES = ("private", "public", "internal")
 # Where a new chat opens in the Claude desktop app: the person confirms the folder and sends the first prompt.
 _NEW_CHAT_LINK = "claude://code/new"
-_FIRST_PROMPT = "Open this repository's CDD main session: call sessions.switch with name main."
+_FIRST_PROMPT = "Open this folder's CDD main session: call sessions.switch with name main."
 _GITIGNORE_HEADER = "# Ignored as the CDD checkout ignores (written by repos.open)"
 _INSTALL_SECONDS = 600
 _PUBLISH_SECONDS = 180
@@ -57,6 +57,14 @@ class FolderIsAWorktreeError(ValueError):
 
     def __init__(self, folder: Path) -> None:
         super().__init__(f"{folder} is a linked worktree of another repository, not a repository of its own")
+        self.folder = folder
+
+
+class FolderNotFoundError(ValueError):
+    """Raised when the folder a chat is to open on is not a folder that is there."""
+
+    def __init__(self, folder: Path) -> None:
+        super().__init__(f"{folder} is not a folder; choose one that is there")
         self.folder = folder
 
 
@@ -200,6 +208,20 @@ class Repos:
             steps.append(self._install_cdd(root))
         steps.append(self._open_chat(root, cleaned) if start_chat else self._chat_instructions(root, cleaned))
         return "\n".join(f"- {step}" for step in steps if step)
+
+    @mcp
+    @command(name="open-folder")
+    @agent_tool
+    @noSessionLog
+    def open_folder(self, path: str, start_chat: bool = True) -> str:
+        """Open the folder at path, any folder on disk, in a chat of its own, as it is: no repository is created, nothing
+        is published or installed, and a folder that is not a git repository stays one. start_chat opens a new top-level
+        Claude chat on it; the person sends its first prompt, which opens the folder's main session. With no git there,
+        its tickets get no worktree or chat of their own."""
+        root = Path(path).expanduser().resolve()
+        if not root.is_dir():
+            raise FolderNotFoundError(root)
+        return self._open_chat(root, root.name) if start_chat else self._chat_instructions(root, root.name)
 
     def _create(self, root: Path) -> str:
         if (root / ".git").is_file():

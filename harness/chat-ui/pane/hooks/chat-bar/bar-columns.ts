@@ -54,14 +54,18 @@ function sessionButtonCellsOf(chatBar: ChatBarClient): number {
 // The repo button: the repository's name, or "repo" while it has none, and its ⑂.
 export const REPO_GLYPH = '⑂'
 export const repoWordOf = (chatBar: ChatBarClient): string => chatBar.repoName || 'repo'
-const repoButtonCellsOf = (chatBar: ChatBarClient): number => repoWordOf(chatBar).length + 1 + REPO_GLYPH.length
 
-// How far the repo list's right edge sits from the line's end: the session buttons after the repo button.
-export function repoListRightOf(chatBar: ChatBarClient): number {
+// The session button after the repo button: the session's name, or "main", and its +.
+const SESSION_GLYPH = '+'
+export const sessionWordOf = (chatBar: ChatBarClient): string => chatBar.sessionName || 'main'
+const sessionButtonWordCellsOf = (chatBar: ChatBarClient): number => sessionWordOf(chatBar).length + 1 + SESSION_GLYPH.length
+
+// How far the session list's right edge sits from the line's end: the session buttons after "main +".
+export function sessionListRightOf(chatBar: ChatBarClient): number {
   return sessionButtonCellsOf(chatBar)
 }
 
-// How far the session list's right edge sits from the line's end: the repo button and the session buttons after "main +".
-export function sessionListRightOf(chatBar: ChatBarClient): number {
-  return GAP + repoButtonCellsOf(chatBar) + sessionButtonCellsOf(chatBar)
+// How far the repo list's right edge sits from the line's end: "main +" and the session buttons after the repo button.
+export function repoListRightOf(chatBar: ChatBarClient): number {
+  return GAP + sessionButtonWordCellsOf(chatBar) + sessionButtonCellsOf(chatBar)
 }

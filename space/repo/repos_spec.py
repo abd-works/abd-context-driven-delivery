@@ -13,7 +13,7 @@ from mamba import after, before, context, description, it
 
 from harness.mcp.cdd_home import CddHome
 from harness.process.git import Git
-from space.repo.repos import CddConfig, FolderIsAWorktreeError, NotAReposFolderError, Repos, RepoNameRequiredError
+from space.repo.repos import CddConfig, FolderIsAWorktreeError, FolderNotFoundError, NotAReposFolderError, Repos, RepoNameRequiredError
 
 
 def _repository(folder: Path) -> Path:
@@ -111,3 +111,19 @@ with description("Repos") as self:
     with context("opening a repository without a name"):
         with it("should refuse"):
             expect(lambda: self.repos.open(" ", publish=False, install=False, start_chat=False)).to(raise_error(RepoNameRequiredError))
+
+    with context("opening a plain folder in a chat of its own"):
+        with before.each:
+            self.plain = self.top / "notes"
+            self.plain.mkdir()
+            self.answer = self.repos.open_folder(str(self.plain), start_chat=False)
+
+        with it("should leave it a plain folder, with no repository created"):
+            expect((self.plain / ".git").exists()).to(equal(False))
+
+        with it("should say how to start the folder's own chat"):
+            expect(self.answer).to(contain(f"cwd {self.plain}"))
+
+    with context("opening a folder that is not there"):
+        with it("should refuse it"):
+            expect(lambda: self.repos.open_folder(str(self.top / "missing"), start_chat=False)).to(raise_error(FolderNotFoundError))

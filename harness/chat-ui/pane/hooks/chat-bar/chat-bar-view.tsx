@@ -4,7 +4,7 @@ import type { ActionPickerJson, ChatBarViewJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { GlyphButtonView } from '../shared/glyph-button-view'
 import { ActionButtonView, PickerView } from './action-button-view'
-import { formatGlyphOf, overlayColumnOf, REPO_GLYPH, repoWordOf, stageColumn } from './bar-columns'
+import { formatGlyphOf, overlayColumnOf, REPO_GLYPH, repoWordOf, sessionWordOf, stageColumn } from './bar-columns'
 import { toggleFormat, type FormatChips } from './format-choices-client'
 import { toggleOverlay, toggleOverlayList, type OverlayChips } from './overlay-choices-client'
 import { askChatToFixBoard, dismissFailure, fixFailure, runHandoff, type ChatBarClient } from './chat-bar-client'
@@ -112,18 +112,18 @@ function WordGlyphButtonView({ Button, Text }: ElementTable, key: string, word: 
   )
 }
 
-// In the main chat, "main +" is one button that opens the list of tickets to open, its card showing on hover, and the
-// repository's name with its ⑂ one button that opens the list of repositories. A ticket's own chat works only on that
+// In the main chat, the repository's name with its ⑂ comes first, one button that opens the list of repositories, then
+// "main +", one button that opens the list of tickets to open, its card showing on hover. A ticket's own chat works only on that
 // ticket, so it shows the name alone: a press opens the session's folder in the files pane, its card showing on hover.
 function SessionNameView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
   const { Box, Button, Text } = elements
   if (chatBar.isMain) {
     return (
       <Box key="session-name" flexDirection="row" gap={1}>
-        <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
-          {WordGlyphButtonView(elements, 'session-list-button', chatBar.sessionName || 'main', '+', () => toggleSessionList($))}
-        </Box>
         {WordGlyphButtonView(elements, 'repo-list-button', repoWordOf(chatBar), REPO_GLYPH, () => toggleRepoListWithRepos($))}
+        <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
+          {WordGlyphButtonView(elements, 'session-list-button', sessionWordOf(chatBar), '+', () => toggleSessionList($))}
+        </Box>
       </Box>
     )
   }

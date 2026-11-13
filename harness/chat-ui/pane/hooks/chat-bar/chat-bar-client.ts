@@ -153,6 +153,12 @@ export class ChatBarClient {
     return this.board?.project ?? ''
   }
 
+  // Whether the folder is a git repository, where tickets get worktrees and chats of their own. A board read before the
+  // overview said so counts as one, so its tickets stay open.
+  get isClone(): boolean {
+    return this.board?.is_clone ?? true
+  }
+
   // The status line below the chat: the repository, the branch the session's chat works on, and the folder the session
   // works in from the repository's folder, which a session working in the whole repository leaves out.
   get statusLine(): string {

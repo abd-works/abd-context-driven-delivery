@@ -765,6 +765,13 @@ class BoardOverview:
 
     @property
     @data_field
+    def is_clone(self) -> bool:
+        """Whether the project is a git repository. A plain folder has no branches, so its tickets get no worktree
+        and no chat of their own: only its main session works there."""
+        return self._board.repo.is_clone
+
+    @property
+    @data_field
     def practices(self) -> list[BoardPractice]:
         """The board's practices, each with the colour and short name its fidelities are drawn in."""
         return [BoardPractice(practice) for practice in self._board.practices]
