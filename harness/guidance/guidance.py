@@ -307,6 +307,16 @@ class PracticeGuidance(Guidance):
     """The Clean Engineering practice whose fidelities accompany this practice's: the one of the set this practice was
     made with, which the catalogue hands it, so a companion works in the same session; none for a practice made apart
     from any set."""
+    editor: ClassVar[Any] = None
+    """The app that edits this practice's files beside the chat (an *App* of harness/diagnostics): the Story UI editor
+    for Stories, none for every other practice. The module that makes the app gives it (``edit_with``), so the framework
+    and the practice import no app."""
+
+    @classmethod
+    def edit_with(cls, app: Any) -> None:
+        """Edit this practice's files with app: every instance of the practice, in every session, answers it as its
+        editor."""
+        cls.editor = app
 
     def __init__(
         self,

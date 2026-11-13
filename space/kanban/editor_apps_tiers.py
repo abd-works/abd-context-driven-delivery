@@ -26,6 +26,7 @@ from harness.diagnostics.app import App
 from harness.diagnostics.server_health import ServerHealth
 from harness.installation.data_class import data_of
 from harness.mcp.mcp_server import McpServer
+from space.kanban.board import Board
 from space.kanban.session_board_examples import SessionsProject
 from space.session.sessions import Sessions
 
@@ -64,7 +65,8 @@ class ChatLaunch:
 
 class DomainTier:
     """*App* and *ServerHealth* on a throwaway project, with nothing between a step and the domain. The project keeps
-    sessions, as the Graph app's calls work in the session open in it (`app_call`)."""
+    sessions, as the Graph app's and the Story UI's calls work in the session open in it (`app_call`), and the board the
+    chat bar's file viewer reads them through."""
 
     name = "domain"
 
@@ -77,6 +79,7 @@ class DomainTier:
             project=project,
             sessions_project=sessions_project,
             sessions=Sessions.of_project(project),
+            board=lambda: Board.load(project),
             app_call=lambda: ToolCall(project=project),
             apps=[],
             chat=chat,

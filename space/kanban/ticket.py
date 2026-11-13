@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.chat.chat import Chat
+from harness.diagnostics.app import App
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.graph.pattern_overlays import PatternOverlays
 from harness.guidance.stages import GENERATE, RENDER, VALIDATE
@@ -819,6 +820,13 @@ class FidelityProgress:
     @property
     def _practice(self) -> PracticeGuidance:
         return self._fidelity.practice_guidance
+
+    @property
+    @data_field
+    def editor(self) -> App | None:
+        """The app the board's small editor widget on this row opens: its practice's editor on the practice's first
+        fidelity's row (the Stories story map), none on every other row."""
+        return self._practice.editor if self._fidelity is next(iter(self._practice.fidelities), None) else None
 
     @property
     def done_actions(self) -> list[str]:

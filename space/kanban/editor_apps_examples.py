@@ -19,6 +19,7 @@ from pathlib import Path
 
 from harness.diagnostics.app import App, AppServer, AppStatus
 import space.kanban  # noqa: F401 - registers the Kanban and Story UI apps, as the cdd server does when it loads every toolset
+from space.kanban.session_board_examples import BacklogFileSeed
 
 @dataclass(frozen=True)
 class AppExample:
@@ -99,3 +100,39 @@ def app_in(report: dict, label: str) -> dict:
     """The app labelled label as the server health report lists it, which the status row reads."""
     return next(app for app in report["apps"] if app["label"] == label)
 
+
+
+@dataclass(frozen=True)
+class PracticeRow:
+    """Interaction: one fidelity's row of a ticket's practice grid, by its slug, and whether the Story UI editor's
+    widget sits on it (the practice rows table)."""
+
+    name: str
+    fidelity: str
+    has_editor: bool
+
+
+# The practice rows table: only the Stories story-map row carries the Story UI editor's widget.
+PRACTICE_ROWS = [
+    PracticeRow("Stories story map", "stories-story-map", True),
+    PracticeRow("Stories scenarios", "stories-scenarios", False),
+    PracticeRow("UX mockup", "ux-mockup", False),
+    PracticeRow("Clean Engineering model", "clean-engineering-model", False),
+]
+
+
+@dataclass(frozen=True)
+class DesignView:
+    """Seed: the design canvas version a session's UX root keeps, with the Claude Design link recorded for it
+    (`versions.json`, which *CanvasVersions* owns). Interaction: the link the file viewer opens."""
+
+    ux_root: str
+    version: int
+    link: str
+
+
+# The design views table: checkout-flow's UX root has version-2 published; billing-report has UX turned off.
+CHECKOUT_FLOW_DESIGN = DesignView("harness/.context/ux", 2, "https://claude.ai/design/checkout-flow-v2")
+
+# Seed: the tickets table's search-orders, an idea in the Backlog with no session yet.
+SEARCH_ORDERS = BacklogFileSeed("search-orders.md", "Search Orders", "Find an order by its number or its customer.")

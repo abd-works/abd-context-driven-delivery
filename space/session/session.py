@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
 from harness.agent_tools.tool_call import ToolCall
+from harness.design_canvas.versions import CanvasVersions
 from harness.graph.graph import Graph
 from harness.graph.pattern_overlays import PatternOverlays
 from harness.guidance.practice_catalogue import PracticeCatalogue
@@ -461,6 +462,16 @@ class Session:
         a board listing every session would otherwise read every session's saved graph. A practice that runs is reached
         through ``practices``, so it works in the graph."""
         return dict(self._own_outputs)
+
+    @property
+    @data_field
+    def design_view(self) -> str:
+        """The Claude Design link recorded for the latest version of the design canvas kept under the folder one of its
+        enabled practices writes under, the UX practice's (``CanvasVersions.in_practice_root``), which the chat bar's
+        file viewer opens; empty when no link is recorded."""
+        canvases = (CanvasVersions.in_practice_root(output.output_root) for output in self._own_outputs.values() if output.enabled)
+        links = (canvas.link(canvas.latest) for canvas in canvases)
+        return next((link for link in links if link), "")
 
     @property
     @data_field(key="handoff")

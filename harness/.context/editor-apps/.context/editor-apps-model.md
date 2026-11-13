@@ -230,6 +230,14 @@ Canonical: `space/session/practice_session_output.py`. It kept the one format a 
 + editor: App | None  <<data_field>>
 	// its practice's editor on the practice's first fidelity row (Stories: the story map), none on every other row: the board's small editor widget sits on that row only
 
+### BoardPractice (extended)
+
++ editor: App | None  <<data_field>>
+	-> practice.editor
+	// the app that edits the practice's files, on every practice the board overview sends: the chat bar's file viewer shows the Story UI editor tile on every file of a fidelity whose practice has one (the person's decision: every Stories file)
+
+Decided while coding (implementation, 2026-11-12): the chat bar's file viewer shows a tile on every Stories file, not only the story map's, so it reads the editor from the practice the board overview sends (*BoardPractice.editor*), not from *FidelityProgress.editor*, which stays on the first row for the board's widget. *PracticeGuidance.editor* is a class-level value that `edit_with` sets, since every session makes its own practice instances and all of them edit with the same app.
+
 ### BoardPage (deleted)
 
 Its `rebuild` is `App.install` of the CDD Kanban's *App* (`KANBAN_APP`); `scripts/install.py` calls that instead and prints an *AppNotStarted* rather than raising it.

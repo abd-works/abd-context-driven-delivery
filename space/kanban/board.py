@@ -12,6 +12,7 @@ from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.catalog_generator.catalog_examples import CatalogFidelity
 from harness.chat.chat import Chat
+from harness.diagnostics.app import App
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
@@ -776,6 +777,13 @@ class BoardPractice:
     @data_field
     def colour(self) -> str:
         return self._practice.colour
+
+    @property
+    @data_field
+    def editor(self) -> App | None:
+        """The app that edits the practice's files, which a file of the practice opens in from the chat bar's file viewer:
+        the Story UI editor for Stories; none for a practice no app edits."""
+        return self._practice.editor
 
 
 class ColumnOverview:
