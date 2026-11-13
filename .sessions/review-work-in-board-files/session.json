@@ -24,6 +24,11 @@
         "story_map": "drawio",
         "scenarios": "markdown"
       }
+    },
+    "clean_engineering": {
+      "formats": {
+        "model": "markdown"
+      }
     }
   }
 }
