@@ -15,3 +15,9 @@ Asked by the lern_domain_driven gate (`ask-cross-aggregate-sync`) while generati
 - **Cross-aggregate sync (accepted):** a Story UI edit is saved and rendered to the chosen formats in one operation; chosen formats live only in session.json; the other apps read the active ticket on their next read (no push).
 - **Session activated last:** do NOT add `Board.last_activated` or any new `_board.json` field. The graph follows the chat's open session (the session `sessions.switch` / activation opened), which already exists.
 - **Editor tiles:** every Stories file gets a Story UI editor tile in the file viewer, acceptance-test code files included.
+- **Story notes:** the story model gets a description field holding the paragraph under each story (and epic) heading. Story UI's "notes" is renamed to description so the UI matches the model. A save writes descriptions back unchanged, so hand-written story maps (harness/.context/stories/story-map.md) are editable, not read-only.
+- **Scenario files:** editable in Story UI (scenarios, steps, examples through the story model).
+- **Acceptance-test files:** not edited in Story UI; shown as links that open the file in the chat bar's file viewer.
+- **Examples:** examples are already part of the story model. Where Story UI's screens disagree with the model, fix the screens to the model.
+- **Increments:** add increments to the story model, shaped as the old Story UI's JSON had them: an ordered list of named increments, each a collection of stories that must exist in the story map. Edited through the model; the Story UI increment views come back on it.
+- **Ticket scope:** Story UI opened from the board on a ticket shows only the part of the story map the ticket's session covers.
