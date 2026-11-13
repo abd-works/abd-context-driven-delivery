@@ -46,16 +46,17 @@ function logged($: EngineInterface, doing: string): (failure: unknown) => void {
   return failure => $.ui.log(`${PLUGIN}: ${doing} failed: ${reasonOf(failure)}`, { to: 'debug' })
 }
 
-// The host draws a plugin's status at the right of the line below the chat and cannot set it left, so the chat bar
-// draws its own status row instead, and the host's line is cleared of what an earlier version showed there.
-function clearStatus($: EngineInterface): void {
-  $.ui.status(undefined)
+// The status line below the chat, where the host draws a plugin's status: the repository, the branch the session's
+// chat works on, and the whole path of the folder the session works in. The host draws it at the right.
+async function showStatus($: EngineInterface): Promise<void> {
+  $.ui.status((await currentChatBar($)).statusLine || undefined)
 }
 
 // The system prompt and the chat bar read the same ChatBarClient. The cdd server can still be
 // connecting at session start; the chat bar then shows why, and the next event reads again.
 async function readActive($: EngineInterface): Promise<void> {
   await refreshChatBar($)
+  await showStatus($)
   const chatBar = await currentChatBar($)
   if (chatBar.problem) return
   await loadFormatChips($, chatBar)
@@ -76,7 +77,6 @@ export const register: Register = on => {
       // The cdd server can still be connecting at session start; the next check-in tries again.
       void checkIn($, chat).catch(logged($, 'checking in with the board'))
     })
-    clearStatus($)
     await readActive($)
     refreshHealthSoon($)
     return next(e)
@@ -104,6 +104,7 @@ export const register: Register = on => {
     if (CDD_TOOL.test(e.tool)) {
       forgetFormatChips()
       await refreshChatBar($)
+      await showStatus($)
     }
     return ran
   })
@@ -126,6 +127,7 @@ export const register: Register = on => {
   on('prompt.submit', async ($, e, next) => {
     await closeOptionListsOutside($)
     await Promise.all([refreshHealth($), refreshChatBar($)])
+    await showStatus($)
     return next(e)
   })
 

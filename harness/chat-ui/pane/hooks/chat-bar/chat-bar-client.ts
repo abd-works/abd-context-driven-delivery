@@ -153,8 +153,8 @@ export class ChatBarClient {
     return this.ticket ? this.ticket.session.workpath || this.repoName : ''
   }
 
-  // The status row under the line, from the left: the repository, the branch the session's chat works on, and the
-  // whole path of the folder the session works in.
+  // The status line below the chat: the repository, the branch the session's chat works on, and the whole path of the
+  // folder the session works in.
   get statusLine(): string {
     if (!this.ticket) return ''
     const ticket = this.ticket as TicketData & { branch_name?: string; root_folder?: string }
