@@ -20,8 +20,10 @@ Cause: Remote Control is switched on for the main chat (`remoteControlActive: tr
 whether a message it did not see the person type came from the desktop or a phone, so it refuses to start a session from
 a message the chat bar typed. A message the person types themselves starts it.
 
-Open: turn Remote Control off on the main chat while working at the desktop, or have the chat bar start the chat some way
-that does not depend on the agent's turn.
+Fixed on main, 2026-11-13: the chat bar no longer asks the agent. It hands the ticket's `new_chat_link`, a
+`claude://code/new` link that `Ticket` in `space/kanban/ticket.py` builds, to the Claude app with the system's opener
+(`shared/system-link.ts`). The app opens a new chat on the worktree with its prompt typed in, and the person sends it, so
+Remote Control does not block it and no model turn runs in the main chat. The board's app opens the same link.
 
 ## Dragging a Backlog item onto another puts it above, never makes it a child
 
