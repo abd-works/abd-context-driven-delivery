@@ -17,6 +17,10 @@ export async function toggleStagePicker($: EngineInterface): Promise<void> {
   await update($, stagePicker, isOpen => !isOpen)
 }
 
+export async function closeStagePicker($: EngineInterface): Promise<void> {
+  await update($, stagePicker, () => false)
+}
+
 // One glyph for each column board.overview sends, standing for the canvas's icons: Backlog, Discovery (magnifier),
 // Specification (document), Implementation (gear), Complete (check). A column the canvas has no icon for shows a dot.
 const STAGE_ICONS: Record<string, string> = { Backlog: '☰', Discovery: '⌕', Specification: '▤', Implementation: '⚙', Complete: '✓' }

@@ -83,7 +83,7 @@ export class BoardClient extends BoardClientGenerated {
   }
 
   get backlogItems(): BacklogItemClient[] {
-    return this.shownColumns.flatMap(column => column.items)
+    return this.shownColumns.flatMap(column => column.items).flatMap(item => [item, ...item.childItems])
   }
 
   get activeTicket(): TicketClient | undefined {

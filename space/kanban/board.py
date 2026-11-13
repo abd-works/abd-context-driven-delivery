@@ -19,6 +19,7 @@ from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_server import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
 from space.repo.repo import Repo
+from space.session.session import SESSION_FILE
 from space.session.session_log import LogTimestamp
 from space.session.session_saves import SaveFailure
 from space.session.sessions import BoardPractices, Sessions
@@ -401,9 +402,12 @@ class BoardReads:
             return []
         # An item is a file in the Backlog, or a folder holding a file of its own name: a ticket moved back keeps its
         # whole folder, history and all. A folder beside a file of its name is that file's ticket, not a second item.
+        # A folder that holds no ticket's work is a parent: every other markdown file in it is one of its children.
         files = list(folder.glob("*.md"))
         kept = [entry / f"{entry.name}.md" for entry in folder.iterdir() if entry.is_dir() and not (folder / f"{entry.name}.md").exists()]
-        found = sorted([*files, *(path for path in kept if path.is_file())], key=lambda path: path.stem)
+        parents = [path for path in kept if path.is_file()]
+        children = [child for parent in parents if not (parent.parent / SESSION_FILE).is_file() for child in parent.parent.glob("*.md") if child != parent]
+        found = sorted([*files, *parents, *children], key=lambda path: path.stem)
         return [board.make_backlog_item(path) for path in found]
 
     @cached_property
@@ -452,6 +456,13 @@ class Column:
 
     def place_before(self, card: Card, other: Card) -> Column:
         """Put card just above other in this column, and keep that order."""
+        return self._place(card, other, 0)
+
+    def place_after(self, card: Card, other: Card) -> Column:
+        """Put card just below other in this column, and keep that order."""
+        return self._place(card, other, 1)
+
+    def _place(self, card: Card, other: Card, past_other: int) -> Column:
         keys = [shown.key for shown in self.cards]
         for named in (card, other):
             if named.key not in keys:
@@ -459,7 +470,7 @@ class Column:
         if card.key == other.key:
             return self
         keys.remove(card.key)
-        keys.insert(keys.index(other.key), card.key)
+        keys.insert(keys.index(other.key) + past_other, card.key)
         self._board.keep_order(self, keys)
         return self
 

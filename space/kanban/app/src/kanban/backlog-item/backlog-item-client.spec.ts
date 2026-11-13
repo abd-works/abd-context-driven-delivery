@@ -52,6 +52,68 @@ describe('Add Backlog Item', () => {
     })
   })
 
+  describe('Drop Backlog Item On Another', () => {
+    async function twoItems() {
+      board.write('.sessions/_backlog/checkout.md', '# Checkout\n\nPay for it.\n')
+      board.write('.sessions/_backlog/gift-cards.md', '# Gift cards\n\nSell them at the till.\n')
+      const { page } = await board.page()
+      const named = (title: string) => page.board.backlogItems.find(item => item.title === title)!
+      return { page, checkout: named('Checkout'), giftCards: named('Gift cards') }
+    }
+
+    async function backlogOrder(): Promise<string[]> {
+      const saved = await new BoardAdapter(board.project.cdd).show()
+      return saved.columns.flatMap(column => column.items ?? []).map(item => item.title).filter(title => ['Checkout', 'Gift cards'].includes(title))
+    }
+
+    it('should put it above near the top edge', async () => {
+      const { checkout, giftCards } = await twoItems()
+      expect(checkout.dropOf(giftCards, 0.1)).toBe('before')
+    })
+
+    it('should put it below near the bottom edge', async () => {
+      const { checkout, giftCards } = await twoItems()
+      expect(checkout.dropOf(giftCards, 0.9)).toBe('after')
+    })
+
+    it('should make it a child in the middle', async () => {
+      const { checkout, giftCards } = await twoItems()
+      expect(checkout.dropOf(giftCards, 0.5)).toBe('child')
+    })
+
+    it('should keep it below the other once dropped there', async () => {
+      const { checkout, giftCards } = await twoItems()
+      await giftCards.take(checkout, 'after')
+      expect(await backlogOrder()).toEqual(['Gift cards', 'Checkout'])
+    })
+
+    describe('in the middle', () => {
+      async function nested() {
+        const { page, checkout, giftCards } = await twoItems()
+        await checkout.take(giftCards, 'child')
+        return page
+      }
+
+      it('should stack it inside the other card', async () => {
+        await nested()
+        const saved = await new BoardAdapter(board.project.cdd).show()
+        const items = saved.columns.flatMap(column => column.items ?? []).filter(item => ['Checkout', 'Gift cards'].includes(item.title))
+        expect(items.map(item => [item.title, item.children.map(child => child.title)])).toEqual([['Checkout', ['Gift cards']]])
+      })
+
+      it('should say so in a toast', async () => {
+        expect((await nested()).store.state.toasts.at(-1)?.text).toBe('Gift cards is now a child of Checkout')
+      })
+
+      it('should not offer the parent as a child of its own child', async () => {
+        const page = await nested()
+        const parent = page.board.backlogItems.find(item => item.title === 'Checkout')!
+        const child = page.board.backlogItems.find(item => item.title === 'Gift cards')!
+        expect(child.canTakeAsChild(parent)).toBe(false)
+      })
+    })
+  })
+
   describe('Start Backlog Item', () => {
     async function started() {
       board.write('.sessions/_backlog/sign-up-pay.md', `# ${TITLE}\n\nAn idea.\n`)

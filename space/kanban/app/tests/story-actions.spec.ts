@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
 import { fixtureRoot, resetSessions } from '../test-utils/fixture-repo'
-import { BOARD_POST_HEADERS, card, FakeChat, openBoard, openCardOf, openTileBarOf, startBoard, toast, turnOffActiveSessionOnly } from './support'
+import { BOARD_POST_HEADERS, card, catchClaudeLinks, FakeChat, openBoard, openCardOf, openTileBarOf, startBoard, toast, turnOffActiveSessionOnly } from './support'
 
 const BROKEN_BOARD_PORT = 8781
 
@@ -415,10 +415,12 @@ test.describe('Choose Session Root', () => {
 })
 
 test.describe('Activate Ticket', () => {
-  test('should open the ticket in its own worktree with one press, asking nothing', async ({ page }) => {
+  test('should open the ticket in its own worktree with one press, asking nothing, and start its chat there', async ({ page }) => {
+    const links = await catchClaudeLinks(page)
     await card(page, 'billing-report').getByRole('button', { name: 'Activate' }).first().click()
-    await expect(toast(page, /^Billing report is open in its worktree .+/)).toBeVisible({ timeout: 15_000 })
+    await expect(toast(page, 'Confirm the folder and send in the Claude app to start the chat of billing-report')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('dialog')).toHaveCount(0)
+    expect(links).toHaveLength(1)
   })
 })
 

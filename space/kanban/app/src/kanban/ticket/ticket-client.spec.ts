@@ -417,6 +417,12 @@ describe('Open Ticket Chat', () => {
       expect(new URL(opened[0]!).searchParams.get('q')).toContain(`Title this session "${ACTIVE}"`)
     })
 
+    // Its chat bar, its log and every tool it calls work on the ticket from its first turn, not on main.
+    it("should ask the new chat to open the ticket's session first", async () => {
+      const { opened } = await clicked()
+      expect(new URL(opened[0]!).searchParams.get('q')).toContain(`First call sessions.switch with name ${ACTIVE}`)
+    })
+
     // Opening the worktree and the Claude app takes a while, so the click shows at once that the chat is on its way.
     it("should show the ticket's chat as opening", async () => {
       const { page } = await board.page()

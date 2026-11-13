@@ -8,7 +8,7 @@ const SHOWN_COMMAND = 80
 const STARTING_CHAT_MILLISECONDS = 120_000
 
 // The prompt a ticket's new chat opens with. The Claude app gives a new chat no title, so the prompt asks for the ticket's.
-const newChatPrompt = (ticket: string): string => `Title this session "${ticket}". You are the chat of the session board's ticket ${ticket}; work on that ticket.`
+const newChatPrompt = (ticket: string): string => `Title this session "${ticket}". You are the chat of the session board's ticket ${ticket}; work on that ticket. First call sessions.switch with name ${ticket}, so every tool works on its session, then read the session's latest handoff.`
 
 type CommandKind = 'submit' | 'fill' | 'command'
 

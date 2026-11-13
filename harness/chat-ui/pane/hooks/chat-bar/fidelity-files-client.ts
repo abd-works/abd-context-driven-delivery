@@ -71,6 +71,15 @@ export async function openReport($: EngineInterface, fidelity: FidelityProgressC
   $.ui.toast(`${fidelity.slug} report: ${why}. The report is ${fidelity.progress.report_file || 'not saved yet'}`)
 }
 
+// The fidelity's help in the board's own help panel, as the ? on its board tile opens it, by the board's
+// ?help=&fidelity= link, the board started first when it is not running.
+export async function openHelp($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
+  const url = await runningBoardUrl($).catch(() => '')
+  const link = url && (await boardPageUrl($, url, { help: fidelity.progress.ticket.name, fidelity: fidelity.slug }))
+  if (link && (await openInBrowser($, link))) return
+  $.ui.toast(`${fidelity.slug} help: ${url ? `the browser did not open ${link}` : 'the board is not running and did not start'}`)
+}
+
 // A file the server refuses shows the server's reason in its tab. A diagram's tab shows only its draw.io button.
 export async function showFile($: EngineInterface, path: string): Promise<void> {
   if (isDiagram(path)) return update($, fidelityFiles, files => (files ? { ...files, shown: path } : files))
