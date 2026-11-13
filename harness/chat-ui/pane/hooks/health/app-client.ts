@@ -14,6 +14,10 @@ const OPEN_TOOL = 'app.open'
 // The Browser pane beside the chat in the Claude desktop app, the only place an app opens.
 const SIDE_PANEL_SERVER = 'Claude_Browser'
 const SIDE_PANEL_TOOL = 'preview_start'
+// The pane's tabs, each with its origin, and the call that brings one to the front.
+const TABS_TOOL = 'tabs_context'
+const SELECT_TAB_TOOL = 'tabs_select'
+type PaneTabs = { browserOpen: boolean; tabs: { tabId: string; origin: string; isActive: boolean }[] }
 // The desktop app's view tools: show_pane brings the Browser pane, its "preview", beside the conversation.
 const VIEW_SERVER = 'ccd_view'
 const SHOW_PANE_TOOL = 'show_pane'
@@ -52,13 +56,17 @@ export async function openAppBesideChat($: EngineInterface, label: string, pageU
   await refreshHealth($)
 }
 
-// The app opens only in Claude's Browser pane, never in the person's own browser; a refusal says the pane's reason.
+// The app opens only in Claude's Browser pane, never in the person's own browser; a refusal says the pane's reason. A
+// tab already on the app's origin is brought to the front rather than opening another.
 async function openInSidePanel($: EngineInterface, url: string): Promise<void> {
   let panelWhy: string
   try {
-    const shown = await $.mcp.call(SIDE_PANEL_SERVER, SIDE_PANEL_TOOL, { url })
+    const open = await tabOn($, new URL(url).origin)
+    const shown = open
+      ? await $.mcp.call(SIDE_PANEL_SERVER, SELECT_TAB_TOOL, { tabId: open })
+      : await $.mcp.call(SIDE_PANEL_SERVER, SIDE_PANEL_TOOL, { url })
     if (!shown.isError) {
-      // preview_start opens a tab in the Browser pane but leaves a hidden pane hidden, so the pane is shown after it.
+      // Neither call shows a hidden pane, so the pane is shown after it.
       await $.mcp.call(VIEW_SERVER, SHOW_PANE_TOOL, { pane: PREVIEW_PANE }).catch(() => null)
       return
     }
@@ -67,4 +75,19 @@ async function openInSidePanel($: EngineInterface, url: string): Promise<void> {
     panelWhy = reasonOf(failure)
   }
   throw new AppNotOpened(`${url} is running, but Claude's Browser pane did not open it: ${panelWhy}`)
+}
+
+// The pane's tab on origin, the active one first; none while the pane is closed or the answer cannot be read. The
+// answer is the tabs as JSON followed by a sentence about the pane, so the JSON is read up to its last brace.
+async function tabOn($: EngineInterface, origin: string): Promise<string | null> {
+  const answer = await $.mcp.call(SIDE_PANEL_SERVER, TABS_TOOL, {}).catch(() => null)
+  const text = answer && !answer.isError ? answer.content[0]?.text ?? '' : ''
+  try {
+    const { browserOpen, tabs } = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as PaneTabs
+    if (!browserOpen) return null
+    const onOrigin = tabs.filter(tab => tab.origin === origin)
+    return (onOrigin.find(tab => tab.isActive) ?? onOrigin[0])?.tabId ?? null
+  } catch {
+    return null
+  }
 }
