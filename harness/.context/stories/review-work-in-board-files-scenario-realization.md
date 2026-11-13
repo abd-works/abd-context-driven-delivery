@@ -11,7 +11,7 @@ Source:
 - `move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md`
 - `move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md` (Open Session Files From Details, and the changed-files filter of List Ticket Files)
 
-Each page call reaches one MCP tool, which calls one domain operation (cdd_web_domain_access). The new pieces are `FileManager.write`, `FileText.language`, `FileComments`, `FileComment`, and `FileCommentState`. The rest exist today.
+Each page call reaches one MCP tool, which calls one domain operation (cdd_web_domain_access). The new pieces are `FileManager.write`, `FileText.language`, `SessionFile`, `Range`, `Fold`, `FileViolation`, `FileComments`, `FileComment`, and `FileCommentState`. A comment, a fold, and a violation each sit on a `Range` of the file. The rest exist today.
 
 A file comment's state is read, not stored twice. It is `not_sent` until `Chat.send` returns, then `sent`, then `processed` once its chat message is done: the chat's turn that worked on it has ended (`harness/chat/chat.py:279-286`).
 
@@ -89,6 +89,30 @@ Session.read_file("src/checkout/README.md")
 FileView renders markdown as HTML
 ```
 
+### Scenario: Fold the file's class and its operations
+
+```realization
+FileView(file: "src/checkout/order.py")
+  -> SessionAdapter.file("src/checkout/order.py")
+    -> Session.file(path)
+      -> SessionFile(session, path)
+    <- SessionFile{path, text, language, comments, folds, violations}
+SessionFile.folds
+  -> the graph saved in .sessions/checkout-flow/graph.json: the OoadClass, Operation, and Property nodes placed in order.py
+  -> SessionFile.range(start_line, end_line)
+  <- [Fold{range: L5-L41, kind: class, name: Order}, Fold{range: L12-L14, kind: block, name: place}]
+FileView folds them as SourceView does (harness/graph/app/source/call-expansion.ts)
+```
+
+### Scenario: Mark the lines a broken rule names
+
+```realization
+SessionFile.violations
+  -> SavedGraph.violations() whose location is order.py
+  <- [FileViolation{violation: Violation{rule, message}, range: L12-L14}]
+FileView marks the range as SourceView marks a ViolationFocus
+```
+
 ---
 
 ## Save Edited File
@@ -111,9 +135,11 @@ FileView.save()
 ### Scenario: Mark a comment beside the selection's first line
 
 ```realization
-FileCommentsAdapter.add("src/checkout/order.py", 12, 14, selected_text, "an empty cart should say which cart and why")
-  -> FileComments.add(path, start_line, end_line, selected_text, text)
-    -> FileComment(path, start_line, end_line, selected_text, text)
+FileCommentsAdapter.add("src/checkout/order.py", 12, 14, "an empty cart should say which cart and why")
+  -> FileComments.add(path, start_line, end_line, text)
+    -> SessionFile(session, path).range(start_line, end_line)
+    <- Range{path, start_line, end_line, content, anchor}
+    -> FileComment(range, text)
     -> FileComments._save()  .sessions/checkout-flow/file-comments.json
   <- FileComment{anchor: "src/checkout/order.py:L12-L14", state: not_sent}
 ```

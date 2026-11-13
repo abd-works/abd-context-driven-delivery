@@ -54,6 +54,22 @@ In every scenario, the [session](../../../../../../space/kanban/.context/kanban-
 *When* the Person views *README.md*
 *Then* the viewer shows *Checkout* rendered as a heading, not as *# Checkout*
 
+#### Scenario: Fold the file's class and its operations
+
+Requested (the person, 2026-11-12): bring over the folding the graph's source view already has (`harness/graph/app/source/SourceView.tsx`, `call-expansion.ts`), which folds a class whole and each of its members as a block.
+
+*Given* checkout-flow's session holds *order.py*
+*And* checkout-flow's graph places the class *Order* on lines 5 to 41 of *order.py*, and its operation *place* on lines 12 to 14
+*When* the Person views *order.py*
+*Then* the viewer offers a fold of *Order* over lines 5 to 41, and a fold of *place* over lines 12 to 14
+
+#### Scenario: Mark the lines a broken rule names
+
+*Given* checkout-flow's session holds *order.py*
+*And* checkout-flow's graph found *vocabulary-traces-to-source* broken on lines 12 to 14 of *order.py*
+*When* the Person views *order.py*
+*Then* the viewer marks lines 12 to 14 with *vocabulary-traces-to-source*: *EmptyCartError should say which cart and why*
+
 ## Story: Save Edited File
 
 #### Scenario: Save the edited text to the file on disk

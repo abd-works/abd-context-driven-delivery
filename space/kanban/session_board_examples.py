@@ -259,6 +259,14 @@ EDITED_LINE_14 = '            raise EmptyCartError(cart.id, "a cart needs one it
 README_FILE = "src/checkout/README.md"
 README_TEXT = "# Checkout\n"
 CHECKOUT_CHAT = "checkout-chat"
+# Seed: the graph checkout-flow saved in its folder, naming files from its root src/checkout: class Order on lines 5 to
+# 41 of order.py, its operation place on 12 to 14, and one rule broken on place.
+ORDER_CLASS_LINES = (5, 41)
+ORDER_RULE = ("vocabulary-traces-to-source", "EmptyCartError should say which cart and why")
+ORDER_GRAPH = SavedGraph([], {"clean_engineering": SavedPractice("clean_engineering", "", {}, [
+    SavedNode("order", "Order", "OoadClass", "clean_engineering", "order.py", *ORDER_CLASS_LINES, "", {}),
+    SavedNode("order-place", "place", "Operation", "clean_engineering", "order.py", 12, 14, "", {"owner": "Order"}),
+], [], [Violation(*ORDER_RULE, practice="clean_engineering", node_id="order-place", location="order.py", line=12, end_line=14)])}).document
 
 
 @dataclass(frozen=True)

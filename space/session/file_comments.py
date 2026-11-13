@@ -14,6 +14,7 @@ from harness.chat.chat import DONE, FAILED, Chat
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_server import mcp
+from space.session.session_file import Range, SessionFile
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -36,49 +37,36 @@ class FileCommentNotFoundError(LookupError):
 
 
 class FileComment:
-    """One comment on lines start_line to end_line of a file, named from the project, with the text selected there; the
-    chat and message it was sent in once it is sent."""
+    """One comment on a range of a file, with the text the range held when the comment was written; the chat and
+    message it was sent in once it is sent."""
 
     # A comment's state is read from the chat's message, never kept twice: sent until the chat is done with the message.
 
-    def __init__(self, path: str, start_line: int, end_line: int, selected_text: str, text: str, chat: str = "", message: str = "") -> None:
-        self._path = path
-        self._start_line = start_line
-        self._end_line = end_line
-        self._selected_text = selected_text
+    def __init__(self, range: Range, text: str, chat: str = "", message: str = "") -> None:
+        self._range = range
         self._text = text
         self._chat = chat
         self._message = message
 
     @classmethod
     def from_record(cls, record: dict) -> FileComment:
-        return cls(record["path"], record["start_line"], record["end_line"], record["selected_text"], record["text"], record.get("chat", ""), record.get("message", ""))
+        range = Range(record["path"], record["start_line"], record["end_line"], record["selected_text"])
+        return cls(range, record["text"], record.get("chat", ""), record.get("message", ""))
 
     @property
     @data_field
     def anchor(self) -> str:
-        """The lines the comment is on, such as src/checkout/order.py:L12-L14: one comment per selection of a file."""
-        return f"{self._path}:L{self._start_line}-L{self._end_line}"
+        """The lines the comment is on, such as src/checkout/order.py:L12-L14: one comment per range of a file."""
+        return self._range.anchor
 
     @property
     @data_field
+    def range(self) -> Range:
+        return self._range
+
+    @property
     def path(self) -> str:
-        return self._path
-
-    @property
-    @data_field
-    def start_line(self) -> int:
-        return self._start_line
-
-    @property
-    @data_field
-    def end_line(self) -> int:
-        return self._end_line
-
-    @property
-    @data_field
-    def selected_text(self) -> str:
-        return self._selected_text
+        return self._range.path
 
     @property
     @data_field
@@ -99,23 +87,23 @@ class FileComment:
 
     @property
     def prompt(self) -> str:
-        """What the chat reads: the file and lines with the comment, then each selected line marked >, as the report's
-        Fix marks the lines it names."""
-        lines = self._selected_text.splitlines()
-        marked = [f"> {self._start_line + offset} | {line}" for offset, line in enumerate(lines)]
-        return "\n".join([f"{self._path}:{self._start_line}-{self._end_line}: {self._text}", *marked])
+        """What the chat reads: the file and lines with the comment, then each line of the range marked >, as the
+        report's Fix marks the lines it names."""
+        start = self._range.start_line
+        marked = [f"> {start + offset} | {line}" for offset, line in enumerate(self._range.content.splitlines())]
+        return "\n".join([f"{self.path}:{start}-{self._range.end_line}: {self._text}", *marked])
 
     def sent_in(self, chat: str, message: str) -> FileComment:
         """This comment, sent to chat in message."""
-        return FileComment(self._path, self._start_line, self._end_line, self._selected_text, self._text, chat, message)
+        return FileComment(self._range, self._text, chat, message)
 
     @property
     def record(self) -> dict:
         return {
-            "path": self._path,
-            "start_line": self._start_line,
-            "end_line": self._end_line,
-            "selected_text": self._selected_text,
+            "path": self.path,
+            "start_line": self._range.start_line,
+            "end_line": self._range.end_line,
+            "selected_text": self._range.content,
             "text": self._text,
             "chat": self._chat,
             "message": self._message,
@@ -159,9 +147,9 @@ class FileComments:
     @mcp
     @agent_tool
     @noSessionLog
-    def add(self, path: str, start_line: int, end_line: int, selected_text: str, text: str) -> FileComment:
-        """Comment text on lines start_line to end_line of path, a file named from the project, whose selected_text is what those lines hold; a new comment on the same lines replaces the one there."""
-        added = FileComment(path, start_line, end_line, selected_text, text)
+    def add(self, path: str, start_line: int, end_line: int, text: str) -> FileComment:
+        """Comment text on lines start_line to end_line of path, a file named from the project, keeping what those lines hold now; a new comment on the same lines replaces the one there."""
+        added = FileComment(SessionFile(self._session, path).range(start_line, end_line), text)
         self._save([*(comment for comment in self.comments if comment.anchor != added.anchor), added])
         return added
 

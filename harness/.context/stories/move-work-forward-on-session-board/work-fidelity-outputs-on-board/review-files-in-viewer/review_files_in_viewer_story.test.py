@@ -4,7 +4,7 @@
 # format: py
 # ---
 #
-# Scenarios of the sub-epic Review Files In Viewer, as GWT structure only: the acceptance tests fill each step.
+# Review Files In Viewer, as GWT structure only: the acceptance tests fill each step.
 # Generated from the markdown beside it, which holds the domain terms, the evidence and the examples.
 # Realizations are in harness/.context/stories/review-work-in-board-files-scenario-realization.md.
 
@@ -32,6 +32,24 @@ with story("View Files In Rich Viewer"):
         with when("the Person views README.md"):
             pass
         with then("the viewer shows Checkout rendered as a heading, not as # Checkout"):
+            pass
+    with scenario("Fold the file's class and its operations"):
+        with given("checkout-flow's session holds order.py"):
+            pass
+        with and_("checkout-flow's graph places the class Order on lines 5 to 41 of order.py, and its operation place on lines 12 to 14"):
+            pass
+        with when("the Person views order.py"):
+            pass
+        with then("the viewer offers a fold of Order over lines 5 to 41, and a fold of place over lines 12 to 14"):
+            pass
+    with scenario("Mark the lines a broken rule names"):
+        with given("checkout-flow's session holds order.py"):
+            pass
+        with and_("checkout-flow's graph found vocabulary-traces-to-source broken on lines 12 to 14 of order.py"):
+            pass
+        with when("the Person views order.py"):
+            pass
+        with then("the viewer marks lines 12 to 14 with vocabulary-traces-to-source: EmptyCartError should say which cart and why"):
             pass
 
 

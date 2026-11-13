@@ -15,9 +15,15 @@ session answers for each: the file's text and language, the comments and their s
 
 from __future__ import annotations
 
+import json
+
 from expects import contain, equal, expect
 
+from harness.graph.saved_graph import GRAPH_FILE_NAME
 from space.kanban.session_board_examples import (
+    ORDER_CLASS_LINES,
+    ORDER_GRAPH,
+    ORDER_RULE,
     CHECKOUT_CHAT,
     CHECKOUT_FLOW_IN_SRC_CHECKOUT,
     EDITED_LINE_14,
@@ -51,7 +57,7 @@ def comments_of(world):
 
 
 def add_comment(world, comment: FileCommentExample) -> None:
-    comments_of(world).add(path=comment.path, start_line=comment.start_line, end_line=comment.end_line, selected_text=comment.selected_text, text=comment.text)
+    comments_of(world).add(path=comment.path, start_line=comment.start_line, end_line=comment.end_line, text=comment.text)
 
 
 def states_on_order(world) -> dict[str, str]:
@@ -116,6 +122,47 @@ def _(s):
         expect((world.opened["language"], world.opened["text"])).to(equal(("markdown", README_TEXT)))
 
 
+
+@shared_stories.scenario("View Files In Rich Viewer", "Fold the file's class and its operations")
+def _(s):
+    @s.given("checkout-flow's session holds order.py")
+    def _(world):
+        seed_checkout_flow(world)
+
+    @s.and_("checkout-flow's graph places the class Order on lines 5 to 41 of order.py, and its operation place on lines 12 to 14")
+    def _(world):
+        world.project.seed_session_file(CHECKOUT_FLOW, GRAPH_FILE_NAME, json.dumps(ORDER_GRAPH))
+
+    @s.when("the Person views order.py")
+    def _(world):
+        world.opened = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file(path=ORDER_FILE))
+
+    @s.then("the viewer offers a fold of Order over lines 5 to 41, and a fold of place over lines 12 to 14")
+    def _(world):
+        folds = [(fold["name"], fold["kind"], fold["range"]["start_line"], fold["range"]["end_line"]) for fold in world.opened["folds"]]
+        expect(folds).to(equal([("Order", "class", *ORDER_CLASS_LINES), ("place", "block", 12, 14)]))
+
+
+@shared_stories.scenario("View Files In Rich Viewer", "Mark the lines a broken rule names")
+def _(s):
+    @s.given("checkout-flow's session holds order.py")
+    def _(world):
+        seed_checkout_flow(world)
+
+    @s.and_("checkout-flow's graph found vocabulary-traces-to-source broken on lines 12 to 14 of order.py")
+    def _(world):
+        world.project.seed_session_file(CHECKOUT_FLOW, GRAPH_FILE_NAME, json.dumps(ORDER_GRAPH))
+
+    @s.when("the Person views order.py")
+    def _(world):
+        world.opened = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file(path=ORDER_FILE))
+
+    @s.then("the viewer marks lines 12 to 14 with vocabulary-traces-to-source: EmptyCartError should say which cart and why")
+    def _(world):
+        marked = [(found["violation"]["rule"], found["violation"]["message"], found["range"]["start_line"], found["range"]["end_line"]) for found in world.opened["violations"]]
+        expect(marked).to(equal([(*ORDER_RULE, 12, 14)]))
+
+
 # --- Save Edited File ---------------------------------------------------------------------------------------------
 
 
@@ -166,7 +213,7 @@ def _(s):
     @s.and_("checkout-flow's file comments hold order.py:L12-L14 with that comment")
     def _(world):
         held = world.data_of(comments_of(world).on(path=ORDER_FILE))[0]
-        expect((held["start_line"], held["end_line"], held["text"])).to(equal((12, 14, EMPTY_CART_COMMENT.text)))
+        expect((held["range"]["start_line"], held["range"]["end_line"], held["range"]["content"], held["text"])).to(equal((12, 14, EMPTY_CART_COMMENT.selected_text, EMPTY_CART_COMMENT.text)))
 
 
 @shared_stories.scenario("Add Comment To File Selection", "Open a file comment from its marker")
@@ -182,7 +229,7 @@ def _(s):
 
     @s.then("the viewer shows an empty cart should say which cart and why under lines 12 to 14")
     def _(world):
-        expect([(held["start_line"], held["end_line"], held["text"]) for held in world.opened]).to(equal([(12, 14, EMPTY_CART_COMMENT.text)]))
+        expect([(held["range"]["start_line"], held["range"]["end_line"], held["text"]) for held in world.opened]).to(equal([(12, 14, EMPTY_CART_COMMENT.text)]))
 
 
 @shared_stories.scenario("Add Comment To File Selection", "Delete a file comment")

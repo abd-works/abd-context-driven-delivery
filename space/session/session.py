@@ -27,6 +27,7 @@ from space.session.handoffs import HANDOFF_FORMAT_FILE, Handoffs
 from space.session.idea_file import IdeaFile
 from space.session.practice_session_output import PracticeSessionOutput
 from space.session.progress_cache import ProgressCache
+from space.session.session_file import SessionFile
 from space.session.session_files import SessionFiles
 from space.session.session_log import HookLog, SessionLog
 
@@ -527,6 +528,13 @@ class Session:
     def write_file(self, path: str, text: str) -> FileText:
         """Save text as the whole of path, a file in this repository or under a folder this session's practices write to, named as read_file names it; the file as saved."""
         return self.session_files.write(path, text)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def file(self, path: str) -> SessionFile:
+        """Return path, a file named as read_file names it, as the viewer shows it: its text and language, the comments on it, the folds of its classes, operations, and properties, and the rules the session's saved graph found broken in it, each on its range of lines."""
+        return SessionFile(self, path)
 
     @property
     def file_comments(self) -> FileComments:

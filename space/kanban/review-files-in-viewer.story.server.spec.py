@@ -8,6 +8,9 @@ from space.kanban.story_test import load_shared, replay
 # the fewest scenarios that between them call each tool these scenarios use once.
 WIRING = [
     "Show a code file in the viewer with its lines numbered",
+    "Fold the file's class and its operations",
+    "Mark the lines a broken rule names",
+    "Mark a comment beside the selection's first line",
     "Save the edited text to the file on disk",
     "Delete a file comment",
     "Send every open comment at once",
