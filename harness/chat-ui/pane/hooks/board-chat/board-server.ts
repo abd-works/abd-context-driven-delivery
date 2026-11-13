@@ -72,19 +72,19 @@ export async function openInBrowser($: EngineInterface, url: string): Promise<bo
   return false
 }
 
-// The Claude desktop app's own browser pane: its tool that opens a tab at a URL, called as the model calls it.
-const OPEN_PANE_TAB = 'mcp__Claude_Browser__preview_start'
+// The Claude desktop app's own browser pane: its tool that opens a tab at a URL.
+export const OPEN_PANE_TAB = 'mcp__Claude_Browser__preview_start'
 
-// Opens a page in a tab of the Claude desktop app's browser pane, beside the chat. Returns why it did not, empty once it
-// did; it never opens the page anywhere else, so a pane that does not answer is seen and fixed.
+// Asks the agent to open a page in a tab of the Claude desktop app's browser pane, beside the chat. The desktop runs
+// the pane's tool only for the model: a plugin's own call is refused in auto mode and waits on a dialog it never shows
+// otherwise. The prompt runs as a turn of its own once the chat is idle. Returns why it was not asked, empty once it was;
+// it never opens the page anywhere else, so a pane that does not answer is seen and fixed.
 export async function openInBrowserPane($: EngineInterface, url: string): Promise<string> {
   try {
-    const opened = (await $.tool.call({ tool: OPEN_PANE_TAB, url } as never)) as { deny?: string; isError?: boolean; text?: string }
-    if (opened.deny) return `the browser pane refused it: ${opened.deny}`
-    if (opened.isError) return `the browser pane failed: ${opened.text ?? 'no reason given'}`
+    await $.prompt.submit({ text: `Open ${url} in the browser pane: call ${OPEN_PANE_TAB} with url ${url}, and say nothing else.` })
     return ''
   } catch (failure) {
-    return `${OPEN_PANE_TAB} could not be called: ${reasonOf(failure)}`
+    return `the agent could not be asked to open it in the browser pane: ${reasonOf(failure)}`
   }
 }
 
