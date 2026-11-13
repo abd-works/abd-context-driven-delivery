@@ -26,10 +26,16 @@ const EMPTY: FilterSelection = {
 const NO_CHOICES: FilterData = { node_types: [], offered_node_types: [], relationships: [], rules: [] };
 
 const graphs = new GraphClient();
+const FOLDER_QUERY = 'folder';
+
+function openedOnFolder(): string {
+  return new URLSearchParams(window.location.search).get(FOLDER_QUERY)?.trim() ?? '';
+}
 
 export function App() {
   const [theme, setTheme] = useState(() => document.documentElement.dataset.theme ?? '');
-  const [folder, setFolder] = useState(() => window.localStorage.getItem(LAST_FOLDER) ?? '');
+  // A page opened with ?folder= (the chat bar names the session's workpath) loads that folder, else the one last loaded.
+  const [folder, setFolder] = useState(() => openedOnFolder() || (window.localStorage.getItem(LAST_FOLDER) ?? ''));
   const [loadedFolder, setLoadedFolder] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [selection, setSelection] = useState<FilterSelection>(EMPTY);
@@ -66,7 +72,7 @@ export function App() {
   }
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(LAST_FOLDER)?.trim();
+    const saved = openedOnFolder() || window.localStorage.getItem(LAST_FOLDER)?.trim();
     if (saved) {
       void load(saved);
     }

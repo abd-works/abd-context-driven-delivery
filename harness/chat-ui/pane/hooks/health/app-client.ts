@@ -17,6 +17,7 @@ const SIDE_PANEL_TOOL = 'preview_start'
 // The pane's tabs, each with its origin, and the call that brings one to the front.
 const TABS_TOOL = 'tabs_context'
 const SELECT_TAB_TOOL = 'tabs_select'
+const NAVIGATE_TOOL = 'navigate'
 type PaneTabs = { browserOpen: boolean; tabs: { tabId: string; origin: string; isActive: boolean }[] }
 // The desktop app's view tools: show_pane brings the Browser pane, its "preview", beside the conversation.
 const VIEW_SERVER = 'ccd_view'
@@ -62,8 +63,9 @@ async function openInSidePanel($: EngineInterface, url: string): Promise<void> {
   let panelWhy: string
   try {
     const open = await tabOn($, new URL(url).origin)
+    // The open tab goes to url too, so a page opened for another session's folder loads this one's.
     const shown = open
-      ? await $.mcp.call(SIDE_PANEL_SERVER, SELECT_TAB_TOOL, { tabId: open })
+      ? await $.mcp.call(SIDE_PANEL_SERVER, NAVIGATE_TOOL, { url, tabId: open }).then(() => $.mcp.call(SIDE_PANEL_SERVER, SELECT_TAB_TOOL, { tabId: open }))
       : await $.mcp.call(SIDE_PANEL_SERVER, SIDE_PANEL_TOOL, { url })
     if (!shown.isError) {
       // Neither call shows a hidden pane, so the pane is shown after it.

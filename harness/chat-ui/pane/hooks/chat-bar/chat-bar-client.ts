@@ -153,6 +153,11 @@ export class ChatBarClient {
     return this.ticket ? this.ticket.session.workpath || this.repoName : ''
   }
 
+  // The session's workpath as a folder an app's page loads; empty while no ticket's session is open or it chose none.
+  get workpath(): string {
+    return this.ticket?.session.workpath ?? ''
+  }
+
   // The status row under the line, from the left: the repository, the branch the session's chat works on, and the
   // whole path of the folder the session works in.
   get statusLine(): string {

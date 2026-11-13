@@ -9,6 +9,8 @@ const BOARD_HEADERS = { 'X-CDD-Board': '1', 'Content-Type': 'application/json' }
 // One board server serves every repository, so each call names this chat's repository, and the page's link does too.
 const PROJECT_HEADER = 'X-CDD-Project'
 const PROJECT_QUERY = 'project'
+// The folder an app's page opens on, such as the session's workpath the Graph loads.
+export const FOLDER_QUERY = 'folder'
 
 // One call on the board's chat routes, each with the body that chat tool takes.
 export type ChatRequest = { chat: string } & (
