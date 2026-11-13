@@ -1,5 +1,7 @@
 import type { CddApi } from '@cdd/cdd-shared'
+import { ChatClientGenerated } from '@cdd/harness/chat/chat'
 import { EpicClientGenerated } from '@cdd/practices/stories/model/epic'
+import { ExampleClientGenerated } from '@cdd/practices/stories/model/example'
 import { IncrementClientGenerated } from '@cdd/practices/stories/model/increment'
 import { ScenarioClientGenerated } from '@cdd/practices/stories/model/scenario'
 import { StepClientGenerated } from '@cdd/practices/stories/model/step'
@@ -95,6 +97,21 @@ export class StoryMapClient extends StoryModelClientGenerated {
 
   editStep(step: string, text: string): Promise<this | null> {
     return this.took(StepClientGenerated.named(this.api, step).editText(text))
+  }
+
+  // A cell of an example's row, changed through that example's own tool; the column that names it renames it.
+  editExample(example: string, field: string, value: string): Promise<this | null> {
+    return this.took(ExampleClientGenerated.named(this.api, example).editField(field, value))
+  }
+
+  removeExample(example: string): Promise<this | null> {
+    return this.took(ExampleClientGenerated.named(this.api, example).remove())
+  }
+
+  // A story's acceptance-test file is read in the chat bar's file viewer of the chat this page was opened beside, never
+  // here: the chat takes it at its next check-in. True once the chat has it waiting.
+  async showInChat(chat: string, file: string): Promise<boolean> {
+    return (await ChatClientGenerated.named(this.api, chat).send('open_file', file)) !== null
   }
 
   // A story given to an increment leaves the increment that delivered it, as the story model keeps it in one at most.

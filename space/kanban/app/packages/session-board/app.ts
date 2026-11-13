@@ -35,7 +35,9 @@ export function createApp(projects: ProjectConnections, port: number, staticRoot
   const app = express()
   app.use(onlyThisMachine(port))
   app.use(express.json())
-  app.use(API_ROOT, cddRoutes(projects, [...boardRoutes, ...stageRoutes, ...ticketRoutes, ...fidelityProgressRoutes, ...sessionRoutes, ...practiceSessionOutputRoutes, ...backlogItemRoutes, ...chatRoutes, ...appRoutes, ...storyMapRoutes]))
+  // The board and the Story UI editor both reach the chat routes; each route is mounted once.
+  const routes = new Set([...boardRoutes, ...stageRoutes, ...ticketRoutes, ...fidelityProgressRoutes, ...sessionRoutes, ...practiceSessionOutputRoutes, ...backlogItemRoutes, ...chatRoutes, ...appRoutes, ...storyMapRoutes])
+  app.use(API_ROOT, cddRoutes(projects, [...routes]))
   // The Story UI editor answers on this server too, at its own page, so it shares the board's port and the board's
   // state: its calls are the story map's generated routes above, and its page is the one its own folder builds.
   app.use(STORY_MAP_PAGE, express.static(storyMapBuild))

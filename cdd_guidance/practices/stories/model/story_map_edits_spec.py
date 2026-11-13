@@ -31,6 +31,7 @@ TOOLSETS = (
     "cdd_guidance.practices.stories.model.story_model:Story",
     "cdd_guidance.practices.stories.model.story_model:Scenario",
     "cdd_guidance.practices.stories.model.story_model:Step",
+    "cdd_guidance.practices.stories.model.story_model:Example",
     "cdd_guidance.practices.stories.model.story_model:Increment",
     "space.session.practice_session_output:FidelitySessionOutput",
     "space.session.sessions:Sessions",
@@ -49,8 +50,29 @@ with story("Open Story UI Side Panel From Chat Bar"):
         with given("a story map"):
             pass
 """
+NAMED_EXAMPLES_FILE = f".context/{CHAT_BAR_FOLDER}/open-story-ui-side-panel-from-chat-bar/press_story_ui_story.test.md"
+# A scenario whose example rows are named by their example column.
+NAMED_EXAMPLES = """# Sub-epic: Integrate Practice Content Editor Apps In Chat Bar
+
+## Story: Open Story UI Side Panel From Chat Bar
+
+#### Scenario Outline: A press on the Story UI editor readies it by its status
+
+*Given* the app status row reads Story UI ${status row reads}
+*When* the Person opens the Story UI editor from the app status row
+*Then* the side panel shows the Story UI editor
+
+##### Examples
+
+| example | status row reads |
+| --- | --- |
+| not installed | not installed |
+| not running | not running |
+| running | running :8778 |
+"""
 # The chat bar's Story UI story on this repository's story map.
-CHAT_BAR_STORY = "move-work-forward-from-chat-bar.work-fidelity-outputs-in-chat-bar.integrate-practice-content-editor-apps-in-chat-bar.open-story-ui-side-panel-from-chat-bar"
+CHAT_BAR_SUB_EPIC = "move-work-forward-from-chat-bar.work-fidelity-outputs-in-chat-bar.integrate-practice-content-editor-apps-in-chat-bar"
+CHAT_BAR_STORY = f"{CHAT_BAR_SUB_EPIC}.open-story-ui-side-panel-from-chat-bar"
 DRAWIO_FILE = ".context/story-map.drawio"
 SESSION_FILE = ".sessions/checkout-flow/session.json"
 SUB_EPIC = "move-work-forward-from-chat-bar.integrate-practice-content-editor-apps-in-chat-bar"
@@ -289,6 +311,28 @@ with description("a story map edited through its tools") as self:
                 removed, added = _changed(self.written, self.project.text(MAP_FILE))
                 expect((len(removed), added)).to(equal((1, ["Requested (2026-11-12): the chat bar opens the Story UI editor beside the chat."])))
 
+        # (S) Refactor Story UI App To Web Domain Access: an epic's and a sub-epic's descriptions are edited on screen and
+        # saved the way a story's is.
+        with context("with an epic's description edited"):
+            with before.each:
+                self.shown = self.project.call("epic.edit_description", node=_node("move-work-forward-from-chat-bar"), description="The Chat Bar is the line above the chat prompt.")
+
+            with it("should change only the paragraph under that epic's heading"):
+                removed, added = _changed(self.written, self.project.text(MAP_FILE))
+                expect((len(removed), added)).to(equal((1, ["The Chat Bar is the line above the chat prompt."])))
+
+            with it("should show the epic's new description"):
+                epic = next(epic for epic in self.shown["epics"] if epic["node"] == _node("move-work-forward-from-chat-bar"))
+                expect(epic["description"]).to(equal("The Chat Bar is the line above the chat prompt."))
+
+        with context("with a sub-epic given a description"):
+            with before.each:
+                self.project.call("epic.edit_description", node=_node(CHAT_BAR_SUB_EPIC), description="Requested (2026-11-12): the chat bar opens the editor apps.")
+
+            with it("should add only the paragraph under that sub-epic's heading"):
+                removed, added = _changed(self.written, self.project.text(MAP_FILE))
+                expect((removed, [line for line in added if line])).to(equal(([], ["Requested (2026-11-12): the chat bar opens the editor apps."])))
+
     # (S) Refactor Story UI App To Web Domain Access: increments are edited through the story map and kept in its thin
     # slice.
     with context("sliced into increments by the thin slice beside it"):
@@ -351,6 +395,65 @@ with description("a story map edited through its tools") as self:
             with it("should write the step under that scenario and change nothing else"):
                 removed, added = _changed(self.written, self.project.text(SCENARIO_FILE))
                 expect((removed, [line.strip() for line in added])).to(equal(([], ["*Then* the story map file keeps its other lines"])))
+
+        # (S) Refactor Story UI App To Web Domain Access: a scenario's example rows are edited through each example.
+        with it("should show each example row by the node its own tools take"):
+            trace = self.project.story_at(self.shown, "Trace Story Through Artifacts")["scenarios"][0]
+            expect(trace["examples"][0]["node"]).to(equal(f"{trace['node']}.example:example-1"))
+
+        with it("should show each example row's fields as its table holds them"):
+            trace = self.project.story_at(self.shown, "Trace Story Through Artifacts")["scenarios"][0]
+            expect(trace["examples"][0]["fields"]).to(equal({"example": "example-1", "violation": "Ticket Archive name", "file": "harness/.context/stories/story-map.md", "lines": "86 to 88", "story": "Ticket Archive"}))
+
+        with context("with an example's field edited"):
+            with before.each:
+                trace = self.project.story_at(self.shown, "Trace Story Through Artifacts")["scenarios"][0]
+                self.edited = self.project.call("example.edit_field", node=trace["examples"][0]["node"], field="lines", text="86 to 90")
+
+            with it("should change only that example's row"):
+                expect(_changed(self.written, self.project.text(SCENARIO_FILE))).to(equal((
+                    ["| Ticket Archive name | harness/.context/stories/story-map.md | 86 to 88 | Ticket Archive |"],
+                    ["| Ticket Archive name | harness/.context/stories/story-map.md | 86 to 90 | Ticket Archive |"],
+                )))
+
+            with it("should answer the example as its file now holds it"):
+                trace = self.project.story_at(self.edited, "Trace Story Through Artifacts")["scenarios"][0]
+                expect(trace["examples"][0]["fields"]["lines"]).to(equal("86 to 90"))
+
+        with it("should refuse a column the example's row does not have"):
+            trace = self.project.story_at(self.shown, "Trace Story Through Artifacts")["scenarios"][0]
+            editing = lambda: self.project.call("example.edit_field", node=trace["examples"][0]["node"], field="owner", text="Person")
+            expect(editing).to(raise_error(Exception, contain("has no owner column")))
+
+        with it("should refuse to move an example, which keeps the place its table gives it"):
+            trace = self.project.story_at(self.shown, "Trace Story Through Artifacts")["scenarios"][0]
+            moving = lambda: self.project.call("example.move_before", node=trace["examples"][1]["node"], other=trace["examples"][0]["node"])
+            expect(moving).to(raise_error(Exception, contain("keeps the place its table gives it")))
+
+    # (S) Refactor Story UI App To Web Domain Access: an example named by its example column is renamed in that cell.
+    with context("opened on a scenario file whose examples are named"):
+        with before.each:
+            self.project.write(NAMED_EXAMPLES_FILE, NAMED_EXAMPLES)
+            shown = self.project.call("story-model.show", file=NAMED_EXAMPLES_FILE)
+            self.scenario = self.project.story_at(shown, "Open Story UI Side Panel From Chat Bar")["scenarios"][0]
+
+        with context("with an example renamed through its example column"):
+            with before.each:
+                self.renamed = self.project.call("example.edit_field", node=self.scenario["examples"][1]["node"], field="example", text="stopped")
+
+            with it("should change only that cell of its row"):
+                expect(_changed(NAMED_EXAMPLES, self.project.text(NAMED_EXAMPLES_FILE))).to(equal((["| not running | not running |"], ["| stopped | not running |"])))
+
+            with it("should name the example by its new name"):
+                scenario = self.project.story_at(self.renamed, "Open Story UI Side Panel From Chat Bar")["scenarios"][0]
+                expect([example["name"] for example in scenario["examples"]]).to(equal(["not installed", "stopped", "running"]))
+
+        with context("with an example removed"):
+            with before.each:
+                self.project.call("example.remove", node=self.scenario["examples"][1]["node"])
+
+            with it("should take only that example's row out of the file"):
+                expect(_changed(NAMED_EXAMPLES, self.project.text(NAMED_EXAMPLES_FILE))).to(equal((["| not running | not running |"], [])))
 
     # (S) Refactor Story UI App To Web Domain Access: acceptance-test files are linked, not edited.
     with context("whose story has an acceptance-test file in the session"):

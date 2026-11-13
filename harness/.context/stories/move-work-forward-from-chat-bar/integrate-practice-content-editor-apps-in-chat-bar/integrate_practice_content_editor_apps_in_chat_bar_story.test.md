@@ -279,6 +279,7 @@ Deferred (still Intended on the map, 2026-11-06): the story explorer opening bel
 | `../story-ui/packages/story-map-workspace/stories/stories.ts` | Observed: today the domain (`StoryMapModel`, `EpicModel`, `ScenarioModel`, `StoryMapRepository`) is TypeScript over a JSON story map |
 | `cdd_guidance/patterns/cdd_web_domain_access` | `domain-lives-in-python`, `state-lives-behind-the-tool`, `fail-loud-on-mcp` |
 | `harness/.context/grill-answers.md` (Decisions 2026-11-12, from the person) | Requested: descriptions on epics, sub-epics and stories, saved unchanged so hand-written maps are editable; scenario files editable; acceptance tests shown as links; examples as the model holds them; increments in the story model |
+| `harness/.context/grill-answers.md` (Decided while closing the three Story UI gaps) | Decided (2026-11-12): an acceptance-test link opens the file in the chat bar's file viewer through `Chat.send` (`open_file`); example rows are edited through `Example`'s own tools and written back in their row; epic and sub-epic descriptions are edited on screen |
 
 #### Scenario: An edit is saved in the story map file and rendered to the chosen formats
 
@@ -333,16 +334,54 @@ Deferred (still Intended on the map, 2026-11-06): the story explorer opening bel
 *When* the Person adds the step "the story map file keeps its other lines" to a scenario  
 *Then* ++chat bar scenarios++ holds the step under that scenario  
   *And* every other line of ++chat bar scenarios++ stays as written  
-  *And* the Story UI editor shows each scenario's examples as the story model's one table, read only
+  *And* the Story UI editor shows each scenario's examples as the story model's one table, a row per example
+
+#### Scenario: An example's cell is edited in the Story UI editor and written back in its row
+
+*Given* the Story UI editor is open on ++chat bar scenarios++  
+*When* the Person changes the lines of the Ticket Archive name example of Trace Story Through Artifacts from 86 to 88 to 86 to 90  
+*Then* ++chat bar scenarios++ changes only that example's row  
+  *And* the Story UI editor shows 86 to 90 in that row
+
+#### Scenario: An example named by its example column is renamed in that cell
+
+*Given* the Story UI editor is open on a scenario file whose examples are named by their example column  
+*When* the Person changes the example not running to stopped  
+*Then* the scenario file changes only that cell of its row  
+  *And* the Story UI editor names the example stopped
+
+#### Scenario: An example keeps the place its table gives it
+
+*Given* the Story UI editor is open on ++chat bar scenarios++  
+*When* the Agent moves the second example of Trace Story Through Artifacts before the first  
+*Then* the story map refuses the move, saying an example keeps the place its table gives it  
+  *And* ++chat bar scenarios++ stays as written
+
+#### Scenario: An epic's and a sub-epic's description are edited on screen
+
+*Given* the Story UI editor is open on ++this repository's story map++  
+*When* the Person opens the epic Move Work Forward From Chat Bar and changes its description  
+*Then* ++this repository's story map++ changes only the paragraph under that epic's heading  
+*When* the Person opens the sub-epic Integrate Practice Content Editor Apps In Chat Bar and gives it a description  
+*Then* ++this repository's story map++ adds only that paragraph under that sub-epic's heading
 
 #### Scenario: A story's acceptance tests are links, not edited
 
-*Given* the Story UI editor is open on ++story-map.md++  
+*Given* the Story UI editor is open on ++story-map.md++ beside ++checkout-flow++'s chat  
   *And* the session holds an acceptance-test file for Open Story UI Side Panel From Chat Bar  
 *When* the Person opens the story Open Story UI Side Panel From Chat Bar  
 *Then* the Story UI editor links the story to its acceptance-test file  
-  *And* a press on the link shows the file read only  
-  *But* no other story links to it
+  *And* a press on the link shows the file in the chat bar's file viewer of ++checkout-flow++'s chat  
+  *But* the Story UI editor opens no file of its own  
+  *And* no other story links to it
+
+#### Scenario: A Story UI editor no chat opened says where to read a story's acceptance tests
+
+*Given* the Story UI editor is open on ++story-map.md++ in a window no chat opened  
+  *And* the session holds an acceptance-test file for Open Story UI Side Panel From Chat Bar  
+*When* the Person opens the story Open Story UI Side Panel From Chat Bar  
+*Then* the Story UI editor names the acceptance-test file without a link  
+  *And* it says to open the Story UI from the chat bar, or from a ticket with a chat, to read it in the chat's file viewer
 
 #### Scenario: Increments are edited through the story map and kept in its thin slice
 

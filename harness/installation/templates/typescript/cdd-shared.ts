@@ -18,6 +18,11 @@ export const PROJECT_HEADER = 'x-cdd-project'
 // The folder the page's ?project= link names; empty for a page opened without one, which shows the server's own project.
 export const projectOfPage = (search: string = (globalThis as { location?: { search: string } }).location?.search ?? ''): string => new URLSearchParams(search).get(PROJECT_QUERY) ?? ''
 
+// The chat a page was opened beside, which its ?chat= link names, so the page can show a file in that chat's file viewer
+// (Chat.send open_file); empty for a page no chat opened.
+export const CHAT_QUERY = 'chat'
+export const chatOfPage = (search: string = (globalThis as { location?: { search: string } }).location?.search ?? ''): string => new URLSearchParams(search).get(CHAT_QUERY) ?? ''
+
 // The newest step a running call has reported, such as which file a long load is reading.
 export type CddProgress = { tool: string; message: string }
 

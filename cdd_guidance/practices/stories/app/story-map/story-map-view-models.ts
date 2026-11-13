@@ -1,4 +1,5 @@
 import type { EpicData } from '@cdd/practices/stories/model/epic'
+import type { ExampleData } from '@cdd/practices/stories/model/example'
 import type { IncrementData } from '@cdd/practices/stories/model/increment'
 import type { ScenarioData } from '@cdd/practices/stories/model/scenario'
 import type { StepData } from '@cdd/practices/stories/model/step'
@@ -12,9 +13,10 @@ import type { StoryModelData } from '@cdd/practices/stories/model/story-model'
 export type SemanticType = 'story-map' | 'epic' | 'sub-epic' | 'story' | 'scenario' | 'increment'
 export type StepKeyword = 'given' | 'when' | 'then' | 'and' | 'but'
 export type StepRowDto = { id: string; parent_id: string; step_type: StepKeyword; text: string; sequential_order: number }
-// A scenario's examples as the story model holds them: one table, a row per example, its name under `example`, then
-// its fields. Python has no operation that edits an example, so the views show the table read only.
-export type ExampleTable = { columns: string[]; rows: Record<string, string>[] }
+// A scenario's examples as the story model holds them: one table, a row per example, each named by the address its own
+// tools take, with its name under `example`, then its fields. A cell is edited through its example's edit_field.
+export type ExampleRow = { id: string; fields: Record<string, string> }
+export type ExampleTable = { columns: string[]; rows: ExampleRow[] }
 
 // A node as Python sends it: the address its tools take, its name, and what the story map says about it.
 type SentNode = { node: string; name: string; description: string }
@@ -62,8 +64,9 @@ function stepRowsOf(steps: StepData[], scenario: string): StepRowDto[] {
   })
 }
 
-function exampleTableOf(rows: Record<string, string>[]): ExampleTable {
-  return { columns: [...new Set(rows.flatMap(row => Object.keys(row)))], rows }
+function exampleTableOf(examples: ExampleData[]): ExampleTable {
+  const rows = examples.map(example => ({ id: example.node, fields: example.fields }))
+  return { columns: [...new Set(rows.flatMap(row => Object.keys(row.fields)))], rows }
 }
 
 export class ScenarioViewModel extends StoryNodeViewModel {

@@ -3,7 +3,7 @@
 // cdd_guidance/practices/stories/model/story_map_edits_spec.py; here the page's server is the only seam, answered as
 // the board's server answers.
 // Stories: Refactor Story UI App To Web Domain Access; Open Story UI On Ticket Scope.
-import { act, cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { PROJECT_HEADER } from '@cdd/cdd-shared'
@@ -50,6 +50,26 @@ const CHECKOUT_FLOW: StoryModelData = {
   ],
 }
 
+const SCENARIO = `${OPEN_STORY_UI}.a-press-opens-the-editor`
+const EXAMPLE = `${SCENARIO}.example:story-ui-editor`
+const STORY_TEST = 'move-work-forward-from-chat-bar/open_story_ui_side_panel_from_chat_bar_story.test.py'
+const CHAT = 'ad6c04ab-chat'
+// The checkout-flow story map with a scenario of the Story UI story, its examples, and an acceptance-test file.
+const WITH_EXAMPLES: StoryModelData = {
+  ...CHECKOUT_FLOW,
+  epics: [{
+    ...CHECKOUT_FLOW.epics[0]!,
+    epics: [{
+      ...CHECKOUT_FLOW.epics[0]!.epics[0]!,
+      stories: [{
+        ...story('open-story-ui-side-panel-from-chat-bar', 'Open Story UI Side Panel From Chat Bar'),
+        acceptance_tests: [STORY_TEST],
+        scenarios: [{ node: SCENARIO, name: 'A press opens the editor', description: '', steps: [], examples: [{ node: EXAMPLE, name: 'Story UI editor', description: '', fields: { example: 'Story UI editor', status: 'running' } }] }],
+      }],
+    }],
+  }],
+}
+
 type Posted = { path: string; body: Record<string, unknown> }
 
 // The board's server as the page reaches it: it answers each path from answers, and refuses the rest as down.
@@ -89,10 +109,8 @@ describe('the story model the Story UI draws', () => {
     expect(StoryMapViewModel.of(CHECKOUT_FLOW).increments.map(each => [each.name, each.stories])).toEqual([['Integrate Practice Content Editor Apps', [OPEN_STORY_UI]]])
   })
 
-  it("should draw a scenario's examples as the story model's one table", () => {
-    const scenario = { node: `${OPEN_STORY_UI}.press`, name: 'A press opens the editor', description: '', steps: [], examples: [{ example: 'Story UI editor', status: 'running' }] }
-    const withExamples = { ...CHECKOUT_FLOW, epics: [{ ...CHECKOUT_FLOW.epics[0]!, epics: [{ ...CHECKOUT_FLOW.epics[0]!.epics[0]!, stories: [{ ...story('open-story-ui-side-panel-from-chat-bar', 'Open Story UI Side Panel From Chat Bar'), scenarios: [scenario] }] }] }] }
-    expect(StoryMapViewModel.of(withExamples).epics[0]!.sub_epics[0]!.stories[0]!.scenarios[0]!.examples).toEqual({ columns: ['example', 'status'], rows: [{ example: 'Story UI editor', status: 'running' }] })
+  it("should draw a scenario's examples as the story model's one table, each row by the node its tools take", () => {
+    expect(StoryMapViewModel.of(WITH_EXAMPLES).epics[0]!.sub_epics[0]!.stories[0]!.scenarios[0]!.examples).toEqual({ columns: ['example', 'status'], rows: [{ id: EXAMPLE, fields: { example: 'Story UI editor', status: 'running' } }] })
   })
 
   it("should draw only the stories the ticket's session names, scoped", () => {
@@ -136,6 +154,27 @@ describe('an edit through the story map tools', () => {
     expect(posted.map(each => [each.path, each.body])).toEqual([[`/api/story/${encodeURIComponent(second)}/move-before`, { other: first }]])
   })
 
+  it("should change a cell of an example's row through that example's own tool", async () => {
+    const posted: Posted[] = []
+    const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/edit-field': WITH_EXAMPLES }, posted)), WITH_EXAMPLES)
+    await client.editExample(EXAMPLE, 'status', 'not running')
+    expect(posted).toEqual([{ path: `/api/example/${encodeURIComponent(EXAMPLE)}/edit-field`, body: { field: 'status', value: 'not running' } }])
+  })
+
+  it("should remove an example through its own tool", async () => {
+    const posted: Posted[] = []
+    const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/remove': WITH_EXAMPLES }, posted)), WITH_EXAMPLES)
+    await client.removeExample(EXAMPLE)
+    expect(posted).toEqual([{ path: `/api/example/${encodeURIComponent(EXAMPLE)}/remove`, body: {} }])
+  })
+
+  it("should change an epic's description through its own tool", async () => {
+    const posted: Posted[] = []
+    const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/edit-description': CHECKOUT_FLOW }, posted)), CHECKOUT_FLOW)
+    await client.describeNode(SUB_EPIC, 'sub-epic', 'Requested: the editor apps open from the chat bar.')
+    expect(posted).toEqual([{ path: `/api/epic/${encodeURIComponent(SUB_EPIC)}/edit-description`, body: { description: 'Requested: the editor apps open from the chat bar.' } }])
+  })
+
   it('should turn a format off for the fidelity in the session', async () => {
     const posted: Posted[] = []
     const answers = { '/choose-format': CHECKOUT_FLOW.formats, '/show': CHECKOUT_FLOW }
@@ -155,6 +194,64 @@ describe('a Story UI opened on a repository', () => {
     }
     await new StoryMapApi(() => {}, send, 'C:/dev/checkout').post('/story-model/show', {})
     expect(headers[0]).toMatchObject({ [PROJECT_HEADER]: 'C:/dev/checkout' })
+  })
+})
+
+// The Story UI page opened on story-map.md, its story expanded, with its server answering as the board's does.
+async function openedPage(answers: Record<string, unknown>, chat: string, posted: Posted[] = []): Promise<Posted[]> {
+  vi.stubGlobal('fetch', serverAnswering({ '/show': WITH_EXAMPLES, ...answers }, posted))
+  render(<StoryMapWorkspaceView file={FILE} chat={chat} />)
+  fireEvent.click((await screen.findAllByText('Open Story UI Side Panel From Chat Bar'))[0]!.closest('.story-card-header')!)
+  return posted
+}
+
+// (S) Refactor Story UI App To Web Domain Access: a story's acceptance tests are links that open in the chat bar's file
+// viewer, not in the Story UI.
+describe("a story's acceptance-test link", () => {
+  it("should send the file to the file viewer of the chat the page was opened beside", async () => {
+    const posted = await openedPage({ '/send': { id: CHAT, name: 'checkout-flow', is_busy: false, folder: '' } }, CHAT)
+    fireEvent.click(screen.getByRole('button', { name: STORY_TEST }))
+    await waitFor(() => expect(posted.at(-1)).toEqual({ path: `/api/chat/${CHAT}/send`, body: { kind: 'open_file', text: STORY_TEST } }))
+  })
+
+  it('should open nothing in the Story UI itself', async () => {
+    await openedPage({ '/send': { id: CHAT, name: 'checkout-flow', is_busy: false, folder: '' } }, CHAT)
+    fireEvent.click(screen.getByRole('button', { name: STORY_TEST }))
+    expect(screen.queryByRole('complementary')).toBeNull()
+  })
+
+  it('should say where to read the file on a page no chat opened', async () => {
+    await openedPage({}, '')
+    expect([screen.queryByRole('button', { name: STORY_TEST }), screen.getByRole('note').textContent]).toEqual([null, expect.stringContaining("chat's file viewer")])
+  })
+})
+
+// (S) Refactor Story UI App To Web Domain Access: a scenario's example rows are edited through each example's tools.
+describe("a scenario's example row on the page", () => {
+  it("should save a changed cell through that example's edit_field", async () => {
+    const posted = await openedPage({ '/edit-field': WITH_EXAMPLES }, CHAT)
+    const cell = screen.getByRole('textbox', { name: 'status of Story UI editor' })
+    fireEvent.change(cell, { target: { value: 'not running' } })
+    fireEvent.blur(cell)
+    await waitFor(() => expect(posted.at(-1)).toEqual({ path: `/api/example/${encodeURIComponent(EXAMPLE)}/edit-field`, body: { field: 'status', value: 'not running' } }))
+  })
+})
+
+// (S) Refactor Story UI App To Web Domain Access: an epic's and a sub-epic's descriptions are edited on screen.
+describe("an epic's description on the page", () => {
+  it("should save a changed description through the sub-epic's own tool", async () => {
+    const posted = await openedPage({ '/edit-description': WITH_EXAMPLES }, CHAT)
+    fireEvent.click(screen.getAllByText('SUB-EPIC')[0]!)
+    const description = screen.getByRole('textbox', { name: 'Description of Integrate Practice Content Editor Apps In Chat Bar' })
+    fireEvent.change(description, { target: { value: 'Requested: the editor apps open from the chat bar.' } })
+    fireEvent.blur(description)
+    await waitFor(() => expect(posted.at(-1)).toEqual({ path: `/api/epic/${encodeURIComponent(SUB_EPIC)}/edit-description`, body: { description: 'Requested: the editor apps open from the chat bar.' } }))
+  })
+
+  it("should show the epic's description once the epic is opened", async () => {
+    await openedPage({}, CHAT)
+    fireEvent.click(screen.getAllByText('EPIC')[0]!)
+    expect(screen.getByRole('textbox', { name: 'Description of Move Work Forward From Chat Bar' })).toBeTruthy()
   })
 })
 

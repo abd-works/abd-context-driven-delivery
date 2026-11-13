@@ -262,6 +262,8 @@ class StoryNode(ModelNode, ABC):
         _renumber(siblings)
 
 
+@language_adapter(language="typescript")
+@agent_toolset
 class Example(StoryNode):
     """One named example. `value` is any object and defaults to a field map.
 
@@ -270,6 +272,10 @@ class Example(StoryNode):
     """
 
     _semantic_type_name = "Example"
+    # An example goes by its slug after `example:`, so it never shares a path with a step of its scenario.
+    segment_prefix = "example:"
+    # The columns an example's row may name it by, in the order a table is read for its name.
+    naming_columns = ("example", "name")
 
     def __init__(
         self,
@@ -326,6 +332,53 @@ class Example(StoryNode):
         arguments = ", ".join(f"{name}={item!r}" for name, item in self.cells().items())
         return f"{type(value).__name__}({arguments})"
 
+    @property
+    @data_field(key="fields")
+    def row(self) -> Dict[str, str]:
+        """Its row of its table: its name under `example`, then its fields, each as text."""
+        cells: Dict[str, Any] = {"example": self.name, **self.cells()}
+        return {column: "" if value is None else str(value) for column, value in cells.items()}
+
+    @mcp
+    @agent_tool
+    def edit_field(self, field: str, text: str) -> "StoryModel":
+        """Change what this example says under field, a column of its row, to text; the column it is named by renames
+        it. Save its story map and return it. A column its row does not have is refused with StoryMapEditRefused."""
+        if field not in self.row:
+            raise StoryMapEditRefused(self, "edit_field", f"{self.name} has no {field} column")
+        if self._names_it(field):
+            return self.rename(text)
+        if not isinstance(self.value, dict):
+            raise StoryMapEditRefused(self, "edit_field", f"{self.name} keeps its fields in a {type(self.value).__name__}, not a table row")
+        self.value[field] = text
+        return self.story_map.write_back()
+
+    @mcp
+    @agent_tool
+    def rename(self, name: str) -> "StoryModel":
+        """Rename this example, and the column of its row that names it; save its story map and return it."""
+        named = [column for column in self.naming_columns if self._names_it(column) and isinstance(self.value, dict)]
+        if isinstance(self.value, str):
+            self.value = name
+        for column in named:
+            self.value[column] = name
+        self.scope.examples.rename(self, name)
+        return self.story_map.write_back()
+
+    def edit_description(self, description: str) -> "StoryModel":
+        """An example's row holds no description, so none is kept: refused with StoryMapEditRefused, and no tool offers
+        it."""
+        raise StoryMapEditRefused(self, "edit_description", f"{self.name} is a row of its table, which holds no description")
+
+    def _names_it(self, field: str) -> bool:
+        """Whether its row names it by field: `example` always does, `name` while it says its name."""
+        return field == "example" or (field in self.naming_columns and self.row.get(field) == self.name)
+
+    def _leave(self) -> None:
+        """An example leaves the examples of its scope; nothing holds its place."""
+        self.scope.examples.drop(self)
+        self.parent = None
+
 
 class Examples(dict):
     """Example name to value. Iterates as a table and each value can be written as code.
@@ -345,6 +398,18 @@ class Examples(dict):
         super().__setitem__(name, value)
         if isinstance(self.scope, StoryNode):
             self.scope.attach(value, "examples")
+
+    def rename(self, example: Example, name: str) -> None:
+        """Keep example under name, in the place it stood."""
+        held = [(name if each is example else key, each) for key, each in self.items()]
+        example.name = name
+        dict.clear(self)
+        dict.update(self, held)
+
+    def drop(self, example: Example) -> None:
+        """Hold example no longer."""
+        for key in [key for key, each in self.items() if each is example]:
+            del self[key]
 
     def clone(self, scope: Optional["StoryNode"] = None) -> "Examples":
         copied = type(self)(self.scope if scope is None else scope)
@@ -721,15 +786,17 @@ class Scenario(StoryNode):
 
     @property
     @data_field(key="examples")
-    def example_rows(self) -> List[Dict[str, str]]:
-        """Its examples as one table: a row per example, its name under `example`, then its fields."""
-        return self.examples.table()
+    def example_rows(self) -> List[Example]:
+        """Its examples, a row each, in the order its table gives them; each is edited through its own tools."""
+        return list(self.examples.values())
 
     @property
     def parts(self) -> List["StoryNode"]:
-        return list(self.steps)
+        return [*self.steps, *self.examples.values()]
 
     def holding(self, part: "StoryNode") -> List["StoryNode"]:
+        if isinstance(part, Example):
+            raise StoryMapEditRefused(part, "move", "an example keeps the place its table gives it")
         return self._steps
 
     @mcp

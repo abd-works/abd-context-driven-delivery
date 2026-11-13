@@ -5,7 +5,7 @@ import type { FileEntryData } from '@cdd/space/kanban/fidelity-progress'
 import type { FileTextData } from '@cdd/space/session/session'
 
 import type { FidelityFilesJson } from '../../types'
-import { projectPageUrl, repositoryFolder } from '../board-chat/board'
+import { CHAT_QUERY, projectPageUrl, repositoryFolder } from '../board-chat/board'
 import { runningBoardUrl } from '../board-chat/board-server'
 import { openAppBesideChat } from '../health/app-client'
 import { openInBrowser } from '../shared/browser'
@@ -85,10 +85,25 @@ export async function showFile($: EngineInterface, path: string): Promise<void> 
 }
 
 // A press on a file's editor tile opens the file in that app beside the chat, readied as a press on it in the status
-// row readies it (App.open): the Story UI editor opens a Stories file at its page's ?file= link. A refusal shows in the
-// server health panel, as a status row press's does.
+// row readies it (App.open): the Story UI editor opens a Stories file at its page's ?file= link, and its ?chat= link
+// names this chat, whose file viewer then shows a story's acceptance tests. A refusal shows in the server health panel,
+// as a status row press's does.
 export async function openInEditorApp($: EngineInterface, editor: string, path: string): Promise<void> {
-  await openAppBesideChat($, editor, url => projectPageUrl($, url, { file: path }))
+  const chat = await $.session.id()
+  await openAppBesideChat($, editor, url => projectPageUrl($, url, { file: path, [CHAT_QUERY]: chat }))
+}
+
+// A file another page asked this chat to show (Chat.send open_file), such as a story's acceptance test the Story UI
+// editor links: a tab of the files pane, added beside the tabs it has, or the pane opened on that file alone.
+export async function openFileInViewer($: EngineInterface, path: string): Promise<void> {
+  const tab = { path, text: null, exists: true, editor: null }
+  const { designView } = await currentChatBar($)
+  await update($, fidelityFiles, files => {
+    if (!files) return { fidelity: path, tabs: [tab], shown: path, isOutOfDate: false, designView }
+    return files.tabs.some(each => each.path === path) ? files : { ...files, tabs: [...files.tabs, tab] }
+  })
+  await openPane($, path.split('/').at(-1) ?? path)
+  await showFile($, path)
 }
 
 // The session's design view opens in Claude Design, in the browser, by its claude.ai link.

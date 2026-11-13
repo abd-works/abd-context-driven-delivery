@@ -44,6 +44,15 @@ describe('Open Story UI On Ticket Scope', () => {
     })
   })
 
+  // (S) Refactor Story UI App To Web Domain Access: the editor names the ticket's chat, whose file viewer shows a story's
+  // acceptance tests.
+  describe("on a ticket with a chat", () => {
+    it("should name the ticket's chat in the Story UI editor's page link", async () => {
+      const { windows } = await opened(STORY_UI, 'running', client => client.openOn(client.editorOf(STORY_UI), PROJECT, 'ad6c04ab-chat'))
+      expect(windows).toEqual(['http://127.0.0.1:8778/story-map?project=C%3A%2Fdev%2Fcheckout-flow&chat=ad6c04ab-chat'])
+    })
+  })
+
   describe('with the Story UI editor not running', () => {
     it("should open nothing and say to open it from the chat bar's status row", async () => {
       const { windows, toasts } = await opened(STORY_UI, 'not running', fromRow)

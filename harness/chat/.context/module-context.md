@@ -1,7 +1,7 @@
 # harness/chat
 *Chat* is a Claude Code chat reached from outside it, so the session board can see which chats are connected and send one a command. A chat is connected while its cdd-board mod checks in every second; `Chat.load(chat)` is the chat with that id, and `chat.list` lists the connected ones with their name, whether a turn is running, and the folder they work in.
 
-*ChatCommand* is a command a chat takes at its check-in: submit a prompt, fill the prompt box, or run a slash command. *ChatMessage* is a command as the board lists it — when it was sent and where it stands (waiting, taken, shown, done, or failed, with the reason it failed).
+*ChatCommand* is a command a chat takes at its check-in: submit a prompt, fill the prompt box, run a slash command, or open a file (a path from the project) in its chat bar's file viewer, as the Story UI editor opened beside the chat does for a story's acceptance test. *ChatMessage* is a command as the board lists it — when it was sent and where it stands (waiting, taken, shown, done, or failed, with the reason it failed).
 
 `chat.open(folder, prompt)` opens a new chat in the Claude app on a folder with its prompt filled in, through *ChatLinks*, the opener *Chat* holds (`Chat.opener`), which builds the `claude://code/new` link (`link_to_new`) and hands it to the system; a page in the app's Browser pane cannot hand the app that link, so the board opens a ticket's chat through it, and `repos.open` opens a new repository's chat through it. A run that names a file in `CDD_OPENED_CHATS` gets *RecordedChatLinks*, which keeps each link in that file instead of opening the app, so no spec opens a chat on this machine.
 

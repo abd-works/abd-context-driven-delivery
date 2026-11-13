@@ -14,7 +14,7 @@ from typing import List, Optional
 
 
 from cdd_guidance.practices.stories.model.markdown.links import unlink
-from cdd_guidance.practices.stories.model.markdown.markup import strip_markup
+from cdd_guidance.practices.stories.model.markdown.markup import ExampleRowLine, MarkdownExample, strip_markup
 from cdd_guidance.practices.stories.model.markdown.scenario_parts import (
     HEADING_LINE,
     STEP_LINE,
@@ -198,10 +198,8 @@ class ScenarioFileReading:
         if match is not None:
             self._step_line(match.group(1), unlink(match.group(2)).strip())
             return
-        self.container.append(self.kept)
         fields = self.examples.row(self.raw)
-        if fields is not None:
-            self._record_example(fields)
+        self.container.append(self.kept if fields is None else self._record_example(fields))
 
     def _step_line(self, keyword: str, text: str) -> None:
         background = self.backgrounds.owner_of(keyword)
@@ -214,12 +212,17 @@ class ScenarioFileReading:
         if owner is self.scenario and keyword.lower() in ("when", "then") and owner.steps:
             self.fence.target = owner.steps[-1]
 
-    def _record_example(self, fields: dict) -> None:
-        """An example row: the scenario's, else the story background's while it is read, else the shared one's."""
+    def _record_example(self, fields: dict) -> MarkdownExample:
+        """An example row: the scenario's, else the story background's while it is read, else the shared one's. The
+        example keeps the row's line and its table's headers, and stands where the line did."""
         value = fields["example"] if set(fields) <= {"example"} else fields
         owner = self.scenario if self.scenario is not None else self.backgrounds.example_owner()
         shared = owner is self.backgrounds.shared
-        owner.examples[self.examples.label(fields, len(owner.examples) + 1, shared=shared)] = value
+        name = self.examples.label(fields, len(owner.examples) + 1, shared=shared)
+        example = MarkdownExample(name, value, ExampleRowLine(self.kept, list(self.examples.headers)))
+        example.sequential_order = len(owner.examples) + 1
+        owner.examples[name] = example
+        return example
 
     def _close_scenario(self) -> None:
         if self.scenario is None:

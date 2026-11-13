@@ -9,6 +9,9 @@ const BOARD_HEADERS = { 'X-CDD-Board': '1', 'Content-Type': 'application/json' }
 // One board server serves every repository, so each call names this chat's repository, and the page's link does too.
 const PROJECT_HEADER = 'X-CDD-Project'
 const PROJECT_QUERY = 'project'
+// A page this chat opens names the chat in its link, so it can show a file in this chat's file viewer (cdd-shared's
+// CHAT_QUERY; the mod takes only types from the language adapter, so the word is spelled here as PROJECT_QUERY is).
+export const CHAT_QUERY = 'chat'
 
 // One call on the board's chat routes, each with the body that chat tool takes.
 export type ChatRequest = { chat: string } & (

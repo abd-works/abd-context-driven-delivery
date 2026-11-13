@@ -3,7 +3,6 @@
 // that client, which saves it through the node's own tool; nothing here holds a story map of its own.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { SourceViewGenerated } from '@cdd/cdd-files';
 import { useStoryModel } from '@cdd/practices/stories/model/story-model-views';
 
 import { StoryMapApi } from './story-map-api';
@@ -600,7 +599,10 @@ interface StoryHierarchyViewProps {
   onAddStep?: (storyId: string, scenarioId: string) => void;
   onUpdateStep?: (storyId: string, scenarioId: string, stepId: string, values: Partial<Pick<StepRowDto, 'text' | 'step_type'>>) => void;
   onRemoveStep?: (storyId: string, scenarioId: string, stepId: string) => void;
+  onEditExample?: (exampleId: string, field: string, value: string) => void;
+  onRemoveExample?: (exampleId: string) => void;
   onEditDescription?: (nodeId: string, description: string) => void;
+  // Opens an acceptance-test file in the chat bar's file viewer; none when no chat opened the page.
   onOpenFile?: (path: string) => void;
 }
 
@@ -640,8 +642,10 @@ export function StoryHierarchyView({
   onAddStep = () => {},
   onUpdateStep = () => {},
   onRemoveStep = () => {},
+  onEditExample = () => {},
+  onRemoveExample = () => {},
   onEditDescription = () => {},
-  onOpenFile = () => {},
+  onOpenFile,
 }: StoryHierarchyViewProps) {
   const assignedStoryIds = new Set(storyMap.increments.flatMap((i) => i.stories));
   const dragRef = useRef<string | null>(null);
@@ -786,6 +790,8 @@ export function StoryHierarchyView({
         onAddStep={onAddStep}
         onUpdateStep={onUpdateStep}
         onRemoveStep={onRemoveStep}
+        onEditExample={onEditExample}
+        onRemoveExample={onRemoveExample}
         onEditDescription={onEditDescription}
         onOpenFile={onOpenFile}
         dragHandlers={dragHandlers}
@@ -881,6 +887,9 @@ export function StoryHierarchyView({
                   </div>
                 </div>
                 <NodeNameInput nodeId={epic.id} name={epic.name} onSaveInline={onSaveInline} className="node-label" />
+                {expandedNodeIds.has(epic.id) && (
+                  <DescriptionEditor key={epic.description} node={epic} onSave={(description) => onEditDescription(epic.id, description)} />
+                )}
               </div>
             );
           })
@@ -975,6 +984,10 @@ export function StoryHierarchyView({
                 </div>
               </div>
               <NodeNameInput nodeId={sub.id} name={sub.name} onSaveInline={onSaveInline} className="node-label" />
+              {/* An epic's own stories show as a row named for the epic, whose description the epic's lane edits. */}
+              {sub.id !== epic.id && expandedNodeIds.has(sub.id) && (
+                <DescriptionEditor key={sub.description} node={sub} onSave={(description) => onEditDescription(sub.id, description)} />
+              )}
             </div>
           );
         });
@@ -1232,8 +1245,10 @@ interface StoryCardProps {
   onAddStep: (storyId: string, scenarioId: string) => void;
   onUpdateStep: (storyId: string, scenarioId: string, stepId: string, values: Partial<Pick<StepRowDto, 'text' | 'step_type'>>) => void;
   onRemoveStep: (storyId: string, scenarioId: string, stepId: string) => void;
+  onEditExample: (exampleId: string, field: string, value: string) => void;
+  onRemoveExample: (exampleId: string) => void;
   onEditDescription: (nodeId: string, description: string) => void;
-  onOpenFile: (path: string) => void;
+  onOpenFile?: (path: string) => void;
 }
 
 function StoryCard({
@@ -1259,6 +1274,8 @@ function StoryCard({
   onAddStep,
   onUpdateStep,
   onRemoveStep,
+  onEditExample,
+  onRemoveExample,
   onEditDescription,
   onOpenFile,
 }: StoryCardProps) {
@@ -1354,6 +1371,8 @@ function StoryCard({
                 onAddStep={() => onAddStep(story.id, sc.id)}
                 onUpdateStep={(stepId, values) => onUpdateStep(story.id, sc.id, stepId, values)}
                 onRemoveStep={(stepId) => onRemoveStep(story.id, sc.id, stepId)}
+                onEditExample={onEditExample}
+                onRemoveExample={onRemoveExample}
               />
             </div>
           ))}
@@ -1442,6 +1461,8 @@ function ScenarioPanel({
   onAddStep,
   onUpdateStep,
   onRemoveStep,
+  onEditExample,
+  onRemoveExample,
 }: {
   scenario: ScenarioViewModel;
   storyId: string;
@@ -1451,6 +1472,8 @@ function ScenarioPanel({
   onAddStep: () => void;
   onUpdateStep: (stepId: string, values: Partial<Pick<StepRowDto, 'text' | 'step_type'>>) => void;
   onRemoveStep: (stepId: string) => void;
+  onEditExample: (exampleId: string, field: string, value: string) => void;
+  onRemoveExample: (exampleId: string) => void;
 }) {
   const stepDragRef = useRef<string | null>(null);
   const [scenarioName, setScenarioName] = useState(scenario.name);
@@ -1496,7 +1519,7 @@ function ScenarioPanel({
         </ol>
       </div>
 
-      <ExampleTableView examples={scenario.examples} />
+      <ExampleTableView examples={scenario.examples} onEdit={onEditExample} onRemove={onRemoveExample} />
     </div>
   );
 }
@@ -1542,8 +1565,9 @@ function StepEditor({
   );
 }
 
-// A scenario's examples as the story model holds them: a row per example, read only, since no operation edits one.
-function ExampleTableView({ examples }: { examples: ExampleTable }) {
+// A scenario's examples as the story model holds them: a row per example. Each cell its row has is edited through that
+// example's edit_field when it changes; a column only other rows have stays empty and read only.
+function ExampleTableView({ examples, onEdit, onRemove }: { examples: ExampleTable; onEdit: (exampleId: string, field: string, value: string) => void; onRemove: (exampleId: string) => void }) {
   if (!examples.rows.length) return null;
   return (
     <div className="examples-section">
@@ -1551,16 +1575,42 @@ function ExampleTableView({ examples }: { examples: ExampleTable }) {
       <div className="example-block">
       <table>
         <thead>
-          <tr>{examples.columns.map((column) => <th key={column}>{column}</th>)}</tr>
+          <tr>{examples.columns.map((column) => <th key={column}>{column}</th>)}<th aria-label="Remove" /></tr>
         </thead>
         <tbody>
-          {examples.rows.map((row, index) => (
-            <tr key={row.example ?? index}>{examples.columns.map((column) => <td key={column}>{row[column] ?? ''}</td>)}</tr>
+          {examples.rows.map((row) => (
+            <tr key={row.id}>
+              {examples.columns.map((column) => (
+                <td key={column}>
+                  {column in row.fields
+                    ? <ExampleCellEditor key={`${row.id}-${row.fields[column]}`} label={`${column} of ${row.fields.example}`} value={row.fields[column]!} onSave={(value) => onEdit(row.id, column, value)} />
+                    : null}
+                </td>
+              ))}
+              <td><button className="node-btn minus-btn" title="Delete Example" onClick={() => onRemove(row.id)}>−</button></td>
+            </tr>
           ))}
         </tbody>
       </table>
       </div>
     </div>
+  );
+}
+
+// One cell of an example's row, saved when it changes and the person leaves it or presses Enter.
+function ExampleCellEditor({ label, value, onSave }: { label: string; value: string; onSave: (value: string) => void }) {
+  const [text, setText] = useState(value);
+  const save = () => { if (text !== value) onSave(text); };
+  return (
+    <input
+      className="example-cell-input"
+      aria-label={label}
+      value={text}
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => setText(e.target.value)}
+      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } if (e.key === 'Escape') setText(value); }}
+      onBlur={save}
+    />
   );
 }
 
@@ -1585,17 +1635,23 @@ function DescriptionEditor({ node, onSave }: { node: { name: string; description
   );
 }
 
-// A story's acceptance tests are read, not edited, here: each opens read only beside the map.
-function AcceptanceTestsView({ files, onOpen }: { files: string[]; onOpen: (path: string) => void }) {
+// A story's acceptance tests are not edited here: each is a link that opens the file in the chat bar's file viewer of the
+// chat this page was opened beside. A page no chat opened names the files and says where to read them.
+function AcceptanceTestsView({ files, onOpen }: { files: string[]; onOpen?: (path: string) => void }) {
   if (!files.length) return null;
   return (
     <div className="acceptance-tests-section">
       <div className="section-heading"><span>Acceptance tests</span></div>
       <ul className="acceptance-test-links">
         {files.map((file) => (
-          <li key={file}><button type="button" className="acceptance-test-link" onClick={(e) => { e.stopPropagation(); onOpen(file); }}>{file}</button></li>
+          <li key={file}>
+            {onOpen
+              ? <button type="button" className="acceptance-test-link" title="Open in the chat bar's file viewer" onClick={(e) => { e.stopPropagation(); onOpen(file); }}>{file}</button>
+              : <span className="acceptance-test-path">{file}</span>}
+          </li>
         ))}
       </ul>
+      {!onOpen && <p className="acceptance-test-note" role="note">Open the Story UI from the chat bar, or from a ticket with a chat, to read these files in the chat's file viewer.</p>}
     </div>
   );
 }
@@ -1607,6 +1663,9 @@ function AcceptanceTestsView({ files, onOpen }: { files: string[]; onOpen: (path
 interface StoryMapWorkspaceViewProps {
   // The Stories file to open, from the page's ?file= link; none follows the session open in the project.
   file: string | null;
+  // The chat the page was opened beside, from its ?chat= link, whose file viewer shows a story's acceptance tests;
+  // empty for a page no chat opened.
+  chat?: string;
 }
 
 type ColorMode = 'executive' | 'engineering';
@@ -1662,7 +1721,7 @@ function useCanvasPanning() {
   return { canvasRef, isPanning: panStart !== null, onMouseDown, onContextMenu: (e: React.MouseEvent) => e.preventDefault() };
 }
 
-export function StoryMapWorkspaceView({ file }: StoryMapWorkspaceViewProps) {
+export function StoryMapWorkspaceView({ file, chat = '' }: StoryMapWorkspaceViewProps) {
   const { client, failure, status, edit, dismissFailure } = useStoryMapPage(file);
   const { viewMode, toggleViewMode, scoped, toggleScoped, showScenarios, expandedNodeIds, toggleShowScenarios, expandNode, collapseNode, expandDescendants, collapseAll } = useStoryMapViewState();
   const [theme, setTheme] = useState<ColorMode>(themeOnOpen);
@@ -1678,20 +1737,20 @@ export function StoryMapWorkspaceView({ file }: StoryMapWorkspaceViewProps) {
       ? <div className="loading"><span className="status-dot error" />{failure}</div>
       : <div className="loading"><span className="status-dot pending" />Loading story map…</div>;
   }
-  return <StoryMapCanvasView client={client} failure={failure} status={status} edit={edit} dismissFailure={dismissFailure} viewMode={viewMode} toggleViewMode={toggleViewMode} scoped={scoped} toggleScoped={toggleScoped} showScenarios={showScenarios} toggleShowScenarios={toggleShowScenarios} expandedNodeIds={expandedNodeIds} expandNode={expandNode} collapseNode={collapseNode} expandDescendants={expandDescendants} collapseAll={collapseAll} theme={theme} setTheme={setTheme} panning={panning} />;
+  return <StoryMapCanvasView client={client} chat={chat} failure={failure} status={status} edit={edit} dismissFailure={dismissFailure} viewMode={viewMode} toggleViewMode={toggleViewMode} scoped={scoped} toggleScoped={toggleScoped} showScenarios={showScenarios} toggleShowScenarios={toggleShowScenarios} expandedNodeIds={expandedNodeIds} expandNode={expandNode} collapseNode={collapseNode} expandDescendants={expandDescendants} collapseAll={collapseAll} theme={theme} setTheme={setTheme} panning={panning} />;
 }
 
 type StoryMapCanvasProps = Omit<ReturnType<typeof useStoryMapPage>, 'client'> & Pick<ReturnType<typeof useStoryMapViewState>, 'viewMode' | 'toggleViewMode' | 'scoped' | 'toggleScoped' | 'showScenarios' | 'toggleShowScenarios' | 'expandedNodeIds' | 'expandNode' | 'collapseNode' | 'expandDescendants' | 'collapseAll'> & {
   client: StoryMapClient;
+  chat: string;
   theme: ColorMode;
   setTheme: (theme: ColorMode) => void;
   panning: ReturnType<typeof useCanvasPanning>;
 };
 
-function StoryMapCanvasView({ client, failure, status, edit, dismissFailure, viewMode, toggleViewMode, scoped, toggleScoped, showScenarios, toggleShowScenarios, expandedNodeIds, expandNode, collapseNode, expandDescendants, collapseAll, theme, setTheme, panning }: StoryMapCanvasProps) {
+function StoryMapCanvasView({ client, chat, failure, status, edit, dismissFailure, viewMode, toggleViewMode, scoped, toggleScoped, showScenarios, toggleShowScenarios, expandedNodeIds, expandNode, collapseNode, expandDescendants, collapseAll, theme, setTheme, panning }: StoryMapCanvasProps) {
   const map = useStoryModel(client);
   const storyMap = useMemo(() => StoryMapViewModel.of(map.toJSON(), scoped), [map, map.toJSON(), scoped]);
-  const [openFile, setOpenFile] = useState<string | null>(null);
   const kindOf = (node: string): NodeKind => (storyMap.kinds.get(node) ?? 'epic') as NodeKind;
   const lastOf = <T extends { id: string }>(nodes: T[]): string | undefined => nodes[nodes.length - 1]?.id;
   const subEpicsOf = (epic: string) => storyMap.epics.find((each) => each.id === epic)?.sub_epics ?? [];
@@ -1773,8 +1832,10 @@ function StoryMapCanvasView({ client, failure, status, edit, dismissFailure, vie
           onAddStep={(_story, scenario) => void edit((held) => held.newStep(scenario, 'given', NEW_NAMES.step))}
           onUpdateStep={(_story, _scenario, step, values) => { if (values.text !== undefined) void edit((held) => held.editStep(step, values.text!)); }}
           onRemoveStep={(_story, _scenario, step) => void edit((held) => held.removeNode(step, 'step'))}
+          onEditExample={(example, field, value) => void edit((held) => held.editExample(example, field, value))}
+          onRemoveExample={(example) => void edit((held) => held.removeExample(example))}
           onEditDescription={(node, description) => void edit((held) => held.describeNode(node, kindOf(node), description))}
-          onOpenFile={setOpenFile}
+          onOpenFile={chat ? (path) => void client.showInChat(chat, path) : undefined}
           onAppendIncrement={() => void edit((held) => held.newIncrement(NEW_NAMES.increment))}
           onRemoveIncrement={(increment) => void edit((held) => held.removeNode(increment, 'increment'))}
           onReorderIncrements={(order) => void edit((held) => held.reorder(storyMap.increments.map((each) => each.id), order, 'increment'))}
@@ -1782,13 +1843,6 @@ function StoryMapCanvasView({ client, failure, status, edit, dismissFailure, vie
           onUnassignFromIncrement={(story) => { const increment = storyMap.incrementOf(story); if (increment) void edit((held) => held.stopDelivering(increment.id, story)); }}
         />
       </div>
-
-      {openFile && (
-        <aside className="acceptance-test-file" aria-label={`Acceptance test ${openFile}`}>
-          <button type="button" className="toolbar-btn" onClick={() => setOpenFile(null)}>Close</button>
-          <SourceViewGenerated api={client.api} path={openFile} />
-        </aside>
-      )}
 
       <div className="status-rail">
         {status === 'synced' && <span><span className="status-dot" />saved in {map.formats.chosen_formats.join(' and ')}</span>}

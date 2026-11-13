@@ -46,7 +46,7 @@ OPEN_LINK_SECONDS = 30
 # A file that keeps every link a new chat was opened with instead of opening the Claude app, as a test run names it.
 OPENED_CHATS_VARIABLE = "CDD_OPENED_CHATS"
 
-CommandKind = Literal["submit", "fill", "command"]
+CommandKind = Literal["submit", "fill", "command", "open_file"]
 MessageState = Literal["waiting", "taken", "shown", "done", "failed"]
 T = TypeVar("T")
 
@@ -195,7 +195,7 @@ class Chat:
     @agent_tool
     @noSessionLog
     def send(self, kind: CommandKind, text: str) -> Chat:
-        """Send chat a command: a fill puts text in its prompt for the person to review, a submit sends it, and a command runs a slash command. A fill waits until the chat's turn has ended."""
+        """Send chat a command: a fill puts text in its prompt for the person to review, a submit sends it, a command runs a slash command, and an open_file shows the file text names, a path from the project, in its chat bar's file viewer. A fill waits until the chat's turn has ended."""
         if not self.is_connected:
             raise ChatNotConnectedError(self.id)
         waiting = self._folder / WAITING

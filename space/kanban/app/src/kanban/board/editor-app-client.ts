@@ -1,4 +1,4 @@
-import { PROJECT_QUERY, type CddApi } from '@cdd/cdd-shared'
+import { CHAT_QUERY, PROJECT_QUERY, type CddApi } from '@cdd/cdd-shared'
 import { AppClientGenerated, type AppData } from '@cdd/harness/diagnostics/app'
 
 import type { BoardStore } from '../shared/board-store'
@@ -31,7 +31,9 @@ export class EditorAppClient {
     return new AppClientGenerated(this.api, editor)
   }
 
-  async openOn(app: AppClientGenerated, project: string): Promise<void> {
+  // chat names the ticket's chat, when it has one, so the app can show a file in that chat's file viewer, as the Story
+  // UI editor shows a story's acceptance tests.
+  async openOn(app: AppClientGenerated, project: string, chat: string = ''): Promise<void> {
     const opened = await app.open()
     if (!opened) return
     if (opened.status !== 'running') {
@@ -40,6 +42,7 @@ export class EditorAppClient {
     }
     const page = new URL(opened.url)
     page.searchParams.set(PROJECT_QUERY, project)
+    if (chat) page.searchParams.set(CHAT_QUERY, chat)
     this.openWindow(page.toString())
   }
 }

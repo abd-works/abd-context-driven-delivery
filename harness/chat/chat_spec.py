@@ -304,6 +304,15 @@ with description("a chat") as self:
                 with it("should keep no more than it shows"):
                     expect(len(Chat.load(CHAT).messages())).to(equal(20))
 
+        # (S) Refactor Story UI App To Web Domain Access: a story's acceptance-test link opens the file in the chat bar's
+        # file viewer of the chat the Story UI editor was opened from.
+        with context("that has been sent a file to open in its file viewer during a turn"):
+            with before.each:
+                Chat.load(CHAT).send("open_file", "move-work-forward-from-chat-bar/open_story_ui_story.test.py")
+
+            with it("should get the file at its next check-in, a turn running or not"):
+                expect(_said(Chat.load(CHAT).check_in(is_busy=True))).to(equal([("open_file", "move-work-forward-from-chat-bar/open_story_ui_story.test.py")]))
+
         with context("that has been sent a fill during a turn"):
             with before.each:
                 Chat.load(CHAT).send("fill", "Write a handoff")

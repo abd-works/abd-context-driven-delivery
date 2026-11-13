@@ -326,13 +326,44 @@ Every edit answers the **story map**, not the node it changed (`standard-mutatio
 ### Story (extended)
 
 + acceptance_tests: list[str]  <<data_field>>
-	// the session's story tests that hold it, as paths from the project: shown as links, read only, never edited (decided 2026-11-12 by the person)
+	// the session's story tests that hold it, as paths from the project: shown as links, never edited (decided 2026-11-12 by the person); a link opens the file in the chat bar's file viewer of the chat the Story UI editor was opened beside (Chat.send open_file), not in the Story UI (decided 2026-11-12, implementation)
 	-> self.story_map.acceptance_tests_of
 
 ### Scenario (extended)
 
-+ example_rows: list[dict[str, str]]  <<data_field key="examples">>
-	// its examples as the story model holds them, one table (Examples.table): the Story UI shows it read only, since no operation edits an example
++ example_rows: list[Example]  <<data_field key="examples">>
+	// its examples, a row each, in the order its table gives them: the Story UI edits each through the example's own tools
++ parts: list[StoryNode]
+	// its steps, then its examples, so a path reaches an example (`{scenario}.example:{slug}`) and a save checks the examples read back
++ holding(part) -> list[StoryNode]
+	// refuses an Example with StoryMapEditRefused: an example keeps the place its table gives it
+
+### Example (extended)
+
+<<language_adapter typescript>> <<agent_toolset>>: one row of a scenario's examples table, edited through the story map like every other node (decided 2026-11-12, implementation: the Story UI's example rows edit through the model, not a copy of it).
+
++ row: dict[str, str]  <<data_field key="fields">>
+	// its row of its table: its name under `example`, then its fields, each as text
++ segment_prefix = "example:"
++ naming_columns = ("example", "name")
+----
++ edit_field(field: str, value: str) -> StoryModel  <<mcp>> <<agent_tool>>
+	// the column that names it (`example`, or `name` while it says its name) renames it; a column its row does not have is refused with StoryMapEditRefused
+	-> self.story_map.write_back
++ rename(name: str) -> StoryModel  <<mcp>> <<agent_tool>>
+	// renames the column of its row that names it too, and keeps its place in its scope's Examples
+	-> Examples.rename
+	-> self.story_map.write_back
++ remove() -> StoryModel  <<mcp>> <<agent_tool>>  (from StoryNode; it leaves its scope's Examples, Examples.drop)
++ move_before(other) -> StoryModel  <<mcp>> <<agent_tool>>  (from StoryNode; refused by Scenario.holding)
++ edit_description(description) -> StoryModel
+	// refused, and no tool offers it: a row holds no description
+
+### MarkdownExample (new, cdd_guidance/practices/stories/model/markdown/markup.py)
+
+An example read from a row of a markdown examples table (*ScenarioFileReading* makes one per row and keeps it where the row stood). It keeps the row's line and the table's headers, so an unchanged example is written back as read, an edited one changes only the cells the edit changed, and one taken off its scope writes no line.
+
++ line() -> str
 
 ### Increment (extended)
 
@@ -422,7 +453,7 @@ The Story UI editor, moved from its own repository (`C:/dev/story-ui`) beside th
 - `story-map/story-map-client.ts` — *StoryMapClient* extends the generated `StoryModelClientGenerated` with what only the page knows: which node client an id the views hand back takes, and how a drag the views report as a new order becomes one `move_before`.
 - `story-map/story-map-api.ts` — *StoryMapApi*, the page's `CddApi` over the board's server; a failed call says what failed and how to fix it, answers null, and the page keeps the map Python last sent (`fail-loud-on-mcp`).
 - `story-map/story-map-view-models.ts`, `story-map/story-map-views.tsx` — the Story UI's views, drawing the generated data.
-- `story-map-routes.ts` — `storyMapRoutes` (the generated routes of StoryModel, Epic, Story, Scenario, Step and FidelitySessionOutput) and `storyMapBuild` (the built page), which the board's server mounts; `story-map-page.ts` — the page's path, `/story-map`.
+- `story-map-routes.ts` — `storyMapRoutes` (the generated routes of StoryModel, Epic, Story, Scenario, Step, Example, Increment, FidelitySessionOutput and Chat) and `storyMapBuild` (the built page), which the board's server mounts; `story-map-page.ts` — the page's path, `/story-map`.
 
 ## Interactions across modules
 
@@ -433,7 +464,9 @@ The Story UI editor, moved from its own repository (`C:/dev/story-ui`) beside th
 | chat bar file viewer link | `PracticeSessionOutput.design_view` | space/session |
 | Story UI edit | `StoryNode.rename` and the other edits, then `StoryModel.write_back` | stories model |
 | Story UI increment view | `StoryModel.new_increment`, `Increment.add_story`, `Increment.remove_story` | stories model |
-| Story UI acceptance-test link | `FileManager.read` (read only) | space/session |
+| Story UI acceptance-test link | `Chat.send(open_file)`, then the chat bar's files pane shows it at the chat's next check-in (`FileManager.read` through `session.read_file`) | harness/chat, harness/chat-ui |
+| Story UI example cell | `Example.edit_field`, `Example.remove`, then `StoryModel.write_back` | stories model |
+| Story UI epic or sub-epic description | `Epic.edit_description`, then `StoryModel.write_back` | stories model |
 | Story UI with no file | `StoryModel.open_in_session`, read every two seconds | stories model |
 | Story UI format toggle, chat bar chip | `FidelitySessionOutput.choose_format`, `Ticket.choose_formats` | space/session, space/kanban |
 | Graph app open | `Graph.load_practice_roots` on the session open in the project (the chat's open session) | harness/graph, space/session |

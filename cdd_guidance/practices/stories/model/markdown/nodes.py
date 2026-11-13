@@ -25,7 +25,7 @@ from cdd_guidance.practices.stories.model.story_model import Background, StepTyp
 from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, path_from, source_at
 from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks, unlink
 from cdd_guidance.practices.stories.model.markdown.map_reading import OutlineLines, described, has_map_structure, is_outline, read_at, read_map
-from cdd_guidance.practices.stories.model.markdown.markup import MarkdownStep, step_line, step_lines, strip_backticks
+from cdd_guidance.practices.stories.model.markdown.markup import MarkdownExample, MarkdownStep, step_line, step_lines, strip_backticks
 from cdd_guidance.practices.stories.model.markdown.scenario_file import SCENARIO_HEADING, ScenarioFileReading, scenario_sections_in
 from cdd_guidance.practices.stories.model.markdown.scenario_parts import HEADING_LINE, STEP_LINE, StorySection
 from cdd_guidance.practices.stories.model.story_model import StoryModel
@@ -72,7 +72,7 @@ class MarkdownScenario(Scenario):
             return "\n".join(self.lines())
         name, is_outline, heading = self.markdown_heading or ("", False, None)
         out: List[str] = []
-        steps = _StepLines(parts)
+        steps = _SectionLines(parts)
         for part in parts:
             if part != HEADING_LINE:
                 out.append(steps.write(part))
@@ -134,7 +134,7 @@ class MarkdownStory(Story):
             return "\n".join([f"# Story: {self.name}", "", *self._scenario_section_lines()]).rstrip() + "\n"
         name, heading = self.markdown_heading or ("", None)
         out: List[str] = []
-        steps = _StepLines(parts)
+        steps = _SectionLines(parts)
         for part in parts:
             if part == HEADING_LINE:
                 out.append(heading if heading is not None and name == self.name else f"# Story: {self.name}\n")
@@ -297,9 +297,10 @@ def _markdown_scenario(scenario: Scenario) -> MarkdownScenario:
     return scenario if isinstance(scenario, MarkdownScenario) else MarkdownScenario(scenario)
 
 
-class _StepLines:
-    """Writes the step lines of one section. Each step line stands where its step was read; a step
-    unchanged on the model keeps its line, and steps added on the model follow the owner's last line."""
+class _SectionLines:
+    """Writes the step and example lines of one section. Each step line stands where its step was read; a step
+    unchanged on the model keeps its line, and steps added on the model follow the owner's last line. Each example row
+    stands where its example was read, as the example now says it."""
 
     def __init__(self, parts: list) -> None:
         self._pending: Dict[int, list] = {}
@@ -317,6 +318,8 @@ class _StepLines:
         return pending
 
     def write(self, part) -> str:
+        if isinstance(part, MarkdownExample):
+            return part.line()
         if not (isinstance(part, tuple) and part[0] == STEP_LINE):
             return part
         owner = part[1]
@@ -517,7 +520,7 @@ class MarkdownStoryModel(StoryModel):
 
     def _render_scenario_document(self, document: "_ScenarioDocument") -> str:
         out: List[str] = []
-        steps = _StepLines(document.parts)
+        steps = _SectionLines(document.parts)
         for part in document.parts:
             if part == HEADING_LINE:
                 out.append(document.heading_line())
