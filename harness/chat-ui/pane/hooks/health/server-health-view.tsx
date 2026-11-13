@@ -30,12 +30,20 @@ const LOOKS = {
 }
 
 
-// The surface has no tooltip, so the part's name is a card revealed while the pointer is over its icon and value.
-function PartView({ Box, Text }: ElementTable, part: Part) {
+// The surface has no tooltip, so the part's name is a card revealed while the pointer is over its icon and value. An
+// app's icon and value are a Button, a press readying the app and opening it in the side panel; a Button holds only
+// strings and Text, so the card sits beside it in the part's Box, never inside it.
+function PartView({ Box, Button, Text }: ElementTable, part: Part, actions: Actions) {
+  const { app } = part
+  const icon = <Text color={colourOf(part)}>{part.icon}</Text>
+  const value = <Text color={colourOf(part)}>{part.value}</Text>
   return (
-    <Box flexDirection="row" gap={1}>
-      <Text color={colourOf(part)}>{part.icon}</Text>
-      <Text color={colourOf(part)}>{part.value}</Text>
+    <Box key={part.label} flexDirection="row" gap={1}>
+      {app === undefined ? <>{icon}{value}</> : (
+        <Button key={`health-app-${app}`} plain onPress={() => actions.openApp(app)}>
+          {icon} {value}
+        </Button>
+      )}
       <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
         <Text color={BRAND.text}>{part.label}</Text>
       </Box>
@@ -43,20 +51,11 @@ function PartView({ Box, Text }: ElementTable, part: Part) {
   )
 }
 
-// An app's part is a button: a press readies the app and opens it in the side panel.
 function PartsView(elements: ElementTable, health: ServerHealthJson, actions: Actions) {
-  const { Box, Button } = elements
+  const { Box } = elements
   return (
     <Box flexDirection="row" columnGap={3}>
-      {partsOf(health).map(part => {
-        const { app } = part
-        if (app === undefined) return <Box key={part.label}>{PartView(elements, part)}</Box>
-        return (
-          <Button key={`health-app-${app}`} plain onPress={() => actions.openApp(app)}>
-            {PartView(elements, part)}
-          </Button>
-        )
-      })}
+      {partsOf(health).map(part => PartView(elements, part, actions))}
     </Box>
   )
 }

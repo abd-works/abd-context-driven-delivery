@@ -86,7 +86,7 @@ export async function openReport($: EngineInterface, fidelity: FidelityProgressC
 // ?help=&fidelity= link, the board started first when it is not running.
 export async function openHelp($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
   const url = await runningBoardUrl($).catch(() => '')
-  const link = url && (await boardPageUrl($, url, { help: fidelity.progress.ticket.name, fidelity: fidelity.slug }))
+  const link = url && (await projectPageUrl($, url, { help: fidelity.progress.ticket.name, fidelity: fidelity.slug }))
   if (link && (await openInBrowser($, link))) return
   $.ui.toast(`${fidelity.slug} help: ${url ? `the browser did not open ${link}` : 'the board is not running and did not start'}`)
 }
