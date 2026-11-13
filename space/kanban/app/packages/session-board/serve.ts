@@ -2,9 +2,8 @@ import { spawn } from 'node:child_process'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { CddConnection } from '@cdd/cdd-connection'
+import { CddConnection, ProjectConnections } from '@cdd/cdd-connection'
 import { BoardUpdate } from '@src/session-board/board-update'
-import { ProjectConnections } from '@src/session-board/project-connections'
 
 import { createApp } from './app'
 // The board's port, written once for this server and for the Python that reports it to a chat.

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { BoardApi, projectOfPage, type Send } from './board-api'
+import { projectOfPage } from '@cdd/cdd-shared'
+
+import { BoardApi, type Send } from './board-api'
 import { BoardStore } from '../shared/board-store'
 
 // The page opened from a chat's /board link names that chat's repository, and every call it makes names it too, so the

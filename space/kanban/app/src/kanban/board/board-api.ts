@@ -1,9 +1,8 @@
+import { PROJECT_HEADER, projectOfPage } from '@cdd/cdd-shared'
+
 import type { BoardStore } from '../shared/board-store'
 
 const BOARD_HEADER = 'X-CDD-Board'
-// The repository the page shows, from its ?project= link, sent with every call so the server reads that repository's board.
-const PROJECT_HEADER = 'X-CDD-Project'
-const PROJECT_QUERY = 'project'
 const API_ROOT = '/api'
 const NOT_CONNECTED = 503
 // A call still running after this long says so: the shared cdd server can be busy for minutes.
@@ -16,9 +15,6 @@ export type Send = (path: string, init?: RequestInit) => Promise<Response>
 const sendWithFetch: Send = (path, init) => fetch(path, init)
 
 export const pathPart = (text: string): string => encodeURIComponent(text)
-
-// The folder the page's ?project= link names; empty for a page opened without one, which shows the server's own project.
-export const projectOfPage = (search: string = typeof location === 'undefined' ? '' : location.search): string => new URLSearchParams(search).get(PROJECT_QUERY) ?? ''
 
 // Every call the page makes to its server, so a failure is shown to the person in one place. A failed call answers null.
 export class BoardApi {

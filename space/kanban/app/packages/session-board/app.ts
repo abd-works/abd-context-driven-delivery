@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
+import type { ProjectConnections } from '@cdd/cdd-connection'
 import { backlogItemRoutes } from '@cdd/space/kanban/backlog-item'
 import { boardRoutes } from '@cdd/space/kanban/board'
 import { fidelityProgressRoutes } from '@cdd/space/kanban/fidelity-progress'
@@ -11,12 +12,12 @@ import { ticketRoutes } from '@cdd/space/kanban/ticket'
 import { practiceSessionOutputRoutes } from '@cdd/space/session/practice-session-output'
 import { sessionRoutes } from '@cdd/space/session/session'
 import { chatRoutes } from '@cdd/harness/chat/chat'
+import { appRoutes } from '@cdd/harness/diagnostics/app'
 import { answer } from '@src/session-board/answer'
 import type { BoardUpdate } from '@src/session-board/board-update'
 import { cddRoutes } from '@src/session-board/cdd-routes'
 import { ClaudeLink } from '@src/session-board/claude-link'
 import { answerFailure, HttpException } from '@src/session-board/http-exception'
-import type { ProjectConnections } from '@src/session-board/project-connections'
 
 // The header forces a preflight, which this server never answers, so a page on another site cannot post here.
 export const BOARD_HEADER = 'x-cdd-board'
@@ -55,7 +56,7 @@ export function createApp(projects: ProjectConnections, port: number, staticRoot
     const build = existsSync(index) ? createHash('sha256').update(readFileSync(index)).digest('hex') : ''
     response.json({ build })
   })
-  app.use('/api', cddRoutes(projects, [...boardRoutes, ...stageRoutes, ...ticketRoutes, ...fidelityProgressRoutes, ...sessionRoutes, ...practiceSessionOutputRoutes, ...backlogItemRoutes, ...chatRoutes]))
+  app.use('/api', cddRoutes(projects, [...boardRoutes, ...stageRoutes, ...ticketRoutes, ...fidelityProgressRoutes, ...sessionRoutes, ...practiceSessionOutputRoutes, ...backlogItemRoutes, ...chatRoutes, ...appRoutes]))
   app.use(express.static(staticRoot))
   app.get('*', (_request, response) => {
     response.sendFile(join(staticRoot, 'index.html'))

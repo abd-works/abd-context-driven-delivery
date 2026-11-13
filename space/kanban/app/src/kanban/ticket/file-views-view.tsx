@@ -25,6 +25,23 @@ export function FileViewsView({ ticket, progress }: { ticket: TicketClient; prog
           <FileViewIcon mode={mode} />
         </button>
       ))}
+      <GraphWidgetView ticket={ticket} />
     </span>
+  )
+}
+
+// Opens the Graph app on the ticket's worktree, where its session is the open one, so the graph shows the ticket's
+// practice roots and only the practices it works on. A ticket not yet activated has no worktree to open it on.
+function GraphWidgetView({ ticket }: { ticket: TicketClient }) {
+  const { page } = useBoard()
+  const hint = ticket.worktree ? "Open the knowledge graph on this ticket's practice roots" : 'Activate this ticket to open its knowledge graph'
+  const opened = (event: MouseEvent) => {
+    if (event.currentTarget.closest('.ticket-card')) event.stopPropagation()
+    void page.graphApp.openOn(ticket.worktree)
+  }
+  return (
+    <button className="file-view" aria-label="graph" title={hint} disabled={!ticket.worktree} onClick={opened}>
+      <FileViewIcon mode="graph" />
+    </button>
   )
 }
