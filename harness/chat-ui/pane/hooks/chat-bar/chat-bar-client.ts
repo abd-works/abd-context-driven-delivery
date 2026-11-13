@@ -159,6 +159,17 @@ export class ChatBarClient {
     return this.board?.is_clone ?? true
   }
 
+  // The project's folder on disk, which a chat in a plain folder shows instead of the repo and session buttons.
+  get folder(): string {
+    return this.board?.folder ?? ''
+  }
+
+  // A chat in a folder that is no git repository has one session and no other repository to switch to, so the bar shows
+  // its folder alone, read only.
+  get isPlainFolder(): boolean {
+    return this.isMain && !this.isClone
+  }
+
   // The status line below the chat: the repository, the branch the session's chat works on, and the folder the session
   // works in from the repository's folder, which a session working in the whole repository leaves out.
   get statusLine(): string {

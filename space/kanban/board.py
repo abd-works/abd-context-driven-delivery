@@ -772,6 +772,12 @@ class BoardOverview:
 
     @property
     @data_field
+    def folder(self) -> str:
+        """The project's folder on disk, which a chat in a plain folder shows in place of a repository and a session."""
+        return str(self._board.repo.root)
+
+    @property
+    @data_field
     def practices(self) -> list[BoardPractice]:
         """The board's practices, each with the colour and short name its fidelities are drawn in."""
         return [BoardPractice(practice) for practice in self._board.practices]
