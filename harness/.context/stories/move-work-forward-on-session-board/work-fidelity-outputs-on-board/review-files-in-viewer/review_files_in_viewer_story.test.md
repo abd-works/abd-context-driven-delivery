@@ -186,3 +186,37 @@ session=.sessions/checkout-flow/session.json
 *When* the Person clears checkout-flow's processed file comments
 *Then* no comment marker shows beside line 12
 *And* the markers beside lines 30 and 40 still show, sent and not sent
+
+## Story: Show AI Changes As Diff
+
+Evidence: intended, not built (`.sessions/_backlog/review-work-in-board-files.md`, "change viewer from ai change like vscode / cursor"). The viewer marks what the chat changed in the file, as VS Code and Cursor do. What counts as the chat's change is the difference between the file as it read when the comment was sent and the file once the comment is processed. That is the turn Mark File Comment Processed waits on, so a change the Person made by hand meanwhile is not told apart from the chat's.
+
+#### Scenario: Mark the line the chat changed, with the line it replaced
+
+*Given* checkout-flow's file comment *order.py:L12-L14* was sent while line 14 read *raise EmptyCartError(cart.id)*
+*And* the chat's turn changed line 14 to *raise EmptyCartError(cart.id, "a cart needs one item to be placed")*
+*When* the file comment *order.py:L12-L14* is marked processed
+*Then* the viewer marks line 14 as changed by the chat
+*And* shows the line it replaced, *raise EmptyCartError(cart.id)*, as removed above it
+
+#### Scenario: Mark the lines the chat added
+
+*Given* checkout-flow's file comment *order.py:L12-L14* was sent
+*And* the chat's turn added two lines after line 14
+*When* the file comment *order.py:L12-L14* is marked processed
+*Then* the viewer marks lines 15 and 16 as added by the chat
+*But* marks no line before them as changed
+
+#### Scenario: Mark nothing when the chat left the file as it was
+
+*Given* checkout-flow's file comment *order.py:L12-L14* was sent
+*And* the chat's turn changed no line of *order.py*
+*When* the file comment *order.py:L12-L14* is marked processed
+*Then* the viewer marks no line of *order.py* as changed
+
+#### Scenario: Stop marking the changes once the processed comment is cleared
+
+*Given* the viewer marks line 14 of *order.py* as changed by the chat for the processed comment *order.py:L12-L14*
+*When* the Person clears checkout-flow's processed file comments
+*Then* the viewer marks no line of *order.py* as changed
+*And* line 14 still reads *raise EmptyCartError(cart.id, "a cart needs one item to be placed")*

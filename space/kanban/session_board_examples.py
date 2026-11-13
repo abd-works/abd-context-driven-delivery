@@ -247,6 +247,7 @@ def _empty_repository() -> Path:
 # --- Review Files In Viewer: checkout-flow working in src/checkout, its order.py, and the comments on it -----------
 
 CHECKOUT_FLOW_IN_SRC_CHECKOUT = SessionSeed("checkout-flow", "Checkout flow", workpath="src/checkout")
+CHECKOUT_FLOW_IN_CONTEXT = SessionSeed("checkout-flow", "Checkout flow", workpath="harness/.context")
 ORDER_FILE = "src/checkout/order.py"
 PLACE_LINES = (
     "    def place(self, cart: Cart) -> Order:",

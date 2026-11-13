@@ -67,6 +67,13 @@ class SessionFiles:
         files = sorted(path for path in self._session.session_path.rglob("*") if path.is_file())
         return [FileEntry(repo.path_from_top(path), True) for path in files]
 
+    def in_workpath(self) -> list[FileEntry]:
+        """Every file directly in the folder the session works in, each with its path from the project; its folders
+        are left out, so a workpath of the whole repository lists only the repository's top files."""
+        repo = self._session.repo
+        files = sorted(path for path in self._session.work_root.iterdir() if path.is_file())
+        return [FileEntry(repo.path_from_top(path), True) for path in files]
+
     def read(self, path: str) -> FileText:
         """The text of path, a file in the session's repository or under a folder its practices write to, such as its
         ticket's worktree beside the repository; no text when the file is gone."""

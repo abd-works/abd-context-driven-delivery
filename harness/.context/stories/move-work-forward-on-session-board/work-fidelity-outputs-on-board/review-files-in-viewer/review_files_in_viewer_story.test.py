@@ -199,3 +199,46 @@ with story("Clear Processed File Comments"):
             pass
         with and_("the markers beside lines 30 and 40 still show, sent and not sent"):
             pass
+
+
+with story("Show AI Changes As Diff"):
+    with scenario("Mark the line the chat changed, with the line it replaced"):
+        with given("checkout-flow's file comment order.py:L12-L14 was sent while line 14 read raise EmptyCartError(cart.id)"):
+            pass
+        with and_("the chat's turn changed line 14 to raise EmptyCartError(cart.id, \"a cart needs one item to be placed\")"):
+            pass
+        with when("the file comment order.py:L12-L14 is marked processed"):
+            pass
+        with then("the viewer marks line 14 as changed by the chat"):
+            pass
+        with and_("shows the line it replaced, raise EmptyCartError(cart.id), as removed above it"):
+            pass
+    with scenario("Mark the lines the chat added"):
+        with given("checkout-flow's file comment order.py:L12-L14 was sent"):
+            pass
+        with and_("the chat's turn added two lines after line 14"):
+            pass
+        with when("the file comment order.py:L12-L14 is marked processed"):
+            pass
+        with then("the viewer marks lines 15 and 16 as added by the chat"):
+            pass
+        with but_("marks no line before them as changed"):
+            pass
+    with scenario("Mark nothing when the chat left the file as it was"):
+        with given("checkout-flow's file comment order.py:L12-L14 was sent"):
+            pass
+        with and_("the chat's turn changed no line of order.py"):
+            pass
+        with when("the file comment order.py:L12-L14 is marked processed"):
+            pass
+        with then("the viewer marks no line of order.py as changed"):
+            pass
+    with scenario("Stop marking the changes once the processed comment is cleared"):
+        with given("the viewer marks line 14 of order.py as changed by the chat for the processed comment order.py:L12-L14"):
+            pass
+        with when("the Person clears checkout-flow's processed file comments"):
+            pass
+        with then("the viewer marks no line of order.py as changed"):
+            pass
+        with and_("line 14 still reads raise EmptyCartError(cart.id, \"a cart needs one item to be placed\")"):
+            pass

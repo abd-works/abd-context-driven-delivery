@@ -32,6 +32,11 @@ export class ChatClient {
     return this.store.state.chats.length > 0
   }
 
+  // The chat a person picked, by its id; empty with none picked.
+  get pickedId(): string {
+    return this.store.state.targetChat ?? ''
+  }
+
   private get target(): ChatData | undefined {
     const { chats, targetChat } = this.store.state
     return chats.find(chat => chat.id === targetChat)
@@ -195,6 +200,12 @@ export class TicketChat {
   get found(): ChatData | undefined {
     const chat = this.chats.chatOf(this.ticket, this.working?.id ?? '')
     return chat ? this.chats.connected(chat) : undefined
+  }
+
+  // The chat a file comment is sent to: the one working on the ticket, else the one a person picked, else the chat named
+  // after the ticket, which Python says is not connected when it has not checked in.
+  get id(): string {
+    return this.found?.id || this.working?.id || this.chats.pickedId || this.ticket
   }
 
   get isOpening(): boolean {

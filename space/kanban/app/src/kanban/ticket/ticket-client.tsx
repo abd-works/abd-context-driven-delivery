@@ -2,6 +2,7 @@ import type { RequiredFidelity } from '../board/column-client'
 import type { BacklogItemData } from '@cdd/space/kanban/backlog-item'
 import type { FidelityProgressClientGenerated, FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import { TicketClientGenerated, type ActionStatesData, type TicketData } from '@cdd/space/kanban/ticket'
+import { FileCommentsClientGenerated } from '@cdd/space/session/file-comments'
 import { PracticeSessionOutputClientGenerated } from '@cdd/space/session/practice-session-output'
 import { SessionClientGenerated } from '@cdd/space/session/session'
 
@@ -71,6 +72,12 @@ export class TicketClient extends TicketClientGenerated {
     return this.fidelityProgress.filter(progress => progress.stage.name === stage.name && progress.isEnabled)
   }
 
+  // Its progress on every fidelity of the stage it stands in, which the files panel offers as its practice filters.
+  get stageProgress(): FidelityProgressClient[] {
+    const stage = this.page.board.stageOf(this)
+    return stage ? this.progressIn(stage) : []
+  }
+
   // Its progress on the fidelities a tile or a panel was opened over, read from this ticket as it is now.
   progressOn(fidelities: RequiredFidelity[]): FidelityProgressClient[] {
     return fidelities.flatMap(fidelity => this.progressNamed(fidelity.slug) ?? [])
@@ -120,6 +127,11 @@ export class TicketClient extends TicketClientGenerated {
 
   practiceClient(practice: string): PracticeSessionOutputClientGenerated {
     return new PracticeSessionOutputClientGenerated(this.api, this.session.practices[practice] ?? null)
+  }
+
+  // The comments a person wrote on the files of its session, kept in the session's folder.
+  get fileComments(): FileCommentsClientGenerated {
+    return FileCommentsClientGenerated.named(this.api, this.session.session_file)
   }
 
   // The chat working on this ticket, which Python names, and every command the board sends for it goes to.

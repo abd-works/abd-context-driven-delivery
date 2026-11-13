@@ -8,6 +8,7 @@ import { boardRoutes } from '@cdd/space/kanban/board'
 import { fidelityProgressRoutes } from '@cdd/space/kanban/fidelity-progress'
 import { stageRoutes } from '@cdd/space/kanban/stage'
 import { ticketRoutes } from '@cdd/space/kanban/ticket'
+import { fileCommentsRoutes } from '@cdd/space/session/file-comments'
 import { practiceSessionOutputRoutes } from '@cdd/space/session/practice-session-output'
 import { sessionRoutes } from '@cdd/space/session/session'
 import { chatRoutes } from '@cdd/harness/chat/chat'
@@ -55,7 +56,7 @@ export function createApp(projects: ProjectConnections, port: number, staticRoot
     const build = existsSync(index) ? createHash('sha256').update(readFileSync(index)).digest('hex') : ''
     response.json({ build })
   })
-  app.use('/api', cddRoutes(projects, [...boardRoutes, ...stageRoutes, ...ticketRoutes, ...fidelityProgressRoutes, ...sessionRoutes, ...practiceSessionOutputRoutes, ...backlogItemRoutes, ...chatRoutes]))
+  app.use('/api', cddRoutes(projects, [...boardRoutes, ...stageRoutes, ...ticketRoutes, ...fidelityProgressRoutes, ...sessionRoutes, ...fileCommentsRoutes, ...practiceSessionOutputRoutes, ...backlogItemRoutes, ...chatRoutes]))
   app.use(express.static(staticRoot))
   app.get('*', (_request, response) => {
     response.sendFile(join(staticRoot, 'index.html'))

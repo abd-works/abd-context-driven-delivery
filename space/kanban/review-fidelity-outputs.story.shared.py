@@ -9,8 +9,7 @@ spec replay the same steps.
 Covered by the board app's TypeScript client specs in space/kanban/app, not here, because they have no Python
 operation: List Ticket Files "Filter the tabs to the files the ticket's branch changed" and "Clear the changed-files
 filter" (the page filters on each file's is_changed); every scenario of Browse Ticket Files By Practice (the practice
-filters and the tabs grouped and colored by practice are the page's); Open Session Files From Details "Open the
-workpath folder from the details" (file-manager.list). The Thens of the scenarios below that only the page shows (a
+filters and the tabs grouped and colored by practice are the page's). The Thens of the scenarios below that only the page shows (a
 tab's color) are left to those specs too.
 
 The scenarios name the story map `.context/story-map.md`. The story_map fidelity declares its markdown at
@@ -26,6 +25,7 @@ from expects import contain, end_with, equal, expect
 from space.kanban.session_board_examples import (
     BILLING_REPORT,
     CHECKOUT_FLOW,
+    CHECKOUT_FLOW_IN_CONTEXT,
     CHECKOUT_FLOW_REPORT,
     NO_SUCH_FIDELITY,
     PET_VISITS,
@@ -139,3 +139,25 @@ def _(s):
     @s.then("the file view shows .sessions/checkout-flow")
     def _(world):
         expect(world.files).to(contain({"path": f".sessions/{CHECKOUT_FLOW.name}/validation-reports/{STORY_MAP_REPORT}.md", "exists": True, "is_changed": False}))
+
+
+@shared_stories.scenario("Open Session Files From Details", "Open the workpath folder from the details")
+def _(s):
+    @s.given("the session of ticket checkout-flow works in the workpath harness/.context")
+    def _(world):
+        world.project.seed_session(CHECKOUT_FLOW_IN_CONTEXT)
+        world.project.seed_file("harness/.context/module-context.md", "# Harness\n")
+        world.project.seed_file("harness/.context/stories/story-map.md", "# Story map\n")
+
+    @s.when("the Person opens checkout-flow's workpath from its details")
+    def _(world):
+        world.files = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.workpath_files())
+
+    @s.then("the files panel lists the entries of harness/.context")
+    def _(world):
+        expect(world.files).to(equal([{"path": "harness/.context/module-context.md", "exists": True, "is_changed": False}]))
+
+    @s.but_("the root chooser does not open")
+    def _(world):
+        # The root chooser is the page's; the details open the workpath's files instead of it.
+        pass

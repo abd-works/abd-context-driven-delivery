@@ -518,6 +518,13 @@ class Session:
     @mcp
     @agent_tool
     @noSessionLog
+    def workpath_files(self) -> list[FileEntry]:
+        """List every file directly in the folder this session works in, each with its path from the project, as the board's details open it from the workpath."""
+        return self.session_files.in_workpath()
+
+    @mcp
+    @agent_tool
+    @noSessionLog
     def read_file(self, path: str = "") -> FileText:
         """Return the text of path, a file in this repository or under a folder this session's practices write to, such as its ticket's worktree; no text when the file is gone, such as one deleted since the board listed it."""
         return self.session_files.read(path)

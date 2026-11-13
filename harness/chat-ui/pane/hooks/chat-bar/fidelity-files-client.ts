@@ -54,6 +54,21 @@ export async function openFilesOf($: EngineInterface, fidelities: FidelityProgre
   }
 }
 
+// Every file in the chat's session folder, .sessions/<session>, as tabs of the files pane: the session button opens it.
+export async function openSessionFolder($: EngineInterface): Promise<void> {
+  const chatBar = await currentChatBar($)
+  const named = `.sessions/${chatBar.sessionName}`
+  try {
+    const entries = await callTool<FileEntryData[]>($, 'session.folder_files', { session: chatBar.sessionFile })
+    const paths = entries.map(entry => entry.path)
+    await update($, fidelityFiles, () => ({ fidelity: named, tabs: entries.map(entry => ({ path: entry.path, text: null, exists: entry.exists })), shown: paths[0] ?? null, isOutOfDate: false }))
+    await openPane($, `${named} files`)
+    if (paths[0]) await showFile($, paths[0])
+  } catch (failure) {
+    $.ui.toast(`${named} files: ${reasonOf(failure)}`)
+  }
+}
+
 // The fidelity's latest validation report in the board's own report panel, with its findings and Fix buttons, opened in
 // the person's browser by the board's ?report=&fidelity= link, the board started first when it is not running. The
 // report's text never comes into the chat: a report can run to many thousands of characters, past what one tool answer

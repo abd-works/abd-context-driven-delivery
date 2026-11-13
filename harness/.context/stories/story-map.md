@@ -588,7 +588,7 @@ Requested (2026-11-12, "then viewer is updated to reflect changes"): when a comm
 
 Requested (2026-11-12, "a clear processed comments button"): clearing removes the processed comments and keeps the ones not sent or still sent.
 
-#### (S) Board App --> Show AI Changes As Diff
+#### (S) Board App --> [Show AI Changes As Diff](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-show-ai-changes-as-diff)
 
 Intended (`.sessions/_backlog/review-work-in-board-files.md` "change viewer from ai change like vscode / cursor"): the viewer marks what the agent changed in a file, as VS Code and Cursor do.
 

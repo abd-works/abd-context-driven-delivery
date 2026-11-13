@@ -7,7 +7,7 @@ import { ActionButtonView, actionColumnOf, PickerView } from './action-button-vi
 import { toggleFormat, type FormatChips } from './format-choices-client'
 import { toggleOverlay, toggleOverlayList, type OverlayChips } from './overlay-choices-client'
 import { askChatToFix, dismissFailure, fixFailure, runHandoff, type ChatBarClient } from './chat-bar-client'
-import { openFilesOf, openReport } from './fidelity-files-client'
+import { openFilesOf, openReport, openSessionFolder } from './fidelity-files-client'
 import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
 import { openClose, toggleRepoListWithRepos } from './session-client'
@@ -96,11 +96,13 @@ export function StagePickerView($: EngineInterface, { Box, Button, Text }: Eleme
 
 // The session name; in the main chat a ▾ beside it opens the list of tickets to open. A ticket's own chat works only on
 // that ticket, so it shows the name alone.
+// The session's name: in a ticket's session it opens the session's folder in the files pane, and its card shows on hover;
+// on main it opens the card.
 function SessionNameView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar }: ChatBarDraw) {
   return (
     <Box key="session-name" flexDirection="row" gap={1}>
       <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
-        <Button key="session-name-button" plain onPress={() => toggleCard($)}>
+        <Button key="session-name-button" plain onPress={() => (chatBar.isMain ? toggleCard($) : openSessionFolder($))}>
           <Text weight="semibold" color={BRAND.text}>{chatBar.sessionName || 'main'}</Text>
         </Button>
       </Box>

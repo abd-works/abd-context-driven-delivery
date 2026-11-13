@@ -248,6 +248,46 @@ FileView sees FileComment{anchor: "src/checkout/order.py:L12-L14"} turn processe
 
 ---
 
+## Show AI Changes As Diff
+
+The comment keeps the file's text as it was sent (`FileComment.sent_text`), and the session's file compares it with the
+text now once the comment is processed. Proposed, not built.
+
+### Scenario: Mark the line the chat changed, with the line it replaced
+
+```realization
+Session.file("src/checkout/order.py")
+  -> SessionFile.changes
+       -> FileComment{anchor: "src/checkout/order.py:L12-L14", state: processed}.sent_text
+       -> difflib over sent_text and SessionFile.text
+  <- [FileChange{kind: changed, range: Range(14, 14), removed: ["raise EmptyCartError(cart.id)"]}]
+FileView marks line 14 changed, with the removed line above it
+```
+
+### Scenario: Mark the lines the chat added
+
+```realization
+SessionFile.changes
+<- [FileChange{kind: added, range: Range(15, 16), removed: []}]
+```
+
+### Scenario: Mark nothing when the chat left the file as it was
+
+```realization
+SessionFile.changes
+<- []
+```
+
+### Scenario: Stop marking the changes once the processed comment is cleared
+
+```realization
+FileComments.clear_processed()
+Session.file("src/checkout/order.py").changes
+<- []   no processed comment is left to compare with
+```
+
+---
+
 ## Clear Processed File Comments
 
 ### Scenario: Clear the processed comments, keeping the rest
