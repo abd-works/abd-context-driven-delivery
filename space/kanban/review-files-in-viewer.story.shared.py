@@ -36,7 +36,10 @@ from space.kanban.session_board_examples import (
     PLACE_LINES,
     README_FILE,
     README_TEXT,
-    FileCommentExample,
+    seed_checkout_flow,
+    seed_comment_shown_in_chat,
+    seed_connected_chat,
+    seed_file_comments,
 )
 from space.kanban.story_test import SharedStories, expect_refused, refusal_of
 from harness.chat.chat import ChatNotConnectedError
@@ -46,46 +49,14 @@ shared_stories = SharedStories("Review Files In Viewer")
 CHECKOUT_FLOW = CHECKOUT_FLOW_IN_SRC_CHECKOUT
 
 
-def seed_checkout_flow(world) -> None:
-    """Seed: checkout-flow working in src/checkout, holding order.py."""
-    world.project.seed_session(CHECKOUT_FLOW)
-    world.project.seed_file(ORDER_FILE, ORDER_TEXT)
-
-
-def comments_of(world):
-    return world.Ticket.load(CHECKOUT_FLOW.name).session.file_comments
-
-
-def add_comment(world, comment: FileCommentExample) -> None:
-    comments_of(world).add(path=comment.path, start_line=comment.start_line, end_line=comment.end_line, text=comment.text)
-
-
 def states_on_order(world) -> dict[str, str]:
-    return {held["anchor"]: held["state"] for held in world.data_of(comments_of(world).on(path=ORDER_FILE))}
-
-
-def seed_connected_chat(world) -> None:
-    """Seed: the chat checkout-chat checked in, and assigned to checkout-flow."""
-    world.Chat.load(CHECKOUT_CHAT).check_in(is_busy=False)
-    world.Ticket.load(CHECKOUT_FLOW.name).assign_chat(chat=CHECKOUT_CHAT)
+    return {held["anchor"]: held["state"] for held in world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file_comments.on(path=ORDER_FILE))}
 
 
 def queued_fills(world) -> list[str]:
     """The fills sent to checkout-chat, oldest first."""
     newest_first = world.data_of(world.Chat.load(CHECKOUT_CHAT).messages())
     return [message["text"] for message in reversed(newest_first) if message["kind"] == "fill"]
-
-
-def seed_comment_shown_in_chat(world) -> None:
-    """Seed: the empty-cart comment sent to checkout-chat, which took it, showed it, and started a turn on it."""
-    seed_checkout_flow(world)
-    seed_connected_chat(world)
-    add_comment(world, EMPTY_CART_COMMENT)
-    comments_of(world).send(anchor=EMPTY_CART_COMMENT.anchor, chat=CHECKOUT_CHAT)
-    chat = world.Chat.load(CHECKOUT_CHAT)
-    taken = world.data_of(chat.check_in(is_busy=False))
-    chat.confirm(message=taken[0]["message"], is_shown=True)
-    chat.check_in(is_busy=True)
 
 
 # --- View Files In Rich Viewer ------------------------------------------------------------------------------------
@@ -204,7 +175,8 @@ def _(s):
 
     @s.when("the Person adds the file comment an empty cart should say which cart and why to the selection")
     def _(world):
-        add_comment(world, world.selection)
+        selection = world.selection
+        world.Ticket.load(CHECKOUT_FLOW.name).session.file_comments.add(path=selection.path, start_line=selection.start_line, end_line=selection.end_line, text=selection.text)
 
     @s.then("a comment marker shows beside line 12, not sent")
     def _(world):
@@ -212,7 +184,7 @@ def _(s):
 
     @s.and_("checkout-flow's file comments hold order.py:L12-L14 with that comment")
     def _(world):
-        held = world.data_of(comments_of(world).on(path=ORDER_FILE))[0]
+        held = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file_comments.on(path=ORDER_FILE))[0]
         expect((held["range"]["start_line"], held["range"]["end_line"], held["range"]["content"], held["text"])).to(equal((12, 14, EMPTY_CART_COMMENT.selected_text, EMPTY_CART_COMMENT.text)))
 
 
@@ -221,11 +193,11 @@ def _(s):
     @s.given("checkout-flow's file comments hold order.py:L12-L14, an empty cart should say which cart and why")
     def _(world):
         seed_checkout_flow(world)
-        add_comment(world, EMPTY_CART_COMMENT)
+        seed_file_comments(world, EMPTY_CART_COMMENT)
 
     @s.when("the Person opens the comment at the marker beside line 12")
     def _(world):
-        world.opened = world.data_of(comments_of(world).on(path=ORDER_FILE))
+        world.opened = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file_comments.on(path=ORDER_FILE))
 
     @s.then("the viewer shows an empty cart should say which cart and why under lines 12 to 14")
     def _(world):
@@ -237,11 +209,11 @@ def _(s):
     @s.given("checkout-flow's file comments hold order.py:L12-L14, not sent")
     def _(world):
         seed_checkout_flow(world)
-        add_comment(world, EMPTY_CART_COMMENT)
+        seed_file_comments(world, EMPTY_CART_COMMENT)
 
     @s.when("the Person deletes that comment")
     def _(world):
-        comments_of(world).remove(anchor=EMPTY_CART_COMMENT.anchor)
+        world.Ticket.load(CHECKOUT_FLOW.name).session.file_comments.remove(anchor=EMPTY_CART_COMMENT.anchor)
 
     @s.then("checkout-flow's file comments no longer hold order.py:L12-L14")
     def _(world):
@@ -253,12 +225,12 @@ def _(s):
     @s.given("checkout-flow's file comments hold order.py:L12-L14")
     def _(world):
         seed_checkout_flow(world)
-        add_comment(world, EMPTY_CART_COMMENT)
+        seed_file_comments(world, EMPTY_CART_COMMENT)
 
     @s.when("the Person views order.py again after the board reloads")
     def _(world):
         # A reload reads the session again from its folder.
-        world.reloaded = world.data_of(comments_of(world).on(path=ORDER_FILE))
+        world.reloaded = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file_comments.on(path=ORDER_FILE))
 
     @s.then("the comment marker still shows beside line 12")
     def _(world):
@@ -277,11 +249,11 @@ def _(s):
 
     @s.and_("checkout-flow's file comments hold order.py:L12-L14, an empty cart should say which cart and why, not sent")
     def _(world):
-        add_comment(world, EMPTY_CART_COMMENT)
+        seed_file_comments(world, EMPTY_CART_COMMENT)
 
     @s.when("the Person sends that comment to the chat")
     def _(world):
-        comments_of(world).send(anchor=EMPTY_CART_COMMENT.anchor, chat=CHECKOUT_CHAT)
+        world.Ticket.load(CHECKOUT_FLOW.name).session.file_comments.send(anchor=EMPTY_CART_COMMENT.anchor, chat=CHECKOUT_CHAT)
 
     @s.then("the checkout-chat queue holds a fill that reads")
     def _(world):
@@ -301,17 +273,15 @@ def _(s):
 
     @s.and_("checkout-flow's file comments hold order.py:L12-L14 and order.py:L30-L31, both not sent")
     def _(world):
-        add_comment(world, EMPTY_CART_COMMENT)
-        add_comment(world, LINE_30_COMMENT)
+        seed_file_comments(world, EMPTY_CART_COMMENT, LINE_30_COMMENT)
 
     @s.and_("order.py:L40-L41 already sent")
     def _(world):
-        add_comment(world, LINE_40_COMMENT)
-        comments_of(world).send(anchor=LINE_40_COMMENT.anchor, chat=CHECKOUT_CHAT)
+        seed_file_comments(world, LINE_40_COMMENT, sent_to=CHECKOUT_CHAT)
 
     @s.when("the Person sends checkout-flow's open file comments to the chat")
     def _(world):
-        comments_of(world).send_open(chat=CHECKOUT_CHAT)
+        world.Ticket.load(CHECKOUT_FLOW.name).session.file_comments.send_open(chat=CHECKOUT_CHAT)
 
     @s.then("the checkout-chat queue holds one fill naming order.py:12-14 and order.py:30-31, each with its lines and comment")
     def _(world):
@@ -335,7 +305,10 @@ def _(s):
     def _(world):
         seed_checkout_flow(world)
         world.Ticket.load(CHECKOUT_FLOW.name).assign_chat(chat=CHECKOUT_CHAT)
-        add_comment(world, EMPTY_CART_COMMENT)
+
+    @s.and_("checkout-flow's file comments hold order.py:L12-L14, not sent")
+    def _(world):
+        seed_file_comments(world, EMPTY_CART_COMMENT)
 
     @s.but_("checkout-chat has not checked in")
     def _(world):
@@ -344,7 +317,7 @@ def _(s):
 
     @s.when("the Person sends the comment order.py:L12-L14 to the chat")
     def _(world):
-        world.refusal = refusal_of(lambda: comments_of(world).send(anchor=EMPTY_CART_COMMENT.anchor, chat=CHECKOUT_CHAT))
+        world.refusal = refusal_of(lambda: world.Ticket.load(CHECKOUT_FLOW.name).session.file_comments.send(anchor=EMPTY_CART_COMMENT.anchor, chat=CHECKOUT_CHAT))
 
     @s.then("a toast says chat 'checkout-chat' is not connected: is the cdd-board mod loaded in it?")
     def _(world):
@@ -433,13 +406,12 @@ def _(s):
     def _(world):
         seed_comment_shown_in_chat(world)
         world.Chat.load(CHECKOUT_CHAT).check_in(is_busy=False)
-        add_comment(world, LINE_30_COMMENT)
-        comments_of(world).send(anchor=LINE_30_COMMENT.anchor, chat=CHECKOUT_CHAT)
-        add_comment(world, LINE_40_COMMENT)
+        seed_file_comments(world, LINE_30_COMMENT, sent_to=CHECKOUT_CHAT)
+        seed_file_comments(world, LINE_40_COMMENT)
 
     @s.when("the Person clears checkout-flow's processed file comments")
     def _(world):
-        comments_of(world).clear_processed()
+        world.Ticket.load(CHECKOUT_FLOW.name).session.file_comments.clear_processed()
 
     @s.then("the markers beside lines 30 and 40 still show, sent and not sent")
     def _(world):

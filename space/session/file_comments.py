@@ -147,11 +147,11 @@ class FileComments:
     @mcp
     @agent_tool
     @noSessionLog
-    def add(self, path: str, start_line: int, end_line: int, text: str) -> FileComment:
-        """Comment text on lines start_line to end_line of path, a file named from the project, keeping what those lines hold now; a new comment on the same lines replaces the one there."""
+    def add(self, path: str, start_line: int, end_line: int, text: str) -> FileComments:
+        """Comment text on lines start_line to end_line of path, a file named from the project, keeping what those lines hold now; a new comment on the same lines replaces the one there. Returns every comment, the new one last."""
         added = FileComment(SessionFile(self._session, path).range(start_line, end_line), text)
         self._save([*(comment for comment in self.comments if comment.anchor != added.anchor), added])
-        return added
+        return self
 
     @mcp
     @agent_tool
@@ -164,9 +164,10 @@ class FileComments:
     @mcp
     @agent_tool
     @noSessionLog
-    def send(self, anchor: str, chat: str) -> FileComment:
-        """Send the comment at anchor to chat, a chat's id, in its prompt for the person to review, with the file, the lines, and the session; the comment is sent once the chat has it."""
-        return self._sent([self._held(anchor)], chat)[0]
+    def send(self, anchor: str, chat: str) -> FileComments:
+        """Send the comment at anchor to chat, a chat's id, in its prompt for the person to review, with the file, the lines, and the session; the comment is sent once the chat has it. Returns every comment."""
+        self._sent([self._held(anchor)], chat)
+        return self
 
     @mcp
     @agent_tool
@@ -186,7 +187,7 @@ class FileComments:
         self._save([comment for comment in self.comments if comment.state != PROCESSED])
         return self
 
-    def _sent(self, sending: list[FileComment], chat: str) -> list[FileComment]:
+    def _sent(self, sending: list[FileComment], chat: str) -> None:
         """Queue the comments for chat in one message, then keep each as sent in it; a chat that is not connected
         refuses the message, and the comments stay not sent."""
         prompt = "\n\n".join([*(comment.prompt for comment in sending), f"session={self.session_file}"])
@@ -194,7 +195,6 @@ class FileComments:
         anchors = {comment.anchor for comment in sending}
         kept = [comment.sent_in(chat, message) if comment.anchor in anchors else comment for comment in self.comments]
         self._save(kept)
-        return [comment for comment in kept if comment.anchor in anchors]
 
     def _held(self, anchor: str) -> FileComment:
         found = next((comment for comment in self.comments if comment.anchor == anchor), None)

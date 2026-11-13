@@ -11,7 +11,7 @@ Source:
 - `move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md`
 - `move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md` (Open Session Files From Details, and the changed-files filter of List Ticket Files)
 
-Each page call reaches one MCP tool, which calls one domain operation (cdd_web_domain_access). The new pieces are `FileManager.write`, `FileText.language`, `SessionFile`, `Range`, `Fold`, `FileViolation`, `FileComments`, `FileComment`, and `FileCommentState`. A comment, a fold, and a violation each sit on a `Range` of the file. The rest exist today.
+Each page call reaches one MCP tool, which calls one domain operation (cdd_web_domain_access). The new pieces are `FileManager.write`, `FileText.language`, `SessionFile`, `Range`, `Fold`, `FileViolation`, `FileComments`, `FileComment`, and `FileCommentState`. Every change to FileComments answers with FileComments, so the page redraws every marker from one shape. A comment, a fold, and a violation each sit on a `Range` of the file. The rest exist today.
 
 A file comment's state is read, not stored twice. It is `not_sent` until `Chat.send` returns, then `sent`, then `processed` once its chat message is done: the chat's turn that worked on it has ended (`harness/chat/chat.py:279-286`).
 
@@ -141,7 +141,7 @@ FileCommentsAdapter.add("src/checkout/order.py", 12, 14, "an empty cart should s
     <- Range{path, start_line, end_line, content, anchor}
     -> FileComment(range, text)
     -> FileComments._save()  .sessions/checkout-flow/file-comments.json
-  <- FileComment{anchor: "src/checkout/order.py:L12-L14", state: not_sent}
+  <- FileComments{comments: [..., FileComment{anchor: "src/checkout/order.py:L12-L14", state: not_sent}]}
 ```
 
 ### Scenario: Open a file comment from its marker
@@ -184,7 +184,7 @@ session=.sessions/checkout-flow/session.json")
   <- ChatMessage{message}
   -> FileComment.sent_in(chat, message)
   -> FileComments._save()
-<- FileComment{state: sent}
+<- FileComments  every comment, this one sent
 ```
 
 ### Scenario: Send every open comment at once

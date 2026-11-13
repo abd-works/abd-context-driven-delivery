@@ -295,6 +295,38 @@ EMPTY_CART_FILL = "\n".join([
 ])
 
 
+
+def seed_checkout_flow(world) -> None:
+    """Seed: checkout-flow working in src/checkout, holding order.py."""
+    world.project.seed_session(CHECKOUT_FLOW_IN_SRC_CHECKOUT)
+    world.project.seed_file(ORDER_FILE, ORDER_TEXT)
+
+
+def seed_connected_chat(world) -> None:
+    """Seed: the chat checkout-chat checked in, and assigned to checkout-flow."""
+    world.Chat.load(CHECKOUT_CHAT).check_in(is_busy=False)
+    world.Ticket.load(CHECKOUT_FLOW_IN_SRC_CHECKOUT.name).assign_chat(chat=CHECKOUT_CHAT)
+
+
+def seed_file_comments(world, *comments: FileCommentExample, sent_to: str = "") -> None:
+    """Seed: checkout-flow's file comments holding comments, each sent to the chat sent_to when it names one."""
+    file_comments = world.Ticket.load(CHECKOUT_FLOW_IN_SRC_CHECKOUT.name).session.file_comments
+    for comment in comments:
+        file_comments.add(path=comment.path, start_line=comment.start_line, end_line=comment.end_line, text=comment.text)
+        if sent_to:
+            file_comments.send(anchor=comment.anchor, chat=sent_to)
+
+
+def seed_comment_shown_in_chat(world) -> None:
+    """Seed: the empty-cart comment sent to checkout-chat, which took it, showed it, and started a turn on it."""
+    seed_checkout_flow(world)
+    seed_connected_chat(world)
+    seed_file_comments(world, EMPTY_CART_COMMENT, sent_to=CHECKOUT_CHAT)
+    chat = world.Chat.load(CHECKOUT_CHAT)
+    taken = world.data_of(chat.check_in(is_busy=False))
+    chat.confirm(message=taken[0]["message"], is_shown=True)
+    chat.check_in(is_busy=True)
+
 class SessionsProject(ThrowawayProject):
     """A throwaway project named by CDD_PROJECT while a scenario runs, whose `.sessions/` and files a scenario seeds."""
 

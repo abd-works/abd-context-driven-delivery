@@ -138,6 +138,8 @@ with story("Send File Comments To Chat"):
     with scenario("Keep the comment unsent when the chat is not connected"):
         with given("ticket checkout-flow is assigned the chat checkout-chat"):
             pass
+        with and_("checkout-flow's file comments hold order.py:L12-L14, not sent"):
+            pass
         with but_("checkout-chat has not checked in"):
             pass
         with when("the Person sends the comment order.py:L12-L14 to the chat"):

@@ -144,6 +144,7 @@ session=.sessions/checkout-flow/session.json
 #### Scenario: Keep the comment unsent when the chat is not connected
 
 *Given* ticket checkout-flow is assigned the chat *checkout-chat*
+*And* checkout-flow's file comments hold *order.py:L12-L14*, not sent
 *But* *checkout-chat* has not checked in
 *When* the Person sends the comment *order.py:L12-L14* to the chat
 *Then* a toast says *chat 'checkout-chat' is not connected: is the cdd-board mod loaded in it?*
