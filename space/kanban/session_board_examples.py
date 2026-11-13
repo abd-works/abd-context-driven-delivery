@@ -156,6 +156,8 @@ SIGN_UP = SessionSeed("sign-up", "Sign up")
 BROWSE_PETS = SessionSeed("browse-pets", "Browse pets", folder="_complete")
 OLD_SPIKE = SessionSeed("old-spike", "Old spike", folder="_archive")
 MAIN = SessionSeed("main", "Main")
+# A ticket whose name holds checkout-flow as a whole word, on a branch named as itself.
+CHECKOUT_FLOW_RETRY = SessionSeed("checkout-flow-retry", "Checkout flow retry")
 BROKEN = SessionSeed("broken", "Broken")
 BROKEN_SESSION_JSON = "{broken"
 CHILD = SessionSeed("child", "child", fields={"scope": "story", "parent": "epic"})

@@ -62,8 +62,19 @@ export async function runningBoardUrl($: EngineInterface): Promise<string> {
   return (await startedBoard($)).url
 }
 
-// Opens a page in the person's browser with the system's own opener, since mods have no call that opens a link.
+// The Claude desktop app's browser pane, as its MCP server is named; a terminal chat has none.
+const BROWSER_PANE = 'Claude_Browser'
+
+// Opens a page in the desktop app's own browser pane, beside the chat, as a tab of its own.
+async function openInBrowserPane($: EngineInterface, url: string): Promise<boolean> {
+  const opened = await $.mcp.call(BROWSER_PANE, 'preview_start', { url }).catch(() => null)
+  return opened !== null && !opened.isError
+}
+
+// Opens a page in the desktop app's browser pane, else, where the chat has no pane, in the person's own browser with the
+// system's opener, since mods have no call that opens a link.
 export async function openInBrowser($: EngineInterface, url: string): Promise<boolean> {
+  if (await openInBrowserPane($, url)) return true
   const openers = [['rundll32', 'url.dll,FileProtocolHandler', url], ['open', url], ['xdg-open', url]]
   for (const argv of openers) {
     const opened = await $.process.run(argv).catch(() => null)

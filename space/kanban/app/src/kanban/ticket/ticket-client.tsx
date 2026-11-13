@@ -214,14 +214,15 @@ export class TicketClient extends TicketClientGenerated {
   async openChat(): Promise<void> {
     const chat = this.chat
     if (!this.canOpenChat || !chat.beginOpening()) return
-    chat.start(await this.worktreeOpened())
+    chat.start(await this.newChatLinkOpened())
   }
 
-  private async worktreeOpened(): Promise<string> {
-    if (this.worktree) return this.worktree
+  // The link to the ticket's new chat, on the worktree activating opens when the ticket has none.
+  private async newChatLinkOpened(): Promise<string> {
+    if (this.worktree) return this.newChatLink
     const opened = await this.activate()
     await this.page.reader.refresh()
-    return opened?.worktree ?? ''
+    return opened?.newChatLink ?? ''
   }
 
   // Python says where Move next and Move previous put the ticket while it stays on a stage, so the card shows there at

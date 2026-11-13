@@ -137,6 +137,12 @@ section: body
 *Then* the Person is told both branches could be checkout-flow's
 *And* checkout-flow's session records no branch
 
+#### Scenario: Leave a branch named as another ticket to that ticket
+
+*Given* checkout-flow-retry is a ticket whose work is on the branch checkout-flow-retry
+*When* the Person activates checkout-flow
+*Then* checkout-flow's session records its own branch checkout-flow
+
 ## Story: Close Active Session
 
 #### Scenario: Close the active session from its card

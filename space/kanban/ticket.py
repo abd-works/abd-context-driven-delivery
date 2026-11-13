@@ -6,6 +6,7 @@ import json
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import quote, urlencode
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
@@ -41,6 +42,8 @@ if TYPE_CHECKING:
     from space.kanban.backlog_item import BacklogItem
 
 GRAPH_RULE_VIOLATION = "graph-rule"
+# The Claude app opens a new chat from this link, on the folder it names, with its prompt typed in for the person to send.
+NEW_CHAT_LINK = "claude://code/new"
 MOVED_INTO = "move"
 MARKED_DONE = "done"
 MARKED_IN_PROGRESS = "in-progress"
@@ -344,6 +347,21 @@ class Ticket(Card):
     def worktree(self) -> str:
         """The folder of the ticket's own worktree, where its chat works; empty while it has none."""
         return self.checkout.worktree
+
+    @property
+    @data_field
+    def new_chat_link(self) -> str:
+        """The claude://code/new link that opens the ticket's chat in the Claude app on its worktree, with a prompt typed
+        in for the person to send; empty while it has no worktree. The app starts no chat a person did not send, so the
+        board and the chat bar open this link rather than ask an agent to start one."""
+        if not self.worktree:
+            return ""
+        prompt = (
+            f'Title this session "{self.name}". You are the chat of the session board\'s ticket {self.name}; work on that '
+            f"ticket. First call sessions.switch with name {self.name}, so every tool works on its session, then read the "
+            "session's latest handoff."
+        )
+        return f"{NEW_CHAT_LINK}?{urlencode({'folder': self.worktree, 'q': prompt}, quote_via=quote)}"
 
     @property
     @data_field

@@ -241,6 +241,11 @@ class Board:
         return self._reads.tickets
 
     @property
+    def ticket_names(self) -> set[str]:
+        """Every ticket's name, listed once per board read."""
+        return self._reads.ticket_names
+
+    @property
     def backlog_items(self) -> list[BacklogItem]:
         return self._reads.backlog_items
 
@@ -382,9 +387,18 @@ class BoardReads:
         self._board = board
 
     @cached_property
+    def sessions(self) -> list[Session]:
+        return self._board.sessions.all()
+
+    @cached_property
     def tickets(self) -> list[Ticket]:
         board = self._board
-        return [board.make_ticket(session) for session in board.sessions.all()]
+        return [board.make_ticket(session) for session in self.sessions]
+
+    @cached_property
+    def ticket_names(self) -> set[str]:
+        """Every ticket's name, read from the sessions without making the tickets, so a ticket being made can ask."""
+        return {session.name for session in self.sessions}
 
     @cached_property
     def children(self) -> dict[str, list[Ticket]]:

@@ -2,6 +2,8 @@
 import json
 import tempfile
 from pathlib import Path
+from unittest.mock import PropertyMock, patch
+from urllib.parse import parse_qs, urlsplit
 
 from expects import be, be_false, be_none, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
@@ -23,6 +25,7 @@ import space.kanban.backlog_item as backlog_item_module  # noqa: E402
 from space.kanban.backlog_item import BacklogNestingError  # noqa: E402
 from space.kanban.board import Board, Card, ColumnNotFoundError, Help  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
+from space.kanban.ticket_checkout import TicketCheckout  # noqa: E402
 from space.repo.repo import Repo  # noqa: E402
 from space.session.throwaway_project import ThrowawayProject  # noqa: E402
 
@@ -546,6 +549,25 @@ with description("a ticket") as self:
 
         with it("should name no branch while its project is no clone"):
             expect(data_of(self.ticket)["branch_name"]).to(equal(""))
+
+        # (S) Chat bar, Board App --> Open Ticket Chat: the Claude app opens a new chat from the link, and the person sends it.
+        with it("should offer no link to a new chat while it has no worktree"):
+            expect(data_of(self.ticket)["new_chat_link"]).to(equal(""))
+
+        with context("with its worktree opened"):
+            with before.each:
+                self.worktree = "C:\\dev\\pawplace-pet-visits"
+                with patch.object(TicketCheckout, "worktree", new_callable=PropertyMock, return_value=self.worktree):
+                    self.link = urlsplit(data_of(self.ticket)["new_chat_link"])
+
+            with it("should link a new chat in the Claude app"):
+                expect(f"{self.link.scheme}://{self.link.netloc}{self.link.path}").to(equal("claude://code/new"))
+
+            with it("should open that chat on its worktree"):
+                expect(parse_qs(self.link.query)["folder"]).to(equal([self.worktree]))
+
+            with it("should ask that chat to switch to its session before anything else"):
+                expect(parse_qs(self.link.query)["q"][0]).to(contain("First call sessions.switch with name pet-visits"))
 
     # (S) Board App --> Display Ticket Card, Place Ticket In Column
     with context("with its first logged work on a Specification fidelity"):

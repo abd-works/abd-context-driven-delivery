@@ -23,10 +23,16 @@ class _ScriptedClaude(ClaudePlugins):
         self.calls: list[tuple[str, ...]] = []
         self.cli: str | None = "claude"
         self.plugins_installed: dict[str, str] = {}
+        # The machine running the spec may watch its own board folder; the spec says whether this one does.
+        self.board_watched = False
 
     @property
     def installed(self) -> dict[str, str]:
         return self.plugins_installed
+
+    @property
+    def is_board_watched(self) -> bool:
+        return self.board_watched
 
     @property
     def published_board_version(self) -> str:
@@ -1411,6 +1417,18 @@ with description("toolsets installed for Claude Code") as self:
 
             with it("should say it is installed"):
                 expect(self.answer).to(equal("installed"))
+
+            with it("should run no claude command"):
+                expect(self.plugins.calls).to(equal([]))
+
+        # Claude Code reloads a watched board folder in every chat as the install writes it, so installing it too loads it twice.
+        with context("with the board folder watched by Claude Code"):
+            with before.each:
+                self.plugins.board_watched = True
+                self.answer = self.plugins.install_board()
+
+            with it("should say it is watched"):
+                expect(self.answer).to(equal("watched"))
 
             with it("should run no claude command"):
                 expect(self.plugins.calls).to(equal([]))

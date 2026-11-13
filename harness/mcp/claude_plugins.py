@@ -33,7 +33,10 @@ class ClaudePlugins:
 
     def install_board(self) -> str:
         """Install the board mod from the code the server runs. The board is a convenience on top of the install, so a
-        miss is printed, never raised."""
+        miss is printed, never raised. A board folder Claude Code watches, named in ``CLAUDE_CODE_PLUGIN_DIRS``, needs
+        no install: every chat reloads the mod as the folder is written, and installing it too would load it twice."""
+        if self.is_board_watched:
+            return "watched"
         installed = self.installed
         from_checkout = self.CHECKOUT_BOARD in installed
         if not from_checkout and installed.get(self.BOARD) == self.published_board_version:
@@ -80,6 +83,18 @@ class ClaudePlugins:
             return str(manifest.read().get("version", ""))
         except JsonFileUnreadable:
             return ""
+
+    @property
+    def is_board_watched(self) -> bool:
+        """Whether the user's Claude Code settings name the published board folder in ``CLAUDE_CODE_PLUGIN_DIRS``, which
+        every chat loads the mod from and reloads it from when the folder changes."""
+        try:
+            env = JsonFile(self._claude.user_settings_folder / "settings.json").read().get("env", {})
+        except JsonFileUnreadable:
+            return False
+        board = (self._home.claude_plugins / BOARD_PLUGIN).resolve()
+        folders = str(env.get("CLAUDE_CODE_PLUGIN_DIRS", "")).split(os.pathsep)
+        return any(folder.strip() and Path(folder.strip()).expanduser().resolve() == board for folder in folders)
 
     @property
     def claude_cli(self) -> str | None:

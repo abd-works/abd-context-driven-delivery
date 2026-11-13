@@ -6,14 +6,6 @@ import type { BoardStore } from '../shared/board-store'
 const SHOWN_COMMAND = 80
 // A ticket's new chat is not opened again for this long, while the person confirms it and it checks in.
 const STARTING_CHAT_MILLISECONDS = 120_000
-// The Claude app opens a new session on a folder from this link, with its prompt filled in for the person to send.
-const NEW_CHAT_LINK = 'claude://code/new'
-
-// The link that opens a ticket's new chat on its worktree. The link names no title, so its prompt asks for the ticket's.
-export const newChatLink = (ticket: string, worktree: string): string => {
-  const prompt = `Title this session "${ticket}". You are the chat of the session board's ticket ${ticket}; work on that ticket. First call sessions.switch with name ${ticket}, so every tool works on its session, then read the session's latest handoff.`
-  return `${NEW_CHAT_LINK}?folder=${encodeURIComponent(worktree)}&q=${encodeURIComponent(prompt)}`
-}
 
 type CommandKind = 'submit' | 'fill' | 'command'
 
@@ -73,14 +65,15 @@ export class ChatClient {
     return asked !== undefined && Date.now() - asked < STARTING_CHAT_MILLISECONDS
   }
 
-  // A ticket's new chat opens in the Claude app on the ticket's worktree; the app asks the person to confirm the folder and send.
-  startFor(ticket: string, worktree: string): void {
-    if (!worktree) {
+  // A ticket's new chat opens in the Claude app on the ticket's worktree from the ticket's new_chat_link, empty while it has
+  // no worktree; the app asks the person to confirm the folder and send.
+  startFor(ticket: string, newChatLink: string): void {
+    if (!newChatLink) {
       const { [ticket]: _given, ...starting } = this.store.state.startingChats
       this.store.change({ startingChats: starting })
       return
     }
-    this.openLink(newChatLink(ticket, worktree))
+    this.openLink(newChatLink)
     this.store.toast(`Confirm the folder and send in the Claude app to start the chat of ${ticket}`)
   }
 
@@ -236,8 +229,8 @@ export class TicketChat {
     return this.chats.beginOpening(this.ticket)
   }
 
-  // The new chat opens on the worktree given, which can have been opened only now.
-  start(worktree: string): void {
-    this.chats.startFor(this.ticket, worktree)
+  // The new chat opens from the ticket's link, on a worktree that can have been opened only now.
+  start(newChatLink: string): void {
+    this.chats.startFor(this.ticket, newChatLink)
   }
 }

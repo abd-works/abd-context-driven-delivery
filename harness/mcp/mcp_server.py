@@ -638,7 +638,7 @@ class McpHost:
             ),
         ]
         enrolled = (*self._checkout_server.tools.values(), *self._checkout_server.prompts.values())
-        listed = [types.Tool(name=tool.mcp_name, description=tool.description or None, inputSchema=tool.input_schema) for tool in enrolled]
+        listed = [types.Tool(name=tool.mcp_name, description=tool.listed_description or None, inputSchema=tool.input_schema) for tool in enrolled]
         return [*builtins, *listed]
 
     async def _answer_chat(self, name: str, arguments: dict[str, object] | None) -> types.CallToolResult:
