@@ -124,6 +124,9 @@ with description("Repos") as self:
         with it("should say how to start the folder's own chat"):
             expect(self.answer).to(contain(f"cwd {self.plain}"))
 
+        with it("should open the session named after the folder in that chat"):
+            expect(self.answer).to(contain("call sessions.switch with name notes"))
+
     with context("opening a folder that is not there yet"):
         with it("should make the folder"):
             self.repos.open_folder(str(self.top / "new" / "notes"), start_chat=False)

@@ -115,7 +115,8 @@ function WordGlyphButtonView({ Button, Text }: ElementTable, key: string, word: 
 // In the main chat, the repository's name with its ⑂ comes first, one button that opens the list of repositories, then
 // "main +", one button that opens the list of tickets to open, its card showing on hover. A ticket's own chat works only on that
 // ticket, so it shows the name alone: a press opens the session's folder in the files pane, its card showing on hover.
-// A chat in a plain folder has neither other repositories nor tickets, so it shows the folder's path alone, read only.
+// A chat in a plain folder, in any session, has neither other repositories nor tickets nor a branch to close, so it
+// shows the folder's path alone, read only, and no close button.
 function SessionNameView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
   const { Box, Button, Text } = elements
   if (chatBar.isPlainFolder) {
@@ -167,7 +168,7 @@ function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBa
     <Box key="session-buttons" flexDirection="row" gap={1}>
       {IconButtonView(elements, 'handoff', '⇥', 'handoff', () => runHandoff($, chatBar))}
       {fidelities.length ? IconButtonView(elements, 'files-button', '▤', 'files', () => openFilesOf($, fidelities)) : null}
-      {chatBar.isMain ? null : IconButtonView(elements, 'close-button', '✕', 'close session', () => openClose($, chatBar))}
+      {chatBar.isMain || chatBar.isPlainFolder ? null : IconButtonView(elements, 'close-button', '✕', 'close session', () => openClose($, chatBar))}
     </Box>
   )
 }

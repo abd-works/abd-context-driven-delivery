@@ -164,10 +164,10 @@ export class ChatBarClient {
     return this.board?.folder ?? ''
   }
 
-  // A chat in a folder that is no git repository has one session and no other repository to switch to, so the bar shows
-  // its folder alone, read only.
+  // A chat in a folder that is no git repository, such as one opened from FOLDER on its own session, has no branch to
+  // switch or close and no other repository to open, so the bar shows its folder alone, read only.
   get isPlainFolder(): boolean {
-    return this.isMain && !this.isClone
+    return Boolean(this.board) && !this.isClone
   }
 
   // The status line below the chat: the repository, the branch the session's chat works on, and the folder the session

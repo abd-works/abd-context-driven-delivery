@@ -21,6 +21,7 @@ from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_server import long_call, mcp
 from harness.process.git import Git
 from space.repo.repo import Repo
+from space.session.session import MAIN_SESSION_NAME
 
 # The checkout serving these tools: its .gitignore is what a new repository ignores, and its install script installs CDD.
 _CDD_CHECKOUT = Path(__file__).resolve().parents[2]
@@ -30,7 +31,6 @@ _DEFAULT_BRANCH = "main"
 _VISIBILITIES = ("private", "public", "internal")
 # Where a new chat opens in the Claude desktop app: the person confirms the folder and sends the first prompt.
 _NEW_CHAT_LINK = "claude://code/new"
-_FIRST_PROMPT = "Open this folder's CDD main session: call sessions.switch with name main."
 _GITIGNORE_HEADER = "# Ignored as the CDD checkout ignores (written by repos.open)"
 _INSTALL_SECONDS = 600
 _PUBLISH_SECONDS = 180
@@ -80,6 +80,43 @@ class PublishFailedError(RuntimeError):
 class InstallFailedError(RuntimeError):
     """Raised when installing CDD into the repository's .claude fails; it carries the install's output."""
 
+
+
+class NewChat:
+    """A new top-level chat in the Claude desktop app on root, titled title, whose first prompt opens the CDD session
+    called session there. The app asks the person to confirm the folder and send that prompt."""
+
+    def __init__(self, root: Path, title: str, session: str) -> None:
+        self._root = root
+        self._title = title
+        self._session = session
+
+    @property
+    def first_prompt(self) -> str:
+        return f"Open the CDD session {self._session} in this folder: call sessions.switch with name {self._session}."
+
+    @property
+    def link(self) -> str:
+        return f"{_NEW_CHAT_LINK}?folder={quote(str(self._root), safe='')}&q={quote(self.first_prompt, safe='')}"
+
+    @property
+    def instructions(self) -> str:
+        """What the agent is told when the link cannot be opened: how to start the chat itself."""
+        return (
+            f"Start a top-level chat on {self._root}: start_session with initiation user_asked, context fresh, "
+            f"cwd {self._root}, use_worktree false, title {self._title!r}, and prompt {self.first_prompt!r}. Or open {self.link}"
+        )
+
+    def open(self) -> str:
+        """Hand the link to the desktop app; when the system cannot open it, say how to start the chat instead."""
+        try:
+            if sys.platform == "win32":
+                os.startfile(self.link)  # noqa: S606 - the link names the desktop app's own scheme
+            else:
+                subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", self.link], check=True, timeout=30)
+        except (OSError, subprocess.SubprocessError):
+            return self.instructions
+        return f"Opened a new chat on {self._root} in the Claude app: send its first prompt there to open the session {self._session}."
 
 class CddConfig:
     """The person's own cdd settings, in ``~/.cdd/config.json``: one object, read whole and written whole."""
@@ -206,7 +243,8 @@ class Repos:
             steps.append(self._publish(root, visibility))
         if install:
             steps.append(self._install_cdd(root))
-        steps.append(self._open_chat(root, cleaned) if start_chat else self._chat_instructions(root, cleaned))
+        chat = NewChat(root, cleaned, MAIN_SESSION_NAME)
+        steps.append(chat.open() if start_chat else chat.instructions)
         return "\n".join(f"- {step}" for step in steps if step)
 
     @mcp
@@ -222,7 +260,8 @@ class Repos:
         if root.is_file():
             raise PathIsAFileError(root)
         root.mkdir(parents=True, exist_ok=True)
-        return self._open_chat(root, root.name) if start_chat else self._chat_instructions(root, root.name)
+        chat = NewChat(root, root.name, root.name)
+        return chat.open() if start_chat else chat.instructions
 
     def _create(self, root: Path) -> str:
         if (root / ".git").is_file():
@@ -290,25 +329,4 @@ class Repos:
             raise InstallFailedError(f"installing CDD into {root / '.claude'} failed: {(answer.stderr or answer.stdout).strip()[-2000:]}")
         return f"Installed CDD into {root / '.claude'}."
 
-    def _chat_link(self, root: Path) -> str:
-        return f"{_NEW_CHAT_LINK}?folder={quote(str(root), safe='')}&q={quote(_FIRST_PROMPT, safe='')}"
-
-    def _open_chat(self, root: Path, name: str) -> str:
-        """Open a new top-level chat on root in the Claude desktop app. The app asks the person to confirm the folder and
-        send the first prompt; when the link cannot be opened, the agent is told to start the chat itself."""
-        link = self._chat_link(root)
-        try:
-            if sys.platform == "win32":
-                os.startfile(link)  # noqa: S606 - the link names the desktop app's own scheme
-            else:
-                subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", link], check=True, timeout=30)
-        except (OSError, subprocess.SubprocessError):
-            return self._chat_instructions(root, name)
-        return f"Opened a new chat on {root} in the Claude app: send its first prompt there to open the main session."
-
-    def _chat_instructions(self, root: Path, name: str) -> str:
-        return (
-            f"Start a top-level chat on {root}: start_session with initiation user_asked, context fresh, cwd {root}, "
-            f"use_worktree false, title {name!r}, and prompt {_FIRST_PROMPT!r}. Or open {self._chat_link(root)}"
-        )
 

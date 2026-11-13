@@ -47,7 +47,7 @@ export function actionColumnOf(chatBar: ChatBarClient, overlays: OverlayChips, f
 function sessionButtonCellsOf(chatBar: ChatBarClient): number {
   if (!chatBar.hasSession) return 0
   const hasFiles = chatBar.actionFidelities.length > 0 || chatBar.fidelities.length > 0
-  const icons = 1 + (hasFiles ? 1 : 0) + (chatBar.isMain ? 0 : 1)
+  const icons = 1 + (hasFiles ? 1 : 0) + (chatBar.isMain || chatBar.isPlainFolder ? 0 : 1)
   return GAP + icons + (icons - 1) * GAP
 }
 
