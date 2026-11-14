@@ -1,5 +1,7 @@
 {
   "name": "release-2",
   "title": "release-2",
-  "scope": "feature"
+  "scope": "feature",
+  "branch": "release-2",
+  "worktree": "C:\\dev\\abd-cdd-2"
 }
