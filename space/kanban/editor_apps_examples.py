@@ -98,7 +98,7 @@ class ThrowawayApp:
         self.port = free_port()
         self._replaced = App.load(example.label, project=self.folder)
         self._listener: socket.socket | None = None
-        self.app = App(example.label, self.folder, AppServer(self.folder, "serve.js", (self.port,)), example.page, self.npm).register()
+        self.app = App(example.label, self.folder, AppServer(self.folder, "serve.js", (self.port,)), example.page, npm=self.npm).register()
         self.write_code(FOUND_DEPENDENCY, SERVE)
 
     def write_code(self, dependency: str, server: str) -> None:
