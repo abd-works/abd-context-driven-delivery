@@ -1,6 +1,6 @@
 """The apps the session board's server serves, made once and registered here: the CDD Kanban, from the ports file its
-server also reads, and the Story UI editor, which the board's server serves at /story-map from the Stories practice's
-app folder."""
+server also reads; the Files app, the file viewer alone at /files, which the chat bar's files button opens; and the
+Story UI editor, which the board's server serves at /story-map from the Stories practice's app folder."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -21,6 +21,8 @@ BOARD_APP_PORTS = AppPorts(APP_FOLDER / "packages" / "session-board" / "ports.js
 # The board's server, which serves the CDD Kanban and the Story UI editor alike, so a chat starts it once for both.
 BOARD_SERVER = AppServer(APP_FOLDER, "packages/session-board/serve.ts", BOARD_APP_PORTS.of("board"))
 KANBAN_APP = App("Kanban", APP_FOLDER, BOARD_SERVER).register()
+# The file viewer as an app of its own: the board's build answers it at /files with the viewer alone, no board around it.
+FILES_APP = App("Files", APP_FOLDER, BOARD_SERVER, page="/files").register()
 STORY_UI_APP = App("Story UI", STORY_UI_FOLDER, BOARD_SERVER, page="/story-map").register()
 # The Story UI editor edits the Stories practice's files, so every Stories file the chat bar and the board show opens in it.
 Stories.editor = STORY_UI_APP
