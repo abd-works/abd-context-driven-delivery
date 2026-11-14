@@ -254,6 +254,12 @@ class McpInstallation(ServerInstallation):
         self.host = McpHost.from_repo(self._checkout)
         return self.host
 
+    def _publish_board(self) -> None:
+        """Publish the chat bar from the code the server now runs, so a chat watching the published copy reloads it
+        with the server's restart rather than at the next install."""
+        if self._home is not None and self._home.is_installed:
+            self._home.write_board_plugin()
+
     def diagnose(self) -> dict[str, Any]:
         host = self.host if self.host is not None else self.standup()
         self.diagnosis = host.diagnose() if host is not None else {}
@@ -902,12 +908,6 @@ class McpHost:
         self._publish_board()
         tools = self._checkout_server.tools
         return {"is_restarted": True, "tools": len(tools) + len(self._checkout_server.prompts), "exceptions": self._checkout_server.skipped.as_data}
-
-    def _publish_board(self) -> None:
-        """Publish the chat bar from the code the server now runs, so a chat watching the published copy reloads it
-        with the server's restart rather than at the next install."""
-        if self._home is not None and self._home.is_installed:
-            self._home.write_board_plugin()
 
     def diagnose(self) -> dict[str, Any]:
         """What this host publishes: the ping's answer, every tool name, and what start-up skipped."""
