@@ -3,5 +3,15 @@
   "title": "tdd practice",
   "scope": "feature",
   "branch": "tdd-practice",
-  "worktree": "C:\\dev\\abd-cdd-tdd-practice"
+  "worktree": "C:\\dev\\abd-cdd-tdd-practice",
+  "practices": {
+    "stories": {
+      "formats": {
+        "story_map": [
+          "markdown",
+          "drawio"
+        ]
+      }
+    }
+  }
 }
