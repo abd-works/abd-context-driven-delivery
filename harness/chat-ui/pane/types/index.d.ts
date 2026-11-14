@@ -41,6 +41,9 @@ export type ChatBarViewJson = {
   isRepoListOpen: boolean
   // The repositories beside this one, as repos.siblings answers them when the repo list opens.
   repos: RepoRowJson[]
+  // The folder of the repository a new session will work on, chosen with the folder picker beside the new session's
+  // name; empty for the whole repository.
+  newSessionFolder: string
 }
 
 // One repository in the repos folder, as repos.siblings answers it.

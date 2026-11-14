@@ -20,8 +20,9 @@ const chatBarView = atom(
     leaving: [],
     isRepoListOpen: false,
     repos: [],
+    newSessionFolder: '',
   } as ChatBarViewJson,
-  { shape: 'chat-bar-view-9' },
+  { shape: 'chat-bar-view-10' },
 )
 
 // A press turns choice on or off; the chosen stay in the order the Ticket offers them, so a choice sent reads the same
@@ -50,6 +51,11 @@ export async function closeRepoList($: EngineInterface): Promise<void> {
 // The repositories the repo list offers, read each time it opens.
 export async function showRepos($: EngineInterface, repos: RepoRowJson[]): Promise<void> {
   await update($, chatBarView, view => ({ ...view, repos }))
+}
+
+// The folder a new session will work on, chosen beside its name; empty for the whole repository.
+export async function chooseNewSessionFolder($: EngineInterface, newSessionFolder: string): Promise<void> {
+  await update($, chatBarView, view => ({ ...view, newSessionFolder }))
 }
 
 export async function closeSessionList($: EngineInterface): Promise<void> {

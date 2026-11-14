@@ -82,6 +82,16 @@ class BacklogItemNotFoundError(LookupError):
         super().__init__(f"no backlog item titled {backlog_item!r} on the board")
 
 
+class FolderOutsideRepositoryError(ValueError):
+    """Raised when a new ticket's session is to work on a folder outside the repository. A session's workpath is a
+    folder of its repository, so its files are committed on the ticket's branch. It names the folder and the repository."""
+
+    def __init__(self, folder: str, repository: str) -> None:
+        self.folder = folder
+        self.repository = repository
+        super().__init__(f"{folder!r} is not a folder of the repository {repository!r}; choose one inside it")
+
+
 class CardNotInColumnError(ValueError):
     """Raised when a card is to be placed before another, and either is not a card of its own in the column."""
 
@@ -329,10 +339,12 @@ class Board:
         return found
 
     def open_ticket(self, title: str, scope: str, parent: str, path: str) -> Ticket:
-        """A new ticket titled title in Discovery, its session working on path, a folder in the repository (its top when
-        empty)."""
-        root = self._repo.root
+        """A new ticket titled title in Discovery, its session working on path, a folder in the repository given from its
+        top or in full (its top when empty). A folder outside the repository raises ``FolderOutsideRepositoryError``."""
+        root = self._repo.root.resolve()
         workpath = (root / path).resolve() if path else root
+        if not workpath.is_relative_to(root):
+            raise FolderOutsideRepositoryError(path, str(root))
         return self.ticket_of(self.sessions.create(title, workpath, title=title, scope=scope, parent=parent))
 
     @mcp
