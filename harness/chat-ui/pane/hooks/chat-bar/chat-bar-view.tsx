@@ -34,6 +34,7 @@ export type ChatBarDraw = {
   overlays: OverlayChips
   busy: { doing: string; wheel: string }
   health: { band: unknown; panel: unknown }
+  version: { badge: unknown; dialog: unknown }
   width: number
 }
 
@@ -225,7 +226,7 @@ function OverlayListView($: EngineInterface, { Box, Button, Text }: ElementTable
 function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
   const { Box, Text } = elements
   const { chatBar } = draw
-  if (!chatBar.hasSession) return <Box key="line" flexDirection="row" gap={1}>{draw.health.band}<Box flexGrow={1} />{SessionNameView($, elements, draw)}</Box>
+  if (!chatBar.hasSession) return <Box key="line" flexDirection="row" gap={1}>{draw.health.band}<Box flexGrow={1} />{SessionNameView($, elements, draw)}{draw.version.badge}</Box>
   return (
     <Box key="line" flexDirection="row" gap={1} flexWrap="wrap" alignItems="center">
         {draw.health.band}
@@ -240,6 +241,7 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
         <Box flexGrow={1} />
         {SessionNameView($, elements, draw)}
         {SessionButtonsView($, elements, draw)}
+        {draw.version.badge}
     </Box>
   )
 }
@@ -264,6 +266,7 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
       {chatBar.problem ? ProblemView($, elements, `The board did not answer: ${chatBar.problem}`) : null}
       {FailureView($, elements, draw.failure)}
       {draw.busy.doing ? <Text key="busy" color={BRAND.accent}>{`${draw.busy.wheel} ${draw.busy.doing}…`}</Text> : null}
+      {draw.version.dialog}
       {CloseView($, elements, draw)}
       {SessionListView($, elements, draw)}
       {RepoListView($, elements, draw)}

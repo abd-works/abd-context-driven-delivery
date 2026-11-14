@@ -76,7 +76,8 @@ def main() -> int:
     if args.from_chat is not None:
         chat_checkout = Path(args.from_chat).resolve()
         if chat_checkout != _REPO and (chat_checkout / "scripts" / "install.py").is_file():
-            command = [sys.executable, str(chat_checkout / "scripts" / "install.py"), *(["--ide", args.ide] if args.ide else [])]
+            passed = [*(["--ide", args.ide] if args.ide else []), *(["--from-latest"] if args.from_latest else [])]
+            command = [sys.executable, str(chat_checkout / "scripts" / "install.py"), *passed]
             return subprocess.run(command, cwd=chat_checkout, check=False).returncode
     if args.from_latest:
         return _install_from_latest(args)

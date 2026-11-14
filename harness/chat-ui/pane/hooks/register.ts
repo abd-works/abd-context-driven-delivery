@@ -28,6 +28,8 @@ import {
   runInstall,
 } from './health/server-health-client'
 import { ServerHealthBandView, ServerHealthPanelView } from './health/server-health-view'
+import { askToUpdate, cancelUpdate, checkVersion, currentCddVersion, updateToLatest } from './health/cdd-version-client'
+import { UpdateDialogView, VersionBadgeView } from './health/cdd-version-view'
 import { currentAppOpening, openAppBesideChat } from './health/app-client'
 import { FOLDER_QUERY, PROJECT_QUERY, projectPageUrl } from './board-chat/board'
 import { CARD_SCOPE } from './chat-bar/session-card-view'
@@ -68,6 +70,7 @@ async function readBoardAfterStart($: EngineInterface): Promise<void> {
   await readName($).catch(shownAsFailure($, 'The chat was not named', 'Starting the chat, reading its name'))
   await readActive($).catch(shownAsFailure($, 'The board did not load', 'Starting the chat, calling board.show'))
   refreshHealthSoon($)
+  await checkVersion($).catch(shownAsFailure($, 'The CDD version was not read', 'Starting the chat, calling cdd-version.check'))
 }
 
 async function readBoardAfterTurn($: EngineInterface, isMainChat: boolean): Promise<void> {
@@ -176,6 +179,8 @@ export const register: Register = on => {
     }
     const band = { health: await currentServerHealth($), view: await currentHealthView($), install: await currentInstall($), opening: await currentAppOpening($), actions }
     const elements = $.ui.resolve(e)
+    const version = await currentCddVersion($)
+    const versionActions = { askToUpdate: () => askToUpdate($), cancelUpdate: () => cancelUpdate($), updateToLatest: () => updateToLatest($) }
     try {
     const chatBar = await currentChatBar($)
     return ChatBarView($, elements, {
@@ -188,6 +193,7 @@ export const register: Register = on => {
       isStagePickerOpen: await isStagePickerOpen($),
       busy: await currentBusy($),
       health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band) },
+      version: { badge: VersionBadgeView(elements, version, versionActions), dialog: UpdateDialogView(elements, version, versionActions) },
       width: e.props.bodyColumns,
     })
     } catch (failure) {

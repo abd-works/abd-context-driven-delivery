@@ -644,9 +644,13 @@ Observed: Reconnect retries `cdd` up to three times (`RECONNECT_TRIES`), then re
 
 Observed: Run install runs the installer and says installing, installed (open a new session) or failed; Details shows the tool, error, server and fix.
 
+### (S) Chat Bar --> Display CDD Version Badge
+
+Observed (requested 2026-11-14, "a small button with v.<major.minor> ... green current version; yellow behind minor; red behind major"): as the chat opens, `cdd-version.check` (`CddVersion.check`, `harness/diagnostics/cdd_version.py`) fetches origin main and answers the version the cdd server runs, read as major and minor from `pyproject.toml`, the version on origin main, and how the two stand; the badge at the end of the line shows `v0.1` green when current, yellow a minor version behind, red a major version behind, grey when origin main was never fetched, with the summary on hover (`health/cdd-version-view.tsx`). Specs: `harness/diagnostics/cdd_version_spec.py`.
+
 ### (S) Person --> Update CDD From Chat Bar
 
-Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "checkout latest and build"), and Requested on 2026-11-06 as the CDD Kanban does: get the latest commit, rebuild the board, pin the cdd server to that commit, and restart the board.
+Observed (requested 2026-11-14, "click opens dialog update and reinstall? use above script if yes"): pressing the version badge asks to update and reinstall; Update and reinstall runs the published install command with `--from-latest` (`updateToLatest`, `health/cdd-version-client.ts`): pull origin main, stop every app and the hook server, restart the cdd server, install every toolset, ping the server, then read the version again; the badge says updating, updated or update failed, and a failure shows why on the failure line. The agent does the same with `/install-latest` (`Installer.install_latest`), which ticks off each step as `scripts/install.py` reports it.
 
 ### (S) Person --> [Open App From Health Panel](../../chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/open-app-from-health-panel/open_app_from_health_panel_story.test.ts)
 
