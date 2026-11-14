@@ -106,7 +106,6 @@ section: body
 - *Fix Report Violations*
 - *Display Violations Band*
 - *List Ticket Files*
-- *Browse Ticket Folder*
 - *View Fidelity Files*
 - *Review Fidelity*
 - *Display Server Health Mark*
@@ -298,15 +297,19 @@ section: body
 
 **Stories in this increment:**
 
-- *Open Story UI Side Panel From Chat Bar*
+- *Open Editor App From App Status Row*
+- *Open Stories File In Story UI Editor*
+- *Load Session Folders In Graph*
+- *Follow Last Activated Session*
 - *Open Story UI On Ticket Scope*
-- *Filter Knowledge Graph To Ticket Scope*
-- *Filter Knowledge Graph To Ticket Practices*
-- *Deploy Knowledge Graph App With Board State*
+- *Filter Graph To Ticket Scope*
+- *Filter Graph To Ticket Practices*
+- *Show Board's Active Ticket In Graph*
+- *Show Agent's Ticket Changes On Board*
 - *Trace Story Through Artifacts*
 - *Invoke Claude Design Story Explorer From Chat Bar*
-- *Deploy Story UI App With Board State*
-- *Refactor Story UI App To Web Domain Access*
+- *Show Board's Active Ticket In Story UI*
+- *Save Story Map Edit Through Domain*
 
 ### Increment 3: Sync Design Canvas With Production
 
@@ -462,7 +465,13 @@ section: body
 - *List Ticket Context Files*
 - *Open Session Files From Details*
 - *View Files In Rich Viewer*
-- *Comment On File Selection*
+- *Save Edited File*
+- *Add Comment To File Selection*
+- *Send File Comments To Chat*
+- *Browse Ticket Files By Practice*
+- *Mark File Comment Processed*
+- *Show Changed File In Viewer*
+- *Clear Processed File Comments*
 - *Show AI Changes As Diff*
 
 ### Increment 10: Customize Board Workflow

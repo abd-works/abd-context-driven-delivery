@@ -1,6 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
+import type { AppData } from '@cdd/harness/diagnostics/app'
 import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
 import type { HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
@@ -8,6 +9,8 @@ import type { HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
 // The cdd plugin declares the server, and Claude Code names a plugin's server plugin:{plugin}:{server}.
 export const SERVER = 'plugin:cdd:cdd'
 export const REPORT_TOOL = 'server-health.report'
+// The CDD Kanban's label, which App.load takes as its identity: the board the chat checks in with.
+export const KANBAN = 'Kanban'
 export const RECONNECT_TRIES = 3
 // Its tools are named mcp__plugin_{plugin}_{server}__{tool}.
 const TOOL_PREFIX = 'mcp__plugin_cdd_cdd__'
@@ -31,17 +34,14 @@ type Answer = Pick<ServerHealthJson, 'connection' | 'report' | 'problem'>
 export class ServerHealthClient {
   constructor(private readonly json: ServerHealthData | null) {}
 
-  get kanbanAppPort(): number | null {
-    return this.json?.kanban_app_port ?? null
+  // Every app a module registered, each with its status, port and url; none before cdd has reported.
+  get apps(): AppData[] {
+    return this.json?.apps ?? []
   }
 
-  // Where a chat reaches the session board, whether or not it answers yet; empty before cdd has reported.
-  get kanbanAppUrl(): string {
-    return this.json?.kanban_app_url ?? ''
-  }
-
-  get graphAppPort(): number | null {
-    return this.json?.graph_app_port ?? null
+  // The app the status row and the board's chat routes name by its label, its identity.
+  appLabelled(label: string): AppData | undefined {
+    return this.apps.find(app => app.label === label)
   }
 
   get isHookServerRunning(): boolean {

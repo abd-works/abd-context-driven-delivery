@@ -13,6 +13,7 @@ RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from space.repo.built_once import BuiltOnce  # noqa: E402
 from space.repo.repo import Repo  # noqa: E402
+from space.session.throwaway_project import SpecRunHome
 
 
 def _git(root: Path, *args: str) -> str:
@@ -116,6 +117,7 @@ with description("a branch on a clone") as self:
 
 with description("a Repo and its checkouts") as self:
     with before.each:
+        SpecRunHome.ensure()
         self.tmp = _REPOSITORIES.copy()
         self.origin, self.clone = self.tmp / "origin.git", self.tmp / "clone"
         self.repo = Repo(self.clone)

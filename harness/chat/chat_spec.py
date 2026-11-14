@@ -5,6 +5,7 @@ import sys
 import tempfile
 from pathlib import Path
 from threading import Barrier, Thread
+from urllib.parse import parse_qs, urlsplit
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 for _root in (_REPO_ROOT, _REPO_ROOT / "tools"):
@@ -14,10 +15,12 @@ for _root in (_REPO_ROOT, _REPO_ROOT / "tools"):
 from expects import be_empty, equal, expect, have_keys, raise_error
 from mamba import after, before, context, description, it
 
-from harness.chat.chat import Chat, ChatNotConnectedError
+from harness.chat.chat import Chat, ChatNotConnectedError, RecordedChatLinks
 from harness.installation.data_class import data_of
 
 CHAT = "ad6c04ab-chat"
+WORKTREE = "C:\\dev\\pets-checkout-flow"
+NEW_CHAT_PROMPT = 'Title this session "checkout-flow". You are the chat of the session board\'s ticket checkout-flow; work on that ticket.'
 CLOCK = [1000.0]
 CONCURRENT_CHECK_INS = 200
 MANY_COMMANDS = 40
@@ -64,6 +67,21 @@ with description("a chat") as self:
 
         with it("should refuse a command for a chat that is not connected"):
             expect(lambda: Chat.load(CHAT).send("command", "/actions-validate")).to(raise_error(ChatNotConnectedError))
+
+    # The board opens a ticket's new chat in the Claude app; the spec's chats keep each link instead of opening the app.
+    with context("that a new chat is opened on a folder"):
+        with before.each:
+            Chat.opener = RecordedChatLinks(self.chats / "opened-chats.txt")
+            self.link = Chat.open(WORKTREE, NEW_CHAT_PROMPT)
+
+        with it("should hand the Claude app one new-chat link"):
+            expect(Chat.opener.links).to(equal([self.link]))
+
+        with it("should open it on the folder"):
+            expect(parse_qs(urlsplit(self.link).query)["folder"]).to(equal([WORKTREE]))
+
+        with it("should fill its prompt in for the person to send"):
+            expect(parse_qs(urlsplit(self.link).query)["q"]).to(equal([NEW_CHAT_PROMPT]))
 
     # Two check-ins written over each other left state files that no longer read, beside chats still checking in.
     with context("with a state file that does not read beside a chat that has checked in"):
@@ -285,6 +303,15 @@ with description("a chat") as self:
 
                 with it("should keep no more than it shows"):
                     expect(len(Chat.load(CHAT).messages())).to(equal(20))
+
+        # (S) Refactor Story UI App To Web Domain Access: a story's acceptance-test link opens the file in the chat bar's
+        # file viewer of the chat the Story UI editor was opened from.
+        with context("that has been sent a file to open in its file viewer during a turn"):
+            with before.each:
+                Chat.load(CHAT).send("open_file", "move-work-forward-from-chat-bar/open_story_ui_story.test.py")
+
+            with it("should get the file at its next check-in, a turn running or not"):
+                expect(_said(Chat.load(CHAT).check_in(is_busy=True))).to(equal([("open_file", "move-work-forward-from-chat-bar/open_story_ui_story.test.py")]))
 
         with context("that has been sent a fill during a turn"):
             with before.each:

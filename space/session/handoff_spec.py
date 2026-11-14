@@ -13,10 +13,10 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import equal, expect, match, raise_error
+from expects import contain, equal, expect, match, raise_error
 from mamba import after, before, context, description, it
 
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, SubAgentAnnotation
 from space.session.session import Session, SessionNotFoundError
 from space.session.sessions import Sessions
 from space.session.throwaway_project import ThrowawayProject
@@ -46,6 +46,14 @@ with description("a session's handoff tools"):
     with it("should read the handoff format, then call write_handoff, when running the handoff_session instructions"):
         tools = AgentToolSet.instantiate(Session).tools["handoff_session"].tools
         expect(tools).to(equal(["read_handoff_format", "write_handoff"]))
+
+    with it("should run handoff_session on a sub-agent"):
+        tool = AgentToolSet.instantiate(Session).tools["handoff_session"]
+        expect(SubAgentAnnotation.annotates(tool.callable)).to(equal(True))
+
+    with it("should tell the sub-agent to commit and push the handoff"):
+        prompt = "\n".join(AgentToolSet.instantiate(Session).tools["handoff_session"].prompt)
+        expect(prompt).to(contain("repo.push_commit"))
 
 
 with description("a session writing a handoff"):

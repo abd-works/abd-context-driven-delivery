@@ -12,14 +12,14 @@ from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.catalog_generator.catalog_examples import CatalogFidelity
 from harness.chat.chat import Chat
-from harness.diagnostics.server_health import ServerHealth
+from harness.diagnostics.app import App
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_annotations import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
-from space.kanban.board_app import BOARD_APP_PORTS
 from space.repo.repo import Repo
+from space.session.session import SESSION_FILE
 from space.session.session_log import LogTimestamp
 from space.session.session_saves import SaveFailure
 from space.session.sessions import BoardPractices, Sessions
@@ -240,6 +240,11 @@ class Board:
         return self._reads.tickets
 
     @property
+    def ticket_names(self) -> set[str]:
+        """Every ticket's name, listed once per board read."""
+        return self._reads.ticket_names
+
+    @property
     def backlog_items(self) -> list[BacklogItem]:
         return self._reads.backlog_items
 
@@ -381,9 +386,18 @@ class BoardReads:
         self._board = board
 
     @cached_property
+    def sessions(self) -> list[Session]:
+        return self._board.sessions.all()
+
+    @cached_property
     def tickets(self) -> list[Ticket]:
         board = self._board
-        return [board.make_ticket(session) for session in board.sessions.all()]
+        return [board.make_ticket(session) for session in self.sessions]
+
+    @cached_property
+    def ticket_names(self) -> set[str]:
+        """Every ticket's name, read from the sessions without making the tickets, so a ticket being made can ask."""
+        return {session.name for session in self.sessions}
 
     @cached_property
     def children(self) -> dict[str, list[Ticket]]:
@@ -402,9 +416,12 @@ class BoardReads:
             return []
         # An item is a file in the Backlog, or a folder holding a file of its own name: a ticket moved back keeps its
         # whole folder, history and all. A folder beside a file of its name is that file's ticket, not a second item.
+        # A folder that holds no ticket's work is a parent: every other markdown file in it is one of its children.
         files = list(folder.glob("*.md"))
         kept = [entry / f"{entry.name}.md" for entry in folder.iterdir() if entry.is_dir() and not (folder / f"{entry.name}.md").exists()]
-        found = sorted([*files, *(path for path in kept if path.is_file())], key=lambda path: path.stem)
+        parents = [path for path in kept if path.is_file()]
+        children = [child for parent in parents if not (parent.parent / SESSION_FILE).is_file() for child in parent.parent.glob("*.md") if child != parent]
+        found = sorted([*files, *parents, *children], key=lambda path: path.stem)
         return [board.make_backlog_item(path) for path in found]
 
     @cached_property
@@ -453,6 +470,13 @@ class Column:
 
     def place_before(self, card: Card, other: Card) -> Column:
         """Put card just above other in this column, and keep that order."""
+        return self._place(card, other, 0)
+
+    def place_after(self, card: Card, other: Card) -> Column:
+        """Put card just below other in this column, and keep that order."""
+        return self._place(card, other, 1)
+
+    def _place(self, card: Card, other: Card, past_other: int) -> Column:
         keys = [shown.key for shown in self.cards]
         for named in (card, other):
             if named.key not in keys:
@@ -460,7 +484,7 @@ class Column:
         if card.key == other.key:
             return self
         keys.remove(card.key)
-        keys.insert(keys.index(other.key), card.key)
+        keys.insert(keys.index(other.key) + past_other, card.key)
         self._board.keep_order(self, keys)
         return self
 
@@ -720,9 +744,13 @@ class BoardFidelity:
         """The slash command of its skill, such as /practices-stories-stories-story-map."""
         return f"/{self._catalogued.skill_of(self._shown.fidelity)}"
 
-
-# Server health probes the board where its server listens, so a chat finds the board without naming its port.
-ServerHealth.reports_kanban_app_on(BOARD_APP_PORTS.of("board"))
+    @property
+    @data_field
+    def editor(self) -> App | None:
+        """The app the small editor widget on this fidelity's row of every ticket opens: its practice's editor on the
+        practice's first fidelity (the Stories story map), none on every other fidelity."""
+        practice = self._catalogued.practice
+        return practice.editor if self._shown.fidelity is next(iter(practice.fidelities), None) else None
 
 
 class BoardOverview:
@@ -737,6 +765,19 @@ class BoardOverview:
     @data_field
     def project(self) -> str:
         return self._board.project
+
+    @property
+    @data_field
+    def is_clone(self) -> bool:
+        """Whether the project is a git repository. A plain folder has no branches, so its tickets get no worktree
+        and no chat of their own: only its main session works there."""
+        return self._board.repo.is_clone
+
+    @property
+    @data_field
+    def folder(self) -> str:
+        """The project's folder on disk, which a chat in a plain folder shows in place of a repository and a session."""
+        return str(self._board.repo.root)
 
     @property
     @data_field
@@ -757,8 +798,9 @@ class BoardOverview:
     @property
     @data_field
     def active(self) -> Ticket | None:
-        """The ticket of the session saved as open, sent whole; none while main is."""
-        return self._board.active
+        """The ticket of the session saved as open, sent whole with its children by name; none while main is."""
+        active = self._board.active
+        return active.in_overview() if active is not None else None
 
 
 class BoardPractice:
@@ -782,6 +824,13 @@ class BoardPractice:
     @data_field
     def colour(self) -> str:
         return self._practice.colour
+
+    @property
+    @data_field
+    def editor(self) -> App | None:
+        """The app that edits the practice's files, which a file of the practice opens in from the chat bar's file viewer:
+        the Story UI editor for Stories; none for a practice no app edits."""
+        return self._practice.editor
 
 
 class ColumnOverview:

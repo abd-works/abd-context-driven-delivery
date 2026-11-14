@@ -8,13 +8,13 @@ import { currentChatBar, refreshChatBar } from './chat-bar/chat-bar-client'
 import { ChatBarView } from './chat-bar/chat-bar-view'
 import { clearBusy, currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
-import { shownActionOf } from './chat-bar/action-button-view'
 import { isStagePickerOpen } from './chat-bar/stage-client'
 import { currentFormatChips, forgetFormatChips, loadFormatChips } from './chat-bar/format-choices-client'
 import { currentOverlayChips, loadOverlayChoices } from './chat-bar/overlay-choices-client'
-import { currentFidelityFiles, FILES_PANE, forgetFiles } from './chat-bar/fidelity-files-client'
-import { FidelityFilesView } from './chat-bar/fidelity-files-view'
+import { currentFidelityHelp, forgetHelp, HELP_PANE } from './chat-bar/fidelity-help-client'
+import { FidelityHelpView } from './chat-bar/fidelity-help-view'
 import { currentChatBarView } from './chat-bar/session-dialogs-client'
+import { closeOptionListsOutside } from './chat-bar/option-lists-client'
 import { reasonOf } from './shared/failure'
 import {
   currentHealthView,
@@ -28,6 +28,8 @@ import {
   runInstall,
 } from './health/server-health-client'
 import { ServerHealthBandView, ServerHealthPanelView } from './health/server-health-view'
+import { currentAppOpening, openAppBesideChat } from './health/app-client'
+import { FOLDER_QUERY, PROJECT_QUERY, projectPageUrl } from './board-chat/board'
 import { CARD_SCOPE } from './chat-bar/session-card-view'
 import { toggleCard } from './chat-bar/session-dialogs-client'
 import { withChatNamed } from './session/session-log-client'
@@ -46,17 +48,17 @@ function logged($: EngineInterface, doing: string): (failure: unknown) => void {
   return failure => $.ui.log(`${PLUGIN}: ${doing} failed: ${reasonOf(failure)}`, { to: 'debug' })
 }
 
-// The status line below the chat, where the host draws a plugin's status: the repository, the session, the folder it
-// works in, and the action the button runs with its fidelities.
+// The status line below the chat, where the host draws a plugin's status: the whole path of the folder the session
+// works in. The host draws it at the right.
 async function showStatus($: EngineInterface): Promise<void> {
-  const chatBar = await currentChatBar($)
-  $.ui.status(chatBar.statusLine(shownActionOf(chatBar, (await currentActionPicker($)).chosenAction)) || undefined)
+  $.ui.status((await currentChatBar($)).statusLine || undefined)
 }
 
-// The status line, the system prompt and the chat bar read the same ChatBarClient. The cdd server can still be
+// The system prompt and the chat bar read the same ChatBarClient. The cdd server can still be
 // connecting at session start; the chat bar then shows why, and the next event reads again.
 async function readActive($: EngineInterface): Promise<void> {
   await refreshChatBar($)
+  await showStatus($)
   const chatBar = await currentChatBar($)
   if (chatBar.problem) return
   await loadFormatChips($, chatBar)
@@ -64,8 +66,24 @@ async function readActive($: EngineInterface): Promise<void> {
   // The system prompt is cached; when the active session's summary changes, it is composed again next turn.
   if (chatBar.agentContext !== shownContext) await $.ui.invalidate('prompt.section')
   shownContext = chatBar.agentContext
-  // empty.
-  await showStatus($)
+}
+
+// The hooks below hand the event on first and then call one of these without waiting, so a failure goes to the debug log.
+async function readBoardAfterStart($: EngineInterface): Promise<void> {
+  await readName($).catch(logged($, 'naming the chat'))
+  await readActive($).catch(logged($, 'reading the board'))
+  refreshHealthSoon($)
+}
+
+async function readBoardAfterTurn($: EngineInterface, isMainChat: boolean): Promise<void> {
+  if (isMainChat) await turnCompleted($).catch(logged($, 'finishing the turn'))
+  await readName($).catch(logged($, 'naming the chat'))
+  await Promise.all([readActive($), refreshHealth($)]).catch(logged($, 'reading the board'))
+}
+
+async function readBoardAfterSubmit($: EngineInterface): Promise<void> {
+  await Promise.all([refreshHealth($), refreshChatBar($)]).catch(logged($, 'reading the board'))
+  await showStatus($).catch(logged($, 'showing the status'))
 }
 
 export const register: Register = on => {
@@ -73,15 +91,15 @@ export const register: Register = on => {
     await $.command.register({ name: 'board', description: 'Open the CDD session board, starting it when it is not running' })
     await clearBusy($)
     const chat = await $.session.id()
-    await readName($).catch(logged($, 'naming the chat'))
     $.clock.every(CHECK_IN_MILLISECONDS, () => {
       if (!isCheckInDue()) return
       // The cdd server can still be connecting at session start; the next check-in tries again.
       void checkIn($, chat).catch(logged($, 'checking in with the board'))
     })
-    await readActive($)
-    refreshHealthSoon($)
-    return next(e)
+    // The chat opens first and the bar fills in after it, so a slow or still-connecting cdd server never holds the chat up.
+    const started = await next(e)
+    void readBoardAfterStart($)
+    return started
   })
 
   on('command.run', { command: 'board' }, async $ => ({ text: await openedBoard($) }))
@@ -91,11 +109,10 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // The turn ends first and the bar is read again after it, so the next prompt does not wait on the cdd server.
   on('turn.complete', async ($, e, next) => {
     const finished = await next(e)
-    if (!e.agentId) await turnCompleted($)
-    await readName($).catch(logged($, 'naming the chat'))
-    await Promise.all([readActive($), refreshHealth($)])
+    void readBoardAfterTurn($, !e.agentId)
     return finished
   })
 
@@ -106,22 +123,40 @@ export const register: Register = on => {
     if (CDD_TOOL.test(e.tool)) {
       forgetFormatChips()
       await refreshChatBar($)
+      await showStatus($)
     }
     return ran
   })
 
-  // A press can change which fidelities or stage the action button acts on, so the format chips are read again after it,
-  // and the status line names the action the button now runs.
+  // A press can change which fidelities or stage the action button acts on, so the format chips are read again after it.
+  // A press anywhere else on the bar closes an open list box of options, as a click outside a menu does.
   on('ui.press', async ($, e, next) => {
     const pressed = await next(e)
+    if (e.plugin === PLUGIN) await closeOptionListsOutside($, e.element)
     if (e.plugin === PLUGIN && CHANGES_FIDELITIES.test(e.element)) void loadFormatChips($, await currentChatBar($)).catch(logged($, 'reading the format chips'))
-    if (e.plugin === PLUGIN) await showStatus($)
     return pressed
   })
 
-  on('prompt.submit', async ($, e, next) => {
-    await Promise.all([refreshHealth($), refreshChatBar($)])
+  // Typing in the prompt is a click outside the bar's list boxes: any one open closes.
+  on('prompt.change', async ($, e, next) => {
+    await closeOptionListsOutside($)
     return next(e)
+  })
+
+  // The prompt goes to the agent first and the bar is read again after it, so a prompt never waits on the cdd server.
+  on('prompt.submit', async ($, e, next) => {
+    await closeOptionListsOutside($)
+    const submitted = await next(e)
+    void readBoardAfterSubmit($)
+    return submitted
+  })
+
+  // The status line, the whole path of the session's folder, sits in the hint line under the prompt, after
+  // what the engine writes there, not in the chat bar above it.
+  on('ui.render', { component: 'PromptHint' }, async ($, e, next) => {
+    const status = (await currentChatBar($)).statusLine
+    if (!status) return next(e)
+    return next({ ...e, props: { ...e.props, hint: e.props.hint ? `${e.props.hint} · ${status}` : status } })
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
@@ -136,8 +171,15 @@ export const register: Register = on => {
       hideDetails: () => hideDetails($),
       reconnect: () => reconnect($, () => readActive($)),
       runInstall: () => runInstall($),
+      // An app opens on the project this chat works in, its worktree for a ticket's chat, so it shows the session open
+      // there, not the main checkout's; and on the folder that session works in, which the Graph loads.
+      openApp: (label: string) =>
+        openAppBesideChat($, label, async url => {
+          const { workpath } = await currentChatBar($)
+          return projectPageUrl($, url, { [PROJECT_QUERY]: await $.session.root(), ...(workpath ? { [FOLDER_QUERY]: workpath } : {}) })
+        }),
     }
-    const band = { health: await currentServerHealth($), view: await currentHealthView($), install: await currentInstall($), actions }
+    const band = { health: await currentServerHealth($), view: await currentHealthView($), install: await currentInstall($), opening: await currentAppOpening($), actions }
     const elements = $.ui.resolve(e)
     try {
     const chatBar = await currentChatBar($)
@@ -159,11 +201,11 @@ ${failure.stack ?? ''}` : String(failure)}`)
     }
   })
 
-  // The files pane beside the chat: a fidelity's files or its validation report, never drawn in the chat itself.
-  on('ui.render', { component: 'Pane', requestId: FILES_PANE }, async ($, e) => FidelityFilesView($, $.ui.resolve(e), await currentFidelityFiles($)))
+  // The help pane beside the chat: a fidelity's help, as the ? beside a practice on a board ticket shows it.
+  on('ui.render', { component: 'Pane', requestId: HELP_PANE }, async ($, e) => FidelityHelpView($.ui.resolve(e), await currentFidelityHelp($)))
 
-  on('ui.close', { id: FILES_PANE }, async ($, e, next) => {
-    if (e.origin.kind === 'person') await forgetFiles($)
+  on('ui.close', { id: HELP_PANE }, async ($, e, next) => {
+    if (e.origin.kind === 'person') await forgetHelp($)
     return next(e)
   })
 

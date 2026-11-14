@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import type { ReportRuleData } from '@cdd/space/kanban/ticket'
-import { folderGroupsOf, generatedPaths, offeredTabs } from '@src/kanban/ticket/files-panel-client'
+import { practicesOf, shownTabs } from '@src/kanban/ticket/files-panel-client'
 import { BoardOnProject, ticketOn as shownTicket } from 'test-utils/board-page-support'
 import type { FidelityProgressClient } from '@src/kanban/ticket/fidelity-progress-client'
 import type { FilesByFidelity, TicketClient } from '@src/kanban/ticket/ticket-client'
@@ -51,18 +51,55 @@ async function brokenRule(page: BoardPage): Promise<ReportRuleData> {
   return reportPanel(page).report.rules[0]!
 }
 
+// A panel over two practices' fidelities, as the files panel holds it, for the filters' own specs.
+const STORIES_FILES = { markdown: [{ path: 'stories/story-map.md', exists: true, is_changed: false }, { path: 'stories/checkout_story.test.md', exists: true, is_changed: true }] }
+const BDD_FILES = { python: [{ path: 'src/order_spec.py', exists: true, is_changed: false }] }
+const progressOf = (slug: string, practice: string) => ({ fidelity: { slug }, practice: { key: practice } }) as unknown as FidelityProgressClient
+const twoPractices = (changes: Partial<FilesPanel> = {}): FilesPanel =>
+  ({
+    kind: 'files',
+    source: 'fidelities',
+    progress: [progressOf('stories-scenarios', 'stories'), progressOf('bdd-realization', 'bdd')],
+    files: { 'stories-scenarios': STORIES_FILES, 'bdd-realization': BDD_FILES },
+    practicesOn: ['stories'],
+    changedOnly: false,
+    activeTab: '',
+    shown: null,
+    lines: {},
+    isExpanded: false,
+    ...changes,
+  }) as FilesPanel
+const pathsOf = (panel: FilesPanel): string[] => shownTabs(panel).map(tab => tab.path)
+
 describe('List Ticket Files', () => {
-  it('should list the files that exist', async () => {
+  it("should show a tab for each of the fidelity's files, with whether each exists", async () => {
     const { page } = await board.page()
-    await page.files.openFiles(ticketOn(page), [storyMapOn(page)], 'folder')
-    expect(generatedPaths(filesPanel(page))).toEqual(['.context/story-map.md'])
+    await page.files.openFiles(ticketOn(page), [storyMapOn(page)])
+    expect(shownTabs(filesPanel(page)).map(tab => [tab.path, tab.exists])).toEqual([
+      ['.context/story-map.md', true],
+      ['.context/story-map.drawio', false],
+    ])
+  })
+
+  it('should show the files of no other practice', async () => {
+    const { page } = await board.page()
+    await page.files.openFiles(ticketOn(page), [storyMapOn(page)])
+    expect(shownTabs(filesPanel(page)).map(tab => tab.practice)).toEqual(['stories', 'stories'])
+  })
+
+  it('should show only the changed files while the changed filter is on', () => {
+    expect(pathsOf(twoPractices({ changedOnly: true }))).toEqual(['stories/checkout_story.test.md'])
+  })
+
+  it('should show every file again once the changed filter is cleared', () => {
+    expect(pathsOf(twoPractices({ changedOnly: false }))).toEqual(['stories/story-map.md', 'stories/checkout_story.test.md'])
   })
 
   describe('with a list that cannot be read', () => {
     async function refused() {
       const { page } = await board.page()
       const gone = goneTicket(page, 'no-such-ticket')
-      await page.files.openFiles(gone, [gone.progressNamed(SLUG)!], 'folder')
+      await page.files.openFiles(gone, [gone.progressNamed(SLUG)!])
       return page
     }
 
@@ -76,26 +113,33 @@ describe('List Ticket Files', () => {
   })
 })
 
-describe('Browse Ticket Folder', () => {
-  it('should group the files under their folders', () => {
-    expect(folderGroupsOf(['tests/a.md', 'tests/deep/b.md', 'src/c.ts'])).toEqual([
-      { root: 'tests/', entries: [{ path: 'tests/a.md', name: 'a.md' }, { path: 'tests/deep/b.md', name: 'deep/b.md' }] },
-      { root: 'src/', entries: [{ path: 'src/c.ts', name: 'c.ts' }] },
-    ])
+describe('Browse Ticket Files By Practice', () => {
+  it("should offer a filter for each practice of the ticket's stage", async () => {
+    const { page } = await board.page()
+    await page.files.openFiles(ticketOn(page), [storyMapOn(page)])
+    expect(practicesOf(filesPanel(page))).toContain('stories')
+  })
+
+  it('should turn on only the practice of the fidelity the files were opened from', async () => {
+    const { page } = await board.page()
+    await page.files.openFiles(ticketOn(page), [storyMapOn(page)])
+    expect(filesPanel(page).practicesOn).toEqual(['stories'])
+  })
+
+  it("should show a practice's files after the others once its filter is on", () => {
+    expect(pathsOf(twoPractices({ practicesOn: ['stories', 'bdd'] }))).toEqual(['stories/story-map.md', 'stories/checkout_story.test.md', 'src/order_spec.py'])
+  })
+
+  it('should name each tab with the practice whose color it takes', () => {
+    expect(shownTabs(twoPractices({ practicesOn: ['stories', 'bdd'] })).map(tab => tab.practice)).toEqual(['stories', 'stories', 'bdd'])
   })
 })
 
 describe("Browse Ticket's Session Folder", () => {
-  it('should list every file in the session folder', async () => {
+  it('should show every file in the session folder as a tab', async () => {
     const { page } = await board.page()
     await page.files.openSessionFolder(ticketOn(page))
-    expect(generatedPaths(filesPanel(page))).toContain(REPORT_PATH)
-  })
-
-  it('should show them as folders', async () => {
-    const { page } = await board.page()
-    await page.files.openSessionFolder(ticketOn(page))
-    expect(filesPanel(page).mode).toBe('folder')
+    expect(pathsOf(filesPanel(page))).toContain(REPORT_PATH)
   })
 
   describe('with its latest handoff opened', () => {
@@ -113,35 +157,28 @@ describe("Browse Ticket's Session Folder", () => {
     })
 
     it("should read the handoff's text", async () => {
-      expect(filesPanel(await opened()).texts[HANDOFF]).toBe('# Handoff\n')
+      expect(filesPanel(await opened()).shown?.text).toBe('# Handoff\n')
     })
   })
 })
 
 describe('View Fidelity Files', () => {
-  it('should open one tab per format, generated or not', async () => {
-    const { page } = await board.page()
-    await page.files.openFiles(ticketOn(page), [storyMapOn(page)], 'files')
-    expect(filesPanel(page).tabs).toEqual(['.context/story-map.md', '.context/story-map.drawio'])
-  })
-
   it('should open the tabs in the order Python sends the formats', () => {
-    const files: FilesByFidelity = { [SLUG]: { markdown: [{ path: 'a.md', exists: true }], python: [{ path: 'c.py', exists: true }], drawio: [{ path: 'b.drawio', exists: true }] } }
-    expect(offeredTabs(files, [SLUG])).toEqual(['a.md', 'c.py', 'b.drawio'])
+    const files: FilesByFidelity = { [SLUG]: { markdown: [{ path: 'a.md', exists: true, is_changed: false }], python: [{ path: 'c.py', exists: true, is_changed: false }], drawio: [{ path: 'b.drawio', exists: true, is_changed: false }] } }
+    expect(pathsOf(twoPractices({ progress: [progressOf(SLUG, 'stories')], files }))).toEqual(['a.md', 'c.py', 'b.drawio'])
   })
 
-  it('should read the text of the file a tab shows', async () => {
+  it('should read the file the first tab shows', async () => {
     const { page } = await board.page()
-    await page.files.openFiles(ticketOn(page), [storyMapOn(page)], 'files')
-    expect(filesPanel(page).texts['.context/story-map.md']).toBe(['# Check Out Order', '', '## Payment', '', '- Enter Card Details', '- Handle Payment', '- Confirm Order', ''].join('\n'))
+    await page.files.openFiles(ticketOn(page), [storyMapOn(page)])
+    expect(filesPanel(page).shown?.text).toBe(['# Check Out Order', '', '## Payment', '', '- Enter Card Details', '- Handle Payment', '- Confirm Order', ''].join('\n'))
   })
 
-  it('should go back to the folder when the last tab closes', async () => {
+  it('should show a file not generated yet as nothing to read', async () => {
     const { page } = await board.page()
-    await page.files.openFiles(ticketOn(page), [storyMapOn(page)], 'files')
-    page.files.closeTab('.context/story-map.md')
-    page.files.closeTab('.context/story-map.drawio')
-    expect(filesPanel(page).mode).toBe('folder')
+    await page.files.openFiles(ticketOn(page), [storyMapOn(page)])
+    await page.files.openTab('.context/story-map.drawio')
+    expect(filesPanel(page).shown).toBeNull()
   })
 
   describe('with a violation in a file its fidelity does not declare', () => {
@@ -159,6 +196,35 @@ describe('View Fidelity Files', () => {
     it('should mark the line it failed on', async () => {
       expect(filesPanel(await opened()).lines['src/other.py']).toBe(FAILING_LINE)
     })
+  })
+})
+
+describe('Add Comment To File Selection', () => {
+  async function commented() {
+    const { page } = await board.page()
+    await page.files.openFiles(ticketOn(page), [storyMapOn(page)])
+    await page.files.addComment(3, 3, 'name the payment step after what the person does')
+    return page
+  }
+
+  it('should show the comment on the open file, not sent', async () => {
+    expect(filesPanel(await commented()).shown?.comments.map(comment => [comment.anchor, comment.state])).toEqual([['.context/story-map.md:L3-L3', 'not_sent']])
+  })
+
+  it('should take the comment away once deleted', async () => {
+    const page = await commented()
+    await page.files.removeComment('.context/story-map.md:L3-L3')
+    expect(filesPanel(page).shown?.comments).toEqual([])
+  })
+})
+
+describe('Save Edited File', () => {
+  it('should show the file as saved', async () => {
+    board.write('src/other.py', 'x\n')
+    const { page } = await board.page()
+    await page.files.openFileAtLine(ticketOn(page), storyMapOn(page), 'src/other.py', 1)
+    await page.files.save('y\n')
+    expect(filesPanel(page).shown?.text).toBe('y\n')
   })
 })
 
@@ -293,7 +359,7 @@ describe('Refresh Board After Tool Calls', () => {
     async function changed() {
       const { page } = await board.page()
       await page.panels.openReport(ticketOn(page), storyMapOn(page))
-      await page.files.openFiles(ticketOn(page), [storyMapOn(page)], 'folder')
+      await page.files.openFiles(ticketOn(page), [storyMapOn(page)])
       board.write('.sessions/checkout-flow/validation-reports/stories-story-map-20261102T100000.md', '# Graph rule validation\n')
       board.write('.sessions/checkout-flow/validation-reports/stories-story-map-20261102T100000.json', JSON.stringify(CLEAN_GRAPH))
       board.write('.context/story-map.drawio', '<mxfile/>\n')
@@ -307,16 +373,16 @@ describe('Refresh Board After Tool Calls', () => {
     })
 
     it('should read the files again', async () => {
-      expect(generatedPaths(filesPanel(await changed()))).toEqual(['.context/story-map.md', '.context/story-map.drawio'])
+      expect(shownTabs(filesPanel(await changed())).filter(tab => tab.exists).map(tab => tab.path)).toEqual(['.context/story-map.md', '.context/story-map.drawio'])
     })
   })
 
-  it('should keep a tab a person closed closed', async () => {
+  it('should read the open file again', async () => {
     const { page } = await board.page()
-    await page.files.openFiles(ticketOn(page), [storyMapOn(page)], 'files')
-    page.files.closeTab('.context/story-map.drawio')
+    await page.files.openFiles(ticketOn(page), [storyMapOn(page)])
+    board.write('.context/story-map.md', '# Check Out Order Again\n')
     await page.files.reload()
-    expect(filesPanel(page).tabs).toEqual(['.context/story-map.md'])
+    expect(filesPanel(page).shown?.text).toBe('# Check Out Order Again\n')
   })
 })
 
@@ -339,7 +405,7 @@ describe('Arrange Side Panel', () => {
     it('should expand one panel at a time', async () => {
       const { page } = await board.page()
       await page.panels.openReport(ticketOn(page), storyMapOn(page))
-      await page.files.openFiles(ticketOn(page), [storyMapOn(page)], 'folder')
+      await page.files.openFiles(ticketOn(page), [storyMapOn(page)])
       page.panels.toggleExpanded('report')
       page.panels.toggleExpanded('files')
       expect(page.store.state.panels.filter(panel => panel.isExpanded).map(panel => panel.kind)).toEqual(['files'])

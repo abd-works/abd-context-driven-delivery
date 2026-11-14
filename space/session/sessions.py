@@ -33,6 +33,10 @@ _OUTSIDE_WORKTREE_NOTE = (
     "This chat works in {chat}, but {session}'s worktree is {worktree}. Do this session's work in a chat started there "
     "(start_session with cwd {worktree}), not in this chat.\n\n"
 )
+_WORKTREE_TICKET_NOTE = (
+    "This chat works in {ticket}'s own worktree, so its session is {ticket}, not {asked}. To work on {asked}, open it "
+    "from the main chat.\n\n"
+)
 
 
 class SessionNameRequiredError(ValueError):
@@ -196,6 +200,7 @@ class Sessions:
         """The session kept in folder, read without opening it: the one object these sessions hold for that folder,
         working in the root ``root_of`` derives now, so a worktree opened or a workpath chosen since is seen."""
         session = self._held_at(Path(folder))
+        session.repo_path = self.checkout_of(session)
         workpath = self.root_of(session)
         if session.workpath is None or session.work_root != workpath:
             session.workpath = workpath
@@ -203,17 +208,40 @@ class Sessions:
 
     def root_of(self, session: Session) -> Path:
         """Where session writes, derived when asked and never saved on a switch: a workpath a person chose by hand in
-        its session.json, else its own worktree as git lists it, else this checkout."""
+        its session.json, else its own worktree as git lists it, else this checkout. A session's root is always in its
+        own checkout, so a chosen workpath that lies in another checkout of the repository names the same folder in it."""
         stored = str(session.fields.get("workpath", "") or "").strip()
-        chosen = Path(stored).resolve() if stored else None
+        checkout = self.checkout_of(session)
+        chosen = self.in_checkout(checkout, checkout / stored) if stored else None
         # WHY: older switches saved the checkout itself, or a worktree since removed, as the workpath; neither was chosen.
-        if chosen is not None and chosen.is_dir() and chosen not in (self.root, self.repo.main_clone.root):
+        if chosen is not None and chosen.is_dir() and chosen not in (self.root, self.repo.main_clone.root, checkout):
             return chosen
-        if session.name and session.name != MAIN_SESSION_NAME:
-            worktree = self._worktree_of(session.name)
-            if worktree is not None:
-                return worktree
-        return self.root
+        return checkout
+
+    def checkout_of(self, session: Session) -> Path:
+        """The checkout session works in: its own worktree, the one its ticket opened or the one git lists for its
+        branch, else this checkout."""
+        if not session.name or session.name == MAIN_SESSION_NAME:
+            return self.root
+        kept = str(session.fields.get("worktree", "") or "").strip()
+        if kept and Path(kept).is_dir():
+            return Path(kept).resolve()
+        worktree = self._worktree_of(session.name)
+        return worktree if worktree is not None else self.root
+
+    def in_checkout(self, checkout: Path, path: Path | str) -> Path:
+        """path, resolved, moved into checkout when it lies in another checkout of this repository, its main clone or
+        another worktree, at the same place from that checkout's top: ``<main>/harness/.context`` becomes
+        ``<checkout>/harness/.context``. A path outside every checkout is kept as it is."""
+        resolved = Path(path).resolve()
+        if resolved.is_relative_to(checkout):
+            return resolved
+        others = [self.repo.main_clone.root.resolve(), self.root.resolve(), *self._worktrees_by_branch().values()]
+        holding = [other for other in others if other != checkout and resolved.is_relative_to(other)]
+        if not holding:
+            return resolved
+        top = max(holding, key=lambda other: len(other.parts))
+        return (checkout / resolved.relative_to(top)).resolve()
 
     def _worktree_of(self, name: str) -> Path | None:
         """The linked worktree of the branch called name, else of the one branch whose name holds name as a whole word,
@@ -274,7 +302,12 @@ class Sessions:
         return WorkState(self.root, chat)
 
     def open_name_for(self, chat: str = "") -> str:
-        """The name of the session chat has open; main when none is."""
+        """The name of the session chat works on: the ticket of the worktree these sessions serve, whatever any chat
+        chose to open, as ``current`` answers; else the session chat has open; main when none is. The board names its
+        active ticket from this, so a ticket's own chat bar shows that ticket rather than main."""
+        ticket = self._ticket_of_worktree()
+        if ticket is not None:
+            return ticket.name
         return self.open_state(chat).session or MAIN_SESSION_NAME
 
     @property
@@ -288,9 +321,10 @@ class Sessions:
         opened, because a session made for later, such as a board ticket, is not the one being worked on."""
         session = self._held_at(self.folder / Name(name).title_slug)
         chosen = Path(workpath).resolve() if workpath is not None else None
-        kept = chosen if chosen is not None and chosen != self.root else None
-        fields = (("name", session.name), ("title", title), ("scope", scope), ("parent", parent), ("workpath", str(kept) if kept else ""))
+        kept = self.repo.path_from_top(chosen) if chosen is not None and chosen != self.root else ""
+        fields = (("name", session.name), ("title", title), ("scope", scope), ("parent", parent), ("workpath", kept))
         session.save_fields(**{key: value for key, value in fields if value})
+        session.repo_path = self.checkout_of(session)
         session.workpath = self.root_of(session)
         session.log.seed_first_loop()
         return session
@@ -305,9 +339,6 @@ class Sessions:
     @agent_tool
     def current(self, call: ToolCall | None = None) -> Session:
         """The open session of this chat; the main session, which works on the whole repository, when none is named."""
-        ticket = self._ticket_of_worktree()
-        if ticket is not None:
-            return ticket
         return self.load(self.folder_of(self.open_name_for(call.chat_id if call is not None else "")))
 
     def _ticket_of_worktree(self) -> Session | None:
@@ -339,13 +370,27 @@ class Sessions:
         ``name`` defaults to the session this chat has open, then to its open ``branch``.
         ``workpath`` is a folder a new session works in; without one its root is derived: its worktree, else the checkout.
         A switch writes nothing in the checkout and does not touch branches or worktrees: when the session has its own
-        worktree and the call's chat works elsewhere, the answer opens by saying to start a chat in that worktree."""
+        worktree and the call's chat works elsewhere, the answer opens by saying to start a chat in that worktree.
+        A chat in a ticket's own worktree always opens that ticket's session, whatever name it asks for, because the
+        worktree holds only that ticket's work; the answer says so when it asked for another."""
         chat = call.chat_id if call is not None else ""
+        ticket = self._ticket_of_worktree()
+        if ticket is not None:
+            return self._worktree_ticket_note(ticket, name) + self.open(ticket, chat).log.instructions()
         wanted = self._name_to_switch_to(name, chat)
         folder = self.folder_of(wanted)
         is_kept = (folder / SESSION_FILE).is_file() or wanted == MAIN_SESSION_NAME
         session = self.load(folder) if is_kept else self.create(wanted, workpath)
         return self._outside_worktree_note(session, call) + self.open(session, chat).log.instructions()
+
+    @staticmethod
+    def _worktree_ticket_note(ticket: Session, asked: str) -> str:
+        """What a chat in ticket's worktree that asked for another session is told; nothing when it asked for none or
+        for ticket."""
+        cleaned = Name(asked).title_slug if asked else ""
+        if not cleaned or cleaned == ticket.name:
+            return ""
+        return _WORKTREE_TICKET_NOTE.format(ticket=ticket.name, asked=cleaned)
 
     def _outside_worktree_note(self, session: Session, call: ToolCall | None) -> str:
         """What a chat working outside session's own worktree must do instead; nothing when it works there, or the

@@ -22,6 +22,8 @@ from harness.agent_tools.recipe import ExpansionMode, ExpansionResult, RecipeExp
 
 ContextDocument = dict[str, Any]
 ArgumentDocument = dict[str, Any]
+LISTED_INSTRUCTIONS_NOTE = "Call this tool for the full instructions."
+
 SUB_AGENT_CALLER_PREAMBLE = """Hand work to a background sub-agent and continue without waiting.
 
 Do not perform the delegated work in this conversation. Do not wait for the
@@ -799,7 +801,8 @@ class ToolSubjectLoader:
         @functools.wraps(operation)
         def on_subject(**arguments: Any) -> Any:
             call = arguments.get(SERVED_CALL)
-            from_call = {name: arguments[name] for name in taken if name in arguments and name != SERVED_CALL}
+            # What each object argument's loader takes from the call, the call itself included, as the subject's loader is handed it.
+            from_call = {name: arguments[name] for name in taken if name in arguments}
             for name, load_other in named_objects.items():
                 if name in arguments:
                     arguments[name] = self._object_named(load_other, arguments[name], from_call)
@@ -1081,8 +1084,20 @@ class AgentTool(AgentToolDestination):
         return SubAgentAnnotation.with_hand_off(text) if SubAgentAnnotation.annotates(self.callable) else text
 
     @functools.cached_property
+    def listed_description(self) -> str:
+        """What the MCP tool list says of this tool, which every chat carries each turn the tool is loaded. An
+        instructions tool returns its whole guidance when called, so the list gives only its opening paragraph."""
+        if self.name != "instructions":
+            return self.description
+        paragraphs = [part.strip() for part in self.description.split("\n\n") if part.strip()]
+        prose = [part for part in paragraphs if not part.startswith("#")]
+        if len(prose) <= 1:
+            return "\n\n".join(prose) or self.description
+        return f"{prose[0]}\n\n{LISTED_INSTRUCTIONS_NOTE}"
+
+    @functools.cached_property
     def description(self) -> str:
-        """What the tool does, expanded from its docstring once: MCP lists it on every request for the tool list."""
+        """What the tool does, expanded from its docstring once: the skill and the MCP prompt carry it whole."""
         expanded = self.toolset.class_markdown.expand_docstring(self.docstring)
         if expanded:
             return expanded

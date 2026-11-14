@@ -73,9 +73,11 @@ class TicketCheckout:
 
     @property
     def candidate_branches(self) -> list[Branch]:
-        """The branches whose name holds the ticket's name as a whole word, such as claude/chat-ui-defects-cef4bc."""
+        """The branches whose name holds the ticket's name as a whole word, such as claude/chat-ui-defects-cef4bc. A
+        branch named as another ticket is that ticket's own, so performance never claims repo-performance."""
         word = re.compile(rf"(^|[/_-]){re.escape(self._ticket.name)}($|[/_-])")
-        return [branch for branch in self._ticket.board.branches if branch.name != self._ticket.name and word.search(branch.name)]
+        board = self._ticket.board
+        return [branch for branch in board.branches if branch.name not in board.ticket_names and word.search(branch.name)]
 
     @property
     def work_branch(self) -> Branch:

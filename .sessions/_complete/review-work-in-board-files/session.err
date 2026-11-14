@@ -1,0 +1,258 @@
+2026-11-13T00:16:27Z generate.generate UnknownGuidance: no practice or fidelity has the slug 'stories-scenarios'; the slugs are stories, stories-story-map, stories-scenarios, stories-acceptance-tests, ddd, ddd-bounded-context, ddd-model, ddd-tactics, ux, ux-ia, ux-mockup, ux-front-end-code, clean-engineering, clean-engineering-modules, clean-engineering-model, clean-engineering-code, bdd, bdd-behavior, bdd-realization, bdd-development
+Traceback (most recent call last):
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 788, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 495, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 502, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1131, in answer
+    tool = self.on(self.toolset.for_call(call))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 408, in for_call
+    action.work.take(guidance)
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 246, in take
+    self._items = argument.items if self.text is None else []
+                  ^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 129, in items
+    return [self._listed(item) for item in list(self._guidance or [])]
+            ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 134, in _listed
+    named = self._item(item)
+            ^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 166, in _item
+    return self._mapped(item) if isinstance(item, dict) else item
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance_actions\guidance_actions.py", line 182, in _mapped
+    raise UnknownGuidance(toolset, self.slugs)
+harness.guidance_actions.guidance_actions.UnknownGuidance: no practice or fidelity has the slug 'stories-scenarios'; the slugs are stories, stories-story-map, stories-scenarios, stories-acceptance-tests, ddd, ddd-bounded-context, ddd-model, ddd-tactics, ux, ux-ia, ux-mockup, ux-front-end-code, clean-engineering, clean-engineering-modules, clean-engineering-model, clean-engineering-code, bdd, bdd-behavior, bdd-realization, bdd-development
+2026-11-13T00:42:50Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\thoma\.cdd\runtime\cdd_guidance\actions\validate\validate.py:59 `self._check(NamedToCheck(paths, graph, self.call))` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-context-driven-delivery\harness\.context at C:/dev/abd-cdd-review-work-in-board-fil/harness/.context/stories/story-map.md, read from C:\dev\abd-cdd-review-work-in-board-fil; name paths from the project's root, or absolute
+Traceback (most recent call last):
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 530, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 518, in <lambda>
+    value = self._ran(lambda: eval(code, environment, environment), node)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 21, in <module>
+  File "C:\Users\thoma\.cdd\runtime\cdd_guidance\actions\validate\validate.py", line 67, in _check
+    self._graph = CheckedGraph(self.session, fidelities, to_check)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 52, in __init__
+    self.edited = self._edited_in_checked_format(to_check.paths)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 59, in _edited_in_checked_format
+    return [path for path in self._from_session_root(edited) if path not in self.unchecked_files]
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 163, in _from_session_root
+    return [self.session.session_files.from_root(item) for item in paths or []]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\session\session_files.py", line 88, in from_root
+    raise NamedPathNotFoundError(str(named), self._session.repo_path, self._session.work_root)
+space.session.session_files.NamedPathNotFoundError: nothing under the session's root C:\dev\abd-context-driven-delivery\harness\.context at C:/dev/abd-cdd-review-work-in-board-fil/harness/.context/stories/story-map.md, read from C:\dev\abd-cdd-review-work-in-board-fil; name paths from the project's root, or absolute
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 788, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 495, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 502, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1135, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1139, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1157, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 306, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 322, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 556, in _walk
+    self._walk_expression(statement.value)
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 586, in _walk_expression
+    self._walk_member_call(value)
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 610, in _walk_member_call
+    self._add_evaluated(value)
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 537, in _add_evaluated
+    value = self._evaluated(node)
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 518, in _evaluated
+    value = self._ran(lambda: eval(code, environment, environment), node)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 534, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\thoma\.cdd\runtime\cdd_guidance\actions\validate\validate.py:59 `self._check(NamedToCheck(paths, graph, self.call))` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-context-driven-delivery\harness\.context at C:/dev/abd-cdd-review-work-in-board-fil/harness/.context/stories/story-map.md, read from C:\dev\abd-cdd-review-work-in-board-fil; name paths from the project's root, or absolute
+2026-11-13T03:37:36Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\thoma\.cdd\runtime\cdd_guidance\actions\validate\validate.py:59 `self._check(NamedToCheck(paths, graph, self.call))` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-context-driven-delivery\harness\.context at C:/dev/abd-cdd-review-work-in-board-fil/space/kanban/review-files-in-viewer.story.ui.spec.ts, read from C:\dev\abd-cdd-review-work-in-board-fil; name paths from the project's root, or absolute
+Traceback (most recent call last):
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 530, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 518, in <lambda>
+    value = self._ran(lambda: eval(code, environment, environment), node)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 21, in <module>
+  File "C:\Users\thoma\.cdd\runtime\cdd_guidance\actions\validate\validate.py", line 67, in _check
+    self._graph = CheckedGraph(self.session, fidelities, to_check)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 52, in __init__
+    self.edited = self._edited_in_checked_format(to_check.paths)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 59, in _edited_in_checked_format
+    return [path for path in self._from_session_root(edited) if path not in self.unchecked_files]
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 163, in _from_session_root
+    return [self.session.session_files.from_root(item) for item in paths or []]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\session\session_files.py", line 88, in from_root
+    raise NamedPathNotFoundError(str(named), self._session.repo_path, self._session.work_root)
+space.session.session_files.NamedPathNotFoundError: nothing under the session's root C:\dev\abd-context-driven-delivery\harness\.context at C:/dev/abd-cdd-review-work-in-board-fil/space/kanban/review-files-in-viewer.story.ui.spec.ts, read from C:\dev\abd-cdd-review-work-in-board-fil; name paths from the project's root, or absolute
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 788, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 495, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 502, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1135, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1139, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1157, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 306, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 322, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 556, in _walk
+    self._walk_expression(statement.value)
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 586, in _walk_expression
+    self._walk_member_call(value)
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 610, in _walk_member_call
+    self._add_evaluated(value)
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 537, in _add_evaluated
+    value = self._evaluated(node)
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 518, in _evaluated
+    value = self._ran(lambda: eval(code, environment, environment), node)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 534, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\thoma\.cdd\runtime\cdd_guidance\actions\validate\validate.py:59 `self._check(NamedToCheck(paths, graph, self.call))` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-context-driven-delivery\harness\.context at C:/dev/abd-cdd-review-work-in-board-fil/space/kanban/review-files-in-viewer.story.ui.spec.ts, read from C:\dev\abd-cdd-review-work-in-board-fil; name paths from the project's root, or absolute
+2026-11-13T04:45:08Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\thoma\.cdd\runtime\cdd_guidance\actions\validate\validate.py:59 `self._check(NamedToCheck(paths, graph, self.call))` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-context-driven-delivery\harness\.context at C:/dev/abd-cdd-review-work-in-board-fil/space/kanban/review-files-in-viewer.story.shared.py, read from C:\dev\abd-cdd-review-work-in-board-fil; name paths from the project's root, or absolute
+Traceback (most recent call last):
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 530, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 518, in <lambda>
+    value = self._ran(lambda: eval(code, environment, environment), node)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 21, in <module>
+  File "C:\Users\thoma\.cdd\runtime\cdd_guidance\actions\validate\validate.py", line 67, in _check
+    self._graph = CheckedGraph(self.session, fidelities, to_check)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 52, in __init__
+    self.edited = self._edited_in_checked_format(to_check.paths)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 59, in _edited_in_checked_format
+    return [path for path in self._from_session_root(edited) if path not in self.unchecked_files]
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\cdd_guidance\actions\validate\checked_graph.py", line 163, in _from_session_root
+    return [self.session.session_files.from_root(item) for item in paths or []]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\session\session_files.py", line 88, in from_root
+    raise NamedPathNotFoundError(str(named), self._session.repo_path, self._session.work_root)
+space.session.session_files.NamedPathNotFoundError: nothing under the session's root C:\dev\abd-context-driven-delivery\harness\.context at C:/dev/abd-cdd-review-work-in-board-fil/space/kanban/review-files-in-viewer.story.shared.py, read from C:\dev\abd-cdd-review-work-in-board-fil; name paths from the project's root, or absolute
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 788, in _answer_between_restarts
+    return server.answer_prompt(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 495, in answer_prompt
+    return self._answer_from(self._prompts, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 502, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1135, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1139, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1157, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 306, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 322, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 556, in _walk
+    self._walk_expression(statement.value)
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 586, in _walk_expression
+    self._walk_member_call(value)
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 610, in _walk_member_call
+    self._add_evaluated(value)
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 537, in _add_evaluated
+    value = self._evaluated(node)
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 518, in _evaluated
+    value = self._ran(lambda: eval(code, environment, environment), node)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\recipe.py", line 534, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\thoma\.cdd\runtime\cdd_guidance\actions\validate\validate.py:59 `self._check(NamedToCheck(paths, graph, self.call))` failed: NamedPathNotFoundError: nothing under the session's root C:\dev\abd-context-driven-delivery\harness\.context at C:/dev/abd-cdd-review-work-in-board-fil/space/kanban/review-files-in-viewer.story.shared.py, read from C:\dev\abd-cdd-review-work-in-board-fil; name paths from the project's root, or absolute
+2026-11-13T04:45:08Z session.read_handoff_format SessionNotFoundError: no session at 'review-work-in-board-files': name the session.json of the session to work on
+Traceback (most recent call last):
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 789, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 491, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 502, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1016, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 806, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 876, in on_the_call
+    return function(owner, *arguments, **named)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\session\session.py", line 131, in from_file
+    return call.session_named(session)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\tool_call.py", line 168, in session_named
+    return ToolCall._sessions.named_in(session_file, self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\session\sessions.py", line 411, in named_in
+    return self.of_project(project).with_file(session_file)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\session\sessions.py", line 192, in with_file
+    raise SessionNotFoundError(session_file)
+space.session.session.SessionNotFoundError: no session at 'review-work-in-board-files': name the session.json of the session to work on

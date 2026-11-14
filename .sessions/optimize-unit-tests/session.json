@@ -1,5 +1,9 @@
 {
   "name": "optimize-unit-tests",
   "title": "optimize-unit-tests",
-  "scope": "feature"
+  "scope": "feature",
+  "branch": "optimize-unit-tests",
+  "worktree": "C:\\dev\\abd-cdd-optimize-unit-tests",
+  "stage": "Implementation",
+  "stage_mark": "in-progress"
 }

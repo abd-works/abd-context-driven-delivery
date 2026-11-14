@@ -1,13 +1,17 @@
 """BDD spec for a JSON file its owner reads and writes whole."""
 
+import os
 import shutil
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from expects import be_a, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.installation.json_file import HeldJsonFile, JsonFile, JsonFileUnreadable
+
+os_replace = os.replace
 
 
 class _OwnersError(JsonFileUnreadable):
@@ -47,6 +51,32 @@ with description("a JSON file"):
         with it("should hold only the last object written"):
             self.file.write({"name": "alpha", "kept": True})
             self.file.write({"name": "beta"})
+            expect(self.file.read()).to(equal({"name": "beta"}))
+
+    # A reinstall writes every plugin's manifest again; a file whose text is the same is not touched, so nothing that
+    # watches it, such as Claude Code reading a plugin's manifest, has it open while the install swaps it.
+    with context("that its owner writes again with the same object"):
+        with it("should leave the file as it was"):
+            self.file.write({"name": "alpha"})
+            written = self.path.stat().st_mtime_ns
+            os.utime(self.path, ns=(written - 10**9, written - 10**9))
+            self.file.write({"name": "alpha"})
+            expect(self.path.stat().st_mtime_ns).to(equal(written - 10**9))
+
+    # Windows refuses the swap while another process reads the file for a moment, as a watcher does after each write.
+    with context("that another process holds open for a moment"):
+        with it("should still be written"):
+            self.file.write({"name": "alpha"})
+            swaps = iter([PermissionError(5, "Access is denied")])
+
+            def refused_once(staged, target):
+                failure = next(swaps, None)
+                if failure is not None:
+                    raise failure
+                os_replace(staged, target)
+
+            with patch("harness.installation.json_file.os.replace", side_effect=refused_once):
+                self.file.write({"name": "beta"})
             expect(self.file.read()).to(equal({"name": "beta"}))
 
     with context("that holds something other than an object"):

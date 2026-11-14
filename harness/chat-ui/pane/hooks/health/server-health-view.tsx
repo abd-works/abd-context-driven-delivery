@@ -1,5 +1,5 @@
-import type { HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
-import { colourOf, detailsOf, headlineOf, installLineOf, partsOf } from './server-health-wording'
+import type { AppOpeningJson, HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
+import { appLineOf, colourOf, detailsOf, headlineOf, installLineOf, partsOf, type Part } from './server-health-wording'
 import type { EngineInterface } from 'claude-code'
 
 import { BRAND } from '../shared/brand'
@@ -13,11 +13,13 @@ type Actions = {
   hideDetails: () => unknown
   reconnect: () => unknown
   runInstall: () => unknown
+  openApp: (label: string) => unknown
 }
 type Band = {
   health: ServerHealthJson
   view: HealthViewJson
   install: InstallJson
+  opening: AppOpeningJson
   actions: Actions
 }
 const LOOKS = {
@@ -28,21 +30,43 @@ const LOOKS = {
 }
 
 
-// The surface has no tooltip, so the part's name is a card revealed while the pointer is over its icon and value.
-function PartsView({ Box, Text }: ElementTable, health: ServerHealthJson) {
+// The surface has no tooltip, so the part's name is a card revealed while the pointer is over its icon and value. An
+// app's icon and value are a Button, a press readying the app and opening it in the side panel; a Button holds only
+// strings and Text, so the card sits beside it in the part's Box, never inside it.
+function PartView({ Box, Button, Text }: ElementTable, part: Part, actions: Actions) {
+  const { app } = part
+  const icon = <Text color={colourOf(part)}>{part.icon}</Text>
+  const value = <Text color={colourOf(part)}>{part.value}</Text>
   return (
-    <Box flexDirection="row" columnGap={3}>
-      {partsOf(health).map(part => (
-        <Box key={part.label} flexDirection="row" gap={1}>
-          <Text color={colourOf(part)}>{part.icon}</Text>
-          <Text color={colourOf(part)}>{part.value}</Text>
-          <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
-            <Text color={BRAND.text}>{part.label}</Text>
-          </Box>
-        </Box>
-      ))}
+    <Box key={part.label} flexDirection="row" gap={1}>
+      {app === undefined ? <>{icon}{value}</> : (
+        <Button key={`health-app-${app}`} plain onPress={() => actions.openApp(app)}>
+          {icon} {value}
+        </Button>
+      )}
+      <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
+        <Text color={BRAND.text}>{part.label}</Text>
+      </Box>
     </Box>
   )
+}
+
+function PartsView(elements: ElementTable, health: ServerHealthJson, actions: Actions) {
+  const { Box } = elements
+  return (
+    // The parts spread across the panel's width, as wide as the text above them.
+    <Box flexDirection="row" columnGap={3} width="100%" justifyContent="space-between">
+      {partsOf(health).map(part => PartView(elements, part, actions))}
+    </Box>
+  )
+}
+
+// Opening the Story UI., or why an app did not open and how to fix it, once a person pressed one. The app's url is
+// not shown: the app opens in the Browser pane, and a failure says why.
+function AppLineView({ Text }: ElementTable, opening: AppOpeningJson) {
+  const line = appLineOf(opening)
+  if (!line) return null
+  return <Text color={opening.state === 'failed' ? BRAND.error : BRAND.text}>{line}</Text>
 }
 
 function DetailsView({ Box, Text }: ElementTable, health: ServerHealthJson, install: InstallJson) {
@@ -106,7 +130,8 @@ function ExpandedView(elements: ElementTable, band: Band) {
     >
       {HeadlineView(elements, health)}
       {InstallLineView(elements, install)}
-      {health.connection === 'connected' ? PartsView(elements, health) : null}
+      {health.connection === 'connected' ? PartsView(elements, health, band.actions) : null}
+      {AppLineView(elements, band.opening)}
       {view.areDetailsOpen && health.connection !== 'connected' ? DetailsView(elements, health, install) : null}
       {ButtonsView(elements, band)}
     </Box>

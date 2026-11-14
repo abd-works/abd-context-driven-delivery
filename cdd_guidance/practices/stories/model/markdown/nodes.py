@@ -16,7 +16,6 @@ A map's text is read by the reading made for its notation (``map_reading``), and
 from __future__ import annotations
 
 
-import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -25,81 +24,12 @@ from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryT
 from cdd_guidance.practices.stories.model.story_model import Background, StepType, Scenario
 from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, path_from, source_at
 from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks, unlink
-from cdd_guidance.practices.stories.model.markdown.map_reading import has_map_structure, is_outline, read_at, read_map
-from cdd_guidance.practices.stories.model.markdown.markup import MarkdownStep, step_line, step_lines, strip_backticks, strip_markup
+from cdd_guidance.practices.stories.model.markdown.map_reading import OutlineLines, described, has_map_structure, is_outline, read_at, read_map
+from cdd_guidance.practices.stories.model.markdown.markup import MarkdownExample, MarkdownStep, step_line, step_lines, strip_backticks
 from cdd_guidance.practices.stories.model.markdown.scenario_file import SCENARIO_HEADING, ScenarioFileReading, scenario_sections_in
 from cdd_guidance.practices.stories.model.markdown.scenario_parts import HEADING_LINE, STEP_LINE, StorySection
 from cdd_guidance.practices.stories.model.story_model import StoryModel
-from cdd_guidance.practices.stories.model.story_model import Increment
-
-# -- MarkdownIncrement ---------------------------------------------------------
-
-_INCREMENT_H3 = re.compile(r"^###\s+Increment\s+\d+\s*:\s*(.+?)\s*$", re.IGNORECASE)
-_ANY_H2 = re.compile(r"^##\s+(?!#)")
-_KV_OUTCOME = re.compile(r"^\*\*Outcome\s*:\*\*\s*(.+)$", re.IGNORECASE)
-_KV_SLICING = re.compile(r"^\*\*Slicing\s+notes\s*:\*\*\s*(.+)$", re.IGNORECASE)
-_KV_STORIES = re.compile(r"^\*\*Stories(?:\s+in\s+this\s+increment)?\s*:?\*\*", re.IGNORECASE)
-_KV_DECISION = re.compile(r"^\*\*Decision\s+prompt\s*:\*\*\s*(.+)$", re.IGNORECASE)
-_BULLET = re.compile(r"^\s*[-*]\s+(.+)$")
-
-
-class MarkdownIncrement(Increment):
-    """Increment leaf node for the Markdown format. Knows how to parse thin-slicing.md."""
-
-    @classmethod
-    def from_workspace(cls, root: "Path", story_map: "StoryModel") -> List["MarkdownIncrement"]:
-        """The increments of the thin-slicing markdown *root* holds (``StoryMapFiles.thin_slicing``), each delivering
-        story_map's own stories; none when it holds none."""
-        root = Path(root).resolve()
-        found = None if root.is_file() else StoryMapFiles(root).thin_slicing()
-        if found is None:
-            return []
-        return cls.parse(found.read_text(encoding="utf-8"), found.relative_to(root).as_posix(), story_map)
-
-    @classmethod
-    def parse(cls, text: str, rel_file: str, story_map: "StoryModel") -> List["MarkdownIncrement"]:
-        """Parse a thin-slicing.md body into a list of MarkdownIncrement nodes; each bullet names one of story_map's
-        stories, which the increment delivers."""
-        increments: List[MarkdownIncrement] = []
-        current: Optional[MarkdownIncrement] = None
-        in_stories = False
-
-        for idx, raw in enumerate(text.splitlines(), start=1):
-            stripped = raw.strip()
-            if not stripped:
-                continue
-            m_inc = _INCREMENT_H3.match(stripped)
-            if m_inc:
-                if current is not None:
-                    increments.append(current)
-                current = cls(strip_markup(m_inc.group(1)), len(increments) + 1)
-                current.source = source_at(rel_file, idx)
-                in_stories = False
-                continue
-            if current is None:
-                continue
-            if m := _KV_OUTCOME.match(stripped):
-                current.outcome = strip_markup(m.group(1))
-                in_stories = False
-            elif m := _KV_SLICING.match(stripped):
-                current.slicing_notes = strip_markup(m.group(1))
-                in_stories = False
-            elif m := _KV_DECISION.match(stripped):
-                current.decision_prompt = strip_markup(m.group(1))
-                in_stories = False
-            elif _KV_STORIES.match(stripped):
-                in_stories = True
-            elif _ANY_H2.match(raw) or _INCREMENT_H3.match(raw):
-                in_stories = False
-            elif in_stories:
-                if m := _BULLET.match(raw):
-                    current.stories.extend(story_map.stories_named([strip_markup(m.group(1))]))
-                else:
-                    in_stories = False
-
-        if current is not None:
-            increments.append(current)
-        return increments
+from cdd_guidance.practices.stories.model.markdown.thin_slice import MarkdownIncrement, thin_slice_in
 
 
 class MarkdownScenario(Scenario):
@@ -142,7 +72,7 @@ class MarkdownScenario(Scenario):
             return "\n".join(self.lines())
         name, is_outline, heading = self.markdown_heading or ("", False, None)
         out: List[str] = []
-        steps = _StepLines(parts)
+        steps = _SectionLines(parts)
         for part in parts:
             if part != HEADING_LINE:
                 out.append(steps.write(part))
@@ -192,6 +122,8 @@ class MarkdownStory(Story):
         # story is written back as read; None for a story read from anywhere else.
         self.markdown_heading: Optional[tuple] = None
         self.markdown_parts: Optional[list] = None
+        # The lines it was read with in an outline story map; None for a story read from anywhere else.
+        self.outline: Optional[OutlineLines] = None
 
     def document_text(self) -> str:
         """This story in a scenarios document: each line as it was read, with its heading, steps, and scenarios
@@ -202,7 +134,7 @@ class MarkdownStory(Story):
             return "\n".join([f"# Story: {self.name}", "", *self._scenario_section_lines()]).rstrip() + "\n"
         name, heading = self.markdown_heading or ("", None)
         out: List[str] = []
-        steps = _StepLines(parts)
+        steps = _SectionLines(parts)
         for part in parts:
             if part == HEADING_LINE:
                 out.append(heading if heading is not None and name == self.name else f"# Story: {self.name}\n")
@@ -227,7 +159,8 @@ class MarkdownStory(Story):
         """This story as an outline heading at level, linked to its own file when links name one, with its
         backgrounds and scenarios one heading level below."""
         actor = f"{strip_backticks(self.actors[0])} " if self.actors else ""
-        lines = [f"{'#' * min(level, 6)} {self.story_type.outline_mark} {actor}--> {self.label(links)}"]
+        heading = f"{'#' * min(level, 6)} {self.story_type.outline_mark} {actor}--> {self.label(links)}"
+        lines = _outlined(self, heading)
         if not self.scenarios and not self.backgrounds:
             return lines
         marks = "#" * min(level + 1, 6)
@@ -303,11 +236,25 @@ class MarkdownStory(Story):
         return took
 
 
+def _outlined(node, heading: Optional[str]) -> List[str]:
+    """node's heading line and the lines under it, holding its description: as it was read in an outline where nothing
+    changed them; heading is none for the story map, whose lines above its first epic have none."""
+    if node.outline is not None:
+        return node.outline.written(node, heading)
+    return [*([heading] if heading is not None else []), *described(node.description_text)]
+
+
 class MarkdownEpic(Epic):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        # The lines it was read with in an outline story map; None for an epic read from anywhere else.
+        self.outline: Optional[OutlineLines] = None
+
     def outline_lines(self, level: int, links: Optional[StoryMapLinks]) -> List[str]:
         """This epic as outline headings at level, every heading at column 0 so it has an anchor to link to: its
-        estimate (after its stories for a sub-epic), its stories, then its sub-epics one level deeper."""
-        lines = [f"{'#' * min(level, 6)} (E) {strip_backticks(self.name)}"]
+        description, its estimate (after its stories for a sub-epic), its stories, then its sub-epics one level
+        deeper."""
+        lines = _outlined(self, f"{'#' * min(level, 6)} (E) {strip_backticks(self.name)}")
         estimate = [f"* {self.estimate}"] if self.estimate else []
         stories = [line for story in self.stories for line in story.outline_lines(level + 1, links)]
         lines.extend([*estimate, *stories] if level == 1 else [*stories, *estimate])
@@ -350,9 +297,10 @@ def _markdown_scenario(scenario: Scenario) -> MarkdownScenario:
     return scenario if isinstance(scenario, MarkdownScenario) else MarkdownScenario(scenario)
 
 
-class _StepLines:
-    """Writes the step lines of one section. Each step line stands where its step was read; a step
-    unchanged on the model keeps its line, and steps added on the model follow the owner's last line."""
+class _SectionLines:
+    """Writes the step and example lines of one section. Each step line stands where its step was read; a step
+    unchanged on the model keeps its line, and steps added on the model follow the owner's last line. Each example row
+    stands where its example was read, as the example now says it."""
 
     def __init__(self, parts: list) -> None:
         self._pending: Dict[int, list] = {}
@@ -370,6 +318,8 @@ class _StepLines:
         return pending
 
     def write(self, part) -> str:
+        if isinstance(part, MarkdownExample):
+            return part.line()
         if not (isinstance(part, tuple) and part[0] == STEP_LINE):
             return part
         owner = part[1]
@@ -401,12 +351,29 @@ class MarkdownStoryModel(StoryModel):
     suffixes = (".md",)
     epic_type = MarkdownEpic
     story_type = MarkdownStory
+    increment_type = MarkdownIncrement
 
     def __init__(self, source: Optional[StoryModel] = None) -> None:
         super().__init__(source)
         # The scenarios document this map was read from, kept so rendering it writes each unchanged line back;
         # None for a map read from a story map.
         self.scenario_document: Optional[_ScenarioDocument] = None
+        # The lines before its first epic, when it was read from an outline story map; None for a map read otherwise.
+        self.outline: Optional[OutlineLines] = None
+
+    def opened_from(self, path: "Path", project: "Path") -> "MarkdownStoryModel":
+        """The story map the markdown file at path holds by itself, each node naming the file from project, and, for a
+        story map, the increments of the thin slice beside it: the map an edit writes back to path. A scenarios file
+        keeps its own lines and no increments."""
+        path = Path(path).resolve()
+        file = path_from(Path(project).resolve(), path)
+        text = path.read_text(encoding="utf-8")
+        story_map = self.parse(text, file)
+        story_map.source_texts[file] = text
+        if story_map.scenario_document is None:
+            story_map.slicing = thin_slice_in(path.parent, story_map, project)
+        return story_map
+
 
     @classmethod
     def from_workspace(cls, root: "Path", *, on_file=None, project: Optional["Path"] = None) -> Optional["MarkdownStoryModel"]:
@@ -452,10 +419,8 @@ class MarkdownStoryModel(StoryModel):
         sections = scenario_sections_in(root, MarkdownScenario, on_file=on_file)
         for story in self.every_story():
             story.load_scenarios(sections)
-        if self.increments:
-            return
-        for increment in MarkdownIncrement.from_workspace(root, self):
-            self.increments.append(increment)
+        if not self.increments and StoryMapFiles(root).thin_slicing() is not None:
+            self.slicing = thin_slice_in(root, self, root)
 
     # -- Uniform Callable Surface ----------------------------------------------
 
@@ -475,9 +440,17 @@ class MarkdownStoryModel(StoryModel):
         if document is not None:
             return self._render_scenario_document(document)
         links = StoryMapLinks.from_workspace(story_map, workspace) if workspace else None
+        return self._map_text(story_map, links, previous)
+
+    def _map_text(self, story_map: "MarkdownStoryModel", links: Optional[StoryMapLinks], previous: Optional[str]) -> str:
+        """story_map as headings and bullets, or as an outline: with the lines it was read with above its first epic,
+        else, at discovery, inside the story map document."""
         if not self._should_render_outline(story_map, previous) and not self._is_discovery_story_map(story_map):
             return "\n".join(line for epic in story_map.epics for line in epic.heading_lines(1, links))
         body = "\n".join(line for epic in story_map.epics for line in epic.outline_lines(1, links))
+        if story_map.outline is not None and story_map.outline.lines:
+            # A map read with lines above its first epic is written back with them, as it was laid out.
+            return "\n".join([*_outlined(story_map, None), body]) + "\n"
         if self._is_discovery_story_map(story_map):
             return self._wrap_story_map_document(body, previous)
         return body
@@ -528,7 +501,8 @@ class MarkdownStoryModel(StoryModel):
         read on, as it is read."""
         if not isinstance(text, str) or text.strip() == "":
             return MarkdownStoryModel()
-        if not self._looks_like_scenario_document(text.splitlines()):
+        if not self._looks_like_scenario_document(text.splitlines()) and not is_outline(text.splitlines()):
+            # An outline keeps the links in its prose; its reading takes them off the names it reads.
             text = unlink(text)
         lines = text.splitlines()
         if self._looks_like_scenario_document(lines):
@@ -546,7 +520,7 @@ class MarkdownStoryModel(StoryModel):
 
     def _render_scenario_document(self, document: "_ScenarioDocument") -> str:
         out: List[str] = []
-        steps = _StepLines(document.parts)
+        steps = _SectionLines(document.parts)
         for part in document.parts:
             if part == HEADING_LINE:
                 out.append(document.heading_line())

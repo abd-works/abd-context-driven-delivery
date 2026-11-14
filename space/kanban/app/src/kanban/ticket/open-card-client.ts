@@ -19,15 +19,15 @@ export class OpenCardClient {
   // A card opens with its tiles only; each tile opens its own action bar when hovered or pressed. The card it replaces
   // takes its bars with it.
   toggle(ticket: TicketClient): void {
-    ticket.select()
+    ticket.choose()
     if (this.store.state.openCard === ticket.name) return this.closeCard()
     this.store.change(state => ({ openCard: ticket.name, tiles: withoutBarsOf(withoutBarsOf(state.tiles, state.openCard), ticket.name) }))
   }
 
   // A press on an empty area of a card chooses its ticket and opens its card; pressing again leaves it open.
   open(ticket: TicketClient): void {
+    if (this.store.state.openCard !== ticket.name) return this.toggle(ticket)
     ticket.choose()
-    if (this.store.state.openCard !== ticket.name) this.toggle(ticket)
   }
 
   // A parent shows its child rows until a person folds it to its own card.

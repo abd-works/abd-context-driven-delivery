@@ -1,0 +1,594 @@
+2026-11-12T21:59:31Z --- 1
+2026-11-12T21:59:31Z backlog C:\dev\abd-context-driven-delivery\.sessions\_backlog\integrate-practice-content-editor-apps.md
+2026-11-12T22:28:34Z tool sessions.switch 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-63
+2026-11-12T22:33:33Z error session.read_file C:\dev\abd-context-driven-delivery\.sessions\integrate-practice-content-editor-apps\session.err 1 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-158
+2026-11-12T22:36:19Z tool ticket.choose_overlays 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-158
+2026-11-12T22:36:24Z tool ticket.choose_overlays 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-158
+2026-11-12T22:48:44Z tool sessions.switch 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-258
+2026-11-12T22:48:45Z tool generate.generate 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-262
+2026-11-12T22:48:45Z generate C:\dev\abd-cdd-integrate-practice-conte\harness\.context, C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories stories, clean_engineering scenarios, model python, python 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-262
+2026-11-12T22:59:04Z tool validate.validate harness\.context\stories\move-work-forward-from-chat-bar\integrate-practice-content-editor-apps-in-chat-bar\integrate_practice_content_editor_apps_in_chat_bar_story.test.md, harness\.context\stories\move-work-forward-on-session-board\integrate-practice-content-editor-apps-on-board\integrate_practice_content_editor_apps_on_board_story.test.md 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-266
+2026-11-12T22:59:10Z validate Stories scenarios 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-266
+2026-11-12T22:59:28Z tool validate.validate harness\.context\editor-apps 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-267
+2026-11-12T22:59:29Z validate CleanEngineering model graph-rule missing-module-context editor-apps/cdd_guidance/practices/stories/model/story_model.py:16 graph-rule missing-module-context editor-apps/cdd_guidance/practices/stories/model/story_model.py:25 graph-rule missing-module-context editor-apps/cdd_guidance/practices/stories/model/story_model.py:60 graph-rule missing-module-context editor-apps/cdd_guidance/practices/stories/model/story_model.py:104 graph-rule missing-module-context editor-apps/cdd_guidance/practices/stories/model/story_model.py:120 graph-rule missing-module-context editor-apps/cdd_guidance/practices/stories/model/story_model.py:128 graph-rule missing-module-context editor-apps/cdd_guidance/practices/stories/model/story_model.py:136 graph-rule missing-module-context editor-apps/harness/diagnostics/server_health.py:11 graph-rule missing-module-context editor-apps/harness/graph/graph.py:10 graph-rule missing-module-context editor-apps/harness/guidance/guidance.py:12 graph-rule missing-module-context editor-apps/harness/guidance/guidance.py:34 graph-rule missing-module-context editor-apps/harness/installation/app.py:16 graph-rule conforms-to-schema editor-apps/harness/installation/app.py:16 graph-rule missing-module-context editor-apps/harness/installation/app.py:24 graph-rule missing-module-context editor-apps/harness/installation/app.py:31 graph-rule missing-module-context editor-apps/harness/installation/app.py:42 graph-rule missing-module-context editor-apps/space/kanban/board.py:8 graph-rule missing-module-context editor-apps/space/kanban/format_choice.py:9 graph-rule missing-module-context editor-apps/space/kanban/ticket.py:12 graph-rule missing-module-context editor-apps/space/kanban/ticket.py:27 graph-rule missing-module-context editor-apps/space/session/practice_session_output.py:13 graph-rule missing-module-context editor-apps/space/session/practice_session_output.py:21 graph-rule missing-module-context editor-apps/space/session/session.py:8 graph-rule conforms-to-schema editor-apps/cdd_guidance/practices/stories/model/story_model.py:17 graph-rule conforms-to-schema editor-apps/cdd_guidance/practices/stories/model/story_model.py:68 graph-rule conforms-to-schema editor-apps/cdd_guidance/practices/stories/model/story_model.py:92 graph-rule prefer-instance-operations editor-apps/harness/guidance/guidance.py:16 graph-rule conforms-to-schema editor-apps/harness/guidance/guidance.py:16 graph-rule conforms-to-schema editor-apps/harness/guidance/guidance.py:29 graph-rule conforms-to-schema editor-apps/harness/installation/app.py:34 graph-rule limit-operation-parameters editor-apps/harness/installation/app.py:49 graph-rule prefer-instance-operations editor-apps/harness/installation/app.py:53 graph-rule conforms-to-schema editor-apps/harness/installation/app.py:53 graph-rule prefer-instance-operations editor-apps/harness/installation/app.py:58 graph-rule conforms-to-schema editor-apps/harness/installation/app.py:63 graph-rule conforms-to-schema editor-apps/space/session/practice_session_output.py:36 graph-rule use-typed-signatures editor-apps/cdd_guidance/practices/stories/model/story_model.py:30 graph-rule use-typed-signatures editor-apps/cdd_guidance/practices/stories/model/story_model.py:63 graph-rule use-typed-signatures editor-apps/cdd_guidance/practices/stories/model/story_model.py:63 graph-rule use-typed-signatures editor-apps/cdd_guidance/practices/stories/model/story_model.py:68 graph-rule … and 2 more 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-267
+2026-11-12T23:00:43Z tool validate.validate harness\.context\editor-apps 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-267
+2026-11-12T23:00:44Z validate CleanEngineering model graph-rule conforms-to-schema editor-apps/app.py:16 graph-rule do-not-invent-parallel-object-models editor-apps/app.py:31 graph-rule missing-module-context editor-apps/cdd_guidance/practices/stories/model/story_model.py:16 graph-rule do-not-invent-parallel-object-models editor-apps/cdd_guidance/practices/stories/model/story_model.py:16 graph-rule missing-module-context editor-apps/cdd_guidance/practices/stories/model/story_model.py:25 graph-rule missing-module-context editor-apps/cdd_guidance/practices/stories/model/story_model.py:60 graph-rule missing-module-context editor-apps/cdd_guidance/practices/stories/model/story_model.py:104 graph-rule missing-module-context editor-apps/cdd_guidance/practices/stories/model/story_model.py:120 graph-rule missing-module-context editor-apps/cdd_guidance/practices/stories/model/story_model.py:128 graph-rule missing-module-context editor-apps/cdd_guidance/practices/stories/model/story_model.py:136 graph-rule missing-module-context editor-apps/harness/diagnostics/server_health.py:11 graph-rule missing-module-context editor-apps/harness/graph/graph.py:10 graph-rule missing-module-context editor-apps/harness/guidance/guidance.py:12 graph-rule missing-module-context editor-apps/harness/guidance/guidance.py:34 graph-rule missing-module-context editor-apps/harness/installation/app.py:16 graph-rule conforms-to-schema editor-apps/harness/installation/app.py:16 graph-rule missing-module-context editor-apps/harness/installation/app.py:24 graph-rule missing-module-context editor-apps/harness/installation/app.py:31 graph-rule missing-module-context editor-apps/harness/installation/app.py:42 graph-rule missing-module-context editor-apps/space/kanban/board.py:8 graph-rule missing-module-context editor-apps/space/kanban/format_choice.py:9 graph-rule missing-module-context editor-apps/space/kanban/ticket.py:12 graph-rule missing-module-context editor-apps/space/kanban/ticket.py:27 graph-rule missing-module-context editor-apps/space/session/practice_session_output.py:13 graph-rule missing-module-context editor-apps/space/session/practice_session_output.py:21 graph-rule missing-module-context editor-apps/space/session/session.py:8 graph-rule conforms-to-schema editor-apps/app.py:34 graph-rule conforms-to-schema editor-apps/app.py:49 graph-rule prefer-instance-operations editor-apps/app.py:60 graph-rule conforms-to-schema editor-apps/app.py:65 graph-rule prefer-instance-operations editor-apps/guidance.py:16 graph-rule conforms-to-schema editor-apps/guidance.py:31 graph-rule eliminate-duplication editor-apps/harness/graph/graph.py:15 graph-rule prefer-instance-operations editor-apps/harness/guidance/guidance.py:16 graph-rule eliminate-duplication editor-apps/harness/guidance/guidance.py:41 graph-rule eliminate-duplication editor-apps/harness/installation/app.py:34 graph-rule limit-operation-parameters editor-apps/harness/installation/app.py:49 graph-rule prefer-instance-operations editor-apps/harness/installation/app.py:53 graph-rule prefer-instance-operations editor-apps/harness/installation/app.py:58 graph-rule eliminate-duplication editor-apps/harness/installation/app.py:90 graph-rule … and 26 more 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-267
+2026-11-12T23:36:51Z tool sessions.switch 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-347
+2026-11-12T23:36:52Z tool sessions.switch 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-347
+2026-11-12T23:37:27Z error generate.generate C:\dev\abd-context-driven-delivery\.sessions\integrate-practice-content-editor-apps\session.err 30 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-350
+2026-11-12T23:37:30Z tool generate.generate 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-350
+2026-11-12T23:37:30Z generate C:\dev\abd-cdd-integrate-practice-conte\harness\.context, C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories stories, clean_engineering acceptance_tests, code python, python 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-350
+2026-11-12T23:37:35Z error generate.generate C:\dev\abd-context-driven-delivery\.sessions\integrate-practice-content-editor-apps\session.err 61 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-350
+2026-11-12T23:37:37Z tool generate.generate 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-350
+2026-11-12T23:37:37Z generate C:\dev\abd-cdd-integrate-practice-conte\harness\.context, C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories stories, clean_engineering acceptance_tests, code python, python 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-350
+2026-11-12T23:54:33Z tool validate.validate C:\dev\abd-cdd-integrate-practice-conte\harness\diagnostics\app.py, C:\dev\abd-cdd-integrate-practice-conte\harness\diagnostics\server_health.py, C:\dev\abd-cdd-integrate-practice-conte\space\kanban\board_app.py, C:\dev\abd-cdd-integrate-practice-conte\space\kanban\integrate-practice-content-editor-apps-in-chat-bar.story.shared.py, C:\dev\abd-cdd-integrate-practice-conte\space\kanban\editor_apps_examples.py, C:\dev\abd-cdd-integrate-practice-conte\space\kanban\editor_apps_tiers.py 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-390
+2026-11-12T23:54:33Z error validate.validate C:\dev\abd-context-driven-delivery\.sessions\integrate-practice-content-editor-apps\session.err 92 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-390
+2026-11-12T23:55:48Z tool sessions.switch 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-432
+2026-11-12T23:56:53Z error generate.generate C:\dev\abd-context-driven-delivery\.sessions\integrate-practice-content-editor-apps\session.err 157 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-441
+2026-11-12T23:56:55Z tool generate.generate 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-441
+2026-11-12T23:56:56Z generate C:\dev\abd-cdd-integrate-practice-conte, C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories stories, clean_engineering acceptance_tests, code python, python 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-441
+2026-11-13T00:05:24Z tool validate.validate cdd_guidance\practices\stories\model\opened_story_map.py, cdd_guidance\practices\stories\app\story-map\story-map-client.ts, cdd_guidance\practices\stories\app\story-map\story-map-api.ts, cdd_guidance\practices\stories\app\story-map\story-map-view-models.ts 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-481
+2026-11-13T00:07:14Z validate CleanEngineering code graph-rule keep-classes-single-responsibility cdd_guidance/practices/stories/app/story-map/story-map-client.ts:17 graph-rule conforms-to-schema cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:29 graph-rule use-explicit-dependencies cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:52 graph-rule conforms-to-schema cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:69 graph-rule use-explicit-dependencies cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:78 graph-rule use-explicit-dependencies cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:89 graph-rule limit-operation-parameters cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:20 graph-rule avoid-vague-parameter-names cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:46 graph-rule avoid-vague-parameter-names cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:57 graph-rule avoid-vague-parameter-names cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:82 graph-rule avoid-vague-parameter-names cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:94 graph-rule limit-operation-parameters cdd_guidance/practices/stories/model/opened_story_map.py:38 graph-rule use-intention-revealing-names cdd_guidance/practices/stories/app/story-map/story-map-client.ts:40 graph-rule use-intention-revealing-names cdd_guidance/practices/stories/app/story-map/story-map-client.ts:46 graph-rule use-intention-revealing-names cdd_guidance/practices/stories/app/story-map/story-map-client.ts:50 graph-rule use-intention-revealing-names cdd_guidance/practices/stories/app/story-map/story-map-client.ts:68 graph-rule use-intention-revealing-names cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:20 graph-rule avoid-vague-parameter-names cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:46 graph-rule avoid-vague-parameter-names cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:57 graph-rule avoid-vague-parameter-names cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:82 graph-rule avoid-vague-parameter-names cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:94 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/opened_story_map.py:22 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/opened_story_map.py:38 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-481
+2026-11-13T00:10:25Z tool sessions.switch 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-497
+2026-11-13T00:11:07Z error generate.generate C:\dev\abd-context-driven-delivery\.sessions\integrate-practice-content-editor-apps\session.err 188 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-500
+2026-11-13T00:11:11Z error generate.generate C:\dev\abd-context-driven-delivery\.sessions\integrate-practice-content-editor-apps\session.err 213 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-500
+2026-11-13T00:11:14Z error generate.generate C:\dev\abd-context-driven-delivery\.sessions\integrate-practice-content-editor-apps\session.err 244 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-500
+2026-11-13T00:11:16Z tool generate.generate 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-500
+2026-11-13T00:11:17Z generate C:\dev\abd-cdd-integrate-practice-conte, C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories stories, clean_engineering acceptance_tests, code python, python 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-500
+2026-11-13T00:13:10Z tool validate.validate harness\graph\graph.py, harness\guidance\guidance.py, cdd_guidance\practices\ddd\model\graph_reading.py, space\kanban\knowledge_graph_examples.py, space\kanban\knowledge_graph_tiers.py, space\kanban\integrate-practice-content-editor-apps-on-board.story.shared.py, space\kanban\integrate-practice-content-editor-apps-on-board.story.domain.spec.py, space\kanban\integrate-practice-content-editor-apps-in-chat-bar.story.shared.py, space\kanban\editor_apps_tiers.py, harness\graph\app\App.tsx, harness\graph\app\server.ts, harness\graph\app\start.ts, harness\graph\app\graph\graph-api.ts, space\kanban\app\src\kanban\board\graph-app-client.ts, space\kanban\app\src\kanban\ticket\file-views-view.tsx, harness\installation\templates\typescript\cdd-connection.ts, harness\installation\templates\typescript\cdd-shared.ts 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-502
+2026-11-13T00:13:41Z validate Stories acceptance_tests graph-rule prefer-class-operations cdd_guidance/practices/ddd/model/graph_reading.py:129 graph-rule prefer-class-operations cdd_guidance/practices/ddd/model/graph_reading.py:129 graph-rule prefer-class-operations cdd_guidance/practices/ddd/model/graph_reading.py:129 graph-rule prefer-class-operations cdd_guidance/practices/ddd/model/graph_reading.py:129 graph-rule prefer-class-operations cdd_guidance/practices/ddd/model/graph_reading.py:129 graph-rule prefer-class-operations cdd_guidance/practices/ddd/model/graph_reading.py:129 graph-rule prefer-class-operations cdd_guidance/practices/ddd/model/graph_reading.py:129 graph-rule prefer-class-operations cdd_guidance/practices/ddd/model/graph_reading.py:129 graph-rule keep-classes-single-responsibility harness/graph/graph.py:261 graph-rule prefer-class-operations harness/graph/graph.py:261 graph-rule keep-classes-single-responsibility harness/graph/graph.py:483 graph-rule keep-classes-single-responsibility harness/graph/graph.py:832 graph-rule use-explicit-dependencies harness/graph/graph.py:832 graph-rule prefer-class-operations harness/graph/graph.py:832 graph-rule do-not-invent-parallel-object-models harness/graph/graph.py:832 graph-rule prefer-class-operations harness/graph/graph.py:1069 graph-rule keep-classes-single-responsibility harness/graph/graph.py:1243 graph-rule use-explicit-dependencies harness/graph/graph.py:1243 graph-rule keep-classes-single-responsibility harness/guidance/guidance.py:278 graph-rule use-explicit-dependencies harness/guidance/guidance.py:278 graph-rule keep-classes-single-responsibility harness/guidance/guidance.py:566 graph-rule prefer-class-operations harness/guidance/guidance.py:566 graph-rule keep-operations-small-focused cdd_guidance/practices/ddd/model/graph_reading.py:210 graph-rule keep-operations-single-responsibility cdd_guidance/practices/ddd/model/graph_reading.py:235 graph-rule simplify-control-flow cdd_guidance/practices/ddd/model/graph_reading.py:251 graph-rule conforms-to-schema cdd_guidance/practices/ddd/model/graph_reading.py:304 graph-rule conforms-to-schema cdd_guidance/practices/ddd/model/graph_reading.py:309 graph-rule conforms-to-schema cdd_guidance/practices/ddd/model/graph_reading.py:314 graph-rule simplify-control-flow cdd_guidance/practices/ddd/model/graph_reading.py:324 graph-rule keep-operations-single-responsibility harness/graph/app/App.tsx:34 graph-rule keep-operations-small-focused harness/graph/app/App.tsx:34 graph-rule simplify-control-flow harness/graph/app/App.tsx:34 graph-rule simplify-control-flow harness/graph/app/App.tsx:96 graph-rule keep-operations-small-focused harness/graph/app/App.tsx:150 graph-rule keep-operations-small-focused harness/graph/app/App.tsx:208 graph-rule keep-operations-single-responsibility harness/graph/app/App.tsx:423 graph-rule never-swallow-exceptions harness/graph/app/App.tsx:423 graph-rule conforms-to-schema harness/graph/graph.py:73 graph-rule limit-operation-parameters harness/graph/graph.py:95 graph-rule limit-operation-parameters harness/graph/graph.py:182 graph-rule … and 50 more 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-502
+2026-11-13T00:13:41Z validate CleanEngineering code graph-rule prefer-class-operations cdd_guidance/practices/ddd/model/graph_reading.py:129 graph-rule prefer-class-operations cdd_guidance/practices/ddd/model/graph_reading.py:129 graph-rule prefer-class-operations cdd_guidance/practices/ddd/model/graph_reading.py:129 graph-rule prefer-class-operations cdd_guidance/practices/ddd/model/graph_reading.py:129 graph-rule prefer-class-operations cdd_guidance/practices/ddd/model/graph_reading.py:129 graph-rule prefer-class-operations cdd_guidance/practices/ddd/model/graph_reading.py:129 graph-rule prefer-class-operations cdd_guidance/practices/ddd/model/graph_reading.py:129 graph-rule prefer-class-operations cdd_guidance/practices/ddd/model/graph_reading.py:129 graph-rule keep-classes-single-responsibility harness/graph/graph.py:261 graph-rule prefer-class-operations harness/graph/graph.py:261 graph-rule keep-classes-single-responsibility harness/graph/graph.py:483 graph-rule keep-classes-single-responsibility harness/graph/graph.py:832 graph-rule use-explicit-dependencies harness/graph/graph.py:832 graph-rule prefer-class-operations harness/graph/graph.py:832 graph-rule do-not-invent-parallel-object-models harness/graph/graph.py:832 graph-rule prefer-class-operations harness/graph/graph.py:1069 graph-rule keep-classes-single-responsibility harness/graph/graph.py:1243 graph-rule use-explicit-dependencies harness/graph/graph.py:1243 graph-rule keep-classes-single-responsibility harness/guidance/guidance.py:278 graph-rule use-explicit-dependencies harness/guidance/guidance.py:278 graph-rule keep-classes-single-responsibility harness/guidance/guidance.py:566 graph-rule prefer-class-operations harness/guidance/guidance.py:566 graph-rule keep-operations-small-focused cdd_guidance/practices/ddd/model/graph_reading.py:210 graph-rule keep-operations-single-responsibility cdd_guidance/practices/ddd/model/graph_reading.py:235 graph-rule simplify-control-flow cdd_guidance/practices/ddd/model/graph_reading.py:251 graph-rule conforms-to-schema cdd_guidance/practices/ddd/model/graph_reading.py:304 graph-rule conforms-to-schema cdd_guidance/practices/ddd/model/graph_reading.py:309 graph-rule conforms-to-schema cdd_guidance/practices/ddd/model/graph_reading.py:314 graph-rule simplify-control-flow cdd_guidance/practices/ddd/model/graph_reading.py:324 graph-rule keep-operations-single-responsibility harness/graph/app/App.tsx:34 graph-rule keep-operations-small-focused harness/graph/app/App.tsx:34 graph-rule simplify-control-flow harness/graph/app/App.tsx:34 graph-rule simplify-control-flow harness/graph/app/App.tsx:96 graph-rule keep-operations-small-focused harness/graph/app/App.tsx:150 graph-rule keep-operations-small-focused harness/graph/app/App.tsx:208 graph-rule keep-operations-single-responsibility harness/graph/app/App.tsx:423 graph-rule never-swallow-exceptions harness/graph/app/App.tsx:423 graph-rule conforms-to-schema harness/graph/graph.py:73 graph-rule limit-operation-parameters harness/graph/graph.py:95 graph-rule limit-operation-parameters harness/graph/graph.py:182 graph-rule … and 50 more 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-502
+2026-11-13T00:14:02Z tool session.append_log harness\graph\graph.py, harness\guidance\guidance.py, harness\graph\app\start.ts, harness\graph\app\App.tsx, space\kanban\integrate-practice-content-editor-apps-on-board.story.shared.py 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-502
+2026-11-13T00:14:02Z note loop 1: Agent C (graph): Graph.load_practice_roots + PracticeGuidance.session_root; Graph app follows the session open in its ?project= (same Session/graph as Board.active, no Board.last_activated); ProjectConnections/projectOfPage moved into generated TS; board graph widget + header Graph button; start.ts runs Vite+web server in one process (chat end stops both); DDD loads without CE. Commits 4393dad9e, d5f62629a, 361e03a46. Open: a chat-specific sessions.switch on the main checkout is not seen by the chat-less Graph app; unactivated tickets have no graph widget target. harness\graph\graph.py, harness\guidance\guidance.py, harness\graph\app\start.ts, harness\graph\app\App.tsx, space\kanban\integrate-practice-content-editor-apps-on-board.story.shared.py 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-502
+2026-11-13T00:24:30Z tool validate.validate space\kanban\integrate-practice-content-editor-apps-in-chat-bar.story.shared.py, space\kanban\integrate-practice-content-editor-apps-on-board.story.shared.py, space\kanban\editor_apps_examples.py, space\kanban\editor_apps_tiers.py, space\kanban\board.py, space\kanban\board_app.py, space\kanban\ticket.py, space\session\session.py, harness\guidance\guidance.py, space\kanban\app\packages\session-board\app.ts, space\kanban\app\src\session-board\story-map-mount.spec.ts, space\kanban\app\src\kanban\board\editor-app-client.ts, space\kanban\app\src\kanban\board\editor-app-client.spec.ts, space\kanban\app\src\kanban\ticket\tile-view.tsx, harness\chat-ui\pane\hooks\chat-bar\fidelity-files-client.ts, harness\chat-ui\pane\hooks\chat-bar\fidelity-files-view.tsx, harness\chat-ui\pane\hooks\chat-bar\fidelity-progress-client.ts, harness\chat-ui\pane\hooks\chat-bar\chat-bar-client.ts, cdd_guidance\practices\stories\app\story-map\story-map-api.ts 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-510
+2026-11-13T00:25:03Z validate Stories acceptance_tests graph-rule keep-classes-single-responsibility harness/guidance/guidance.py:278 graph-rule use-explicit-dependencies harness/guidance/guidance.py:278 graph-rule keep-classes-single-responsibility harness/guidance/guidance.py:576 graph-rule prefer-class-operations harness/guidance/guidance.py:576 graph-rule keep-classes-single-responsibility space/kanban/board.py:93 graph-rule keep-classes-single-responsibility space/kanban/ticket.py:107 graph-rule keep-classes-single-responsibility space/session/session.py:86 graph-rule use-explicit-dependencies space/session/session.py:86 graph-rule prefer-class-operations space/session/session.py:86 graph-rule limit-operation-parameters harness/chat-ui/pane/hooks/chat-bar/fidelity-progress-client.ts:27 graph-rule limit-operation-parameters harness/chat-ui/pane/hooks/chat-bar/fidelity-progress-client.ts:125 graph-rule conforms-to-schema harness/guidance/guidance.py:52 graph-rule conforms-to-schema harness/guidance/guidance.py:55 graph-rule conforms-to-schema harness/guidance/guidance.py:69 graph-rule avoid-vague-parameter-names harness/guidance/guidance.py:203 graph-rule prefer-instance-operations harness/guidance/guidance.py:250 graph-rule prefer-instance-operations harness/guidance/guidance.py:316 graph-rule limit-operation-parameters harness/guidance/guidance.py:321 graph-rule keep-operations-small-focused harness/guidance/guidance.py:321 graph-rule prefer-instance-operations harness/guidance/guidance.py:412 graph-rule limit-operation-parameters harness/guidance/guidance.py:542 graph-rule limit-operation-parameters harness/guidance/guidance.py:585 graph-rule avoid-vague-parameter-names harness/guidance/guidance.py:600 graph-rule conforms-to-schema harness/guidance/guidance.py:723 graph-rule limit-operation-parameters harness/guidance/guidance.py:860 graph-rule keep-operations-small-focused harness/guidance/guidance.py:935 graph-rule prefer-instance-operations space/kanban/board.py:117 graph-rule conforms-to-schema space/kanban/board.py:117 graph-rule conforms-to-schema space/kanban/board.py:251 graph-rule conforms-to-schema space/kanban/board.py:255 graph-rule limit-operation-parameters space/kanban/board.py:320 graph-rule conforms-to-schema space/kanban/board.py:379 graph-rule conforms-to-schema space/kanban/board.py:429 graph-rule conforms-to-schema space/kanban/board.py:595 graph-rule conforms-to-schema space/kanban/board.py:639 graph-rule limit-operation-parameters space/kanban/board.py:647 graph-rule conforms-to-schema space/kanban/board.py:647 graph-rule conforms-to-schema space/kanban/board.py:694 graph-rule conforms-to-schema space/kanban/board.py:728 graph-rule conforms-to-schema space/kanban/board.py:763 graph-rule … and 27 more 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-510
+2026-11-13T00:25:03Z validate CleanEngineering code graph-rule keep-classes-single-responsibility harness/guidance/guidance.py:278 graph-rule use-explicit-dependencies harness/guidance/guidance.py:278 graph-rule keep-classes-single-responsibility harness/guidance/guidance.py:576 graph-rule prefer-class-operations harness/guidance/guidance.py:576 graph-rule keep-classes-single-responsibility space/kanban/board.py:93 graph-rule keep-classes-single-responsibility space/kanban/ticket.py:107 graph-rule keep-classes-single-responsibility space/session/session.py:86 graph-rule use-explicit-dependencies space/session/session.py:86 graph-rule prefer-class-operations space/session/session.py:86 graph-rule limit-operation-parameters harness/chat-ui/pane/hooks/chat-bar/fidelity-progress-client.ts:27 graph-rule limit-operation-parameters harness/chat-ui/pane/hooks/chat-bar/fidelity-progress-client.ts:125 graph-rule conforms-to-schema harness/guidance/guidance.py:52 graph-rule conforms-to-schema harness/guidance/guidance.py:55 graph-rule conforms-to-schema harness/guidance/guidance.py:69 graph-rule avoid-vague-parameter-names harness/guidance/guidance.py:203 graph-rule prefer-instance-operations harness/guidance/guidance.py:250 graph-rule prefer-instance-operations harness/guidance/guidance.py:316 graph-rule limit-operation-parameters harness/guidance/guidance.py:321 graph-rule keep-operations-small-focused harness/guidance/guidance.py:321 graph-rule prefer-instance-operations harness/guidance/guidance.py:412 graph-rule limit-operation-parameters harness/guidance/guidance.py:542 graph-rule limit-operation-parameters harness/guidance/guidance.py:585 graph-rule avoid-vague-parameter-names harness/guidance/guidance.py:600 graph-rule conforms-to-schema harness/guidance/guidance.py:723 graph-rule limit-operation-parameters harness/guidance/guidance.py:860 graph-rule keep-operations-small-focused harness/guidance/guidance.py:935 graph-rule prefer-instance-operations space/kanban/board.py:117 graph-rule conforms-to-schema space/kanban/board.py:117 graph-rule conforms-to-schema space/kanban/board.py:251 graph-rule conforms-to-schema space/kanban/board.py:255 graph-rule limit-operation-parameters space/kanban/board.py:320 graph-rule conforms-to-schema space/kanban/board.py:379 graph-rule conforms-to-schema space/kanban/board.py:429 graph-rule conforms-to-schema space/kanban/board.py:595 graph-rule conforms-to-schema space/kanban/board.py:639 graph-rule limit-operation-parameters space/kanban/board.py:647 graph-rule conforms-to-schema space/kanban/board.py:647 graph-rule conforms-to-schema space/kanban/board.py:694 graph-rule conforms-to-schema space/kanban/board.py:728 graph-rule conforms-to-schema space/kanban/board.py:763 graph-rule … and 27 more 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-510
+2026-11-13T01:34:13Z tool sessions.switch 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-599
+2026-11-13T01:34:13Z tool sessions.switch 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-599
+2026-11-13T01:35:43Z tool generate.generate 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-605
+2026-11-13T01:35:44Z generate C:\dev\abd-cdd-integrate-practice-conte, C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories stories, clean_engineering acceptance_tests, code python, python 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-605
+2026-11-13T01:37:06Z tool generate.generate 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-605
+2026-11-13T01:37:06Z generate C:\dev\abd-cdd-integrate-practice-conte, C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories stories, clean_engineering acceptance_tests, code python, python 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-605
+2026-11-13T01:48:38Z tool validate.validate space\kanban\app\src\kanban\board\editor-app-client.ts, space\kanban\app\src\kanban\board\board-api.ts, space\kanban\app\src\kanban\board\build-client.ts, space\kanban\app\src\kanban\board\board-page.ts, space\kanban\app\src\kanban\board\board-page-view.tsx, space\kanban\app\src\kanban\board\board-columns-view.tsx, space\kanban\app\src\session-board\board-server-paths.ts, space\kanban\app\packages\session-board\app.ts, space\kanban\app\src\session-board\web-domain-access.spec.ts, space\kanban\app\src\kanban\board\editor-app-client.spec.ts, space\kanban\app\src\kanban\board\board-page.spec.ts, space\kanban\integrate-practice-content-editor-apps-on-board.story.shared.py 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-625
+2026-11-13T01:49:06Z validate CleanEngineering code graph-rule keep-classes-single-responsibility space/kanban/app/src/kanban/board/board-page.ts:38 graph-rule use-explicit-dependencies space/kanban/app/src/kanban/board/board-page.ts:38 graph-rule keep-operations-small-focused space/kanban/app/src/kanban/board/board-columns-view.tsx:88 graph-rule prefer-instance-operations space/kanban/app/src/kanban/board/board-page-view.tsx:146 graph-rule keep-operations-single-responsibility space/kanban/app/src/kanban/board/board-page.ts:63 graph-rule use-typed-signatures space/kanban/app/src/kanban/board/board-api.ts:14 graph-rule use-typed-signatures space/kanban/app/src/kanban/board/board-api.ts:14 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-625
+2026-11-13T01:49:06Z validate Stories acceptance_tests graph-rule keep-classes-single-responsibility space/kanban/app/src/kanban/board/board-page.ts:38 graph-rule use-explicit-dependencies space/kanban/app/src/kanban/board/board-page.ts:38 graph-rule keep-operations-small-focused space/kanban/app/src/kanban/board/board-columns-view.tsx:88 graph-rule prefer-instance-operations space/kanban/app/src/kanban/board/board-page-view.tsx:146 graph-rule keep-operations-single-responsibility space/kanban/app/src/kanban/board/board-page.ts:63 graph-rule use-typed-signatures space/kanban/app/src/kanban/board/board-api.ts:14 graph-rule use-typed-signatures space/kanban/app/src/kanban/board/board-api.ts:14 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-625
+2026-11-13T01:56:48Z tool sessions.switch 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-682
+2026-11-13T01:58:56Z tool generate.generate 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-689
+2026-11-13T01:58:57Z generate C:\dev\abd-cdd-integrate-practice-conte, C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories stories, clean_engineering acceptance_tests, code python, python 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-689
+2026-11-13T02:15:07Z tool validate.validate cdd_guidance\practices\stories\model\markdown\thin_slice.py, cdd_guidance\practices\stories\model\markdown\map_reading.py, cdd_guidance\practices\stories\model\opened_story_map.py, cdd_guidance\practices\stories\model\name_facts.py, cdd_guidance\practices\stories\model\story_copies.py, cdd_guidance\practices\stories\model\story_map_edits_spec.py, cdd_guidance\practices\stories\app\story-map\story-map-view-models.ts, cdd_guidance\practices\stories\app\story-map\story-map-client.ts, cdd_guidance\practices\stories\app\story-map\story-map-client.spec.tsx 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-703
+2026-11-13T02:15:37Z tool validate.validate harness\chat\chat.py, harness\diagnostics\app.py, space\repo\repos.py, space\kanban\app\packages\session-board\app.ts, space\kanban\app\packages\session-board\serve.ts, space\kanban\app\src\kanban\board\board-page.ts, space\kanban\app\src\kanban\board\editor-app-client.ts, space\kanban\app\src\kanban\chat\chat-client.tsx, space\kanban\app\src\session-board\board-server-paths.ts 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-703
+2026-11-13T02:15:46Z validate CleanEngineering code graph-rule keep-classes-single-responsibility cdd_guidance/practices/stories/app/story-map/story-map-client.ts:21 graph-rule use-explicit-dependencies cdd_guidance/practices/stories/model/markdown/map_reading.py:235 graph-rule prefer-class-operations cdd_guidance/practices/stories/model/markdown/map_reading.py:235 graph-rule prefer-class-operations cdd_guidance/practices/stories/model/markdown/thin_slice.py:46 graph-rule prefer-class-operations cdd_guidance/practices/stories/model/markdown/thin_slice.py:46 graph-rule prefer-class-operations cdd_guidance/practices/stories/model/markdown/thin_slice.py:133 graph-rule prefer-class-operations cdd_guidance/practices/stories/model/opened_story_map.py:31 graph-rule limit-operation-parameters cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:70 graph-rule limit-operation-parameters cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:80 graph-rule conforms-to-schema cdd_guidance/practices/stories/model/markdown/map_reading.py:31 graph-rule conforms-to-schema cdd_guidance/practices/stories/model/markdown/map_reading.py:36 graph-rule simplify-control-flow cdd_guidance/practices/stories/model/markdown/map_reading.py:132 graph-rule conforms-to-schema cdd_guidance/practices/stories/model/markdown/map_reading.py:151 graph-rule conforms-to-schema cdd_guidance/practices/stories/model/markdown/map_reading.py:230 graph-rule limit-operation-parameters cdd_guidance/practices/stories/model/markdown/thin_slice.py:93 graph-rule use-typed-signatures cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:138 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/map_reading.py:42 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/map_reading.py:48 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/map_reading.py:65 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/map_reading.py:100 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/map_reading.py:112 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/map_reading.py:215 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/map_reading.py:220 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/map_reading.py:241 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/map_reading.py:271 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/thin_slice.py:137 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/name_facts.py:86 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/opened_story_map.py:96 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-703
+2026-11-13T02:15:46Z validate Stories acceptance_tests graph-rule keep-classes-single-responsibility cdd_guidance/practices/stories/app/story-map/story-map-client.ts:21 graph-rule use-explicit-dependencies cdd_guidance/practices/stories/model/markdown/map_reading.py:235 graph-rule prefer-class-operations cdd_guidance/practices/stories/model/markdown/map_reading.py:235 graph-rule prefer-class-operations cdd_guidance/practices/stories/model/markdown/thin_slice.py:46 graph-rule prefer-class-operations cdd_guidance/practices/stories/model/markdown/thin_slice.py:46 graph-rule prefer-class-operations cdd_guidance/practices/stories/model/markdown/thin_slice.py:133 graph-rule prefer-class-operations cdd_guidance/practices/stories/model/opened_story_map.py:31 graph-rule limit-operation-parameters cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:70 graph-rule limit-operation-parameters cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:80 graph-rule conforms-to-schema cdd_guidance/practices/stories/model/markdown/map_reading.py:31 graph-rule conforms-to-schema cdd_guidance/practices/stories/model/markdown/map_reading.py:36 graph-rule simplify-control-flow cdd_guidance/practices/stories/model/markdown/map_reading.py:132 graph-rule conforms-to-schema cdd_guidance/practices/stories/model/markdown/map_reading.py:151 graph-rule conforms-to-schema cdd_guidance/practices/stories/model/markdown/map_reading.py:230 graph-rule limit-operation-parameters cdd_guidance/practices/stories/model/markdown/thin_slice.py:93 graph-rule use-typed-signatures cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:138 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/map_reading.py:42 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/map_reading.py:48 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/map_reading.py:65 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/map_reading.py:100 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/map_reading.py:112 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/map_reading.py:215 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/map_reading.py:220 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/map_reading.py:241 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/map_reading.py:271 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/markdown/thin_slice.py:137 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/name_facts.py:86 graph-rule use-typed-signatures cdd_guidance/practices/stories/model/opened_story_map.py:96 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-703
+2026-11-13T02:16:21Z validate CleanEngineering code graph-rule keep-classes-single-responsibility harness/chat/chat.py:151 graph-rule prefer-class-operations harness/chat/chat.py:151 graph-rule prefer-class-operations harness/chat/chat.py:151 graph-rule prefer-class-operations harness/chat/chat.py:151 graph-rule prefer-class-operations harness/chat/chat.py:151 graph-rule prefer-class-operations harness/chat/chat.py:151 graph-rule prefer-class-operations harness/diagnostics/app.py:92 graph-rule keep-classes-single-responsibility space/kanban/app/src/kanban/board/board-page.ts:35 graph-rule keep-classes-single-responsibility space/kanban/app/src/kanban/chat/chat-client.tsx:18 graph-rule conforms-to-schema space/repo/repos.py:65 graph-rule conforms-to-schema space/repo/repos.py:69 graph-rule use-explicit-dependencies space/repo/repos.py:73 graph-rule conforms-to-schema harness/chat/chat.py:57 graph-rule limit-operation-parameters harness/chat/chat.py:81 graph-rule conforms-to-schema harness/chat/chat.py:129 graph-rule conforms-to-schema harness/chat/chat.py:163 graph-rule prefer-instance-operations harness/chat/chat.py:177 graph-rule prefer-instance-operations harness/chat/chat.py:186 graph-rule prefer-instance-operations harness/chat/chat.py:193 graph-rule conforms-to-schema harness/chat/chat.py:193 graph-rule conforms-to-schema harness/diagnostics/app.py:60 graph-rule conforms-to-schema harness/diagnostics/app.py:83 graph-rule limit-operation-parameters harness/diagnostics/app.py:101 graph-rule prefer-instance-operations harness/diagnostics/app.py:116 graph-rule prefer-instance-operations space/repo/repos.py:120 graph-rule conforms-to-schema space/repo/repos.py:120 graph-rule avoid-vague-parameter-names space/repo/repos.py:128 graph-rule conforms-to-schema space/repo/repos.py:135 graph-rule limit-operation-parameters space/repo/repos.py:178 graph-rule keep-operations-small-focused space/repo/repos.py:178 graph-rule provide-meaningful-context space/repo/repos.py:254 graph-rule use-typed-signatures harness/chat/chat.py:320 graph-rule use-typed-signatures harness/chat/chat.py:347 graph-rule use-typed-signatures harness/chat/chat.py:356 graph-rule use-intention-revealing-names space/repo/repos.py:83 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-703
+2026-11-13T02:21:08Z tool validate.validate harness\chat\chat_spec.py, space\kanban\app\src\session-board\web-domain-access.spec.ts, space\kanban\app\src\kanban\board\board-client.spec.ts, space\kanban\app\src\kanban\ticket\ticket-client.spec.ts, space\kanban\app\test-utils\board-page-support.ts 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-722
+2026-11-13T02:21:44Z validate Stories acceptance_tests 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-722
+2026-11-13T03:34:55Z tool sessions.switch 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-816
+2026-11-13T03:37:19Z tool generate.generate 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-919
+2026-11-13T03:37:20Z generate C:\dev\abd-cdd-integrate-practice-conte, C:\dev\abd-cdd-integrate-practice-conte\harness\.context\stories stories, clean_engineering acceptance_tests, code python, python 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-919
+2026-11-13T04:01:55Z tool validate.validate cdd_guidance\practices\stories\model\story_model.py, cdd_guidance\practices\stories\model\markdown\markup.py, cdd_guidance\practices\stories\model\markdown\scenario_file.py, cdd_guidance\practices\stories\model\markdown\nodes.py, cdd_guidance\practices\stories\model\story_map_edits_spec.py, harness\chat\chat.py, harness\chat\chat_spec.py, cdd_guidance\practices\stories\app\story-map\story-map-client.ts, cdd_guidance\practices\stories\app\story-map\story-map-view-models.ts, cdd_guidance\practices\stories\app\story-map\story-map-views.tsx, cdd_guidance\practices\stories\app\story-map\story-map-client.spec.tsx, cdd_guidance\practices\stories\app\story-map-routes.ts, harness\chat-ui\pane\hooks\chat-bar\fidelity-files-client.ts, harness\chat-ui\pane\hooks\board-chat\board-chat-client.ts, space\kanban\app\src\kanban\board\editor-app-client.ts 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-947
+2026-11-13T04:04:20Z validate Stories acceptance_tests graph-rule keep-classes-single-responsibility cdd_guidance/practices/stories/app/story-map/story-map-client.ts:23 graph-rule prefer-class-operations cdd_guidance/practices/stories/model/markdown/nodes.py:116 graph-rule conforms-to-schema cdd_guidance/practices/stories/model/markdown/nodes.py:343 graph-rule use-explicit-dependencies cdd_guidance/practices/stories/model/markdown/scenario_file.py:86 graph-rule keep-classes-single-responsibility cdd_guidance/practices/stories/model/story_model.py:58 graph-rule conforms-to-schema cdd_guidance/practices/stories/model/story_model.py:729 graph-rule keep-classes-single-responsibility cdd_guidance/practices/stories/model/story_model.py:904 graph-rule keep-classes-single-responsibility cdd_guidance/practices/stories/model/story_model.py:1286 graph-rule do-not-invent-parallel-object-models cdd_guidance/practices/stories/model/story_model.py:1286 graph-rule keep-classes-single-responsibility harness/chat/chat.py:155 graph-rule prefer-class-operations harness/chat/chat.py:155 graph-rule prefer-class-operations harness/chat/chat.py:155 graph-rule prefer-class-operations harness/chat/chat.py:155 graph-rule prefer-class-operations harness/chat/chat.py:155 graph-rule limit-operation-parameters cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:73 graph-rule limit-operation-parameters cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:83 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:29 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:75 graph-rule provide-meaningful-context cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:124 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:230 graph-rule limit-operation-parameters cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:262 graph-rule limit-operation-parameters cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:281 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:515 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:1254 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:1696 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:1751 graph-rule conforms-to-schema cdd_guidance/practices/stories/model/markdown/markup.py:18 graph-rule limit-operation-parameters cdd_guidance/practices/stories/model/markdown/markup.py:39 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/model/markdown/nodes.py:86 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/model/markdown/nodes.py:128 graph-rule simplify-control-flow cdd_guidance/practices/stories/model/markdown/nodes.py:128 graph-rule provide-meaningful-context cdd_guidance/practices/stories/model/markdown/nodes.py:158 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/model/markdown/nodes.py:194 graph-rule provide-meaningful-context cdd_guidance/practices/stories/model/markdown/nodes.py:253 graph-rule conforms-to-schema cdd_guidance/practices/stories/model/markdown/nodes.py:295 graph-rule prefer-instance-operations cdd_guidance/practices/stories/model/markdown/nodes.py:313 graph-rule prefer-instance-operations cdd_guidance/practices/stories/model/markdown/nodes.py:335 graph-rule keep-operations-single-responsibility cdd_guidance/practices/stories/model/markdown/nodes.py:364 graph-rule keep-operations-single-responsibility cdd_guidance/practices/stories/model/markdown/nodes.py:398 graph-rule limit-operation-parameters cdd_guidance/practices/stories/model/markdown/nodes.py:398 graph-rule … and 74 more 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-947
+2026-11-13T04:04:20Z validate CleanEngineering code graph-rule keep-classes-single-responsibility cdd_guidance/practices/stories/app/story-map/story-map-client.ts:23 graph-rule prefer-class-operations cdd_guidance/practices/stories/model/markdown/nodes.py:116 graph-rule conforms-to-schema cdd_guidance/practices/stories/model/markdown/nodes.py:343 graph-rule use-explicit-dependencies cdd_guidance/practices/stories/model/markdown/scenario_file.py:86 graph-rule keep-classes-single-responsibility cdd_guidance/practices/stories/model/story_model.py:58 graph-rule conforms-to-schema cdd_guidance/practices/stories/model/story_model.py:729 graph-rule keep-classes-single-responsibility cdd_guidance/practices/stories/model/story_model.py:904 graph-rule keep-classes-single-responsibility cdd_guidance/practices/stories/model/story_model.py:1286 graph-rule do-not-invent-parallel-object-models cdd_guidance/practices/stories/model/story_model.py:1286 graph-rule keep-classes-single-responsibility harness/chat/chat.py:155 graph-rule prefer-class-operations harness/chat/chat.py:155 graph-rule prefer-class-operations harness/chat/chat.py:155 graph-rule prefer-class-operations harness/chat/chat.py:155 graph-rule prefer-class-operations harness/chat/chat.py:155 graph-rule limit-operation-parameters cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:73 graph-rule limit-operation-parameters cdd_guidance/practices/stories/app/story-map/story-map-view-models.ts:83 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:29 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:75 graph-rule provide-meaningful-context cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:124 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:230 graph-rule limit-operation-parameters cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:262 graph-rule limit-operation-parameters cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:281 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:515 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:1254 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:1696 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/app/story-map/story-map-views.tsx:1751 graph-rule conforms-to-schema cdd_guidance/practices/stories/model/markdown/markup.py:18 graph-rule limit-operation-parameters cdd_guidance/practices/stories/model/markdown/markup.py:39 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/model/markdown/nodes.py:86 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/model/markdown/nodes.py:128 graph-rule simplify-control-flow cdd_guidance/practices/stories/model/markdown/nodes.py:128 graph-rule provide-meaningful-context cdd_guidance/practices/stories/model/markdown/nodes.py:158 graph-rule keep-operations-small-focused cdd_guidance/practices/stories/model/markdown/nodes.py:194 graph-rule provide-meaningful-context cdd_guidance/practices/stories/model/markdown/nodes.py:253 graph-rule conforms-to-schema cdd_guidance/practices/stories/model/markdown/nodes.py:295 graph-rule prefer-instance-operations cdd_guidance/practices/stories/model/markdown/nodes.py:313 graph-rule prefer-instance-operations cdd_guidance/practices/stories/model/markdown/nodes.py:335 graph-rule keep-operations-single-responsibility cdd_guidance/practices/stories/model/markdown/nodes.py:364 graph-rule keep-operations-single-responsibility cdd_guidance/practices/stories/model/markdown/nodes.py:398 graph-rule limit-operation-parameters cdd_guidance/practices/stories/model/markdown/nodes.py:398 graph-rule … and 74 more 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-947
+2026-11-13T04:20:14Z tool session.handoff_session 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-1484
+2026-11-13T04:20:19Z tool session.read_handoff_format 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-1499
+2026-11-13T04:20:57Z tool session.write_handoff 185124aa-37b9-4b54-b1d9-3d8267cc267d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\185124aa-37b9-4b54-b1d9-3d8267cc267d.jsonl 1-1524
+2026-11-12T23:58:01Z tool sessions.switch 472cd0d7-890e-42d3-955c-d34cce950d29 C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\472cd0d7-890e-42d3-955c-d34cce950d29.jsonl 1-63
+2026-11-12T23:58:41Z tool validate.validate harness\.context\stories\story-map.md 472cd0d7-890e-42d3-955c-d34cce950d29 C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\472cd0d7-890e-42d3-955c-d34cce950d29.jsonl 1-129
+2026-11-13T00:02:35Z error validate.validate C:\dev\abd-context-driven-delivery\.sessions\integrate-practice-content-editor-apps\session.err 1 472cd0d7-890e-42d3-955c-d34cce950d29 C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\472cd0d7-890e-42d3-955c-d34cce950d29.jsonl 1-129
+2026-11-13T06:49:56Z tool sessions.switch 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-63
+2026-11-13T06:50:24Z tool validate.validate harness\.context\stories\story-map.md 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-120
+2026-11-13T06:55:09Z validate Stories story_map graph-rule playwright-tests-browser-interaction harness/.context/stories/story-map.md:597 graph-rule playwright-tests-browser-interaction harness/.context/stories/story-map.md:601 graph-rule playwright-tests-browser-interaction harness/.context/stories/story-map.md:605 graph-rule playwright-tests-browser-interaction harness/.context/stories/story-map.md:609 graph-rule playwright-tests-browser-interaction harness/.context/stories/story-map.md:613 graph-rule playwright-tests-browser-interaction harness/.context/stories/story-map.md:825 graph-rule playwright-tests-browser-interaction harness/.context/stories/story-map.md:829 graph-rule playwright-tests-browser-interaction harness/.context/stories/story-map.md:833 graph-rule playwright-tests-browser-interaction harness/.context/stories/story-map.md:837 graph-rule playwright-tests-browser-interaction harness/.context/stories/story-map.md:841 graph-rule playwright-tests-browser-interaction harness/.context/stories/story-map.md:845 graph-rule playwright-tests-browser-interaction harness/.context/stories/story-map.md:853 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-120
+2026-11-13T06:56:12Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-429
+2026-11-13T06:56:28Z error app.open C:\dev\abd-context-driven-delivery\.sessions\integrate-practice-content-editor-apps\session.err 153 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-429
+2026-11-13T06:58:20Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-522
+2026-11-13T06:58:25Z error app.open C:\dev\abd-context-driven-delivery\.sessions\integrate-practice-content-editor-apps\session.err 175 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-522
+2026-11-13T06:59:26Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-567
+2026-11-13T06:59:33Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-569
+2026-11-13T07:04:40Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-870
+2026-11-13T07:04:47Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-875
+2026-11-13T07:04:48Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-875
+2026-11-13T07:04:49Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-875
+2026-11-13T07:04:52Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-886
+2026-11-13T07:08:12Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-994
+2026-11-13T07:08:55Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1048
+2026-11-13T07:08:57Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1049
+2026-11-13T07:09:00Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1049
+2026-11-13T07:09:05Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1049
+2026-11-13T07:09:16Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1049
+2026-11-13T07:09:22Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1049
+2026-11-13T07:10:18Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1084
+2026-11-13T07:10:45Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1117
+2026-11-13T07:11:04Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1117
+2026-11-13T07:11:09Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1117
+2026-11-13T07:11:24Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1123
+2026-11-13T07:11:47Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1163
+2026-11-13T07:12:00Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1164
+2026-11-13T07:12:07Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1174
+2026-11-13T07:13:59Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1256
+2026-11-13T07:16:05Z tool ticket.choose_overlays 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1372
+2026-11-13T07:16:06Z tool ticket.choose_overlays 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1372
+2026-11-13T07:16:43Z tool validate.validate harness\.context\stories\story-map.md 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1381
+2026-11-13T07:17:11Z error session.read_file C:\dev\abd-context-driven-delivery\.sessions\integrate-practice-content-editor-apps\session.err 197 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1407
+2026-11-13T07:17:14Z error session.read_file C:\dev\abd-context-driven-delivery\.sessions\integrate-practice-content-editor-apps\session.err 226 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1407
+2026-11-13T07:17:18Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1407
+2026-11-13T07:17:31Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1407
+2026-11-13T07:17:51Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1433
+2026-11-13T07:17:55Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1438
+2026-11-13T07:17:58Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1438
+2026-11-13T07:19:18Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1497
+2026-11-13T07:21:30Z validate Stories story_map 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1381
+2026-11-13T07:21:31Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1555
+2026-11-13T07:25:47Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1725
+2026-11-13T07:25:47Z error app.open C:\dev\abd-context-driven-delivery\.sessions\integrate-practice-content-editor-apps\session.err 255 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1725
+2026-11-13T07:27:09Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1764
+2026-11-13T07:27:10Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1764
+2026-11-13T07:27:10Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1764
+2026-11-13T07:28:44Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-1919
+2026-11-13T07:30:36Z tool validate.validate harness\.context\stories\story-map.md 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2074
+2026-11-13T07:31:59Z tool app.install 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2129
+2026-11-13T07:32:20Z tool validate.validate harness\.context\stories\story-map.md 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2132
+2026-11-13T07:32:32Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2135
+2026-11-13T07:33:07Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2160
+2026-11-13T07:33:12Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2164
+2026-11-13T07:33:43Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2191
+2026-11-13T07:33:45Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2191
+2026-11-13T07:34:28Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2228
+2026-11-13T07:34:33Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2228
+2026-11-13T07:34:38Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2233
+2026-11-13T07:35:17Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2281
+2026-11-13T07:35:21Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2281
+2026-11-13T07:36:33Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2308
+2026-11-13T07:36:53Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2319
+2026-11-13T07:36:58Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2319
+2026-11-13T07:37:04Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2319
+2026-11-13T07:37:07Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2319
+2026-11-13T07:37:35Z tool story-model.open_in_session
+2026-11-13T07:37:37Z tool story-model.open_in_session
+2026-11-13T07:37:39Z tool story-model.open_in_session
+2026-11-13T07:37:41Z tool story-model.open_in_session
+2026-11-13T07:37:43Z tool story-model.open_in_session
+2026-11-13T07:37:45Z tool story-model.open_in_session
+2026-11-13T07:37:48Z tool story-model.open_in_session
+2026-11-13T07:37:51Z tool story-model.open_in_session
+2026-11-13T07:37:53Z tool story-model.open_in_session 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2399
+2026-11-13T07:37:55Z tool story-model.open_in_session
+2026-11-13T07:37:57Z tool story-model.open_in_session
+2026-11-13T07:37:59Z tool story-model.open_in_session
+2026-11-13T07:38:01Z tool story-model.open_in_session
+2026-11-13T07:38:03Z tool story-model.open_in_session
+2026-11-13T07:38:05Z tool story-model.open_in_session
+2026-11-13T07:38:07Z tool story-model.open_in_session
+2026-11-13T07:38:09Z tool story-model.open_in_session
+2026-11-13T07:38:11Z tool story-model.open_in_session
+2026-11-13T07:38:13Z tool story-model.open_in_session
+2026-11-13T07:38:15Z tool story-model.open_in_session
+2026-11-13T07:38:17Z tool story-model.open_in_session
+2026-11-13T07:38:19Z tool story-model.open_in_session
+2026-11-13T07:38:21Z tool story-model.open_in_session
+2026-11-13T07:38:23Z tool story-model.open_in_session
+2026-11-13T07:38:25Z tool story-model.open_in_session
+2026-11-13T07:38:27Z tool story-model.open_in_session
+2026-11-13T07:38:29Z tool story-model.open_in_session
+2026-11-13T07:38:31Z tool story-model.open_in_session
+2026-11-13T07:38:33Z tool story-model.open_in_session
+2026-11-13T07:38:35Z tool story-model.open_in_session
+2026-11-13T07:38:37Z tool story-model.open_in_session
+2026-11-13T07:38:39Z tool story-model.open_in_session
+2026-11-13T07:38:41Z tool story-model.open_in_session
+2026-11-13T07:38:43Z tool story-model.open_in_session
+2026-11-13T07:38:45Z tool story-model.open_in_session
+2026-11-13T07:38:47Z tool story-model.open_in_session
+2026-11-13T07:38:49Z tool story-model.open_in_session
+2026-11-13T07:38:51Z tool story-model.open_in_session
+2026-11-13T07:38:53Z tool story-model.open_in_session
+2026-11-13T07:38:55Z tool story-model.open_in_session
+2026-11-13T07:38:57Z tool story-model.open_in_session
+2026-11-13T07:38:59Z tool story-model.open_in_session
+2026-11-13T07:39:01Z tool story-model.open_in_session
+2026-11-13T07:39:03Z tool story-model.open_in_session
+2026-11-13T07:39:05Z tool story-model.open_in_session
+2026-11-13T07:39:07Z tool story-model.open_in_session
+2026-11-13T07:39:09Z tool story-model.open_in_session
+2026-11-13T07:39:22Z tool story-model.open_in_session
+2026-11-13T07:40:22Z tool story-model.open_in_session
+2026-11-13T07:41:00Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2586
+2026-11-13T07:41:00Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2586
+2026-11-13T07:41:01Z tool graph.practice_names
+2026-11-13T07:41:01Z tool graph.load_practice_roots
+2026-11-13T07:41:02Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2586
+2026-11-13T07:41:03Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2586
+2026-11-13T07:41:03Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2586
+2026-11-13T07:41:07Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2586
+2026-11-13T07:41:07Z tool story-model.open_in_session
+2026-11-13T07:41:09Z tool story-model.open_in_session
+2026-11-13T07:41:11Z tool story-model.open_in_session
+2026-11-13T07:41:13Z tool story-model.open_in_session
+2026-11-13T07:41:15Z tool story-model.open_in_session
+2026-11-13T07:41:17Z tool story-model.open_in_session
+2026-11-13T07:41:19Z tool story-model.open_in_session
+2026-11-13T07:41:21Z tool story-model.open_in_session
+2026-11-13T07:41:23Z tool story-model.open_in_session
+2026-11-13T07:41:25Z tool story-model.open_in_session
+2026-11-13T07:41:27Z tool story-model.open_in_session
+2026-11-13T07:41:29Z tool story-model.open_in_session
+2026-11-13T07:41:31Z tool story-model.open_in_session
+2026-11-13T07:41:33Z tool story-model.open_in_session
+2026-11-13T07:41:35Z tool story-model.open_in_session
+2026-11-13T07:41:37Z tool story-model.open_in_session
+2026-11-13T07:41:39Z tool story-model.open_in_session
+2026-11-13T07:41:41Z tool story-model.open_in_session
+2026-11-13T07:41:43Z tool story-model.open_in_session
+2026-11-13T07:41:45Z tool story-model.open_in_session
+2026-11-13T07:41:47Z tool story-model.open_in_session
+2026-11-13T07:41:49Z tool story-model.open_in_session
+2026-11-13T07:41:51Z tool story-model.open_in_session
+2026-11-13T07:41:53Z tool story-model.open_in_session
+2026-11-13T07:41:55Z tool story-model.open_in_session
+2026-11-13T07:41:57Z tool story-model.open_in_session
+2026-11-13T07:41:59Z tool story-model.open_in_session
+2026-11-13T07:42:01Z tool story-model.open_in_session
+2026-11-13T07:42:03Z tool story-model.open_in_session
+2026-11-13T07:42:05Z tool story-model.open_in_session
+2026-11-13T07:42:07Z tool story-model.open_in_session
+2026-11-13T07:42:09Z tool story-model.open_in_session
+2026-11-13T07:42:10Z tool story-model.show
+2026-11-13T07:42:13Z tool story-model.show
+2026-11-13T07:42:15Z tool story-model.open_in_session
+2026-11-13T07:42:17Z tool story-model.open_in_session
+2026-11-13T07:42:19Z tool story-model.open_in_session
+2026-11-13T07:42:21Z tool story-model.open_in_session
+2026-11-13T07:42:23Z tool story-model.open_in_session
+2026-11-13T07:42:25Z tool story-model.open_in_session
+2026-11-13T07:42:27Z tool story-model.open_in_session
+2026-11-13T07:42:29Z tool story-model.open_in_session
+2026-11-13T07:42:31Z tool story-model.open_in_session
+2026-11-13T07:42:33Z tool story-model.open_in_session
+2026-11-13T07:42:35Z tool story-model.open_in_session
+2026-11-13T07:42:37Z tool story-model.open_in_session
+2026-11-13T07:42:39Z tool story-model.open_in_session
+2026-11-13T07:42:41Z tool story-model.open_in_session
+2026-11-13T07:42:42Z tool increment.remove
+2026-11-13T07:42:44Z tool increment.remove
+2026-11-13T07:42:49Z tool increment.remove
+2026-11-13T07:42:58Z tool story-model.open_in_session
+2026-11-13T07:43:00Z tool story-model.open_in_session
+2026-11-13T07:43:02Z tool story-model.open_in_session
+2026-11-13T07:43:04Z tool story-model.open_in_session
+2026-11-13T07:43:06Z tool story-model.open_in_session
+2026-11-13T07:43:07Z tool increment.remove
+2026-11-13T07:43:21Z tool story-model.open_in_session
+2026-11-13T07:43:23Z tool story-model.open_in_session
+2026-11-13T07:43:25Z tool story-model.open_in_session
+2026-11-13T07:43:27Z tool story-model.open_in_session
+2026-11-13T07:43:29Z tool story-model.open_in_session
+2026-11-13T07:43:31Z tool story-model.open_in_session
+2026-11-13T07:43:33Z tool story-model.open_in_session
+2026-11-13T07:43:35Z tool story-model.open_in_session
+2026-11-13T07:43:37Z tool story-model.open_in_session
+2026-11-13T07:43:39Z tool story-model.open_in_session
+2026-11-13T07:43:41Z tool story-model.open_in_session
+2026-11-13T07:43:43Z tool story-model.open_in_session
+2026-11-13T07:43:45Z tool story-model.open_in_session
+2026-11-13T07:43:47Z tool story-model.open_in_session
+2026-11-13T07:43:49Z tool story-model.open_in_session
+2026-11-13T07:43:51Z tool story-model.open_in_session
+2026-11-13T07:43:53Z tool story-model.open_in_session
+2026-11-13T07:43:55Z tool story-model.open_in_session
+2026-11-13T07:43:57Z tool story-model.open_in_session
+2026-11-13T07:43:59Z tool story-model.open_in_session
+2026-11-13T07:44:01Z tool story-model.open_in_session
+2026-11-13T07:44:03Z tool story-model.open_in_session
+2026-11-13T07:44:05Z tool story-model.open_in_session
+2026-11-13T07:44:07Z tool story-model.open_in_session
+2026-11-13T07:44:09Z tool story-model.open_in_session
+2026-11-13T07:44:11Z tool story-model.open_in_session
+2026-11-13T07:44:13Z tool story-model.open_in_session
+2026-11-13T07:44:15Z tool story-model.open_in_session
+2026-11-13T07:44:17Z tool story-model.open_in_session
+2026-11-13T07:44:21Z tool story-model.open_in_session
+2026-11-13T07:44:23Z tool story-model.open_in_session
+2026-11-13T07:44:25Z tool story-model.open_in_session
+2026-11-13T07:44:27Z tool story-model.open_in_session
+2026-11-13T07:44:37Z tool story-model.open_in_session
+2026-11-13T07:44:40Z tool story-model.open_in_session
+2026-11-13T07:44:42Z tool story-model.open_in_session
+2026-11-13T07:44:44Z tool story-model.open_in_session
+2026-11-13T07:44:48Z tool story-model.open_in_session
+2026-11-13T07:44:50Z tool story-model.open_in_session
+2026-11-13T07:44:52Z tool story-model.open_in_session
+2026-11-13T07:44:56Z tool story-model.open_in_session
+2026-11-13T07:44:58Z tool story-model.open_in_session
+2026-11-13T07:45:00Z tool story-model.open_in_session
+2026-11-13T07:45:02Z tool story-model.open_in_session
+2026-11-13T07:45:05Z tool story-model.open_in_session
+2026-11-13T07:45:07Z tool story-model.open_in_session
+2026-11-13T07:45:09Z tool story-model.open_in_session
+2026-11-13T07:45:11Z tool story-model.open_in_session
+2026-11-13T07:45:13Z tool story-model.open_in_session
+2026-11-13T07:45:15Z tool story-model.open_in_session
+2026-11-13T07:45:17Z tool story-model.open_in_session
+2026-11-13T07:45:19Z tool story-model.open_in_session
+2026-11-13T07:45:21Z tool story-model.open_in_session
+2026-11-13T07:45:23Z tool story-model.open_in_session
+2026-11-13T07:45:25Z tool story-model.open_in_session
+2026-11-13T07:45:27Z tool story-model.open_in_session
+2026-11-13T07:45:29Z tool story-model.open_in_session
+2026-11-13T07:45:31Z tool story-model.open_in_session
+2026-11-13T07:45:33Z tool story-model.open_in_session
+2026-11-13T07:45:35Z tool story-model.open_in_session
+2026-11-13T07:45:37Z tool story-model.open_in_session
+2026-11-13T07:45:39Z tool story-model.open_in_session
+2026-11-13T07:45:41Z tool story-model.open_in_session
+2026-11-13T07:45:43Z tool story-model.open_in_session
+2026-11-13T07:45:45Z tool story-model.open_in_session
+2026-11-13T07:45:47Z tool story-model.open_in_session
+2026-11-13T07:45:49Z tool story-model.open_in_session
+2026-11-13T07:45:51Z tool story-model.open_in_session
+2026-11-13T07:45:53Z tool story-model.open_in_session
+2026-11-13T07:45:55Z tool story-model.open_in_session
+2026-11-13T07:45:57Z tool story-model.open_in_session
+2026-11-13T07:45:59Z tool story-model.open_in_session
+2026-11-13T07:46:01Z tool story-model.open_in_session
+2026-11-13T07:46:03Z tool story-model.open_in_session
+2026-11-13T07:46:05Z tool story-model.open_in_session
+2026-11-13T07:46:07Z tool story-model.open_in_session
+2026-11-13T07:46:09Z tool story-model.open_in_session
+2026-11-13T07:46:11Z tool story-model.open_in_session
+2026-11-13T07:46:13Z tool story-model.open_in_session
+2026-11-13T07:46:15Z tool story-model.open_in_session
+2026-11-13T07:46:17Z tool story-model.open_in_session
+2026-11-13T07:46:19Z tool story-model.open_in_session
+2026-11-13T07:46:21Z tool story-model.open_in_session
+2026-11-13T07:46:23Z tool story-model.open_in_session
+2026-11-13T07:46:25Z tool story-model.open_in_session
+2026-11-13T07:46:27Z tool story-model.open_in_session
+2026-11-13T07:46:29Z tool story-model.open_in_session
+2026-11-13T07:46:31Z tool story-model.open_in_session
+2026-11-13T07:46:33Z tool story-model.open_in_session
+2026-11-13T07:46:35Z tool story-model.open_in_session
+2026-11-13T07:46:37Z tool story-model.open_in_session
+2026-11-13T07:46:39Z tool story-model.open_in_session
+2026-11-13T07:46:41Z tool story-model.open_in_session
+2026-11-13T07:46:43Z tool story-model.open_in_session
+2026-11-13T07:46:45Z tool story-model.open_in_session
+2026-11-13T07:46:47Z tool story-model.open_in_session
+2026-11-13T07:46:49Z tool story-model.open_in_session
+2026-11-13T07:46:51Z tool story-model.open_in_session
+2026-11-13T07:46:53Z tool story-model.open_in_session
+2026-11-13T07:46:55Z tool story-model.open_in_session
+2026-11-13T07:46:57Z tool story-model.open_in_session
+2026-11-13T07:46:59Z tool story-model.open_in_session
+2026-11-13T07:47:01Z tool story-model.open_in_session
+2026-11-13T07:47:03Z tool story-model.open_in_session
+2026-11-13T07:47:05Z tool story-model.open_in_session
+2026-11-13T07:47:07Z tool story-model.open_in_session
+2026-11-13T07:47:09Z tool story-model.open_in_session
+2026-11-13T07:47:11Z tool story-model.open_in_session
+2026-11-13T07:47:13Z tool story-model.open_in_session
+2026-11-13T07:47:15Z tool story-model.open_in_session
+2026-11-13T07:47:17Z tool story-model.open_in_session
+2026-11-13T07:47:19Z tool story-model.open_in_session
+2026-11-13T07:47:21Z tool story-model.open_in_session
+2026-11-13T07:47:23Z tool story-model.open_in_session
+2026-11-13T07:47:25Z tool story-model.open_in_session
+2026-11-13T07:47:27Z tool story-model.open_in_session
+2026-11-13T07:47:29Z tool story-model.open_in_session
+2026-11-13T07:47:31Z tool story-model.open_in_session
+2026-11-13T07:47:33Z tool story-model.open_in_session
+2026-11-13T07:47:35Z tool story-model.open_in_session
+2026-11-13T07:47:37Z tool story-model.open_in_session
+2026-11-13T07:47:39Z tool story-model.open_in_session
+2026-11-13T07:47:41Z tool story-model.open_in_session
+2026-11-13T07:47:43Z tool story-model.open_in_session
+2026-11-13T07:47:45Z tool story-model.open_in_session
+2026-11-13T07:47:47Z tool story-model.open_in_session
+2026-11-13T07:47:49Z tool story-model.open_in_session
+2026-11-13T07:47:51Z tool story-model.open_in_session
+2026-11-13T07:47:53Z tool story-model.open_in_session
+2026-11-13T07:47:55Z tool story-model.open_in_session
+2026-11-13T07:47:57Z tool story-model.open_in_session
+2026-11-13T07:47:59Z tool story-model.open_in_session
+2026-11-13T07:48:01Z tool story-model.open_in_session
+2026-11-13T07:48:03Z tool story-model.open_in_session
+2026-11-13T07:48:05Z tool story-model.open_in_session
+2026-11-13T07:48:07Z tool story-model.open_in_session
+2026-11-13T07:48:09Z tool story-model.open_in_session
+2026-11-13T07:48:11Z tool story-model.open_in_session
+2026-11-13T07:48:13Z tool story-model.open_in_session
+2026-11-13T07:48:15Z tool story-model.open_in_session
+2026-11-13T07:48:17Z tool story-model.open_in_session
+2026-11-13T07:48:19Z tool story-model.open_in_session
+2026-11-13T07:48:21Z tool story-model.open_in_session
+2026-11-13T07:48:23Z tool story-model.open_in_session
+2026-11-13T07:48:25Z tool story-model.open_in_session
+2026-11-13T07:48:27Z tool story-model.open_in_session
+2026-11-13T07:48:29Z tool story-model.open_in_session
+2026-11-13T07:48:31Z tool story-model.open_in_session
+2026-11-13T07:48:33Z tool story-model.open_in_session
+2026-11-13T07:48:35Z tool story-model.open_in_session
+2026-11-13T07:48:37Z tool story-model.open_in_session
+2026-11-13T07:48:39Z tool story-model.open_in_session
+2026-11-13T07:48:41Z tool story-model.open_in_session
+2026-11-13T07:48:43Z tool story-model.open_in_session
+2026-11-13T07:48:45Z tool story-model.open_in_session
+2026-11-13T07:48:47Z tool story-model.open_in_session
+2026-11-13T07:48:49Z tool story-model.open_in_session
+2026-11-13T07:48:51Z tool story-model.open_in_session
+2026-11-13T07:48:53Z tool story-model.open_in_session
+2026-11-13T07:48:55Z tool story-model.open_in_session
+2026-11-13T07:48:57Z tool story-model.open_in_session
+2026-11-13T07:48:59Z tool story-model.open_in_session
+2026-11-13T07:49:01Z tool story-model.open_in_session
+2026-11-13T07:49:03Z tool story-model.open_in_session
+2026-11-13T07:49:05Z tool story-model.open_in_session
+2026-11-13T07:49:07Z tool story-model.open_in_session
+2026-11-13T07:49:09Z tool story-model.open_in_session
+2026-11-13T07:49:11Z tool story-model.open_in_session
+2026-11-13T07:49:13Z tool story-model.open_in_session
+2026-11-13T07:49:15Z tool story-model.open_in_session
+2026-11-13T07:49:17Z tool story-model.open_in_session
+2026-11-13T07:49:19Z tool story-model.open_in_session
+2026-11-13T07:49:21Z tool story-model.open_in_session
+2026-11-13T07:49:23Z tool story-model.open_in_session
+2026-11-13T07:49:25Z tool story-model.open_in_session
+2026-11-13T07:49:27Z tool story-model.open_in_session
+2026-11-13T07:49:29Z tool story-model.open_in_session
+2026-11-13T07:49:31Z tool story-model.open_in_session
+2026-11-13T07:49:33Z tool story-model.open_in_session
+2026-11-13T07:49:35Z tool story-model.open_in_session
+2026-11-13T07:49:37Z tool story-model.open_in_session
+2026-11-13T07:49:39Z tool story-model.open_in_session
+2026-11-13T07:49:41Z tool story-model.open_in_session
+2026-11-13T07:49:43Z tool story-model.open_in_session
+2026-11-13T07:49:45Z tool story-model.open_in_session
+2026-11-13T07:49:47Z tool story-model.open_in_session
+2026-11-13T07:49:49Z tool story-model.open_in_session
+2026-11-13T07:49:51Z tool story-model.open_in_session
+2026-11-13T07:49:53Z tool story-model.open_in_session
+2026-11-13T07:49:55Z tool story-model.open_in_session
+2026-11-13T07:49:57Z tool story-model.open_in_session
+2026-11-13T07:49:59Z tool story-model.open_in_session
+2026-11-13T07:50:01Z tool story-model.open_in_session
+2026-11-13T07:50:03Z tool story-model.open_in_session
+2026-11-13T07:50:05Z tool story-model.open_in_session
+2026-11-13T07:50:07Z tool story-model.open_in_session
+2026-11-13T07:50:09Z tool story-model.open_in_session
+2026-11-13T07:50:11Z tool story-model.open_in_session
+2026-11-13T07:50:13Z tool story-model.open_in_session
+2026-11-13T07:50:15Z tool story-model.open_in_session
+2026-11-13T07:50:17Z tool story-model.open_in_session
+2026-11-13T07:50:19Z tool story-model.open_in_session
+2026-11-13T07:50:21Z tool story-model.open_in_session
+2026-11-13T07:50:23Z tool story-model.open_in_session
+2026-11-13T07:50:25Z tool story-model.open_in_session
+2026-11-13T07:50:27Z tool story-model.open_in_session
+2026-11-13T07:50:29Z tool story-model.open_in_session
+2026-11-13T07:50:31Z tool story-model.open_in_session
+2026-11-13T07:50:33Z tool story-model.open_in_session
+2026-11-13T07:50:35Z tool story-model.open_in_session
+2026-11-13T07:50:37Z tool story-model.open_in_session
+2026-11-13T07:50:39Z tool story-model.open_in_session
+2026-11-13T07:50:41Z tool story-model.open_in_session
+2026-11-13T07:50:43Z tool story-model.open_in_session
+2026-11-13T07:50:45Z tool story-model.open_in_session
+2026-11-13T07:50:47Z tool story-model.open_in_session
+2026-11-13T07:50:49Z tool story-model.open_in_session
+2026-11-13T07:50:51Z tool story-model.open_in_session
+2026-11-13T07:50:53Z tool story-model.open_in_session
+2026-11-13T07:50:55Z tool story-model.open_in_session
+2026-11-13T07:50:57Z tool story-model.open_in_session
+2026-11-13T07:50:59Z tool story-model.open_in_session
+2026-11-13T07:51:01Z tool story-model.open_in_session
+2026-11-13T07:51:03Z tool story-model.open_in_session
+2026-11-13T07:51:05Z tool story-model.open_in_session
+2026-11-13T07:51:07Z tool story-model.open_in_session
+2026-11-13T07:51:10Z tool story-model.open_in_session
+2026-11-13T07:51:13Z tool story-model.open_in_session
+2026-11-13T07:51:15Z tool story-model.open_in_session
+2026-11-13T07:51:17Z tool story-model.open_in_session
+2026-11-13T07:51:19Z tool story-model.open_in_session
+2026-11-13T07:51:21Z tool story-model.open_in_session
+2026-11-13T07:51:23Z tool story-model.open_in_session
+2026-11-13T07:51:25Z tool story-model.open_in_session
+2026-11-13T07:51:27Z tool story-model.open_in_session
+2026-11-13T07:51:29Z tool story-model.open_in_session
+2026-11-13T07:51:31Z tool story-model.open_in_session
+2026-11-13T07:51:33Z tool story-model.open_in_session
+2026-11-13T07:51:36Z tool story-model.open_in_session
+2026-11-13T07:51:39Z tool story-model.open_in_session
+2026-11-13T07:51:41Z tool story-model.open_in_session
+2026-11-13T07:51:43Z tool story-model.open_in_session
+2026-11-13T07:51:45Z tool story-model.open_in_session
+2026-11-13T07:51:47Z tool story-model.open_in_session
+2026-11-13T07:51:49Z tool story-model.open_in_session
+2026-11-13T07:51:51Z tool story-model.open_in_session
+2026-11-13T07:51:53Z tool story-model.open_in_session
+2026-11-13T07:51:55Z tool story-model.open_in_session
+2026-11-13T07:51:57Z tool story-model.open_in_session
+2026-11-13T07:51:59Z tool story-model.open_in_session
+2026-11-13T07:52:01Z tool story-model.open_in_session
+2026-11-13T07:52:03Z tool story-model.open_in_session
+2026-11-13T07:52:05Z tool story-model.open_in_session
+2026-11-13T07:52:07Z tool story-model.open_in_session
+2026-11-13T07:52:09Z tool story-model.open_in_session
+2026-11-13T07:52:11Z tool story-model.open_in_session
+2026-11-13T07:52:13Z tool story-model.open_in_session
+2026-11-13T07:52:15Z tool story-model.open_in_session
+2026-11-13T07:52:17Z tool story-model.open_in_session
+2026-11-13T07:52:19Z tool story-model.open_in_session
+2026-11-13T07:52:21Z tool story-model.open_in_session
+2026-11-13T07:52:23Z tool story-model.open_in_session
+2026-11-13T07:52:25Z tool story-model.open_in_session
+2026-11-13T07:52:27Z tool story-model.open_in_session
+2026-11-13T07:52:29Z tool story-model.open_in_session
+2026-11-13T07:52:31Z tool story-model.open_in_session
+2026-11-13T07:52:35Z tool story-model.open_in_session
+2026-11-13T07:52:37Z tool story-model.open_in_session
+2026-11-13T07:52:39Z tool story-model.open_in_session
+2026-11-13T07:52:41Z tool story-model.open_in_session
+2026-11-13T07:52:43Z tool story-model.open_in_session
+2026-11-13T07:52:45Z tool story-model.open_in_session
+2026-11-13T07:52:47Z tool story-model.open_in_session
+2026-11-13T07:52:49Z tool story-model.open_in_session
+2026-11-13T07:52:51Z tool story-model.open_in_session
+2026-11-13T07:52:53Z tool story-model.open_in_session
+2026-11-13T07:52:55Z tool story-model.open_in_session
+2026-11-13T07:52:57Z tool story-model.open_in_session
+2026-11-13T07:52:59Z tool story-model.open_in_session
+2026-11-13T07:53:01Z tool story-model.open_in_session
+2026-11-13T07:53:03Z tool story-model.open_in_session
+2026-11-13T07:53:05Z tool story-model.open_in_session
+2026-11-13T07:53:07Z tool story-model.open_in_session
+2026-11-13T07:53:09Z tool story-model.open_in_session
+2026-11-13T07:53:11Z tool story-model.open_in_session
+2026-11-13T07:53:13Z tool story-model.open_in_session
+2026-11-13T07:53:15Z tool story-model.open_in_session
+2026-11-13T07:53:17Z tool story-model.open_in_session
+2026-11-13T07:53:19Z tool story-model.open_in_session
+2026-11-13T07:53:21Z tool story-model.open_in_session
+2026-11-13T07:53:23Z tool story-model.open_in_session
+2026-11-13T07:53:25Z tool story-model.open_in_session
+2026-11-13T07:53:27Z tool story-model.open_in_session
+2026-11-13T07:53:29Z tool story-model.open_in_session
+2026-11-13T07:53:31Z tool story-model.open_in_session
+2026-11-13T07:53:33Z tool story-model.open_in_session
+2026-11-13T07:53:35Z tool story-model.open_in_session
+2026-11-13T07:53:37Z tool story-model.open_in_session
+2026-11-13T07:53:39Z tool story-model.open_in_session
+2026-11-13T07:53:41Z tool story-model.open_in_session
+2026-11-13T07:53:43Z tool story-model.open_in_session
+2026-11-13T07:53:45Z tool story-model.open_in_session
+2026-11-13T07:53:47Z tool story-model.open_in_session
+2026-11-13T07:53:49Z tool story-model.open_in_session
+2026-11-13T07:53:51Z tool story-model.open_in_session
+2026-11-13T07:53:53Z tool story-model.open_in_session
+2026-11-13T07:53:55Z tool story-model.open_in_session
+2026-11-13T07:53:57Z tool story-model.open_in_session
+2026-11-13T07:53:59Z tool story-model.open_in_session
+2026-11-13T07:54:01Z tool story-model.open_in_session
+2026-11-13T07:54:03Z tool story-model.open_in_session
+2026-11-13T07:54:05Z tool story-model.open_in_session
+2026-11-13T07:54:07Z tool story-model.open_in_session
+2026-11-13T07:54:09Z tool story-model.open_in_session
+2026-11-13T07:54:11Z tool story-model.open_in_session
+2026-11-13T07:54:13Z tool story-model.open_in_session
+2026-11-13T07:54:15Z tool story-model.open_in_session
+2026-11-13T07:54:19Z tool story-model.open_in_session
+2026-11-13T07:54:21Z tool story-model.open_in_session
+2026-11-13T07:54:23Z tool story-model.open_in_session
+2026-11-13T07:54:25Z tool story-model.open_in_session
+2026-11-13T07:54:27Z tool story-model.open_in_session
+2026-11-13T07:54:29Z tool story-model.open_in_session
+2026-11-13T07:54:31Z tool story-model.open_in_session
+2026-11-13T07:54:33Z tool story-model.open_in_session
+2026-11-13T07:54:35Z tool story-model.open_in_session
+2026-11-13T07:54:37Z tool story-model.open_in_session
+2026-11-13T07:54:38Z tool app.open 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-2936
+2026-11-13T17:21:12Z tool validate.validate harness\.context\stories\story-map.md 03d84911-8b8f-4c85-805e-976b889f15ab C:\Users\thoma\.claude\projects\C--dev-abd-cdd-integrate-practice-conte\03d84911-8b8f-4c85-805e-976b889f15ab.jsonl 1-3273
+2026-11-13T18:04:34Z tool graph.practice_names
+2026-11-13T18:04:34Z tool graph.load_working_copy
+2026-11-13T18:04:38Z tool graph.inventory
+2026-11-13T18:04:38Z tool graph.filter_choices
+2026-11-13T18:04:38Z tool graph.explorer_trees
+2026-11-13T18:04:47Z tool graph.filter_choices
+2026-11-13T18:04:47Z tool graph.explorer_trees
+2026-11-13T18:04:56Z tool graph.source

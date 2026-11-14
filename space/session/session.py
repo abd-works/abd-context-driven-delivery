@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
-from harness.agent_tools.agent_tools import noSessionLog, tool_subject
+from harness.agent_tools.agent_tools import noSessionLog, subAgent, tool_subject
 from harness.agent_tools.tool_call import ToolCall
 from harness.graph.graph import Graph
 from harness.graph.pattern_overlays import PatternOverlays
@@ -27,10 +27,13 @@ from space.session.handoffs import HANDOFF_FORMAT_FILE, Handoffs
 from space.session.idea_file import IdeaFile
 from space.session.practice_session_output import PracticeSessionOutput
 from space.session.progress_cache import ProgressCache
+from space.session.session_file import SessionFile
 from space.session.session_files import SessionFiles
 from space.session.session_log import HookLog, SessionLog
 
 if TYPE_CHECKING:
+    # Named only for typing: a toolset the module holds at run time would be published again as this toolset's tools.
+    from space.session.file_comments import FileComments
     from space.session.sessions import Sessions
 
 MAIN_SESSION_NAME = "main"
@@ -386,7 +389,18 @@ class Session:
         the fields others store there, such as a board ticket's title, scope, and parent."""
         if self.session_path is None:
             return
-        self.save_fields(name=self.name, workpath=str(self.work_root), repo_path=str(self.repo_path))
+        self.save_fields(name=self.name, workpath=self.workpath_from_checkout, repo_path=str(self.repo_path))
+
+    @property
+    def workpath_from_checkout(self) -> str:
+        """The session's root as saved in its session.json: from its checkout's top, so it can never name a folder in
+        another checkout of the repository; empty for the whole checkout, and absolute when it lies outside it."""
+        root = self.work_root
+        checkout = self._resolved(self.repo_path)
+        if not root.is_relative_to(checkout):
+            return str(root)
+        relative = root.relative_to(checkout).as_posix()
+        return "" if relative == "." else relative
 
     @property
     def reports_folder(self) -> Path:
@@ -487,7 +501,7 @@ class Session:
         # and still names the same folder.
         # The practices on the new workpath are kept again with it, so each root is kept by the practice that works there.
         chosen = {key: practice.folder for key, practice in self.practices.items() if practice.is_root_chosen}
-        self.workpath = (self.repo_path / path).resolve()
+        self.workpath = self._sessions.in_checkout(self.repo_path, self.repo_path / path)
         self.save()
         moved = self.practices
         for key, root in chosen.items():
@@ -504,9 +518,37 @@ class Session:
     @mcp
     @agent_tool
     @noSessionLog
+    def workpath_files(self) -> list[FileEntry]:
+        """List every file directly in the folder this session works in, each with its path from the project, as the board's details open it from the workpath."""
+        return self.session_files.in_workpath()
+
+    @mcp
+    @agent_tool
+    @noSessionLog
     def read_file(self, path: str = "") -> FileText:
         """Return the text of path, a file in this repository or under a folder this session's practices write to, such as its ticket's worktree; no text when the file is gone, such as one deleted since the board listed it."""
         return self.session_files.read(path)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def write_file(self, path: str, text: str) -> FileText:
+        """Save text as the whole of path, a file in this repository or under a folder this session's practices write to, named as read_file names it; the file as saved."""
+        return self.session_files.write(path, text)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def file(self, path: str) -> SessionFile:
+        """Return path, a file named as read_file names it, as the viewer shows it: its text and language, the comments on it, the folds of its classes, operations, and properties, and the rules the session's saved graph found broken in it, each on its range of lines."""
+        return SessionFile(self, path)
+
+    @property
+    def file_comments(self) -> FileComments:
+        """The comments a person wrote on this session's files, kept in its folder."""
+        from space.session.file_comments import FileComments
+
+        return FileComments(self)
 
     @mcp
     @command(name="mark-loop")
@@ -570,17 +612,19 @@ class Session:
         write the approach for the next agent. Read this before drafting a handoff."""
         return HANDOFF_FORMAT_FILE.read_text(encoding="utf-8")
 
+    @subAgent
     @mcp
     @skill
     @agent_instructions
     def handoff_session(self, next_focus: str = "") -> str:
-        """Write a compact handoff for this session so the next agent can continue. Tailor it to {{next_focus}} when provided. Pass the same session argument to every session tool this calls."""
+        """Write a compact handoff for this session so the next agent can continue, then commit and push it. Tailor it to {{next_focus}} when provided. Pass the same session argument to every session tool this calls. The caller hands the sub-agent the conversation's outcome, open work, corrections and decisions in the prompt, since the sub-agent cannot read this chat."""
         """Step 1 - Read the handoff format once via read_handoff_format."""
         tools(self.read_handoff_format)
-        """Step 2 - Draft the handoff markdown from this conversation in that format, tailored to {{next_focus}} when provided."""
-        """Step 3 - Write the handoff markdown to a file and call write_handoff with paths set to that file. Do not pass the handoff body. Report the returned path to the user."""
+        """Step 2 - Draft the handoff markdown from what the caller passed in that format, tailored to {{next_focus}} when provided."""
+        """Step 3 - Write the handoff markdown to a file and call write_handoff with paths set to that file. Do not pass the handoff body."""
         tools(self.write_handoff)
-        return "Handoff written."
+        """Step 4 - Commit and push the handoff on the current branch with repo.push_commit (message: "Handoff: {session}"). Report the handoff path and the pushed commit."""
+        return "Handoff written, committed and pushed."
 
     @mcp
     @skill

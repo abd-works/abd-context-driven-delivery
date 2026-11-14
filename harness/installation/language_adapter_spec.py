@@ -277,8 +277,11 @@ with description("a language adapter"):
             with it("should start cdd from the checkout it was installed from"):
                 expect(self.connection).to(contain(f"const SOURCE_ROOT = {json.dumps(str(_REPO))}"))
 
-            with it("should raise the text of an answer that is not JSON"):
-                expect(self.connection).to(contain("throw new CddToolError(tool, text)"))
+            with it("should raise the text of an answer the server marks as an error"):
+                expect(self.connection).to(contain("if (result.isError || text === undefined) throw new CddToolError(tool, text ?? 'no result')"))
+
+            with it("should answer the text itself for an operation that answers a string"):
+                expect(self.connection).to(contain("return text as Result"))
 
             with it("should give up on a call after ten minutes"):
                 expect(self.connection).to(contain("const LONGEST_TOOL_MILLISECONDS = 600_000"))
@@ -331,6 +334,13 @@ with description("a language adapter"):
                     _install(install_path, ("harness.chat.chat:Chat",))
                     chat = (install_path / _ADAPTERS / "harness/chat/chat.ts").read_text(encoding="utf-8")
                     expect(chat).to(contain("  state: 'waiting' | 'taken' | 'shown' | 'done' | 'failed'\n"))
+
+            with context("with a field that holds a member of an enumeration"):
+                with it("should allow only the enumeration's values"):
+                    install_path = Path(tempfile.mkdtemp(prefix="language-adapter-"))
+                    _install(install_path, ("harness.diagnostics.app:App",))
+                    app = (install_path / _ADAPTERS / "harness/diagnostics/app.ts").read_text(encoding="utf-8")
+                    expect(app).to(contain("  status: 'not installed' | 'not running' | 'running'\n"))
 
         with description("its shared base"):
             with before.all:

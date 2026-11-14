@@ -1,7 +1,6 @@
 """BDD spec for a guidance action: made for the session its call works in, working on the guidance the call names."""
 
 import sys
-import tempfile
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -39,9 +38,18 @@ import cdd_guidance.actions  # noqa: F401 - registers the actions with the actio
 
 def _project() -> Path:
     """A project of its own for an example, so what its actions log never lands in the session being worked on here."""
-    folder = Path(tempfile.mkdtemp(prefix="guidance-action-project-"))
+    from space.session.throwaway_project import ThrowawayProject
+
+    folder = ThrowawayProject().root
     (folder / ".git").mkdir()
     return folder
+
+
+def _close_projects() -> None:
+    """Remove every example's project, and the cdd home it kept its open sessions in."""
+    from space.session.throwaway_project import ThrowawayProject
+
+    ThrowawayProject.close_all()
 
 
 def _open_session(project: Path, name: str) -> None:
@@ -59,6 +67,9 @@ def _call(guidance, project: Path | None = None):
 
 
 with description("a guidance action"):
+    with after.each:
+        _close_projects()
+
     with it("should start without opening a session"):
         from harness.guidance_actions import GuidanceAction
 
@@ -291,14 +302,14 @@ with description("a guidance action"):
             action = GuidanceAction().for_call(_call(f"stories-story-map format=drawio {self.session_word}", self.project))
             expect(action.listed()[0].fidelities["scenarios"].format).not_to(equal("drawio"))
 
-        with it("should keep the format a generate names on that session's fidelity"):
+        with it("should choose the format a generate names for that session's fidelity, after its default"):
             from harness.guidance_actions import GuidanceAction
             from space.session import Sessions
 
             action = GuidanceAction().for_call(_call(f"stories-story-map format=drawio {self.session_word}", self.project))
             action.run(lambda item: None, action="generate")
             reloaded = Sessions(self.project).load(self.project / ".sessions" / "sign-up")
-            expect(reloaded.practices["stories"].saved.get("formats")).to(equal({"story_map": "drawio"}))
+            expect(reloaded.practices["stories"].saved.get("formats")).to(equal({"story_map": ["markdown", "drawio"]}))
 
         with it("should work in the kept format when the next command names none"):
             from harness.guidance_actions import GuidanceAction
@@ -308,6 +319,16 @@ with description("a guidance action"):
                 lambda item: None, action="generate"
             )
             action = served.for_call(_call(f"stories-story-map {self.session_word}", self.project))
+            expect([action.fidelity_of(item).format for item in action.listed()]).to(equal(["drawio"]))
+
+        # The story editor's format chips save the formats chosen for a fidelity as a list.
+        with it("should work in the first of the formats a session keeps as a list"):
+            from harness.guidance_actions import GuidanceAction
+            from space.session import Sessions
+
+            session = Sessions(self.project).load(self.project / ".sessions" / "sign-up")
+            session.practices["stories"].save(formats={"story_map": ["drawio", "markdown"]})
+            action = GuidanceAction().for_call(_call(f"stories-story-map {self.session_word}", self.project))
             expect([action.fidelity_of(item).format for item in action.listed()]).to(equal(["drawio"]))
 
         with it("should keep the practice turned on when it keeps a format"):
@@ -439,6 +460,9 @@ def _call_taking_action():
 
 
 with description("a guidance action's tool that takes the call it serves"):
+    with after.each:
+        _close_projects()
+
     with before.each:
         self.project = _project()
         _open_session(self.project, "alpha")
@@ -454,6 +478,9 @@ with description("a guidance action's tool that takes the call it serves"):
 
 
 with description("a guidance action that wrote files"):
+    with after.each:
+        _close_projects()
+
     with before.each:
         from space.session import Sessions
         from harness.guidance_actions import GuidanceAction
@@ -511,6 +538,9 @@ with description("an action started inside another that wrote files"):
 
 
 with description("two calls in one session on two fidelities of the same practice"):
+    with after.each:
+        _close_projects()
+
     with before.each:
         from harness.guidance_actions import GuidanceAction
 
@@ -560,6 +590,9 @@ with description("two calls in one session on two fidelities of the same practic
 
 
 with description("a fidelity's actions"):
+    with after.each:
+        _close_projects()
+
     with before.each:
         from space.session import Sessions
 

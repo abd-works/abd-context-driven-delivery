@@ -92,11 +92,13 @@ class Folder:
 
 
 class FileEntry:
-    """One file something declares, such as a fidelity's output, as a path from the project, and whether it is there yet."""
+    """One file something declares, such as a fidelity's output, as a path from the project, whether it is there yet,
+    and whether the session's branch changed it, which a page filters on."""
 
-    def __init__(self, path: str, exists: bool) -> None:
+    def __init__(self, path: str, exists: bool, is_changed: bool = False) -> None:
         self._path = path
         self._exists = exists
+        self._is_changed = is_changed
 
     @property
     @data_field
@@ -107,6 +109,28 @@ class FileEntry:
     @data_field
     def exists(self) -> bool:
         return self._exists
+
+    @property
+    @data_field
+    def is_changed(self) -> bool:
+        return self._is_changed
+
+
+# The language a viewer shows a file in, by its suffix; a file of any other suffix is plain text.
+LANGUAGES = {
+    ".py": "python",
+    ".ts": "typescript",
+    ".tsx": "typescript",
+    ".js": "javascript",
+    ".json": "json",
+    ".md": "markdown",
+    ".drawio": "xml",
+    ".html": "html",
+    ".css": "css",
+    ".yaml": "yaml",
+    ".yml": "yaml",
+}
+PLAIN_TEXT = "plaintext"
 
 
 class FileText:
@@ -126,11 +150,17 @@ class FileText:
     def text(self) -> str:
         return self._text
 
+    @property
+    @data_field
+    def language(self) -> str:
+        """The language a viewer shows the text in, from the file's suffix, such as python or markdown."""
+        return LANGUAGES.get(Path(self._path).suffix.lower(), PLAIN_TEXT)
+
 
 @language_adapter(language="typescript", shares_file_views=True)
 @agent_toolset
 class FileManager:
-    """List and read the files under a session's roots, the folders its practices work in."""
+    """List, read, and save the files under a session's roots, the folders its practices work in."""
 
     # The session owns its file manager in memory; it keeps nothing but the roots it reads.
 
@@ -173,6 +203,16 @@ class FileManager:
         """Return the text of path, a file inside one of the session's roots, named from its workpath; no text when the file is not there, such as one deleted since a page listed it."""
         target = self._inside(path)
         text = target.read_text(encoding="utf-8", errors="replace") if target.is_file() else ""
+        return FileText(self._relative(target), text)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def write(self, path: str, text: str) -> FileText:
+        """Save text as the whole of path, a file inside one of the session's roots, named from its workpath, making its folder when it has none; the file as saved."""
+        target = self._inside(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8", newline="")
         return FileText(self._relative(target), text)
 
     def find(self, pattern: str) -> list[Path]:

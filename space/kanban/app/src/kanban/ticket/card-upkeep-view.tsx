@@ -1,4 +1,5 @@
 import { useBoard } from '../shared/board-context'
+import { openingOf } from '../shared/text-opening'
 import { SessionActionIcon } from '../shared/icons'
 import { CardFieldView, withoutSelecting } from '../shared/card-field-view'
 import type { CardField } from '../shared/card-field-view'
@@ -41,14 +42,6 @@ export function CardUpkeepView({ ticket }: { ticket: TicketClient }) {
       <DeleteView ticket={ticket} />
     </div>
   )
-}
-
-const SHOWN_PARAGRAPHS = 2
-
-// A card shows only the opening of what its ticket is about: its first paragraphs, then a link to the whole file.
-export const openingOf = (text: string): { opening: string; isCut: boolean } => {
-  const paragraphs = text.split(/\n\s*\n/).filter(paragraph => paragraph.trim())
-  return { opening: paragraphs.slice(0, SHOWN_PARAGRAPHS).join('\n\n'), isCut: paragraphs.length > SHOWN_PARAGRAPHS }
 }
 
 // What a ticket is about, on its open card only: the opening paragraphs of its idea file and a link that opens the file.

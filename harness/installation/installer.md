@@ -20,6 +20,20 @@ When install runs **inside** the cdd server itself, the installer skips standing
 
 **After install finishes, read the diagnostic report back to the user.** `install` always runs `diagnose_after_install` (install-channel counts and runtime status only) and appends to `{install_path}/diagnostics.json` (for this repo, `.cursor/diagnostics.json`). It does not run guidance instruction or action probes — use `/guidance-diagnostics` for those. The CLI only prints reports that start with `!` (red); green and yellow stay in the log. Open the latest `installs[]` entry: give the overall `color`, paste the full `diagnose_install` `report` (channel deltas, any new/deleted items, **cdd server**, **hook server**, **hooks registered (events)**, **hook handlers (operations)**), and call out red or yellow. If you ran install in the shell, read that file or run `Installer(...).diagnose_install()` against the same install path — do not leave the user without the summary.
 
+### When install fails
+
+Treat every failed install as evidence, whoever ran it: `/install`, `python scripts/install.py` in a shell, the chat bar's **Run install**, or a reinstall another fix asked for. The same few causes come back across chats and weeks (a stale pinned runtime, a locked file, a missing header, a server that will not start), and they only show up as themes when every failure is written down in the same place.
+
+1. **Log it in the session folder.** Append one entry to `install-failures.md` in the open session's folder, `.sessions/{session}/` at the repository root (`.sessions/main/` when no ticket session is open). Create the file when it is missing. Each entry holds:
+   - the date and time, and who ran it (which command, from which chat or button);
+   - the checkout it ran from, its branch and commit, and the commit in `~/.cdd/runtime.json`;
+   - the error: the exception name and message, and the last lines of output that explain it, quoted as they appeared;
+   - what you tried, and whether it cleared the failure; fill this in once you know.
+   Log the failure before you start fixing it, so a fix that takes the chat somewhere else does not lose it.
+2. **Hand the error to diagnostics.** Run `/harness-diagnostics-agent-tools-diagnostics` (MCP `agent-tools-diagnostics.agent_tools_diagnostics`) with the error in hand, and read its results under `agent_tools` in `diagnostics.json` in the install folder (`.claude/` or `.cursor/`). When the cdd server is itself what the install broke, the MCP call fails too: say so, as `mcp-fail-loud` asks, and carry on with step 3 from the logs alone.
+3. **Look for themes across time.** Read every `install-failures.md` under `.sessions/` and `.sessions/_complete/`, the `installs[]` and `agent_tools` history in `diagnostics.json`, and the diagnostics you just ran. Group the failures by cause, not by wording: two stack traces from the same stale runtime are one theme. For each theme, record how often it happened, when it was first and last seen, which commits it spans, whether a fix held, and the fix that worked. Keep the result in `.sessions/_backlog/install-failure-themes.md`, updating the themes already there rather than starting a new list, so the history stays in one file.
+4. **Tell the person.** Report this failure, the theme it belongs to (or that it is new), and the fix that has worked before. When a theme keeps coming back after its fix, say so and propose fixing the installer or server code itself, because another manual workaround will only add another entry.
+
 ## Clean
 
 Remove files written by the previous install for this IDE path. Slash **`/clean`** — same automatic Shell tail (``@agent_tool`` without MCP).

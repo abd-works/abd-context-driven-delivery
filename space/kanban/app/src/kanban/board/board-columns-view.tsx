@@ -64,7 +64,13 @@ function EdgeColumnView({ column }: { column: ColumnClient }) {
       <EdgeHeadView column={column} />
       {column.isBacklog && state.draft.isOpen ? <ComposerView /> : null}
       <div className="card-lists is-single">
-        <DropZoneView className="card-list" accepts={ticket => ticket.canDropOn(column.name)} onDrop={ticket => ticket.dropOn(column.name)}>
+        <DropZoneView
+          className="card-list"
+          accepts={ticket => ticket.canDropOn(column.name)}
+          onDrop={ticket => ticket.dropOn(column.name)}
+          acceptsItem={item => column.isBacklog && item.isStacked}
+          onItemDrop={item => item.leaveParent()}
+        >
           {column.items.map(item => (
             <BacklogCardView key={item.path} item={item} />
           ))}
@@ -79,20 +85,23 @@ type DropProps = {
   accepts: (ticket: TicketClient) => boolean
   onDrop: (ticket: TicketClient) => unknown
   onItemDrop?: (item: BacklogItemClient) => unknown
+  acceptsItem?: (item: BacklogItemClient) => boolean
   className: string
   children: ReactNode
 }
 
 // A list a dragged card can be dropped on. Only a list that would change where the card is accepts it, and only a list
-// given onItemDrop takes a backlog item. Any list takes a child dragged out of its parent's card, which leaves it there.
-function DropZoneView({ accepts, onDrop, onItemDrop, className, children }: DropProps) {
+// given onItemDrop takes a backlog item, the ones acceptsItem names when it is given. Any list takes a child dragged out
+// of its parent's card, which leaves it there.
+function DropZoneView({ accepts, onDrop, onItemDrop, acceptsItem = () => true, className, children }: DropProps) {
   const { page, state } = useBoard()
   const [isOver, setOver] = useState(false)
   // Read when each event arrives, not from the last drawing: a quick drag reaches the list before the page redraws.
   const draggedNow = () => {
     const address = page.store.state.dragged
     const ticket = page.board.ticketAt(address)
-    const item = onItemDrop ? page.board.backlogItems.find(entry => entry.address === address) : undefined
+    const found = onItemDrop ? page.board.backlogItems.find(entry => entry.address === address) : undefined
+    const item = found && acceptsItem(found) ? found : undefined
     return { ticket, item, isAccepted: (ticket !== undefined && (ticket.isStacked || accepts(ticket))) || item !== undefined }
   }
   const isAccepted = state.dragged !== null && draggedNow().isAccepted
@@ -130,7 +139,9 @@ function StageListView({ column, done, children }: { column: ColumnClient; done:
   )
 }
 
-function TicketListView({ tickets, spot }: { tickets: TicketClient[]; spot: CardSpot }) {
+// Main, the default session, is no ticket of its own, so the board draws no card for it.
+function TicketListView({ tickets: listed, spot }: { tickets: TicketClient[]; spot: CardSpot }) {
+  const tickets = listed.filter(ticket => !ticket.isMain)
   return (
     <>
       {tickets.map(ticket => (
@@ -163,7 +174,7 @@ function StageColumnView({ column }: { column: ColumnClient }) {
 }
 
 function WaitingView({ hasFailed }: { hasFailed: boolean }) {
-  return <p className="board-waiting">{hasFailed ? 'Connect the cdd server and the board appears here.' : 'Reading the board…'}</p>
+  return <p className="board-waiting">{hasFailed ? 'No columns while the server is not answering: the board appears here once it does.' : 'Reading the board…'}</p>
 }
 
 export function BoardColumnsView() {
@@ -171,7 +182,7 @@ export function BoardColumnsView() {
   useKeptSelection()
   return (
     <section className="board-region" aria-label="Board" style={{ flexBasis: state.expandedRegion ? 0 : state.boardHeight, flexGrow: state.expandedRegion ? 1 : 0 }}>
-      {state.board ? (
+      {state.board && !state.serverFailure ? (
         <div className="column-grid">
           {page.board.shownColumns.map(column => (column.isStage ? <StageColumnView key={column.name} column={column} /> : <EdgeColumnView key={column.name} column={column} />))}
         </div>

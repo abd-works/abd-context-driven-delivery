@@ -596,6 +596,18 @@ it('should reload the last folder when the app opens', async () => {
   expect(calls.some((call) => call.operation === 'load_working_copy' && call.body.folder === folder)).toBe(true);
 });
 
+it('should load the session path a link names in place of the last folder', async () => {
+  window.localStorage.setItem('cdd-graph-folder', 'C:/last/folder');
+  window.history.replaceState(null, '', `/?folder=${encodeURIComponent(folder)}`);
+  try {
+    render(<App />);
+    await screen.findByRole('button', { name: 'Expand clean_engineering' });
+    expect(calls.some((call) => call.operation === 'load_working_copy' && call.body.folder === folder)).toBe(true);
+  } finally {
+    window.history.replaceState(null, '', '/');
+  }
+});
+
 it('should start with the source pane asking for a node', () => {
   render(<App />);
   expect(screen.getByText('Select a node')).toBeTruthy();

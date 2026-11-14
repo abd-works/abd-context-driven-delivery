@@ -39,7 +39,7 @@ with story("Choose Action And Formats"):
             pass
         with then("the bar shows a diagram chip and a markdown chip"):
             pass
-        with and_("the markdown chip reads 1 of 2 with the hint markdown: 1 of 2 done"):
+        with and_("the markdown chip reads 1 of 2 with the hint markdown: 1 of 2 done, selected"):
             pass
     with scenario("Keep Run off with no format picked"):
         # Evidence: observed: tile-client.spec 'should keep Run off until a format is chosen'.

@@ -13,6 +13,7 @@ spec replay the same steps. Display Overlay Icons is drawn by the chat bar's Typ
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from expects import contain, equal, expect
 
@@ -21,8 +22,17 @@ from space.kanban.story_test import SharedStories, refusal_of
 
 shared_stories = SharedStories("Guide Work Through Practices In Chat Bar")
 
-# Seed: the patterns cdd_guidance/patterns registers, each with the icon the chat bar shows for it.
-PATTERNS = {"cdd_claude_mod": "CD", "cdd_web_domain_access": "CS", "lern_domain_driven": "LN", "mern_domain_driven": "MN"}
+# Seed: the patterns folder. A folder defines a pattern when it holds the pattern's own guidance, {name}.md, and the chat
+# bar shows each pattern with the first and last letter of its name. They are read from the folder, so a pattern added
+# there is expected here without editing this story.
+PATTERNS_FOLDER = Path(__file__).resolve().parents[2] / "cdd_guidance" / "patterns"
+
+
+def patterns_in_folder() -> list[tuple[str, str]]:
+    names = sorted(folder.name for folder in PATTERNS_FOLDER.iterdir() if (folder / f"{folder.name}.md").is_file())
+    return [(name, f"{name[0]}{name[-1]}".upper()) for name in names]
+
+
 # Interaction: the patterns a person chooses, and a name that is no pattern.
 LERN = "lern_domain_driven"
 WEB_DOMAIN_ACCESS = "cdd_web_domain_access"
@@ -49,7 +59,7 @@ def _(s):
 
     @s.then("it receives one choice per pattern in name order, each with its overlay icon")
     def _(world):
-        expect([(choice["pattern"], choice["icon"]) for choice in world.choices]).to(equal(list(PATTERNS.items())))
+        expect([(choice["pattern"], choice["icon"]) for choice in world.choices]).to(equal(patterns_in_folder()))
 
     @s.and_("none of them is chosen")
     def _(world):

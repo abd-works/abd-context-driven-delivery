@@ -22,7 +22,7 @@ describe('Show A Slow Call', () => {
   describe("with the board's own read still running", () => {
     it('should say nothing, since it reads again every two seconds', async () => {
       const store = new BoardStore()
-      void new BoardApi(store, hanging).post('/board/show')
+      void new BoardApi(store, hanging, '', false).post('/board/show')
       await vi.advanceTimersByTimeAsync(8_000)
       expect(store.state.toasts).toEqual([])
     })

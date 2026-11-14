@@ -48,35 +48,63 @@ const BY_ITS_TITLE = { x: 24, y: 14 }
 const DRAG_STEPS = 10
 
 // Where a drag grabs what it drags, and where on the target it lets go: by default a card by its title, onto the
-// target's middle; a child's row is grabbed near its left end, and a card dropped above another lets go on its top edge.
-// A drop on a card makes the dragged ticket its child, so a move into a list that holds cards drops below them: atTheEnd.
-export type DragPlaces = { grab?: { x: number; y: number }; onTop?: boolean; atTheEnd?: boolean }
+// target's middle; a child's row is grabbed near its left end, a card dropped above another lets go on its top edge, and
+// one dropped below a backlog item on its bottom edge.
+export type DragPlaces = { grab?: { x: number; y: number }; onTop?: boolean; onBottom?: boolean }
 const NEAR_THE_TOP_EDGE = 4
 const BELOW_THE_LAST_CARD = 24
 
+// Keeps the board from handing claude:// links to the system, which would open real chats in the Claude app; returns the
+// links the page asked to open.
+export async function catchClaudeLinks(page: Page): Promise<string[]> {
+  const links: string[] = []
+  await page.route('**/claude/open', async route => {
+    links.push((route.request().postDataJSON() as { link: string }).link)
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+  })
+  return links
+}
+
 // Drags a card by its title onto a list the way a person does, in small moves. Playwright's dragTo jumps to the target
 // in one move, and a drag made that way was sometimes never dropped against the whole stack.
-export async function dragCard(page: Page, dragged: Locator, target: Locator, { grab = BY_ITS_TITLE, onTop = false, atTheEnd = false }: DragPlaces = {}): Promise<void> {
-  await holdOver(page, dragged, target, { grab, onTop, atTheEnd })
+export async function dragCard(page: Page, dragged: Locator, target: Locator, places: DragPlaces = {}): Promise<void> {
+  await holdOver(page, dragged, target, places)
   await page.mouse.up()
 }
 
 // Leaves the drag held over the target, before the drop, so a spec can see what the target shows while it is dragged over.
-export async function holdOver(page: Page, dragged: Locator, target: Locator, { grab = BY_ITS_TITLE, onTop = false, atTheEnd = false }: DragPlaces = {}): Promise<void> {
+export async function holdOver(page: Page, dragged: Locator, target: Locator, { grab = BY_ITS_TITLE, onTop = false, onBottom = false }: DragPlaces = {}): Promise<void> {
+  // The board region scrolls, and a card below its visible part cannot be grabbed where it is drawn; a list's label,
+  // where a drop lands on no card, is brought into view first, then the card if that left it out of view.
+  const labels = target.locator(':scope.card-list > .list-label')
+  if (await labels.count()) await labels.first().scrollIntoViewIfNeeded()
+  await dragged.scrollIntoViewIfNeeded()
   const from = (await dragged.boundingBox())!
   await page.mouse.move(from.x + grab.x, from.y + grab.y)
   await page.mouse.down()
   await page.mouse.move(from.x + grab.x + 20, from.y + grab.y + 10, { steps: DRAG_STEPS })
   const to = (await target.boundingBox())!
-  const down = onTop ? NEAR_THE_TOP_EDGE : atTheEnd ? await belowTheLastCard(target, to) : Math.min(to.height / 2, 60)
-  await page.mouse.move(to.x + to.width / 2, to.y + down, { steps: DRAG_STEPS })
+  const [top, bottom] = await shownRange(page)
+  // A drop on a card makes the dragged ticket its child, so a drag onto a list drops where no card is: on the list's
+  // label while the board shows it, else below the list's cards.
+  const isList = await target.evaluate(element => element.classList.contains('card-list'))
+  const label = isList && (await labels.count()) ? await labels.first().boundingBox() : null
+  const down = onTop ? NEAR_THE_TOP_EDGE : onBottom ? to.height - NEAR_THE_TOP_EDGE : isList ? await belowTheLastCard(target, to) : Math.min(to.height / 2, 60)
+  const y = label && label.y >= top && label.y + label.height <= bottom ? label.y + label.height / 2 : Math.max(top, Math.min(to.y + down, bottom))
+  await page.mouse.move(to.x + to.width / 2, y, { steps: DRAG_STEPS })
+}
+
+// The part of the board region on screen, so a drop never lands above the board or on the details below it.
+async function shownRange(page: Page): Promise<[number, number]> {
+  const region = await page.locator('.board-region').boundingBox()
+  return region ? [region.y + BELOW_THE_LAST_CARD, region.y + region.height - BELOW_THE_LAST_CARD] : [0, Number.POSITIVE_INFINITY]
 }
 
 // Just under the list's last card, where the list itself takes the drop.
 async function belowTheLastCard(target: Locator, to: { y: number; height: number }): Promise<number> {
   const cards = target.locator(':scope > .ticket-card')
   const last = (await cards.count()) ? await cards.last().boundingBox() : null
-  return Math.min(last ? last.y + last.height - to.y + BELOW_THE_LAST_CARD : to.height / 2, to.height / 2 + 60)
+  return Math.min(last ? last.y + last.height - to.y + BELOW_THE_LAST_CARD : to.height / 2, to.height - 2 * BELOW_THE_LAST_CARD)
 }
 
 export const openCard = (page: Page, ticket: string): Locator => page.locator(`[data-open-card="${ticket}"]`)

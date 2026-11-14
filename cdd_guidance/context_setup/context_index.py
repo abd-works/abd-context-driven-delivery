@@ -156,7 +156,11 @@ class ContextIndex:
     def for_call(self, call: ToolCall) -> ContextIndex:
         """A ContextIndex made for call: it reads the paths call names from the project of the session call works in,
         and embeds with this index's provider."""
-        return type(self)(self._provider, call.session)
+        return self.in_session(call.session)
+
+    def in_session(self, session: Any) -> ContextIndex:
+        """A ContextIndex reading the paths it is given from session's project, embedding with this index's provider."""
+        return type(self)(self._provider, session)
 
     def _path_named(self, named: str) -> Path:
         """named as a path in this index's session's project; read as given when it works in no session, as an index

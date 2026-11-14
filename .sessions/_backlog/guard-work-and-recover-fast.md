@@ -92,4 +92,4 @@ From `board-enhancements.md`: "restart refresh ->onre button relopadsplugins mcp
 
 #### Story: Open App From Health Panel
 
-*Person*. Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "click on app in health bar"): pressing the Kanban app or Graph app in the server health panel opens that app. Requested (2026-11-10, "clicking on app in chat ui starts it if down, opens it if up"): pressing an app that is not running starts it and then opens it; pressing one that is running opens it.
+*Person*. Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "click on app in health bar"): pressing the Kanban app or Graph app in the server health panel opens that app. Requested (2026-11-10, "clicking on app in chat ui starts it if down, opens it if up"): pressing an app that is not running starts it and then opens it; pressing one that is running opens it. Built on branch `open-app-from-health-panel` (ticket `open-app-from-health-panel`).

@@ -2,6 +2,7 @@ import type { RequiredFidelity } from '../board/column-client'
 import type { BacklogItemData } from '@cdd/space/kanban/backlog-item'
 import type { FidelityProgressClientGenerated, FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import { TicketClientGenerated, type ActionStatesData, type TicketData } from '@cdd/space/kanban/ticket'
+import { FileCommentsClientGenerated } from '@cdd/space/session/file-comments'
 import { PracticeSessionOutputClientGenerated } from '@cdd/space/session/practice-session-output'
 import { SessionClientGenerated } from '@cdd/space/session/session'
 
@@ -71,6 +72,12 @@ export class TicketClient extends TicketClientGenerated {
     return this.fidelityProgress.filter(progress => progress.stage.name === stage.name && progress.isEnabled)
   }
 
+  // Its progress on every fidelity of the stage it stands in, which the files panel offers as its practice filters.
+  get stageProgress(): FidelityProgressClient[] {
+    const stage = this.page.board.stageOf(this)
+    return stage ? this.progressIn(stage) : []
+  }
+
   // Its progress on the fidelities a tile or a panel was opened over, read from this ticket as it is now.
   progressOn(fidelities: RequiredFidelity[]): FidelityProgressClient[] {
     return fidelities.flatMap(fidelity => this.progressNamed(fidelity.slug) ?? [])
@@ -120,6 +127,11 @@ export class TicketClient extends TicketClientGenerated {
 
   practiceClient(practice: string): PracticeSessionOutputClientGenerated {
     return new PracticeSessionOutputClientGenerated(this.api, this.session.practices[practice] ?? null)
+  }
+
+  // The comments a person wrote on the files of its session, kept in the session's folder.
+  get fileComments(): FileCommentsClientGenerated {
+    return FileCommentsClientGenerated.named(this.api, this.session.session_file)
   }
 
   // The chat working on this ticket, which Python names, and every command the board sends for it goes to.
@@ -185,12 +197,13 @@ export class TicketClient extends TicketClientGenerated {
     this.page.board.select(this.address)
   }
 
-  // A person clicking the ticket: it opens in the details, and the board's commands go to its chat, the one working in
-  // its worktree, when it has one. A press only selects: opening a worktree and a chat is the card's own button.
+  // A person clicking the ticket: it opens in the details, and the chat at the top of the board is its chat, the one
+  // working in its worktree; with none open, main's chat when main has one; else no chat, so the top never shows another
+  // ticket's chat. A press only selects: opening a worktree and a chat is the card's own button.
   choose(): void {
     this.select()
-    const found = this.chat.found
-    if (found) this.page.chat.choose(found.id)
+    const chat = this.chat.found ?? this.page.board.mainTicket?.chat.found
+    this.page.chat.choose(chat?.id ?? '')
   }
 
   get canOpenChat(): boolean {
@@ -202,9 +215,10 @@ export class TicketClient extends TicketClientGenerated {
   async openChat(): Promise<void> {
     const chat = this.chat
     if (!this.canOpenChat || !chat.beginOpening()) return
-    chat.start(await this.worktreeOpened())
+    await chat.start(await this.worktreeOpened())
   }
 
+  // The ticket's worktree, opened by activating when the ticket has none.
   private async worktreeOpened(): Promise<string> {
     if (this.worktree) return this.worktree
     const opened = await this.activate()

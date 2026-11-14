@@ -1,11 +1,9 @@
 import type { RequiredFidelity } from '../board/column-client'
-import type { FormatChoiceData } from '@cdd/space/kanban/ticket'
 
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../shared/board-store'
 import type { ColumnClient } from '../board/column-client'
 import type { TicketClient } from './ticket-client'
-import { startingPicks } from './tile-formats'
 
 const DEFAULT_ACTION = 'generate'
 const HOVER_OPEN_MILLISECONDS = 500
@@ -45,22 +43,17 @@ export class TileClient {
     const { ticket, stage, place, fidelities } = spot
     const order = ++this.opening
     this.latestOpening.set(`${ticket.name} ${place}`, order)
-    const shown: Tile = { ticket, place, stage, fidelities, action: DEFAULT_ACTION, picked: [], isPinned, choices: [] }
+    const shown: Tile = { ticket, place, stage, fidelities, action: DEFAULT_ACTION, isPinned, choices: [] }
     this.store.change(state => ({ tiles: [...this.othersKept(state.tiles, shown), shown] }))
     const choices = (await ticket.formatChoices(slugsOf(fidelities))) ?? []
     if (this.latestOpening.get(`${ticket.name} ${place}`) !== order) return
-    this.change(ticket.name, place, tile => this.withChoices(tile, shown, choices))
+    this.change(ticket.name, place, tile => ({ ...tile, choices }))
   }
 
   // A bar a hover opens replaces any other bar a hover opened; pressed bars stay.
   private othersKept(tiles: Tile[], shown: Tile): Tile[] {
     const others = tiles.filter(tile => !isAt(tile, shown.ticket.name, shown.place))
     return shown.isPinned ? others : others.filter(tile => tile.isPinned)
-  }
-
-  // A person's own choice of formats stays; until they make one, the bar starts on the chips Python picks.
-  private withChoices(tile: Tile, shown: Tile, choices: FormatChoiceData[]): Tile {
-    return { ...tile, choices, picked: tile.picked === shown.picked ? startingPicks(choices) : tile.picked }
   }
 
   // Changes the one open bar on that ticket at that place, and leaves every other bar as it is.

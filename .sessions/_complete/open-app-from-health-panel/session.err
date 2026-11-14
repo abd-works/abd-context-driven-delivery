@@ -1,0 +1,32 @@
+2026-11-13T21:54:35Z session.folder_files SessionNotFoundError: no session at 'open-app-from-health-panel': name the session.json of the session to work on
+Traceback (most recent call last):
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 815, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 491, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 502, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1018, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 808, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 878, in on_the_call
+    return function(owner, *arguments, **named)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\session\session.py", line 134, in from_file
+    return call.session_named(session)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\tool_call.py", line 168, in session_named
+    return ToolCall._sessions.named_in(session_file, self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\session\sessions.py", line 454, in named_in
+    return self.of_project(project).with_file(session_file)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\session\sessions.py", line 196, in with_file
+    raise SessionNotFoundError(session_file)
+space.session.session.SessionNotFoundError: no session at 'open-app-from-health-panel': name the session.json of the session to work on

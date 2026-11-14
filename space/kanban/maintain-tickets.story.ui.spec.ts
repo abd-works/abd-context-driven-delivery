@@ -121,10 +121,44 @@ test.describe('Reorder Tickets In Column', () => {
     await openWholeBoard(page)
     const titles = ['Gift cards', 'Returns and refunds']
     await expect.poll(() => itemOrderOf(page, titles)).toEqual(titles)
-    await dragCard(page, backlogCard(page, 'Returns and refunds'), backlogCard(page, 'Gift cards'))
+    await dragCard(page, backlogCard(page, 'Returns and refunds'), backlogCard(page, 'Gift cards'), { onTop: true })
     await expect.poll(() => itemOrderOf(page, titles)).toEqual(['Returns and refunds', 'Gift cards'])
     await page.reload()
     await expect.poll(() => itemOrderOf(page, titles)).toEqual(['Returns and refunds', 'Gift cards'])
+  })
+
+  test('Keep a backlog item below the one it was dropped on', async ({ page }) => {
+    writeInto(backlogFile('gift-cards'), '# Gift cards\n\nSell gift cards.\n')
+    writeInto(backlogFile('returns-and-refunds'), '# Returns and refunds\n\nTake goods back.\n')
+    await openWholeBoard(page)
+    const titles = ['Gift cards', 'Returns and refunds']
+    await expect.poll(() => itemOrderOf(page, titles)).toEqual(titles)
+    await dragCard(page, backlogCard(page, 'Gift cards'), backlogCard(page, 'Returns and refunds'), { onBottom: true })
+    await expect.poll(() => itemOrderOf(page, titles)).toEqual(['Returns and refunds', 'Gift cards'])
+  })
+})
+
+test.describe('Nest Backlog Items', () => {
+  const childRow = (page: Page, parent: string, child: string) => backlogCard(page, parent).locator(`[data-child-item="${child}"]`)
+
+  test('Make a backlog item the child of the one it was dropped in the middle of', async ({ page }) => {
+    writeInto(backlogFile('gift-cards'), '# Gift cards\n\nSell gift cards.\n')
+    writeInto(backlogFile('returns-and-refunds'), '# Returns and refunds\n\nTake goods back.\n')
+    await openWholeBoard(page)
+    await dragCard(page, backlogCard(page, 'Returns and refunds'), backlogCard(page, 'Gift cards'))
+    await expect(childRow(page, 'Gift cards', 'Returns and refunds')).toBeVisible()
+    await expect(backlogCard(page, 'Returns and refunds')).toHaveCount(0)
+    await expect.poll(() => existsSync(join(sessions, '_backlog', 'gift-cards', 'returns-and-refunds.md'))).toBe(true)
+  })
+
+  test('Take a child out of its parent onto the Backlog', async ({ page }) => {
+    writeInto(join(sessions, '_backlog', 'gift-cards', 'gift-cards.md'), '# Gift cards\n\nSell gift cards.\n')
+    writeInto(join(sessions, '_backlog', 'gift-cards', 'returns-and-refunds.md'), '# Returns and refunds\n\nTake goods back.\n')
+    await openWholeBoard(page)
+    await expect(childRow(page, 'Gift cards', 'Returns and refunds')).toBeVisible()
+    await dragCard(page, childRow(page, 'Gift cards', 'Returns and refunds'), page.locator('.board-column[data-column="Backlog"] .card-list').first())
+    await expect(backlogCard(page, 'Returns and refunds')).toBeVisible()
+    await expect.poll(() => existsSync(backlogFile('returns-and-refunds'))).toBe(true)
   })
 })
 

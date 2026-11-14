@@ -4,14 +4,15 @@ step as the `*Given* a cart` line it is read from and written as."""
 from __future__ import annotations
 
 import re
-from typing import List, Optional
+from typing import Dict, List, NamedTuple, Optional
 
 from cdd_guidance.practices.stories.model.markdown.links import unlink
-from cdd_guidance.practices.stories.model.story_model import Step
+from cdd_guidance.practices.stories.model.story_model import Example, Step
 
 _BOLD_TERM = re.compile(r"\*\*([^*]+)\*\*")
 _ITALIC_VALUE = re.compile(r"(?<!\*)\*([^*\n]+)\*(?!\*)")
 _STEP_CONTINUATION = re.compile(r"^(And|But)\s+", re.IGNORECASE)
+TABLE_LINE = re.compile(r"^\s*\|(.+)\|\s*$")
 
 
 def strip_backticks(text: str) -> str:
@@ -28,6 +29,51 @@ def strip_markup(text: str) -> str:
     while s.startswith("*") and s.endswith("*") and len(s) >= 2:
         s = strip_backticks(s[1:-1].strip())
     return strip_backticks(s)
+
+
+class ExampleRowLine(NamedTuple):
+    """The line an example row was read from, as written, and the headers of the table it sits in."""
+
+    line: str
+    headers: List[str]
+
+    def written(self, cells: Dict[str, str], read: Dict[str, str]) -> str:
+        """The line with each cell whose value differs from read written as cells says it, every other cell, the
+        indent and the line ending as read."""
+        found = TABLE_LINE.match(self.line)
+        read_cells = [cell.strip() for cell in found.group(1).split("|")] if found else []
+        kept = [index < len(read_cells) and cells.get(header, "") == read.get(header, "") for index, header in enumerate(self.headers)]
+        written = [read_cells[index] if kept[index] else cells.get(header, "").replace("|", "/") for index, header in enumerate(self.headers)]
+        body = self.line.rstrip("\r\n")
+        indent = body[: len(body) - len(body.lstrip())]
+        return f"{indent}| {' | '.join(written)} |{self.line[len(body):]}"
+
+
+class MarkdownExample(Example):
+    """An example read from a row of a markdown examples table. It keeps the row's line and its table's headers, so an
+    unchanged example is written back as read, an edited one changes only the cells the edit changed, and one taken off
+    its scope writes no line."""
+
+    def __init__(self, name: str, value: "Dict[str, str] | str", read: ExampleRowLine) -> None:
+        super().__init__(name, value)
+        self.read = read
+        self.read_row: Dict[str, str] = dict(self.row)
+
+    def line(self) -> str:
+        """Its row as it stands now: the line it was read from while no cell under its headers changed, the line with
+        the changed cells written anew otherwise, and nothing once it has left its scope."""
+        if self.parent is None:
+            return ""
+        row = self.row
+        if all(row.get(header, "") == self.read_row.get(header, "") for header in self.read.headers):
+            return self.read.line
+        return self.read.written(row, self.read_row)
+
+    def clone(self) -> "MarkdownExample":
+        """A copy that still writes the row it was read from."""
+        copied = type(self)(self.name, dict(self.value) if isinstance(self.value, dict) else self.value, self.read)
+        copied.sequential_order, copied.scope, copied.read_row = self.sequential_order, self.scope, dict(self.read_row)
+        return copied
 
 
 class MarkdownStep(Step):

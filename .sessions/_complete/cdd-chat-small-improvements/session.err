@@ -1,0 +1,318 @@
+2026-11-10T05:28:29Z board.overview PracticesNotRegistered: no practices are registered with PracticeCatalogue in this process; import the package that defines them
+Traceback (most recent call last):
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 747, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 482, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 493, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 952, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 789, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 812, in on_the_call
+    return function(owner, *arguments, **named)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\kanban\board.py", line 108, in load
+    return cls(sessions.repo, sessions.board_practices)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.12.13-windows-x86_64-none\Lib\functools.py", line 998, in __get__
+    val = self.func(instance)
+          ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\session\sessions.py", line 123, in board_practices
+    return BoardPractices(CatalogPractice.of_practices(PracticeCatalogue.create_all()))
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance\practice_catalogue.py", line 79, in create_all
+    made = {key: practice_class(**arguments) for key, practice_class in cls._registered().items()}
+                                                                        ^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance\practice_catalogue.py", line 94, in _registered
+    raise PracticesNotRegistered()
+harness.guidance.practice_catalogue.PracticesNotRegistered: no practices are registered with PracticeCatalogue in this process; import the package that defines them
+2026-11-10T05:29:11Z board.overview PracticesNotRegistered: no practices are registered with PracticeCatalogue in this process; import the package that defines them
+Traceback (most recent call last):
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 747, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 482, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 493, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 952, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 789, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 812, in on_the_call
+    return function(owner, *arguments, **named)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\kanban\board.py", line 108, in load
+    return cls(sessions.repo, sessions.board_practices)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.12.13-windows-x86_64-none\Lib\functools.py", line 998, in __get__
+    val = self.func(instance)
+          ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\session\sessions.py", line 123, in board_practices
+    return BoardPractices(CatalogPractice.of_practices(PracticeCatalogue.create_all()))
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance\practice_catalogue.py", line 79, in create_all
+    made = {key: practice_class(**arguments) for key, practice_class in cls._registered().items()}
+                                                                        ^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance\practice_catalogue.py", line 94, in _registered
+    raise PracticesNotRegistered()
+harness.guidance.practice_catalogue.PracticesNotRegistered: no practices are registered with PracticeCatalogue in this process; import the package that defines them
+2026-11-10T05:29:11Z board.overview PracticesNotRegistered: no practices are registered with PracticeCatalogue in this process; import the package that defines them
+Traceback (most recent call last):
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 747, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 482, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 493, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 952, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 789, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 812, in on_the_call
+    return function(owner, *arguments, **named)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\kanban\board.py", line 108, in load
+    return cls(sessions.repo, sessions.board_practices)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.12.13-windows-x86_64-none\Lib\functools.py", line 998, in __get__
+    val = self.func(instance)
+          ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\session\sessions.py", line 123, in board_practices
+    return BoardPractices(CatalogPractice.of_practices(PracticeCatalogue.create_all()))
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance\practice_catalogue.py", line 79, in create_all
+    made = {key: practice_class(**arguments) for key, practice_class in cls._registered().items()}
+                                                                        ^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance\practice_catalogue.py", line 94, in _registered
+    raise PracticesNotRegistered()
+harness.guidance.practice_catalogue.PracticesNotRegistered: no practices are registered with PracticeCatalogue in this process; import the package that defines them
+2026-11-10T05:29:13Z board.overview PracticesNotRegistered: no practices are registered with PracticeCatalogue in this process; import the package that defines them
+Traceback (most recent call last):
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 747, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 482, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 493, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 952, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 789, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 812, in on_the_call
+    return function(owner, *arguments, **named)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\kanban\board.py", line 108, in load
+    return cls(sessions.repo, sessions.board_practices)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.12.13-windows-x86_64-none\Lib\functools.py", line 998, in __get__
+    val = self.func(instance)
+          ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\session\sessions.py", line 123, in board_practices
+    return BoardPractices(CatalogPractice.of_practices(PracticeCatalogue.create_all()))
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance\practice_catalogue.py", line 79, in create_all
+    made = {key: practice_class(**arguments) for key, practice_class in cls._registered().items()}
+                                                                        ^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance\practice_catalogue.py", line 94, in _registered
+    raise PracticesNotRegistered()
+harness.guidance.practice_catalogue.PracticesNotRegistered: no practices are registered with PracticeCatalogue in this process; import the package that defines them
+2026-11-10T05:29:26Z board.overview PracticesNotRegistered: no practices are registered with PracticeCatalogue in this process; import the package that defines them
+Traceback (most recent call last):
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 747, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 482, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 493, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 952, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 789, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 812, in on_the_call
+    return function(owner, *arguments, **named)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\kanban\board.py", line 108, in load
+    return cls(sessions.repo, sessions.board_practices)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.12.13-windows-x86_64-none\Lib\functools.py", line 998, in __get__
+    val = self.func(instance)
+          ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\session\sessions.py", line 123, in board_practices
+    return BoardPractices(CatalogPractice.of_practices(PracticeCatalogue.create_all()))
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance\practice_catalogue.py", line 79, in create_all
+    made = {key: practice_class(**arguments) for key, practice_class in cls._registered().items()}
+                                                                        ^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance\practice_catalogue.py", line 94, in _registered
+    raise PracticesNotRegistered()
+harness.guidance.practice_catalogue.PracticesNotRegistered: no practices are registered with PracticeCatalogue in this process; import the package that defines them
+2026-11-10T05:29:26Z board.overview PracticesNotRegistered: no practices are registered with PracticeCatalogue in this process; import the package that defines them
+Traceback (most recent call last):
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 747, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 482, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 493, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 952, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 789, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 812, in on_the_call
+    return function(owner, *arguments, **named)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\kanban\board.py", line 108, in load
+    return cls(sessions.repo, sessions.board_practices)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.12.13-windows-x86_64-none\Lib\functools.py", line 998, in __get__
+    val = self.func(instance)
+          ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\session\sessions.py", line 123, in board_practices
+    return BoardPractices(CatalogPractice.of_practices(PracticeCatalogue.create_all()))
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance\practice_catalogue.py", line 79, in create_all
+    made = {key: practice_class(**arguments) for key, practice_class in cls._registered().items()}
+                                                                        ^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance\practice_catalogue.py", line 94, in _registered
+    raise PracticesNotRegistered()
+harness.guidance.practice_catalogue.PracticesNotRegistered: no practices are registered with PracticeCatalogue in this process; import the package that defines them
+2026-11-10T05:30:40Z board.overview PracticesNotRegistered: no practices are registered with PracticeCatalogue in this process; import the package that defines them
+Traceback (most recent call last):
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 747, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 482, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 493, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 952, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 789, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 812, in on_the_call
+    return function(owner, *arguments, **named)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\kanban\board.py", line 108, in load
+    return cls(sessions.repo, sessions.board_practices)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.12.13-windows-x86_64-none\Lib\functools.py", line 998, in __get__
+    val = self.func(instance)
+          ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\session\sessions.py", line 123, in board_practices
+    return BoardPractices(CatalogPractice.of_practices(PracticeCatalogue.create_all()))
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance\practice_catalogue.py", line 79, in create_all
+    made = {key: practice_class(**arguments) for key, practice_class in cls._registered().items()}
+                                                                        ^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance\practice_catalogue.py", line 94, in _registered
+    raise PracticesNotRegistered()
+harness.guidance.practice_catalogue.PracticesNotRegistered: no practices are registered with PracticeCatalogue in this process; import the package that defines them
+2026-11-10T05:30:50Z ticket.close_choices PracticesNotRegistered: no practices are registered with PracticeCatalogue in this process; import the package that defines them
+Traceback (most recent call last):
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 747, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 482, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 493, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 952, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 789, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 812, in on_the_call
+    return function(owner, *arguments, **named)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\kanban\ticket.py", line 85, in load
+    found = Board.load(project).ticket(ticket)
+            ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\kanban\board.py", line 108, in load
+    return cls(sessions.repo, sessions.board_practices)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.12.13-windows-x86_64-none\Lib\functools.py", line 998, in __get__
+    val = self.func(instance)
+          ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\session\sessions.py", line 123, in board_practices
+    return BoardPractices(CatalogPractice.of_practices(PracticeCatalogue.create_all()))
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance\practice_catalogue.py", line 79, in create_all
+    made = {key: practice_class(**arguments) for key, practice_class in cls._registered().items()}
+                                                                        ^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance\practice_catalogue.py", line 94, in _registered
+    raise PracticesNotRegistered()
+harness.guidance.practice_catalogue.PracticesNotRegistered: no practices are registered with PracticeCatalogue in this process; import the package that defines them
+2026-11-10T05:31:09Z board.overview PracticesNotRegistered: no practices are registered with PracticeCatalogue in this process; import the package that defines them
+Traceback (most recent call last):
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 747, in _answer_between_restarts
+    return server.answer_tool(call.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 482, in answer_tool
+    return self._answer_from(self._tools, mcp_name, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\mcp\mcp_server.py", line 493, in _answer_from
+    return published[resolved].answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 952, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 789, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\agent_tools\agent_tools.py", line 812, in on_the_call
+    return function(owner, *arguments, **named)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\kanban\board.py", line 108, in load
+    return cls(sessions.repo, sessions.board_practices)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.12.13-windows-x86_64-none\Lib\functools.py", line 998, in __get__
+    val = self.func(instance)
+          ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\space\session\sessions.py", line 123, in board_practices
+    return BoardPractices(CatalogPractice.of_practices(PracticeCatalogue.create_all()))
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance\practice_catalogue.py", line 79, in create_all
+    made = {key: practice_class(**arguments) for key, practice_class in cls._registered().items()}
+                                                                        ^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\.cdd\runtime\harness\guidance\practice_catalogue.py", line 94, in _registered
+    raise PracticesNotRegistered()
+harness.guidance.practice_catalogue.PracticesNotRegistered: no practices are registered with PracticeCatalogue in this process; import the package that defines them

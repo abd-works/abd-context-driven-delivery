@@ -84,3 +84,11 @@ with story("Activate Ticket"):
             pass
         with and_("checkout-flow's session records no branch"):
             pass
+    with scenario("Leave a branch named as another ticket to that ticket"):
+        with given("checkout-flow-retry is a ticket whose work is on the branch checkout-flow-retry"):
+            pass
+        with when("the Person activates checkout-flow"):
+            # TicketCheckout -> Board.ticket_names
+            pass
+        with then("checkout-flow's session records its own branch checkout-flow"):
+            pass

@@ -42,7 +42,12 @@ async function openStoryMapTile(page: Page): Promise<Locator> {
   return barOf(page, 'stories-story-map')
 }
 
-test.beforeEach(() => resetSessions(fixtureRoot))
+// The fixture project holds a story map where the story_map fidelity declares its markdown; each scenario starts with
+// none, so its markdown chip starts picked, and a scenario with generated output writes the file itself.
+test.beforeEach(() => {
+  resetSessions(fixtureRoot)
+  rmSync(DECLARED_STORY_MAP, { force: true })
+})
 test.afterEach(() => rmSync(join(fixtureRoot, '.context'), { recursive: true, force: true }))
 test.afterAll(() => resetSessions(fixtureRoot))
 
@@ -62,10 +67,10 @@ test.describe('with no chat connected', () => {
 
     test.describe('Leave a generated format unpicked', () => {
       test.beforeEach(async ({ page }) => {
+        writeInto(DECLARED_STORY_MAP, '# Check Out Order\n')
         await openBoard(page)
       })
 
-      // Fails today: the fixture's .context/story-map.md is not where the story_map fidelity declares its markdown.
       test('Then the markdown chip is green and not picked', async ({ page }) => {
         const bar = await openStoryMapTile(page)
         await expect(chip(bar, 'markdown')).toHaveAttribute('aria-label', 'markdown: done')
@@ -90,10 +95,10 @@ test.describe('with no chat connected', () => {
         await expect(chip(bar, 'markdown')).toBeVisible()
       })
 
-      test('And the markdown chip reads 1 of 2 with the hint markdown: 1 of 2 done', async ({ page }) => {
+      test('And the markdown chip reads 1 of 2 with the hint markdown: 1 of 2 done, selected', async ({ page }) => {
         const markdown = chip(details(page).locator('.expansion').first(), 'markdown')
         await expect(markdown).toHaveText('1 of 2')
-        await expect(markdown).toHaveAttribute('title', 'markdown: 1 of 2 done')
+        await expect(markdown).toHaveAttribute('title', 'markdown: 1 of 2 done, selected')
       })
     })
 
@@ -179,7 +184,7 @@ test.describe('with a chat connected', () => {
       })
 
       test("And the bar's picks are cleared", async ({ page }) => {
-        await expect.poll(() => receivedBy(chat)).toContain('/actions-generate stories-story-map format=markdown session=.sessions/billing-report/session.json')
+        await expect.poll(() => receivedBy(chat)).toContain('/actions-generate stories-story-map session=.sessions/billing-report/session.json format=markdown')
         await expect(barOf(page, 'stories-story-map').locator('[aria-pressed="true"]')).toHaveCount(0)
       })
     })
@@ -189,6 +194,7 @@ test.describe('with a chat connected', () => {
     test.describe('Render existing output into another format', () => {
       test.beforeEach(async ({ page }) => {
         seedActive('billing-report')
+        writeInto(DECLARED_STORY_MAP, '# Check Out Order\n')
         await openWithChat(page)
         const bar = await openStoryMapTile(page)
         await bar.getByRole('combobox', { name: 'Action' }).selectOption('render')
@@ -196,9 +202,8 @@ test.describe('with a chat connected', () => {
         await runOf(bar).click({ timeout: 5_000 }).catch(() => undefined)
       })
 
-      // Fails today: .context/story-map.md is not the story map's declared markdown, so there is nothing to render and Run stays off.
       test('Then the chat receives the command /actions-render stories-story-map format=drawio', async () => {
-        await expect.poll(() => receivedBy(chat)).toContain('/actions-render stories-story-map format=drawio session=.sessions/billing-report/session.json')
+        await expect.poll(() => receivedBy(chat)).toContain('/actions-render stories-story-map session=.sessions/billing-report/session.json format=drawio')
       })
     })
 
@@ -276,8 +281,7 @@ test.describe('with a chat connected', () => {
         await runOf(bar).click()
       })
 
-      // Fails today: ChatClient.refresh chooses the first connected chat when the person has picked none, so sketch
-      // is sent to Generate chat; chat-client.spec's 'should choose none among several' describes the page before that.
+      // The board picks no chat on its own, so with two connected and none picked, sketch goes nowhere.
       test('Then nothing is sent', async ({ page }) => {
         await expect(page.getByRole('combobox', { name: 'Chat to send commands to' })).toHaveValue('')
         await expect(toast(page, /^Sent to/)).toHaveCount(0)

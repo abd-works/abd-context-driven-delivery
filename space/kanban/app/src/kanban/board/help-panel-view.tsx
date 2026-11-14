@@ -8,45 +8,14 @@ const subjectOf = (help: HelpData): PracticeGuidanceData | FidelityGuidanceData 
 
 import { useBoard } from '../shared/board-context'
 import type { HelpPanel } from '../shared/board-store'
+import { MarkdownBlockView } from '../shared/markdown-view'
 import { helpBlocksOf } from './help-text'
-import type { HelpBlock, TextRun } from './help-text'
-
-function RunsView({ runs }: { runs: TextRun[] }) {
-  return (
-    <>
-      {runs.map((run, index) => {
-        if (run.style === 'bold') return <strong key={index}>{run.text}</strong>
-        if (run.style === 'italic') return <em key={index}>{run.text}</em>
-        return run.style === 'code' ? <code key={index}>{run.text}</code> : <span key={index}>{run.text}</span>
-      })}
-    </>
-  )
-}
-
-function HelpListView({ items, className }: { items: TextRun[][]; className: string }) {
-  return (
-    <ul className={className}>
-      {items.map((runs, index) => (
-        <li key={index}>
-          <RunsView runs={runs} />
-        </li>
-      ))}
-    </ul>
-  )
-}
-
-function HelpBlockView({ block, className }: { block: HelpBlock; className: string }) {
-  if (block.kind === 'preformatted') return <pre className="help-preformatted">{block.text}</pre>
-  if (block.kind === 'heading') return <h3 className="help-heading"><RunsView runs={block.runs} /></h3>
-  if (block.kind === 'paragraph') return <p className={className}><RunsView runs={block.runs} /></p>
-  return <HelpListView items={block.items} className={className} />
-}
 
 function HelpTextView({ markdown, className }: { markdown: string; className: string }) {
   return (
     <>
       {helpBlocksOf(markdown).map((block, index) => (
-        <HelpBlockView key={index} block={block} className={className} />
+        <MarkdownBlockView key={index} block={block} className={className} />
       ))}
     </>
   )

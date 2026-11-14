@@ -12,6 +12,8 @@ export default function startRunCddHome(): () => void {
   const chats = mkdtempSync(join(tmpdir(), 'cdd-board-run-chats-'))
   process.env.CDD_CHATS_FOLDER = join(chats, 'chats')
   process.env.CLAUDE_CONFIG_DIR = chats
+  // The cdd server keeps each new chat's link here instead of opening the Claude app on this machine.
+  process.env.CDD_OPENED_CHATS = join(chats, 'opened-chats.txt')
   // The connect script names the chat a call comes from by this variable; a run started from a chat would otherwise
   // answer as that chat, and keep its open sessions under that chat's entry instead of the project's.
   delete process.env[CHAT_ID_VARIABLE]

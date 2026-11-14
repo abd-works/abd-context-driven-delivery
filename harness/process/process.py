@@ -3,6 +3,7 @@ no console window on Windows or with a Python whose console output a caller read
 its process id still runs, or stop it."""
 from __future__ import annotations
 
+import ctypes
 import os
 import re
 import signal
@@ -26,10 +27,28 @@ _POLL_SECONDS = 0.05
 # reports it refused, so a caller waiting longer only waits out those retries.
 LOOPBACK_CONNECT_SECONDS = 0.5
 
+# GetExtendedTcpTable's TCP_TABLE_OWNER_PID_LISTENER: only listening sockets, each with its process id.
+_TCP_TABLE_OWNER_PID_LISTENER = 3
+# The table's leading socket count, a DWORD, before its rows.
+_TCP_TABLE_COUNT_BYTES = 4
+
+
+class _TcpRowOwnerPid(ctypes.Structure):
+    """One socket of Windows' TCP table: MIB_TCPROW_OWNER_PID."""
+
+    _fields_ = [
+        ("state", ctypes.c_uint32),
+        ("local_address", ctypes.c_uint32),
+        ("local_port", ctypes.c_uint32),
+        ("remote_address", ctypes.c_uint32),
+        ("remote_port", ctypes.c_uint32),
+        ("owning_pid", ctypes.c_uint32),
+    ]
+
 
 class ListeningPorts:
-    """Which process on this computer listens on which TCP port, as ``netstat -ano`` (Windows) or ``ss -ltnp``
-    (elsewhere) reports it now. A server that finds its port held asks it for the holder, and the instances script asks
+    """Which process on this computer listens on which TCP port, as Windows' TCP table or ``ss -ltnp`` (elsewhere)
+    reports it now. A server that finds its port held asks it for the holder, and the instances script asks
     it which ports each of its processes listens on."""
 
     def by_process(self) -> dict[int, list[int]]:
@@ -45,19 +64,25 @@ class ListeningPorts:
 
     def _listeners(self) -> list[tuple[int, int]]:
         if sys.platform == "win32":
-            return self._netstat_listeners()
+            return self._windows_listeners()
         return self._ss_listeners()
 
-    def _netstat_listeners(self) -> list[tuple[int, int]]:
-        found: list[tuple[int, int]] = []
-        for line in self._output(["netstat", "-ano", "-p", "TCP"]).splitlines():
-            parts = line.split()
-            if len(parts) < 5 or parts[3].upper() != "LISTENING":
-                continue
-            port_text = parts[1].rsplit(":", 1)[-1]
-            if port_text.isdigit() and parts[4].isdigit():
-                found.append((int(parts[4]), int(port_text)))
-        return found
+    def _windows_listeners(self) -> list[tuple[int, int]]:
+        """Windows' own table of listening IPv4 sockets. It asks for listeners by kind rather than by each socket's
+        state, because some Windows builds report a listener's state as 0, and ``netstat`` then leaves it out."""
+        table = self._windows_listener_table()
+        count = ctypes.cast(table, ctypes.POINTER(ctypes.c_uint32))[0]
+        rows = ctypes.cast(ctypes.addressof(table) + _TCP_TABLE_COUNT_BYTES, ctypes.POINTER(_TcpRowOwnerPid * count))[0]
+        return [(row.owning_pid, socket.ntohs(row.local_port & 0xFFFF)) for row in rows]
+
+    def _windows_listener_table(self) -> ctypes.Array:
+        get_table = ctypes.windll.iphlpapi.GetExtendedTcpTable
+        size = ctypes.c_uint32(0)
+        get_table(None, ctypes.byref(size), False, socket.AF_INET, _TCP_TABLE_OWNER_PID_LISTENER, 0)
+        table = ctypes.create_string_buffer(size.value)
+        if get_table(table, ctypes.byref(size), False, socket.AF_INET, _TCP_TABLE_OWNER_PID_LISTENER, 0) != 0:
+            return ctypes.create_string_buffer(_TCP_TABLE_COUNT_BYTES)
+        return table
 
     def _ss_listeners(self) -> list[tuple[int, int]]:
         found: list[tuple[int, int]] = []

@@ -9,7 +9,7 @@ fields its classes mark, which the board app draws from.
 
 Covered by the board app's TypeScript client specs in space/kanban/app, not here, because they have no Python
 operation: Arrange Board And Details (all three); Arrange Side Panel (all four); Display Board "Say the cdd server is
-not connected", "Update the board and cdd to the latest code", "Say which update step failed", "Keep the newer board when an older read answers late", "Announce a
+not connected", "Install the board again", "Say why the board's install failed", "Keep the newer board when an older read answers late", "Announce a
 ticket that moved", "Announce a fidelity done"; Display Ticket Card "Draw the card's title, age, and fidelity
 segments", "Name the active ticket on the chat's status line"; Display Ticket Details "Show the active ticket with no
 card pressed", "Show main when no other ticket is opened", "Say another session must be activated to act on

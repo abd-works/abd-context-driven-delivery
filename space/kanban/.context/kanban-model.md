@@ -370,6 +370,9 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> TicketCheckout.work_branch
 + format_choices(fidelities: list[str]): list[FormatChoice]
 	// `ticket.format_choices`: the chips of an action bar over those fidelities, each fidelity's files read once
++ choose_formats(fidelities: list[str], label: str, is_chosen: bool): list[FormatChoice]
+	// `ticket.choose_formats`: one press on a chip, in the chat bar or on the board, chooses or leaves out its formats in the session
+	-> FormatChoice.choose
 	-> TicketWork.progress_of
 	-> FidelityProgress.files
 	-> FormatChoice.offered_by
@@ -640,9 +643,11 @@ A ticket's work in one stage taken together: the progress of each fidelity the s
 	// data field
 + made: int
 	// data field: how many of the fidelities have a file in the group already
-+ starts_picked: bool
-	// data field: it holds a fidelity's default format and nothing is made in it
++ is_chosen: bool
+	// data field: every fidelity the chip covers has the format it uses from the group chosen in the session (FidelitySessionOutput.chosen_formats)
 ----
++ choose(is_chosen: bool): None
+	-> FidelitySessionOutput.choose_format (each fidelity the chip covers)
 + offered_by(read: list[tuple[FidelityGuidance, dict[str, list[FileEntry]]]]): list[FormatChoice]
 	// a chip per group the fidelities offer, in the order of `Format.GROUPS`
 	-> Format.group
@@ -680,12 +685,24 @@ Marked `@identity("title")`.
 	// the item a ticket moved into the Backlog waits in: `_backlog/<name>/<name>.md`, inside the ticket's kept folder on the ticket's board
 + write_if_missing(title: str)
 	// gives an item whose ticket never had an idea file one holding title, so it shows in the Backlog
++ parent: str
+	// the title of the item whose folder keeps this one's file, `_backlog/<parent>/<child>.md`; empty for an item of its own
++ is_stacked: bool
+	// a child shows inside its parent's card, not as a card of its own
++ children: list[BacklogItem]
+	// the other markdown files in a folder that keeps no ticket's work, beside the parent's own `<parent>.md`; sent whole
 + start(scope: str, path: str): Ticket
-	// `backlog-item.start`: an item a ticket was moved into returns that ticket with its folder; a new item's file moves into the new session folder
+	// `backlog-item.start`: an item a ticket was moved into returns that ticket with its folder; a new item's file moves into the new session folder; its children start too, each a story ticket that is its child
 	-> Sessions.load
 	-> Session.reopen
 	-> Board.open_ticket
 	-> Session.keep_file
+	-> BacklogItem.start
+	-> Ticket.reassign_parent
++ nest_under(parent: BacklogItem): BacklogItem
+	// `backlog-item.nest_under`: moves its file into parent's folder, made from parent's one file the first time; one level only, never into or out of a folder kept with a ticket's work
++ leave_parent(): BacklogItem
+	// `backlog-item.leave_parent`: moves its file back to the Backlog folder, an item of its own again
 + start_under(parent: Ticket): Ticket
 	// `backlog-item.start_under`: starts the item, as dropping it on parent's card does, and gives its ticket parent as its parent
 	-> BacklogItem.start
@@ -701,6 +718,9 @@ Marked `@identity("title")`.
 + move_before(other: BacklogItem): BacklogItem
 	// `backlog-item.move_before`: keeps it just above other in the Backlog; the tool names other by its title
 	-> Card.move_before
++ move_after(other: BacklogItem): BacklogItem
+	// `backlog-item.move_after`: keeps it just below other in the Backlog, as dropping it on other's bottom edge does
+	-> Column.place_after
 
 ## Help
 

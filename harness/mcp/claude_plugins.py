@@ -33,7 +33,10 @@ class ClaudePlugins:
 
     def install_board(self) -> str:
         """Install the board mod from the code the server runs. The board is a convenience on top of the install, so a
-        miss is printed, never raised."""
+        miss is printed, never raised. A board folder Claude Code watches, named in ``CLAUDE_CODE_PLUGIN_DIRS``, needs
+        no install: every chat reloads the mod as the folder is written, and installing it too would load it twice."""
+        if self.is_board_watched:
+            return "watched"
         installed = self.installed
         from_checkout = self.CHECKOUT_BOARD in installed
         if not from_checkout and installed.get(self.BOARD) == self.published_board_version:
@@ -82,6 +85,18 @@ class ClaudePlugins:
             return ""
 
     @property
+    def is_board_watched(self) -> bool:
+        """Whether the user's Claude Code settings name the published board folder in ``CLAUDE_CODE_PLUGIN_DIRS``, which
+        every chat loads the mod from and reloads it from when the folder changes."""
+        try:
+            env = JsonFile(self._claude.user_settings_folder / "settings.json").read().get("env", {})
+        except JsonFileUnreadable:
+            return False
+        board = (self._home.claude_plugins / BOARD_PLUGIN).resolve()
+        folders = str(env.get("CLAUDE_CODE_PLUGIN_DIRS", "")).split(os.pathsep)
+        return any(folder.strip() and Path(folder.strip()).expanduser().resolve() == board for folder in folders)
+
+    @property
     def claude_cli(self) -> str | None:
         """The desktop app's newest Claude Code, else the one on PATH, which can be too old for the plugin."""
         found = [path for folder in self._desktop_claude_code_folders() for path in folder.glob("*/*/claude.exe")]
@@ -100,8 +115,11 @@ class ClaudePlugins:
             return str(error)
         return run.stdout + run.stderr
 
+    # Adding a marketplace Claude Code already has reads nothing new, and an update compares against the listing it last
+    # read, so the marketplace is read again before the update, or a newly published board stays uninstalled.
     def _install(self, claude: str, plugin: str) -> str:
         self.run(claude, "plugin", "marketplace", "add", str(self._home.claude_plugins))
+        self.run(claude, "plugin", "marketplace", "update", CLAUDE_MARKETPLACE)
         self.run(claude, "plugin", "install", plugin, "--scope", "user")
         self.run(claude, "plugin", "update", plugin, "--scope", "user")
         if plugin in self.run(claude, "plugin", "list"):

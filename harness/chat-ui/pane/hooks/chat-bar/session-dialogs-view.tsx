@@ -2,8 +2,9 @@ import type { EngineInterface } from 'claude-code'
 
 import { BRAND } from '../shared/brand'
 import type { ChatBarDraw } from './chat-bar-view'
+import { repoListRightOf, sessionListRightOf } from './bar-columns'
 import { MAIN_SESSION } from './chat-bar-client'
-import { activateTicket, closeSession, createSession } from './session-client'
+import { activateTicket, chooseFolder, closeSession, createSession, openFolder, openRepo } from './session-client'
 import { cancelClose, toggleLeaving } from './session-dialogs-client'
 import { stageIconOf } from './stage-client'
 
@@ -50,31 +51,64 @@ function leaveHeadingOf(session: string, branch: string): string {
   return `LEAVE ${session}${branch ? ` on ${branch}` : ''}`
 }
 
-// In the main chat, the tickets a person can open, each after its stage's orange icon, and a field to name a new one.
+// Each open ticket's label, its stage icon and name, padded to the longest so the buttons share one width.
+function sessionLabels(tickets: { name: string; stage: string }[]): { name: string; label: string }[] {
+  const labels = tickets.map(ticket => ({ name: ticket.name, label: `${stageIconOf(ticket.stage)} ${ticket.name}` }))
+  const width = Math.max(0, ...labels.map(({ label }) => label.length))
+  return labels.map(({ name, label }) => ({ name, label: label.padEnd(width) }))
+}
+
+// In the main chat, the tickets a person can open, each after its stage's orange icon, and a field to name a new one,
+// its right edge under the end of "main +", the button after the repository's name that opens it.
 // Main is listed first as the session this chat works on; opening a ticket finds its chat or starts one in its worktree.
 // A ticket's own chat works only on that ticket, so it has no list.
 export function SessionListView($: EngineInterface, { Box, Button, Input, Text }: ElementTable, { chatBar, view }: ChatBarDraw) {
   if (!view.isSessionListOpen || !chatBar.isMain) return null
   return (
-    <Box key="session-list" flexDirection="column" alignSelf="flex-end" paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
+    <Box key="session-list" flexDirection="column" alignSelf="flex-end" marginRight={sessionListRightOf(chatBar)} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
       <Box key="session-row-main" flexDirection="row" gap={1}>
         <Text color={BRAND.muted}>⌂</Text>
         <Text color={BRAND.accent}>{MAIN_SESSION}</Text>
       </Box>
-      {chatBar.openTickets.map(ticket => (
-        <Box key={`session-row-${ticket.name}`} flexDirection="row" gap={1}>
-          <Text color={BRAND.accent}>{stageIconOf(ticket.stage)}</Text>
-          {/* The desktop pads a Button and draws it in its own colour, so the name is Text in main's column and a
-              see-through Button over it takes the press. */}
-          <Box key={`session-name-${ticket.name}`}>
-            <Text color={BRAND.text}>{ticket.name}</Text>
-            <Box position="absolute" top={0} left={0} width={ticket.name.length}>
-              <Button key={`session-${ticket.name}`} plain label=" " onPress={() => activateTicket($, ticket.name)} />
-            </Box>
-          </Box>
-        </Box>
+      {chatBar.isClone ? TicketChoicesView($, { Button, Input }, chatBar) : <Text key="session-no-git" color={BRAND.muted}>No git here, so no ticket chats</Text>}
+    </Box>
+  )
+}
+
+// Each ticket is a whole button, its stage icon in its label: a see-through Button laid over the name took no press in
+// the desktop app, which left the list open and deaf. Every label is padded to the longest, so each button spans the
+// list and a press anywhere on its line opens it. A ticket opens in its own worktree and chat, so only a git repository
+// offers them.
+function TicketChoicesView($: EngineInterface, { Button, Input }: Pick<ElementTable, 'Button' | 'Input'>, chatBar: ChatBarDraw['chatBar']) {
+  return [
+    ...sessionLabels(chatBar.openTickets).map(({ name, label }) => <Button key={`session-${name}`} plain label={label} onPress={() => activateTicket($, name)} />),
+    <Input key="new-session" placeholder="New session name" value="" onSubmit={value => (value.trim() ? createSession($, value.trim()) : undefined)} />,
+  ]
+}
+
+// In the main chat, the repositories beside this one, opened from the repository's own button before "main +",
+// alone, so the bar stays in view, its right edge under the end of that button. Opening one starts a top-level chat on it; a new
+// name creates the repository, private. FOLDER, above them, opens any folder as it is in a top-level chat, chosen with
+// the system's folder picker or typed, and creates nothing there.
+export function RepoListView($: EngineInterface, { Box, Button, Input, Text }: ElementTable, { chatBar, view }: ChatBarDraw) {
+  if (!view.isRepoListOpen || !chatBar.isMain) return null
+  return (
+    <Box key="repo-list" flexDirection="column" alignSelf="flex-end" marginRight={repoListRightOf(chatBar)} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
+      <Text key="folder-heading" color={BRAND.muted}>FOLDER</Text>
+      <Button key="repo-folder-choose" plain label="▸ Choose a folder…" onPress={() => chooseFolder($)} />
+      <Input key="repo-folder-path" placeholder="Folder path" value="" onSubmit={value => (value.trim() ? openFolder($, value.trim()) : undefined)} />
+      <Text key="repos-heading" color={BRAND.muted}>REPOS</Text>
+      {/* A chat bar whose view was saved before repos existed has none. Each repository is a whole button: a
+          see-through one laid over its name took no press. */}
+      {(view.repos ?? []).map(repo => (
+        <Button
+          key={`repo-${repo.name}`}
+          plain
+          label={`${repo.has_cdd ? '◆' : '◇'} ${repo.name}${repo.branch ? ` · ${repo.branch}` : ''}`}
+          onPress={() => openRepo($, repo.name)}
+        />
       ))}
-      <Input key="new-session" placeholder="New session name" value="" onSubmit={value => (value.trim() ? createSession($, value.trim()) : undefined)} />
+      <Input key="new-repo" placeholder="New repo name (private)" value="" onSubmit={value => (value.trim() ? openRepo($, value.trim()) : undefined)} />
     </Box>
   )
 }

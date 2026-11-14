@@ -131,6 +131,14 @@ def _render_kept(model, previous):
     return channel.render(model)
 
 
+def _render_closed_up(model, previous):
+    channel = DrawIOCleanEngineeringModel()
+    channel.previous = previous
+    channel.keep_positioning = True
+    channel.close_gaps = True
+    return channel.render(model)
+
+
 def _create_kept(content, path):
     toolset = CleanEngineering().drawio
     toolset.channel.keep_positioning = True
@@ -313,6 +321,20 @@ with description('a Draw.io class diagram'):
 
             with it('should still show the unchanged owner property'):
                 expect(self.xml).to(contain('owner'))
+
+        # A diagram spread over a mostly empty page is hard to read, so a render can close it up.
+        with context('with a card moved far from the others and the gaps closed up'):
+            with before.each:
+                first = DrawIOCleanEngineeringModel().render(_shop_model())
+                order_x, order_y = _cell_xy(first, _ORDER)
+                moved = _set_cell_xy(first, _CART, order_x + 3000, order_y)
+                self.xml = _render_closed_up(_shop_model(), moved)
+
+            with it('should bring the far card back near the others'):
+                expect(_cell_xy(self.xml, _CART)[0] - _cell_xy(self.xml, _ORDER)[0] < 1000).to(be_true)
+
+            with it('should keep the far card on the side it was on'):
+                expect(_cell_xy(self.xml, _CART)[0] > _cell_xy(self.xml, _ORDER)[0]).to(be_true)
 
         with context('with an existing relationship already present'):
             with before.each:

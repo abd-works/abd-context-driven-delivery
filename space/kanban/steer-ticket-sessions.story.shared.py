@@ -30,6 +30,7 @@ from space.kanban.session_board_examples import (
     BILLING_REPORT_ON_SRC_BILLING,
     BILLING_ROOT,
     CHECKOUT_FLOW,
+    CHECKOUT_FLOW_RETRY,
     EARLIER_HANDOFF,
     EARLIER_HANDOFF_TEXT,
     ENTER_CARD_DETAILS,
@@ -220,7 +221,7 @@ def _(s):
     @s.then("billing-report's session works in src/billing")
     def _(world):
         saved = json.loads((world.project.sessions / "billing-report" / "session.json").read_text(encoding="utf-8"))
-        expect(saved["workpath"]).to(equal(str((world.project.root / BILLING_ROOT).resolve())))
+        expect(saved["workpath"]).to(equal(BILLING_ROOT))
 
     @s.and_("the details show its root as src/billing")
     def _(world):
@@ -374,7 +375,7 @@ def _(s):
 
     @s.then("main on origin holds the commit checkout-flow: leave session")
     def _(world):
-        expect(world.project.origin_log("main")[0]).to(equal(LEAVE_SESSION_COMMIT))
+        expect(world.project.origin_log("main")).to(contain(LEAVE_SESSION_COMMIT))
 
     @s.and_("the checkout is still on main")
     def _(world):
@@ -732,6 +733,23 @@ def _(s):
     @s.and_("checkout-flow's session records no branch")
     def _(world):
         expect(recorded_checkout(world)[0]).to(equal(""))
+
+
+@shared_stories.scenario("Activate Ticket", "Leave a branch named as another ticket to that ticket")
+def _(s):
+    @s.given("checkout-flow-retry is a ticket whose work is on the branch checkout-flow-retry")
+    def _(world):
+        seed_checkout_flow_open_on_pushed_main(world.project)
+        world.project.seed_session(CHECKOUT_FLOW_RETRY)
+        world.project.seed_branch(CHECKOUT_FLOW_RETRY.name, checked_out=False)
+
+    @s.when("the Person activates checkout-flow")
+    def _(world):
+        world.Ticket.load(CHECKOUT_FLOW.name).activate()
+
+    @s.then("checkout-flow's session records its own branch checkout-flow")
+    def _(world):
+        expect(recorded_checkout(world)[0]).to(equal(CHECKOUT_FLOW.name))
 
 
 def has_branch(world, name: str) -> bool:

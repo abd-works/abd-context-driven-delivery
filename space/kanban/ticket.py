@@ -6,6 +6,7 @@ import json
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import quote, urlencode
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
@@ -41,6 +42,8 @@ if TYPE_CHECKING:
     from space.kanban.backlog_item import BacklogItem
 
 GRAPH_RULE_VIOLATION = "graph-rule"
+# The Claude app opens a new chat from this link, on the folder it names, with its prompt typed in for the person to send.
+NEW_CHAT_LINK = "claude://code/new"
 MOVED_INTO = "move"
 MARKED_DONE = "done"
 MARKED_IN_PROGRESS = "in-progress"
@@ -346,6 +349,29 @@ class Ticket(Card):
         return self.checkout.worktree
 
     @property
+    @data_field
+    def new_chat_link(self) -> str:
+        """The claude://code/new link that opens the ticket's chat in the Claude app on its worktree, with a prompt typed
+        in for the person to send; empty while it has no worktree. The app starts no chat a person did not send, so the
+        board and the chat bar open this link rather than ask an agent to start one."""
+        if not self.worktree:
+            return ""
+        prompt = (
+            f'Title this session "{self.name}". You are the chat of the session board\'s ticket {self.name}; work on that '
+            f"ticket. First call sessions.switch with name {self.name}, so every tool works on its session, then read the "
+            "session's latest handoff."
+        )
+        return f"{NEW_CHAT_LINK}?{urlencode({'folder': self.worktree, 'q': prompt}, quote_via=quote)}"
+
+    @property
+    @data_field
+    def session_path(self) -> str:
+        """The whole path of the folder the ticket's session works in: its workpath, else its repository's folder. The
+        status line below the chat names it, and the chat bar opens the Graph app on it, so the graph a chat opens is its
+        own session's."""
+        return str(self._session.work_root)
+
+    @property
     @data_field(key="working_chat", reference=True)
     def chat(self) -> Chat | None:
         """The connected chat the ticket works in, which every command the board sends for it goes to, sent by its id as
@@ -370,9 +396,18 @@ class Ticket(Card):
     @agent_tool
     @noSessionLog
     def format_choices(self, fidelities: list[str]) -> list[FormatChoice]:
-        """Return the format chips of an action bar on ticket over fidelities, slugs such as stories-story-map: each group of formats they offer, the format each fidelity uses from it, how many offer it and have a file in it already, and whether the bar opens with it picked."""
+        """Return the format chips of an action bar on ticket over fidelities, slugs such as stories-story-map: each group of formats they offer, the format each fidelity uses from it, how many offer it and have a file in it already, and whether it is chosen for them in the session."""
         read = [(progress.fidelity, progress.files()) for progress in (self.work.progress_of(slug) for slug in fidelities)]
         return FormatChoice.offered_by(read)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def choose_formats(self, fidelities: list[str], label: str, is_chosen: bool) -> list[FormatChoice]:
+        """Turn the chip label, such as markdown, on or off for fidelities, slugs such as stories-story-map, on ticket: each fidelity chooses, or leaves out, the format it uses from that group in the session, the same choice the Story UI's toggles make; return the chips again."""
+        chips = self.format_choices(fidelities)
+        next(chip for chip in chips if chip.label == label).choose(is_chosen)
+        return self.format_choices(fidelities)
 
     @mcp
     @agent_tool
@@ -600,6 +635,23 @@ class Ticket(Card):
         item = self._board.backlog_item_of(kept_in_backlog)
         item.write_if_missing(kept_in_backlog.title)
         return item
+
+    def in_overview(self) -> OverviewTicket:
+        """This ticket as the board's overview sends it: whole, but with its children by name."""
+        return OverviewTicket(self._session, self._board)
+
+
+class OverviewTicket(Ticket):
+    """*OverviewTicket* is the active ticket as `board.overview` sends it to a reader such as the chat bar, whose MCP
+    answer is cut off past its size limit: the ticket whole, with each child by its name alone. Sent whole, each child
+    would carry its own progress, stage work, and children, so a ticket two levels of children deep would triple the
+    answer; `board.show` keeps sending them whole for the board, where a stacked child shows in no column."""
+
+    @property
+    @data_field(reference=True)
+    def children(self) -> list[Ticket]:
+        """The tickets whose session names this one's as their parent, each by its name."""
+        return self._board.children_of(self)
 
 
 class TicketWork:

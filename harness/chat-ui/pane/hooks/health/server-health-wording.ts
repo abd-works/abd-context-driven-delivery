@@ -1,30 +1,46 @@
+import type { AppData } from '@cdd/harness/diagnostics/app'
 import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
-import type { InstallJson, ServerHealthJson } from '../../types'
+import type { AppOpeningJson, InstallJson, ServerHealthJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { RECONNECT_TRIES, REPORT_TOOL, SERVER, ServerHealthClient } from './server-health-client'
 
 // The server health panel's words: what each part reads, the headline, the details and the install line. The panel's
 // view paints them; ServerHealthClient carries the report they are read from.
 
-export type Part = { icon: string; label: string; value: string; isUp: boolean }
+// app: the label of the app a press on the part opens; none for a part that is not an app.
+export type Part = { icon: string; label: string; value: string; isUp: boolean; app?: string }
 
 // A part reads green while it runs and grey while it does not.
 export function colourOf(part: Part): string {
   return part.isUp ? BRAND.success : BRAND.muted
 }
 
-const runningOn = (port: number | null): string => (port === null ? 'not running' : `running :${port}`)
+// Each app's mark in the status row; an app registered later shows the plain one.
+const APP_ICONS: Record<string, string> = { Kanban: '▦', Graph: '◈', 'Story UI': '✎' }
+const APP_ICON = '▣'
+const RUNNING: AppData['status'] = 'running'
+
+// An app reads its status, and the port it answers on while it runs: running :8778, not running, not installed.
+function appPartOf(app: AppData): Part {
+  const isUp = app.status === RUNNING
+  return { icon: APP_ICONS[app.label] ?? APP_ICON, label: app.label, value: isUp ? `${app.status} :${app.port}` : app.status, isUp, app: app.label }
+}
 
 export function partsOf({ report, toolCount }: ServerHealthJson): Part[] {
-  const { kanbanAppPort, graphAppPort, isHookServerRunning: isHookRunning } = new ServerHealthClient(report as ServerHealthData | null)
+  const { apps, isHookServerRunning: isHookRunning } = new ServerHealthClient(report as ServerHealthData | null)
   return [
     { icon: '⬢', label: 'MCP host', value: 'running', isUp: true },
     { icon: '⚒', label: 'Tools', value: `${toolCount} loaded`, isUp: true },
-    { icon: '▦', label: 'Kanban app', value: runningOn(kanbanAppPort), isUp: kanbanAppPort !== null },
-    { icon: '◈', label: 'Graph app', value: runningOn(graphAppPort), isUp: graphAppPort !== null },
+    ...apps.map(appPartOf),
     { icon: '↪', label: 'Hook server', value: isHookRunning ? 'running' : 'not installed', isUp: isHookRunning },
   ]
+}
+
+// Opening the Story UI., or what failed and how to fix it, once a person pressed an app; nothing otherwise.
+export function appLineOf({ label, state, error }: AppOpeningJson): string {
+  if (state === 'opening') return `Opening the ${label}.`
+  return state === 'failed' ? error ?? `The ${label} did not open.` : ''
 }
 
 export function headlineOf({ connection, attempt, toolCount }: ServerHealthJson): { title: string; detail: string } {

@@ -1,10 +1,11 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { ACCENT, card, dragCard, openBoard, openCard, openCardOf, openTileBarOf } from './support'
+import { ACCENT, card, openBoard, openCard, openCardOf, openTileBarOf } from './support'
 
-// Dropping the active ticket on Complete asks, in the Close dialog, what to do with its work.
+// Close on the active ticket's card, with no chat connected, asks in the Close dialog what to do with its work. A drag
+// onto Complete asks the same, but at phone width Complete is off the page.
 async function openCloseDialog(page: Page): Promise<void> {
-  await dragCard(page, card(page, 'checkout-flow'), page.locator('.board-column[data-column="Complete"] .card-list').first(), { atTheEnd: true })
+  await card(page, 'checkout-flow').getByRole('button', { name: 'Close' }).first().click()
   await expect(page.getByRole('dialog')).toBeVisible({ timeout: 8_000 })
 }
 
@@ -89,18 +90,18 @@ test.describe('the session board on the page', () => {
     })
   })
 
-  test.describe('with the files folder pressed on a card', () => {
+  test.describe('with the files button pressed on a card', () => {
     test('should open the files list beside the board', async ({ page }) => {
-      await card(page, 'checkout-flow').getByRole('button', { name: 'folder' }).first().click()
+      await card(page, 'checkout-flow').getByRole('button', { name: 'files', exact: true }).first().click()
       const panel = page.locator('[data-panel="files"]')
-      await expect(panel.getByRole('button', { name: 'story-map.md', exact: true })).toBeVisible()
+      await expect(panel.getByRole('tab', { name: 'story-map.md', exact: true })).toBeVisible()
       const board = await page.locator('.board-main').boundingBox()
       const beside = await panel.boundingBox()
       expect(beside!.x).toBeGreaterThanOrEqual(board!.x + board!.width - 1)
     })
 
     test('should keep the header on one line', async ({ page }) => {
-      await card(page, 'checkout-flow').getByRole('button', { name: 'folder' }).first().click()
+      await card(page, 'checkout-flow').getByRole('button', { name: 'files', exact: true }).first().click()
       await expect(page.locator('[data-panel="files"]')).toBeVisible()
       const header = await page.locator('.board-header').boundingBox()
       expect(header!.height).toBeLessThanOrEqual(CANVAS_HEADER_PIXELS)

@@ -1,5 +1,6 @@
 """BDD spec for the agent a spec drives: the steps every agent block takes, whichever agent answers."""
 
+import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -11,6 +12,7 @@ from cdd_guidance.practices.agent_bdd.agent_bdd_common import AgentResult
 from cdd_guidance.practices.agent_bdd.agent import agent
 from cdd_guidance.practices.agent_bdd.agent_block import AgentBlock
 from cdd_guidance.practices.agent_bdd.agent_chat_bdd import ChatAgentBlock
+from cdd_guidance.practices.agent_bdd.agent_cli_bdd import AGENT_RUNS_OFF, AgentRunsOff
 
 
 class ScriptedAgentBlock(AgentBlock):
@@ -42,6 +44,17 @@ with description("an agent a spec drives") as self:
         with it("should be the in-chat agent"):
             with agent(self.workspace, self.session_file, in_chat=True) as run:
                 expect(isinstance(run, ChatAgentBlock)).to(be_true)
+
+    with context("that is opened on the agent command line while agent runs are off"):
+        with it("should refuse to start, naming the setting that turned agent runs off"):
+            previous = os.environ.get(AGENT_RUNS_OFF)
+            os.environ[AGENT_RUNS_OFF] = "1"
+            try:
+                expect(lambda: agent(self.workspace, self.session_file, in_chat=False).__enter__()).to(
+                    raise_error(AgentRunsOff, contain(AGENT_RUNS_OFF))
+                )
+            finally:
+                os.environ.pop(AGENT_RUNS_OFF) if previous is None else os.environ.__setitem__(AGENT_RUNS_OFF, previous)
 
     with context("that is given a step"):
         with before.each:

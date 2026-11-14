@@ -1,0 +1,3 @@
+<JSONThreatProtection name="json-threat-protection">
+  <ContainerDepth>10</ContainerDepth><ArrayElementCount>200</ArrayElementCount><StringValueLength>4000</StringValueLength>
+</JSONThreatProtection>

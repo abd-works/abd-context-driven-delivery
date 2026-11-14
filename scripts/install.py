@@ -78,7 +78,9 @@ def main() -> int:
         print(f"cdd server: {server.serve_from_checkout() if args.serve_from_checkout else server.pin_server()}")
         if installer.layout.is_claude_code:
             print(f"cdd-board: {server.claude_plugins.install_board()}")
-        _rebuild_board_page()
+        print(f"language adapters: {len(installer.write_language_adapters())} written")
+        _write_runtime_adapters(installer, server)
+        _install_board_apps()
         return 0
     if args.self:
         installer.install_self(replace=not args.no_replace)
@@ -88,16 +90,40 @@ def main() -> int:
         restarted = server.keep_pinned_current()
         if restarted:
             print(f"cdd server: {restarted}")
-        _rebuild_board_page()
+            _write_runtime_adapters(installer, server)
+        _install_board_apps()
     return 0
 
 
-def _rebuild_board_page() -> None:
-    """The board's server serves a page built from this checkout, which a pull or a merge leaves as it was, so every
-    install rebuilds it and the open board reloads onto the new code."""
-    from space.kanban.board_app import BoardPage
+def _write_runtime_adapters(installer, server) -> None:
+    """The apps the server launches run from the pinned runtime, and their pages import the CDD domain through the
+    language adapters under its IDE folder, which git never copies there. The runtime is this checkout's commit, so a pin
+    copies the adapters this checkout's install wrote, in place of any an earlier pin left."""
+    import shutil
 
-    print(f"board page: {BoardPage().rebuild()}")
+    home = server.daemon.home
+    if home.mode != home.PINNED:
+        return
+    source = Path(installer.path) / "language-adapters"
+    target = home.pinned_checkout / installer.layout.folder_name / "language-adapters"
+    shutil.rmtree(target, ignore_errors=True)
+    shutil.copytree(source, target)
+    print(f"runtime language adapters: copied to {target}")
+
+
+def _install_board_apps() -> None:
+    """The board's server serves pages built from this checkout, the Kanban's and the Story UI editor's, which a pull or
+    a merge leaves as they were, so every install installs both apps again and an open page reloads onto the new code.
+    The apps are a convenience on top of the install, so a failure is told, never raised."""
+    from harness.diagnostics.app import AppNotStarted
+    from space.kanban.board_app import KANBAN_APP, STORY_UI_APP
+
+    for app in (KANBAN_APP, STORY_UI_APP):
+        try:
+            app.install()
+            print(f"{app.label} app: installed in {app.folder}")
+        except AppNotStarted as failed:
+            print(f"{app.label} app: {failed}")
 
 
 if __name__ == "__main__":

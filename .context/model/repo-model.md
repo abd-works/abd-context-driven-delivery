@@ -2310,22 +2310,51 @@ This module reports whether CDD is running and answering: *ServerHealth* says wh
 
 ## ServerHealth
 
-Report the parts of CDD that run outside this MCP host, so a person can see what is up without opening a terminal. Each app a report probes is registered from the ports file its servers read: the graph app's here, the session board's from space/kanban.
+Report the parts of CDD that run outside this MCP host, so a person can see what is up without opening a terminal: every registered *App*, each read as it is now, and the hook server.
 
-+ ServerHealth(repo_root: Path | str, graph_ports: tuple[int, ...] | None = None, kanban_ports: tuple[int, ...] | None = None, hook_daemon: HookDaemon | None = None)
++ ServerHealth(repo_root: Path | str, hook_daemon: HookDaemon | None = None)
 ------
-+ kanban_app_port: int | None
-+ kanban_app_url: str
-+ graph_app_port: int | None
++ apps: list[App]
 + is_hook_server_running: bool
 ----
-+ reports_graph_app_on(ports: tuple[int, ...]): None
-+ reports_kanban_app_on(ports: tuple[int, ...]): None
 + load(project: Path | str): ServerHealth
 + report(): ServerHealth
 ---<<creates>>--> HookDaemon
----<<reads the graph app's ports from>>--> GRAPH_APP_PORTS
+---<<aggregation>>--> App
 ---<<annotated with>>--> LanguageAdapter
+
+## App
+
+One CDD web app a person opens beside the chat (Kanban, Graph, Story UI), and the one registry of them. The module that owns each app makes it once and registers it: the Graph app here, from `GRAPH_APP_PORTS`; the CDD Kanban and the Story UI editor in space/kanban.
+
++ App(label: str, folder: Path, server: AppServer, page: str = "/")
+------
++ label: str
++ status: AppStatus
++ port: int | None
++ url: str
++ server: AppServer
++ is_installed: bool
+----
++ register(): App
++ registered(): list[App]
++ load(app: str, project: Path | str): App
++ open(): App
++ install(): App
+---<<raises>>--> AppNotRegistered
+---<<raises>>--> AppNotStarted
+---<<aggregation>>--> AppServer
+---<<annotated with>>--> LanguageAdapter
+
+## AppServer
+
+The server an app answers from, which the chat that opens the app starts and its end stops: the folder it runs in, the command that starts it (node on its script, through tsx for TypeScript), and the ports it tries in turn.
+
++ AppServer(folder: Path, script: str, ports: tuple[int, ...])
+------
++ folder: str
++ command: list[str]
++ port: int | None
 
 ## CallDiagnostics
 
@@ -3104,11 +3133,11 @@ Where one fidelity writes in one session: its output paths by format, the files 
 + is_enabled: bool
 + reports_folder: Path
 + root: Path
-+ kept_format: str
++ chosen_formats: list[str]
 ----
 + reports(): list[Path]
 + new_report_path(): Path
-+ keep_format(format: str): None
++ choose_format(format: str, is_chosen: bool): FidelitySessionOutput
 + output_paths(): dict[str, list[str]]
 + files(): dict[str, list[FileEntry]]
 	-> SessionFiles.find
@@ -3848,10 +3877,15 @@ Sketch a solution interactively before generating the formal artifact.
 
 ## Partition : GuidanceAction
 
-Split a corpus into an index and verbatim segments.
+Convert a corpus to markdown, split it into an index and verbatim segments, and embed the segments into a searchable index.
 
++ Partition(session: Any = None, call: ToolCall | None = None, context_setup: ContextSetup | None = None)
 ------
++ << composition >> context_setup: ContextSetup
++ context_index: ContextIndex
+	// its context_setup's
 ----
++ made_for(session: Any, call: ToolCall | None = None): Partition
 + verify_segment_completeness(segment_path: str, expected_names: str = '', min_body_chars: int = MIN_ENTRY_BODY_CHARS, index_path: str = ''): str
 + partition_guidance(): str
 + index(context: str = '', out_root: str | None = None, paths: list[str] | str | None = None): str
@@ -4790,32 +4824,30 @@ Scaffold a new practice: its PracticeGuidance class, its markdown, templates, an
 
 # cdd_guidance/context_setup
 
-*ContextSetup* converts documents or captures a live app, through *LiveAppCapture*, and partitions the result with the practices the user picks; *ContextIndex* embeds the segments and answers questions with citations. The cdd server makes each for the call it answers, so the folders a call names are read from that call's session's project.
+*ContextSetup* converts documents to markdown, which Partition calls before it partitions them, and captures a live app through *LiveAppCapture*; *ContextIndex* embeds the segments and answers questions with citations. The cdd server makes each for the call it answers, so the folders a call names are read from that call's session's project.
 
 - **Purpose:** Turn existing documents or a running application into partitioned, indexed context that later stages can search and cite.
 - **Seam (terms):** ContextSetup, ContextIndex, EmbeddingProvider
-- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/markdown, harness/mcp, cdd_guidance/actions (*Partition*)
+- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/markdown, harness/mcp, harness/guidance_actions (*ActionWorksInNoSession*)
 
 ## ContextSetup
 
-Convert a folder of documents to markdown and partition it through the context tools the user selects.
+Convert a folder of documents to markdown, and capture a live application into indexed context.
 
-+ ContextSetup(partition: Partition | None = None, context_index: ContextIndex | None = None)
++ ContextSetup(context_index: ContextIndex | None = None, session: Any = None)
 ------
-+ << composition >> partition: Partition
 + << composition >> context_index: ContextIndex
 + session: Any
-	// the session its Partition was made for
+	// the session it works in
 ----
 + for_call(call: ToolCall): ContextSetup
++ in_session(session: Any): ContextSetup
 + convert(folder_path: str): ConversionResult
 + smoke_test(repo_path: str, surface: str = 'web', capture_repo: str = '', base_url: str = '', entry_paths: list[str] | None = None): SmokeTestResult
 + scout_app(repo_path: str, surface: str = 'web', capture_repo: str = '', base_url: str = '', entry_paths: list[str] | None = None): ScoutResult
 + complete_capture(repo_path: str, missing_pages: list[str], surface: str = 'web', capture_repo: str = '', base_url: str = ''): CaptureResult
 + capture_from_live_app(repo_path: str, capture_repo: str = '', surface: str = 'web'): str
-+ capture_from_documents(folder_path: str, indexers: list[str] | None = None, first: str = ''): str
 ---<<creates>>--> ContextIndex
----<<creates>>--> Partition
 ---<<creates>>--> LiveAppCapture
 ---<<reads session of>>--> ToolCall
 
@@ -4827,6 +4859,7 @@ Embed partitioned segments into a FAISS index and answer questions with source c
 ------
 ----
 + for_call(call: ToolCall): ContextIndex
++ in_session(session: Any): ContextIndex
 + embed(segments_paths: list[str], out_path: str): EmbedResult
 + search(query: str, index_path: str, top_k: int = 5): SearchResult
 + ask(question: str, index_path: str): str

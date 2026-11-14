@@ -1,0 +1,6 @@
+<TargetEndpoint name="default">
+  <HTTPTargetConnection>
+    <SSLInfo><Enabled>true</Enabled><ClientAuthEnabled>true</ClientAuthEnabled></SSLInfo>
+    <URL>https://{service}.internal</URL>
+  </HTTPTargetConnection>
+</TargetEndpoint>

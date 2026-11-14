@@ -35,6 +35,7 @@ from space.session.sessions import SessionNameRequiredError
 from space.work_state import WorkState
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
+from space.session.throwaway_project import SpecRunHome
 
 
 def _chat_in(session: Session, chat_id: str = "spec-chat") -> ChatPointer:
@@ -54,6 +55,9 @@ def _chat_arguments(chat_id: str, transcript: Path) -> dict[str, str]:
 # (E) Open Work Session
 # (E) Hold Process Session
 with description("a session"):
+    with before.each:
+        SpecRunHome.ensure()
+
     # (S) Session --> Persist Hook Session
     with context("that a hook event reads"):
         with before.each:
@@ -251,6 +255,11 @@ with description("a session"):
             with it("should log into the ticket's folder in the repository's own .sessions"):
                 expect(Sessions(self.called).current().session_path).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
 
+            # The board and the chat bar name the active ticket by the open session's name, so it follows the worktree
+            # as current does: the ticket's own chat shows the ticket, not main.
+            with it("should name that ticket as the session open"):
+                expect(Sessions(self.called).open_name).to(equal("alpha"))
+
             with context("that a chat in the repository's own folder switches to"):
                 with before.each:
                     self.instructions = Sessions(self.repo).switch("alpha", call=ToolCall({}, self.repo))
@@ -265,6 +274,66 @@ with description("a session"):
                 with it("should give no warning"):
                     instructions = Sessions(self.worktree).switch("alpha", call=ToolCall({}, self.worktree))
                     expect(instructions).not_to(contain("This chat works in"))
+
+            # A session's root has to be in its own worktree: a workpath saved into the repository's own folder, as
+            # older saves wrote it, names the same folder in the ticket's worktree.
+            with context("with a workpath stored in the repository's own folder"):
+                with before.each:
+                    (self.repo / "harness").mkdir()
+                    (self.worktree / "harness").mkdir()
+                    stored = self.repo / ".sessions" / "alpha" / "session.json"
+                    fields = json.loads(stored.read_text(encoding="utf-8"))
+                    fields.update(workpath=str(self.repo.resolve() / "harness"), repo_path=str(self.repo.resolve()))
+                    stored.write_text(json.dumps(fields), encoding="utf-8")
+                    self.session = Sessions(self.repo).named("alpha")
+
+                with it("should work in that folder in the ticket's worktree"):
+                    expect(self.session.work_root).to(equal(self.worktree.resolve() / "harness"))
+
+                with it("should take the ticket's worktree as its repository"):
+                    expect(self.session.repo_path).to(equal(self.worktree.resolve()))
+
+                with context("that is saved"):
+                    with before.each:
+                        self.session.save()
+
+                    with it("should keep its workpath from the repository's top"):
+                        expect(self.session.fields["workpath"]).to(equal("harness"))
+
+                    with it("should keep working in that folder in the ticket's worktree"):
+                        expect(Sessions(self.repo).named("alpha").work_root).to(equal(self.worktree.resolve() / "harness"))
+
+            # The worktree holds only its ticket's work, so a chat there always opens the ticket's session.
+            with context("that a chat in the ticket's worktree switches naming no session"):
+                with before.each:
+                    self.instructions = Sessions(self.worktree).switch(call=ToolCall({}, self.worktree))
+
+                with it("should open the ticket's session"):
+                    expect(Sessions(self.worktree).current().name).to(equal("alpha"))
+
+                with it("should return how to keep its log"):
+                    expect(self.instructions).to(contain("Keeping the session log"))
+
+            with context("that a chat in the ticket's worktree switches to main"):
+                with before.each:
+                    self.instructions = Sessions(self.worktree).switch("main", call=ToolCall({}, self.worktree))
+
+                with it("should open the ticket's session"):
+                    expect(Sessions(self.worktree).current().name).to(equal("alpha"))
+
+                with it("should say the worktree belongs to the ticket"):
+                    expect(self.instructions).to(contain("This chat works in alpha's own worktree, so its session is alpha, not main"))
+
+            with context("that a chat in the ticket's worktree switches to another ticket"):
+                with before.each:
+                    Sessions(self.repo).create("beta")
+                    self.instructions = Sessions(self.worktree).switch("beta", call=ToolCall({}, self.worktree))
+
+                with it("should open the worktree's ticket"):
+                    expect(Sessions(self.worktree).current().name).to(equal("alpha"))
+
+                with it("should say the worktree belongs to the ticket"):
+                    expect(self.instructions).to(contain("so its session is alpha, not beta"))
 
         with context("with a repo path"):
             with before.each:
@@ -562,6 +631,9 @@ with description("a session"):
 # (E) Open Named Session
 # (S) Session --> Open Session Loop
 with description("a loop"):
+    with before.each:
+        SpecRunHome.ensure()
+
     with context("that is opened"):
         with before.each:
             self.repo = Path(tempfile.mkdtemp())
@@ -618,6 +690,9 @@ with description("a loop"):
 # (E) Open Work Session
 # (E) Record Session Log
 with description("an action"):
+    with before.each:
+        SpecRunHome.ensure()
+
     with before.each:
         self.repo = Path(tempfile.mkdtemp())
         self.called = self.repo
@@ -725,6 +800,9 @@ with description("an action"):
 # (E) Hold Process Session
 # (S) Session --> Load Practice Guideline
 with description("a practice"):
+    with before.each:
+        SpecRunHome.ensure()
+
     with context("that a practice has been invoked"):
         with before.each:
             self.repo = Path(tempfile.mkdtemp())
@@ -959,6 +1037,9 @@ with description("a practice"):
 
 with description("a session with no folder of its own, on a project inside its checkout") as self:
     with before.each:
+        SpecRunHome.ensure()
+
+    with before.each:
         self.repo = Path(tempfile.mkdtemp(prefix="session-root-")).resolve()
         (self.repo / ".git").mkdir()
         self.project = self.repo / "app"
@@ -977,6 +1058,9 @@ with description("a session with no folder of its own, on a project inside its c
 
 
 with description("a session working in a folder of its own, holding an aggregate's files") as self:
+    with before.each:
+        SpecRunHome.ensure()
+
     with before.each:
         self.repo = Path(tempfile.mkdtemp(prefix="session-declared-")).resolve()
         (self.repo / ".git").mkdir()
@@ -1000,6 +1084,9 @@ with description("a session working in a folder of its own, holding an aggregate
 # (E) Open Work Session
 # (S) Session --> Switch Session
 with description("a session on an MCP host whose CDD_REPO is the CDD checkout, not the project"):
+    with before.each:
+        SpecRunHome.ensure()
+
     with before.each:
         self._prior_repo = os.environ.get("CDD_REPO")
         self._prior_project = os.environ.get("CDD_PROJECT")
@@ -1083,6 +1170,9 @@ with description("a session on an MCP host whose CDD_REPO is the CDD checkout, n
 
 
 with description("a session switched to without a name"):
+    with before.each:
+        SpecRunHome.ensure()
+
     with context("with nothing saved in .sessions/session.json"):
         with before.each:
             self.repo = Path(tempfile.mkdtemp())
@@ -1098,6 +1188,9 @@ with description("a session switched to without a name"):
 
 
 with description("a session read for a board") as self:
+    with before.each:
+        SpecRunHome.ensure()
+
     with before.each:
         self.repo = Path(tempfile.mkdtemp(prefix="session-board-"))
         (self.repo / ".git").mkdir()
@@ -1185,6 +1278,9 @@ with description("a session read for a board") as self:
 
 # One graph per session: two calls that first ask for it at once must not each make their own.
 with description("a session whose graph two calls first ask for at once"):
+    with before.each:
+        SpecRunHome.ensure()
+
     with before.each:
         self.repo = Path(tempfile.mkdtemp())
         session = Sessions(self.repo).current()

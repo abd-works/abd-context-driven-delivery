@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import functools
 import inspect
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -199,6 +200,8 @@ def data_of(value: Any) -> Any:
 
     This is the one way a value of any type becomes data, for MCP results and every other JSON answer, so a path reads
     the same wherever it is sent: with forward slashes."""
+    if isinstance(value, Enum):
+        return value.value
     if value is None or isinstance(value, (str, int, float, bool)):
         return value
     if isinstance(value, Path):

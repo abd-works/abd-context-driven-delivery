@@ -2,7 +2,6 @@
 
 A behavior the board app shares across its tiers keeps its sentence here, in `app/tests/kanban/**/*.spec.shared.ts`."""
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -33,6 +32,7 @@ from space.session import Sessions  # noqa: E402
 from space.session.session import UnknownPracticeError  # noqa: E402
 
 from space.kanban.board_tools_examples import CHECKED_GRAPH, DISCOVERY_DONE, JUDGED_REPORT, ProjectTools, STORY_MAP_GRAPH, WHOLE_STORIES_GRAPH, next_action_of, reports_of, session_file_of, violation_counts_of  # noqa: E402
+from space.session.throwaway_project import ThrowawayProject
 
 
 with description("the board tools") as self:
@@ -40,7 +40,7 @@ with description("the board tools") as self:
         self.project = ProjectTools()
 
     with after.each:
-        os.environ.pop("CDD_PROJECT", None)
+        ThrowawayProject.close_all()
 
     # (E) See Work On Session Board
     with context("with a project whose sessions folder holds a ticket and a backlog item"):
@@ -65,9 +65,10 @@ with description("the board tools") as self:
                 with before.each:
                     self.chosen = self.project.call("session.choose_workpath", session=session_file_of("pet-visits"), path="src/visits")
 
+                # Kept from the repository's top, so it can never name a folder in another checkout of the repository.
                 with it("should keep the folder as the session's work folder"):
                     saved = json.loads((self.project.sessions / "pet-visits" / "session.json").read_text(encoding="utf-8"))
-                    expect(Path(saved["workpath"])).to(equal((self.project.root / "src" / "visits").resolve()))
+                    expect(saved["workpath"]).to(equal("src/visits"))
 
             with context("that a person has chosen as one practice's root"):
                 with before.each:
@@ -254,7 +255,7 @@ with description("the board tools") as self:
 
             with it("should save that folder as the session's workpath"):
                 fields = json.loads((self.project.sessions / "pet-records" / "session.json").read_text(encoding="utf-8"))
-                expect(fields["workpath"]).to(equal(str((self.project.root / "harness" / "pets").resolve())))
+                expect(fields["workpath"]).to(equal("harness/pets"))
 
         with context("that opens a ticket with no folder"):
             with before.each:
@@ -413,7 +414,7 @@ with description("the board tools") as self:
             # (S) Person --> View Fidelity Files
             with it("should list the files a pattern finds there"):
                 files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="bdd-behavior")["python"]
-                expect(files).to(equal([{"path": (self.outside / "src" / "visits_spec.py").as_posix(), "exists": True}]))
+                expect(files).to(equal([{"path": (self.outside / "src" / "visits_spec.py").as_posix(), "exists": True, "is_changed": False}]))
 
             # (S) Person --> View Fidelity Files, a path that names its module
             with it("should list the files a named part of the path finds there, in folders at any depth"):
@@ -421,7 +422,7 @@ with description("the board tools") as self:
                 model.parent.mkdir(parents=True)
                 model.write_text("# Visits\n", encoding="utf-8")
                 files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="clean-engineering-model")["markdown"]
-                expect(files).to(equal([{"path": model.as_posix(), "exists": True}]))
+                expect(files).to(equal([{"path": model.as_posix(), "exists": True, "is_changed": False}]))
 
         with context("with a fidelity's markdown generated"):
             with before.each:
@@ -433,12 +434,12 @@ with description("the board tools") as self:
 
             with it("should list the file with whether it exists"):
                 files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="stories-story-map")["markdown"]
-                expect(files).to(equal([{"path": "docs/.context/story-map.md", "exists": True}]))
+                expect(files).to(equal([{"path": "docs/.context/story-map.md", "exists": True, "is_changed": False}]))
 
             # (S) Person --> View Fidelity Files: the page opens tabs in the order Python sends the formats.
-            with it("should send the formats in the order files are shown, markdown before code"):
+            with it("should send the formats in the order files are shown, markdown before code, and the diagram last"):
                 files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="clean-engineering-model")
-                expect(list(files)).to(equal(["markdown", "python", "typescript"]))
+                expect(list(files)).to(equal(["markdown", "python", "typescript", "drawio"]))
 
             # One fidelity object per session: the progress's fidelity is the one an action on the ticket's session works with.
             with it("should give each progress the fidelity its ticket's session holds"):
@@ -451,7 +452,7 @@ with description("the board tools") as self:
             # (S) Person --> View Fidelity Files
             with it("should return no text for a file that is gone, such as one deleted since the board listed it"):
                 opened = self.project.call("session.read_file", session=session_file_of("pet-visits"), path="docs/.context/gone.md")
-                expect(opened).to(equal({"path": "docs/.context/gone.md", "text": ""}))
+                expect(opened).to(equal({"path": "docs/.context/gone.md", "text": "", "language": "markdown"}))
 
             # A ticket's worktree sits beside the repository, so its practices write outside it.
             with it("should return the text of a file under a practice root outside the repository, such as the ticket's worktree"):
@@ -493,7 +494,7 @@ with description("the board tools") as self:
 
         # (S) Person --> Send Next Fidelity Action
         with it("should allow only the actions that need no output before anything is generated"):
-            expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["generate", "iterate", "sketch", "document"]))
+            expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["partition", "generate", "iterate", "sketch", "document"]))
 
         # The board's Run sends render only once there is output to convert; Python says so, not the page.
         with it("should not allow Render before anything is generated"):
@@ -507,8 +508,29 @@ with description("the board tools") as self:
             with it("should offer a chip for each group of formats the story map writes, diagram first"):
                 expect([chip["label"] for chip in self.chips]).to(equal(["diagram", "markdown"]))
 
-            with it("should open with the chip of its default format picked"):
-                expect([chip["label"] for chip in self.chips if chip["starts_picked"]]).to(equal(["markdown"]))
+            with it("should show the chip of its default format chosen until a person chooses"):
+                expect([chip["label"] for chip in self.chips if chip["is_chosen"]]).to(equal(["markdown"]))
+
+            with context("that turns the diagram chip on"):
+                with before.each:
+                    self.chips = self.project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="diagram", is_chosen=True)
+
+                with it("should show both chips chosen"):
+                    expect([chip["label"] for chip in self.chips if chip["is_chosen"]]).to(equal(["diagram", "markdown"]))
+
+                with it("should keep both chosen for the story map in the session, in the order chosen"):
+                    output = self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="markdown", is_chosen=True)
+                    expect(output["chosen_formats"]).to(equal(["markdown", "drawio"]))
+
+            with context("that turns the markdown chip off"):
+                with before.each:
+                    self.chips = self.project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="markdown", is_chosen=False)
+
+                with it("should show no chip chosen"):
+                    expect([chip["label"] for chip in self.chips if chip["is_chosen"]]).to(equal([]))
+
+            with it("should refuse a format the story map does not write"):
+                expect(lambda: self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="python", is_chosen=True)).to(raise_error(Exception, contain("does not write python")))
 
         with context("with an action bar opened on its UX mockup"):
             with before.each:
@@ -520,8 +542,8 @@ with description("the board tools") as self:
             with it("should send the claude_design format for the canvas chip"):
                 expect(next(chip["formats"] for chip in self.chips if chip["label"] == "canvas")).to(equal(["claude_design"]))
 
-            with it("should open with the canvas unpicked, since the mockup defaults to html"):
-                expect([chip["label"] for chip in self.chips if chip["starts_picked"]]).to(equal(["code"]))
+            with it("should show the canvas unchosen, since the mockup defaults to html"):
+                expect([chip["label"] for chip in self.chips if chip["is_chosen"]]).to(equal(["code"]))
 
         with context("with an action bar opened on its UX mockup, a canvas written in the UX root"):
             with before.each:
@@ -546,7 +568,7 @@ with description("the board tools") as self:
                 (self.project.root / ".context" / "story-map.md").write_text("# Story Map\n", encoding="utf-8")
                 chips = self.project.call("ticket.format_choices", ticket="sign-up", fidelities=["stories-story-map", "ddd-bounded-context"])
                 self.markdown = next(chip for chip in chips if chip["label"] == "markdown")
-                self.chips_named = lambda label: [chip for chip in chips if chip["label"] == label and chip["starts_picked"]]
+                self.chips_named = lambda label: [chip for chip in chips if chip["label"] == label and chip["is_chosen"]]
 
             with it("should count the fidelities that offer the markdown chip"):
                 expect(self.markdown["offered"]).to(equal(2))
@@ -554,11 +576,10 @@ with description("the board tools") as self:
             with it("should count the fidelities that have a file in it already"):
                 expect(self.markdown["made"]).to(equal(1))
 
-            # B6: the bounded context still has no markdown of its own, so a stage Run writes its default format.
-            with it("should open picked while a fidelity whose default it holds has not made it"):
-                expect(self.markdown["starts_picked"]).to(be_true)
+            with it("should show chosen while every fidelity it covers keeps the format chosen"):
+                expect(self.markdown["is_chosen"]).to(be_true)
 
-            with it("should open the code chip unpicked, since no fidelity here defaults to code"):
+            with it("should show the code chip unchosen, since no fidelity here defaults to code"):
                 expect(self.chips_named("code")).to(equal([]))
 
             with it("should send each fidelity's own format for the chip"):
@@ -571,8 +592,8 @@ with description("the board tools") as self:
                 chips = self.project.call("ticket.format_choices", ticket="sign-up", fidelities=["stories-story-map"])
                 self.markdown = next(chip for chip in chips if chip["label"] == "markdown")
 
-            with it("should open with a chip every fidelity has made left unpicked"):
-                expect(self.markdown["starts_picked"]).to(be_false)
+            with it("should keep a chip chosen once its file is written"):
+                expect(self.markdown["is_chosen"]).to(be_true)
 
         # A person can write a fidelity's file by hand, and checking it should not wait for a generate.
         with context("whose story map is already written, with nothing recorded"):
@@ -581,7 +602,7 @@ with description("the board tools") as self:
                 (self.project.root / ".context" / "story-map.md").write_text("# Story Map\n", encoding="utf-8")
 
             with it("should allow Validate and Render on that file"):
-                expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["generate", "validate", "iterate", "sketch", "render", "document"]))
+                expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["partition", "generate", "validate", "iterate", "sketch", "render", "document"]))
 
             with it("should still name generate as the next action"):
                 expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["next_action"]).to(equal("generate"))
@@ -763,25 +784,40 @@ with description("the board tools") as self:
             discovery = next(column for column in self.overview["columns"] if column["name"] == "Discovery")
             expect(discovery["work_required"][0]).to(equal({"slug": "stories-story-map"}))
 
-        with it("should send each practice's colour under its key"):
-            expect(sorted(self.overview["practices"][0])).to(equal(["colour", "practice", "short_name"]))
+        with it("should send each practice's colour and editor under its key"):
+            expect(sorted(self.overview["practices"][0])).to(equal(["colour", "editor", "practice", "short_name"]))
 
         with it("should stay well inside an MCP answer with a dozen tickets"):
             expect(len(json.dumps(self.overview)) < 40_000).to(be_true)
+
+        # Each child sent whole carries its own progress and its own children, so a ticket two levels of children deep
+        # tripled the answer past the chat bar's size limit.
+        with context("that has children two levels deep"):
+            with before.each:
+                self.project.ticket("child-1", *DISCOVERY_DONE, title="Child 1", parent="ticket-0")
+                self.project.ticket("grandchild-1", *DISCOVERY_DONE, title="Grandchild 1", parent="child-1")
+                self.overview = self.project.call("board.overview")
+
+            with it("should send the active ticket's children by name alone"):
+                expect(self.overview["active"]["children"]).to(equal([{"name": "child-1"}]))
+
+            with it("should stay as small as a ticket with no children"):
+                expect(len(json.dumps(self.overview)) < 40_000).to(be_true)
 
     with context("that are published through the cdd server"):
         with it("should name each tool after its object"):
             names = set(self.project.server.tools)
             expect(names).to(equal({
                 "board.show", "board.overview", "board.help", "board.folders", "board.set_sends_fixes_directly", "board.save_again", "stage.set_wip_limit",
-                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.format_choices", "ticket.overlay_choices", "ticket.choose_overlays", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations", "ticket.assign_chat",
+                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.format_choices", "ticket.choose_formats", "ticket.overlay_choices", "ticket.choose_overlays", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations", "ticket.assign_chat",
                 "ticket.edit_text", "ticket.tag", "ticket.delete", "ticket.add_child", "ticket.pull_out", "ticket.reassign_parent", "ticket.move_before",
                 "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
-                "session.choose_workpath", "session.folder_files", "session.read_file",
+                "session.choose_workpath", "session.folder_files", "session.workpath_files", "session.read_file", "session.write_file", "session.file",
                 "session.write_handoff", "session.read_handoff_format", "session.read_cdr_format", "session.list_cdrs", "session.write_cdr",
-                "practice-session-output.enable", "practice-session-output.choose_root", "practice-session-output.use_default_root",
+                "practice-session-output.enable", "practice-session-output.choose_root", "practice-session-output.use_default_root", "fidelity-session-output.choose_format",
                 "backlog-item.create", "backlog-item.start", "backlog-item.start_under", "backlog-item.edit_text", "backlog-item.move_before",
+                "backlog-item.move_after", "backlog-item.nest_under", "backlog-item.leave_parent", "backlog-item.open_file",
             }))
 
         # An agent that opens a ticket must work in the ticket's own worktree, not in the chat that opened it.

@@ -23,10 +23,16 @@ class _ScriptedClaude(ClaudePlugins):
         self.calls: list[tuple[str, ...]] = []
         self.cli: str | None = "claude"
         self.plugins_installed: dict[str, str] = {}
+        # The machine running the spec may watch its own board folder; the spec says whether this one does.
+        self.board_watched = False
 
     @property
     def installed(self) -> dict[str, str]:
         return self.plugins_installed
+
+    @property
+    def is_board_watched(self) -> bool:
+        return self.board_watched
 
     @property
     def published_board_version(self) -> str:
@@ -43,7 +49,7 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 
-from expects import be_true, contain, equal, expect, have_key, raise_error, start_with
+from expects import be_below, be_true, contain, equal, expect, have_key, raise_error, start_with
 from mamba import after, before, context, description, it
 from harness.guidance.fixtures.agentic_ops.agentic_ops import (
     SampleAgenticOps,
@@ -1415,11 +1421,30 @@ with description("toolsets installed for Claude Code") as self:
             with it("should run no claude command"):
                 expect(self.plugins.calls).to(equal([]))
 
+        # Claude Code reloads a watched board folder in every chat as the install writes it, so installing it too loads it twice.
+        with context("with the board folder watched by Claude Code"):
+            with before.each:
+                self.plugins.board_watched = True
+                self.answer = self.plugins.install_board()
+
+            with it("should say it is watched"):
+                expect(self.answer).to(equal("watched"))
+
+            with it("should run no claude command"):
+                expect(self.plugins.calls).to(equal([]))
+
         with context("with an older board mod installed"):
             with it("should update it"):
                 self.plugins.plugins_installed = {"cdd-board@cdd-home": "0.6.3-old"}
                 self.plugins.install_board()
                 expect(("plugin", "update", "cdd-board@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
+
+            # Adding a marketplace Claude Code already has reads nothing new, so the update would find the old board.
+            with it("should read the cdd home's marketplace again before it updates"):
+                self.plugins.plugins_installed = {"cdd-board@cdd-home": "0.6.3-old"}
+                self.plugins.install_board()
+                refresh = self.plugins.calls.index(("plugin", "marketplace", "update", "cdd-home"))
+                expect(refresh).to(be_below(self.plugins.calls.index(("plugin", "update", "cdd-board@cdd-home", "--scope", "user"))))
 
         with it("should install the board mod the cdd home publishes, at user scope"):
             expect(self.plugins.install_board()).to(equal("installed"))

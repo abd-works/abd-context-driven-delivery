@@ -1,4 +1,4 @@
-"""ContextSetup — converts a folder of documents to markdown and delegates partitioning to context tools."""
+"""ContextSetup — converts a folder of documents to markdown and captures a live application into indexed context."""
 from __future__ import annotations
 
 import dataclasses
@@ -11,8 +11,8 @@ from harness.agent_tools import agent_instructions, agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, tools
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.files import skill
+from harness.guidance_actions import ActionWorksInNoSession
 from harness.mcp.mcp_annotations import mcp
-from cdd_guidance.actions.partition.partition import Partition
 from cdd_guidance.context_setup.context_index import ContextIndex
 from cdd_guidance.context_setup.live_app_capture import (
     CaptureResult,
@@ -55,27 +55,34 @@ def _document_converter() -> Any:
 
 @agent_toolset
 class ContextSetup:
-    """Convert a folder of documents to markdown and delegate partitioning to selected context tools.
+    """Convert a folder of documents to markdown, and capture a live application into indexed context. Partition runs
+    the documents pipeline: it calls convert, partitions the markdown through the practices, then embeds the segments.
 
-    The cdd server makes one for each call, with its Partition made for the session that call works in, so the folders
-    a call names are read from that session's project and the index and segments land in that session's folder."""
+    The cdd server makes one for each call, for the session that call works in, so the folders a call names are read
+    from that session's project."""
 
-    def __init__(self, partition: Optional[Partition] = None, context_index: Optional[ContextIndex] = None) -> None:
-        """A collaborator left out is made here, so the toolset the cdd server builds with no arguments can run every
-        step of its recipes. The Partition is held as a tool the agent calls with the practices the user picks, which
-        only that call knows."""
-        self.partition = (partition if partition is not None else Partition()).as_tool()
+    def __init__(self, context_index: Optional[ContextIndex] = None, session: Any = None) -> None:
+        """A ContextIndex left out is made here, so the toolset the cdd server builds with no arguments can run every
+        step of its recipes."""
         self.context_index = context_index if context_index is not None else ContextIndex()
+        self._session = session
 
     def for_call(self, call: ToolCall) -> ContextSetup:
-        """A ContextSetup made for call, holding a Partition and a ContextIndex made for the session the call works in."""
-        return type(self)(self.partition.for_call(call), self.context_index.for_call(call))
+        """A ContextSetup made for call, working in the session call works in, holding a ContextIndex made for it."""
+        return self.in_session(call.session)
+
+    def in_session(self, session: Any) -> ContextSetup:
+        """A ContextSetup working in session, as an action that holds one, such as Partition, makes it for its own
+        session, holding a ContextIndex made for that session with this one's embedding provider."""
+        return type(self)(self.context_index.in_session(session), session)
 
     @property
     def session(self) -> Any:
-        """The session this toolset works in: the one its Partition was made for, whose project the folders a call names
-        are read from. Raises ActionWorksInNoSession for a toolset made for no call."""
-        return self.partition.session
+        """The session this toolset works in, whose project the folders a call names are read from. Raises
+        ActionWorksInNoSession for a toolset made for no session."""
+        if self._session is None:
+            raise ActionWorksInNoSession(type(self).__name__)
+        return self._session
 
     def _capture(self, repo_path: str, capture_repo: str, surface: str, base_url: str, entry_paths: Optional[list[str]]) -> LiveAppCapture:
         """The application this call captures, with its folders read from the session's project."""
@@ -254,47 +261,6 @@ class ContextSetup:
         tools(self.complete_capture)
         tools(self.context_index.embed())
         return "Live app captured and indexed."
-
-    @mcp
-    @skill
-    @agent_instructions
-    def capture_from_documents(self,
-        folder_path: str,
-        indexers: Optional[list[str]] = None,
-        first: str = "",
-    ) -> str:
-        """Capture documents from folder_path, partition through selected context tools, embed into one FAISS index.
-        indexers: the context tools that index it; first: the one that runs first.
-        Collaborators (compile-time references): Partition, ContextIndex."""
-        "The documents are in folder_path={{folder_path}}."
-        """Step 1 — call convert(folder_path) to convert every document to markdown.
-        Inspect the returned structure_notes.  If any note shows heading_depth=0 and
-        word_count > 200, note it for the user — the document may need a semantic re-pass
-        before partitioning gives useful results (do not block; continue to Step 2)."""
-        tools(self.convert)
-        # The options are the slugs of the practices partition works with, so every word offered is one it accepts.
-        f"""Step 2 — Choose Indexers:
-        If indexers is None or empty, ask the user via AskQuestion (allow_multiple=True):
-          Which context tools should index this content?
-          Options: {' | '.join(self.partition.practice_slugs)}
-        Also ask: which tool runs first? (first)
-        No tool fires during this step — just collect the user's selection."""
-        """Step 3 — Partition (partition is additive; a later pass adds to the index and segments):
-        Call partition.partition once, with:
-          guidance = the context tools selected in Step 2, the one named by `first` first, each as the slug offered
-          paths = the markdown_files convert returned in Step 1, the documents it wrote
-          out_root = {{folder_path}}, so the index and segments are written beside the documents
-        If the user selects no context tool, ask once more; if none is selected then, stop and tell the user that
-        nothing was partitioned or indexed, because partition needs at least one guidance."""
-        tools(self.partition.partition)
-        """Step 4 — Embed:
-        Call partition.segment_files with out_root={{folder_path}}; it lists the segment files the partition wrote.
-        Pass that list as segments_paths to context_index.embed, with out_path={{folder_path}}/rag.
-        If the list is empty, the partition wrote no segments: say so and stop rather than embed an empty index.
-        Report the resulting index_path to the user."""
-        tools(self.partition.segment_files)
-        tools(self.context_index.embed())
-        return "Documents captured and indexed."
 
     def _analyse(self, file_path: str, content: str) -> StructureNote:
         headings = re.findall(r"^(#{1,6})\s", content, re.MULTILINE)

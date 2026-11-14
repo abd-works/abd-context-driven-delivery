@@ -1391,6 +1391,23 @@ class Graph:
             self.overlays = list(overlays or [])
             return self.build.load(force, call)
 
+    @long_call
+    @mcp
+    @agent_tool
+    def load_practice_roots(self, call: ToolCall | None = None) -> GraphLoaded:
+        """Open each practice this graph holds on the folder its session names for it (its session root), with the
+        overlays the graph applies, and build: the Graph app's whole load, with no folder or practice named by the
+        caller. A session's graph holds only the practices its session works on, so a practice turned off is never
+        read. A practice no session works in has no root, and one whose folder is not written yet has nothing to read:
+        both are left out."""
+        with self._changing:
+            roots = {practice: root for practice in self.practices.held.values() if (root := practice.session_root) is not None and root.is_dir()}
+            if not roots:
+                return GraphLoaded("No practice root of a session is there to read, so nothing was loaded.")
+            self.scope = LoadScope(self.scope.folder)
+            self.practices.choose(roots)
+            return self.build.load(False, call)
+
     @mcp
     @command(name="load-files")
     @agent_tool

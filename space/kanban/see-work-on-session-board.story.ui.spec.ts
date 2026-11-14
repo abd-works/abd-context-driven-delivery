@@ -9,8 +9,8 @@
  * A Given seeds the fixture project's `.sessions/`, where the board reads it; a When does what the person does on the
  * page; a Then reads what the person sees.
  *
- * Left out here: "Update the board and cdd to the latest code" and "Say which update step failed" (an update really pulls,
- * builds, and re-pins this checkout; board-client.spec drives it with the steps recorded), "Keep the newer board when an older read answers late" (a browser cannot hold one answer back;
+ * Left out here: "Install the board again" and "Say why the board's install failed" (an install really runs npm install
+ * and build in the board's folder; board-client.spec drives the page with the install's answer given), "Keep the newer board when an older read answers late" (a browser cannot hold one answer back;
  * board-client.spec drives the page's reads in order), and "Find the board from a chat" and "Name the active ticket on
  * the chat's status line" (the cdd-board mod in harness/chat-ui, not the board app, does them).
  */
@@ -46,7 +46,7 @@ async function resizePanelTo(page: Page, kind: string, wanted: number): Promise<
   await page.mouse.up()
 }
 
-const openFilesOf = (page: Page, ticket: string) => card(page, ticket).getByRole('button', { name: 'folder' }).first().click()
+const openFilesOf = (page: Page, ticket: string) => card(page, ticket).getByRole('button', { name: 'files', exact: true }).first().click()
 const openReportOf = (page: Page, ticket: string) => card(page, ticket).locator('.card-violations').click()
 
 test.beforeEach(() => resetSessions(fixtureRoot))
@@ -456,7 +456,7 @@ test.describe('Restrict Actions To Active Session', () => {
     })
 
     test("Then the files panel lists billing-report's files", async ({ page }) => {
-      await expect(page.locator('[data-panel="files"] .files-subject')).toContainText('stories-story-map')
+      await expect(page.locator('[data-panel="files"] .files-subject')).toContainText('billing-report')
     })
 
     test.describe('the Person moves billing-report to Specification', () => {

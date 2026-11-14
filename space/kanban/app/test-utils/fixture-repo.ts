@@ -110,10 +110,23 @@ function removeWorktrees(root: string): void {
   execFileSync('git', ['worktree', 'prune'], { cwd: root, stdio: 'ignore' })
 }
 
+// The board saves to git in the background after a change, so a reset right after can meet its index lock for a moment.
+function gitRetried(root: string, args: string[]): void {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      execFileSync('git', args, { cwd: root, stdio: 'ignore' })
+      return
+    } catch (failure) {
+      if (attempt >= REMOVE_RETRIES) throw failure
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, REMOVE_RETRY_MILLISECONDS)
+    }
+  }
+}
+
 // Branches a click or an activation opened for a ticket; main is the fixture's own, and git deletes no branch the
 // fixture has checked out, so it goes back to main first.
 function removeTicketBranches(root: string): void {
-  execFileSync('git', ['checkout', '-f', 'main'], { cwd: root, stdio: 'ignore' })
+  gitRetried(root, ['checkout', '-f', 'main'])
   const branches = execFileSync('git', ['branch', '--format=%(refname:short)'], { cwd: root, encoding: 'utf-8' }).split(/\s+/)
   for (const branch of branches.filter(name => name && name !== 'main')) execFileSync('git', ['branch', '-D', branch], { cwd: root, stdio: 'ignore' })
 }

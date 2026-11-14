@@ -193,6 +193,20 @@ class Installer:
                 print(report, file=sys.stderr)
         return channels
 
+    def write_language_adapters(self) -> list[Path]:
+        """Write the TypeScript language adapters from the repository's toolsets as they are now, and nothing else. A
+        page built against adapters an earlier install wrote reads the data the server sent then, so a field added since,
+        such as a backlog item's children, is missing from it and the page fails; switching the server's code writes
+        them first, then rebuilds its pages."""
+        self.toolsets.ensure_import_path()
+        adapters = LanguageAdapterInstallation(self.layout, self.path, repo=self.repo)
+        server_toolsets = [toolset for server in Installer._servers for toolset in server.toolsets]
+        for item in [*self._repository_toolsets(), *server_toolsets]:
+            toolset = AgentToolSet.instantiate(item)
+            for each in (toolset, *toolset.child_toolsets()):
+                adapters.record(each)
+        return adapters.write_all()
+
     def _repository_toolsets(self) -> list[type]:
         """The class of every toolset the repository defines; one whose module cannot be imported stops the install,
         named after the toolset, with its cause."""

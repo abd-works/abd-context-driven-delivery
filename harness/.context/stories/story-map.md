@@ -94,7 +94,7 @@ Observed: `/document` records what code, tests or docs already do for the listed
 
 ### (S) Agent --> Capture Documents Into Searchable Context
 
-Observed: `context-setup.capture_from_documents` converts a folder of documents to markdown, partitions them through the chosen practices, and embeds the segments into one index that `context-index.ask` answers from with citations.
+Observed: `partition.partition` converts a folder of documents to markdown with `context-setup.convert`, partitions them through the practices it is given, and embeds the segments into one index that `context-index.ask` answers from with citations.
 
 ### (S) Agent --> Capture Live App Context
 
@@ -206,7 +206,7 @@ Requested (2026-11-06, as the Chat Bar does): the board runs the installer and s
 
 ### (S) Person --> Update Board And CDD
 
-Observed: Update in the header (`board-update.ts` `BoardUpdate.update`, `/api/update`) gets the latest commit, rebuilds the board, installs with the cdd server pinned to that commit, then restarts the board and refreshes the page; a failed step says which step and why (`UpdateStepFailed`).
+Observed (2026-11-12): Update in the header installs the Kanban app again through its generated client (`App.install`, `app.install`): npm install and build in the board's folder, then the page loads the new build; a failed install says why and how to fix it (`AppNotStarted`). It no longer gets the latest commit or re-pins cdd; `scripts/install.py --update` does that.
 
 ### (S) Person --> Reload Everything With One Button
 
@@ -284,7 +284,7 @@ Observed: with Active session only on, a ticket that is not the active session d
 
 ### (S) Board App --> Open Ticket Chat On Session Open
 
-Observed (checked 2026-11-10): a press on a card points the board at the ticket's own chat (`ticket-client.tsx:184-188`), and the card's chat button opens the worktree, making it first if needed, then a new Claude chat on it through `/api/claude/open` and `ClaudeLink` (`ticket-client.tsx:196-205`, `chat-client.tsx:72-80`, `claude-link.ts`). It opens a new chat rather than the one the ticket ran in, and Activate opens none. Was: Intended (`.sessions/_backlog/suggest-the-next-step.md` "open associated chat on session open / manually"): opening a ticket's session opens the Claude Code chat it ran in. Observed today: a press on a ticket switches to its chat by hand (`/api/claude/open`, `ClaudeLink`).
+Observed (checked 2026-11-10): a press on a card points the board at the ticket's own chat (`ticket-client.tsx:184-188`), and the card's chat button opens the worktree, making it first if needed, then a new Claude chat on it through Python's `chat.open` (`Chat.open`, `harness/chat/chat.py`) (`ticket-client.tsx:196-205`, `chat-client.tsx:72-80`, `claude-link.ts`). It opens a new chat rather than the one the ticket ran in, and Activate opens none. Was: Intended (`.sessions/_backlog/suggest-the-next-step.md` "open associated chat on session open / manually"): opening a ticket's session opens the Claude Code chat it ran in. Observed today: a press on a ticket switches to its chat by hand (`chat.open`).
 
 ### (S) Person --> Choose Where A Backlog Item Works
 
@@ -540,11 +540,11 @@ Observed (checked 2026-11-10): each violation that names a file and line shows a
 
 #### (S) Person --> [List Ticket Files](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-list-ticket-files)
 
-Observed: `fidelity-progress.files` lists the tile's or ticket's fidelities' files; on a ticket working in the whole repository, only what its branch changed.
+Observed: `fidelity-progress.files` lists the tile's or ticket's fidelities' files; on a ticket working in the whole repository, only what its branch changed. Intended (the person, 2026-11-12, "this is a filter eg a checkbox on the file viewer at the top where tabs are; you click only changed files listed"): the list shows every file of the fidelity, and a changed-files-only check box at the top beside the tabs filters it to what the ticket's branch changed.
 
-#### (S) Person --> [Browse Ticket Folder](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-browse-ticket-folder)
+#### (S) Person --> [Browse Ticket Files By Practice](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-browse-ticket-files-by-practice)
 
-Observed: the folder mode of the files panel groups the files under their folders.
+Observed: the folder mode of the files panel groups the files under their folders. Requested (2026-11-12, "list a shortened form/image of each practice top to bottom on left side, filters preset when clicking files button in chat ui, user can toggle them; top has file tabs like now but colored to practice"): the practice filters sit along the top of the files panel, each by its short form (2026-11-12: "put the filter toggles on the top, it will waste less space"). Every file is a tab along the top, grouped by practice and colored in its practice's color. Opening the files from the chat bar presets the filters, which the person can toggle ("these are just filters on left; all files are shown in tabs above grouped by practice colored by practice color"). This replaces grouping by folder, and builds on the person's 2026-11-11 notes (groupings by knowledge-graph root such as practice, click to select, check box to select several).
 
 #### (S) Person --> [View Fidelity Files](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-view-fidelity-files)
 
@@ -556,43 +556,69 @@ Intended (`.sessions/_backlog/review-work-in-board-files.md` "include ticket con
 
 #### (S) Person --> Open Session Files From Details
 
-Intended (`.sessions/_backlog/review-work-in-board-files.md` "session information -> link to file or folders"): each file or folder the session information names opens from where it is named. Built today (checked 2026-11-10): the details open the session folder, the stage's files and the latest handoff (`details-view.tsx:37-55`). Missing: the workpath link opens the root chooser rather than the folder.
+Intended (`.sessions/_backlog/review-work-in-board-files.md` "session information -> link to file or folders"): each file or folder the session information names opens from where it is named. Built today (checked 2026-11-10): the details open the session folder, the stage's files and the latest handoff (`details-view.tsx:37-55`). Missing: the workpath link opens the root chooser rather than the folder. Requested (2026-11-12, "clicking on a session button when the button is in session mode eg no expand no main; opens the file view on .session/session"): pressing a ticket's session button, not main and not expanded, opens the file view on its .sessions/<session> folder.
 
-#### (S) Person --> View Files In Rich Viewer
+### (E) Review Files In Viewer
 
-Intended (`.sessions/_backlog/review-work-in-board-files.md` "integrate with monaco viewer OR native file rendering"): files open in an editor-grade viewer, or rendered as the file type.
+#### (S) Person --> [View Files In Rich Viewer](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-view-files-in-rich-viewer)
 
-#### (S) Person --> Comment On File Selection
+Intended (`.sessions/_backlog/review-work-in-board-files.md` "integrate with monaco viewer OR native file rendering"): files open in an editor-grade viewer, or rendered as the file type. Requested (2026-11-12, "use the graph app file viewer for this - make this a common component ... with a typed file shape along with typescript monaco viewer that renders"): one Monaco file viewer in `space/`, beside `space/session/file_manager.py`, shared by the board and the graph app, typed on the file manager's `FileText` (`.sessions/review-work-in-board-files/file-viewer-research.md`).
 
-Intended (`.sessions/_backlog/review-work-in-board-files.md` "select some text in file view and add comment that gets sent to chat like in design view"): a person selects text in a file and sends a comment on it to the chat.
+#### (S) Person --> [Save Edited File](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-save-edited-file)
 
-#### (S) Board App --> Show AI Changes As Diff
+Requested (2026-11-12, "clicking edit opens in edit mode and can be saved"): Edit turns the viewer's file editable, and Save writes the text to the file on disk through the file manager, kept to the workpath's folders as reading is. No MCP operation writes a file's content today (`file-viewer-research.md`, "The file viewer today").
+
+#### (S) Person --> [Add Comment To File Selection](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-add-comment-to-file-selection)
+
+Intended (`.sessions/_backlog/review-work-in-board-files.md` "select some text in file view and add comment that gets sent to chat like in design view"): a person selects text in a file and sends a comment on it to the chat. Requested (2026-11-12, "select text, right click -> add comment, type the comment; comment widget appears beside the line number of beginning of comment; click to open, press delete to delete selected comment"): Add comment on the right-click menu opens a comment box at the selection; the comment shows as a marker beside the selection's first line number; clicking the marker opens the comment, and Delete removes it.
+
+#### (S) Person --> [Send File Comments To Chat](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-send-file-comments-to-chat)
+
+Requested (2026-11-12, "finish editing press enter; added to chat q"): Enter finishes a comment and adds it to the chat queue, carrying the file's path, the selected lines, the selected text and the comment, as the report's Fix sends a file and line (`chat.send`, `report-client.ts`; `file-viewer-research.md`, "Recommendation"). Requested (2026-11-12, "a send all open comment button top left of viewer"): Send all sends every comment not yet sent in one message.
+
+#### (S) Chat --> [Mark File Comment Processed](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-mark-file-comment-processed)
+
+Requested (2026-11-12, "chat process comment and changes files then ... comment is at processed stage; comment --> not sent, sent, processed"): a sent comment becomes processed once the chat's turn that worked on its message has ended, as `chat.check_in` moves a shown message to done (`harness/chat/chat.py:279-286`).
+
+#### (S) Board App --> [Show Changed File In Viewer](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-show-changed-file-in-viewer)
+
+Requested (2026-11-12, "then viewer is updated to reflect changes"): when a comment on the open file is processed, the viewer reads the file again and shows the agent's changes.
+
+#### (S) Person --> [Clear Processed File Comments](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-clear-processed-file-comments)
+
+Requested (2026-11-12, "a clear processed comments button"): clearing removes the processed comments and keeps the ones not sent or still sent.
+
+#### (S) Board App --> [Show AI Changes As Diff](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-show-ai-changes-as-diff)
 
 Intended (`.sessions/_backlog/review-work-in-board-files.md` "change viewer from ai change like vscode / cursor"): the viewer marks what the agent changed in a file, as VS Code and Cursor do.
 
 ### (E) Integrate Practice Content Editor Apps On Board
 
-#### (S) Person --> Open Story UI On Ticket Scope
+#### (S) Person --> [Open Story UI On Ticket Scope](move-work-forward-on-session-board/integrate-practice-content-editor-apps-on-board/integrate_practice_content_editor_apps_on_board_story.test.md#story-open-story-ui-on-ticket-scope)
 
-Requested (2026-11-06, "board --> story ui for ticket's scope"): the board opens the Story UI editor on the part of the story map the ticket covers, from its session folder. Also Intended (`.sessions/_backlog/integrate-practice-content-editor-apps.md` "view story map / ux design canvas for a session").
+Requested (2026-11-06, "board --> story ui for ticket's scope"): the board opens the Story UI editor on the part of the story map the ticket covers, from its session folder. Also Intended (`.sessions/_backlog/integrate-practice-content-editor-apps.md` "view story map / ux design canvas for a session"). Requested (2026-11-12): a small editor widget on the ticket's Stories story-map row opens it.
 
-#### (S) Person --> Filter Knowledge Graph To Ticket Scope
+#### (S) Person --> Filter Graph To Ticket Scope
 
-Requested (2026-11-06, "filter to scope of ticket"): opening the Graph app from the board or the chat bar loads only the ticket's session folders. Also Intended (`.sessions/_backlog/integrate-practice-content-editor-apps.md` "view knowledge graph from here").
+Requested (2026-11-06, "filter to scope of ticket"): opening the Graph app from the board or the chat bar loads only the ticket's session folders. Also Intended (`.sessions/_backlog/integrate-practice-content-editor-apps.md` "view knowledge graph from here"). Requested (2026-11-12): a graph widget on the ticket, beside its folder and file icons, opens the graph on the ticket's scope.
 
-#### (S) Person --> Filter Knowledge Graph To Ticket Practices
+#### (S) Person --> Filter Graph To Ticket Practices
 
 Requested (2026-11-06, "practices loaded for ticket / board"): the Graph app opens with its practice filter set to the practices the ticket has turned on, or every practice on the board when opened from the board header.
 
-#### (S) Agent --> Deploy Knowledge Graph App With Board State
+#### (S) Graph App --> Show Board's Active Ticket In Graph
 
-Requested (2026-11-06, non-functional): the Graph app runs on the same app server and instance as the board's state, so the graph and the board share one state for the active ticket.
+Requested (2026-11-06, non-functional): the Graph app runs on the same app server and instance as the board's state, so the graph and the board share one state for the active ticket. The repeatable behaviour: the Graph app shows the ticket the board has active, from the board's own state.
 
-#### (S) Agent --> Refactor Knowledge Graph App To Web Domain Access
+#### (S) Board App --> Show Agent's Ticket Changes On Board
+
+Requested (2026-11-12, non-functional, "like above but for kanban board"): the CDD Kanban, like the Story UI app, follows the cdd_web_domain_access and lern_domain_driven patterns: its backend is the MCP-generated domain objects through the TypeScript adapter, not calls of its own. The repeatable behaviour: a change the agent makes through the tools shows on the board with no copy kept in the page, and a board whose cdd server is down says so.
+
+#### (S) Agent --> [Refactor Knowledge Graph App To Web Domain Access](move-work-forward-on-session-board/integrate-practice-content-editor-apps-on-board/integrate_practice_content_editor_apps_on_board_story.test.md#story-refactor-knowledge-graph-app-to-web-domain-access)
 
 Observed (checked 2026-11-10; commit 23e3d037e): `GraphClient extends GraphClientGenerated` (`harness/graph/app/graph/GraphClient.ts:1-6`), with `GraphApi implements CddApi` as transport and the server mounting the generated `graphRoutes` (`server.ts:8,50`). Was: Requested (2026-11-06, non-functional): the Graph app reaches the CDD domain through the TypeScript language adapter generated by the cdd_web_domain_access pattern, instead of its own calls.
 
-#### (S) Person --> Invoke Story Explorer In Session Context
+#### (S) Person --> [Invoke Story Explorer In Session Context](move-work-forward-on-session-board/integrate-practice-content-editor-apps-on-board/integrate_practice_content_editor_apps_on_board_story.test.md#story-invoke-story-explorer-in-session-context)
 
 Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "view story map / ux design canvas for a session", requested on 2026-11-06): the board opens the browser story explorer on the ticket's story map, framed by its design canvas screens.
 
@@ -622,9 +648,9 @@ Observed: Run install runs the installer and says installing, installed (open a 
 
 Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "checkout latest and build"), and Requested on 2026-11-06 as the CDD Kanban does: get the latest commit, rebuild the board, pin the cdd server to that commit, and restart the board.
 
-### (S) Person --> Open App From Health Panel
+### (S) Person --> [Open App From Health Panel](../../chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/open-app-from-health-panel/open_app_from_health_panel_story.test.ts)
 
-Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "click on app in health bar"): pressing the Kanban app or Graph app in the server health panel opens that app. Requested (2026-11-10, "clicking on app in chat ui starts it if down, opens it if up"): pressing an app that is not running starts it and then opens it; pressing one that is running opens it.
+Observed: pressing the Kanban app or the Graph app on the server health panel opens it in the browser, and starts it first when it reads not running (requested 2026-11-10, "clicking on app in chat ui starts it if down, opens it if up"). The Kanban app starts as `/board` starts it (`startedBoard` in `board-server.ts`) and opens on this repository's board page; the Graph app starts with the repository's own `scripts/start_graph_web.py` and `scripts/start_graph_app.py` and opens where the second says it answers. A start that fails says why in a toast (`health/open-app-client.ts`).
 
 ### (S) Person --> Restart Parts From Chat Bar
 
@@ -654,7 +680,7 @@ Observed: the pointer on the session name shows the card, with each fidelity's n
 
 ### (S) Chat Bar --> Show Active Session On Status Line
 
-Observed (`register.ts` `showStatus`, `chat-bar-client.ts` `statusLine`): the status line below the chat, where the host draws a plugin's status, names the repository, the active session, the folder it works in, and the action the button runs with the fidelities it runs on; a press on the chat bar shows the action it now runs. Requested on 2026-11-11 ("repo . session . root path of session . action selected", "below the actual chat edit like before"). Left aligned was also asked; the host places a plugin's status line itself, so a plugin cannot align it, and drawing the row in the chat bar or in the prompt hint line (tried in ce6b9157e and 066b2d3fc) lost it below the chat.
+Observed (`register.ts` `showStatus`, `chat-bar-client.ts` `statusLine`): the status line below the chat, where the host draws a plugin's status, names the repository, the branch the session's chat works on, and the whole path of the folder the session works in. Requested on 2026-11-11 ("repo . session . root path of session . action selected", "below the actual chat edit like before"). Left aligned was also asked; the host places a plugin's status line itself, so a plugin cannot align it, and drawing the row in the chat bar or in the prompt hint line (tried in ce6b9157e and 066b2d3fc) lost it below the chat; the bar's own left-aligned row (c8abaf8d0) put it under the bar's menus, and it came back below the chat on 2026-11-13.
 
 ### (S) Claude Code --> [Add Active Ticket To System Prompt](move-work-forward-from-chat-bar/see-work-in-chat-bar/see_work_in_chat_bar_story.test.md#story-add-active-ticket-to-system-prompt)
 
@@ -796,27 +822,39 @@ Requested (2026-11-06, as the CDD Kanban does): the chat bar sends Fix and Fix a
 
 ### (E) Integrate Practice Content Editor Apps In Chat Bar
 
-#### (S) Person --> Open Story UI Side Panel From Chat Bar
+#### (S) Person --> Open Editor App From App Status Row
 
-Requested (2026-11-06, "chat band -> story UI side panel"): the chat bar opens the Story UI editor in a side panel on the active session's story map. Also Intended (the chat bar, as the CDD Kanban).
+Requested (2026-11-06, "chat band -> story UI side panel"; 2026-11-12, "same but for KG"; 2026-11-12, the CDD Kanban): the chat bar's app status row lists each editor app with its status; clicking one installs it when it is not installed, launches it when it is down, and opens it in the side panel. Examples: the Story UI editor, the Graph app, the CDD Kanban.
 
-#### (S) Person --> Invoke Claude Design Story Explorer From Chat Bar
+#### (S) Person --> Open Stories File In Story UI Editor
 
-Intended (requested on 2026-11-06, as the CDD Kanban): the chat bar opens the Claude Design story explorer the design canvas draws today (`explorer.dc.html`) on the active session's story map and screens.
+Requested (2026-11-12): the file viewer shows a story-map editor tile for every Stories file, which opens that file in the Story UI editor on the active session's story map.
 
-#### (S) Agent --> Deploy Story UI App With Board State
+#### (S) Graph App --> Load Session Folders In Graph
 
-Requested (2026-11-06, non-functional): the Story UI app runs on the same app server and instance as the board's state, so the story map, the explorer and the board share one state for the active ticket.
+Requested (2026-11-12, "same but for KG"): the Graph app opened from the chat bar loads the folders the session's practice roots name.
 
-#### (S) Agent --> Refactor Story UI App To Web Domain Access
+#### (S) Graph App --> Follow Last Activated Session
 
-Requested (2026-11-06, non-functional): the Story UI app reaches the CDD domain through the TypeScript language adapter generated by the cdd_web_domain_access pattern, instead of its own calls.
+Requested (2026-11-12, "same but for KG"): the open Graph app follows the session activated last.
 
-#### (S) Person --> Open UX Design In Claude Design
+#### (S) Person --> [Invoke Claude Design Story Explorer From Chat Bar](move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/integrate_practice_content_editor_apps_in_chat_bar_story.test.md#story-invoke-claude-design-story-explorer-from-chat-bar)
+
+Intended (requested on 2026-11-06, as the CDD Kanban): the chat bar opens the Claude Design story explorer the design canvas draws today (`explorer.dc.html`) on the active session's story map and screens. Requested (2026-11-12, for now): the file viewer has a link that opens the design view attached to the session.
+
+#### (S) Story UI App --> Show Board's Active Ticket In Story UI
+
+Requested (2026-11-06, non-functional): the Story UI app runs on the same app server and instance as the board's state, so the story map, the explorer and the board share one state for the active ticket. Requested (2026-11-12): built with the cdd_web_domain_access and lern_domain_driven patterns. The repeatable behaviour: the board's server serves the Story UI editor, which shows the ticket activated on the board.
+
+#### (S) Story UI App --> Save Story Map Edit Through Domain
+
+Requested (2026-11-06, non-functional): the Story UI app reaches the CDD domain through the TypeScript language adapter generated by the cdd_web_domain_access pattern, instead of its own calls. Requested (2026-11-12): the story map's backend moves out of TypeScript into the MCP-generated domain objects, not a JSON story map; each edit is saved and rendered to the formats chosen in the chat bar, which the Story UI app can toggle.
+
+#### (S) Person --> [Open UX Design In Claude Design](move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/integrate_practice_content_editor_apps_in_chat_bar_story.test.md#story-open-ux-design-in-claude-design)
 
 Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "claude design integration with ux tool"): the UX practice's design opens in Claude Design from the chat.
 
-#### (S) Person --> Trace Story Through Artifacts
+#### (S) Person --> [Trace Story Through Artifacts](move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/integrate_practice_content_editor_apps_in_chat_bar_story.test.md#story-trace-story-through-artifacts)
 
 Intended (`.sessions/_backlog/integrate-practice-content-editor-apps.md` "Trace pane"): picking a story shows its scenarios, tests and code from `harness/graph`, with the domain, class and bounded-context diagrams. Built today (checked 2026-11-10): the Graph app folds story, scenario and step and shows a step's invokes, observes and demonstrates with its source (`harness/graph/app/app.test.tsx:429,746`). Missing: one trace view of a picked story's scenarios, tests and code, and the diagrams.
 

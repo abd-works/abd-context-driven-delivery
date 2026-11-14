@@ -1,103 +1,52 @@
-import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { FileEntryData } from '@cdd/space/kanban/fidelity-progress'
-import type { FileTextData } from '@cdd/space/session/session'
+import { projectPageUrl } from '../board-chat/board'
+import { runningBoardUrl } from '../board-chat/board-server'
+import { openInBrowserPane } from '../shared/browser-pane'
+import { currentChatBar } from './chat-bar-client'
+import type { FidelityProgressClient } from './fidelity-progress-client'
 
-import type { FidelityFilesJson } from '../../types'
-import { boardPageUrl, repositoryFolder } from '../board-chat/board'
-import { openInBrowser, runningBoardUrl } from '../board-chat/board-server'
-import { reasonOf } from '../shared/failure'
-import { callTool, currentChatBar } from './chat-bar-client'
-import { runAction, type FidelityProgressClient } from './fidelity-progress-client'
+// A fidelity's files, a session's folder and a fidelity's report open in the board's own panels, in the desktop app's
+// browser pane beside the chat: the board's file viewer, with its practice filters, comments and change marks, is the
+// one viewer, so the chat bar never draws a second. Each opens by a board link, the board started first when it is not
+// running. When the pane does not open, the toast says why.
 
-// The files view of one fidelity: a tab per file fidelity-progress.files declares, each tab's text read by session.read_file.
-// It opens in a pane of its own beside the chat, as the board's files panel does, never above the prompt in the chat.
-export const FILES_PANE = 'cdd-files'
-const fidelityFiles = atom({ plugin: 'cdd-board', key: 'fidelityFiles' } as const, null as FidelityFilesJson, { shape: 'fidelity-files-2' })
-
-// A diagram is drawn in the draw.io editor, not as text, so its XML, often too long for one tool answer, is never read.
-export const isDiagram = (path: string): boolean => path.endsWith('.drawio')
-
-async function openPane($: EngineInterface, title: string): Promise<void> {
-  const opened = await $.ui.open({ id: FILES_PANE, title })
-  if (!opened.isPlaced) $.ui.log(`cdd-board: the files pane waits to be placed: ${opened.reason}`, { to: 'debug' })
+async function openBoardLink($: EngineInterface, what: string, query: Record<string, string>): Promise<void> {
+  const url = await runningBoardUrl($).catch(() => '')
+  if (!url) return $.ui.toast(`${what} did not open: the board is not running and did not start`)
+  const link = await projectPageUrl($, url, query)
+  const problem = await openInBrowserPane($, link)
+  if (problem) $.ui.toast(`${what} did not open at ${link}: ${problem}`)
 }
 
-// Atom fidelityFiles, declared in pane/types/index.d.ts and kept in this file.
-export function currentFidelityFiles($: EngineInterface) {
-  return read($, fidelityFiles)
-}
-
-// One tab per file the fidelity declares, in the order fidelity-progress.files sends its formats (markdown, then code,
-// then diagrams); the first tab's text is read straight away.
+// One fidelity's files: the files button of a fidelity's folder on the session card.
 export async function openFiles($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
   await openFilesOf($, [fidelity])
 }
 
-// Every file of several fidelities, each once, as tabs of one files pane: the files button opens the files of every
-// selected fidelity together.
+// The files of the stage, with the practices of these fidelities turned on: the bar's files button.
 export async function openFilesOf($: EngineInterface, fidelities: FidelityProgressClient[]): Promise<void> {
   const [first] = fidelities
   if (!first) return
-  const named = fidelities.map(fidelity => fidelity.slug).join(', ')
-  try {
-    const read = await Promise.all(fidelities.map(fidelity => callTool<Record<string, FileEntryData[]>>($, 'fidelity-progress.files', { ticket: fidelity.progress.ticket.name, fidelity: fidelity.slug })))
-    const paths = [...new Set(read.flatMap(files => Object.values(files).flat().map(entry => entry.path)))]
-    await update($, fidelityFiles, () => ({ fidelity: first.slug, tabs: paths.map(path => ({ path, text: null })), shown: paths[0] ?? null, isOutOfDate: false }))
-    await openPane($, `${named} files`)
-    if (paths[0]) await showFile($, paths[0])
-  } catch (failure) {
-    $.ui.toast(`${named} files: ${reasonOf(failure)}`)
-  }
+  const slugs = fidelities.map(fidelity => fidelity.slug).join(',')
+  await openBoardLink($, `${slugs} files`, { files: first.progress.ticket.name, fidelity: slugs })
 }
 
-// The fidelity's latest validation report in the board's own report panel, with its findings and Fix buttons, opened in
-// the person's browser by the board's ?report=&fidelity= link, the board started first when it is not running. The
-// report's text never comes into the chat: a report can run to many thousands of characters, past what one tool answer
-// holds. With no board to open, the toast says so and names the report's file.
-export async function openReport($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
-  const url = await runningBoardUrl($).catch(() => '')
-  const link = url && (await boardPageUrl($, url, { report: fidelity.progress.ticket.name, fidelity: fidelity.slug }))
-  if (link && (await openInBrowser($, link))) return
-  const why = url ? `the browser did not open ${link}` : 'the board is not running and did not start'
-  $.ui.toast(`${fidelity.slug} report: ${why}. The report is ${fidelity.progress.report_file || 'not saved yet'}`)
-}
-
-// A file the server refuses shows the server's reason in its tab. A diagram's tab shows only its draw.io button.
-export async function showFile($: EngineInterface, path: string): Promise<void> {
-  if (isDiagram(path)) return update($, fidelityFiles, files => (files ? { ...files, shown: path } : files))
+// Every file in the chat's session folder, .sessions/<session>: a ticket chat's session name opens it.
+export async function openSessionFolder($: EngineInterface): Promise<void> {
   const chatBar = await currentChatBar($)
-  let text: string
-  try {
-    text = (await callTool<FileTextData>($, 'session.read_file', { session: chatBar.sessionFile, path })).text
-  } catch (failure) {
-    text = reasonOf(failure)
-  }
-  await update($, fidelityFiles, files => (files ? { ...files, shown: path, tabs: files.tabs.map(tab => (tab.path === path ? { path, text } : tab)) } : files))
+  await openBoardLink($, `.sessions/${chatBar.sessionName}`, { 'session-folder': chatBar.sessionName })
 }
 
-// A press on the shown file's title opens it in the editor the system opens its kind of file with, by its file:// link.
-// A path from the project is named from the repository's own folder; an absolute one, such as a report's, is as it is.
-const ABSOLUTE_PATH = /^([A-Za-z]:[\\/]|\/)/
-export async function openFileInEditor($: EngineInterface, path: string): Promise<void> {
-  const absolute = ABSOLUTE_PATH.test(path) ? path : `${await repositoryFolder($)}/${path}`
-  const link = `file:///${absolute.split('\\').join('/').replace(/^\//, '')}`
-  if (!(await openInBrowser($, link))) $.ui.toast(`${path} did not open: no program took ${link}`)
+// A file another page asked this chat to show (Chat.send open_file), such as a story's acceptance test the Story UI
+// editor links: the session's folder in the board's file viewer, with that file open.
+export async function openFileInViewer($: EngineInterface, path: string): Promise<void> {
+  const chatBar = await currentChatBar($)
+  await openBoardLink($, path, { 'session-folder': chatBar.sessionName, file: path })
 }
 
-// A report whose saved graph is out of date has lost its graph's rules, so its fidelity is validated again to find them.
-export async function validateAgain($: EngineInterface, slug: string): Promise<void> {
-  const fidelity = (await currentChatBar($)).fidelities.find(entry => entry.slug === slug)
-  if (fidelity) await runAction($, fidelity, 'validate')
-}
-
-export async function closeFiles($: EngineInterface): Promise<void> {
-  await update($, fidelityFiles, () => null)
-  await $.ui.close({ id: FILES_PANE })
-}
-
-// The person closed the pane with its own mark: the files view is forgotten, so the next open starts afresh.
-export async function forgetFiles($: EngineInterface): Promise<void> {
-  await update($, fidelityFiles, () => null)
+// The fidelity's latest validation report in the board's report panel, with its findings and Fix buttons. The report's
+// text never comes into the chat: a report can run to many thousands of characters, past what one tool answer holds.
+export async function openReport($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
+  await openBoardLink($, `${fidelity.slug} report (${fidelity.progress.report_file || 'not saved yet'})`, { report: fidelity.progress.ticket.name, fidelity: fidelity.slug })
 }

@@ -3,10 +3,12 @@ import type { EngineInterface } from 'claude-code'
 import type { LeaveChoicesData, TicketData } from '@cdd/space/kanban/ticket'
 
 import { reasonOf } from '../shared/failure'
-import { callTool, currentChatBar, refreshChatBar, showFailure, type ChatBarClient } from './chat-bar-client'
+import { chosenFolder } from '../shared/folder-dialog'
+import { callTool, callToolText, currentChatBar, refreshChatBar, showFailure, type ChatBarClient } from './chat-bar-client'
 import { whileBusy } from './busy-client'
 import { startedChatIn } from './chat-folder-client'
-import { cancelClose, closeSessionList, currentChatBarView, showClose } from './session-dialogs-client'
+import type { RepoRowJson } from '../../types'
+import { cancelClose, closeRepoList, closeSessionList, currentChatBarView, showClose, showRepos, toggleRepoList } from './session-dialogs-client'
 
 // The person's moves between sessions: open a ticket from the main chat, create one, close the active one. Each is one
 // ticket tool; the dialogs they open and close, and what they chose, are in session-dialogs-client.ts. Sessions open
@@ -48,6 +50,50 @@ export async function createSession($: EngineInterface, sessionName: string): Pr
     await showFailure($, `${sessionName} was not created: ${reasonOf(failure)}`)
     await refreshChatBar($)
   }
+}
+
+// The main chat's repo button opens the repositories beside this one, read afresh each time; a list that cannot read
+// them opens empty, with the field for a new one.
+export async function toggleRepoListWithRepos($: EngineInterface): Promise<void> {
+  await toggleRepoList($)
+  if (!(await currentChatBarView($)).isRepoListOpen) return
+  try {
+    await showRepos($, await callTool<RepoRowJson[]>($, 'repos.siblings', {}))
+  } catch (failure) {
+    await showRepos($, [])
+    $.ui.toast(`Repositories not listed: ${reasonOf(failure)}`)
+  }
+}
+
+// repos.open creates the repository when missing, publishes it private, installs CDD into it, and opens a new top-level
+// chat there, where the person opens its main session.
+export async function openRepo($: EngineInterface, name: string): Promise<void> {
+  $.ui.toast(`Opening repository ${name}…`)
+  await closeRepoList($)
+  try {
+    const answer = await whileBusy($, `Opening repository ${name}`, () => callToolText($, 'repos.open', { name, visibility: 'private' }))
+    $.ui.toast(`${name}: ${answer.split('\n').pop()?.replace(/^- /, '') ?? 'opened'}`)
+  } catch (failure) {
+    await showFailure($, `${name} did not open: ${reasonOf(failure)}`)
+  }
+}
+
+// repos.open_folder opens any folder as it is, git or not, in a new top-level chat, where the person opens its main
+// session; nothing is created there.
+export async function openFolder($: EngineInterface, path: string): Promise<void> {
+  await closeRepoList($)
+  try {
+    const answer = await whileBusy($, `Opening folder ${path}`, () => callToolText($, 'repos.open_folder', { path }))
+    $.ui.toast(answer)
+  } catch (failure) {
+    await showFailure($, `${path} did not open: ${reasonOf(failure)}`)
+  }
+}
+
+// The folder button asks the system's folder picker; cancelling it leaves the list open as it was.
+export async function chooseFolder($: EngineInterface): Promise<void> {
+  const path = await chosenFolder($)
+  if (path) await openFolder($, path)
 }
 
 // The close dialog offers what the Python Ticket answers closing can do with the session's work.

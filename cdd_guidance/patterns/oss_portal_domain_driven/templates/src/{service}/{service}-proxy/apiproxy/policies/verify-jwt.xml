@@ -1,0 +1,6 @@
+<VerifyJWT name="verify-jwt">
+  <Algorithm>RS256</Algorithm>
+  <PublicKey><JWKS uri="{{issuerJwksUri}}"/></PublicKey>
+  <Issuer>{{issuer}}</Issuer>
+  <Audience>{{audience}}</Audience>
+</VerifyJWT>

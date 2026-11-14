@@ -93,8 +93,19 @@ export class ChatBarClient {
 
   // Every action a person can run on a fidelity of the shown stage, its steps first, as the stage sends them.
   // The ticket the session works on, by name; empty with none.
+  // The Claude Design link recorded for the latest version of the session's design canvas, as the practice that keeps
+  // one answers it (UX), which the file viewer opens; empty when none is recorded or that practice is off.
+  get designView(): string {
+    return Object.values(this.ticket?.session.practices ?? {}).find(practice => practice.design_view)?.design_view ?? ''
+  }
+
   get ticketName(): string {
     return this.ticket?.name ?? ''
+  }
+
+  // The whole path of the folder the session works in, which the Graph app opens on; empty with no session.
+  get sessionPath(): string {
+    return (this.ticket as (TicketData & { session_path?: string }) | null)?.session_path ?? ''
   }
 
   // The actions of the shown stage whose command takes the formats the chips pick, generate and render.
@@ -148,17 +159,33 @@ export class ChatBarClient {
     return this.board?.project ?? ''
   }
 
-  // The folder the session works in, its workpath; a session that chose none works in the whole repository.
-  get rootPath(): string {
-    return this.ticket ? this.ticket.session.workpath || this.repoName : ''
+  // Whether the folder is a git repository, where tickets get worktrees and chats of their own. A board read before the
+  // overview said so counts as one, so its tickets stay open.
+  get isClone(): boolean {
+    return this.board?.is_clone ?? true
   }
 
-  // The status row under the strip: the repository, the session, the folder it works in, and the action the button
-  // runs with the fidelities it runs on.
-  statusLine(action: string): string {
-    if (!this.ticket) return ''
-    const acting = action ? [action, ...this.actionFidelities.map(fidelity => fidelity.slug)].join(' ') : ''
-    return [this.repoName, this.ticket.name, this.rootPath, acting].filter(Boolean).join(' · ')
+  // The project's folder on disk, which a chat in a plain folder shows instead of the repo and session buttons.
+  get folder(): string {
+    return this.board?.folder ?? ''
+  }
+
+  // A chat in a folder that is no git repository, such as one opened from FOLDER on its own session, has no branch to
+  // switch or close and no other repository to open, so the bar shows its folder alone, read only.
+  get isPlainFolder(): boolean {
+    return Boolean(this.board) && !this.isClone
+  }
+
+  // The folder an app's page loads: the whole path of the folder the session works in, its workpath; empty while no
+  // ticket's session is open or it works in the whole repository.
+  get workpath(): string {
+    return this.ticket?.session.workpath ?? ''
+  }
+
+  // The status line below the chat: the whole path of the folder the session works in, which already names the
+  // repository, and a worktree's folder its branch.
+  get statusLine(): string {
+    return this.sessionPath
   }
 
   // The agent context: what the Python Ticket tells the agent about the active session in its system prompt, the same
@@ -203,14 +230,20 @@ export class MoveRefused {
 // the sessions of that folder's branch and worktree, not of the folder the chat connected from, and names the chat as
 // conversation_id, so the server answers with the session this chat has open, as it does for the agent's own calls.
 export async function callTool<T>($: EngineInterface, tool: string, args: object): Promise<T> {
-  const result = await $.mcp.call(SERVER, tool, { ...args, chat_folder: await $.session.root(), conversation_id: await $.session.id() })
-  const text = result.content[0]?.text ?? ''
-  if (result.isError) throw new CddToolFailed(tool, text || `${tool} failed`)
+  const text = await callToolText($, tool, args)
   try {
     return JSON.parse(text) as T
   } catch {
     throw new CddToolFailed(tool, text || `${tool} sent back nothing`)
   }
+}
+
+// A tool that answers in prose, such as repos.open, read as its text; one flagged isError is a CddToolFailed.
+export async function callToolText($: EngineInterface, tool: string, args: object): Promise<string> {
+  const result = await $.mcp.call(SERVER, tool, { ...args, chat_folder: await $.session.root(), conversation_id: await $.session.id() })
+  const text = result.content[0]?.text ?? ''
+  if (result.isError) throw new CddToolFailed(tool, text || `${tool} failed`)
+  return text
 }
 
 // Atom chatBar, declared in pane/types/index.d.ts and kept in this file: the last board.overview answer.
@@ -254,7 +287,38 @@ export async function dismissFailure($: EngineInterface): Promise<void> {
 
 // Fix sends what the chat bar shows to this chat's agent to find its cause and fix it.
 export async function askChatToFix($: EngineInterface, shown: string): Promise<void> {
-  await $.prompt.submit({ text: `The chat bar shows this; find its cause and fix it: ${shown}`, asUser: true })
+  await $.prompt.submit({ text: `The CDD chat bar above the prompt shows this; find its cause and fix it: ${shown}`, asUser: true })
+}
+
+// What Fix on a board that did not answer sends: the chat bar reads the board from the cdd MCP server, which runs a
+// pinned copy of CDD, so most of these failures are a server or install older than the CDD checkout.
+export const BOARD_PROBLEM_STEPS = [
+  'Context: the chat bar reads the session board from the cdd MCP server. That server runs a pinned copy of the CDD '
+    + 'repository at ~/.cdd/runtime, and ~/.cdd/runtime.json names its commit. This chat reaches it through its cdd entry '
+    + '(.mcp.json and ~/.claude.json), whose header helper names the chat\'s project and Claude Code process. Read '
+    + 'harness/mcp/.context/module-context.md and harness/installation/.context/module-context.md in the CDD checkout first.',
+  'Check versions: in the CDD checkout, git fetch, then compare the commit in ~/.cdd/runtime.json with HEAD of the '
+    + 'checkout\'s branch and with origin/main. Search the commits between them for a fix to this error.',
+  'Get the latest: pull the latest from the checkout\'s branch; on main, git pull origin main. Stop and tell me if the '
+    + 'pull conflicts with uncommitted work.',
+  'Reinstall: python scripts/install.py --ide Claude from the CDD checkout. It runs harness/installation/installer.py, '
+    + 'which writes the cdd entry and plugins again and pins the server to the checkout\'s commit when it runs an older one. '
+    + 'Other chats share that server, so message their sessions before --pin-runtime or cdd.restart. If the install '
+    + 'fails, follow "When install fails" in harness/installation/installer.md: log it in the open session\'s '
+    + '.sessions/{session}/install-failures.md, run /harness-diagnostics-agent-tools-diagnostics with the error, and '
+    + 'update the themes in .sessions/_backlog/install-failure-themes.md.',
+  'Ask me to run /reload-plugins, so this chat loads the new cdd entry and header helper, then check that the chat bar '
+    + 'reads the board again.',
+]
+
+export function boardProblemPrompt(shown: string): string {
+  const steps = BOARD_PROBLEM_STEPS.map((step, index) => `${index + 1}. ${step}`).join('\n')
+  return `The CDD chat bar above the prompt shows: ${shown}\n\nFind its cause and fix it:\n${steps}\n\nThen tell me what was wrong and what you changed.`
+}
+
+// Fix on a board that did not answer sends the chat the context and the steps that usually clear it.
+export async function askChatToFixBoard($: EngineInterface, shown: string): Promise<void> {
+  await $.prompt.submit({ text: boardProblemPrompt(shown), asUser: true })
 }
 
 // Fix on a failure sends it to the chat and clears it from the line.

@@ -15,7 +15,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { card, dragCard, expect, FakeChat, fixtureRoot, openBoard, receivedBy, resetSessions, test, toast, waitForChat, waitForNoChat, writeInto } from './app/tests/story-ui'
+import { card, catchClaudeLinks, dragCard, expect, FakeChat, fixtureRoot, openBoard, receivedBy, resetSessions, test, toast, waitForChat, waitForNoChat, writeInto } from './app/tests/story-ui'
 import type { Page } from './app/tests/story-ui'
 
 const CHAT_CHECKED_IN_MILLISECONDS = 10_000
@@ -72,7 +72,10 @@ test.describe('with no chat connected', () => {
     })
 
     test.describe('Start a backlog item in a chosen folder', () => {
+      let links: string[] = []
+
       test.beforeEach(async ({ page }) => {
+        links = await catchClaudeLinks(page)
         writeInto(join(fixtureRoot, '.sessions', '_backlog', 'gift-cards.md'), '# Gift cards\n\nSell gift cards.\n')
         for (const folder of ['src/billing', 'src/visits']) mkdirSync(join(fixtureRoot, folder), { recursive: true })
         await openBoard(page)
@@ -82,6 +85,8 @@ test.describe('with no chat connected', () => {
         await dialog.getByRole('listitem').filter({ hasText: 'src/' }).click()
         await dialog.getByRole('listitem').filter({ hasText: 'visits/' }).click()
         await dialog.getByRole('button', { name: 'Use src/visits' }).click()
+        // Starting opens a worktree in the background; the next scenario's reset must not start while it still runs.
+        await expect(toast(page, 'Confirm the folder and send in the Claude app to start the chat of gift-cards')).toBeVisible({ timeout: 15_000 })
       })
 
       test.afterEach(() => rmSync(join(fixtureRoot, 'src'), { recursive: true, force: true }))
@@ -92,6 +97,10 @@ test.describe('with no chat connected', () => {
 
       test('And a toast says Gift cards started in Discovery', async ({ page }) => {
         await expect(toast(page, 'Gift cards started in Discovery')).toBeVisible({ timeout: 8_000 })
+      })
+
+      test("And a new chat opens on gift-cards' own worktree", async () => {
+        expect(links.map(link => new URL(link).searchParams.get('folder'))).toEqual([expect.stringContaining('gift-cards')])
       })
     })
   })
@@ -158,19 +167,24 @@ test.describe('with no chat connected', () => {
 
   test.describe('Activate Ticket', () => {
     // Activating opens the ticket in its own worktree in one press: no chat moves between folders, so there is nothing
-    // to ask first.
+    // to ask first. With no chat working there yet, it starts one there.
     test.describe('Open a ticket in its own worktree', () => {
+      let links: string[] = []
+
       test.beforeEach(async ({ page }) => {
+        links = await catchClaudeLinks(page)
         await openBoard(page)
         await card(page, 'billing-report').getByRole('button', { name: 'Activate' }).first().click()
+        // Activating makes a worktree in the background; the next scenario's reset must not start while it still runs.
+        await expect(toast(page, 'Confirm the folder and send in the Claude app to start the chat of billing-report')).toBeVisible({ timeout: 15_000 })
       })
 
       test('Then no dialog opens', async ({ page }) => {
         await expect(page.getByRole('dialog')).toHaveCount(0)
       })
 
-      test('And a toast names the worktree of Billing report, where its chat can be opened', async ({ page }) => {
-        await expect(toast(page, /^Billing report is open in its worktree .+ · open its chat from its card$/)).toBeVisible({ timeout: 8_000 })
+      test("And a new chat opens on Billing report's worktree", async () => {
+        expect(links.map(link => new URL(link).searchParams.get('folder'))).toEqual([expect.stringContaining('billing-report')])
       })
     })
   })
@@ -181,7 +195,7 @@ test.describe('with no chat connected', () => {
         checkOutMainAlone()
         git('checkout', '-b', 'checkout-flow')
         await openBoard(page)
-        await dragCard(page, card(page, 'checkout-flow'), column(page, 'Complete').locator('.card-list').first(), { atTheEnd: true })
+        await dragCard(page, card(page, 'checkout-flow'), column(page, 'Complete').locator('.card-list').first())
       })
 
       test.afterEach(async ({ page }) => {

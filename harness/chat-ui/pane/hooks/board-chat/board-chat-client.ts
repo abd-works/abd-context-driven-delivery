@@ -1,6 +1,7 @@
 import type { ChatCommandData } from '@cdd/harness/chat/chat'
 import type { EngineInterface } from 'claude-code'
 
+import { openFileInViewer } from '../chat-bar/fidelity-files-client'
 import { commandOf, filledPrompt, REFUSED_WITHIN_MILLISECONDS } from '../shared/chat-command'
 import { reasonOf } from '../shared/failure'
 import { after, post } from './board'
@@ -39,8 +40,10 @@ async function ranOrFilled($: EngineInterface, chat: string, command: ChatComman
   return ''
 }
 
-// Why the chat did not show the command, or nothing once it did.
+// Why the chat did not show the command, or nothing once it did. A file to open is shown in the chat bar's file viewer,
+// never in the chat: a Story UI editor this chat opened sends a story's acceptance test so.
 function shown($: EngineInterface, chat: string, command: ChatCommandData): Promise<string> {
+  if (command.kind === 'open_file') return openFileInViewer($, command.text).then(() => '', reasonOf)
   if (command.kind === 'fill') return filledPrompt($, command.text).catch(reasonOf)
   return command.text.startsWith('/') ? ranOrFilled($, chat, command) : submitted($, command.text)
 }
