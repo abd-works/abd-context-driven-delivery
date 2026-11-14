@@ -20,14 +20,16 @@ export type SourceRule = {
 export type SourceEditorInstance = Parameters<OnMount>[0];
 
 // A fold a page names on the source's own lines, such as a class or operation the session's graph places in a whole
-// file; it opens unfolded, so the file reads whole until a person folds it.
+// file.
 export type SourceFold = { start: number; end: number; kind: 'class' | 'block' };
 
-// What a page showing a whole file adds to the view: the folds its graph names, the language the file is in, and the
-// editor itself once it is made, so the page can add its own gutter marks (each with the class SOURCE_MARK, which the
-// fold toggle leaves alone) and menu actions, such as the Files app's comments.
+// What a page showing a whole file adds to the view: the folds its graph names, whether every fold starts open so the
+// file reads whole until a person folds it, the language the file is in, and the editor itself once it is made, so the
+// page can add its own gutter marks (each with the class SOURCE_MARK, which the fold toggle leaves alone) and menu
+// actions, such as the Files app's comments.
 export type SourceHostProps = {
   folds?: SourceFold[];
+  unfolded?: boolean;
   language?: string;
   keepGlyphMargin?: boolean;
   onEditor?: (editor: SourceEditorInstance) => void;
@@ -66,6 +68,7 @@ function SourceEditor({
   activeRule,
   onSelectRule,
   folds = NO_FOLDS,
+  unfolded = false,
   language = '',
   keepGlyphMargin = false,
   onEditor,
@@ -93,7 +96,7 @@ function SourceEditor({
       ),
     [source, text, members, owner, folds],
   );
-  const initialOpen = () => [...openBlockFolds(prepared.folds, source.type), ...folds.map((fold) => foldKey(namedFold(fold)))];
+  const initialOpen = () => (unfolded ? prepared.folds.map(foldKey) : openBlockFolds(prepared.folds, source.type));
   const [openFor, setOpenFor] = useState(source.node_id);
   const [openFolds, setOpenFolds] = useState<string[]>(initialOpen);
   if (openFor !== source.node_id) {
