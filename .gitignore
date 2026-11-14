@@ -138,3 +138,9 @@ sandbox/
 
 # The board keeps what is slow to work out for each ticket in its session folder; it is worked out again when missing
 .sessions/**/progress-cache.json
+
+# Claude Code loads the chat bar from the served checkout: the install command the cdd home writes there, and the type
+# files Claude Code writes beside the mod while it watches the folder
+harness/chat-ui/pane/install.json
+harness/chat-ui/pane/tsconfig.json
+harness/chat-ui/pane/.claude-plugin/types/

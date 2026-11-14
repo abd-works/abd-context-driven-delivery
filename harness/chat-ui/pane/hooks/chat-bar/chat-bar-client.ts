@@ -276,6 +276,22 @@ async function readBoard($: EngineInterface): Promise<BoardOverviewData> {
   }
 }
 
+// Restart starts the cdd server again on the code in the checkout it serves, so a Python edit takes effect without an
+// install; the chat bar itself reloads from that checkout as its files change. The bar is read again on the new code.
+interface RestartData { tools: number }
+
+export async function restartServer($: EngineInterface): Promise<void> {
+  $.ui.toast('Restarting the cdd server…')
+  try {
+    const restarted = await callTool<RestartData>($, 'cdd.restart', {})
+    $.ui.toast(`cdd server restarted with ${restarted.tools} tools`)
+  } catch (failure) {
+    await showFailure($, `cdd.restart failed: ${reasonOf(failure)}`)
+    return
+  }
+  await refreshChatBar($)
+}
+
 // An action that failed stays above the line until the person dismisses it: a toast passes before anyone reads it.
 export async function showFailure($: EngineInterface, failure: string): Promise<void> {
   await update($, chatBar, json => ({ ...json, failure }))
