@@ -34,6 +34,7 @@ from harness.agent_tools.agent_tools import (
 )
 from harness.hooks.hooks import hook
 from harness.mcp.mcp_annotations import mcp
+from harness.mcp.mcp_server import McpServer
 from harness.agent_tools.agent_tools import AgentInstructions, ToolSetCollectionAnnotation
 from harness.agent_tools.recipe import RecipeLineFailed, RecipePlaceholders
 from harness.agent_tools.tool_call import ToolCall
@@ -1579,8 +1580,6 @@ with description("a published tool asked whether a client's spelling names it"):
 
     with context("that a server has enrolled"):
         with before.each:
-            from harness.mcp.mcp_server import McpServer
-
             self.server = McpServer(repo=Path(__file__).resolve().parents[2])
             self.server.enroll(self.tool)
 

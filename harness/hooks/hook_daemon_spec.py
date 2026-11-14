@@ -1,5 +1,6 @@
-"""A checkout's hook daemon finding its port held: by the daemon the older layout started, by this checkout's daemon on
-the current code, or by a process that is no hook daemon; and the daemon stopping when its checkout closes."""
+"""A checkout's hook daemon finding its port held: by this checkout's daemon on the current code, or by a process that is
+no hook daemon. The daemon the older layout started, and the daemon stopping when its checkout closes, are in
+hook_daemon_heavy_spec.py: each starts a daemon process."""
 import shutil
 import socket
 import sys
@@ -17,7 +18,6 @@ from mamba import after, before, context, description, it
 
 from harness.hooks.hook_daemon import HookDaemon, HookPortTaken
 from harness.hooks.hook_server import HandlerCatalog, HookServer
-from harness.hooks.fixtures.older_layout_daemon import OlderLayoutDaemon
 
 def _free_port() -> int:
     with socket.socket() as probe:
@@ -37,38 +37,6 @@ with description("a checkout's hook daemon") as self:
         if self.listener is not None:
             self.listener.close()
         shutil.rmtree(self.repo, ignore_errors=True)
-
-    with context("with its port held by the daemon the older layout started"):
-
-        with before.each:
-            self.older = OlderLayoutDaemon(self.repo, self.port).start()
-
-        with after.each:
-            self.older.kill()
-
-        with it("should claim the port"):
-            self.listener = self.daemon.claim_port()
-            expect(self.listener is not None).to(be_true)
-
-        with it("should stop the older daemon"):
-            self.listener = self.daemon.claim_port()
-            expect(self.older.ended()).to(be_true)
-
-        with it("should remove the older layout's address file"):
-            self.listener = self.daemon.claim_port()
-            expect(self.older.published_file.is_file()).to(be_false)
-
-    with context("with its port held by the daemon the older layout started, with no address file left"):
-
-        with before.each:
-            self.older = OlderLayoutDaemon(self.repo, self.port).start(publishes=False)
-
-        with after.each:
-            self.older.kill()
-
-        with it("should stop the process that holds the port"):
-            self.listener = self.daemon.claim_port()
-            expect(self.older.ended()).to(be_true)
 
     with context("with its port held by a process that answers no hook ping"):
 
@@ -103,20 +71,3 @@ with description("a checkout's hook daemon") as self:
 
         with it("should leave the port to that daemon"):
             expect(HookDaemon(self.repo, port=self.port).claim_port()).to(be_none)
-
-    with context("whose checkout closes"):
-
-        with before.each:
-            self.older = OlderLayoutDaemon(self.repo, self.port).start()
-
-        with after.each:
-            self.older.kill()
-
-        with it("should stop the daemon serving the checkout"):
-            self.daemon.stop()
-            expect(self.older.ended()).to(be_true)
-
-        with it("should leave the port free"):
-            self.daemon.stop()
-            self.older.ended()
-            expect(HookDaemon(self.repo, port=self.port).live_address()).to(be_none)

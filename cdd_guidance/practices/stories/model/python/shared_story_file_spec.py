@@ -66,14 +66,21 @@ _MAP = """\
 """
 
 
+def _project() -> tempfile.TemporaryDirectory:
+    """A folder holding the shared story file, its examples module, and its story map."""
+    folder = tempfile.TemporaryDirectory()
+    root = Path(folder.name)
+    (root / "shop").mkdir()
+    (root / "shop" / "shop_examples.py").write_text(_EXAMPLES, encoding="utf-8")
+    (root / "shop" / "edit-ticket-text.story.shared.py").write_text(_SHARED, encoding="utf-8")
+    (root / "story-map.md").write_text(_MAP, encoding="utf-8")
+    return folder
+
+
 with description("a Python shared story file"):
     with before.each:
-        self.folder = tempfile.TemporaryDirectory()
+        self.folder = _project()
         self.root = Path(self.folder.name)
-        (self.root / "shop").mkdir()
-        (self.root / "shop" / "shop_examples.py").write_text(_EXAMPLES, encoding="utf-8")
-        (self.root / "shop" / "edit-ticket-text.story.shared.py").write_text(_SHARED, encoding="utf-8")
-        (self.root / "story-map.md").write_text(_MAP, encoding="utf-8")
         story = SharedStoryFile(_SHARED, [self.root]).stories(PythonStory)[0]
         self.scenario = story.scenarios[0]
 
@@ -104,10 +111,14 @@ with description("a Python shared story file"):
             expect(self.scenario.examples["CHECKOUT_FLOW"].fixture_facts["source_reads"]).to(equal(["name"]))
 
     with description("rendered to markdown"):
-        with before.each:
+        # Rendered once; the examples only read the markdown.
+        with before.all:
+            folder = _project()
+            root = Path(folder.name)
             practice = PracticeCatalogue.create("stories", fidelity="scenarios")
-            paths = [str(self.root / "shop" / "edit-ticket-text.story.shared.py"), str(self.root / "story-map.md")]
+            paths = [str(root / "shop" / "edit-ticket-text.story.shared.py"), str(root / "story-map.md")]
             self.markdown = str(practice.fidelities.current.render_files("markdown", paths, "python")["content"])
+            folder.cleanup()
 
         with it("should write the scenario's steps"):
             expect(self.markdown).to(contain("*When* the Person opens the board"))

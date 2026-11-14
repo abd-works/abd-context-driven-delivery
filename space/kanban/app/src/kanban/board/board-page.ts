@@ -198,6 +198,15 @@ export class BoardPage {
     this.cards.open(ticket)
   }
 
+  // The Files app's page: only the file viewer, opened on the files or the session folder its link names, with the board
+  // read again every two seconds so an open file shows what is on disk now.
+  startFiles(): () => void {
+    const search = typeof location === 'undefined' ? '' : location.search
+    void this.openLinkedFiles(search)
+    void this.openLinkedSessionFolder(search)
+    return this.reader.startPolling()
+  }
+
   start(): () => void {
     const search = typeof location === 'undefined' ? '' : location.search
     void this.openLinkedTicket(search)

@@ -2,6 +2,8 @@
 shows, which link it to the classes it demonstrates, and the members read off it, which link it to the properties it is
 retrieved through."""
 
+import functools
+
 from expects import contain, equal, expect
 from mamba import before, description, it
 
@@ -17,13 +19,22 @@ _DECLARED = {
 }
 
 
+@functools.cache
+def _stories_practice():
+    """The Stories practice of a graph, made once: every example reads facts through it and none changes it."""
+    return Graph().practice("stories")
+
+
 def _facts(name: str) -> dict:
     model = StoryModel()
     model.source_texts.update(_DECLARED)
-    return StoryRecording(model, Graph().practice("stories"), None).example_facts("tests/story.ts", name)
+    return StoryRecording(model, _stories_practice(), None).example_facts("tests/story.ts", name)
 
 
 with description("the facts of an example"):
+    with before.all:
+        _stories_practice()
+
     with description("declared as a TypeScript or JavaScript function"):
         with it("should name the class it builds"):
             expect(_facts("validCart")["source_names"]).to(contain("Cart"))

@@ -1,5 +1,6 @@
 """Specs for project-specific approach slide generation."""
 import json
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -13,7 +14,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
         sys.path.insert(0, _p)
 
 from expects import be_true, contain, equal, expect
-from mamba import context, description, it
+from mamba import after, before, context, description, it
 
 from harness.catalog_generator.catalog_generator import Catalog
 from harness.catalog_generator.catalog_practice import CatalogPractice
@@ -70,9 +71,11 @@ with description("a project file's place on the approach page"):
 
 
 with description("a project's approach page"):
-    with it("should write cdd-approach.html with staged project examples"):
-        with tempfile.TemporaryDirectory() as project_dir, tempfile.TemporaryDirectory() as out_dir:
-            root = Path(project_dir)
+    # Writing the page loads every practice's format readers, so it is written once and the example only reads it.
+    with context("written from a project with staged examples"):
+        with before.all:
+            self.project_dir, self.out_dir = tempfile.mkdtemp(), tempfile.mkdtemp()
+            root = Path(self.project_dir)
             files = {
                 "stories/.context/story-map.drawio": "<mxfile></mxfile>",
                 "qualify/offer/cross-sell/cross_sell_story.test.ts": "story('Qualify', () => {});\n",
@@ -86,11 +89,17 @@ with description("a project's approach page"):
                 (root / relative).parent.mkdir(parents=True, exist_ok=True)
                 (root / relative).write_text(text, encoding="utf-8")
 
-            catalog = Catalog(repo_url="https://example.com/demo", ref="abc", out_root=out_dir, project=root)
-            message = catalog.generate_project_approach(project_title="Demo Project")
-            page = Path(out_dir) / "cdd-approach.html"
+            catalog = Catalog(repo_url="https://example.com/demo", ref="abc", out_root=self.out_dir, project=root)
+            self.message = catalog.generate_project_approach(project_title="Demo Project")
+
+        with after.all:
+            shutil.rmtree(self.project_dir, ignore_errors=True)
+            shutil.rmtree(self.out_dir, ignore_errors=True)
+
+        with it("should write cdd-approach.html with staged project examples"):
+            page = Path(self.out_dir) / "cdd-approach.html"
             expect(page.is_file()).to(be_true)
-            expect(message).to(contain("cdd-approach.html"))
+            expect(self.message).to(contain("cdd-approach.html"))
             html = page.read_text(encoding="utf-8")
             expect("approach-page" in html).to(be_true)
             expect("story-map.drawio" in html or "catalog-drawio-frame" in html).to(be_true)

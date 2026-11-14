@@ -161,6 +161,8 @@ class Chat:
 
     # Seconds since the epoch; a spec sets its own.
     clock = staticmethod(time.time)
+    # How many of the latest messages a chat keeps and lists; a spec keeps fewer, so it sends fewer to pass the limit.
+    kept_messages = KEPT_MESSAGES
     # What a new chat's link is handed to: the system's, unless the run names a file to keep the links in.
     opener: ChatLinks = RecordedChatLinks(Path(os.environ[OPENED_CHATS_VARIABLE])) if os.environ.get(OPENED_CHATS_VARIABLE) else ChatLinks()
 
@@ -221,7 +223,7 @@ class Chat:
     def messages(self) -> list[ChatMessage]:
         """List the latest messages sent to chat, newest first: what each one said, when it was sent, whether it waits, was taken, was shown in the chat, or failed, and why it failed."""
         sent = [(path, state) for state in MESSAGE_STATES for path in self._sent_in(state)]
-        newest = sorted(sent, key=lambda entry: entry[0].name, reverse=True)[:KEPT_MESSAGES]
+        newest = sorted(sent, key=lambda entry: entry[0].name, reverse=True)[: self.kept_messages]
         return [self._message(path, state) for path, state in newest]
 
     @mcp
@@ -386,7 +388,7 @@ class Chat:
 
     def _forget_old_messages(self) -> None:
         handled = sorted((path for state in (TAKEN, SHOWN, DONE, FAILED) for path in self._sent_in(state)), key=lambda path: path.name)
-        for path in handled[:-KEPT_MESSAGES]:
+        for path in handled[: -self.kept_messages]:
             path.unlink()
 
     def _message(self, path: Path, state: MessageState) -> ChatMessage:

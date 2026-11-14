@@ -17,7 +17,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from harness.diagnostics.app import App, AppServer, AppStatus
+from harness.diagnostics.app import App, AppServer, AppStatus, Npm, NpmRun
 import space.kanban  # noqa: F401 - registers the Kanban and Story UI apps, as the cdd server does when it loads every toolset
 from space.kanban.session_board_examples import BacklogFileSeed
 
@@ -50,16 +50,55 @@ def free_port() -> int:
         return probe.getsockname()[1]
 
 
+class ThrowawayNpm(Npm):
+    """npm for a throwaway app, stubbed at the boundary *App* calls: the same commands and the same answers, without
+    the minutes real npm takes. Install puts each ``file:`` dependency's package under node_modules, and fails as npm
+    does, with its ENOENT lines, when one is not there; ``run build`` writes the built page. The e2e spec
+    ``kanban_app_install_e2e_spec.py`` runs real npm."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.commands: list[tuple[str, ...]] = []
+
+    def run(self, folder: Path, *arguments: str) -> NpmRun:
+        self.commands.append(arguments)
+        if arguments == ("install",):
+            return self._install(folder)
+        if arguments == ("run", "build"):
+            (folder / "dist").mkdir(exist_ok=True)
+            (folder / "dist" / "index.html").write_text("built", encoding="utf-8")
+            return NpmRun(0)
+        return NpmRun(1, stderr=f"npm error Missing script: {' '.join(arguments[1:])}")
+
+    @staticmethod
+    def _install(folder: Path) -> NpmRun:
+        dependencies = json.loads((folder / "package.json").read_text(encoding="utf-8")).get("dependencies", {})
+        for name, version in dependencies.items():
+            source = folder / version.removeprefix("file:")
+            if version.startswith("file:") and not source.exists():
+                return NpmRun(254, stderr="\n".join([
+                    "npm error code ENOENT",
+                    "npm error syscall open",
+                    f"npm error path {source}",
+                    f"npm error enoent ENOENT: no such file or directory, open '{source}'",
+                ]))
+        (folder / "node_modules").mkdir(exist_ok=True)
+        for name in dependencies:
+            (folder / "node_modules" / name).mkdir(exist_ok=True)
+        return NpmRun(0)
+
+
 class ThrowawayApp:
     """An app of the example's label in a throwaway folder on a free port, registered in place of the real one."""
 
-    def __init__(self, example: AppExample) -> None:
+    def __init__(self, example: AppExample, npm: Npm | None = None) -> None:
         self.example = example
+        self.npm = npm or ThrowawayNpm()
         self.folder = Path(tempfile.mkdtemp(prefix="cdd-app-"))
         self.port = free_port()
         self._replaced = App.load(example.label, project=self.folder)
         self._listener: socket.socket | None = None
-        self.app = App(example.label, self.folder, AppServer(self.folder, "serve.js", (self.port,)), example.page).register()
+        self.app = App(example.label, self.folder, AppServer(self.folder, "serve.js", (self.port,)), example.page, self.npm).register()
         self.write_code(FOUND_DEPENDENCY, SERVE)
 
     def write_code(self, dependency: str, server: str) -> None:

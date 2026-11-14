@@ -20,6 +20,7 @@ from harness.installation.json_file import HeldJsonFile, JsonFile
 from harness.mcp.mcp_annotations import mcp
 from harness.installation.context_config import CONTEXT_FOLDER, ContextConfig
 from space.repo.repo import Repo
+from space.session.answer_reads import AnswerReads, HeldForAnswer
 from space.session.chat_injections import ChatInjections
 from space.session.decision_records import FORMAT_FILE, DecisionRecords
 from space.session.file_manager import FileEntry, FileText
@@ -107,6 +108,8 @@ class Session:
         self._resolved_paths: dict[str, Path] = {}
         # Its session.json, read again only once the file changes; none before it has a folder.
         self._session_json: HeldJsonFile | None = None
+        # What its session.json holds, read once for each answer that asks.
+        self._fields = HeldForAnswer[dict]()
         # The practices and graph this session keeps between calls, made when first asked for.
         self._outputs: dict[str, PracticeSessionOutput] | None = None
         self._graph: Graph | None = None
@@ -172,6 +175,7 @@ class Session:
     def session_path(self, folder: Path | None) -> None:
         self._session_path = folder
         self._session_json = HeldJsonFile(JsonFile(folder / SESSION_FILE)) if folder is not None else None
+        self._fields.drop()
         self.handoffs = Handoffs(folder) if folder is not None else None
         self.progress_cache = ProgressCache(folder)
 
@@ -366,16 +370,32 @@ class Session:
                 self._graph.overlays = list(overlays)
 
     @property
+    def answer(self) -> int | None:
+        """The answer this session's sessions are giving, which what it reads from its files is held for; none when
+        they serve no answer, and it reads them on every ask."""
+        return self._sessions.answer
+
+    @property
     def fields(self) -> dict:
-        """What ``session.json`` in this session's folder holds, read again only once the file changes; nothing before it
-        has a folder."""
-        return self._session_json.read() if self._session_json is not None else {}
+        """What ``session.json`` in this session's folder holds, read once for each answer that asks (*AnswerReads*),
+        and between answers again only once the file changes; nothing before it has a folder."""
+        held = self._session_json
+        if held is None:
+            return {}
+        return dict(self._fields.get(self.answer, held.read))
 
     def save_fields(self, **values: object) -> None:
         """Merge ``values`` into ``session.json``, keeping what others store there, and make the session's folder when
-        it has none yet, as a project's main session has none until something is saved in it."""
+        it has none yet, as a project's main session has none until something is saved in it. It merges into what the
+        file holds now, not what this answer read, and begins a new answer, so no read in this process answers what the
+        file held before."""
         held = self._session_json
-        (held if held is not None else JsonFile(self.session_file)).write({**self.fields, **values})
+        file = held if held is not None else JsonFile(self.session_file)
+        try:
+            file.write({**file.read(), **values})
+        finally:
+            self._fields.drop()
+            AnswerReads.begin()
         self._saved(", ".join(f"{name} {_shown(value)}" for name, value in values.items()))
 
     def _saved(self, change: str) -> None:

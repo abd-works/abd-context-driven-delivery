@@ -86,6 +86,10 @@ class Repo:
         # Each path already written from the top. The board names every session file this way thousands of times a
         # refresh, and the answer depends only on the path and this repository's root, which never changes.
         self._from_top: dict[Path, str] = {}
+        # Held while git writes this checkout's index: a commit, a merge, a checkout. The board's saves commit on main
+        # from a thread of their own while a tool call commits or merges in the same folder, and two at once fail on
+        # git's index.lock. This process holds one Repo per checkout, so the one lock covers every writer in it.
+        self.writing_index = threading.RLock()
 
     @classmethod
     @tool_subject
@@ -244,12 +248,13 @@ class Repo:
         if not paths:
             raise CommitPathsRequiredError()
         add_flag = "-A" if untracked else "-u"
-        named = [] if self.is_merging else ["--", *(self._relative(path) for path in paths)]
-        self.git.run("add", add_flag, *named)
-        if not self.git.run("diff", "--cached", "--name-only", *named):
+        with self.writing_index:
+            named = [] if self.is_merging else ["--", *(self._relative(path) for path in paths)]
+            self.git.run("add", add_flag, *named)
+            if not self.git.run("diff", "--cached", "--name-only", *named):
+                return self.current_commit
+            self.git.run("commit", "-m", message, *named)
             return self.current_commit
-        self.git.run("commit", "-m", message, *named)
-        return self.current_commit
 
     @property
     def has_origin(self) -> bool:
@@ -304,12 +309,13 @@ class Repo:
         """Merge ref into the current branch. Every branch appends to the same session logs, so those merge by keeping
         the lines of both sides instead of stopping the merge on a conflict."""
         self.prepare_merges()
-        try:
-            self.git.run("merge", ref, *(["-m", message] if message else ["--no-edit"]))
-        except RepoConnectError:
-            # A merge left half done blocks every later checkout and commit, so the checkout goes back as it was.
-            self.git.succeeds("merge", "--abort")
-            raise
+        with self.writing_index:
+            try:
+                self.git.run("merge", ref, *(["-m", message] if message else ["--no-edit"]))
+            except RepoConnectError:
+                # A merge left half done blocks every later checkout and commit, so the checkout goes back as it was.
+                self.git.succeeds("merge", "--abort")
+                raise
 
     def prepare_merges(self) -> None:
         """Tell git, in this repository's own attributes file, which no checkout commits, to merge session logs by
@@ -453,10 +459,11 @@ class Branch:
         not committed go along and are merged into the branch checked out, so a session log every tool call appends to
         never stops a switch; its lines merge by union."""
         self._repo.prepare_merges()
-        if self.exists:
-            self._repo.git.run("checkout", "-m", self.name)
-        else:
-            self._repo.git.run("checkout", "-m", "-b", self.name, self.start_point)
+        with self._repo.writing_index:
+            if self.exists:
+                self._repo.git.run("checkout", "-m", self.name)
+            else:
+                self._repo.git.run("checkout", "-m", "-b", self.name, self.start_point)
         return self
 
     def switch_to(self) -> Branch:

@@ -58,13 +58,24 @@ def violations_for_ddd_rule(
     return [hit for node in nodes for hit in run.node_hits(node)]
 
 
+class DddExamplePair:
+    """What a rule reports on its example's faulty asset and on its repaired one, read once, for an example to check."""
+
+    def __init__(self, slug: str, fault_class: str | None = None, *, clean_class: str | None = None) -> None:
+        root = _EXAMPLES / slug
+        rule = ddd_rule_by_slug(slug)
+        self.slug, self.fault_class = slug, fault_class
+        self.fault_hits = violations_for_ddd_rule(rule, (root / "faulty" / "faultyAsset.py").read_text(encoding="utf-8"), class_name=fault_class)
+        self.clean_hits = violations_for_ddd_rule(rule, (root / "repaired" / "repairedAsset.py").read_text(encoding="utf-8"), class_name=clean_class or fault_class)
+
+    def check(self) -> None:
+        """The rule flags the faulty asset and passes the repaired one: on the classes named, else anywhere."""
+        if not self.fault_hits:
+            raise AssertionError(f"{self.slug}/{self.fault_class}: expected violations on fault fixture, got none")
+        if self.clean_hits:
+            raise AssertionError(f"{self.slug}/{self.fault_class}: expected clean fixture, got {self.clean_hits!r}")
+
+
 def assert_ddd_example_pair(slug: str, fault_class: str | None = None, *, clean_class: str | None = None) -> None:
     """The rule flags the example's faulty asset and passes its repaired one: on the classes named, else anywhere."""
-    root = _EXAMPLES / slug
-    rule = ddd_rule_by_slug(slug)
-    fault_hits = violations_for_ddd_rule(rule, (root / "faulty" / "faultyAsset.py").read_text(encoding="utf-8"), class_name=fault_class)
-    clean_hits = violations_for_ddd_rule(rule, (root / "repaired" / "repairedAsset.py").read_text(encoding="utf-8"), class_name=clean_class or fault_class)
-    if not fault_hits:
-        raise AssertionError(f"{slug}/{fault_class}: expected violations on fault fixture, got none")
-    if clean_hits:
-        raise AssertionError(f"{slug}/{fault_class}: expected clean fixture, got {clean_hits!r}")
+    DddExamplePair(slug, fault_class, clean_class=clean_class).check()

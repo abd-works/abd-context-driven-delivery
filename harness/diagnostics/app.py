@@ -186,6 +186,51 @@ def _stop_process(process: int) -> None:
     os.kill(process, signal.SIGTERM)
 
 
+class NpmRun:
+    """What one npm command did: its exit code and what it printed."""
+
+    def __init__(self, code: int, stdout: str = "", stderr: str = "") -> None:
+        self.code = code
+        self.stdout = stdout
+        self.stderr = stderr
+
+
+class NpmNotFound(Exception):
+    """npm is not on the PATH."""
+
+
+class NpmTooSlow(Exception):
+    """An npm command outlasted its time limit and was stopped."""
+
+    def __init__(self, seconds: float) -> None:
+        super().__init__(f"took longer than {seconds:g} s")
+
+
+class Npm:
+    """npm, the one system an app's install calls: one command run in an app's folder, within a time limit. On Windows
+    npm is a launcher that starts node, so a command over its limit is stopped with every process it started; stopping
+    only the launcher would leave node holding its output open, and the wait for that output would not end."""
+
+    def __init__(self, seconds: float = NPM_SECONDS) -> None:
+        self.seconds = seconds
+
+    def run(self, folder: Path, *arguments: str) -> NpmRun:
+        """Run npm with arguments in folder and answer what it did."""
+        npm = shutil.which("npm")
+        if npm is None:
+            raise NpmNotFound()
+        process = subprocess.Popen(
+            [npm, *arguments], cwd=folder, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace"
+        )
+        try:
+            stdout, stderr = process.communicate(timeout=self.seconds)
+        except subprocess.TimeoutExpired as slow:
+            _stop_process(process.pid)
+            process.communicate()
+            raise NpmTooSlow(self.seconds) from slow
+        return NpmRun(process.returncode, stdout, stderr)
+
+
 @identity("label")
 @language_adapter(language="typescript")
 @agent_toolset
@@ -202,12 +247,13 @@ class App:
     PACKAGES_STAMP = Path("node_modules") / ".cdd-packages"
     BUILD_STAMP = Path("dist") / ".cdd-build"
 
-    def __init__(self, label: str, folder: Path, server: AppServer, page: str = "/", imports: tuple[Path, ...] = ()) -> None:
+    def __init__(self, label: str, folder: Path, server: AppServer, page: str = "/", imports: tuple[Path, ...] = (), npm: Npm | None = None) -> None:
         """imports are the folders outside its own that its build reads, such as the language adapters."""
         self._label = label
         self.folder = Path(folder)
         self._server = server
         self.page = page
+        self._npm_system = npm or Npm()
         self._package = JsonFile(self.folder / "package.json")
         self._sources = AppSources(self.folder, imports)
 
@@ -332,22 +378,15 @@ class App:
     def _builds_a_page(self) -> bool:
         return "build" in self._package.read().get("scripts", {})
 
-    @property
-    def _npm_command(self) -> str:
-        npm = shutil.which("npm")
-        if npm is None:
-            raise AppNotStarted(self, "npm is not on the PATH: install Node.js")
-        return npm
-
     def _npm(self, *arguments: str) -> None:
         try:
-            ran = subprocess.run(
-                [self._npm_command, *arguments], cwd=self.folder, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=NPM_SECONDS, stdin=subprocess.DEVNULL
-            )
-        except subprocess.TimeoutExpired as slow:
-            raise AppNotStarted(self, f"npm {' '.join(arguments)} took longer than {NPM_SECONDS} s") from slow
-        if ran.returncode != 0:
-            raise AppNotStarted(self, _reason_of(ran.stderr or ran.stdout) or f"npm {' '.join(arguments)} exited with {ran.returncode}")
+            ran = self._npm_system.run(self.folder, *arguments)
+        except NpmNotFound as missing:
+            raise AppNotStarted(self, "npm is not on the PATH: install Node.js") from missing
+        except NpmTooSlow as slow:
+            raise AppNotStarted(self, f"npm {' '.join(arguments)} {slow}") from slow
+        if ran.code != 0:
+            raise AppNotStarted(self, _reason_of(ran.stderr or ran.stdout) or f"npm {' '.join(arguments)} exited with {ran.code}")
 
 
 def _reason_of(output: str) -> str:

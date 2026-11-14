@@ -10,6 +10,7 @@ if str(_REPO) not in sys.path:
 import logging
 
 import anyio
+import anyio._backends._asyncio  # noqa: F401 - the backend anyio.run loads, loaded with the module rather than by the first example
 from expects import be_a, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
@@ -17,7 +18,7 @@ from harness.agent_tools.tool_call import ToolCall
 from harness.mcp.tool_calls import ThrottledReporter, _StillRunning, _ToolCalls
 
 # Short enough that a held call outlives it; long enough that a released call finishes inside it.
-SHORT_SECONDS = 0.05
+SHORT_SECONDS = 0.02
 LONG_SECONDS = 5
 
 
@@ -40,6 +41,13 @@ class HeldWork:
 class FailedWork:
     def __call__(self, _reporter) -> object:
         raise ValueError("graph is corrupt")
+
+
+async def _until_every_run_ended(calls: _ToolCalls) -> None:
+    """Wait for every run the calls started to end, so the event loop does not close on a run and stop it."""
+    with anyio.fail_after(LONG_SECONDS):
+        while calls._running:
+            await anyio.sleep(0.001)
 
 
 def _call(arguments: dict | None = None) -> ToolCall:
@@ -113,8 +121,7 @@ with description("tool calls on worker threads") as self:
                 await self.calls.run(_call({"paths": ["src"]}), SHORT_SECONDS, self.work, None)
                 await self.calls.run(_call({"paths": ["docs"]}), SHORT_SECONDS, self.work, None)
                 self.work.released.set()
-                # Let both runs end before the event loop closes, which would stop them.
-                await anyio.sleep(SHORT_SECONDS * 4)
+                await _until_every_run_ended(self.calls)
 
             anyio.run(call_two_paths)
             expect(self.work.starts).to(equal(2))
@@ -149,7 +156,7 @@ with description("tool calls on worker threads") as self:
                     arguments = {"paths": ["src"], "conversation_id": chat, "transcript_path": "transcript.jsonl"}
                     await self.calls.run(_call(arguments), SHORT_SECONDS, self.work, None)
                 self.work.released.set()
-                await anyio.sleep(SHORT_SECONDS * 4)
+                await _until_every_run_ended(self.calls)
 
             anyio.run(call_from_two_chats)
             expect(self.work.starts).to(equal(2))
@@ -174,7 +181,7 @@ with description("tool calls on worker threads") as self:
                     scope.cancel()
                     await self.calls.run(_call(), LONG_SECONDS, fail_when_released, None)
                 failing.released.set()
-                await anyio.sleep(SHORT_SECONDS * 4)
+                await _until_every_run_ended(self.calls)
 
             anyio.run(cancel_the_caller)
             expect(self.logged.messages).to(contain("MCP tool validate.validate failed after its caller stopped waiting"))

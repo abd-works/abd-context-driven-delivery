@@ -1,14 +1,17 @@
 ---
-description: "When work runs in several passes or merges, run the quick suite after each pass and the heavy specs once at the end."
+description: "Run the unit tier after each pass, the heavy tier once at the end, and the e2e tier when the work touches a browser or an agent."
 alwaysApply: true
 ---
 
 # Test Timing
 
-When a piece of work runs in several passes, such as a series of merges, refactor rounds, or agents' branches landing one after another, run the **quick suite** after each pass and the **heavy specs** once, at the end of the whole approach.
+The suite has three tiers, `scripts/test.ps1 -Suite unit | heavy | e2e`. What belongs in each is the BDD practice's `tier-by-speed` rule (`@bdd` development).
 
-- **Quick suite after each pass:** the non-heavy specs (`scripts/test.ps1`, or every `*_spec.py` that is not `*_heavy_spec.py`) and the story tests. They run in minutes and catch almost every break a pass makes, so the next pass starts from known-good code.
-- **Heavy specs once, at the end:** every `*_heavy_spec.py` (`scripts/test.ps1 -Suite heavy`), the ones that start servers, browsers, or a real install. Run them together after the last pass, then fix what they find and run them again. Running them after every pass multiplies a ten-minute wait by the number of passes, and the breaks they catch are rarer and easier to trace once all the changes are in.
-- **Push after the quick suite passes**, as each pass lands. Say in the report that the heavy specs are still to run, so nobody reads a pushed pass as fully verified.
+When a piece of work runs in several passes, such as a series of merges, refactor rounds, or agents' branches landing one after another, run the **unit tier** after each pass and the **heavy tier** once, at the end of the whole approach.
 
-A single change made in one pass runs both, quick first, then the heavy specs for the modules it touched.
+- **Unit after each pass:** it runs in seconds to a minute and catches almost every break a pass makes, so the next pass starts from known-good code. It fails any example over its budget; make that example fast or move it to a heavy spec.
+- **Heavy once, at the end:** run it after the last pass, then fix what it finds and run it again. Running it after every pass multiplies a ten-minute wait by the number of passes, and the breaks it catches are rarer and easier to trace once all the changes are in.
+- **E2E when the work touches a browser capture or an agent**, also once at the end.
+- **Push after the unit tier passes**, as each pass lands. Say in the report which tiers are still to run, so nobody reads a pushed pass as fully verified.
+
+A single change made in one pass runs unit first, then the heavy specs for the modules it touched.

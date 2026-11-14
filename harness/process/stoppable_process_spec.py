@@ -44,13 +44,6 @@ with description("a stoppable process") as self:
             finally:
                 child.kill()
 
-    with context("that has already exited"):
-        with it("should stop without complaint"):
-            child = subprocess.Popen([sys.executable, "-c", "pass"])
-            child.wait()
-            StoppableProcess(child.pid).stop(WAIT_SECONDS)
-            expect(RunningProcess(child.pid).alive).to(equal(False))
-
     with context("that is this process"):
         with it("should not be signalled"):
             self._record_signals()

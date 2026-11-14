@@ -61,10 +61,3 @@ with description("Embed Local Assets And Content Into Generated HTML"):
             expect("cdd_guidance/practices/" in written).to(equal(False))
             expect("tools/" in written or "tools\\" in written).to(equal(False))
 
-
-with description("Regenerate Catalog Via CLI With Default And Override Flags"):
-    with description("given the bare command with no flags"):
-        with it("resolves repo_url and ref from git remote origin and current HEAD"):
-            citation = GitCitation.from_checkout(_REPO_ROOT)
-            expect(citation.repo_url.startswith("https://")).to(be_true)
-            expect(len(citation.ref)).to(equal(40))

@@ -210,8 +210,9 @@ with description("a practice"):
             with it("should render that model into the requested format"):
                 expect(self.result["content"]).to(contain("mxGraphModel"))
 
+        # The code is read and rendered once; every example only reads the rendered content.
         with context("with a tool whose context lives in the code layer"):
-            with before.each:
+            with before.all:
                 self.root = Path(tempfile.mkdtemp(prefix="story-code-"))
                 leaf = (
                     self.root

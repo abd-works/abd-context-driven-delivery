@@ -30,8 +30,12 @@ from cdd_guidance.practices.ddd.ddd import Ddd
 
 with description("noCatalog"):
     with description("a class or operation annotated not ready for the catalog"):
+        # Loading the utilities imports every toolset the installer finds, so the examples share one load.
+        with before.all:
+            self.utilities = Utility.load_all()
+
         with it("drops the toolset from the utilities"):
-            names = [utility.toolset_class.__name__ for utility in Utility.load_all()]
+            names = [utility.toolset_class.__name__ for utility in self.utilities]
             expect("Echo" in names).to(be_false)
 
         with it("drops the operation from the lifecycle actions"):

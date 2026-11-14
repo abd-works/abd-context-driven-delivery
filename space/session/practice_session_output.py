@@ -17,6 +17,7 @@ from harness.installation.data_class import data_field, identity, language_adapt
 from harness.mcp.mcp_annotations import mcp
 from harness.installation.context_config import CONTEXT_FOLDER
 from harness.markdown.format import Format
+from space.session.answer_reads import HeldForAnswer
 from space.session.file_manager import FileEntry
 
 if TYPE_CHECKING:
@@ -39,6 +40,8 @@ class PracticeSessionOutput:
         self._guidance = guidance
         self._name = guidance.key
         self._session = session
+        # The folder the project's ``.context/config.json`` names for this practice, read once for each answer.
+        self._configured_folder = HeldForAnswer[str | None]()
 
     @classmethod
     @tool_subject
@@ -116,7 +119,9 @@ class PracticeSessionOutput:
     def _chosen_or_configured_root(self) -> str | None:
         """Where this practice writes, relative to the session's root, when someone said: the root a person chose in
         this session, else the folder the project's ``.context/config.json`` names for the practice."""
-        return self.chosen_outputs.get("root") or self._session.context_config.practice_folder(self.name)
+        return self.chosen_outputs.get("root") or self._configured_folder.get(
+            self._session.answer, lambda: self._session.context_config.practice_folder(self.name)
+        )
 
     @property
     def folder(self) -> Path:

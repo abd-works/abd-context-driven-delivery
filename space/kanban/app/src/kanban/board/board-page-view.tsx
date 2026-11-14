@@ -91,7 +91,7 @@ function SplitGripView() {
   )
 }
 
-function ToastsView() {
+export function ToastsView() {
   const { state } = useBoard()
   return (
     <div className="toasts">
@@ -140,7 +140,7 @@ function PageBodyView() {
 }
 
 // A view that throws would otherwise leave an empty black page, so the person sees what broke and can read the board again.
-class PageFailureView extends Component<{ children: ReactNode }, { failure: string }> {
+export class PageFailureView extends Component<{ children: ReactNode }, { failure: string }> {
   state = { failure: '' }
 
   static getDerivedStateFromError(error: unknown) {

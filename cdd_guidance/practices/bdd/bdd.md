@@ -321,6 +321,7 @@ If this change will not stay here, follow `practices/bdd/bdd-behavior.mdc`.
 - **`context-sharing`** — Shared construction in `beforeEach` / factory at three sibling dupes. Repeated setup in every test hides what actually differs between them.
 - **`oo-api-design`** — Ask-don't-tell: construct fully; own state on the object; operations on the closest domain concept. Tests that assemble state through getters or pass setup bags couple to how you built it, not what it does.
 - **`honors-documented-surface-contracts`** — Public API must match documented surface contracts; if a spec fights the contract, fix the spec.
+- **`tier-by-speed`** — A spec file's suffix names its tier, and the tier is about speed. A unit spec (`*_spec`) runs each example in microseconds to milliseconds, with its before-each and after-each, so hundreds of examples run in seconds; the project's runner fails an example over its budget (100 ms). A heavy spec (`*_heavy_spec`) holds the examples that need a real resource to say what they say: git, a server, a daemon, an installer, a worker process, a big load. An e2e spec (`*_e2e_spec`, `*_agent_spec`) drives a real browser or a real agent. An example over the unit budget gets fast, with a fake at the architecture boundary or a fixture built once and shared, or moves to the heavy spec beside its unit spec under the same described subject; only the slow examples move, never the whole file, and never raise the budget. A unit tier that takes minutes stops being run after each change, and then it catches nothing.
 
 ---
 

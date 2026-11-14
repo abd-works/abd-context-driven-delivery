@@ -371,7 +371,8 @@ with description("interface naming"):
 
 
 with description("a clean engineering model on a graph"):
-    with before.each:
+    # A graph reads every practice's guidance when it is made, so one model on one graph is built for every example to read.
+    with before.all:
         self.graph = Graph()
         self.model = CleanEngineeringModel("orders", graph=self.graph)
         self.module = Module("orders", 0)

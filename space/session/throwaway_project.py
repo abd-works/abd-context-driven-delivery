@@ -34,6 +34,28 @@ class SpecRunHome:
         os.environ[CDD_HOME_ENV] = str(cls._folder)
 
 
+class ExampleHome:
+    """A cdd home of one example's own, named by ``CDD_HOME`` from its ``before.each`` until ``close`` in its
+    ``after.each`` names the home named before and removes this one.
+
+    Every switch reads ``open-sessions.json`` under the cdd home and, writing it, looks for the folder of every entry it
+    holds. A spec whose examples each switch in a throwaway project of their own leaves an entry for each in a home the
+    whole run shares, so each switch is slower than the one before; a home of the example's own holds only what that
+    example opened."""
+
+    def __init__(self) -> None:
+        self._saved = os.environ.get(CDD_HOME_ENV)
+        self.folder = Path(tempfile.mkdtemp(prefix="cdd-example-home-"))
+        os.environ[CDD_HOME_ENV] = str(self.folder)
+
+    def close(self) -> None:
+        if self._saved is None:
+            os.environ.pop(CDD_HOME_ENV, None)
+        else:
+            os.environ[CDD_HOME_ENV] = self._saved
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+
 class ThrowawayProject:
     """An empty project named by ``CDD_PROJECT`` while a spec runs. An action writes a line to the open session's log,
     and run in this repository the open session is whoever is working here, so a spec's actions land in that person's

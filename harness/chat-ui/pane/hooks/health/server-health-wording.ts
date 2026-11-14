@@ -17,7 +17,7 @@ export function colourOf(part: Part): string {
 }
 
 // Each app's mark in the status row; an app registered later shows the plain one.
-const APP_ICONS: Record<string, string> = { Kanban: '▦', Graph: '◈', 'Story UI': '✎' }
+const APP_ICONS: Record<string, string> = { Kanban: '▦', Files: '▤', Graph: '◈', 'Story UI': '✎' }
 const APP_ICON = '▣'
 const RUNNING: AppData['status'] = 'running'
 

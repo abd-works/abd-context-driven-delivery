@@ -32,7 +32,7 @@ class AgentRunsOff(AgentHarnessError):
     """A spec opened the agent command line in a suite that turned agent runs off."""
 
     def __init__(self) -> None:
-        super().__init__(f"agent runs are off in this suite ({AGENT_RUNS_OFF} is set); run agent specs with -Suite agent")
+        super().__init__(f"agent runs are off in this suite ({AGENT_RUNS_OFF} is set); run agent specs with -Suite e2e")
 
 _TOOLS_RUN = re.compile(
     r"(?:python\s+-m\s+tools\s+run|tools\.ps1\s+run|tools\s+run\b)",

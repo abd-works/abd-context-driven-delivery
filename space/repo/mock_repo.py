@@ -188,6 +188,7 @@ class MockRepo(Repo):
         self.git = _NoGit()
         self.worktrees = MockWorktrees(self, held)
         self._from_top: dict[Path, str] = {}
+        self.writing_index = held.lock
         self._held = held
 
     @property

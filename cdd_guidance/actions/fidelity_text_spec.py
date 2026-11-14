@@ -61,22 +61,33 @@ def _rule(fidelity) -> str:
     return f"`{list(fidelity.rules)[0].slug}`"
 
 
+def _open_project() -> ThrowawayProject:
+    """A throwaway project with its session alpha open, which the actions it is named for log to."""
+    throwaway = ThrowawayProject()
+    sessions = Sessions(throwaway.root)
+    sessions.open(sessions.create("alpha", throwaway.root))
+    return throwaway
+
+
+def _session_folder(throwaway: ThrowawayProject) -> Path:
+    return throwaway.root / ".sessions" / "alpha"
+
+
 def _logged_verbs(session_folder: Path) -> list[str]:
     log = session_folder / "session.log"
     lines = log.read_text(encoding="utf-8").splitlines() if log.is_file() else []
     return [line.split(" ")[1] for line in lines if len(line.split(" ")) > 1]
 
 
+# Each example reads only the text an action gives, so each description opens its project, and each context expands its
+# action, once, in before.all; a context whose examples read the session's log or reports opens a project of its own.
 with description("an action that writes a practice's artifacts") as self:
-    with before.each:
-        self.throwaway = ThrowawayProject()
-        sessions = Sessions(self.throwaway.root)
-        sessions.open(sessions.create("alpha", self.throwaway.root))
-        self.session_folder = self.throwaway.root / ".sessions" / "alpha"
+    with before.all:
+        self.throwaway = _open_project()
         self.story_map = _fidelity("story_map")
         self.scenarios = _fidelity("scenarios")
 
-    with after.each:
+    with after.all:
         self.throwaway.close()
 
     with it("should have a template for the fidelity to show"):
@@ -92,7 +103,7 @@ with description("an action that writes a practice's artifacts") as self:
         expect(self.story_map.scaffold).not_to(be_empty)
 
     with context("that generates"):
-        with before.each:
+        with before.all:
             self.prose = _expanded(self.throwaway.root, Generate,Generate.generate, {"guidance": _STORY_MAP})
 
         with it("should give the fidelity's instructions"):
@@ -104,7 +115,7 @@ with description("an action that writes a practice's artifacts") as self:
     # Each recipe below reaches its text through recipes it names; a recipe called as a Python method gives the prompt
     # nothing, so these expand from the call's arguments alone and look for the text that must arrive.
     with context("that sketches"):
-        with before.each:
+        with before.all:
             self.expansion = _expansion(self.throwaway.root, Sketch, Sketch.sketch, {"guidance": _STORY_MAP})
             self.prose = self.expansion.instructions
 
@@ -133,7 +144,7 @@ with description("an action that writes a practice's artifacts") as self:
             expect(self.expansion.tools).to(contain("validate"))
 
     with context("that grills"):
-        with before.each:
+        with before.all:
             self.expansion = _expansion(self.throwaway.root, GrillContext, GrillContext.grill, {"guidance": _STORY_MAP})
             self.prose = self.expansion.instructions
 
@@ -157,12 +168,14 @@ with description("an action that writes a practice's artifacts") as self:
             expect(self.prose).not_to(contain("Grilling session for:"))
 
     with context("that grills a plan the call names by its path"):
+        with before.all:
+            self.prose = _expanded(self.throwaway.root, GrillContext, GrillContext.grill_with_context, {"paths": "plan.md"})
+
         with it("should name the plan's path"):
-            prose = _expanded(self.throwaway.root, GrillContext, GrillContext.grill_with_context, {"paths": "plan.md"})
-            expect(prose).to(contain("Grilling session for: plan.md"))
+            expect(self.prose).to(contain("Grilling session for: plan.md"))
 
     with context("that iterates"):
-        with before.each:
+        with before.all:
             self.expansion = _expansion(self.throwaway.root, Iterate, Iterate.iterate, {"guidance": _STORY_MAP})
             self.prose = self.expansion.instructions
 
@@ -179,55 +192,79 @@ with description("an action that writes a practice's artifacts") as self:
             expect(self.expansion.tools).to(contain("mark_iterate_round", "validate"))
 
     with context("that iterates in no session"):
+        with before.all:
+            self.prose = _expanded(None, Iterate, Iterate.iterate, {"guidance": _STORY_MAP})
+
         with it("should still give the grill's interview"):
-            prose = _expanded(None, Iterate, Iterate.iterate, {"guidance": _STORY_MAP})
-            expect(prose).to(contain("Conduct a relentless grilling interview"))
+            expect(self.prose).to(contain("Conduct a relentless grilling interview"))
 
     # Building a prompt runs the recipes it names, such as the generate a sketch ends with. Only the action the call asked
     # for may say it ran: a generate line tells the session board that generate is done before anything is written.
     with context("that an MCP client calls with only its required arguments"):
         with context("to sketch"):
-            with before.each:
-                self.reply = _answered(self.throwaway.root, Sketch, Sketch.sketch, {"guidance": _STORY_MAP})
+            with before.all:
+                self.answered = _open_project()
+                self.reply = _answered(self.answered.root, Sketch, Sketch.sketch, {"guidance": _STORY_MAP})
+
+            with after.all:
+                self.answered.close()
 
             with it("should give the sketch instructions"):
                 expect(self.reply).to(contain("save_sketch the shell"))
 
             with it("should log no generate line"):
-                expect(_logged_verbs(self.session_folder)).not_to(contain("generate"))
+                expect(_logged_verbs(_session_folder(self.answered))).not_to(contain("generate"))
 
         with context("to grill"):
-            with before.each:
-                self.reply = _answered(self.throwaway.root, GrillContext, GrillContext.grill, {"guidance": _STORY_MAP})
+            with before.all:
+                self.answered = _open_project()
+                self.reply = _answered(self.answered.root, GrillContext, GrillContext.grill, {"guidance": _STORY_MAP})
+
+            with after.all:
+                self.answered.close()
 
             with it("should give the grill's interview"):
                 expect(self.reply).to(contain("Conduct a relentless grilling interview"))
 
             with it("should log no generate line"):
-                expect(_logged_verbs(self.session_folder)).not_to(contain("generate"))
+                expect(_logged_verbs(_session_folder(self.answered))).not_to(contain("generate"))
 
         with context("to iterate"):
-            with before.each:
-                self.reply = _answered(self.throwaway.root, Iterate, Iterate.iterate, {"guidance": _STORY_MAP})
+            with before.all:
+                self.answered = _open_project()
+                self.reply = _answered(self.answered.root, Iterate, Iterate.iterate, {"guidance": _STORY_MAP})
+
+            with after.all:
+                self.answered.close()
 
             with it("should give the grill's interview"):
                 expect(self.reply).to(contain("Conduct a relentless grilling interview"))
 
             with it("should log that it iterates"):
-                expect(_logged_verbs(self.session_folder)).to(contain("iterate"))
+                expect(_logged_verbs(_session_folder(self.answered))).to(contain("iterate"))
 
             with it("should log no generate line"):
-                expect(_logged_verbs(self.session_folder)).not_to(contain("generate"))
+                expect(_logged_verbs(_session_folder(self.answered))).not_to(contain("generate"))
 
         with context("to generate"):
+            with before.all:
+                self.answered = _open_project()
+                _answered(self.answered.root, Generate, Generate.generate, {"guidance": _STORY_MAP})
+
+            with after.all:
+                self.answered.close()
+
             with it("should log its own generate line"):
-                _answered(self.throwaway.root, Generate, Generate.generate, {"guidance": _STORY_MAP})
-                expect(_logged_verbs(self.session_folder)).to(contain("generate"))
+                expect(_logged_verbs(_session_folder(self.answered))).to(contain("generate"))
 
     with context("that satisfies"):
-        with before.each:
-            self.expansion = _expansion(self.throwaway.root, Satisfy, Satisfy.satisfy, {"guidance": _STORY_MAP})
+        with before.all:
+            self.satisfied = _open_project()
+            self.expansion = _expansion(self.satisfied.root, Satisfy, Satisfy.satisfy, {"guidance": _STORY_MAP})
             self.prose = self.expansion.instructions
+
+        with after.all:
+            self.satisfied.close()
 
         with it("should give the fidelity's rules"):
             expect(self.prose).to(contain(_rule(self.story_map)))
@@ -240,14 +277,14 @@ with description("an action that writes a practice's artifacts") as self:
 
         # The agent runs validate itself; checking nothing yet, the expansion must not tell the board the work was checked.
         with it("should save no validation report"):
-            expect((self.session_folder / "validation-reports").exists()).to(be_false)
+            expect((_session_folder(self.satisfied) / "validation-reports").exists()).to(be_false)
 
         with it("should log no validate line"):
-            expect(_logged_verbs(self.session_folder)).not_to(contain("validate"))
+            expect(_logged_verbs(_session_folder(self.satisfied))).not_to(contain("validate"))
 
     # The index and the segments a partition asks for are one set for the corpus the call names, whatever it lists.
     with context("that partitions one corpus for two practices"):
-        with before.each:
+        with before.all:
             arguments = {"guidance": "stories-story-map ddd-bounded-context", "paths": ["docs"], "mode": "one_go"}
             self.prose = _expanded(self.throwaway.root, Partition, Partition.partition, arguments)
 
@@ -261,7 +298,7 @@ with description("an action that writes a practice's artifacts") as self:
             expect(self.prose).to(contain(self.story_map.scaffold))
 
     with context("that documents"):
-        with before.each:
+        with before.all:
             self.prose = _expanded(self.throwaway.root, Document, Document.document, {"guidance": _STORY_MAP, "paths": ["docs"]})
 
         with it("should give the fidelity's template"):
@@ -272,7 +309,7 @@ with description("an action that writes a practice's artifacts") as self:
             expect(self.prose).not_to(contain("session path"))
 
     with context("that repairs"):
-        with before.each:
+        with before.all:
             self.prose = _expanded(self.throwaway.root, Improvement,Improvement.repair, {"guidance": _STORY_MAP, "asset": "a.md", "violation": "rule"})
 
         with it("should give the fidelity's template"):
@@ -282,14 +319,20 @@ with description("an action that writes a practice's artifacts") as self:
             expect(self.prose).to(contain(str(self.story_map.examples).strip()))
 
     with context("that creates a rule"):
+        with before.all:
+            self.prose = _expanded(self.throwaway.root, Validate,Validate.create_rule, {"guidance": _STORY_MAP, "failed": "a.md", "wanted": "b.md"})
+
         with it("should give the fidelity's template"):
-            prose = _expanded(self.throwaway.root, Validate,Validate.create_rule, {"guidance": _STORY_MAP, "failed": "a.md", "wanted": "b.md"})
-            expect(prose).to(contain(self.story_map.templates.strip()))
+            expect(self.prose).to(contain(self.story_map.templates.strip()))
 
     # Two calls in one session share its practice; the second must not change the fidelity the first one works at.
     with context("while another call works at another fidelity of the same practice"):
-        with before.each:
-            root = self.throwaway.root
+        with after.all:
+            self.shared.close()
+
+        with before.all:
+            self.shared = _open_project()
+            root = self.shared.root
             self.action = Generate().for_call(ToolCall({"guidance": _STORY_MAP}, root))
             self.action.listed()
             Generate().for_call(ToolCall({"guidance": _SCENARIOS}, root)).listed()
@@ -319,9 +362,12 @@ def _rules_given_twice() -> list[str]:
 
 
 # Two texts for one rule leave the agent to guess which one holds; a fidelity restates no shared rule.
-with description("the rules an action gives at any fidelity of any practice"):
+with description("the rules an action gives at any fidelity of any practice") as self:
+    with before.all:
+        self.given_twice = _rules_given_twice()
+
     with it("should give each rule once"):
-        expect(_rules_given_twice()).to(equal([]))
+        expect(self.given_twice).to(equal([]))
 
 
 # A practice's first fidelity is the one it is made at, so an action that loses the fidelity a call names still gives
@@ -332,21 +378,20 @@ _UX_MOCKUP = "ux-mockup"
 
 
 with description("an action that works at a fidelity past its practice's first") as self:
-    with before.each:
-        self.throwaway = ThrowawayProject()
-        sessions = Sessions(self.throwaway.root)
-        sessions.open(sessions.create("alpha", self.throwaway.root))
+    with before.all:
+        self.throwaway = _open_project()
         self.model = _fidelity("model", "ddd")
         self.bounded_context = _fidelity("bounded_context", "ddd")
+        self.story_map = _fidelity("story_map")
 
-    with after.each:
+    with after.all:
         self.throwaway.close()
 
     with it("should have a template that differs from the first fidelity's, to tell them apart"):
         expect(self.model.templates.strip()).not_to(equal(self.bounded_context.templates.strip()))
 
     with context("that generates"):
-        with before.each:
+        with before.all:
             self.prose = _expanded(self.throwaway.root, Generate, Generate.generate, {"guidance": _DDD_MODEL})
 
         with it("should give the named fidelity's instructions"):
@@ -362,7 +407,7 @@ with description("an action that works at a fidelity past its practice's first")
             expect(self.prose).not_to(contain(self.bounded_context.templates.strip()))
 
     with context("that sketches"):
-        with before.each:
+        with before.all:
             self.prose = _expanded(self.throwaway.root, Sketch, Sketch.sketch, {"guidance": _DDD_MODEL})
 
         with it("should give the named fidelity's template"):
@@ -375,7 +420,7 @@ with description("an action that works at a fidelity past its practice's first")
             expect(self.prose).not_to(contain(self.bounded_context.scaffold))
 
     with context("that grills at the model"):
-        with before.each:
+        with before.all:
             self.prose = _expanded(self.throwaway.root, GrillContext, GrillContext.grill, {"guidance": _DDD_MODEL})
 
         with it("should give the named fidelity's instructions to generate from"):
@@ -391,7 +436,7 @@ with description("an action that works at a fidelity past its practice's first")
             expect(self.prose).not_to(contain(self.bounded_context.templates.strip()))
 
     with context("that grills at the acceptance tests"):
-        with before.each:
+        with before.all:
             self.acceptance_tests = _fidelity("acceptance_tests")
             self.prose = _expanded(self.throwaway.root, GrillContext, GrillContext.grill, {"guidance": _ACCEPTANCE_TESTS})
 
@@ -402,10 +447,10 @@ with description("an action that works at a fidelity past its practice's first")
             expect(self.prose).to(contain(_rule(self.acceptance_tests)))
 
         with it("should not give the story map's template"):
-            expect(self.prose).not_to(contain(_fidelity("story_map").templates.strip()))
+            expect(self.prose).not_to(contain(self.story_map.templates.strip()))
 
     with context("that grills at the mockup"):
-        with before.each:
+        with before.all:
             self.mockup = _fidelity("mockup", "ux")
             self.prose = _expanded(self.throwaway.root, GrillContext, GrillContext.grill, {"guidance": _UX_MOCKUP})
 
@@ -419,12 +464,14 @@ with description("an action that works at a fidelity past its practice's first")
             expect(self.prose).to(contain(_rule(self.mockup)))
 
     with context("that an MCP client asks to grill with only its required arguments"):
+        with before.all:
+            self.reply = _answered(self.throwaway.root, GrillContext, GrillContext.grill, {"guidance": _DDD_MODEL})
+
         with it("should give the named fidelity's template"):
-            reply = _answered(self.throwaway.root, GrillContext, GrillContext.grill, {"guidance": _DDD_MODEL})
-            expect(reply).to(contain(self.model.templates.strip()))
+            expect(self.reply).to(contain(self.model.templates.strip()))
 
     with context("that iterates"):
-        with before.each:
+        with before.all:
             self.prose = _expanded(self.throwaway.root, Iterate, Iterate.iterate, {"guidance": _DDD_MODEL})
 
         with it("should give the named fidelity's template"):
@@ -434,29 +481,39 @@ with description("an action that works at a fidelity past its practice's first")
             expect(self.prose).to(contain(_rule(self.model)))
 
     with context("that satisfies"):
+        with before.all:
+            self.prose = _expanded(self.throwaway.root, Satisfy, Satisfy.satisfy, {"guidance": _DDD_MODEL})
+
         with it("should give the named fidelity's rules"):
-            prose = _expanded(self.throwaway.root, Satisfy, Satisfy.satisfy, {"guidance": _DDD_MODEL})
-            expect(prose).to(contain(_rule(self.model)))
+            expect(self.prose).to(contain(_rule(self.model)))
 
     with context("that documents"):
+        with before.all:
+            self.prose = _expanded(self.throwaway.root, Document, Document.document, {"guidance": _DDD_MODEL, "paths": ["docs"]})
+
         with it("should give the named fidelity's template"):
-            prose = _expanded(self.throwaway.root, Document, Document.document, {"guidance": _DDD_MODEL, "paths": ["docs"]})
-            expect(prose).to(contain(self.model.templates.strip()))
+            expect(self.prose).to(contain(self.model.templates.strip()))
 
     with context("that repairs"):
-        with it("should give the named fidelity's template"):
+        with before.all:
             arguments = {"guidance": _DDD_MODEL, "asset": "a.md", "violation": "rule"}
-            prose = _expanded(self.throwaway.root, Improvement, Improvement.repair, arguments)
-            expect(prose).to(contain(self.model.templates.strip()))
+            self.prose = _expanded(self.throwaway.root, Improvement, Improvement.repair, arguments)
+
+        with it("should give the named fidelity's template"):
+            expect(self.prose).to(contain(self.model.templates.strip()))
 
     with context("that creates a rule"):
-        with it("should give the named fidelity's template"):
+        with before.all:
             arguments = {"guidance": _DDD_MODEL, "failed": "a.md", "wanted": "b.md"}
-            prose = _expanded(self.throwaway.root, Validate, Validate.create_rule, arguments)
-            expect(prose).to(contain(self.model.templates.strip()))
+            self.prose = _expanded(self.throwaway.root, Validate, Validate.create_rule, arguments)
+
+        with it("should give the named fidelity's template"):
+            expect(self.prose).to(contain(self.model.templates.strip()))
 
     with context("that partitions"):
-        with it("should not give the first fidelity's Scaffold section"):
+        with before.all:
             arguments = {"guidance": _DDD_MODEL, "paths": ["docs"], "mode": "one_go"}
-            prose = _expanded(self.throwaway.root, Partition, Partition.partition, arguments)
-            expect(prose).not_to(contain(self.bounded_context.scaffold))
+            self.prose = _expanded(self.throwaway.root, Partition, Partition.partition, arguments)
+
+        with it("should not give the first fidelity's Scaffold section"):
+            expect(self.prose).not_to(contain(self.bounded_context.scaffold))

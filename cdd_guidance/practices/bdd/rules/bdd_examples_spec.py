@@ -8,7 +8,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from expects import equal, expect, have_len
-from mamba import context, description, it
+from mamba import before, context, description, it
 
 from harness.graph.rule_fixture import SchemaRuleRun
 
@@ -34,6 +34,10 @@ def _failing(source: str, slug: str) -> list[str]:
 
 
 with description("BDD example specs"):
+    # The first fixture loads the practices' guidance and readers; it is read here once, so no example pays for it.
+    with before.all:
+        spec_fixture(_LAYER_CLEAN)
+
     with context("layer-isolation"):
         with it("should flag import-time patch decorators"):
             assert_bdd_source_pair("layer-isolation", _LAYER_FAULT, _LAYER_CLEAN)

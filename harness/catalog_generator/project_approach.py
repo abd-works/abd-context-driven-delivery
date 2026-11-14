@@ -99,7 +99,10 @@ class ProjectFiles:
 
     @property
     def origin(self) -> str:
-        """The project's repository address; empty for a project that is not a git checkout with an origin."""
+        """The project's repository address; empty for a project that is not a git checkout with an origin. A folder
+        with no ``.git`` in it or above it is no checkout, so it is answered without starting git."""
+        if not any((folder / ".git").exists() for folder in (self.root, *self.root.parents)):
+            return ""
         try:
             return GitCitation.from_checkout(self.root).repo_url
         except RepoConnectError:

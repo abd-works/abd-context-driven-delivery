@@ -15,10 +15,11 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
 
-import anyio
-import mcp.types as types
-from mcp.server import NotificationOptions, Server
-from mcp.server.models import InitializationOptions
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import mcp.types as types
+    from mcp.server.models import InitializationOptions
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetReference
 from harness.agent_tools.chat_pointer import ChatPointer
@@ -531,17 +532,29 @@ class ProjectIsClaudeSettings(Exception):
         self.folder = folder
 
 
-class _CddProtocolServer(Server):
-    """The MCP protocol server, telling every client that a restart can change the tool list."""
+def _mcp_types() -> Any:
+    """The MCP SDK's types, loaded the first time the host speaks the protocol: the SDK takes seconds to import, and
+    making or asking a server about its toolsets never needs it."""
+    import mcp.types
 
-    def create_initialization_options(
-        self,
-        notification_options: NotificationOptions | None = None,
-        experimental_capabilities: dict[str, dict[str, Any]] | None = None,
-    ) -> InitializationOptions:
-        return super().create_initialization_options(
-            notification_options or NotificationOptions(tools_changed=True), experimental_capabilities
-        )
+    return mcp.types
+
+
+def _cdd_protocol_server(name: str) -> Any:
+    """The MCP protocol server, telling every client that a restart can change the tool list."""
+    from mcp.server import NotificationOptions, Server
+
+    class _CddProtocolServer(Server):
+        def create_initialization_options(
+            self,
+            notification_options: NotificationOptions | None = None,
+            experimental_capabilities: dict[str, dict[str, Any]] | None = None,
+        ) -> InitializationOptions:
+            return super().create_initialization_options(
+                notification_options or NotificationOptions(tools_changed=True), experimental_capabilities
+            )
+
+    return _CddProtocolServer(name)
 
 
 class McpHost:
@@ -555,10 +568,27 @@ class McpHost:
         self._servers_lock = threading.Lock()
         self._restart_gate = _RestartGate()
         self._tool_calls = _ToolCalls()
-        self._protocol = _CddProtocolServer("cdd")
+        self._protocol_server: Any = None
         # A user-level cdd entry names Claude Code's own settings folder as its project; calls naming it are refused.
         self._claude_settings = IdeLayout("Claude").user_settings_folder.resolve()
-        self._register_handlers()
+
+    @property
+    def _protocol(self) -> Any:
+        """The MCP protocol server answering chats, made with its handlers the first time the host speaks MCP: a call
+        dispatched in-process (a probe, a script, a spec) never loads the SDK."""
+        if self._protocol_server is None:
+            self._protocol_server = _cdd_protocol_server("cdd")
+            self._register_handlers()
+        return self._protocol_server
+
+    def _request_context(self) -> Any:
+        """The MCP request being answered; none outside one, which is always so before the protocol server is made."""
+        if self._protocol_server is None:
+            return None
+        try:
+            return self._protocol_server.request_context
+        except LookupError:
+            return None
 
     @property
     def checkout_server(self) -> McpServer:
@@ -580,6 +610,8 @@ class McpHost:
             return sorted(self._servers)
 
     def _register_handlers(self) -> None:
+        types = _mcp_types()
+
         @self._protocol.list_tools()
         async def handle_list_tools() -> list[types.Tool]:
             return self._tool_list()
@@ -590,6 +622,8 @@ class McpHost:
             # A worker thread runs to the end even when the client cancels it, and
             # the cancellation has already answered the request. Stop here, because
             # a second answer raises in the MCP session and takes down the host.
+            import anyio.lowlevel
+
             await anyio.lowlevel.checkpoint()
             return result
 
@@ -607,6 +641,7 @@ class McpHost:
             return types.GetPromptResult(description=prompt.description or None, messages=[message])
 
     def _tool_list(self) -> list[types.Tool]:
+        types = _mcp_types()
         builtins = [
             types.Tool(
                 name=BUILTIN_PING_TOOL,
@@ -626,6 +661,7 @@ class McpHost:
     async def _answer_chat(self, name: str, arguments: dict[str, object] | None) -> types.CallToolResult:
         """Answer one call a chat sent. A failure goes back as an error result, which the client shows as a failed call
         rather than as the tool's output."""
+        types = _mcp_types()
         try:
             call = self._call_from_chat(name, arguments)
             value = await self._answer_off_loop(call)
@@ -667,18 +703,16 @@ class McpHost:
 
     async def _announce_tool_list_changed(self) -> None:
         """A restart can add or drop tools, so the client is told to list them again."""
-        try:
-            await self._protocol.request_context.session.send_tool_list_changed()
-        except LookupError:
-            return
+        context = self._request_context()
+        if context is not None:
+            await context.session.send_tool_list_changed()
 
     def _progress_reporter(self) -> Callable[[str], None] | None:
         """Sends a tool's progress reports as notifications for its call, when the caller asked for them with a progress
         token. The tool runs on a worker thread, so each report goes back through the event loop, at most four a
         second (*ThrottledReporter*), however often the tool reports."""
-        try:
-            context = self._protocol.request_context
-        except LookupError:
+        context = self._request_context()
+        if context is None:
             return None
         token = context.meta.progressToken if context.meta else None
         if token is None:
@@ -686,6 +720,8 @@ class McpHost:
         reported = iter(range(1, sys.maxsize))
 
         def report(message: str) -> None:
+            import anyio.from_thread
+
             anyio.from_thread.run(context.session.send_progress_notification, token, next(reported), None, message)
 
         return ThrottledReporter(report)
@@ -744,10 +780,8 @@ class McpHost:
         return client[1] if client else None
 
     def _current_request(self) -> Any:
-        try:
-            return self._protocol.request_context.request
-        except LookupError:
-            return None
+        context = self._request_context()
+        return context.request if context is not None else None
 
     def _folder_of_chat(self, chat_id: str | None) -> Path | None:
         chat = ChatPointer.from_claude_session(chat_id or "")
@@ -810,6 +844,7 @@ class McpHost:
             session.log.by(call.chat).failure(failure, tool=call.tool)
 
     def _content_blocks(self, value: object) -> list[types.TextContent]:
+        types = _mcp_types()
         text = value if isinstance(value, str) else json.dumps(data_of(value))
         return [types.TextContent(type="text", text=text)]
 

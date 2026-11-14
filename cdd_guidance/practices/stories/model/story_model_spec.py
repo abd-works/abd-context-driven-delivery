@@ -850,6 +850,10 @@ def _source_showing(text: str):
 
 
 with description("a story map on a graph") as self:
+    # A process reads the practices' guidance once, for its first graph; read it here, not in the first example.
+    with before.all:
+        Graph()
+
     with before.each:
         self.graph = Graph()
         self.story_map = StoryModel(self.graph)

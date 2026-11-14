@@ -199,12 +199,13 @@ with description("a prompt log hook"):
             expect(log.read_text(encoding="utf-8")).to(contain("Audit the project log"))
 
     with context("that has been installed to Cursor") as self:
-        with before.each:
+        # Both examples only read what the install wrote, so it runs once for them.
+        with before.all:
             self._tmp = tempfile.mkdtemp()
             self.tree = Path(self._tmp)
             Installer(ide="Cursor", path=self.tree, repo=Path(__file__).resolve().parents[2]).install([pl.PromptLog()])
 
-        with after.each:
+        with after.all:
             shutil.rmtree(self._tmp, ignore_errors=True)
 
         with it("should write hooks.json dispatch for beforeSubmitPrompt"):

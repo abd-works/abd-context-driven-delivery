@@ -54,9 +54,11 @@ def _passes_through(path, card):
 
 
 with description("a class diagram page"):
+    # Routing a page searches thousands of grid cells, so each page is laid out once, before its examples, which only read it.
     with context("with cards placed from their relationships"):
-        with before.each:
+        with before.all:
             self.cards, self.arrows = _laid_out()
+            self.again, _ = _laid_out()
 
         with it("should keep every card clear of every other"):
             boxes = [card.geometry for card in self.cards.values()]
@@ -67,13 +69,12 @@ with description("a class diagram page"):
             expect(self.cards["Refund"].geometry.y).to(be_above(self.cards["Payment"].geometry.y))
 
         with it("should give the same layout every time"):
-            again, _ = _laid_out()
-            expect({key: card.geometry for key, card in again.items()}).to(
+            expect({key: card.geometry for key, card in self.again.items()}).to(
                 equal({key: card.geometry for key, card in self.cards.items()})
             )
 
     with context("with arrows routed between the cards"):
-        with before.each:
+        with before.all:
             self.cards, self.arrows = _laid_out()
 
         with it("should route every arrow"):
@@ -115,7 +116,7 @@ with description("a class diagram page"):
             expect(len(crossed) <= 1).to(be_true)
 
     with context("with a third card between two cards in one row"):
-        with before.each:
+        with before.all:
             self.cards = [_card("Left"), _card("Middle"), _card("Right")]
             for card, x in zip(self.cards, (60, 400, 740)):
                 card.geometry = card.geometry.moved_to(x, 200)
@@ -126,7 +127,7 @@ with description("a class diagram page"):
             expect(_passes_through(self.arrow.path, self.cards[1])).to(be_false)
 
     with context("with three subclasses that share one base"):
-        with before.each:
+        with before.all:
             self.base = _card("Payment", box=(400, 60, 200, 100))
             self.subclasses = [_card(name, box=(x, 300, 200, 100)) for name, x in (("Card", 60), ("Cash", 400), ("Voucher", 740))]
             self.cards = [self.base] + self.subclasses
@@ -165,7 +166,7 @@ with description("a class diagram page"):
             expect(through).to(equal([]))
 
     with context("with one subclass of a base"):
-        with before.each:
+        with before.all:
             self.cards = [_card("Payment", box=(400, 60, 200, 100)), _card("Cash", box=(400, 300, 200, 100))]
             self.arrow = DiagramArrow("Cash", "Payment", "inheritance")
             ArrowRouter(self.cards, [self.arrow]).route()
@@ -174,7 +175,7 @@ with description("a class diagram page"):
             expect({point[0] for point in self.arrow.path}).to(equal({self.arrow.entry_point[0]}))
 
     with context("with a card a person moved off the grid"):
-        with before.each:
+        with before.all:
             self.source = _card("Source", box=(63, 47, 200, 87))
             self.target = _card("Target", box=(61, 401, 200, 93))
             self.arrow = DiagramArrow("Source", "Target", "association")
@@ -185,7 +186,7 @@ with description("a class diagram page"):
             expect(all(a[0] == b[0] or a[1] == b[1] for a, b in bends)).to(be_true)
 
     with context("with subclasses both above and below their base"):
-        with before.each:
+        with before.all:
             self.base = _card("Payment", box=(400, 300, 200, 100))
             above = [_card("Gift", box=(400, 60, 200, 100))]
             below = [_card(name, box=(x, 560, 200, 100)) for name, x in (("Card", 60), ("Cash", 400), ("Voucher", 740))]
@@ -212,7 +213,7 @@ with description("a class diagram page"):
             expect(through).to(equal([]))
 
     with context("with a card a person placed right against another one's port"):
-        with before.each:
+        with before.all:
             self.cards = [
                 _card("Payment", box=(400, 60, 200, 100)),
                 _card("Receipt", box=(380, 190, 240, 60)),
@@ -244,7 +245,7 @@ def _spread_out():
 
 with description("a page with empty space between its cards"):
     with context("whose space is closed up"):
-        with before.each:
+        with before.all:
             self.cards, self.spacing = _spread_out()
 
         with it("should bring a card beside another to the gap between cards side by side"):
@@ -269,7 +270,7 @@ with description("a page with empty space between its cards"):
             expect(any(first.overlaps(second) for index, first in enumerate(boxes) for second in boxes[index + 1:])).to(be_false)
 
     with context("that a layout made itself"):
-        with before.each:
+        with before.all:
             self.cards, _ = _laid_out()
 
         with it("should leave no gap wider than the most room between cards"):

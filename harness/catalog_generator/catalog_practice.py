@@ -40,6 +40,11 @@ class CatalogPractice:
         "stage_examples": False,
     }
 
+    # Each skill folder the catalog has worked out, by skill install, practice class, and guidance: the folder follows
+    # from the practice's class and the install's place alone, so every catalog made for another project or session
+    # (the board makes its practices once per checkout) answers from the first one that worked it out.
+    _SKILL_FOLDERS: dict[tuple[str, str, type, str], str] = {}
+
     def __init__(
         self,
         practice: PracticeGuidance,
@@ -152,8 +157,12 @@ class CatalogPractice:
         named = guidance.slug if isinstance(guidance, FidelityGuidance) else type(guidance).__qualname__
         held = self._skill_names.get(named)
         if held is None:
-            tool = next((tool for tool in guidance.tools.values() if tool.install_to_skill), None)
-            held = self._skills.relative_path(guidance, tool.deploy_name).parent.name if tool is not None else ""
+            key = (str(self._skills.path), self._skills.destination, type(self.practice), named)
+            held = type(self)._SKILL_FOLDERS.get(key)
+            if held is None:
+                tool = next((tool for tool in guidance.tools.values() if tool.install_to_skill), None)
+                held = self._skills.relative_path(guidance, tool.deploy_name).parent.name if tool is not None else ""
+                type(self)._SKILL_FOLDERS[key] = held
             self._skill_names[named] = held
         return held
 
