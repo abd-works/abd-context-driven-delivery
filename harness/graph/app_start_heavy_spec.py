@@ -28,8 +28,14 @@ def _page_port_answering(before_start: set[int]) -> int | None:
     return next((port for port in _PORTS["app"] if port not in before_start and _answers(port)), None)
 
 
+# A checkout where npm install has not run, such as a fresh worktree, has no tsx to start the app with.
+_NOT_INSTALLED = f"the Graph app is not installed in this checkout: run npm install in {_APP}"
+
+
 with description("the Graph app's start"):
     with before.all:
+        if not (_APP / "node_modules" / "tsx").is_dir():
+            raise AssertionError(_NOT_INSTALLED)
         self.busy = {port for port in _PORTS["app"] if _answers(port)}
         self.web = _PORTS["web"][0]
         self.web_was_busy = _answers(self.web)
@@ -44,7 +50,7 @@ with description("the Graph app's start"):
         time.sleep(_CHECK_SECONDS)
 
     with after.all:
-        if self.server.poll() is None:
+        if getattr(self, "server", None) is not None and self.server.poll() is None:
             self.server.kill()
 
     with it("should answer on a page port and the web port from its one process"):

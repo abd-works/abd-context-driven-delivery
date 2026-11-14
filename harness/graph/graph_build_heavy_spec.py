@@ -207,9 +207,10 @@ def _project(role: str) -> Path:
 
 def _practices_copy() -> Path:
     """A copy of ``cdd_guidance/practices`` in a folder of its own, which the shared graph is loaded from and saved in;
-    the examples are left out, whose deep folders pass the longest path Windows takes."""
+    the examples and the repository story map snapshot a spec edits are left out, whose deep folders pass the longest
+    path Windows takes."""
     folder = Path(tempfile.mkdtemp(prefix="cdd-shared-graph-")) / "practices"
-    shutil.copytree(_REPO_ROOT / "cdd_guidance" / "practices", folder, ignore=shutil.ignore_patterns("_examples", "node_modules", "__pycache__"))
+    shutil.copytree(_REPO_ROOT / "cdd_guidance" / "practices", folder, ignore=shutil.ignore_patterns("_examples", "repository-story-map", "node_modules", "__pycache__"))
     return folder
 
 
@@ -257,9 +258,13 @@ with description("the cdd server while several chats refresh the one graph their
             f"{pinging.median:.2f} s, slowest {pinging.slowest:.2f} s"
         )
 
+    # A setup that failed part way leaves some of these unset; cleaning up only what it made keeps its error the one
+    # each example reports.
     with after.all:
-        self.server.stop()
-        shutil.rmtree(self.project.parent, ignore_errors=True)
+        if getattr(self, "server", None) is not None:
+            self.server.stop()
+        if getattr(self, "project", None) is not None:
+            shutil.rmtree(self.project.parent, ignore_errors=True)
 
     with it("should load every practice into the shared graph first"):
         expect(self.probe.loaded).to(equal(_LOADED))
@@ -290,9 +295,13 @@ with description("the cdd server while several chats validate files of the one g
             f"{pinging.median:.2f} s, slowest {pinging.slowest:.2f} s"
         )
 
+    # A setup that failed part way leaves some of these unset; cleaning up only what it made keeps its error the one
+    # each example reports.
     with after.all:
-        self.server.stop()
-        shutil.rmtree(self.project.parent, ignore_errors=True)
+        if getattr(self, "server", None) is not None:
+            self.server.stop()
+        if getattr(self, "project", None) is not None:
+            shutil.rmtree(self.project.parent, ignore_errors=True)
 
     with it("should load every practice into the shared graph first"):
         expect(self.probe.loaded).to(equal(_LOADED))
