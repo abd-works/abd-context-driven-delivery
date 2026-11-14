@@ -11,7 +11,8 @@ from pathlib import Path
 from expects import be_false, be_true, equal, expect
 from mamba import after, before, context, description, it
 
-from harness.diagnostics.app import AppServer, _process_listening_on, _stop_process
+from harness.diagnostics.app import AppServer
+from harness.process.process import ListeningPorts
 
 STARTED_WITHIN_SECONDS = 15
 
@@ -47,9 +48,9 @@ with description("an app's server") as self:
         self.server = AppServer(self.folder, "serve.js", (self.port,))
 
     with after.each:
-        listening = _process_listening_on(self.port) if self.server.port is not None else None
+        listening = ListeningPorts().holder(self.port)
         if listening is not None:
-            _stop_process(listening)
+            listening.stop(5)
         shutil.rmtree(self.folder, ignore_errors=True)
 
     with context("that is not running"):
