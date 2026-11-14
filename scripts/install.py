@@ -119,15 +119,17 @@ def _write_runtime_adapters(installer, server) -> None:
 
 def _install_board_apps() -> None:
     """The board's server serves pages built from this checkout, the Kanban's and the Story UI editor's, which a pull or
-    a merge leaves as they were, so every install installs both apps again and an open page reloads onto the new code.
+    a merge leaves as they were, so every install installs again each app whose packages or sources changed, and an open
+    page reloads onto the new code.
     The apps are a convenience on top of the install, so a failure is told, never raised."""
     from harness.diagnostics.app import AppNotStarted
     from space.kanban.board_app import KANBAN_APP, STORY_UI_APP
 
     for app in (KANBAN_APP, STORY_UI_APP):
         try:
+            was_current = app.is_current
             app.install()
-            print(f"{app.label} app: installed in {app.folder}")
+            print(f"{app.label} app: {'unchanged' if was_current else 'installed'} in {app.folder}")
         except AppNotStarted as failed:
             print(f"{app.label} app: {failed}")
 

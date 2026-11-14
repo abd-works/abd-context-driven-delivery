@@ -86,7 +86,7 @@ export function SessionCardView($: EngineInterface, elements: ElementTable, { ch
       <Box flexDirection="column" marginBottom={1} {...shown}>
         {health.panel}
         {chatBar.hasSession ? (
-          <Box key="card-grid" flexDirection="column" paddingX={1} paddingY={1} borderStyle="round" borderColor={BRAND.card} backgroundColor={BRAND.card}>
+          <Box key="card-grid" flexDirection="column" paddingX={1} paddingY={1} borderStyle="round" borderColor={BRAND.cardEdge} backgroundColor={BRAND.card}>
             {HeaderView($, elements, chatBar)}
             {chatBar.fidelities.map(fidelity => FidelityRowView($, elements, fidelity, columns, chatBar.foldersListedBeside.has(fidelity.slug)))}
           </Box>

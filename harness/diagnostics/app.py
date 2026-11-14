@@ -1,8 +1,8 @@
 """*App*, one CDD web app a person opens beside the chat, the one registry of them, and how far each has got."""
 from __future__ import annotations
 
+import hashlib
 import os
-import re
 import shutil
 import signal
 import socket
@@ -20,6 +20,7 @@ from harness.graph.graph_app import GRAPH_APP_PORTS
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_annotations import long_call, mcp
+from harness.process.process import ListeningPorts, ProcessNotStopped
 
 _HOST = "127.0.0.1"
 # A server listening on this machine takes a connection at once: the system completes it, not the server.
@@ -60,6 +61,48 @@ class AppNotStarted(Exception):
         super().__init__(f"The {app.label} install failed: {reason}. Run npm install in {app.folder}.")
         self.app = app
         self.reason = reason
+
+
+class AppSources:
+    """What an app's install reads: the package files npm installs from, and every file its build reads, which is its
+    folder but for what npm, the build, and its tests write, plus the folders outside it the build imports, such as the
+    language adapters. Each fingerprint is taken over the files' contents, so an install that writes the same adapters
+    again leaves it as it was, and an app whose fingerprints match the ones its last install kept needs no npm."""
+
+    PACKAGE_FILES = ("package.json", "package-lock.json")
+    # Folders in an app's folder its build does not read: what npm, the build, and its tests write.
+    WRITTEN_FOLDERS = frozenset({"node_modules", "dist", "test-results", "playwright-report"})
+
+    def __init__(self, folder: Path, imports: tuple[Path, ...] = ()) -> None:
+        self._folder = Path(folder)
+        self._imports = tuple(Path(path) for path in imports)
+
+    @property
+    def packages(self) -> str:
+        """The fingerprint of the package files npm installs from."""
+        return _fingerprint_of(self._folder, [self._folder / name for name in self.PACKAGE_FILES])
+
+    @property
+    def build(self) -> str:
+        """The fingerprint of every file the build reads, the package files among them."""
+        read = [path for folder in (self._folder, *self._imports) for path in self._files_in(folder)]
+        return _fingerprint_of(self._folder, read)
+
+    def _files_in(self, folder: Path) -> list[Path]:
+        found = []
+        for parent, folders, files in os.walk(folder):
+            folders[:] = [name for name in folders if name not in self.WRITTEN_FOLDERS and not name.startswith(".")]
+            found.extend(Path(parent) / name for name in files)
+        return found
+
+
+def _fingerprint_of(folder: Path, paths: list[Path]) -> str:
+    """A hash over each file's place and contents, in a fixed order; a file not there counts as absent."""
+    digest = hashlib.sha256()
+    for path in sorted(path for path in paths if path.is_file()):
+        digest.update(os.path.relpath(path, folder).replace(os.sep, "/").encode())
+        digest.update(hashlib.sha256(path.read_bytes()).digest())
+    return digest.hexdigest()
 
 
 class AppServer:
@@ -103,10 +146,13 @@ class AppServer:
         port = self.port
         if port is None:
             return False
-        listening = _process_listening_on(port)
+        listening = ListeningPorts().holder(port)
         if listening is None:
             raise AppServerNotRestarted(self, f"nothing this machine lists is listening on port {port}")
-        _stop_process(listening)
+        try:
+            listening.stop(RESTART_SECONDS)
+        except ProcessNotStopped as held:
+            raise AppServerNotRestarted(self, str(held)) from held
         self._wait_until(lambda: self.port is None, f"it still answers on port {port} after it was stopped")
         try:
             subprocess.Popen(self.command, cwd=self._folder, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=_DETACHED, start_new_session=sys.platform != "win32")
@@ -131,23 +177,6 @@ class AppServerNotRestarted(Exception):
         self.server = server
 
 
-def _process_listening_on(port: int) -> int | None:
-    """The process listening on port on this machine, as the system lists its connections: netstat on Windows, lsof
-    elsewhere. Windows may list a listening socket under process 0, but names the process on its end of a connection,
-    so a connection is held open while its server's end is looked up."""
-    if sys.platform == "win32":
-        try:
-            with socket.create_connection((_HOST, port), timeout=PROBE_SECONDS * 20) as held:
-                ours = held.getsockname()[1]
-                listed = subprocess.run(["netstat", "-ano", "-p", "TCP"], capture_output=True, text=True, errors="replace").stdout
-        except (ConnectionRefusedError, TimeoutError):
-            return None
-        found = re.search(rf"^[ \t]*TCP[ \t]+\S+:{port}[ \t]+\S+:{ours}[ \t]+ESTABLISHED[ \t]+(\d+)[ \t]*$", listed, re.MULTILINE)
-        return int(found.group(1)) if found else None
-    listed = subprocess.run(["lsof", "-t", f"-iTCP:{port}", "-sTCP:LISTEN"], capture_output=True, text=True).stdout.split()
-    return int(listed[0]) if listed else None
-
-
 def _stop_process(process: int) -> None:
     """Stop the process, and on Windows the ones it started. Elsewhere only the process itself: a server a chat started
     shares the chat's process group, so stopping the group would stop the chat too."""
@@ -169,12 +198,18 @@ class App:
 
     _registered: ClassVar[list[App]] = []
 
-    def __init__(self, label: str, folder: Path, server: AppServer, page: str = "/") -> None:
+    # The fingerprints the last install kept, each beside what it describes, so removing either folder forgets it.
+    PACKAGES_STAMP = Path("node_modules") / ".cdd-packages"
+    BUILD_STAMP = Path("dist") / ".cdd-build"
+
+    def __init__(self, label: str, folder: Path, server: AppServer, page: str = "/", imports: tuple[Path, ...] = ()) -> None:
+        """imports are the folders outside its own that its build reads, such as the language adapters."""
         self._label = label
         self.folder = Path(folder)
         self._server = server
         self.page = page
         self._package = JsonFile(self.folder / "package.json")
+        self._sources = AppSources(self.folder, imports)
 
     def register(self) -> App:
         """Register this app; registering a label again replaces the earlier app rather than listing it twice."""
@@ -242,22 +277,56 @@ class App:
             self.install()
         return self
 
+    @property
+    def is_current(self) -> bool:
+        """Installed, and nothing its install reads has changed since: its packages match the package files, and its
+        built page, when it builds one, matches its sources."""
+        if not self.is_installed or not self._is_stamped(self.PACKAGES_STAMP, self._sources.packages):
+            return False
+        return not self._builds_a_page or self._is_stamped(self.BUILD_STAMP, self._sources.build)
+
     @long_call
     @mcp
     @agent_tool
     def install(self) -> App:
-        """Install the app's packages, then build its page when its package builds one; a page open on it loads the new build."""
+        """Install the app's packages, then build its page when its package builds one; a page open on it loads the new
+        build. Each step runs only when what it reads changed since the last install, so an unchanged app takes no npm."""
         if not self._package.exists():
             raise AppNotStarted(self, f"{self.folder} holds no package.json, so the {self.label} app is not there yet")
-        report_progress(f"{self.label}: npm install in {self.folder}")
-        self._npm("install")
+        self._install_packages()
         if self._builds_a_page:
-            report_progress(f"{self.label}: npm run build in {self.folder}")
-            self._npm("run", "build")
+            self._build_page()
         # a chat starts only an installed app, so an install that leaves it not installed is a failed one.
         if not self.is_installed:
             raise AppNotStarted(self, f"npm left {self.folder} without its packages or its built page")
         return self
+
+    def _install_packages(self) -> None:
+        if self._is_stamped(self.PACKAGES_STAMP, self._sources.packages):
+            report_progress(f"{self.label}: packages unchanged in {self.folder}")
+            return
+        report_progress(f"{self.label}: npm install in {self.folder}")
+        self._npm("install")
+        # npm install may rewrite the lock file, so the fingerprint is taken after it.
+        self._stamp(self.PACKAGES_STAMP, self._sources.packages)
+
+    def _build_page(self) -> None:
+        sources = self._sources.build
+        if self._is_stamped(self.BUILD_STAMP, sources):
+            report_progress(f"{self.label}: page unchanged in {self.folder}")
+            return
+        report_progress(f"{self.label}: npm run build in {self.folder}")
+        self._npm("run", "build")
+        self._stamp(self.BUILD_STAMP, sources)
+
+    def _is_stamped(self, stamp: Path, fingerprint: str) -> bool:
+        kept = self.folder / stamp
+        return kept.is_file() and kept.read_text(encoding="utf-8") == fingerprint
+
+    def _stamp(self, stamp: Path, fingerprint: str) -> None:
+        kept = self.folder / stamp
+        if kept.parent.is_dir():
+            kept.write_text(fingerprint, encoding="utf-8")
 
     @property
     def _builds_a_page(self) -> bool:

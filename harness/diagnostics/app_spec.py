@@ -4,6 +4,7 @@ and the server a chat starts it with.
 Installing runs npm, so it is proved by the heavy story tiers of Integrate Practice Content Editor Apps In Chat Bar
 (space/kanban); this spec proves what needs no process."""
 import json
+import os
 import shutil
 import socket
 import tempfile
@@ -88,6 +89,84 @@ with description("an app") as self:
             with it("should send its label, status, port, url and server as its data"):
                 server = {"folder": self.folder.as_posix(), "command": ["node", "serve.js"]}
                 expect(data_of(self.app)).to(equal({"label": "Throwaway", "status": "running", "port": self.port, "url": f"http://127.0.0.1:{self.port}/story-map", "server": server}))
+
+
+def fake_npm_in(folder: Path, log: Path) -> None:
+    """An npm that writes down each call and makes what the real one would: node_modules on install, dist on a build."""
+    (folder / "npm.cmd").write_text(
+        f'@echo off\r\necho %*>>"{log}"\r\nif "%1"=="install" mkdir node_modules 2>nul\r\nif "%1"=="run" mkdir dist 2>nul\r\nexit /b 0\r\n', encoding="utf-8"
+    )
+    script = folder / "npm"
+    script.write_text(f'#!/bin/sh\necho "$*" >> "{log}"\n[ "$1" = install ] && mkdir -p node_modules\n[ "$1" = run ] && mkdir -p dist\nexit 0\n', encoding="utf-8")
+    script.chmod(0o755)
+
+
+with description("an app installed again") as self:
+    with before.each:
+        self.folder = Path(tempfile.mkdtemp(prefix="app-"))
+        self.tools = Path(tempfile.mkdtemp(prefix="npm-"))
+        self.imported = Path(tempfile.mkdtemp(prefix="adapter-"))
+        self.log = self.tools / "npm.log"
+        fake_npm_in(self.tools, self.log)
+        self.path = os.environ["PATH"]
+        os.environ["PATH"] = f"{self.tools}{os.pathsep}{self.path}"
+        package_in(self.folder, {"build": "vite build"})
+        (self.folder / "main.tsx").write_text("export {}", encoding="utf-8")
+        (self.imported / "adapter.ts").write_text("export {}", encoding="utf-8")
+        self.app = App("Throwaway", self.folder, AppServer(self.folder, "serve.js", (free_port(),)), imports=(self.imported,))
+        self.app.install()
+        self.log.unlink()
+
+    with after.each:
+        os.environ["PATH"] = self.path
+        for folder in (self.folder, self.tools, self.imported):
+            shutil.rmtree(folder, ignore_errors=True)
+
+    def npm_calls(self) -> list[str]:
+        return self.log.read_text(encoding="utf-8").split() if self.log.exists() else []
+
+    with context("with nothing changed since"):
+        with it("should read current"):
+            expect(self.app.is_current).to(equal(True))
+
+        with it("should run no npm"):
+            self.app.install()
+            expect(self.npm_calls()).to(equal([]))
+
+    with context("whose package file changed"):
+        with before.each:
+            package_in(self.folder, {"build": "vite build", "start": "node serve.js"})
+
+        with it("should not read current"):
+            expect(self.app.is_current).to(equal(False))
+
+        with it("should install its packages and build its page again"):
+            self.app.install()
+            expect(self.npm_calls()).to(equal(["install", "run", "build"]))
+
+    with context("whose source changed"):
+        with it("should build its page again without installing its packages"):
+            (self.folder / "main.tsx").write_text("export const changed = 1", encoding="utf-8")
+            self.app.install()
+            expect(self.npm_calls()).to(equal(["run", "build"]))
+
+    with context("whose imported folder changed"):
+        with it("should build its page again"):
+            (self.imported / "adapter.ts").write_text("export const changed = 1", encoding="utf-8")
+            self.app.install()
+            expect(self.npm_calls()).to(equal(["run", "build"]))
+
+    with context("whose imported folder was written again with the same contents"):
+        with it("should run no npm"):
+            (self.imported / "adapter.ts").write_text("export {}", encoding="utf-8")
+            self.app.install()
+            expect(self.npm_calls()).to(equal([]))
+
+    with context("whose built page was removed"):
+        with it("should build its page again"):
+            shutil.rmtree(self.folder / "dist")
+            self.app.install()
+            expect(self.npm_calls()).to(equal(["run", "build"]))
 
 
 with description("an app's server"):

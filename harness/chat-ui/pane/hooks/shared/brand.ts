@@ -3,8 +3,11 @@
 export const BRAND = {
   surface: '#141418',
   raised: '#1B1B20',
-  // Behind the session card's fidelities: black, so the expanded card stands apart from the blue-grey bar.
-  card: '#0B0B0B',
+  // Behind the chat bar's line: black, in place of the prompt's grey.
+  bar: '#0B0B0B',
+  // The expanded session card: a dark orange wash inside a faint orange edge, so it stands apart from the black bar.
+  card: '#1F140E',
+  cardEdge: '#3A2014',
   border: '#2A2A2A',
   text: '#E8E8ED',
   muted: '#9B9BA8',
