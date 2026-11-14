@@ -13,6 +13,8 @@ const CHECK_TOOL = 'cdd-version.check'
 const UPDATE_TIMEOUT_MS = 600000
 // The cdd server is still connecting as a chat opens, so the first check waits as the server health's first look does.
 const FIRST_CHECK_WAIT_MS = 5000
+// Twelve tries five seconds apart: a minute for cdd to connect after the chat opens or the plugins reload.
+const CHECK_TRIES = 12
 const ERROR_LINES_SHOWN = 1
 // The colour of each standing CddVersion answers: green current, yellow a minor update behind, red a major one.
 const STANDING_COLOURS: Record<string, string> = {
@@ -65,9 +67,15 @@ export async function currentCddVersion($: EngineInterface): Promise<CddVersionC
   return new CddVersionClient(await read($, cddVersion))
 }
 
-// The first check, a moment after the chat opens, once the cdd server has had time to connect.
-export function checkVersionSoon($: EngineInterface): void {
-  $.clock.after(FIRST_CHECK_WAIT_MS, () => void checkVersion($))
+// The first check, a moment after the chat opens, then again every few seconds while cdd is still connecting, up to a
+// limit; a chat whose cdd stays down tries again after its next turn.
+export function checkVersionSoon($: EngineInterface, attempt = 1): void {
+  $.clock.after(FIRST_CHECK_WAIT_MS, () => void checkUntilReadOrTriesRunOut($, attempt))
+}
+
+async function checkUntilReadOrTriesRunOut($: EngineInterface, attempt: number): Promise<void> {
+  await checkVersion($)
+  if ((await read($, cddVersion)).data === null && attempt < CHECK_TRIES) checkVersionSoon($, attempt + 1)
 }
 
 // Check again after a turn while the version is not read yet; once read it stays, since the check fetches origin main,

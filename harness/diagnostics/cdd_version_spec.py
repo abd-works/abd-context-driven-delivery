@@ -5,10 +5,10 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from expects import contain, equal, expect
+from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.diagnostics.cdd_version import CddVersion, VersionStanding
+from harness.diagnostics.cdd_version import CddVersion, VersionNotValid, VersionStanding
 from harness.process.git import RepoConnectError
 
 
@@ -78,3 +78,34 @@ with description("the CDD version a chat runs") as self:
 
         with it("should say why the latest version is unknown"):
             expect(self.checked(OriginStub(None, is_reachable=False)).summary).to(contain("could not resolve host"))
+
+
+with description("the next CDD version") as self:
+    with before.each:
+        self.project = Path(tempfile.mkdtemp(prefix="cdd-next-version-"))
+        (self.project / "pyproject.toml").write_text(pyproject("0.1.0") + '\n[tool.setuptools]\npackages = []\n', encoding="utf-8")
+        self.subject = CddVersion(self.project, git=OriginStub("0.1.0"), project=self.project)
+
+    with after.each:
+        shutil.rmtree(self.project, ignore_errors=True)
+
+    def written(self) -> str:
+        return (self.project / "pyproject.toml").read_text(encoding="utf-8")
+
+    with context("set with no version given"):
+        with it("should raise the minor version in pyproject.toml"):
+            self.subject.set_next()
+            expect(self.written()).to(contain('version = "0.2.0"'))
+
+    with context("set to a version given by major and minor"):
+        with it("should write that version in pyproject.toml"):
+            self.subject.set_next("1.0")
+            expect(self.written()).to(contain('version = "1.0.0"'))
+
+        with it("should leave the rest of pyproject.toml as it was"):
+            self.subject.set_next("1.0")
+            expect(self.written()).to(contain("[tool.setuptools]\npackages = []"))
+
+    with context("set to text that is not a version"):
+        with it("should refuse it, naming the text"):
+            expect(lambda: self.subject.set_next("next")).to(raise_error(VersionNotValid, contain("next")))

@@ -1,6 +1,7 @@
 """The CDD version a chat runs, read against the latest on origin main, so the chat bar can say when to update."""
 from __future__ import annotations
 
+import re
 import tomllib
 from enum import Enum
 from pathlib import Path
@@ -8,6 +9,7 @@ from pathlib import Path
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.data_class import data_field, language_adapter
+from harness.installation.files import command
 from harness.mcp.mcp_annotations import mcp
 from harness.process.git import Git, RepoConnectError
 
@@ -15,6 +17,9 @@ from harness.process.git import Git, RepoConnectError
 SERVED_CHECKOUT = Path(__file__).resolve().parents[2]
 PYPROJECT = "pyproject.toml"
 LATEST_BRANCH = "main"
+# The version line of pyproject.toml's [project] table, the one line /version rewrites.
+_VERSION_LINE = re.compile(r'^version\s*=\s*"[^"]*"', re.MULTILINE)
+_VERSION_TEXT = re.compile(r'^\d+\.\d+(\.\d+)?$')
 # Short enough that the fetch ends inside the cdd tool's own time limit, so a slow network reads the last fetch instead.
 FETCH_SECONDS = 8
 
@@ -26,6 +31,14 @@ class VersionStanding(str, Enum):
     BEHIND_MINOR = "behind minor"
     BEHIND_MAJOR = "behind major"
     UNKNOWN = "unknown"
+
+
+class VersionNotValid(ValueError):
+    """A next version given to /version that is not numbers such as 0.2 or 0.2.1."""
+
+    def __init__(self, text: str) -> None:
+        super().__init__(f"{text!r} is not a version: give major and minor, such as 0.2, or major, minor and patch, such as 0.2.1")
+        self.text = text
 
 
 class Release:
@@ -59,16 +72,20 @@ class CddVersion:
     """Say which CDD version a chat runs and how it stands against the latest on origin main, so the chat bar's version
     badge can show it green, yellow, or red and offer the update."""
 
-    def __init__(self, checkout: Path | str, git: Git | None = None) -> None:
+    def __init__(self, checkout: Path | str, git: Git | None = None, project: Path | str | None = None) -> None:
+        """checkout is the CDD checkout whose version the chat runs; project is the repository /version writes the next
+        version in, the one the chat works in."""
         self._checkout = Path(checkout)
+        self._project = Path(project) if project is not None else self._checkout
         self._git = git or Git(self._checkout)
         self._fetch_problem = ""
 
     @classmethod
     @tool_subject
     def load(cls, *, project: Path | str) -> CddVersion:
-        """The version of the code the cdd server runs, whichever project the call names: every chat it answers runs it."""
-        return cls(SERVED_CHECKOUT)
+        """The version of the code the cdd server runs, whichever project the call names: every chat it answers runs it.
+        The next version is set in the project the call names."""
+        return cls(SERVED_CHECKOUT, project=project)
 
     @mcp
     @agent_tool
@@ -81,6 +98,27 @@ class CddVersion:
         except RepoConnectError as unreachable:
             self._fetch_problem = str(unreachable)
         return self
+
+    @command(name="version")
+    @mcp
+    @agent_tool
+    def set_next(self, version: str = "") -> CddVersion:
+        """Set the next CDD version in the repository's pyproject.toml, so the next push to main carries it: the version
+        given, such as 0.2 or 1.0.1, or with none given the next minor version. Nothing raises the version by itself; run
+        this when a change is a release, before you push. Then tell the person the version it wrote."""
+        file = self._project / PYPROJECT
+        text = file.read_text(encoding="utf-8")
+        next_version = self._next_version_from(version, Release.from_pyproject(text))
+        file.write_text(_VERSION_LINE.sub(f'version = "{next_version}"', text, count=1), encoding="utf-8")
+        return self
+
+    def _next_version_from(self, version: str, current: Release) -> str:
+        if not version.strip():
+            return f"{current.major}.{current.minor + 1}.0"
+        given = version.strip().removeprefix("v")
+        if not _VERSION_TEXT.match(given):
+            raise VersionNotValid(version)
+        return given if given.count(".") == 2 else f"{given}.0"
 
     @property
     @data_field
