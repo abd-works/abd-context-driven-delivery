@@ -11,7 +11,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from harness.mcp.cdd_home import CDD_HOME_ENV, CddHome
-from harness.mcp.mcp_daemon import CONNECT_SCRIPT, PROJECT_HEADER, SERVER_PORT_ENV, McpDaemon, RunningServer
+from harness.mcp.mcp_daemon import CONNECT_SCRIPT, PROJECT_HEADER, SERVER_OWNER_ENV, SERVER_PORT_ENV, McpDaemon, RunningServer
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _TOOLSET_REFS_ENV = "MCP_TOOLSET_REFS"
@@ -51,16 +51,18 @@ class SpecServer:
         self.home = CddHome(home or tempfile.mkdtemp(prefix="cdd-home-"))
         self.daemon = McpDaemon(self.home, port=port or self._free_port())
         self._toolsets = toolsets
-        self._prior = {key: os.environ.get(key) for key in (CDD_HOME_ENV, SERVER_PORT_ENV, _TOOLSET_REFS_ENV)}
+        self._prior = {key: os.environ.get(key) for key in (CDD_HOME_ENV, SERVER_PORT_ENV, SERVER_OWNER_ENV, _TOOLSET_REFS_ENV)}
 
     @property
     def url(self) -> str:
         return self.daemon.url
 
     def install(self) -> None:
-        """Install the throwaway ``~/.cdd`` serving this checkout, with no server started yet."""
+        """Install the throwaway ``~/.cdd`` serving this checkout, with no server started yet. The server it starts
+        belongs to this process and ends when it does."""
         os.environ[CDD_HOME_ENV] = str(self.home.folder)
         os.environ[SERVER_PORT_ENV] = str(self.daemon.port)
+        os.environ[SERVER_OWNER_ENV] = str(os.getpid())
         os.environ[_TOOLSET_REFS_ENV] = ",".join(self._toolsets)
         self.home.serve_from(_REPO_ROOT)
         self.home.install(_REPO_ROOT, CONNECT_SCRIPT)

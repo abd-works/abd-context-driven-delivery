@@ -6,13 +6,19 @@ import json
 import os
 import socket
 import sys
+import threading
 import time
 from pathlib import Path
 
 from harness.mcp.cdd_home import CddHome
-from harness.process.process import BackgroundStart, ExclusivePort, StoppableProcess
+from harness.process.process import BackgroundStart, ExclusivePort, RunningProcess, StoppableProcess
 
 SERVER_PORT_ENV = "CDD_SERVER_PORT"
+# The process a throwaway server belongs to, such as the spec run that started it on a port of its own. The server ends
+# when that process does, so a run that is killed or hangs leaves no server behind; the person's own server names none.
+SERVER_OWNER_ENV = "CDD_SERVER_OWNER"
+# How often a throwaway server checks that the process it belongs to still runs.
+OWNER_CHECK_SECONDS = 2
 DEFAULT_SERVER_PORT = 47800
 PROJECT_HEADER = "X-CDD-Project"
 # The Claude Code chat a request comes from, so the server can follow that chat into whatever folder it works in now.
@@ -146,6 +152,20 @@ class McpDaemon:
     def publish(self, source: Path) -> None:
         """Write the address and pid for tools that look for the server without calling it."""
         self.home.state_file.write({"url": self.url, "port": self.port, "pid": os.getpid(), "source": str(source)})
+
+    def end_with_owner(self) -> None:
+        """When ``CDD_SERVER_OWNER`` names the process this server belongs to, end this server once that process has
+        ended, withdrawing its address first; a server that names no owner runs until it is stopped."""
+        owner = RunningProcess(int(os.environ.get(SERVER_OWNER_ENV) or 0))
+        if owner.pid <= 0:
+            return
+        threading.Thread(target=self._end_after, args=(owner,), name="cdd-server-owner", daemon=True).start()
+
+    def _end_after(self, owner: RunningProcess) -> None:
+        while owner.alive:
+            time.sleep(OWNER_CHECK_SECONDS)
+        self.withdraw()
+        os._exit(0)
 
     def withdraw(self) -> None:
         if self.runs_this_process():

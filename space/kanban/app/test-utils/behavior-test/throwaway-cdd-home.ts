@@ -9,6 +9,8 @@ const VENV_PYTHON = [join(CHECKOUT, '.venv', 'Scripts', 'python.exe'), join(CHEC
 const SPEC_SERVER = ['-m', 'harness.mcp.spec_support']
 // Set by the install, so a process that inherits the environment knows the home is its run's, not the person's.
 const RUN_HOME = 'CDD_SPEC_RUN_HOME'
+// The process the throwaway server belongs to: it ends with this run, so a killed or hung run leaves no server behind.
+const SERVER_OWNER = 'CDD_SERVER_OWNER'
 
 const python = (): string => VENV_PYTHON.find(path => existsSync(path)) ?? 'python'
 
@@ -33,6 +35,7 @@ export class ThrowawayCddHome {
     process.env.CDD_HOME = home
     process.env.CDD_SERVER_PORT = String(port)
     process.env[RUN_HOME] = home
+    process.env[SERVER_OWNER] = String(process.pid)
     return new ThrowawayCddHome(home, port)
   }
 

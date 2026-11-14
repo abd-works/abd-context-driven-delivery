@@ -28,6 +28,7 @@ def main() -> None:
     listener = daemon.claim_port()
     if listener is None:
         return
+    daemon.end_with_owner()
     refs = tuple(ref.strip() for ref in arguments.toolsets.split(",") if ref.strip())
     host = McpHost.from_refs(refs, repo=str(source)) if refs else McpHost.from_repo(source)
     host.serve(daemon, listener)
