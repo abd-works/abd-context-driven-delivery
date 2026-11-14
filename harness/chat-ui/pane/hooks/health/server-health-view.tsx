@@ -122,6 +122,8 @@ function ExpandedView(elements: ElementTable, band: Band) {
     <Box
       key="card-health"
       flexDirection="column"
+      borderStyle="round"
+      borderColor={look.wash}
       backgroundColor={look.wash}
     >
       {HeadlineView(elements, health)}
