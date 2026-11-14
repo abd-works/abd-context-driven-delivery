@@ -12,6 +12,9 @@ if str(_REPO) not in sys.path:
 
 
 def main() -> int:
+    # The step lines carry symbols a Windows console's code page cannot write when the output is piped.
+    for stream in (sys.stdout, sys.stderr):
+        stream.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description="Install CDD toolsets into the IDE path.")
     parser.add_argument(
         "--ide",
@@ -98,6 +101,7 @@ def main() -> int:
         return 0
     if args.restart_everything:
         _restart_everything(installer, server)
+        _step_started(4)
     if args.self:
         installer.install_self(replace=not args.no_replace)
     else:
@@ -108,18 +112,47 @@ def main() -> int:
             print(f"cdd server: {restarted}")
         _write_runtime_adapters(installer, server)
     if args.restart_everything:
+        _step_done(4, "installed")
         return _ping_server(server)
     return 0
 
 
+# The steps of /install-latest. The script reports each one as it starts and as it is done, flushed at once, so the agent
+# watching its output can tick each step in the chat as it happens; the agent does steps 6 and 7 itself.
+INSTALL_LATEST_STEPS = {
+    1: "Pull origin main",
+    2: "Stop every app's server and the hook server",
+    3: "Restart the cdd server",
+    4: "Install every toolset",
+    5: "Ping the cdd server",
+    6: "Reconnect this chat",
+    7: "Report the summary from diagnostics.json",
+}
+
+
+def _step_started(number: int) -> None:
+    print(f"▶ {number}/{len(INSTALL_LATEST_STEPS)} {INSTALL_LATEST_STEPS[number]}", flush=True)
+
+
+def _step_done(number: int, result: str) -> None:
+    print(f"✓ {number}/{len(INSTALL_LATEST_STEPS)} {INSTALL_LATEST_STEPS[number]}: {result}", flush=True)
+
+
+def _step_failed(number: int, error: str) -> None:
+    print(f"✗ {number}/{len(INSTALL_LATEST_STEPS)} {INSTALL_LATEST_STEPS[number]}: {error}", file=sys.stderr, flush=True)
+
+
 def _install_from_latest(args) -> int:
-    pulled = subprocess.run(["git", "pull", "origin", "main"], cwd=_REPO, check=False)
+    _step_started(1)
+    pulled = subprocess.run(["git", "pull", "origin", "main"], cwd=_REPO, check=False, capture_output=True, text=True)
     if pulled.returncode != 0:
-        print("git pull origin main failed, so nothing was stopped or installed: resolve the pull, then run this again.", file=sys.stderr)
+        _step_failed(1, f"{(pulled.stderr or pulled.stdout).strip()} - nothing was stopped or installed: resolve the pull, then run this again.")
         return pulled.returncode
-    # The pull may have changed this script and the installer, so the install runs in a new process on the pulled code.
+    _step_done(1, pulled.stdout.strip().splitlines()[-1] if pulled.stdout.strip() else "pulled")
+    # The pull may have changed this script and the installer, so the install runs in a new process on the pulled code,
+    # unbuffered, so its lines reach whoever watches as they are written.
     passed = [*(["--ide", args.ide] if args.ide else []), *(["--path", args.path] if args.path else [])]
-    command = [sys.executable, str(_REPO / "scripts" / "install.py"), "--restart-everything", *passed]
+    command = [sys.executable, "-u", str(_REPO / "scripts" / "install.py"), "--restart-everything", *passed]
     return subprocess.run(command, cwd=_REPO, check=False).returncode
 
 
@@ -133,22 +166,24 @@ def _restart_everything(installer, server) -> None:
     from harness.diagnostics.app import App
     from harness.hooks.hook_installation import HookInstallation
 
-    for app in App.registered():
-        # Two apps can share one server, as the Kanban and the Story UI do; the second finds it already stopped.
-        if app.server.stop():
-            print(f"{app.label}: server stopped", flush=True)
+    _step_started(2)
+    # Two apps can share one server, as the Kanban and the Story UI do; the second finds it already stopped.
+    stopped = [app.label for app in App.registered() if app.server.stop()]
     HookInstallation(installer.layout, installer.path, repo=_REPO).daemon.stop()
-    print("hook server: stopped", flush=True)
+    apps = f"stopped {', '.join(stopped)}" if stopped else "no app server was running"
+    _step_done(2, f"{apps}; hook server stopped")
+    _step_started(3)
     restarted = server.daemon.restart()
-    print(f"cdd server: restarted (pid {restarted.pid})", flush=True)
+    _step_done(3, f"pid {restarted.pid}")
 
 
 def _ping_server(server) -> int:
+    _step_started(5)
     running = server.daemon.ping()
     if running is None:
-        print(f"cdd server: no answer on {server.daemon.url} after the install; see {server.daemon.home.log_path}", file=sys.stderr)
+        _step_failed(5, f"no answer on {server.daemon.url}; see {server.daemon.home.log_path}")
         return 1
-    print(f"cdd server: answers (pid {running.pid}, serving {running.source})")
+    _step_done(5, f"answers (pid {running.pid}, serving {running.source})")
     return 0
 
 

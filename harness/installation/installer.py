@@ -171,17 +171,19 @@ class Installer:
     def install_latest(self) -> int:
         """Pull origin main and reinstall CDD on it, restarting every server, so this chat and the apps run the latest code.
 
-        Before you run it, write these steps in the chat as a checklist. Then, as each one completes, write ``✓`` and the step in the chat with what the output said for it, so the person follows the install as it goes:
+        Before you run it, put these seven steps in your task list (in Claude Code, the plan the app shows under your message) and write them in the chat as a checklist:
 
-        1. Pull origin main into this checkout (git's ``Already up to date.`` or the commits it merged). A pull that fails or conflicts stops here, before anything is stopped: tell the person and wait.
-        2. Stop every app's server and the hook server (``<app>: server stopped``, ``hook server: stopped``).
-        3. Restart the cdd server (``cdd server: restarted (pid …)``).
-        4. Install every toolset: skills, commands, rules, MCP, and hooks (``hook: …, mcp: …, cdd plugin: …, board: …``).
-        5. Ping the cdd server (``cdd server: answers (pid …)``).
-        6. Reconnect this chat: ask the person to run ``/reload-plugins``; when the cdd server still reads failed, reconnect it.
+        1. Pull origin main into this checkout. A pull that fails or conflicts stops here, before anything is stopped: tell the person and wait.
+        2. Stop every app's server and the hook server.
+        3. Restart the cdd server.
+        4. Install every toolset: skills, commands, rules, MCP, and hooks. This is the long step, about a minute.
+        5. Ping the cdd server.
+        6. Reconnect this chat: when the cdd server reads failed, reconnect it, or ask the person to run ``/reload-plugins``.
         7. Read ``diagnostics.json`` in the install folder (latest ``diagnose_install`` report) and paste the summary: color, channel deltas, cdd server, hook server.
 
-        Other chats share the cdd server, so message their sessions before you run it. When a step fails, write ``✗`` and the step with its error, stop, and follow "When install fails" in ``harness/installation/installer.md``."""
+        Run the command in the background and watch its output as it runs, rather than waiting for it to end, so the person sees each step finish as it happens. The script writes ``▶ n/7 <step>`` as a step starts and ``✓ n/7 <step>: <result>`` as it is done. On each ``✓`` line, mark that step done in your task list and write the same line in the chat; on a ``✗ n/7`` line, write it, stop, and follow "When install fails" in ``harness/installation/installer.md``. Steps 6 and 7 are yours: mark and write each the same way once you have done it.
+
+        Other chats share the cdd server, so message their sessions before you run it."""
         script = self.repo / "scripts" / "install-latest.py"
         return subprocess.run([sys.executable, str(script)], cwd=self.repo, check=False).returncode
 
