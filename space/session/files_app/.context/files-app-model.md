@@ -22,7 +22,7 @@ The *Files app* shows the files a link names and turns a person's reading into w
 - `open(path)` opens a file in the source view, or a `.drawio` file in the draw.io editor.
   - -> Session.file
   - **Invariant:** a `.drawio` file opens in a tab opened during the click, so this tab keeps its file list; a tab whose viewer never answers is closed.
-- `refreshOpen()` reads the open file again, and again every two seconds while a comment on it is sent.
+- `refreshOpen()` (private) reads the open file again, and again every two seconds while a comment on it is sent.
 - `attempt(what, work)` runs a call a person started; its failure is a toast naming what failed, and the open file is read again after it.
 
 ### FidelityFiles (`files/files-state.ts`)

@@ -119,7 +119,7 @@ export class FilesPage {
   }
 
   // The open file read again through the session: its text, comments, folds, violations and the chat's changes.
-  async refreshOpen(): Promise<void> {
+  private async refreshOpen(): Promise<void> {
     const path = this.state.openPath
     if (!path) return
     this.stopRefreshing()

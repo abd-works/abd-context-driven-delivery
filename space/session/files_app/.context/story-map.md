@@ -77,7 +77,7 @@ Built: the rules the session's saved graph found broken in the file mark their l
 
 Intended: Edit turns the file editable and Save writes it through the file manager (`session.write_file`). The board's panel does it; the Files app is read-only today.
 
-## (E) Comment On File
+## (E) Review Files With Comments
 
 ### (S) Person --> [Add Comment To File Selection](review-files-in-files-app/review_files_in_files_app_story.test.md#story-add-comment-to-file-selection)
 
