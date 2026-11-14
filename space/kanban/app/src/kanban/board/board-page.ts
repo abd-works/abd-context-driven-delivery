@@ -181,6 +181,7 @@ export class BoardPage {
     const progress = slugs.flatMap(slug => ticket?.progressNamed(slug) ?? [])
     if (!ticket || !progress.length) return this.store.toast(`The board has no ${slugs.join(', ')} files for ${name}.`, true)
     this.store.change({ selected: ticket.address })
+    this.layout.expandRegion('details')
     await this.files.openFiles(ticket, progress)
   }
 
@@ -193,6 +194,7 @@ export class BoardPage {
     const ticket = this.board.tickets.find(shown => shown.name === name)
     if (!ticket) return this.store.toast(`The board has no ticket ${name}.`, true)
     this.store.change({ selected: ticket.address })
+    this.layout.expandRegion('details')
     await this.files.openSessionFolder(ticket)
   }
 

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import threading
@@ -21,6 +22,17 @@ from cdd_guidance.practices.agent_bdd.cursor_cli import CursorAgentNotFound, Cur
 
 # How long `cursor-agent status` may take to say whether the agent is signed in.
 _STATUS_TIMEOUT_SECONDS = 30
+
+# Set by the quick and heavy suites, so no spec in them can start a real agent: a model call is slow, costs money,
+# and gives an answer that changes from run to run.
+AGENT_RUNS_OFF = "CDD_AGENT_RUNS_OFF"
+
+
+class AgentRunsOff(AgentHarnessError):
+    """A spec opened the agent command line in a suite that turned agent runs off."""
+
+    def __init__(self) -> None:
+        super().__init__(f"agent runs are off in this suite ({AGENT_RUNS_OFF} is set); run agent specs with -Suite agent")
 
 _TOOLS_RUN = re.compile(
     r"(?:python\s+-m\s+tools\s+run|tools\.ps1\s+run|tools\s+run\b)",
@@ -272,6 +284,8 @@ class CliAgentBlock(AgentBlock):
         self._cli = CursorCli()
 
     def _open(self) -> None:
+        if os.environ.get(AGENT_RUNS_OFF):
+            raise AgentRunsOff()
         self._assert_authenticated()
         self._session = AgentSession.from_workspace(self._session_file, self._workspace, self._cli, fresh=False)
 

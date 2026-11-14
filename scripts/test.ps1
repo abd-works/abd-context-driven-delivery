@@ -20,7 +20,7 @@ $mamba = if (Test-Path $venvMamba) { $venvMamba } else { "mamba" }
 $excludedDirs = [System.Collections.Generic.HashSet[string]]::new(
     [string[]]@(
         ".codeql", ".cq", ".venv", ".git", "node_modules", "__pycache__",
-        ".ruff_cache", "sandbox", "fixtures", "seeds", "templates", "retired", ".retired", ".claude", ".cursor"
+        ".ruff_cache", "sandbox", "fixtures", "seeds", "templates", "retired", ".retired", "_retired", ".claude", ".cursor"
     ),
     [StringComparer]::OrdinalIgnoreCase
 )
@@ -177,6 +177,8 @@ function Invoke-Reported {
 }
 
 Set-TestEnvironment
+# Only the agent suite may start a real agent; in the others a spec that opens the agent command line fails at once.
+if ($Suite -ne "agent") { $env:CDD_AGENT_RUNS_OFF = "1" } else { Remove-Item Env:CDD_AGENT_RUNS_OFF -ErrorAction SilentlyContinue }
 Push-Location $repo
 try {
     $failures = New-Object System.Collections.Generic.List[string]

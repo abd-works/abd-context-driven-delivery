@@ -27,6 +27,12 @@ describe('Linked Files', () => {
       await page.openLinkedFiles(`?files=${TICKET}&fidelity=${SLUG}`)
       expect(filesPanelOf(page.store.state.panels)?.practicesOn).toEqual(['stories'])
     })
+
+    it('should show the details alone, so the files panel fills the page', async () => {
+      const { page } = board.unreadPage()
+      await page.openLinkedFiles(`?files=${TICKET}&fidelity=${SLUG}`)
+      expect(page.store.state.expandedRegion).toBe('details')
+    })
   })
 
   with_link('naming a fidelity the ticket does not have', () => {
@@ -50,6 +56,12 @@ describe('Linked Files', () => {
       const { page } = board.unreadPage()
       await page.openLinkedSessionFolder(`?session-folder=${TICKET}`)
       expect(filesPanelOf(page.store.state.panels)?.source).toBe('session')
+    })
+
+    it('should show the details alone, so the files panel fills the page', async () => {
+      const { page } = board.unreadPage()
+      await page.openLinkedSessionFolder(`?session-folder=${TICKET}`)
+      expect(page.store.state.expandedRegion).toBe('details')
     })
   })
 

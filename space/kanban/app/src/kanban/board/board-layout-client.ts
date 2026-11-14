@@ -7,6 +7,12 @@ const ROOM_OVER_REGIONS = 90
 export class BoardLayoutClient {
   constructor(private readonly store: BoardStore) {}
 
+  // A link that opens a panel of the details, such as a fidelity's files, shows the details alone, so the panel it opened
+  // is what the page shows in a narrow browser pane beside a chat, not the board above it.
+  expandRegion(region: Region): void {
+    this.store.change({ expandedRegion: region })
+  }
+
   toggleRegion(region: Region): void {
     this.store.change(state => ({ expandedRegion: state.expandedRegion === region ? null : region }))
   }

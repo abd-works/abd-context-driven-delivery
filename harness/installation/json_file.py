@@ -4,8 +4,13 @@ from __future__ import annotations
 import json
 import os
 import threading
+import time
 from pathlib import Path
 from typing import Any, Mapping
+
+# How long a swap Windows refuses is tried again, and how long between tries.
+_SWAP_SECONDS = 5.0
+_SWAP_RETRY_SECONDS = 0.05
 
 
 class JsonFileUnreadable(ValueError):
@@ -50,18 +55,39 @@ class JsonFile:
 
     def write(self, data: Mapping[str, Any]) -> Path:
         """Write data as the whole file, making its folder when there is none. The text is written beside the file and
-        renamed over it, so a reader, or another chat's call writing the same file at once, never meets half of it."""
+        renamed over it, so a reader, or another chat's call writing the same file at once, never meets half of it. A
+        file that already holds the same text is left as it is, so nothing watching it is woken to read it again."""
+        text = (json.dumps(dict(data), separators=(",", ":")) if self._compact else json.dumps(dict(data), indent=2)) + "\n"
+        if self._holds(text):
+            return self.path
         self.path.parent.mkdir(parents=True, exist_ok=True)
         staged = self.path.with_name(f"{self.path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
-        text = json.dumps(dict(data), separators=(",", ":")) if self._compact else json.dumps(dict(data), indent=2)
-        staged.write_text(text + "\n", encoding="utf-8")
+        staged.write_text(text, encoding="utf-8")
         try:
-            os.replace(staged, self.path)
+            self._swap_in(staged)
         except OSError:
-            # Windows refuses the swap while another process holds the file open; the staged copy goes, the error stays.
             staged.unlink(missing_ok=True)
             raise
         return self.path
+
+    def _holds(self, text: str) -> bool:
+        try:
+            return self.path.read_text(encoding="utf-8") == text
+        except OSError:
+            return False
+
+    def _swap_in(self, staged: Path) -> None:
+        """Rename staged over the file. Windows refuses the rename while another process has the file open, as a watcher
+        does for a moment after each write, so a refusal is tried again until _SWAP_SECONDS pass, then raised."""
+        deadline = time.monotonic() + _SWAP_SECONDS
+        while True:
+            try:
+                os.replace(staged, self.path)
+                return
+            except PermissionError:
+                if time.monotonic() >= deadline:
+                    raise
+                time.sleep(_SWAP_RETRY_SECONDS)
 
 
 class HeldJsonFile:
