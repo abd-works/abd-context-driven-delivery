@@ -36,7 +36,9 @@ TOOLSETS = (
     "space.session.practice_session_output:FidelitySessionOutput",
     "space.session.sessions:Sessions",
 )
-STORIES = Path(__file__).resolve().parents[4] / "harness" / ".context" / "stories"
+# A snapshot of this repository's story map, its thin slice, and the chat bar's scenario file, taken before its stories
+# were regrouped, so the edits below run on fixed text rather than on a story map that keeps changing.
+STORIES = Path(__file__).resolve().parent / "fixtures" / "repository-story-map"
 MAP_FILE = ".context/story-map.md"
 THIN_SLICE_FILE = ".context/thin-slice.md"
 CHAT_BAR_FOLDER = "move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar"
@@ -70,7 +72,7 @@ NAMED_EXAMPLES = """# Sub-epic: Integrate Practice Content Editor Apps In Chat B
 | not running | not running |
 | running | running :8778 |
 """
-# The chat bar's Story UI story on this repository's story map.
+# The chat bar's Story UI story on the snapshot of this repository's story map.
 CHAT_BAR_SUB_EPIC = "move-work-forward-from-chat-bar.work-fidelity-outputs-in-chat-bar.integrate-practice-content-editor-apps-in-chat-bar"
 CHAT_BAR_STORY = f"{CHAT_BAR_SUB_EPIC}.open-story-ui-side-panel-from-chat-bar"
 DRAWIO_FILE = ".context/story-map.drawio"
@@ -274,7 +276,7 @@ with description("a story map edited through its tools") as self:
             expect(self.project.text(MAP_FILE)).to(contain("# Checkout notes\n\nWritten by hand above the map.\n\n# (E) Move Work Forward From Chat Bar"))
 
     # This repository's own story map, laid out by hand, read and saved through the tools.
-    with context("opened on this repository's story map"):
+    with context("opened on a snapshot of this repository's story map"):
         with before.each:
             self.written = self.project.copy(STORIES / "story-map.md", MAP_FILE)
             self.sliced = self.project.copy(STORIES / "thin-slice.md", THIN_SLICE_FILE)

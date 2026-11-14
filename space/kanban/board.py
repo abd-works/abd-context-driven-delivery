@@ -244,6 +244,11 @@ class Board:
         """The chats connected now, listed once per board read, so each ticket finds the one working on it."""
         return self._reads.chats
 
+    def chat_named(self, name: str) -> Chat | None:
+        """The first chat connected now that goes by name; each chat's name is read once per board read, rather than
+        once for every ticket that looks for its chat."""
+        return self._reads.chats_by_name.get(name)
+
     @property
     def tickets(self) -> list[Ticket]:
         """Every session's ticket, made once per board read: each column, and each ticket's own reads, ask for them."""
@@ -439,6 +444,14 @@ class BoardReads:
     @cached_property
     def chats(self) -> list[Chat]:
         return Chat.list()
+
+    @cached_property
+    def chats_by_name(self) -> dict[str, Chat]:
+        """Each connected chat under the name it goes by, the first in the list where two share one."""
+        named: dict[str, Chat] = {}
+        for chat in self.chats:
+            named.setdefault(chat.name, chat)
+        return named
 
     @cached_property
     def branches(self) -> list[Branch]:

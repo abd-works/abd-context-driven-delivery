@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from cdd_guidance.practices.stories.model.markdown.map_reading import described
 from cdd_guidance.practices.stories.model.markdown.markup import strip_markup
@@ -141,6 +141,8 @@ class _ThinSliceReading:
         self.first_number = 1
         self.increments: List[MarkdownIncrement] = []
         self.in_stories = False
+        # The map's stories by name, taken once: reading a thin slice adds increments, never stories.
+        self._stories_by_name: Optional[Dict[str, "Story"]] = None
 
     def read(self, lines: List[str]) -> List[MarkdownIncrement]:
         for number, raw in enumerate(lines, start=1):
@@ -187,9 +189,12 @@ class _ThinSliceReading:
 
     def _read_bullet(self, raw: str, named: str, increment: MarkdownIncrement) -> None:
         """A story bullet: the increment delivers the map's story of that name; a name the map lacks is kept as written."""
-        found = self.story_map.stories_named([strip_markup(named)])
+        if self._stories_by_name is None:
+            self._stories_by_name = self.story_map.stories_by_name()
+        story = self._stories_by_name.get(strip_markup(named))
+        found = [story] if story is not None else []
         increment.lines.bullets.append((raw, found[0] if found else None, found[0].name if found else ""))
-        increment.stories = [*increment.stories, *found]
+        increment.stories.extend(found)
 
 
 

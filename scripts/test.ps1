@@ -101,21 +101,30 @@ function Get-BatchKey {
     return ($folders | Select-Object -First $batchDepth) -join '/'
 }
 
-# A folder with many spec files, such as space/kanban, would otherwise run them one after another in one process while
-# the other batches finish early; its files are dealt into several batches, each with its own cdd home.
-$filesPerBatch = 4
+# Each batch pays a process start and the framework's import, about two seconds, so a folder's fast files share one
+# batch until it is expected to take $batchSeconds; a folder with more, such as space/kanban, is dealt into several
+# batches, each with its own cdd home, so it does not run alone while the other batches finish early.
+$batchSeconds = 15
 
-function Split-LargeBatches {
-    param($Groups)
+function Split-ByTime {
+    param($Groups, [hashtable]$Seconds)
     foreach ($group in $Groups) {
-        $files = [string[]]$group.Group
-        if ($files.Count -le $filesPerBatch) {
-            [pscustomobject]@{ Name = $group.Name; Group = $files; Count = $files.Count }
-            continue
+        $part = New-Object System.Collections.Generic.List[string]
+        $expected = 0.0
+        $number = 1
+        foreach ($relative in [string[]]$group.Group) {
+            $own = Get-ExpectedSeconds $Seconds ([string[]]@($relative))
+            if ($part.Count -gt 0 -and $expected + $own -gt $batchSeconds) {
+                [pscustomobject]@{ Name = "$($group.Name) #$number"; Group = $part.ToArray(); Count = $part.Count }
+                $part = New-Object System.Collections.Generic.List[string]
+                $expected = 0.0
+                $number++
+            }
+            $part.Add($relative)
+            $expected += $own
         }
-        for ($start = 0; $start -lt $files.Count; $start += $filesPerBatch) {
-            $part = [string[]]($files[$start..([Math]::Min($start + $filesPerBatch, $files.Count) - 1)])
-            [pscustomobject]@{ Name = "$($group.Name) #$($start / $filesPerBatch + 1)"; Group = $part; Count = $part.Count }
+        if ($part.Count -gt 0) {
+            [pscustomobject]@{ Name = $(if ($number -eq 1) { $group.Name } else { "$($group.Name) #$number" }); Group = $part.ToArray(); Count = $part.Count }
         }
     }
 }
@@ -126,6 +135,9 @@ function Split-LargeBatches {
 $timesFile = Join-Path $repo ".pycache\spec-seconds.json"
 $soloSeconds = 20
 $unknownSeconds = 5
+# What a batch's process start and framework import take, kept out of its files' seconds so a fast file packed into a
+# large batch is not charged for a start it shares.
+$startSeconds = 2
 
 function Read-SpecSeconds {
     $seconds = @{}
@@ -154,7 +166,12 @@ function Get-Batches {
     $slow = @($Relatives | Where-Object { $Seconds.ContainsKey($_) -and $Seconds[$_] -ge $soloSeconds })
     $rest = @($Relatives | Where-Object { $slow -notcontains $_ })
     $batches = @(foreach ($relative in $slow) { [pscustomobject]@{ Name = $relative; Group = [string[]]@($relative); Count = 1 } })
-    if ($rest.Count -gt 0) { $batches += @(Split-LargeBatches ($rest | Group-Object { Get-BatchKey $_ })) }
+    # Neighbouring folders share most of what they import, so the rest are packed in path order across folders.
+    if ($rest.Count -gt 0) {
+        $batches += @(Split-ByTime @([pscustomobject]@{ Name = "batch"; Group = [string[]]@($rest | Sort-Object) }) $Seconds | ForEach-Object {
+            $_.Name = "$(Get-BatchKey $_.Group[0]) .. $(Get-BatchKey $_.Group[-1])"; $_
+        })
+    }
     return $batches | Sort-Object { Get-ExpectedSeconds $Seconds ([string[]]$_.Group) } -Descending
 }
 
@@ -207,8 +224,9 @@ function Invoke-Reported {
         foreach ($batch in @($running | Where-Object { $_.Process.HasExited })) {
             $batch.Process.WaitForExit()
             $batch.Seconds = $batch.Clock.Elapsed.TotalSeconds
-            # A batch's files share its seconds evenly: Mamba times the batch, not each file in it.
-            foreach ($relative in $batch.Relatives) { $seconds[$relative] = [Math]::Round($batch.Seconds / $batch.Relatives.Count, 1) }
+            # A batch's files share its seconds, less its start, evenly: Mamba times the batch, not each file in it.
+            $work = [Math]::Max(0.1, $batch.Seconds - $startSeconds)
+            foreach ($relative in $batch.Relatives) { $seconds[$relative] = [Math]::Round($work / $batch.Relatives.Count, 1) }
             $finished.Add($batch)
             $running.Remove($batch) | Out-Null
         }

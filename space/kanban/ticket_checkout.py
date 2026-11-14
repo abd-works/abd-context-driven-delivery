@@ -106,7 +106,7 @@ class TicketCheckout:
         assigned = self.assigned_chat
         if assigned:
             return next((chat for chat in chats if chat.id == assigned), None)
-        named = next((chat for chat in chats if chat.name == self._ticket.name), None)
+        named = self._ticket.board.chat_named(self._ticket.name)
         return named or self._chat_in_worktree(chats)
 
     @property
