@@ -46,6 +46,9 @@ async function ranOrFilled($: EngineInterface, chat: string, command: ChatComman
 function shown($: EngineInterface, chat: string, command: ChatCommandData): Promise<string> {
   if (command.kind === 'open_file') return openFileInViewer($, command.text).then(() => '', reasonOf)
   if (command.kind === 'fill') return filledPrompt($, command.text).catch(reasonOf)
+  // A kind this bar does not know is refused, never submitted: an older bar submitted a refresh's text as the
+  // person's own message.
+  if (command.kind !== 'command' && command.kind !== 'submit') return Promise.resolve(`this chat bar does not know the command kind ${command.kind}: run /reload-plugins`)
   return command.text.startsWith('/') ? ranOrFilled($, chat, command) : submitted($, command.text)
 }
 
