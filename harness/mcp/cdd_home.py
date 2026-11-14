@@ -133,8 +133,6 @@ class CddHome:
             (target / BOARD_DRAWIO_VIEWER).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(self.source / DRAWIO_VIEWER, target / BOARD_DRAWIO_VIEWER)
         JsonFile(target / self.INSTALL_COMMAND).write({"command": self.install_command})
-        if self.mode == self.CHECKOUT:
-            JsonFile(source / self.INSTALL_COMMAND).write({"command": self.install_command})
         manifest_file = JsonFile(target / ".claude-plugin" / "plugin.json")
         manifest = manifest_file.read()
         # The source is hashed, not the copy: with the board folder watched, Claude Code writes type files into the copy
@@ -160,14 +158,6 @@ class CddHome:
                 plugins.append({"name": name, "source": f"./{name}", "description": description})
         marketplace = JsonFile(self.claude_plugins / ".claude-plugin" / "marketplace.json")
         return marketplace.write({"name": CLAUDE_MARKETPLACE, "owner": {"name": "cdd"}, "plugins": plugins})
-
-    @property
-    def board_folder(self) -> Path:
-        """The folder Claude Code loads the board mod from: a served checkout's own mod folder, so an edit there reloads
-        in every chat with no install, else the copy published here."""
-        if self.mode == self.CHECKOUT:
-            return self.source / BOARD_MOD_FOLDER
-        return self.claude_plugins / BOARD_PLUGIN
 
     @property
     def runtime_record(self) -> Path:

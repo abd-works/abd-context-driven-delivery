@@ -7,7 +7,7 @@ import { ActionButtonView, PickerView } from './action-button-view'
 import { formatGlyphOf, overlayColumnOf, REPO_GLYPH, repoWordOf, sessionWordOf, stageColumn } from './bar-columns'
 import { toggleFormat, type FormatChips } from './format-choices-client'
 import { toggleOverlay, toggleOverlayList, type OverlayChips } from './overlay-choices-client'
-import { askChatToFixBoard, dismissFailure, fixFailure, restartServer, runHandoff, type ChatBarClient } from './chat-bar-client'
+import { askChatToFixBoard, dismissFailure, fixFailure, runHandoff, type ChatBarClient } from './chat-bar-client'
 import { openFilesOf, openReport, openSessionFolder } from './fidelity-files-client'
 import { openHelp } from './fidelity-help-client'
 import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
@@ -160,7 +160,7 @@ function IconButtonView(elements: ElementTable, key: string, icon: string, words
   )
 }
 
-// Handoff, files, restart and close as icons. Files shows the action fidelity's files, else the first fidelity's.
+// Handoff, files and close as icons. Files shows the action fidelity's files, else the first fidelity's.
 function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
   const { Box } = elements
   const fidelities = chatBar.actionFidelities.length ? chatBar.actionFidelities : chatBar.fidelities.slice(0, 1)
@@ -168,7 +168,6 @@ function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBa
     <Box key="session-buttons" flexDirection="row" gap={1}>
       {IconButtonView(elements, 'handoff', '⇥', 'handoff', () => runHandoff($, chatBar))}
       {fidelities.length ? IconButtonView(elements, 'files-button', '▤', 'files', () => openFilesOf($, fidelities)) : null}
-      {IconButtonView(elements, 'restart-button', '↻', 'restart cdd server', () => restartServer($))}
       {chatBar.isMain || chatBar.isPlainFolder ? null : IconButtonView(elements, 'close-button', '✕', 'close session', () => openClose($, chatBar))}
     </Box>
   )
