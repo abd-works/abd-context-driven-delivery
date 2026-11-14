@@ -90,7 +90,7 @@ def main() -> int:
         restarted = server.keep_pinned_current()
         if restarted:
             print(f"cdd server: {restarted}")
-            _write_runtime_adapters(installer, server)
+        _write_runtime_adapters(installer, server)
         _install_board_apps()
     return 0
 
@@ -98,16 +98,20 @@ def main() -> int:
 def _write_runtime_adapters(installer, server) -> None:
     """The apps the server launches run from the pinned runtime, and their pages import the CDD domain through the
     language adapters under its IDE folder, which git never copies there. The runtime is this checkout's commit, so a pin
-    copies the adapters this checkout's install wrote, in place of any an earlier pin left."""
+    copies the adapters this checkout's install wrote, in place of any an earlier pin left. Every install from the
+    checkout the runtime serves copies them, not only the one that pins it, so a pin whose copy failed is repaired by the
+    next install."""
     import shutil
 
     home = server.daemon.home
-    if home.mode != home.PINNED:
+    if home.mode != home.PINNED or not home.is_pinned_to(_REPO):
         return
     source = Path(installer.path) / "language-adapters"
     target = home.pinned_checkout / installer.layout.folder_name / "language-adapters"
+    # A server started from the runtime, such as the board's, keeps its folders open on Windows, so they outlive the
+    # removal empty; the copy writes into them. A file still held makes the copy fail and names it.
     shutil.rmtree(target, ignore_errors=True)
-    shutil.copytree(source, target)
+    shutil.copytree(source, target, dirs_exist_ok=True)
     print(f"runtime language adapters: copied to {target}")
 
 
