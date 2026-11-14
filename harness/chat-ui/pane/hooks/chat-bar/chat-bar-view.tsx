@@ -3,6 +3,7 @@ import type { EngineInterface } from 'claude-code'
 import type { ActionPickerJson, ChatBarViewJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { GlyphButtonView } from '../shared/glyph-button-view'
+import { TipView } from '../shared/tip-view'
 import { ActionButtonView, PickerView } from './action-button-view'
 import { formatGlyphOf, overlayColumnOf, REPO_GLYPH, repoWordOf, sessionWordOf, stageColumn } from './bar-columns'
 import { toggleFormat, type FormatChips } from './format-choices-client'
@@ -37,21 +38,6 @@ export type ChatBarDraw = {
 }
 
 const SEPARATOR = '│'
-
-// A label shown above an element while the pointer is on its keyed Box, as the canvas's hover tips. A tip given onPress
-// is a button too: a see-through Button over its words takes the press.
-function TipView({ Box, Button, Text }: ElementTable, words: string, detail: string, detailColour: string, onPress?: () => unknown, key = '') {
-  const tip = [
-    <Text key="tip-words" color={BRAND.text}>{detail ? `${words} ` : words}</Text>,
-    detail ? <Text key="tip-detail" color={detailColour}>{detail}</Text> : null,
-  ]
-  // A pressable tip is one whole Button holding its words: a see-through one laid over them takes no press.
-  return (
-    <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
-      {onPress ? <Button key={key} plain onPress={onPress}>{tip}</Button> : tip}
-    </Box>
-  )
-}
 
 // One square in its practice colour, fainter the less is done, underlined on a light tint when selected, with the
 // violation count in red beside it, a press on the count opening the validation report; the fidelity's name shows above

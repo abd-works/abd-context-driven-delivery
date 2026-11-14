@@ -1,6 +1,7 @@
 import type { EngineInterface } from 'claude-code'
 
 import { BRAND } from '../shared/brand'
+import { TipView } from '../shared/tip-view'
 import type { ChatBarDraw } from './chat-bar-view'
 import { repoListRightOf, sessionListRightOf } from './bar-columns'
 import { MAIN_SESSION } from './chat-bar-client'
@@ -115,13 +116,19 @@ function folderFromTop(repository: string, folder: string): string {
 
 // In the main chat, the repositories beside this one, opened from the repository's own button before "main +",
 // alone, so the bar stays in view, its right edge under the end of that button. Opening one starts a top-level chat on it; a new
-// name creates the repository, private. FOLDER, above them, opens any folder as it is in a top-level chat, chosen with
-// the system's folder picker or typed, and creates nothing there.
-export function RepoListView($: EngineInterface, { Box, Button, Input, Text }: ElementTable, { chatBar, view }: ChatBarDraw) {
+// name creates the repository, private. Folder Only (No Repo), above them, opens any folder as it is in a top-level
+// chat, chosen with the system's folder picker or typed, and creates nothing there; its tip says when to choose it.
+const FOLDER_ONLY_TIP = "Choose a path if you don't want to work with a repository and want to just work within your local file system"
+
+export function RepoListView($: EngineInterface, elements: ElementTable, { chatBar, view }: ChatBarDraw) {
+  const { Box, Button, Input, Text } = elements
   if (!view.isRepoListOpen || !chatBar.isMain) return null
   return (
     <Box key="repo-list" flexDirection="column" alignSelf="flex-end" marginRight={repoListRightOf(chatBar)} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
-      <Text key="folder-heading" color={BRAND.muted}>FOLDER</Text>
+      <Box key="folder-heading-box">
+        <Text key="folder-heading" color={BRAND.muted}>Folder Only (No Repo)</Text>
+        {TipView(elements, FOLDER_ONLY_TIP, '', BRAND.muted)}
+      </Box>
       <Button key="repo-folder-choose" plain label="▸ Choose a folder…" onPress={() => chooseFolder($)} />
       <Input key="repo-folder-path" placeholder="Folder path" value="" onSubmit={value => (value.trim() ? openFolder($, value.trim()) : undefined)} />
       <Text key="repos-heading" color={BRAND.muted}>REPOS</Text>

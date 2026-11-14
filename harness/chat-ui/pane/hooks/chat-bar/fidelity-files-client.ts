@@ -1,7 +1,8 @@
 import type { EngineInterface } from 'claude-code'
 
-import { projectPageUrl } from '../board-chat/board'
+import { CHAT_QUERY, projectPageUrl } from '../board-chat/board'
 import { runningBoardUrl } from '../board-chat/board-server'
+import { openApp } from '../health/app-client'
 import { showFailure } from '../error-display/failure-client'
 import { openInBrowserPane } from '../shared/browser-pane'
 import { currentChatBar } from './chat-bar-client'
@@ -12,8 +13,9 @@ import type { FidelityProgressClient } from './fidelity-progress-client'
 // report panel. Each is readied as the status row readies its app (Python's App.open, then this chat starts the server
 // while it is not running), and opens by a link that names what to show. When the pane does not open, the failure line says why.
 
-// The Files app is the board's own server answering its /files page, so it is readied as the board is.
-const FILES_PAGE = '/files'
+// The Files app, space/session/files_app: its own server on its own port, readied by Python's App.open as the status
+// row readies any app. Its page names the chat that opened it, which its comments are sent to.
+const FILES_APP = 'Files'
 const BOARD_PAGE = '/'
 
 // A page of the board's server, the board started first when it is not running. Every function here that takes `$` is
@@ -32,7 +34,15 @@ async function openBoardPage($: EngineInterface, page: string, what: string, que
 }
 
 async function openFilesLink($: EngineInterface, what: string, query: Record<string, string>): Promise<void> {
-  await openBoardPage($, FILES_PAGE, what, query)
+  let url: string
+  try {
+    url = (await openApp($, FILES_APP)).url
+  } catch (failure) {
+    return showFailure($, `${what} did not open: the ${FILES_APP} app did not start`, `Opening ${what}, calling app.open for the ${FILES_APP} app`, failure)
+  }
+  const link = await projectPageUrl($, url, { [CHAT_QUERY]: await $.session.id(), ...query })
+  const problem = await openInBrowserPane($, link)
+  if (problem) await showFailure($, `${what} did not open: ${problem}`, `Opening ${link} in Claude's Browser pane`)
 }
 
 async function openBoardLink($: EngineInterface, what: string, query: Record<string, string>): Promise<void> {
