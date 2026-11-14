@@ -103,10 +103,9 @@ class McpInstallation(ServerInstallation):
         self.diagnosis: dict[str, Any] | None = None
 
     def write(self, tool: AgentTool) -> None:
-        if not tool.install_to_mcp:
-            return
+        """Record the tool; the MCP config and the plugins are written once the whole install has been recorded, in
+        standup, rather than again after every tool."""
         self.record_operation(tool)
-        self.write_mcp_manifest()
 
     def record_operation(self, tool: AgentTool) -> None:
         if not tool.install_to_mcp:
@@ -248,7 +247,8 @@ class McpInstallation(ServerInstallation):
 
     def standup(self) -> McpHost | None:
         """A host over every toolset in this installation's checkout, in this process, to check it stands up; none
-        inside the cdd server, which already serves them."""
+        inside the cdd server, which already serves them. The MCP config and the plugins are written first, once."""
+        self.write_mcp_manifest()
         if self.serves_this_process():
             return None
         self.host = McpHost.from_repo(self._checkout)
