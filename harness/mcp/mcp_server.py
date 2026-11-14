@@ -254,12 +254,6 @@ class McpInstallation(ServerInstallation):
         self.host = McpHost.from_repo(self._checkout)
         return self.host
 
-    def _publish_board(self) -> None:
-        """Publish the chat bar from the code the server now runs, so a chat watching the published copy reloads it
-        with the server's restart rather than at the next install."""
-        if self._home is not None and self._home.is_installed:
-            self._home.write_board_plugin()
-
     def diagnose(self) -> dict[str, Any]:
         host = self.host if self.host is not None else self.standup()
         self.diagnosis = host.diagnose() if host is not None else {}
@@ -577,8 +571,6 @@ class McpHost:
         self._protocol_server: Any = None
         # A user-level cdd entry names Claude Code's own settings folder as its project; calls naming it are refused.
         self._claude_settings = IdeLayout("Claude").user_settings_folder.resolve()
-        # The cdd home of the server process, once it serves chats; a host made in-process for a probe or spec has none.
-        self._home: CddHome | None = None
 
     @property
     def _protocol(self) -> Any:
@@ -863,7 +855,6 @@ class McpHost:
         from harness.mcp.listening_loop import _ListeningLoop
 
         daemon.publish(self._checkout_server.repo)
-        self._home = daemon.home
         try:
             server = uvicorn.Server(uvicorn.Config(self.http_app(daemon.port), log_level="warning"))
             asyncio.run(server.serve(sockets=[listener]), loop_factory=_ListeningLoop(server).new_event_loop)
@@ -905,7 +896,6 @@ class McpHost:
             self._checkout_server = self._checkout_server.restarted()
             with self._servers_lock:
                 self._servers = {self._checkout_server.project: self._checkout_server}
-        self._publish_board()
         tools = self._checkout_server.tools
         return {"is_restarted": True, "tools": len(tools) + len(self._checkout_server.prompts), "exceptions": self._checkout_server.skipped.as_data}
 
