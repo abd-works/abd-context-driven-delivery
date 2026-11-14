@@ -1,5 +1,5 @@
-"""Server health as the tool the band calls (cdd MCP), for servers it reaches over real sockets. Heavy: each example
-connects to a port nothing listens on, which Windows takes most of a second to refuse.
+"""Server health as the tool the band calls (cdd MCP), for servers it reaches over real sockets. Heavy: each report
+checks every registered app's ports, and Windows waits out each check of a port nothing listens on.
 
 Each signature here has a test of the same name in `harness/chat-ui/pane/hooks/register.test.ts`."""
 import json
@@ -19,6 +19,7 @@ from harness.diagnostics.app import App, AppServer  # noqa: E402
 from harness.diagnostics.server_health import ServerHealth  # noqa: E402
 from harness.hooks.hook_daemon import HookDaemon  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
+from harness.mcp.mcp_server import McpServer  # noqa: E402
 
 
 def closed_port() -> int:
@@ -54,6 +55,20 @@ with description("server health") as self:
         with it("should list the app with its status and the port it answers on"):
             graph = next(app for app in data_of(ServerHealth(self.root).report())["apps"] if app["label"] == "Graph")
             expect((graph["status"], graph["port"])).to(equal(("running", self.port)))
+
+    with context("with no hook server state in the project"):
+        with it("should report the hook server is not running"):
+            expect(data_of(ServerHealth(self.root).report())["is_hook_server_running"]).to(be_false)
+
+    with context("called through the MCP server for the project the call names"):
+        with before.each:
+            self.server = McpServer(project=self.root)
+            self.server.start(("harness.diagnostics.server_health:ServerHealth",))
+
+        with it("should answer the band's call with every part"):
+            result = self.server.invoke_tool("server-health.report", {})
+            answer = json.loads(json.dumps(result, default=data_of))
+            expect(sorted(answer)).to(equal(["apps", "is_hook_server_running"]))
 
     with context("with a hook server state file whose process has gone"):
         with it("should report the hook server is not running"):

@@ -108,15 +108,25 @@ def _fingerprint_of(folder: Path, paths: list[Path]) -> str:
     return digest.hexdigest()
 
 
+class PortProbe:
+    """This machine's ports, the one system an app server's status reads: whether something answers on a port."""
+
+    def answers(self, port: int) -> bool:
+        with socket.socket() as probe:
+            probe.settimeout(PROBE_SECONDS)
+            return probe.connect_ex((_HOST, port)) == 0
+
+
 class AppServer:
     """The server an app answers from: the script node runs, the folder it runs in, and the ports it tries in turn. The
     chat that opens an app starts it, as long as that chat lasts, so this says how; two apps the same server serves,
     as the board's server serves the Story UI editor, share one."""
 
-    def __init__(self, folder: Path, script: str, ports: tuple[int, ...]) -> None:
+    def __init__(self, folder: Path, script: str, ports: tuple[int, ...], probe: PortProbe | None = None) -> None:
         self._folder = Path(folder)
         self.script = script
         self.ports = tuple(ports)
+        self._probe = probe or PortProbe()
 
     @property
     @data_field
@@ -134,12 +144,7 @@ class AppServer:
     @property
     def port(self) -> int | None:
         """The first of its ports that answers; none while it is not running."""
-        return next((port for port in self.ports if self._answers(port)), None)
-
-    def _answers(self, port: int) -> bool:
-        with socket.socket() as probe:
-            probe.settimeout(PROBE_SECONDS)
-            return probe.connect_ex((_HOST, port)) == 0
+        return next((port for port in self.ports if self._probe.answers(port)), None)
 
     def restart(self) -> bool:
         """Stop the server while it runs and start it again in its folder, so it serves the code an install just

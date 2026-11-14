@@ -17,7 +17,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from harness.diagnostics.app import App, AppServer, AppStatus, Npm, NpmRun
+from harness.diagnostics.app import App, AppServer, AppStatus, Npm, NpmRun, PortProbe
 import space.kanban  # noqa: F401 - registers the Kanban and Story UI apps, as the cdd server does when it loads every toolset
 from space.kanban.session_board_examples import BacklogFileSeed
 
@@ -88,17 +88,37 @@ class ThrowawayNpm(Npm):
         return NpmRun(0)
 
 
-class ThrowawayApp:
-    """An app of the example's label in a throwaway folder on a free port, registered in place of the real one."""
+class ThrowawayPorts(PortProbe):
+    """This machine's ports, stubbed at the boundary an app server's status reads: a port answers once a throwaway
+    app listens on it, and no real port is asked, so no check waits out a closed port's timeout."""
 
-    def __init__(self, example: AppExample, npm: Npm | None = None) -> None:
+    def __init__(self) -> None:
+        self._listening: set[int] = set()
+
+    def answers(self, port: int) -> bool:
+        return port in self._listening
+
+    def listen(self, port: int) -> None:
+        self._listening.add(port)
+
+    def close(self, port: int) -> None:
+        self._listening.discard(port)
+
+
+class ThrowawayApp:
+    """An app of the example's label in a throwaway folder on a free port, registered in place of the real one. Given
+    ports, it answers on them rather than on a real socket."""
+
+    def __init__(self, example: AppExample, ports: ThrowawayPorts | None = None, npm: Npm | None = None) -> None:
         self.example = example
         self.npm = npm or ThrowawayNpm()
         self.folder = Path(tempfile.mkdtemp(prefix="cdd-app-"))
         self.port = free_port()
+        self._ports = ports
         self._replaced = App.load(example.label, project=self.folder)
         self._listener: socket.socket | None = None
-        self.app = App(example.label, self.folder, AppServer(self.folder, "serve.js", (self.port,)), example.page, npm=self.npm).register()
+        server = AppServer(self.folder, "serve.js", (self.port,), probe=ports)
+        self.app = App(example.label, self.folder, server, example.page, npm=self.npm).register()
         self.write_code(FOUND_DEPENDENCY, SERVE)
 
     def write_code(self, dependency: str, server: str) -> None:
@@ -112,15 +132,23 @@ class ThrowawayApp:
         (self.folder / "part" / "package.json").write_text(json.dumps({"name": "part", "version": "1.0.0"}), encoding="utf-8")
 
     def seed(self, status: AppStatus) -> None:
-        """Seed: the folder and port as an app of status has them."""
+        """Seed: the folder and port as an app of status has them. An installed app is one its install left current,
+        so a press opens it with no second install and no restart."""
         if status is AppStatus.NOT_INSTALLED:
             return
-        (self.folder / "node_modules").mkdir()
-        (self.folder / "dist").mkdir()
+        self.app.install()
+        self.npm.commands.clear()
         if status is AppStatus.RUNNING:
-            self._listener = socket.socket()
-            self._listener.bind(("127.0.0.1", self.port))
-            self._listener.listen()
+            self.listen()
+
+    def listen(self) -> None:
+        """Answer on the app's port from this process, as its server would once started."""
+        if self._ports is not None:
+            self._ports.listen(self.port)
+            return
+        self._listener = socket.socket()
+        self._listener.bind(("127.0.0.1", self.port))
+        self._listener.listen()
 
     @property
     def url(self) -> str:
@@ -131,6 +159,8 @@ class ThrowawayApp:
         """Put the real app back and remove the folder."""
         if self._listener is not None:
             self._listener.close()
+        if self._ports is not None:
+            self._ports.close(self.port)
         self._replaced.register()
         shutil.rmtree(self.folder, ignore_errors=True)
 

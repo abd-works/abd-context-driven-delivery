@@ -57,7 +57,7 @@ def press_readies_by_status(story: str, example: AppExample, name: str, status: 
     def _(s):
         @s.given(f"the app status row reads {example.label} {status.value}")
         def _(world):
-            world.app = ThrowawayApp(example)
+            world.app = ThrowawayApp(example, world.ports)
             world.apps.append(world.app)
             world.app.seed(status)
 
@@ -87,7 +87,7 @@ for app_status in PRESS_DOES:
 def _(s):
     @s.given("the app status row reads Story UI not installed")
     def _(world):
-        world.app = ThrowawayApp(STORY_UI_EDITOR)
+        world.app = ThrowawayApp(STORY_UI_EDITOR, world.ports)
         world.apps.append(world.app)
 
     @s.but_("npm install fails in the Story UI editor's folder with npm's ENOENT")

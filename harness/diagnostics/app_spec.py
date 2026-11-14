@@ -1,10 +1,9 @@
 """An app a person opens beside the chat: the one registry of apps, the status each reads from its folder and ports,
 and the server a chat starts it with.
 
-Installing runs npm, so it is proved by the heavy story tiers of Integrate Practice Content Editor Apps In Chat Bar
-(space/kanban); this spec proves what needs no process."""
+Installing again is proved with npm and the machine's ports stubbed at the boundaries *App* calls, so this spec starts
+no process; the e2e spec kanban_app_install_e2e_spec.py runs real npm."""
 import json
-import os
 import shutil
 import socket
 import tempfile
@@ -13,7 +12,7 @@ from pathlib import Path
 from expects import be_a, be_none, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.diagnostics.app import App, AppNotRegistered, AppNotStarted, AppServer, AppStatus
+from harness.diagnostics.app import App, AppNotRegistered, AppNotStarted, AppServer, AppStatus, Npm, NpmRun, PortProbe
 from harness.installation.data_class import data_of
 
 
@@ -88,39 +87,48 @@ with description("an app") as self:
                 expect(data_of(self.app)).to(equal({"label": "Throwaway", "status": "running", "port": self.port, "url": f"http://127.0.0.1:{self.port}/story-map", "server": server}))
 
 
-def fake_npm_in(folder: Path, log: Path) -> None:
-    """An npm that writes down each call and makes what the real one would: node_modules on install, dist on a build."""
-    (folder / "npm.cmd").write_text(
-        f'@echo off\r\necho %*>>"{log}"\r\nif "%1"=="install" mkdir node_modules 2>nul\r\nif "%1"=="run" mkdir dist 2>nul\r\nexit /b 0\r\n', encoding="utf-8"
-    )
-    script = folder / "npm"
-    script.write_text(f'#!/bin/sh\necho "$*" >> "{log}"\n[ "$1" = install ] && mkdir -p node_modules\n[ "$1" = run ] && mkdir -p dist\nexit 0\n', encoding="utf-8")
-    script.chmod(0o755)
+class RecordingNpm(Npm):
+    """npm stubbed at the boundary *App* calls: each command written down, and what the real one would make, node_modules
+    on install and dist on a build, made in the app's folder. The e2e spec kanban_app_install_e2e_spec.py runs real npm."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.calls: list[str] = []
+
+    def run(self, folder: Path, *arguments: str) -> NpmRun:
+        self.calls.extend(arguments)
+        made = {"install": "node_modules", "run": "dist"}.get(arguments[0])
+        if made:
+            (folder / made).mkdir(exist_ok=True)
+        return NpmRun(0)
+
+
+class NothingListening(PortProbe):
+    """This machine's ports with nothing answering on any, so no check waits out a closed port."""
+
+    def answers(self, port: int) -> bool:
+        return False
 
 
 with description("an app installed again") as self:
     with before.each:
         self.folder = Path(tempfile.mkdtemp(prefix="app-"))
-        self.tools = Path(tempfile.mkdtemp(prefix="npm-"))
         self.imported = Path(tempfile.mkdtemp(prefix="adapter-"))
-        self.log = self.tools / "npm.log"
-        fake_npm_in(self.tools, self.log)
-        self.path = os.environ["PATH"]
-        os.environ["PATH"] = f"{self.tools}{os.pathsep}{self.path}"
+        self.npm = RecordingNpm()
         package_in(self.folder, {"build": "vite build"})
         (self.folder / "main.tsx").write_text("export {}", encoding="utf-8")
         (self.imported / "adapter.ts").write_text("export {}", encoding="utf-8")
-        self.app = App("Throwaway", self.folder, AppServer(self.folder, "serve.js", (free_port(),)), imports=(self.imported,))
+        server = AppServer(self.folder, "serve.js", (free_port(),), probe=NothingListening())
+        self.app = App("Throwaway", self.folder, server, imports=(self.imported,), npm=self.npm)
         self.app.install()
-        self.log.unlink()
+        self.npm.calls.clear()
 
     with after.each:
-        os.environ["PATH"] = self.path
-        for folder in (self.folder, self.tools, self.imported):
+        for folder in (self.folder, self.imported):
             shutil.rmtree(folder, ignore_errors=True)
 
     def npm_calls(self) -> list[str]:
-        return self.log.read_text(encoding="utf-8").split() if self.log.exists() else []
+        return self.npm.calls
 
     with context("with nothing changed since"):
         with it("should read current"):

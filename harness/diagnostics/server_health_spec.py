@@ -1,21 +1,18 @@
-"""Server health as the tool the band calls (cdd MCP), through the MCP server. Its servers reached over real sockets are
-in server_health_heavy_spec.py.
+"""Server health as the tool the band calls (cdd MCP), through the MCP server. Its servers reached over real sockets, and
+every report that checks the registered apps' ports, are in server_health_heavy_spec.py.
 
 Each signature here has a test of the same name in `harness/chat-ui/pane/hooks/register.test.ts`."""
-import json
 import shutil
 import tempfile
 from pathlib import Path
 
-from expects import be_false, equal, expect
+from expects import be_false, expect
 from mamba import after, before, context, description, it
 
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
-from harness.diagnostics.server_health import ServerHealth  # noqa: E402
-from harness.installation.data_class import data_of  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
 
 
@@ -26,19 +23,10 @@ with description("server health") as self:
     with after.each:
         shutil.rmtree(self.root, ignore_errors=True)
 
-    with context("with no hook server state in the project"):
-        with it("should report the hook server is not running"):
-            expect(data_of(ServerHealth(self.root).report())["is_hook_server_running"]).to(be_false)
-
     with context("called through the MCP server for the project the call names"):
         with before.each:
             self.server = McpServer(project=self.root)
             self.server.start(("harness.diagnostics.server_health:ServerHealth",))
-
-        with it("should answer the band's call with every part"):
-            result = self.server.invoke_tool("server-health.report", {})
-            answer = json.loads(json.dumps(result, default=data_of))
-            expect(sorted(answer)).to(equal(["apps", "is_hook_server_running"]))
 
         with it("should leave the session log alone"):
             self.server.invoke_tool("server-health.report", {})
