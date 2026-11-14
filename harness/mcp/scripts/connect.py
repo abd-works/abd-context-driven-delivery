@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 HOME = Path(__file__).resolve().parent
@@ -21,9 +22,14 @@ CHAT_ID_VARIABLE = "CLAUDE_CODE_SESSION_ID"
 UNNAMED_CHAT = "unnamed"
 
 
+# An install swaps the pinned runtime in place, and for those seconds its code cannot be imported. The script waits that
+# long rather than exit, because a header helper that prints nothing leaves its chat cut off from cdd until a reload.
+RUNTIME_SWAP_SECONDS = 30
+RUNTIME_RETRY_SECONDS = 0.5
+
+
 def main() -> None:
-    runtime = json.loads((HOME / "runtime.json").read_text(encoding="utf-8"))
-    sys.path.insert(0, runtime["source"])
+    import_runtime()
     from harness.mcp.cdd_home import CddHome
     from harness.agent_tools.claude_chat_process import ClaudeChatProcess
     from harness.mcp.mcp_daemon import CHAT_HEADER, CHAT_PROCESS_HEADER, PROJECT_HEADER, McpDaemon
@@ -33,6 +39,37 @@ def main() -> None:
     process = ClaudeChatProcess.from_ancestors()
     chat_process = {CHAT_PROCESS_HEADER: str(process.pid)} if process is not None else {}
     print(json.dumps(answer(sys.argv[1:], daemon.url, PROJECT_HEADER, CHAT_HEADER, chat_process)))
+
+
+def import_runtime() -> None:
+    """Put the pinned runtime on the import path and import the modules main needs, retrying while an install swaps it.
+    The last failure is raised once the swap has taken longer than an install ever does."""
+    waited = 0.0
+    while True:
+        try:
+            _import_pinned_runtime()
+            return
+        except (OSError, ValueError, KeyError, ImportError) as failure:
+            if waited >= RUNTIME_SWAP_SECONDS:
+                raise
+            if isinstance(failure, ImportError):
+                _forget_partial_imports()
+        time.sleep(RUNTIME_RETRY_SECONDS)
+        waited += RUNTIME_RETRY_SECONDS
+
+
+def _import_pinned_runtime() -> None:
+    runtime = json.loads((HOME / "runtime.json").read_text(encoding="utf-8"))
+    if runtime["source"] not in sys.path:
+        sys.path.insert(0, runtime["source"])
+    import harness.agent_tools.claude_chat_process  # noqa: F401
+    import harness.mcp.mcp_daemon  # noqa: F401
+
+
+def _forget_partial_imports() -> None:
+    """A failed import can leave half-loaded harness modules behind, which the next try would reuse."""
+    for name in [name for name in sys.modules if name == "harness" or name.startswith("harness.")]:
+        del sys.modules[name]
 
 
 def answer(arguments: list[str], url: str, project_header: str, chat_header: str, chat_process: dict[str, str] | None = None) -> dict:

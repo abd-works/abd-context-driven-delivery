@@ -503,9 +503,10 @@ class McpServer:
 
 
 class _ProjectNamedOnly:
-    """The ``/mcp`` endpoint for requests that name their project. Claude Code runs a chat's header helper again only
-    when the server answers 401, so a chat that connected while the helper could not run, such as during a restart or
-    an install, names its project on the next try instead of failing every call."""
+    """The ``/mcp`` endpoint for requests that name their project. A request that names none is refused as a bad
+    request (400), naming the missing header. It is never refused as unauthorized (401): Claude Code answers a 401 with
+    a sign-in attempt, Dynamic Client Registration, which this server does not offer, and then cuts cdd off for that
+    chat until its plugins are reloaded."""
 
     def __init__(self, app: Any) -> None:
         self._app = app
@@ -516,7 +517,7 @@ class _ProjectNamedOnly:
         from starlette.responses import JSONResponse
 
         if scope["type"] == "http" and not any(name == self._header and value for name, value in scope["headers"]):
-            await JSONResponse(self._refusal, status_code=401)(scope, receive, send)
+            await JSONResponse(self._refusal, status_code=400)(scope, receive, send)
             return
         await self._app(scope, receive, send)
 

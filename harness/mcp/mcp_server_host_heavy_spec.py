@@ -283,14 +283,14 @@ with description("the cdd server") as self:
             second = self.chat.run(lambda session: session.call_tool("hosting-demo.read_count", arguments={}), self.worktrees.second)
             expect(_text(second)).to(equal("0"))
 
-    # Claude Code runs a chat's header helper again only when the server answers 401, so a chat that connected while
-    # the helper could not run gets its project named on the next try instead of failing every call.
+    # Claude Code answers a 401 with a sign-in attempt that this server does not offer, and cuts cdd off for the chat,
+    # so a request that names no project is refused as a bad request instead.
     with context("that a chat names no project"):
         with before.each:
             self.answer = httpx.post(self.server.url, json={"jsonrpc": "2.0", "id": 1, "method": "ping"}, headers={"Accept": "application/json, text/event-stream"})
 
-        with it("should refuse the connection as unauthorized"):
-            expect(self.answer.status_code).to(equal(401))
+        with it("should refuse the request as a bad request, never as unauthorized"):
+            expect(self.answer.status_code).to(equal(400))
 
         with it("should say which header is missing"):
             expect(self.answer.text).to(contain("X-CDD-Project"))

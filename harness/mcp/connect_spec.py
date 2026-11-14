@@ -1,14 +1,20 @@
 """How the connect script names the project a chat's cdd calls are for."""
 
 import importlib.util
+import json
 import os
+import shutil
+import sys
+import tempfile
+import threading
 from pathlib import Path
 
-from expects import equal, expect
+from expects import be_true, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 _SCRIPT = Path(__file__).resolve().parent / "scripts" / "connect.py"
 _URL = "http://127.0.0.1:8790/mcp"
+_REPOSITORY = Path(__file__).resolve().parents[2]
 _spec = importlib.util.spec_from_file_location("cdd_connect", _SCRIPT)
 connect = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(connect)
@@ -62,3 +68,30 @@ with description("what a chat's connect script prints") as self:
                 os.environ[connect.CHAT_ID_VARIABLE] = "chat-7"
                 answer = connect.answer(["--address"], _URL, "x-cdd-project", "x-cdd-chat", {"x-cdd-chat-process": "40364"})
                 expect(answer["headers"]).to(equal({"x-cdd-project": os.getcwd(), "x-cdd-chat": connect.UNNAMED_CHAT}))
+
+
+# An install swaps the pinned runtime in place; a headers helper that exits then prints nothing, and its chat is cut
+# off from cdd until a reload, so the script waits out the swap.
+with description("the pinned runtime a chat's connect script imports") as self:
+    with before.each:
+        self.prior = (connect.HOME, connect.RUNTIME_SWAP_SECONDS, connect.RUNTIME_RETRY_SECONDS)
+        self.home = Path(tempfile.mkdtemp())
+        connect.HOME = self.home
+        connect.RUNTIME_RETRY_SECONDS = 0.05
+
+    with after.each:
+        connect.HOME, connect.RUNTIME_SWAP_SECONDS, connect.RUNTIME_RETRY_SECONDS = self.prior
+        shutil.rmtree(self.home, ignore_errors=True)
+
+    with context("that an install is swapping, its record written a moment later"):
+        with it("should import it once the record is there"):
+            connect.RUNTIME_SWAP_SECONDS = 5
+            record = json.dumps({"source": str(_REPOSITORY)})
+            threading.Timer(0.3, lambda: (self.home / "runtime.json").write_text(record, encoding="utf-8")).start()
+            connect.import_runtime()
+            expect("harness.mcp.mcp_daemon" in sys.modules).to(be_true)
+
+    with context("whose record stays missing longer than an install swaps it"):
+        with it("should fail, naming the missing record"):
+            connect.RUNTIME_SWAP_SECONDS = 0.1
+            expect(connect.import_runtime).to(raise_error(FileNotFoundError))
