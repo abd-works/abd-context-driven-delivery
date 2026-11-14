@@ -70,7 +70,8 @@ with description("the saves of a real clone's session folders on main"):
         top = _REPOSITORIES.copy()
         self.clone, self.origin = top / "clone", top / "origin.git"
         self.folder = _ticket_folder(self.clone)
-        self.saves = SessionSaves(Repo(self.clone), self.folder, settle_seconds=_SETTLE_SECONDS)
+        self.repository = Repo(self.clone)
+        self.saves = SessionSaves(self.repository, self.folder, settle_seconds=_SETTLE_SECONDS)
 
     with after.each:
         shutil.rmtree(self.clone.parent, ignore_errors=True)
@@ -90,6 +91,24 @@ with description("the saves of a real clone's session folders on main"):
 
         with it("should leave the cache out of the commit, in a project whose own .gitignore does not name it"):
             expect(_git(self.clone, "ls-files", ".sessions").splitlines()).to(equal([".sessions/.gitignore", ".sessions/checkout-flow/session.json"]))
+
+    # A tool call commits or merges in the same folder while the saves' thread commits: two at once fail on index.lock.
+    with context("that a tool call is writing the clone's index when a change is queued"):
+        with before.each:
+            self.repository.writing_index.acquire()
+            try:
+                self.saves.later("sessions: checkout-flow move Specification")
+                time.sleep(1)
+                self.subject_while_writing = _subject(self.clone)
+            finally:
+                self.repository.writing_index.release()
+            self.saved = _until(lambda: _subject(self.clone) == "sessions: checkout-flow move Specification")
+
+        with it("should wait for that write before it commits"):
+            expect(self.subject_while_writing).to(equal("start"))
+
+        with it("should commit once that write is done"):
+            expect(self.saved).to(equal(True))
 
     with context("that work needs main saved before it goes on"):
         with it("should raise git's refusal to the caller"):

@@ -17,19 +17,25 @@ from space.kanban.editor_apps_examples import free_port
 # npm install fetches every package of the board app; on a slow machine it and the build each take minutes.
 _INSTALL_SECONDS = 900
 _LEFT_OUT = shutil.ignore_patterns("node_modules", "dist", "test-results", "playwright-report", ".vite")
+# The app builds against the TypeScript adapters the installer wrote into its checkout (`@cdd`, three folders up), so
+# the copy keeps the place it has in a checkout, with those adapters beside it.
+_CHECKOUT = Path(__file__).resolve().parents[2]
+_ADAPTERS = Path(".claude") / "language-adapters" / "typescript"
 
 
 with description("the CDD Kanban installed with real npm") as self:
     with before.all:
-        self.folder = Path(tempfile.mkdtemp(prefix="cdd-kanban-e2e-")) / "app"
+        self.top = Path(tempfile.mkdtemp(prefix="cdd-kanban-e2e-"))
+        self.folder = self.top / APP_FOLDER.relative_to(_CHECKOUT)
         shutil.copytree(APP_FOLDER, self.folder, ignore=_LEFT_OUT)
+        shutil.copytree(_CHECKOUT / _ADAPTERS, self.top / _ADAPTERS)
         server = AppServer(self.folder, "packages/session-board/serve.ts", (free_port(),))
         self.app = App("Kanban", self.folder, server, npm=Npm(_INSTALL_SECONDS))
         self.was = self.app.status
         self.app.install()
 
     with after.all:
-        shutil.rmtree(self.folder.parent, ignore_errors=True)
+        shutil.rmtree(self.top, ignore_errors=True)
 
     with it("should start not installed"):
         expect(self.was).to(equal(AppStatus.NOT_INSTALLED))

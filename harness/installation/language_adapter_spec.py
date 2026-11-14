@@ -562,7 +562,8 @@ with description("a language adapter"):
 
 
 with description("the TypeScript files of the kanban toolsets being written"):
-    with it("should make each class's data shape once for each file it is written into"):
+    # Writing every kanban toolset's files takes over a unit example's budget, so they are written once for the file.
+    with before.all:
         import harness.installation.language_adapter as language_adapter
 
         made: list[tuple[int, type]] = []
@@ -578,4 +579,7 @@ with description("the TypeScript files of the kanban toolsets being written"):
             _install(Path(tempfile.mkdtemp(prefix="adapter-shapes-")))
         finally:
             language_adapter._DataShape = original
-        expect(len(made)).to(equal(len(set(made))))
+        self.shapes_made = made
+
+    with it("should make each class's data shape once for each file it is written into"):
+        expect(len(self.shapes_made)).to(equal(len(set(self.shapes_made))))

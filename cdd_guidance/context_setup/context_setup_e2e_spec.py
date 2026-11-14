@@ -34,7 +34,7 @@ _TEST_HTML = b"""<!DOCTYPE html>
 <html lang="en">
 <head><title>Test App</title></head>
 <body>
-  <main>
+  <main id="root">
     <h1>Home</h1>
     <nav aria-label="main">
       <a href="/login">Login</a>
@@ -48,7 +48,7 @@ _LOGIN_HTML = b"""<!DOCTYPE html>
 <html lang="en">
 <head><title>Login</title></head>
 <body>
-  <main>
+  <main id="root">
     <h1>Login</h1>
     <form>
       <input type="text" aria-label="Username" />
@@ -134,7 +134,7 @@ with description("a ContextSetup driving a real browser"):
     # ── Tool: scout_app ──────────────────────────────────────────────────────
 
     with context("whose scout_app tool captures pages from a running web server"):
-        with before.each:
+        with before.all:
             self._folder = str(fixture.temporary_folder())
             port = fixture.start_test_server()
             self._base_url = f"http://localhost:{port}"
@@ -145,7 +145,7 @@ with description("a ContextSetup driving a real browser"):
                 entry_paths=["/", "/login"],
             )
 
-        with after.each:
+        with after.all:
             fixture.release()
 
         with it("should return a ScoutResult"):
@@ -179,7 +179,7 @@ with description("a ContextSetup driving a real browser"):
     # ── Tool: complete_capture ───────────────────────────────────────────────
 
     with context("whose complete_capture tool adds a missing page to an existing capture"):
-        with before.each:
+        with before.all:
             self._folder = str(fixture.temporary_folder())
             port = fixture.start_test_server()
             self._base_url = f"http://localhost:{port}"
@@ -196,7 +196,7 @@ with description("a ContextSetup driving a real browser"):
                 base_url=self._base_url,
             )
 
-        with after.each:
+        with after.all:
             fixture.release()
 
         with it("should return a CaptureResult"):
