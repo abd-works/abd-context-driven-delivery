@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node", "vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@cdd/*": ["../../../../.claude/language-adapters/typescript/*"],
+      "@source-view/*": ["../../../../harness/graph/app/source/*"],
+      "react": ["./node_modules/@types/react"],
+      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"],
+      "react-dom": ["./node_modules/@types/react-dom"],
+      "react-dom/client": ["./node_modules/@types/react-dom/client"],
+      "@monaco-editor/react": ["./node_modules/@monaco-editor/react"],
+      "monaco-editor": ["./node_modules/monaco-editor"],
+      "express": ["./node_modules/@types/express"]
+    }
+  },
+  "include": ["*.ts", "*.tsx", "files"]
+}

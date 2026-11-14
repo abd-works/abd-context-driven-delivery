@@ -4,6 +4,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { initialOpenFolds, inlineCallLayout, type FoldMember, type InlineFold } from './call-expansion';
 import type { NodeSourceData } from '@cdd/harness/graph/graph';
 import { buildViolationCorrectPrompt, type ViolationFocus } from './violation-prompt';
+import './source.css';
 
 const LINE_HEIGHT = 20;
 
@@ -16,7 +17,27 @@ export type SourceRule = {
   messages: string[];
 };
 
-type SourceViewProps = {
+export type SourceEditorInstance = Parameters<OnMount>[0];
+
+// A fold a page names on the source's own lines, such as a class or operation the session's graph places in a whole
+// file; it opens unfolded, so the file reads whole until a person folds it.
+export type SourceFold = { start: number; end: number; kind: 'class' | 'block' };
+
+// What a page showing a whole file adds to the view: the folds its graph names, the language the file is in, and the
+// editor itself once it is made, so the page can add its own gutter marks (each with the class SOURCE_MARK, which the
+// fold toggle leaves alone) and menu actions, such as the Files app's comments.
+export type SourceHostProps = {
+  folds?: SourceFold[];
+  language?: string;
+  keepGlyphMargin?: boolean;
+  onEditor?: (editor: SourceEditorInstance) => void;
+};
+
+export const SOURCE_MARK = 'source-mark';
+
+const NO_FOLDS: SourceFold[] = [];
+
+type SourceViewProps = SourceHostProps & {
   source: NodeSourceData | null;
   // Why there is no source to show for a selected node; empty while no node is selected.
   note?: string;
@@ -26,11 +47,11 @@ type SourceViewProps = {
   onSelectRule?: (name: string) => void;
 };
 
-export function SourceView({ source, note = '', violation, rules = [], activeRule = '', onSelectRule = () => undefined }: SourceViewProps) {
+export function SourceView({ source, note = '', violation, rules = [], activeRule = '', onSelectRule = () => undefined, ...host }: SourceViewProps) {
   return (
     <div className="panel" data-testid="source-file">
       {source ? (
-        <SourceEditor source={source} violation={violation} rules={rules} activeRule={activeRule} onSelectRule={onSelectRule} />
+        <SourceEditor source={source} violation={violation} rules={rules} activeRule={activeRule} onSelectRule={onSelectRule} {...host} />
       ) : (
         <p className="empty-state">{note || 'Select a node'}</p>
       )}
@@ -44,7 +65,11 @@ function SourceEditor({
   rules,
   activeRule,
   onSelectRule,
-}: {
+  folds = NO_FOLDS,
+  language = '',
+  keepGlyphMargin = false,
+  onEditor,
+}: SourceHostProps & {
   source: NodeSourceData;
   violation: ViolationFocus | null;
   rules: SourceRule[];
@@ -59,18 +84,24 @@ function SourceEditor({
   const owner = members.find((member) => member.node_id === source.node_id)?.owner ?? '';
   const prepared = useMemo(
     () =>
-      inlineCallLayout(text, members, owner, {
-        openedClass: source.type === 'OoadClass' ? source.name : '',
-        origin: source.start_line || 1,
-      }),
-    [source, text, members, owner],
+      withNamedFolds(
+        inlineCallLayout(text, members, owner, {
+          openedClass: source.type === 'OoadClass' ? source.name : '',
+          origin: source.start_line || 1,
+        }),
+        folds,
+      ),
+    [source, text, members, owner, folds],
   );
+  const initialOpen = () => [...openBlockFolds(prepared.folds, source.type), ...folds.map((fold) => foldKey(namedFold(fold)))];
   const [openFor, setOpenFor] = useState(source.node_id);
-  const [openFolds, setOpenFolds] = useState<string[]>(() => openBlockFolds(prepared.folds, source.type));
+  const [openFolds, setOpenFolds] = useState<string[]>(initialOpen);
   if (openFor !== source.node_id) {
     setOpenFor(source.node_id);
-    setOpenFolds(openBlockFolds(prepared.folds, source.type));
+    setOpenFolds(initialOpen());
   }
+  const glyphs = useRef(keepGlyphMargin);
+  glyphs.current = keepGlyphMargin;
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
   const decorations = useRef<monaco.IEditorDecorationsCollection | null>(null);
   const hideSource = useRef({ id: 'call-folds' });
@@ -97,6 +128,7 @@ function SourceEditor({
       decorations,
       prepared.depths,
       violationLineDecorations(prepared.lineNumbers, markStart, markEnd, Boolean(violation)),
+      glyphs.current,
     );
   }, [prepared.text, prepared.folds, prepared.depths, openFolds, prepared.lineNumbers, markStart, markEnd, violation]);
 
@@ -109,7 +141,8 @@ function SourceEditor({
       hideSource.current,
       decorations,
       depthsRef.current,
-        violationLineDecorations(prepared.lineNumbers, markStart, markEnd, Boolean(violation)),
+      violationLineDecorations(prepared.lineNumbers, markStart, markEnd, Boolean(violation)),
+      glyphs.current,
     );
     const nodeEl = editor.getDomNode();
     nodeEl?.addEventListener(
@@ -118,7 +151,8 @@ function SourceEditor({
         const target = editor.getTargetAtClientPoint(event.clientX, event.clientY);
         const line = target?.position?.lineNumber;
         const markHit = event.target instanceof Element && event.target.closest('.call-fold, .class-fold, .block-fold') !== null;
-        if (!line || (!markHit && target?.type !== 2)) {
+        const pageMark = event.target instanceof Element && event.target.closest(`.${SOURCE_MARK}`) !== null;
+        if (!line || pageMark || (!markHit && target?.type !== 2)) {
           return;
         }
         const fold = foldsRef.current.find((entry) => entry.glyph === line);
@@ -132,6 +166,7 @@ function SourceEditor({
       },
       true,
     );
+    onEditor?.(editor);
   };
 
   async function copyCorrectPrompt() {
@@ -183,7 +218,7 @@ function SourceEditor({
       <div className="panel-source" data-testid="source-excerpt">
         <Editor
           height={sourceHeight(prepared.text)}
-          language={languageFor(file)}
+          language={language || languageFor(file)}
           theme={document.documentElement.dataset.theme === 'engineering' ? 'vs-dark' : 'vs'}
           defaultValue={prepared.text}
           onMount={onMount}
@@ -198,7 +233,7 @@ function SourceEditor({
             fontFamily: "'JetBrains Mono', ui-monospace, monospace",
             fontSize: 13,
             lineHeight: LINE_HEIGHT,
-            glyphMargin: prepared.folds.length > 0,
+            glyphMargin: keepGlyphMargin || prepared.folds.length > 0,
             lineNumbers: (line: number) => prepared.lineNumbers[line - 1] ?? '',
             scrollbar: { handleMouseWheel: false, alwaysConsumeMouseWheel: false },
           }}
@@ -234,6 +269,16 @@ function openBlockFolds(folds: InlineFold[], nodeType?: string): string[] {
     return folds.filter((fold) => fold.kind === 'block').map((fold) => foldKey(fold));
   }
   return folds.filter((fold) => initialOpenFolds([fold]).length > 0).map((fold) => foldKey(fold));
+}
+
+// The page's folds join the layout's own, one fold to a line: a fold the layout already starts on that line stays.
+function withNamedFolds<Layout extends { folds: InlineFold[] }>(layout: Layout, folds: SourceFold[]): Layout {
+  const named = folds.map(namedFold).filter((fold) => fold.end > fold.glyph && !layout.folds.some((held) => held.glyph === fold.glyph));
+  return named.length ? { ...layout, folds: [...layout.folds, ...named] } : layout;
+}
+
+function namedFold(fold: SourceFold): InlineFold {
+  return { glyph: fold.start, start: fold.start + 1, end: fold.end, kind: fold.kind };
 }
 
 function foldKey(fold: InlineFold): string {
@@ -317,6 +362,7 @@ function applyCallFolds(
   decorations: Decorations,
   depths: number[] = [],
   violationMarks: Decoration[] = [],
+  keepGlyphMargin = false,
 ) {
   const open = new Set(openFolds);
   const ranges = hiddenRanges(folds, openFolds).map((fold) => ({
@@ -345,7 +391,7 @@ function applyCallFolds(
     ...violationMarks,
   ];
   const withOptions = editor as Parameters<OnMount>[0] & { updateOptions?(options: { glyphMargin: boolean }): void };
-  withOptions.updateOptions?.({ glyphMargin: folds.length > 0 });
+  withOptions.updateOptions?.({ glyphMargin: keepGlyphMargin || folds.length > 0 });
   if (decorations.current) {
     decorations.current.set(next);
   } else {

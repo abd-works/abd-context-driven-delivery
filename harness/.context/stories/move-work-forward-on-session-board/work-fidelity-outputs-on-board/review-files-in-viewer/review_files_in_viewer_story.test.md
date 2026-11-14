@@ -97,6 +97,14 @@ Requested (the person, 2026-11-12): bring over the folding the graph's source vi
 *When* the Person opens the comment at the marker beside line 12
 *Then* the viewer shows *an empty cart should say which cart and why* under lines 12 to 14
 
+#### Scenario: Edit a file comment
+
+Requested (the person, 2026-11-14): clicking a comment's marker opens it, where it can be edited and saved.
+
+*Given* checkout-flow's file comments hold *order.py:L12-L14*, *an empty cart should say which cart and why*, not sent
+*When* the Person edits that comment to read *say which cart is empty and why*
+*Then* checkout-flow's file comments hold *order.py:L12-L14* reading *say which cart is empty and why*, not sent
+
 #### Scenario: Delete a file comment
 
 *Given* checkout-flow's file comments hold *order.py:L12-L14*, not sent

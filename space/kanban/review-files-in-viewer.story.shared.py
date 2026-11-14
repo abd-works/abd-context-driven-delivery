@@ -47,6 +47,8 @@ from harness.chat.chat import ChatNotConnectedError
 shared_stories = SharedStories("Review Files In Viewer")
 
 CHECKOUT_FLOW = CHECKOUT_FLOW_IN_SRC_CHECKOUT
+# Interaction: the words a person changes a comment to.
+EDITED_COMMENT = "say which cart is empty and why"
 
 
 def states_on_order(world) -> dict[str, str]:
@@ -202,6 +204,23 @@ def _(s):
     @s.then("the viewer shows an empty cart should say which cart and why under lines 12 to 14")
     def _(world):
         expect([(held["range"]["start_line"], held["range"]["end_line"], held["text"]) for held in world.opened]).to(equal([(12, 14, EMPTY_CART_COMMENT.text)]))
+
+
+@shared_stories.scenario("Add Comment To File Selection", "Edit a file comment")
+def _(s):
+    @s.given("checkout-flow's file comments hold order.py:L12-L14, an empty cart should say which cart and why, not sent")
+    def _(world):
+        seed_checkout_flow(world)
+        seed_file_comments(world, EMPTY_CART_COMMENT)
+
+    @s.when("the Person edits that comment to read say which cart is empty and why")
+    def _(world):
+        world.Ticket.load(CHECKOUT_FLOW.name).session.file_comments.edit(anchor=EMPTY_CART_COMMENT.anchor, text=EDITED_COMMENT)
+
+    @s.then("checkout-flow's file comments hold order.py:L12-L14 reading say which cart is empty and why, not sent")
+    def _(world):
+        held = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file_comments.on(path=ORDER_FILE))
+        expect([(comment["anchor"], comment["text"], comment["state"]) for comment in held]).to(equal([(EMPTY_CART_COMMENT.anchor, EDITED_COMMENT, "not_sent")]))
 
 
 @shared_stories.scenario("Add Comment To File Selection", "Delete a file comment")
