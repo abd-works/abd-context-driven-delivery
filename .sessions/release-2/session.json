@@ -3,5 +3,10 @@
   "title": "release-2",
   "scope": "feature",
   "branch": "release-2",
-  "worktree": "C:\\dev\\abd-cdd-2"
+  "worktree": "C:\\dev\\abd-cdd-2",
+  "practices": {
+    "ddd": {
+      "enabled": true
+    }
+  }
 }
