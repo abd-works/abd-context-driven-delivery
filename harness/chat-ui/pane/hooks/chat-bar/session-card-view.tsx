@@ -77,16 +77,16 @@ function FidelityRowView($: EngineInterface, elements: ElementTable, fidelity: F
 // The session card above the line, as wide as the chat with a line of space below it: the server health panel on top,
 // then, once there is a session, the shown stage's fidelities directly under it. Hovering the session name or the
 // health mark shows it; a press on either pins it, and ✕ or another press closes it.
-export function SessionCardView($: EngineInterface, elements: ElementTable, { chatBar, view, health }: ChatBarDraw) {
+export function SessionCardView($: EngineInterface, elements: ElementTable, { chatBar, view, health, width }: ChatBarDraw) {
   const { Box } = elements
   const shown = view.isCardOpen ? {} : { display: 'none' as const, hover: { display: 'flex' as const, scope: CARD_SCOPE } }
   const columns = cardColumnsOf(chatBar)
   return (
-    <Box key="session-card" flexDirection="column">
+    <Box key="session-card" flexDirection="column" width={width}>
       <Box flexDirection="column" marginBottom={1} {...shown}>
         {health.panel}
         {chatBar.hasSession ? (
-          <Box key="card-grid" flexDirection="column" backgroundColor={BRAND.card}>
+          <Box key="card-grid" flexDirection="column" width={width} borderStyle="round" borderColor={BRAND.card} backgroundColor={BRAND.card}>
             {HeaderView($, elements, chatBar)}
             {chatBar.fidelities.map(fidelity => FidelityRowView($, elements, fidelity, columns, chatBar.foldersListedBeside.has(fidelity.slug)))}
           </Box>

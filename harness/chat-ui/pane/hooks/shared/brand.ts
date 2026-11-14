@@ -3,8 +3,8 @@
 export const BRAND = {
   surface: '#141418',
   raised: '#1B1B20',
-  // The expanded session card: a dark orange wash, so it stands apart from the prompt's grey.
-  card: '#1F140E',
+  // The expanded session card: black, so it stands apart from the prompt's grey.
+  card: '#0B0B0B',
   border: '#2A2A2A',
   text: '#E8E8ED',
   muted: '#9B9BA8',
