@@ -86,13 +86,13 @@ class ClaudePlugins:
 
     @property
     def is_board_watched(self) -> bool:
-        """Whether the user's Claude Code settings name the published board folder in ``CLAUDE_CODE_PLUGIN_DIRS``, which
-        every chat loads the mod from and reloads it from when the folder changes."""
+        """Whether the user's Claude Code settings name the board folder in ``CLAUDE_CODE_PLUGIN_DIRS``, which every chat
+        loads the mod from and reloads it from when the folder changes: a served checkout's mod folder, else the copy."""
         try:
             env = JsonFile(self._claude.user_settings_folder / "settings.json").read().get("env", {})
         except JsonFileUnreadable:
             return False
-        board = (self._home.claude_plugins / BOARD_PLUGIN).resolve()
+        board = self._home.board_folder.resolve()
         folders = str(env.get("CLAUDE_CODE_PLUGIN_DIRS", "")).split(os.pathsep)
         return any(folder.strip() and Path(folder.strip()).expanduser().resolve() == board for folder in folders)
 
