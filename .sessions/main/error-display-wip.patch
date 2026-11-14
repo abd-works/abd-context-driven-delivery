@@ -1,0 +1,415 @@
+diff --git a/harness/chat-ui/pane/hooks/board-chat/board-chat-client.ts b/harness/chat-ui/pane/hooks/board-chat/board-chat-client.ts
+index ba9a82834..52be0fd96 100644
+--- a/harness/chat-ui/pane/hooks/board-chat/board-chat-client.ts
++++ b/harness/chat-ui/pane/hooks/board-chat/board-chat-client.ts
+@@ -3,7 +3,7 @@ import type { EngineInterface } from 'claude-code'
+ 
+ import { openFileInViewer } from '../chat-bar/fidelity-files-client'
+ import { commandOf, filledPrompt, REFUSED_WITHIN_MILLISECONDS } from '../shared/chat-command'
+-import { reasonOf } from '../shared/failure'
++import { reasonOf } from '../error-display/failure-client'
+ import { after, post } from './board'
+ import { currentChatName } from './chat-name'
+ import { awaitTurn, chatWorked, finish, forgetTurn, isChatBusy, turnsSoFar } from './chat-turns'
+diff --git a/harness/chat-ui/pane/hooks/board-chat/board-server.ts b/harness/chat-ui/pane/hooks/board-chat/board-server.ts
+index 0d1c8626d..0b51f76b9 100644
+--- a/harness/chat-ui/pane/hooks/board-chat/board-server.ts
++++ b/harness/chat-ui/pane/hooks/board-chat/board-server.ts
+@@ -1,7 +1,7 @@
+ import type { EngineInterface } from 'claude-code'
+ 
+ import { openApp } from '../health/app-client'
+-import { reasonOf } from '../shared/failure'
++import { reasonOf } from '../error-display/failure-client'
+ import { projectPageUrl } from './board'
+ import { KANBAN } from '../health/server-health-client'
+ 
+diff --git a/harness/chat-ui/pane/hooks/chat-bar/chat-bar-client.ts b/harness/chat-ui/pane/hooks/chat-bar/chat-bar-client.ts
+index b014bacf8..5484183d6 100644
+--- a/harness/chat-ui/pane/hooks/chat-bar/chat-bar-client.ts
++++ b/harness/chat-ui/pane/hooks/chat-bar/chat-bar-client.ts
+@@ -6,7 +6,7 @@ import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
+ import type { TicketData } from '@cdd/space/kanban/ticket'
+ 
+ import type { ChatBarJson } from '../../types'
+-import { reasonOf } from '../shared/failure'
++import { reasonOf, showFailure } from '../error-display/failure-client'
+ import { SERVER } from '../health/server-health-client'
+ import { FidelityProgressClient, selectedFidelitySlugs } from './fidelity-progress-client'
+ import { StageClient, shownStageName } from './stage-client'
+@@ -16,7 +16,7 @@ import { StageClient, shownStageName } from './stage-client'
+ // Main is the default session: the default branch in the repository's own folder, a ticket on the board like any other.
+ export const MAIN_SESSION = 'main'
+ 
+-const chatBar = atom({ plugin: 'cdd-board', key: 'chatBar' } as const, { board: null, problem: null, failure: null } as ChatBarJson, { shape: 'chat-bar-overview-2' })
++const chatBar = atom({ plugin: 'cdd-board', key: 'chatBar' } as const, { board: null, problem: null } as ChatBarJson, { shape: 'chat-bar-overview-3' })
+ 
+ 
+ // The active session's line: health mark, session name, fidelity dots, action button, stage icons.
+@@ -30,14 +30,10 @@ export class ChatBarClient {
+   ) {
+     this.board = json.board as BoardOverviewData | null
+     this.problem = json.problem
+-    this.failure = json.failure ?? null
+   }
+ 
+   readonly problem: string | null
+ 
+-  // An action the person ran that failed, in the server's own words, shown until they dismiss it.
+-  readonly failure: string | null
+-
+   // The tickets a person can open from the main chat, each named in the stage it is in, as board.overview sends them.
+   // Main is a ticket too, but the session list shows it first on its own row, so it is left out here.
+   get openTickets(): { name: string; stage: string }[] {
+@@ -286,26 +282,12 @@ export async function restartServer($: EngineInterface): Promise<void> {
+     const restarted = await callTool<RestartData>($, 'cdd.restart', {})
+     $.ui.toast(`cdd server restarted with ${restarted.tools} tools`)
+   } catch (failure) {
+-    await showFailure($, `cdd.restart failed: ${reasonOf(failure)}`)
++    await showFailure($, 'The cdd server did not restart', 'Restart on the health panel, calling cdd.restart', failure)
+     return
+   }
+   await refreshChatBar($)
+ }
+ 
+-// An action that failed stays above the line until the person dismisses it: a toast passes before anyone reads it.
+-export async function showFailure($: EngineInterface, failure: string): Promise<void> {
+-  await update($, chatBar, json => ({ ...json, failure }))
+-}
+-
+-export async function dismissFailure($: EngineInterface): Promise<void> {
+-  await update($, chatBar, json => ({ ...json, failure: null }))
+-}
+-
+-// Fix sends what the chat bar shows to this chat's agent to find its cause and fix it.
+-export async function askChatToFix($: EngineInterface, shown: string): Promise<void> {
+-  await $.prompt.submit({ text: `The CDD chat bar above the prompt shows this; find its cause and fix it: ${shown}`, asUser: true })
+-}
+-
+ // What Fix on a board that did not answer sends: the chat bar reads the board from the cdd MCP server, which runs a
+ // pinned copy of CDD, so most of these failures are a server or install older than the CDD checkout.
+ export const BOARD_PROBLEM_STEPS = [
+@@ -337,18 +319,11 @@ export async function askChatToFixBoard($: EngineInterface, shown: string): Prom
+   await $.prompt.submit({ text: boardProblemPrompt(shown), asUser: true })
+ }
+ 
+-// Fix on a failure sends it to the chat and clears it from the line.
+-export async function fixFailure($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
+-  if (!chatBar.failure) return
+-  await askChatToFix($, chatBar.failure)
+-  await dismissFailure($)
+-}
+-
+ export async function moveNext($: EngineInterface, chatBar: ChatBarClient): Promise<ChatBarClient | MoveRefused> {
+   try {
+     await callTool<TicketData>($, 'ticket.move_next', { ticket: chatBar.sessionName })
+   } catch (failure) {
+-    await showFailure($, `${chatBar.sessionName} did not move: ${reasonOf(failure)}`)
++    await showFailure($, `${chatBar.sessionName} did not move to the next stage`, 'The stage button on the chat bar, calling ticket.move_next', failure)
+     return new MoveRefused(reasonOf(failure))
+   }
+   await refreshChatBar($)
+diff --git a/harness/chat-ui/pane/hooks/chat-bar/chat-folder-client.ts b/harness/chat-ui/pane/hooks/chat-bar/chat-folder-client.ts
+index dd1efaaeb..a4719afe9 100644
+--- a/harness/chat-ui/pane/hooks/chat-bar/chat-folder-client.ts
++++ b/harness/chat-ui/pane/hooks/chat-bar/chat-folder-client.ts
+@@ -3,7 +3,7 @@ import type { EngineInterface } from 'claude-code'
+ import type { ChatData } from '@cdd/harness/chat/chat'
+ import type { TicketData } from '@cdd/space/kanban/ticket'
+ 
+-import { reasonOf } from '../shared/failure'
++import { reasonOf } from '../error-display/failure-client'
+ import { openedWithSystem } from '../shared/system-link'
+ import { callTool, showFailure } from './chat-bar-client'
+ 
+diff --git a/harness/chat-ui/pane/hooks/chat-bar/fidelity-help-client.ts b/harness/chat-ui/pane/hooks/chat-bar/fidelity-help-client.ts
+index d11dd39eb..a636d9dae 100644
+--- a/harness/chat-ui/pane/hooks/chat-bar/fidelity-help-client.ts
++++ b/harness/chat-ui/pane/hooks/chat-bar/fidelity-help-client.ts
+@@ -4,7 +4,7 @@ import type { EngineInterface } from 'claude-code'
+ import type { HelpData } from '@cdd/space/kanban/board'
+ 
+ import type { FidelityHelpJson } from '../../types'
+-import { reasonOf } from '../shared/failure'
++import { reasonOf } from '../error-display/failure-client'
+ import { callTool } from './chat-bar-client'
+ import type { FidelityProgressClient } from './fidelity-progress-client'
+ 
+diff --git a/harness/chat-ui/pane/hooks/chat-bar/overlay-choices-client.ts b/harness/chat-ui/pane/hooks/chat-bar/overlay-choices-client.ts
+index 0978cf664..9c7bf8ce9 100644
+--- a/harness/chat-ui/pane/hooks/chat-bar/overlay-choices-client.ts
++++ b/harness/chat-ui/pane/hooks/chat-bar/overlay-choices-client.ts
+@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
+ import type { EngineInterface } from 'claude-code'
+ 
+ import type { OverlayChoiceJson, OverlayChoicesJson } from '../../types'
+-import { reasonOf } from '../shared/failure'
++import { reasonOf } from '../error-display/failure-client'
+ import { callTool, type ChatBarClient } from './chat-bar-client'
+ 
+ // The pattern overlays beside the fidelity dots: Python's ticket.overlay_choices answers every pattern with its icon and
+diff --git a/harness/chat-ui/pane/hooks/chat-bar/session-client.ts b/harness/chat-ui/pane/hooks/chat-bar/session-client.ts
+index fef41a185..7568f84d5 100644
+--- a/harness/chat-ui/pane/hooks/chat-bar/session-client.ts
++++ b/harness/chat-ui/pane/hooks/chat-bar/session-client.ts
+@@ -2,7 +2,7 @@ import type { EngineInterface } from 'claude-code'
+ 
+ import type { LeaveChoicesData, TicketData } from '@cdd/space/kanban/ticket'
+ 
+-import { reasonOf } from '../shared/failure'
++import { reasonOf } from '../error-display/failure-client'
+ import { chosenFolder } from '../shared/folder-dialog'
+ import { callTool, callToolText, currentChatBar, refreshChatBar, showFailure, type ChatBarClient } from './chat-bar-client'
+ import { whileBusy } from './busy-client'
+diff --git a/harness/chat-ui/pane/hooks/error-display/failure-client.ts b/harness/chat-ui/pane/hooks/error-display/failure-client.ts
+new file mode 100644
+index 000000000..217f21e1e
+--- /dev/null
++++ b/harness/chat-ui/pane/hooks/error-display/failure-client.ts
+@@ -0,0 +1,61 @@
++import { atom, read, update } from 'claude-code'
++import type { EngineInterface } from 'claude-code'
++
++import type { FailureData } from '@cdd/tools/error_display/failure'
++
++import type { FailureJson } from '../../types'
++
++// Every failure in the mod is shown the same way, above the chat bar's line: what failed with the reason it gave, the
++// context it failed in, Fix, which sends both to this chat to find the cause and fix it, and ✕ to dismiss it. It stays
++// until the person fixes or dismisses it, since a toast passes before anyone reads it. The shape is tools/error_display's
++// Failure; the mod builds it itself, since a failure must show while the cdd server is what is broken.
++const shownFailure = atom({ plugin: 'cdd-board', key: 'failure' } as const, null as FailureJson)
++
++export class FailureClient {
++  constructor(private readonly json: FailureData) {}
++
++  get failure(): string {
++    return this.json.failure
++  }
++
++  get context(): string {
++    return this.json.context
++  }
++
++  // What Fix sends to the chat: the failure and its context, and the ask to find the cause and fix it.
++  get fixPrompt(): string {
++    return `The CDD chat bar above the prompt shows this failure; find its cause and fix it.\n\nFailure: ${this.failure}\nContext: ${this.context}`
++  }
++}
++
++// The words a failure carries: the server's own text for a failed cdd tool, a thrown error's message otherwise.
++export function reasonOf(failure: unknown): string {
++  return failure instanceof Error ? failure.message : String(failure)
++}
++
++export async function currentFailure($: EngineInterface): Promise<FailureClient | null> {
++  const json = await read($, shownFailure)
++  return json ? new FailureClient(json as FailureData) : null
++}
++
++// Shows a failure above the line: what failed, with the reason the thrown failure gave when there is one, and the
++// context it failed in, such as the button pressed and the tool it called.
++export async function showFailure($: EngineInterface, failure: string, context: string, thrown?: unknown): Promise<void> {
++  const said = thrown === undefined ? failure : `${failure}: ${reasonOf(thrown)}`
++  await update($, shownFailure, () => ({ failure: said, context }))
++}
++
++// A catch handler that shows what it caught: `.catch(shownAsFailure($, 'The board did not load', 'Reading the board'))`.
++export function shownAsFailure($: EngineInterface, failure: string, context: string): (thrown: unknown) => Promise<void> {
++  return thrown => showFailure($, failure, context, thrown)
++}
++
++export async function dismissFailure($: EngineInterface): Promise<void> {
++  await update($, shownFailure, () => null)
++}
++
++// Fix sends the failure and its context to this chat's agent and clears it from the line.
++export async function fixFailure($: EngineInterface, failure: FailureClient): Promise<void> {
++  await $.prompt.submit({ text: failure.fixPrompt, asUser: true })
++  await dismissFailure($)
++}
+diff --git a/harness/chat-ui/pane/hooks/error-display/failure-view.tsx b/harness/chat-ui/pane/hooks/error-display/failure-view.tsx
+new file mode 100644
+index 000000000..1d90d7e6b
+--- /dev/null
++++ b/harness/chat-ui/pane/hooks/error-display/failure-view.tsx
+@@ -0,0 +1,24 @@
++import type { EngineInterface } from 'claude-code'
++
++import { BRAND } from '../shared/brand'
++import { GlyphButtonView } from '../shared/glyph-button-view'
++import { dismissFailure, fixFailure, type FailureClient } from './failure-client'
++
++type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
++
++// A failure above the chat bar's line: what failed in red, the context it failed in beneath it, Fix to send both to the
++// chat, and ✕ to dismiss it.
++export function FailureView($: EngineInterface, elements: ElementTable, failure: FailureClient | null) {
++  const { Box, Button, Text } = elements
++  if (!failure) return null
++  return (
++    <Box key="failure" flexDirection="column">
++      <Box key="failure-line" flexDirection="row" gap={1} alignItems="center">
++        <Text color={BRAND.error}>{failure.failure}</Text>
++        <Button key="fix-failure" label="Fix" variant="primary" onPress={() => fixFailure($, failure)} />
++        {GlyphButtonView(elements, 'dismiss-failure', '✕', BRAND.muted, () => dismissFailure($))}
++      </Box>
++      <Text key="failure-context" color={BRAND.muted}>{failure.context}</Text>
++    </Box>
++  )
++}
+diff --git a/harness/chat-ui/pane/hooks/health/app-client.ts b/harness/chat-ui/pane/hooks/health/app-client.ts
+index 38d0fdcd8..33e1e6367 100644
+--- a/harness/chat-ui/pane/hooks/health/app-client.ts
++++ b/harness/chat-ui/pane/hooks/health/app-client.ts
+@@ -6,7 +6,7 @@ import type { AppData, AppServerData } from '@cdd/harness/diagnostics/app'
+ import type { AppOpeningJson } from '../../types'
+ import { after } from '../board-chat/board'
+ import { openInBrowserPane } from '../shared/browser-pane'
+-import { reasonOf } from '../shared/failure'
++import { reasonOf } from '../error-display/failure-client'
+ import { refreshHealth, SERVER } from './server-health-client'
+ 
+ // A press on an app in the status row: Python's App.open installs it while it is not installed and answers it with its
+diff --git a/harness/chat-ui/pane/hooks/register.ts b/harness/chat-ui/pane/hooks/register.ts
+index 53ce11360..0c19b2d89 100644
+--- a/harness/chat-ui/pane/hooks/register.ts
++++ b/harness/chat-ui/pane/hooks/register.ts
+@@ -15,7 +15,7 @@ import { currentFidelityHelp, forgetHelp, HELP_PANE } from './chat-bar/fidelity-
+ import { FidelityHelpView } from './chat-bar/fidelity-help-view'
+ import { currentChatBarView } from './chat-bar/session-dialogs-client'
+ import { closeOptionListsOutside } from './chat-bar/option-lists-client'
+-import { reasonOf } from './shared/failure'
++import { reasonOf } from './error-display/failure-client'
+ import {
+   currentHealthView,
+   currentInstall,
+diff --git a/harness/chat-ui/pane/hooks/shared/browser-pane.ts b/harness/chat-ui/pane/hooks/shared/browser-pane.ts
+index 9c4e1699c..123d555e1 100644
+--- a/harness/chat-ui/pane/hooks/shared/browser-pane.ts
++++ b/harness/chat-ui/pane/hooks/shared/browser-pane.ts
+@@ -1,6 +1,6 @@
+ import type { EngineInterface } from 'claude-code'
+ 
+-import { reasonOf } from './failure'
++import { reasonOf } from '../error-display/failure-client'
+ 
+ // The Claude desktop app's own browser pane, as /mcp lists it: its tool that opens a tab at a URL, its tabs with their
+ // origins, and the calls that move a tab and bring it to the front.
+diff --git a/harness/chat-ui/pane/hooks/shared/chat-command.ts b/harness/chat-ui/pane/hooks/shared/chat-command.ts
+index bded238ba..cd76ad5ab 100644
+--- a/harness/chat-ui/pane/hooks/shared/chat-command.ts
++++ b/harness/chat-ui/pane/hooks/shared/chat-command.ts
+@@ -1,6 +1,6 @@
+ import type { EngineInterface } from 'claude-code'
+ 
+-import { reasonOf } from './failure'
++import { reasonOf } from '../error-display/failure-client'
+ 
+ // The engine queues a plugin's prompt or slash command until the chat is idle, the same queue a person's Ctrl+Enter
+ // uses, and either resolves only once it has run. It refuses one it will not take straight away, so one not refused by
+diff --git a/harness/chat-ui/pane/hooks/shared/failure.ts b/harness/chat-ui/pane/hooks/shared/failure.ts
+deleted file mode 100644
+index 62a9456ad..000000000
+--- a/harness/chat-ui/pane/hooks/shared/failure.ts
++++ /dev/null
+@@ -1,5 +0,0 @@
+-// The words a failure carries, for a toast or a log: the server's own text for a failed cdd tool, a thrown error's
+-// message otherwise.
+-export function reasonOf(failure: unknown): string {
+-  return failure instanceof Error ? failure.message : String(failure)
+-}
+diff --git a/harness/chat-ui/pane/types/index.d.ts b/harness/chat-ui/pane/types/index.d.ts
+index d11480255..5838e032e 100644
+--- a/harness/chat-ui/pane/types/index.d.ts
++++ b/harness/chat-ui/pane/types/index.d.ts
+@@ -20,9 +20,13 @@ export type InstallJson = { state: 'idle' | 'running' | 'installed' | 'failed';
+ export type AppOpeningJson = { label: string; state: 'idle' | 'opening' | 'failed'; error: string | null; url?: string | null }
+ 
+ // What the chat bar keeps between draws: board.overview's answer, and the server's own text when the last call failed.
+-// problem is why the last board read failed, cleared by the next read that works. failure is an action the person ran
+-// that failed, such as opening a ticket or a close, kept until they dismiss it, so a refresh never hides it.
+-export type ChatBarJson = { board: object | null; problem: string | null; failure: string | null }
++// problem is why the last board read failed, cleared by the next read that works.
++export type ChatBarJson = { board: object | null; problem: string | null }
++
++// The failure shown above the chat bar's line, tools/error_display's FailureData (what failed and the context it failed
++// in), typed where error-display/failure-client.ts reads it; null while none is shown. It stays until the person fixes
++// or dismisses it, so a refresh never hides it.
++export type FailureJson = object | null
+ 
+ // Which of the chat bar's boxes is open above the line. closing holds the branch the active session's work is on,
+ // checked out, whose work the close dialog offers to commit and push, or null. leaveChoices is what the Python Ticket
+@@ -73,6 +77,7 @@ declare module 'claude-code' {
+       install: InstallJson
+       appOpening: AppOpeningJson
+       chatBar: ChatBarJson
++      failure: FailureJson
+       chatBarView: ChatBarViewJson
+       selectedFidelities: string[]
+       actionPicker: ActionPickerJson
+diff --git a/tools/error_display/failure.py b/tools/error_display/failure.py
+new file mode 100644
+index 000000000..73849579f
+--- /dev/null
++++ b/tools/error_display/failure.py
+@@ -0,0 +1,40 @@
++"""*Failure*: something a person or the agent ran that did not work, shown the same way wherever it happened.
++
++Every failure says what failed and why, the context it failed in, and offers Fix, which sends both to the chat to find
++the cause and fix it. The chat bar shows one above its line until it is fixed or dismissed; an app outside Python builds
++the same shape from the TypeScript this class's language adapter generates, so no failure is shown differently.
++"""
++from __future__ import annotations
++
++from harness.agent_tools import agent_toolset
++from harness.agent_tools.agent_tools import agent_tool
++from harness.installation.data_class import data_field, language_adapter
++from harness.mcp.mcp_annotations import mcp
++
++
++@language_adapter(language="typescript")
++@agent_toolset
++class Failure:
++    """One failure as a person sees it: what failed with the reason it gave, and the context it failed in."""
++
++    def __init__(self, failure: str = "", context: str = "") -> None:
++        self._failure = failure
++        self._context = context
++
++    @classmethod
++    @mcp
++    @agent_tool
++    def describe(cls, failure: str, context: str) -> Failure:
++        """The failure as it is shown: failure says what failed and the reason it gave, context what was being done
++        and where, such as the action pressed and the tool it called."""
++        return cls(failure, context)
++
++    @property
++    @data_field
++    def failure(self) -> str:
++        return self._failure
++
++    @property
++    @data_field
++    def context(self) -> str:
++        return self._context
+diff --git a/tools/error_display/failure_spec.py b/tools/error_display/failure_spec.py
+new file mode 100644
+index 000000000..b6e569580
+--- /dev/null
++++ b/tools/error_display/failure_spec.py
+@@ -0,0 +1,13 @@
++"""Failure: what failed and the context it failed in, the shape every failure is shown in."""
++from expects import equal, expect
++from mamba import describe, it
++
++from tools.error_display.failure import Failure
++
++with describe(Failure):
++    with describe("a failure described"):
++        with it("should say what failed"):
++            expect(Failure.describe("Kanban did not open: npm install failed", "Opening an app from the health panel").failure).to(equal("Kanban did not open: npm install failed"))
++
++        with it("should say the context it failed in"):
++            expect(Failure.describe("Kanban did not open: npm install failed", "Opening an app from the health panel").context).to(equal("Opening an app from the health panel"))
