@@ -585,6 +585,7 @@ class FidelityGuidance(Guidance):
         clean_engineering: FidelityGuidance | None = None,
     ) -> None:
         super().__init__(format=default_format)
+        self._is_given = False
         self.name = name
         self.stage = stage
         self.default_format = default_format
@@ -695,6 +696,7 @@ class FidelityGuidance(Guidance):
         return parent
 
     _format: Format = Format()
+    _is_given: bool = False
     _default_format: Format = Format()
 
     @property
@@ -703,7 +705,10 @@ class FidelityGuidance(Guidance):
         practice works in, else the first format chosen there, else the one it was given or its default. A format it
         does not write, such as one an action names for a practice of its own, is worked in for as long as it is held."""
         chosen = self.session_output.chosen_formats if self.session_output is not None else []
-        if not chosen or self._format in chosen or not self.offers(self._format):
+        if not chosen or not self.offers(self._format):
+            return self._format
+        # Its default is not a format it was given: a session's chosen formats come before it.
+        if self._is_given and self._format in chosen:
             return self._format
         return Format(chosen[0])
 
@@ -712,6 +717,7 @@ class FidelityGuidance(Guidance):
         """Work in value from now on; in a session, a format the fidelity writes is chosen there too, so the next
         action on it works in it without being told."""
         self._format = Format(value)
+        self._is_given = bool(self._format)
         if self._format and self.session_output is not None and self.offers(self._format):
             self.session_output.choose_format(self._format, True)
 
