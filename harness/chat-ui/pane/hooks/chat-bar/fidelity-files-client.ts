@@ -2,8 +2,6 @@ import type { EngineInterface } from 'claude-code'
 
 import { projectPageUrl } from '../board-chat/board'
 import { runningBoardUrl } from '../board-chat/board-server'
-import { openApp } from '../health/app-client'
-import { FILES } from '../health/server-health-client'
 import { openInBrowserPane } from '../shared/browser-pane'
 import { currentChatBar } from './chat-bar-client'
 import type { FidelityProgressClient } from './fidelity-progress-client'
@@ -21,7 +19,9 @@ async function openLink($: EngineInterface, what: string, appUrl: () => Promise<
   if (problem) $.ui.toast(`${what} did not open at ${link}: ${problem}`)
 }
 
-const filesAppUrl = ($: EngineInterface) => async (): Promise<string> => (await openApp($, FILES)).url
+// The Files app is the board's own server answering its /files page, so it is readied as the board is.
+const FILES_PAGE = '/files'
+const filesAppUrl = ($: EngineInterface) => async (): Promise<string> => new URL(FILES_PAGE, await runningBoardUrl($)).toString()
 
 const openFilesLink = ($: EngineInterface, what: string, query: Record<string, string>) => openLink($, what, filesAppUrl($), query)
 

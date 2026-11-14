@@ -235,9 +235,9 @@ function OverlayListView($: EngineInterface, { Box, Button, Text }: ElementTable
 function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
   const { Box, Text } = elements
   const { chatBar } = draw
-  if (!chatBar.hasSession) return <Box key="line" flexDirection="row" gap={1} backgroundColor={BRAND.bar}>{draw.health.band}<Box flexGrow={1} />{SessionNameView($, elements, draw)}</Box>
+  if (!chatBar.hasSession) return <Box key="line" flexDirection="row" gap={1}>{draw.health.band}<Box flexGrow={1} />{SessionNameView($, elements, draw)}</Box>
   return (
-    <Box key="line" flexDirection="row" gap={1} flexWrap="wrap" alignItems="center" backgroundColor={BRAND.bar}>
+    <Box key="line" flexDirection="row" gap={1} flexWrap="wrap" alignItems="center">
         {draw.health.band}
         {StageButtonView($, elements, draw)}
         <Text color={BRAND.border}>{SEPARATOR}</Text>

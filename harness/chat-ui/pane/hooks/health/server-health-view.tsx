@@ -23,10 +23,10 @@ type Band = {
   actions: Actions
 }
 const LOOKS = {
-  connected: { glyph: '✓', color: BRAND.success, wash: BRAND.successWash, border: BRAND.success },
-  reconnecting: { glyph: '⟳', color: BRAND.warning, wash: BRAND.raised, border: BRAND.border },
-  disconnected: { glyph: '✕', color: BRAND.error, wash: BRAND.errorWash, border: BRAND.error },
-  'tools-missing': { glyph: '!', color: BRAND.warning, wash: BRAND.warningWash, border: BRAND.warning },
+  connected: { glyph: '✓', color: BRAND.success, wash: BRAND.successWash },
+  reconnecting: { glyph: '⟳', color: BRAND.warning, wash: BRAND.raised },
+  disconnected: { glyph: '✕', color: BRAND.error, wash: BRAND.errorWash },
+  'tools-missing': { glyph: '!', color: BRAND.warning, wash: BRAND.warningWash },
 }
 
 
@@ -122,9 +122,6 @@ function ExpandedView(elements: ElementTable, band: Band) {
     <Box
       key="card-health"
       flexDirection="column"
-      paddingX={1}
-      borderStyle="single"
-      borderColor={look.border}
       backgroundColor={look.wash}
     >
       {HeadlineView(elements, health)}

@@ -11,8 +11,6 @@ export const SERVER = 'plugin:cdd:cdd'
 export const REPORT_TOOL = 'server-health.report'
 // The CDD Kanban's label, which App.load takes as its identity: the board the chat checks in with.
 export const KANBAN = 'Kanban'
-// The file viewer, an app of its own the board's server answers at /files: the files button and session name open it.
-export const FILES = 'Files'
 export const RECONNECT_TRIES = 3
 // Its tools are named mcp__plugin_{plugin}_{server}__{tool}.
 const TOOL_PREFIX = 'mcp__plugin_cdd_cdd__'
