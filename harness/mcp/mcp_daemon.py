@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 from harness.mcp.cdd_home import CddHome
-from harness.process.process import BackgroundStart, ExclusivePort, RunningProcess, StoppableProcess
+from harness.process.process import BackgroundStart, ExclusivePort, ListeningPorts, RunningProcess, StoppableProcess
 
 SERVER_PORT_ENV = "CDD_SERVER_PORT"
 # The process a throwaway server belongs to, such as the spec run that started it on a port of its own. The server ends
@@ -64,9 +64,10 @@ class McpDaemon:
 
     HOST = "127.0.0.1"
 
-    def __init__(self, home: CddHome, port: int | None = None) -> None:
+    def __init__(self, home: CddHome, port: int | None = None, listening: ListeningPorts | None = None) -> None:
         self.home = home
         self.port = port or int(os.environ.get(SERVER_PORT_ENV) or DEFAULT_SERVER_PORT)
+        self._listening = listening or ListeningPorts()
 
     @property
     def url(self) -> str:
@@ -104,9 +105,13 @@ class McpDaemon:
         return self.ensure()
 
     def stop(self) -> None:
+        """Stop the server on the port. One that holds the port but does not answer, such as a deadlocked one, is found
+        by the port it listens on and stopped too: left running, it would keep every new server from claiming the
+        port."""
         running = self.ping()
-        if running is not None:
-            running.process.stop(_STOP_SECONDS)
+        process = running.process if running is not None else self._listening.holder(self.port)
+        if process is not None:
+            process.stop(_STOP_SECONDS)
 
     def ensure_from(self, checkout: Path) -> str:
         """Install ``~/.cdd/`` from checkout on first use and start the server when none answers. A server already

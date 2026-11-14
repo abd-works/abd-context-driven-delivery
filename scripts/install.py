@@ -49,6 +49,19 @@ def main() -> int:
         help="Serve this checkout as it is on disk to every chat, for working on CDD itself; cdd.restart reloads it. "
         "Only switches the server: run a plain install as well when skills, rules, or commands changed.",
     )
+    serving.add_argument(
+        "--from-latest",
+        action="store_true",
+        help="Pull origin main into this checkout, then run --restart-everything on the code just pulled. Stops at a "
+        "pull that fails or conflicts, before anything is stopped.",
+    )
+    serving.add_argument(
+        "--restart-everything",
+        action="store_true",
+        help="Stop every app's server and the hook server, and restart the cdd server at once, even one that holds its "
+        "port without answering; then install in full and ping the server. A chat that connected in the seconds it was "
+        "down needs its cdd connection reconnected.",
+    )
     parser.add_argument(
         "--from-chat",
         default=None,
@@ -62,6 +75,8 @@ def main() -> int:
         if chat_checkout != _REPO and (chat_checkout / "scripts" / "install.py").is_file():
             command = [sys.executable, str(chat_checkout / "scripts" / "install.py"), *(["--ide", args.ide] if args.ide else [])]
             return subprocess.run(command, cwd=chat_checkout, check=False).returncode
+    if args.from_latest:
+        return _install_from_latest(args)
     # The MCP and hook installations register with the Installer when their modules are imported.
     import harness.hooks.hook_installation  # noqa: F401
     from harness.installation.installer import Installer
@@ -81,6 +96,8 @@ def main() -> int:
         print(f"language adapters: {len(installer.write_language_adapters())} written")
         _write_runtime_adapters(installer, server)
         return 0
+    if args.restart_everything:
+        _restart_everything(installer, server)
     if args.self:
         installer.install_self(replace=not args.no_replace)
     else:
@@ -90,6 +107,48 @@ def main() -> int:
         if restarted:
             print(f"cdd server: {restarted}")
         _write_runtime_adapters(installer, server)
+    if args.restart_everything:
+        return _ping_server(server)
+    return 0
+
+
+def _install_from_latest(args) -> int:
+    pulled = subprocess.run(["git", "pull", "origin", "main"], cwd=_REPO, check=False)
+    if pulled.returncode != 0:
+        print("git pull origin main failed, so nothing was stopped or installed: resolve the pull, then run this again.", file=sys.stderr)
+        return pulled.returncode
+    # The pull may have changed this script and the installer, so the install runs in a new process on the pulled code.
+    passed = [*(["--ide", args.ide] if args.ide else []), *(["--path", args.path] if args.path else [])]
+    command = [sys.executable, str(_REPO / "scripts" / "install.py"), "--restart-everything", *passed]
+    return subprocess.run(command, cwd=_REPO, check=False).returncode
+
+
+def _restart_everything(installer, server) -> None:
+    """Stop each server an install replaces the code of, so none keeps serving what it loaded before. The cdd server
+    starts again at once rather than after the install: a chat that connects while it is down runs its header helper,
+    which waits for a server longer than Claude Code waits for the helper, and Claude Code then sends no project header,
+    is refused, and leaves that chat's cdd connection failed until it is reconnected."""
+    import space.kanban  # noqa: F401  registers the Kanban and Story UI apps
+    import space.session  # noqa: F401  registers the Files app
+    from harness.diagnostics.app import App
+    from harness.hooks.hook_installation import HookInstallation
+
+    for app in App.registered():
+        # Two apps can share one server, as the Kanban and the Story UI do; the second finds it already stopped.
+        if app.server.stop():
+            print(f"{app.label}: server stopped", flush=True)
+    HookInstallation(installer.layout, installer.path, repo=_REPO).daemon.stop()
+    print("hook server: stopped", flush=True)
+    restarted = server.daemon.restart()
+    print(f"cdd server: restarted (pid {restarted.pid})", flush=True)
+
+
+def _ping_server(server) -> int:
+    running = server.daemon.ping()
+    if running is None:
+        print(f"cdd server: no answer on {server.daemon.url} after the install; see {server.daemon.home.log_path}", file=sys.stderr)
+        return 1
+    print(f"cdd server: answers (pid {running.pid}, serving {running.source})")
     return 0
 
 
