@@ -122,6 +122,19 @@ class Ticket(Card):
         self.work = TicketWork(self)
         self.checkout = TicketCheckout(self)
         self.marks = StageMarks(self)
+        # What it has worked out about itself so far, such as its column, its parent, and whether it is done: one answer
+        # asks each many times, for every column, mark, and drop target. Forgotten whenever the ticket writes anything.
+        self._remembered: dict[str, object] = {}
+
+    def _remember(self, name: str, read):
+        """What read answers, worked out once until the ticket next writes something (``forget_reads``)."""
+        if name not in self._remembered:
+            self._remembered[name] = read()
+        return self._remembered[name]
+
+    def forget_reads(self) -> None:
+        """Forget what the ticket worked out about itself, since it has just written a change to its session."""
+        self._remembered = {}
 
     @classmethod
     @tool_subject
@@ -194,6 +207,9 @@ class Ticket(Card):
     @property
     def parent(self) -> Ticket | None:
         """The ticket its session names as its parent; none when it names none, or one the board does not have."""
+        return self._remember("parent", self._read_parent)
+
+    def _read_parent(self) -> Ticket | None:
         named = self._session.parent
         return self._board.ticket(named) if named else None
 
@@ -245,6 +261,9 @@ class Ticket(Card):
         """Complete once closed; otherwise the stage of the fidelity its latest generate or validate names, unless a
         person moved it since, which holds until the next generate or validate: the stage follows the work, forward or
         back. With neither, the first stage. Sent by its name, since the column sends the ticket."""
+        return self._remember("column", self._read_column)
+
+    def _read_column(self) -> Column:
         if self._session.is_closed:
             return self._board.column(COMPLETE_COLUMN)
         furthest_back = self._furthest_back_child_stage
@@ -262,7 +281,7 @@ class Ticket(Card):
     @data_field
     def is_active(self) -> bool:
         """Whether its session is the one saved as open, which the agent works in."""
-        return self._board.sessions.open_name == self.name
+        return self._remember("is_active", lambda: self._board.sessions.open_name == self.name)
 
     @property
     @data_field
@@ -300,6 +319,9 @@ class Ticket(Card):
     @data_field
     def is_done(self) -> bool:
         """True in a stage when a person marked it done there, or when all its enabled work there is done."""
+        return self._remember("is_done", self._read_is_done)
+
+    def _read_is_done(self) -> bool:
         column = self.column
         if not isinstance(column, Stage):
             return False
@@ -384,6 +406,7 @@ class Ticket(Card):
     def assign_chat(self, chat: str = "") -> Ticket:
         """Make chat, the id of a connected chat, ticket's chat, kept in its session.json, so every command the board sends for ticket goes there and no chat named after it is looked for; an empty chat gives ticket back to the chat named after it."""
         self.checkout.assign_chat(chat)
+        self.forget_reads()
         return self
 
     @property
@@ -422,6 +445,7 @@ class Ticket(Card):
     def choose_overlays(self, overlays: list[str]) -> list[OverlayChoice]:
         """Overlay the patterns overlays names, such as lern_domain_driven, on ticket's session's graph in place of those chosen before, refusing a name that is no pattern with NotAPatternError; return its overlay choices."""
         self._session.choose_overlays(overlays)
+        self.forget_reads()
         return self.overlay_choices()
 
     @mcp
@@ -438,6 +462,7 @@ class Ticket(Card):
     def activate(self) -> Ticket:
         """Open ticket in its own worktree, where its own chat works on it: the worktree it has, else a new one on its own branch, made when missing, after the session folders not yet committed are committed on main and pushed. Sessions open only from main: the chat that asks keeps its own session, the repository's own folder stays on main, and nothing is left or moved."""
         self.checkout.open()
+        self.forget_reads()
         return self
 
     @mcp
@@ -557,6 +582,7 @@ class Ticket(Card):
     def edit_text(self, text: str) -> Ticket:
         """Write text as what ticket's work is about, in the idea file its session folder keeps, <name>.md, under its heading; the file is made when ticket has none. Committed on main and pushed."""
         self._session.keep_text(text)
+        self.forget_reads()
         return self
 
     @mcp
@@ -565,6 +591,7 @@ class Ticket(Card):
     def tag(self, word: str) -> Ticket:
         """Tag ticket's session with word, kept in its session.json beside its other tags. Committed on main and pushed."""
         self._session.add_tag(word)
+        self.forget_reads()
         return self
 
     @mcp
@@ -594,6 +621,7 @@ class Ticket(Card):
         if self.parent is None:
             raise NotAChildError(self.name)
         self._session.mark_pulled_out()
+        self.forget_reads()
         return self
 
     @mcp
@@ -604,6 +632,7 @@ class Ticket(Card):
         if parent is not None and not self._can_be_child_of(parent):
             raise ParentLoopError(self.name, parent.name)
         self._session.set_parent(parent.session if parent is not None else None)
+        self.forget_reads()
         return self
 
     @mcp
@@ -664,6 +693,21 @@ class TicketWork:
         self._read: list[FidelityProgress] | None = None
         # The enabled part of that reading, with the reading it was picked from.
         self._enabled: tuple[list[FidelityProgress], list[FidelityProgress]] | None = None
+        # Its session's log entries as last read; none until asked for, and none again once a line is written.
+        self._entries: list[LogEntry] | None = None
+
+    @property
+    def entries(self) -> list[LogEntry]:
+        """Its session's log entries, read once with its progress, so its stage and its progress read the same lines."""
+        if self._entries is None:
+            self._entries = self._ticket.session.log.entries
+        return self._entries
+
+    @cached_property
+    def _session_file(self) -> str:
+        """Its session's session.json as a path from the project, which every command names: one per action on every
+        fidelity, so it is worked out once. A ticket whose folder moves is read again as another ticket."""
+        return self._ticket.session.session_file_from_project
 
     @cached_property
     def _required(self) -> list[tuple[Stage, FidelityGuidance]]:
@@ -675,7 +719,7 @@ class TicketWork:
     @property
     def progress(self) -> list[FidelityProgress]:
         if self._read is None:
-            entries = self._ticket.session.log.entries
+            entries = self.entries
             self._read = [FidelityProgress.from_log(fidelity, stage, entries, self._ticket) for stage, fidelity in self._required]
         return self._read
 
@@ -692,7 +736,7 @@ class TicketWork:
     def stage_worked_since_latest_move(self) -> Stage | None:
         """The stage of the fidelity the latest generate or validate line names, when that line came after the ticket's
         latest move; none when no such work followed it."""
-        entries = self._ticket.session.log.entries
+        entries = self.entries
         moves = [index for index, entry in enumerate(entries) if entry.verb == MOVED_INTO]
         since = entries[moves[-1] + 1:] if moves else entries
         for entry in reversed(since):
@@ -710,7 +754,7 @@ class TicketWork:
         if found is None:
             raise FidelityNotFoundError(slug, f"ticket {self._ticket.name!r}")
         stage, fidelity = found
-        return FidelityProgress.from_log(fidelity, stage, self._ticket.session.log.entries, self._ticket)
+        return FidelityProgress.from_log(fidelity, stage, self.entries, self._ticket)
 
     def in_stage(self, stage: Stage) -> StageWork:
         """Its work in stage: the progress of every fidelity stage requires whose practice its session works on."""
@@ -721,12 +765,14 @@ class TicketWork:
         works on them in one turn. It names the session, because the chat that runs it can have another session open,
         and no format, so the action works in the format each fidelity keeps in that session."""
         named = " ".join(fidelity.slug for fidelity in fidelities)
-        return f"/actions-{action} {named} session={self._ticket.session.session_file_from_project}"
+        return f"/actions-{action} {named} session={self._session_file}"
 
     def record(self, line: str) -> None:
         """Write line to the ticket's session log; its progress is read from the log again next time it is asked for."""
         self._ticket.session.log.record(line)
         self._read = None
+        self._entries = None
+        self._ticket.forget_reads()
 
 
 class StageMarks:

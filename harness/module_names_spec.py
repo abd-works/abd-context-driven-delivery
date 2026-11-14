@@ -7,6 +7,7 @@ twice under the two names, and its classes, ``isinstance`` checks, and class-lev
 import ast
 import collections
 import importlib
+import re
 import sys
 from pathlib import Path
 
@@ -55,9 +56,25 @@ def _short_names() -> set[str]:
     return short
 
 
+# An import statement, wherever it sits: the module after `from`, or every module after `import`. A file whose import
+# statements name none of the short names cannot import one, so only the files they name one in are parsed.
+_IMPORT_LINE = re.compile(r"^[ \t]*(?:from[ \t]+(\w+)|import[ \t]+([^\n#;]+))", re.M)
+
+
+def _names_a_short_name(text: str, short: set[str]) -> bool:
+    for match in _IMPORT_LINE.finditer(text):
+        modules = [match.group(1)] if match.group(1) else [part.split()[0] for part in match.group(2).split(",") if part.strip()]
+        if any(module.split(".")[0] in short for module in modules):
+            return True
+    return False
+
+
 def _short_name_imports(path: Path, short: set[str]) -> list[str]:
+    text = path.read_text(encoding="utf-8")
+    if not _names_a_short_name(text, short):
+        return []
     try:
-        tree = ast.parse(path.read_text(encoding="utf-8"))
+        tree = ast.parse(text)
     except SyntaxError:
         return []
     found = []
@@ -71,10 +88,14 @@ def _short_name_imports(path: Path, short: set[str]) -> list[str]:
 
 def _files_loaded_twice() -> list[str]:
     by_file = collections.defaultdict(list)
+    packages = [_REPO / package for package in _PACKAGES]
     for name, module in list(sys.modules.items()):
         file = getattr(module, "__file__", None)
-        if file and any(Path(file).resolve().is_relative_to(_REPO / package) for package in _PACKAGES):
-            by_file[Path(file).resolve()].append(name)
+        if not file:
+            continue
+        resolved = Path(file).resolve()
+        if any(resolved.is_relative_to(package) for package in packages):
+            by_file[resolved].append(name)
     return [f"{file.relative_to(_REPO).as_posix()}: {sorted(names)}" for file, names in by_file.items() if len(names) > 1]
 
 

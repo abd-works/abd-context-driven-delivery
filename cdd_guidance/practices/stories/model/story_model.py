@@ -1490,9 +1490,15 @@ class StoryModel(StoryNode):
     def stories_named(self, names: List[str]) -> List["Story"]:
         """This map's own stories that names name, in the order names gives them; a name no story has adds nothing. A
         thin slice names the stories it delivers, so an increment read from one takes the map's stories through this."""
-        stories = self.every_story()
-        matches = ([story for story in stories if story.name == name] for name in names)
-        return [found[0] for found in matches if found]
+        first = self.stories_by_name()
+        return [first[name] for name in names if name in first]
+
+    def stories_by_name(self) -> Dict[str, "Story"]:
+        """Each name a story of this map has, mapped to the first story in map order that has it."""
+        first: Dict[str, "Story"] = {}
+        for story in self.every_story():
+            first.setdefault(story.name, story)
+        return first
 
     def place_in(self, file: str) -> None:
         """Name file on every epic and story of this map that names no file yet; the line stays unknown."""

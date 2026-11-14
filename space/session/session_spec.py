@@ -2,7 +2,6 @@
 import json
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
 import threading
@@ -27,6 +26,7 @@ from harness.guidance_actions import GuidanceAction
 from harness.hooks.hook_server import HookPayload
 from harness.agent_tools.tool_call import ToolCall
 from harness.mcp.mcp_server import McpServer
+from space.repo.mock_repo import MockGit
 from space.repo.repo import Repo
 from space.session import Session, Sessions
 from harness.agent_tools.chat_pointer import ChatPointer
@@ -238,16 +238,16 @@ with description("a session"):
         # .sessions, and the ticket's worktree carries only its work.
         with context("from the linked worktree of a ticket"):
             with before.each:
-                git = ["git", "-c", "user.name=t", "-c", "user.email=t@t"]
-                subprocess.run(["git", "init", "-q", "-b", "main"], cwd=self.repo, check=True)
-                subprocess.run([*git, "commit", "-q", "--allow-empty", "-m", "start"], cwd=self.repo, check=True)
+                # The repository and its worktree held in memory: what is checked out where is all these examples ask git.
+                held = MockGit(self.repo.resolve())
+                held.make_clone()
                 Sessions(self.repo).create("alpha")
-                self.worktree = Path(tempfile.mkdtemp()) / "alpha"
-                subprocess.run(["git", "worktree", "add", "-q", "-b", "alpha", str(self.worktree)], cwd=self.repo, check=True)
+                self.worktree = Path(tempfile.mkdtemp()).resolve() / "alpha"
+                held.add_worktree("alpha", self.worktree)
                 self.called = self.worktree
 
             with after.each:
-                subprocess.run(["git", "worktree", "remove", "--force", str(self.worktree)], cwd=self.repo, check=False)
+                shutil.rmtree(self.worktree.parent, ignore_errors=True)
 
             with it("should work on that ticket's session"):
                 expect(Sessions(self.called).current().name).to(equal("alpha"))

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 import zlib
-from functools import cached_property
+from functools import cached_property, lru_cache
 from typing import TYPE_CHECKING, Callable, Optional
 from pathlib import Path, PurePosixPath
 
@@ -37,11 +37,18 @@ def _imported_modules(text: str) -> dict[str, str]:
     """Each name the story file imports, mapped to the module it comes from, written as a path without its extension
     the way the story test's language names it: TypeScript and JavaScript as the import says, Python and Java with
     their dots turned into folders."""
+    return dict(_scanned_imports(text))
+
+
+@lru_cache(maxsize=128)
+def _scanned_imports(text: str) -> tuple[tuple[str, str], ...]:
+    """The imports of text, scanned once per text: every story of a story map is recorded from the same file, so the
+    same text is asked about once per story."""
     imported: dict[str, str] = {}
     for name, module in [*_script_imports(text), *_python_imports(text), *_java_imports(text)]:
         if name and name != "*":
             imported.setdefault(name, module)
-    return imported
+    return tuple(imported.items())
 
 
 def _script_imports(text: str) -> list[tuple[str, str]]:
@@ -153,17 +160,29 @@ def step_node_id(kind: str, file: str, line: int, name: str) -> str:
 def story_file_facts(text: str) -> dict:
     """Facts a story file owns, read from its text: they sit on the Story node, and its scenarios, steps, and examples
     read them through get_fact."""
+    export_names, domain_class_names = _scanned_names(text)
     return {
-        "export_names": _EXPORT_CONST.findall(text),
-        "domain_class_names": _DOMAIN_CLASS.findall(text),
+        "export_names": list(export_names),
+        "domain_class_names": list(domain_class_names),
         "imported_modules": _imported_modules(text),
     }
 
 
+@lru_cache(maxsize=128)
+def _scanned_names(text: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """The exported constants and domain classes text declares, scanned once per text."""
+    return tuple(_EXPORT_CONST.findall(text)), tuple(_DOMAIN_CLASS.findall(text))
+
+
 def declared_evidence(text: str) -> list[str]:
     """The evidence a sub-epic file declares in its opening docblock; none when it declares none."""
+    return list(_scanned_evidence(text))
+
+
+@lru_cache(maxsize=128)
+def _scanned_evidence(text: str) -> tuple[str, ...]:
     declared = _EVIDENCE_LINE.search(_opening_docblock(text.splitlines()))
-    return [part.strip() for part in declared.group(1).split(",") if part.strip()] if declared else []
+    return tuple(part.strip() for part in declared.group(1).split(",") if part.strip()) if declared else ()
 
 
 class StoryRecording:
@@ -179,6 +198,7 @@ class StoryRecording:
         self.story_at = 0
         self.story_total = len(story_map.every_story())
         self._cursor: dict[str, int] = {}
+        self._lines: dict[str, list[str]] = {}
 
     def write(self) -> None:
         for epic in self.story_map.epics:
@@ -250,14 +270,14 @@ class StoryRecording:
           read (an examples module the story test imports); otherwise the story file's own apply."""
         text = self._function_sources.get(name, "")
         facts = {"source_names": sorted(set(_IDENTIFIER.findall(text))), "source_reads": sorted(set(_MEMBER_READ.findall(text)))}
-        source = example_source_file(file, story_file_facts(self.text_of(file))["imported_modules"], name)
+        source = example_source_file(file, _imported_modules(self.text_of(file)), name)
         if source != file and self.text_of(source):
-            facts["export_names"] = _EXPORT_CONST.findall(self.text_of(source))
+            facts["export_names"] = list(_scanned_names(self.text_of(source))[0])
         return facts
 
     def name_span(self, file: str, name: str, folder: str) -> "Source":
         """The line of file that names name; the folder alone when no line of file does."""
-        line = next((index for index, text in enumerate(self.text_of(file).splitlines(), start=1) if name and name in text), None)
+        line = next((index for index, text in enumerate(self._lines_of(file), start=1) if name and name in text), None)
         return source_at(file, line) if line is not None else source_at(folder or ".")
 
     def span_of(self, node, file: str, fallback_text: str = "") -> "Source":
@@ -268,8 +288,15 @@ class StoryRecording:
         line = self._next_line(file, fallback_text or node.name)
         return source_at(file, line)
 
+    def _lines_of(self, file: str) -> list[str]:
+        """The lines of file's text, split once for the whole recording."""
+        lines = self._lines.get(file)
+        if lines is None:
+            lines = self._lines[file] = self.text_of(file).splitlines()
+        return lines
+
     def _next_line(self, file: str, text: str) -> int:
-        lines = self.text_of(file).splitlines()
+        lines = self._lines_of(file)
         start = self._cursor.get(file, 0)
         if not text:
             return 1

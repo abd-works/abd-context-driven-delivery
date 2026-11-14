@@ -2,6 +2,7 @@
 
 import json
 import tempfile
+from enum import Enum
 from pathlib import Path
 
 from expects import be_false, be_true, contain, equal, expect, have_key, raise_error
@@ -190,6 +191,12 @@ with description("a language adapter"):
 
         with it("should leave out a property it does not annotate"):
             expect(data_of(self.card)).not_to(have_key("unshown"))
+
+        with it("should send an enumeration built on str as its value, though it is a str"):
+            class Mark(str, Enum):
+                DONE = "done-mark"
+
+            expect(type(data_of(Mark.DONE))).to(equal(str))
 
     with description("the installation of an annotated toolset"):
         with before.all:

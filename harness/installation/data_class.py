@@ -167,9 +167,19 @@ class DataClass:
         """Whether field sends the object it holds by that object's identity alone."""
         return bool(getattr(field.fget, DataField.reference_flag, False))
 
+    @functools.cached_property
+    def _sent(self) -> tuple[tuple[str, Any, bool], ...]:
+        """Each field as `data` sends it: its key, its getter, and whether it sends what it holds by identity alone. Every
+        answer sends thousands of objects, so this is read once per class rather than once per object."""
+        return tuple((key, field.fget, self.sends_by_identity(field)) for key, field in self.fields.items())
+
     def data(self, value: Any) -> dict[str, Any]:
         """value's annotated fields as plain data."""
-        return {key: self._field_data(field, value) for key, field in self.fields.items()}
+        sent: dict[str, Any] = {}
+        for key, getter, by_identity in self._sent:
+            held = getter(value)
+            sent[key] = self._referenced(held) if by_identity else data_of(held)
+        return sent
 
     def reference(self, value: Any) -> dict[str, Any]:
         """value by its identity alone, such as `{"name": "Discovery"}` for a stage, so data can name an object that is
@@ -180,12 +190,11 @@ class DataClass:
         fields = self.fields
         return {key: self._identity_data(fields[key].fget(value)) for key in self.identity}
 
-    def _field_data(self, field: property, value: Any) -> Any:
-        held = field.fget(value)
-        return self._referenced(held) if self.sends_by_identity(field) else data_of(held)
-
     def _identity_data(self, held: Any) -> Any:
-        return DataClass.of(type(held)).reference(held) if held is not None and DataClass.of(type(held)).identity else data_of(held)
+        if held is None:
+            return data_of(held)
+        held_class = DataClass.of(type(held))
+        return held_class.reference(held) if held_class.identity else data_of(held)
 
     def _referenced(self, held: Any) -> Any:
         if held is None:
@@ -195,11 +204,17 @@ class DataClass:
         return DataClass.of(type(held)).reference(held)
 
 
+# The types data_of sends as they are, matched exactly.
+_PLAIN_TYPES = frozenset({str, int, float, bool, type(None)})
+
+
 def data_of(value: Any) -> Any:
     """value as plain JSON data: an object with annotated properties as its fields, each object it holds as its own data.
 
     This is the one way a value of any type becomes data, for MCP results and every other JSON answer, so a path reads
     the same wherever it is sent: with forward slashes."""
+    if type(value) in _PLAIN_TYPES:  # most of an answer's values; an Enum built on str is no plain str, so it is sent below
+        return value
     if isinstance(value, Enum):
         return value.value
     if value is None or isinstance(value, (str, int, float, bool)):
