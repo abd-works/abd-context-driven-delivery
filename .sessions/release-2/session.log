@@ -1,3 +1,8 @@
 2026-11-14T19:52:32Z --- 1
 2026-11-14T19:52:58Z tool sessions.switch f3705dfb-0700-4a2a-8a82-90a4ec461afb C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\f3705dfb-0700-4a2a-8a82-90a4ec461afb.jsonl 1-66
 2026-11-14T20:57:39Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-1858
+2026-11-14T20:58:59Z error chat.send C:\dev\abd-context-driven-delivery\.sessions\release-2\session.err 1 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-1973
+2026-11-14T20:59:01Z error chat.send C:\dev\abd-context-driven-delivery\.sessions\release-2\session.err 23 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-1973
+2026-11-14T20:59:02Z error chat.send C:\dev\abd-context-driven-delivery\.sessions\release-2\session.err 45 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-1973
+2026-11-14T21:04:23Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-1992
+2026-11-14T21:04:30Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-1992
