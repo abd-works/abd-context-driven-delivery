@@ -10,7 +10,7 @@ from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.files import skill
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 
 _NEVER_WALKED = frozenset({".git", ".venv", "node_modules"})
 

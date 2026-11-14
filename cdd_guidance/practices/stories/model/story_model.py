@@ -19,7 +19,7 @@ from harness.graph.model_node import ModelNode
 from harness.graph.graph import Graph
 from harness.annotations.name import Name
 from harness.installation.data_class import SourceFile, data_field, identity, language_adapter
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, WrittenBlock

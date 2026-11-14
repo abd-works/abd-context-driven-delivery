@@ -2,7 +2,6 @@
 import os
 import shutil
 import subprocess
-import tempfile
 from pathlib import Path
 
 from expects import be, be_false, be_none, be_true, contain, equal, expect
@@ -12,6 +11,7 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
+from space.repo.built_once import BuiltOnce  # noqa: E402
 from space.repo.repo import Repo  # noqa: E402
 from space.session.throwaway_project import SpecRunHome
 
@@ -20,7 +20,7 @@ def _git(root: Path, *args: str) -> str:
     return subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True, text=True).stdout.strip()
 
 
-def _clone_with_origin(root: Path) -> tuple[Path, Path]:
+def _clone_with_origin(root: Path) -> None:
     origin = root / "origin.git"
     clone = root / "clone"
     subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True, capture_output=True)
@@ -32,13 +32,15 @@ def _clone_with_origin(root: Path) -> tuple[Path, Path]:
     _git(clone, "add", ".gitignore")
     _git(clone, "commit", "-q", "-m", "seed")
     _git(clone, "push", "-q", "origin", "main")
-    return origin, clone
+
+
+_REPOSITORIES = BuiltOnce("worktree-spec-", _clone_with_origin)
 
 
 with description("a worktree opened for a branch") as self:
     with before.each:
-        self.tmp = Path(tempfile.mkdtemp(prefix="worktree-spec-"))
-        self.origin, self.clone = _clone_with_origin(self.tmp)
+        self.tmp = _REPOSITORIES.copy()
+        self.origin, self.clone = self.tmp / "origin.git", self.tmp / "clone"
 
     with after.each:
         shutil.rmtree(self.tmp, ignore_errors=True)
@@ -95,8 +97,8 @@ with description("a worktree opened for a branch") as self:
 
 with description("a branch on a clone") as self:
     with before.each:
-        self.tmp = Path(tempfile.mkdtemp(prefix="branch-spec-"))
-        self.origin, self.clone = _clone_with_origin(self.tmp)
+        self.tmp = _REPOSITORIES.copy()
+        self.origin, self.clone = self.tmp / "origin.git", self.tmp / "clone"
 
     with after.each:
         shutil.rmtree(self.tmp, ignore_errors=True)
@@ -116,10 +118,8 @@ with description("a branch on a clone") as self:
 with description("a Repo and its checkouts") as self:
     with before.each:
         SpecRunHome.ensure()
-
-    with before.each:
-        self.tmp = Path(tempfile.mkdtemp(prefix="repo-parts-spec-"))
-        self.origin, self.clone = _clone_with_origin(self.tmp)
+        self.tmp = _REPOSITORIES.copy()
+        self.origin, self.clone = self.tmp / "origin.git", self.tmp / "clone"
         self.repo = Repo(self.clone)
 
     with after.each:

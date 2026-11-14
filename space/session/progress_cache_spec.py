@@ -19,6 +19,9 @@ from space.session.progress_cache import HAS_OUTPUT, PROGRESS_CACHE_FILE, VIOLAT
 _WAIT_SECONDS = 10
 
 
+_SAVE_SECONDS = 0.05
+
+
 def _until(condition) -> bool:
     deadline = time.monotonic() + _WAIT_SECONDS
     while time.monotonic() < deadline and not condition():
@@ -41,7 +44,8 @@ class _Counting:
 with description("a session's progress cache"):
     with before.each:
         self.folder = Path(tempfile.mkdtemp(prefix="cdd-progress-cache-"))
-        self.cache = ProgressCache(self.folder)
+        # The cache writes a moment after it answers; an example that waits for the file need not wait a second.
+        self.cache = ProgressCache(self.folder, save_seconds=_SAVE_SECONDS)
         self.files_found = _Counting(True)
 
     with after.each:

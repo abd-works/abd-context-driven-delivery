@@ -22,6 +22,11 @@ _PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 _STILL_ACTIVE = 259
 # How long a stop waits between looks at whether the process has ended.
 _POLL_SECONDS = 0.05
+# How long a connect to a port of this computer waits. A listening server accepts at once; where nothing listens,
+# Windows retries the connect for about two seconds (four for ``localhost``, tried as ::1 and then 127.0.0.1) before it
+# reports it refused, so a caller waiting longer only waits out those retries.
+LOOPBACK_CONNECT_SECONDS = 0.5
+
 # GetExtendedTcpTable's TCP_TABLE_OWNER_PID_LISTENER: only listening sockets, each with its process id.
 _TCP_TABLE_OWNER_PID_LISTENER = 3
 # The table's leading socket count, a DWORD, before its rows.
@@ -107,6 +112,13 @@ class ExclusivePort:
     def holder(self) -> StoppableProcess | None:
         """The process listening on this port now; none when none is."""
         return ListeningPorts().holder(self.port)
+
+    def connect(self, reply_seconds: float) -> socket.socket:
+        """A connection to the server listening on this port, which then waits up to reply_seconds for each reply.
+        Raises ``OSError`` within ``LOOPBACK_CONNECT_SECONDS`` when no server listens here."""
+        connection = socket.create_connection((self.host, self.port), timeout=LOOPBACK_CONNECT_SECONDS)
+        connection.settimeout(reply_seconds)
+        return connection
 
     def claim(self) -> socket.socket | None:
         """A listening socket on the port; none when another server already holds it, so the loser exits."""

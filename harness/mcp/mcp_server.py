@@ -1,4 +1,4 @@
-"""The ``@mcp`` annotation, the install that writes each IDE's MCP entry, and the cdd server's MCP side: one *McpServer* of
+"""The install that writes each IDE's MCP entry, and the cdd server's MCP side: one *McpServer* of
 toolsets for each project, and the *McpHost* answering every chat with them."""
 from __future__ import annotations
 
@@ -30,8 +30,8 @@ from harness.installation.ide_layout import IdeLayout
 from harness.installation.installer import Installer
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.installation.repository_toolsets import RepositoryToolsets
-from harness.annotations.annotation import Destination, Annotation
 from harness.mcp.cdd_home import CddHome
+from harness.mcp.mcp_annotations import LongCall, Mcp  # noqa: F401 - importing the server defines Mcp, the channel install reads
 from harness.mcp.claude_plugins import ClaudePlugins
 from harness.mcp.mcp_daemon import CHAT_HEADER, CHAT_PROCESS_HEADER, MCP_PATH, PING_PATH, PROJECT_HEADER, McpDaemon
 from harness.mcp.server_hooks import CddServerHooks
@@ -51,25 +51,6 @@ LONG_CALL_SECONDS = 600
 _LEGAL_MCP_NAME = re.compile(r"[A-Za-z0-9_.-]+")
 # Claude Code names the cdd plugin's tools mcp__plugin_cdd_cdd__{tool}, so this one entry allows every one of them.
 CLAUDE_TOOLS_PERMISSION = "mcp__plugin_cdd_cdd"
-
-
-class Mcp(Destination):
-    flag = "_mcp"
-    channel = InstallDestination.MCP
-
-
-mcp = Mcp
-
-
-class LongCall(Annotation):
-    """Annotate an MCP operation whose call may take minutes, such as one that walks the repository, waits on git over the
-    network, or probes every other tool. The cdd server waits ``LONG_CALL_SECONDS`` for its answer, not
-    ``CALL_SECONDS``, before telling the chat it is still running."""
-
-    flag = "_long_call"
-
-
-long_call = LongCall
 
 
 class McpStandupFailed(Exception):

@@ -32,6 +32,11 @@ function Set-TestEnvironment {
     $env:PYTHONPATH = (($roots | ForEach-Object { Join-Path $repo $_ }) -join [IO.Path]::PathSeparator)
     $env:PYTHONUTF8 = "1"
     $env:PYTHONIOENCODING = "utf-8"
+    # Every spec process imports the framework and its packages (mcp, pydantic, httpx, coverage) anew. A Claude Code
+    # chat runs its commands with PYTHONDONTWRITEBYTECODE set, which would make each one compile them all again, so the
+    # run writes bytecode, in the checkout's one bytecode folder, as the cdd server and hook daemon do.
+    Remove-Item Env:PYTHONDONTWRITEBYTECODE -ErrorAction SilentlyContinue
+    $env:PYTHONPYCACHEPREFIX = Join-Path $repo ".pycache"
     # Specs keep what chats have open in a cdd home of their own, never the one the running cdd server uses, and no
     # spec answers as the chat that started the run.
     $env:CDD_HOME = Join-Path ([IO.Path]::GetTempPath()) ("cdd-spec-home-" + [guid]::NewGuid().ToString("N"))
@@ -115,6 +120,44 @@ function Split-LargeBatches {
     }
 }
 
+# The run cannot end before its slowest batch, so the seconds each file took last time order the next run: a file that
+# took $soloSeconds or more runs in a batch of its own, and the batches expected to take longest start first. The
+# seconds live beside the bytecode, out of git; a file never timed counts as $unknownSeconds.
+$timesFile = Join-Path $repo ".pycache\spec-seconds.json"
+$soloSeconds = 20
+$unknownSeconds = 5
+
+function Read-SpecSeconds {
+    $seconds = @{}
+    try {
+        $saved = Get-Content $timesFile -Raw -ErrorAction Stop | ConvertFrom-Json
+        foreach ($property in $saved.PSObject.Properties) { $seconds[$property.Name] = [double]$property.Value }
+    } catch { }
+    return $seconds
+}
+
+function Save-SpecSeconds {
+    param([hashtable]$Seconds)
+    New-Item -ItemType Directory -Force (Split-Path $timesFile) | Out-Null
+    $Seconds | ConvertTo-Json | Set-Content -Path $timesFile -Encoding utf8
+}
+
+function Get-ExpectedSeconds {
+    param([hashtable]$Seconds, [string[]]$Relatives)
+    $total = 0.0
+    foreach ($relative in $Relatives) { $total += $(if ($Seconds.ContainsKey($relative)) { $Seconds[$relative] } else { $unknownSeconds }) }
+    return $total
+}
+
+function Get-Batches {
+    param([string[]]$Relatives, [hashtable]$Seconds)
+    $slow = @($Relatives | Where-Object { $Seconds.ContainsKey($_) -and $Seconds[$_] -ge $soloSeconds })
+    $rest = @($Relatives | Where-Object { $slow -notcontains $_ })
+    $batches = @(foreach ($relative in $slow) { [pscustomobject]@{ Name = $relative; Group = [string[]]@($relative); Count = 1 } })
+    if ($rest.Count -gt 0) { $batches += @(Split-LargeBatches ($rest | Group-Object { Get-BatchKey $_ })) }
+    return $batches | Sort-Object { Get-ExpectedSeconds $Seconds ([string[]]$_.Group) } -Descending
+}
+
 function Start-SpecBatch {
     param([string]$Executable, [string[]]$Arguments, [string]$Key, [string[]]$Relatives, [string]$OutputFolder)
     $env:CDD_HOME = Join-Path $OutputFolder ("home-" + [guid]::NewGuid().ToString("N"))
@@ -124,7 +167,7 @@ function Start-SpecBatch {
         -NoNewWindow -PassThru -RedirectStandardOutput $out -RedirectStandardError "$out.err"
     # Windows PowerShell reads a started process's exit code only when its handle was taken while it ran.
     $null = $process.Handle
-    return [pscustomobject]@{ Process = $process; Key = $Key; Relatives = $Relatives; Out = $out }
+    return [pscustomobject]@{ Process = $process; Key = $Key; Relatives = $Relatives; Out = $out; Clock = [Diagnostics.Stopwatch]::StartNew(); Seconds = 0.0 }
 }
 
 function Get-FailedFiles {
@@ -151,7 +194,8 @@ function Invoke-Reported {
     }
     $outputFolder = Join-Path ([IO.Path]::GetTempPath()) ("cdd-spec-run-" + [guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Force $outputFolder | Out-Null
-    $batches = Split-LargeBatches ($Files | ForEach-Object { Get-RelativePath $_ } | Group-Object { Get-BatchKey $_ }) | Sort-Object Count -Descending
+    $seconds = Read-SpecSeconds
+    $batches = Get-Batches ([string[]]@($Files | ForEach-Object { Get-RelativePath $_ })) $seconds
     $pending = [System.Collections.Generic.Queue[object]]::new([object[]]@($batches))
     $running = New-Object System.Collections.Generic.List[object]
     $finished = New-Object System.Collections.Generic.List[object]
@@ -162,14 +206,18 @@ function Invoke-Reported {
         }
         foreach ($batch in @($running | Where-Object { $_.Process.HasExited })) {
             $batch.Process.WaitForExit()
+            $batch.Seconds = $batch.Clock.Elapsed.TotalSeconds
+            # A batch's files share its seconds evenly: Mamba times the batch, not each file in it.
+            foreach ($relative in $batch.Relatives) { $seconds[$relative] = [Math]::Round($batch.Seconds / $batch.Relatives.Count, 1) }
             $finished.Add($batch)
             $running.Remove($batch) | Out-Null
         }
         Start-Sleep -Milliseconds 200
     }
+    Save-SpecSeconds $seconds
     foreach ($batch in ($finished | Sort-Object Key)) {
         Write-Host ""
-        Write-Host "[$($batch.Key)] $($batch.Relatives.Count) files"
+        Write-Host "[$($batch.Key)] $($batch.Relatives.Count) files, $([Math]::Round($batch.Seconds, 1)) s"
         Get-Content $batch.Out, "$($batch.Out).err" -ErrorAction SilentlyContinue | Out-Host
         Get-FailedFiles $batch | ForEach-Object { Write-Output $_ }
     }

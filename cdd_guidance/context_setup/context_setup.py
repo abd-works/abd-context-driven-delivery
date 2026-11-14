@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import dataclasses
+import functools
 import re
 from pathlib import Path
 from typing import Any, Optional
@@ -11,7 +12,7 @@ from harness.agent_tools.agent_tools import agent_tool, tools
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.files import skill
 from harness.guidance_actions import ActionWorksInNoSession
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 from cdd_guidance.context_setup.context_index import ContextIndex
 from cdd_guidance.context_setup.live_app_capture import (
     CaptureResult,
@@ -41,6 +42,15 @@ class ConversionResult:
 # ── Toolset ───────────────────────────────────────────────────────────────────
 
 _SUPPORTED = frozenset({".docx", ".doc", ".pdf", ".pptx", ".ppt", ".txt", ".md", ".html", ".htm"})
+
+
+@functools.cache
+def _document_converter() -> Any:
+    """The one MarkItDown of the process: making one registers every converter it has, which takes longer than most
+    conversions."""
+    from markitdown import MarkItDown
+
+    return MarkItDown()
 
 
 @agent_toolset
@@ -92,12 +102,10 @@ class ContextSetup:
         Returns a ConversionResult containing markdown_files (absolute paths) and
         structure_notes (one StructureNote per file with heading_depth, heading_count,
         word_count)."""
-        from markitdown import MarkItDown
-
         root = self.session.path_named(folder_path)
         out_dir = root / "markdown"
         out_dir.mkdir(parents=True, exist_ok=True)
-        converter = MarkItDown()
+        converter = _document_converter()
         notes = [self._convert_source(converter, src, out_dir) for src in sorted(root.iterdir()) if self._is_convertible(src)]
         return ConversionResult(markdown_files=[note.file for note in notes], structure_notes=notes)
 

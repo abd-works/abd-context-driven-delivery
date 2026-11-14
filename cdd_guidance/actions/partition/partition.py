@@ -15,7 +15,7 @@ from harness.agent_tools.agent_tools import agent_tool
 from harness.agent_tools.recipe import RecipePlaceholders
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.files import skill
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 from cdd_guidance.context_setup.context_setup import ContextSetup
 
 @agent_toolset

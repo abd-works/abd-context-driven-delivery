@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from harness.agent_tools.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.diagnostics.call_diagnostics import CallDiagnostics
 from harness.installation.files import command, skill
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 
 if TYPE_CHECKING:
     from harness.installation.install_diagnostics import InstallDiagnostics

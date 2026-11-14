@@ -14,7 +14,7 @@ from harness.agent_tools.progress import report_progress
 from harness.graph.graph_app import GRAPH_APP_PORTS
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
-from harness.mcp.mcp_server import long_call, mcp
+from harness.mcp.mcp_annotations import long_call, mcp
 
 _HOST = "127.0.0.1"
 # A server listening on this machine takes a connection at once: the system completes it, not the server.

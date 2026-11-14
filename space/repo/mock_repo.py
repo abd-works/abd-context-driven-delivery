@@ -187,6 +187,7 @@ class MockRepo(Repo):
         self.default_branch = held.default_branch
         self.git = _NoGit()
         self.worktrees = MockWorktrees(self, held)
+        self._from_top: dict[Path, str] = {}
         self._held = held
 
     @property
@@ -258,7 +259,7 @@ class MockRepo(Repo):
     def push_upstream(self) -> None:
         self._held.push(self._held.branch_of(self.root))
 
-    def catch_up_with_origin(self) -> None:
+    def merge_origin_copy(self) -> None:
         return None
 
     def needs_push(self) -> bool:

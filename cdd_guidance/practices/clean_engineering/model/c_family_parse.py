@@ -19,8 +19,11 @@ _CLASS_RE = re.compile(
 )
 # A member declared with no body, ending its signature with `;`: an interface's method (`draw(scale: number): void;`,
 # `void draw(double scale);`) or an abstract one (`abstract area(width: number): number;`).
+# Everything outside the parameter list stays on one line: the class body arrives with its nested bodies blanked to
+# spaces, and a pattern free to cross lines rescans every blank line below each line start, growing with the square of
+# the body.
 _BODILESS_RE = re.compile(
-    r"^\s*(?:(?:public|protected|private|static|abstract|default|readonly)\s+)*(?:[\w<>\[\],.?]+\s+)?(\w+)\s*\(([^)]*)\)\s*(?::\s*([^;{=]+?))?\s*;\s*$",
+    r"^[ \t]*(?:(?:public|protected|private|static|abstract|default|readonly)\s+)*(?:[\w<>\[\],.?]+\s+)?(\w+)\s*\(([^)]*)\)[ \t]*(?::[ \t]*([^;{=\n]+?))?[ \t]*;[ \t]*$",
     re.M,
 )
 _NOT_MEMBERS = frozenset({"if", "for", "while", "switch", "catch", "return", "super", "this"})
@@ -47,13 +50,14 @@ _CONSTRUCTION_RE = re.compile(r"\bnew\s+$")
 _STRING_RE = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|[^`\\])*`')
 # A comment or a string, read left to right so a `//` inside a string, or a quote inside a comment, stays inside it.
 _COMMENT_OR_STRING_RE = re.compile(r"//[^\n]*|/\*.*?\*/|" + _STRING_RE.pattern, re.S)
-# A declared field, `name: Type;` or `name: Type = value;`, with its modifiers.
+# A declared field, `name: Type;` or `name: Type = value;`, with its modifiers. Like `_BODILESS_RE`, its start stays on
+# its own line.
 _FIELD_RE = re.compile(
-    r"^\s*((?:(?:public|private|protected|readonly|static|declare|override)\s+)*)(\w+)\s*:\s*([^;=\n]+?)(?:\s*=\s*[^;\n]*)?\s*;",
+    r"^[ \t]*((?:(?:public|private|protected|readonly|static|declare|override)\s+)*)(\w+)\s*:\s*([^;=\n]+?)(?:\s*=\s*[^;\n]*)?\s*;",
     re.M,
 )
 _ASSIGN_FIELD_RE = re.compile(
-    r"^\s*(?:(?:public|private|protected|readonly|static|declare|override)\s+)+(\w+)\s*=",
+    r"^[ \t]*(?:(?:public|private|protected|readonly|static|declare|override)\s+)+(\w+)\s*=",
     re.M,
 )
 class CFamilyParse:

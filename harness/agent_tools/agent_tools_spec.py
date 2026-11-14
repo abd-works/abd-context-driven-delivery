@@ -33,7 +33,7 @@ from harness.agent_tools.agent_tools import (
     toolset_collection,
 )
 from harness.hooks.hooks import hook
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 from harness.agent_tools.agent_tools import AgentInstructions, ToolSetCollectionAnnotation
 from harness.agent_tools.recipe import RecipeLineFailed, RecipePlaceholders
 from harness.agent_tools.tool_call import ToolCall

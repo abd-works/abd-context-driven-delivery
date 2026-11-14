@@ -18,7 +18,7 @@ from space.kanban.board import BACKLOG_COLUMN, Board, Card, Column
 from space.kanban.ticket import Ticket
 from space.session.idea_file import IdeaFile
 from space.session.session import SESSION_FILE
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 
 
 def open_with_system(path: Path) -> None:

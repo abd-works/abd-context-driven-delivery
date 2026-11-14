@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.agent_tools.agent_tools import SUB_AGENT_CALLER_PREAMBLE
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 from harness.installation.files import skill
 
 

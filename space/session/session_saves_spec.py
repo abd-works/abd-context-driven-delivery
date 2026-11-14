@@ -3,7 +3,6 @@
 import shutil
 import subprocess
 import sys
-import tempfile
 import time
 from pathlib import Path
 
@@ -15,19 +14,20 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from harness.process.git import RepoConnectError
+from space.repo.built_once import BuiltOnce
 from space.repo.repo import Repo
 from space.session.session_saves import SessionSaves
 
 _WAIT_SECONDS = 20
+_SETTLE_SECONDS = 0.05
 
 
 def _git(folder: Path, *args: str) -> str:
     return subprocess.run(["git", *args], cwd=folder, capture_output=True, text=True, check=True).stdout.strip()
 
 
-def _repository_with_origin() -> tuple[Path, Path]:
+def _repository_with_origin(top: Path) -> None:
     """A clone on main with one commit, and the bare repository it pushes to."""
-    top = Path(tempfile.mkdtemp(prefix="cdd-session-saves-")).resolve()
     origin, clone = top / "origin.git", top / "clone"
     _git(top, "init", "--bare", "-b", "main", str(origin))
     _git(top, "init", "-b", "main", str(clone))
@@ -38,7 +38,9 @@ def _repository_with_origin() -> tuple[Path, Path]:
     _git(clone, "commit", "-m", "start")
     _git(clone, "remote", "add", "origin", str(origin))
     _git(clone, "push", "-u", "origin", "main")
-    return clone, origin
+
+
+_REPOSITORIES = BuiltOnce("cdd-session-saves-", _repository_with_origin)
 
 
 def _until(condition) -> bool:
@@ -56,11 +58,13 @@ def _subject(folder: Path) -> str:
 
 with description("the saves of a repository's session folders on main"):
     with before.each:
-        self.clone, self.origin = _repository_with_origin()
+        top = _REPOSITORIES.copy()
+        self.clone, self.origin = top / "clone", top / "origin.git"
         self.folder = self.clone / ".sessions"
         (self.folder / "checkout-flow").mkdir(parents=True)
         (self.folder / "checkout-flow" / "session.json").write_text('{"stage": "Specification"}\n', encoding="utf-8")
-        self.saves = SessionSaves(Repo(self.clone), self.folder)
+        # Every example queues its changes before the save settles, so a short settle commits them together all the same.
+        self.saves = SessionSaves(Repo(self.clone), self.folder, settle_seconds=_SETTLE_SECONDS)
 
     with after.each:
         shutil.rmtree(self.clone.parent, ignore_errors=True)

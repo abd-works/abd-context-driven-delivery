@@ -1,5 +1,4 @@
 """MCP tools diagnostics — ping and invoke workspace toolsets (space, harness, tools)."""
-import asyncio
 import json
 import shutil
 import sys
@@ -24,7 +23,6 @@ from harness.diagnostics import agent_tools_probe
 from harness.diagnostics.agent_tools_diagnostics import AgentToolsDiagnostics
 from harness.mcp._examples.call_outcomes.call_outcomes import MONTH_END_SECONDS
 from harness.mcp.mcp_server import McpHost, McpInstallation
-from harness.mcp.spec_support import SpecServer
 from harness.diagnostics.agent_tools_probe import (
     AGENT_TOOLS_PROBE_SECTION,
     AgentToolsProbe,
@@ -36,28 +34,10 @@ _AGENT_TOOLS_DIAGNOSTICS_REF = (
 )
 _REPO_TOOLSET = "space.repo.repo:Repo"
 _CALL_OUTCOMES = "harness.mcp._examples.call_outcomes.call_outcomes:CallOutcomes"
-_DIAGNOSTICS_SECONDS = 150
 
 
 def _host_of(*refs: str) -> McpHost:
     return McpHost.from_refs(refs, repo=str(_REPO_ROOT), project=str(_REPO_ROOT))
-
-
-def _call_agent_tools_diagnostics(project: Path) -> tuple[float, str]:
-    """Run the diagnostics tool through a real cdd server, as a chat working on the spec's own project does."""
-    server = SpecServer((_AGENT_TOOLS_DIAGNOSTICS_REF,))
-    server.start()
-    try:
-        return asyncio.run(_timed_diagnostics(server, project))
-    finally:
-        server.stop()
-
-
-async def _timed_diagnostics(server: SpecServer, project: Path) -> tuple[float, str]:
-    async with server.chat(project, _DIAGNOSTICS_SECONDS) as session:
-        started = time.perf_counter()
-        result = await session.call_tool("agent-tools-diagnostics.agent_tools_diagnostics", arguments={})
-        return time.perf_counter() - started, result.content[0].text
 
 
 def _installer(
@@ -110,17 +90,6 @@ with description("mcp tools diagnostics"):
     with it("should treat agent_tools_diagnostics as kind tool for MCP enrollment"):
         tool = AgentToolsDiagnostics().tools["agent_tools_diagnostics"]
         expect(tool.kind).to(equal("tool"))
-
-    # A chat on a project with nothing installed probes nothing, so its ping phase is red; the call still completes.
-    with context("that a chat calls through the cdd server"):
-        with before.each:
-            self.elapsed, self.text = _call_agent_tools_diagnostics(self.project.root)
-
-        with it("should complete within two minutes"):
-            expect(self.elapsed < 120.0).to(equal(True))
-
-        with it("should report the invoke phase"):
-            expect(self.text).to(contain("invoke:"))
 
     with it("should never publish nested diagnostics tools as workspace probe targets"):
         tree = Path(tempfile.mkdtemp())

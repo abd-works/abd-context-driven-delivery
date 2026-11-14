@@ -14,7 +14,7 @@ from harness.agent_tools.tool_call import ToolCall
 from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.files import command
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 from harness.annotations.name import Name
 from space.repo.repo import Repo
 from space.session.file_manager import FileManager

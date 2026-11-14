@@ -7,7 +7,7 @@ import os
 import re
 import shutil
 import subprocess
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -67,9 +67,16 @@ class Worktree:
         """Bring this checkout up to date with origin. A checkout that cannot reach origin, or whose branch has moved
         apart from origin's, still opens as it is; ``sync_failure`` then says why, so the caller can tell the user the
         work may be behind origin."""
-        repository = self.repository
+        self._catch_up(self.repository.catch_up_with_origin)
+
+    def pull_fetched(self) -> None:
+        """Bring this checkout up to date with origin as the repository last fetched it, as ``fetch_pull`` does for a
+        checkout opened just after a fetch."""
+        self._catch_up(self.repository.merge_origin_copy)
+
+    def _catch_up(self, step: Callable[[], None]) -> None:
         try:
-            repository.catch_up_with_origin()
+            step()
         except RepoConnectError as exc:
             self.sync_failure = str(exc)
             logger.warning("worktree %s is not up to date with origin: %s", self.path, exc)
@@ -127,8 +134,12 @@ class Worktrees:
             self._repo.fetch()
         except RepoConnectError as exc:
             logger.warning("opening %s from local refs; fetch from origin failed: %s", branch.name, exc)
+            opened = self.add(self.sibling_folder(branch), branch)
+            opened.fetch_pull()
+            return opened
+        # The worktree shares the clone's refs, so what was just fetched is what it merges.
         opened = self.add(self.sibling_folder(branch), branch)
-        opened.fetch_pull()
+        opened.pull_fetched()
         return opened
 
     def sibling_folder(self, branch: Branch) -> Path:

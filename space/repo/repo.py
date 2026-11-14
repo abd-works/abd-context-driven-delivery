@@ -10,7 +10,7 @@ from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import tool_subject
 from harness.installation.data_class import data_field, language_adapter
 from harness.installation.files import command
-from harness.mcp.mcp_server import long_call, mcp
+from harness.mcp.mcp_annotations import long_call, mcp
 from harness.process.git import Git, RepoConnectError
 from space.repo.git_folder import GitFolder
 from space.repo.worktree import Worktree, Worktrees
@@ -83,6 +83,9 @@ class Repo:
         self.git = Git(self.root)
         # The checkouts of this repository: the main clone and the linked worktrees beside it.
         self.worktrees = Worktrees(self)
+        # Each path already written from the top. The board names every session file this way thousands of times a
+        # refresh, and the answer depends only on the path and this repository's root, which never changes.
+        self._from_top: dict[Path, str] = {}
 
     @classmethod
     @tool_subject
@@ -143,6 +146,11 @@ class Repo:
         """path as written from the repository's top, empty for the top itself, or as it is when it lies outside the
         repository, where a session may work."""
         given = Path(path)
+        if given not in self._from_top:
+            self._from_top[given] = self._written_from_top(given)
+        return self._from_top[given]
+
+    def _written_from_top(self, given: Path) -> str:
         if not given.is_relative_to(self.root):
             return given.as_posix()
         relative = given.relative_to(self.root).as_posix()
@@ -261,10 +269,14 @@ class Repo:
             self.git.run("push", "-u", "origin", branch)
 
     def catch_up_with_origin(self) -> None:
-        """Merge origin's copy of the current branch into it when origin has commits this branch lacks; nothing when
-        origin has no copy yet or this branch already holds every commit of it."""
-        branch = self.current_branch.name
+        """Fetch origin, then merge its copy of the current branch in as ``merge_origin_copy`` does."""
         self.fetch()
+        self.merge_origin_copy()
+
+    def merge_origin_copy(self) -> None:
+        """Merge origin's copy of the current branch, as last fetched, into it when origin has commits this branch lacks;
+        nothing when origin has no copy yet or this branch already holds every commit of it."""
+        branch = self.current_branch.name
         tracked = f"origin/{branch}"
         if not self.has_ref(f"refs/remotes/{tracked}") or self.git.succeeds("merge-base", "--is-ancestor", tracked, "HEAD"):
             return

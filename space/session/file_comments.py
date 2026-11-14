@@ -13,7 +13,7 @@ from harness.agent_tools.tool_call import ToolCall
 from harness.chat.chat import DONE, FAILED, Chat
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 from space.session.file_range import Range
 
 if TYPE_CHECKING:

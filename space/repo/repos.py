@@ -19,7 +19,7 @@ from harness.installation.data_class import data_field
 from harness.installation.files import command
 from harness.installation.json_file import JsonFile
 from harness.mcp.cdd_home import CddHome
-from harness.mcp.mcp_server import long_call, mcp
+from harness.mcp.mcp_annotations import long_call, mcp
 from harness.process.git import Git
 from space.repo.repo import Repo
 from space.session.session import MAIN_SESSION_NAME

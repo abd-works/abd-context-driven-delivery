@@ -14,7 +14,7 @@ from harness.agent_tools.tool_call import ToolCall
 from harness.design_canvas.versions import CanvasVersions
 from harness.guidance.guidance import DeclaredFile
 from harness.installation.data_class import data_field, identity, language_adapter
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 from harness.installation.context_config import CONTEXT_FOLDER
 from harness.markdown.format import Format
 from space.session.file_manager import FileEntry

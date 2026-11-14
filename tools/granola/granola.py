@@ -15,7 +15,7 @@ from harness.agent_tools.agent_tools import agent_tool, tool_subject
 from harness.installation.context_config import CONTEXT_FOLDER
 from harness.annotations.name import Name
 from harness.installation.files import skill
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_annotations import mcp
 
 _CONTEXT_SUBFOLDER = "granola"
 # A note's file is named for its date and title; a long title is cut so the name stays readable in a folder listing.
