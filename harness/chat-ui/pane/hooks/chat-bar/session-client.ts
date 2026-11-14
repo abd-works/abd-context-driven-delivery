@@ -8,7 +8,7 @@ import { callTool, callToolText, currentChatBar, refreshChatBar, showFailure, ty
 import { whileBusy } from './busy-client'
 import { startedChatIn } from './chat-folder-client'
 import type { RepoRowJson } from '../../types'
-import { cancelClose, closeRepoList, closeSessionList, currentChatBarView, showClose, showRepos, toggleRepoList } from './session-dialogs-client'
+import { cancelClose, chooseNewSessionFolder, closeRepoList, closeSessionList, currentChatBarView, showClose, showRepos, toggleRepoList } from './session-dialogs-client'
 
 // The person's moves between sessions: open a ticket from the main chat, create one, close the active one. Each is one
 // ticket tool; the dialogs they open and close, and what they chose, are in session-dialogs-client.ts. Sessions open
@@ -41,10 +41,13 @@ async function activatedTicket($: EngineInterface, ticketName: string): Promise<
   }
 }
 
-// A new ticket opens as one picked from the list does.
+// A new ticket opens as one picked from the list does, its session working on the folder chosen beside its name, or the
+// whole repository when none was. Python refuses a folder outside the repository.
 export async function createSession($: EngineInterface, sessionName: string): Promise<void> {
+  const path = (await currentChatBarView($)).newSessionFolder
   try {
-    const created = await callTool<TicketData>($, 'ticket.create', { title: sessionName })
+    const created = await callTool<TicketData>($, 'ticket.create', { title: sessionName, ...(path ? { path } : {}) })
+    await chooseNewSessionFolder($, '')
     await activateTicket($, created.name)
   } catch (failure) {
     await showFailure($, `${sessionName} was not created: ${reasonOf(failure)}`)
@@ -94,6 +97,13 @@ export async function openFolder($: EngineInterface, path: string): Promise<void
 export async function chooseFolder($: EngineInterface): Promise<void> {
   const path = await chosenFolder($)
   if (path) await openFolder($, path)
+}
+
+// The folder button beside the new session's name asks the system's folder picker, opened at the repository's top, for
+// the folder the session will work on; cancelling it keeps the folder chosen before.
+export async function chooseSessionFolder($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
+  const path = await chosenFolder($, { startIn: chatBar.folder, purpose: 'Choose the folder in this repository the new session works on' })
+  if (path) await chooseNewSessionFolder($, path)
 }
 
 // The close dialog offers what the Python Ticket answers closing can do with the session's work.

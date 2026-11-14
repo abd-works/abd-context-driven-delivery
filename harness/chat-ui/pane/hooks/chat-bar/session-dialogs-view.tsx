@@ -4,8 +4,8 @@ import { BRAND } from '../shared/brand'
 import type { ChatBarDraw } from './chat-bar-view'
 import { repoListRightOf, sessionListRightOf } from './bar-columns'
 import { MAIN_SESSION } from './chat-bar-client'
-import { activateTicket, chooseFolder, closeSession, createSession, openFolder, openRepo } from './session-client'
-import { cancelClose, toggleLeaving } from './session-dialogs-client'
+import { activateTicket, chooseFolder, chooseSessionFolder, closeSession, createSession, openFolder, openRepo } from './session-client'
+import { cancelClose, chooseNewSessionFolder, toggleLeaving } from './session-dialogs-client'
 import { stageIconOf } from './stage-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
@@ -70,7 +70,7 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
         <Text color={BRAND.muted}>⌂</Text>
         <Text color={BRAND.accent}>{MAIN_SESSION}</Text>
       </Box>
-      {chatBar.isClone ? TicketChoicesView($, { Button, Input }, chatBar) : <Text key="session-no-git" color={BRAND.muted}>No git here, so no ticket chats</Text>}
+      {chatBar.isClone ? TicketChoicesView($, { Box, Button, Input, Text }, { chatBar, view }) : <Text key="session-no-git" color={BRAND.muted}>No git here, so no ticket chats</Text>}
     </Box>
   )
 }
@@ -78,12 +78,39 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
 // Each ticket is a whole button, its stage icon in its label: a see-through Button laid over the name took no press in
 // the desktop app, which left the list open and deaf. Every label is padded to the longest, so each button spans the
 // list and a press anywhere on its line opens it. A ticket opens in its own worktree and chat, so only a git repository
-// offers them.
-function TicketChoicesView($: EngineInterface, { Button, Input }: Pick<ElementTable, 'Button' | 'Input'>, chatBar: ChatBarDraw['chatBar']) {
+// offers them. Beside the new session's name, a folder button picks the folder of the repository it will work on.
+function TicketChoicesView($: EngineInterface, elements: Pick<ElementTable, 'Box' | 'Button' | 'Input' | 'Text'>, { chatBar, view }: ChatBarDraw) {
+  const { Box, Button, Input } = elements
   return [
     ...sessionLabels(chatBar.openTickets).map(({ name, label }) => <Button key={`session-${name}`} plain label={label} onPress={() => activateTicket($, name)} />),
-    <Input key="new-session" placeholder="New session name" value="" onSubmit={value => (value.trim() ? createSession($, value.trim()) : undefined)} />,
+    <Box key="new-session-row" flexDirection="row" gap={1}>
+      <Input key="new-session" placeholder="New session name" value="" onSubmit={value => (value.trim() ? createSession($, value.trim()) : undefined)} />
+      <Button key="new-session-folder" plain label="▸ folder" onPress={() => chooseSessionFolder($, chatBar)} />
+    </Box>,
+    NewSessionFolderView($, elements, chatBar.folder, view.newSessionFolder),
   ]
+}
+
+// The folder of the repository the new session will work on, from the repository's top, and a button to go back to
+// the whole repository; nothing while none is chosen.
+function NewSessionFolderView($: EngineInterface, { Box, Button, Text }: Pick<ElementTable, 'Box' | 'Button' | 'Text'>, repository: string, chosen: string) {
+  if (!chosen) return null
+  return (
+    <Box key="new-session-folder-row" flexDirection="row" gap={1}>
+      <Text color={BRAND.muted} wrap="truncate-start">in {folderFromTop(repository, chosen)}</Text>
+      <Button key="new-session-folder-clear" plain label="×" onPress={() => chooseNewSessionFolder($, '')} />
+    </Box>
+  )
+}
+
+// A folder named from the repository's top, as the session will save it; one outside the repository in full, which
+// Python then refuses when the session is created.
+function folderFromTop(repository: string, folder: string): string {
+  const slashed = (path: string): string => path.replace(/\\/g, '/').replace(/\/$/, '')
+  const top = slashed(repository)
+  const path = slashed(folder)
+  if (path.toLowerCase() === top.toLowerCase()) return '(whole repository)'
+  return path.toLowerCase().startsWith(`${top.toLowerCase()}/`) ? path.slice(top.length + 1) : path
 }
 
 // In the main chat, the repositories beside this one, opened from the repository's own button before "main +",

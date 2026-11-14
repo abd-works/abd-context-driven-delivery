@@ -257,6 +257,20 @@ with description("the board tools") as self:
                 fields = json.loads((self.project.sessions / "pet-records" / "session.json").read_text(encoding="utf-8"))
                 expect(fields["workpath"]).to(equal("harness/pets"))
 
+        # The chat bar's folder picker sends the folder in full; it is kept from the repository's top all the same.
+        with context("that opens a ticket on a folder of the repository named in full"):
+            with before.each:
+                self.project.call("ticket.create", title="Pet records", scope="feature", path=str(self.project.root / "harness" / "pets"))
+
+            with it("should save that folder from the repository's top as the session's workpath"):
+                fields = json.loads((self.project.sessions / "pet-records" / "session.json").read_text(encoding="utf-8"))
+                expect(fields["workpath"]).to(equal("harness/pets"))
+
+        with context("that opens a ticket on a folder outside the repository"):
+            with it("should refuse it, naming the folder"):
+                outside = str(self.project.root.parent)
+                expect(lambda: self.project.call("ticket.create", title="Pet records", scope="feature", path=outside)).to(raise_error(Exception, contain(outside.replace("\\", "\\\\"))))
+
         with context("that opens a ticket with no folder"):
             with before.each:
                 self.project.call("ticket.create", title="Pet records", scope="feature")
