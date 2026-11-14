@@ -118,7 +118,7 @@ def _render(target: str, content, source: str, previous=None) -> dict:
 with description("a story tree rendered to code"):
     with context("that was read from a typescript story file"):
         with context("that is rendered back to typescript"):
-            with before.each:
+            with before.all:
                 self.rendered = _render("typescript", {_TS_PATH: _CUSTOMER_TYPESCRIPT}, "typescript")
 
             with it("should write the file back to the path it was read from"):
@@ -128,7 +128,7 @@ with description("a story tree rendered to code"):
                 expect(self.rendered[_TS_PATH]).to(equal(_CUSTOMER_TYPESCRIPT))
 
         with context("with one scenario renamed on the model"):
-            with before.each:
+            with before.all:
                 stories = Stories(fidelity="acceptance_tests")
                 model = stories.formats.parse(Format("typescript"), {_TS_PATH: _CUSTOMER_TYPESCRIPT})
                 story = model.epics[0].epics[0].stories[0]
@@ -147,7 +147,7 @@ with description("a story tree rendered to code"):
                 expect(self.rendered).to(contain("scenario('CustomerProfile exists already'"))
 
         with context("that is rendered to python"):
-            with before.each:
+            with before.all:
                 self.rendered = "".join(_render("python", {_TS_PATH: _CUSTOMER_TYPESCRIPT}, "typescript").values())
 
             with it("should carry each typescript step body commented out inside its step"):
@@ -173,7 +173,7 @@ with description("a story tree rendered to code"):
 
     with context("that was read from scenarios markdown"):
         with context("that is rendered to typescript with the previous typescript files"):
-            with before.each:
+            with before.all:
                 previous = {_TS_PATH: _CUSTOMER_TYPESCRIPT}
                 self.rendered = _render("typescript", _CUSTOMER_MARKDOWN, "markdown", previous=previous)
                 self.file = self.rendered.get(_TS_PATH, "")

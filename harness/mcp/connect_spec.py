@@ -19,6 +19,11 @@ _spec = importlib.util.spec_from_file_location("cdd_connect", _SCRIPT)
 connect = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(connect)
 
+# What the pinned runtime's modules build on, loaded with the spec, so an example that imports the runtime times the wait
+# for its record and the runtime's own modules rather than the standard library's HTTP client and the toolset framework.
+import http.client  # noqa: E402,F401
+import harness.agent_tools.claude_chat_process  # noqa: E402,F401
+
 
 with description("the project a chat's connect script names"):
     with context("with the chat's folder passed by the cdd plugin"):
@@ -77,7 +82,7 @@ with description("the pinned runtime a chat's connect script imports") as self:
         self.prior = (connect.HOME, connect.RUNTIME_SWAP_SECONDS, connect.RUNTIME_RETRY_SECONDS)
         self.home = Path(tempfile.mkdtemp())
         connect.HOME = self.home
-        connect.RUNTIME_RETRY_SECONDS = 0.05
+        connect.RUNTIME_RETRY_SECONDS = 0.005
 
     with after.each:
         connect.HOME, connect.RUNTIME_SWAP_SECONDS, connect.RUNTIME_RETRY_SECONDS = self.prior
@@ -87,11 +92,11 @@ with description("the pinned runtime a chat's connect script imports") as self:
         with it("should import it once the record is there"):
             connect.RUNTIME_SWAP_SECONDS = 5
             record = json.dumps({"source": str(_REPOSITORY)})
-            threading.Timer(0.3, lambda: (self.home / "runtime.json").write_text(record, encoding="utf-8")).start()
+            threading.Timer(0.02, lambda: (self.home / "runtime.json").write_text(record, encoding="utf-8")).start()
             connect.import_runtime()
             expect("harness.mcp.mcp_daemon" in sys.modules).to(be_true)
 
     with context("whose record stays missing longer than an install swaps it"):
         with it("should fail, naming the missing record"):
-            connect.RUNTIME_SWAP_SECONDS = 0.1
+            connect.RUNTIME_SWAP_SECONDS = 0.02
             expect(connect.import_runtime).to(raise_error(FileNotFoundError))

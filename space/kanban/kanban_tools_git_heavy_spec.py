@@ -18,7 +18,8 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from harness.chat.chat import Chat  # noqa: E402
-from space.repo.repo import Repo  # noqa: E402
+from harness.installation.data_class import DataClass  # noqa: E402
+from space.repo.repo import Branch, Repo  # noqa: E402
 from space.session import Sessions  # noqa: E402
 from space.session.progress_cache import PROGRESS_CACHE_FILE  # noqa: E402
 
@@ -38,6 +39,7 @@ with description("the board tools") as self:
 
     with after.each:
         ThrowawayProject.close_all()
+        patch.stopall()
 
     # (E) See Work On Session Board
     # (S) Person --> Activate Ticket
@@ -336,9 +338,9 @@ with description("the board tools") as self:
                 subprocess.run(["git", "checkout", "-q", "-b", "pet-visits"], cwd=self.project.root, check=True)
                 (self.project.root / "src" / "mine_spec.py").write_text("", encoding="utf-8")
 
-            with it("should list only the files the ticket's branch changed"):
+            with it("should mark only the files the ticket's branch changed as changed"):
                 files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="bdd-behavior")["python"]
-                expect(files).to(equal([{"path": "src/mine_spec.py", "exists": True}]))
+                expect({entry["path"]: entry["is_changed"] for entry in files}).to(equal({"src/mine_spec.py": True, "src/theirs_spec.py": False}))
 
         with context("with the active ticket's branch not checked out, and another branch checked out"):
             with before.each:
@@ -351,3 +353,15 @@ with description("the board tools") as self:
             with it("should offer to close it with a handoff and a merge and delete of its branch, and no commit or push"):
                 expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "", "own_branch": "pet-visits", "choices": ["handoff", "merge", "delete_branch"], "chosen": []}))
 
+
+    # The shapes in data.py are the only agreement between the two languages: the language adapter is written from them.
+    # A ticket's branch is read from git, so this one makes a repository (kanban_tools_spec.py compares the rest).
+    with context("whose JSON is compared with the shapes in data.py"):
+        with before.each:
+            self.project.ticket("pet-visits", title="Pet visits")
+            self.project.backlog_item("returns.md", "Returns and refunds")
+
+        with it("should return exactly the fields a Branch marks as its data"):
+            subprocess.run(["git", "init", "-q", "-b", "main"], cwd=self.project.root, check=False)
+            branch = self.project.call("ticket.branch", ticket="pet-visits")
+            expect(set(branch)).to(equal(set(DataClass(Branch).fields)))

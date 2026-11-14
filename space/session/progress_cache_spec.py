@@ -19,13 +19,15 @@ from space.session.progress_cache import HAS_OUTPUT, PROGRESS_CACHE_FILE, VIOLAT
 _WAIT_SECONDS = 10
 
 
-_SAVE_SECONDS = 0.05
+_SAVE_SECONDS = 0.005
+# How often an example looks again for what the cache wrote.
+_POLL_SECONDS = 0.005
 
 
 def _until(condition) -> bool:
     deadline = time.monotonic() + _WAIT_SECONDS
     while time.monotonic() < deadline and not condition():
-        time.sleep(0.05)
+        time.sleep(_POLL_SECONDS)
     return condition()
 
 

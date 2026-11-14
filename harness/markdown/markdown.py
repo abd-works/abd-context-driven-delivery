@@ -94,6 +94,10 @@ def _section_heading(label: str) -> str:
     return label.replace("_", " ").replace("-", " ").title()
 
 
+# The first marks a heading (#) or a code fence (``` or ~~~) can open with.
+_MARK_CHARACTERS = ("#", "`", "~")
+
+
 class MarkdownText:
     """A markdown document: headings, slices, and child sections."""
 
@@ -147,6 +151,10 @@ class MarkdownText:
         offset = 0
         fence: str | None = None
         for line in self._text.splitlines(keepends=True):
+            # Only a line opening with a heading's or a fence's mark can be either, so most lines are passed over unmatched.
+            if line.lstrip()[:1] not in _MARK_CHARACTERS:
+                offset += len(line)
+                continue
             bare = line.rstrip("\r\n")
             fence, consumed = self._fence_update(fence, bare)
             if not consumed and fence is None:

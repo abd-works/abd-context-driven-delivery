@@ -253,8 +253,9 @@ with description("a context tool module with one domain markdown file named for 
             expect(text).to(contain("#### Template"))
             expect(text.index("#### Template")).to(be_below(text.index("Story Map")))
 
+    # The fidelities are read together once, and every example only reads what they gave.
     with context("with two fidelities of one practice reading their instructions at the same time"):
-        with before.each:
+        with before.all:
             from cdd_guidance.practices.stories.stories import Stories
 
             self.stories = Stories(fidelity="story_map")

@@ -120,7 +120,8 @@ with description("Stories"):
         # The MCP host serves every project from its own folder, so the paths a call names are read from the project
         # of the session the practice works in, and each node names its file from there.
         with context("that reads a story map named from its session's project, which the host does not run in"):
-            with before.each:
+            # The map is read once; the examples only look at what was read.
+            with before.all:
                 import tempfile
 
                 from space.session import Session, Sessions
@@ -129,10 +130,11 @@ with description("Stories"):
                 story_map = self.root / "tests" / "story-map.md"
                 story_map.parent.mkdir(parents=True)
                 story_map.write_text("# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n", encoding="utf-8")
-                self.stories.work_in(Session(Sessions(self.root)).practice("stories"))
-                self.model = self.stories.formats.read("tests", RenderRequest(Format("markdown"), source=Format("python")))
+                stories = Stories(fidelity="scenarios")
+                stories.work_in(Session(Sessions(self.root)).practice("stories"))
+                self.model = stories.formats.read("tests", RenderRequest(Format("markdown"), source=Format("python")))
 
-            with after.each:
+            with after.all:
                 import shutil
 
                 shutil.rmtree(self.root, ignore_errors=True)

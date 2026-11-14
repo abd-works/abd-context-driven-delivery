@@ -21,6 +21,14 @@ from cdd_guidance.actions.grill_context.grill_context import GrillContext
 from harness.agent_tools.agent_tools import AgentToolSet
 from space.session import Session, Sessions
 from space.session.session_files import NamedPathNotFoundError
+from harness.guidance.practice_catalogue import PracticeCatalogue
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+
+
+def _import_format_adapters() -> None:
+    """Import the format adapters of every practice, as the first graph read in a run does."""
+    for practice in PracticeCatalogue.create_all():
+        practice.formats.suffixes
 
 
 def _session_at(folder: Path) -> Session:
@@ -163,6 +171,11 @@ with description("GrillContext toolset"):
                 expect(lambda: gc.read_context_file(path="missing.md")).to(raise_error(NamedPathNotFoundError, contain("nothing at missing.md, read from")))
 
     with context("write_grill_answer tool"):
+        # Writing a file refreshes the session's graph, whose first read in a run imports every practice's format
+        # adapters; they are imported once here, so no example pays for it.
+        with before.all:
+            _import_format_adapters()
+
         with before.each:
             self.tmp = tempfile.TemporaryDirectory()
             self.root = self.tmp.name

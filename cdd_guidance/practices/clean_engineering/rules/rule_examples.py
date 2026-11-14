@@ -2,6 +2,9 @@
 
 Fixtures go through the same path as a live load: language parser, model nodes loading
 their own facts, each node holding its parsed object, rules reading ``node.get_fact``.
+
+Building a fixture reads every practice's guidance and builds a graph, tens of milliseconds, so a spec builds its
+fixtures and pairs once, in ``before.all``, and its examples only check them: ``rule_pair(...).check()``.
 """
 
 from __future__ import annotations
@@ -51,12 +54,22 @@ def practice_from_source(source: str, *, lang: str = "python", filename: str | N
     return practice_from_files({f"{FIXTURE_FOLDER}/{name}": source.strip() + "\n"})
 
 
+def rule_pair(slug: str, fault_source: str, clean_source: str, *, lang: str = "python") -> RulePair:
+    """The rule's failing and repaired fixture, each one source file in lang."""
+    return RulePair(ce_rule_by_slug(slug), practice_from_source(fault_source, lang=lang), practice_from_source(clean_source, lang=lang))
+
+
+def files_rule_pair(slug: str, fault_files: dict[str, str], clean_files: dict[str, str]) -> RulePair:
+    """The rule's failing and repaired fixture, each a tree of files."""
+    return RulePair(ce_rule_by_slug(slug), practice_from_files(fault_files), practice_from_files(clean_files))
+
+
 def assert_rule_pair(slug: str, fault_source: str, clean_source: str, *, lang: str = "python") -> None:
-    RulePair(ce_rule_by_slug(slug), practice_from_source(fault_source, lang=lang), practice_from_source(clean_source, lang=lang)).check()
+    rule_pair(slug, fault_source, clean_source, lang=lang).check()
 
 
 def assert_files_rule_pair(slug: str, fault_files: dict[str, str], clean_files: dict[str, str]) -> None:
-    RulePair(ce_rule_by_slug(slug), practice_from_files(fault_files), practice_from_files(clean_files)).check()
+    files_rule_pair(slug, fault_files, clean_files).check()
 
 
 def example_asset_paths(slug: str, *, channel: str = "python") -> tuple[Path, Path]:
@@ -65,14 +78,14 @@ def example_asset_paths(slug: str, *, channel: str = "python") -> tuple[Path, Pa
     return root / "faulty" / f"faultyAsset{suffix}", root / "repaired" / f"repairedAsset{suffix}"
 
 
-def assert_python_example_pair(slug: str) -> None:
+def python_example_pair(slug: str) -> RulePair:
+    """The rule's faulty and repaired python assets, the examples its guidance shows."""
     faulty_path, repaired_path = example_asset_paths(slug)
-    assert_rule_pair(
-        slug,
-        faulty_path.read_text(encoding="utf-8"),
-        repaired_path.read_text(encoding="utf-8"),
-        lang="python",
-    )
+    return rule_pair(slug, faulty_path.read_text(encoding="utf-8"), repaired_path.read_text(encoding="utf-8"), lang="python")
+
+
+def assert_python_example_pair(slug: str) -> None:
+    python_example_pair(slug).check()
 
 
 def _example_files(folder: Path) -> dict[str, str]:
@@ -85,8 +98,11 @@ def _example_files(folder: Path) -> dict[str, str]:
     return files
 
 
-def assert_module_example_pair(slug: str) -> None:
+def module_example_pair(slug: str) -> RulePair:
+    """The rule's faulty and repaired example folders, each with its ``.context`` files."""
     root_path = _PRACTICE / "model" / "python" / "_examples" / slug
-    faulty = practice_from_files(_example_files(root_path / "faulty"))
-    repaired = practice_from_files(_example_files(root_path / "repaired"))
-    RulePair(ce_rule_by_slug(slug), faulty, repaired).check()
+    return files_rule_pair(slug, _example_files(root_path / "faulty"), _example_files(root_path / "repaired"))
+
+
+def assert_module_example_pair(slug: str) -> None:
+    module_example_pair(slug).check()

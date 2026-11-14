@@ -1,6 +1,8 @@
 """Hook daemons serving on real ports, and the hook command hook_daemon.py run as a subprocess. Heavy: starts servers and processes."""
 import json
 import os
+import shutil
+import socket
 import subprocess
 import sys
 import tempfile
@@ -18,9 +20,11 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 sys.modules.pop("tools", None)
 sys.modules.pop("hooks", None)
 
-from expects import equal, expect
-from mamba import description, it
+from expects import be_false, be_none, be_true, equal, expect
+from mamba import after, before, context, description, it
 
+from harness.hooks.fixtures.older_layout_daemon import OlderLayoutDaemon
+from harness.hooks.hook_daemon import HookDaemon
 from harness.hooks.hook_server import HandlerCatalog, HookResult, HookServer
 from harness.installation.repository_toolsets import RepositoryToolsets
 
@@ -132,3 +136,72 @@ with description("a checkout whose hook port the daemon of the older layout hold
         address = self.daemon.ensure()
         self.daemon.stop()
         expect(address.answers()).to(equal(False))
+
+
+def _free_port() -> int:
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
+
+
+with description("a checkout's hook daemon") as self:
+
+    with before.each:
+        self.repo = Path(tempfile.mkdtemp(prefix="hook-daemon-"))
+        self.port = _free_port()
+        self.daemon = HookDaemon(self.repo, port=self.port)
+        self.listener = None
+
+    with after.each:
+        if self.listener is not None:
+            self.listener.close()
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    with context("with its port held by the daemon the older layout started"):
+
+        with before.each:
+            self.older = OlderLayoutDaemon(self.repo, self.port).start()
+
+        with after.each:
+            self.older.kill()
+
+        with it("should claim the port"):
+            self.listener = self.daemon.claim_port()
+            expect(self.listener is not None).to(be_true)
+
+        with it("should stop the older daemon"):
+            self.listener = self.daemon.claim_port()
+            expect(self.older.ended()).to(be_true)
+
+        with it("should remove the older layout's address file"):
+            self.listener = self.daemon.claim_port()
+            expect(self.older.published_file.is_file()).to(be_false)
+
+    with context("with its port held by the daemon the older layout started, with no address file left"):
+
+        with before.each:
+            self.older = OlderLayoutDaemon(self.repo, self.port).start(publishes=False)
+
+        with after.each:
+            self.older.kill()
+
+        with it("should stop the process that holds the port"):
+            self.listener = self.daemon.claim_port()
+            expect(self.older.ended()).to(be_true)
+
+    with context("whose checkout closes"):
+
+        with before.each:
+            self.older = OlderLayoutDaemon(self.repo, self.port).start()
+
+        with after.each:
+            self.older.kill()
+
+        with it("should stop the daemon serving the checkout"):
+            self.daemon.stop()
+            expect(self.older.ended()).to(be_true)
+
+        with it("should leave the port free"):
+            self.daemon.stop()
+            self.older.ended()
+            expect(HookDaemon(self.repo, port=self.port).live_address()).to(be_none)

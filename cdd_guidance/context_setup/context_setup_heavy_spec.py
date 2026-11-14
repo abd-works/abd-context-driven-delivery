@@ -8,8 +8,8 @@ Covers Increment 1 stories:
 Covers Increment 2 stories:
   User --> Capture From Live App         (action expansion — step order)
   Tool --> Smoke Test App                (smoke_test tool — real HTTP server)
-  Tool --> Scout App Pages               (scout_app tool — Playwright against real HTTP server)
-  Tool --> Complete App Capture          (complete_capture tool — targeted re-capture)
+  Tool --> Scout App Pages               (scout_app tool — in context_setup_e2e_spec.py)
+  Tool --> Complete App Capture          (complete_capture tool — in context_setup_e2e_spec.py)
 """
 import sys
 import tempfile
@@ -450,94 +450,3 @@ with description("a ContextSetup"):
 
         with it("should mark all reachable paths as passed"):
             expect(self._result.passed).to(be_true)
-
-    # ── Tool: scout_app ──────────────────────────────────────────────────────
-
-    with context("whose scout_app tool captures pages from a running web server"):
-        with before.each:
-            self._folder = str(fixture.temporary_folder())
-            port = fixture.start_test_server()
-            self._base_url = f"http://localhost:{port}"
-            self._result = fixture.context_setup_for_a_call().scout_app(
-                repo_path=self._folder,
-                surface="web",
-                base_url=self._base_url,
-                entry_paths=["/", "/login"],
-            )
-
-        with after.each:
-            fixture.release()
-
-        with it("should return a ScoutResult"):
-            expect(self._result).to(be_a(ScoutResult))
-
-        with it("should capture one PageCapture per entry point"):
-            expect(self._result.page_captures).to(have_len(2))
-
-        with it("should write a screenshot for each captured page"):
-            for cap in self._result.page_captures:
-                expect(Path(cap.screenshot_path).exists()).to(be_true)
-
-        with it("should write an aria.yaml for each captured page"):
-            for cap in self._result.page_captures:
-                expect(Path(cap.aria_path).exists()).to(be_true)
-
-        with it("should write the extraction-overview.md"):
-            expect(Path(self._result.overview_path).exists()).to(be_true)
-
-        with it("should write capture under sandbox/extracted-context/app-extraction"):
-            expect(Path(self._result.overview_path).as_posix()).to(
-                contain("sandbox/extracted-context/app-extraction")
-            )
-
-        with it("should report the correct page count via page_count property"):
-            expect(self._result.page_count).to(equal(2))
-
-        with it("should list both page slugs via page_slugs property"):
-            expect(self._result.page_slugs).to(have_len(2))
-
-    # ── Tool: complete_capture ───────────────────────────────────────────────
-
-    with context("whose complete_capture tool adds a missing page to an existing capture"):
-        with before.each:
-            self._folder = str(fixture.temporary_folder())
-            port = fixture.start_test_server()
-            self._base_url = f"http://localhost:{port}"
-            cs = fixture.context_setup_for_a_call()
-            self._scout = cs.scout_app(
-                repo_path=self._folder,
-                surface="web",
-                base_url=self._base_url,
-                entry_paths=["/"],
-            )
-            self._result = cs.complete_capture(
-                repo_path=self._folder,
-                missing_pages=["/login"],
-                base_url=self._base_url,
-            )
-
-        with after.each:
-            fixture.release()
-
-        with it("should return a CaptureResult"):
-            expect(self._result).to(be_a(CaptureResult))
-
-        with it("should add one new PageCapture for the missing page"):
-            expect(self._result.added_captures).to(have_len(1))
-
-        with it("should write a screenshot for the added page"):
-            cap = self._result.added_captures[0]
-            expect(Path(cap.screenshot_path).exists()).to(be_true)
-
-        with it("should write an aria.yaml for the added page"):
-            cap = self._result.added_captures[0]
-            expect(Path(cap.aria_path).exists()).to(be_true)
-
-        with it("should report total_page_count as scout count plus added count"):
-            expect(self._result.total_page_count).to(equal(
-                self._scout.page_count + len(self._result.added_captures)
-            ))
-
-        with it("should update the extraction-overview.md with the new page section"):
-            overview = Path(self._result.overview_path).read_text(encoding="utf-8")
-            expect(any(cap.slug in overview for cap in self._result.added_captures)).to(be_true)

@@ -36,6 +36,11 @@ from harness.agent_tools.tool_call import ToolCall
 from space.session.session_files import NamedPathNotFoundError
 from space.session.throwaway_project import ThrowawayProject
 
+# The index imports faiss and numpy on its first embed, so the cdd server starts without them; the spec imports them
+# once here, so no example pays for it.
+import faiss  # noqa: E402,F401
+import numpy  # noqa: E402,F401
+
 
 # ── Fake embedding provider ───────────────────────────────────────────────────
 

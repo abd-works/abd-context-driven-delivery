@@ -22,7 +22,7 @@ from space.session.throwaway_project import ThrowawayProject
 from harness.diagnostics import agent_tools_probe
 from harness.diagnostics.agent_tools_diagnostics import AgentToolsDiagnostics
 from harness.mcp._examples.call_outcomes.call_outcomes import MONTH_END_SECONDS
-from harness.mcp.mcp_server import McpHost, McpInstallation
+from harness.mcp.mcp_server import McpHost
 from harness.diagnostics.agent_tools_probe import (
     AGENT_TOOLS_PROBE_SECTION,
     AgentToolsProbe,
@@ -143,28 +143,12 @@ with description("mcp tools diagnostics"):
         finally:
             shutil.rmtree(tree, ignore_errors=True)
 
-    with it("should install agent-tools-diagnostics as slash command with MCP invoke"):
-        tree = Path(tempfile.mkdtemp())
-        try:
-            mcp = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install(
-                [AgentToolsDiagnostics()]
-            ).of(McpInstallation)
-            path = tree / "commands" / "harness" / "diagnostics" / "agent-tools-diagnostics.md"
-            expect(path.is_file()).to(equal(True))
-            text = path.read_text(encoding="utf-8")
-            expect(text).to(contain("agent-tools-diagnostics.agent_tools_diagnostics"))
-            expect(text).to(contain("agent_tools"))
-            names = [op.mcp_name for op in mcp.mcp_operations]
-            expect(names).to(contain("agent-tools-diagnostics.agent_tools_diagnostics"))
-        finally:
-            shutil.rmtree(tree, ignore_errors=True)
-
     with context("with a tool that does not answer within the probe's time limit"):
         with before.each:
             self.tree = Path(tempfile.mkdtemp())
             installer = _installer(self.tree, ["call-outcomes.close_month"], toolset_items=[_CALL_OUTCOMES])
             self.limit = agent_tools_probe._DISPATCH_SECONDS
-            agent_tools_probe._DISPATCH_SECONDS = 0.2
+            agent_tools_probe._DISPATCH_SECONDS = 0.02
             started = time.perf_counter()
             self.report = AgentToolsProbe(installer, mcp_host=_host_of(_CALL_OUTCOMES)).invoke()
             self.elapsed = time.perf_counter() - started

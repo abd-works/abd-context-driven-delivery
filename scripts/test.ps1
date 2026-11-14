@@ -1,19 +1,33 @@
-﻿# Run the non-agent suite in the reporter each runner actually prints.
+﻿# Run one tier of the suite in the reporter each runner actually prints.
 # Mamba's default is progress (dots). Documentation is the report: nested
 # description / context / it lines, then the failure list.
 # Story files are Mamba with a different loader, so they go through story_test.
-# Agentic BDD (*_agent_spec.py that drive agent_bdd) stays out of this pass.
-# Heavy specs (*_heavy_spec.py) drive a browser, start servers or subprocesses,
-# or build indexes; they run only with -Suite heavy so the default pass stays fast.
+# Three tiers:
+#   unit  (default; alias vanilla) - *_spec.py, story tests and story tiers: microseconds to milliseconds an
+#           example, so hundreds run in seconds. An example over -ExampleBudgetMs fails its file.
+#   heavy - *_heavy_spec.py: real git, servers, the hook daemon, the installer, worker builds, big loads.
+#           Each runs in its own process, one at a time.
+#   e2e   (alias agent) - *_e2e_spec.py (a real browser through Playwright) and agentic BDD
+#           (*_agent_spec.py, which drive a real agent). Only this tier may start an agent.
 param(
-    [ValidateSet("vanilla", "heavy", "agent")]
-    [string]$Suite = "vanilla"
+    [ValidateSet("unit", "vanilla", "heavy", "e2e", "agent")]
+    [string]$Suite = "unit",
+    # The unit tier's budget for one example, before.each and after.each included. Over it, the example's file fails.
+    [int]$ExampleBudgetMs = 100
 )
+if ($Suite -eq "vanilla") { $Suite = "unit" }
+if ($Suite -eq "agent") { $Suite = "e2e" }
 
 $ErrorActionPreference = "Continue"
 $repo = Split-Path -Parent $PSScriptRoot
-$venvPython = Join-Path $repo ".venv\Scripts\python.exe"
-$venvMamba = Join-Path $repo ".venv\Scripts\mamba.exe"
+# A ticket's worktree has no venv of its own: use the main checkout's, never whatever python is first on the PATH.
+$venv = Join-Path $repo ".venv"
+if (-not (Test-Path $venv)) {
+    $commonGit = (& git -C $repo rev-parse --path-format=absolute --git-common-dir 2>$null)
+    if ($commonGit) { $venv = Join-Path (Split-Path -Parent $commonGit) ".venv" }
+}
+$venvPython = Join-Path $venv "Scripts\python.exe"
+$venvMamba = Join-Path $venv "Scripts\mamba.exe"
 $python = if (Test-Path $venvPython) { $venvPython } else { "python" }
 $mamba = if (Test-Path $venvMamba) { $venvMamba } else { "mamba" }
 
@@ -75,6 +89,11 @@ function Test-AgenticBdd {
     param([string]$Name)
     # sub_agent_spec.py is the SubAgent unit spec. It only shares the suffix.
     return $Name -match '(?<!sub_)agent_spec\.py$'
+}
+
+function Test-EndToEnd {
+    param([string]$Name)
+    return $Name -like "*_e2e_spec.py"
 }
 
 function Test-Heavy {
@@ -196,6 +215,17 @@ function Get-FailedFiles {
     return $failed
 }
 
+# The examples the unit guard logged over the budget, each with its spec file from the repository's top.
+function Read-SlowExamples {
+    param([string]$Log)
+    if (-not (Test-Path $Log)) { return }
+    Get-Content $Log | Where-Object { $_ } | ForEach-Object {
+        $spec, $ms, $example = $_ -split "`t", 3
+        $relative = if ($spec.StartsWith($repo)) { Get-RelativePath $spec } else { $spec }
+        [pscustomobject]@{ Spec = $relative; Ms = [int]$ms; Example = $example }
+    }
+}
+
 function Invoke-Reported {
     param(
         [string]$Label,
@@ -243,13 +273,19 @@ function Invoke-Reported {
 }
 
 Set-TestEnvironment
-# Only the agent suite may start a real agent; in the others a spec that opens the agent command line fails at once.
-if ($Suite -ne "agent") { $env:CDD_AGENT_RUNS_OFF = "1" } else { Remove-Item Env:CDD_AGENT_RUNS_OFF -ErrorAction SilentlyContinue }
+# Only the e2e suite may start a real agent; in the others a spec that opens the agent command line fails at once.
+if ($Suite -ne "e2e") { $env:CDD_AGENT_RUNS_OFF = "1" } else { Remove-Item Env:CDD_AGENT_RUNS_OFF -ErrorAction SilentlyContinue }
 Push-Location $repo
 try {
     $failures = New-Object System.Collections.Generic.List[string]
 
-    if ($Suite -eq "vanilla") {
+    if ($Suite -eq "unit") {
+        # The unit tier's time budget: every spec process imports scripts/unit_guard/sitecustomize.py, which logs each
+        # example slower than the budget with its spec file, so that file fails here.
+        $guardLog = Join-Path ([IO.Path]::GetTempPath()) ("cdd-unit-guard-" + [guid]::NewGuid().ToString("N") + ".log")
+        $env:CDD_UNIT_GUARD_LOG = $guardLog
+        $env:CDD_UNIT_EXAMPLE_BUDGET_MS = "$ExampleBudgetMs"
+        $env:PYTHONPATH = "$(Join-Path $repo "scripts\unit_guard")$([IO.Path]::PathSeparator)$env:PYTHONPATH"
         # A story channel's rendered outputs under _examples/actual import an examples module that is not rendered
         # beside them; the channel feature checks them, so they do not run as story tests here.
         $stories = @(Get-RepoFiles { param($name) $name -like "*_story.test.py" } | Where-Object {
@@ -258,7 +294,7 @@ try {
         # A sub-epic's story tiers, `{sub_epic}.story.domain.spec.py` and `.story.server.spec.py`, are its acceptance tests.
         $specs = @(Get-RepoFiles { param($name) $name -like "*_spec.py" -or $name -like "*.story.*.spec.py" } | Where-Object {
             $name = [IO.Path]::GetFileName($_)
-            -not (Test-AgenticBdd $name) -and -not (Test-Heavy $name)
+            -not (Test-AgenticBdd $name) -and -not (Test-Heavy $name) -and -not (Test-EndToEnd $name)
         })
         $storyModule = Join-Path $repo "cdd_guidance\practices\stories\templates\py"
         $savedPath = $env:PYTHONPATH
@@ -270,6 +306,34 @@ try {
             if ($relative) { $failures.Add($relative) | Out-Null }
         }
         $total = @($stories).Count + @($specs).Count
+        # Eight spec processes at once slow each other down, so a file over the budget in the parallel pass runs again,
+        # one process at a time; only an example still over the budget on that quiet run fails its file.
+        $flagged = @(Read-SlowExamples $guardLog | Select-Object -ExpandProperty Spec -Unique | ForEach-Object { Join-Path $repo $_ })
+        if ($flagged.Count -gt 0) {
+            Remove-Item $guardLog -ErrorAction SilentlyContinue
+            $flaggedStories = @($flagged | Where-Object { $_ -like "*_story.test.py" })
+            $flaggedSpecs = @($flagged | Where-Object { $_ -notlike "*_story.test.py" })
+            $env:PYTHONPATH = "$storyModule$([IO.Path]::PathSeparator)$savedPath"
+            Invoke-Reported "Over the budget in parallel, run again alone" $flaggedStories $python @("-m", "story_test", "--format", "progress") -Parallel 1 | Out-Null
+            $env:PYTHONPATH = $savedPath
+            Invoke-Reported "Over the budget in parallel, run again alone" $flaggedSpecs $mamba @("--format", "progress") -Parallel 1 | Out-Null
+            $slow = @(Read-SlowExamples $guardLog)
+            if ($slow.Count -gt 0) {
+                Write-Host ""
+                Write-Host "Examples over the unit budget of $ExampleBudgetMs ms, run alone (make them fast, or move them to a *_heavy_spec.py):"
+                foreach ($group in ($slow | Group-Object Spec | Sort-Object { ($_.Group | Measure-Object Ms -Sum).Sum } -Descending)) {
+                    $sum = ($group.Group | Measure-Object Ms -Sum).Sum
+                    Write-Host ("  {0}  ({1} examples, {2:N1} s)" -f $group.Name, $group.Count, ($sum / 1000))
+                    foreach ($entry in ($group.Group | Sort-Object Ms -Descending | Select-Object -First 3)) {
+                        Write-Host ("      {0,6} ms  {1}" -f $entry.Ms, $entry.Example)
+                    }
+                    if (-not $failures.Contains($group.Name)) { $failures.Add($group.Name) | Out-Null }
+                }
+            } else {
+                Write-Host "Every example over the budget in parallel ran within it alone."
+            }
+            Remove-Item $guardLog -ErrorAction SilentlyContinue
+        }
     } elseif ($Suite -eq "heavy") {
         $heavySpecs = @(Get-RepoFiles { param($name) Test-Heavy $name })
         # Heavy specs start servers and browsers, so each runs in its own process, one at a time.
@@ -282,14 +346,19 @@ try {
         }
         $total = @($heavySpecs).Count
     } else {
-        $agentSpecs = @(Get-RepoFiles { param($name) $name -like "*_spec.py" } | Where-Object {
-            Test-AgenticBdd ([IO.Path]::GetFileName($_))
+        # A browser or an agent per example: one file at a time, so they do not fight over the machine.
+        $endToEndSpecs = @(Get-RepoFiles { param($name) $name -like "*_spec.py" } | Where-Object {
+            $name = [IO.Path]::GetFileName($_)
+            (Test-EndToEnd $name) -or (Test-AgenticBdd $name)
         })
-        $agentFailures = Invoke-Reported "Agentic BDD" $agentSpecs $mamba @("--format", "documentation")
+        $agentFailures = @()
+        foreach ($spec in $endToEndSpecs) {
+            $agentFailures += Invoke-Reported "End-to-end spec" @($spec) $mamba @("--format", "documentation") -Parallel 1
+        }
         foreach ($relative in @($agentFailures)) {
             if ($relative) { $failures.Add($relative) | Out-Null }
         }
-        $total = @($agentSpecs).Count
+        $total = @($endToEndSpecs).Count
     }
 } finally {
     Pop-Location

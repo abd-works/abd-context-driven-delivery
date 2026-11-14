@@ -20,6 +20,14 @@ from space.session.throwaway_project import ThrowawayProject
 from cdd_guidance.actions.sketch.sketch import Sketch
 from harness.agent_tools.agent_tools import AgentToolSet
 from harness.agent_tools.tool_call import ToolCall
+from harness.guidance.practice_catalogue import PracticeCatalogue
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+
+
+def _import_format_adapters() -> None:
+    """Import the format adapters of every practice, as the first graph read in a run does."""
+    for practice in PracticeCatalogue.create_all():
+        practice.formats.suffixes
 
 
 with description("Sketch toolset") as self:
@@ -99,6 +107,11 @@ with description("Sketch toolset") as self:
                 expect(content).to(contain("made-with template"))
 
     with context("save_sketch tool"):
+        # Writing a file refreshes the session's graph, whose first read in a run imports every practice's format
+        # adapters; they are imported once here, so no example pays for it.
+        with before.all:
+            _import_format_adapters()
+
         with before.each:
             self.session = ToolCall(project=self.throwaway.root).session
             self.sketcher = Sketch(session=self.session)

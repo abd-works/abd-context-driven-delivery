@@ -19,12 +19,6 @@ with description("a running process"):
         with it("should be alive"):
             expect(RunningProcess(os.getpid()).alive).to(equal(True))
 
-    with context("that has exited"):
-        with it("should not be alive"):
-            child = subprocess.Popen([sys.executable, "-c", "pass"])
-            child.wait()
-            expect(RunningProcess(child.pid).alive).to(equal(False))
-
     with context("that a lock file names with no id"):
         with it("should not be alive"):
             expect(RunningProcess(0).alive).to(equal(False))

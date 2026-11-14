@@ -44,7 +44,8 @@ _ALL_RULE_SLUGS = (
 )
 
 with description("a MernDomainDriven generator"):
-    with before.each:
+    # Making the generator reads its guidance, and every example only reads the generator, so it is made once.
+    with before.all:
         self.tool = MernDomainDriven()
 
     with context("that has been constructed"):

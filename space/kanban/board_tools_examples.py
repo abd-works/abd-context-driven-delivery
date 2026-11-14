@@ -1,7 +1,13 @@
 """The board's tools as specs call them: a project with a sessions folder whose board tools run on a McpServer,
 and the examples the board tools specs share."""
+from __future__ import annotations
+
 import json
+import os
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
+from unittest.mock import PropertyMock, patch
 
 
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -11,8 +17,12 @@ RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 from harness.installation.data_class import data_of  # noqa: E402
 from space.kanban.session_board_examples import saved_graph, saved_practice  # noqa: E402
 from space.kanban.story_test import progress_in  # noqa: E402
+from harness.agent_tools.tool_call import ToolCall  # noqa: E402
+from harness.diagnostics.app import AppServer  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
 from space.session.throwaway_project import ThrowawayProject
+
+T = TypeVar("T")
 
 TOOLSETS = (
     "space.kanban.board:Board",
@@ -100,15 +110,55 @@ WHOLE_STORIES_GRAPH = saved_graph(saved_practice("stories", "node-1", "docs/map.
 
 
 class ProjectTools:
-    """A project with a sessions folder, and the board's tools called through the MCP server."""
+    """A project with a sessions folder, and the board's tools called through the MCP server. The server's tools are
+    enrolled once for every project a spec makes, as the cdd server enrols them once for its checkout: each call names
+    its project, as a chat's request does, so no project's board is read for another's."""
+
+    _started: McpServer | None = None
+
+    @classmethod
+    def started_server(cls) -> McpServer:
+        """The MCP server with the board's toolsets enrolled, started the first time a project asks."""
+        if cls._started is None:
+            cls._started = McpServer()
+            cls._started.start(TOOLSETS)
+        return cls._started
 
     def __init__(self) -> None:
-        self.root = ThrowawayProject().root
+        self._project = ThrowawayProject()
+        self.root = self._project.root
+        # No chat checks in from a spec's project: the board reads the chats folder named for it, which is not there,
+        # rather than the person's own, whose every chat a board read would open. Nor does an app's server answer: the
+        # board sends each practice's editor app, and a read probes no real port. ``close`` or ``patch.stopall`` undoes both.
+        self._patches = [
+            patch.dict(os.environ, {"CDD_CHATS_FOLDER": str(self._project.folder / "no-chats")}),
+            patch.object(AppServer, "port", new_callable=PropertyMock, return_value=None),
+        ]
+        for each in self._patches:
+            each.start()
         self.sessions = self.root / ".sessions"
         self.sessions.mkdir()
         (self.root / ".git").mkdir()
-        self.server = McpServer(project=self.root)
-        self.server.start(TOOLSETS)
+        self.server = self.started_server()
+
+    def close(self) -> None:
+        """Remove the project and undo its patches, for a project a spec made once in a ``before.all``."""
+        for each in reversed(self._patches):
+            try:
+                each.stop()
+            except RuntimeError:
+                pass  # already stopped by ``patch.stopall``
+        self._project.close()
+
+    @classmethod
+    def answer_of(cls, build: Callable[[ProjectTools], T]) -> T:
+        """What build answers on a project of its own, made and removed at once: a ``before.all`` reads the board once
+        for every example of a context that only looks at what came back."""
+        project = cls()
+        try:
+            return build(project)
+        finally:
+            project.close()
 
     def ticket(self, name: str, *log_lines: str, **fields) -> Path:
         folder = self.sessions / name
@@ -130,19 +180,33 @@ class ProjectTools:
         (folder / file_name).write_text(f"# {heading}\n\nAn idea.\n", encoding="utf-8")
 
     def call(self, tool: str, **arguments):
-        result = self.server.invoke_tool(tool, arguments)
+        result = self.server.answer_tool(tool, ToolCall(arguments, self.root.resolve(), tool=tool))
         return json.loads(json.dumps(result, default=data_of))
 
     def column(self, name: str) -> dict:
-        return next(column for column in self.call("board.show")["columns"] if column["name"] == name)
+        return column_of(self.call("board.show"), name)
 
     def tickets_in(self, name: str) -> list:
-        column = self.column(name)
-        return [ticket["name"] for key in ("in_progress", "done", "tickets") for ticket in column.get(key, [])]
+        return ticket_names_in(self.call("board.show"), name)
 
     def ticket_json(self, name: str) -> dict:
-        columns = self.call("board.show")["columns"]
-        return next(ticket for column in columns for key in ("in_progress", "done", "tickets")
-                    for ticket in column.get(key, []) if ticket["name"] == name)
+        return ticket_of(self.call("board.show"), name)
+
+
+def column_of(board: dict, name: str) -> dict:
+    """The column called name on a board.show answer."""
+    return next(column for column in board["columns"] if column["name"] == name)
+
+
+def ticket_names_in(board: dict, name: str) -> list[str]:
+    """The name of every ticket in the column called name on a board.show answer, in progress, done, or neither."""
+    column = column_of(board, name)
+    return [ticket["name"] for key in ("in_progress", "done", "tickets") for ticket in column.get(key, [])]
+
+
+def ticket_of(board: dict, name: str) -> dict:
+    """The ticket called name, sent whole, on a board.show answer."""
+    return next(ticket for column in board["columns"] for key in ("in_progress", "done", "tickets")
+                for ticket in column.get(key, []) if ticket["name"] == name)
 
 

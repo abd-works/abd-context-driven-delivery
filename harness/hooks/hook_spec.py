@@ -5,8 +5,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import threading
-import time
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -35,6 +33,9 @@ from harness.installation.ide_layout import IdeLayout
 from harness.installation.repository_toolsets import RepositoryToolsets
 from space.session.sessions import Sessions
 from space.work_state import WorkState
+from cdd_guidance.actions.sketch.sketch import Sketch
+from cdd_guidance.practices.bdd.bdd import Bdd
+from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
 
 def _dispatch(payload: dict, toolsets: list | None = None) -> dict:
@@ -699,8 +700,6 @@ with description("inject_rules hook dispatch"):
     with context("that receives a Write payload for a sketch markdown path"):
 
         with it("should inject BDD bags that glob sketches"):
-            from cdd_guidance.practices.bdd.bdd import Bdd
-
             out = _dispatch(
                 {
                     "hook_event_name": "postToolUse",
@@ -714,8 +713,6 @@ with description("inject_rules hook dispatch"):
             expect(out.get("additional_context") or "").to(equal(""))
 
         with it("should inject clean engineering bags that glob sketches"):
-            from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-
             out = _dispatch(
                 {
                     "hook_event_name": "postToolUse",
@@ -731,8 +728,6 @@ with description("inject_rules hook dispatch"):
     with context("that receives a sketch action payload with listed BDD"):
 
         with it("should inject listed BDD rules without a matching path"):
-            from cdd_guidance.actions.sketch.sketch import Sketch
-
             out = _dispatch(
                 {
                     "hook_event_name": "postToolUse",
@@ -872,38 +867,6 @@ with description("hook process helpers"):
         if sys.platform == "win32":
             expect(bool(flags & getattr(subprocess, "CREATE_NO_WINDOW", 0))).to(equal(True))
             expect(bool(flags & getattr(subprocess, "DETACHED_PROCESS", 0))).to(equal(False))
-
-    with it("should start a single daemon when several hook commands arrive together"):
-        from harness.hooks.hook_daemon import HookDaemon, HookDaemonAddress
-
-        calls: list[float] = []
-
-        class _CountingDaemon(HookDaemon):
-            def live_address(self):
-                if calls and time.time() >= calls[0] + 0.4:
-                    return HookDaemonAddress(self.HOST, self.port)
-                return None
-
-            def spawn(self):
-                calls.append(time.time())
-
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            errors: list[BaseException] = []
-
-            def arrive():
-                try:
-                    _CountingDaemon(repo)._start_once()
-                except BaseException as exc:
-                    errors.append(exc)
-
-            arrivals = [threading.Thread(target=arrive) for _ in range(4)]
-            for arrival in arrivals:
-                arrival.start()
-            for arrival in arrivals:
-                arrival.join(5)
-        expect(errors).to(equal([]))
-        expect(len(calls)).to(equal(1))
 
     with it("should give one checkout the same daemon port every start"):
         from harness.hooks.hook_daemon import HookDaemon

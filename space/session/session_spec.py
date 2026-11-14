@@ -35,7 +35,12 @@ from space.session.sessions import SessionNameRequiredError
 from space.work_state import WorkState
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
-from space.session.throwaway_project import SpecRunHome
+from space.session.throwaway_project import ExampleHome, SpecRunHome
+from harness.guidance.practice_catalogue import PracticeCatalogue
+
+# The first practices a process makes read and parse their guidance for every later one; made once here, before any
+# example, so no example pays for that first read.
+PracticeCatalogue.create_all()
 
 
 def _chat_in(session: Session, chat_id: str = "spec-chat") -> ChatPointer:
@@ -56,7 +61,10 @@ def _chat_arguments(chat_id: str, transcript: Path) -> dict[str, str]:
 # (E) Hold Process Session
 with description("a session"):
     with before.each:
-        SpecRunHome.ensure()
+        self.home = ExampleHome()
+
+    with after.each:
+        self.home.close()
 
     # (S) Session --> Persist Hook Session
     with context("that a hook event reads"):
@@ -632,7 +640,10 @@ with description("a session"):
 # (S) Session --> Open Session Loop
 with description("a loop"):
     with before.each:
-        SpecRunHome.ensure()
+        self.home = ExampleHome()
+
+    with after.each:
+        self.home.close()
 
     with context("that is opened"):
         with before.each:
@@ -690,10 +701,11 @@ with description("a loop"):
 # (E) Open Work Session
 # (E) Record Session Log
 with description("an action"):
-    with before.each:
-        SpecRunHome.ensure()
+    with after.each:
+        self.home.close()
 
     with before.each:
+        self.home = ExampleHome()
         self.repo = Path(tempfile.mkdtemp())
         self.called = self.repo
         self.work = self.repo / "work"
@@ -801,7 +813,10 @@ with description("an action"):
 # (S) Session --> Load Practice Guideline
 with description("a practice"):
     with before.each:
-        SpecRunHome.ensure()
+        self.home = ExampleHome()
+
+    with after.each:
+        self.home.close()
 
     with context("that a practice has been invoked"):
         with before.each:
@@ -887,8 +902,12 @@ with description("a practice"):
             with before.each:
                 self.stories = self.session.practice("stories")
                 self.fidelity = self.stories.fidelities["story_map"]
-                self.write_overrides = lambda overrides: (self.session.session_path / "session.json").write_text(
-                    json.dumps({"name": "alpha", "outputs": overrides}), encoding="utf-8"
+                # Written by hand, as another process would, and read by the next call, which begins an answer of its own.
+                self.write_overrides = lambda overrides: (
+                    (self.session.session_path / "session.json").write_text(
+                        json.dumps({"name": "alpha", "outputs": overrides}), encoding="utf-8"
+                    ),
+                    Sessions.of_project(self.called),
                 )
 
             with it("should put each format's file under the practice's root folder"):
@@ -1037,9 +1056,7 @@ with description("a practice"):
 
 with description("a session with no folder of its own, on a project inside its checkout") as self:
     with before.each:
-        SpecRunHome.ensure()
-
-    with before.each:
+        self.home = ExampleHome()
         self.repo = Path(tempfile.mkdtemp(prefix="session-root-")).resolve()
         (self.repo / ".git").mkdir()
         self.project = self.repo / "app"
@@ -1048,6 +1065,7 @@ with description("a session with no folder of its own, on a project inside its c
 
     with after.each:
         shutil.rmtree(self.repo, ignore_errors=True)
+        self.home.close()
 
     with it("should work in the whole repository"):
         expect(self.session.work_root).to(equal(self.repo))
@@ -1059,9 +1077,7 @@ with description("a session with no folder of its own, on a project inside its c
 
 with description("a session working in a folder of its own, holding an aggregate's files") as self:
     with before.each:
-        SpecRunHome.ensure()
-
-    with before.each:
+        self.home = ExampleHome()
         self.repo = Path(tempfile.mkdtemp(prefix="session-declared-")).resolve()
         (self.repo / ".git").mkdir()
         self.work = self.repo / "work"
@@ -1073,6 +1089,7 @@ with description("a session working in a folder of its own, holding an aggregate
 
     with after.each:
         shutil.rmtree(self.repo, ignore_errors=True)
+        self.home.close()
 
     with it("should list the file named for its aggregate's folder"):
         expect([entry.path for entry in self.model.files()["typescript"]]).to(equal(["work/sales/client/client.ts"]))
@@ -1085,9 +1102,7 @@ with description("a session working in a folder of its own, holding an aggregate
 # (S) Session --> Switch Session
 with description("a session on an MCP host whose CDD_REPO is the CDD checkout, not the project"):
     with before.each:
-        SpecRunHome.ensure()
-
-    with before.each:
+        self.home = ExampleHome()
         self._prior_repo = os.environ.get("CDD_REPO")
         self._prior_project = os.environ.get("CDD_PROJECT")
         self.cdd = Path(tempfile.mkdtemp(prefix="cdd-checkout-"))
@@ -1104,6 +1119,7 @@ with description("a session on an MCP host whose CDD_REPO is the CDD checkout, n
                 os.environ.pop(key, None)
             else:
                 os.environ[key] = prior
+        self.home.close()
 
     with context("with a session named on the project"):
         with before.each:
@@ -1171,7 +1187,10 @@ with description("a session on an MCP host whose CDD_REPO is the CDD checkout, n
 
 with description("a session switched to without a name"):
     with before.each:
-        SpecRunHome.ensure()
+        self.home = ExampleHome()
+
+    with after.each:
+        self.home.close()
 
     with context("with nothing saved in .sessions/session.json"):
         with before.each:
@@ -1188,10 +1207,11 @@ with description("a session switched to without a name"):
 
 
 with description("a session read for a board") as self:
-    with before.each:
-        SpecRunHome.ensure()
+    with after.each:
+        self.home.close()
 
     with before.each:
+        self.home = ExampleHome()
         self.repo = Path(tempfile.mkdtemp(prefix="session-board-"))
         (self.repo / ".git").mkdir()
         Sessions(self.repo).switch("alpha", self.repo)
@@ -1278,10 +1298,9 @@ with description("a session read for a board") as self:
 
 # One graph per session: two calls that first ask for it at once must not each make their own.
 with description("a session whose graph two calls first ask for at once"):
-    with before.each:
+    # The two calls race once, made slow on purpose, and every example reads what that one race left.
+    with before.all:
         SpecRunHome.ensure()
-
-    with before.each:
         self.repo = Path(tempfile.mkdtemp())
         session = Sessions(self.repo).current()
         self.original = Graph.open_saved
@@ -1308,8 +1327,9 @@ with description("a session whose graph two calls first ask for at once"):
         for caller in callers:
             caller.join()
 
-    with after.each:
         Graph.open_saved = self.original
+
+    with after.all:
         shutil.rmtree(self.repo, ignore_errors=True)
 
     with it("should give both calls the one graph"):

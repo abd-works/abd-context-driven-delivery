@@ -4,7 +4,6 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from threading import Barrier, Thread
 from urllib.parse import parse_qs, urlsplit
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -15,15 +14,13 @@ for _root in (_REPO_ROOT, _REPO_ROOT / "tools"):
 from expects import be_empty, equal, expect, have_keys, raise_error
 from mamba import after, before, context, description, it
 
-from harness.chat.chat import Chat, ChatNotConnectedError, RecordedChatLinks
+from harness.chat.chat import KEPT_MESSAGES, Chat, ChatNotConnectedError, RecordedChatLinks
 from harness.installation.data_class import data_of
 
 CHAT = "ad6c04ab-chat"
 WORKTREE = "C:\\dev\\pets-checkout-flow"
 NEW_CHAT_PROMPT = 'Title this session "checkout-flow". You are the chat of the session board\'s ticket checkout-flow; work on that ticket.'
 CLOCK = [1000.0]
-CONCURRENT_CHECK_INS = 200
-MANY_COMMANDS = 40
 
 
 def _said(commands: list) -> list[tuple[str, str]]:
@@ -32,14 +29,6 @@ def _said(commands: list) -> list[tuple[str, str]]:
 
 def _states() -> list[str]:
     return [message.state for message in Chat.load(CHAT).messages()]
-
-
-def _check_in_repeatedly(name: str, failures: list[Exception]) -> None:
-    try:
-        for _ in range(CONCURRENT_CHECK_INS):
-            Chat.load(CHAT).check_in(is_busy=True, name=name)
-    except Exception as failure:
-        failures.append(failure)
 
 
 def _titled(title: str) -> str:
@@ -58,6 +47,7 @@ with description("a chat") as self:
         Chat.clock = staticmethod(lambda: CLOCK[0])
 
     with after.each:
+        Chat.kept_messages = KEPT_MESSAGES
         os.environ.pop("CDD_CHATS_FOLDER", None)
         os.environ.pop("CLAUDE_CONFIG_DIR", None)
 
@@ -149,23 +139,6 @@ with description("a chat") as self:
                 with it("should go by the new title from the transcript it kept"):
                     expect(Chat.list()[0].name).to(equal("Renamed review"))
 
-        # A mod that reloads can check in twice at once, and a state file written over itself cannot be read.
-        with context("that checks in from two places at once"):
-            with before.each:
-                self.failures = []
-                names = ("repo · first words", "repo · a much longer name than the first one")
-                checking_in = [Thread(target=_check_in_repeatedly, args=(name, self.failures)) for name in names]
-                for thread in checking_in:
-                    thread.start()
-                for thread in checking_in:
-                    thread.join()
-
-            with it("should take every check-in"):
-                expect(self.failures).to(be_empty)
-
-            with it("should still be listed"):
-                expect([chat.id for chat in Chat.list()]).to(equal([CHAT]))
-
         with context("that has gone quiet"):
             with before.each:
                 CLOCK[0] += 6
@@ -184,33 +157,6 @@ with description("a chat") as self:
             with it("should get it only once"):
                 Chat.load(CHAT).check_in(is_busy=True)
                 expect(Chat.load(CHAT).check_in(is_busy=True)).to(be_empty)
-
-            # A mod that reloads checks in twice at once, and one cdd server answers both.
-            with context("among many, at two check-ins at once"):
-                with before.each:
-                    for number in range(MANY_COMMANDS):
-                        Chat.load(CHAT).send("command", f"/actions-validate {number}")
-                    self.failures, self.taken = [], []
-                    together = Barrier(2)
-
-                    def check_in() -> None:
-                        together.wait(timeout=5)
-                        try:
-                            self.taken.extend(Chat.load(CHAT).check_in(is_busy=True))
-                        except Exception as failure:
-                            self.failures.append(failure)
-
-                    both = [Thread(target=check_in) for _ in range(2)]
-                    for thread in both:
-                        thread.start()
-                    for thread in both:
-                        thread.join()
-
-                with it("should take both check-ins"):
-                    expect(self.failures).to(be_empty)
-
-                with it("should hand each command to only one of them"):
-                    expect(len(self.taken)).to(equal(MANY_COMMANDS + 1))
 
             # (S) Person --> View Chat Messages
             with it("should show the command waiting among its messages"):
@@ -293,16 +239,18 @@ with description("a chat") as self:
                             expect(_said(Chat.load(CHAT).check_in(is_busy=True))).to(equal([("command", "/actions-validate stories-story-map")]))
 
             with context("that is followed by more messages than the chat keeps"):
+                # Each message is a file, so the chat keeps three here rather than the twenty it keeps for the board.
                 with before.each:
-                    for number in range(30):
+                    Chat.kept_messages = 3
+                    for number in range(5):
                         Chat.load(CHAT).send("submit", f"message {number}")
                     Chat.load(CHAT).check_in(is_busy=False)
 
                 with it("should keep only the latest, newest first"):
-                    expect([message.text for message in Chat.load(CHAT).messages()][:2]).to(equal(["message 29", "message 28"]))
+                    expect([message.text for message in Chat.load(CHAT).messages()][:2]).to(equal(["message 4", "message 3"]))
 
                 with it("should keep no more than it shows"):
-                    expect(len(Chat.load(CHAT).messages())).to(equal(20))
+                    expect(len(Chat.load(CHAT).messages())).to(equal(3))
 
         # (S) Refactor Story UI App To Web Domain Access: a story's acceptance-test link opens the file in the chat bar's
         # file viewer of the chat the Story UI editor was opened from.

@@ -96,6 +96,10 @@ def _order_aggregate(graph: Graph) -> None:
 
 
 with description("a scenario on a story graph"):
+    # A process reads the practices' guidance once, for its first graph; read it here, not in the first example.
+    with before.all:
+        Graph()
+
     with context("with a second When before the first When has its Then"):
         with before.each:
             self.context = _loaded(_scenario([("When", "the customer adds a lamp"), ("When", "the customer pays"), ("Then", "the order is placed")]))

@@ -297,8 +297,9 @@ class Ticket(Card):
         the tickets under it, which would make a loop."""
         if self.is_main:
             return []
-        parent = self.parent
-        return [ticket.name for ticket in self._board.tickets if ticket is not parent and self._can_be_child_of(ticket)]
+        # By name: its parent is a ticket of its own, never one of the board's ticket objects.
+        parent_name = self.parent.name if self.parent is not None else None
+        return [ticket.name for ticket in self._board.tickets if ticket.name != parent_name and self._can_be_child_of(ticket)]
 
     def _can_be_child_of(self, parent: Ticket) -> bool:
         return self.name not in [parent.name, *(ancestor.name for ancestor in parent.ancestors)]

@@ -578,8 +578,9 @@ class Catalog:
         project: str | Path | None = None,
     ) -> None:
         self.project = CatalogProject(project if project is not None else Path.cwd())
-        checkout = GitCitation(repo_url, ref) if repo_url and ref else GitCitation.from_checkout()
-        self.citation = GitCitation(repo_url or checkout.repo_url, ref or checkout.ref)
+        self._repo_url = repo_url
+        self._ref = ref
+        self._citation: GitCitation | None = None
         self._named_out_root = Path(out_root) if out_root else None
         self.approach_md_path = Path(approach_md_path) if approach_md_path is not None else APPROACH_MARKDOWN
         self.brand = Brand(collection=brands_root)
@@ -594,6 +595,15 @@ class Catalog:
         """The catalog of project, the folder the tool call names; one server answers every chat, so each call makes
         its own."""
         return cls(project=project)
+
+    @property
+    def citation(self) -> GitCitation:
+        """The repository the pages cite: the URL and ref the caller named, else the checkout's origin and commit, read
+        from git the first time a page cites a file, so placing a brand or naming the output folder runs no git."""
+        if self._citation is None:
+            checkout = GitCitation(self._repo_url, self._ref) if self._repo_url and self._ref else GitCitation.from_checkout()
+            self._citation = GitCitation(self._repo_url or checkout.repo_url, self._ref or checkout.ref)
+        return self._citation
 
     @property
     def repo_url(self) -> str:

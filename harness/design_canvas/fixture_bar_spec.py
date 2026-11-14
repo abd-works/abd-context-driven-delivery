@@ -1,10 +1,7 @@
-"""Mamba spec for a fixture-driven screen artboard and the fixture bar it shows."""
+"""Mamba spec for a fixture-driven screen artboard and the fixture bar it shows. Its script parsed by Node is in
+fixture_bar_heavy_spec.py."""
 
 import re
-import shutil
-import subprocess
-import tempfile
-from pathlib import Path
 
 from expects import contain, equal, expect
 from mamba import before, context, description, it
@@ -43,10 +40,3 @@ with description("a fixture-driven screen") as self:
     with context("inside the story explorer"):
         with it("should link Edit to the screen's own artboard"):
             expect(self.html).to(contain('href="/screens/select-plan.dc.html"'))
-
-    with context("with its script read as JavaScript"):
-        with it("should parse"):
-            script = Path(tempfile.mkdtemp()) / "screen.js"
-            script.write_text("class DCLogic {}\n" + self.script, encoding="utf-8")
-            checked = subprocess.run([shutil.which("node") or "node", "--check", str(script)], capture_output=True, text=True)
-            expect(checked.stderr).to(equal(""))

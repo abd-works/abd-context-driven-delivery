@@ -10,18 +10,30 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from expects import contain, equal, expect
-from mamba import before, description, context, it
+from mamba import after, before, description, context, it
 
 from harness.agent_tools.tool_call import ToolCall
 from harness.mcp.mcp_server import McpServer
 from space.session.session import Session
 from space.session.session_log import LogTimestamp
 from space.session.sessions import Sessions
+from space.session.throwaway_project import ExampleHome
+from harness.guidance.practice_catalogue import PracticeCatalogue
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+
+# The first practices a process makes read and parse their guidance for every later one; made once here, before any
+# example, so no example pays for that first read.
+PracticeCatalogue.create_all()
 
 
 # (E) Record Session Log
 with description("a session loop"):
+    with before.each:
+        self.home = ExampleHome()
+
+    with after.each:
+        self.home.close()
+
     with context("whose log line points at a chat"):
         with it("should place the transcript text under that line"):
             repo = Path(tempfile.mkdtemp())
@@ -90,7 +102,9 @@ with description("a session loop"):
     # A session tool names its session by its session.json, so the session it acts on is found from that argument,
     # not from the session open in the project; the chat that sent the call is still the one its lines point at.
     with context("marked through the session tool a chat calls with the session named"):
-        with before.each:
+        # The server marks the loop once, and every example reads what that one call answered and wrote.
+        with before.all:
+            self.marking_home = ExampleHome()
             self.repo = Path(tempfile.mkdtemp())
             (self.repo / ".git").mkdir()
             Sessions(self.repo).switch("alpha", self.repo)
@@ -103,6 +117,9 @@ with description("a session loop"):
             call = ToolCall.sent({"session": ".sessions/alpha/session.json", **chat}, self.repo, tool="session.mark_loop")
             self.number = self.server.answer_tool("session.mark_loop", call)
             self.log = (self.repo / ".sessions" / "alpha" / "session.log").read_text(encoding="utf-8")
+
+        with after.all:
+            self.marking_home.close()
 
         with it("should answer the number of the loop it marked"):
             expect(self.number).to(equal("2"))
@@ -143,6 +160,12 @@ with description("a log timestamp"):
 
 # (E) Record Session Log
 with description("a hook log"):
+    with before.each:
+        self.home = ExampleHome()
+
+    with after.each:
+        self.home.close()
+
     with context("of a session that two hooks append to"):
         with before.each:
             repo = Path(tempfile.mkdtemp())

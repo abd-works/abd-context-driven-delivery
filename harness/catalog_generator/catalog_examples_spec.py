@@ -74,23 +74,27 @@ with description("a fidelity's catalog examples"):
 
 
 with description("a code example"):
+    # The catalogued practices load once, and every example reads them only.
+    with before.all:
+        self.stories = next(practice for practice in CatalogPractice.load_all() if practice.key == "stories")
+
     # Stories reads no `.ts` file itself, so another catalogued practice's TypeScript model names the language.
     with context("of a practice whose formats do not read it"):
         with it("should open in the language another practice's format reads it in"):
-            stories = next(practice for practice in CatalogPractice.load_all() if practice.key == "stories")
+            stories = self.stories
             source = _examples({"acceptance_tests.ts": "export class Customer {}\n"}) / "acceptance_tests.ts"
             expect(ExampleFile(source, stories).panel_html()).to(contain('data-language="typescript"'))
 
     # The fidelity page's figure and the approach panel name a code example's language the same way.
     with context("shown on a fidelity page"):
         with it("should label its code with the language the approach panel opens it in"):
-            stories = next(practice for practice in CatalogPractice.load_all() if practice.key == "stories")
+            stories = self.stories
             source = _examples({"scenarios.py": "class Customer:\n    pass\n"}) / "scenarios.py"
             expect(ExampleFile(source, stories).figure_html).to(contain('<div class="skill-code-lang">python</div>'))
 
     with context("that no practice's format reads"):
         with it("should open as plain text"):
-            stories = next(practice for practice in CatalogPractice.load_all() if practice.key == "stories")
+            stories = self.stories
             source = _examples({"notes.txt": "a note\n"}) / "notes.txt"
             expect(ExampleFile(source, stories).panel_html()).to(contain('data-language="plaintext"'))
 

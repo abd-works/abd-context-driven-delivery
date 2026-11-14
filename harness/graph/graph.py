@@ -16,6 +16,7 @@ from harness.installation.files import command, skill
 from harness.mcp.mcp_annotations import long_call, mcp
 from harness.graph.edge import Display, Edge, EdgeIndex, EdgeType
 from harness.graph.explorer import ExplorerEntry, FilteredNode, GraphLoaded, GraphSaved, NodeSource, Overlay, PracticeInventory
+from harness.graph.file_lines import FileLines, PathKind
 from harness.graph.graph_build import BuildStep, CheckedFiles, GraphBuild
 from harness.graph.graph_practices import GraphPractices
 from harness.graph.graph_rules_collection import GraphRulesCollection
@@ -170,9 +171,9 @@ class Source:
         function = re.compile(rf"(?:export\s+)?function\s+{re.escape(name)}\b")
         constant = re.compile(rf"\bexport\s+const\s+{re.escape(name)}\b")
         for path in sorted(files):
-            if not path.is_file():
+            if FileLines.kind(path) is not PathKind.FILE:
                 continue
-            lines = path.read_text(encoding="utf-8").splitlines()
+            lines = FileLines.of(path)
             for index, line in enumerate(lines):
                 if function.search(line) or constant.search(line):
                     end = self._call_end(lines, index) if function.search(line) else self._declaration_end(lines, index)
@@ -197,28 +198,18 @@ class Source:
         return len(lines)
 
     def _file_lines(self) -> list[str]:
+        """The lines of the file this slice is in, or of every code file in its folder; a build reads each once."""
         full = self._full_path()
-        if full is None:
-            return []
-        if full.is_dir():
-            lines: list[str] = []
-            for path in sorted(full.rglob("*")):
-                if path.suffix.lower() not in {".ts", ".tsx", ".js", ".py"} or not path.is_file():
-                    continue
-                lines.append(f"// {path.relative_to(full).as_posix()}")
-                lines.extend(path.read_text(encoding="utf-8").splitlines())
-            return lines
-        return full.read_text(encoding="utf-8").splitlines()
+        return FileLines.of(full) if full is not None else []
 
     def _directory(self) -> bool:
         full = self._full_path()
-        return full is not None and full.is_dir()
+        return full is not None and FileLines.kind(full) is PathKind.FOLDER
 
     def _full_path(self) -> Path | None:
         if not self.root or not self.file or self.file == ".":
             return None
-        full = Path(self.root, self.file)
-        return full if full.exists() else None
+        return Path(self.root, self.file)
 
     def _call_end(self, lines: list[str], start: int) -> int:
         """The line the call or block that opens at start closes on: the first where its parentheses and braces are

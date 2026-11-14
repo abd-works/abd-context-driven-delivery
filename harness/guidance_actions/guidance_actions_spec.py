@@ -31,9 +31,11 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 sys.path.insert(0, _root)
 
 from expects import be, contain, equal, expect, raise_error
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
+from harness.guidance_actions import GuidanceAction  # noqa: F401 - loaded with the module, not by its first example
+from space.session.throwaway_project import ThrowawayProject  # noqa: F401 - likewise
 
 
 def _project() -> Path:
@@ -416,33 +418,46 @@ with description("a guidance action"):
             )
             expect(result).to(equal({}))
 
-    with it("should document and list the same guidance slugs on every action CDD ships"):
-        import inspect
+    # Making every action CDD ships makes every practice for each of them, so they are made and asked once.
+    with context("with every action CDD ships"):
+        with before.all:
+            import inspect
 
-        from harness.guidance.action_catalogue import ActionCatalogue
-        from harness.guidance_actions.guidance_actions import GUIDANCE_PARAMETER
+            from harness.guidance.action_catalogue import ActionCatalogue
 
-        seen: list[str] = []
-        for toolset_class in ActionCatalogue.toolsets():
-            toolset = toolset_class()
-            guidance_tools = [
-                tool
-                for tool in toolset.tools.values()
-                if "guidance" in inspect.signature(tool.callable).parameters
-            ]
-            expect(len(guidance_tools) > 0).to(equal(True))
-            for tool in guidance_tools:
-                expect(tool.docstring).to(contain(GUIDANCE_PARAMETER))
-                seen.append(f"{toolset_class.__name__}.{tool.name}")
-            toolset._work_on(["clean-engineering-model", "bdd-behavior"])
-            listed = toolset.listed()
-            expect([type(item).__name__ for item in listed]).to(equal(["CleanEngineering", "Bdd"]))
-            expect(toolset.fidelity_of(listed[0]).name).to(equal("model"))
-            expect(toolset.fidelity_of(listed[1]).name).to(equal("behavior"))
-        expect(seen).to(contain("Render.render"))
-        expect(seen).to(contain("Validate.validate"))
-        expect(seen).to(contain("Validate.create_rule"))
+            self.shipped = []
+            for toolset_class in ActionCatalogue.toolsets():
+                toolset = toolset_class()
+                guidance_tools = [
+                    tool
+                    for tool in toolset.tools.values()
+                    if "guidance" in inspect.signature(tool.callable).parameters
+                ]
+                toolset._work_on(["clean-engineering-model", "bdd-behavior"])
+                listed = toolset.listed()
+                self.shipped.append(
+                    (
+                        toolset_class.__name__,
+                        [(tool.name, tool.docstring) for tool in guidance_tools],
+                        [type(item).__name__ for item in listed],
+                        [toolset.fidelity_of(item).name for item in listed],
+                    )
+                )
 
+        with it("should document and list the same guidance slugs on every action CDD ships"):
+            from harness.guidance_actions.guidance_actions import GUIDANCE_PARAMETER
+
+            seen: list[str] = []
+            for toolset_name, guidance_tools, listed, fidelities in self.shipped:
+                expect(len(guidance_tools) > 0).to(equal(True))
+                for name, docstring in guidance_tools:
+                    expect(docstring).to(contain(GUIDANCE_PARAMETER))
+                    seen.append(f"{toolset_name}.{name}")
+                expect(listed).to(equal(["CleanEngineering", "Bdd"]))
+                expect(fidelities).to(equal(["model", "behavior"]))
+            expect(seen).to(contain("Render.render"))
+            expect(seen).to(contain("Validate.validate"))
+            expect(seen).to(contain("Validate.create_rule"))
 
 def _call_taking_action():
     """A guidance action with a tool that takes the call it serves, as any toolset's tool can."""
@@ -477,11 +492,12 @@ with description("a guidance action's tool that takes the call it serves"):
         expect(self.tool.answer(_call("stories-story-map", self.project))).to(equal(str(self.project)))
 
 
+# The session's graph is built once from the files the action wrote, and every example only reads it.
 with description("a guidance action that wrote files"):
-    with after.each:
+    with after.all:
         _close_projects()
 
-    with before.each:
+    with before.all:
         from space.session import Sessions
         from harness.guidance_actions import GuidanceAction
 

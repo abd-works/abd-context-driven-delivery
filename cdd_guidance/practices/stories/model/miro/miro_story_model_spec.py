@@ -345,7 +345,8 @@ with description("a Miro Story Map (thin-slice fidelity)") as self:
 
 
 with description("a Stories practice rendering a story map in the miro format") as self:
-    with before.each:
+    # Rendered once; the examples only read the SVG.
+    with before.all:
         from cdd_guidance.practices.stories.stories import Stories
 
         story_map = (

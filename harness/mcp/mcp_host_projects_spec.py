@@ -13,6 +13,7 @@ from mamba import after, before, context, description, it
 
 from harness.mcp.mcp_server import McpHost
 from space.session import Sessions
+import cdd_guidance.actions  # noqa: F401 - the generate action the host loads, imported with the spec rather than by its first example
 
 _FILE_MANAGER = "space.session.file_manager:FileManager"
 _GENERATE = "cdd_guidance.actions.generate.generate:Generate"

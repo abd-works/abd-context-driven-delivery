@@ -1,9 +1,5 @@
 """BDD spec for agent_bdd run requests and in-process toolset runs."""
 
-import os
-import subprocess
-import sys
-import tempfile
 import time
 from contextvars import ContextVar
 from pathlib import Path
@@ -21,17 +17,10 @@ from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
 )
 from space.session.sessions import Sessions
 from space.session.throwaway_project import ThrowawayProject
+import cdd_guidance.actions.sketch.sketch  # noqa: F401 - imported once here, not by the first run request that names it
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _CALLING_PROJECT: ContextVar[str] = ContextVar("calling_project", default="")
-
-
-def _secret_loaded_after(statement: str) -> str:
-    """Run statement in a fresh python without the secret, and say whether the secret is then in its environment."""
-    environment = {key: value for key, value in os.environ.items() if key != "CURSOR_API_KEY"}
-    script = f"import os\n{statement}\nprint('CURSOR_API_KEY' in os.environ)"
-    done = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, env=environment, cwd=_REPO_ROOT, timeout=120)
-    return done.stdout.strip().splitlines()[-1] if done.stdout.strip() else done.stderr
 
 
 def _slow_run() -> str:
@@ -41,24 +30,6 @@ def _slow_run() -> str:
 
 def _failing_run() -> str:
     raise KeyError("unknown tool")
-
-
-with description("the agent bdd practice"):
-    with context("that is imported, as the MCP host does"):
-        with it("should leave the agent's secrets out of the importing process"):
-            expect(_secret_loaded_after("import agent_bdd.agent_bdd")).to(equal("False"))
-
-    with context("that runs an agent for a spec"):
-        # The secrets file is each checkout's own and often absent, so the spec writes one and loads it.
-        with it("should load the agent's secrets"):
-            with tempfile.TemporaryDirectory() as folder:
-                secrets = Path(folder) / ".secrets"
-                secrets.write_text("CURSOR_API_KEY=spec-key\n", encoding="utf-8")
-                statement = (
-                    "from pathlib import Path\nfrom cdd_guidance.practices.agent_bdd.conf import AgentBddConf\n"
-                    f"AgentBddConf(Path({str(secrets)!r})).load_secrets()"
-                )
-                expect(_secret_loaded_after(statement)).to(equal("True"))
 
 
 with description("an agent spec file"):
@@ -103,7 +74,7 @@ with description("an in-process toolset run with a timeout"):
 
     with context("that outlives its timeout"):
         with it("should fail naming the timeout"):
-            expect(lambda: ToolRunDeadline(0.1).run(_slow_run, "car")).to(raise_error(ToolRunTimedOut))
+            expect(lambda: ToolRunDeadline(0.01).run(_slow_run, "car")).to(raise_error(ToolRunTimedOut))
 
 
 with description("a toolset run request") as self:

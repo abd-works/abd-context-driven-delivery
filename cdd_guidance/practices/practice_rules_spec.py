@@ -10,7 +10,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from expects import equal, expect
-from mamba import description, it
+from mamba import before, description, it
 
 import cdd_guidance.practices  # noqa: F401  (registers the practices)
 from harness.graph.schema_rules import PracticeSchema
@@ -31,19 +31,27 @@ def _unlisted(practice) -> list[str]:
     )
 
 
-with description("the graph rules of every practice CDD ships"):
+with description("the graph rules of every practice CDD ships") as self:
+    # Reading every practice, its schema, and its rules modules is the slow part, so it is read once for the examples.
+    with before.all:
+        self.practices = PracticeCatalogue.create_all()
+        self.unlisted = [gap for practice in self.practices for gap in _unlisted(practice)]
+
     with it("should check the five practices"):
-        expect(len(PracticeCatalogue.create_all())).to(equal(5))
+        expect(len(self.practices)).to(equal(5))
 
     with it("should list each rule on every node type its check judges, so validate runs it there"):
-        expect([gap for practice in PracticeCatalogue.create_all() for gap in _unlisted(practice)]).to(equal([]))
+        expect(self.unlisted).to(equal([]))
 
 
-with description("the fidelities of every practice CDD ships"):
+with description("the fidelities of every practice CDD ships") as self:
+    with before.all:
+        self.practices = PracticeCatalogue.create_all()
+
     with it("should each give a Scaffold, which a partition at that fidelity indexes by"):
         missing = sorted(
             f"{practice.key}: {fidelity.name}"
-            for practice in PracticeCatalogue.create_all()
+            for practice in self.practices
             for fidelity in practice.fidelities
             if not fidelity.scaffold
         )

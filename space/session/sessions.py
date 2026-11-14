@@ -19,6 +19,7 @@ from harness.annotations.name import Name
 from space.repo.repo import Repo
 from space.session.file_manager import FileManager
 from space.session.session_saves import SERVED_SAVES, SessionSaves
+from space.session.answer_reads import AnswerReads
 from space.session.session import COMPLETE_FOLDER, MAIN_SESSION_NAME, SESSION_FILE, Session, SessionNotFoundError
 from space.work_state import SESSIONS_FOLDER, WorkState
 
@@ -116,12 +117,26 @@ class Sessions:
         self._worktree_listing: tuple[float, dict[str, Path]] = (0.0, {})
         self._held: dict[Path, Session] = {}
         self._held_lock = threading.Lock()
+        # Whether the process serves calls from these sessions (*CallSessions*), each call an answer of its own.
+        self._serves_answers = False
 
     @classmethod
     @tool_subject
     def of_project(cls, project: Path) -> Sessions:
         """The sessions of project, the project the running call names, as this process holds them between calls."""
         return SERVED_SESSIONS.of_project(project)
+
+    @property
+    def answer(self) -> int | None:
+        """The answer these sessions are giving, which their sessions hold what they read from their files for
+        (*AnswerReads*); none when the process serves no calls from them, so their sessions read on every ask."""
+        return AnswerReads.current() if self._serves_answers else None
+
+    def serve_answer(self) -> None:
+        """Begin an answer from these sessions: what their sessions read from their files is read again, so a change
+        another process wrote since the last answer is seen."""
+        self._serves_answers = True
+        AnswerReads.begin()
 
     @cached_property
     def board_practices(self) -> BoardPractices:
@@ -439,7 +454,9 @@ class CallSessions:
             held = self._of_project.get(repo.root)
             if held is None:
                 held = self._of_project[repo.root] = Sessions(repo.root)
-            return held
+        # Each call, and each hook event, finds its sessions here, so each begins an answer of its own.
+        held.serve_answer()
+        return held
 
     def saved_in(self, project: Path) -> Session:
         return self.of_project(project).current()

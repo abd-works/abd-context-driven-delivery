@@ -167,17 +167,61 @@ class StoryMapProject:
         return [story["name"] for epic in story_map["epics"] for sub in epic["epics"] for story in sub["stories"]]
 
 
-with description("a story map edited through its tools") as self:
-    with before.each:
-        self.project = StoryMapProject()
 
+
+def _snapshot_project() -> StoryMapProject:
+    """A project holding the snapshot of this repository's story map and its thin slice."""
+    project = StoryMapProject()
+    project.copy(STORIES / "story-map.md", MAP_FILE)
+    project.copy(STORIES / "thin-slice.md", THIN_SLICE_FILE)
+    return project
+
+
+def _scenario_project() -> tuple[StoryMapProject, str, dict, dict]:
+    """A project holding the chat bar's scenario file: the project, the file as written, the map shown from it, and its
+    Refactor Story UI App To Web Domain Access story."""
+    project = StoryMapProject()
+    written = project.copy(STORIES / CHAT_BAR_FOLDER / "integrate_practice_content_editor_apps_in_chat_bar_story.test.md", SCENARIO_FILE)
+    shown = project.call("story-model.show", file=SCENARIO_FILE)
+    return project, written, shown, project.story_at(shown, "Refactor Story UI App To Web Domain Access")
+
+
+def _named_examples_project() -> tuple[StoryMapProject, dict]:
+    """A project holding a scenario file whose examples are named: the project and its scenario as shown."""
+    project = StoryMapProject()
+    project.write(NAMED_EXAMPLES_FILE, NAMED_EXAMPLES)
+    shown = project.call("story-model.show", file=NAMED_EXAMPLES_FILE)
+    return project, project.story_at(shown, "Open Story UI Side Panel From Chat Bar")["scenarios"][0]
+
+
+def _failure(call) -> Exception | None:
+    """What call raised; none when it raised nothing."""
+    try:
+        call()
+    except Exception as failure:  # noqa: BLE001 - the examples check what was raised
+        return failure
+    return None
+
+
+def _again(failure: Exception | None) -> None:
+    """Raise failure again, so an example checks what a call raised; nothing when it raised nothing."""
+    if failure is not None:
+        raise failure
+
+
+# Each context makes its project and runs its tool calls once, in before.all; its examples read what came of them.
+with description("a story map edited through its tools") as self:
     # (S) Deploy Story UI App With Board State: the editor follows the session open in the project.
     with context("opened on the session open in the project"):
+        with before.all:
+            self.opened = StoryMapProject().call("story-model.open_in_session")
+
         with it("should show that session's story map"):
-            expect(self.project.call("story-model.open_in_session")["file"]).to(equal(MAP_FILE))
+            expect(self.opened["file"]).to(equal(MAP_FILE))
 
     with context("opened on story-map.md"):
-        with before.each:
+        with before.all:
+            self.project = StoryMapProject()
             self.shown = self.project.call("story-model.show", file=MAP_FILE)
 
         with it("should show the stories story-map.md holds"):
@@ -194,7 +238,8 @@ with description("a story map edited through its tools") as self:
 
     # (S) Person --> Refactor Story UI App To Web Domain Access: an edit is saved and rendered to the chosen formats.
     with context("whose story-map fidelity has markdown and drawio chosen"):
-        with before.each:
+        with before.all:
+            self.project = StoryMapProject()
             self.project.choose("drawio", True)
             self.renamed = self.project.call("story.rename", node=_node(f"{SUB_EPIC}.open-kanban-side-panel-from-chat-bar"), name="Open Board Side Panel From Chat Bar")
 
@@ -212,7 +257,8 @@ with description("a story map edited through its tools") as self:
 
     # A format turned off in the Story UI is left out of the next save.
     with context("whose drawio is turned off"):
-        with before.each:
+        with before.all:
+            self.project = StoryMapProject()
             self.project.choose("drawio", True)
             self.project.call("story.rename", node=_node(f"{SUB_EPIC}.trace-story-through-artifacts"), name="Trace Story Across Artifacts")
             self.drawn = self.project.drawio.read_text(encoding="utf-8")
@@ -230,7 +276,8 @@ with description("a story map edited through its tools") as self:
 
     # The Story UI shows an edit the agent made through the tools: the next read takes the file as it is.
     with context("renamed by the agent through the story map's tools"):
-        with before.each:
+        with before.all:
+            self.project = StoryMapProject()
             self.project.call("story.rename", node=_node(f"{SUB_EPIC}.trace-story-through-artifacts"), name="Trace Story Across Artifacts")
             self.read = self.project.call("story-model.show", file=MAP_FILE)
 
@@ -238,34 +285,52 @@ with description("a story map edited through its tools") as self:
             expect(self.project.story_names(self.read)).to(contain("Trace Story Across Artifacts"))
 
     with context("with each edit"):
-        with it("should add an epic after the map's epics"):
-            story_map = self.project.call("story-model.new_epic", file=MAP_FILE, name="Deploy Story UI App")
-            expect([epic["name"] for epic in story_map["epics"]]).to(equal(["Move Work Forward From Chat Bar", "Deploy Story UI App"]))
+        with context("that adds an epic"):
+            with before.all:
+                self.story_map = StoryMapProject().call("story-model.new_epic", file=MAP_FILE, name="Deploy Story UI App")
 
-        with it("should move a story before another under the same sub-epic"):
-            story_map = self.project.call("story.move_before", node=_node(f"{SUB_EPIC}.trace-story-through-artifacts"), other=_node(f"{SUB_EPIC}.open-story-ui-side-panel-from-chat-bar"))
-            expect(self.project.story_names(story_map)[0]).to(equal("Trace Story Through Artifacts"))
+            with it("should add an epic after the map's epics"):
+                expect([epic["name"] for epic in self.story_map["epics"]]).to(equal(["Move Work Forward From Chat Bar", "Deploy Story UI App"]))
 
-        with it("should remove a story"):
-            story_map = self.project.call("story.remove", node=_node(f"{SUB_EPIC}.trace-story-through-artifacts"))
-            expect(self.project.story_names(story_map)).not_to(contain("Trace Story Through Artifacts"))
+            with it("should name each node by its file and its path"):
+                expect(self.story_map["epics"][0]["epics"][0]["node"]).to(equal(_node(SUB_EPIC)))
 
-        with it("should refuse to move a story before an epic"):
-            moving = lambda: self.project.call("story.move_before", node=_node(f"{SUB_EPIC}.trace-story-through-artifacts"), other=_node(SUB_EPIC))
-            expect(moving).to(raise_error(Exception, contain("not a Story")))
+        with context("that moves a story"):
+            with before.all:
+                self.project = StoryMapProject()
+                self.story_map = self.project.call("story.move_before", node=_node(f"{SUB_EPIC}.trace-story-through-artifacts"), other=_node(f"{SUB_EPIC}.open-story-ui-side-panel-from-chat-bar"))
+
+            with it("should move a story before another under the same sub-epic"):
+                expect(self.project.story_names(self.story_map)[0]).to(equal("Trace Story Through Artifacts"))
+
+        with context("that removes a story"):
+            with before.all:
+                self.project = StoryMapProject()
+                self.story_map = self.project.call("story.remove", node=_node(f"{SUB_EPIC}.trace-story-through-artifacts"))
+
+            with it("should remove a story"):
+                expect(self.project.story_names(self.story_map)).not_to(contain("Trace Story Through Artifacts"))
+
+        with context("that moves a story before an epic"):
+            with before.all:
+                project = StoryMapProject()
+                self.moving = _failure(lambda: project.call("story.move_before", node=_node(f"{SUB_EPIC}.trace-story-through-artifacts"), other=_node(SUB_EPIC)))
+
+            with it("should refuse to move a story before an epic"):
+                expect(lambda: _again(self.moving)).to(raise_error(Exception, contain("not a Story")))
 
         # A story map keeps its stories; their scenarios are kept in each story's scenario file.
-        with it("should refuse a scenario on a story map, which does not read one back"):
-            adding = lambda: self.project.call("story.new_scenario", node=_node(f"{SUB_EPIC}.open-story-ui-side-panel-from-chat-bar"), name="Press opens the editor")
-            expect(adding).to(raise_error(Exception, contain("would not keep the edit")))
+        with context("that adds a scenario to a story"):
+            with before.all:
+                project = StoryMapProject()
+                self.adding = _failure(lambda: project.call("story.new_scenario", node=_node(f"{SUB_EPIC}.open-story-ui-side-panel-from-chat-bar"), name="Press opens the editor"))
 
-        with it("should name each node by its file and its path"):
-            story_map = self.project.call("story-model.new_epic", file=MAP_FILE, name="Deploy Story UI App")
-            expect(story_map["epics"][0]["epics"][0]["node"]).to(equal(_node(SUB_EPIC)))
+            with it("should refuse a scenario on a story map, which does not read one back"):
+                expect(lambda: _again(self.adding)).to(raise_error(Exception, contain("would not keep the edit")))
 
     # (S) Refactor Story UI App To Web Domain Access: a story map laid out by hand is edited, not read only.
     with context("opened on a story map laid out by hand"):
-        with before.each:
+        with before.all:
             self.project = StoryMapProject("# Checkout notes\n\nWritten by hand above the map.\n\n" + HAND_WRITTEN_MAP)
             self.project.call("story.rename", node=_node(f"{SUB_EPIC}.trace-story-through-artifacts"), name="Trace Story Across Artifacts")
 
@@ -277,12 +342,13 @@ with description("a story map edited through its tools") as self:
 
     # This repository's own story map, laid out by hand, read and saved through the tools.
     with context("opened on a snapshot of this repository's story map"):
-        with before.each:
-            self.written = self.project.copy(STORIES / "story-map.md", MAP_FILE)
-            self.sliced = self.project.copy(STORIES / "thin-slice.md", THIN_SLICE_FILE)
+        with before.all:
+            self.written = (STORIES / "story-map.md").read_text(encoding="utf-8")
+            self.sliced = (STORIES / "thin-slice.md").read_text(encoding="utf-8")
 
         with context("saved with no change"):
-            with before.each:
+            with before.all:
+                self.project = _snapshot_project()
                 self.shown = self.project.call("story.rename", node=_node(CHAT_BAR_STORY), name="Open Story UI Side Panel From Chat Bar")
 
             with it("should write story-map.md as it was written"):
@@ -296,7 +362,8 @@ with description("a story map edited through its tools") as self:
                 expect(story["description"]).to(contain('Requested (2026-11-06, "chat band -> story UI side panel")'))
 
         with context("with a story renamed"):
-            with before.each:
+            with before.all:
+                self.project = _snapshot_project()
                 self.project.call("story.rename", node=_node(CHAT_BAR_STORY), name="Open Story UI Beside The Chat")
 
             with it("should change only that story's heading"):
@@ -306,7 +373,8 @@ with description("a story map edited through its tools") as self:
                 )))
 
         with context("with a story's description edited"):
-            with before.each:
+            with before.all:
+                self.project = _snapshot_project()
                 self.project.call("story.edit_description", node=_node(CHAT_BAR_STORY), description="Requested (2026-11-12): the chat bar opens the Story UI editor beside the chat.")
 
             with it("should change only the paragraph under that story's heading"):
@@ -316,7 +384,8 @@ with description("a story map edited through its tools") as self:
         # (S) Refactor Story UI App To Web Domain Access: an epic's and a sub-epic's descriptions are edited on screen and
         # saved the way a story's is.
         with context("with an epic's description edited"):
-            with before.each:
+            with before.all:
+                self.project = _snapshot_project()
                 self.shown = self.project.call("epic.edit_description", node=_node("move-work-forward-from-chat-bar"), description="The Chat Bar is the line above the chat prompt.")
 
             with it("should change only the paragraph under that epic's heading"):
@@ -328,7 +397,8 @@ with description("a story map edited through its tools") as self:
                 expect(epic["description"]).to(equal("The Chat Bar is the line above the chat prompt."))
 
         with context("with a sub-epic given a description"):
-            with before.each:
+            with before.all:
+                self.project = _snapshot_project()
                 self.project.call("epic.edit_description", node=_node(CHAT_BAR_SUB_EPIC), description="Requested (2026-11-12): the chat bar opens the editor apps.")
 
             with it("should add only the paragraph under that sub-epic's heading"):
@@ -338,10 +408,9 @@ with description("a story map edited through its tools") as self:
     # (S) Refactor Story UI App To Web Domain Access: increments are edited through the story map and kept in its thin
     # slice.
     with context("sliced into increments by the thin slice beside it"):
-        with before.each:
-            self.project.copy(STORIES / "story-map.md", MAP_FILE)
-            self.sliced = self.project.copy(STORIES / "thin-slice.md", THIN_SLICE_FILE)
-            self.shown = self.project.call("story-model.show", file=MAP_FILE)
+        with before.all:
+            self.sliced = (STORIES / "thin-slice.md").read_text(encoding="utf-8")
+            self.shown = _snapshot_project().call("story-model.show", file=MAP_FILE)
 
         with it("should show its increments in order"):
             expect([increment["name"] for increment in self.shown["increments"]][:3]).to(equal(["Built Today", "Maintain Tickets On Board", "Integrate Practice Content Editor Apps"]))
@@ -353,7 +422,8 @@ with description("a story map edited through its tools") as self:
             expect(self.shown["increments"][2]["stories"]).to(contain(_node(CHAT_BAR_STORY)))
 
         with context("with an increment added and given a story"):
-            with before.each:
+            with before.all:
+                self.project = _snapshot_project()
                 self.project.call("story-model.new_increment", file=MAP_FILE, name="Edit Story Maps In Story UI")
                 self.added = self.project.call("increment.add_story", node=_node("increment:edit-story-maps-in-story-ui"), story=_node(CHAT_BAR_STORY))
 
@@ -368,7 +438,8 @@ with description("a story map edited through its tools") as self:
                 expect(removed).to(equal(["- *Open Story UI Side Panel From Chat Bar*"]))
 
         with context("with an increment renamed"):
-            with before.each:
+            with before.all:
+                self.project = _snapshot_project()
                 self.project.call("increment.rename", node=_node("increment:maybe-later"), name="Later")
 
             with it("should change only its heading in thin-slice.md"):
@@ -379,10 +450,9 @@ with description("a story map edited through its tools") as self:
 
     # (S) Refactor Story UI App To Web Domain Access: a scenario file is edited through the story model too.
     with context("opened on a scenario file"):
-        with before.each:
-            self.written = self.project.copy(STORIES / CHAT_BAR_FOLDER / "integrate_practice_content_editor_apps_in_chat_bar_story.test.md", SCENARIO_FILE)
-            self.shown = self.project.call("story-model.show", file=SCENARIO_FILE)
-            self.story = self.project.story_at(self.shown, "Refactor Story UI App To Web Domain Access")
+        with before.all:
+            self.project, self.written, self.shown, self.story = _scenario_project()
+            self.trace = self.project.story_at(self.shown, "Trace Story Through Artifacts")["scenarios"][0]
 
         with it("should take edits"):
             expect(self.shown["refusal"]).to(equal(""))
@@ -391,8 +461,9 @@ with description("a story map edited through its tools") as self:
             expect([scenario["name"] for scenario in self.story["scenarios"]]).to(contain("An edit is saved in the story map file and rendered to the chosen formats"))
 
         with context("with a step added to a scenario"):
-            with before.each:
-                self.project.call("scenario.new_step", node=self.story["scenarios"][0]["node"], step_type="then", text="the story map file keeps its other lines")
+            with before.all:
+                self.project, self.written, _, story = _scenario_project()
+                self.project.call("scenario.new_step", node=story["scenarios"][0]["node"], step_type="then", text="the story map file keeps its other lines")
 
             with it("should write the step under that scenario and change nothing else"):
                 removed, added = _changed(self.written, self.project.text(SCENARIO_FILE))
@@ -400,16 +471,15 @@ with description("a story map edited through its tools") as self:
 
         # (S) Refactor Story UI App To Web Domain Access: a scenario's example rows are edited through each example.
         with it("should show each example row by the node its own tools take"):
-            trace = self.project.story_at(self.shown, "Trace Story Through Artifacts")["scenarios"][0]
-            expect(trace["examples"][0]["node"]).to(equal(f"{trace['node']}.example:example-1"))
+            expect(self.trace["examples"][0]["node"]).to(equal(f"{self.trace['node']}.example:example-1"))
 
         with it("should show each example row's fields as its table holds them"):
-            trace = self.project.story_at(self.shown, "Trace Story Through Artifacts")["scenarios"][0]
-            expect(trace["examples"][0]["fields"]).to(equal({"example": "example-1", "violation": "Ticket Archive name", "file": "harness/.context/stories/story-map.md", "lines": "86 to 88", "story": "Ticket Archive"}))
+            expect(self.trace["examples"][0]["fields"]).to(equal({"example": "example-1", "violation": "Ticket Archive name", "file": "harness/.context/stories/story-map.md", "lines": "86 to 88", "story": "Ticket Archive"}))
 
         with context("with an example's field edited"):
-            with before.each:
-                trace = self.project.story_at(self.shown, "Trace Story Through Artifacts")["scenarios"][0]
+            with before.all:
+                self.project, self.written, shown, _ = _scenario_project()
+                trace = self.project.story_at(shown, "Trace Story Through Artifacts")["scenarios"][0]
                 self.edited = self.project.call("example.edit_field", node=trace["examples"][0]["node"], field="lines", text="86 to 90")
 
             with it("should change only that example's row"):
@@ -422,26 +492,26 @@ with description("a story map edited through its tools") as self:
                 trace = self.project.story_at(self.edited, "Trace Story Through Artifacts")["scenarios"][0]
                 expect(trace["examples"][0]["fields"]["lines"]).to(equal("86 to 90"))
 
-        with it("should refuse a column the example's row does not have"):
-            trace = self.project.story_at(self.shown, "Trace Story Through Artifacts")["scenarios"][0]
-            editing = lambda: self.project.call("example.edit_field", node=trace["examples"][0]["node"], field="owner", text="Person")
-            expect(editing).to(raise_error(Exception, contain("has no owner column")))
+        with context("with a field its example's row does not have edited"):
+            with before.all:
+                self.editing = _failure(lambda: self.project.call("example.edit_field", node=self.trace["examples"][0]["node"], field="owner", text="Person"))
 
-        with it("should refuse to move an example, which keeps the place its table gives it"):
-            trace = self.project.story_at(self.shown, "Trace Story Through Artifacts")["scenarios"][0]
-            moving = lambda: self.project.call("example.move_before", node=trace["examples"][1]["node"], other=trace["examples"][0]["node"])
-            expect(moving).to(raise_error(Exception, contain("keeps the place its table gives it")))
+            with it("should refuse a column the example's row does not have"):
+                expect(lambda: _again(self.editing)).to(raise_error(Exception, contain("has no owner column")))
+
+        with context("with an example moved before another"):
+            with before.all:
+                self.moving = _failure(lambda: self.project.call("example.move_before", node=self.trace["examples"][1]["node"], other=self.trace["examples"][0]["node"]))
+
+            with it("should refuse to move an example, which keeps the place its table gives it"):
+                expect(lambda: _again(self.moving)).to(raise_error(Exception, contain("keeps the place its table gives it")))
 
     # (S) Refactor Story UI App To Web Domain Access: an example named by its example column is renamed in that cell.
     with context("opened on a scenario file whose examples are named"):
-        with before.each:
-            self.project.write(NAMED_EXAMPLES_FILE, NAMED_EXAMPLES)
-            shown = self.project.call("story-model.show", file=NAMED_EXAMPLES_FILE)
-            self.scenario = self.project.story_at(shown, "Open Story UI Side Panel From Chat Bar")["scenarios"][0]
-
         with context("with an example renamed through its example column"):
-            with before.each:
-                self.renamed = self.project.call("example.edit_field", node=self.scenario["examples"][1]["node"], field="example", text="stopped")
+            with before.all:
+                self.project, scenario = _named_examples_project()
+                self.renamed = self.project.call("example.edit_field", node=scenario["examples"][1]["node"], field="example", text="stopped")
 
             with it("should change only that cell of its row"):
                 expect(_changed(NAMED_EXAMPLES, self.project.text(NAMED_EXAMPLES_FILE))).to(equal((["| not running | not running |"], ["| stopped | not running |"])))
@@ -451,15 +521,17 @@ with description("a story map edited through its tools") as self:
                 expect([example["name"] for example in scenario["examples"]]).to(equal(["not installed", "stopped", "running"]))
 
         with context("with an example removed"):
-            with before.each:
-                self.project.call("example.remove", node=self.scenario["examples"][1]["node"])
+            with before.all:
+                self.project, scenario = _named_examples_project()
+                self.project.call("example.remove", node=scenario["examples"][1]["node"])
 
             with it("should take only that example's row out of the file"):
                 expect(_changed(NAMED_EXAMPLES, self.project.text(NAMED_EXAMPLES_FILE))).to(equal((["| not running | not running |"], [])))
 
     # (S) Refactor Story UI App To Web Domain Access: acceptance-test files are linked, not edited.
     with context("whose story has an acceptance-test file in the session"):
-        with before.each:
+        with before.all:
+            self.project = StoryMapProject()
             self.project.write(STORY_TEST_FILE, STORY_TEST)
             self.shown = self.project.call("story-model.show", file=MAP_FILE)
 
@@ -471,16 +543,25 @@ with description("a story map edited through its tools") as self:
 
     # (S) Open Story UI On Ticket Scope: the story map says which part of it the ticket's session covers.
     with context("opened in a session whose ticket names its stories"):
-        with before.each:
-            self.project.write(".sessions/checkout-flow/checkout-flow.md", "# Checkout flow\n\n## Story: Open Story UI Side Panel From Chat Bar\n\n## Story: Open Kanban Side Panel From Chat Bar\n")
-            self.shown = self.project.call("story-model.open_in_session")
+        with before.all:
+            project = StoryMapProject()
+            project.write(".sessions/checkout-flow/checkout-flow.md", "# Checkout flow\n\n## Story: Open Story UI Side Panel From Chat Bar\n\n## Story: Open Kanban Side Panel From Chat Bar\n")
+            self.shown = project.call("story-model.open_in_session")
 
         with it("should scope the map to the stories the session names"):
             expect(self.shown["scope"]).to(equal([_node(f"{SUB_EPIC}.open-story-ui-side-panel-from-chat-bar"), _node(f"{SUB_EPIC}.open-kanban-side-panel-from-chat-bar")]))
 
     with context("opened in a session that names no story"):
-        with it("should scope the map to none of its stories, so the whole map shows"):
-            expect(self.project.call("story-model.show", file=MAP_FILE)["scope"]).to(equal([]))
+        with before.all:
+            self.shown = StoryMapProject().call("story-model.show", file=MAP_FILE)
 
-    with it("should refuse a format the story map does not write"):
-        expect(lambda: self.project.choose("python", True)).to(raise_error(Exception, contain("does not write python")))
+        with it("should scope the map to none of its stories, so the whole map shows"):
+            expect(self.shown["scope"]).to(equal([]))
+
+    with context("asked to write a format it does not write"):
+        with before.all:
+            project = StoryMapProject()
+            self.choosing = _failure(lambda: project.choose("python", True))
+
+        with it("should refuse a format the story map does not write"):
+            expect(lambda: _again(self.choosing)).to(raise_error(Exception, contain("does not write python")))

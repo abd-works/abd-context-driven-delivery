@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING
 
 from harness.agent_tools.progress import report_progress
 from harness.graph.explorer import GraphLoaded
+from harness.graph.file_lines import FileLines
 from harness.graph.load_scope import LoadScope
 from harness.graph.saved_graph import GraphChanges, SavedGraph
 
@@ -329,10 +330,11 @@ class GraphBuild:
             WorkerBuild(report_progress).carry_out(lambda: self._order(step, state, saves, checked), answer, self._hold, self.graph.practices.take)
             self._answer.keep(answer)
             return
-        if state is not None:
-            self._hold(state)
-        self._carry_out(step)
-        self._finish(saves, checked)
+        with FileLines.during_build():
+            if state is not None:
+                self._hold(state)
+            self._carry_out(step)
+            self._finish(saves, checked)
 
     def carry_out(self, order: BuildOrder) -> SavedGraph:
         """Carry order out on the graph, as a worker process does for a graph the cdd server holds, save it and write
@@ -344,10 +346,11 @@ class GraphBuild:
         graph.practices.choose({held[key]: root for key, root in order.roots.items()})
         graph.overlays = order.overlays
         graph.schema_edges.syncs = False
-        self._hold(order.state)
-        self._carry_out(order.step)
-        self._finish(order.saves, order.checked)
-        return SavedGraph.from_graph(graph)
+        with FileLines.during_build():
+            self._hold(order.state)
+            self._carry_out(order.step)
+            self._finish(order.saves, order.checked)
+            return SavedGraph.from_graph(graph)
 
     def _hold(self, saved: SavedGraph) -> None:
         self.graph.practices.hold(saved, self.graph.scope.folder)

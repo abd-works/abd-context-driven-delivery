@@ -1,5 +1,6 @@
 """The session kanban board (model: space/kanban/.context/kanban-model.md)."""
 import json
+import os
 import tempfile
 from pathlib import Path
 from unittest.mock import PropertyMock, patch
@@ -34,9 +35,13 @@ class SessionsFolder:
     """A temporary `.sessions/` folder: work sessions with their logs, closed sessions, backlog items."""
 
     def __init__(self) -> None:
-        self.project = ThrowawayProject().root
+        project = ThrowawayProject()
+        self.project = project.root
         self.root = self.project / ".sessions"
         self.root.mkdir()
+        # No chat checks in from a spec's project: a board reads the chats folder named for it, which is not there,
+        # rather than the person's own, whose every chat a board read would open. ``patch.stopall`` undoes it.
+        patch.dict(os.environ, {"CDD_CHATS_FOLDER": str(project.folder / "no-chats")}).start()
 
     def session(self, name: str, *log_lines: str, closed: bool = False, **fields) -> Path:
         folder = self.root / ("_complete" if closed else "") / name
@@ -67,6 +72,7 @@ def names(items) -> list:
 with description("a board") as self:
     with after.each:
         ThrowawayProject.close_all()
+        patch.stopall()
 
     with context("loaded for a tool call"):
         with it("should work on the one repository its sessions hold"):
@@ -165,16 +171,28 @@ with description("a board") as self:
 
     # (S) Board App --> Display Ticket Card, Display Backlog Items As Tickets
     with context("with a sessions folder of work sessions, closed sessions, default, backlog items, and archived sessions"):
+        with before.all:
+            def every_kind() -> Board:
+                sessions = SessionsFolder()
+                sessions.session("pet-visits", title="Pet visits")
+                sessions.session("sign-up", title="Sign up")
+                sessions.session("browse-pets", closed=True, title="Browse pets")
+                sessions.folder("main")
+                sessions.backlog_item("returns-and-refunds.md", "Returns and refunds")
+                sessions.folder("_archive/old-spike")
+                sessions.current("pet-visits")
+                return Board(Repo(sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+
+            # What the board sends is read once, on a folder of its own, for the examples that only look at it.
+            board = every_kind()
+            self.sent = data_of(board)
+            self.cards_sent = [data_of(card) for card in board.cards]
+            ThrowawayProject.close_all()
+            patch.stopall()
+            self.every_kind = every_kind
+
         with before.each:
-            sessions = SessionsFolder()
-            sessions.session("pet-visits", title="Pet visits")
-            sessions.session("sign-up", title="Sign up")
-            sessions.session("browse-pets", closed=True, title="Browse pets")
-            sessions.folder("main")
-            sessions.backlog_item("returns-and-refunds.md", "Returns and refunds")
-            sessions.folder("_archive/old-spike")
-            sessions.current("pet-visits")
-            self.board = Board(Repo(sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+            self.board = self.every_kind()
 
         with it("should show every work session as a ticket"):
             expect(names(self.board.tickets)).to(equal(["main", "pet-visits", "sign-up", "browse-pets"]))
@@ -196,7 +214,7 @@ with description("a board") as self:
 
         # The chat bar draws the active session from this alone, so it never finds the ticket again by its name.
         with it("should send the active ticket whole, with its progress"):
-            expect(list(data_of(self.board)["active"])).to(contain("progress"))
+            expect(list(self.sent["active"])).to(contain("progress"))
 
         with it("should offer the tickets in a stage to switch to, neither backlog items nor closed tickets"):
             expect(names(self.board.open_tickets)).to(equal(["main", "pet-visits", "sign-up"]))
@@ -211,10 +229,10 @@ with description("a board") as self:
             expect([card.column.name for card in self.board.cards]).to(equal(["Discovery", "Discovery", "Discovery", "Complete", "Backlog"]))
 
         with it("should list every column with its tickets or items"):
-            expect([column["name"] for column in data_of(self.board)["columns"]]).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
+            expect([column["name"] for column in self.sent["columns"]]).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
 
         with it("should send each column's kind"):
-            expect([column["kind"] for column in data_of(self.board)["columns"]]).to(equal(["backlog", "stage", "stage", "stage", "complete"]))
+            expect([column["kind"] for column in self.sent["columns"]]).to(equal(["backlog", "stage", "stage", "stage", "complete"]))
 
         with it("should read its tickets once for every column"):
             expect(self.board.column("Discovery").cards[0]).to(be(self.board.tickets[0]))
@@ -228,8 +246,7 @@ with description("a board") as self:
                 expect(names(self.board.tickets)).to(contain("gift-cards"))
 
         with it("should send each card's title and last activity, whether a ticket or a backlog item"):
-            sent = [data_of(card) for card in self.board.cards]
-            expect([(bool(card["title"]), "last_activity" in card) for card in sent]).to(equal([(True, True)] * 5))
+            expect([(bool(card["title"]), "last_activity" in card) for card in self.cards_sent]).to(equal([(True, True)] * 5))
 
     # (S) Person --> Open Help
     with context("with help open on a fidelity the catalog has no page for"):
@@ -288,6 +305,7 @@ with description("a board") as self:
 with description("a backlog item") as self:
     with after.each:
         ThrowawayProject.close_all()
+        patch.stopall()
 
     # (S) Person --> Add Backlog Item, Start Backlog Item
     with context("that a person has added to the backlog folder"):
@@ -322,6 +340,10 @@ with description("a backlog item") as self:
 
             with it("should start it with that ticket as its parent"):
                 expect(self.child.session.parent).to(equal("checkout-flow"))
+
+            with it("should not offer its parent as a place to drop it"):
+                board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+                expect(board.ticket(self.child.name).parent_choices).not_to(contain("checkout-flow"))
 
         with context("that has been started"):
             with before.each:
@@ -390,12 +412,23 @@ with description("a backlog item") as self:
 
     # (S) Person --> Reassign Ticket Parent: in the Backlog, a parent's folder keeps its children's idea files.
     with context("that a person drops on another backlog item"):
+        with before.all:
+            def nested() -> tuple[SessionsFolder, Board]:
+                sessions = SessionsFolder()
+                sessions.backlog_item("checkout.md", "Checkout")
+                sessions.backlog_item("gift-cards.md", "Gift cards")
+                board = Board(Repo(sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+                board.backlog_item_called("Gift cards").nest_under(board.backlog_item_called("Checkout"))
+                return sessions, board
+
+            # What the board sends is read once, on a folder of its own, for the example that only looks at it.
+            self.backlog_sent = data_of(nested()[1])["columns"][0]
+            ThrowawayProject.close_all()
+            patch.stopall()
+            self.nested = nested
+
         with before.each:
-            self.sessions = SessionsFolder()
-            self.sessions.backlog_item("checkout.md", "Checkout")
-            self.sessions.backlog_item("gift-cards.md", "Gift cards")
-            self.board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
-            self.board.backlog_item_called("Gift cards").nest_under(self.board.backlog_item_called("Checkout"))
+            self.sessions, self.board = self.nested()
             self.backlog = self.sessions.root / "_backlog"
 
         with it("should make the other item a folder that keeps its own text in a file of its name"):
@@ -414,8 +447,7 @@ with description("a backlog item") as self:
             expect(self.board.backlog_item_called("Gift cards").parent).to(equal("Checkout"))
 
         with it("should send the parent's children whole, with the Backlog"):
-            backlog = data_of(self.board)["columns"][0]
-            expect([child["title"] for child in backlog["items"][0]["children"]]).to(equal(["Gift cards"]))
+            expect([child["title"] for child in self.backlog_sent["items"][0]["children"]]).to(equal(["Gift cards"]))
 
         with context("that a person drops on another's bottom edge"):
             with before.each:
@@ -514,6 +546,7 @@ def story_map(ticket):
 with description("a ticket") as self:
     with after.each:
         ThrowawayProject.close_all()
+        patch.stopall()
 
     # (S) Person --> Open Ticket Session
     with context("that has just been started"):

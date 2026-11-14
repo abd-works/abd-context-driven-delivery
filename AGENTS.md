@@ -42,6 +42,14 @@ python -m venv .venv && .venv/bin/pip install -e .     # Windows: .venv\Scripts\
 .venv/bin/mamba --format documentation path/to/thing_spec.py
 ```
 
-`scripts/test.ps1` runs the suite (`-Suite heavy` for `*_heavy_spec.py`, which start servers or browsers). Cloud sessions run `scripts/cloud-setup.sh`.
+`scripts/test.ps1` runs one of three tiers. Cloud sessions run `scripts/cloud-setup.sh`.
+
+| Tier | Files | What belongs there |
+|---|---|---|
+| `-Suite unit` (default) | `*_spec.py`, `*_story.test.py`, story tiers | Fast: an example runs in microseconds to milliseconds, so hundreds run in seconds. An example over `-ExampleBudgetMs` (100 ms) fails its file; the run lists each one. Use fakes (`MockGit`) and shared fixtures. |
+| `-Suite heavy` | `*_heavy_spec.py` | Real resources: git, the cdd server, the hook daemon, the installer, worker graph builds, big loads. One file at a time. |
+| `-Suite e2e` | `*_e2e_spec.py`, `*_agent_spec.py` | The beasts: a real browser through Playwright, and agentic BDD that drives a real agent. The only tier that may start an agent. |
+
+The rule for which tier a test belongs in is BDD's `tier-by-speed` (`cdd_guidance/practices/bdd/bdd.md`, development).
 
 Specs are Mamba: `describe` a domain subject, nest `with` / `that` states (never `when`), one outcome per `it`, ordered as a usage story. Practice rules under `.claude/rules/` apply by path.

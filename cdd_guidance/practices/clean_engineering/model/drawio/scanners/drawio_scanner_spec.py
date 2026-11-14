@@ -93,8 +93,9 @@ with description("a Draw.io layout scanner"):
             DrawioScanner(explicit_paths=[self.path])
             expect(DrawioScanner().is_skipped_path(self.path)).to(be_true)
 
+    # A scan reads every scanner's rules over the diagram, so each context scans once, before its examples read the report.
     with context("that prefers short routes, given two related classes far apart"):
-        with before.each:
+        with before.all:
             path = _diagram_in_examples()
             self.violations = PreferShortRoutesScanner(explicit_paths=[path]).scan(path.parent, [path])
 
@@ -105,7 +106,7 @@ with description("a Draw.io layout scanner"):
             expect(self.violations[0].message).to(contain("[Page] Order → Customer"))
 
     with context("that reports on every rule for named paths"):
-        with before.each:
+        with before.all:
             path = _diagram_in_examples()
             self.report = DrawioScanner(scan_root=path.parent).run_report([str(path)])
 
@@ -116,15 +117,21 @@ with description("a Draw.io layout scanner"):
             expect(self.report["ok"]).to(equal(False))
 
     with context("with two subclasses joined into one shared line to their base"):
+        with before.all:
+            self.rules = _rules_reported(_INHERITANCE_HEAD)
+
         with it("should report neither a shared anchor nor an overlap"):
-            expect(_rules_reported(_INHERITANCE_HEAD)).to(equal([]))
+            expect(self.rules).to(equal([]))
 
     with context("with two associations that end at one point and share the last line"):
+        with before.all:
+            self.rules = _rules_reported(_ASSOCIATION_HEAD)
+
         with it("should report the shared anchor and the overlap"):
-            expect(sorted(_rules_reported(_ASSOCIATION_HEAD))).to(equal(["distinct-anchor-points", "edges-do-not-overlap-edges"]))
+            expect(sorted(self.rules)).to(equal(["distinct-anchor-points", "edges-do-not-overlap-edges"]))
 
     with context("that reports on named paths with no scan root"):
-        with before.each:
+        with before.all:
             path = _diagram_in_examples()
             self.report = DrawioScanner().run_report([str(path)])
 

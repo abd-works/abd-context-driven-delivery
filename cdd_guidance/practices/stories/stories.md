@@ -235,6 +235,7 @@ If this change will not stay here, follow `practices/stories/stories-scenarios.m
 - **`inline-simple-gwt-bodies`** - Keep simple Given, When, and Then bodies inline and use example exports directly. Extract a helper only for repeated interaction that is not a domain operation, such as a screen gesture or application wiring, because pass-through helpers add names without adding meaning.
 - **`domain-operations-inline-in-steps`** - Call each domain operation — a repository load with the identity in hand, an aggregate command, the refusal it raises — directly in the Given, When, or Then that relies on it. Do not wrap domain calls in story-file helpers such as `signIn` or `reloadAccount`. When several steps need the same prior state, seed it with a `seed…` fixture in the examples file, because the acceptance test exists to show which domain operation each step runs and what it proves.
 - **`extract-assertion-helper`** - Extract the same assertion shape after it appears more than twice and pass its concrete values as data, because copied assertions become inconsistent when behaviour changes.
+- **`story-tier-by-speed`** - Keep the domain tier (`.story.domain.spec`) within the unit budget of `@bdd` development `tier-by-speed`: stubs at external systems, the domain real and in memory. Name a tier that starts a real server, application, or install `..._heavy_spec`, and one that drives a real browser or agent `..._e2e_spec`, because the domain tier runs after every change and the real-surface tiers cannot.
 
 ---
 

@@ -8,7 +8,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from expects import equal, expect  # noqa: E402
-from mamba import context, description, it  # noqa: E402
+from mamba import before, context, description, it  # noqa: E402
 
 from cdd_guidance.practices.stories.rules.acceptance_tests import DomainFixtureExampleFiles  # noqa: E402
 from harness.graph.graph import Graph, Node, Source  # noqa: E402
@@ -27,6 +27,10 @@ def _hits(file: str, *, imported_from: str | None = None) -> list[str]:
 
 
 with description("an example fixture in an acceptance test"):
+    # A process reads the practices' guidance once, for its first graph; read it here, not in the first example.
+    with before.all:
+        Graph()
+
     with context("that a TypeScript story test imports from an examples module"):
         with it("should pass"):
             expect(_hits("tests/onboard/onboard.story.shared.ts", imported_from="./examples/customers.examples")).to(equal([]))

@@ -8,9 +8,9 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from expects import equal, expect, have_len
-from mamba import context, description, it
+from mamba import before, context, description, it
 
-from cdd_guidance.practices.ddd.rules.rule_examples import assert_ddd_example_pair, ddd_fixture, ddd_rule_by_slug, violations_for_ddd_rule
+from cdd_guidance.practices.ddd.rules.rule_examples import DddExamplePair, ddd_fixture, ddd_rule_by_slug, violations_for_ddd_rule
 from harness.graph.rule_fixture import SchemaRuleRun
 
 # A toolkit folder with no DDD model, shaped like the harness folders the scanner once misread: a class whose name ends
@@ -27,10 +27,18 @@ export class Onboarding {
 }
 """
 
-with description("DDD tactical rules (python .examples)"):
+with description("DDD tactical rules (python .examples)") as self:
+    # The first fixture loads the practices' guidance and readers; it is read here once, so no example pays for it.
+    with before.all:
+        ddd_fixture({"example.py": "class Warm:\n    pass\n"})
+
     with context("every-class-carries-ddd-stereotype"):
+        # The pair's two fixtures are read once; the example checks what the rule reported on them.
+        with before.all:
+            self.pair = DddExamplePair("every-class-carries-ddd-stereotype")
+
         with it("should flag a bare Plan beside its aggregate root and accept Plan as a value object"):
-            assert_ddd_example_pair("every-class-carries-ddd-stereotype")
+            self.pair.check()
 
         with it("should name the bare class on its aggregate"):
             source = "# <<Aggregate Root>> <<Entity>>\nclass Subscription:\n    pass\n\n\nclass Plan:\n    pass\n"
@@ -106,8 +114,12 @@ export class PaymentMethod {
             expect(hits).to(equal([]))
 
     with context("domain-concepts-not-technical-names"):
+        # The pair's two fixtures are read once; the example checks what the rule reported on them.
+        with before.all:
+            self.pair = DddExamplePair("domain-concepts-not-technical-names", "CartManager", clean_class="Cart")
+
         with it("should flag CartManager and accept Cart"):
-            assert_ddd_example_pair("domain-concepts-not-technical-names", "CartManager", clean_class="Cart")
+            self.pair.check()
 
         with it("should flag an aggregate whose folder is named for a manager"):
             hits = violations_for_ddd_rule(
@@ -119,8 +131,12 @@ export class PaymentMethod {
             expect(hits).to(have_len(1))
 
     with context("flaccid-data-object-no-behavior"):
+        # The pair's two fixtures are read once; the example checks what the rule reported on them.
+        with before.all:
+            self.pair = DddExamplePair("flaccid-data-object-no-behavior", "Cart", clean_class="Product")
+
         with it("should flag field-only Cart and accept Product with behavior"):
-            assert_ddd_example_pair("flaccid-data-object-no-behavior", "Cart", clean_class="Product")
+            self.pair.check()
 
         with it("should not apply to value objects that carry data only"):
             source = """
@@ -154,20 +170,36 @@ export class Sim {
             expect(hits).to(equal([]))
 
     with context("private-method-naming"):
+        # The pair's two fixtures are read once; the example checks what the rule reported on them.
+        with before.all:
+            self.pair = DddExamplePair("private-method-naming", "Other", clean_class="Cart")
+
         with it("should flag cross-type private access on Other"):
-            assert_ddd_example_pair("private-method-naming", "Other", clean_class="Cart")
+            self.pair.check()
 
     with context("service-is-homeless"):
+        # The pair's two fixtures are read once; the example checks what the rule reported on them.
+        with before.all:
+            self.pair = DddExamplePair("service-is-homeless", "CheckoutService", clean_class="PricingService")
+
         with it("should flag CheckoutService and accept a PricingService that does its own work"):
-            assert_ddd_example_pair("service-is-homeless", "CheckoutService", clean_class="PricingService")
+            self.pair.check()
 
     with context("repository-is-collection-lifecycle"):
+        # The pair's two fixtures are read once; the example checks what the rule reported on them.
+        with before.all:
+            self.pair = DddExamplePair("repository-is-collection-lifecycle", "NoteRepository")
+
         with it("should flag persist-only NoteRepository"):
-            assert_ddd_example_pair("repository-is-collection-lifecycle", "NoteRepository")
+            self.pair.check()
 
     with context("load-with-identity-in-hand"):
+        # The pair's two fixtures are read once; the example checks what the rule reported on them.
+        with before.all:
+            self.pair = DddExamplePair("load-with-identity-in-hand", "CustomerRepository")
+
         with it("should flag load without identity parameter"):
-            assert_ddd_example_pair("load-with-identity-in-hand", "CustomerRepository")
+            self.pair.check()
 
         with it("should accept a repository that loads the one record it holds"):
             source = """
@@ -189,12 +221,20 @@ export class DeviceWalletMerchantCredentialRepository {
             expect(hits).to(equal([]))
 
     with context("no-orphaned-objects"):
+        # The pair's two fixtures are read once; the example checks what the rule reported on them.
+        with before.all:
+            self.pair = DddExamplePair("no-orphaned-objects", "LonelyType", clean_class="Cart")
+
         with it("should flag LonelyType and accept related Cart"):
-            assert_ddd_example_pair("no-orphaned-objects", "LonelyType", clean_class="Cart")
+            self.pair.check()
 
     with context("screen-interface-not-a-domain-object"):
+        # The pair's two fixtures are read once; the example checks what the rule reported on them.
+        with before.all:
+            self.pair = DddExamplePair("screen-interface-not-a-domain-object", "SelectSim", clean_class="Checkout")
+
         with it("should flag SelectSim and accept Checkout"):
-            assert_ddd_example_pair("screen-interface-not-a-domain-object", "SelectSim", clean_class="Checkout")
+            self.pair.check()
 
         with it("should flag a domain service that opens and shows like a screen"):
             source = "# <<Domain Service>>\nclass SimPickerService:\n    def open(self):\n        return None\n\n    def isShowing(self):\n        return True\n"

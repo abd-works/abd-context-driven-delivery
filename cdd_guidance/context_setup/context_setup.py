@@ -105,16 +105,16 @@ class ContextSetup:
         root = self.session.path_named(folder_path)
         out_dir = root / "markdown"
         out_dir.mkdir(parents=True, exist_ok=True)
-        converter = _document_converter()
-        notes = [self._convert_source(converter, src, out_dir) for src in sorted(root.iterdir()) if self._is_convertible(src)]
+        notes = [self._convert_source(src, out_dir) for src in sorted(root.iterdir()) if self._is_convertible(src)]
         return ConversionResult(markdown_files=[note.file for note in notes], structure_notes=notes)
 
     def _is_convertible(self, src: Path) -> bool:
         return src.is_file() and src.suffix.lower() in _SUPPORTED
 
-    def _convert_source(self, converter, src: Path, out_dir: Path) -> StructureNote:
+    def _convert_source(self, src: Path, out_dir: Path) -> StructureNote:
+        # A markdown document is copied as it is, so a folder of markdown never makes the converter.
         content = src.read_text(encoding="utf-8") if src.suffix.lower() == ".md" else (
-            converter.convert(str(src)).text_content or ""
+            _document_converter().convert(str(src)).text_content or ""
         )
         out_file = out_dir / (src.stem + ".md")
         out_file.write_text(content, encoding="utf-8")

@@ -14,7 +14,9 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from harness.agent_tools.tool_call import ToolCall
+from space.repo.mock_repo import MockGit
 from space.session import Sessions
+from space.session.throwaway_project import ExampleHome
 
 
 def _project() -> Path:
@@ -25,6 +27,7 @@ def _project() -> Path:
 
 with description("the session a tool call opens"):
     with before.each:
+        self.home = ExampleHome()
         self.first = _project()
         self.second = _project()
         Sessions(self.first).switch("alpha")
@@ -33,6 +36,7 @@ with description("the session a tool call opens"):
     with after.each:
         shutil.rmtree(self.first, ignore_errors=True)
         shutil.rmtree(self.second, ignore_errors=True)
+        self.home.close()
 
     with context("that two projects each have a session switched on"):
         with it("should be each project's own session for a call on that project"):
@@ -64,15 +68,15 @@ with description("the session a tool call opens"):
 
     with context("that a call names a folder in a linked worktree of a project"):
         with before.each:
-            self.worktree = Path(tempfile.mkdtemp()).resolve()
-            worktree_git = self.first / ".git" / "worktrees" / "pet-visits"
-            worktree_git.mkdir(parents=True)
-            (worktree_git / "commondir").write_text("../..\n", encoding="utf-8")
-            (self.worktree / ".git").write_text(f"gitdir: {worktree_git}\n", encoding="utf-8")
+            # The project and its worktree held in memory: which branch each checkout has out is all this asks git.
+            held = MockGit(self.first)
+            held.make_clone()
+            self.worktree = Path(tempfile.mkdtemp()).resolve() / "pet-visits"
+            held.add_worktree("pet-visits", self.worktree)
             (self.worktree / "docs").mkdir()
 
         with after.each:
-            shutil.rmtree(self.worktree, ignore_errors=True)
+            shutil.rmtree(self.worktree.parent, ignore_errors=True)
 
         with it("should be the session of the worktree holding that folder"):
             expect(ToolCall({}, self.worktree / "docs").session.repo_path).to(equal(self.worktree))

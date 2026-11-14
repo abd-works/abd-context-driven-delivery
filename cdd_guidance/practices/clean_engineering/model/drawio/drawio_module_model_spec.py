@@ -145,9 +145,10 @@ def _create_kept(content, path):
     return toolset.create_diagram(content, path)
 
 
+# Rendering lays out and routes a page, so each context renders once, before its examples, which only read what it drew.
 with description('a Draw.io modules diagram'):
     with context('that was rendered from canonical modules'):
-        with before.each:
+        with before.all:
             model = CleanEngineeringModel(name='HeroesHandbook', sequential_order=1)
             checks = Module(name='checks', sequential_order=1, description='Resolve checks.', seam_terms=['Trait', 'Check'])
             character = Module(
@@ -185,7 +186,7 @@ with description('a Draw.io modules diagram'):
             expect(self.xml).to(contain('target="checks"'))
 
     with context('that round-trips markdown through Draw.io back to the model'):
-        with before.each:
+        with before.all:
             parsed = MarkdownCleanEngineeringModel(name='', sequential_order=1).parse(_MODULES_MD)
             drawio = DrawIOCleanEngineeringModel().render(parsed)
             self.back = DrawIOCleanEngineeringModel().parse(drawio)
@@ -214,7 +215,7 @@ with description('a Draw.io modules diagram'):
             expect(checks.dependencies).to(equal([]))
 
     with context('that was parsed from a nested Modules fidelity markdown section'):
-        with before.each:
+        with before.all:
             self.model = MarkdownCleanEngineeringModel(name='', sequential_order=1).parse(_NESTED_MODULE_CONTEXT_MD)
 
         with it('should hold one module'):
@@ -230,7 +231,7 @@ with description('a Draw.io modules diagram'):
             expect(self.model.modules[0].dependencies).to(equal(['character', 'checks']))
 
     with context('that was parsed from the AI template modules.drawio'):
-        with before.each:
+        with before.all:
             path = _TEMPLATES / 'modules.drawio'
             self.model = DrawIOCleanEngineeringModel().parse(path.read_text(encoding='utf-8'))
 
@@ -245,7 +246,7 @@ with description('a Draw.io modules diagram'):
             expect(with_deps).to(have_len(4))
 
     with context('that nests path children as containment'):
-        with before.each:
+        with before.all:
             parsed = MarkdownCleanEngineeringModel(name='', sequential_order=1).parse(_NESTED_POWERS_MD)
             parsed.name = 'Heroes Handbook'
             self.xml = DrawIOCleanEngineeringModel().render(parsed)
@@ -277,7 +278,7 @@ with description('a Draw.io modules diagram'):
 
 with description('a Draw.io class diagram'):
     with context('that was rendered from a typed class model'):
-        with before.each:
+        with before.all:
             model = CleanEngineeringModel(name='Shop', sequential_order=1)
             module = Module(name='Shop', sequential_order=1)
             module.classes.append(
@@ -305,7 +306,7 @@ with description('a Draw.io class diagram'):
 
     with context('that keeps positioning'):
         with context('with existing class content that has changed'):
-            with before.each:
+            with before.all:
                 first = DrawIOCleanEngineeringModel().render(_shop_model())
                 moved = _set_cell_xy(first, _CART, 500, 300)
                 self.xml = _render_kept(
@@ -324,7 +325,7 @@ with description('a Draw.io class diagram'):
 
         # A diagram spread over a mostly empty page is hard to read, so a render can close it up.
         with context('with a card moved far from the others and the gaps closed up'):
-            with before.each:
+            with before.all:
                 first = DrawIOCleanEngineeringModel().render(_shop_model())
                 order_x, order_y = _cell_xy(first, _ORDER)
                 moved = _set_cell_xy(first, _CART, order_x + 3000, order_y)
@@ -337,7 +338,7 @@ with description('a Draw.io class diagram'):
                 expect(_cell_xy(self.xml, _CART)[0] > _cell_xy(self.xml, _ORDER)[0]).to(be_true)
 
         with context('with an existing relationship already present'):
-            with before.each:
+            with before.all:
                 first = DrawIOCleanEngineeringModel().render(_shop_model())
                 marked = _set_edge_waypoint(first, _CART, _ORDER, 111, 222)
                 self.xml = _render_kept(_shop_model(), marked)
@@ -348,7 +349,7 @@ with description('a Draw.io class diagram'):
                 expect(points).to(contain(('111', '222')))
 
         with context('with a new class added to the model'):
-            with before.each:
+            with before.all:
                 first = DrawIOCleanEngineeringModel().render(_shop_model())
                 moved = _set_cell_xy(first, _CART, 500, 300)
                 invoice = OoadClass(name='Invoice', sequential_order=3, properties=[Property(name='number', type_hint='str')])
@@ -367,7 +368,7 @@ with description('a Draw.io class diagram'):
                 expect(_cell_xy(self.xml, _INVOICE) == (500.0, 300.0)).to(be_false)
 
         with context('with a new relationship added to the model'):
-            with before.each:
+            with before.all:
                 first = DrawIOCleanEngineeringModel().render(_shop_model())
                 marked = _set_edge_waypoint(first, _CART, _ORDER, 111, 222)
                 invoice = OoadClass(name='Invoice', sequential_order=3, properties=[Property(name='number', type_hint='str')])
@@ -385,7 +386,7 @@ with description('a Draw.io class diagram'):
                 expect(_edge_cell(self.xml, _CART, _INVOICE).get('target')).to(equal(_INVOICE))
 
         with context('with no previous diagram'):
-            with before.each:
+            with before.all:
                 channel = DrawIOCleanEngineeringModel()
                 channel.keep_positioning = True
                 self.xml = channel.render(_shop_model())
@@ -397,7 +398,7 @@ with description('a Draw.io class diagram'):
                 expect(_has_vertex(self.xml, _CART)).to(be_true)
 
         with context('with a model large enough for one page per module'):
-            with before.each:
+            with before.all:
                 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import CLASSES_ON_ONE_PAGE
 
                 def two_modules():
@@ -434,7 +435,7 @@ with description('a Draw.io class diagram'):
 with description('Drawio creating a diagram'):
     with context('that keeps positioning'):
         with context('with an existing diagram at the output path'):
-            with before.each:
+            with before.all:
                 self.tmp = tempfile.TemporaryDirectory()
                 self.path = str(Path(self.tmp.name) / 'shop.drawio')
                 first = DrawIOCleanEngineeringModel().render(_shop_model())
@@ -499,7 +500,7 @@ _TWO_MODULES = """# shop/cart
 
 
 with description('a class model that spans two modules'):
-    with before.each:
+    with before.all:
         model = MarkdownCleanEngineeringModel(name='', sequential_order=1).parse(_TWO_MODULES)
         self.rendered = DrawIOCleanEngineeringModel().render(model)
         self.cells = {cell.get('id'): cell for cell in ET.fromstring(self.rendered).iter('mxCell')}

@@ -70,7 +70,10 @@ class SessionSaves:
         return self._failure
 
     def later(self, message: str) -> None:
-        """Queue a save with message; it is made on the saving thread, started when none is running."""
+        """Queue a save with message; it is made on the saving thread, started when none is running. A project git does
+        not hold has nothing to commit, so its save is not queued and no thread is started for it."""
+        if not self._repository.is_clone:
+            return
         with self._queue:
             self._pending.append(message)
             if self._worker is None:
