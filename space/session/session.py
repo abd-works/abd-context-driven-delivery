@@ -531,6 +531,13 @@ class Session:
     @mcp
     @agent_tool
     @noSessionLog
+    def show(self) -> Session:
+        """This session as it stands, changing nothing: its title, workpath, and each practice with whether it is on and its colour."""
+        return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
     def folder_files(self) -> list[FileEntry]:
         """List every file in this session's folder, each with its path from the project: its log, handoffs, kept notes, and validation reports."""
         return self.session_files.in_folder()

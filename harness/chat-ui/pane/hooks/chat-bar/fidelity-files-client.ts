@@ -5,7 +5,7 @@ import { runningBoardUrl } from '../board-chat/board-server'
 import { openApp } from '../health/app-client'
 import { showFailure } from '../error-display/failure-client'
 import { openInBrowserPane } from '../shared/browser-pane'
-import { currentChatBar } from './chat-bar-client'
+import { currentChatBar, type ChatBarClient } from './chat-bar-client'
 import type { FidelityProgressClient } from './fidelity-progress-client'
 
 // A fidelity's files, a session's folder and a file another page asks for open in the Files app, the file viewer alone
@@ -51,15 +51,15 @@ async function openBoardLink($: EngineInterface, what: string, query: Record<str
 
 // One fidelity's files: the files button of a fidelity's folder on the session card.
 export async function openFiles($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
-  await openFilesOf($, [fidelity])
+  await openFilesLink($, `${fidelity.slug} files`, { files: fidelity.progress.ticket.name, fidelity: fidelity.slug })
 }
 
-// The files of the stage, with the practices of these fidelities turned on: the bar's files button.
-export async function openFilesOf($: EngineInterface, fidelities: FidelityProgressClient[]): Promise<void> {
-  const [first] = fidelities
-  if (!first) return
-  const slugs = fidelities.map(fidelity => fidelity.slug).join(',')
-  await openFilesLink($, `${slugs} files`, { files: first.progress.ticket.name, fidelity: slugs })
+// The shown stage's files, every practice's, for the files button: the Files app lists the files of the practices turned
+// on and toggles a practice on or off for the session, which this bar then shows too.
+export async function openStageFiles($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
+  const slugs = chatBar.stageFidelitySlugs.join(',')
+  if (!slugs) return
+  await openFilesLink($, `${chatBar.shownStage} files`, { files: chatBar.ticketName, fidelity: slugs })
 }
 
 // Every file in the chat's session folder, .sessions/<session>: a ticket chat's session name opens it.

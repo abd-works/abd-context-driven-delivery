@@ -1,4 +1,4 @@
-import { Component, useEffect, useSyncExternalStore, type ReactNode } from 'react'
+import { Component, useEffect, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react'
 
 import type { FileEntryData, SessionFileData } from '@cdd/space/session/session'
 
@@ -36,6 +36,29 @@ function FileListView({ page }: { page: FilesPage }) {
         <FileEntryView key={entry.path} page={page} entry={entry} isOpen={entry.path === state.openPath} />
       ))}
     </ul>
+  )
+}
+
+// The session's practices along the top, each a toggle in its practice colour: filled while the session works on it,
+// an outline while it is off. A press turns it on or off for the session, here and on the chat bar.
+function PracticeTogglesView({ page }: { page: FilesPage }) {
+  const { practices } = useFilesState(page)
+  if (!practices.length) return null
+  return (
+    <div className="practice-toggles" role="group" aria-label="Practices">
+      {practices.map(practice => (
+        <button
+          key={practice.name}
+          className={`practice-toggle ${practice.enabled ? 'is-on' : 'is-off'}`}
+          style={{ '--practice-colour': practice.colour } as CSSProperties}
+          aria-pressed={practice.enabled}
+          title={`${practice.short_name}: ${practice.enabled ? 'on, press to hide its files' : 'off, press to show its files'}`}
+          onClick={() => void page.togglePractice(practice.name)}
+        >
+          {practice.short_name}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -90,6 +113,7 @@ export function FilesPageView({ page }: { page: FilesPage }) {
       <header className="files-head">
         <span className="files-kind">FILES</span>
         <span className="files-subject">{page.link.subject}</span>
+        <PracticeTogglesView page={page} />
       </header>
       {problem ? <div className="files-problem" role="alert">{problem}</div> : null}
       <div className="files-body">

@@ -1,6 +1,7 @@
 import type { ChatCommandData } from '@cdd/harness/chat/chat'
 import type { EngineInterface } from 'claude-code'
 
+import { refreshChatBar } from '../chat-bar/chat-bar-client'
 import { openFileInViewer } from '../chat-bar/fidelity-files-client'
 import { commandOf, filledPrompt, REFUSED_WITHIN_MILLISECONDS } from '../shared/chat-command'
 import { reasonOf, showFailure } from '../error-display/failure-client'
@@ -51,6 +52,7 @@ function shown($: EngineInterface, chat: string, command: ChatCommandData): Prom
 // The board shows each message as shown or failed, so a message the chat could not take is never silent. A fill waits
 // for the person to send it, so only a command or a submit has work for the chat to finish.
 async function run($: EngineInterface, chat: string, command: ChatCommandData): Promise<void> {
+  if (command.kind === 'refresh') return refreshed($, chat, command)
   const hasTurn = command.kind === 'command' || command.kind === 'submit'
   $.ui.toast(`Board message arrived: ${command.text}`)
   if (hasTurn) awaitTurn(command.message)
@@ -58,6 +60,14 @@ async function run($: EngineInterface, chat: string, command: ChatCommandData): 
   if (reason) await showFailure($, `Board message failed: ${reason}`, `A ${command.kind} the board sent to this chat: ${command.text}`)
   else $.ui.toast(`Board sent: ${command.text}`)
   if (reason) forgetTurn(command.message)
+  await post($, { chat, operation: 'confirm', body: { message: command.message, is_shown: !reason, reason } })
+}
+
+// A refresh reads the board again, with no toast: a page such as the Files app turned a practice on or off for the
+// session, which the bar shows only after it reads the board.
+async function refreshed($: EngineInterface, chat: string, command: ChatCommandData): Promise<void> {
+  const reason = await refreshChatBar($).then(() => '', reasonOf)
+  if (reason) await showFailure($, `The chat bar did not read the board again: ${reason}`, `A refresh ${command.text} sent to this chat`)
   await post($, { chat, operation: 'confirm', body: { message: command.message, is_shown: !reason, reason } })
 }
 

@@ -34,6 +34,12 @@ button:disabled { cursor: default; opacity: 0.5; }
 .files-head { display: flex; gap: var(--space-sm); align-items: baseline; padding: var(--space-xs) var(--space-md); border-bottom: 1px solid var(--border); background: var(--surface); }
 .files-kind { font-family: var(--font-mono); font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
 .files-subject { font-family: var(--font-mono); color: var(--muted); }
+/* Each practice in its own colour: filled while on, an outline while off. */
+.practice-toggles { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin-left: auto; align-self: center; }
+.practice-toggle { font: inherit; font-size: 0.8rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--practice-colour); cursor: pointer; }
+.practice-toggle.is-on { background: var(--practice-colour); color: #fff; }
+.practice-toggle.is-off { background: transparent; color: var(--practice-colour); opacity: 0.7; }
+.practice-toggle:hover { opacity: 1; filter: brightness(1.1); }
 .files-problem { margin: var(--space-xs) var(--space-md); padding: var(--space-xs); border: 1px solid var(--error); color: var(--error); white-space: pre-wrap; }
 .files-body { display: grid; grid-template-columns: minmax(12rem, 18rem) 1fr; gap: var(--space-md); padding: var(--space-md); align-items: start; }
 .files-side { position: sticky; top: var(--space-md); max-height: calc(100vh - 6rem); overflow: auto; }

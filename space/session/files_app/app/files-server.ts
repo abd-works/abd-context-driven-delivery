@@ -3,8 +3,10 @@ import { join } from 'node:path'
 
 import type { ProjectConnections } from '@cdd/cdd-connection'
 import { CddRequestError, type CddRoute } from '@cdd/cdd-shared'
+import { chatRoutes } from '@cdd/harness/chat/chat'
 import { fidelityProgressRoutes } from '@cdd/space/kanban/fidelity-progress'
 import { fileCommentsRoutes } from '@cdd/space/session/file-comments'
+import { practiceSessionOutputRoutes } from '@cdd/space/session/practice-session-output'
 import { sessionRoutes } from '@cdd/space/session/session'
 
 import { DrawioViewer } from './drawio-viewer'
@@ -15,8 +17,19 @@ const BAD_REQUEST = 400
 const FORBIDDEN = 403
 const FAILED = 500
 
-// The Files app reads a session's files, a fidelity's files, and the comments on them; it never reads the board.
-export const filesRoutes: CddRoute[] = [...sessionRoutes, ...fileCommentsRoutes, ...fidelityProgressRoutes]
+// The one chat route the page needs: a refresh to the chat that opened it, so its chat bar shows a practice turned on
+// or off here. Opening or removing chats stays with the board.
+const SEND_TO_CHAT = '/chat/:chat/send'
+
+// The Files app reads a session's files, a fidelity's files, and the comments on them, turns the session's practices on
+// or off, and tells the chat that opened it; it never reads the board.
+export const filesRoutes: CddRoute[] = [
+  ...sessionRoutes,
+  ...fileCommentsRoutes,
+  ...fidelityProgressRoutes,
+  ...practiceSessionOutputRoutes,
+  ...chatRoutes.filter(route => route.path === SEND_TO_CHAT),
+]
 
 const textOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
 

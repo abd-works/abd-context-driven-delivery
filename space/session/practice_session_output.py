@@ -96,6 +96,18 @@ class PracticeSessionOutput:
 
     @property
     @data_field
+    def short_name(self) -> str:
+        """The practice's short name, such as DDD, which a toggle for it shows."""
+        return self._guidance.short_name
+
+    @property
+    @data_field
+    def colour(self) -> str:
+        """The practice's colour, which its toggles and fidelity dots are drawn in."""
+        return self._guidance.colour
+
+    @property
+    @data_field
     def enabled(self) -> bool:
         """Whether the session works on this practice: true until a person turns it off."""
         return self.saved.get("enabled", True)

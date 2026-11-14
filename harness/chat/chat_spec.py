@@ -261,6 +261,14 @@ with description("a chat") as self:
             with it("should get the file at its next check-in, a turn running or not"):
                 expect(_said(Chat.load(CHAT).check_in(is_busy=True))).to(equal([("open_file", "move-work-forward-from-chat-bar/open_story_ui_story.test.py")]))
 
+        # (S) Toggle Practices In The Files App: a practice turned on or off in the Files app shows on the chat bar too.
+        with context("that has been sent a refresh during a turn"):
+            with before.each:
+                Chat.load(CHAT).send("refresh", "practices")
+
+            with it("should get the refresh at its next check-in, a turn running or not"):
+                expect(_said(Chat.load(CHAT).check_in(is_busy=True))).to(equal([("refresh", "practices")]))
+
         with context("that has been sent a fill during a turn"):
             with before.each:
                 Chat.load(CHAT).send("fill", "Write a handoff")

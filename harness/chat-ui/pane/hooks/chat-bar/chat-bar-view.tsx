@@ -11,7 +11,7 @@ import { toggleOverlay, toggleOverlayList, type OverlayChips } from './overlay-c
 import { askChatToFixBoard, restartServer, runHandoff, type ChatBarClient } from './chat-bar-client'
 import type { FailureClient } from '../error-display/failure-client'
 import { FailureView } from '../error-display/failure-view'
-import { openFilesOf, openReport, openSessionFolder } from './fidelity-files-client'
+import { openReport, openSessionFolder, openStageFiles } from './fidelity-files-client'
 import { openHelp } from './fidelity-help-client'
 import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
@@ -149,14 +149,14 @@ function IconButtonView(elements: ElementTable, key: string, icon: string, words
   )
 }
 
-// Handoff, files, restart and close as icons. Files shows the action fidelity's files, else the first fidelity's.
+// Handoff, files, restart and close as icons. Files shows the shown stage's files in the Files app, every practice
+// there with its toggle.
 function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
   const { Box } = elements
-  const fidelities = chatBar.actionFidelities.length ? chatBar.actionFidelities : chatBar.fidelities.slice(0, 1)
   return (
     <Box key="session-buttons" flexDirection="row" gap={1}>
       {IconButtonView(elements, 'handoff', '⇥', 'handoff', () => runHandoff($, chatBar))}
-      {fidelities.length ? IconButtonView(elements, 'files-button', '▤', 'files', () => openFilesOf($, fidelities)) : null}
+      {chatBar.stageFidelitySlugs.length ? IconButtonView(elements, 'files-button', '▤', 'files', () => openStageFiles($, chatBar)) : null}
       {IconButtonView(elements, 'restart-button', '↻', 'restart cdd server', () => restartServer($))}
       {chatBar.isMain || chatBar.isPlainFolder ? null : IconButtonView(elements, 'close-button', '✕', 'close session', () => openClose($, chatBar))}
     </Box>

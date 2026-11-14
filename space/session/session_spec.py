@@ -22,6 +22,7 @@ from mamba import after, before, context, description, it
 
 from harness.graph.graph import Graph
 from harness.guidance.guidance import PracticeGuidance
+from harness.installation.data_class import data_of
 from harness.guidance_actions import GuidanceAction
 from harness.hooks.hook_server import HookPayload
 from harness.agent_tools.tool_call import ToolCall
@@ -886,6 +887,12 @@ with description("a practice"):
 
             with it("should be left out of the practices the session works on"):
                 expect(sorted(self.session.practices)).to(equal(["bdd", "clean_engineering", "stories", "ux"]))
+
+            with it("should still be shown, turned off, so a toggle can turn it on again"):
+                expect(data_of(self.session.show())["practices"]["ddd"]["enabled"]).to(equal(False))
+
+            with it("should be shown in its practice's colour"):
+                expect(data_of(self.session.show())["practices"]["ddd"]["colour"]).to(equal(self.session.practice("ddd").guidance.colour))
 
             with context("that is turned on again"):
                 with before.each:

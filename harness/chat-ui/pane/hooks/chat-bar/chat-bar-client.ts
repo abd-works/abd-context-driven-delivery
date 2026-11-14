@@ -124,6 +124,12 @@ export class ChatBarClient {
       .map(progress => new FidelityProgressClient(progress, ticket, this.practiceNamed(progress.practice.key), this.selected.includes(progress.fidelity.slug), this.labelOf(progress.fidelity.slug)))
   }
 
+  // Every fidelity of the shown stage, its practice on or off for the session: the Files app shows a toggle for each
+  // practice and lists the files of the ones turned on, so turning one on there shows its files at once.
+  get stageFidelitySlugs(): string[] {
+    return (this.ticket?.progress ?? []).filter(progress => progress.stage.name === this.shownStage).map(progress => progress.fidelity.slug)
+  }
+
   // The fidelities the session card lists a folder beside: practices that write under one folder share it, so each
   // folder is listed once, beside the first fidelity that writes there.
   get foldersListedBeside(): Set<string> {
