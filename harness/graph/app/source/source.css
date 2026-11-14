@@ -1,0 +1,195 @@
+/* The source view's own look: its rule chips, its violation banner and marks, and the fold and call-nest marks in
+   Monaco's gutter. SourceView imports it, so every page that shows a source, the Graph app and the Files app alike,
+   draws it the same. The page supplies the colour and spacing tokens it reads (--raised, --border, --error, ...). */
+
+.source-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-s) 0;
+}
+
+.source-rule {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s, 4px);
+  cursor: pointer;
+  padding: 0 var(--space-2xs);
+}
+.source-rule.passing { color: var(--success); }
+.source-rule.violating { color: var(--error); }
+.source-rule.prompt { color: var(--text-muted, var(--text)); }
+.source-rule.is-active { border-color: var(--select); }
+
+.violation-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--error) 12%, var(--raised));
+}
+
+.violation-banner-copy {
+  display: grid;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.violation-rule {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.violation-message {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.35;
+  color: var(--error);
+}
+
+.source-snippet .violation-highlight {
+  background-color: color-mix(in srgb, var(--error) 22%, transparent) !important;
+}
+
+.source-snippet {
+  position: relative;
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-xs);
+  overflow: visible;
+  overflow-anchor: none;
+}
+
+.panel-source {
+  min-height: 0;
+}
+
+.source-snippet-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  min-height: 1.5rem;
+  padding: 0 var(--space-sm);
+  border-bottom: 1px solid var(--border);
+}
+
+.source-type {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.source-snippet .call-fold,
+.source-snippet .class-fold,
+.source-snippet .block-fold {
+  cursor: pointer;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 14px 14px;
+}
+
+.source-snippet .call-fold.codicon::before,
+.source-snippet .class-fold.codicon::before,
+.source-snippet .block-fold.codicon::before {
+  content: none;
+}
+
+.source-snippet .block-fold {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6 3.5 11.5 8 6 12.5' fill='none' stroke='%23333333' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.source-snippet .block-fold-open {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 6 8 11.5 12.5 6' fill='none' stroke='%23333333' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+html[data-theme="engineering"] .source-snippet .block-fold {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6 3.5 11.5 8 6 12.5' fill='none' stroke='%23d4d4d4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+html[data-theme="engineering"] .source-snippet .block-fold-open {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 6 8 11.5 12.5 6' fill='none' stroke='%23d4d4d4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.source-snippet .class-fold {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2.5' y='2.5' width='11' height='11' rx='0.5' fill='none' stroke='%23333333' stroke-width='1.5'/%3E%3Cpath d='M2.5 6.2h11' fill='none' stroke='%23333333' stroke-width='1.5'/%3E%3C/svg%3E");
+}
+
+.source-snippet .call-fold {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M5 4.5 2.5 8 5 11.5M11 4.5 13.5 8 11 11.5' fill='none' stroke='%23333333' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+html[data-theme="engineering"] .source-snippet .class-fold {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2.5' y='2.5' width='11' height='11' rx='0.5' fill='none' stroke='%23d4d4d4' stroke-width='1.5'/%3E%3Cpath d='M2.5 6.2h11' fill='none' stroke='%23d4d4d4' stroke-width='1.5'/%3E%3C/svg%3E");
+}
+
+html[data-theme="engineering"] .source-snippet .call-fold {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M5 4.5 2.5 8 5 11.5M11 4.5 13.5 8 11 11.5' fill='none' stroke='%23d4d4d4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.source-snippet .lines-content .cdr.call-nest {
+  background-color: #e6dfd2 !important;
+}
+.source-snippet .lines-content .cdr.call-nest-1 { background-color: #e6dfd2 !important; }
+.source-snippet .lines-content .cdr.call-nest-2 { background-color: #d9d0c0 !important; }
+.source-snippet .lines-content .cdr.call-nest-3 { background-color: #cfc3b0 !important; }
+.source-snippet .lines-content .cdr.call-nest-4 { background-color: #c4b6a0 !important; }
+.source-snippet .lines-content .cdr.call-nest-5 { background-color: #b9aa92 !important; }
+
+html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest,
+html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest-1 { background-color: #32323c !important; }
+html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest-2 { background-color: #3e3e4a !important; }
+html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest-3 { background-color: #4a4a58 !important; }
+html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest-4 { background-color: #565668 !important; }
+html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest-5 { background-color: #626276 !important; }
+
+.source-snippet .source-toggle {
+  position: static;
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.source-snippet-bar h2 {
+  border-bottom: none;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text);
+}
+
+.source-snippet[data-open='false'] .source-snippet-bar {
+  border-bottom: none;
+}
+
+.source-snippet .monaco-editor,
+.source-snippet .monaco-editor-background,
+.source-snippet .margin {
+  background: var(--raised) !important;
+}
+
+.source-snippet .monaco-editor,
+.source-snippet .overflow-guard {
+  overflow-anchor: none;
+}

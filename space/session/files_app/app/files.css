@@ -1,0 +1,78 @@
+/* The Files app's page. The tokens are the ones the source view's own stylesheet reads (harness/graph/app/source). */
+*, ::before, ::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #F6F5F3;
+  --surface: #FFFFFF;
+  --raised: #F0ECE4;
+  --border: #DDD8CF;
+  --text: #111113;
+  --muted: #595A61;
+  --accent: #E5531A;
+  --success: #22C55E;
+  --warning: #F59E0B;
+  --error: #EF4444;
+  --select: #2563EB;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --radius-sm: 4px;
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+}
+
+body { background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: var(--text-sm); }
+
+button { font: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-sm); padding: 2px var(--space-xs); }
+button:disabled { cursor: default; opacity: 0.5; }
+
+.files-page { display: flex; flex-direction: column; min-height: 100vh; }
+.files-head { display: flex; gap: var(--space-sm); align-items: baseline; padding: var(--space-xs) var(--space-md); border-bottom: 1px solid var(--border); background: var(--surface); }
+.files-kind { font-family: var(--font-mono); font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+.files-subject { font-family: var(--font-mono); color: var(--muted); }
+.files-problem { margin: var(--space-xs) var(--space-md); padding: var(--space-xs); border: 1px solid var(--error); color: var(--error); white-space: pre-wrap; }
+.files-body { display: grid; grid-template-columns: minmax(12rem, 18rem) 1fr; gap: var(--space-md); padding: var(--space-md); align-items: start; }
+.files-side { position: sticky; top: var(--space-md); max-height: calc(100vh - 6rem); overflow: auto; }
+.files-note { color: var(--muted); }
+
+.file-list { list-style: none; display: grid; gap: 2px; }
+.file-entry { width: 100%; text-align: left; border-color: transparent; background: transparent; font-family: var(--font-mono); font-size: var(--text-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-entry.is-open { border-color: var(--select); background: var(--surface); }
+.file-entry.is-changed { font-weight: 600; }
+.file-entry.is-missing { font-style: italic; }
+.file-entry-note { color: var(--muted); }
+
+.open-file { min-width: 0; }
+.comment-toolbar { display: flex; gap: var(--space-xs); align-items: center; margin-bottom: var(--space-xs); }
+.files-hint { color: var(--muted); font-size: var(--text-xs); }
+.source-path { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--muted); padding: var(--space-2xs) var(--space-sm); }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: var(--space-xs); }
+.empty-state { color: var(--muted); }
+.copy-prompt { align-self: center; }
+
+.file-source { position: relative; }
+.comment-box { position: absolute; z-index: 20; width: min(32rem, 80%); display: grid; gap: var(--space-2xs); padding: var(--space-xs); background: var(--surface); border: 1px solid var(--select); border-radius: var(--radius-sm); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); }
+.comment-box-head { display: flex; justify-content: space-between; gap: var(--space-xs); font-family: var(--font-mono); font-size: var(--text-xs); color: var(--muted); }
+.comment-box textarea { min-height: 4rem; font: inherit; padding: var(--space-2xs); border: 1px solid var(--border); border-radius: var(--radius-sm); resize: vertical; }
+.comment-actions { display: flex; gap: var(--space-2xs); }
+.comment-state.is-not_sent { color: var(--warning); }
+.comment-state.is-sent { color: var(--select); }
+.comment-state.is-processed { color: var(--success); }
+
+/* Monaco's gutter marks: a dot beside a comment's first line, by its state. */
+.source-snippet .file-comment-marker { cursor: pointer; }
+.source-snippet .file-comment-marker::after { content: ''; display: block; width: 10px; height: 10px; margin: 5px auto; border-radius: 50%; background: var(--warning); }
+.source-snippet .file-comment-marker.is-sent::after { background: var(--select); }
+.source-snippet .file-comment-marker.is-processed::after { background: var(--success); }
+.source-snippet .file-violation { background: color-mix(in srgb, var(--error) 8%, transparent); }
+.source-snippet .file-change { width: 3px !important; margin-left: 3px; }
+.source-snippet .file-change.is-changed { background: var(--select); }
+.source-snippet .file-change.is-added { background: var(--success); }
+.source-snippet .file-change.is-removed { border-top: 3px solid var(--error); }
+
+.toasts { position: fixed; right: var(--space-md); bottom: var(--space-md); display: grid; gap: var(--space-xs); max-width: 28rem; }
+.toast { padding: var(--space-xs) var(--space-sm); background: var(--text); color: var(--surface); border-radius: var(--radius-sm); }

@@ -12,6 +12,7 @@ WIRING = [
     "Mark the lines a broken rule names",
     "Mark a comment beside the selection's first line",
     "Save the edited text to the file on disk",
+    "Edit a file comment",
     "Delete a file comment",
     "Send every open comment at once",
     "Clear the processed comments, keeping the rest",

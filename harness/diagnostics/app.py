@@ -34,6 +34,9 @@ TYPESCRIPT_LOADER = ("--import", "tsx")
 # How long a restarted server has to answer on one of its ports, and how often it is asked.
 RESTART_SECONDS = 30
 RESTART_CHECK_SECONDS = 0.25
+# The TypeScript language adapter the install writes into the checkout, which every app's page imports as @cdd (each
+# vite.config.ts names it), so an app lists it among the folders its build reads.
+LANGUAGE_ADAPTER_FOLDER = Path(__file__).resolve().parents[2] / ".claude" / "language-adapters" / "typescript"
 # A Windows process started on its own, so it outlives the install that started it and opens no console window.
 _DETACHED = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(subprocess, "CREATE_NO_WINDOW", 0)
 

@@ -100,6 +100,10 @@ class FileComment:
         is told from it once the comment is processed."""
         return self._sent_text
 
+    def reworded(self, text: str) -> FileComment:
+        """This comment on the same lines, saying text instead, not sent: a chat that had the old words never had these."""
+        return FileComment(self._range, text)
+
     def sent_in(self, chat: str, message: str, sent_text: str) -> FileComment:
         """This comment, sent to chat in message while its file read sent_text."""
         return FileComment(self._range, self._text, chat, message, sent_text)
@@ -159,6 +163,15 @@ class FileComments:
         """Comment text on lines start_line to end_line of path, a file named from the project, keeping what those lines hold now; a new comment on the same lines replaces the one there. Returns every comment, the new one last."""
         added = FileComment(self._session.file(path).range(start_line, end_line), text)
         self._save([*(comment for comment in self.comments if comment.anchor != added.anchor), added])
+        return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def edit(self, anchor: str, text: str) -> FileComments:
+        """Change the words of the comment at anchor, such as src/checkout/order.py:L12-L14, to text, keeping its lines; the edited comment is not sent, so the chat is sent the new words. Returns every comment."""
+        edited = self._held(anchor).reworded(text)
+        self._save([edited if comment.anchor == anchor else comment for comment in self.comments])
         return self
 
     @mcp
