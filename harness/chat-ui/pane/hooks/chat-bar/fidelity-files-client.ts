@@ -11,21 +11,27 @@ import type { FidelityProgressClient } from './fidelity-progress-client'
 // report panel. Each is readied as the status row readies its app (Python's App.open, then this chat starts the server
 // while it is not running), and opens by a link that names what to show. When the pane does not open, the toast says why.
 
-async function openLink($: EngineInterface, what: string, appUrl: () => Promise<string>, query: Record<string, string>): Promise<void> {
-  const url = await appUrl().catch(() => '')
-  if (!url) return $.ui.toast(`${what} did not open: its app is not running and did not start`)
-  const link = await projectPageUrl($, url, query)
+// The Files app is the board's own server answering its /files page, so it is readied as the board is.
+const FILES_PAGE = '/files'
+const BOARD_PAGE = '/'
+
+// A page of the board's server, the board started first when it is not running. Every function here that takes `$` is
+// a function declaration: the engine follows `$` only into those, and refuses a module that hides one in a const.
+async function openBoardPage($: EngineInterface, page: string, what: string, query: Record<string, string>): Promise<void> {
+  const url = await runningBoardUrl($).catch(() => '')
+  if (!url) return $.ui.toast(`${what} did not open: the board is not running and did not start`)
+  const link = await projectPageUrl($, new URL(page, url).toString(), query)
   const problem = await openInBrowserPane($, link)
   if (problem) $.ui.toast(`${what} did not open at ${link}: ${problem}`)
 }
 
-// The Files app is the board's own server answering its /files page, so it is readied as the board is.
-const FILES_PAGE = '/files'
-const filesAppUrl = ($: EngineInterface) => async (): Promise<string> => new URL(FILES_PAGE, await runningBoardUrl($)).toString()
+async function openFilesLink($: EngineInterface, what: string, query: Record<string, string>): Promise<void> {
+  await openBoardPage($, FILES_PAGE, what, query)
+}
 
-const openFilesLink = ($: EngineInterface, what: string, query: Record<string, string>) => openLink($, what, filesAppUrl($), query)
-
-const openBoardLink = ($: EngineInterface, what: string, query: Record<string, string>) => openLink($, what, () => runningBoardUrl($), query)
+async function openBoardLink($: EngineInterface, what: string, query: Record<string, string>): Promise<void> {
+  await openBoardPage($, BOARD_PAGE, what, query)
+}
 
 // One fidelity's files: the files button of a fidelity's folder on the session card.
 export async function openFiles($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
