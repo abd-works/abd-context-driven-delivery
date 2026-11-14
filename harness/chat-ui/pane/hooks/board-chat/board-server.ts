@@ -1,7 +1,7 @@
 import type { EngineInterface } from 'claude-code'
 
 import { openApp } from '../health/app-client'
-import { reasonOf } from '../shared/failure'
+import { reasonOf } from '../error-display/failure-client'
 import { projectPageUrl } from './board'
 import { KANBAN } from '../health/server-health-client'
 

@@ -1,6 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 
-import { reasonOf } from './failure'
+import { reasonOf } from '../error-display/failure-client'
 
 // The Claude desktop app's own browser pane, as /mcp lists it: its tool that opens a tab at a URL, its tabs with their
 // origins, and the calls that move a tab and bring it to the front.
@@ -52,19 +52,22 @@ async function openedTab($: EngineInterface, url: string): Promise<string> {
   return opened.isError || /"navOk":\s*false/.test(said) ? `${BROWSER_PANE} ${OPEN_PANE_TAB} failed: ${said || 'no reason given'}` : ''
 }
 
-// The pane's tab on origin, the active one first; none while the pane is closed or the answer cannot be read. The
-// answer is the tabs as JSON followed by a sentence about the pane, so the JSON is read up to its last brace.
+// The pane's tab on origin, the active one first; none while the pane is closed. A refused call or an answer that
+// cannot be read throws, so openInBrowserPane says why. The answer is the tabs as JSON followed by a sentence about the
+// pane, so the JSON is read up to its last brace.
 async function tabOn($: EngineInterface, origin: string): Promise<string | null> {
-  const answer = await $.mcp.call(BROWSER_PANE, TABS, {}).catch(() => null)
-  const text = answer && !answer.isError ? saidBy(answer) : ''
+  const answer = await $.mcp.call(BROWSER_PANE, TABS, {})
+  const text = saidBy(answer)
+  if (answer.isError) throw new Error(`${BROWSER_PANE} ${TABS} failed: ${text || 'no reason given'}`)
+  let pane: PaneTabs
   try {
-    const { browserOpen, tabs } = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as PaneTabs
-    if (!browserOpen) return null
-    const onOrigin = tabs.filter(tab => tab.origin === origin)
-    return (onOrigin.find(tab => tab.isActive) ?? onOrigin[0])?.tabId ?? null
-  } catch {
-    return null
+    pane = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as PaneTabs
+  } catch (failure) {
+    throw new Error(`${BROWSER_PANE} ${TABS} answered what is not its tabs (${reasonOf(failure)}): ${text || 'nothing'}`)
   }
+  if (!pane.browserOpen) return null
+  const onOrigin = pane.tabs.filter(tab => tab.origin === origin)
+  return (onOrigin.find(tab => tab.isActive) ?? onOrigin[0])?.tabId ?? null
 }
 
 // The engine wraps a hook's refusal as "<plugin>: $.mcp.call(<server>, <tool>) refused: PreToolUse:<tool> hook error:

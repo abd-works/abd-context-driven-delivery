@@ -6,7 +6,7 @@ import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
 import type { ChatBarJson } from '../../types'
-import { reasonOf } from '../shared/failure'
+import { reasonOf, showFailure } from '../error-display/failure-client'
 import { SERVER } from '../health/server-health-client'
 import { FidelityProgressClient, selectedFidelitySlugs } from './fidelity-progress-client'
 import { StageClient, shownStageName } from './stage-client'
@@ -16,7 +16,7 @@ import { StageClient, shownStageName } from './stage-client'
 // Main is the default session: the default branch in the repository's own folder, a ticket on the board like any other.
 export const MAIN_SESSION = 'main'
 
-const chatBar = atom({ plugin: 'cdd-board', key: 'chatBar' } as const, { board: null, problem: null, failure: null } as ChatBarJson, { shape: 'chat-bar-overview-2' })
+const chatBar = atom({ plugin: 'cdd-board', key: 'chatBar' } as const, { board: null, problem: null } as ChatBarJson, { shape: 'chat-bar-overview-3' })
 
 
 // The active session's line: health mark, session name, fidelity dots, action button, stage icons.
@@ -30,13 +30,9 @@ export class ChatBarClient {
   ) {
     this.board = json.board as BoardOverviewData | null
     this.problem = json.problem
-    this.failure = json.failure ?? null
   }
 
   readonly problem: string | null
-
-  // An action the person ran that failed, in the server's own words, shown until they dismiss it.
-  readonly failure: string | null
 
   // The tickets a person can open from the main chat, each named in the stage it is in, as board.overview sends them.
   // Main is a ticket too, but the session list shows it first on its own row, so it is left out here.
@@ -286,24 +282,10 @@ export async function restartServer($: EngineInterface): Promise<void> {
     const restarted = await callTool<RestartData>($, 'cdd.restart', {})
     $.ui.toast(`cdd server restarted with ${restarted.tools} tools`)
   } catch (failure) {
-    await showFailure($, `cdd.restart failed: ${reasonOf(failure)}`)
+    await showFailure($, 'The cdd server did not restart', 'Restart on the health panel, calling cdd.restart', failure)
     return
   }
   await refreshChatBar($)
-}
-
-// An action that failed stays above the line until the person dismisses it: a toast passes before anyone reads it.
-export async function showFailure($: EngineInterface, failure: string): Promise<void> {
-  await update($, chatBar, json => ({ ...json, failure }))
-}
-
-export async function dismissFailure($: EngineInterface): Promise<void> {
-  await update($, chatBar, json => ({ ...json, failure: null }))
-}
-
-// Fix sends what the chat bar shows to this chat's agent to find its cause and fix it.
-export async function askChatToFix($: EngineInterface, shown: string): Promise<void> {
-  await $.prompt.submit({ text: `The CDD chat bar above the prompt shows this; find its cause and fix it: ${shown}`, asUser: true })
 }
 
 // What Fix on a board that did not answer sends: the chat bar reads the board from the cdd MCP server, which runs a
@@ -337,18 +319,11 @@ export async function askChatToFixBoard($: EngineInterface, shown: string): Prom
   await $.prompt.submit({ text: boardProblemPrompt(shown), asUser: true })
 }
 
-// Fix on a failure sends it to the chat and clears it from the line.
-export async function fixFailure($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
-  if (!chatBar.failure) return
-  await askChatToFix($, chatBar.failure)
-  await dismissFailure($)
-}
-
 export async function moveNext($: EngineInterface, chatBar: ChatBarClient): Promise<ChatBarClient | MoveRefused> {
   try {
     await callTool<TicketData>($, 'ticket.move_next', { ticket: chatBar.sessionName })
   } catch (failure) {
-    await showFailure($, `${chatBar.sessionName} did not move: ${reasonOf(failure)}`)
+    await showFailure($, `${chatBar.sessionName} did not move to the next stage`, 'The stage button on the chat bar, calling ticket.move_next', failure)
     return new MoveRefused(reasonOf(failure))
   }
   await refreshChatBar($)

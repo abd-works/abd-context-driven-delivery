@@ -20,9 +20,13 @@ export type InstallJson = { state: 'idle' | 'running' | 'installed' | 'failed'; 
 export type AppOpeningJson = { label: string; state: 'idle' | 'opening' | 'failed'; error: string | null; url?: string | null }
 
 // What the chat bar keeps between draws: board.overview's answer, and the server's own text when the last call failed.
-// problem is why the last board read failed, cleared by the next read that works. failure is an action the person ran
-// that failed, such as opening a ticket or a close, kept until they dismiss it, so a refresh never hides it.
-export type ChatBarJson = { board: object | null; problem: string | null; failure: string | null }
+// problem is why the last board read failed, cleared by the next read that works.
+export type ChatBarJson = { board: object | null; problem: string | null }
+
+// The failure shown above the chat bar's line, tools/error_display's FailureData (what failed and the context it failed
+// in), typed where error-display/failure-client.ts reads it; null while none is shown. It stays until the person fixes
+// or dismisses it, so a refresh never hides it.
+export type FailureJson = object | null
 
 // Which of the chat bar's boxes is open above the line. closing holds the branch the active session's work is on,
 // checked out, whose work the close dialog offers to commit and push, or null. leaveChoices is what the Python Ticket
@@ -73,6 +77,7 @@ declare module 'claude-code' {
       install: InstallJson
       appOpening: AppOpeningJson
       chatBar: ChatBarJson
+      failure: FailureJson
       chatBarView: ChatBarViewJson
       selectedFidelities: string[]
       actionPicker: ActionPickerJson

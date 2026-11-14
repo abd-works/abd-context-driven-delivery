@@ -3,7 +3,7 @@ import type { EngineInterface } from 'claude-code'
 
 import { openFileInViewer } from '../chat-bar/fidelity-files-client'
 import { commandOf, filledPrompt, REFUSED_WITHIN_MILLISECONDS } from '../shared/chat-command'
-import { reasonOf } from '../shared/failure'
+import { reasonOf, showFailure } from '../error-display/failure-client'
 import { after, post } from './board'
 import { currentChatName } from './chat-name'
 import { awaitTurn, chatWorked, finish, forgetTurn, isChatBusy, turnsSoFar } from './chat-turns'
@@ -55,7 +55,8 @@ async function run($: EngineInterface, chat: string, command: ChatCommandData): 
   $.ui.toast(`Board message arrived: ${command.text}`)
   if (hasTurn) awaitTurn(command.message)
   const reason = await shown($, chat, command)
-  $.ui.toast(reason ? `Board message failed: ${reason}: ${command.text}` : `Board sent: ${command.text}`)
+  if (reason) await showFailure($, `Board message failed: ${reason}`, `A ${command.kind} the board sent to this chat: ${command.text}`)
+  else $.ui.toast(`Board sent: ${command.text}`)
   if (reason) forgetTurn(command.message)
   await post($, { chat, operation: 'confirm', body: { message: command.message, is_shown: !reason, reason } })
 }

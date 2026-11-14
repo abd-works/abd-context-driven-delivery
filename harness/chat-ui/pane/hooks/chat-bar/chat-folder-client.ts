@@ -3,9 +3,9 @@ import type { EngineInterface } from 'claude-code'
 import type { ChatData } from '@cdd/harness/chat/chat'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
-import { reasonOf } from '../shared/failure'
-import { openedWithSystem } from '../shared/system-link'
-import { callTool, showFailure } from './chat-bar-client'
+import { reasonOf, showFailure } from '../error-display/failure-client'
+import { linkNotOpened } from '../shared/system-link'
+import { callTool } from './chat-bar-client'
 
 // A ticket's work happens in a chat of its own, in the ticket's worktree: the server decides which ticket a chat works
 // on from the folder it is in. Opening a ticket from the main chat never moves the main chat; it finds the ticket's chat
@@ -28,7 +28,7 @@ export async function startedChatIn($: EngineInterface, ticket: TicketData): Pro
     return
   }
   if (!ticket.worktree) {
-    await showFailure($, `${ticket.name} opened with no worktree, so there is no folder to start its chat in`)
+    await showFailure($, `${ticket.name} opened with no worktree, so there is no folder to start its chat in`, `Starting the chat of ${ticket.name} after ticket.activate`)
     return
   }
   const isDesktopApp = !(await $.command.list()).some(command => command.name === 'cd')
@@ -36,8 +36,9 @@ export async function startedChatIn($: EngineInterface, ticket: TicketData): Pro
     $.ui.toast(`${ticket.name} is open in ${ticket.worktree}: open a chat in that folder to work on it`)
     return
   }
-  if (!(await openedWithSystem($, ticket.new_chat_link))) {
-    await showFailure($, `No chat opened for ${ticket.name}: the system did not hand the link to the Claude app. Open a chat in ${ticket.worktree} to work on it`)
+  const notOpened = await linkNotOpened($, ticket.new_chat_link)
+  if (notOpened) {
+    await showFailure($, `No chat opened for ${ticket.name}: the system did not hand the link to the Claude app (${notOpened}). Open a chat in ${ticket.worktree} to work on it`, `Starting the chat of ${ticket.name}, opening its new chat link ${ticket.new_chat_link}`)
     return
   }
   $.ui.toast(`Send the new chat's prompt in the Claude app to start the chat of ${ticket.name}`)

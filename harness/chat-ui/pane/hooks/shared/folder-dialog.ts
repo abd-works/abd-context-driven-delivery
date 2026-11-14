@@ -1,5 +1,7 @@
 import type { EngineInterface } from 'claude-code'
 
+import { reasonOf } from '../error-display/failure-client'
+
 // The system's own folder picker, as each system offers one to a program with no window: Windows' folder browser, kept
 // on top of the Claude app so it is not opened behind it, macOS's choose folder, and zenity on Linux. Mods have no
 // folder dialog of their own, so the first picker this system has is run.
@@ -34,12 +36,16 @@ function linuxPicker({ purpose, startIn }: FolderRequest): string[] {
   return ['zenity', '--file-selection', '--directory', `--title=${purpose}`, ...(startIn ? [`--filename=${startIn.replace(/\/?$/, '/')}`] : [])]
 }
 
-// The folder the person chose; empty when they cancelled or this system has no picker.
+// The folder the person chose; empty when they cancelled. Throws, with each picker's reason, when none would run.
 export async function chosenFolder($: EngineInterface, request: FolderRequest = CHAT_FOLDER): Promise<string> {
+  const reasons: string[] = []
   for (const argv of [windowsPicker(request), macPicker(request), linuxPicker(request)]) {
-    const picked = await $.process.run(argv).catch(() => null)
-    if (picked === null) continue
-    return picked.exitCode === 0 ? picked.stdout.trim() : ''
+    try {
+      const picked = await $.process.run(argv)
+      return picked.exitCode === 0 ? picked.stdout.trim() : ''
+    } catch (failure) {
+      reasons.push(`${argv[0]}: ${reasonOf(failure)}`)
+    }
   }
-  return ''
+  throw new Error(`no folder picker would run (${reasons.join('; ')})`)
 }

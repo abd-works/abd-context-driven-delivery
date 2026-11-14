@@ -2,6 +2,7 @@ import type { EngineInterface } from 'claude-code'
 
 import { projectPageUrl } from '../board-chat/board'
 import { runningBoardUrl } from '../board-chat/board-server'
+import { showFailure } from '../error-display/failure-client'
 import { openInBrowserPane } from '../shared/browser-pane'
 import { currentChatBar } from './chat-bar-client'
 import type { FidelityProgressClient } from './fidelity-progress-client'
@@ -9,7 +10,7 @@ import type { FidelityProgressClient } from './fidelity-progress-client'
 // A fidelity's files, a session's folder and a file another page asks for open in the Files app, the file viewer alone
 // as an app of its own, in the desktop app's browser pane beside the chat; a fidelity's report opens in the board's
 // report panel. Each is readied as the status row readies its app (Python's App.open, then this chat starts the server
-// while it is not running), and opens by a link that names what to show. When the pane does not open, the toast says why.
+// while it is not running), and opens by a link that names what to show. When the pane does not open, the failure line says why.
 
 // The Files app is the board's own server answering its /files page, so it is readied as the board is.
 const FILES_PAGE = '/files'
@@ -18,11 +19,16 @@ const BOARD_PAGE = '/'
 // A page of the board's server, the board started first when it is not running. Every function here that takes `$` is
 // a function declaration: the engine follows `$` only into those, and refuses a module that hides one in a const.
 async function openBoardPage($: EngineInterface, page: string, what: string, query: Record<string, string>): Promise<void> {
-  const url = await runningBoardUrl($).catch(() => '')
-  if (!url) return $.ui.toast(`${what} did not open: the board is not running and did not start`)
+  let url: string
+  try {
+    url = await runningBoardUrl($)
+  } catch (failure) {
+    return showFailure($, `${what} did not open: the board is not running and did not start`, `Opening ${what}, starting the board server`, failure)
+  }
+  if (!url) return showFailure($, `${what} did not open: the board is not running and did not start`, `Opening ${what}, starting the board server`)
   const link = await projectPageUrl($, new URL(page, url).toString(), query)
   const problem = await openInBrowserPane($, link)
-  if (problem) $.ui.toast(`${what} did not open at ${link}: ${problem}`)
+  if (problem) await showFailure($, `${what} did not open: ${problem}`, `Opening ${link} in Claude's Browser pane`)
 }
 
 async function openFilesLink($: EngineInterface, what: string, query: Record<string, string>): Promise<void> {

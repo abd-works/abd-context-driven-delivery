@@ -15,7 +15,7 @@ import { currentFidelityHelp, forgetHelp, HELP_PANE } from './chat-bar/fidelity-
 import { FidelityHelpView } from './chat-bar/fidelity-help-view'
 import { currentChatBarView } from './chat-bar/session-dialogs-client'
 import { closeOptionListsOutside } from './chat-bar/option-lists-client'
-import { reasonOf } from './shared/failure'
+import { currentFailure, shownAsFailure } from './error-display/failure-client'
 import {
   currentHealthView,
   currentInstall,
@@ -43,11 +43,6 @@ const CDD_TOOL = /^mcp__(plugin_cdd_)?cdd__/
 // The agent context the system prompt last held, so the cached prompt is composed again only when it changes.
 let shownContext = ''
 
-// A failure the mod rides over, such as the cdd server still connecting, goes to the debug log, never nowhere.
-function logged($: EngineInterface, doing: string): (failure: unknown) => void {
-  return failure => $.ui.log(`${PLUGIN}: ${doing} failed: ${reasonOf(failure)}`, { to: 'debug' })
-}
-
 // The status line below the chat, where the host draws a plugin's status: the whole path of the folder the session
 // works in. The host draws it at the right.
 async function showStatus($: EngineInterface): Promise<void> {
@@ -62,28 +57,28 @@ async function readActive($: EngineInterface): Promise<void> {
   const chatBar = await currentChatBar($)
   if (chatBar.problem) return
   await loadFormatChips($, chatBar)
-  await loadOverlayChoices($, chatBar).catch(logged($, 'reading the overlay choices'))
+  await loadOverlayChoices($, chatBar).catch(shownAsFailure($, 'The overlay choices did not load', 'Reading the board, calling ticket.overlay_choices'))
   // The system prompt is cached; when the active session's summary changes, it is composed again next turn.
   if (chatBar.agentContext !== shownContext) await $.ui.invalidate('prompt.section')
   shownContext = chatBar.agentContext
 }
 
-// The hooks below hand the event on first and then call one of these without waiting, so a failure goes to the debug log.
+// The hooks below hand the event on first and then call one of these without waiting, so a failure shows on the failure line.
 async function readBoardAfterStart($: EngineInterface): Promise<void> {
-  await readName($).catch(logged($, 'naming the chat'))
-  await readActive($).catch(logged($, 'reading the board'))
+  await readName($).catch(shownAsFailure($, 'The chat was not named', 'Starting the chat, reading its name'))
+  await readActive($).catch(shownAsFailure($, 'The board did not load', 'Starting the chat, calling board.show'))
   refreshHealthSoon($)
 }
 
 async function readBoardAfterTurn($: EngineInterface, isMainChat: boolean): Promise<void> {
-  if (isMainChat) await turnCompleted($).catch(logged($, 'finishing the turn'))
-  await readName($).catch(logged($, 'naming the chat'))
-  await Promise.all([readActive($), refreshHealth($)]).catch(logged($, 'reading the board'))
+  if (isMainChat) await turnCompleted($).catch(shownAsFailure($, 'The turn was not recorded as finished', 'Finishing a turn in the main chat'))
+  await readName($).catch(shownAsFailure($, 'The chat was not named', 'Finishing a turn, reading the chat name'))
+  await Promise.all([readActive($), refreshHealth($)]).catch(shownAsFailure($, 'The board did not load', 'Finishing a turn, calling board.show and reading the server health'))
 }
 
 async function readBoardAfterSubmit($: EngineInterface): Promise<void> {
-  await Promise.all([refreshHealth($), refreshChatBar($)]).catch(logged($, 'reading the board'))
-  await showStatus($).catch(logged($, 'showing the status'))
+  await Promise.all([refreshHealth($), refreshChatBar($)]).catch(shownAsFailure($, 'The board did not load', 'Sending a prompt, calling board.show and reading the server health'))
+  await showStatus($).catch(shownAsFailure($, 'The status line was not shown', 'Sending a prompt, showing the session folder'))
 }
 
 export const register: Register = on => {
@@ -94,7 +89,7 @@ export const register: Register = on => {
     $.clock.every(CHECK_IN_MILLISECONDS, () => {
       if (!isCheckInDue()) return
       // The cdd server can still be connecting at session start; the next check-in tries again.
-      void checkIn($, chat).catch(logged($, 'checking in with the board'))
+      void checkIn($, chat).catch(shownAsFailure($, 'This chat did not check in with the board', 'The check-in every second, calling chat.check_in'))
     })
     // The chat opens first and the bar fills in after it, so a slow or still-connecting cdd server never holds the chat up.
     const started = await next(e)
@@ -133,7 +128,7 @@ export const register: Register = on => {
   on('ui.press', async ($, e, next) => {
     const pressed = await next(e)
     if (e.plugin === PLUGIN) await closeOptionListsOutside($, e.element)
-    if (e.plugin === PLUGIN && CHANGES_FIDELITIES.test(e.element)) void loadFormatChips($, await currentChatBar($)).catch(logged($, 'reading the format chips'))
+    if (e.plugin === PLUGIN && CHANGES_FIDELITIES.test(e.element)) void loadFormatChips($, await currentChatBar($)).catch(shownAsFailure($, 'The format chips did not load', `Pressing ${e.element}, reading the format choices`))
     return pressed
   })
 
@@ -185,6 +180,7 @@ export const register: Register = on => {
     const chatBar = await currentChatBar($)
     return ChatBarView($, elements, {
       chatBar,
+      failure: await currentFailure($),
       formats: await currentFormatChips($, chatBar),
       overlays: await currentOverlayChips($, chatBar),
       view: await currentChatBarView($),

@@ -5,6 +5,7 @@ import type { AppData } from '@cdd/harness/diagnostics/app'
 import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
 import type { HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
+import { showFailure } from '../error-display/failure-client'
 
 // The cdd plugin declares the server, and Claude Code names a plugin's server plugin:{plugin}:{server}.
 export const SERVER = 'plugin:cdd:cdd'
@@ -100,8 +101,10 @@ export async function runInstall($: EngineInterface): Promise<void> {
     const folder = await $.session.root()
     const run = await $.process.run([...(await installCommand($)), folder], { cwd: folder, timeoutMs: INSTALL_TIMEOUT_MS })
     await update($, install, () => (run.exitCode === 0 ? { state: 'installed', error: null } : { state: 'failed', error: lastLines(run.stderr) }))
+    if (run.exitCode !== 0) await showFailure($, `The install failed: ${lastLines(run.stderr)}`, `Install on the health panel, running ${(await installCommand($)).join(' ')} in ${folder}`)
   } catch (failure) {
     await update($, install, () => ({ state: 'failed', error: String(failure) }))
+    await showFailure($, 'The install did not run', 'Install on the health panel', failure)
   }
 }
 

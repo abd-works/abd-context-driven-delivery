@@ -6,7 +6,7 @@ import type { AppData, AppServerData } from '@cdd/harness/diagnostics/app'
 import type { AppOpeningJson } from '../../types'
 import { after } from '../board-chat/board'
 import { openInBrowserPane } from '../shared/browser-pane'
-import { reasonOf } from '../shared/failure'
+import { reasonOf, showFailure, shownAsFailure } from '../error-display/failure-client'
 import { refreshHealth, SERVER } from './server-health-client'
 
 // A press on an app in the status row: Python's App.open installs it while it is not installed and answers it with its
@@ -56,7 +56,7 @@ function startServer($: EngineInterface, server: AppServerData): void {
   void (async () => {
     const running = $.process.spawn({ argv: server.command, cwd: server.folder })
     for await (const { text } of running) $.ui.log(text, { to: 'debug' })
-  })().catch(error => $.ui.log(`${server.command.join(' ')} stopped: ${reasonOf(error)}`, { to: 'debug' }))
+  })().catch(shownAsFailure($, `The app server stopped: ${server.command.join(' ')}`, `Running the app server in ${server.folder}`))
 }
 
 function answers($: EngineInterface, url: string): Promise<boolean> {
@@ -87,6 +87,7 @@ export async function openAppBesideChat($: EngineInterface, label: string, pageU
     await update($, appOpening, () => ({ label, state: 'idle', error: null, url }))
   } catch (failure) {
     await update($, appOpening, () => ({ label, state: 'failed', error: reasonOf(failure), url }))
+    await showFailure($, `The ${label} did not open`, `Pressing the ${label} on the health panel, calling ${OPEN_TOOL}${url ? ` and opening ${url} in Claude's Browser pane` : ''}`, failure)
   }
   await refreshHealth($)
 }

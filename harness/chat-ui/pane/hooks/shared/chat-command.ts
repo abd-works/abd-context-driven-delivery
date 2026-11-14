@@ -1,6 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 
-import { reasonOf } from './failure'
+import { reasonOf, showFailure } from '../error-display/failure-client'
 
 // The engine queues a plugin's prompt or slash command until the chat is idle, the same queue a person's Ctrl+Enter
 // uses, and either resolves only once it has run. It refuses one it will not take straight away, so one not refused by
@@ -24,5 +24,5 @@ export async function filledPrompt($: EngineInterface, text: string): Promise<st
 // long time.
 export async function promptCommand($: EngineInterface, command: string): Promise<void> {
   const unfilled = await filledPrompt($, command).catch(reasonOf)
-  if (unfilled) $.ui.toast(`${command} could not go in the prompt box: ${unfilled}`)
+  if (unfilled) await showFailure($, `${command} could not go in the prompt box: ${unfilled}`, `Pressing the button that puts ${command} in the prompt box`)
 }

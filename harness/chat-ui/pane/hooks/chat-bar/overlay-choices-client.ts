@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
 import type { OverlayChoiceJson, OverlayChoicesJson } from '../../types'
-import { reasonOf } from '../shared/failure'
+import { showFailure } from '../error-display/failure-client'
 import { callTool, type ChatBarClient } from './chat-bar-client'
 
 // The pattern overlays beside the fidelity dots: Python's ticket.overlay_choices answers every pattern with its icon and
@@ -47,7 +47,7 @@ export async function closeOverlayList($: EngineInterface): Promise<void> {
 }
 
 // A press on a pattern in the list box adds it to the session's overlays or takes it out; the list stays open so a
-// person can pick several. A refusal shows as a toast and leaves the choices as they were.
+// person can pick several. A refusal shows on the failure line and leaves the choices as they were.
 export async function toggleOverlay($: EngineInterface, chips: OverlayChips, pattern: string): Promise<void> {
   const chosen = chips.chosen.map(choice => choice.pattern)
   const overlays = chosen.includes(pattern) ? chosen.filter(each => each !== pattern) : [...chosen, pattern]
@@ -55,6 +55,6 @@ export async function toggleOverlay($: EngineInterface, chips: OverlayChips, pat
     const choices = await callTool<OverlayChoiceJson[]>($, 'ticket.choose_overlays', { ticket: chips.ticket, overlays })
     await update($, overlayChoices, held => ({ ...(held ?? { isOpen: true }), ticket: chips.ticket, choices }))
   } catch (failure) {
-    $.ui.toast(`Overlay ${pattern}: ${reasonOf(failure)}`)
+    await showFailure($, `The overlay ${pattern} was not ${chosen.includes(pattern) ? 'removed' : 'added'}`, `Pressing ${pattern} in the overlay list, calling ticket.choose_overlays`, failure)
   }
 }

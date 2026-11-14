@@ -7,7 +7,9 @@ import { ActionButtonView, PickerView } from './action-button-view'
 import { formatGlyphOf, overlayColumnOf, REPO_GLYPH, repoWordOf, sessionWordOf, stageColumn } from './bar-columns'
 import { toggleFormat, type FormatChips } from './format-choices-client'
 import { toggleOverlay, toggleOverlayList, type OverlayChips } from './overlay-choices-client'
-import { askChatToFixBoard, dismissFailure, fixFailure, restartServer, runHandoff, type ChatBarClient } from './chat-bar-client'
+import { askChatToFixBoard, restartServer, runHandoff, type ChatBarClient } from './chat-bar-client'
+import type { FailureClient } from '../error-display/failure-client'
+import { FailureView } from '../error-display/failure-view'
 import { openFilesOf, openReport, openSessionFolder } from './fidelity-files-client'
 import { openHelp } from './fidelity-help-client'
 import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
@@ -20,9 +22,10 @@ import { selectStage, toggleStagePicker, type StageClient } from './stage-client
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
 // What one draw of the chat bar reads: the client built from board.show, which boxes are open above the line, the
-// server health mark, its panel above the line, the same panel for the session card, and the columns the band may fill.
+// server health mark, its panel above the line, the failure shown above it, the same panel for the session card, and the columns the band may fill.
 export type ChatBarDraw = {
   chatBar: ChatBarClient
+  failure: FailureClient | null
   view: ChatBarViewJson
   picker: ActionPickerJson
   isStagePickerOpen: boolean
@@ -265,19 +268,6 @@ function ProblemView($: EngineInterface, { Box, Button, Text }: ElementTable, sh
   )
 }
 
-// An action that failed, in red above the line, until the person sends it to the chat with Fix or dismisses it with ✕.
-function FailureView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
-  const { Box, Button, Text } = elements
-  if (!chatBar.failure) return null
-  return (
-    <Box key="failure" flexDirection="row" gap={1} alignItems="center">
-      <Text color={BRAND.error}>{chatBar.failure}</Text>
-      <Button key="fix-failure" label="Fix" variant="primary" onPress={() => fixFailure($, chatBar)} />
-      {GlyphButtonView(elements, 'dismiss-failure', '✕', BRAND.muted, () => dismissFailure($))}
-    </Box>
-  )
-}
-
 // The chat bar above the prompt: the boxes a person opened sit above one line holding the server health mark, the
 // session name, the fidelity dots, the action button, and the stage icons. A failed board read says so above the line.
 export function ChatBarView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
@@ -286,7 +276,7 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
   return (
     <Box key="chat-bar" flexDirection="column" width={draw.width}>
       {chatBar.problem ? ProblemView($, elements, `The board did not answer: ${chatBar.problem}`) : null}
-      {FailureView($, elements, draw)}
+      {FailureView($, elements, draw.failure)}
       {draw.busy.doing ? <Text key="busy" color={BRAND.accent}>{`${draw.busy.wheel} ${draw.busy.doing}…`}</Text> : null}
       {CloseView($, elements, draw)}
       {SessionListView($, elements, draw)}
