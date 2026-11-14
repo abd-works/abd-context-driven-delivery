@@ -25,6 +25,9 @@ if TYPE_CHECKING:
     from space.session.session import Session
 
 _OUTPUT_PATTERN_MARKS = {"*", "{"}
+# A code format whose files also carry a second extension, such as React components in TypeScript; any other code format
+# is its own extension alone.
+_CODE_EXTENSIONS = {"typescript": (".ts", ".tsx"), "javascript": (".js", ".jsx")}
 # Report and handoff names end with the time they were made, written so names sort by time.
 REPORT_DATE_FORMAT = "%Y%m%dT%H%M%S"
 
@@ -373,12 +376,23 @@ class FidelitySessionOutput:
         """A declared path, or each file the fidelity declares where a pattern searches, each marked when the session's
         branch changed it; a pattern that finds none stays as its search, not yet there."""
         repo = self._session.repo
+        if path.endswith("/") and Format(label).is_code:
+            return self._worked_on_code(label, changed)
         declared = self._declared(path)
         if declared.names_one_path:
             named = repo.root / declared.glob
             return [FileEntry(declared.glob, named.exists(), named.exists() and named.resolve() in changed())]
         found = self._found(label, declared)
         return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed()) for file in found] or [FileEntry(declared.glob, False)]
+
+    def _worked_on_code(self, label: str, changed: Callable[[], set[Path]]) -> list[FileEntry]:
+        """The code a fidelity that declares a folder per module writes, such as Clean Engineering's ``{module}/``: the
+        files in that format under its root that the session's branch changed, the code the ticket worked on, not every
+        file of that language in the repository."""
+        root = self.root.resolve()
+        extensions = _CODE_EXTENSIONS.get(Format(label).name, (Format(label).extension,))
+        worked_on = sorted(file for file in changed() if file.suffix in extensions and (file == root or root in file.parents))
+        return [FileEntry(self._session.repo.path_from_top(file), file.exists(), True) for file in worked_on]
 
     def _found(self, label: str, declared: DeclaredFile) -> list[Path]:
         """The files a declared pattern's search finds that this fidelity declares in the format label: a name used

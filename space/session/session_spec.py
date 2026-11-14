@@ -1098,6 +1098,34 @@ with description("a session working in a folder of its own, holding an aggregate
         expect(self.model.has_declared_output()).to(equal(True))
 
 
+# A fidelity that declares a folder per module, as Clean Engineering's code does with ``{module}/``, lists the code the
+# session's branch changed; git is the boundary, so the branch's changes are given, not read.
+with description("a session whose branch changed code in the folder it works in") as self:
+    with before.each:
+        self.home = ExampleHome()
+        self.repo = Path(tempfile.mkdtemp(prefix="session-code-")).resolve()
+        (self.repo / ".git").mkdir()
+        self.work = self.repo / "work"
+        changed = [self.work / "orders" / "order.py", self.work / "orders" / "order_view.tsx", self.work / "orders" / "notes.md", self.repo / "elsewhere.py"]
+        for file in changed:
+            file.parent.mkdir(parents=True, exist_ok=True)
+            file.write_text("x\n", encoding="utf-8")
+        Sessions(self.repo).switch("alpha", self.work)
+        session = Sessions(self.repo).current()
+        session.session_files.changed = lambda: {file.resolve() for file in changed}
+        self.code = session.practice("clean_engineering").fidelities["code"]
+
+    with after.each:
+        shutil.rmtree(self.repo, ignore_errors=True)
+        self.home.close()
+
+    with it("should list the changed Python under its folder as the code's Python"):
+        expect([entry.path for entry in self.code.files()["python"]]).to(equal(["work/orders/order.py"]))
+
+    with it("should list the changed TypeScript, components included, as the code's TypeScript"):
+        expect([entry.path for entry in self.code.files()["typescript"]]).to(equal(["work/orders/order_view.tsx"]))
+
+
 # (E) Open Work Session
 # (S) Session --> Switch Session
 with description("a session on an MCP host whose CDD_REPO is the CDD checkout, not the project"):

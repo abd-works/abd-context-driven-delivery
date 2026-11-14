@@ -35,11 +35,20 @@ export async function openApp($: EngineInterface, label: string): Promise<AppDat
   throw new AppNotOpened(`The ${label} did not start: nothing answered on port ${port}. Run ${app.server.command.join(' ')} in ${app.server.folder}.`)
 }
 
+// An install runs npm and can outlast the seconds the server waits on a call: it then answers that the call is still
+// running, and an identical call waits for that same run. Each call waits about ten seconds, so this allows npm fifteen
+// minutes, the install's own limit, before saying it did not finish.
+const STILL_RUNNING = `${OPEN_TOOL} is still running`
+const STILL_RUNNING_CALLS = 90
+
 async function installedApp($: EngineInterface, label: string): Promise<AppData> {
-  const result = await $.mcp.call(SERVER, OPEN_TOOL, { app: label })
-  const text = result.content[0]?.text ?? ''
-  if (result.isError) throw new AppNotOpened(text || `${OPEN_TOOL} failed for ${label}`)
-  return JSON.parse(text) as AppData
+  for (let call = 0; call < STILL_RUNNING_CALLS; call += 1) {
+    const result = await $.mcp.call(SERVER, OPEN_TOOL, { app: label })
+    const text = result.content[0]?.text ?? ''
+    if (result.isError) throw new AppNotOpened(text || `${OPEN_TOOL} failed for ${label}`)
+    if (!text.startsWith(STILL_RUNNING)) return JSON.parse(text) as AppData
+  }
+  throw new AppNotOpened(`The ${label} is still installing after fifteen minutes; press it again to wait for that install.`)
 }
 
 // The server lives as long as this chat's mod: leaving the loop, or the module unloading, ends it.
