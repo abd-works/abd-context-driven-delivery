@@ -28,7 +28,7 @@ import {
   runInstall,
 } from './health/server-health-client'
 import { ServerHealthBandView, ServerHealthPanelView } from './health/server-health-view'
-import { askToUpdate, cancelUpdate, checkVersion, currentCddVersion, updateToLatest } from './health/cdd-version-client'
+import { askToUpdate, cancelUpdate, checkVersionSoon, checkVersionUntilRead, currentCddVersion, updateToLatest } from './health/cdd-version-client'
 import { UpdateDialogView, VersionBadgeView } from './health/cdd-version-view'
 import { currentAppOpening, openAppBesideChat } from './health/app-client'
 import { FOLDER_QUERY, PROJECT_QUERY, projectPageUrl } from './board-chat/board'
@@ -70,13 +70,14 @@ async function readBoardAfterStart($: EngineInterface): Promise<void> {
   await readName($).catch(shownAsFailure($, 'The chat was not named', 'Starting the chat, reading its name'))
   await readActive($).catch(shownAsFailure($, 'The board did not load', 'Starting the chat, calling board.show'))
   refreshHealthSoon($)
-  await checkVersion($).catch(shownAsFailure($, 'The CDD version was not read', 'Starting the chat, calling cdd-version.check'))
+  checkVersionSoon($)
 }
 
 async function readBoardAfterTurn($: EngineInterface, isMainChat: boolean): Promise<void> {
   if (isMainChat) await turnCompleted($).catch(shownAsFailure($, 'The turn was not recorded as finished', 'Finishing a turn in the main chat'))
   await readName($).catch(shownAsFailure($, 'The chat was not named', 'Finishing a turn, reading the chat name'))
   await Promise.all([readActive($), refreshHealth($)]).catch(shownAsFailure($, 'The board did not load', 'Finishing a turn, calling board.show and reading the server health'))
+  await checkVersionUntilRead($).catch(shownAsFailure($, 'The CDD version was not read', 'Finishing a turn, calling cdd-version.check'))
 }
 
 async function readBoardAfterSubmit($: EngineInterface): Promise<void> {

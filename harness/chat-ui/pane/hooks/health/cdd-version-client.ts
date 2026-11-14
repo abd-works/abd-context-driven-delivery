@@ -11,6 +11,8 @@ const SERVER = 'plugin:cdd:cdd'
 const CHECK_TOOL = 'cdd-version.check'
 // A full install from the latest pulls, restarts every server and reinstalls every toolset: minutes, not seconds.
 const UPDATE_TIMEOUT_MS = 600000
+// The cdd server is still connecting as a chat opens, so the first check waits as the server health's first look does.
+const FIRST_CHECK_WAIT_MS = 5000
 const ERROR_LINES_SHOWN = 1
 // The colour of each standing CddVersion answers: green current, yellow a minor update behind, red a major one.
 const STANDING_COLOURS: Record<string, string> = {
@@ -20,7 +22,7 @@ const STANDING_COLOURS: Record<string, string> = {
   unknown: BRAND.muted,
 }
 
-const cddVersion = atom({ plugin: 'cdd-board', key: 'cddVersion' } as const, { data: null, isAsking: false, update: 'idle', error: null } as CddVersionJson)
+const cddVersion = atom({ plugin: 'cdd-board', key: 'cddVersion' } as const, { data: null, problem: null, isAsking: false, update: 'idle', error: null } as CddVersionJson)
 
 export class CddVersionClient {
   constructor(private readonly json: CddVersionJson) {}
@@ -39,7 +41,7 @@ export class CddVersionClient {
   }
 
   get summary(): string {
-    return this.data?.summary ?? 'Reading the CDD version.'
+    return this.data?.summary ?? (this.json.problem ? `The CDD version is not read yet: ${this.json.problem}` : 'Reading the CDD version.')
   }
 
   get latest(): string {
@@ -63,13 +65,25 @@ export async function currentCddVersion($: EngineInterface): Promise<CddVersionC
   return new CddVersionClient(await read($, cddVersion))
 }
 
-// Read once as the chat opens: the check fetches origin main, too slow to repeat on every prompt.
+// The first check, a moment after the chat opens, once the cdd server has had time to connect.
+export function checkVersionSoon($: EngineInterface): void {
+  $.clock.after(FIRST_CHECK_WAIT_MS, () => void checkVersion($))
+}
+
+// Check again after a turn while the version is not read yet; once read it stays, since the check fetches origin main,
+// too slow to repeat on every turn.
+export async function checkVersionUntilRead($: EngineInterface): Promise<void> {
+  if ((await read($, cddVersion)).data === null) await checkVersion($)
+}
+
+// A call that cannot reach cdd, which is still connecting or down, leaves the badge grey with the reason on hover: the
+// server health mark already says cdd is not connected. An answer that is an error or not JSON is a failure.
 export async function checkVersion($: EngineInterface): Promise<void> {
   let result
   try {
     result = await $.mcp.call(SERVER, CHECK_TOOL, {})
   } catch (failure) {
-    await showFailure($, `The CDD version was not read: ${String(failure)}`, `Opening the chat, calling ${CHECK_TOOL}`, failure)
+    await update($, cddVersion, version => ({ ...version, problem: String(failure) }))
     return
   }
   const text = result.content[0]?.text ?? ''
@@ -78,7 +92,7 @@ export async function checkVersion($: EngineInterface): Promise<void> {
     await showFailure($, `The CDD version was not read: ${text || `${CHECK_TOOL} sent back nothing`}`, `Opening the chat, calling ${CHECK_TOOL}`)
     return
   }
-  await update($, cddVersion, version => ({ ...version, data }))
+  await update($, cddVersion, version => ({ ...version, data, problem: null }))
 }
 
 export async function askToUpdate($: EngineInterface): Promise<void> {

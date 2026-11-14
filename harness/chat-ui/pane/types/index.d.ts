@@ -15,8 +15,9 @@ export type HealthViewJson = { areDetailsOpen: boolean }
 export type InstallJson = { state: 'idle' | 'running' | 'installed' | 'failed'; error: string | null }
 
 // The CDD version badge. data is cdd-version.check's answer, read as the chat opens; isAsking while the update dialog
-// is open; update and error say how the last Update and reinstall went.
-export type CddVersionJson = { data: object | null; isAsking: boolean; update: InstallJson['state']; error: string | null }
+// is open; problem is why it is not read yet, such as cdd still connecting; update and error say how the last Update
+// and reinstall went.
+export type CddVersionJson = { data: object | null; problem: string | null; isAsking: boolean; update: InstallJson['state']; error: string | null }
 
 // The app a person last pressed in the status row: opening while App.open readies it, failed with what failed and how to
 // fix it, idle once it opened in the side panel.
