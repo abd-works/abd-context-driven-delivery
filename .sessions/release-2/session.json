@@ -10,6 +10,15 @@
     },
     "stories": {
       "enabled": false
+    },
+    "ddd": {
+      "enabled": false
+    },
+    "ux": {
+      "enabled": false
+    },
+    "bdd": {
+      "enabled": false
     }
   }
 }
