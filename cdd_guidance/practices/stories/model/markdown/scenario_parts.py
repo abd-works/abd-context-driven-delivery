@@ -7,10 +7,9 @@ import re
 from typing import List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
-from cdd_guidance.practices.stories.model.markdown.markup import MarkdownStep, step_marks, strip_markup
+from cdd_guidance.practices.stories.model.markdown.markup import TABLE_LINE, MarkdownStep, step_marks, strip_markup
 from cdd_guidance.practices.stories.model.story_model import Background, Step, StepType, Story
 
-_TABLE_LINE = re.compile(r"^\s*\|(.+)\|\s*$")
 _PHASES = {"given": StepType.GIVEN, "when": StepType.WHEN, "then": StepType.THEN}
 
 # Where a read scenarios document had a heading or a step line. Every other line is kept as written.
@@ -111,7 +110,7 @@ class ExamplesTable:
 
     def row(self, raw: str) -> Optional[dict]:
         """The example a table line gives, by header, with its group; none for a line that is no example row."""
-        table_line = _TABLE_LINE.match(raw) if self.open else None
+        table_line = TABLE_LINE.match(raw) if self.open else None
         if table_line is None:
             return None
         cells = [cell.strip() for cell in table_line.group(1).split("|")]

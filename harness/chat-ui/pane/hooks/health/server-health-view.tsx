@@ -1,7 +1,5 @@
-import type { HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
-import type { AppName } from './open-app-client'
-import { colourOf, detailsOf, headlineOf, installLineOf, partsOf } from './server-health-wording'
-import type { Part } from './server-health-wording'
+import type { AppOpeningJson, HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
+import { appLineOf, colourOf, detailsOf, headlineOf, installLineOf, partsOf, type Part } from './server-health-wording'
 import type { EngineInterface } from 'claude-code'
 
 import { BRAND } from '../shared/brand'
@@ -15,58 +13,60 @@ type Actions = {
   hideDetails: () => unknown
   reconnect: () => unknown
   runInstall: () => unknown
-  openApp: (app: AppName) => unknown
+  openApp: (label: string) => unknown
 }
 type Band = {
   health: ServerHealthJson
   view: HealthViewJson
   install: InstallJson
+  opening: AppOpeningJson
   actions: Actions
 }
 const LOOKS = {
-  connected: { glyph: '✓', color: BRAND.success, wash: BRAND.successWash },
-  reconnecting: { glyph: '⟳', color: BRAND.warning, wash: BRAND.raised },
-  disconnected: { glyph: '✕', color: BRAND.error, wash: BRAND.errorWash },
-  'tools-missing': { glyph: '!', color: BRAND.warning, wash: BRAND.warningWash },
+  connected: { glyph: '✓', color: BRAND.success, wash: BRAND.successWash, border: BRAND.success },
+  reconnecting: { glyph: '⟳', color: BRAND.warning, wash: BRAND.raised, border: BRAND.border },
+  disconnected: { glyph: '✕', color: BRAND.error, wash: BRAND.errorWash, border: BRAND.error },
+  'tools-missing': { glyph: '!', color: BRAND.warning, wash: BRAND.warningWash, border: BRAND.warning },
 }
 
 
-// The key of the Button that is an app's part, such as health-open-kanban-app.
-export const openKeyOf = (app: AppName): string => `health-open-${app.toLowerCase().replace(/ /g, '-')}`
-
-// An app's icon and value, drawn in the part's colour. For the Kanban app and the Graph app they are the children of one
-// plain Button, so a press anywhere on them, not only on the icon, opens the app.
-function PartFaceView({ Button, Text }: ElementTable, part: Part, openApp: Actions['openApp']) {
-  const face = [
-    <Text key="health-part-icon" color={colourOf(part)}>{part.icon}</Text>,
-    ' ',
-    <Text key="health-part-value" color={colourOf(part)}>{part.value}</Text>,
-  ]
-  if (!part.app) return face
-  const app = part.app
+// The surface has no tooltip, so the part's name is a card revealed while the pointer is over its icon and value. An
+// app's icon and value are a Button, a press readying the app and opening it in the side panel; a Button holds only
+// strings and Text, so the card sits beside it in the part's Box, never inside it.
+function PartView({ Box, Button, Text }: ElementTable, part: Part, actions: Actions) {
+  const { app } = part
+  const icon = <Text color={colourOf(part)}>{part.icon}</Text>
+  const value = <Text color={colourOf(part)}>{part.value}</Text>
   return (
-    <Button key={openKeyOf(app)} plain onPress={() => openApp(app)}>
-      {face}
-    </Button>
-  )
-}
-
-// The surface has no tooltip, so the part's name is a card revealed while the pointer is over its icon and value. A
-// press on the Kanban app or the Graph app opens it, starting it first when it is not running.
-function PartsView(elements: ElementTable, health: ServerHealthJson, openApp: Actions['openApp']) {
-  const { Box, Text } = elements
-  return (
-    <Box flexDirection="row" columnGap={3}>
-      {partsOf(health).map(part => (
-        <Box key={part.label} flexDirection="row">
-          {PartFaceView(elements, part, openApp)}
-          <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
-            <Text color={BRAND.text}>{part.label}</Text>
-          </Box>
-        </Box>
-      ))}
+    <Box key={part.label} flexDirection="row" gap={1}>
+      {app === undefined ? <>{icon}{value}</> : (
+        <Button key={`health-app-${app}`} plain onPress={() => actions.openApp(app)}>
+          {icon} {value}
+        </Button>
+      )}
+      <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
+        <Text color={BRAND.text}>{part.label}</Text>
+      </Box>
     </Box>
   )
+}
+
+function PartsView(elements: ElementTable, health: ServerHealthJson, actions: Actions) {
+  const { Box } = elements
+  return (
+    // The parts spread across the panel's width, as wide as the text above them.
+    <Box flexDirection="row" columnGap={3} width="100%" justifyContent="space-between">
+      {partsOf(health).map(part => PartView(elements, part, actions))}
+    </Box>
+  )
+}
+
+// Opening the Story UI., or why an app did not open and how to fix it, once a person pressed one. The app's url is
+// not shown: the app opens in the Browser pane, and a failure says why.
+function AppLineView({ Text }: ElementTable, opening: AppOpeningJson) {
+  const line = appLineOf(opening)
+  if (!line) return null
+  return <Text color={opening.state === 'failed' ? BRAND.error : BRAND.text}>{line}</Text>
 }
 
 function DetailsView({ Box, Text }: ElementTable, health: ServerHealthJson, install: InstallJson) {
@@ -114,7 +114,6 @@ function InstallLineView({ Text }: ElementTable, install: InstallJson) {
   return line ? <Text color={BRAND.text}>{line}</Text> : null
 }
 
-// Its border is drawn in its own background colour, so the panel has the round corners of the app's cards and no line.
 function ExpandedView(elements: ElementTable, band: Band) {
   const { Box } = elements
   const { health, view, install } = band
@@ -124,14 +123,15 @@ function ExpandedView(elements: ElementTable, band: Band) {
       key="card-health"
       flexDirection="column"
       paddingX={1}
-      paddingY={1}
-      borderStyle="round"
-      borderColor={look.wash}
+      borderStyle="single"
+      borderColor={look.border}
       backgroundColor={look.wash}
+      alignSelf="flex-start"
     >
       {HeadlineView(elements, health)}
       {InstallLineView(elements, install)}
-      {health.connection === 'connected' ? PartsView(elements, health, band.actions.openApp) : null}
+      {health.connection === 'connected' ? PartsView(elements, health, band.actions) : null}
+      {AppLineView(elements, band.opening)}
       {view.areDetailsOpen && health.connection !== 'connected' ? DetailsView(elements, health, install) : null}
       {ButtonsView(elements, band)}
     </Box>

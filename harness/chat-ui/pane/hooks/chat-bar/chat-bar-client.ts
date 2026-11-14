@@ -93,6 +93,12 @@ export class ChatBarClient {
 
   // Every action a person can run on a fidelity of the shown stage, its steps first, as the stage sends them.
   // The ticket the session works on, by name; empty with none.
+  // The Claude Design link recorded for the latest version of the session's design canvas, as the practice that keeps
+  // one answers it (UX), which the file viewer opens; empty when none is recorded or that practice is off.
+  get designView(): string {
+    return Object.values(this.ticket?.session.practices ?? {}).find(practice => practice.design_view)?.design_view ?? ''
+  }
+
   get ticketName(): string {
     return this.ticket?.name ?? ''
   }
@@ -168,6 +174,12 @@ export class ChatBarClient {
   // switch or close and no other repository to open, so the bar shows its folder alone, read only.
   get isPlainFolder(): boolean {
     return Boolean(this.board) && !this.isClone
+  }
+
+  // The folder an app's page loads: the whole path of the folder the session works in, its workpath; empty while no
+  // ticket's session is open or it works in the whole repository.
+  get workpath(): string {
+    return this.ticket?.session.workpath ?? ''
   }
 
   // The status line below the chat: the whole path of the folder the session works in, which already names the
@@ -249,22 +261,18 @@ export async function refreshChatBar($: EngineInterface): Promise<void> {
   }
 }
 
-// The cdd server is sometimes not there for a moment: a restart, as an install does, cuts off a call in flight, and at
-// session start Claude Code is still connecting it, so it answers that it has no connected tool board.overview.
-// board.overview only reads, so a read refused either way is asked again while the server comes up, before the bar
-// says the board did not answer.
-const SERVER_NOT_THERE_YET = ['connection closed', 'no connected MCP tool']
-const SERVER_WAIT_MILLISECONDS = 3000
-const READ_TRIES = 3
+// A restart of the cdd server, as an install does, cuts off a call in flight. board.overview only reads, so a read cut
+// off that way is asked again once the server is back, before the bar says the board did not answer.
+const CUT_OFF = 'connection closed'
+const RESTART_WAIT_MILLISECONDS = 3000
 
-async function readBoard($: EngineInterface, attempt = 1): Promise<BoardOverviewData> {
+async function readBoard($: EngineInterface): Promise<BoardOverviewData> {
   try {
     return await callTool<BoardOverviewData>($, 'board.overview', {})
   } catch (failure) {
-    const reason = reasonOf(failure)
-    if (attempt >= READ_TRIES || !SERVER_NOT_THERE_YET.some(sign => reason.includes(sign))) throw failure
-    await $.clock.sleep(SERVER_WAIT_MILLISECONDS)
-    return readBoard($, attempt + 1)
+    if (!reasonOf(failure).includes(CUT_OFF)) throw failure
+    await $.clock.sleep(RESTART_WAIT_MILLISECONDS)
+    return callTool<BoardOverviewData>($, 'board.overview', {})
   }
 }
 

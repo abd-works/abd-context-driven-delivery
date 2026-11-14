@@ -234,7 +234,7 @@ class MiroStoryModel(DiagramStoryModel):
             cells = [(cell.text or "").strip() for cell in row if _local_name(cell) == "td"]
             if cells and cells[0]:
                 increments.append(MiroIncrement(cells[0], len(increments) + 1, self.stories_named(cells[1:])))
-        self.increments = increments
+        self.increments.refill(increments)
         return self
 
     def save(self) -> str:

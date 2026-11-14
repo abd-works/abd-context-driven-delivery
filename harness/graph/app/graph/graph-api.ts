@@ -1,4 +1,4 @@
-import type { CddApi } from '@cdd/cdd-shared';
+import { PROJECT_HEADER, projectOfPage, type CddApi } from '@cdd/cdd-shared';
 
 const API_ROOT = '/api';
 
@@ -13,11 +13,14 @@ export class GraphCallFailure extends Error {
 
 // Every call the explorer makes to its server. The page shows a failure where the operation that met it was started, so
 // a failed call throws its diagnosis instead of answering null.
+// Every call names the project the page was opened on, so it works in the session open there.
 export class GraphApi implements CddApi {
+  constructor(readonly project: string = projectOfPage()) {}
+
   async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
     const response = await fetch(`${API_ROOT}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(this.project ? { [PROJECT_HEADER]: this.project } : {}) },
       body: JSON.stringify(body),
     });
     const raw = await response.text();

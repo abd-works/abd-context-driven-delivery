@@ -599,9 +599,9 @@ class DrawIOStoryModel(DiagramStoryModel):
                 lanes.setdefault(parts[1], [])
             elif style.startswith("increment-story;") and len(parts) >= 3:
                 lanes.setdefault(parts[1], []).extend(self.stories_named([cell.attrib.get("value", "").strip()]))
-        self.increments = [
+        self.increments.refill([
             DrawIOIncrement(names[slug], order, lanes[slug]) for order, slug in enumerate((slug for slug in lanes if slug in names), start=1)
-        ]
+        ])
         return self
 
     def _cell(self, cell_id, label) -> "DrawIOStoryModel.Vertex":

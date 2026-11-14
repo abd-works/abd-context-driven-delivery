@@ -396,9 +396,18 @@ class Ticket(Card):
     @agent_tool
     @noSessionLog
     def format_choices(self, fidelities: list[str]) -> list[FormatChoice]:
-        """Return the format chips of an action bar on ticket over fidelities, slugs such as stories-story-map: each group of formats they offer, the format each fidelity uses from it, how many offer it and have a file in it already, and whether the bar opens with it picked."""
+        """Return the format chips of an action bar on ticket over fidelities, slugs such as stories-story-map: each group of formats they offer, the format each fidelity uses from it, how many offer it and have a file in it already, and whether it is chosen for them in the session."""
         read = [(progress.fidelity, progress.files()) for progress in (self.work.progress_of(slug) for slug in fidelities)]
         return FormatChoice.offered_by(read)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def choose_formats(self, fidelities: list[str], label: str, is_chosen: bool) -> list[FormatChoice]:
+        """Turn the chip label, such as markdown, on or off for fidelities, slugs such as stories-story-map, on ticket: each fidelity chooses, or leaves out, the format it uses from that group in the session, the same choice the Story UI's toggles make; return the chips again."""
+        chips = self.format_choices(fidelities)
+        next(chip for chip in chips if chip.label == label).choose(is_chosen)
+        return self.format_choices(fidelities)
 
     @mcp
     @agent_tool

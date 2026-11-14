@@ -1,8 +1,8 @@
 import { execFile } from 'node:child_process'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 
-import type { CddProgress } from './cdd-shared'
+import { PROJECT_HEADER, type CddProgress } from './cdd-shared'
 
 // Written by the installer from the checkout and the Python it ran with.
 const SOURCE_ROOT = __SOURCE_ROOT__
@@ -46,7 +46,7 @@ export class CddConnection {
     const result = (await this.request(session, 'tools/call', { name: tool, arguments: args }, tool)) as ToolResult
     const text = result.content?.[0]?.text
     if (result.isError || text === undefined) throw new CddToolError(tool, text ?? 'no result')
-    return this.parsed<Result>(tool, text)
+    return this.parsed<Result>(text)
   }
 
   // The newest step each running call has reported, for a page waiting on one; a finished call reports nothing.
@@ -163,12 +163,44 @@ export class CddConnection {
     if (call && notification.params?.message) call.step = notification.params.message
   }
 
-  // The server sends a failed operation's error as plain text, and every successful operation as JSON.
-  private parsed<Result>(tool: string, text: string): Result {
+  // The server marks a failed operation's answer as an error, read before this. A successful one is JSON, except an
+  // operation that answers a string, such as chat.open's link: the server sends that as the text itself.
+  private parsed<Result>(text: string): Result {
     try {
       return JSON.parse(text) as Result
     } catch {
-      throw new CddToolError(tool, text)
+      return text as Result
     }
+  }
+}
+
+// A request as any server framework hands it: what it names in a header.
+type NamingRequest = { get(name: string): string | undefined }
+
+// One app server serves every repository on this machine, each through a cdd connection of its own, so a page opened
+// for a chat's repository shows that repository, in the session open there, rather than the one the server started in.
+export class ProjectConnections {
+  private readonly connections = new Map<string, CddConnection>()
+
+  constructor(
+    private readonly started: CddConnection,
+    private readonly connect: (folder: string) => CddConnection = folder => new CddConnection(folder),
+  ) {}
+
+  // The connection of the repository the request names in its project header; the started one for a request naming none.
+  of(request: NamingRequest): CddConnection {
+    const named = request.get(PROJECT_HEADER)?.trim()
+    if (!named) return this.started
+    const folder = resolve(named)
+    let connection = this.connections.get(folder)
+    if (!connection) {
+      connection = this.connect(folder)
+      this.connections.set(folder, connection)
+    }
+    return connection
+  }
+
+  async close(): Promise<void> {
+    await Promise.all([this.started, ...this.connections.values()].map(connection => connection.close()))
   }
 }

@@ -14,6 +14,7 @@ from urllib.parse import quote
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
+from harness.chat.chat import Chat
 from harness.installation.data_class import data_field
 from harness.installation.files import command
 from harness.installation.json_file import JsonFile

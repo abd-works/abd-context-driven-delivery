@@ -2,9 +2,9 @@ import type { Request } from 'express'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import type { CddConnection } from '@cdd/cdd-connection'
+import { ProjectConnections, type CddConnection } from '@cdd/cdd-connection'
+import { PROJECT_HEADER } from '@cdd/cdd-shared'
 
-import { PROJECT_HEADER, ProjectConnections } from './project-connections'
 
 // A connection that says which folder it was made for and whether it was closed.
 type Recorded = CddConnection & { folder: string; isClosed: boolean }

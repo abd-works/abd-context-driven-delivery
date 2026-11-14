@@ -48,20 +48,19 @@ section: body
 *Then* a toast says cdd board.show failed: JsonFileUnreadable: .sessions/broken/session.json is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))
 *But* no band says the cdd server is lost
 
-#### Scenario: Update the board and cdd to the latest code
+#### Scenario: Install the board again
 
-*Given* the band says the cdd server is lost
+*Given* the board is open
 *When* the Person presses Update
-*Then* the session board server gets the latest code, rebuilds the page, and pins the cdd server to it
-*And* the session board server restarts on the new code
-*And* the page loads again from the restarted server
+*Then* the Kanban app is installed again through App.install, which installs its packages and rebuilds its page
+*And* the page loads again from the new build
 
-#### Scenario: Say which update step failed
+#### Scenario: Say why the board's install failed
 
-*Given* the latest code cannot be pulled
+*Given* npm cannot install the Kanban app
 *When* the Person presses Update
-*Then* a toast says Update failed at get latest, with the reason
-*And* the page and the session board server keep running as they were
+*Then* a toast says the Kanban install failed, with the reason and the fix
+*And* the page keeps running as it was
 
 #### Scenario: Keep the newer board when an older read answers late
 

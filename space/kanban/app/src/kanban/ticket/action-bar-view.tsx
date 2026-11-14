@@ -22,7 +22,7 @@ function chipLook({ isOn, isDone }: ChipFace) {
 function FormatChipView({ tile, chip, isOff }: { tile: Tile; chip: ChipFace; isOff: boolean }) {
   const { page } = useBoard()
   return (
-    <button className="format-icon" disabled={isOff} title={chip.hint} aria-label={chip.hint} aria-pressed={chip.isOn} style={chipLook(chip)} onClick={() => page.tileActions.toggleFormat(tile, chip.label)}>
+    <button className="format-icon" disabled={isOff} title={chip.hint} aria-label={chip.hint} aria-pressed={chip.isOn} style={chipLook(chip)} onClick={() => void page.tileActions.toggleFormat(tile, chip.label)}>
       <FormatIcon label={chip.label} />
       {chip.count ? <span className="format-count">{chip.count}</span> : null}
     </button>

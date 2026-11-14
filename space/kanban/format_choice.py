@@ -14,12 +14,12 @@ if TYPE_CHECKING:
 
 class FormatChoice:
     """*FormatChoice* is one chip of an action bar: a group of formats, the format each fidelity the bar acts on uses
-    from it, how many of those fidelities offer it and have output in it already, and whether the bar opens with it
-    picked."""
+    from it, how many of those fidelities offer it and have output in it already, and whether it is chosen for them in
+    the session."""
 
-    # A fidelity uses its default format from a group that holds it, else the first format it offers there. A bar
-    # opens ready to run: on each group that holds the default of a fidelity that has not made it yet, so a stage Run
-    # writes each fidelity in its own default format.
+    # A fidelity uses its default format from a group that holds it, else the first format it offers there. A chip shows
+    # what the session keeps chosen (FidelitySessionOutput.chosen_formats), so the chat bar, the board and the Story UI
+    # show one choice.
 
     def __init__(self, label: str, offering: list[tuple[FidelityGuidance, list[str], dict[str, list[FileEntry]]]]) -> None:
         self._label = label
@@ -59,13 +59,15 @@ class FormatChoice:
 
     @property
     @data_field
-    def starts_picked(self) -> bool:
-        """Whether the bar opens with the chip picked: it holds the default format of a fidelity that has no file in it
-        yet."""
-        return any(fidelity.default_format in in_group and not self._has_made(fidelity.default_format, files) for fidelity, in_group, files in self._offering)
+    def is_chosen(self) -> bool:
+        """Whether every fidelity the chip covers has the format it uses from the group chosen in the session: what the
+        chip shows, the same choice the Story UI's toggles show."""
+        return all(self._used(fidelity, in_group) in fidelity.session_output.chosen_formats for fidelity, in_group, _ in self._offering)
 
-    def _has_made(self, format_name: str, files: dict[str, list[FileEntry]]) -> bool:
-        return any(entry.exists for entry in files.get(format_name, []))
+    def choose(self, is_chosen: bool) -> None:
+        """Choose, or leave out, the format each fidelity the chip covers uses from the group."""
+        for fidelity, in_group, _ in self._offering:
+            fidelity.session_output.choose_format(self._used(fidelity, in_group), is_chosen)
 
     def _used(self, fidelity: FidelityGuidance, in_group: list[str]) -> str:
         return fidelity.default_format if fidelity.default_format in in_group else in_group[0]

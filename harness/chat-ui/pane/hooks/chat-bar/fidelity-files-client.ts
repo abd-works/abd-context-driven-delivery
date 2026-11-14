@@ -1,7 +1,8 @@
 import type { EngineInterface } from 'claude-code'
 
-import { boardPageUrl } from '../board-chat/board'
-import { openInBrowserPane, runningBoardUrl } from '../board-chat/board-server'
+import { projectPageUrl } from '../board-chat/board'
+import { runningBoardUrl } from '../board-chat/board-server'
+import { openInBrowserPane } from '../shared/browser-pane'
 import { currentChatBar } from './chat-bar-client'
 import type { FidelityProgressClient } from './fidelity-progress-client'
 
@@ -13,7 +14,7 @@ import type { FidelityProgressClient } from './fidelity-progress-client'
 async function openBoardLink($: EngineInterface, what: string, query: Record<string, string>): Promise<void> {
   const url = await runningBoardUrl($).catch(() => '')
   if (!url) return $.ui.toast(`${what} did not open: the board is not running and did not start`)
-  const link = await boardPageUrl($, url, query)
+  const link = await projectPageUrl($, url, query)
   const problem = await openInBrowserPane($, link)
   if (problem) $.ui.toast(`${what} did not open at ${link}: ${problem}`)
 }
@@ -35,6 +36,13 @@ export async function openFilesOf($: EngineInterface, fidelities: FidelityProgre
 export async function openSessionFolder($: EngineInterface): Promise<void> {
   const chatBar = await currentChatBar($)
   await openBoardLink($, `.sessions/${chatBar.sessionName}`, { 'session-folder': chatBar.sessionName })
+}
+
+// A file another page asked this chat to show (Chat.send open_file), such as a story's acceptance test the Story UI
+// editor links: the session's folder in the board's file viewer, with that file open.
+export async function openFileInViewer($: EngineInterface, path: string): Promise<void> {
+  const chatBar = await currentChatBar($)
+  await openBoardLink($, path, { 'session-folder': chatBar.sessionName, file: path })
 }
 
 // The fidelity's latest validation report in the board's report panel, with its findings and Fix buttons. The report's

@@ -24,7 +24,7 @@ export class BoardReader {
   // Reads can overlap with a move's own read, so a slower, older answer never replaces a newer one.
   async refresh(): Promise<void> {
     const order = ++this.reads
-    this.source ??= new BoardClientGenerated(this.page.api)
+    this.source ??= new BoardClientGenerated(this.page.readingApi)
     const shown = await this.source.show()
     if (!shown || order < this.latestApplied) return
     this.latestApplied = order

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { BoardApi, projectOfPage, type Send } from './board-api'
+import { projectOfPage } from '@cdd/cdd-shared'
+
+import { BoardApi, type Send } from './board-api'
 import { BoardStore } from '../shared/board-store'
 
 // The page opened from a chat's /board link names that chat's repository, and every call it makes names it too, so the
@@ -21,8 +23,7 @@ describe('Show The Board Of The Linked Repository', () => {
       sent.length = 0
       const api = new BoardApi(new BoardStore(), recording, 'C:/dev/sandbox')
       await api.post('/board/show')
-      await api.get('/build')
-      expect(sent.map(headers => headers.get('X-CDD-Project'))).toEqual(['C:/dev/sandbox', 'C:/dev/sandbox'])
+      expect(sent.map(headers => headers.get('X-CDD-Project'))).toEqual(['C:/dev/sandbox'])
     })
   })
 

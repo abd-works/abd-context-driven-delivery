@@ -206,7 +206,7 @@ Requested (2026-11-06, as the Chat Bar does): the board runs the installer and s
 
 ### (S) Person --> Update Board And CDD
 
-Observed: Update in the header (`board-update.ts` `BoardUpdate.update`, `/api/update`) gets the latest commit, rebuilds the board, installs with the cdd server pinned to that commit, then restarts the board and refreshes the page; a failed step says which step and why (`UpdateStepFailed`).
+Observed (2026-11-12): Update in the header installs the Kanban app again through its generated client (`App.install`, `app.install`): npm install and build in the board's folder, then the page loads the new build; a failed install says why and how to fix it (`AppNotStarted`). It no longer gets the latest commit or re-pins cdd; `scripts/install.py --update` does that.
 
 ### (S) Person --> Reload Everything With One Button
 
@@ -284,7 +284,7 @@ Observed: with Active session only on, a ticket that is not the active session d
 
 ### (S) Board App --> Open Ticket Chat On Session Open
 
-Observed (checked 2026-11-10): a press on a card points the board at the ticket's own chat (`ticket-client.tsx:184-188`), and the card's chat button opens the worktree, making it first if needed, then a new Claude chat on it through `/api/claude/open` and `ClaudeLink` (`ticket-client.tsx:196-205`, `chat-client.tsx:72-80`, `claude-link.ts`). It opens a new chat rather than the one the ticket ran in, and Activate opens none. Was: Intended (`.sessions/_backlog/suggest-the-next-step.md` "open associated chat on session open / manually"): opening a ticket's session opens the Claude Code chat it ran in. Observed today: a press on a ticket switches to its chat by hand (`/api/claude/open`, `ClaudeLink`).
+Observed (checked 2026-11-10): a press on a card points the board at the ticket's own chat (`ticket-client.tsx:184-188`), and the card's chat button opens the worktree, making it first if needed, then a new Claude chat on it through Python's `chat.open` (`Chat.open`, `harness/chat/chat.py`) (`ticket-client.tsx:196-205`, `chat-client.tsx:72-80`, `claude-link.ts`). It opens a new chat rather than the one the ticket ran in, and Activate opens none. Was: Intended (`.sessions/_backlog/suggest-the-next-step.md` "open associated chat on session open / manually"): opening a ticket's session opens the Claude Code chat it ran in. Observed today: a press on a ticket switches to its chat by hand (`chat.open`).
 
 ### (S) Person --> Choose Where A Backlog Item Works
 
@@ -594,27 +594,31 @@ Intended (`.sessions/_backlog/review-work-in-board-files.md` "change viewer from
 
 ### (E) Integrate Practice Content Editor Apps On Board
 
-#### (S) Person --> Open Story UI On Ticket Scope
+#### (S) Person --> [Open Story UI On Ticket Scope](move-work-forward-on-session-board/integrate-practice-content-editor-apps-on-board/integrate_practice_content_editor_apps_on_board_story.test.md#story-open-story-ui-on-ticket-scope)
 
-Requested (2026-11-06, "board --> story ui for ticket's scope"): the board opens the Story UI editor on the part of the story map the ticket covers, from its session folder. Also Intended (`.sessions/_backlog/integrate-practice-content-editor-apps.md` "view story map / ux design canvas for a session").
+Requested (2026-11-06, "board --> story ui for ticket's scope"): the board opens the Story UI editor on the part of the story map the ticket covers, from its session folder. Also Intended (`.sessions/_backlog/integrate-practice-content-editor-apps.md` "view story map / ux design canvas for a session"). Requested (2026-11-12): a small editor widget on the ticket's Stories story-map row opens it.
 
-#### (S) Person --> Filter Knowledge Graph To Ticket Scope
+#### (S) Person --> Filter Graph To Ticket Scope
 
-Requested (2026-11-06, "filter to scope of ticket"): opening the Graph app from the board or the chat bar loads only the ticket's session folders. Also Intended (`.sessions/_backlog/integrate-practice-content-editor-apps.md` "view knowledge graph from here").
+Requested (2026-11-06, "filter to scope of ticket"): opening the Graph app from the board or the chat bar loads only the ticket's session folders. Also Intended (`.sessions/_backlog/integrate-practice-content-editor-apps.md` "view knowledge graph from here"). Requested (2026-11-12): a graph widget on the ticket, beside its folder and file icons, opens the graph on the ticket's scope.
 
-#### (S) Person --> Filter Knowledge Graph To Ticket Practices
+#### (S) Person --> Filter Graph To Ticket Practices
 
 Requested (2026-11-06, "practices loaded for ticket / board"): the Graph app opens with its practice filter set to the practices the ticket has turned on, or every practice on the board when opened from the board header.
 
-#### (S) Agent --> Deploy Knowledge Graph App With Board State
+#### (S) Graph App --> Show Board's Active Ticket In Graph
 
-Requested (2026-11-06, non-functional): the Graph app runs on the same app server and instance as the board's state, so the graph and the board share one state for the active ticket.
+Requested (2026-11-06, non-functional): the Graph app runs on the same app server and instance as the board's state, so the graph and the board share one state for the active ticket. The repeatable behaviour: the Graph app shows the ticket the board has active, from the board's own state.
 
-#### (S) Agent --> Refactor Knowledge Graph App To Web Domain Access
+#### (S) Board App --> Show Agent's Ticket Changes On Board
+
+Requested (2026-11-12, non-functional, "like above but for kanban board"): the CDD Kanban, like the Story UI app, follows the cdd_web_domain_access and lern_domain_driven patterns: its backend is the MCP-generated domain objects through the TypeScript adapter, not calls of its own. The repeatable behaviour: a change the agent makes through the tools shows on the board with no copy kept in the page, and a board whose cdd server is down says so.
+
+#### (S) Agent --> [Refactor Knowledge Graph App To Web Domain Access](move-work-forward-on-session-board/integrate-practice-content-editor-apps-on-board/integrate_practice_content_editor_apps_on_board_story.test.md#story-refactor-knowledge-graph-app-to-web-domain-access)
 
 Observed (checked 2026-11-10; commit 23e3d037e): `GraphClient extends GraphClientGenerated` (`harness/graph/app/graph/GraphClient.ts:1-6`), with `GraphApi implements CddApi` as transport and the server mounting the generated `graphRoutes` (`server.ts:8,50`). Was: Requested (2026-11-06, non-functional): the Graph app reaches the CDD domain through the TypeScript language adapter generated by the cdd_web_domain_access pattern, instead of its own calls.
 
-#### (S) Person --> Invoke Story Explorer In Session Context
+#### (S) Person --> [Invoke Story Explorer In Session Context](move-work-forward-on-session-board/integrate-practice-content-editor-apps-on-board/integrate_practice_content_editor_apps_on_board_story.test.md#story-invoke-story-explorer-in-session-context)
 
 Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "view story map / ux design canvas for a session", requested on 2026-11-06): the board opens the browser story explorer on the ticket's story map, framed by its design canvas screens.
 
@@ -818,27 +822,39 @@ Requested (2026-11-06, as the CDD Kanban does): the chat bar sends Fix and Fix a
 
 ### (E) Integrate Practice Content Editor Apps In Chat Bar
 
-#### (S) Person --> Open Story UI Side Panel From Chat Bar
+#### (S) Person --> Open Editor App From App Status Row
 
-Requested (2026-11-06, "chat band -> story UI side panel"): the chat bar opens the Story UI editor in a side panel on the active session's story map. Also Intended (the chat bar, as the CDD Kanban).
+Requested (2026-11-06, "chat band -> story UI side panel"; 2026-11-12, "same but for KG"; 2026-11-12, the CDD Kanban): the chat bar's app status row lists each editor app with its status; clicking one installs it when it is not installed, launches it when it is down, and opens it in the side panel. Examples: the Story UI editor, the Graph app, the CDD Kanban.
 
-#### (S) Person --> Invoke Claude Design Story Explorer From Chat Bar
+#### (S) Person --> Open Stories File In Story UI Editor
 
-Intended (requested on 2026-11-06, as the CDD Kanban): the chat bar opens the Claude Design story explorer the design canvas draws today (`explorer.dc.html`) on the active session's story map and screens.
+Requested (2026-11-12): the file viewer shows a story-map editor tile for every Stories file, which opens that file in the Story UI editor on the active session's story map.
 
-#### (S) Agent --> Deploy Story UI App With Board State
+#### (S) Graph App --> Load Session Folders In Graph
 
-Requested (2026-11-06, non-functional): the Story UI app runs on the same app server and instance as the board's state, so the story map, the explorer and the board share one state for the active ticket.
+Requested (2026-11-12, "same but for KG"): the Graph app opened from the chat bar loads the folders the session's practice roots name.
 
-#### (S) Agent --> Refactor Story UI App To Web Domain Access
+#### (S) Graph App --> Follow Last Activated Session
 
-Requested (2026-11-06, non-functional): the Story UI app reaches the CDD domain through the TypeScript language adapter generated by the cdd_web_domain_access pattern, instead of its own calls.
+Requested (2026-11-12, "same but for KG"): the open Graph app follows the session activated last.
 
-#### (S) Person --> Open UX Design In Claude Design
+#### (S) Person --> [Invoke Claude Design Story Explorer From Chat Bar](move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/integrate_practice_content_editor_apps_in_chat_bar_story.test.md#story-invoke-claude-design-story-explorer-from-chat-bar)
+
+Intended (requested on 2026-11-06, as the CDD Kanban): the chat bar opens the Claude Design story explorer the design canvas draws today (`explorer.dc.html`) on the active session's story map and screens. Requested (2026-11-12, for now): the file viewer has a link that opens the design view attached to the session.
+
+#### (S) Story UI App --> Show Board's Active Ticket In Story UI
+
+Requested (2026-11-06, non-functional): the Story UI app runs on the same app server and instance as the board's state, so the story map, the explorer and the board share one state for the active ticket. Requested (2026-11-12): built with the cdd_web_domain_access and lern_domain_driven patterns. The repeatable behaviour: the board's server serves the Story UI editor, which shows the ticket activated on the board.
+
+#### (S) Story UI App --> Save Story Map Edit Through Domain
+
+Requested (2026-11-06, non-functional): the Story UI app reaches the CDD domain through the TypeScript language adapter generated by the cdd_web_domain_access pattern, instead of its own calls. Requested (2026-11-12): the story map's backend moves out of TypeScript into the MCP-generated domain objects, not a JSON story map; each edit is saved and rendered to the formats chosen in the chat bar, which the Story UI app can toggle.
+
+#### (S) Person --> [Open UX Design In Claude Design](move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/integrate_practice_content_editor_apps_in_chat_bar_story.test.md#story-open-ux-design-in-claude-design)
 
 Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "claude design integration with ux tool"): the UX practice's design opens in Claude Design from the chat.
 
-#### (S) Person --> Trace Story Through Artifacts
+#### (S) Person --> [Trace Story Through Artifacts](move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/integrate_practice_content_editor_apps_in_chat_bar_story.test.md#story-trace-story-through-artifacts)
 
 Intended (`.sessions/_backlog/integrate-practice-content-editor-apps.md` "Trace pane"): picking a story shows its scenarios, tests and code from `harness/graph`, with the domain, class and bounded-context diagrams. Built today (checked 2026-11-10): the Graph app folds story, scenario and step and shows a step's invokes, observes and demonstrates with its source (`harness/graph/app/app.test.tsx:429,746`). Missing: one trace view of a picked story's scenarios, tests and code, and the diagrams.
 

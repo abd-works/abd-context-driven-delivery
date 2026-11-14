@@ -23,6 +23,7 @@ TOOLSETS = (
     "space.session.session:Session",
     "space.session.sessions:Sessions",
     "space.session.practice_session_output:PracticeSessionOutput",
+    "space.session.practice_session_output:FidelitySessionOutput",
 )
 
 

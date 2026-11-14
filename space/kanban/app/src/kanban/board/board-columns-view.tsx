@@ -174,7 +174,7 @@ function StageColumnView({ column }: { column: ColumnClient }) {
 }
 
 function WaitingView({ hasFailed }: { hasFailed: boolean }) {
-  return <p className="board-waiting">{hasFailed ? 'Connect the cdd server and the board appears here.' : 'Reading the board…'}</p>
+  return <p className="board-waiting">{hasFailed ? 'No columns while the server is not answering: the board appears here once it does.' : 'Reading the board…'}</p>
 }
 
 export function BoardColumnsView() {
@@ -182,7 +182,7 @@ export function BoardColumnsView() {
   useKeptSelection()
   return (
     <section className="board-region" aria-label="Board" style={{ flexBasis: state.expandedRegion ? 0 : state.boardHeight, flexGrow: state.expandedRegion ? 1 : 0 }}>
-      {state.board ? (
+      {state.board && !state.serverFailure ? (
         <div className="column-grid">
           {page.board.shownColumns.map(column => (column.isStage ? <StageColumnView key={column.name} column={column} /> : <EdgeColumnView key={column.name} column={column} />))}
         </div>

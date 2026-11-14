@@ -302,14 +302,14 @@ with description("a guidance action"):
             action = GuidanceAction().for_call(_call(f"stories-story-map format=drawio {self.session_word}", self.project))
             expect(action.listed()[0].fidelities["scenarios"].format).not_to(equal("drawio"))
 
-        with it("should keep the format a generate names on that session's fidelity"):
+        with it("should choose the format a generate names for that session's fidelity, after its default"):
             from harness.guidance_actions import GuidanceAction
             from space.session import Sessions
 
             action = GuidanceAction().for_call(_call(f"stories-story-map format=drawio {self.session_word}", self.project))
             action.run(lambda item: None, action="generate")
             reloaded = Sessions(self.project).load(self.project / ".sessions" / "sign-up")
-            expect(reloaded.practices["stories"].saved.get("formats")).to(equal({"story_map": "drawio"}))
+            expect(reloaded.practices["stories"].saved.get("formats")).to(equal({"story_map": ["markdown", "drawio"]}))
 
         with it("should work in the kept format when the next command names none"):
             from harness.guidance_actions import GuidanceAction

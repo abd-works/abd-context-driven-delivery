@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express, { type Request, type Response } from 'express';
 
-import { CddConnection } from '@cdd/cdd-connection';
+import { CddConnection, ProjectConnections } from '@cdd/cdd-connection';
 import { CddRequestError, cddProgressRoutes, type CddRoute } from '@cdd/cdd-shared';
 import { graphRoutes } from '@cdd/harness/graph/graph';
 import ports from './ports.json';
@@ -14,9 +14,10 @@ const API_ROOT = '/api';
 const BAD_REQUEST = 400;
 const FAILED = 500;
 
-/// One cdd server holds the graph; every route reaches it through this connection, which names the project the
-// explorer was started on (GRAPH_PROJECT, set by scripts/start.py). CDD_PROJECT is only for a call made in process.
-const cdd = new CddConnection(process.env.GRAPH_PROJECT);
+// One cdd server holds the graph. A route reaches it on the connection of the project the page names (?project=, sent
+// as the project header), so the call works in the session open in that project, the one the board shows as active;
+// a page naming none works on the project the explorer was started on (GRAPH_PROJECT, set by scripts/start.py).
+const projects = new ProjectConnections(new CddConnection(process.env.GRAPH_PROJECT));
 
 const textOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure));
 
@@ -30,7 +31,7 @@ function diagnosis(route: CddRoute, request: Request, failure: unknown): string 
 
 async function answer(route: CddRoute, request: Request, response: Response): Promise<void> {
   try {
-    response.json((await route.run(cdd, request)) ?? null);
+    response.json((await route.run(projects.of(request), request)) ?? null);
   } catch (failure) {
     const status = failure instanceof CddRequestError ? BAD_REQUEST : FAILED;
     response.status(status).json({ error: textOf(failure), diagnosis: diagnosis(route, request, failure) });

@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "start": "tsx start.ts",
     "server": "tsx server.ts",
     "typecheck": "tsc --noEmit",
     "test": "tsc --noEmit && vitest run"

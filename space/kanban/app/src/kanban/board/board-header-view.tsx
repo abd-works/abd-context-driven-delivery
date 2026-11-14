@@ -12,7 +12,10 @@ function HeaderActionsView() {
       <button className="action" disabled={!page.chat.canSend} onClick={() => void page.openNewTicket()}>
         + Ticket
       </button>
-      <button className="action" disabled={state.isUpdating} title="Get the latest code, rebuild the board, pin cdd to it, and reload this page" onClick={() => void page.update()}>
+      <button className="action" title="Open the knowledge graph on the active ticket, with every practice it works on" onClick={() => void page.editorApp.openOn(page.editorApp.graph, page.board.project)}>
+        Graph
+      </button>
+      <button className="action" disabled={state.isUpdating} title="Install the board again, rebuild its page, and reload this page" onClick={() => void page.update()}>
         {state.isUpdating ? 'Updating…' : 'Update'}
       </button>
       <button className="icon-button" aria-label={label} title={label} onClick={() => page.layout.toggleRegion('board')}>

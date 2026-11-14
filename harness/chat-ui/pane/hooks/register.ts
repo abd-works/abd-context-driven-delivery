@@ -28,7 +28,8 @@ import {
   runInstall,
 } from './health/server-health-client'
 import { ServerHealthBandView, ServerHealthPanelView } from './health/server-health-view'
-import { openApp, type AppName } from './health/open-app-client'
+import { currentAppOpening, openAppBesideChat } from './health/app-client'
+import { FOLDER_QUERY, PROJECT_QUERY, projectPageUrl } from './board-chat/board'
 import { CARD_SCOPE } from './chat-bar/session-card-view'
 import { toggleCard } from './chat-bar/session-dialogs-client'
 import { withChatNamed } from './session/session-log-client'
@@ -170,10 +171,15 @@ export const register: Register = on => {
       hideDetails: () => hideDetails($),
       reconnect: () => reconnect($, () => readActive($)),
       runInstall: () => runInstall($),
-      // Starting the Graph app can take a minute, so the press returns at once and the app opens when it answers.
-      openApp: (app: AppName) => void openApp($, app).catch(logged($, `opening the ${app}`)),
+      // An app opens on the project this chat works in, its worktree for a ticket's chat, so it shows the session open
+      // there, not the main checkout's; and on the folder that session works in, which the Graph loads.
+      openApp: (label: string) =>
+        openAppBesideChat($, label, async url => {
+          const { workpath } = await currentChatBar($)
+          return projectPageUrl($, url, { [PROJECT_QUERY]: await $.session.root(), ...(workpath ? { [FOLDER_QUERY]: workpath } : {}) })
+        }),
     }
-    const band = { health: await currentServerHealth($), view: await currentHealthView($), install: await currentInstall($), actions }
+    const band = { health: await currentServerHealth($), view: await currentHealthView($), install: await currentInstall($), opening: await currentAppOpening($), actions }
     const elements = $.ui.resolve(e)
     try {
     const chatBar = await currentChatBar($)
