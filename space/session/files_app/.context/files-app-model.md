@@ -1,0 +1,54 @@
+## Language
+
+The *Files app* shows the files a link names and turns a person's reading into work for the chat that opened it. It keeps no state of its own on disk: the session owns its practices, its files and their comments, and the page only shows what the session answers and asks it to change. Classes are TypeScript in `app/` unless named otherwise; *Session*, *PracticeSessionOutput*, *FileComments* and *Chat* are the Python owners, reached through their generated clients.
+
+### FilesLink (`files/files-link.ts`)
+
+- What the page's link names: the ticket, the fidelities whose files to list (none for a session folder), the session's `session.json`, the file to open first, and the chat that opened the page.
+- **Invariant:** a link names a ticket and its session.json, or the page shows that it names no files.
+
+### FilesPage (`files/files-page.ts`)
+
+- The page: the files its link names, read once and kept by fidelity; the session's practices; the one file open; and what went wrong. Holds its *FilesStore*, its session client, and its *FileCommentsActions*.
+- `start()` lists the files and reads the practices; whenever the person comes back to the page it reads the open file and the practices again.
+  - -> Session.folderFiles, or FidelityProgress.files for each fidelity the link names
+  - -> Session.show
+- `readPractices()` keeps the session's practices, on and off, each with its colour, short name and fidelities, and lists the files of the practices turned on.
+  - -> Session.show
+- `togglePractice(name)` turns that practice on or off for the session, reads the practices again, and tells the chat that opened the page to read the board again.
+  - -> PracticeSessionOutput.enable
+  - -> Chat.send("refresh", "practices")
+  - **Invariant:** the practices shown are the session's own; the page never keeps an on/off of its own.
+- `open(path)` opens a file in the source view, or a `.drawio` file in the draw.io editor.
+  - -> Session.file
+  - **Invariant:** a `.drawio` file opens in a tab opened during the click, so this tab keeps its file list; a tab whose viewer never answers is closed.
+- `refreshOpen()` reads the open file again, and again every two seconds while a comment on it is sent.
+- `attempt(what, work)` runs a call a person started; its failure is a toast naming what failed, and the open file is read again after it.
+
+### FidelityFiles (`files/files-state.ts`)
+
+- One fidelity's files as the link names them, kept apart so a practice turned off hides its own. A session folder is one *FidelityFiles* of no fidelity.
+- `filesShown(byFidelity, practices)` is every file of the fidelities whose practice is on, each once; a fidelity no practice owns is shown.
+  - -> PracticeSessionOutput.fidelity_slugs
+
+### FilesStore (`files/files-state.ts`)
+
+- The one place the page's state is held and changed: practices, files by fidelity, the files shown, the open path and its file, the problem, and the toasts. A view subscribes and reads it whole.
+
+### FileCommentsActions (`files/file-comments-actions.ts`)
+
+- The comment operations a person presses on the open file: add, add and send, edit, edit and send, send, send all open, remove, clear processed, each through `FilesPage.attempt`.
+  - -> FileComments.add, edit, send, send_open, remove, clear_processed
+
+### FilesPageView, PracticeTogglesView, CommentToolbarView (`files/files-page-view.tsx`)
+
+- The page drawn: the header with the ticket and one toggle per practice, filled in its colour while on and an outline while off; the file list; the open file with Send all open comments and Clear processed above it; the toasts.
+
+### Session, PracticeSessionOutput (Python, `space/session`)
+
+- `Session.show()` answers the session as it stands, changing nothing; its `practices` are every practice, on or off.
+- *PracticeSessionOutput* sends `short_name`, `colour` and `fidelity_slugs` from the practice's guidance beside `enabled`; `enable(is_enabled)` saves the change in session.json.
+
+### Chat (Python, `harness/chat`)
+
+- `send("refresh", text)` queues a refresh; the chat's chat bar takes it at its next check-in and reads the board again, with no toast (`board-chat-client.ts` `refreshed`).

@@ -891,6 +891,9 @@ with description("a practice"):
             with it("should still be shown, turned off, so a toggle can turn it on again"):
                 expect(data_of(self.session.show())["practices"]["ddd"]["enabled"]).to(equal(False))
 
+            with it("should name its own fidelities, so a page can hide their files"):
+                expect(data_of(self.session.show())["practices"]["ddd"]["fidelity_slugs"]).to(equal(["ddd-bounded-context", "ddd-model", "ddd-tactics"]))
+
             with it("should be shown in its practice's colour"):
                 expect(data_of(self.session.show())["practices"]["ddd"]["colour"]).to(equal(self.session.practice("ddd").guidance.colour))
 

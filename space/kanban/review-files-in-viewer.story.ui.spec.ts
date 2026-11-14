@@ -1,7 +1,7 @@
 /**
  * Review Files In Viewer at the browser tier: the scenarios that only the board app's page shows.
  *
- * Scenarios: harness/.context/stories/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md.
+ * Scenarios: space/session/files_app/.context/review-files-in-files-app/review_files_in_files_app_story.test.md.
  * The Python tiers replay the rest from review-files-in-viewer.story.shared.py.
  *
  * Each scenario runs against the board app built and served on the throwaway fixture project

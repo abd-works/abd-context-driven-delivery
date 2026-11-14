@@ -560,37 +560,7 @@ Intended (`.sessions/_backlog/review-work-in-board-files.md` "session informatio
 
 ### (E) Review Files In Viewer
 
-#### (S) Person --> [View Files In Rich Viewer](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-view-files-in-rich-viewer)
-
-Intended (`.sessions/_backlog/review-work-in-board-files.md` "integrate with monaco viewer OR native file rendering"): files open in an editor-grade viewer, or rendered as the file type. Requested (2026-11-12, "use the graph app file viewer for this - make this a common component ... with a typed file shape along with typescript monaco viewer that renders"): one Monaco file viewer in `space/`, beside `space/session/file_manager.py`, shared by the board and the graph app, typed on the file manager's `FileText` (`.sessions/review-work-in-board-files/file-viewer-research.md`).
-
-#### (S) Person --> [Save Edited File](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-save-edited-file)
-
-Requested (2026-11-12, "clicking edit opens in edit mode and can be saved"): Edit turns the viewer's file editable, and Save writes the text to the file on disk through the file manager, kept to the workpath's folders as reading is. No MCP operation writes a file's content today (`file-viewer-research.md`, "The file viewer today").
-
-#### (S) Person --> [Add Comment To File Selection](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-add-comment-to-file-selection)
-
-Intended (`.sessions/_backlog/review-work-in-board-files.md` "select some text in file view and add comment that gets sent to chat like in design view"): a person selects text in a file and sends a comment on it to the chat. Requested (2026-11-12, "select text, right click -> add comment, type the comment; comment widget appears beside the line number of beginning of comment; click to open, press delete to delete selected comment"): Add comment on the right-click menu opens a comment box at the selection; the comment shows as a marker beside the selection's first line number; clicking the marker opens the comment, and Delete removes it.
-
-#### (S) Person --> [Send File Comments To Chat](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-send-file-comments-to-chat)
-
-Requested (2026-11-12, "finish editing press enter; added to chat q"): Enter finishes a comment and adds it to the chat queue, carrying the file's path, the selected lines, the selected text and the comment, as the report's Fix sends a file and line (`chat.send`, `report-client.ts`; `file-viewer-research.md`, "Recommendation"). Requested (2026-11-12, "a send all open comment button top left of viewer"): Send all sends every comment not yet sent in one message.
-
-#### (S) Chat --> [Mark File Comment Processed](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-mark-file-comment-processed)
-
-Requested (2026-11-12, "chat process comment and changes files then ... comment is at processed stage; comment --> not sent, sent, processed"): a sent comment becomes processed once the chat's turn that worked on its message has ended, as `chat.check_in` moves a shown message to done (`harness/chat/chat.py:279-286`).
-
-#### (S) Board App --> [Show Changed File In Viewer](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-show-changed-file-in-viewer)
-
-Requested (2026-11-12, "then viewer is updated to reflect changes"): when a comment on the open file is processed, the viewer reads the file again and shows the agent's changes.
-
-#### (S) Person --> [Clear Processed File Comments](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-clear-processed-file-comments)
-
-Requested (2026-11-12, "a clear processed comments button"): clearing removes the processed comments and keeps the ones not sent or still sent.
-
-#### (S) Board App --> [Show AI Changes As Diff](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-show-ai-changes-as-diff)
-
-Intended (`.sessions/_backlog/review-work-in-board-files.md` "change viewer from ai change like vscode / cursor"): the viewer marks what the agent changed in a file, as VS Code and Cursor do.
+Moved (2026-11-14) to the Files app's map, [Review Files In Files App](../../../space/session/files_app/.context/story-map.md): the Files app is now the one place a session's files are viewed and commented on, and its stories, scenarios (`space/session/files_app/.context/review-files-in-files-app/`) and acceptance tests (`space/session/files_app/review-files-in-files-app.story.*.py`) live there. The board's own files panel (`space/kanban/app/src/kanban/ticket/file-viewer-view.tsx`) still draws the same behaviour; its UI spec stays in `space/kanban/review-files-in-viewer.story.ui.spec.ts`.
 
 ### (E) Integrate Practice Content Editor Apps On Board
 
@@ -804,13 +774,9 @@ Observed: pressing the button on validate, render, iterate, sketch or document p
 Requested (2026-11-11, "doesnt result in LERN being passed in as a param? shouldnt it?"): the command the action button puts in the prompt names the session's chosen overlays in an `overlays=` word beside `format=` (`overlay-choices-client.ts` `overlayArgumentOf`); an action run with that word chooses those overlays on the session first (`WorkList.take`), and Generate adds each overlay's shared rules on top of the practices' rules (`Generate._overlay_rules`).
 ### (E) Review Fidelity Outputs In Chat Bar
 
-#### (S) Person --> [List Session Files](../../chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/list-session-files/list_session_files_story.test.ts)
+#### (S) Person --> List Session Files, View Session Files
 
-Observed: the ▤ files icon, or a folder chip on the session card, opens a tab per file `fidelity-progress.files` declares for the selected fidelity (`fidelity-files-client.ts` `openFiles`).
-
-#### (S) Person --> [View Session Files](../../chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/view-fidelity-files/view_fidelity_files_story.test.ts)
-
-Observed: each tab's text comes from `session.read_file`, which refuses a file outside the session's roots. This covers `.sessions/_backlog/bring-chat-bar-level-with-board.md` "Show the file list, with each file clickable to open it": the files view has one tab per file.
+Moved (2026-11-14) to the Files app's map as Open Stage Files From Chat Bar, Open Session Folder From Chat Bar and List Files The Link Names ([Review Files In Files App](../../../space/session/files_app/.context/story-map.md)): the chat bar's files button and session name open the Files app beside the chat, no longer a tab per file in the chat bar.
 
 #### (S) Person --> Open Validation Report From Violation Count
 
@@ -1751,7 +1717,7 @@ Observed: selecting a violating rule opens the node's source with a banner namin
 
 ### (S) Person --> Display Drawio File As Diagram
 
-Requested on 2026-11-06: a `.drawio` file opens as its diagram, with a Source tab for the XML. A violation marks the shape it names in red, and pressing a shape opens its lines in the source. Built today (checked 2026-11-10): the chat bar's files view offers Open in draw.io, which opens the file in the draw.io editor through `tools/drawio_viewer` (`drawio-viewer-client.ts:44`). Missing: a Source tab, marking the shape a violation names, and opening a pressed shape's lines.
+Requested on 2026-11-06: a `.drawio` file opens as its diagram, with a Source tab for the XML; a violation marks the shape it names in red, and pressing a shape opens its lines in the source. Opening a diagram moved (2026-11-14) to the Files app's Open Diagram In Draw.io Tab ([Review Files In Files App](../../../space/session/files_app/.context/story-map.md)), which opens the draw.io editor in a tab of its own. Missing still: a Source tab, marking the shape a violation names, and opening a pressed shape's lines.
 
 ### (S) Person --> Copy Correct Prompt
 

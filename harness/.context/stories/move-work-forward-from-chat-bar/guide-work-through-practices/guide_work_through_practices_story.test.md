@@ -39,11 +39,7 @@ section: body
 
 #### Scenario: Open the files beside the chat, never in it
 
-*Given* checkout-flow's clean-engineering-model declares chat-bar-model.md and chat-bar-model.drawio  
-*When* the Person opens the files of clean-engineering-model  
-*Then* the files pane opens beside the chat, titled clean-engineering-model files  
-  *And* the chat bar above the prompt draws no file tab  
-  *And* the diagram is never read as text
+Moved (2026-11-14) to `space/session/files_app/.context/review-files-in-files-app/review_files_in_files_app_story.test.md`, Open Stage Files From Chat Bar.
 
 ## Story: Read Validation Report From Chat Bar
 
@@ -99,9 +95,7 @@ section: body
 
 #### Scenario: Open a diagram in the draw.io editor
 
-*Given* the tab pane/.context/chat-bar-model.drawio is open  
-*When* the Person opens the diagram in draw.io  
-*Then* the draw.io viewer opens on pane/.context/chat-bar-model.drawio, and nothing is sent to the chat
+Moved (2026-11-14) to the Files app's scenarios, Open Diagram In Draw.io Tab.
 
 ## Story: List Available Patterns
 

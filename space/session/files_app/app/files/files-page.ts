@@ -19,13 +19,13 @@ export type DrawioTab = { location: { href: string }; close(): void }
 
 const reasonOf =(failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
 
-// A fidelity's practice by its slug: practice clean_engineering's fidelities are named clean-engineering-modules and so on.
-export const practiceOfFidelity = (slug: string, practices: PracticeSessionOutputData[]): PracticeSessionOutputData | undefined =>
-  practices.find(practice => slug.startsWith(`${practice.name.replaceAll('_', '-')}-`))
+// The practice that owns a fidelity, as each practice names its own fidelities.
+const practiceOwning = (slug: string, practices: PracticeSessionOutputData[]): PracticeSessionOutputData | undefined =>
+  practices.find(practice => practice.fidelity_slugs.includes(slug))
 
 // The files of the fidelities whose practice is on, each once; a fidelity of no practice the session knows is shown.
 export const filesShown = (byFidelity: FidelityFiles[], practices: PracticeSessionOutputData[]): FileEntryData[] =>
-  eachOnce(byFidelity.filter(({ slug }) => practiceOfFidelity(slug, practices)?.enabled ?? true).flatMap(({ entries }) => entries))
+  eachOnce(byFidelity.filter(({ slug }) => practiceOwning(slug, practices)?.enabled ?? true).flatMap(({ entries }) => entries))
 
 // Each file once, in the order its fidelities and formats send them.
 const eachOnce = (entries: FileEntryData[]): FileEntryData[] => entries.filter((entry, index) => entries.findIndex(other => other.path === entry.path) === index)

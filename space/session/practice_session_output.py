@@ -108,6 +108,13 @@ class PracticeSessionOutput:
 
     @property
     @data_field
+    def fidelity_slugs(self) -> list[str]:
+        """The slugs of this practice's fidelities, such as stories-story-map, so a page listing a stage's files knows
+        which of them this practice owns and hides them while it is off."""
+        return [fidelity.slug for fidelity in self.fidelities]
+
+    @property
+    @data_field
     def enabled(self) -> bool:
         """Whether the session works on this practice: true until a person turns it off."""
         return self.saved.get("enabled", True)

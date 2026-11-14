@@ -1,3 +1,6 @@
+// The Files app's acceptance tests for what only the page shows, story by story as
+// space/session/files_app/.context/review-files-in-files-app/review_files_in_files_app_story.test.md writes them; what the
+// session answers is proved by space/session/files_app/review-files-in-files-app.story.domain.spec.py.
 import { describe, expect, it } from 'vitest'
 
 import type { CddApi } from '@cdd/cdd-shared'
@@ -35,7 +38,8 @@ class FakeFilesServer implements CddApi {
 const SESSION = '.sessions/release-2/session.json'
 
 function practice(name: string, short_name: string, colour: string, enabled: boolean): PracticeSessionOutputData {
-  return { name, short_name, colour, enabled, session_file: SESSION, design_view: '', root: '', is_root_chosen: false }
+  const fidelity_slugs = { stories: ['stories-story-map'], ddd: ['ddd-bounded-context'] }[name] ?? []
+  return { name, short_name, colour, fidelity_slugs, enabled, session_file: SESSION, design_view: '', root: '', is_root_chosen: false }
 }
 
 function entry(path: string) {
@@ -56,7 +60,7 @@ async function settled(): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, 0))
 }
 
-describe('Files page', () => {
+describe('Toggle Practice In Files App', () => {
   describe('with a stage of two practices, one turned off', () => {
     it('should show a toggle for each practice, on or off', async () => {
       const page = new FilesPage(new FakeFilesServer(), new FilesLink(STAGE_LINK))
@@ -84,6 +88,7 @@ describe('Files page', () => {
         expect(server.practices.ddd!.enabled).toBe(true)
       })
 
+      // Keep Chat Bar Practices In Sync
       it('should tell the chat that opened the page to read the board again, so its chat bar shows it on', async () => {
         const server = new FakeFilesServer()
         const page = new FilesPage(server, new FilesLink(STAGE_LINK))
@@ -94,6 +99,9 @@ describe('Files page', () => {
     })
   })
 
+})
+
+describe('Open Diagram In Draw.io Tab', () => {
   describe('with a .drawio file pressed', () => {
     it('should send a tab opened during the press to the draw.io viewer, leaving this tab on the file list', async () => {
       const tab = new FakeTab()

@@ -8,7 +8,7 @@ section: body
 # Scenario Realizations: Review Work In Board Files
 
 Source:
-- `move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md`
+- `space/session/files_app/.context/review-files-in-files-app/review_files_in_files_app_story.test.md`
 - `move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md` (Open Session Files From Details, and the changed-files filter of List Ticket Files)
 
 Each page call reaches one MCP tool, which calls one domain operation (cdd_web_domain_access). The new pieces are `FileManager.write`, `FileText.language`, `SessionFile`, `Range`, `Fold`, `FileViolation`, `FileComments`, `FileComment`, and `FileCommentState`. Every change to FileComments answers with FileComments, so the page redraws every marker from one shape. A comment, a fold, and a violation each sit on a `Range` of the file. The rest exist today.
