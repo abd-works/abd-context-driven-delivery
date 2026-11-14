@@ -81,6 +81,7 @@ def main() -> int:
         print(f"language adapters: {len(installer.write_language_adapters())} written")
         _write_runtime_adapters(installer, server)
         _install_board_apps()
+        _restart_app_servers()
         return 0
     if args.self:
         installer.install_self(replace=not args.no_replace)
@@ -92,6 +93,7 @@ def main() -> int:
             print(f"cdd server: {restarted}")
         _write_runtime_adapters(installer, server)
         _install_board_apps()
+        _restart_app_servers()
     return 0
 
 
@@ -128,6 +130,23 @@ def _install_board_apps() -> None:
             print(f"{app.label} app: installed in {app.folder}")
         except AppNotStarted as failed:
             print(f"{app.label} app: {failed}")
+
+
+def _restart_app_servers() -> None:
+    """A running app server keeps the routes and the page it started with, so after an install it answers the new
+    page's calls with 404 and a new app's page with another's. Every registered app's server that is running is
+    restarted on the code just installed, each server once, though the board's serves two apps. A failure is told,
+    never raised, as for the apps' install."""
+    from harness.diagnostics.app import App, AppServerNotRestarted
+    import space.kanban.board_app  # noqa: F401  registers the Kanban and Story UI apps beside the Graph app
+
+    servers = list({id(app.server): app.server for app in App.registered()}.values())
+    for server in servers:
+        try:
+            if server.restart():
+                print(f"app server restarted: {' '.join(server.command)} in {server.folder}")
+        except AppServerNotRestarted as failed:
+            print(f"app server: {failed}")
 
 
 if __name__ == "__main__":

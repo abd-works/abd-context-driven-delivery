@@ -1,9 +1,14 @@
 """*App*, one CDD web app a person opens beside the chat, the one registry of them, and how far each has got."""
 from __future__ import annotations
 
+import os
+import re
 import shutil
+import signal
 import socket
 import subprocess
+import sys
+import time
 from enum import Enum
 from pathlib import Path
 from typing import ClassVar
@@ -25,6 +30,11 @@ NPM_SECONDS = 270
 REASON_LINES = 3
 # The loader node runs a TypeScript server with, from the server's own packages.
 TYPESCRIPT_LOADER = ("--import", "tsx")
+# How long a restarted server has to answer on one of its ports, and how often it is asked.
+RESTART_SECONDS = 30
+RESTART_CHECK_SECONDS = 0.25
+# A Windows process started on its own, so it outlives the install that started it and opens no console window.
+_DETACHED = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
 class AppStatus(str, Enum):
@@ -84,6 +94,67 @@ class AppServer:
         with socket.socket() as probe:
             probe.settimeout(PROBE_SECONDS)
             return probe.connect_ex((_HOST, port)) == 0
+
+    def restart(self) -> bool:
+        """Stop the server while it runs and start it again in its folder, so it serves the code an install just
+        wrote: a server keeps the routes and the built page it started with, and answers a path it does not know with
+        another app's page. The server started again runs on its own, past the install. A server that is not running
+        is left for the chat that opens its app to start; answers whether it restarted."""
+        port = self.port
+        if port is None:
+            return False
+        listening = _process_listening_on(port)
+        if listening is None:
+            raise AppServerNotRestarted(self, f"nothing this machine lists is listening on port {port}")
+        _stop_process(listening)
+        self._wait_until(lambda: self.port is None, f"it still answers on port {port} after it was stopped")
+        try:
+            subprocess.Popen(self.command, cwd=self._folder, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=_DETACHED, start_new_session=sys.platform != "win32")
+        except OSError as failed:
+            raise AppServerNotRestarted(self, f"{' '.join(self.command)} did not start: {failed}") from failed
+        self._wait_until(lambda: self.port is not None, f"nothing answered on {', '.join(map(str, self.ports))} within {RESTART_SECONDS} s")
+        return True
+
+    def _wait_until(self, done, reason: str) -> None:
+        deadline = time.monotonic() + RESTART_SECONDS
+        while not done():
+            if time.monotonic() > deadline:
+                raise AppServerNotRestarted(self, reason)
+            time.sleep(RESTART_CHECK_SECONDS)
+
+
+class AppServerNotRestarted(Exception):
+    """A running app server could not be restarted: which server, why, and how to start it by hand."""
+
+    def __init__(self, server: AppServer, reason: str) -> None:
+        super().__init__(f"{' '.join(server.command)} was not restarted: {reason}. Stop it and run that command in {server.folder}.")
+        self.server = server
+
+
+def _process_listening_on(port: int) -> int | None:
+    """The process listening on port on this machine, as the system lists its connections: netstat on Windows, lsof
+    elsewhere. Windows may list a listening socket under process 0, but names the process on its end of a connection,
+    so a connection is held open while its server's end is looked up."""
+    if sys.platform == "win32":
+        try:
+            with socket.create_connection((_HOST, port), timeout=PROBE_SECONDS * 20) as held:
+                ours = held.getsockname()[1]
+                listed = subprocess.run(["netstat", "-ano", "-p", "TCP"], capture_output=True, text=True, errors="replace").stdout
+        except (ConnectionRefusedError, TimeoutError):
+            return None
+        found = re.search(rf"^[ \t]*TCP[ \t]+\S+:{port}[ \t]+\S+:{ours}[ \t]+ESTABLISHED[ \t]+(\d+)[ \t]*$", listed, re.MULTILINE)
+        return int(found.group(1)) if found else None
+    listed = subprocess.run(["lsof", "-t", f"-iTCP:{port}", "-sTCP:LISTEN"], capture_output=True, text=True).stdout.split()
+    return int(listed[0]) if listed else None
+
+
+def _stop_process(process: int) -> None:
+    """Stop the process, and on Windows the ones it started. Elsewhere only the process itself: a server a chat started
+    shares the chat's process group, so stopping the group would stop the chat too."""
+    if sys.platform == "win32":
+        subprocess.run(["taskkill", "/PID", str(process), "/T", "/F"], capture_output=True)
+        return
+    os.kill(process, signal.SIGTERM)
 
 
 @identity("label")
