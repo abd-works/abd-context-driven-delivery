@@ -2,6 +2,7 @@ import { Component, useEffect, useSyncExternalStore, type CSSProperties, type Re
 
 import type { FileEntryData, SessionFileData } from '@cdd/space/session/session'
 
+import type { FileFolder } from './file-bar'
 import { FileSourceView } from './file-source-view'
 import type { FilesPage } from './files-page'
 import { isDrawio } from './files-paths'
@@ -30,12 +31,66 @@ function FileListView({ page }: { page: FilesPage }) {
   const state = useFilesState(page)
   if (state.isListing) return <p className="files-note">Reading the files…</p>
   if (!state.entries.length) return <p className="files-note">No files here yet.</p>
+  if (state.fileBar.view === 'folders') return <FileFoldersView page={page} />
   return (
     <ul className="file-list" aria-label="Files">
       {state.entries.map(entry => (
         <FileEntryView key={entry.path} page={page} entry={entry} isOpen={entry.path === state.openPath} />
       ))}
     </ul>
+  )
+}
+
+// The files in their folders, each folder a row that opens and closes to show the files directly in it.
+function FileFoldersView({ page }: { page: FilesPage }) {
+  const { openPath } = useFilesState(page)
+  return (
+    <ul className="file-folders" aria-label="Folders">
+      {page.fileBar.folders.map(folder => (
+        <FileFolderView key={folder.path} page={page} folder={folder} openPath={openPath} />
+      ))}
+    </ul>
+  )
+}
+
+// One folder: a row that opens and closes it, and its files while it is open.
+function FileFolderView({ page, folder, openPath }: { page: FilesPage; folder: FileFolder; openPath: string }) {
+  const isOpen = page.fileBar.isOpen(folder)
+  return (
+    <li>
+      <button className="file-folder" title={folder.path || 'the project folder'} aria-expanded={isOpen} onClick={() => page.fileBar.toggleFolder(folder.path)}>
+        <span className="file-folder-mark">{isOpen ? '▾' : '▸'}</span> {folder.path || '/'} <span className="file-entry-note">{folder.files.length}</span>
+      </button>
+      {isOpen ? (
+        <ul className="file-list">
+          {folder.files.map(entry => (
+            <FileEntryView key={entry.path} page={page} entry={entry} isOpen={entry.path === openPath} />
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  )
+}
+
+// The file bar's buttons: collapse or expand it, and show its files as a list or in their folders.
+function FileBarButtonsView({ page }: { page: FilesPage }) {
+  const { fileBar } = useFilesState(page)
+  return (
+    <div className="file-bar-buttons" role="toolbar" aria-label="File bar">
+      <button aria-label={fileBar.isOpen ? 'Collapse the file bar' : 'Expand the file bar'} title={fileBar.isOpen ? 'Collapse the file bar' : 'Expand the file bar'} onClick={() => page.fileBar.toggle()}>
+        {fileBar.isOpen ? '«' : '»'}
+      </button>
+      {fileBar.isOpen ? (
+        <>
+          <button className="file-bar-view" aria-pressed={fileBar.view === 'list'} title="Show the files as a list" onClick={() => page.fileBar.show('list')}>
+            List
+          </button>
+          <button className="file-bar-view" aria-pressed={fileBar.view === 'folders'} title="Show the files in their folders" onClick={() => page.fileBar.show('folders')}>
+            Folders
+          </button>
+        </>
+      ) : null}
+    </div>
   )
 }
 
@@ -106,7 +161,7 @@ function ToastsView({ page }: { page: FilesPage }) {
 
 // The Files app's page: the files its link names down the side, the open one beside them, and what went wrong.
 export function FilesPageView({ page }: { page: FilesPage }) {
-  const { problem } = useFilesState(page)
+  const { problem, fileBar } = useFilesState(page)
   useEffect(() => page.start(), [page])
   return (
     <main className="files-page">
@@ -116,9 +171,10 @@ export function FilesPageView({ page }: { page: FilesPage }) {
         <PracticeTogglesView page={page} />
       </header>
       {problem ? <div className="files-problem" role="alert">{problem}</div> : null}
-      <div className="files-body">
+      <div className={`files-body ${fileBar.isOpen ? '' : 'is-bar-collapsed'}`}>
         <nav className="files-side">
-          <FileListView page={page} />
+          <FileBarButtonsView page={page} />
+          {fileBar.isOpen ? <FileListView page={page} /> : null}
         </nav>
         <OpenFileView page={page} />
       </div>

@@ -13,7 +13,7 @@ The *Files app* shows the files a link names and turns a person's reading into w
 - `start()` lists the files and reads the practices; it reads the practices again every three seconds while the page shows, so a practice turned on or off on the chat bar or the board hides or shows its files here, and whenever the person comes back to the page it reads the open file and the practices again.
   - -> Session.folderFiles, or FidelityProgress.files for each fidelity the link names
   - -> Session.show
-- `readPractices()` keeps the session's practices, on and off, each with its colour, short name and fidelities, and lists the files of the practices turned on.
+- `readPractices()` (private) keeps the session's practices, on and off, each with its colour, short name and fidelities, and lists the files of the practices turned on.
   - -> Session.show
 - `togglePractice(name)` turns that practice on or off for the session, reads the practices again, and tells the chat that opened the page to read the board again.
   - -> PracticeSessionOutput.enable
@@ -25,6 +25,15 @@ The *Files app* shows the files a link names and turns a person's reading into w
 - `refreshOpen()` (private) reads the open file again, and again every two seconds while a comment on it is sent.
 - `attempt(what, work)` runs a call a person started; its failure is a toast naming what failed, and the open file is read again after it.
 
+### FileBar (`files/file-bar.ts`)
+
+- The page's side bar: collapsed to its buttons or expanded, showing the files the page lists as one list or in their folders. Holds no files of its own; reads the page's *FilesStore* and keeps what it shows there (`fileBar`: open, view, open folders).
+- `folders` is each folder the listed files are in, once, in the order its first file is listed, with the files directly in it (`foldersOf`).
+- `toggle()` collapses or expands the bar.
+- `show(view)` shows the files as a list or in their folders.
+  - **Invariant:** shown as folders, the open file's folder is open.
+- `toggleFolder(path)` opens or closes one folder; `isOpen(folder)` says which it is.
+
 ### FidelityFiles (`files/files-state.ts`)
 
 - One fidelity's files as the link names them, kept apart so a practice turned off hides its own. A session folder is one *FidelityFiles* of no fidelity.
@@ -33,7 +42,7 @@ The *Files app* shows the files a link names and turns a person's reading into w
 
 ### FilesStore (`files/files-state.ts`)
 
-- The one place the page's state is held and changed: practices, files by fidelity, the files shown, the open path and its file, the problem, and the toasts. A view subscribes and reads it whole.
+- The one place the page's state is held and changed: practices, files by fidelity, the files shown, the open path and its file, the problem, the toasts, and what the file bar shows. A view subscribes and reads it whole.
 
 ### FileCommentsActions (`files/file-comments-actions.ts`)
 

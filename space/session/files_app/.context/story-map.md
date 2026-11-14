@@ -51,6 +51,10 @@ Observed (2026-11-14): the page reads only the files its link names, each once, 
 
 Built (2026-11-14): a press on a `.drawio` file opens the draw.io editor in a new tab, and the Files tab stays on its file list (`files-page.ts` `openDrawio`). Requested (the person, 2026-11-14): "open in new tab works but orig tab also getting moved to drawio; leave it on file explorer". Was the chat bar's Open a diagram in the draw.io editor and the graph's Display Drawio File As Diagram; that story's Source tab and shape marking stay Intended.
 
+### (S) Person --> [Switch File Bar Between Folders And List](review-files-in-files-app/review_files_in_files_app_story.test.md#story-switch-file-bar-between-folders-and-list)
+
+Built (2026-11-14): the file bar collapses to its buttons and expands again, and shows its files as a list or in their folders, the open file's folders open (`file-bar.ts` *FileBar*, `files-page-view.tsx` `FileBarView`). Requested (the person, 2026-11-14): "expand collapse file bar with buttons to swap a folder view and file list".
+
 ## (S) Person --> [Toggle Practice In Files App](review-files-in-files-app/review_files_in_files_app_story.test.md#story-toggle-practice-in-files-app)
 
 Built (2026-11-14): the session's practices sit along the top as toggles, each in its practice colour, filled while on and an outline while off; a press turns the practice on or off for the session and the list shows only the files of the practices turned on (`files-page.ts` `togglePractice`, `practice_session_output.enable`). Requested (the person, 2026-11-14): "the patterns should be toggles at the top; be the practice color; and allow us to toggle the practice filter here". Builds on the board's Browse Ticket Files By Practice (2026-11-12): "put the filter toggles on the top".

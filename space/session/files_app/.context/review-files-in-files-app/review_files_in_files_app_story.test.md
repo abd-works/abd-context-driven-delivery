@@ -114,6 +114,36 @@ Required by the cdd_web_domain_access rule `fail-loud-on-mcp` this session overl
 *Then* the new tab closes
 *And* a toast says *story-map.drawio did not open in the draw.io viewer*, with the reason
 
+## Story: Switch File Bar Between Folders And List
+
+Requested (the person, 2026-11-14): "expand collapse file bar with buttons to swap a folder view and file list". Only the page shows it: the session answers the same files either way.
+
+#### Scenario: Collapse the file bar to give the open file the page
+
+*Given* the [Files app](../files-app-model.md#filebar-filesfile-barts) lists *story-map.md* and *src/checkout/order.py*, with *order.py* open
+*When* the Person collapses the file bar
+*Then* the file bar shows only its buttons, and *order.py* takes the page's width
+*When* the Person expands the file bar
+*Then* the file bar lists *story-map.md* and *order.py* again
+
+#### Scenario: Show the files in their folders, the open file's folder open
+
+*Given* the [Files app](../files-app-model.md#filebar-filesfile-barts) lists *.context/story-map.md*, *src/checkout/order.py* and *src/checkout/cart.py*, with *order.py* open
+*When* the Person shows the file bar as folders
+*Then* the file bar shows the folders *.context* and *src/checkout*
+*And* *src/checkout* is open, showing *cart.py* and *order.py*
+*But* *.context* is closed
+*When* the Person shows the file bar as a list
+*Then* the file bar lists *story-map.md*, *order.py* and *cart.py* again, in the order the link names them
+
+#### Scenario: Open and close a folder
+
+*Given* the [Files app](../files-app-model.md#filebar-filesfile-barts) shows its files as folders, *.context* closed
+*When* the Person opens *.context*
+*Then* *.context* shows *story-map.md*
+*When* the Person closes *.context*
+*Then* *.context* shows no file
+
 ## Story: Toggle Practice In Files App
 
 #### Scenario: Show each practice as a toggle in its colour

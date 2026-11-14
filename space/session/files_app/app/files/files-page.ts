@@ -4,6 +4,7 @@ import { FidelityProgressClientGenerated } from '@cdd/space/kanban/fidelity-prog
 import { PracticeSessionOutputClientGenerated, type PracticeSessionOutputData } from '@cdd/space/session/practice-session-output'
 import { SessionClientGenerated, type FileEntryData } from '@cdd/space/session/session'
 
+import { FileBar } from './file-bar'
 import { FileCommentsActions } from './file-comments-actions'
 import type { FilesLink } from './files-link'
 import { DRAWIO_PATH, isDrawio } from './files-paths'
@@ -42,6 +43,7 @@ export class FilesPage {
   readonly store = new FilesStore()
   readonly session: SessionClientGenerated
   readonly comments: FileCommentsActions
+  readonly fileBar = new FileBar(this.store)
   private refreshTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor(
@@ -99,7 +101,7 @@ export class FilesPage {
   // The session's practices, on and off, with their colours; read again while the page shows and when the person comes
   // back to it, so a practice turned on or off on the chat bar or the board shows here. The list changes only when a
   // practice did; a quiet read that fails is tried again on the next, with no toast.
-  async readPractices({ isQuiet = false } = {}): Promise<void> {
+  private async readPractices({ isQuiet = false } = {}): Promise<void> {
     try {
       const shown = await this.session.show()
       const practices = Object.values(shown?.practices ?? {})

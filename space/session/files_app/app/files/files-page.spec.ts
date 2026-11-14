@@ -60,11 +60,17 @@ async function settled(): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, 0))
 }
 
+// The page as the person finds it once it opened: its files listed and the session's practices read.
+async function started(page: FilesPage): Promise<void> {
+  page.start()()
+  await settled()
+}
+
 describe('Toggle Practice In Files App', () => {
   describe('with a stage of two practices, one turned off', () => {
     it('should show a toggle for each practice, on or off', async () => {
       const page = new FilesPage(new FakeFilesServer(), new FilesLink(STAGE_LINK))
-      await page.readPractices()
+      await started(page)
       expect(page.state.practices.map(each => `${each.short_name}:${each.enabled}`)).toEqual(['Stories:true', 'DDD:false'])
     })
 
@@ -83,7 +89,7 @@ describe('Toggle Practice In Files App', () => {
       it('should turn it on for the session', async () => {
         const server = new FakeFilesServer()
         const page = new FilesPage(server, new FilesLink(STAGE_LINK))
-        await page.readPractices()
+        await started(page)
         await page.togglePractice('ddd')
         expect(server.practices.ddd!.enabled).toBe(true)
       })
@@ -92,7 +98,7 @@ describe('Toggle Practice In Files App', () => {
       it('should tell the chat that opened the page to read the board again, so its chat bar shows it on', async () => {
         const server = new FakeFilesServer()
         const page = new FilesPage(server, new FilesLink(STAGE_LINK))
-        await page.readPractices()
+        await started(page)
         await page.togglePractice('ddd')
         expect(server.posted('/send')).toEqual([{ path: '/chat/chat-1/send', body: { kind: 'refresh', text: 'practices' } }])
       })

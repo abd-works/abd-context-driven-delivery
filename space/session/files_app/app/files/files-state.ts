@@ -15,9 +15,20 @@ export type FilesState = {
   file: SessionFileData | null
   problem: string
   toasts: string[]
+  fileBar: { isOpen: boolean; view: 'list' | 'folders'; openFolders: string[] }
 }
 
-export const NO_FILES: FilesState = { practices: [], byFidelity: [], entries: [], isListing: true, openPath: '', file: null, problem: '', toasts: [] }
+export const NO_FILES: FilesState = {
+  practices: [],
+  byFidelity: [],
+  entries: [],
+  isListing: true,
+  openPath: '',
+  file: null,
+  problem: '',
+  toasts: [],
+  fileBar: { isOpen: true, view: 'list', openFolders: [] },
+}
 
 // A change to the state, applied by the store that holds it.
 export type FilesChange = (state: FilesState) => Partial<FilesState>
