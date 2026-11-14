@@ -108,6 +108,11 @@ describe('folders of the files', () => {
     expect([docs!.path, named(docs)]).toEqual(['docs/guide', ['docs/guide/intro.md', 'docs/guide/setup.md']])
   })
 
+  it('should name each folder below the folder every file shares', () => {
+    const folders = foldersOf([entry('C:/dev/work/.context/story-map.md'), entry('C:/dev/work/src/checkout/order.py')])
+    expect(folders.map(folder => folder.name)).toEqual(['.context', 'src/checkout'])
+  })
+
   it('should keep a file at the top as a folder of no path', () => {
     expect(foldersOf([entry('README.md')]).map(folder => [folder.path, named(folder)])).toEqual([['', ['README.md']]])
   })

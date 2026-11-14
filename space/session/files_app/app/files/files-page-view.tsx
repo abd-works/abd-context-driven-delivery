@@ -59,7 +59,7 @@ function FileFolderView({ page, folder, openPath }: { page: FilesPage; folder: F
   return (
     <li>
       <button className="file-folder" title={folder.path || 'the project folder'} aria-expanded={isOpen} onClick={() => page.fileBar.toggleFolder(folder.path)}>
-        <span className="file-folder-mark">{isOpen ? '▾' : '▸'}</span> {folder.path || '/'} <span className="file-entry-note">{folder.files.length}</span>
+        <span className="file-folder-mark">{isOpen ? '▾' : '▸'}</span> {folder.name || '/'}<span className="file-entry-note">{folder.files.length}</span>
       </button>
       {isOpen ? (
         <ul className="file-list">
