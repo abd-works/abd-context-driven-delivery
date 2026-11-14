@@ -7,6 +7,9 @@
   "practices": {
     "clean_engineering": {
       "enabled": true
+    },
+    "stories": {
+      "enabled": false
     }
   }
 }
