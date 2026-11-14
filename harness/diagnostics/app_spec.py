@@ -83,9 +83,6 @@ with description("an app") as self:
             with it("should read running"):
                 expect(self.app.status).to(equal(AppStatus.RUNNING))
 
-            with it("should open by answering itself, installing nothing"):
-                expect(self.app.open()).to(be_a(App))
-
             with it("should send its label, status, port, url and server as its data"):
                 server = {"folder": self.folder.as_posix(), "command": ["node", "serve.js"]}
                 expect(data_of(self.app)).to(equal({"label": "Throwaway", "status": "running", "port": self.port, "url": f"http://127.0.0.1:{self.port}/story-map", "server": server}))
@@ -133,6 +130,10 @@ with description("an app installed again") as self:
             self.app.install()
             expect(self.npm_calls()).to(equal([]))
 
+        with it("should open without running npm"):
+            self.app.open()
+            expect(self.npm_calls()).to(equal([]))
+
     with context("whose package file changed"):
         with before.each:
             package_in(self.folder, {"build": "vite build", "start": "node serve.js"})
@@ -145,6 +146,11 @@ with description("an app installed again") as self:
             expect(self.npm_calls()).to(equal(["install", "run", "build"]))
 
     with context("whose source changed"):
+        with it("should build its page again when it is opened"):
+            (self.folder / "main.tsx").write_text("export const changed = 1", encoding="utf-8")
+            self.app.open()
+            expect(self.npm_calls()).to(equal(["run", "build"]))
+
         with it("should build its page again without installing its packages"):
             (self.folder / "main.tsx").write_text("export const changed = 1", encoding="utf-8")
             self.app.install()

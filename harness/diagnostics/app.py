@@ -246,6 +246,9 @@ class App:
     # The fingerprints the last install kept, each beside what it describes, so removing either folder forgets it.
     PACKAGES_STAMP = Path("node_modules") / ".cdd-packages"
     BUILD_STAMP = Path("dist") / ".cdd-build"
+    # An app that builds no page, such as the Graph, which its server serves through vite, keeps its sources' fingerprint
+    # beside its packages, so a change to its server's code still counts as a change.
+    SOURCES_STAMP = Path("node_modules") / ".cdd-sources"
 
     def __init__(self, label: str, folder: Path, server: AppServer, page: str = "/", imports: tuple[Path, ...] = (), npm: Npm | None = None) -> None:
         """imports are the folders outside its own that its build reads, such as the language adapters."""
@@ -317,10 +320,12 @@ class App:
     @mcp
     @agent_tool
     def open(self) -> App:
-        """Ready the app to open beside the chat: install it while it is not installed, then answer it with its url and
-        its server, which the chat starts while it is not running and stops when the chat ends."""
-        if self.status is AppStatus.NOT_INSTALLED:
+        """Ready the app to open beside the chat: install it again when anything its install reads has changed, and
+        restart its server when one runs, so it serves the new code; then answer it with its url and its server, which
+        the chat starts while it is not running and stops when the chat ends. An unchanged app opens with no npm."""
+        if not self.is_current:
             self.install()
+            self._server.restart()
         return self
 
     @property
@@ -329,7 +334,7 @@ class App:
         built page, when it builds one, matches its sources."""
         if not self.is_installed or not self._is_stamped(self.PACKAGES_STAMP, self._sources.packages):
             return False
-        return not self._builds_a_page or self._is_stamped(self.BUILD_STAMP, self._sources.build)
+        return self._is_stamped(self._sources_stamp, self._sources.build)
 
     @long_call
     @mcp
@@ -342,6 +347,8 @@ class App:
         self._install_packages()
         if self._builds_a_page:
             self._build_page()
+        else:
+            self._stamp(self.SOURCES_STAMP, self._sources.build)
         # a chat starts only an installed app, so an install that leaves it not installed is a failed one.
         if not self.is_installed:
             raise AppNotStarted(self, f"npm left {self.folder} without its packages or its built page")
@@ -373,6 +380,10 @@ class App:
         kept = self.folder / stamp
         if kept.parent.is_dir():
             kept.write_text(fingerprint, encoding="utf-8")
+
+    @property
+    def _sources_stamp(self) -> Path:
+        return self.BUILD_STAMP if self._builds_a_page else self.SOURCES_STAMP
 
     @property
     def _builds_a_page(self) -> bool:
