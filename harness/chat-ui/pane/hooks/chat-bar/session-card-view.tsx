@@ -83,7 +83,7 @@ export function SessionCardView($: EngineInterface, elements: ElementTable, { ch
   const columns = cardColumnsOf(chatBar)
   return (
     <Box key="session-card" flexDirection="column" width={width}>
-      <Box flexDirection="column" marginBottom={1} {...shown}>
+      <Box flexDirection="column" marginTop={1} marginBottom={1} {...shown}>
         {health.panel}
         {chatBar.hasSession ? (
           <Box key="card-grid" flexDirection="column" width={width} borderStyle="round" borderColor={BRAND.card} backgroundColor={BRAND.card}>
