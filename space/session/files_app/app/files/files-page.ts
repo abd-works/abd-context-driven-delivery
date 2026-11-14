@@ -12,7 +12,13 @@ import { FilesStore, type FidelityFiles } from './files-state'
 // While a comment on the open file is with a chat, the file is read again this often, so the chat's change and the
 // comment's processed state show without a reload. Nothing else is read again: never the list, never a board.
 export const SENT_REFRESH_MILLISECONDS = 2_000
+// The session's practices are read again this often while the page shows, so a practice turned on or off on the chat
+// bar or the board hides or shows its files here: a page in a side pane is never focused again to read them.
+export const PRACTICES_REFRESH_MILLISECONDS = 3_000
 const TOAST_MILLISECONDS = 8_000
+
+// Which practices are on, the one thing about them the file list depends on.
+const onOff = (practices: PracticeSessionOutputData[]): string => practices.map(practice => `${practice.name}:${practice.enabled}`).join(',')
 
 // The tab a .drawio file opens in: sent to the viewer once its address is known, closed when it never comes.
 export type DrawioTab = { location: { href: string }; close(): void }
@@ -57,8 +63,12 @@ export class FilesPage {
     void this.list()
     const reread = () => void Promise.all([this.refreshOpen(), this.readPractices()])
     window.addEventListener('focus', reread)
+    const practicesTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') void this.readPractices({ isQuiet: true })
+    }, PRACTICES_REFRESH_MILLISECONDS)
     return () => {
       window.removeEventListener('focus', reread)
+      clearInterval(practicesTimer)
       this.stopRefreshing()
     }
   }
@@ -86,15 +96,17 @@ export class FilesPage {
     )
   }
 
-  // The session's practices, on and off, with their colours; read again when the person comes back to the page, so a
-  // practice turned on or off on the chat bar or the board shows here.
-  async readPractices(): Promise<void> {
+  // The session's practices, on and off, with their colours; read again while the page shows and when the person comes
+  // back to it, so a practice turned on or off on the chat bar or the board shows here. The list changes only when a
+  // practice did; a quiet read that fails is tried again on the next, with no toast.
+  async readPractices({ isQuiet = false } = {}): Promise<void> {
     try {
       const shown = await this.session.show()
       const practices = Object.values(shown?.practices ?? {})
+      if (this.state.practices.length && onOff(practices) === onOff(this.state.practices)) return
       this.store.change(state => ({ practices, entries: filesShown(state.byFidelity, practices) }))
     } catch (failure) {
-      this.toast(`The session's practices did not load: ${reasonOf(failure)}`)
+      if (!isQuiet) this.toast(`The session's practices did not load: ${reasonOf(failure)}`)
     }
   }
 

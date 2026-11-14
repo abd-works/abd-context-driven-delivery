@@ -157,12 +157,11 @@ Required by the cdd_web_domain_access rule `fail-loud-on-mcp` this session overl
 *Then* *checkout-chat* gets a refresh
 *And* *checkout-chat*'s chat bar reads the board again and shows ddd-bounded-context's dot
 
-#### Scenario: Show a practice turned off on the board in the Files app
+#### Scenario: Show a practice turned off on the chat bar in the Files app
 
 *Given* the [Files app](../files-app-model.md#filespage-filesfiles-pagets) shows the DDD toggle filled
-*And* the Person turned DDD off on the board
-*When* the Person comes back to the Files app
-*Then* the DDD toggle shows as an outline
+*When* the Person turns DDD off on the chat bar
+*Then* within three seconds, with no press in the Files app, the DDD toggle shows as an outline
 *And* the Files app no longer lists *bounded-context-map.md*
 
 ---

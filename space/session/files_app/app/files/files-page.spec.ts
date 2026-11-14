@@ -1,13 +1,13 @@
 // The Files app's acceptance tests for what only the page shows, story by story as
 // space/session/files_app/.context/review-files-in-files-app/review_files_in_files_app_story.test.md writes them; what the
 // session answers is proved by space/session/files_app/review-files-in-files-app.story.domain.spec.py.
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import type { CddApi } from '@cdd/cdd-shared'
 import type { PracticeSessionOutputData } from '@cdd/space/session/practice-session-output'
 
 import { FilesLink } from './files-link'
-import { FilesPage, filesShown, type DrawioTab } from './files-page'
+import { FilesPage, filesShown, PRACTICES_REFRESH_MILLISECONDS, type DrawioTab } from './files-page'
 
 // The Files app's page against a fake of its own server: each post answers what the route would, and is kept in order.
 class FakeFilesServer implements CddApi {
@@ -97,8 +97,26 @@ describe('Toggle Practice In Files App', () => {
         expect(server.posted('/send')).toEqual([{ path: '/chat/chat-1/send', body: { kind: 'refresh', text: 'practices' } }])
       })
     })
-  })
 
+    // Keep Chat Bar Practices In Sync
+    describe('that has the practice turned on, turned off on the chat bar', () => {
+      it('should hide its files while the page shows, with no press here', async () => {
+        vi.useFakeTimers()
+        try {
+          const server = new FakeFilesServer()
+          const page = new FilesPage(server, new FilesLink(STAGE_LINK))
+          const stop = page.start()
+          await vi.advanceTimersByTimeAsync(0)
+          server.practices.stories = { ...server.practices.stories!, enabled: false }
+          await vi.advanceTimersByTimeAsync(PRACTICES_REFRESH_MILLISECONDS)
+          stop()
+          expect(page.state.entries.map(each => (each as { path: string }).path)).toEqual([])
+        } finally {
+          vi.useRealTimers()
+        }
+      })
+    })
+  })
 })
 
 describe('Open Diagram In Draw.io Tab', () => {

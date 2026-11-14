@@ -10,7 +10,7 @@ The *Files app* shows the files a link names and turns a person's reading into w
 ### FilesPage (`files/files-page.ts`)
 
 - The page: the files its link names, read once and kept by fidelity; the session's practices; the one file open; and what went wrong. Holds its *FilesStore*, its session client, and its *FileCommentsActions*.
-- `start()` lists the files and reads the practices; whenever the person comes back to the page it reads the open file and the practices again.
+- `start()` lists the files and reads the practices; it reads the practices again every three seconds while the page shows, so a practice turned on or off on the chat bar or the board hides or shows its files here, and whenever the person comes back to the page it reads the open file and the practices again.
   - -> Session.folderFiles, or FidelityProgress.files for each fidelity the link names
   - -> Session.show
 - `readPractices()` keeps the session's practices, on and off, each with its colour, short name and fidelities, and lists the files of the practices turned on.
