@@ -77,4 +77,10 @@ app.get('/ping', (_request, response) => {
   });
 });
 
-app.listen(port);
+// A port another process holds is the usual reason the Graph does not start, often a Graph server another checkout
+// started on its own (`npm run server`): say so in one line the chat bar shows, instead of a stack.
+app.listen(port).on('error', (failure: NodeJS.ErrnoException) => {
+  const held = failure.code === 'EADDRINUSE' ? `port ${port} is held by another process, often another Graph server; stop it, or set PORT` : failure.message;
+  console.error(`Error: the Graph web server did not start: ${held}`);
+  process.exit(1);
+});
