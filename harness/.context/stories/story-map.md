@@ -158,6 +158,30 @@ Intended (increment 5, Repair Guidance From Mistakes; the person, 2026-11-11: no
 
 Intended (increment 5, Repair Guidance From Mistakes; the person, 2026-11-11: not built yet): validate adds a named rule from an example that failed, so the next validation catches the same mistake (`actions/validate` purpose).
 
+## (E) Deliver Work With Overlays
+
+An overlay is guidance laid on top of the practices rather than a practice of its own. Today every overlay is a stack pattern under `cdd_guidance/patterns/`, such as lern_domain_driven, registered with `PatternOverlays` (`harness/graph/pattern_overlays.py`): it holds `practices/<practice>/` folders whose schema and rules the graph adds, and shared rules that Generate and Validate add on top of the practices' rules. The person asked on 2026-11-14 for overlays in general, such as a TDD overlay that adds one common test-first guideline to Clean Engineering `code`, Stories `acceptance_tests` and BDD `development`, at those fidelities only. Today that testing advice is spread over `cdd_guidance/practices/clean_engineering/rules/testing-approach.md` (the test shape ladder, not installed), `cdd_guidance/rules/test-timing.md`, `cdd_guidance/references/language-tools.md`, and red-green-refactor and boundary-stub rules restated in `bdd.md` and `stories.md` (session tdd-practice).
+
+### (S) Person --> [Select Pattern Overlays For Session](deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-select-pattern-overlays-for-session)
+
+Observed: an action run with an `overlays=` word, such as `overlays=lern_domain_driven,mern_domain_driven`, chooses those overlays on the session first, and the session keeps them in its `session.json`; a word with nothing after it clears them (`guidance_actions.py` `overlays_named`, `ticket.choose_overlays`). Requested (2026-11-14, "select pattern overlay(s) for session"): one or more overlays chosen for the session, whatever kind of overlay each is. The chat bar's + button is Choose Graph Overlays in Move Work Forward From Chat Bar.
+
+### (S:system) CDD Server --> [Decorate Practice Fidelity With Overlay Guidance](deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-decorate-practice-fidelity-with-overlay-guidance)
+
+Requested (2026-11-14, "decorate guidelines with overlay guideline (eg TDD is added to CE, Stories, BDD at right fidelities)"): an overlay names the practices and fidelities its guidance decorates, such as a TDD overlay on Clean Engineering `code`, Stories `acceptance_tests` and BDD `development`, and adds its guidance and rules to those fidelities and no others. Observed today: a pattern decorates a practice only through its `practices/<practice>/model` schema and `rules` folders, which the graph reads (`GraphOverlay`, `pattern_overlays.py`); its shared rules are not tied to any fidelity.
+
+### (S) Agent --> [Inject Overlay Guidance Into Fidelity Instructions](deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-inject-overlay-guidance-into-fidelity-instructions)
+
+Requested (2026-11-14, "inject overlay guidance"): loading a fidelity's instructions, through its skill or MCP tool, includes the guidance of each chosen overlay that decorates that fidelity, so the agent follows it while it writes, not only when Generate or Validate runs. Observed today: the fidelity instructions hold the practice's words only, and the hook that injects rules after an action (`GuidanceAction.inject_rules`) injects the listed guidance's rules, not an overlay's.
+
+### (S) Agent --> [Generate With Overlay Rules](deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-generate-with-overlay-rules)
+
+Observed: Generate adds each chosen overlay's shared rules on top of the practices' rules, under `## Pattern overlay: {name}` (`cdd_guidance/actions/generate/generate.py`, `GuidanceAction._overlay_rules`). Requested (2026-11-14, "generate with overlay rules"): only the overlays that decorate the fidelity being generated add their rules.
+
+### (S) Agent --> [Validate With Overlay Rules](deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-validate-with-overlay-rules)
+
+Observed: Validate judges the work against the overlaid patterns' shared rules too, for content paths name the patterns the work was generated with, and the graph adds each overlay's rules to the node types it names (`cdd_guidance/actions/validate/validate.py`, `practice_rules_registry.py` `pattern_rules_for_practice`). Requested (2026-11-14, "validate with overlay rules"): only the overlays that decorate the fidelity being validated are judged.
+
 ## (E) Inject Guidance Into Chat Lifecycle
 
 Hooks run Python at named Cursor events, so CDD can act at key moments of a chat without anyone calling a tool. Cursor starts `harness/hooks/hook_daemon.py` for each event, which runs every enabled hook for that event and returns one merged answer. The Claude install registers no hooks; in Claude Code, the cdd-board mod does this work (Move Work Forward From Chat Bar).
