@@ -25,6 +25,9 @@ export class CddNotConnectedError extends Error {
   }
 }
 
+// The server answered that it no longer knows this connection's session: it ran nothing.
+class SessionGoneError extends CddNotConnectedError {}
+
 type Session = { url: string; headers: Record<string, string> }
 type Message = { id?: number; method?: string; params?: { progressToken?: number; message?: string }; result?: unknown; error?: { message?: string } }
 type ToolResult = { content?: { text?: string }[]; isError?: boolean }
@@ -41,12 +44,20 @@ export class CddConnection {
 
   constructor(private readonly project: string = SOURCE_ROOT) {}
 
+  // A server restarted since this connection opened no longer knows its session and runs nothing for it, so the call
+  // is sent once more on a new session rather than failing the page that made it.
   async call<Result>(tool: string, args: Record<string, unknown>): Promise<Result> {
-    const session = await this.connected()
-    const result = (await this.request(session, 'tools/call', { name: tool, arguments: args }, tool)) as ToolResult
+    const result = (await this.calledOnce(tool, args).catch(failure => {
+      if (failure instanceof SessionGoneError) return this.calledOnce(tool, args)
+      throw failure
+    })) as ToolResult
     const text = result.content?.[0]?.text
     if (result.isError || text === undefined) throw new CddToolError(tool, text ?? 'no result')
     return this.parsed<Result>(text)
+  }
+
+  private async calledOnce(tool: string, args: Record<string, unknown>): Promise<unknown> {
+    return this.request(await this.connected(), 'tools/call', { name: tool, arguments: args }, tool)
   }
 
   // The newest step each running call has reported, for a page waiting on one; a finished call reports nothing.
@@ -122,7 +133,10 @@ export class CddConnection {
       throw new CddNotConnectedError(failure instanceof Error ? failure.message : String(failure))
     }
     // A restarted server no longer knows this session, so the next call opens a new one.
-    if (response.status === 404) this.session = null
+    if (response.status === 404 && session.headers[SESSION_HEADER]) {
+      this.session = null
+      throw new SessionGoneError(`${response.status} ${await response.text()}`)
+    }
     if (!response.ok) throw new CddNotConnectedError(`${response.status} ${await response.text()}`)
     return response
   }
