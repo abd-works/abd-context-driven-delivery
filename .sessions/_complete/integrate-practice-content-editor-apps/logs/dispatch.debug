@@ -1,0 +1,168 @@
+2026-11-12T23:45:54Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-12T23:45:54Z NO_EVENT merged={}
+2026-11-12T23:53:00Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-12T23:53:00Z NO_EVENT merged={}
+2026-11-13T01:52:18Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-13T01:52:18Z NO_EVENT merged={}
+2026-11-13T01:59:45Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-13T01:59:45Z NO_EVENT merged={}
+2026-11-13T02:01:07Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-13T02:01:07Z NO_EVENT merged={}
+2026-11-13T02:01:38Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-13T02:01:38Z NO_EVENT merged={}
+2026-11-13T02:03:09Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-13T02:03:09Z NO_EVENT merged={}
+2026-11-13T02:08:14Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-13T02:08:14Z NO_EVENT merged={}
+2026-11-13T02:09:10Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-13T02:09:10Z NO_EVENT merged={}
+2026-11-13T02:13:31Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-13T02:13:31Z NO_EVENT merged={}
+2026-11-13T03:59:22Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-13T03:59:22Z NO_EVENT merged={}
+2026-11-13T03:59:26Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-13T03:59:26Z NO_EVENT merged={}
+2026-11-13T03:59:36Z EVENT 'afterAgentResponse' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T03:59:36Z ENABLED ['(none)']
+2026-11-13T03:59:36Z MERGED {"permission": "allow"}
+2026-11-13T03:59:36Z EVENT 'afterAgentResponse' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T03:59:36Z HANDLER _DispatchFixture.on_after result={"permission": "allow", "agent_message": "ran"}
+2026-11-13T03:59:36Z ENABLED ['_DispatchFixture.on_after']
+2026-11-13T03:59:36Z MERGED {"permission": "allow", "agent_message": "ran"}
+2026-11-13T03:59:36Z EVENT 'stop' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T03:59:36Z HANDLER _StopFixture.on_stop result={"followup_message": "/turn"}
+2026-11-13T03:59:36Z ENABLED ['_StopFixture.on_stop']
+2026-11-13T03:59:36Z MERGED {"permission": "allow", "followup_message": "/turn"}
+2026-11-13T03:59:36Z EVENT 'beforeSubmitPrompt' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T03:59:36Z HANDLER _MessageFixture.on_before result={"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-11-13T03:59:36Z ENABLED ['_MessageFixture.on_before']
+2026-11-13T03:59:36Z MERGED {"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-11-13T03:59:36Z EVENT 'preToolUse' tool='Write' path='' conversation_id='' payload_keys=['hook_event_name', 'tool_name']
+2026-11-13T03:59:36Z HANDLER _FirstRules.on_first result={"permission": "allow", "additional_context": "clean engineering code rules"}
+2026-11-13T03:59:36Z HANDLER _SecondRules.on_second result={"permission": "allow", "additional_context": "ddd tactics rules"}
+2026-11-13T03:59:36Z ENABLED ['_FirstRules.on_first', '_SecondRules.on_second']
+2026-11-13T03:59:36Z MERGED {"permission": "allow", "additional_context": "clean engineering code rules\n\nddd tactics rules"}
+2026-11-13T03:59:36Z EVENT 'afterFileEdit' tool='' path='sandbox/mm3e/no-yaml/story-map.md' conversation_id='' payload_keys=['file_path', 'hook_event_name']
+2026-11-13T03:59:36Z HANDLER _FileEditRules.inject_rules result={"permission": "allow", "additional_context": "sandbox/mm3e/no-yaml/story-map.md"}
+2026-11-13T03:59:36Z ENABLED ['_FileEditRules.inject_rules']
+2026-11-13T03:59:36Z MERGED {"permission": "allow", "additional_context": "sandbox/mm3e/no-yaml/story-map.md"}
+2026-11-13T03:59:36Z EVENT 'postToolUse' tool='Write' path='' conversation_id='' payload_keys=['hook_event_name', 'tool_name']
+2026-11-13T03:59:36Z HANDLER _Once.on_first result={"permission": "allow", "additional_context": "keep-operations-small-focused"}
+2026-11-13T03:59:36Z HANDLER _Again.on_second result={"permission": "allow", "additional_context": "keep-operations-small-focused"}
+2026-11-13T03:59:36Z ENABLED ['_Once.on_first', '_Again.on_second']
+2026-11-13T03:59:36Z MERGED {"permission": "allow", "additional_context": "keep-operations-small-focused"}
+2026-11-13T03:59:36Z EVENT 'preToolUse' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T03:59:36Z HANDLER _DescribedFixture.on_pre_tool result={"permission": "allow", "agent_message": "Honor the hook operation description."}
+2026-11-13T03:59:36Z ENABLED ['_DescribedFixture.on_pre_tool']
+2026-11-13T03:59:36Z MERGED {"permission": "allow", "agent_message": "Honor the hook operation description."}
+2026-11-13T03:59:36Z EVENT 'sessionStart' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T03:59:36Z HANDLER _StatusFixture.on_session_start result={"permission": "allow"}
+2026-11-13T03:59:36Z ENABLED ['_StatusFixture.on_session_start']
+2026-11-13T03:59:36Z MERGED {"permission": "allow"}
+2026-11-13T03:59:36Z EVENT 'sessionStart' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T03:59:36Z HANDLER _StatusFixture.on_session_start result={"permission": "allow"}
+2026-11-13T03:59:36Z ENABLED ['_StatusFixture.on_session_start']
+2026-11-13T03:59:36Z MERGED {"permission": "allow"}
+2026-11-13T03:59:37Z EVENT 'stop' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T03:59:37Z ENABLED ['_RaisingFixture.on_stop']
+2026-11-13T03:59:37Z MERGED {"permission": "allow"}
+2026-11-13T03:59:37Z EVENT 'stop' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T03:59:37Z ENABLED ['_RaisingFixture.on_stop']
+2026-11-13T03:59:37Z MERGED {"permission": "allow"}
+2026-11-13T03:59:37Z EVENT 'stop' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T03:59:37Z ENABLED ['_RaisingFixture.on_stop']
+2026-11-13T03:59:37Z MERGED {"permission": "allow"}
+2026-11-13T03:59:37Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-13T03:59:37Z NO_EVENT merged={}
+2026-11-13T03:59:37Z EVENT 'postToolUse' tool='Write' path='space/kanban/.context/kanban-sketch.md' conversation_id='' payload_keys=['hook_event_name', 'tool_input', 'tool_name']
+2026-11-13T03:59:37Z ENABLED ['(none)']
+2026-11-13T03:59:37Z MERGED {"permission": "allow"}
+2026-11-13T03:59:37Z EVENT 'postToolUse' tool='Write' path='space/kanban/.context/kanban-sketch.md' conversation_id='' payload_keys=['hook_event_name', 'tool_input', 'tool_name']
+2026-11-13T03:59:37Z ENABLED ['(none)']
+2026-11-13T03:59:37Z MERGED {"permission": "allow"}
+2026-11-13T03:59:37Z EVENT 'postToolUse' tool='sketch.sketch' path='' conversation_id='' payload_keys=['hook_event_name', 'tool_input', 'tool_name']
+2026-11-13T03:59:37Z HANDLER Sketch.inject_rules result={"permission": "allow"}
+2026-11-13T03:59:37Z ENABLED ['Sketch.inject_rules']
+2026-11-13T03:59:37Z MERGED {"permission": "allow"}
+2026-11-13T03:59:37Z EVENT 'postToolUse' tool='_listed_inject_action' path='' conversation_id='' payload_keys=['hook_event_name', 'tool_input', 'tool_name']
+2026-11-13T03:59:37Z HANDLER _ListedInjectAction.inject_rules result={"permission": "allow"}
+2026-11-13T03:59:37Z ENABLED ['_ListedInjectAction.inject_rules']
+2026-11-13T03:59:37Z MERGED {"permission": "allow"}
+2026-11-13T03:59:42Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-13T03:59:42Z NO_EVENT merged={}
+2026-11-13T03:59:45Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-13T03:59:45Z NO_EVENT merged={}
+2026-11-13T04:20:11Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-13T04:20:11Z NO_EVENT merged={}
+2026-11-13T04:20:14Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-13T04:20:14Z NO_EVENT merged={}
+2026-11-13T04:20:25Z EVENT 'afterAgentResponse' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T04:20:25Z ENABLED ['(none)']
+2026-11-13T04:20:25Z MERGED {"permission": "allow"}
+2026-11-13T04:20:25Z EVENT 'afterAgentResponse' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T04:20:25Z HANDLER _DispatchFixture.on_after result={"permission": "allow", "agent_message": "ran"}
+2026-11-13T04:20:25Z ENABLED ['_DispatchFixture.on_after']
+2026-11-13T04:20:25Z MERGED {"permission": "allow", "agent_message": "ran"}
+2026-11-13T04:20:25Z EVENT 'stop' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T04:20:25Z HANDLER _StopFixture.on_stop result={"followup_message": "/turn"}
+2026-11-13T04:20:25Z ENABLED ['_StopFixture.on_stop']
+2026-11-13T04:20:25Z MERGED {"permission": "allow", "followup_message": "/turn"}
+2026-11-13T04:20:25Z EVENT 'beforeSubmitPrompt' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T04:20:25Z HANDLER _MessageFixture.on_before result={"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-11-13T04:20:25Z ENABLED ['_MessageFixture.on_before']
+2026-11-13T04:20:25Z MERGED {"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-11-13T04:20:25Z EVENT 'preToolUse' tool='Write' path='' conversation_id='' payload_keys=['hook_event_name', 'tool_name']
+2026-11-13T04:20:25Z HANDLER _FirstRules.on_first result={"permission": "allow", "additional_context": "clean engineering code rules"}
+2026-11-13T04:20:25Z HANDLER _SecondRules.on_second result={"permission": "allow", "additional_context": "ddd tactics rules"}
+2026-11-13T04:20:25Z ENABLED ['_FirstRules.on_first', '_SecondRules.on_second']
+2026-11-13T04:20:25Z MERGED {"permission": "allow", "additional_context": "clean engineering code rules\n\nddd tactics rules"}
+2026-11-13T04:20:25Z EVENT 'afterFileEdit' tool='' path='sandbox/mm3e/no-yaml/story-map.md' conversation_id='' payload_keys=['file_path', 'hook_event_name']
+2026-11-13T04:20:25Z HANDLER _FileEditRules.inject_rules result={"permission": "allow", "additional_context": "sandbox/mm3e/no-yaml/story-map.md"}
+2026-11-13T04:20:25Z ENABLED ['_FileEditRules.inject_rules']
+2026-11-13T04:20:25Z MERGED {"permission": "allow", "additional_context": "sandbox/mm3e/no-yaml/story-map.md"}
+2026-11-13T04:20:25Z EVENT 'postToolUse' tool='Write' path='' conversation_id='' payload_keys=['hook_event_name', 'tool_name']
+2026-11-13T04:20:25Z HANDLER _Once.on_first result={"permission": "allow", "additional_context": "keep-operations-small-focused"}
+2026-11-13T04:20:25Z HANDLER _Again.on_second result={"permission": "allow", "additional_context": "keep-operations-small-focused"}
+2026-11-13T04:20:25Z ENABLED ['_Once.on_first', '_Again.on_second']
+2026-11-13T04:20:25Z MERGED {"permission": "allow", "additional_context": "keep-operations-small-focused"}
+2026-11-13T04:20:25Z EVENT 'preToolUse' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T04:20:25Z HANDLER _DescribedFixture.on_pre_tool result={"permission": "allow", "agent_message": "Honor the hook operation description."}
+2026-11-13T04:20:25Z ENABLED ['_DescribedFixture.on_pre_tool']
+2026-11-13T04:20:25Z MERGED {"permission": "allow", "agent_message": "Honor the hook operation description."}
+2026-11-13T04:20:25Z EVENT 'sessionStart' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T04:20:25Z HANDLER _StatusFixture.on_session_start result={"permission": "allow"}
+2026-11-13T04:20:25Z ENABLED ['_StatusFixture.on_session_start']
+2026-11-13T04:20:25Z MERGED {"permission": "allow"}
+2026-11-13T04:20:25Z EVENT 'sessionStart' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T04:20:25Z HANDLER _StatusFixture.on_session_start result={"permission": "allow"}
+2026-11-13T04:20:25Z ENABLED ['_StatusFixture.on_session_start']
+2026-11-13T04:20:25Z MERGED {"permission": "allow"}
+2026-11-13T04:20:25Z EVENT 'stop' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T04:20:25Z ENABLED ['_RaisingFixture.on_stop']
+2026-11-13T04:20:25Z MERGED {"permission": "allow"}
+2026-11-13T04:20:25Z EVENT 'stop' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T04:20:25Z ENABLED ['_RaisingFixture.on_stop']
+2026-11-13T04:20:25Z MERGED {"permission": "allow"}
+2026-11-13T04:20:25Z EVENT 'stop' tool='' path='' conversation_id='' payload_keys=['hook_event_name']
+2026-11-13T04:20:25Z ENABLED ['_RaisingFixture.on_stop']
+2026-11-13T04:20:25Z MERGED {"permission": "allow"}
+2026-11-13T04:20:25Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-13T04:20:25Z NO_EVENT merged={}
+2026-11-13T04:20:26Z EVENT 'postToolUse' tool='Write' path='space/kanban/.context/kanban-sketch.md' conversation_id='' payload_keys=['hook_event_name', 'tool_input', 'tool_name']
+2026-11-13T04:20:26Z ENABLED ['(none)']
+2026-11-13T04:20:26Z MERGED {"permission": "allow"}
+2026-11-13T04:20:26Z EVENT 'postToolUse' tool='Write' path='space/kanban/.context/kanban-sketch.md' conversation_id='' payload_keys=['hook_event_name', 'tool_input', 'tool_name']
+2026-11-13T04:20:26Z ENABLED ['(none)']
+2026-11-13T04:20:26Z MERGED {"permission": "allow"}
+2026-11-13T04:20:26Z EVENT 'postToolUse' tool='sketch.sketch' path='' conversation_id='' payload_keys=['hook_event_name', 'tool_input', 'tool_name']
+2026-11-13T04:20:26Z HANDLER Sketch.inject_rules result={"permission": "allow"}
+2026-11-13T04:20:26Z ENABLED ['Sketch.inject_rules']
+2026-11-13T04:20:26Z MERGED {"permission": "allow"}
+2026-11-13T04:20:26Z EVENT 'postToolUse' tool='_listed_inject_action' path='' conversation_id='' payload_keys=['hook_event_name', 'tool_input', 'tool_name']
+2026-11-13T04:20:26Z HANDLER _ListedInjectAction.inject_rules result={"permission": "allow"}
+2026-11-13T04:20:26Z ENABLED ['_ListedInjectAction.inject_rules']
+2026-11-13T04:20:26Z MERGED {"permission": "allow"}
+2026-11-13T04:20:32Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-13T04:20:32Z NO_EVENT merged={}
+2026-11-13T04:20:35Z EVENT '' tool='' path='' conversation_id='' payload_keys=[]
+2026-11-13T04:20:35Z NO_EVENT merged={}

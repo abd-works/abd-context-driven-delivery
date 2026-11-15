@@ -763,3 +763,17 @@
 2026-11-15T23:48:33Z move Implementation
 2026-11-15T23:48:33Z in-progress Implementation
 2026-11-15T23:48:51Z render C:\dev\abd-cdd-2 stories story_map drawio 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-13823
+2026-11-15T23:49:10Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-13827
+2026-11-15T23:49:15Z tool graph.practice_names
+2026-11-15T23:49:15Z tool graph.load_practice_roots
+2026-11-15T23:49:31Z tool graph.inventory
+2026-11-15T23:49:31Z tool graph.filter_choices
+2026-11-15T23:49:32Z tool graph.explorer_trees
+2026-11-15T23:49:42Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-13852
+2026-11-15T23:49:47Z tool graph.practice_names
+2026-11-15T23:49:47Z tool graph.load_practice_roots
+2026-11-15T23:50:03Z tool graph.inventory
+2026-11-15T23:50:03Z tool graph.filter_choices
+2026-11-15T23:50:04Z tool graph.explorer_trees
+2026-11-15T23:52:16Z tool validate.validate space\session\files_app\app\files\files-page.ts, space\session\files_app\app\files\file-menu.ts, space\session\files_app\app\files\chat-context.ts, space\session\files_app\app\files\files-notices.ts, space\session\files_app\app\files\files-page-view.tsx, space\session\files_app\app\files\file-comments-actions.ts, space\session\files_app\app\main.tsx 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-14008
+2026-11-15T23:52:35Z validate CleanEngineering code graph-rule keep-classes-single-responsibility space/session/files_app/app/files/files-page.ts:51 graph-rule use-explicit-dependencies space/session/files_app/app/files/files-page.ts:51 graph-rule limit-operation-parameters space/session/files_app/app/files/file-menu.ts:13 graph-rule keep-operations-single-responsibility space/session/files_app/app/files/files-page-view.tsx:355 graph-rule keep-operations-small-focused space/session/files_app/app/files/files-page-view.tsx:371 graph-rule prefer-instance-operations space/session/files_app/app/files/files-page-view.tsx:405 graph-rule limit-operation-parameters space/session/files_app/app/files/files-page.ts:40 graph-rule use-intention-revealing-names space/session/files_app/app/files/file-menu.ts:20 graph-rule use-intention-revealing-names space/session/files_app/app/files/file-menu.ts:20 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-14008
