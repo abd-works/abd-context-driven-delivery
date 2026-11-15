@@ -20,10 +20,7 @@ cdd_guidance/practices/tdd/
       rules/code_tdd_rules.py
       rules/code_tdd_rules_spec.py
       model/python/_examples/<rule>/{faulty,repaired}/
-    stories/
-      model/{schema.yaml, rules.yaml}
-      rules/{__init__.py, acceptance_test_tdd_rules.py, acceptance_test_tdd_rules_spec.py}
-      model/python/_examples/<rule>/{faulty,repaired}/
+    stories/                   # guidance only for now: Stories already has every rule proposed
     bdd/
       model/{schema.yaml, rules.yaml}
       rules/{__init__.py, development_tdd_rules.py, development_tdd_rules_spec.py}
@@ -79,15 +76,20 @@ A rule names something you can see in the finished tests and code, so validate c
 
 ## Shared rules
 
-File: `rules/shared_tdd_rules.py`. Each is checked on the output; a rule the graph cannot decide is a bullet in `tdd.md` that validate judges.
+File: `rules/shared_tdd_rules.py`. The overlay supplies only rules no practice has yet. Each is checked on the output; a rule the graph cannot decide is a bullet in `tdd.md` that validate judges.
 
 | Rule | Checked on | One line |
 |---|---|---|
-| `one-outcome-per-test` | graph: observation, then | A test asserts one outcome, so a failure names the behavior that broke. |
-| `double-only-at-boundaries` | graph: observation, step | A test fakes only what crosses the architecture boundary, never the subject under test. |
-| `double-honours-real-seam` | graph: class | A fake has the real seam's operations and failure cases, and a heavy test runs the real one. |
-| `tier-by-speed` | graph: spec file | The file suffix names the tier, and what the file touches fits that tier. |
 | `no-skipped-or-empty-test` | graph: observation, scenario | No test is skipped, commented out, or left without an assertion. |
+
+Not supplied, because a practice already has the rule (open decision 2 asks whether these move here):
+
+| Proposed | Already exists as |
+|---|---|
+| `one-outcome-per-test` | BDD `one-assertion-per-test` |
+| `double-only-at-boundaries` | BDD `layer-isolation` |
+| `double-honours-real-seam` | Stories `system-stubs-domain-real` |
+| `tier-by-speed` | BDD `tier-by-speed`, Stories `story-tier-by-speed` |
 
 Moved to Guidance as process: `test-before-code`, `minimum-to-green`, `one-at-a-time`, `diagnose-after-two-misses`.
 
@@ -106,16 +108,18 @@ Guidance: production code is written only to turn a test green; when a new class
 
 ## Stories · acceptance_tests
 
-File: `practices/stories/rules/acceptance_test_tdd_rules.py`
-
 Guidance: one scenario at a time — scenario test red on its Then, production code to green, then the next scenario.
 
-| Rule | Graph node | One line |
-|---|---|---|
-| `given-seeds-state-only` | `given` | A Given builds state through repositories or fixtures; it never asserts and never calls the When. |
-| `when-calls-the-domain-operation` | `when` | A When calls the operation it `invokes`, through the public seam, nothing else. |
-| `then-observes-one-outcome` | `then` | A Then checks the example it `observes`; an And adds an outcome of the same interaction only. |
-| `example-data-from-one-home` | `example` | Example rows come from the story's examples file, never typed inline in a step. |
+No new rules: Stories acceptance_tests and scenarios already cover each one proposed.
+
+| Proposed | Already exists as |
+|---|---|
+| `given-seeds-state-only` | `seed-state-at-its-real-owner`, `infrastructure-in-lifecycle-hooks`, `given-only-what-the-system-checks` |
+| `when-calls-the-domain-operation` | `when-holds-the-operation`, `domain-operations-inline-in-steps`, `gwt-steps-trace-to-domain-operations` |
+| `then-observes-one-outcome` | `when-holds-the-operation`, `behavioral-and-system-observable-outcomes`, `and-chaining` |
+| `example-data-from-one-home` | `shared-example-fixtures`, `examples-declare-seed-vs-interaction` |
+
+So `practices/stories/` holds Guidance only until a gap shows; no `rules/` folder yet.
 
 Moved to Guidance as process: `scenario-runs-red-first`.
 
@@ -128,8 +132,8 @@ Guidance: one `BDD: SIGNATURE` at a time — fill it, see it fail, write the lea
 | Rule | Graph node | One line |
 |---|---|---|
 | `act-follows-the-realization` | `observation` | The act calls what the observation `invokes`, in the realization's order. |
-| `setup-builds-the-named-state` | `context` | A `that`/`with` setup arranges exactly the state its label names (pairs with BDD's `context-setup-expresses-state`). |
-| `no-signature-left` | `spec` | A development spec holds no `BDD: SIGNATURE` marker. |
+
+Not supplied, because BDD already has them: `setup-builds-the-named-state` (BDD `context-setup-expresses-state`), `no-signature-left` (BDD template `no-remaining-signatures`, with `hierarchy-preservation`).
 
 Moved to Guidance as process: `signature-goes-red-first`.
 
