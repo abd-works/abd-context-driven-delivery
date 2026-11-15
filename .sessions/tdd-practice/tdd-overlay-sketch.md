@@ -89,13 +89,22 @@ File: `rules/shared_tdd_rules.py`. What BDD development and Stories acceptance_t
 
 Guidance (not rules): which tier runs when, from `cdd_guidance/rules/test-timing.md` — unit after every change, heavy once at the end of the work, e2e when the work touches a browser or an agent.
 
-Not supplied, because one practice already has it and it is not shared by both:
+Also shared, because they overlay both BDD development and Stories acceptance_tests (each moves here from the practice that has it now):
 
-| Proposed | Already exists as |
-|---|---|
-| `one-outcome-per-test` | BDD `one-assertion-per-test` (Stories chains outcomes with `and-chaining`) |
-| `double-only-at-boundaries` | BDD `layer-isolation` |
-| `double-honours-real-seam` | Stories `system-stubs-domain-real` |
+| Rule | Checked on | One line | Moves from |
+|---|---|---|---|
+| `one-outcome-per-test` | BDD observation, Stories then | A test asserts one outcome; a Stories And may add an outcome of the same interaction only. | BDD `one-assertion-per-test` |
+| `double-only-at-boundaries` | BDD observation, Stories step | A test fakes only what crosses the architecture boundary, never the subject under test. | BDD `layer-isolation` |
+| `double-honours-real-seam` | BDD observation, Stories given | A fake has the real seam's operations and failure cases, and a heavy test runs the real one. | Stories `system-stubs-domain-real` |
+
+### New code: one rule shared across practices
+
+A classic overlay can't do this. `GraphOverlay.rules_for` (`harness/graph/pattern_overlays.py:76`) reads only `<overlay>.practices.<practice>.rules`, so a rule lives under exactly one practice, and LERN would have to copy a rule into each practice that needs it. TDD needs one rule checked on several practices' nodes. The new pieces:
+
+- **A shared rule names a node type per practice.** It is a `PracticeGraphRule` whose `node_types` is a map, such as `{"bdd": ("Observation",), "stories": ("Then",)}`, instead of a flat tuple. `check(node, context)` reads the same fact on each node, for example `asserted_outcomes`, `fakes` or `tier_reaches`, so each practice's graph reading has to record that fact on its own node.
+- **The overlay loads shared rules for each practice it decorates.** `GraphOverlay.rules_for(practice)` also reads `<overlay>.rules` and keeps the shared rules whose `node_types` name `practice.key`, merged with that practice's own `practices/<practice>/rules`.
+- **The rule lives in one place.** Each decorated practice's `model/rules.yaml` lists the shared slug against its own node type, so the graph runs it there. The rule class, its spec and its faulty/repaired examples live once, in `tdd/rules/`, with one example pair per practice it checks.
+- **Always on.** `always_apply` makes `PatternOverlays.checks_of` include this overlay for every practice listed in `decorates`, whatever overlays the session chose.
 
 Moved to Guidance as process: `test-before-code`, `minimum-to-green`, `one-at-a-time`, `diagnose-after-two-misses`.
 
@@ -160,7 +169,7 @@ Guidance: settle how each building block is tested when you choose its pattern; 
 ## Open decisions for step 2
 
 1. **Order on brownfield.** The ladder says run real conditions first, with no automated tests. Every other source says write the test first. The sketch keeps both: greenfield goes test first, brownfield runs real conditions first. Is that right?
-2. **Moving rules.** Decided: the tier rules move here, and BDD `tier-by-speed` and Stories `story-tier-by-speed` are removed. Still open: should `layer-isolation` move too? And BDD's `red-then-green`, `minimum-green` and `one-signature-at-a-time` are process — move them out of BDD's rules into this overlay's Guidance?
+2. **Moving rules.** Decided: the tier rules move here, and BDD `tier-by-speed` and Stories `story-tier-by-speed` are removed. Also decided: `one-assertion-per-test`, `layer-isolation` and `system-stubs-domain-real` move here as shared rules. Still open: BDD's `red-then-green`, `minimum-green` and `one-signature-at-a-time` are process — move them out of BDD's rules into this overlay's Guidance?
 3. **The `always_apply` setting.** Should it go in `tdd.md` front matter, or in the project's yaml so a project can turn it off?
 4. **Overlay reading.** Teach the practice catalogue that a practice may decorate others (its `decorates:` list and `practices/` folder), and have `PatternOverlays` read stack patterns only? Or one overlay reader for both?
 5. **Agent BDD.** Agent BDD isn't decorated in this sketch. Should it be?
