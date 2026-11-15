@@ -20,34 +20,24 @@
     "bdd": {
       "enabled": true,
       "formats": {
-        "realization": [
-          "python"
-        ],
-        "development": [
-          "python"
-        ]
+        "realization": [],
+        "development": []
       }
     },
     "ddd": {
       "formats": {
         "model": [
-          "drawio",
-          "python"
+          "drawio"
         ],
-        "tactics": [
-          "python"
-        ]
+        "tactics": []
       }
     },
     "ux": {
       "formats": {
         "front_end_code": [
-          "html",
-          "typescript"
-        ],
-        "mockup": [
           "html"
-        ]
+        ],
+        "mockup": []
       }
     }
   },
@@ -56,6 +46,6 @@
       "specification",
       "implementation"
     ],
-    "version": 22
+    "version": 23
   }
 }
