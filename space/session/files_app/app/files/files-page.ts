@@ -21,7 +21,7 @@ const reasonOf = (failure: unknown): string => (failure instanceof Error ? failu
 // The fidelities whose files the page lists: those the session's guidance selection lists, its stages selected by its
 // practices selected, none selected meaning every one; before any stage was selected, the ones the link names.
 export const listedBy = (selection: GuidanceSelectionData | null, linked: string[]): string[] =>
-  selection?.is_stage_chosen ? selection.fidelities_listed : linked
+  selection?.is_stage_chosen ? selection.fidelities : linked
 
 // The formats of the format groups selected, each once; none selected, every format shows.
 export const selectedFormatsOf = (selection: GuidanceSelectionData | null): string[] =>

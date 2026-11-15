@@ -59,7 +59,7 @@ class FakeFilesServer implements CddApi {
 
   selection(): GuidanceSelectionData {
     const chosen = this.stages ?? []
-    const fidelities = Object.keys(FIDELITIES).filter(stage => chosen.includes(stage)).flatMap(stage => this.practices.map(key => FIDELITIES[stage]![key]).filter((slug): slug is string => Boolean(slug)))
+    const fidelities = this.listed()
     return {
       version: this.version,
       is_stage_chosen: this.stages !== null,
@@ -70,7 +70,6 @@ class FakeFilesServer implements CddApi {
         { label: 'diagram', formats: ['drawio'], offered: fidelities.length, is_selected: this.formats.includes('diagram') },
       ],
       fidelities,
-      fidelities_listed: this.listed(),
     } as GuidanceSelectionData
   }
 
