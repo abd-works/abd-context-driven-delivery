@@ -17,9 +17,9 @@ const BAD_REQUEST = 400
 const FORBIDDEN = 403
 const FAILED = 500
 
-// The one chat route the page needs: a refresh to the chat that opened it, so its chat bar shows a practice turned on
-// or off here. Opening or removing chats stays with the board.
-const SEND_TO_CHAT = '/chat/:chat/send'
+// The chat routes the page needs: sending the chat that opened it a refresh, a selection or a failure, and reading the
+// fidelities its chat bar has selected. Opening or removing chats stays with the board.
+const CHAT_ROUTES = ['/chat/:chat/send', '/chat/:chat/show']
 
 // The Files app reads a session's files, a fidelity's files, and the comments on them, turns the session's practices on
 // or off, and tells the chat that opened it; it never reads the board.
@@ -28,7 +28,7 @@ export const filesRoutes: CddRoute[] = [
   ...fileCommentsRoutes,
   ...fidelityProgressRoutes,
   ...practiceSessionOutputRoutes,
-  ...chatRoutes.filter(route => route.path === SEND_TO_CHAT),
+  ...chatRoutes.filter(route => CHAT_ROUTES.includes(route.path)),
 ]
 
 const textOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))

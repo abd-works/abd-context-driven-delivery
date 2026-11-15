@@ -53,7 +53,7 @@ export class FilesPage {
   readonly comments: FileCommentsActions
   readonly fileBar = new FileBar(this.store)
   private refreshTimer: ReturnType<typeof setTimeout> | null = null
-  // The failures already sent to the chat that opened the page.
+  // The failures already shown here and sent to the chat that opened the page.
   private readonly toldChat = new Set<string>()
 
   constructor(
@@ -225,16 +225,17 @@ export class FilesPage {
 
   // A failure is shown here and sent to the chat that opened the page, which shows it on its chat bar as it shows its
   // own, so the person can have the chat fix it.
+  // Each failure is shown and sent once, however often a read every few seconds meets it again.
   fail(failure: string, context: string): void {
+    if (this.toldChat.has(failure)) return
     this.toast(failure)
     this.tellChat(failure, context)
+    this.toldChat.add(failure)
   }
 
-  // Each failure goes to the chat once, however often a read every few seconds meets it again. A failure that cannot
-  // reach the chat stays on the page, since telling the chat again would fail the same way.
+  // A failure that cannot reach the chat stays on the page, since telling the chat again would fail the same way.
   private tellChat(failure: string, context: string): void {
     if (!this.link.chat || this.toldChat.has(failure)) return
-    this.toldChat.add(failure)
     const told = ChatClientGenerated.named(this.api, this.link.chat).send('failure', JSON.stringify({ failure, context }))
     void told.catch(reason => this.toast(`The chat was not told: ${reasonOf(reason)}`))
   }
