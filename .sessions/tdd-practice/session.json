@@ -18,7 +18,15 @@
       "enabled": false
     },
     "bdd": {
-      "enabled": true
+      "enabled": true,
+      "formats": {
+        "realization": []
+      }
+    },
+    "ddd": {
+      "formats": {
+        "model": []
+      }
     }
   },
   "guidance": {
@@ -26,6 +34,6 @@
       "specification",
       "implementation"
     ],
-    "version": 14
+    "version": 15
   }
 }
