@@ -270,6 +270,14 @@ class CddHome:
         has_origin = self._pinned.succeeds("remote", "get-url", "origin")
         self._git(source, self._pinned, "remote", "set-url" if has_origin else "add", "origin", url)
 
+    def serve_current(self, checkout: Path | str) -> None:
+        """Serve ``checkout``'s current code the way the server already serves it: as it is on disk for a person working
+        on CDD itself, who chose that, else pinned to its current commit."""
+        if self.is_installed and self.mode == self.CHECKOUT:
+            self.serve_from(checkout)
+            return
+        self.pin(checkout)
+
     def serve_from(self, checkout: Path | str) -> None:
         """Run the server on ``checkout`` as it is on disk, so a ``cdd.restart`` picks up its edits."""
         self._save_runtime(Path(checkout).resolve(), self.CHECKOUT)
