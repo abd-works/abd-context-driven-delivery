@@ -8,13 +8,38 @@ Shell only: table of contents, rule names, one line each. It is practice guidanc
 cdd_guidance/practices/tdd/
   tdd.md                       # Overview, Guidance, Shared rules, one section per decorated practice
   tdd.py                       # thin @agent_toolset PracticeGuidance, like stories.py
-  practices/
-    clean_engineering/model/{schema.yaml, rules.yaml}
-    stories/model/{schema.yaml, rules.yaml}
-    bdd/model/{schema.yaml, rules.yaml}
-    ddd/model/{schema.yaml, rules.yaml}
-  _examples/<rule>/{faulty,repaired}/
+  rules/                       # the shared rules, checked on every decorated practice's nodes
+    __init__.py                # RULES, BY_SLUG
+    shared_tdd_rules.py        # one PracticeGraphRule per shared rule
+    shared_tdd_rules_spec.py   # failing + repaired example per rule
+  practices/                   # one folder per decorated practice, named like the practice
+    clean_engineering/
+      model/schema.yaml        # extends CE nodes with the facts the rules read (e.g. operation.provenBy)
+      model/rules.yaml         # node type -> rule slugs
+      rules/__init__.py        # RULES, BY_SLUG — loaded when the overlay is on
+      rules/code_tdd_rules.py
+      rules/code_tdd_rules_spec.py
+      model/python/_examples/<rule>/{faulty,repaired}/
+    stories/
+      model/{schema.yaml, rules.yaml}
+      rules/{__init__.py, acceptance_test_tdd_rules.py, acceptance_test_tdd_rules_spec.py}
+      model/python/_examples/<rule>/{faulty,repaired}/
+    bdd/
+      model/{schema.yaml, rules.yaml}
+      rules/{__init__.py, development_tdd_rules.py, development_tdd_rules_spec.py}
+      model/python/_examples/<rule>/{faulty,repaired}/
+    ddd/
+      model/{schema.yaml, rules.yaml}
+      rules/{__init__.py, tactics_tdd_rules.py, tactics_tdd_rules_spec.py}
+      model/python/_examples/<rule>/{faulty,repaired}/
 ```
+
+Rules are the core of the overlay, laid out like LERN's (`patterns/lern_domain_driven/practices/bdd/rules/shared_behavior_rules.py`):
+- **One class per rule.** Each rule is a `PracticeGraphRule` subclass. It names its `slug` and the `node_types` it checks, and its `check(node, context)` returns one `file:line` message per violation.
+- **Facts on the node.** A rule reads facts the overlay's `schema.yaml` adds to the practice's node, such as `operation.provenBy` or `observation.seenRed`. It never parses files itself.
+- **Wiring.** `rules.yaml` maps each node type to the slugs that run on it, and the practice's `rules/__init__.py` exports `RULES` and `BY_SLUG`.
+- **Proof.** Each rule has a `_spec.py` that checks a failing example and its repaired example with the decorated practice's rule examples: `assert_rule_pair` for CE, `assert_stories_example_pair` for Stories, `assert_bdd_source_pair` for BDD, and `assert_ddd_example_pair` for DDD.
+- **Judged rules.** A rule the graph can't decide, such as `minimum-to-green`, has no class. It stays a named bullet in `tdd.md`, and validate judges it.
 
 `tdd.md` front matter (new setting). Today only `PatternOverlays` reads `practices/<practice>/model` overlays, and only from `cdd_guidance/patterns/`; a practice that decorates other practices needs that reading to come from the guidance side too:
 
@@ -49,18 +74,23 @@ Rules apply to the domain: each rule in `rules.yaml` is keyed to the practice's 
 
 ## Shared rules
 
-| Rule | One line |
-|---|---|
-| `test-before-code` | No production change without a test that failed for the right reason first. |
-| `minimum-to-green` | Write the least production code that turns the failing test green; refactor only while green. |
-| `one-at-a-time` | Take one failing test to green before opening the next. |
-| `one-outcome-per-test` | A test proves one outcome, so a failure names the behavior that broke. |
-| `double-only-at-boundaries` | Replace only what crosses the architecture boundary; never the subject under test. |
-| `double-honours-real-seam` | A fake has the real seam's operations and failure cases, and a heavy test runs the real one. |
-| `tier-by-speed` | The file suffix names the tier and the tier is about speed (moved here from BDD and Stories). |
-| `diagnose-after-two-misses` | After two failed fixes for the same failure, stop and diagnose before a third. |
+File: `rules/shared_tdd_rules.py` (graph-checked ones); judged ones are bullets in `tdd.md`.
+
+| Rule | Checked by | One line |
+|---|---|---|
+| `test-before-code` | judged | No production change without a test that failed for the right reason first. |
+| `minimum-to-green` | judged | Write the least production code that turns the failing test green; refactor only while green. |
+| `one-at-a-time` | judged | Take one failing test to green before opening the next. |
+| `one-outcome-per-test` | graph: observation, then | A test proves one outcome, so a failure names the behavior that broke. |
+| `double-only-at-boundaries` | graph: observation, step | Replace only what crosses the architecture boundary; never the subject under test. |
+| `double-honours-real-seam` | graph: class (fake vs real seam) | A fake has the real seam's operations and failure cases, and a heavy test runs the real one. |
+| `tier-by-speed` | graph: spec file | The file suffix names the tier and the tier is about speed (moved here from BDD and Stories). |
+| `diagnose-after-two-misses` | judged | After two failed fixes for the same failure, stop and diagnose before a third. |
 
 ## Clean Engineering · code
+
+File: `practices/clean_engineering/rules/code_tdd_rules.py`
+
 
 General: production code is written only to turn a test green; a new class or operation arrives with the test that needed it.
 
@@ -72,6 +102,9 @@ General: production code is written only to turn a test green; a new class or op
 | `no-untested-branch-added` | `operation` | A new branch in an operation body arrives with the test that takes it. |
 
 ## Stories · acceptance_tests
+
+File: `practices/stories/rules/acceptance_test_tdd_rules.py`
+
 
 General: one scenario at a time — scenario test red, production code green, then the next scenario.
 
@@ -85,6 +118,9 @@ General: one scenario at a time — scenario test red, production code green, th
 
 ## BDD · development
 
+File: `practices/bdd/rules/development_tdd_rules.py`
+
+
 General: one `BDD: SIGNATURE` at a time, arrange-act-assert from the realization call graph.
 
 | Rule | Graph node | One line |
@@ -95,6 +131,9 @@ General: one `BDD: SIGNATURE` at a time, arrange-act-assert from the realization
 | `no-signature-left` | `spec` | A development spec is done only when no `BDD: SIGNATURE` marker remains. |
 
 ## DDD · tactics
+
+File: `practices/ddd/rules/tactics_tdd_rules.py`
+
 
 General: each building block is proven the way its kind demands, through its aggregate root.
 
