@@ -43,7 +43,7 @@
       }
     },
     "ux": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
         "ia": [
           "drawio",
@@ -72,6 +72,6 @@
       "discovery",
       "implementation"
     ],
-    "version": 84
+    "version": 85
   }
 }
