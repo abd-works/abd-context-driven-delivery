@@ -307,6 +307,9 @@ class PracticeGuidance(Guidance):
     """The Clean Engineering practice whose fidelities accompany this practice's: the one of the set this practice was
     made with, which the catalogue hands it, so a companion works in the same session; none for a practice made apart
     from any set."""
+    supplements: tuple[Any, ...] = ()
+    """The supplements of the set this practice was made with that supplement one of its fidelities (each a
+    *PracticeSupplement*), held by reference; none for a practice made apart from any set."""
     editor: ClassVar[Any] = None
     """The app that edits this practice's files beside the chat (an *App* of harness/diagnostics, which sits above this
     module, so it is not named here): the Story UI editor for Stories, none for every other practice. Every instance of the practice, in every session, edits with the same app, so the module that makes the
@@ -414,12 +417,14 @@ class PracticeGuidance(Guidance):
         companion. The catalogue makes them with it when it makes this practice on its own."""
         return tuple(key for key in (self.extends, COMPANION_PRACTICE) if key and key != self.key)
 
-    def hold_set(self, practices: dict[str, PracticeGuidance]) -> None:
+    def hold_set(self, practices: dict[str, PracticeGuidance], supplements: list[Any] | None = None) -> None:
         """Hold the practices of the set this one was made with, by key: the one it extends, and the Clean Engineering
-        practice whose fidelities accompany its own, so it works with the same objects as the rest of its set."""
+        practice whose fidelities accompany its own, so it works with the same objects as the rest of its set; and each
+        of supplements that supplements one of its fidelities."""
         if self.extends:
             self.extended = practices[self.extends]
         self.companion = practices.get(COMPANION_PRACTICE)
+        self.supplements = [supplement for supplement in supplements or () if self in supplement.supplemented_practices]
 
     @property
     @data_field
@@ -851,11 +856,19 @@ class FidelityGuidance(Guidance):
         """Fidelity rules section."""
 
     def checked_rule_collections(self) -> list[RulesCollection]:
-        """The rule collections a validate of this fidelity checks: its practice's shared rules, then its own. A
-        collection it shares with its practice is listed once."""
+        """The rule collections a validate of this fidelity checks: its practice's shared rules, then its own, then each
+        supplement's rules for it. A collection it shares with its practice is listed once."""
         practice = self.practice_guidance
-        collections = [practice.rules if practice is not None else None, self.rules]
+        added = [collection for supplement in self.supplements for collection in supplement.rules_for(self)]
+        collections = [practice.rules if practice is not None else None, self.rules, *added]
         return list({id(collection): collection for collection in collections if collection is not None}.values())
+
+    @property
+    def supplements(self) -> list[Any]:
+        """The supplements of its practice that supplement this fidelity, such as TDD for BDD development."""
+        practice = self.practice_guidance
+        held = practice.supplements if practice is not None else ()
+        return [supplement for supplement in held if self in supplement.supplemented_fidelities]
 
     def every_rule(self) -> list[Rule]:
         """Every rule of its practice, shared and each fidelity's: a saved graph holds the whole practice's hits, so a
@@ -950,7 +963,8 @@ class FidelityGuidance(Guidance):
     @agent_instructions
     def instructions(self) -> str:
         """overview"""
-        return self.instructions_in(self.format)
+        added = (supplement.text_for(self) for supplement in self.supplements)
+        return "\n\n".join(part for part in (self.instructions_in(self.format), *added) if part)
 
     def instructions_in(self, format: Format) -> str:
         """Its instructions with its template in format: its own format for its own instructions, the code format of

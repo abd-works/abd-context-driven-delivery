@@ -135,8 +135,8 @@ Its markdown keeps the usual Overview, Guidance and Shared rules, then one `## {
 
 PracticeSupplement(format)
 ------
-supplements: list[FidelityGuidance]
-	// the fidelities it supplements: the same set's own FidelityGuidance objects, held by reference once hold_set gives it the set, such as bdd.fidelities["development"]
+supplemented_fidelities: list[FidelityGuidance]
+	// the fidelities it supplements (named apart from PracticeGuidance.supplements, which it inherits): the same set's own FidelityGuidance objects, held by reference once hold_set gives it the set, such as bdd.fidelities["development"]
 	Invariant: the front matter's names are read once, in hold_set, into the set's objects; nothing after holds a practice key or fidelity name as text
 	Invariant: a name with no practice in the set, or no such fidelity on that practice, raises UnknownSupplementedFidelity in hold_set
 supplemented_practices: list[PracticeGuidance]
@@ -144,14 +144,14 @@ supplemented_practices: list[PracticeGuidance]
 always_apply: bool
 	// on for every session without being chosen; a supplement that is not always on applies only when a session's overlays name it
 graph_overlay: GraphOverlay
-	// made once: its rules for each practice it supplements, read from its own folder (harness/graph)
+	// on a subclass that checks graph rules, made once, as a pattern makes its own: harness/guidance imports no graph
 ----
 hold_set(practices: dict[str, PracticeGuidance]): None
 	// resolves the front matter's practice and fidelity names into the set's own fidelities, once
 	-> practices[key].fidelity_called(name)
 text_for(fidelity: FidelityGuidance): str
 	// its Overview and Guidance, then the section for that fidelity, headed "## Supplement: {name}"; empty for a fidelity it does not supplement
-rules_for(fidelity: FidelityGuidance): RulesCollection
+rules_for(fidelity: FidelityGuidance): list[RulesCollection]
 	// its Shared rules, then that fidelity section's rules; empty for a fidelity it does not supplement
 
 ## PracticeFormats
@@ -261,7 +261,7 @@ rules: RulesCollection
 supplements: list[PracticeSupplement]
 	// its practice's supplements that hold this fidelity among their supplements, such as TDD for BDD development
 	-> practice_guidance.supplements
-	Invariant: a supplement supplements this fidelity exactly when this object is in supplement.supplements
+	Invariant: a supplement supplements this fidelity exactly when this object is in supplement.supplemented_fidelities
 instructions: str
 	// practice overview, guidance, and shared rules, the companion's instructions, the template, this fidelity's own text, then each supplement's text for it
 	-> PracticeSupplement.text_for

@@ -1,14 +1,14 @@
 <mxfile host="CleanEngineering.diagram.drawio">
   <diagram name="CleanEngineering Model" id="CleanEngineering-model">
-    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3780" pageHeight="1774" math="0" shadow="0">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3840" pageHeight="1774" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
         <mxCell id="practice-guidance-class-model-model-fidelity--language-companion" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Language companion&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
-          <mxGeometry x="910" y="60" width="200" height="80" as="geometry" />
+          <mxGeometry x="940" y="60" width="200" height="80" as="geometry" />
         </mxCell>
         <mxCell id="practice-guidance-class-model-model-fidelity--guidance" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Guidance&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ format: Format&lt;br/&gt;+ Invariant: an omitted format uses default_format&lt;br/&gt;+ default_format: str&lt;br/&gt;+ session: Session | None&lt;br/&gt;+ name: str | None&lt;br/&gt;+ slug: str&lt;br/&gt;+ registration_name: str&lt;br/&gt;+ install_folder: Path&lt;br/&gt;+ module_dir: Path&lt;br/&gt;+ overview: str&lt;br/&gt;+ guidance: str&lt;br/&gt;+ templates: str&lt;br/&gt;+ sketch_template: str&lt;br/&gt;+ rules: RulesCollection&lt;br/&gt;+ instructions: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Guidance(format)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
-          <mxGeometry x="1250" y="60" width="300" height="302" as="geometry" />
+          <mxGeometry x="1280" y="60" width="300" height="302" as="geometry" />
         </mxCell>
         <mxCell id="practice-guidance-class-model-model-fidelity--guidancecollection" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;GuidanceCollection&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ current: Guidance | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ GuidanceCollection(entries: dict[str, Guidance] | None, parent: Any)&lt;br/&gt;+ child(name: str, body: str): FidelityGuidance&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
           <mxGeometry x="60" y="510" width="420" height="94" as="geometry" />
@@ -16,68 +16,68 @@
         <mxCell id="practice-guidance-class-model-model-fidelity--practiceguidance" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PracticeGuidance&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ fidelities: GuidanceCollection&lt;br/&gt;+ format: Format&lt;br/&gt;+ Invariant: the current fidelity&amp;#x27;s format; the practice&amp;#x27;s own only while it has no current fidelity&lt;br/&gt;+ Invariant: a constructor format is the format the fidelity made current at construction works in&lt;br/&gt;+ formats: PracticeFormats&lt;br/&gt;+ reading: PracticeReading&lt;br/&gt;+ schema: Schema&lt;br/&gt;+ companion: PracticeGuidance | None&lt;br/&gt;+ set_keys: tuple[str, ...]&lt;br/&gt;+ Invariant: an unsupported fidelity or format raises ValueError at construction&lt;br/&gt;+ extends: str&lt;br/&gt;+ extended: PracticeGuidance | None&lt;br/&gt;+ supplements: list[PracticeSupplement]&lt;br/&gt;+ sketch_lens: SketchLens&lt;br/&gt;+ SHORT_NAME: str&lt;br/&gt;+ COLOUR: str&lt;br/&gt;+ key: str&lt;br/&gt;+ practice_slug: str&lt;br/&gt;+ short_name: str&lt;br/&gt;+ colour: str&lt;br/&gt;+ fidelity_slugs: list[str]&lt;br/&gt;+ guidance: str&lt;br/&gt;+ instructions: str&lt;br/&gt;+ examples: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ PracticeGuidance(format, fidelity, default_workspace_folder, formats)&lt;br/&gt;+ hold_set(practices: dict[str, PracticeGuidance], supplements: list[PracticeSupplement]): None&lt;br/&gt;+ answers_to(slug: str): PracticeGuidance | FidelityGuidance | None&lt;br/&gt;+ fidelity_called(name: str): FidelityGuidance | None&lt;br/&gt;+ work_in(session_output: PracticeSessionOutput): None&lt;br/&gt;+ domain_markdown_path(): Path&lt;br/&gt;+ scoped_markdown(): str&lt;br/&gt;+ generate_output(): str&lt;br/&gt;+ render(format: str, content: Any, source: str | None, previous: str): dict&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
           <mxGeometry x="720" y="510" width="580" height="574" as="geometry" />
         </mxCell>
-        <mxCell id="practice-guidance-class-model-model-fidelity--practicesupplement" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PracticeSupplement&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ supplements: list[FidelityGuidance]&lt;br/&gt;+ Invariant: the front matter&amp;#x27;s names are read once, in hold_set, into the set&amp;#x27;s objects; nothing after holds a practice key or fidelity name as text&lt;br/&gt;+ Invariant: a name with no practice in the set, or no such fidelity on that practice, raises UnknownSupplementedFidelity in hold_set&lt;br/&gt;+ supplemented_practices: list[PracticeGuidance]&lt;br/&gt;+ always_apply: bool&lt;br/&gt;+ graph_overlay: GraphOverlay&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ PracticeSupplement(format)&lt;br/&gt;+ hold_set(practices: dict[str, PracticeGuidance]): None&lt;br/&gt;+ text_for(fidelity: FidelityGuidance): str&lt;br/&gt;+ rules_for(fidelity: FidelityGuidance): RulesCollection&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
-          <mxGeometry x="340" y="1240" width="840" height="206" as="geometry" />
+        <mxCell id="practice-guidance-class-model-model-fidelity--practicesupplement" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PracticeSupplement&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ supplemented_fidelities: list[FidelityGuidance]&lt;br/&gt;+ Invariant: the front matter&amp;#x27;s names are read once, in hold_set, into the set&amp;#x27;s objects; nothing after holds a practice key or fidelity name as text&lt;br/&gt;+ Invariant: a name with no practice in the set, or no such fidelity on that practice, raises UnknownSupplementedFidelity in hold_set&lt;br/&gt;+ supplemented_practices: list[PracticeGuidance]&lt;br/&gt;+ always_apply: bool&lt;br/&gt;+ graph_overlay: GraphOverlay&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ PracticeSupplement(format)&lt;br/&gt;+ hold_set(practices: dict[str, PracticeGuidance]): None&lt;br/&gt;+ text_for(fidelity: FidelityGuidance): str&lt;br/&gt;+ rules_for(fidelity: FidelityGuidance): list[RulesCollection]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
+          <mxGeometry x="370" y="1240" width="840" height="206" as="geometry" />
         </mxCell>
         <mxCell id="practice-guidance-class-model-model-fidelity--practiceformats" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PracticeFormats&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ supported: frozenset[Format]&lt;br/&gt;+ suffixes: frozenset[str]&lt;br/&gt;+ adapter_settings: dict[str, Any]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ PracticeFormats(practice: PracticeGuidance, adapters: dict[str, Any])&lt;br/&gt;+ check(): None&lt;br/&gt;+ adapter_class(format: str): Any&lt;br/&gt;+ adapter(format: str): Any&lt;br/&gt;+ reading(file: Path): Format | None&lt;br/&gt;+ reading_with(file: Path, others: Iterable[PracticeGuidance]): Format | None&lt;br/&gt;+ for_file(file: Path): Any&lt;br/&gt;+ read(paths, request: RenderRequest): Any&lt;br/&gt;+ render(request: RenderRequest): dict&lt;br/&gt;+ parse(format: Format, content: Any): Any&lt;br/&gt;+ model_for(target: Any, model: Any): Any&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
-          <mxGeometry x="1300" y="1240" width="460" height="270" as="geometry" />
+          <mxGeometry x="1330" y="1240" width="460" height="270" as="geometry" />
         </mxCell>
         <mxCell id="practice-guidance-class-model-model-fidelity--practicereading" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PracticeReading&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ reads_after: tuple[str, ...]&lt;br/&gt;+ node_types: tuple[str, ...]&lt;br/&gt;+ class_types: tuple[str, ...]&lt;br/&gt;+ member_types: tuple[str, ...]&lt;br/&gt;+ class_node_type: str&lt;br/&gt;+ source_ordered_types: frozenset[str]&lt;br/&gt;+ anchor_types: dict[str, str]&lt;br/&gt;+ rule_types: dict[str, tuple[str, ...]]&lt;br/&gt;+ graph: Graph | None&lt;br/&gt;+ in_graph: PracticeNodes | None&lt;br/&gt;+ graph_checks: dict[str, PracticeGraphRule]&lt;br/&gt;+ package: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ PracticeReading(practice: PracticeGuidance)&lt;br/&gt;+ held_in(graph: Graph, nodes: PracticeNodes): None&lt;br/&gt;+ read(): None&lt;br/&gt;+ read_working_copy(): None&lt;br/&gt;+ own_graph_checks(): dict[str, PracticeGraphRule]&lt;br/&gt;+ checks(): dict[str, PracticeGraphRule]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
-          <mxGeometry x="1860" y="1240" width="300" height="334" as="geometry" />
+          <mxGeometry x="1890" y="1240" width="300" height="334" as="geometry" />
         </mxCell>
-        <mxCell id="practice-guidance-class-model-model-fidelity--fidelityguidance" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;FidelityGuidance&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ stage: str&lt;br/&gt;+ default_format: Format&lt;br/&gt;+ outputs: dict[str, str | list[str]]&lt;br/&gt;+ format: Format&lt;br/&gt;+ Invariant: the format this fidelity last used, kept in the session its practice works in, else its default&lt;br/&gt;+ practice_guidance: PracticeGuidance | None&lt;br/&gt;+ clean_engineering: FidelityGuidance | None&lt;br/&gt;+ Invariant: Clean Engineering&amp;#x27;s own fidelities have none; a practice made apart from any set has none&lt;br/&gt;+ companion_instructions: str&lt;br/&gt;+ session_output: FidelitySessionOutput | None&lt;br/&gt;+ slug: str&lt;br/&gt;+ install_folder: Path&lt;br/&gt;+ overview: str&lt;br/&gt;+ scaffold: str&lt;br/&gt;+ section: str&lt;br/&gt;+ guidance: str&lt;br/&gt;+ rules: RulesCollection&lt;br/&gt;+ supplements: list[PracticeSupplement]&lt;br/&gt;+ Invariant: a supplement supplements this fidelity exactly when this object is in supplement.supplements&lt;br/&gt;+ instructions: str&lt;br/&gt;+ templates: str&lt;br/&gt;+ examples: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ FidelityGuidance(name, stage, default_format, clean_engineering)&lt;br/&gt;+ checked_rule_collections(): list[RulesCollection]&lt;br/&gt;+ every_rule(): list[Rule]&lt;br/&gt;+ generate_output(): str&lt;br/&gt;+ render(format: str, content: Any, source: str | None, previous: str): dict&lt;br/&gt;+ render_files(format: str, paths: list[str] | str, source: str | None): dict&lt;br/&gt;+ declares(path: str, format: str): bool&lt;br/&gt;+ work_in(session_output: FidelitySessionOutput): None&lt;br/&gt;+ output_paths(): dict[str, list[str]]&lt;br/&gt;+ files(): dict[str, list]&lt;br/&gt;+ has_declared_output(): bool&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
-          <mxGeometry x="1560" y="510" width="620" height="590" as="geometry" />
+        <mxCell id="practice-guidance-class-model-model-fidelity--fidelityguidance" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;FidelityGuidance&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ stage: str&lt;br/&gt;+ default_format: Format&lt;br/&gt;+ outputs: dict[str, str | list[str]]&lt;br/&gt;+ format: Format&lt;br/&gt;+ Invariant: the format this fidelity last used, kept in the session its practice works in, else its default&lt;br/&gt;+ practice_guidance: PracticeGuidance | None&lt;br/&gt;+ clean_engineering: FidelityGuidance | None&lt;br/&gt;+ Invariant: Clean Engineering&amp;#x27;s own fidelities have none; a practice made apart from any set has none&lt;br/&gt;+ companion_instructions: str&lt;br/&gt;+ session_output: FidelitySessionOutput | None&lt;br/&gt;+ slug: str&lt;br/&gt;+ install_folder: Path&lt;br/&gt;+ overview: str&lt;br/&gt;+ scaffold: str&lt;br/&gt;+ section: str&lt;br/&gt;+ guidance: str&lt;br/&gt;+ rules: RulesCollection&lt;br/&gt;+ supplements: list[PracticeSupplement]&lt;br/&gt;+ Invariant: a supplement supplements this fidelity exactly when this object is in supplement.supplemented_fidelities&lt;br/&gt;+ instructions: str&lt;br/&gt;+ templates: str&lt;br/&gt;+ examples: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ FidelityGuidance(name, stage, default_format, clean_engineering)&lt;br/&gt;+ checked_rule_collections(): list[RulesCollection]&lt;br/&gt;+ every_rule(): list[Rule]&lt;br/&gt;+ generate_output(): str&lt;br/&gt;+ render(format: str, content: Any, source: str | None, previous: str): dict&lt;br/&gt;+ render_files(format: str, paths: list[str] | str, source: str | None): dict&lt;br/&gt;+ declares(path: str, format: str): bool&lt;br/&gt;+ work_in(session_output: FidelitySessionOutput): None&lt;br/&gt;+ output_paths(): dict[str, list[str]]&lt;br/&gt;+ files(): dict[str, list]&lt;br/&gt;+ has_declared_output(): bool&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
+          <mxGeometry x="1560" y="510" width="680" height="590" as="geometry" />
         </mxCell>
         <mxCell id="practice-guidance-class-model-model-fidelity--rule" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Rule&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ slug: str&lt;br/&gt;+ body: str&lt;br/&gt;+ fidelity: str | None&lt;br/&gt;+ tag: str&lt;br/&gt;+ practice: str&lt;br/&gt;+ pattern: str&lt;br/&gt;+ shared: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Rule(slug: str, body: str, fidelity: str | None, tag: str)&lt;br/&gt;+ validate(): str&lt;br/&gt;+ from_bullet(text: str, fidelity: str | None): Rule&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
-          <mxGeometry x="2600" y="1240" width="360" height="206" as="geometry" />
+          <mxGeometry x="2630" y="1240" width="360" height="206" as="geometry" />
         </mxCell>
         <mxCell id="practice-guidance-class-model-model-fidelity--rulescollection" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;RulesCollection&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ applies_to: AppliesTo&lt;br/&gt;+ practice_key: str&lt;br/&gt;+ fidelity_name: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ RulesCollection(entries, applies_to: AppliesTo | None, parent)&lt;br/&gt;+ matches(path: str): bool&lt;br/&gt;+ from_markdown(text: str, fidelity: str | None, parent): RulesCollection&lt;br/&gt;+ formatted(): str&lt;br/&gt;+ validate(): str&lt;br/&gt;+ inject_rules(payload: HookPayload): dict&lt;br/&gt;+ scan(paths: Any): Any&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
-          <mxGeometry x="2340" y="510" width="420" height="206" as="geometry" />
+          <mxGeometry x="2400" y="510" width="420" height="206" as="geometry" />
         </mxCell>
         <mxCell id="practice-guidance-class-model-model-fidelity--appliesto" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;AppliesTo&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ always_apply: bool | None&lt;br/&gt;+ globs: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ AppliesTo(always_apply, globs)&lt;br/&gt;+ from_value(value: Any): AppliesTo&lt;br/&gt;+ from_markdown(text: str): AppliesTo&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
-          <mxGeometry x="3060" y="1240" width="240" height="126" as="geometry" />
+          <mxGeometry x="3090" y="1240" width="240" height="126" as="geometry" />
         </mxCell>
         <mxCell id="practice-guidance-class-model-model-fidelity--practicecatalogue" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PracticeCatalogue&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ register(*practice_classes: type[PracticeGuidance])&lt;br/&gt;+ keys(): tuple[str, ...]&lt;br/&gt;+ has(key: str): bool&lt;br/&gt;+ create(key: str): PracticeGuidance&lt;br/&gt;+ register_supplements(*supplement_classes: type[PracticeSupplement])&lt;br/&gt;+ create_all(): list[PracticeGuidance]&lt;br/&gt;+ practice_class(key: str): type[PracticeGuidance]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
-          <mxGeometry x="430" y="60" width="400" height="158" as="geometry" />
+          <mxGeometry x="460" y="60" width="400" height="158" as="geometry" />
         </mxCell>
         <mxCell id="practice-guidance-class-model-model-fidelity--actioncatalogue" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ActionCatalogue&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ register(*toolset_classes: type)&lt;br/&gt;+ toolsets(): tuple[type, ...]&lt;br/&gt;+ actions(): tuple[Action, ...]&lt;br/&gt;+ names(): tuple[str, ...]&lt;br/&gt;+ has(name: str): bool&lt;br/&gt;+ action(name: str): Action | None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
-          <mxGeometry x="2070" y="60" width="220" height="142" as="geometry" />
+          <mxGeometry x="2100" y="60" width="220" height="142" as="geometry" />
         </mxCell>
         <mxCell id="practice-guidance-class-model-model-fidelity--action" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Action&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ toolset_class: type&lt;br/&gt;+ operation: Callable&lt;br/&gt;+ folder: Path&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Action(name: str, toolset_class: type)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
-          <mxGeometry x="2880" y="510" width="240" height="126" as="geometry" />
+          <mxGeometry x="2940" y="510" width="240" height="126" as="geometry" />
         </mxCell>
         <mxCell id="practice-guidance-class-model-model-fidelity--approachstages" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ApproachStages&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ names: tuple[str, ...]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ApproachStages(stages: tuple[ApproachStage, ...])&lt;br/&gt;+ of(name: str): ApproachStage | None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
-          <mxGeometry x="1690" y="60" width="300" height="94" as="geometry" />
+          <mxGeometry x="1720" y="60" width="300" height="94" as="geometry" />
         </mxCell>
         <mxCell id="practice-guidance-class-model-model-fidelity--approachstage" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ApproachStage&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ title: str&lt;br/&gt;+ scope: StageScope&lt;br/&gt;+ steps: list[str]&lt;br/&gt;+ actions: list[str]&lt;br/&gt;+ producing_actions: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ApproachStage(name: str, scope: StageScope)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
-          <mxGeometry x="2650" y="60" width="280" height="158" as="geometry" />
+          <mxGeometry x="2680" y="60" width="280" height="158" as="geometry" />
         </mxCell>
         <mxCell id="practice-guidance-class-model-model-fidelity--stagescope" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;StageScope&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ shape: str&lt;br/&gt;+ name: str&lt;br/&gt;+ reach: str&lt;br/&gt;+ covers: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ StageScope(shape: str, name: str, reach: str, covers: str)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
-          <mxGeometry x="3220" y="510" width="360" height="126" as="geometry" />
+          <mxGeometry x="3280" y="510" width="360" height="126" as="geometry" />
         </mxCell>
         <mxCell id="practice-guidance-class-model-model-fidelity--schema" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Schema&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ types: dict[str, SchemaType]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Schema(text: str)&lt;br/&gt;+ fidelities(): dict[str, str]&lt;br/&gt;+ rules(): dict[str, tuple[str, ...]]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
-          <mxGeometry x="2260" y="1240" width="240" height="110" as="geometry" />
+          <mxGeometry x="2290" y="1240" width="240" height="110" as="geometry" />
         </mxCell>
         <mxCell id="practice-guidance-class-model-model-fidelity--schematype" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;SchemaType&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ key: str&lt;br/&gt;+ fields: list[tuple[str, str]]&lt;br/&gt;+ rules: list[str]&lt;br/&gt;+ fidelity: str&lt;br/&gt;+ supertype: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ SchemaType(key: str)&lt;br/&gt;+ field(name: str): str&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
-          <mxGeometry x="2370" y="60" width="200" height="158" as="geometry" />
+          <mxGeometry x="2400" y="60" width="200" height="158" as="geometry" />
         </mxCell>
         <mxCell id="practice-guidance-class-model-model-fidelity--load-document" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;load_document&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=Practice Guidance — class model (model fidelity);" vertex="1" parent="1">
-          <mxGeometry x="3010" y="60" width="200" height="80" as="geometry" />
+          <mxGeometry x="3040" y="60" width="200" height="80" as="geometry" />
         </mxCell>
         <mxCell id="2" value="rules" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practice-guidance-class-model-model-fidelity--guidance" target="practice-guidance-class-model-model-fidelity--rulescollection" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1400" y="480" />
-              <mxPoint x="2540" y="480" />
-              <mxPoint x="2540" y="470" />
-              <mxPoint x="2550" y="470" />
+              <mxPoint x="1430" y="480" />
+              <mxPoint x="2600" y="480" />
+              <mxPoint x="2600" y="470" />
+              <mxPoint x="2610" y="470" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="3" value="current" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practice-guidance-class-model-model-fidelity--guidancecollection" target="practice-guidance-class-model-model-fidelity--guidance" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1400" y="392" />
+              <mxPoint x="1430" y="392" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -88,7 +88,7 @@
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="860" y="1190" />
-              <mxPoint x="1530" y="1190" />
+              <mxPoint x="1560" y="1190" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -96,11 +96,11 @@
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="1010" y="1170" />
-              <mxPoint x="1850" y="1170" />
-              <mxPoint x="1850" y="1210" />
-              <mxPoint x="2000" y="1210" />
-              <mxPoint x="2000" y="1200" />
-              <mxPoint x="2010" y="1200" />
+              <mxPoint x="1880" y="1170" />
+              <mxPoint x="1880" y="1210" />
+              <mxPoint x="2030" y="1210" />
+              <mxPoint x="2030" y="1200" />
+              <mxPoint x="2040" y="1200" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -108,14 +108,14 @@
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="1160" y="1150" />
-              <mxPoint x="2380" y="1150" />
+              <mxPoint x="2410" y="1150" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="8" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practice-guidance-class-model-model-fidelity--practiceguidance" target="practice-guidance-class-model-model-fidelity--guidance" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1400" y="392" />
+              <mxPoint x="1430" y="392" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -132,59 +132,61 @@
         <mxCell id="11" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practice-guidance-class-model-model-fidelity--fidelityguidance" target="practice-guidance-class-model-model-fidelity--guidance" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1400" y="392" />
+              <mxPoint x="1430" y="392" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="12" value="applies_to" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practice-guidance-class-model-model-fidelity--rulescollection" target="practice-guidance-class-model-model-fidelity--appliesto" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="2550" y="1190" />
-              <mxPoint x="3180" y="1190" />
+              <mxPoint x="2610" y="1190" />
+              <mxPoint x="3210" y="1190" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="13" value="scope" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practice-guidance-class-model-model-fidelity--approachstage" target="practice-guidance-class-model-model-fidelity--stagescope" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="2790" y="660" />
-              <mxPoint x="3190" y="660" />
-              <mxPoint x="3190" y="470" />
-              <mxPoint x="3400" y="470" />
+              <mxPoint x="2820" y="480" />
+              <mxPoint x="2910" y="480" />
+              <mxPoint x="2910" y="660" />
+              <mxPoint x="3250" y="660" />
+              <mxPoint x="3250" y="470" />
+              <mxPoint x="3460" y="470" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="14" value="actions" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practice-guidance-class-model-model-fidelity--actioncatalogue" target="practice-guidance-class-model-model-fidelity--action" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="2180" y="240" />
-              <mxPoint x="2620" y="240" />
-              <mxPoint x="2620" y="30" />
-              <mxPoint x="2980" y="30" />
-              <mxPoint x="2980" y="440" />
-              <mxPoint x="3000" y="440" />
+              <mxPoint x="2210" y="240" />
+              <mxPoint x="2650" y="240" />
+              <mxPoint x="2650" y="30" />
+              <mxPoint x="3010" y="30" />
+              <mxPoint x="3010" y="440" />
+              <mxPoint x="3060" y="440" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="15" value="create_all" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3333;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practice-guidance-class-model-model-fidelity--practicecatalogue" target="practice-guidance-class-model-model-fidelity--practicesupplement" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="630" y="460" />
+              <mxPoint x="660" y="460" />
               <mxPoint x="30" y="460" />
               <mxPoint x="30" y="1200" />
-              <mxPoint x="620" y="1200" />
+              <mxPoint x="650" y="1200" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="16" value="every_rule" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practice-guidance-class-model-model-fidelity--fidelityguidance" target="practice-guidance-class-model-model-fidelity--rule" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1870" y="1130" />
-              <mxPoint x="2530" y="1130" />
-              <mxPoint x="2530" y="1470" />
-              <mxPoint x="3330" y="1470" />
-              <mxPoint x="3330" y="1170" />
-              <mxPoint x="2780" y="1170" />
+              <mxPoint x="1900" y="1130" />
+              <mxPoint x="2590" y="1130" />
+              <mxPoint x="2590" y="1470" />
+              <mxPoint x="3360" y="1470" />
+              <mxPoint x="3360" y="1170" />
+              <mxPoint x="2810" y="1170" />
             </Array>
           </mxGeometry>
         </mxCell>
