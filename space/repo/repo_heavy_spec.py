@@ -60,6 +60,21 @@ with description("a Repo"):
             (self.clone / "a.py").write_text("work\n", encoding="utf-8")
             expect(self.repo.branch_named("session/demo").changed_files()).to(equal(["a.py"]))
 
+        with context("with a branch checked out in a worktree of its own, a file committed there and one not yet"):
+            with before.each:
+                self.tree = Path(self.tmp.name) / "ticket-tree"
+                _git(self.clone, "worktree", "add", "-b", "session/ticket", str(self.tree), "main")
+                (self.tree / "done.py").write_text("work", encoding="utf-8")
+                _git(self.tree, "add", "done.py")
+                _git(self.tree, "commit", "-m", "ticket turn")
+                (self.tree / "doing.py").write_text("work", encoding="utf-8")
+
+            with it("should find the branch checked out in that worktree"):
+                expect(self.repo.branch_named("session/ticket").checkout.root).to(equal(self.tree.resolve()))
+
+            with it("should name both files, read from the clone"):
+                expect(sorted(self.repo.branch_named("session/ticket").changed_files())).to(equal(["doing.py", "done.py"]))
+
         # (S) Repo --> Push Branch
         with context("with a commit pushed to its branch from elsewhere"):
             with before.each:

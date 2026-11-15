@@ -111,4 +111,9 @@ class SessionFiles:
         repo = self._session.repo
         if not repo.is_clone:
             return set()
-        return {(repo.root / path).resolve() for path in repo.branch_named(self._session.name).changed_files()}
+        # A branch checked out in a worktree of its own, such as a ticket's, has its changed files there, not in the
+        # clone the session was reached through.
+        branch = repo.branch_named(self._session.name)
+        checkout = branch.checkout if branch.exists else None
+        root = checkout.root if checkout is not None else repo.root
+        return {(root / path).resolve() for path in branch.changed_files()}

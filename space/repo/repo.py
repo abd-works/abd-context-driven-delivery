@@ -515,10 +515,20 @@ class Branch:
             return []
         git = self._repo.git
         committed = git.run("diff", "--name-only", f"{self._repo.default_branch}...{self.name}").splitlines()
-        if self._repo.current_branch != self:
+        checkout = self.checkout
+        if checkout is None:
             return committed
-        uncommitted = git.run("status", "--porcelain", "--untracked-files=all", "--no-renames").splitlines()
+        uncommitted = checkout.git.run("status", "--porcelain", "--untracked-files=all", "--no-renames").splitlines()
         return [*committed, *(line[3:].strip('"') for line in uncommitted)]
+
+    @property
+    def checkout(self) -> Repo | None:
+        """The checkout that has this branch checked out: this clone, or the linked worktree beside it, such as a
+        ticket's; none when no checkout has it. Its root is where the branch's changed paths are."""
+        if self._repo.current_branch == self:
+            return self._repo
+        tree = self.worktree
+        return tree.repository if tree is not None else None
 
     def check_out(self) -> Branch:
         """Check this branch out in its clone; a branch the clone does not have starts from ``start_point``. Changes
