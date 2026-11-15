@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -149,12 +150,34 @@ def _install_from_latest(args) -> int:
     if pulled.returncode != 0:
         _step_failed(1, f"{(pulled.stderr or pulled.stdout).strip()} - nothing was stopped or installed: resolve the pull, then run this again.")
         return pulled.returncode
-    _step_done(1, pulled.stdout.strip().splitlines()[-1] if pulled.stdout.strip() else "pulled")
+    pulled_result = pulled.stdout.strip().splitlines()[-1] if pulled.stdout.strip() else "pulled"
+    _step_done(1, f"{pulled_result}; {_match_origin_version()}")
     # The pull may have changed this script and the installer, so the install runs in a new process on the pulled code,
     # unbuffered, so its lines reach whoever watches as they are written.
     passed = [*(["--ide", args.ide] if args.ide else []), *(["--path", args.path] if args.path else [])]
     command = [sys.executable, "-u", str(_REPO / "scripts" / "install.py"), "--restart-everything", *passed]
     return subprocess.run(command, cwd=_REPO, check=False).returncode
+
+
+_VERSION_LINE = re.compile(r'^version = "[^"]*"$', re.MULTILINE)
+
+
+def _match_origin_version() -> str:
+    """Install from latest runs the version origin main carries, so a local edit to the version line in pyproject.toml,
+    which the pull leaves in place, is put back to origin main's; the rest of the file keeps any local edits."""
+    shown = subprocess.run(["git", "show", "origin/main:pyproject.toml"], cwd=_REPO, check=False, capture_output=True, text=True)
+    origin_line = _VERSION_LINE.search(shown.stdout) if shown.returncode == 0 else None
+    if origin_line is None:
+        return "origin main's version was not read"
+    pyproject = _REPO / "pyproject.toml"
+    with pyproject.open(encoding="utf-8", newline="") as file:
+        local = file.read()
+    local_line = _VERSION_LINE.search(local.replace("\r\n", "\n"))
+    if local_line is not None and local_line.group(0) == origin_line.group(0):
+        return origin_line.group(0)
+    with pyproject.open("w", encoding="utf-8", newline="") as file:
+        file.write(re.sub(r'^version = "[^"]*"(?=\r?$)', origin_line.group(0), local, count=1, flags=re.MULTILINE))
+    return f"{origin_line.group(0)} (set from origin main)"
 
 
 def _restart_everything(installer, server) -> None:

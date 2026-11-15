@@ -4,7 +4,7 @@ import { checkIn } from './board-chat/board-chat-client'
 import { isCheckInDue, turnCompleted, turnStarted } from './board-chat/chat-turns'
 import { readName } from './board-chat/chat-name'
 import { openedBoard } from './board-chat/board-server'
-import { currentChatBar, refreshChatBar } from './chat-bar/chat-bar-client'
+import { currentChatBar, readChatBarUntilAnswered, refreshChatBar } from './chat-bar/chat-bar-client'
 import { ChatBarView } from './chat-bar/chat-bar-view'
 import { clearBusy, currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
@@ -71,6 +71,7 @@ async function readActive($: EngineInterface): Promise<void> {
 async function readBoardAfterStart($: EngineInterface): Promise<void> {
   await readName($).catch(shownAsFailure($, 'The chat was not named', 'Starting the chat, reading its name'))
   await readActive($).catch(shownAsFailure($, 'The board did not load', 'Starting the chat, calling board.show'))
+  readChatBarUntilAnswered($, () => readActive($).catch(shownAsFailure($, 'The board did not load', 'Opening the chat while cdd connects, calling board.show')))
   refreshHealthSoon($)
   checkVersionSoon($)
 }

@@ -9,18 +9,14 @@ type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
 export type VersionActions = { askToUpdate: () => unknown; cancelUpdate: () => unknown; updateToLatest: () => unknown }
 
-const UPDATE_WORDS: Record<string, string> = { running: 'updating…', installed: 'updated', failed: 'update failed' }
-
-// The version badge at the end of the line: the version in its standing's colour, its summary on hover, and a press that
-// asks whether to update and reinstall.
+// The version badge at the end of the line: the version in its standing's colour, how an update is going (or else its
+// summary) on hover, and a press that asks whether to update and reinstall.
 export function VersionBadgeView(elements: ElementTable, version: CddVersionClient, actions: VersionActions) {
-  const { Box, Text } = elements
-  const doing = UPDATE_WORDS[version.update]
+  const { Box } = elements
   return (
     <Box key="cdd-version" flexDirection="row" gap={1}>
       {GlyphButtonView(elements, 'cdd-version-badge', version.label, version.colour, actions.askToUpdate)}
-      {doing ? <Text key="cdd-version-update" color={version.update === 'failed' ? BRAND.error : BRAND.muted}>{doing}</Text> : null}
-      {TipView(elements, version.summary, '', BRAND.muted)}
+      {TipView(elements, version.tip, '', BRAND.muted)}
     </Box>
   )
 }

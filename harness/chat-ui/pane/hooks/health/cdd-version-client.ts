@@ -6,16 +6,15 @@ import type { CddVersionData } from '@cdd/harness/diagnostics/cdd-version'
 import type { CddVersionJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { showFailure } from '../error-display/failure-client'
+import { commandOf } from '../shared/chat-command'
 
 const SERVER = 'plugin:cdd:cdd'
 const CHECK_TOOL = 'cdd-version.check'
-// A full install from the latest pulls, restarts every server and reinstalls every toolset: minutes, not seconds.
-const UPDATE_TIMEOUT_MS = 600000
+const INSTALL_LATEST_COMMAND = '/harness:installation:install-latest'
 // The cdd server is still connecting as a chat opens, so the first check waits as the server health's first look does.
 const FIRST_CHECK_WAIT_MS = 5000
 // Twelve tries five seconds apart: a minute for cdd to connect after the chat opens or the plugins reload.
 const CHECK_TRIES = 12
-const ERROR_LINES_SHOWN = 1
 // The colour of each standing CddVersion answers: green current, yellow a minor update behind, red a major one.
 const STANDING_COLOURS: Record<string, string> = {
   current: BRAND.success,
@@ -44,6 +43,15 @@ export class CddVersionClient {
 
   get summary(): string {
     return this.data?.summary ?? (this.json.problem ? `The CDD version is not read yet: ${this.json.problem}` : 'Reading the CDD version.')
+  }
+
+  // The badge's hover: updating while an update runs, up to date once one leaves this chat on the latest, why it failed
+  // if it did, and otherwise the version's summary, which says when the chat is still behind.
+  get tip(): string {
+    if (this.json.update === 'running') return 'updating…'
+    if (this.json.update === 'installed' && this.data?.standing === 'current') return 'up to date'
+    if (this.json.update === 'failed') return `update failed: ${this.json.error ?? 'no reason given'}`
+    return this.summary
   }
 
   get latest(): string {
@@ -111,22 +119,19 @@ export async function cancelUpdate($: EngineInterface): Promise<void> {
   await update($, cddVersion, version => ({ ...version, isAsking: false }))
 }
 
-// The update restarts the cdd server, so it runs from here, as Run install does, and not through a cdd tool.
+// The update runs in the chat as the person's own /install-latest, so the chat lists its steps and ticks each one off
+// as the script reports it. The engine queues the command until the chat is idle and resolves once its turn has run.
 export async function updateToLatest($: EngineInterface): Promise<void> {
   await update($, cddVersion, version => ({ ...version, isAsking: false, update: 'running', error: null }))
-  const folder = await $.session.root()
-  let command: string[] = []
   try {
-    command = [...(await installCommand($)), folder, '--from-latest']
-    const run = await $.process.run(command, { cwd: folder, timeoutMs: UPDATE_TIMEOUT_MS })
-    const error = run.exitCode === 0 ? null : lastLines(run.stderr || run.stdout)
-    await update($, cddVersion, version => ({ ...version, update: error === null ? 'installed' : 'failed', error }))
-    if (error !== null) await showFailure($, `The update failed: ${error}`, `Update and reinstall on the version badge, running ${command.join(' ')} in ${folder}`)
-    else await checkVersion($)
+    await $.command.run(commandOf(INSTALL_LATEST_COMMAND))
   } catch (failure) {
     await update($, cddVersion, version => ({ ...version, update: 'failed', error: String(failure) }))
-    await showFailure($, 'The update did not run', `Update and reinstall on the version badge, running ${command.join(' ')}`, failure)
+    await showFailure($, `${INSTALL_LATEST_COMMAND} did not run`, `Update and reinstall on the version badge, running ${INSTALL_LATEST_COMMAND} in the chat`, failure)
+    return
   }
+  await update($, cddVersion, version => ({ ...version, update: 'installed' }))
+  await checkVersion($)
 }
 
 function versionFrom(text: string): CddVersionData | null {
@@ -137,13 +142,3 @@ function versionFrom(text: string): CddVersionData | null {
   }
 }
 
-// The cdd home publishes this mod with the command that installs for a chat's folder.
-async function installCommand($: EngineInterface): Promise<string[]> {
-  const published = `${$.plugin.root}/install.json`
-  if (!(await $.fs.exists(published))) throw new Error(`this board mod was not published by a cdd home, so it has no install command; run python scripts/install-latest.py in a CDD checkout`)
-  return (JSON.parse(await $.fs.read(published)) as { command: string[] }).command
-}
-
-function lastLines(text: string): string {
-  return text.trim().split('\n').slice(-ERROR_LINES_SHOWN).join('\n')
-}
