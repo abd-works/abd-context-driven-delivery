@@ -5,5 +5,7 @@
   "parent": "tdd-practice",
   "branch": "release-cadence",
   "worktree": "C:\\dev\\abd-cdd-release-cadence",
-  "pulled_out": true
+  "pulled_out": true,
+  "stage": "Implementation",
+  "stage_mark": "done"
 }
