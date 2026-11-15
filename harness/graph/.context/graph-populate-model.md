@@ -350,7 +350,7 @@ What one pattern or one practice supplement gives the graph on top of the practi
 	// read once per practice: its own practices/{practice}/rules, then its shared rules/ bound to that practice
 	-> rules_in(f"{package}.practices.{practice.key}.rules")
 	-> rules_in(f"{package}.rules")
-	-> SharedPracticeGraphRule.for_practice(practice.key)
+	-> SharedPracticeGraphRule.for_practice(practice)
 
 ## PracticeGraphRule
 
@@ -369,11 +369,11 @@ One rule a practice checks on loaded nodes (`practice_rule.py`). A practice writ
 
 One rule an overlay checks on several practices' nodes, such as TDD's `one-outcome-per-test` on BDD observations and Stories Thens (`practice_rule.py`). It lives once, in the overlay's `rules/` package; each practice runs a copy bound to its own node types.
 
-+ node_types_by_practice: dict[str, tuple[str, ...]]
-	// practice key to the node types it checks there, such as {"bdd": ("Observation",), "stories": ("Then",)}
++ node_types_by_practice: dict[type[PracticeGuidance], tuple[str, ...]]
+	// each practice's class to the node types it checks there, such as {Bdd: ("Observation",), Stories: ("Then",)}
 ----
-+ for_practice(practice_key: str): PracticeGraphRule | None
-	// a copy whose node_types are that practice's; none for a practice it does not name
++ for_practice(practice: PracticeGuidance): PracticeGraphRule | None
+	// a copy whose node_types are that practice's, matched by its class; none for a practice it does not name
 	Invariant: check reads only facts every named practice's reading records on its nodes
 
 ## RuleCheckContext

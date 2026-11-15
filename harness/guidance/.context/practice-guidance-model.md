@@ -80,7 +80,7 @@ extends: str
 extended: PracticeGuidance | None
 	// the practice extends names, held by reference from the same set of practices
 supplements: list[PracticeSupplement]
-	// the supplements of its set that supplement one of its fidelities, held by reference (hold_set); none for a practice made apart from any set
+	// the supplements of its set whose supplemented_practices hold this practice, by reference (hold_set); none for a practice made apart from any set
 sketch_lens: SketchLens
 	// the headings that open this practice's section of a sketch, such as "stories:"; the practice holds the one lens its sketch format reads its section with
 SHORT_NAME: str
@@ -101,7 +101,7 @@ instructions: str
 examples: str
 ----
 hold_set(practices: dict[str, PracticeGuidance], supplements: list[PracticeSupplement]): None
-	// holds the practice it extends, its Clean Engineering companion, and each supplement whose supplements name its key
+	// holds the practice it extends, its Clean Engineering companion, and each supplement whose supplemented_practices hold it
 answers_to(slug: str): PracticeGuidance | FidelityGuidance | None
 	// itself for its slug, the fidelity whose slug it is, else none
 fidelity_called(name: str): FidelityGuidance | None
@@ -135,16 +135,20 @@ Its markdown keeps the usual Overview, Guidance and Shared rules, then one `## {
 
 PracticeSupplement(format)
 ------
-supplements: dict[str, str]
-	// practice key to the fidelity name it supplements, read once from the front matter
-	Invariant: every key is a registered practice and every fidelity is one that practice has; otherwise UnknownSupplementedFidelity at construction
+supplements: list[FidelityGuidance]
+	// the fidelities it supplements: the same set's own FidelityGuidance objects, held by reference once hold_set gives it the set, such as bdd.fidelities["development"]
+	Invariant: the front matter's names are read once, in hold_set, into the set's objects; nothing after holds a practice key or fidelity name as text
+	Invariant: a name with no practice in the set, or no such fidelity on that practice, raises UnknownSupplementedFidelity in hold_set
+supplemented_practices: list[PracticeGuidance]
+	// the practice of each fidelity it supplements, once each: each fidelity's practice_guidance
 always_apply: bool
 	// on for every session without being chosen; a supplement that is not always on applies only when a session's overlays name it
 graph_overlay: GraphOverlay
 	// made once: its rules for each practice it supplements, read from its own folder (harness/graph)
 ----
-supplements_fidelity(fidelity: FidelityGuidance): bool
-	// the fidelity's practice key is named, with that fidelity's name
+hold_set(practices: dict[str, PracticeGuidance]): None
+	// resolves the front matter's practice and fidelity names into the set's own fidelities, once
+	-> practices[key].fidelity_called(name)
 text_for(fidelity: FidelityGuidance): str
 	// its Overview and Guidance, then the section for that fidelity, headed "## Supplement: {name}"; empty for a fidelity it does not supplement
 rules_for(fidelity: FidelityGuidance): RulesCollection
@@ -255,9 +259,9 @@ guidance: str
 rules: RulesCollection
 	// the fidelity's Rules section
 supplements: list[PracticeSupplement]
-	// its practice's supplements that name this fidelity, such as TDD for BDD development
+	// its practice's supplements that hold this fidelity among their supplements, such as TDD for BDD development
 	-> practice_guidance.supplements
-	-> PracticeSupplement.supplements_fidelity
+	Invariant: a supplement supplements this fidelity exactly when this object is in supplement.supplements
 instructions: str
 	// practice overview, guidance, and shared rules, the companion's instructions, the template, this fidelity's own text, then each supplement's text for it
 	-> PracticeSupplement.text_for
@@ -361,7 +365,8 @@ create(key: str): PracticeGuidance
 register_supplements(*supplement_classes: type[PracticeSupplement])
 	// called by cdd_guidance/practices when it is imported; held apart from the practices, so keys() and the board never list a supplement
 create_all(): list[PracticeGuidance]
-	// also makes one of each registered supplement that is always on, and hands the set and them to each practice
+	// also makes one of each registered supplement that is always on; each supplement holds the set first, then each practice holds the set and the supplements
+	-> PracticeSupplement.hold_set
 	-> PracticeGuidance.hold_set
 	// each practice holds the one it extends and the Clean Engineering practice whose fidelities accompany its own, from the same set
 practice_class(key: str): type[PracticeGuidance]
