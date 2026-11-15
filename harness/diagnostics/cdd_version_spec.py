@@ -5,9 +5,10 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from expects import contain, equal, expect, raise_error
+from expects import be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
+from harness.mcp.mcp_annotations import LongCall
 from harness.diagnostics.cdd_version import CddVersion, VersionNotValid, VersionStanding
 from harness.process.git import RepoConnectError
 
@@ -49,6 +50,9 @@ with description("the CDD version a chat runs") as self:
         with it("should fetch origin main before reading its version"):
             self.checked(OriginStub("0.1.0"))
             expect(self.origin.ran[0]).to(equal(("fetch", "origin", "main")))
+
+        with it("should be answered when it comes back, since its fetch waits on origin"):
+            expect(LongCall.annotates(CddVersion.check)).to(be_true)
 
         with it("should name its version by major and minor"):
             expect(self.checked(OriginStub("0.1.0")).version).to(equal("v0.1"))

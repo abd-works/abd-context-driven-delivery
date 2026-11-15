@@ -10,7 +10,7 @@ from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.data_class import data_field, language_adapter
 from harness.installation.files import command
-from harness.mcp.mcp_annotations import mcp
+from harness.mcp.mcp_annotations import long_call, mcp
 from harness.process.git import Git, RepoConnectError
 
 # The checkout the cdd server runs its code from: the one whose version every chat it answers runs.
@@ -87,6 +87,8 @@ class CddVersion:
         The next version is set in the project the call names."""
         return cls(SERVED_CHECKOUT, project=project)
 
+    # Its fetch waits on origin, which can pass the server's ten-second wait on a busy machine.
+    @long_call
     @mcp
     @agent_tool
     @noSessionLog

@@ -287,6 +287,11 @@ class Repo:
             return
         self._merge(tracked, "")
 
+    @property
+    def head_message(self) -> str:
+        """The message of the commit the checked-out branch is on."""
+        return self.git.run("log", "-1", "--format=%B")
+
     def needs_push(self) -> bool:
         """True when origin has no copy of the current branch yet or the branch is ahead of it. A git failure is raised,
         not read as nothing to push, so a close never reports a branch pushed that was not."""
@@ -391,7 +396,7 @@ class Repo:
         branch.merge_into_default()
         if push and clone.has_origin:
             clone.push_upstream()
-        landed = Commit(clone.current_commit, clone.git.run("log", "-1", "--format=%B"))
+        landed = Commit(clone.current_commit, clone.head_message)
         returning_to.switch_to()
         return landed
 
