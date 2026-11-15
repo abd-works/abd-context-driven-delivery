@@ -33,7 +33,7 @@ cdd_guidance/practices/tdd/
 
 Rules are the core of the overlay, laid out like LERN's (`patterns/lern_domain_driven/practices/bdd/rules/shared_behavior_rules.py`):
 - **One class per rule.** Each rule is a `PracticeGraphRule` subclass. It names its `slug` and the `node_types` it checks, and its `check(node, context)` returns one `file:line` message per violation.
-- **Facts on the node.** A rule reads facts the overlay's `schema.yaml` adds to the practice's node, such as `operation.provenBy` or `observation.seenRed`. It never parses files itself.
+- **Facts on the node.** A rule reads facts the overlay's `schema.yaml` adds to the practice's node, such as `operation.provenBy` or `spec.tier`. It never parses files itself.
 - **Wiring.** `rules.yaml` maps each node type to the slugs that run on it, and the practice's `rules/__init__.py` exports `RULES` and `BY_SLUG`.
 - **Proof.** Each rule has a `_spec.py` that checks a failing example and its repaired example with the decorated practice's rule examples: `assert_rule_pair` for CE, `assert_stories_example_pair` for Stories, `assert_bdd_source_pair` for BDD, and `assert_ddd_example_pair` for DDD.
 - **Judged rules.** A rule the graph can't decide, such as `minimum-to-green`, has no class. It stays a named bullet in `tdd.md`, and validate judges it.
@@ -54,14 +54,14 @@ Rules apply to the domain: each rule in `rules.yaml` is keyed to the practice's 
 
 ## Rules check the output, guidance steers the process
 
-A rule names something you can see in the finished tests and code, so validate can check it after the fact. How the work got there (test first, red then green, one at a time, stop after two misses) is process: it lives in Guidance as steps, never as a rule, because nothing in the output proves or disproves it. Rechecked every rule against that test; the process ones moved to Guidance.
+A rule names something you can see in the finished tests and code, so validate can check it after the fact. How the work got there (which flow, real run or test first, red then green, one at a time, stop after two misses) is process: it lives in Guidance as steps, never as a rule, because nothing in the output proves or disproves it. Rechecked every rule against that test; the process ones moved to Guidance.
 
 ## Table of contents
 
 1. **Overview** — what TDD adds at implementation: every behavior is proven working for real before it is trusted, then kept proven by a test at the fastest tier that can prove it.
 2. **Guidance** (process, all decorated fidelities)
    1. **Choose the flow** — first crossing of an architectural boundary runs end to end first; a story on a known area tests first (see below; replaces the test shape ladder in `testing-approach.md`).
-   2. Red, green, refactor — write the test, see it fail for the right reason, write the least code to green, refactor only while green.
+   2. Red, green, refactor — inside Flow B, and for Flow A's unit tests once the real run works: see the test fail for the right reason, write the least code to green, refactor only while green. Not the opening move on a first boundary crossing.
    3. One at a time — one signature or scenario to green before the next.
    4. Arrange, act, assert — how to lay out a test body.
    5. Test doubles — where to put a fake and how to build it from the real seam.
@@ -132,13 +132,13 @@ A classic overlay can't do this. `GraphOverlay.rules_for` (`harness/graph/patter
 - **The rule lives in one place.** Each decorated practice's `model/rules.yaml` lists the shared slug against its own node type, so the graph runs it there. The rule class, its spec and its faulty/repaired examples live once, in `tdd/rules/`, with one example pair per practice it checks.
 - **Always on.** `always_apply` makes `PatternOverlays.checks_of` include this overlay for every practice listed in `decorates`, whatever overlays the session chose.
 
-Moved to Guidance as process: `test-before-code`, `minimum-to-green`, `one-at-a-time`, `diagnose-after-two-misses`.
+Moved to Guidance as process: `minimum-to-green`, `one-at-a-time`, `diagnose-after-two-misses`. Dropped: `test-before-code`, because test first is Flow B only; Flow A runs it for real first.
 
 ## Clean Engineering · code
 
 File: `practices/clean_engineering/rules/code_tdd_rules.py`
 
-Guidance: production code is written only to turn a test green; when a new class or operation is needed, write the test that needs it first.
+Guidance: follow the flow. Crossing a boundary for the first time (Flow A), write the code and run it end to end for real before any unit test; on a known area (Flow B), write the unit test that needs a new class or operation before the code.
 
 | Rule | Graph node | One line |
 |---|---|---|
@@ -149,7 +149,7 @@ Guidance: production code is written only to turn a test green; when a new class
 
 ## Stories · acceptance_tests
 
-Guidance: one scenario at a time — scenario test red on its Then, production code to green, then the next scenario.
+Guidance: one scenario at a time, in the flow's order. Flow A: run the scenario for real end to end, have the person verify it, then turn it into the heavy or e2e story test, then the stubbed domain tier. Flow B: domain tier red on its Then, code to green, person tries it, heavy/e2e tier in a sub-task.
 
 No new rules: Stories acceptance_tests and scenarios already cover each one proposed.
 
@@ -162,13 +162,13 @@ No new rules: Stories acceptance_tests and scenarios already cover each one prop
 
 So `practices/stories/` holds Guidance only until a gap shows; no `rules/` folder yet.
 
-Moved to Guidance as process: `scenario-runs-red-first`.
+Dropped `scenario-runs-red-first`: red first is Flow B only.
 
 ## BDD · development
 
 File: `practices/bdd/rules/development_tdd_rules.py`
 
-Guidance: one `BDD: SIGNATURE` at a time — fill it, see it fail, write the least code to green; arrange-act-assert from the realization call graph.
+Guidance: one `BDD: SIGNATURE` at a time, in the flow's order; arrange-act-assert from the realization call graph. Flow A fills the heavy or e2e signature first, against a path already run for real; Flow B fills the unit signature red, then green.
 
 | Rule | Graph node | One line |
 |---|---|---|
@@ -176,7 +176,7 @@ Guidance: one `BDD: SIGNATURE` at a time — fill it, see it fail, write the lea
 
 Not supplied, because BDD already has them: `setup-builds-the-named-state` (BDD `context-setup-expresses-state`), `no-signature-left` (BDD template `no-remaining-signatures`, with `hierarchy-preservation`).
 
-Moved to Guidance as process: `signature-goes-red-first`.
+Dropped `signature-goes-red-first`: red first is Flow B only.
 
 ## DDD · tactics
 
