@@ -25,7 +25,9 @@
         "story_map": [
           "drawio"
         ],
-        "acceptance_tests": [],
+        "acceptance_tests": [
+          "python"
+        ],
         "scenarios": []
       }
     },
@@ -71,6 +73,6 @@
       "discovery",
       "implementation"
     ],
-    "version": 103
+    "version": 104
   }
 }
