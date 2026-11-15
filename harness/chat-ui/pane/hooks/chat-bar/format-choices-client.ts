@@ -4,8 +4,8 @@ import type { EngineInterface } from 'claude-code'
 import type { FormatChoiceJson, FormatChoicesJson } from '../../types'
 import { callTool, type ChatBarClient } from './chat-bar-client'
 
-// The format chips beside the action button, as the board's action bar has them: Python's ticket.format_choices answers
-// a chip for each group of formats the fidelities offer, each marked is_chosen while the session keeps that format
+// The format chips beside the action button: Python's ticket.format_choices answers a chip for each group of formats the
+// fidelities of the stages shown offer, each marked is_chosen while the session keeps that format
 // chosen for every fidelity in it. A press turns the chip on or off in the session (ticket.choose_formats), the same
 // choice the Story UI's format toggles make, so the bar keeps no picks of its own. Atom formatChoices, declared in
 // pane/types/index.d.ts.
@@ -23,7 +23,7 @@ export function forgetFormatChips(): void {
 export type FormatChips = { choices: FormatChoiceJson[] }
 
 function keyOf(chatBar: ChatBarClient): string {
-  return [chatBar.ticketName, ...chatBar.shownStages, ...chatBar.actionFidelities.map(fidelity => fidelity.slug)].join(' ')
+  return [chatBar.ticketName, ...fidelitySlugsOf(chatBar)].join(' ')
 }
 
 // The chips for the fidelities the action button acts on, as last read. Drawing only reads: until loadFormatChips has
@@ -38,7 +38,7 @@ export async function currentFormatChips($: EngineInterface, chatBar: ChatBarCli
 export async function loadFormatChips($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
   const key = keyOf(chatBar)
   const held = await read($, formatChoices)
-  if (held?.key === key || !chatBar.ticketName || !chatBar.actionFidelities.length) return
+  if (held?.key === key || !chatBar.ticketName || !fidelitySlugsOf(chatBar).length) return
   let choices = CACHE.get(key)
   if (!choices) {
     try {
@@ -76,6 +76,9 @@ export function formatArgumentOf(chatBar: ChatBarClient, chips: FormatChips, act
   return formats.length ? ` format=${formats.join(',')}` : ''
 }
 
+// The fidelities the chips are read and chosen for: those the dots show, every fidelity of the stages shown whose practice
+// the session works on, the same the Files app's chips are, so a chip reads the same in both and one press chooses it
+// for both.
 function fidelitySlugsOf(chatBar: ChatBarClient): string[] {
-  return chatBar.actionFidelities.map(fidelity => fidelity.slug)
+  return chatBar.fidelities.map(fidelity => fidelity.slug)
 }

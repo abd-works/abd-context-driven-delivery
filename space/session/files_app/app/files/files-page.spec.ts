@@ -334,9 +334,9 @@ describe('Filter Files By Format In Files App', () => {
         return { page, server }
       }
 
-      it('should choose the diagram format in the session, as the chat bar shows it', async () => {
+      it("should choose the diagram format in the session for the fidelities the chat bar's dots show, its practices turned on", async () => {
         const { server } = await pressedDiagram()
-        expect(server.posted('/choose-formats').map(post => post.body)).toEqual([{ fidelities: ['stories-story-map', 'ddd-bounded-context'], label: 'diagram', is_chosen: true }])
+        expect(server.posted('/choose-formats').map(post => post.body)).toEqual([{ fidelities: ['stories-story-map'], label: 'diagram', is_chosen: true }])
       })
 
       it('should list only the diagrams of the practice turned on', async () => {

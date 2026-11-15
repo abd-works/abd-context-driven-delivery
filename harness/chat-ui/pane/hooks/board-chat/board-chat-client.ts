@@ -2,7 +2,7 @@ import type { ChatCommandData, ChatData } from '@cdd/harness/chat/chat'
 import type { EngineInterface } from 'claude-code'
 
 import { currentChatBar, refreshChatBar } from '../chat-bar/chat-bar-client'
-import { reloadFormatChips } from '../chat-bar/format-choices-client'
+import { loadFormatChips, reloadFormatChips } from '../chat-bar/format-choices-client'
 import { openFileInViewer } from '../chat-bar/fidelity-files-client'
 import { showSelected } from '../chat-bar/fidelity-progress-client'
 import { showStagesHeld } from '../chat-bar/stage-client'
@@ -108,13 +108,15 @@ export async function keepInTouch($: EngineInterface, chat: string, isCheckIn: b
 }
 
 // The dots draw the selection cdd holds for the chat, read every second even while an idle chat checks in less often,
-// so a practice pressed in the Files app shows on the dots within a second; the stage the bar shows goes the other way.
+// so a practice or a stage pressed in the Files app shows on the dots within a second, and the format chips are read
+// again once the fidelities they cover changed.
 export async function readSelection($: EngineInterface, chat: string): Promise<void> {
   const shown = JSON.parse((await post($, { chat, operation: 'show', body: {} })).text) as ChatData
   await showSelected($, shown.selected_fidelities)
   await showStagesHeld($, shown.is_stage_chosen ? shown.shown_stages : null)
   await listStages($, chat, shown)
   await startStageChoice($, chat, shown)
+  await loadFormatChips($, await currentChatBar($))
 }
 
 // Before the bar or a page chose the stages shown, the bar starts the choice at the session's own stage, so turning

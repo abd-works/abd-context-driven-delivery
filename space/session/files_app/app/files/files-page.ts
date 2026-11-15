@@ -150,7 +150,7 @@ export class FilesPage {
       const [shown, chat] = await Promise.all([this.session.show(), this.chatShown()])
       const practices = Object.values(shown?.practices ?? {})
       const listed = fidelitiesOfStages(chat.stages, chat.shownStages, this.link.fidelities, chat.isStageChosen)
-      const formatChoices = await this.formatChips.read(listed)
+      const formatChoices = await this.formatChips.read(this.worked(listed, practices))
       const now = { practices, selectedFidelities: chat.selectedFidelities, formatChoices, stages: chat.stages, shownStages: chat.shownStages, isStageChosen: chat.isStageChosen }
       if (this.state.practices.length && this.isUnchanged(now)) return
       await this.loadMissing(listed)
@@ -164,6 +164,12 @@ export class FilesPage {
     const was = this.state
     const key = (of: typeof now) => [onOff(of.practices, of.selectedFidelities, chosenKeyOf(of.formatChoices)), of.formatChoices.length, JSON.stringify(of.stages), of.shownStages.join(','), of.isStageChosen].join('|')
     return key(now) === key(was)
+  }
+
+  // The fidelities listed whose practice the session works on: those the chat bar's dots show, which the format chips are
+  // read and chosen for on both, so a chip reads the same here and on the bar.
+  private worked(listed: string[], practices: PracticeSessionOutputData[]): string[] {
+    return listed.filter(slug => practiceOwning(slug, practices)?.enabled ?? true)
   }
 
   // The files of the fidelities listed that the page has not read yet, such as a stage turned on for the first time.
@@ -228,7 +234,7 @@ export class FilesPage {
   async toggleFormat(label: string): Promise<void> {
     let answered: Awaited<ReturnType<FormatChips['toggle']>> = null
     const isChosen = await this.attemptQuietly(`The ${label} format was not chosen`, async () => {
-      answered = await this.formatChips.toggle(label, this.listed)
+      answered = await this.formatChips.toggle(label, this.worked(this.listed, this.state.practices))
     })
     const formatChoices = answered as Awaited<ReturnType<FormatChips['toggle']>>
     if (!isChosen || !formatChoices) return
