@@ -107,13 +107,33 @@ File: `rules/shared_tdd_rules.py`. What BDD development and Stories acceptance_t
 | Rule | Checked on | One line |
 |---|---|---|
 | `suffix-names-the-tier` | spec file | `*_spec` is unit, `*_heavy_spec` is heavy, `*_e2e_spec` / `*_agent_spec` is e2e; a story test's tier file follows the same suffixes. |
-| `unit-tier-within-budget` | spec file | A unit example, with its before-each and after-each, runs within the budget (100 ms); a fake sits at every architecture boundary. |
+| `unit-tier-fakes-every-boundary` | spec file | A unit spec reaches no real resource: a fake sits at every architecture boundary. |
 | `heavy-tier-holds-a-real-resource` | spec file | A heavy spec uses a real resource (git, a server, a daemon, an installer, a worker, a big load); without one it belongs in the unit tier. |
 | `e2e-tier-drives-browser-or-agent` | spec file | An e2e spec drives a real browser or a real agent, and nothing else does. |
 | `slow-example-moves-not-the-file` | spec file | An example over budget moves to the heavy spec beside its unit spec, under the same described subject; the rest of the file stays unit, and the budget is never raised. |
 | `no-skipped-or-empty-test` | observation, scenario | No test is skipped, commented out, or left without an assertion. |
 
-Guidance (not rules): which tier runs when, from `cdd_guidance/rules/test-timing.md` — unit after every change, heavy once at the end of the work, e2e when the work touches a browser or an agent.
+### Test speed rules
+
+These are checked on what a test run leaves behind, the way `scripts/test.ps1` checks today. The runner's guard logs every example over budget, and `.pycache/spec-seconds.json` keeps each file's seconds from the last run. The graph reads both onto the spec file node (new facts `example_ms`, `file_seconds` and `run_seconds`), so validate can check speed without running the suite again.
+
+| Rule | Checked on | One line |
+|---|---|---|
+| `unit-example-within-100-ms` | spec file (`example_ms`) | Every unit example runs within 100 ms, its before-each and after-each included. Today: `-ExampleBudgetMs 100`, and an example over it fails its file. |
+| `unit-file-within-20-seconds` | spec file (`file_seconds`) | A unit spec file runs within 20 s. Over that, the runner gives it a batch of its own (`$soloSeconds`), so split it or move its slow examples. |
+| `unit-tier-within-a-minute` | the run (`run_seconds`) | The whole unit tier finishes in under X seconds of wall clock, proposed 60. Unit runs after every pass, and a slow unit tier stops being run. |
+| `specs-run-in-parallel` | spec file | A spec can run beside any other: no fixed port, no shared temp folder, no shared `CDD_HOME`, no order between files. The runner splits files into `ProcessorCount - 2` parallel batches, longest first. |
+| `heavy-spec-owns-its-resources` | heavy spec file | A heavy spec makes its own throwaway resources (repo, server port, `CDD_HOME`), so heavy specs can run in parallel too. Today they run one file at a time. |
+| `expensive-fixture-built-once` | spec file | A read-only fixture that is slow to build, such as a parsed graph or a loaded practice, is built once per file and shared, not once per example. |
+| `no-wait-in-unit-test` | unit spec file | A unit test never sleeps or polls. Time, retries and timeouts come from a fake clock. |
+| `budget-never-raised` | runner settings | The 100 ms, 20 s and X s budgets are never raised to make a slow test pass. The slow test gets fast or moves tier. |
+
+Guidance (process, not rules):
+- **Unit after every pass.** Run it after each change or pass. The run is fast enough that the next pass starts from known-good code.
+- **Heavy once, at the end, in the background.** Don't wait on it. Commit and push after unit passes, and report the heavy result when it comes back.
+- **E2E only when the work touches a browser or an agent,** also once at the end.
+- **Read the slow list after every unit run.** The runner lists each example over budget. Fix them in the same pass, by making the example fast or moving it to heavy.
+- **Keep the timings.** `spec-seconds.json` orders the next run's batches, longest first, so the run ends when its slowest batch does and no later.
 
 Also shared, because they overlay both BDD development and Stories acceptance_tests (each moves here from the practice that has it now):
 
@@ -197,5 +217,6 @@ Guidance: settle how each building block is tested when you choose its pattern; 
 1. **Order.** Decided: chosen by whether this crosses an architectural boundary for the first time (Flow A: real end to end first) or works on a known area (Flow B: unit tests first). See Guidance emphasis.
 2. **Moving rules.** Decided: the tier rules move here, and BDD `tier-by-speed` and Stories `story-tier-by-speed` are removed. Also decided: `one-assertion-per-test`, `layer-isolation` and `system-stubs-domain-real` move here as shared rules. BDD's process rules (`red-then-green`, `minimum-green`, `one-signature-at-a-time`) stay in BDD for now; moving them is in the backlog (`.sessions/_backlog/maybe-later.md`).
 3. **The `always_apply` setting.** Should it go in `tdd.md` front matter, or in the project's yaml so a project can turn it off?
-4. **Overlay reading.** Teach the practice catalogue that a practice may decorate others (its `decorates:` list and `practices/` folder), and have `PatternOverlays` read stack patterns only? Or one overlay reader for both?
-5. **Agent BDD.** Agent BDD isn't decorated in this sketch. Should it be?
+4. **Unit tier wall-clock budget.** What is X for `unit-tier-within-a-minute`? 60 s is proposed. Should heavy specs move from one file at a time to parallel, once `heavy-spec-owns-its-resources` holds?
+5. **Overlay reading.** Teach the practice catalogue that a practice may decorate others (its `decorates:` list and `practices/` folder), and have `PatternOverlays` read stack patterns only? Or one overlay reader for both?
+6. **Agent BDD.** Agent BDD isn't decorated in this sketch. Should it be?
