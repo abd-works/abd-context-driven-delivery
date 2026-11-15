@@ -122,6 +122,9 @@ a.file-entry.is-published:hover { text-decoration: underline; }
 .format-toggle.is-chosen { background: var(--accent); border-color: var(--accent); color: #fff; }
 .format-toggle.is-made { color: var(--success); }
 .format-toggle.is-not-made { color: var(--muted); }
-.stage-toggles { display: flex; gap: var(--space-2xs); align-self: center; margin-left: auto; }
+.scope-toggles { display: flex; gap: var(--space-2xs); align-self: center; margin-left: auto; }
+.scope-toggle { padding: 1px 8px; border-radius: var(--radius-sm); color: var(--accent); border-color: var(--border); }
+.scope-toggle.is-shown { background: var(--accent); border-color: var(--accent); color: #fff; }
+.stage-toggles { display: flex; gap: var(--space-2xs); align-self: center; }
 .stage-toggle { padding: 1px 8px; border-radius: var(--radius-sm); color: var(--accent); border-color: var(--border); }
 .stage-toggle.is-shown { background: var(--accent); border-color: var(--accent); color: #fff; }

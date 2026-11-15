@@ -117,7 +117,7 @@ function FileFolderView({ page, folder, openPath }: { page: FilesPage; folder: F
 
 // The file bar's buttons: collapse or expand it, and show its files as a list or in their folders.
 function FileBarButtonsView({ page }: { page: FilesPage }) {
-  const { fileBar, scope } = useFilesState(page)
+  const { fileBar } = useFilesState(page)
   return (
     <div className="file-bar-buttons" role="toolbar" aria-label="File bar">
       <button aria-label={fileBar.isOpen ? 'Collapse the file bar' : 'Expand the file bar'} title={fileBar.isOpen ? 'Collapse the file bar' : 'Expand the file bar'} onClick={() => page.fileBar.toggle()}>
@@ -125,12 +125,6 @@ function FileBarButtonsView({ page }: { page: FilesPage }) {
       </button>
       {fileBar.isOpen ? (
         <>
-          <button className="file-bar-view" aria-pressed={scope === 'all'} title="Every file of the stages, practices and formats selected, older work included" onClick={() => page.showScope('all')}>
-            All session files
-          </button>
-          <button className="file-bar-view" aria-pressed={scope === 'session'} title="The files this session's branch changed, among those its stages, practices and formats select" onClick={() => page.showScope('session')}>
-            This session <span className="file-entry-note">{scope === 'session' ? page.fileBar.changedCount : ''}</span>
-          </button>
           <button className="file-bar-view" aria-pressed={fileBar.view === 'list'} title="Show the files as a list" onClick={() => page.fileBar.show('list')}>
             List
           </button>
@@ -230,6 +224,22 @@ const STAGE_ICONS: Record<string, string> = { Discovery: '⌕', Specification: '
 
 // A button for each stage, before the practices, as the chat bar's stage buttons: filled orange while selected. A press
 // selects the stage beside those selected, or no longer, here and on the chat bar.
+// Which files the page lists, first of the filters along the top and orange while selected, as the stages are: every
+// file under the session's root, or the ones this session's branch changed, with how many.
+function ScopeTogglesView({ page }: { page: FilesPage }) {
+  const { scope } = useFilesState(page)
+  return (
+    <div className="scope-toggles" role="group" aria-label="Files listed">
+      <button type="button" className={`scope-toggle ${scope === 'all' ? 'is-shown' : ''}`} aria-pressed={scope === 'all'} title="Every file of the stages, practices and formats selected, older work included" onClick={() => page.showScope('all')}>
+        All session files
+      </button>
+      <button type="button" className={`scope-toggle ${scope === 'session' ? 'is-shown' : ''}`} aria-pressed={scope === 'session'} title="The files this session's branch changed, among those its stages, practices and formats select" onClick={() => page.showScope('session')}>
+        This session {page.fileBar.changedCount}
+      </button>
+    </div>
+  )
+}
+
 function StageTogglesView({ page }: { page: FilesPage }) {
   const { guidance } = useFilesState(page)
   if (!guidance?.stages.length) return null
@@ -317,6 +327,7 @@ export function FilesPageView({ page }: { page: FilesPage }) {
       <header className="files-head">
         <span className="files-kind">FILES</span>
         <span className="files-subject">{page.heading}</span>
+        <ScopeTogglesView page={page} />
         <StageTogglesView page={page} />
         <PracticeTogglesView page={page} />
         <FormatTogglesView page={page} />
