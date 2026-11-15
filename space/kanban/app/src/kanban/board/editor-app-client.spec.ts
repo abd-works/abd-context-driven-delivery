@@ -5,6 +5,7 @@ import type { AppData } from '@cdd/harness/diagnostics/app'
 
 import { BoardStore } from '../shared/board-store'
 import { EditorAppClient } from './editor-app-client'
+import { PageFailures } from './page-failures'
 
 const PROJECT = 'C:/dev/checkout-flow'
 const SERVER = { folder: 'space/kanban/app', command: ['node', '--import', 'tsx', 'packages/session-board/serve.ts'] }
@@ -28,7 +29,7 @@ async function opened(app: AppData, status: AppData['status'], open: (client: Ed
   const windows: string[] = []
   const store = new BoardStore()
   const { api, posted } = answering(app, status)
-  await open(new EditorAppClient(store, api, url => windows.push(url)))
+  await open(new EditorAppClient(new PageFailures(store, fetch, ''), api, url => windows.push(url)))
   return { posted, windows, toasts: store.state.toasts.map(toast => toast.text) }
 }
 

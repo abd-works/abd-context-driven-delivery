@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { projectOfPage } from '@cdd/cdd-shared'
 
 import { BoardApi, type Send } from './board-api'
+import { PageFailures } from './page-failures'
 import { BoardStore } from '../shared/board-store'
 
 // The page opened from a chat's /board link names that chat's repository, and every call it makes names it too, so the
@@ -13,6 +14,10 @@ describe('Show The Board Of The Linked Repository', () => {
     sent.push(new Headers(init?.headers))
     return Promise.resolve(Response.json({}))
   }
+  const apiNaming = (project: string) => {
+    const store = new BoardStore()
+    return new BoardApi(store, new PageFailures(store, recording, ''), recording, project)
+  }
 
   describe('with a page opened at ?project=C:/dev/sandbox', () => {
     it('should read the project from the link', () => {
@@ -21,7 +26,7 @@ describe('Show The Board Of The Linked Repository', () => {
 
     it('should name the project on every call', async () => {
       sent.length = 0
-      const api = new BoardApi(new BoardStore(), recording, 'C:/dev/sandbox')
+      const api = apiNaming('C:/dev/sandbox')
       await api.post('/board/show')
       expect(sent.map(headers => headers.get('X-CDD-Project'))).toEqual(['C:/dev/sandbox'])
     })
@@ -30,7 +35,7 @@ describe('Show The Board Of The Linked Repository', () => {
   describe('with a page opened without a project', () => {
     it('should name no project, so the server shows its own', async () => {
       sent.length = 0
-      await new BoardApi(new BoardStore(), recording, '').post('/board/show')
+      await apiNaming('').post('/board/show')
       expect(sent[0]?.has('X-CDD-Project')).toBe(false)
     })
   })
