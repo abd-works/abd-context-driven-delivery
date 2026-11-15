@@ -202,6 +202,26 @@ describe('Head The Files App With Where The Files Are', () => {
     stop()
     expect(page.heading).toBe('abd-cdd · release-2 · C:/dev/abd-cdd-2')
   })
+
+  describe('with a link that names no session', () => {
+    async function opened(): Promise<{ page: FilesPage; server: FakeFilesServer }> {
+      const server = new FakeFilesServer()
+      const page = new FilesPage(server, new FilesLink(''))
+      page.start()()
+      await settled()
+      return { page, server }
+    }
+
+    it('should ask cdd about no session', async () => {
+      const { server } = await opened()
+      expect(server.posts.filter(post => post.path.startsWith('/session/'))).toEqual([])
+    })
+
+    it('should say to open it from the chat bar', async () => {
+      const { page } = await opened()
+      expect(page.state.problem).toBe('This link names no files: open the Files app from the chat bar.')
+    })
+  })
 })
 
 describe('Review All Session Files Or This Session', () => {
