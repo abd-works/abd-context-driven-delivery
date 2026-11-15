@@ -71,6 +71,10 @@ function PracticeTipView($: EngineInterface, { Box, Button, Text }: ElementTable
   )
 }
 
+// Every stage button is this many columns wide, its icon centred: the desktop draws a stage icon wider than the one column
+// a glyph is measured at, so a box sized to its icon came out a different width for each.
+const STAGE_BUTTON_COLUMNS = 4
+
 // A button for each stage, its icon filled orange while the stage is shown, its name above it on hover. A press shows
 // that stage's fidelities beside those already shown, or no longer, here and in a page the chat opened, such as the Files
 // app, so one action can run across several stages.
@@ -79,9 +83,9 @@ function StageButtonsView($: EngineInterface, elements: ElementTable, { chatBar 
   const stages = chatBar.stages.filter(stage => stage.canShow)
   if (!stages.length) return null
   return (
-    <Box key="stage-buttons" flexDirection="row" gap={0}>
+    <Box key="stage-buttons" flexDirection="row" gap={1}>
       {stages.map((stage: StageClient) => (
-        <Box key={`stage-${stage.stage}`} paddingX={1} backgroundColor={stage.isShown ? BRAND.accent : undefined}>
+        <Box key={`stage-${stage.stage}`} width={STAGE_BUTTON_COLUMNS} justifyContent="center" backgroundColor={stage.isShown ? BRAND.accent : undefined}>
           {GlyphButtonView(elements, `stage-button-${stage.stage}`, stage.icon, stage.isShown ? BRAND.onAccent : stage.ink, () => toggleStage($, chatBar.shownStages, stage))}
           {TipView(elements, stage.stage, stage.isCurrent ? 'the session is here' : '', BRAND.muted)}
         </Box>
