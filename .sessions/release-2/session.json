@@ -20,7 +20,7 @@
       }
     },
     "stories": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
         "story_map": [
           "drawio"
@@ -70,6 +70,6 @@
     "stages": [
       "discovery"
     ],
-    "version": 91
+    "version": 92
   }
 }
