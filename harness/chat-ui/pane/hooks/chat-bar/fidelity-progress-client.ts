@@ -150,6 +150,8 @@ export async function selectPractice($: EngineInterface, dot: PracticeDotClient)
   const slugs = (await read($, selectedFidelities)) ?? []
   const own = dot.fidelities.map(fidelity => fidelity.slug)
   const next = dot.isSelected ? slugs.filter(slug => !own.includes(slug)) : [...slugs, ...own.filter(slug => !slugs.includes(slug))]
+  // The dot redraws at once; cdd's answer then replaces it.
+  await showSelected($, next)
   const answer = await post($, { chat: await $.session.id(), operation: 'select', body: { selected_fidelities: next } })
   await showSelected($, (JSON.parse(answer.text) as { selected_fidelities: string[] }).selected_fidelities)
 }

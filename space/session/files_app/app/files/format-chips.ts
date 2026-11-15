@@ -39,9 +39,12 @@ export class FormatChips {
 
   // A press on a chip chooses it in the session for every fidelity the page lists, or no longer; the page shows the chips
   // cdd answers.
+  // The chip redraws at once, flipped; cdd's answer then replaces it.
   async toggle(label: string, fidelities: string[]): Promise<FormatChoiceData[] | null> {
     const chip = this.store.state.formatChoices.find(choice => choice.label === label)
     if (!chip || !this.ticket) return null
-    return (await this.ticket.chooseFormats(fidelities, label, !chip.is_chosen)) ?? []
+    const isChosen = !chip.is_chosen
+    this.store.change(({ formatChoices }) => ({ formatChoices: formatChoices.map(each => (each.label === label ? { ...each, is_chosen: isChosen } : each)) }))
+    return (await this.ticket.chooseFormats(fidelities, label, isChosen)) ?? []
   }
 }

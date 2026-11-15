@@ -152,9 +152,11 @@ export class FilesPage {
       const listed = fidelitiesOfStages(chat.stages, chat.shownStages, this.link.fidelities, chat.isStageChosen)
       const formatChoices = await this.formatChips.read(this.worked(listed, practices))
       const now = { practices, selectedFidelities: chat.selectedFidelities, formatChoices, stages: chat.stages, shownStages: chat.shownStages, isStageChosen: chat.isStageChosen }
-      if (this.state.practices.length && this.isUnchanged(now)) return
-      await this.loadMissing(listed)
+      if (this.state.practices.length && this.isUnchanged(now) && !this.missing(listed).length) return
+      // The buttons redraw at once; a stage's files read the first time it shows come after.
       this.store.change(state => ({ ...now, entries: this.shownFrom({ ...state, ...now }) }))
+      await this.loadMissing(listed)
+      this.store.change(state => ({ entries: this.shownFrom(state) }))
     } catch (failure) {
       this.fail(`The Files app did not read the session's practices, formats, stages or the chat bar's selection: ${reasonOf(failure)}`, isQuiet ? 'Reading them again every second while the page shows' : 'Opening the Files app')
     }
@@ -172,10 +174,16 @@ export class FilesPage {
     return listed.filter(slug => practiceOwning(slug, practices)?.enabled ?? true)
   }
 
+  // The fidelities listed whose files the page has not read yet.
+  private missing(listed: string[]): string[] {
+    if (this.link.isSessionFolder || this.state.isListing) return []
+    return listed.filter(slug => !this.state.byFidelity.some(each => each.slug === slug))
+  }
+
   // The files of the fidelities listed that the page has not read yet, such as a stage turned on for the first time.
   private async loadMissing(listed: string[]): Promise<void> {
     if (this.link.isSessionFolder || this.state.isListing) return
-    const missing = listed.filter(slug => !this.state.byFidelity.some(each => each.slug === slug))
+    const missing = this.missing(listed)
     if (!missing.length) return
     const read = await this.filesByFidelity(missing)
     this.store.change(state => ({ byFidelity: [...state.byFidelity, ...read] }))
@@ -195,6 +203,8 @@ export class FilesPage {
     if (!this.link.chat) return
     const shown = this.shownStageNames
     const next = shown.includes(stage) ? shown.filter(each => each !== stage) : [...shown, stage]
+    // The button redraws at once; cdd's answer and the stage's files follow.
+    this.store.change(() => ({ shownStages: next, isStageChosen: true }))
     await this.attemptQuietly(`The ${stage} stage was not shown`, () => ChatClientGenerated.named(this.api, this.link.chat).showStages(next))
     await this.readPractices()
   }
@@ -232,9 +242,12 @@ export class FilesPage {
   // the page lists, as the chat bar's chip does, and the list shows only the files in the formats chosen; the chat that
   // opened the page reads its chips again.
   async toggleFormat(label: string): Promise<void> {
+    const fidelities = this.worked(this.listed, this.state.practices)
+    const chip = this.state.formatChoices.find(choice => choice.label === label)
+    if (!chip) return
     let answered: Awaited<ReturnType<FormatChips['toggle']>> = null
     const isChosen = await this.attemptQuietly(`The ${label} format was not chosen`, async () => {
-      answered = await this.formatChips.toggle(label, this.worked(this.listed, this.state.practices))
+      answered = await this.formatChips.toggle(label, fidelities)
     })
     const formatChoices = answered as Awaited<ReturnType<FormatChips['toggle']>>
     if (!isChosen || !formatChoices) return

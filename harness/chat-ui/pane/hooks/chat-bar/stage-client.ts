@@ -89,6 +89,8 @@ export async function showStagesHeld($: EngineInterface, stages: string[] | null
 export async function toggleStage($: EngineInterface, shown: string[], stage: StageClient): Promise<void> {
   if (!stage.canShow) return
   const next = shown.includes(stage.stage) ? shown.filter(each => each !== stage.stage) : [...shown, stage.stage]
+  // The button redraws at once; cdd's answer then replaces it.
+  await showStagesHeld($, next)
   const answer = await post($, { chat: await $.session.id(), operation: 'show-stages', body: { shown_stages: next } })
   await showStagesHeld($, (JSON.parse(answer.text) as { shown_stages: string[] }).shown_stages)
 }

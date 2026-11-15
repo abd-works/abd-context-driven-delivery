@@ -64,6 +64,8 @@ export async function toggleFormat($: EngineInterface, chatBar: ChatBarClient, c
   const chip = chips.choices.find(choice => choice.label === label)
   if (!chip) return
   const key = keyOf(chatBar)
+  // The chip redraws at once, flipped; cdd's answer then replaces it.
+  await update($, formatChoices, () => ({ key, choices: chips.choices.map(choice => (choice.label === label ? { ...choice, is_chosen: !chip.is_chosen } : choice)) }))
   const choices = await callTool<FormatChoiceJson[]>($, 'ticket.choose_formats', { ticket: chatBar.ticketName, fidelities: fidelitySlugsOf(chatBar), label, is_chosen: !chip.is_chosen })
   CACHE.set(key, choices)
   await update($, formatChoices, () => ({ key, choices }))
