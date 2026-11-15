@@ -3,11 +3,6 @@
   "title": "file-manager",
   "scope": "feature",
   "workpath": "harness",
-<<<<<<< HEAD
-  "outputs": {
-    "stories": {
-      "root": ".context/stories"
-=======
   "branch": "file-manager",
   "worktree": "C:\\dev\\abd-cdd-file-manager",
   "guidance": {
@@ -44,7 +39,11 @@
       "formats": {
         "behavior": []
       }
->>>>>>> main
+    }
+  },
+  "outputs": {
+    "stories": {
+      "root": ".context/stories"
     }
   }
 }
