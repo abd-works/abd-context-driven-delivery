@@ -7,6 +7,7 @@ practice's default folder when it records none. The session's own folder under `
 from __future__ import annotations
 
 import os
+import time
 import re
 from pathlib import Path
 from typing import Annotated
@@ -237,18 +238,7 @@ class FileManager:
         base = start.joinpath(*parts[:fixed])
         searched = parts[fixed:]
         matching = self._glob_expression("/".join(searched))
-        # A pattern without ** names files a fixed number of folders down, so the walk stops there: `*.md` on a large
-        # checkout reads its top folder alone instead of every folder in it.
-        deepest = None if "**" in searched else len(searched) - 1
-        base_text = str(base)
-        found = []
-        for folder, folders, files in os.walk(base_text):
-            # Plain strings here: building a Path for every file in the repository made the search take a second.
-            inside = folder[len(base_text):].strip("\\/").replace("\\", "/")
-            depth = inside.count("/") + 1 if inside else 0
-            folders[:] = [] if deepest is not None and depth >= deepest else [name for name in folders if holds_work(name)]
-            found += [Path(folder, name) for name in files if matching.fullmatch(f"{inside}/{name}" if inside else name)]
-        return sorted(found)
+        return sorted(Path(base, inside) for inside in _files_under(str(base)) if matching.fullmatch(inside))
 
     def _inside(self, path: str) -> Path:
         """The path resolved from the workpath; a page names paths, so one outside every root is refused."""
@@ -271,3 +261,25 @@ class FileManager:
         parts = re.split(r"(\*\*/|\*\*|\*|\?)", pattern)
         wildcards = {"**/": "(?:.*/)?", "**": ".*", "*": "[^/]*", "?": "[^/]"}
         return re.compile("".join(wildcards.get(part, re.escape(part)) for part in parts))
+
+
+# How long the files under a folder are kept before it is walked again: a page lists many fidelities at once, each
+# searching its patterns, and walking the checkout once for each pattern made fifteen fidelities take five seconds.
+FILES_KEPT_SECONDS = 3.0
+_FILES_UNDER: dict[str, tuple[float, list[str]]] = {}
+
+
+def _files_under(base: str) -> list[str]:
+    """Every file under base that holds someone's work, as a path from base with forward slashes, walked once and kept
+    for FILES_KEPT_SECONDS. Installed packages and hidden folders hold no one's work, so the walk skips them."""
+    held = _FILES_UNDER.get(base)
+    if held is not None and time.monotonic() - held[0] < FILES_KEPT_SECONDS:
+        return held[1]
+    files = []
+    for folder, folders, names in os.walk(base):
+        # Plain strings here: building a Path for every file in the repository made the search take a second.
+        inside = folder[len(base):].strip("\\/").replace("\\", "/")
+        folders[:] = [name for name in folders if holds_work(name)]
+        files += [f"{inside}/{name}" if inside else name for name in names]
+    _FILES_UNDER[base] = (time.monotonic(), files)
+    return files
