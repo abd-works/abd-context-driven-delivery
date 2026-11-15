@@ -51,7 +51,7 @@ The *Files app* shows the files a link names and turns a person's reading into w
 
 ### FilesPageView, PracticeTogglesView, CommentToolbarView (`files/files-page-view.tsx`)
 
-- The page drawn: the header with the ticket and one toggle per practice, filled in its colour while on and an outline while off; the file list; the open file with Send all open comments and Clear processed above it; the toasts.
+- The page drawn, in the dark engineering look unless the person turned on the light one with the header's ☀ (`files/files-theme.ts`, kept in this browser): the header with the ticket and one toggle per practice, filled in its colour while on and an outline while off; the file list; the open file with Send all open comments and Clear processed above it; the toasts.
 
 ### Session, PracticeSessionOutput (Python, `space/session`)
 
