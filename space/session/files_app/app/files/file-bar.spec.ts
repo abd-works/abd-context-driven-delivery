@@ -1,5 +1,5 @@
 // Switch File Bar Between Folders And List, as
-// space/session/files_app/.context/review-files-in-files-app/review_files_in_files_app_story.test.md writes it. Only the
+// harness/.context/stories/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md writes it. Only the
 // page shows it: the session answers the same files either way, so it has no step in the Python story tiers.
 import { describe, expect, it } from 'vitest'
 

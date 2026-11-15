@@ -39,7 +39,7 @@ section: body
 
 #### Scenario: Open the files beside the chat, never in it
 
-Moved (2026-11-14) to `space/session/files_app/.context/review-files-in-files-app/review_files_in_files_app_story.test.md`, Open Stage Files From Chat Bar.
+Moved (2026-11-14) to `harness/.context/stories/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md`, Open Stage Files From Chat Bar.
 
 ## Story: Read Validation Report From Chat Bar
 

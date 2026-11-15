@@ -15,8 +15,7 @@
           "python"
         ],
         "model": [
-          "python",
-          "markdown"
+          "drawio"
         ]
       }
     },
@@ -36,7 +35,7 @@
       }
     },
     "ddd": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
         "bounded_context": [],
         "tactics": [
@@ -48,7 +47,7 @@
       }
     },
     "ux": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
         "ia": [
           "drawio"
@@ -76,5 +75,13 @@
         ]
       }
     }
+  },
+  "guidance": {
+    "stages": [
+      "discovery",
+      "specification",
+      "implementation"
+    ],
+    "version": 53
   }
 }

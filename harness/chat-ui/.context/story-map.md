@@ -95,7 +95,7 @@ Mirrors Move Ticket, forward only: once every fidelity of the stage is reviewed,
 
 ### (S) Person --> List Session Files, View Fidelity Files
 
-Moved (2026-11-14) to the Files app's map ([Review Files In Files App](../../../space/session/files_app/.context/story-map.md)): the files button opens the Files app beside the chat on the shown stage's files, with a toggle for each practice kept in sync with the bar; the session name opens it on the session's folder. A fidelity's red violation count still opens its report in the board's report panel.
+Moved (2026-11-14) to the main map's file viewer epic ([Review Generated Work In File Viewer](../../.context/stories/story-map.md)): the files button opens the Files app beside the chat on the shown stage's files, with a toggle for each practice kept in sync with the bar; the session name opens it on the session's folder. A fidelity's red violation count still opens its report in the board's report panel.
 
 ---
 

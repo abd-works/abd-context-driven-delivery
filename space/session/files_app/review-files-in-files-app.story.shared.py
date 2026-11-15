@@ -1,9 +1,9 @@
 """Review Files In Files App: the shared scenarios the Python tiers replay.
 
-Scenarios: space/session/files_app/.context/review-files-in-files-app/review_files_in_files_app_story.test.md.
+Scenarios: harness/.context/stories/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md.
 Realizations: harness/.context/stories/review-work-in-board-files-scenario-realization.md, written for the board's files
 panel when these scenarios lived there; the session operations they name are the ones the Files app calls.
-Map: space/session/files_app/.context/story-map.md, (E) Review Files In Files App. Moved here from
+Map: harness/.context/stories/story-map.md, (E) Review Generated Work In File Viewer. Moved here from
 space/kanban/review-files-in-viewer.story.shared.py on 2026-11-14, when the Files app became the one place files are viewed.
 
 Steps reach the session only through the namespace a tier hands them (`world.Ticket`, `world.Chat`), so the domain spec

@@ -256,3 +256,37 @@
 2026-11-15T18:40:48Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-7924
 2026-11-15T18:40:55Z tool graph.practice_names
 2026-11-15T18:40:55Z tool graph.load_practice_roots
+2026-11-15T18:41:19Z tool graph.inventory
+2026-11-15T18:41:19Z tool graph.filter_choices
+2026-11-15T18:41:21Z tool graph.explorer_trees
+2026-11-15T18:42:25Z tool graph.practice_names
+2026-11-15T18:42:25Z tool graph.load_practice_roots
+2026-11-15T18:42:44Z tool graph.inventory
+2026-11-15T18:42:44Z tool graph.filter_choices
+2026-11-15T18:42:46Z tool graph.explorer_trees
+2026-11-15T18:43:41Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-8033
+2026-11-15T18:47:34Z error session.guidance_selection_after C:\dev\abd-context-driven-delivery\.sessions\release-2\session.err 2007 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-8156
+2026-11-15T18:47:59Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-8165
+2026-11-15T18:48:04Z tool graph.practice_names
+2026-11-15T18:48:04Z tool graph.load_practice_roots
+2026-11-15T18:48:22Z tool graph.inventory
+2026-11-15T18:48:22Z tool graph.filter_choices
+2026-11-15T18:48:23Z tool graph.explorer_trees
+2026-11-15T18:49:37Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-8216
+2026-11-15T18:49:43Z tool graph.practice_names
+2026-11-15T18:49:44Z tool graph.load_practice_roots
+2026-11-15T18:50:00Z tool graph.inventory
+2026-11-15T18:50:00Z tool graph.filter_choices
+2026-11-15T18:50:02Z tool graph.explorer_trees
+2026-11-15T18:51:10Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-8279
+2026-11-15T18:51:16Z tool graph.practice_names
+2026-11-15T18:51:16Z tool graph.load_practice_roots
+2026-11-15T18:51:38Z tool graph.inventory
+2026-11-15T18:51:38Z tool graph.filter_choices
+2026-11-15T18:51:40Z tool graph.explorer_trees
+2026-11-15T18:56:11Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-8436
+2026-11-15T18:56:18Z tool graph.practice_names
+2026-11-15T18:56:18Z tool graph.load_practice_roots
+2026-11-15T18:56:39Z tool graph.inventory
+2026-11-15T18:56:39Z tool graph.filter_choices
+2026-11-15T18:56:40Z tool graph.explorer_trees

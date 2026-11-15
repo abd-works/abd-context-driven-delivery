@@ -67,6 +67,50 @@ describe('cdd connection', () => {
     })
   })
 
+  // A repin restarts the cdd server: for a few seconds nothing answers on its port, and a call already running is cut off.
+  describe('that makes a call while the cdd server restarts', () => {
+    function refused(): TypeError {
+      return new TypeError('fetch failed', { cause: Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:47800'), { code: 'ECONNREFUSED' }) })
+    }
+
+    function serverDownOnce(failure: () => Error): number[] {
+      const asks: number[] = []
+      vi.stubGlobal('fetch', async (_url: string, init: { body: string }) => {
+        const { id } = JSON.parse(init.body) as { id: number }
+        asks.push(id)
+        if (asks.length === 1) throw failure()
+        return Response.json({ jsonrpc: '2.0', id, result: { content: [{ text: '"answered"' }] } })
+      })
+      return asks
+    }
+
+    describe('with nothing answering on its port', () => {
+      it('should answer the call once the server is back', async () => {
+        serverDownOnce(refused)
+        expect(await connectionFromBeforeRestart().call('graph.practice_names', {})).toBe('answered')
+      })
+
+      it('should send the call a second time', async () => {
+        const asks = serverDownOnce(refused)
+        await connectionFromBeforeRestart().call('graph.practice_names', {})
+        expect(asks.length).toBe(2)
+      })
+    })
+
+    describe('with the call cut off while it was answered', () => {
+      it('should fail the call saying the server stopped while answering it', async () => {
+        serverDownOnce(() => new TypeError('terminated'))
+        await expect(connectionFromBeforeRestart().call('ticket.move_next', {})).rejects.toThrow('stopped')
+      })
+
+      it('should send the call only once, since it may already have run', async () => {
+        const asks = serverDownOnce(() => new TypeError('terminated'))
+        await connectionFromBeforeRestart().call('ticket.move_next', {}).catch(() => null)
+        expect(asks.length).toBe(1)
+      })
+    })
+  })
+
   // The server sends a call's answer as a stream of events, and a large answer arrives in many small pieces.
   describe('that is answered as a stream of events', () => {
     const PIECE_CHARACTERS = 4_096
