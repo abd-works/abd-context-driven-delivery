@@ -9,7 +9,7 @@ import { GraphClient } from './graph/GraphClient';
 import { reasonOf } from './graph/graph-failures';
 import { api, failures } from './graph/graph-page';
 import { GraphView } from './graph/GraphView';
-import { childrenOf, isRule, ruleHits, selectionForRule, type GraphSelection, type TreeItem } from './graph/graph-selection';
+import { childrenOf, isRule, ruleHits, selectionForRule, withBranch, type GraphSelection, type TreeItem } from './graph/graph-selection';
 import { SourceView, type SourceRule } from './source/SourceView';
 import { normalizeInventoryBundle } from './inventory-bundle';
 import { overlayPathLabel } from './labels/overlay-labels';
@@ -44,6 +44,8 @@ export function App() {
   const [loadedFolder, setLoadedFolder] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [selection, setSelection] = useState<FilterSelection>(EMPTY);
+  // The filter the trees on the page were read with, which a branch opened later is read with too.
+  const shownFilter = useRef<FilterSelection>(EMPTY);
   const [trees, setTrees] = useState<ExplorerEntryData[]>([]);
   const [practices, setPractices] = useState<string[]>([]);
   const [nodeTypes, setNodeTypes] = useState<string[]>([]);
@@ -287,7 +289,18 @@ export function App() {
   // Python's Filter keeps the nodes the selection matches, with the way to each, in every practice it names.
   async function showFilter(resolved: FilterSelection) {
     setSelection(resolved);
+    shownFilter.current = resolved;
     setTrees((await graphs.explorerTrees(nodeFilter(resolved))) ?? []);
+  }
+
+  // The entries a closed entry left out, read with the filter the trees were read with, put in its place.
+  async function openBranch(nodeId: string) {
+    try {
+      const branch = await graphs.explorerBranch(nodeId, nodeFilter(shownFilter.current));
+      if (branch) setTrees((current) => withBranch(current, branch));
+    } catch (cause) {
+      failures.fail(reasonOf(cause), `Opening ${nodeId} in the Graph app's tree`);
+    }
   }
 
   async function applyFilter(next: FilterSelection) {
@@ -411,6 +424,7 @@ export function App() {
             selectedId={selectedId}
             activeRule={activeRule}
             onSelect={(selection) => void choose(selection)}
+            onOpenBranch={openBranch}
           />
           <SourceView
             source={source}

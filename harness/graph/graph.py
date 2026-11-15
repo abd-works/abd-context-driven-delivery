@@ -813,11 +813,22 @@ class GraphExplorer:
 
     def explorer_trees(self, request: dict) -> list[ExplorerEntry]:
         """The explorer tree of each practice the narrowed filter names, or of every open practice when it names none,
-        keeping each practice's root, the nodes the filter matches, and the nodes on the way to them."""
+        keeping each practice's root, the nodes the filter matches, and the nodes on the way to them: each root with the
+        entries below it, which are closed."""
         wanted = self.filter.narrowed_by(request)
         opened = self.graph.practices.opened
         named = [opened[key] for key in wanted.practices if key in opened] if wanted.practices else list(opened.values())
-        return [tree for practice in named if (tree := practice.reading.in_graph.root.serialize().kept_by(wanted)) is not None]
+        return [tree.opened() for practice in named if (tree := practice.reading.in_graph.root.serialize().kept_by(wanted)) is not None]
+
+    def explorer_branch(self, node_id: str, request: dict) -> ExplorerEntry | None:
+        """The node node_id's entry as the narrowed filter keeps it, with the entries below it, which are closed; none
+        for an id the graph no longer holds. The node is written at its home place, under its parent, where its children
+        are."""
+        node = self.graph.node(node_id)
+        if node is None:
+            return None
+        kept = node.serialize(via=node.parent).kept_by(self.filter.narrowed_by(request))
+        return kept.opened() if kept is not None else ExplorerEntry(node)
 
 
 class PracticeNodes:
@@ -1546,5 +1557,11 @@ class Graph:
     @mcp
     @agent_tool
     def explorer_trees(self, filter: dict | None = None) -> list[ExplorerEntry]:
-        """Return the explorer tree of each practice the filter names, or of every loaded practice when it names none, keeping each practice's root, the nodes the filter matches with their rules, and the nodes on the way to them. filter takes the keys return_nodes takes."""
+        """Return the explorer tree of each practice the filter names, or of every loaded practice when it names none, keeping each practice's root, the nodes the filter matches with their rules, and the nodes on the way to them. Each root comes with the entries below it, closed: each keeps its rules and says how many entries below it were left out (children_left_out), which explorer_branch answers. filter takes the keys return_nodes takes."""
         return self.explorer.explorer_trees(filter or {})
+
+    @mcp
+    @agent_tool
+    def explorer_branch(self, node_id: str, filter: dict | None = None) -> ExplorerEntry | None:
+        """Return the node node_id's explorer entry as the filter keeps it, with the entries below it, closed as explorer_trees closes them; None for an id the graph no longer holds. filter takes the keys return_nodes takes, the same filter the tree was read with."""
+        return self.explorer.explorer_branch(node_id, filter or {})

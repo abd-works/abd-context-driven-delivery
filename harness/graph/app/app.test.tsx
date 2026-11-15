@@ -352,6 +352,14 @@ it('should leave every practice collapsed until it is opened', async () => {
   expect(screen.queryByText('AccountCredentials')).toBeNull();
 });
 
+it('should read the entries a closed entry left out when it is opened', async () => {
+  const user = userEvent.setup();
+  await openFolder(user);
+  await expand(user, 'clean_engineering');
+  await expand(user, 'account');
+  expect(calls.filter((call) => call.operation === 'explorer_branch').map((call) => call.body.node_id)).toEqual(['module-1']);
+});
+
 it('should show the customer aggregate with its entity, repository, and value objects', async () => {
   const user = userEvent.setup();
   await openFolder(user);
@@ -843,10 +851,14 @@ async function openFolder(user: UserEvent) {
   await screen.findByRole('button', { name: 'Expand clean_engineering' });
 }
 
+// Opens an entry and waits for the branch the page reads for it.
 async function expand(user: UserEvent, name: string) {
-  const closed = screen.queryByRole('button', { name: `Expand ${name}` });
-  if (closed) {
-    await user.click(closed);
+  const shut = screen.queryByRole('button', { name: `Expand ${name}` });
+  if (shut) {
+    await user.click(shut);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
   }
 }
 
@@ -900,7 +912,13 @@ function answer(operation: string, body: Record<string, unknown>): unknown {
   if (operation === 'explorer_trees') {
     const picked = body.filter as { practices?: string[]; types?: string[]; violations?: boolean };
     shownViolations = Boolean(picked.violations);
-    return treesFor(picked.practices ?? [], picked.types ?? [], shownViolations);
+    return treesFor(picked.practices ?? [], picked.types ?? [], shownViolations).map(opened);
+  }
+  if (operation === 'explorer_branch') {
+    const picked = body.filter as { practices?: string[]; types?: string[]; violations?: boolean };
+    const trees = treesFor(picked.practices ?? [], picked.types ?? [], Boolean(picked.violations));
+    const home = trees.flatMap((tree) => [...walked(tree)]).find((entry) => entry.node_id === body.node_id && entry.children.length > 0);
+    return home ? opened(home) : null;
   }
   if (operation === 'source') {
     const nodeId = String(body.node_id);
@@ -1015,7 +1033,23 @@ function violationTree(node: Entry): Entry | null {
 }
 
 // An explorer tree item as the fixtures write it: an entry, a rules collection, or a rule with its status.
-type Entry = { type: string; name: string; node_id: string; children: Entry[]; status?: string };
+type Entry = { type: string; name: string; node_id: string; children: Entry[]; status?: string; children_left_out?: number };
+
+// An entry as Python's explorer answers send it: the entries below it, each closed, keeping its rules and counting the
+// entries it left out, which explorer_branch answers.
+function opened(entry: Entry): Entry {
+  return { ...entry, children: entry.children.map((child) => (child.type === 'rules' ? child : closed(child))) };
+}
+
+function closed(entry: Entry): Entry {
+  const rules = entry.children.filter((child) => child.type === 'rules');
+  return { ...entry, children: rules, children_left_out: entry.children.length - rules.length };
+}
+
+function* walked(entry: Entry): Generator<Entry> {
+  yield entry;
+  for (const child of entry.children) yield* walked(child);
+}
 
 // Graph.explorer_trees as Python answers it: each named practice's tree, every practice's when none is named, keeping
 // its root, the nodes the filter matches with their rules, and the nodes on the way to them.

@@ -12,6 +12,22 @@ export function childrenOf(item: TreeItem): TreeItem[] {
   return item.children;
 }
 
+// How many entries below an explorer entry its answer left out; a rules collection and a rule leave none out.
+export function childrenLeftOut(item: TreeItem): number {
+  return 'children_left_out' in item ? item.children_left_out : 0;
+}
+
+// The trees with branch in place of the closed entry it opens: the one that left its children out, its home place.
+export function withBranch(trees: ExplorerEntryData[], branch: ExplorerEntryData): ExplorerEntryData[] {
+  return trees.map((tree) => opening(tree, branch) as ExplorerEntryData);
+}
+
+function opening(item: TreeItem, branch: ExplorerEntryData): TreeItem {
+  if (item.node_id === branch.node_id && childrenLeftOut(item) > 0) return branch;
+  if (isRule(item) || !('children_left_out' in item)) return item;
+  return { ...item, children: item.children.map((child) => opening(child, branch)) as ExplorerEntryData['children'] };
+}
+
 export type GraphSelection = {
   nodeId: string;
   rule?: string;
