@@ -76,5 +76,11 @@
         ]
       }
     }
+  },
+  "guidance": {
+    "stages": [
+      "implementation"
+    ],
+    "version": 1
   }
 }
