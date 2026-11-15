@@ -338,12 +338,6 @@ class Session:
         entries = [paths] if isinstance(paths, (str, Path)) else list(paths)
         return load_document(content, [str(self.path_named(entry)) for entry in entries])
 
-    @property
-    @data_field(key="workpath")
-    def workpath_from_project(self) -> str:
-        """The folder the session works in, as a path from the project; empty for the whole repository."""
-        return self.from_project(self.work_root)
-
     def from_project(self, path: Path | str) -> str:
         """path as written from the project's top, the way the board names every file and folder."""
         return self.repo.path_from_top(path)
@@ -495,13 +489,15 @@ class Session:
         self.save_fields(name=self.name, workpath=self.workpath_from_checkout, repo_path=str(self.repo_path))
 
     @property
+    @data_field(key="workpath")
     def workpath_from_checkout(self) -> str:
-        """The session's root as saved in its session.json: from its checkout's top, so it can never name a folder in
+        """The folder the session works in, as its session.json saves it and the board shows it: from its checkout's
+        top, so a ticket working in its own worktree shows the folder it chose there, and it can never name a folder in
         another checkout of the repository; empty for the whole checkout, and absolute when it lies outside it."""
         root = self.work_root
         checkout = self._resolved(self.repo_path)
         if not root.is_relative_to(checkout):
-            return str(root)
+            return root.as_posix()
         relative = root.relative_to(checkout).as_posix()
         return "" if relative == "." else relative
 

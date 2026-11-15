@@ -2928,7 +2928,7 @@ One named piece of work in a project, kept in `.sessions/{name}/`. It holds wher
 + session_file_from_project: str
 + work_root: Path
 + << composition >> graph: Graph
-+ workpath_from_project: str
++ workpath_from_checkout: str
 + title: str
 + scope: str
 + parent: str
