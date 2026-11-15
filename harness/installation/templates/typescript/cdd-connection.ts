@@ -28,6 +28,13 @@ export class CddNotConnectedError extends Error {
 // The server answered that it no longer knows this connection's session: it ran nothing.
 class SessionGoneError extends CddNotConnectedError {}
 
+// Nothing answered on the server's port, as for the seconds a repin restarts it: the call never reached a server.
+class ServerNotAnsweringError extends CddNotConnectedError {}
+
+// The connection refusals of Node's fetch: nothing was listening, so the request was never sent.
+const REFUSED = 'ECONNREFUSED'
+const isRefused = (failure: unknown): boolean => (failure as { cause?: { code?: string } } | null)?.cause?.code === REFUSED
+
 export class CddAnswerUnreadableError extends Error {
   constructor(request: number, detail: string) {
     super(`The cdd server's answer to request ${request} could not be read: ${detail}`)
@@ -102,10 +109,12 @@ export class CddConnection {
 
   // A call that outlives the server's wait is still running there and answers so; asking again with the same arguments
   // waits for that same run, so the page gets the call's result, never the notice. A server that no longer knows this
-  // connection's session (restarted) is asked once more on a new session.
+  // connection's session (restarted), or that did not answer at all (restarting), ran nothing, so the call is sent once
+  // more on a new session, whose connect script starts the server when none answers. A call cut off while it was
+  // answered may already have run, so it is never sent again.
   private async answerText(tool: string, args: Record<string, unknown>): Promise<string> {
     const result = (await this.calledOnce(tool, args).catch(failure => {
-      if (failure instanceof SessionGoneError) return this.calledOnce(tool, args)
+      if (failure instanceof SessionGoneError || failure instanceof ServerNotAnsweringError) return this.calledOnce(tool, args)
       throw failure
     })) as ToolResult
     const text = result.content?.[0]?.text
@@ -187,7 +196,8 @@ export class CddConnection {
       })
     } catch (failure) {
       this.session = null
-      throw new CddNotConnectedError(failure instanceof Error ? failure.message : String(failure))
+      if (isRefused(failure)) throw new ServerNotAnsweringError(`nothing answered at ${session.url}`)
+      throw this.stopped(failure)
     }
     // A restarted server no longer knows this session, so the next call opens a new one.
     if (response.status === 404 && session.headers[SESSION_HEADER]) {
@@ -198,13 +208,24 @@ export class CddConnection {
     return response
   }
 
+  // A request the server took and then stopped answering: cut off, as when a repin restarts the server, or past the
+  // ten-minute limit. It may already have run, so the failure says so and the call is not sent again.
+  private stopped(failure: unknown): CddNotConnectedError {
+    const reason = failure instanceof Error ? failure.message : String(failure)
+    if (failure instanceof Error && failure.name === 'TimeoutError') return new CddNotConnectedError(`no answer within ${LONGEST_TOOL_MILLISECONDS / 60_000} minutes (${reason})`)
+    return new CddNotConnectedError(`the cdd server stopped while answering, as when a repin restarts it; the call may have run, so it was not sent again (${reason})`)
+  }
+
   // The server answers a request as plain JSON or as a stream of events: progress reports first, the reply last.
   private async replyTo(id: number, response: Response): Promise<Message> {
     if (!(response.headers.get('content-type') ?? '').includes('text/event-stream')) return (await response.json()) as Message
     const reader = response.body!.pipeThrough(new TextDecoderStream()).getReader()
     const events = new EventStream()
     for (;;) {
-      const { value, done } = await reader.read()
+      const { value, done } = await reader.read().catch(failure => {
+        this.session = null
+        throw this.stopped(failure)
+      })
       if (done) throw new CddNotConnectedError(`the server closed the stream before answering request ${id}`)
       for (const message of events.read(value).map(event => this.messageIn(id, event))) {
         if (message?.method === 'notifications/progress') this.reported(message)
