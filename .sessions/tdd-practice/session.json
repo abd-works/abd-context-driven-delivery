@@ -20,7 +20,9 @@
     "bdd": {
       "enabled": true,
       "formats": {
-        "realization": [],
+        "realization": [
+          "markdown"
+        ],
         "development": [
           "python"
         ]
@@ -28,7 +30,9 @@
     },
     "ddd": {
       "formats": {
-        "model": [],
+        "model": [
+          "markdown"
+        ],
         "tactics": [
           "python"
         ]
@@ -48,6 +52,6 @@
       "specification",
       "implementation"
     ],
-    "version": 18
+    "version": 19
   }
 }
