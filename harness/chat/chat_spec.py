@@ -139,6 +139,9 @@ with description("a chat") as self:
         with it("should name no folder while its mod has sent none"):
             expect(Chat.list()[0].folder).to(equal(""))
 
+        with it("should have no stage chosen before its chat bar or a page chose one"):
+            expect(Chat.load(CHAT).show().is_stage_chosen).to(equal(False))
+
         with it("should have no fidelity selected while its chat bar has selected none"):
             expect(Chat.load(CHAT).show().selected_fidelities).to(equal([]))
 
@@ -169,6 +172,11 @@ with description("a chat") as self:
             with it("should keep them through its next check-in"):
                 Chat.load(CHAT).check_in(is_busy=False, name="repo · first words")
                 expect(Chat.load(CHAT).show().shown_stages).to(equal(["Discovery", "Implementation"]))
+
+            with it("should say the stages were chosen once every one is turned off"):
+                Chat.load(CHAT).show_stages([])
+                shown = Chat.load(CHAT).show()
+                expect([shown.shown_stages, shown.is_stage_chosen]).to(equal([[], True]))
 
         # The board finds a ticket's chat by the worktree the chat works in.
         with context("from the folder it works in"):

@@ -93,8 +93,17 @@ async function failed($: EngineInterface, chat: string, command: ChatCommandData
 export async function readSelection($: EngineInterface, chat: string): Promise<void> {
   const shown = JSON.parse((await post($, { chat, operation: 'show', body: {} })).text) as ChatData
   await showSelected($, shown.selected_fidelities)
-  await showStagesHeld($, shown.shown_stages)
+  await showStagesHeld($, shown.is_stage_chosen ? shown.shown_stages : null)
   await listStages($, chat, shown)
+  await startStageChoice($, chat, shown)
+}
+
+// Before the bar or a page chose the stages shown, the bar starts the choice at the session's own stage, so turning
+// every stage off later shows none, here and in a page the chat opened.
+async function startStageChoice($: EngineInterface, chat: string, held: ChatData): Promise<void> {
+  const chatBar = await currentChatBar($)
+  if (held.is_stage_chosen || !chatBar.ticketName || !chatBar.shownStages.length) return
+  await post($, { chat, operation: 'show-stages', body: { shown_stages: chatBar.shownStages } })
 }
 
 // cdd holds each stage of the ticket with its fidelities for a page the chat opened, such as the Files app, whose stage

@@ -19,6 +19,9 @@ export type FilesState = {
   // page and its chat bar alike; none shown, the stage the page was opened on.
   stages: Record<string, string[]>
   shownStages: string[]
+  // Whether the chat bar or this page has chosen the stages shown, none included; before that, the stage the page was
+  // opened on shows.
+  isStageChosen: boolean
   // What the open file is read with: its folds and broken rules from the session's graph, and the graph holding the
   // whole working copy so rules across files hold too. Both off by default, so browsing never reads the graph.
   reads: { rules: boolean; crossFile: boolean }
@@ -38,6 +41,7 @@ export const NO_FILES: FilesState = {
   formatChoices: [],
   stages: {},
   shownStages: [],
+  isStageChosen: false,
   reads: { rules: false, crossFile: false },
   byFidelity: [],
   entries: [],

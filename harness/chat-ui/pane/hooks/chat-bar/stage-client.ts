@@ -7,8 +7,9 @@ import { post } from '../board-chat/board'
 import { clearChosenAction } from './action-picker-client'
 
 // The stages shown for the chat, as cdd holds them (chat.show_stages): the one choice the bar's stage buttons and a page
-// the chat opened, such as the Files app, both show and change. None held, the bar shows the session's own stage.
-const shownStages = atom({ plugin: 'cdd-board', key: 'shownStages' } as const, [] as string[])
+// the chat opened, such as the Files app, both show and change; null before either chose, when the bar starts the choice
+// at the session's own stage. The atom only keeps what cdd last answered, for drawing.
+const shownStages = atom({ plugin: 'cdd-board', key: 'shownStages' } as const, null as string[] | null)
 
 // One glyph for each column board.overview sends, standing for the canvas's icons: Backlog, Discovery (magnifier),
 // Specification (document), Implementation (gear), Complete (check). A column the canvas has no icon for shows a dot.
@@ -70,21 +71,21 @@ export class StageClient {
 }
 
 // Atom shownStages, declared in pane/types/index.d.ts and kept in this file: the stages whose fidelities the dots show.
-export async function shownStageNames($: EngineInterface): Promise<string[]> {
-  return (await read($, shownStages)) ?? []
+export async function shownStageNames($: EngineInterface): Promise<string[] | null> {
+  return (await read($, shownStages)) ?? null
 }
 
 // The stages cdd holds for the chat, as chat.show or chat.show_stages answered them; a change from elsewhere, such as a
 // stage pressed in the Files app, drops an action picked before.
-export async function showStagesHeld($: EngineInterface, stages: string[]): Promise<void> {
+export async function showStagesHeld($: EngineInterface, stages: string[] | null): Promise<void> {
   const held = await shownStageNames($)
-  if (held.length === stages.length && held.every(stage => stages.includes(stage))) return
+  if (JSON.stringify(held) === JSON.stringify(stages)) return
   await update($, shownStages, () => stages)
   await clearChosenAction($)
 }
 
 // A press on a stage button shows that stage's fidelities beside those already shown, or no longer; the bar shows the
-// stages cdd answers. With none left, the session's own stage shows.
+// stages cdd answers. With none left, none shows.
 export async function toggleStage($: EngineInterface, shown: string[], stage: StageClient): Promise<void> {
   if (!stage.canShow) return
   const next = shown.includes(stage.stage) ? shown.filter(each => each !== stage.stage) : [...shown, stage.stage]

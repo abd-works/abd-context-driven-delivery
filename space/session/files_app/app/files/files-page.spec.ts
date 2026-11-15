@@ -18,6 +18,7 @@ class FakeFilesServer implements CddApi {
   // The stages cdd holds for the chat: each with its fidelities, and those shown; none shown, the link's stage.
   stages: Record<string, string[]> = {}
   shownStages: string[] = []
+  isStageChosen = false
   // The session's format chips for the page's fidelities, markdown and diagram, none chosen.
   formats = [
     { label: 'markdown', formats: ['markdown'], offered: 2, made: 2, is_chosen: false },
@@ -36,8 +37,11 @@ class FakeFilesServer implements CddApi {
       return this.formats as Result
     }
     if (path.startsWith('/chat/') && path.endsWith('/select')) this.selected = [...(body.selected_fidelities as string[])]
-    if (path.startsWith('/chat/') && path.endsWith('/show-stages')) this.shownStages = [...(body.shown_stages as string[])]
-    if (path.startsWith('/chat/') && (path.endsWith('/show') || path.endsWith('/select') || path.endsWith('/show-stages'))) return { id: 'chat-1', name: 'release-2', is_busy: false, folder: '', selected_fidelities: this.selected, shown_stages: this.shownStages, stages: this.stages } as Result
+    if (path.startsWith('/chat/') && path.endsWith('/show-stages')) {
+      this.shownStages = [...(body.shown_stages as string[])]
+      this.isStageChosen = true
+    }
+    if (path.startsWith('/chat/') && (path.endsWith('/show') || path.endsWith('/select') || path.endsWith('/show-stages'))) return { id: 'chat-1', name: 'release-2', is_busy: false, folder: '', selected_fidelities: this.selected, shown_stages: this.shownStages, stages: this.stages, is_stage_chosen: this.isStageChosen } as Result
     if (path.endsWith('/show')) return { name: 'release-2', session_file: SESSION, practices: this.practices } as Result
     if (path.endsWith('/enable')) {
       const name = decodeURIComponent(path.split('/')[3] ?? '')
@@ -383,6 +387,13 @@ describe('Show Stages In Files App', () => {
       it('should show both stages for the chat, as its chat bar shows them', async () => {
         const { server } = await withSpecification()
         expect(server.shownStages).toEqual(['Discovery', 'Specification'])
+      })
+
+      it('should list no file once both are turned off', async () => {
+        const { page } = await withSpecification()
+        await page.toggleStage('Discovery')
+        await page.toggleStage('Specification')
+        expect([page.shownStageNames, page.state.entries]).toEqual([[], []])
       })
 
       it("should list both stages' files", async () => {

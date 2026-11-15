@@ -43,11 +43,11 @@ export const filesShown = (fidelities: FidelityFiles[], practices: PracticeSessi
   return eachOnce(byFidelity.filter(isShown).flatMap(inFormat))
 }
 
-// The fidelities of the stages shown, in the board's order; none shown, those the link names, the stage the page was
-// opened on.
-export const fidelitiesOfStages = (stages: Record<string, string[]>, shown: string[], linked: string[]): string[] => {
-  const showing = Object.keys(stages).filter(stage => shown.includes(stage))
-  return showing.length ? showing.flatMap(stage => stages[stage] ?? []) : linked
+// The fidelities of the stages shown, in the board's order, none when every stage is turned off; before the chat bar or
+// the page chose, those the link names, the stage the page was opened on.
+export const fidelitiesOfStages = (stages: Record<string, string[]>, shown: string[], linked: string[], isChosen = true): string[] => {
+  if (!isChosen || !Object.keys(stages).length) return linked
+  return Object.keys(stages).filter(stage => shown.includes(stage)).flatMap(stage => stages[stage] ?? [])
 }
 
 // Each file once, in the order its fidelities and formats send them.
@@ -120,13 +120,13 @@ export class FilesPage {
 
   // The fidelities whose files the page lists: those of the stages shown, else the ones the link names.
   get listed(): string[] {
-    return fidelitiesOfStages(this.state.stages, this.state.shownStages, this.link.fidelities)
+    return fidelitiesOfStages(this.state.stages, this.state.shownStages, this.link.fidelities, this.state.isStageChosen)
   }
 
   // The files shown from state: of the fidelities listed, their practices or the chat bar's selection, and the formats
   // chosen.
   private shownFrom(state: FilesPage['state']): FileEntryData[] {
-    const listed = fidelitiesOfStages(state.stages, state.shownStages, this.link.fidelities)
+    const listed = fidelitiesOfStages(state.stages, state.shownStages, this.link.fidelities, state.isStageChosen)
     return filesShown(state.byFidelity, state.practices, state.selectedFidelities, chosenFormatsOf(state.formatChoices), this.link.isSessionFolder ? undefined : listed)
   }
 
@@ -149,9 +149,9 @@ export class FilesPage {
     try {
       const [shown, chat] = await Promise.all([this.session.show(), this.chatShown()])
       const practices = Object.values(shown?.practices ?? {})
-      const listed = fidelitiesOfStages(chat.stages, chat.shownStages, this.link.fidelities)
+      const listed = fidelitiesOfStages(chat.stages, chat.shownStages, this.link.fidelities, chat.isStageChosen)
       const formatChoices = await this.formatChips.read(listed)
-      const now = { practices, selectedFidelities: chat.selectedFidelities, formatChoices, stages: chat.stages, shownStages: chat.shownStages }
+      const now = { practices, selectedFidelities: chat.selectedFidelities, formatChoices, stages: chat.stages, shownStages: chat.shownStages, isStageChosen: chat.isStageChosen }
       if (this.state.practices.length && this.isUnchanged(now)) return
       await this.loadMissing(listed)
       this.store.change(state => ({ ...now, entries: this.shownFrom({ ...state, ...now }) }))
@@ -160,9 +160,9 @@ export class FilesPage {
     }
   }
 
-  private isUnchanged(now: Pick<FilesPage['state'], 'practices' | 'selectedFidelities' | 'formatChoices' | 'stages' | 'shownStages'>): boolean {
+  private isUnchanged(now: Pick<FilesPage['state'], 'practices' | 'selectedFidelities' | 'formatChoices' | 'stages' | 'shownStages' | 'isStageChosen'>): boolean {
     const was = this.state
-    const key = (of: typeof now) => [onOff(of.practices, of.selectedFidelities, chosenKeyOf(of.formatChoices)), of.formatChoices.length, JSON.stringify(of.stages), of.shownStages.join(',')].join('|')
+    const key = (of: typeof now) => [onOff(of.practices, of.selectedFidelities, chosenKeyOf(of.formatChoices)), of.formatChoices.length, JSON.stringify(of.stages), of.shownStages.join(','), of.isStageChosen].join('|')
     return key(now) === key(was)
   }
 
@@ -177,14 +177,14 @@ export class FilesPage {
 
   // What cdd holds for the chat that opened the page: the fidelities selected and the stages shown, the chat bar's and
   // this page's alike; none for a page no chat opened.
-  private async chatShown(): Promise<{ selectedFidelities: string[]; shownStages: string[]; stages: Record<string, string[]> }> {
-    if (!this.link.chat) return { selectedFidelities: [], shownStages: [], stages: {} }
+  private async chatShown(): Promise<{ selectedFidelities: string[]; shownStages: string[]; stages: Record<string, string[]>; isStageChosen: boolean }> {
+    if (!this.link.chat) return { selectedFidelities: [], shownStages: [], stages: {}, isStageChosen: false }
     const chat = await ChatClientGenerated.named(this.api, this.link.chat).show()
-    return { selectedFidelities: chat?.selectedFidelities ?? [], shownStages: chat?.shownStages ?? [], stages: chat?.stages ?? {} }
+    return { selectedFidelities: chat?.selectedFidelities ?? [], shownStages: chat?.shownStages ?? [], stages: chat?.stages ?? {}, isStageChosen: chat?.isStageChosen ?? false }
   }
 
   // A press on a stage button shows that stage's files beside those shown, or no longer, here and on the chat bar, the
-  // one choice cdd holds; none left, the stage the page was opened on.
+  // one choice cdd holds; none left, none shows.
   async toggleStage(stage: string): Promise<void> {
     if (!this.link.chat) return
     const shown = this.shownStageNames
@@ -193,10 +193,11 @@ export class FilesPage {
     await this.readPractices()
   }
 
-  // The stages whose files show: those turned on, else the stage the link's fidelities are in.
+  // The stages whose files show: those turned on, none included; before the chat bar or this page chose, the stage the
+  // link's fidelities are in.
   get shownStageNames(): string[] {
-    const { stages, shownStages } = this.state
-    if (shownStages.length) return shownStages
+    const { stages, shownStages, isStageChosen } = this.state
+    if (isStageChosen) return shownStages
     return Object.keys(stages).filter(stage => (stages[stage] ?? []).some(slug => this.link.fidelities.includes(slug)))
   }
 

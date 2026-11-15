@@ -375,8 +375,16 @@ class Chat:
     @property
     @data_field
     def shown_stages(self) -> list[str]:
-        """The stages shown for the chat, as its chat bar or a page it opened last chose them; none before either chose."""
+        """The stages shown for the chat, as its chat bar or a page it opened last chose them; none before either chose,
+        or once every stage was turned off."""
         return list(self._state.get("shown_stages", []))
+
+    @property
+    @data_field
+    def is_stage_chosen(self) -> bool:
+        """Whether its chat bar or a page it opened has chosen the stages shown, none included: before that, the chat bar
+        starts the choice at the session's own stage."""
+        return "shown_stages" in self._state
 
     @property
     @data_field

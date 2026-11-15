@@ -25,7 +25,7 @@ export class ChatBarClient {
 
   constructor(
     json: ChatBarJson,
-    private readonly shown: string[],
+    private readonly shown: string[] | null,
     private readonly selected: string[],
   ) {
     this.board = json.board as BoardOverviewData | null
@@ -69,11 +69,11 @@ export class ChatBarClient {
   }
 
   // The stages whose fidelities the dots show, in the board's order: those turned on with the stage buttons, here or in
-  // a page the chat opened; none turned on, the stage the session is in.
+  // a page the chat opened, none included; before either chose, the stage the session is in.
   get shownStages(): string[] {
     const stages = (this.board?.columns ?? []).filter(column => column.kind === 'stage').map(column => column.name)
-    const shown = stages.filter(stage => this.shown.includes(stage))
-    return shown.length ? shown : stages.filter(stage => stage === this.stage)
+    const chosen = this.shown ?? [this.stage]
+    return stages.filter(stage => chosen.includes(stage))
   }
 
   // The first stage shown, whose actions the action button offers: every stage takes the same steps.
