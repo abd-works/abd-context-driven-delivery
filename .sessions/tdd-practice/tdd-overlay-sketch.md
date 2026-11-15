@@ -110,7 +110,7 @@ File: `rules/shared_tdd_rules.py`. What BDD development and Stories acceptance_t
 | `unit-tier-fakes-every-boundary` | spec file | A unit spec reaches no real resource: a fake sits at every architecture boundary. |
 | `heavy-tier-holds-a-real-resource` | spec file | A heavy spec uses a real resource (git, a server, a daemon, an installer, a worker, a big load); without one it belongs in the unit tier. |
 | `e2e-tier-drives-browser-or-agent` | spec file | An e2e spec drives a real browser or a real agent, and nothing else does. |
-| `slow-example-moves-not-the-file` | spec file | An example over budget moves to the heavy spec beside its unit spec, under the same described subject; the rest of the file stays unit, and the budget is never raised. |
+| `slow-example-moves-not-the-file` | spec file | An example over budget that still needs a real resource after optimizing moves to the heavy spec beside its unit spec, under the same described subject; the rest of the file stays unit, and the budget is never raised. |
 | `no-skipped-or-empty-test` | observation, scenario | No test is skipped, commented out, or left without an assertion. |
 
 ### Test speed rules
@@ -139,7 +139,13 @@ Guidance (process, not rules):
 - **Unit after every pass.** Run it after each change or pass. The run is fast enough that the next pass starts from known-good code.
 - **Heavy once, at the end, in the background.** Don't wait on it. Commit and push after unit passes, and report the heavy result when it comes back.
 - **E2E only when the work touches a browser or an agent,** also once at the end.
-- **Read the slow list after every unit run.** The runner lists each example over budget. Fix them in the same pass, by making the example fast or moving it to heavy.
+- **A slow test: optimize first.** The first move for any example over budget is to find out why it is slow and make it fast. Moving it to heavy is the last resort, for an example whose point is the real resource. Measure where the time goes, then look for these, in order:
+  1. **A real boundary the unit test doesn't need.** A socket, a subprocess, git, the file system or a server. Put a fake at that boundary. An example: `mcp_daemon_spec`'s two examples pinged a closed port, and Windows waits out the full 0.5 s connect timeout instead of refusing straight away. A fake ping makes them about 1 ms.
+  2. **A wait.** A sleep, a poll or a retry loop. Use a fake clock or an event.
+  3. **An expensive fixture rebuilt for every example.** Build it once per file and share it.
+  4. **Work the example doesn't assert on.** For example, loading every practice to check one.
+- **Move to heavy only if it is still slow.** If none of these applies, or the example exists to prove the real resource, move it to the heavy spec under the same subject.
+- **Read the slow list after every unit run.** The runner lists each example over budget. Fix each one in the same pass, optimizing first.
 - **Keep the timings.** `spec-seconds.json` orders the next run's batches, longest first, so the run ends when its slowest batch does and no later.
 
 Also shared, because they overlay both BDD development and Stories acceptance_tests (each moves here from the practice that has it now):
