@@ -33,6 +33,7 @@ class FakeFilesServer implements CddApi {
   async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
     this.posts.push({ path, body })
     if (path.endsWith('/guidance-selection')) return this.selection() as Result
+    if (path.endsWith('/root-files')) return [entry('C:/dev/abd-cdd-2/old/notes.md'), entry('C:/dev/abd-cdd-2/src/app.py')] as Result
     if (path.endsWith('/show')) return { name: 'release-2', repo_name: 'abd-cdd', branch: 'release-2', root: 'C:/dev/abd-cdd-2' } as Result
     if (path.endsWith('/update-guidance-selection')) return this.update(body) as Result
     if (path.endsWith('/guidance-selection-after')) return (await this.after(Number(body.version))) as Result
@@ -201,6 +202,30 @@ describe('Head The Files App With Where The Files Are', () => {
     const { page, stop } = await following(new FakeFilesServer())
     stop()
     expect(page.heading).toBe('abd-cdd · release-2 · C:/dev/abd-cdd-2')
+  })
+})
+
+describe('Review Every File Under The Session Root', () => {
+  describe('that has All files pressed', () => {
+    it('should list every file under the root, no stage, practice or format filtering it', async () => {
+      const server = new FakeFilesServer()
+      server.stages = ['discovery']
+      server.formats = ['diagram']
+      const { page, stop } = await following(server)
+      await page.showScope('all')
+      stop()
+      expect(paths(page)).toEqual(['C:/dev/abd-cdd-2/old/notes.md', 'C:/dev/abd-cdd-2/src/app.py'])
+    })
+
+    it("should list the session's own files again once This session is pressed", async () => {
+      const server = new FakeFilesServer()
+      server.stages = ['discovery']
+      const { page, stop } = await following(server)
+      await page.showScope('all')
+      await page.showScope('session')
+      stop()
+      expect(paths(page)).toContain('.context/stories-story-map.md')
+    })
   })
 })
 

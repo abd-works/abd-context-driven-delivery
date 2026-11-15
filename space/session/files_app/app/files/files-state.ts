@@ -11,6 +11,10 @@ export type FilesState = {
   guidance: GuidanceSelectionData | null
   // Where the files are, as the header shows it: the repository, the branch, and the session's root.
   place: string
+  // What the page lists: the session's own files, as its guidance selection covers them, or every file under its
+  // root, read the first time it is asked for, to review older work.
+  scope: 'session' | 'all'
+  rootFiles: FileEntryData[] | null
   // What the open file is read with: its own rules, read on its own, and the rules across the whole working copy. Both
   // off by default, so browsing never reads a graph.
   reads: { rules: boolean; crossFile: boolean }
@@ -28,6 +32,8 @@ export type FilesState = {
 export const NO_FILES: FilesState = {
   guidance: null,
   place: '',
+  scope: 'session',
+  rootFiles: null,
   reads: { rules: false, crossFile: false },
   byFidelity: [],
   entries: [],

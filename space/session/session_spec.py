@@ -1204,6 +1204,11 @@ with description("a session's guidance selection") as self:
     with it("should name its repository, branch, and root, as a page heads them"):
         expect([self.session.repo_name, self.session.branch, self.session.root]).to(equal([self.repo.name, "alpha", str((self.repo / "work").resolve())]))
 
+    with it("should list every file under its root, its folders included, as the Files app's All files shows them"):
+        (self.repo / "work" / "notes").mkdir()
+        (self.repo / "work" / "notes" / "old.md").write_text("# Old", encoding="utf-8")
+        expect([entry.path for entry in self.session.root_files()]).to(contain("work/notes/old.md"))
+
     with context("that nothing has selected yet"):
         with it("should have no stage chosen"):
             expect(self.session.guidance_selection().is_stage_chosen).to(equal(False))

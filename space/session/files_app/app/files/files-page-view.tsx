@@ -120,7 +120,7 @@ function FileFolderView({ page, folder, openPath }: { page: FilesPage; folder: F
 
 // The file bar's buttons: collapse or expand it, and show its files as a list or in their folders.
 function FileBarButtonsView({ page }: { page: FilesPage }) {
-  const { fileBar } = useFilesState(page)
+  const { fileBar, scope } = useFilesState(page)
   return (
     <div className="file-bar-buttons" role="toolbar" aria-label="File bar">
       <button aria-label={fileBar.isOpen ? 'Collapse the file bar' : 'Expand the file bar'} title={fileBar.isOpen ? 'Collapse the file bar' : 'Expand the file bar'} onClick={() => page.fileBar.toggle()}>
@@ -128,6 +128,12 @@ function FileBarButtonsView({ page }: { page: FilesPage }) {
       </button>
       {fileBar.isOpen ? (
         <>
+          <button className="file-bar-view" aria-pressed={scope === 'session'} title="The session's own files, as its stages, practices and formats select them" onClick={() => void page.showScope('session')}>
+            This session
+          </button>
+          <button className="file-bar-view" aria-pressed={scope === 'all'} title="Every file and folder under the session's root, to review older work" onClick={() => void page.showScope('all')}>
+            All files
+          </button>
           <button className="file-bar-view" aria-pressed={fileBar.view === 'list'} title="Show the files as a list" onClick={() => page.fileBar.show('list')}>
             List
           </button>

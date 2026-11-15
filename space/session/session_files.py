@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from harness.process.git import Git
 from space.session.file_manager import FileEntry, FileManager, FileText
 
 if TYPE_CHECKING:
@@ -74,6 +75,24 @@ class SessionFiles:
         files = sorted(path for path in self._session.work_root.iterdir() if path.is_file())
         return [FileEntry(repo.path_from_top(path), True) for path in files]
 
+    def under_root(self) -> list[FileEntry]:
+        """Every file under the folder the session works in, its folders included, each with its path from the project
+        and whether the session's branch changed it: in a repository the files git tracks or would track there, so what
+        .gitignore leaves out, such as node_modules or a build, is left out; elsewhere every file under it but those
+        folders' kind."""
+        root = self._session.work_root
+        files = self._tracked_under(root) if self._session.repo.is_clone else self._walked_under(root)
+        changed = self.changed()
+        repo = self._session.repo
+        return [FileEntry(repo.path_from_top(path), True, path.resolve() in changed) for path in sorted(files) if path.is_file()]
+
+    def _tracked_under(self, root: Path) -> list[Path]:
+        listed = Git(root).run("ls-files", "--cached", "--others", "--exclude-standard")
+        return [root / line for line in dict.fromkeys(listed.splitlines()) if line]
+
+    def _walked_under(self, root: Path) -> list[Path]:
+        return [path for path in root.rglob("*") if not _UNREAD_FOLDERS.intersection(path.relative_to(root).parts)]
+
     def read(self, path: str) -> FileText:
         """The text of path, a file in the session's repository or under a folder its practices write to, such as its
         ticket's worktree beside the repository; no text when the file is gone."""
@@ -117,3 +136,7 @@ class SessionFiles:
         checkout = branch.checkout if branch.exists else None
         root = checkout.root if checkout is not None else repo.root
         return {(root / path).resolve() for path in branch.changed_files()}
+
+
+# The folders a root outside a repository never lists files from: version control, dependencies, builds, caches.
+_UNREAD_FOLDERS = {".git", "node_modules", "dist", "build", "__pycache__", ".venv", ".pytest_cache"}

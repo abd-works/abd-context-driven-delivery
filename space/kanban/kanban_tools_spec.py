@@ -917,7 +917,7 @@ with description("the board tools") as self:
                 "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
                 "session.choose_workpath", "session.folder_files", "session.workpath_files", "session.read_file", "session.write_file", "session.file", "session.show",
-                "session.guidance_selection", "session.update_guidance_selection", "session.guidance_selection_after",
+                "session.guidance_selection", "session.update_guidance_selection", "session.guidance_selection_after", "session.root_files",
                 "session.write_handoff", "session.read_handoff_format", "session.read_cdr_format", "session.list_cdrs", "session.write_cdr",
                 "practice-session-output.enable", "practice-session-output.choose_root", "practice-session-output.use_default_root", "fidelity-session-output.choose_format",
                 "backlog-item.create", "backlog-item.start", "backlog-item.start_under", "backlog-item.edit_text", "backlog-item.move_before",
