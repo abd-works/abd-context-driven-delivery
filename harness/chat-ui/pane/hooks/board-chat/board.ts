@@ -1,13 +1,8 @@
 import type { EngineInterface } from 'claude-code'
 
-import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
+import { SERVER } from '../health/server-health-client'
 
-import { currentServerHealth, KANBAN, ServerHealthClient } from '../health/server-health-client'
-
-// The board refuses a POST without this header, so another page cannot act on it.
-const BOARD_HEADERS = { 'X-CDD-Board': '1', 'Content-Type': 'application/json' }
-// One board server serves every repository, so each call names this chat's repository, and the page's link does too.
-const PROJECT_HEADER = 'X-CDD-Project'
+// A page this chat opens names its repository, so one app server can serve every repository.
 export const PROJECT_QUERY = 'project'
 // The folder an app's page opens on, such as the session's workpath the Graph loads.
 export const FOLDER_QUERY = 'folder'
@@ -15,7 +10,7 @@ export const FOLDER_QUERY = 'folder'
 // CHAT_QUERY; the mod takes only types from the language adapter, so the word is spelled here as PROJECT_QUERY is).
 export const CHAT_QUERY = 'chat'
 
-// One call on the board's chat routes, each with the body that chat tool takes.
+// One call on a chat tool (chat.check_in, chat.confirm, chat.finish), each with the body that tool takes.
 export type ChatRequest = { chat: string } & (
   | { operation: 'check-in'; body: { is_busy: boolean; name: string; folder: string; selected_fidelities: string[] } }
   | { operation: 'confirm'; body: { message: string; is_shown: boolean; reason: string } }
@@ -25,15 +20,6 @@ export type ChatRequest = { chat: string } & (
 // Resolves to answer once milliseconds have passed on the engine's clock.
 export function after($: EngineInterface, milliseconds: number, answer: string): Promise<string> {
   return new Promise(resolve => $.clock.after(milliseconds, () => resolve(answer)))
-}
-
-// Where the session board answers, as cdd's server health last listed the Kanban app; empty while it is not running, or
-// before cdd has answered. Its url names its first port even while it is down, so it is used only while it runs: a
-// chat whose board is not running has no one to check in with, which is no failure.
-async function boardUrlWhileRunning($: EngineInterface): Promise<string> {
-  const { report } = await currentServerHealth($)
-  const board = new ServerHealthClient(report as ServerHealthData | null).appLabelled(KANBAN)
-  return board?.status === 'running' ? board.url : ''
 }
 
 // The repository's own folder, which a chat in a ticket's worktree reaches through the git folder they share: the
@@ -53,11 +39,14 @@ export async function projectPageUrl($: EngineInterface, url: string, query: Rec
   return page.toString()
 }
 
-// A chat whose board is not running has nothing to post to, which reads as a board that did not answer.
+// A chat call goes to the cdd server every chat shares, as each chat tool does, so a chat checks in, confirms and
+// finishes whether or not any app, the Kanban board included, is running. A failed call is the server's own text.
 export async function post($: EngineInterface, { chat, operation, body }: ChatRequest): Promise<{ ok: boolean; text: string }> {
-  const url = await boardUrlWhileRunning($)
-  if (!url) return { ok: false, text: '' }
-  const project = await repositoryFolder($)
-  const headers = project ? { ...BOARD_HEADERS, [PROJECT_HEADER]: project } : BOARD_HEADERS
-  return $.http.fetch(`${new URL(url).origin}/api/chat/${encodeURIComponent(chat)}/${operation}`, { method: 'POST', headers, body: JSON.stringify(body) })
+  const tool = `chat.${operation.replace('-', '_')}`
+  const result = await $.mcp.call(SERVER, tool, { chat, ...body })
+  const text = result.content[0]?.text ?? ''
+  if (result.isError) throw new ChatCallFailed(`${tool} failed: ${text || 'cdd sent back no reason'}`)
+  return { ok: true, text }
 }
+
+export class ChatCallFailed extends Error {}
