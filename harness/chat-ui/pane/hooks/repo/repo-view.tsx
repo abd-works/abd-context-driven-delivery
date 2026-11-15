@@ -19,7 +19,7 @@ export function PushButtonView(elements: ElementTable, repo: RepoClient, actions
     <Box key="push-to-main" flexDirection="row" gap={1}>
       <Box key="push-to-main-box">
         {GlyphButtonView(elements, 'push-to-main', '⇪', BRAND.muted, actions.ask)}
-        {TipView(elements, 'push to main on origin', '', BRAND.muted)}
+        {TipView(elements, 'push & merge to origin/main', '', BRAND.muted)}
       </Box>
       {doing ? <Text key="push-to-main-state" color={repo.state === 'failed' ? BRAND.error : BRAND.muted}>{doing}</Text> : null}
     </Box>
