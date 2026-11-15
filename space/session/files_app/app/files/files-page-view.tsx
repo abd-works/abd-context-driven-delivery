@@ -242,6 +242,7 @@ export function FilesPageView({ page }: { page: FilesPage }) {
         <span className="files-kind">FILES</span>
         <span className="files-subject">{page.link.subject}</span>
         <PracticeTogglesView page={page} />
+        <ReadsTogglesView page={page} />
         <ThemeToggleView page={page} />
       </header>
       {problem ? <div className="files-problem" role="alert">{problem}</div> : null}
