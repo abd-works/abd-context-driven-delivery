@@ -622,7 +622,14 @@ with description("the board tools") as self:
                 def root_files(project: ProjectTools) -> dict[str, dict]:
                     sign_up(project)
                     story_map = project.call("ticket.fidelity_files", ticket="sign-up", fidelities=["stories-story-map"])["stories-story-map"]["markdown"][0]["path"]
-                    written = {story_map: "text\n", "notes/plain.txt": "text\n", "src/orders/chat_bar.py": "class ChatBar:\n    pass\n", "src/orders/carts.py": "class CartRepository:\n    pass\n"}
+                    written = {
+                        story_map: "text\n",
+                        "notes/plain.txt": "text\n",
+                        "src/orders/chat_bar.py": "class ChatBar:\n    pass\n",
+                        "src/carts/cart.py": "@aggregate_root\nclass Cart:\n    pass\n",
+                        "src/carts/carts.py": "class CartRepository:\n    pass\n",
+                        "lib/billing/billing.py": "class Billing:\n    pass\n",
+                    }
                     for path, text in written.items():
                         (project.root / path).parent.mkdir(parents=True, exist_ok=True)
                         (project.root / path).write_text(text, encoding="utf-8")
@@ -644,8 +651,11 @@ with description("the board tools") as self:
                 with it("should name no DDD fidelity for code declaring no building block"):
                     expect([slug for slug in self.root_files["src/orders/chat_bar.py"]["fidelities"] if slug.startswith("ddd-")]).to(equal([]))
 
-                with it("should name DDD tactics for code declaring a building block"):
-                    expect(self.root_files["src/orders/carts.py"]["fidelities"]).to(contain("ddd-tactics"))
+                with it("should name DDD tactics for code declaring a building block in a domain"):
+                    expect(self.root_files["src/carts/carts.py"]["fidelities"]).to(contain("ddd-tactics"))
+
+                with it("should name no DDD fidelity for code that only fits a DDD file pattern"):
+                    expect([slug for slug in self.root_files["lib/billing/billing.py"]["fidelities"] if slug.startswith("ddd-")]).to(equal([]))
 
         with context("with a fidelity whose patterns find no file"):
             with it("should list no file for it, a pattern being no file"):

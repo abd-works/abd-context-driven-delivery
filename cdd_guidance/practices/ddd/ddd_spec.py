@@ -169,25 +169,23 @@ with description("a Ddd practice made in a set with the Clean Engineering practi
 # (E) Review Generated Work In File Viewer
 # (S) Person --> Review Files In Files App
 with description("a file the DDD practice claims as its own, so a page filtering on DDD lists it"):
-    with before.all:
+    with before.each:
         self.folder = Path(tempfile.mkdtemp(prefix="ddd-claims-"))
         self.ddd = _support.ddd()
 
         def written(name: str, text: str) -> Path:
             file = self.folder / name
+            file.parent.mkdir(parents=True, exist_ok=True)
             file.write_text(text, encoding="utf-8")
             return file
 
         self.written = written
 
-    with after.all:
+    with after.each:
         shutil.rmtree(self.folder, ignore_errors=True)
 
     with it("should claim code whose class carries a DDD stereotype"):
         expect(self.ddd.claims(self.written("cart.py", "@aggregate_root\nclass Cart:\n    pass\n"))).to(be_true)
-
-    with it("should claim code whose class is named for a building block"):
-        expect(self.ddd.claims(self.written("carts.ts", "export class CartRepository {}\n"))).to(be_true)
 
     with it("should claim a domain model by its name"):
         expect(self.ddd.claims(self.written("domain-model.md", "# Orders\n"))).to(be_true)
@@ -197,3 +195,23 @@ with description("a file the DDD practice claims as its own, so a page filtering
 
     with it("should leave code with neither to the other practices"):
         expect(self.ddd.claims(self.written("chat_bar.py", "class ChatBarClient:\n    pass\n"))).to(be_false)
+
+    with context("with a class named for a building block"):
+        with context("in a bounded context's folder"):
+            with it("should claim it"):
+                self.written("ordering/.context/bounded-context.md", "# Ordering\n")
+                expect(self.ddd.claims(self.written("ordering/ordering.ts", "export class OrderRepository {}\n"))).to(be_true)
+
+        with context("in an aggregate, a folder under a bounded context"):
+            with it("should claim it"):
+                self.written("ordering/.context/bounded-context.md", "# Ordering\n")
+                expect(self.ddd.claims(self.written("ordering/carts/carts.ts", "export class CartRepository {}\n"))).to(be_true)
+
+        with context("in a folder where a class carries a DDD stereotype"):
+            with it("should claim it"):
+                self.written("carts/cart.py", "@aggregate_root\nclass Cart:\n    pass\n")
+                expect(self.ddd.claims(self.written("carts/carts.py", "class CartRepository:\n    pass\n"))).to(be_true)
+
+        with context("in a folder that holds no domain"):
+            with it("should leave it to the other practices, its name saying nothing about the business"):
+                expect(self.ddd.claims(self.written("agent_tools/agent_tools.py", "class AgentOperation:\n    pass\n"))).to(be_false)

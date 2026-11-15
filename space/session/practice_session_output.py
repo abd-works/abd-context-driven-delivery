@@ -369,12 +369,13 @@ class FidelitySessionOutput:
 
     def holds(self, file: Path) -> bool:
         """Whether file, in the session's checkout, is one of this fidelity's, changed by the session or not: a file one
-        of its outputs names, or production code under a folder it writes code to that its practice claims, so a page
-        lists every file of the fidelities it shows."""
-        if self._fidelity.declares(self._session.repo.path_from_top(file)):
-            return True
+        of its outputs names, or production code under a folder it writes code to, and either way one its practice
+        claims, since a pattern such as DDD's ``{bounded_context}/{aggregate}/{aggregate}.py`` fits files of no domain.
+        A page lists every file of the fidelities it shows."""
+        if not (self._fidelity.declares(self._session.repo.path_from_top(file)) or self._writes_code_to(file)):
+            return False
         practice = self._fidelity.practice_guidance
-        return self._writes_code_to(file) and (practice is None or practice.claims(file))
+        return practice is None or practice.claims(file)
 
     def _writes_code_to(self, file: Path) -> bool:
         """Whether file is production code in a format this fidelity writes as a folder per module, under its root."""

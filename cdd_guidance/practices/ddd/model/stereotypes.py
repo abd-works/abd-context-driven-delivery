@@ -80,11 +80,14 @@ _DECLARED_CLASS = re.compile(r"\bclass\s+([A-Za-z_]\w*)")
 _FACTORY = "Factory"
 
 
-def declares_a_building_block(source: str) -> bool:
-    """Whether source code declares a DDD building block: a class carrying a DDD stereotype as its decorator, or a class
-    named by a building block's naming convention, such as `CartRepository` or `ShippingCode`."""
-    if any(kind_named_by([stereotype_named(decorator)]) for decorator in _STEREOTYPE_DECORATOR.findall(source)):
-        return True
+def carries_a_stereotype(source: str) -> bool:
+    """Whether source code declares a class carrying a DDD stereotype as its decorator, such as `@aggregate_root`."""
+    return any(kind_named_by([stereotype_named(decorator)]) for decorator in _STEREOTYPE_DECORATOR.findall(source))
+
+
+def names_a_building_block(source: str) -> bool:
+    """Whether source code declares a class named by a building block's naming convention, such as `CartRepository`
+    or `ShippingCode`; the name says so only in a folder that holds a domain."""
     return any(_named_as_a_building_block(name) for name in _DECLARED_CLASS.findall(source))
 
 
