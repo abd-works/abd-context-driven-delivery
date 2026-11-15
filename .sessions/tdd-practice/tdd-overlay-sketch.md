@@ -137,6 +137,34 @@ Measured on 2026-11-15, `scripts/test.ps1 -Suite unit` in this worktree on a 24-
 - **Per file:** the slowest file takes about 1 s (`.pycache/spec-seconds.json`), and 292 of the 312 take under 1 s.
 - **Over budget:** one file, `harness/mcp/mcp_daemon_spec.py`, has 2 examples at about 515 ms each, so the run fails. That spec arrived with the merge from main.
 
+### Test cadence
+
+Every tier runs on a schedule, so no tier waits on someone remembering to run it. Unit runs far more often than the rest, which is why its budget is the tightest.
+
+| Tier | When it runs | Who runs it |
+|---|---|---|
+| unit | After every change or pass, many times an hour | The agent, in the foreground: it takes about 20 s |
+| heavy | Every hour, plus once at the end of multi-pass work | A background process. It reports failures to the chat and the board; nobody waits on it. |
+| e2e | Every day, plus before every release | A daily scheduled run, and the release command, which runs e2e first and stops on a failure |
+
+New pieces this needs:
+- **Hourly heavy run.** A scheduled background job runs `scripts/test.ps1 -Suite heavy` on main, and on each active ticket's worktree, every hour. It records the result where the board's health view shows it, and raises a toast for a new failure.
+- **Daily e2e run.** The same kind of job runs `-Suite e2e` once a day.
+- **Release command.** A major-version counterpart to `/harness:diagnostics:version` (`CddVersion.set_next`, `harness/diagnostics/cdd_version.py:117`, which today only bumps the minor version and pushes `pyproject.toml`). It would:
+  1. Run the e2e tier first, then the heavy tier. On a failure, fix it and run again. It doesn't release until both pass.
+  2. Raise the major version, e.g. 1.4 to 2.0, in `pyproject.toml`, then commit and push.
+  3. Tag the commit `v2.0.0` and cut a GitHub release with `gh release create`.
+  4. Write release notes from the commits and the stories completed since the last release tag.
+  5. Hand the person the release link on the repository.
+
+Rules this adds (checked on the output):
+
+| Rule | Checked on | One line |
+|---|---|---|
+| `heavy-run-within-the-hour` | the last heavy run record | The newest heavy run on main is under an hour old and passed, or its failure is open on the board. |
+| `e2e-run-within-the-day` | the last e2e run record | The newest e2e run on main is under a day old and passed, or its failure is open on the board. |
+| `release-follows-a-green-e2e` | the release | A release tag points at a commit whose e2e and heavy runs passed. |
+
 Guidance (process, not rules):
 - **Unit after every pass.** Run it after each change or pass. The run is fast enough that the next pass starts from known-good code.
 - **Heavy once, at the end, in the background.** Don't wait on it. Commit and push after unit passes, and report the heavy result when it comes back.
