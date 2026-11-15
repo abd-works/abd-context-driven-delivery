@@ -176,6 +176,33 @@ describe('Follow Chat Bar Selection In Files App', () => {
       })
     })
 
+    describe('that has Stories pressed in the Files app', () => {
+      async function pressedStories(): Promise<{ page: FilesPage; server: FakeFilesServer }> {
+        const server = new FakeFilesServer()
+        server.practices.ddd = practice('ddd', 'DDD', '#2471a3', true)
+        const page = new FilesPage(server, new FilesLink(STAGE_LINK))
+        await started(page)
+        await page.togglePractice('stories')
+        return { page, server }
+      }
+
+      it("should select the other practice's dots on the chat bar", async () => {
+        const { server } = await pressedStories()
+        expect(server.posted('/send').map(post => post.body)).toEqual([{ kind: 'select', text: 'ddd-bounded-context' }])
+      })
+
+      it("should list only the other practice's files", async () => {
+        const { page } = await pressedStories()
+        expect(page.state.entries.map(each => each.path)).toEqual(['.context/ddd-bounded-context.md'])
+      })
+
+      it('should clear the selection once pressed again, every practice shown', async () => {
+        const { page, server } = await pressedStories()
+        await page.togglePractice('stories')
+        expect(server.posted('/send').at(-1)?.body).toEqual({ kind: 'select', text: '' })
+      })
+    })
+
     describe('that has the selection cleared on the chat bar', () => {
       it('should list the files of every practice turned on again', async () => {
         vi.useFakeTimers()
@@ -190,6 +217,24 @@ describe('Follow Chat Bar Selection In Files App', () => {
         vi.useRealTimers()
         expect(page.state.entries.map(each => each.path)).toEqual(['.context/stories-story-map.md', '.context/ddd-bounded-context.md'])
       })
+    })
+  })
+})
+
+describe('Send Files App Failures To Chat', () => {
+  describe('with files that do not list', () => {
+    class FailingFilesServer extends FakeFilesServer {
+      override async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
+        if (path.endsWith('/files')) throw new Error('cdd did not answer')
+        return super.post<Result>(path, body)
+      }
+    }
+
+    it('should send the failure to the chat that opened the page', async () => {
+      const server = new FailingFilesServer()
+      await started(new FilesPage(server, new FilesLink(STAGE_LINK)))
+      const sent = server.posted('/send').map(post => [post.body.kind, JSON.parse(String(post.body.text)).failure])
+      expect(sent).toEqual([['failure', 'The Files app did not list the files: cdd did not answer']])
     })
   })
 })

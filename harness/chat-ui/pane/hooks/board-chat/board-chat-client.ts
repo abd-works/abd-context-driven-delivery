@@ -3,7 +3,7 @@ import type { EngineInterface } from 'claude-code'
 
 import { refreshChatBar } from '../chat-bar/chat-bar-client'
 import { openFileInViewer } from '../chat-bar/fidelity-files-client'
-import { selectedFidelitySlugs } from '../chat-bar/fidelity-progress-client'
+import { selectedFidelitySlugs, selectFidelities } from '../chat-bar/fidelity-progress-client'
 import { commandOf, filledPrompt, REFUSED_WITHIN_MILLISECONDS } from '../shared/chat-command'
 import { reasonOf, showFailure } from '../error-display/failure-client'
 import { after, post } from './board'
@@ -57,6 +57,8 @@ function shown($: EngineInterface, chat: string, command: ChatCommandData): Prom
 // for the person to send it, so only a command or a submit has work for the chat to finish.
 async function run($: EngineInterface, chat: string, command: ChatCommandData): Promise<void> {
   if (command.kind === 'refresh') return refreshed($, chat, command)
+  if (command.kind === 'select') return selected($, chat, command)
+  if (command.kind === 'failure') return failed($, chat, command)
   const hasTurn = command.kind === 'command' || command.kind === 'submit'
   $.ui.toast(`Board message arrived: ${command.text}`)
   if (hasTurn) awaitTurn(command.message)
@@ -73,6 +75,21 @@ async function refreshed($: EngineInterface, chat: string, command: ChatCommandD
   const reason = await refreshChatBar($).then(() => '', reasonOf)
   if (reason) await showFailure($, `The chat bar did not read the board again: ${reason}`, `A refresh ${command.text} sent to this chat`)
   await post($, { chat, operation: 'confirm', body: { message: command.message, is_shown: !reason, reason } })
+}
+
+// A select puts the fidelities a page named in place of the bar's selection, with no toast: a practice pressed in the
+// Files app selects or clears its dots here.
+async function selected($: EngineInterface, chat: string, command: ChatCommandData): Promise<void> {
+  await selectFidelities($, command.text.split(',').filter(Boolean))
+  await post($, { chat, operation: 'confirm', body: { message: command.message, is_shown: true, reason: '' } })
+}
+
+// A page the chat opened, such as the Files app, failed: its failure shows on the chat bar as the bar's own do, where
+// the person can have the chat fix it.
+async function failed($: EngineInterface, chat: string, command: ChatCommandData): Promise<void> {
+  const { failure, context } = JSON.parse(command.text) as { failure: string; context: string }
+  await showFailure($, failure, context)
+  await post($, { chat, operation: 'confirm', body: { message: command.message, is_shown: true, reason: '' } })
 }
 
 // Checks in through the board, which runs chat.check_in on the cdd server every chat shares. The folder the chat works in

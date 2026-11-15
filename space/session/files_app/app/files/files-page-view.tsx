@@ -138,7 +138,7 @@ function PracticeTogglesView({ page }: { page: FilesPage }) {
       {isFollowing ? <span className="files-hint">as selected on the chat bar</span> : null}
       {practices.map(practice => {
         const isShown = page.isShown(practice)
-        const hint = isFollowing ? 'select or clear its dots on the chat bar' : isShown ? 'on, press to hide its files' : 'off, press to show its files'
+        const hint = !practice.enabled ? 'off for the session, press to turn it on' : isShown ? 'shown, press to hide its files here and on the chat bar' : 'hidden, press to show its files here and on the chat bar'
         return (
           <button
             key={practice.name}
@@ -146,7 +146,6 @@ function PracticeTogglesView({ page }: { page: FilesPage }) {
             className={`practice-toggle ${isShown ? 'is-on' : 'is-off'}`}
             style={{ '--practice-colour': practice.colour } as CSSProperties}
             aria-pressed={isShown}
-            disabled={isFollowing}
             title={`${practice.short_name}: ${hint}`}
             onClick={() => void page.togglePractice(practice.name)}
           >

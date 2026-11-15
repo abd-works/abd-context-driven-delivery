@@ -17,10 +17,10 @@ The *Files app* shows the files a link names and turns a person's reading into w
   - -> Session.show
 - The page follows the chat bar of the chat that opened it: while fidelities it lists are selected there (the chat bar's dots), it shows only their files and its toggles show their practices, disabled, `isFollowingChatBar`; with none selected, the practices turned on. `isShown(practice)` says which a toggle shows.
   - -> Chat.show (`selected_fidelities`, which the chat bar sends at its check-in every second)
-- `togglePractice(name)` turns that practice on or off for the session, reads the practices again, and tells the chat that opened the page to read the board again.
-  - -> PracticeSessionOutput.enable
-  - -> Chat.send("refresh", "practices")
-  - **Invariant:** the practices shown are the session's own; the page never keeps an on/off of its own.
+- `togglePractice(name)`: a practice the session works on shows or hides its files by selecting or clearing its dots on the opening chat's chat bar (`Chat.send("select", slugs)`), so the bar and the page follow each other both ways; a practice the session does not work on is turned on for it.
+- `fail(failure, context)` shows a failure here and sends it to the opening chat once (`Chat.send("failure", {failure, context})`), which shows it on its chat bar as the bar shows its own; every failure on the page goes through it.
+  - -> Chat.send("select", slugs), or PracticeSessionOutput.enable and Chat.send("refresh", "practices")
+  - **Invariant:** the practices and the selection shown are the session's and the chat bar's; the page keeps no filter of its own.
 - `open(path)` opens a file in the source view, or a `.drawio` file in the draw.io editor.
   - -> Session.file
   - **Invariant:** a `.drawio` file opens in a tab opened during the click, so this tab keeps its file list; a tab whose viewer never answers is closed.

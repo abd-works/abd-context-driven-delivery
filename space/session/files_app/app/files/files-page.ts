@@ -53,6 +53,8 @@ export class FilesPage {
   readonly comments: FileCommentsActions
   readonly fileBar = new FileBar(this.store)
   private refreshTimer: ReturnType<typeof setTimeout> | null = null
+  // The failures already sent to the chat that opened the page.
+  private readonly toldChat = new Set<string>()
 
   constructor(
     readonly api: CddApi,
@@ -95,6 +97,7 @@ export class FilesPage {
       if (first) await this.open(first)
     } catch (failure) {
       this.store.change(() => ({ isListing: false, problem: `The files did not list: ${reasonOf(failure)}` }))
+      this.tellChat(`The Files app did not list the files: ${reasonOf(failure)}`, `Opening the Files app on ${this.link.subject}`)
     }
   }
 
@@ -108,7 +111,7 @@ export class FilesPage {
 
   // The session's practices, on and off, with their colours; read again while the page shows and when the person comes
   // back to it, so a practice turned on or off on the chat bar or the board shows here. The list changes only when a
-  // practice did; a quiet read that fails is tried again on the next, with no toast.
+  // practice did; a read that fails goes to the chat once and is tried again on the next.
   private async readPractices({ isQuiet = false } = {}): Promise<void> {
     try {
       const [shown, selectedFidelities] = await Promise.all([this.session.show(), this.selectedOnChatBar()])
@@ -116,7 +119,7 @@ export class FilesPage {
       if (this.state.practices.length && onOff(practices, selectedFidelities) === onOff(this.state.practices, this.state.selectedFidelities)) return
       this.store.change(state => ({ practices, selectedFidelities, entries: filesShown(state.byFidelity, practices, selectedFidelities) }))
     } catch (failure) {
-      if (!isQuiet) this.toast(`The session's practices did not load: ${reasonOf(failure)}`)
+      this.fail(`The Files app did not read the session's practices or the chat bar's selection: ${reasonOf(failure)}`, isQuiet ? 'Reading them again every three seconds while the page shows' : 'Opening the Files app')
     }
   }
 
@@ -139,18 +142,42 @@ export class FilesPage {
     return practice.fidelity_slugs.some(slug => this.state.selectedFidelities.includes(slug))
   }
 
-  // The practices toggled at the top of the page are the practices the session works on: a press turns one on or off
-  // for the session, the list shows or hides its files, and the chat that opened the page reads the board again, so its
-  // chat bar shows the same practices.
+  // A press on a practice at the top of the page. A practice the session does not work on is turned on for it, and the
+  // chat that opened the page reads the board again. A practice it works on shows or hides its files by selecting or
+  // clearing its dots on that chat's chat bar, so the bar and the page always show the same fidelities.
   async togglePractice(name: string): Promise<void> {
     const practice = this.state.practices.find(each => each.name === name)
     if (!practice) return
+    if (!practice.enabled || !this.link.chat) return this.enable(practice)
+    await this.select(this.selectionToggling(practice))
+  }
+
+  // The session works on practice from now on, or no longer, for a page no chat opened.
+  private async enable(practice: PracticeSessionOutputData): Promise<void> {
     const isTurnedOn = await this.attemptQuietly(`${practice.short_name} was not turned ${practice.enabled ? 'off' : 'on'}`, () =>
-      PracticeSessionOutputClientGenerated.named(this.api, this.link.sessionFile, name).enable(!practice.enabled),
+      PracticeSessionOutputClientGenerated.named(this.api, this.link.sessionFile, practice.name).enable(!practice.enabled),
     )
     if (!isTurnedOn) return
     await this.readPractices()
     if (this.link.chat) await this.attemptQuietly('The chat bar was not told to show the change', () => ChatClientGenerated.named(this.api, this.link.chat).send('refresh', 'practices'))
+  }
+
+  // The chat bar's selection with practice's listed fidelities taken out while they show, or put in while they do not. A
+  // selection of every practice the session works on is no selection: the bar shows them all.
+  private selectionToggling(practice: PracticeSessionOutputData): string[] {
+    const listed = this.state.byFidelity.map(({ slug }) => slug)
+    const working = listed.filter(slug => practiceOwning(slug, this.state.practices)?.enabled ?? true)
+    const shown = this.isFollowingChatBar ? selectedListed(this.state.byFidelity, this.state.selectedFidelities) : working
+    const own = listed.filter(slug => practice.fidelity_slugs.includes(slug))
+    const next = own.some(slug => shown.includes(slug)) ? shown.filter(slug => !own.includes(slug)) : [...shown, ...own]
+    const kept = this.state.selectedFidelities.filter(slug => !listed.includes(slug))
+    return next.length === working.length && working.every(slug => next.includes(slug)) ? kept : [...kept, ...next]
+  }
+
+  // Shows the selection here at once and sends it to the chat bar, which takes it at its next check-in.
+  private async select(selectedFidelities: string[]): Promise<void> {
+    this.store.change(state => ({ selectedFidelities, entries: filesShown(state.byFidelity, state.practices, selectedFidelities) }))
+    await this.attemptQuietly('The chat bar did not take the selection', () => ChatClientGenerated.named(this.api, this.link.chat).send('select', selectedFidelities.join(',')))
   }
 
   async open(path: string): Promise<void> {
@@ -171,6 +198,7 @@ export class FilesPage {
       if (file?.comments.some(comment => comment.state === 'sent')) this.refreshTimer = setTimeout(() => void this.refreshOpen(), SENT_REFRESH_MILLISECONDS)
     } catch (failure) {
       this.store.change(() => ({ problem: `${path} did not open: ${reasonOf(failure)}` }))
+      this.tellChat(`The Files app did not open ${path}: ${reasonOf(failure)}`, `Opening ${path} in the Files app`)
     }
   }
 
@@ -187,12 +215,28 @@ export class FilesPage {
     try {
       const opened = await this.api.post<{ url: string }>(DRAWIO_PATH, { path })
       if (!opened?.url) throw new Error('the viewer sent back no address')
-      if (!tab) return this.toast(`${path} did not open in the draw.io viewer: the browser refused a new tab`)
+      if (!tab) return this.fail(`${path} did not open in the draw.io viewer: the browser refused a new tab`, `Opening ${path} from the Files app`)
       tab.location.href = opened.url
     } catch (failure) {
       tab?.close()
-      this.toast(`${path} did not open in the draw.io viewer: ${reasonOf(failure)}`)
+      this.fail(`${path} did not open in the draw.io viewer: ${reasonOf(failure)}`, `Opening ${path} from the Files app`)
     }
+  }
+
+  // A failure is shown here and sent to the chat that opened the page, which shows it on its chat bar as it shows its
+  // own, so the person can have the chat fix it.
+  fail(failure: string, context: string): void {
+    this.toast(failure)
+    this.tellChat(failure, context)
+  }
+
+  // Each failure goes to the chat once, however often a read every few seconds meets it again. A failure that cannot
+  // reach the chat stays on the page, since telling the chat again would fail the same way.
+  private tellChat(failure: string, context: string): void {
+    if (!this.link.chat || this.toldChat.has(failure)) return
+    this.toldChat.add(failure)
+    const told = ChatClientGenerated.named(this.api, this.link.chat).send('failure', JSON.stringify({ failure, context }))
+    void told.catch(reason => this.toast(`The chat was not told: ${reasonOf(reason)}`))
   }
 
   toast(text: string): void {
@@ -206,7 +250,7 @@ export class FilesPage {
       await work()
       return true
     } catch (failure) {
-      this.toast(`${what}: ${reasonOf(failure)}`)
+      this.fail(`${what}: ${reasonOf(failure)}`, 'A press in the Files app')
       return false
     }
   }
@@ -216,7 +260,7 @@ export class FilesPage {
       await work()
       return true
     } catch (failure) {
-      this.toast(`${what}: ${reasonOf(failure)}`)
+      this.fail(`${what}: ${reasonOf(failure)}`, 'A press on a comment in the Files app')
       return false
     } finally {
       await this.refreshOpen()

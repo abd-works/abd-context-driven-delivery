@@ -120,6 +120,13 @@ export async function selectFidelity($: EngineInterface, fidelity: FidelityProgr
   await clearChosenAction($)
 }
 
+// The fidelities a page the chat opened asked the bar to select, such as a practice pressed in the Files app, in place of
+// the selection: the bar's dots and that page then show the same ones.
+export async function selectFidelities($: EngineInterface, slugs: string[]): Promise<void> {
+  await update($, selectedFidelities, () => slugs)
+  await clearChosenAction($)
+}
+
 // The action's command goes in the prompt box for the person to send. Generate renders the earlier fidelity first
 // itself when that fidelity has no file in the format, so every action is one command.
 export async function runAction($: EngineInterface, fidelity: FidelityProgressClient, action: string): Promise<void> {
