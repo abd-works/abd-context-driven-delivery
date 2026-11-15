@@ -2,5 +2,7 @@
   "name": "release-cadence",
   "title": "release-cadence",
   "scope": "feature",
-  "parent": "tdd-practice"
+  "parent": "tdd-practice",
+  "branch": "release-cadence",
+  "worktree": "C:\\dev\\abd-cdd-release-cadence"
 }
