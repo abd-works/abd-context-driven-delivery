@@ -16,8 +16,9 @@
   },
   "guidance": {
     "stages": [
+      "specification",
       "implementation"
     ],
-    "version": 3
+    "version": 4
   }
 }
