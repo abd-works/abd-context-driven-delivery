@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from harness.annotations.class_folder import class_folder
 from harness.graph.patterns_file import PatternsFile
+from harness.graph.practice_rule import SharedPracticeGraphRule
 from harness.graph.schema_conformance import FRAMEWORK_RULES
 from harness.guidance.practice_reading import rules_in
 
@@ -23,9 +24,9 @@ if TYPE_CHECKING:
 
 
 class GraphOverlay:
-    """What one pattern gives the graph on top of the practices: the nodes it reads and the rules it adds to each
-    practice, which live in the pattern's ``practices/<practice>/rules``. A pattern that adds no nodes keeps this base,
-    which gives its rules."""
+    """What one pattern or practice supplement gives the graph on top of the practices: the nodes it reads and the rules
+    it adds to each practice, which live in its ``practices/<practice>/rules``, and the rules it shares across practices,
+    which live in its ``rules``. One that adds no nodes keeps this base, which gives its rules."""
 
     direct_kinds: frozenset[str] = frozenset()
     """Relationship kinds of the pattern's schema that place a node as a child in the explorer tree; every other kind is
@@ -38,8 +39,9 @@ class GraphOverlay:
 
     @property
     def name(self) -> str:
-        """The pattern's folder name, such as ``lern_domain_driven``, which names its schema files and its rule labels."""
-        return self.pattern.pattern
+        """The pattern's or supplement's folder name, such as ``lern_domain_driven`` or ``tdd``, which names its schema
+        files and its rule labels."""
+        return getattr(self.pattern, "pattern", None) or self.pattern.key
 
     def display_of(self, kind: str) -> str:
         """How the explorer tree shows an edge of this pattern's kind: as a child, or under the kind's name."""
@@ -78,8 +80,15 @@ class GraphOverlay:
         is the held pattern's own, the way a practice reads its rules from its own package."""
         if practice.key not in self._rules:
             package = type(self.pattern).__module__.rsplit(".", 1)[0]
-            self._rules[practice.key] = rules_in(f"{package}.practices.{practice.key}.rules")
+            own = rules_in(f"{package}.practices.{practice.key}.rules")
+            self._rules[practice.key] = {**own, **self._shared_rules_for(practice, package)}
         return self._rules[practice.key]
+
+    def _shared_rules_for(self, practice: Any, package: str) -> dict[str, Any]:
+        """The rules in its own ``rules`` package it shares across practices, each bound to practice's node types; none
+        it does not name practice in."""
+        bound = {slug: rule.for_practice(practice) for slug, rule in rules_in(f"{package}.rules").items() if isinstance(rule, SharedPracticeGraphRule)}
+        return {slug: rule for slug, rule in bound.items() if rule is not None}
 
 
 class PatternOverlays:
@@ -140,11 +149,16 @@ class PatternOverlays:
     def checks_of(self, practice: Any, overlays: list[str] | None = None) -> dict[str, Any]:
         """The graph rules practice checks with these overlays applied, or with the overlays named, such as those a
         saved graph was saved with, by slug: the framework's own, which every practice checks, its own, then those each
-        pattern adds to it. Each pattern is the one this object made, so asking again makes none."""
+        pattern adds to it, then those each supplement the practice holds adds, whatever overlays were chosen. Each
+        pattern is the one this object made, so asking again makes none."""
         patterns = self.patterns if overlays is None else self._patterns_at(self._paths_of(overlays))
         merged = {**FRAMEWORK_RULES, **practice.reading.graph_checks}
         for pattern in patterns:
             merged.update(pattern.graph_overlay.rules_for(practice))
+        for supplement in getattr(practice, "supplements", ()):
+            overlay = getattr(supplement, "graph_overlay", None)
+            if overlay is not None:
+                merged.update(overlay.rules_for(practice))
         return merged
 
     def record_content(self, folders: list[Path]) -> str:

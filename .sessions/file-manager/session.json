@@ -1,0 +1,52 @@
+{
+  "name": "file-manager",
+  "title": "file-manager",
+  "scope": "feature",
+  "workpath": "harness",
+  "branch": "file-manager",
+  "worktree": "C:\\dev\\abd-cdd-file-manager",
+  "guidance": {
+    "stages": [
+      "implementation"
+    ],
+    "version": 22
+  },
+  "practices": {
+    "stories": {
+      "formats": {
+        "story_map": []
+      }
+    },
+    "ux": {
+      "formats": {
+        "ia": [
+          "drawio"
+        ]
+      },
+      "enabled": false
+    },
+    "clean_engineering": {
+      "formats": {
+        "modules": [
+          "markdown",
+          "drawio"
+        ]
+      },
+      "enabled": true
+    },
+    "bdd": {
+      "formats": {
+        "behavior": []
+      },
+      "enabled": false
+    },
+    "ddd": {
+      "enabled": false
+    }
+  },
+  "outputs": {
+    "stories": {
+      "root": ".context/stories"
+    }
+  }
+}

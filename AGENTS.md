@@ -50,6 +50,6 @@ python -m venv .venv && .venv/bin/pip install -e .     # Windows: .venv\Scripts\
 | `-Suite heavy` | `*_heavy_spec.py` | Real resources: git, the cdd server, the hook daemon, the installer, worker graph builds, big loads. One file at a time. |
 | `-Suite e2e` | `*_e2e_spec.py`, `*_agent_spec.py` | The beasts: a real browser through Playwright, and agentic BDD that drives a real agent. The only tier that may start an agent. |
 
-The rule for which tier a test belongs in is BDD's `tier-by-speed` (`cdd_guidance/practices/bdd/bdd.md`, development).
+Which tier a test belongs in, the speed budgets, and how often each tier runs are the TDD supplement's rules (`cdd_guidance/practices/tdd/tdd.md`), which supplement Clean Engineering code, Stories acceptance tests, BDD development, and DDD tactics.
 
 Specs are Mamba: `describe` a domain subject, nest `with` / `that` states (never `when`), one outcome per `it`, ordered as a usage story. Practice rules under `.claude/rules/` apply by path.

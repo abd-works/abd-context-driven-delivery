@@ -28,10 +28,7 @@
         "acceptance_tests": [
           "python"
         ],
-        "scenarios": [
-          "python",
-          "markdown"
-        ]
+        "scenarios": []
       }
     },
     "ddd": {
@@ -50,7 +47,8 @@
       "enabled": false,
       "formats": {
         "ia": [
-          "drawio"
+          "drawio",
+          "markdown"
         ],
         "front_end_code": [
           "html",
@@ -62,26 +60,19 @@
       }
     },
     "bdd": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
-        "behavior": [
-          "python"
-        ],
-        "development": [
-          "python"
-        ],
-        "realization": [
-          "markdown"
-        ]
+        "behavior": [],
+        "development": [],
+        "realization": []
       }
     }
   },
   "guidance": {
     "stages": [
-      "discovery",
       "specification",
       "implementation"
     ],
-    "version": 53
+    "version": 137
   }
 }

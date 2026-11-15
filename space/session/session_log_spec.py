@@ -181,3 +181,33 @@ with description("a hook log"):
 
         with it("should stamp a line with the time it was written"):
             expect(self.text.splitlines()[1]).to(contain("Z dispatch line"))
+
+
+# (E) Record Session Log
+with description("a session a chat switches to"):
+    with before.each:
+        self.home = ExampleHome()
+        self.repo = Path(tempfile.mkdtemp())
+        (self.repo / ".git").mkdir()
+
+    with after.each:
+        self.home.close()
+
+    with context("whose practices write under their default folders"):
+        with it("should tell the chat to point each practice at where its artifacts already are"):
+            answer = Sessions(self.repo).switch("alpha", self.repo)
+            expect(answer).to(contain("practice-session-output.choose_root"))
+
+    with context("whose every practice has a chosen root"):
+        with it("should not ask about roots"):
+            Sessions(self.repo).switch("alpha", self.repo)
+            session = Sessions(self.repo).current()
+            for practice in session.own_practices.values():
+                practice.choose_root("work")
+            answer = Sessions(self.repo).switch("alpha", self.repo)
+            expect("Output roots" in answer).to(equal(False))
+
+    with context("that is main"):
+        with it("should not ask about roots"):
+            answer = Sessions(self.repo).switch("main")
+            expect("Output roots" in answer).to(equal(False))
