@@ -16,6 +16,7 @@ from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.data_class import SourceFile, data_field, language_adapter
+from harness.markdown.format import Format
 from harness.mcp.mcp_annotations import mcp
 
 
@@ -94,14 +95,15 @@ class Folder:
 
 class FileEntry:
     """One file something declares, such as a fidelity's output, as a path from the project, whether it is there yet,
-    whether the session's branch changed it, which a page filters on, and the link it is published at, such as a design
-    canvas's, which a page opens instead of the file."""
+    whether the session's branch changed it, the format its extension names, and the fidelities it belongs to, which a
+    page filters on, and the link it is published at, such as a design canvas's, which a page opens instead of the file."""
 
-    def __init__(self, path: str, exists: bool, is_changed: bool = False, link: str = "") -> None:
+    def __init__(self, path: str, exists: bool, is_changed: bool = False, link: str = "", fidelities: tuple[str, ...] = ()) -> None:
         self._path = path
         self._exists = exists
         self._is_changed = is_changed
         self._link = link
+        self._fidelities = tuple(fidelities)
 
     @property
     @data_field
@@ -122,6 +124,22 @@ class FileEntry:
     @data_field
     def link(self) -> str:
         return self._link
+
+    @property
+    @data_field
+    def format(self) -> str:
+        """The format its extension names, such as python for a .py file."""
+        return Format.from_extension(Path(self._path).suffix).name
+
+    @property
+    @data_field
+    def fidelities(self) -> list[str]:
+        """The fidelities whose files it is, such as stories-story-map; none for a file no fidelity declares."""
+        return list(self._fidelities)
+
+    def belonging_to(self, fidelities: list[str]) -> FileEntry:
+        """This file, saying it is a file of fidelities."""
+        return FileEntry(self._path, self._exists, self._is_changed, self._link, tuple(fidelities))
 
 
 # The language a viewer shows a file in, by its suffix; a file of any other suffix is plain text.

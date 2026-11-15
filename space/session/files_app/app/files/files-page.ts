@@ -33,6 +33,11 @@ export const filesShown = (byFidelity: FidelityFiles[], listed: string[], format
   return eachOnce(byFidelity.filter(({ slug }) => !slug || listed.includes(slug)).flatMap(inFormat))
 }
 
+// The files under the session's root a page shows: in a format selected while any is, and belonging to a fidelity listed
+// or to none, so a practice or stage turned off hides its files and a file no fidelity declares always shows.
+export const rootFilesShown = (rootFiles: FileEntryData[], listed: string[], formats: string[]): FileEntryData[] =>
+  rootFiles.filter(entry => (!formats.length || formats.includes(entry.format)) && (!entry.fidelities.length || entry.fidelities.some(slug => listed.includes(slug))))
+
 // Each file once, in the order its fidelities and formats send them.
 const eachOnce = (entries: FileEntryData[]): FileEntryData[] => entries.filter((entry, index) => entries.findIndex(other => other.path === entry.path) === index)
 
@@ -72,6 +77,7 @@ export class FilesPage {
     void this.list()
     // A link naming no session, such as the app's bare address, has nothing to ask cdd about: list() says so.
     if (this.link.namesFiles) void this.readPlace()
+    if (this.link.namesFiles && !this.link.isSessionFolder) void this.readRootFiles()
     const stopFollowing = this.link.isSessionFolder || !this.link.namesFiles ? () => undefined : this.guidance.follow()
     const reread = () => void this.refreshOpen()
     window.addEventListener('focus', reread)
@@ -120,9 +126,25 @@ export class FilesPage {
     return listedBy(this.state.guidance, this.link.fidelities)
   }
 
-  // The files shown from state: of the fidelities listed, those in the formats selected.
+  // The files shown from state, in the formats selected: the files of the fidelities listed first, among them those not
+  // generated yet and a design canvas at its link; then every other file under the session's root that belongs to a
+  // fidelity listed or to none. The file bar keeps the changed ones for This session.
   private shownFrom(state: FilesPage['state']): FileEntryData[] {
-    return filesShown(state.byFidelity, this.link.isSessionFolder ? [''] : listedBy(state.guidance, this.link.fidelities), selectedFormatsOf(state.guidance))
+    const formats = selectedFormatsOf(state.guidance)
+    if (this.link.isSessionFolder) return filesShown(state.byFidelity, [''], formats)
+    const listed = listedBy(state.guidance, this.link.fidelities)
+    return eachOnce([...filesShown(state.byFidelity, listed, formats), ...rootFilesShown(state.rootFiles ?? [], listed, formats)])
+  }
+
+  // Every file under the session's root, read once as the page opens: what All session files lists, and This session
+  // the changed ones of.
+  private async readRootFiles(): Promise<void> {
+    try {
+      const rootFiles = (await TicketClientGenerated.named(this.api, this.link.ticket).rootFiles()) ?? []
+      this.store.change(state => ({ rootFiles, entries: this.shownFrom({ ...state, rootFiles }) }))
+    } catch (failure) {
+      this.fail(`The Files app did not list the files under the session's root: ${reasonOf(failure)}`, 'Opening the Files app, calling ticket.root_files')
+    }
   }
 
   // A session folder is one list of no fidelity; a ticket's fidelities are kept apart, so a practice can hide its own.

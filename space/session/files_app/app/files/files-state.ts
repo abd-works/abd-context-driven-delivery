@@ -11,9 +11,11 @@ export type FilesState = {
   guidance: GuidanceSelectionData | null
   // Where the files are, as the header shows it: the repository, the branch, and the session's root.
   place: string
-  // What the page lists of the files its guidance selection covers: This session, those the session's branch changed;
-  // or All session files, every one, older work included.
+  // What the page lists of the files its stages, practices and formats select: This session, those the session's
+  // branch changed against main; or All session files, every one under the session's root, older work included.
   scope: 'session' | 'all'
+  // Every file under the session's root, each with its format and the fidelities it belongs to; none until read.
+  rootFiles: FileEntryData[] | null
   // What the open file is read with: its own rules, read on its own, and the rules across the whole working copy. Both
   // off by default, so browsing never reads a graph.
   reads: { rules: boolean; crossFile: boolean }
@@ -32,6 +34,7 @@ export const NO_FILES: FilesState = {
   guidance: null,
   place: '',
   scope: 'session',
+  rootFiles: null,
   reads: { rules: false, crossFile: false },
   byFidelity: [],
   entries: [],
