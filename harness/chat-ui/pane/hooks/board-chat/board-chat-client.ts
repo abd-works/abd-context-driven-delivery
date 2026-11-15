@@ -88,6 +88,25 @@ async function failed($: EngineInterface, chat: string, command: ChatCommandData
   await post($, { chat, operation: 'confirm', body: { message: command.message, is_shown: true, reason: '' } })
 }
 
+// How many check-ins in a row may fail before the bar shows it: a cdd server restarting, as a repin restarts it, drops
+// the call in flight, and the check-in a second later answers again. Ten failed in a row is a cdd that is not coming back.
+const FAILED_CHECK_INS_SHOWN = 10
+let failedCheckIns = 0
+
+// The check-in every second, or, between an idle chat's check-ins, the read of its selection: a failure shows once it
+// keeps happening, with the reason the last one gave and how long it has gone on.
+export async function keepInTouch($: EngineInterface, chat: string, isCheckIn: boolean): Promise<void> {
+  try {
+    await (isCheckIn ? checkIn($, chat) : readSelection($, chat))
+    failedCheckIns = 0
+  } catch (failure) {
+    failedCheckIns += 1
+    if (failedCheckIns !== FAILED_CHECK_INS_SHOWN) return
+    const call = isCheckIn ? 'chat.check_in' : 'chat.show'
+    await showFailure($, `This chat has not reached cdd for ${FAILED_CHECK_INS_SHOWN} seconds`, `The check-in every second, calling ${call}`, failure)
+  }
+}
+
 // The dots draw the selection cdd holds for the chat, read every second even while an idle chat checks in less often,
 // so a practice pressed in the Files app shows on the dots within a second; the stage the bar shows goes the other way.
 export async function readSelection($: EngineInterface, chat: string): Promise<void> {
