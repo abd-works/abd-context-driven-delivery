@@ -226,7 +226,7 @@ function OverlayListView($: EngineInterface, { Box, Button, Text }: ElementTable
   )
 }
 
-// The line, left to right: health mark, the stage button, │, fidelity dots and the action chip, then at the right end
+// The line, left to right: health mark, the version badge, the stage button, │, fidelity dots and the action chip, then at the right end
 // the session name and its buttons.
 function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
   const { Box, Text } = elements
@@ -235,6 +235,7 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
   return (
     <Box key="line" flexDirection="row" gap={1} flexWrap="wrap" alignItems="center">
         {draw.health.band}
+        {draw.version.badge}
         {StageButtonView($, elements, draw)}
         <Text color={BRAND.border}>{SEPARATOR}</Text>
         <Box key="fidelity-column" flexDirection="row" gap={1} alignItems="center">
@@ -248,7 +249,6 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
         <Box flexGrow={1} />
         {SessionNameView($, elements, draw)}
         {SessionButtonsView($, elements, draw)}
-        {draw.version.badge}
     </Box>
   )
 }
