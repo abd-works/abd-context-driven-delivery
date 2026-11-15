@@ -66,4 +66,41 @@ describe('cdd connection', () => {
       expect(asks.length).toBe(2)
     })
   })
+
+  // The server sends a call's answer as a stream of events, and a large answer arrives in many small pieces.
+  describe('that is answered as a stream of events', () => {
+    const PIECE_CHARACTERS = 4_096
+
+    function serverStreaming(event: (id: number) => string): void {
+      vi.stubGlobal('fetch', async (_url: string, init: { body: string }) => {
+        const { id } = JSON.parse(init.body) as { id: number }
+        const text = event(id)
+        let sent = 0
+        const body = new ReadableStream<Uint8Array>({
+          pull(controller) {
+            if (sent >= text.length) return controller.close()
+            controller.enqueue(new TextEncoder().encode(text.slice(sent, sent + PIECE_CHARACTERS)))
+            sent += PIECE_CHARACTERS
+          },
+        })
+        return new Response(body, { headers: { 'content-type': 'text/event-stream' } })
+      })
+    }
+
+    describe('with an answer of four million characters', () => {
+      const LARGE = 'x'.repeat(4_000_000)
+
+      it('should read the answer within three hundred milliseconds', { timeout: 300 }, async () => {
+        serverStreaming(id => `event: message\r\ndata: ${JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ text: JSON.stringify(LARGE) }] } })}\r\n\r\n`)
+        expect((await connectionFromBeforeRestart().call<string>('graph.inventory', {})).length).toBe(LARGE.length)
+      })
+    })
+
+    describe('with an event whose data is not JSON', () => {
+      it('should fail the call saying the answer could not be read', async () => {
+        serverStreaming(() => 'event: message\r\ndata: {"jsonrpc": "2.0", "id": \r\n\r\n')
+        await expect(connectionFromBeforeRestart().call('graph.inventory', {})).rejects.toThrow('could not be read')
+      })
+    })
+  })
 })

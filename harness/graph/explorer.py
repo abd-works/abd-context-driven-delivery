@@ -89,7 +89,9 @@ class ExplorerEntry(NodeAnswer):
 
 class PracticeInventory:
     """One loaded practice as the explorer's inventory shows it, read from the graph that holds it: how many nodes of
-    each type it holds, how many edges, its node types, edge kinds, rules, and explorer tree."""
+    each type it holds, how many edges, its node types, edge kinds, and rules. Its explorer tree comes from
+    ``graph.explorer_trees``, as the explorer's filter leaves it: a whole repository's tree runs to hundreds of
+    megabytes, which no page reads and no call sends within its ten minutes."""
 
     def __init__(self, graph: Graph, practice: PracticeGuidance) -> None:
         self._graph = graph
@@ -124,12 +126,6 @@ class PracticeInventory:
     def rules(self) -> list[str]:
         """Each rule the practice runs, named ``practice.node.rule`` with the pattern that owns it in front."""
         return self._practice.reading.in_graph.rule_run.rule_labels
-
-    @property
-    @data_field
-    def tree(self) -> ExplorerEntry:
-        """The explorer tree, from the practice's root."""
-        return self._practice.reading.in_graph.root.serialize()
 
 
 class Overlay:

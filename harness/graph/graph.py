@@ -767,8 +767,8 @@ class GraphExplorer:
         self.filter = Filter(graph)
 
     def inventory(self) -> Inventory:
-        """Each open practice's node and edge counts, node types, rules, and explorer tree, with the overlays applied
-        and those available."""
+        """Each open practice's node and edge counts, node types, and rules, with the overlays applied and those
+        available."""
         return Inventory(self.graph)
 
     def filter_choices(self, practices: list[str], node_types: list[str], practices_before: list[str] | None) -> Filter:
@@ -1512,7 +1512,7 @@ class Graph:
     @mcp
     @agent_tool
     def inventory(self) -> Inventory:
-        """Return each loaded practice's node and edge counts, node types, rules, and explorer tree, with the overlays applied and those available."""
+        """Return each loaded practice's node and edge counts, node types, and rules, with the overlays applied and those available; explorer_trees answers the trees."""
         return self.explorer.inventory()
 
     @mcp

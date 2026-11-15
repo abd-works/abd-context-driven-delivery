@@ -138,8 +138,8 @@ One loaded practice as the explorer's inventory shows it, read from the graph th
 	// in EDGE_ORDER
 + rules: list[str]
 	// -> practice.reading.in_graph.rule_run.rule_labels
-+ tree: ExplorerEntry
-	// -> practice.reading.in_graph.root.serialize()
+	// no tree: graph.explorer_trees answers each practice's tree as the explorer's filter leaves it; a whole
+	// repository's tree runs to hundreds of megabytes, which no page reads and no call sends within ten minutes
 
 ## Node
 

@@ -28,6 +28,48 @@ export class CddNotConnectedError extends Error {
 // The server answered that it no longer knows this connection's session: it ran nothing.
 class SessionGoneError extends CddNotConnectedError {}
 
+export class CddAnswerUnreadableError extends Error {
+  constructor(request: number, detail: string) {
+    super(`The cdd server's answer to request ${request} could not be read: ${detail}`)
+    this.name = 'CddAnswerUnreadableError'
+  }
+}
+
+// The events of a stream the server writes, each ended by a blank line, read piece by piece as they arrive.
+const EVENT_END = /\r?\n\r?\n/g
+// The longest end of an event, \r\n\r\n, less one: how far back into the text already read a new piece's end can begin.
+const EVENT_END_REACH = 3
+
+class EventStream {
+  // The pieces of the event not ended yet, kept apart and joined once its end arrives: searching all the text read so
+  // far again for every piece takes hours on an answer of 300 MB.
+  private readonly pieces: string[] = []
+  private tail = ''
+
+  // The events piece completes, oldest first; what follows the last one waits for the next piece. Only the new piece,
+  // and the few characters before it where an end could begin, are searched.
+  read(piece: string): string[] {
+    const searched = this.tail + piece
+    EVENT_END.lastIndex = 0
+    if (!EVENT_END.test(searched)) {
+      this.keep(piece)
+      return []
+    }
+    const text = [...this.pieces, piece].join('')
+    this.pieces.length = 0
+    this.tail = ''
+    const events = text.split(EVENT_END)
+    this.keep(events.pop() ?? '')
+    return events
+  }
+
+  private keep(piece: string): void {
+    if (!piece) return
+    this.pieces.push(piece)
+    this.tail = (this.tail + piece).slice(-EVENT_END_REACH)
+  }
+}
+
 type Session = { url: string; headers: Record<string, string> }
 type Message = { id?: number; method?: string; params?: { progressToken?: number; message?: string }; result?: unknown; error?: { message?: string } }
 type ToolResult = { content?: { text?: string }[]; isError?: boolean }
@@ -160,30 +202,29 @@ export class CddConnection {
   private async replyTo(id: number, response: Response): Promise<Message> {
     if (!(response.headers.get('content-type') ?? '').includes('text/event-stream')) return (await response.json()) as Message
     const reader = response.body!.pipeThrough(new TextDecoderStream()).getReader()
-    let buffered = ''
+    const events = new EventStream()
     for (;;) {
       const { value, done } = await reader.read()
       if (done) throw new CddNotConnectedError(`the server closed the stream before answering request ${id}`)
-      buffered += value
-      const events = buffered.split(/\r?\n\r?\n/)
-      buffered = events.pop() ?? ''
-      for (const message of events.map(event => this.messageIn(event))) {
+      for (const message of events.read(value).map(event => this.messageIn(id, event))) {
         if (message?.method === 'notifications/progress') this.reported(message)
         else if (message?.id === id) return message
       }
     }
   }
 
-  private messageIn(event: string): Message | null {
+  // An event whose data is not JSON fails the call: dropped, it would leave the call waiting for a reply already sent.
+  private messageIn(id: number, event: string): Message | null {
     const data = event
       .split(/\r?\n/)
       .filter(line => line.startsWith('data:'))
       .map(line => line.slice(5).trimStart())
       .join('\n')
+    if (!data) return null
     try {
-      return data ? (JSON.parse(data) as Message) : null
-    } catch {
-      return null
+      return JSON.parse(data) as Message
+    } catch (failure) {
+      throw new CddAnswerUnreadableError(id, `${failure instanceof Error ? failure.message : String(failure)}; it began ${JSON.stringify(data.slice(0, 200))}`)
     }
   }
 
