@@ -5,6 +5,7 @@ import express, { type Request, type Response } from 'express';
 
 import { CddConnection, ProjectConnections } from '@cdd/cdd-connection';
 import { CddRequestError, cddProgressRoutes, type CddRoute } from '@cdd/cdd-shared';
+import { chatRoutes } from '@cdd/harness/chat/chat';
 import { graphRoutes } from '@cdd/harness/graph/graph';
 import ports from './ports.json';
 
@@ -13,6 +14,8 @@ const python = process.env.PYTHON || 'python';
 const API_ROOT = '/api';
 const BAD_REQUEST = 400;
 const FAILED = 500;
+// The chat route the page needs: sending the chat that opened it (?chat=) each failure the page meets.
+const CHAT_ROUTES = ['/chat/:chat/send'];
 
 // One cdd server holds the graph. A route reaches it on the connection of the project the page names (?project=, sent
 // as the project header), so the call works in the session open in that project, the one the board shows as active;
@@ -48,8 +51,17 @@ function chooseFolder(title: string): Promise<string> {
 const app = express();
 app.use(express.json());
 
-for (const route of [...graphRoutes, ...cddProgressRoutes]) {
-  app.post(`${API_ROOT}${route.path}`, (request, response) => void answer(route, request, response));
+// A failure answering a request the request can no longer be told of, as when the answer was half sent, is written
+// to stderr whole, so it is seen where the server runs.
+function unanswered(route: string, failure: unknown): void {
+  console.error(`Error: the Graph web server could not answer ${route}:`, failure);
+}
+
+const routes = [...graphRoutes, ...cddProgressRoutes, ...chatRoutes.filter((route) => CHAT_ROUTES.includes(route.path))];
+for (const route of routes) {
+  app.post(`${API_ROOT}${route.path}`, (request, response) => {
+    answer(route, request, response).catch((failure) => unanswered(route.path, failure));
+  });
 }
 
 app.post(`${API_ROOT}/explorer/choose-folder`, async (request, response) => {

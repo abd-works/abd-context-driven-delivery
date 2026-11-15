@@ -5,8 +5,9 @@ import type { CddProgress } from '@cdd/cdd-shared';
 import type { ExplorerEntryData, FilterData, GraphRuleData, NodeSourceData } from '@cdd/harness/graph/graph';
 import { nodeFilter, type FilterSelection } from './filter/filter-selection';
 import { FilterView } from './filter/FilterView';
-import { GraphApi } from './graph/graph-api';
 import { GraphClient } from './graph/GraphClient';
+import { reasonOf } from './graph/graph-failures';
+import { api, failures } from './graph/graph-page';
 import { GraphView } from './graph/GraphView';
 import { childrenOf, isRule, ruleHits, selectionForRule, type GraphSelection, type TreeItem } from './graph/graph-selection';
 import { SourceView, type SourceRule } from './source/SourceView';
@@ -29,7 +30,7 @@ const NO_CHOICES: FilterData = { node_types: [], offered_node_types: [], relatio
 // A page opened with ?folder= (the chat bar names the session's workpath) loads that folder; one opened on a project
 // (?project=, from a ticket's graph widget) shows the graph of the session open there, loaded on its practice roots; a
 // page opened with neither shows the folder a person last chose.
-const api = new GraphApi();
+// Every failure goes through failures.fail: shown on the page and sent once to the chat that opened it (?chat=).
 const graphs = new GraphClient(api);
 const FOLDER_QUERY = 'folder';
 
@@ -111,11 +112,9 @@ export function App() {
             }
           }
         } catch (cause) {
-          const message = cause instanceof Error ? cause.message : String(cause);
-          setLoadingLog((current) => {
-            const line = `error: Progress check failed: ${message}`;
-            return current[current.length - 1] === line ? current : [...current, line];
-          });
+          const line = `error: Progress check failed: ${reasonOf(cause)}`;
+          setLoadingLog((current) => (current[current.length - 1] === line ? current : [...current, line]));
+          failures.fail(`The Graph app did not read the cdd server's progress: ${reasonOf(cause)}`, 'Reading the progress of the cdd server while the page shows');
         }
         await new Promise((resolve) => setTimeout(resolve, 400));
       }
@@ -145,12 +144,22 @@ export function App() {
   }
 
   async function browse() {
-    const chosen = await graphs.chooseFolder();
-    if (!chosen) {
-      return;
+    try {
+      const chosen = await graphs.chooseFolder();
+      if (!chosen) {
+        return;
+      }
+      setFolder(chosen);
+      await load(chosen);
+    } catch (cause) {
+      failed(cause, 'Choosing the session path in the Graph app');
     }
-    setFolder(chosen);
-    await load(chosen);
+  }
+
+  // A failure of an operation the graph pane shows: kept in the pane, and shown and sent to the opening chat.
+  function failed(cause: unknown, context: string) {
+    setError(reasonOf(cause));
+    failures.fail(reasonOf(cause), context);
   }
 
   async function load(root: string, next = selection, force = false) {
@@ -185,9 +194,10 @@ export function App() {
       setLoadingLog([]);
     } catch (cause) {
       if (generation !== loadGeneration.current) {
+        failures.fail(reasonOf(cause), `Loading the graph of ${trimmed}, a load the page has since started again`);
         return;
       }
-      setError(cause instanceof Error ? cause.message : String(cause));
+      failed(cause, `Loading the graph of ${trimmed}`);
     } finally {
       if (generation === loadGeneration.current) {
         setLoading(false);
@@ -207,7 +217,8 @@ export function App() {
       if (!shown) setSourceNote('The graph holds no source for this node. Load the folder again if it should.');
     } catch (cause) {
       setSource(null);
-      setSourceNote(`The source did not open: ${cause instanceof Error ? cause.message : String(cause)}`);
+      setSourceNote(`The source did not open: ${reasonOf(cause)}`);
+      failures.fail(reasonOf(cause), `Opening the source of ${selection.nodeId} in the Graph app`);
     }
   }
 
@@ -229,7 +240,7 @@ export function App() {
       await showFilter(chosen(applied, await offerChoices(applied)));
       window.localStorage.setItem(LAST_OVERLAYS, JSON.stringify(bundle.overlays));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      failed(cause, 'Applying pattern overlays in the Graph app');
     } finally {
       setOverlayApplying(false);
       setLoading(false);
@@ -247,7 +258,7 @@ export function App() {
       }
       await applyOverlays([...selection.overlays, picked]);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      failed(cause, 'Adding a pattern overlay folder in the Graph app');
     }
   }
 
@@ -284,12 +295,16 @@ export function App() {
       setSelection(next);
       return;
     }
-    if (joined(next.practices) !== joined(selection.practices)) {
-      await showFilter(chosen(next, await offerChoices(next, selection.practices)));
-    } else if (joined(next.node_types) !== joined(selection.node_types)) {
-      await showFilter(chosen(next, await offerChoices(next)));
-    } else {
-      await showFilter(next);
+    try {
+      if (joined(next.practices) !== joined(selection.practices)) {
+        await showFilter(chosen(next, await offerChoices(next, selection.practices)));
+      } else if (joined(next.node_types) !== joined(selection.node_types)) {
+        await showFilter(chosen(next, await offerChoices(next)));
+      } else {
+        await showFilter(next);
+      }
+    } catch (cause) {
+      failed(cause, 'Changing the filter in the Graph app');
     }
   }
 
@@ -426,17 +441,18 @@ function chosen(next: FilterSelection, choices: FilterData): FilterSelection {
   return { ...next, node_types: choices.node_types, relationships: choices.relationships, rules: choices.rules };
 }
 
+// The overlays a person last applied. Saved text that is not a list of overlays fails the load that reads it, which
+// says so, instead of loading with none.
 function readSavedOverlays(): string[] {
-  try {
-    const raw = window.localStorage.getItem(LAST_OVERLAYS);
-    if (!raw) {
-      return [];
-    }
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? parsed.map(String) : [];
-  } catch {
+  const raw = window.localStorage.getItem(LAST_OVERLAYS);
+  if (!raw) {
     return [];
   }
+  const parsed = JSON.parse(raw) as unknown;
+  if (!Array.isArray(parsed)) {
+    throw new Error(`The overlays saved in this browser (${LAST_OVERLAYS}) are not a list: ${raw}`);
+  }
+  return parsed.map(String);
 }
 
 function overlayIsActive(overlays: string[], name: string): boolean {

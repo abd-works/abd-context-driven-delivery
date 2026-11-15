@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { KindMark } from '../labels/kind-mark';
 import type { ExplorerEntryData } from '@cdd/harness/graph/graph';
 import { childrenOf, isRule, ruleHits, selectionForRule, type GraphSelection, type TreeItem } from './graph-selection';
+import { reasonOf } from './graph-failures';
+import { failures } from './graph-page';
 import { queryProgress } from './query-progress';
 
 type GraphViewProps = {
@@ -80,7 +82,7 @@ export function GraphView({ trees, loading, loadingLabel, loadingLog = [], error
       ) : null}
       {error && !loading ? (
         <div className="scan-error empty-state" data-testid="scan-error">
-          <button type="button" className="copy-diagnosis" onClick={() => void navigator.clipboard.writeText(error)}>
+          <button type="button" className="copy-diagnosis" onClick={() => void copyDiagnosis(error)}>
             Copy for AI
           </button>
           <pre>{error}</pre>
@@ -169,4 +171,13 @@ function TreeNode({
       ) : null}
     </li>
   );
+}
+
+// The diagnosis copied for a person to paste to an agent; a copy the browser refuses is shown and sent to the chat.
+async function copyDiagnosis(error: string) {
+  try {
+    await navigator.clipboard.writeText(error);
+  } catch (cause) {
+    failures.fail(`The diagnosis was not copied: ${reasonOf(cause)}`, 'Copy for AI in the Graph app');
+  }
 }
