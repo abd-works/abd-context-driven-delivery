@@ -32,7 +32,9 @@
     "bdd": {
       "enabled": true,
       "formats": {
-        "behavior": []
+        "behavior": [
+          "python"
+        ]
       }
     }
   }
