@@ -146,7 +146,7 @@ export function BacklogCardView({ item }: { item: BacklogItemClient }) {
   const { shownDrop, ...drop } = useItemDrop(item)
   const className = ['ticket-card', item.childItems.length ? 'is-parent' : '', state.dragged === item.address ? 'is-dragged' : '', shownDrop ? DROP_LOOKS[shownDrop] : ''].filter(Boolean).join(' ')
   return (
-    <div className={className} data-item={item.title} draggable {...useItemDrag(item)} {...drop} onClick={() => item.select()} style={{ borderColor: isSelected ? 'var(--text)' : 'var(--border)' }}>
+    <div className={className} data-item={item.title} draggable {...useItemDrag(item)} {...drop} onClick={() => item.toggleShown()} style={{ borderColor: isSelected ? 'var(--text)' : 'var(--border)' }}>
       {/* Chrome starts no drag on a button, and this one covers the card, so it carries the card's drag. */}
       <button className="card-hit" aria-label={`Show ${item.title}`} draggable />
       <span className="expand-mark card-mark" aria-hidden="true" />

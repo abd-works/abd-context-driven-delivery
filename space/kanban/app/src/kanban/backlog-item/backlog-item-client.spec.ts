@@ -50,6 +50,14 @@ describe('Add Backlog Item', () => {
     it('should close the form', async () => {
       expect((await added()).store.state.draft.isOpen).toBe(false)
     })
+
+    describe('that a person has pressed once it shows', () => {
+      it('should collapse it again', async () => {
+        const page = await added()
+        page.board.selectedItem?.toggleShown()
+        expect(page.board.selectedItem).toBeUndefined()
+      })
+    })
   })
 
   describe('Drop Backlog Item On Another', () => {

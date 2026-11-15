@@ -27,7 +27,7 @@ import {
   refreshHealthSoon,
   runInstall,
 } from './health/server-health-client'
-import { ServerHealthBandView, ServerHealthPanelView } from './health/server-health-view'
+import { ServerHealthBandView, ServerHealthIconsView, ServerHealthPanelView } from './health/server-health-view'
 import { askToUpdate, cancelUpdate, checkVersionSoon, currentCddVersion, readVersionAfterTurn, updateToLatest } from './health/cdd-version-client'
 import { UpdateDialogView, VersionBadgeView } from './health/cdd-version-view'
 import { askToPush, cancelPush, currentRepo, pushToMain, pushWork } from './repo/repo-client'
@@ -194,7 +194,7 @@ export const register: Register = on => {
       view: await currentChatBarView($),
       picker: await currentActionPicker($),
       busy: await currentBusy($),
-      health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band) },
+      health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band), icons: ServerHealthIconsView(elements, band) },
       version: { label: version.label, badge: VersionBadgeView(elements, version, versionActions), dialog: UpdateDialogView(elements, version, versionActions) },
       push: { buttons: PushButtonsView(elements, repo, pushActions), dialog: PushDialogView(elements, repo, chatBar.title || chatBar.sessionName, pushActions) },
       width: e.props.bodyColumns,
