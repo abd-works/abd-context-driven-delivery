@@ -9,6 +9,8 @@ export type FidelityFiles = { slug: string; entries: FileEntryData[]; formatOf?:
 export type FilesState = {
   // The session's guidance selection as last drawn: its stages, practices and formats, the chat bar's buttons' too.
   guidance: GuidanceSelectionData | null
+  // Where the files are, as the header shows it: the repository, the branch, and the session's root.
+  place: string
   // What the open file is read with: its own rules, read on its own, and the rules across the whole working copy. Both
   // off by default, so browsing never reads a graph.
   reads: { rules: boolean; crossFile: boolean }
@@ -24,6 +26,7 @@ export type FilesState = {
 
 export const NO_FILES: FilesState = {
   guidance: null,
+  place: '',
   reads: { rules: false, crossFile: false },
   byFidelity: [],
   entries: [],

@@ -1193,12 +1193,16 @@ with description("a session's guidance selection") as self:
         self.home = ExampleHome()
         self.repo = Path(tempfile.mkdtemp(prefix="session-guidance-")).resolve()
         (self.repo / ".git").mkdir()
+        (self.repo / "work").mkdir()
         Sessions(self.repo).switch("alpha", self.repo / "work")
         self.session = Sessions(self.repo).current()
 
     with after.each:
         shutil.rmtree(self.repo, ignore_errors=True)
         self.home.close()
+
+    with it("should name its repository, branch, and root, as a page heads them"):
+        expect([self.session.repo_name, self.session.branch, self.session.root]).to(equal([self.repo.name, "alpha", str((self.repo / "work").resolve())]))
 
     with context("that nothing has selected yet"):
         with it("should have no stage chosen"):

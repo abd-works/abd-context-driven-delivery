@@ -70,6 +70,7 @@ export class FilesPage {
     window.addEventListener('error', onError)
     window.addEventListener('unhandledrejection', onRejection)
     void this.list()
+    void this.readPlace()
     const stopFollowing = this.link.isSessionFolder ? () => undefined : this.guidance.follow()
     const reread = () => void this.refreshOpen()
     window.addEventListener('focus', reread)
@@ -79,6 +80,21 @@ export class FilesPage {
       window.removeEventListener('focus', reread)
       stopFollowing()
       this.stopRefreshing()
+    }
+  }
+
+  // The header: the repository, the branch, and the session's root; the link's subject until the session answers.
+  get heading(): string {
+    return this.state.place || this.link.subject
+  }
+
+  // Where the files are, read once as the page opens.
+  private async readPlace(): Promise<void> {
+    try {
+      const session = await this.session.show()
+      if (session) this.store.change(() => ({ place: [session.repoName, session.branch, session.root].filter(Boolean).join(' · ') }))
+    } catch (failure) {
+      this.fail(`The Files app did not read where the session works: ${reasonOf(failure)}`, 'Opening the Files app, calling session.show')
     }
   }
 

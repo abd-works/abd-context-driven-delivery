@@ -354,6 +354,24 @@ class Session:
 
     @property
     @data_field
+    def repo_name(self) -> str:
+        """The repository the session works in, by its folder's name, as a page heads it."""
+        return self.repo.root.name
+
+    @property
+    @data_field
+    def branch(self) -> str:
+        """The branch the session works on, as its session.json names it, else the session's own name."""
+        return self.fields.get("branch") or self.name
+
+    @property
+    @data_field
+    def root(self) -> str:
+        """The whole path of the folder the session works in, as a page heads it."""
+        return str(self.work_root)
+
+    @property
+    @data_field
     def scope(self) -> str:
         """feature, story, or slice; empty when no one said."""
         return self.fields.get("scope", "")

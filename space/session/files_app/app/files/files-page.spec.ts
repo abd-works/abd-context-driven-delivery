@@ -33,6 +33,7 @@ class FakeFilesServer implements CddApi {
   async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
     this.posts.push({ path, body })
     if (path.endsWith('/guidance-selection')) return this.selection() as Result
+    if (path.endsWith('/show')) return { name: 'release-2', repo_name: 'abd-cdd', branch: 'release-2', root: 'C:/dev/abd-cdd-2' } as Result
     if (path.endsWith('/update-guidance-selection')) return this.update(body) as Result
     if (path.endsWith('/guidance-selection-after')) return (await this.after(Number(body.version))) as Result
     if (path.endsWith('/files')) return { markdown: [entry(`.context/${path.split('/')[3]}.md`)], drawio: [entry(`.context/${path.split('/')[3]}.drawio`)] } as Result
@@ -192,6 +193,14 @@ describe('Select Guidance In Files App', () => {
       stop()
       expect(paths(page)).toEqual(['.context/stories-story-map.md', '.context/stories-story-map.drawio', '.context/ddd-bounded-context.md', '.context/ddd-bounded-context.drawio'])
     })
+  })
+})
+
+describe('Head The Files App With Where The Files Are', () => {
+  it('should name the repository, the branch, and the session root', async () => {
+    const { page, stop } = await following(new FakeFilesServer())
+    stop()
+    expect(page.heading).toBe('abd-cdd · release-2 · C:/dev/abd-cdd-2')
   })
 })
 

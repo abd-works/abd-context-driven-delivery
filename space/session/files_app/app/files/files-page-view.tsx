@@ -300,7 +300,7 @@ export function FilesPageView({ page }: { page: FilesPage }) {
     <main className="files-page">
       <header className="files-head">
         <span className="files-kind">FILES</span>
-        <span className="files-subject">{page.link.subject}</span>
+        <span className="files-subject">{page.heading}</span>
         <StageTogglesView page={page} />
         <PracticeTogglesView page={page} />
         <FormatTogglesView page={page} />
