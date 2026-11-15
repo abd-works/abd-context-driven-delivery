@@ -11,7 +11,8 @@ from datetime import timedelta
 from pathlib import Path
 
 from harness.mcp.cdd_home import CDD_HOME_ENV, CddHome
-from harness.mcp.mcp_daemon import CONNECT_SCRIPT, PROJECT_HEADER, SERVER_OWNER_ENV, SERVER_PORT_ENV, McpDaemon, RunningServer
+from harness.mcp.mcp_address import PROJECT_HEADER, SERVER_PORT_ENV
+from harness.mcp.mcp_daemon import CONNECT_SCRIPT, SERVER_OWNER_ENV, McpDaemon, RunningServer
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _TOOLSET_REFS_ENV = "MCP_TOOLSET_REFS"

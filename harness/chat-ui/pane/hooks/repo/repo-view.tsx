@@ -11,21 +11,22 @@ export type PushActions = { pushWork: () => unknown; ask: () => unknown; cancel:
 
 const DOING: Record<string, string> = { running: 'pushing…', failed: 'not pushed' }
 
-// Push and Push & merge to origin/main, as icons among the session's buttons, with pushing… or not pushed while one runs or after one fails.
+// Push and Push & merge to origin/main, as icons among the session's buttons. While a push runs, or after one fails,
+// the icons say so in their tooltips, red when it failed, so the bar carries no words.
 export function PushButtonsView(elements: ElementTable, repo: RepoClient, actions: PushActions) {
-  const { Box, Text } = elements
-  const doing = DOING[repo.state]
+  const { Box } = elements
+  const doing = DOING[repo.state] ?? ''
+  const colour = repo.state === 'failed' ? BRAND.error : BRAND.muted
   return (
     <Box key="push-buttons" flexDirection="row" gap={1}>
       <Box key="push-work-box">
-        {GlyphButtonView(elements, 'push-work', '⤴', BRAND.muted, actions.pushWork)}
-        {TipView(elements, 'push', '', BRAND.muted)}
+        {GlyphButtonView(elements, 'push-work', '⤴', colour, actions.pushWork)}
+        {TipView(elements, 'push', doing, colour)}
       </Box>
       <Box key="push-to-main-box">
-        {GlyphButtonView(elements, 'push-to-main', '⇪', BRAND.muted, actions.ask)}
-        {TipView(elements, 'push & merge to origin/main', '', BRAND.muted)}
+        {GlyphButtonView(elements, 'push-to-main', '⇪', colour, actions.ask)}
+        {TipView(elements, 'push & merge to origin/main', doing, colour)}
       </Box>
-      {doing ? <Text key="push-state" color={repo.state === 'failed' ? BRAND.error : BRAND.muted}>{doing}</Text> : null}
     </Box>
   )
 }

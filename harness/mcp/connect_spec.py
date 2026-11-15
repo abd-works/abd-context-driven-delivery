@@ -22,7 +22,7 @@ _spec.loader.exec_module(connect)
 # What the pinned runtime's modules build on, loaded with the spec, so an example that imports the runtime times the wait
 # for its record and the runtime's own modules rather than the standard library's HTTP client and the toolset framework.
 import http.client  # noqa: E402,F401
-import harness.agent_tools.claude_chat_process  # noqa: E402,F401
+import harness.process.claude_chat_process  # noqa: E402,F401
 
 
 with description("the project a chat's connect script names"):
@@ -94,7 +94,7 @@ with description("the pinned runtime a chat's connect script imports") as self:
             record = json.dumps({"source": str(_REPOSITORY)})
             threading.Timer(0.02, lambda: (self.home / "runtime.json").write_text(record, encoding="utf-8")).start()
             connect.import_runtime()
-            expect("harness.mcp.mcp_daemon" in sys.modules).to(be_true)
+            expect("harness.mcp.mcp_address" in sys.modules).to(be_true)
 
     with context("whose record stays missing longer than an install swaps it"):
         with it("should fail, naming the missing record"):
