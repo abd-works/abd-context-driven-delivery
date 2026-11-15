@@ -1,6 +1,8 @@
 """BDD spec for practices/ddd/ddd.py — Ddd toolset CE delegation.
 """
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -11,8 +13,8 @@ for _cat in ("cdd_guidance/practices", "tools"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_a, be_true, equal, expect, have_key, raise_error
-from mamba import context, description, it
+from expects import be_a, be_false, be_true, equal, expect, have_key, raise_error
+from mamba import after, before, context, description, it
 
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.ddd.ddd import Ddd
@@ -162,3 +164,36 @@ with description("a Ddd practice made in a set with the Clean Engineering practi
         practices = {type(item).__name__: item for item in PracticeCatalogue.create_all(fidelity=None)}
         practices["Ddd"].render("markdown", "## Cart\n\n------\n+ total: int\n----\n", source="markdown")
         expect(practices["Ddd"].extended.formats._made).to(have_key("markdown"))
+
+
+# (E) Review Generated Work In File Viewer
+# (S) Person --> Review Files In Files App
+with description("a file the DDD practice claims as its own, so a page filtering on DDD lists it"):
+    with before.all:
+        self.folder = Path(tempfile.mkdtemp(prefix="ddd-claims-"))
+        self.ddd = _support.ddd()
+
+        def written(name: str, text: str) -> Path:
+            file = self.folder / name
+            file.write_text(text, encoding="utf-8")
+            return file
+
+        self.written = written
+
+    with after.all:
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    with it("should claim code whose class carries a DDD stereotype"):
+        expect(self.ddd.claims(self.written("cart.py", "@aggregate_root\nclass Cart:\n    pass\n"))).to(be_true)
+
+    with it("should claim code whose class is named for a building block"):
+        expect(self.ddd.claims(self.written("carts.ts", "export class CartRepository {}\n"))).to(be_true)
+
+    with it("should claim a domain model by its name"):
+        expect(self.ddd.claims(self.written("domain-model.md", "# Orders\n"))).to(be_true)
+
+    with it("should claim a bounded context map by its name"):
+        expect(self.ddd.claims(self.written("bounded-context-map.drawio", "<mxfile/>\n"))).to(be_true)
+
+    with it("should leave code with neither to the other practices"):
+        expect(self.ddd.claims(self.written("chat_bar.py", "class ChatBarClient:\n    pass\n"))).to(be_false)

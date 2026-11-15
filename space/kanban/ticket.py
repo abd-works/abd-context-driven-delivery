@@ -426,11 +426,9 @@ class Ticket(Card):
     @noSessionLog
     def root_files(self) -> list[FileEntry]:
         """Return every file under the folder ticket's session works in, each with its path from the project, whether the branch changed it, its format, and the fidelities whose files it is, so a page narrows it by the stages, practices, and formats selected; a file no fidelity declares names none."""
-        belongs: dict[str, list[str]] = {}
-        for progress in self.work.progress:
-            for entry in (entry for entries in progress.files().values() for entry in entries):
-                belongs.setdefault(entry.path, []).append(progress.fidelity.slug)
-        return [entry.belonging_to(belongs.get(entry.path, [])) for entry in self._session.session_files.under_root()]
+        progress = self.work.progress
+        repo = self._session.repo.root
+        return [entry.belonging_to([each.fidelity.slug for each in progress if each.holds(repo / entry.path)]) for entry in self._session.session_files.under_root()]
 
     @mcp
     @agent_tool
@@ -894,6 +892,12 @@ class FidelityProgress:
     def ticket(self) -> Ticket:
         """The ticket this progress is on, sent by its name, which with its fidelity names the progress."""
         return self._ticket
+
+    def holds(self, file: Path) -> bool:
+        """Whether file is one of this fidelity's in its ticket's session, changed by the session or not; none while its
+        practice works in no session."""
+        output = self._fidelity.session_output
+        return output is not None and output.holds(file)
 
     @property
     @data_field(reference=True)

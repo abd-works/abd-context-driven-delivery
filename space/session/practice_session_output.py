@@ -367,6 +367,23 @@ class FidelitySessionOutput:
             for label, paths in self.output_paths().items()
         }
 
+    def holds(self, file: Path) -> bool:
+        """Whether file, in the session's checkout, is one of this fidelity's, changed by the session or not: a file one
+        of its outputs names, or production code under a folder it writes code to that its practice claims, so a page
+        lists every file of the fidelities it shows."""
+        if self._fidelity.declares(self._session.repo.path_from_top(file)):
+            return True
+        practice = self._fidelity.practice_guidance
+        return self._writes_code_to(file) and (practice is None or practice.claims(file))
+
+    def _writes_code_to(self, file: Path) -> bool:
+        """Whether file is production code in a format this fidelity writes as a folder per module, under its root."""
+        root = self.root.resolve()
+        if root not in file.resolve().parents or is_test_code(file.as_posix()):
+            return False
+        folders = [label for label, declared in self._fidelity.outputs.items() if str(declared).endswith("/") and Format(label).is_code]
+        return any(file.suffix in _CODE_EXTENSIONS.get(Format(label).name, (Format(label).extension,)) for label in folders)
+
     def every_file(self) -> list[Path]:
         """Every file this fidelity declares that is in the session's checkout, worked on by the session or not: what a
         reader links to, such as each acceptance test of a story."""
@@ -405,7 +422,7 @@ class FidelitySessionOutput:
 
     def _declared_files(self, label: str, path: str, changed: Callable[[], set[Path]]) -> list[FileEntry]:
         """A declared path, or each file the fidelity declares where a pattern searches, each marked when the session's
-        branch changed it; a pattern that finds none stays as its search, not yet there."""
+        branch changed it; a pattern that finds none lists nothing, a pattern being no file."""
         repo = self._session.repo
         if path.endswith("/") and Format(label).is_code:
             return self._worked_on_code(label, changed)
@@ -414,7 +431,7 @@ class FidelitySessionOutput:
             named = repo.root / declared.glob
             return [FileEntry(declared.glob, named.exists(), named.exists() and named.resolve() in changed())]
         found = self._found(label, declared)
-        return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed(), _canvas_link(file)) for file in found] or [FileEntry(declared.glob, False)]
+        return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed(), _canvas_link(file)) for file in found]
 
     def _worked_on_code(self, label: str, changed: Callable[[], set[Path]]) -> list[FileEntry]:
         """The code a fidelity that declares a folder per module writes, such as Clean Engineering's ``{module}/``: the

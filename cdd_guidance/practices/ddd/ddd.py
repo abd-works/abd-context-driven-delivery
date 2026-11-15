@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 
@@ -9,6 +11,11 @@ from cdd_guidance.practices.ddd.ddd_formats import DddFormats
 from cdd_guidance.practices.ddd.model.graph_reading import DddReading
 from cdd_guidance.practices.ddd.model.nodes import DomainNode
 from cdd_guidance.practices.ddd.model.sketch.sketch_ddd_model import SketchDddModel
+from cdd_guidance.practices.ddd.model.stereotypes import declares_a_building_block
+
+
+# The words a path holds when it is a domain model or a bounded context, written with a hyphen or an underscore.
+_DOMAIN_NAMES = ("domain-model", "domain_model", "bounded-context", "bounded_context")
 
 
 @agent_toolset
@@ -35,6 +42,13 @@ class Ddd(PracticeGuidance):
         "blurb": "Organize the code around domain state, domain logic, and domain rules.",
         "spec_blurb": "An aggregate model of the core domain, then the building blocks that implement it",
     }
+
+    def claims(self, file: Path) -> bool:
+        """DDD's code is a domain's: a file whose path names a domain model or a bounded context, or code declaring a
+        building block by its stereotype or its name, so a page filtering on DDD shows no other code."""
+        if any(name in file.as_posix().lower() for name in _DOMAIN_NAMES):
+            return True
+        return declares_a_building_block(file.read_text(encoding="utf-8", errors="replace")) if file.is_file() else False
 
     def __init__(
         self,

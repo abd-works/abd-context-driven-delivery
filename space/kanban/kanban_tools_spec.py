@@ -622,11 +622,12 @@ with description("the board tools") as self:
                 def root_files(project: ProjectTools) -> dict[str, dict]:
                     sign_up(project)
                     story_map = project.call("ticket.fidelity_files", ticket="sign-up", fidelities=["stories-story-map"])["stories-story-map"]["markdown"][0]["path"]
-                    for written in (story_map, "notes/plain.txt"):
-                        (project.root / written).parent.mkdir(parents=True, exist_ok=True)
-                        (project.root / written).write_text("text\n", encoding="utf-8")
+                    written = {story_map: "text\n", "notes/plain.txt": "text\n", "src/orders/chat_bar.py": "class ChatBar:\n    pass\n", "src/orders/carts.py": "class CartRepository:\n    pass\n"}
+                    for path, text in written.items():
+                        (project.root / path).parent.mkdir(parents=True, exist_ok=True)
+                        (project.root / path).write_text(text, encoding="utf-8")
                     entries = project.call("ticket.root_files", ticket="sign-up")
-                    return {entry["path"]: entry for entry in entries if entry["path"] in (story_map, "notes/plain.txt")}
+                    return {entry["path"]: entry for entry in entries if entry["path"] in written}
 
                 self.root_files = ProjectTools.answer_of(root_files)
 
@@ -635,6 +636,25 @@ with description("the board tools") as self:
 
             with it("should name no fidelity for a file none declares"):
                 expect(self.root_files["notes/plain.txt"]["fidelities"]).to(equal([]))
+
+            with context("with code the session did not change"):
+                with it("should name Clean Engineering code for it"):
+                    expect(self.root_files["src/orders/chat_bar.py"]["fidelities"]).to(contain("clean-engineering-code"))
+
+                with it("should name no DDD fidelity for code declaring no building block"):
+                    expect([slug for slug in self.root_files["src/orders/chat_bar.py"]["fidelities"] if slug.startswith("ddd-")]).to(equal([]))
+
+                with it("should name DDD tactics for code declaring a building block"):
+                    expect(self.root_files["src/orders/carts.py"]["fidelities"]).to(contain("ddd-tactics"))
+
+        with context("with a fidelity whose patterns find no file"):
+            with it("should list no file for it, a pattern being no file"):
+                def acceptance_tests(project: ProjectTools) -> dict:
+                    sign_up(project)
+                    return project.call("ticket.fidelity_files", ticket="sign-up", fidelities=["stories-acceptance-tests"])["stories-acceptance-tests"]
+
+                listed = ProjectTools.answer_of(acceptance_tests)
+                expect([entry["path"] for entries in listed.values() for entry in entries]).to(equal([]))
 
         # (S) Person --> Choose Action And Formats
         with context("with an action bar opened on its story map"):
