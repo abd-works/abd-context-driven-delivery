@@ -15,7 +15,7 @@ import { FilesStore, type FidelityFiles } from './files-state'
 export const SENT_REFRESH_MILLISECONDS = 2_000
 // The session's practices and the chat bar's selection are read again this often while the page shows, so a practice
 // turned on or off, or a fidelity selected on the chat bar, shows here: a page in a side pane is never focused again.
-export const PRACTICES_REFRESH_MILLISECONDS = 3_000
+export const PRACTICES_REFRESH_MILLISECONDS = 1_000
 const TOAST_MILLISECONDS = 8_000
 
 // Which practices are on and which fidelities are selected, the one thing about them the file list depends on.
@@ -126,7 +126,7 @@ export class FilesPage {
       if (this.state.practices.length && onOff(practices, selectedFidelities) === onOff(this.state.practices, this.state.selectedFidelities)) return
       this.store.change(state => ({ practices, selectedFidelities, entries: filesShown(state.byFidelity, practices, selectedFidelities) }))
     } catch (failure) {
-      this.fail(`The Files app did not read the session's practices or the chat bar's selection: ${reasonOf(failure)}`, isQuiet ? 'Reading them again every three seconds while the page shows' : 'Opening the Files app')
+      this.fail(`The Files app did not read the session's practices or the chat bar's selection: ${reasonOf(failure)}`, isQuiet ? 'Reading them again every second while the page shows' : 'Opening the Files app')
     }
   }
 

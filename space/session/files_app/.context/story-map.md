@@ -61,7 +61,7 @@ Built (2026-11-15): the file bar's Changed button, with its count, lists only th
 
 ### (S) Person --> Follow Chat Bar Selection In Files App
 
-Built (2026-11-15): the chat bar sends its selected fidelity dots at check-in (`Chat.check_in` `selected_fidelities`, `Chat.show`); the Files app reads them every three seconds and, while any it lists are selected, shows only their files, its practice toggles following the dots (`files-page.ts` `filesShown`, `isShown`). Requested (the person, 2026-11-15): "make sure that the filter in the Files window is inherited from the filter in the chatbar", pointing at the chat bar's fidelity dots.
+Built (2026-11-15): the chat bar sends its selected fidelity dots at check-in (`Chat.check_in` `selected_fidelities`, `Chat.show`); the Files app reads them every second and, while any it lists are selected, shows only their files, its practice toggles following the dots (`files-page.ts` `filesShown`, `isShown`). Requested (the person, 2026-11-15): "make sure that the filter in the Files window is inherited from the filter in the chatbar", pointing at the chat bar's fidelity dots.
 
 ## (S) Person --> [Toggle Practice In Files App](review-files-in-files-app/review_files_in_files_app_story.test.md#story-toggle-practice-in-files-app)
 

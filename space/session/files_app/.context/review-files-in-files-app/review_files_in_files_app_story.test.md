@@ -210,7 +210,7 @@ Requested (the person, 2026-11-15): add a "changed only" filter, since a session
 
 *Given* the [Files app](../files-app-model.md#filespage-filesfiles-pagets) shows the DDD toggle filled
 *When* the Person turns DDD off on the chat bar
-*Then* within three seconds, with no press in the Files app, the DDD toggle shows as an outline
+*Then* within a second, with no press in the Files app, the DDD toggle shows as an outline
 *And* the Files app no longer lists *bounded-context-map.md*
 
 ---

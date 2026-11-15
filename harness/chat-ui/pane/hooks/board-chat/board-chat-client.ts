@@ -84,13 +84,19 @@ async function failed($: EngineInterface, chat: string, command: ChatCommandData
   await post($, { chat, operation: 'confirm', body: { message: command.message, is_shown: true, reason: '' } })
 }
 
+// The dots draw the selection cdd holds for the chat, read every second even while an idle chat checks in less often,
+// so a practice pressed in the Files app shows on the dots within a second.
+export async function readSelection($: EngineInterface, chat: string): Promise<void> {
+  const shown = await post($, { chat, operation: 'show', body: {} })
+  await showSelected($, (JSON.parse(shown.text) as { selected_fidelities: string[] }).selected_fidelities)
+}
+
 // Checks in with cdd every second: whether a turn is running, what to call the chat, and the folder it works in, which
 // lets the board find a ticket's chat. The dots then draw the selection cdd holds for the chat, which a page the chat
 // opened, such as the Files app, may have changed.
 export async function checkIn($: EngineInterface, chat: string): Promise<void> {
   const answer = await post($, { chat, operation: 'check-in', body: { is_busy: isChatBusy(), name: currentChatName(), folder: await $.session.root() } })
-  const shown = await post($, { chat, operation: 'show', body: {} })
-  await showSelected($, (JSON.parse(shown.text) as { selected_fidelities: string[] }).selected_fidelities)
+  await readSelection($, chat)
   if (!answer.ok) return
   const commands = JSON.parse(answer.text) as ChatCommandData[]
   if (commands.length) chatWorked()
