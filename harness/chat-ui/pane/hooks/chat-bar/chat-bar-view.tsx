@@ -47,15 +47,15 @@ export type ChatBarDraw = {
 const SEPARATOR = '│'
 
 // One square for each practice in its colour, standing for its fidelities in every stage shown: while the practice is on,
-// fainter the less is done, their violations counted in red beside it, a press on the count opening the first one's
-// report; while it is off, faint. A press on the square turns the practice on or off for the session. Its fidelities show
+// underlined on a light tint, so it reads on at a glance, fainter the less is done, their violations counted in red
+// beside it, a press on the count opening the first one's report; while it is off, faint, with no tint or underline. A press on the square turns the practice on or off for the session. Its fidelities show
 // above it on hover, each opening its help in a pane beside the chat; their states are on the session card.
 export function PracticeDotView($: EngineInterface, elements: ElementTable, dot: PracticeDotClient, session: string) {
   const { Box } = elements
   const violating = dot.violating
   return (
-    <Box key={`practice-${dot.key}`} flexDirection="row" gap={0}>
-      {GlyphButtonView(elements, `dot-${dot.key}`, '■', dot.shade, () => togglePractice($, session, dot.practice))}
+    <Box key={`practice-${dot.key}`} flexDirection="row" gap={0} backgroundColor={dot.isOn ? BRAND.selectedTint : undefined}>
+      {GlyphButtonView(elements, `dot-${dot.key}`, '■', dot.shade, () => togglePractice($, session, dot.practice), dot.isOn)}
       {violating ? GlyphButtonView(elements, `violations-${dot.key}`, String(dot.violationCount), BRAND.error, () => openReport($, violating)) : null}
       {PracticeTipView($, elements, dot)}
     </Box>
