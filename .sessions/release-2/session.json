@@ -6,7 +6,7 @@
   "worktree": "C:\\dev\\abd-cdd-2",
   "practices": {
     "clean_engineering": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
         "modules": [
           "drawio"
@@ -23,15 +23,11 @@
       "enabled": true,
       "formats": {
         "story_map": [
-          "drawio"
-        ],
-        "acceptance_tests": [
-          "python"
-        ],
-        "scenarios": [
-          "python",
+          "drawio",
           "markdown"
-        ]
+        ],
+        "acceptance_tests": [],
+        "scenarios": []
       }
     },
     "ddd": {
@@ -47,10 +43,11 @@
       }
     },
     "ux": {
-      "enabled": false,
+      "enabled": true,
       "formats": {
         "ia": [
-          "drawio"
+          "drawio",
+          "markdown"
         ],
         "front_end_code": [
           "html",
@@ -62,26 +59,19 @@
       }
     },
     "bdd": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
-        "behavior": [
-          "python"
-        ],
-        "development": [
-          "python"
-        ],
-        "realization": [
-          "markdown"
-        ]
+        "behavior": [],
+        "development": [],
+        "realization": []
       }
     }
   },
   "guidance": {
     "stages": [
       "discovery",
-      "specification",
       "implementation"
     ],
-    "version": 53
+    "version": 84
   }
 }

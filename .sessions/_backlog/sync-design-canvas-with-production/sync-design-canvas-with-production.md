@@ -287,4 +287,3 @@ This keeps a clear answer to "is this what production does?" for every screen. P
 ##### Story: Reattach A Screen Once Its Change Reaches Production
 
 - A detached screen shows as diverged until the change lands in the TSX, then it re-attaches and the mark clears.
-

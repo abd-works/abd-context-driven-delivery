@@ -3,9 +3,48 @@
   "title": "file-manager",
   "scope": "feature",
   "workpath": "harness",
+<<<<<<< HEAD
   "outputs": {
     "stories": {
       "root": ".context/stories"
+=======
+  "branch": "file-manager",
+  "worktree": "C:\\dev\\abd-cdd-file-manager",
+  "guidance": {
+    "stages": [
+      "discovery"
+    ],
+    "version": 3
+  },
+  "practices": {
+    "stories": {
+      "formats": {
+        "story_map": [
+          "markdown",
+          "drawio"
+        ]
+      }
+    },
+    "ux": {
+      "formats": {
+        "ia": [
+          "drawio"
+        ]
+      }
+    },
+    "clean_engineering": {
+      "formats": {
+        "modules": [
+          "markdown",
+          "drawio"
+        ]
+      }
+    },
+    "bdd": {
+      "formats": {
+        "behavior": []
+      }
+>>>>>>> main
     }
   }
 }

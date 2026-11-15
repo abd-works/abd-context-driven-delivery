@@ -11,13 +11,51 @@
           "markdown",
           "drawio"
         ]
+      },
+      "enabled": false
+    },
+    "clean_engineering": {
+      "enabled": false
+    },
+    "bdd": {
+      "enabled": true,
+      "formats": {
+        "realization": [
+          "python"
+        ],
+        "development": [
+          "python"
+        ]
+      }
+    },
+    "ddd": {
+      "formats": {
+        "model": [
+          "drawio",
+          "python"
+        ],
+        "tactics": [
+          "python"
+        ]
+      }
+    },
+    "ux": {
+      "formats": {
+        "front_end_code": [
+          "html",
+          "typescript"
+        ],
+        "mockup": [
+          "html"
+        ]
       }
     }
   },
   "guidance": {
     "stages": [
-      "specification"
+      "specification",
+      "implementation"
     ],
-    "version": 1
+    "version": 24
   }
 }
