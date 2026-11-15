@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Iterator
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.agent_tools.agent_tools import noSessionLog, subAgent, tool_subject
 from harness.agent_tools.tool_call import ToolCall
+from harness.chat.chat import Chat
 from harness.graph.graph import Graph
 from harness.graph.saved_graph import GRAPH_FILE_NAME, SavedGraph
 from harness.guidance.stages import STAGES
@@ -714,6 +715,16 @@ class Session:
     def file(self, path: str, rules: bool = False, cross_file: bool = False) -> SessionFile:
         """Return path, a file named as read_file names it, as the viewer shows it: its text and language, the comments on it, and with either of rules or cross_file the folds of its classes, operations, and properties. With rules, the rules it breaks read on its own, under a second; with cross_file, the rules only the whole working copy finds broken in it, linking files and practices, which takes far longer. Each on its range of lines. Both off, browsing never reads a graph."""
         return SessionFile(self, path, rules, cross_file)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def add_to_chat_context(self, chat: str, path: str, start_line: int = 0, end_line: int = 0) -> Chat:
+        """Add path, a file named from the project, or its lines start_line to end_line, to the context of chat, a chat's id: a fill in its prompt box that goes with the person's next prompt, as Claude's own file viewer adds a file. The whole file goes as an @ mention of its path; lines go as the path and range with each line quoted. A chat that is not connected refuses it."""
+        text = self.file(path).range(start_line, end_line).context if start_line else f"@{path} "
+        added_to = Chat.load(chat)
+        added_to.queue("fill", text)
+        return added_to
 
     @property
     def file_comments(self) -> FileComments:

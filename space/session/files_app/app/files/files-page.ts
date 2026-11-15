@@ -229,6 +229,25 @@ export class FilesPage {
     this.store.change(() => ({ menu: null }))
   }
 
+  // The file the menu is on, added whole to the context of the chat that opened the page.
+  async addToContext(): Promise<void> {
+    const path = this.state.menu?.path
+    this.closeMenu()
+    if (path) await this.addLinesToContext(path)
+  }
+
+  // A file, or lines of it, added to the context of the chat that opened the page: the session puts them in its prompt
+  // box, to go with the person's next prompt, as Claude's own file viewer does.
+  async addLinesToContext(path: string, lines?: { start: number; end: number }): Promise<void> {
+    const name = path.split('/').at(-1) ?? path
+    try {
+      await this.session.addToChatContext(this.link.chat, path, lines?.start, lines?.end)
+      this.toast(`${name} added to the chat's context`)
+    } catch (failure) {
+      this.fail(`${name} was not added to the chat's context: ${reasonOf(failure)}`, `Adding ${path} to the chat's context`)
+    }
+  }
+
   // The file or folder the menu is on, shown in the system's file browser by the Files server, on this machine.
   async reveal(): Promise<void> {
     const path = this.state.menu?.path

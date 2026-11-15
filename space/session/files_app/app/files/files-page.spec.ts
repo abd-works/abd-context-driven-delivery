@@ -404,6 +404,63 @@ describe('Open File In File Browser', () => {
   })
 })
 
+describe('Add File Or Selection To Chat Context', () => {
+  async function opened(server = new FakeFilesServer()) {
+    const page = new FilesPage(server, new FilesLink(STAGE_LINK))
+    await started(page)
+    return { page, server }
+  }
+
+  const addedBodies = (server: FakeFilesServer) => server.posted('/add-to-chat-context').map(post => post.body)
+
+  describe('with a file listed', () => {
+    describe("that the Person adds to the chat's context from its menu", () => {
+      async function added(server = new FakeFilesServer()) {
+        const done = await opened(server)
+        done.page.openMenu('src/checkout/order.py', 40, 80)
+        await done.page.addToContext()
+        return done
+      }
+
+      it('should ask the session to add the whole file to the chat that opened the page', async () => {
+        expect(addedBodies((await added()).server)).toEqual([{ chat: 'chat-1', path: 'src/checkout/order.py' }])
+      })
+
+      it('should close the menu', async () => {
+        expect((await added()).page.state.menu).toBeNull()
+      })
+
+      it('should say so in a toast', async () => {
+        expect((await added()).page.state.toasts).toContain("order.py added to the chat's context")
+      })
+
+      describe('with a chat that is not connected', () => {
+        class NotConnectedServer extends FakeFilesServer {
+          override async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
+            if (path.endsWith('/add-to-chat-context')) throw new Error("chat 'chat-1' is not connected: is the cdd-board mod loaded in it?")
+            return super.post<Result>(path, body)
+          }
+        }
+
+        it('should say so in a toast', async () => {
+          const { page } = await added(new NotConnectedServer())
+          expect(page.state.toasts).toContain("order.py was not added to the chat's context: chat 'chat-1' is not connected: is the cdd-board mod loaded in it?")
+        })
+      })
+    })
+  })
+
+  describe('with lines 12 to 14 of the open file selected', () => {
+    describe("that the Person adds to the chat's context", () => {
+      it('should ask the session to add those lines to the chat that opened the page', async () => {
+        const { page, server } = await opened()
+        await page.addLinesToContext('src/checkout/order.py', { start: 12, end: 14 })
+        expect(addedBodies(server)).toEqual([{ chat: 'chat-1', path: 'src/checkout/order.py', start_line: 12, end_line: 14 }])
+      })
+    })
+  })
+})
+
 describe('Send Files App Failures To Chat', () => {
   describe('with files that do not list', () => {
     class FailingFilesServer extends FakeFilesServer {

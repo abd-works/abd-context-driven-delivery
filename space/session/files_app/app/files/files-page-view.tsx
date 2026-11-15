@@ -1,4 +1,4 @@
-import { Component, useEffect, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react'
+import { Component, useCallback, useEffect, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react'
 
 import type { FileEntryData, SessionFileData } from '@cdd/space/session/session'
 
@@ -110,6 +110,9 @@ function FileMenuView({ page }: { page: FilesPage }) {
   return (
     <div className="file-menu-backdrop" onClick={() => page.closeMenu()} onContextMenu={event => { event.preventDefault(); page.closeMenu() }}>
       <div className="file-menu" role="menu" style={{ left: menu.x, top: menu.y }} onClick={event => event.stopPropagation()}>
+        <button role="menuitem" title={`${menu.path}: goes with your next prompt in the chat that opened this page`} onClick={() => void page.addToContext()}>
+          Add to context
+        </button>
         <button role="menuitem" title={menu.path} onClick={() => void page.reveal()}>
           {revealLabelOf(navigator.platform)}
         </button>
@@ -195,7 +198,7 @@ function CommentToolbarView({ page, file }: { page: FilesPage; file: SessionFile
       <button disabled={!processed} onClick={() => void page.comments.clearProcessed()}>
         Clear processed{processed ? ` (${processed})` : ''}
       </button>
-      <span className="files-hint">Select lines, right-click, Add comment</span>
+      <span className="files-hint">Select lines, right-click, Add comment or Add to context</span>
     </div>
   )
 }
@@ -216,13 +219,16 @@ function DrawioFileView({ page, path }: { page: FilesPage; path: string }) {
 
 function OpenFileView({ page }: { page: FilesPage }) {
   const state = useFilesState(page)
+  const path = state.file?.path ?? ''
+  // The open file's selected lines, added to the chat's context; made once per file, so the editor keeps its action.
+  const addLines = useCallback((lines: { start: number; end: number }) => void page.addLinesToContext(path, lines), [page, path])
   if (!state.openPath) return <p className="files-note">Choose a file.</p>
   if (isDrawio(state.openPath)) return <DrawioFileView page={page} path={state.openPath} />
   if (!state.file) return <p className="files-note">Opening {state.openPath}…</p>
   return (
     <section className="open-file" aria-label={state.file.path}>
       <CommentToolbarView page={page} file={state.file} />
-      <FileSourceView key={state.file.path} file={state.file} actions={page.comments} />
+      <FileSourceView key={state.file.path} file={state.file} actions={page.comments} onAddToContext={addLines} />
     </section>
   )
 }

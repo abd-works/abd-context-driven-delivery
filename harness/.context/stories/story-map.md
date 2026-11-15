@@ -1014,6 +1014,8 @@ Intended: the page marks what the chat changed in the file, as VS Code and Curso
 
 Requested (2026-11-15, "on right click of file we also need an add to context option; same with selected text in file viewer; adds to chat context like Claude functionality does in file viewer"). Intended: Add to context, in the right-click menu of a file in the file bar and, beside Add comment, of lines selected in the source view, attaches the file by its path from the session's root, or the path, line range and selected text, to the chat that opened the Files app. As Claude's own file viewer does, it goes with the chat's next prompt rather than being sent on its own. One mechanic, so a file and a selection are two scenarios of this story.
 
+Built (2026-11-15): Add to context on a file's or folder's right-click menu in the file bar, and beside Add comment on the source view's right-click menu for selected lines, calls `session.add_to_chat_context` (`Session.add_to_chat_context`), which queues a fill for the chat that opened the Files app: `@path ` for a whole file, the path, the range and each line quoted (`Range.context`) for a selection. A chat not connected refuses it, and the page says so in a toast.
+
 ## (E) Switch Files App Between Files And Graph
 
 [Scenarios](review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md).
