@@ -3,23 +3,12 @@ import type { EngineInterface } from 'claude-code'
 
 import type { ColumnOverviewData } from '@cdd/space/kanban/board'
 
+import { post } from '../board-chat/board'
 import { clearChosenAction } from './action-picker-client'
 
-const shownStage = atom({ plugin: 'cdd-board', key: 'shownStage' } as const, null as string | null)
-// Atom stagePicker, declared in pane/types/index.d.ts: whether the stage button's list is open.
-const stagePicker = atom({ plugin: 'cdd-board', key: 'stagePicker' } as const, false)
-
-export function isStagePickerOpen($: EngineInterface) {
-  return read($, stagePicker)
-}
-
-export async function toggleStagePicker($: EngineInterface): Promise<void> {
-  await update($, stagePicker, isOpen => !isOpen)
-}
-
-export async function closeStagePicker($: EngineInterface): Promise<void> {
-  await update($, stagePicker, () => false)
-}
+// The stages shown for the chat, as cdd holds them (chat.show_stages): the one choice the bar's stage buttons and a page
+// the chat opened, such as the Files app, both show and change. None held, the bar shows the session's own stage.
+const shownStages = atom({ plugin: 'cdd-board', key: 'shownStages' } as const, [] as string[])
 
 // One glyph for each column board.overview sends, standing for the canvas's icons: Backlog, Discovery (magnifier),
 // Specification (document), Implementation (gear), Complete (check). A column the canvas has no icon for shows a dot.
@@ -80,17 +69,25 @@ export class StageClient {
   }
 }
 
-// Atom shownStage, declared in pane/types/index.d.ts and kept in this file: the stage whose fidelities the dots show.
-export function shownStageName($: EngineInterface) {
-  return read($, shownStage)
+// Atom shownStages, declared in pane/types/index.d.ts and kept in this file: the stages whose fidelities the dots show.
+export async function shownStageNames($: EngineInterface): Promise<string[]> {
+  return (await read($, shownStages)) ?? []
 }
 
-// Showing the session's own stage goes back to it. A fidelity of the last stage then reads as none selected, because
-// ChatBarClient.selectedFidelity looks only among the shown stage's fidelities.
-// Showing another stage drops an action picked from the menu, so the button shows the shown stage's next action.
-export async function selectStage($: EngineInterface, stage: StageClient): Promise<void> {
-  if (!stage.canShow) return
-  await update($, shownStage, () => (stage.isCurrent ? null : stage.stage))
-  await update($, stagePicker, () => false)
+// The stages cdd holds for the chat, as chat.show or chat.show_stages answered them; a change from elsewhere, such as a
+// stage pressed in the Files app, drops an action picked before.
+export async function showStagesHeld($: EngineInterface, stages: string[]): Promise<void> {
+  const held = await shownStageNames($)
+  if (held.length === stages.length && held.every(stage => stages.includes(stage))) return
+  await update($, shownStages, () => stages)
   await clearChosenAction($)
+}
+
+// A press on a stage button shows that stage's fidelities beside those already shown, or no longer; the bar shows the
+// stages cdd answers. With none left, the session's own stage shows.
+export async function toggleStage($: EngineInterface, shown: string[], stage: StageClient): Promise<void> {
+  if (!stage.canShow) return
+  const next = shown.includes(stage.stage) ? shown.filter(each => each !== stage.stage) : [...shown, stage.stage]
+  const answer = await post($, { chat: await $.session.id(), operation: 'show-stages', body: { shown_stages: next } })
+  await showStagesHeld($, (JSON.parse(answer.text) as { shown_stages: string[] }).shown_stages)
 }

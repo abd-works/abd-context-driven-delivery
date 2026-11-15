@@ -214,6 +214,35 @@ function ToastsView({ page }: { page: FilesPage }) {
   )
 }
 
+// The chat bar's icon for each stage (harness/chat-ui/pane/hooks/chat-bar/stage-client.ts STAGE_ICONS), so a stage looks
+// the same on the bar and here.
+const STAGE_ICONS: Record<string, string> = { Discovery: '⌕', Specification: '▤', Implementation: '⚙' }
+
+// A button for each stage of the ticket, before the practices, as the chat bar's stage buttons: filled orange while the
+// stage is shown. A press shows that stage's files beside those shown, or no longer, here and on the chat bar.
+function StageTogglesView({ page }: { page: FilesPage }) {
+  const { stages } = useFilesState(page)
+  const names = Object.keys(stages)
+  if (!names.length) return null
+  const shown = page.shownStageNames
+  return (
+    <div className="stage-toggles" role="group" aria-label="Stages">
+      {names.map(stage => (
+        <button
+          key={stage}
+          type="button"
+          className={`stage-toggle ${shown.includes(stage) ? 'is-shown' : ''}`}
+          aria-pressed={shown.includes(stage)}
+          title={`${stage}: ${shown.includes(stage) ? 'shown, press to hide its files here and on the chat bar' : 'press to show its files here and on the chat bar'}`}
+          onClick={() => void page.toggleStage(stage)}
+        >
+          {STAGE_ICONS[stage] ?? stage}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // The format chips after the practices, with the chat bar's glyphs and colours: filled orange while the format is chosen
 // in the session, green when every fidelity has a file in it already, grey otherwise. A press chooses it or no longer,
 // here and on the chat bar; while any is chosen, the list shows only the files in the formats chosen.
@@ -283,6 +312,7 @@ export function FilesPageView({ page }: { page: FilesPage }) {
       <header className="files-head">
         <span className="files-kind">FILES</span>
         <span className="files-subject">{page.link.subject}</span>
+        <StageTogglesView page={page} />
         <PracticeTogglesView page={page} />
         <FormatTogglesView page={page} />
         <ReadsTogglesView page={page} />

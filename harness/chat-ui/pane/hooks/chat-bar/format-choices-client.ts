@@ -23,7 +23,7 @@ export function forgetFormatChips(): void {
 export type FormatChips = { choices: FormatChoiceJson[] }
 
 function keyOf(chatBar: ChatBarClient): string {
-  return [chatBar.ticketName, chatBar.shownStage, ...chatBar.actionFidelities.map(fidelity => fidelity.slug)].join(' ')
+  return [chatBar.ticketName, ...chatBar.shownStages, ...chatBar.actionFidelities.map(fidelity => fidelity.slug)].join(' ')
 }
 
 // The chips for the fidelities the action button acts on, as last read. Drawing only reads: until loadFormatChips has

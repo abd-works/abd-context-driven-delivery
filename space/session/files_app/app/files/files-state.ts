@@ -15,6 +15,10 @@ export type FilesState = {
   // The format chips of the link's fidelities, chosen or not in the session, as the chat bar shows them; none chosen,
   // every format is shown.
   formatChoices: FormatChoiceData[]
+  // Each stage of the ticket with its fidelities, and the stages shown, as cdd holds them for the chat that opened the
+  // page and its chat bar alike; none shown, the stage the page was opened on.
+  stages: Record<string, string[]>
+  shownStages: string[]
   // What the open file is read with: its folds and broken rules from the session's graph, and the graph holding the
   // whole working copy so rules across files hold too. Both off by default, so browsing never reads the graph.
   reads: { rules: boolean; crossFile: boolean }
@@ -32,6 +36,8 @@ export const NO_FILES: FilesState = {
   practices: [],
   selectedFidelities: [],
   formatChoices: [],
+  stages: {},
+  shownStages: [],
   reads: { rules: false, crossFile: false },
   byFidelity: [],
   entries: [],

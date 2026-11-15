@@ -19,8 +19,8 @@ const FORBIDDEN = 403
 const FAILED = 500
 
 // The chat routes the page needs: sending the chat that opened it a refresh or a failure, and reading and changing the
-// one selection cdd holds for its chat bar and this page. Opening or removing chats stays with the board.
-const CHAT_ROUTES = ['/chat/:chat/send', '/chat/:chat/show', '/chat/:chat/select']
+// one selection and the stages shown, which cdd holds for its chat bar and this page alike. Opening or removing chats stays with the board.
+const CHAT_ROUTES = ['/chat/:chat/send', '/chat/:chat/show', '/chat/:chat/select', '/chat/:chat/show-stages']
 // The ticket routes the page needs: reading and choosing the session's formats, the chat bar's format chips.
 const TICKET_ROUTES = ['/ticket/:ticket/format-choices', '/ticket/:ticket/choose-formats']
 

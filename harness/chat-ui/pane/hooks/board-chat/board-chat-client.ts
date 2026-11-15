@@ -1,10 +1,11 @@
-import type { ChatCommandData } from '@cdd/harness/chat/chat'
+import type { ChatCommandData, ChatData } from '@cdd/harness/chat/chat'
 import type { EngineInterface } from 'claude-code'
 
 import { currentChatBar, refreshChatBar } from '../chat-bar/chat-bar-client'
 import { reloadFormatChips } from '../chat-bar/format-choices-client'
 import { openFileInViewer } from '../chat-bar/fidelity-files-client'
 import { showSelected } from '../chat-bar/fidelity-progress-client'
+import { showStagesHeld } from '../chat-bar/stage-client'
 import { commandOf, filledPrompt, REFUSED_WITHIN_MILLISECONDS } from '../shared/chat-command'
 import { reasonOf, showFailure } from '../error-display/failure-client'
 import { after, post } from './board'
@@ -88,10 +89,21 @@ async function failed($: EngineInterface, chat: string, command: ChatCommandData
 }
 
 // The dots draw the selection cdd holds for the chat, read every second even while an idle chat checks in less often,
-// so a practice pressed in the Files app shows on the dots within a second.
+// so a practice pressed in the Files app shows on the dots within a second; the stage the bar shows goes the other way.
 export async function readSelection($: EngineInterface, chat: string): Promise<void> {
-  const shown = await post($, { chat, operation: 'show', body: {} })
-  await showSelected($, (JSON.parse(shown.text) as { selected_fidelities: string[] }).selected_fidelities)
+  const shown = JSON.parse((await post($, { chat, operation: 'show', body: {} })).text) as ChatData
+  await showSelected($, shown.selected_fidelities)
+  await showStagesHeld($, shown.shown_stages)
+  await listStages($, chat, shown)
+}
+
+// cdd holds each stage of the ticket with its fidelities for a page the chat opened, such as the Files app, whose stage
+// buttons show them; the bar tells it again only once they differ from what cdd holds, as when the board is read again.
+async function listStages($: EngineInterface, chat: string, held: ChatData): Promise<void> {
+  const chatBar = await currentChatBar($)
+  const stages = chatBar.stagesWithFidelities
+  if (!chatBar.ticketName || JSON.stringify(held.stages) === JSON.stringify(stages)) return
+  await post($, { chat, operation: 'list-stages', body: { stages } })
 }
 
 // Checks in with cdd every second: whether a turn is running, what to call the chat, and the folder it works in, which

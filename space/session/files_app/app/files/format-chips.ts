@@ -30,17 +30,18 @@ export class FormatChips {
     this.ticket = link.isSessionFolder || !link.ticket ? null : TicketClientGenerated.named(api, link.ticket)
   }
 
-  // The chips as the session holds them now; none for a session folder, which has no fidelities.
-  async read(): Promise<FormatChoiceData[]> {
-    if (!this.ticket) return []
-    return (await this.ticket.formatChoices(this.link.fidelities)) ?? []
+  // The chips of the fidelities listed, as the session holds them now; none for a session folder, which has no
+  // fidelities.
+  async read(fidelities: string[]): Promise<FormatChoiceData[]> {
+    if (!this.ticket || !fidelities.length) return []
+    return (await this.ticket.formatChoices(fidelities)) ?? []
   }
 
   // A press on a chip chooses it in the session for every fidelity the page lists, or no longer; the page shows the chips
   // cdd answers.
-  async toggle(label: string): Promise<FormatChoiceData[] | null> {
+  async toggle(label: string, fidelities: string[]): Promise<FormatChoiceData[] | null> {
     const chip = this.store.state.formatChoices.find(choice => choice.label === label)
     if (!chip || !this.ticket) return null
-    return (await this.ticket.chooseFormats(this.link.fidelities, label, !chip.is_chosen)) ?? []
+    return (await this.ticket.chooseFormats(fidelities, label, !chip.is_chosen)) ?? []
   }
 }

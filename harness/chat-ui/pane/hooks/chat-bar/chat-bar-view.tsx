@@ -18,7 +18,7 @@ import { CARD_SCOPE, SessionCardView } from './session-card-view'
 import { openClose, toggleRepoListWithRepos } from './session-client'
 import { toggleSessionList } from './session-dialogs-client'
 import { CloseView, RepoListView, repoListRowsOf, SessionListView, sessionListRowsOf } from './session-dialogs-view'
-import { selectStage, toggleStagePicker, type StageClient } from './stage-client'
+import { toggleStage, type StageClient } from './stage-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
@@ -29,7 +29,6 @@ export type ChatBarDraw = {
   failure: FailureClient | null
   view: ChatBarViewJson
   picker: ActionPickerJson
-  isStagePickerOpen: boolean
   formats: FormatChips
   overlays: OverlayChips
   busy: { doing: string; wheel: string }
@@ -57,47 +56,21 @@ export function FidelityView($: EngineInterface, elements: ElementTable, fidelit
   )
 }
 
-// The shown stage as one orange chip, its icon and ▾, like the action button; a press opens the list of stages.
-// The list opened from it is drawn beside the chip, in a box of its own, so hovering the list does not show the chip's tip.
-function StageButtonView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
-  const { Box, Text } = elements
-  const { chatBar } = draw
-  const shown = chatBar.stages.find(stage => stage.stage === chatBar.shownStage)
-  if (!shown) return null
+// A button for each stage, its icon filled orange while the stage is shown, its name above it on hover. A press shows
+// that stage's fidelities beside those already shown, or no longer, here and in a page the chat opened, such as the Files
+// app, so one action can run across several stages.
+function StageButtonsView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
+  const { Box } = elements
+  const stages = chatBar.stages.filter(stage => stage.canShow)
+  if (!stages.length) return null
   return (
-    <Box key="stage-anchor">
-      <Box key="stage-button" flexDirection="row" gap={0} paddingX={1} backgroundColor={BRAND.accent}>
-        {GlyphButtonView(elements, 'stage-shown', shown.icon, BRAND.onAccent, () => toggleStagePicker($))}
-        {GlyphButtonView(elements, 'stage-picker', '▾', BRAND.onAccent, () => toggleStagePicker($))}
-        <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
-          <Text color={BRAND.text}>{shown.stage}</Text>
+    <Box key="stage-buttons" flexDirection="row" gap={0}>
+      {stages.map((stage: StageClient) => (
+        <Box key={`stage-${stage.stage}`} paddingX={1} backgroundColor={stage.isShown ? BRAND.accent : undefined}>
+          {GlyphButtonView(elements, `stage-button-${stage.stage}`, stage.icon, stage.isShown ? BRAND.onAccent : stage.ink, () => toggleStage($, chatBar.shownStages, stage))}
+          {TipView(elements, stage.stage, stage.isCurrent ? 'the session is here' : '', BRAND.muted)}
         </Box>
-      </Box>
-      {StagePickerView($, elements, draw)}
-    </Box>
-  )
-}
-
-// The stages the stage list shows.
-const shownStagesOf = (chatBar: ChatBarClient): StageClient[] => chatBar.stages.filter(stage => stage.canShow)
-
-// Every stage as a list above the stage button, its left edge under the button's: its icon and name, the session's
-// own marked, the shown one highlighted; a press shows that stage's fidelities.
-function StagePickerView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar, isStagePickerOpen }: ChatBarDraw) {
-  if (!isStagePickerOpen) return null
-  return (
-    <Box key="stage-list" flexDirection="column" position="absolute" bottom={1} left={0} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
-      {shownStagesOf(chatBar).map((stage: StageClient) => {
-        const isShown = stage.stage === chatBar.shownStage
-        return (
-          <Box key={`stage-row-${stage.stage}`} backgroundColor={isShown ? BRAND.accentTint : undefined}>
-            <Button key={`stage-pick-${stage.stage}`} plain onPress={() => selectStage($, stage)}>
-              <Text color={stage.ink}>{`${stage.icon} `}</Text>
-              <Text color={BRAND.text} weight={stage.isCurrent ? 'bold' : undefined}>{stage.stage}</Text>
-            </Button>
-          </Box>
-        )
-      })}
+      ))}
     </Box>
   )
 }
@@ -254,7 +227,7 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
   if (!chatBar.hasSession) return <Box key="line" flexDirection="row" gap={1}><Box flexGrow={1} />{SessionNameView($, elements, draw)}{draw.health.band}{draw.version.badge}</Box>
   return (
     <Box key="line" flexDirection="row" gap={1} alignItems="center">
-        {StageButtonView($, elements, draw)}
+        {StageButtonsView($, elements, draw)}
         <Text color={BRAND.border}>{SEPARATOR}</Text>
         <Box key="fidelity-column" flexDirection="row" gap={1} alignItems="center">
           {chatBar.fidelities.map(fidelity => FidelityView($, elements, fidelity))}
@@ -297,7 +270,6 @@ const LINE_ROWS = 1
 function ListRoomView({ Box }: ElementTable, draw: ChatBarDraw) {
   const { chatBar, overlays } = draw
   const rows = Math.max(
-    draw.isStagePickerOpen ? shownStagesOf(chatBar).length + LIST_BORDER_ROWS : 0,
     overlays.isOpen ? overlays.choices.length + LIST_BORDER_ROWS : 0,
     pickerRowsOf(draw),
     sessionListRowsOf(draw),

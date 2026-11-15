@@ -35,7 +35,7 @@ function HeaderView($: EngineInterface, elements: ElementTable, chatBar: ChatBar
   const { Box, Text } = elements
   return (
     <Box key="card-header" flexDirection="row" gap={2} alignItems="center">
-      <Text weight="bold" color={BRAND.accent}>{chatBar.shownStage}</Text>
+      <Text weight="bold" color={BRAND.accent}>{chatBar.shownStages.join(' · ')}</Text>
       <Box flexGrow={1} />
       <Text weight="bold" color={BRAND.text} wrap="truncate-end">{chatBar.sessionName}</Text>
       {GlyphButtonView(elements, 'card-close', '✕', BRAND.muted, () => closeCard($))}

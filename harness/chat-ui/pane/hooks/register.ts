@@ -8,7 +8,6 @@ import { currentChatBar, readChatBarUntilAnswered, refreshChatBar } from './chat
 import { ChatBarView } from './chat-bar/chat-bar-view'
 import { clearBusy, currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
-import { isStagePickerOpen } from './chat-bar/stage-client'
 import { currentFormatChips, forgetFormatChips, loadFormatChips } from './chat-bar/format-choices-client'
 import { currentOverlayChips, loadOverlayChoices } from './chat-bar/overlay-choices-client'
 import { currentFidelityHelp, forgetHelp, HELP_PANE } from './chat-bar/fidelity-help-client'
@@ -198,7 +197,6 @@ export const register: Register = on => {
       overlays: await currentOverlayChips($, chatBar),
       view: await currentChatBarView($),
       picker: await currentActionPicker($),
-      isStagePickerOpen: await isStagePickerOpen($),
       busy: await currentBusy($),
       health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band) },
       version: { label: version.label, badge: VersionBadgeView(elements, version, versionActions), dialog: UpdateDialogView(elements, version, versionActions) },

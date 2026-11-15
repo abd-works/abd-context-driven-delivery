@@ -35,11 +35,19 @@ const selectedListed = (byFidelity: FidelityFiles[], selected: string[]): string
 // The files the page shows, each once: those of the fidelities selected on the chat bar, else of the fidelities whose
 // practice is on, a fidelity of no practice the session knows shown; and of those, only the ones in a format chosen,
 // while any is.
-export const filesShown = (byFidelity: FidelityFiles[], practices: PracticeSessionOutputData[], selected: string[] = [], formats: string[] = []): FileEntryData[] => {
+export const filesShown = (fidelities: FidelityFiles[], practices: PracticeSessionOutputData[], selected: string[] = [], formats: string[] = [], listed?: string[]): FileEntryData[] => {
+  const byFidelity = listed ? fidelities.filter(({ slug }) => listed.includes(slug)) : fidelities
   const chosen = selectedListed(byFidelity, selected)
   const isShown = ({ slug }: FidelityFiles) => (chosen.length ? chosen.includes(slug) : (practiceOwning(slug, practices)?.enabled ?? true))
   const inFormat = ({ entries, formatOf = {} }: FidelityFiles) => (formats.length ? entries.filter(entry => formats.includes(formatOf[entry.path] ?? '')) : entries)
   return eachOnce(byFidelity.filter(isShown).flatMap(inFormat))
+}
+
+// The fidelities of the stages shown, in the board's order; none shown, those the link names, the stage the page was
+// opened on.
+export const fidelitiesOfStages = (stages: Record<string, string[]>, shown: string[], linked: string[]): string[] => {
+  const showing = Object.keys(stages).filter(stage => shown.includes(stage))
+  return showing.length ? showing.flatMap(stage => stages[stage] ?? []) : linked
 }
 
 // Each file once, in the order its fidelities and formats send them.
@@ -96,8 +104,9 @@ export class FilesPage {
   private async list(): Promise<void> {
     if (!this.link.namesFiles) return this.store.change(() => ({ isListing: false, problem: 'This link names no files: open the Files app from the chat bar.' }))
     try {
-      const [byFidelity] = await Promise.all([this.filesByFidelity(), this.readPractices()])
-      this.store.change(state => ({ byFidelity, entries: filesShown(byFidelity, state.practices, state.selectedFidelities, chosenFormatsOf(state.formatChoices)), isListing: false }))
+      await this.readPractices()
+      const byFidelity = await this.filesByFidelity(this.listed)
+      this.store.change(state => ({ byFidelity, isListing: false, entries: this.shownFrom({ ...state, byFidelity }) }))
       const entries = this.state.entries
       // A .drawio file opens in a tab of its own only on a click, so a link naming one opens the first other file here.
       const named = isDrawio(this.link.file) ? '' : this.link.file
@@ -109,11 +118,23 @@ export class FilesPage {
     }
   }
 
+  // The fidelities whose files the page lists: those of the stages shown, else the ones the link names.
+  get listed(): string[] {
+    return fidelitiesOfStages(this.state.stages, this.state.shownStages, this.link.fidelities)
+  }
+
+  // The files shown from state: of the fidelities listed, their practices or the chat bar's selection, and the formats
+  // chosen.
+  private shownFrom(state: FilesPage['state']): FileEntryData[] {
+    const listed = fidelitiesOfStages(state.stages, state.shownStages, this.link.fidelities)
+    return filesShown(state.byFidelity, state.practices, state.selectedFidelities, chosenFormatsOf(state.formatChoices), this.link.isSessionFolder ? undefined : listed)
+  }
+
   // A session folder is one list of no fidelity; a ticket's fidelities are kept apart, so a practice can hide its own.
-  private async filesByFidelity(): Promise<FidelityFiles[]> {
+  private async filesByFidelity(slugs: string[]): Promise<FidelityFiles[]> {
     if (this.link.isSessionFolder) return [{ slug: '', entries: (await this.session.folderFiles()) ?? [] }]
     return Promise.all(
-      this.link.fidelities.map(async slug => {
+      slugs.map(async slug => {
         const byFormat = Object.entries((await FidelityProgressClientGenerated.named(this.api, this.link.ticket, slug).files()) ?? {})
         const formatOf = Object.fromEntries(byFormat.flatMap(([format, entries]) => entries.map(entry => [entry.path, format])))
         return { slug, entries: byFormat.flatMap(([, entries]) => entries), formatOf }
@@ -126,22 +147,57 @@ export class FilesPage {
   // practice did; a read that fails goes to the chat once and is tried again on the next.
   private async readPractices({ isQuiet = false } = {}): Promise<void> {
     try {
-      const [shown, selectedFidelities, formatChoices] = await Promise.all([this.session.show(), this.selectedOnChatBar(), this.formatChips.read()])
+      const [shown, chat] = await Promise.all([this.session.show(), this.chatShown()])
       const practices = Object.values(shown?.practices ?? {})
-      const isSame = onOff(practices, selectedFidelities, chosenKeyOf(formatChoices)) === onOff(this.state.practices, this.state.selectedFidelities, chosenKeyOf(this.state.formatChoices))
-      if (this.state.practices.length && isSame && formatChoices.length === this.state.formatChoices.length) return
-      const entries = filesShown(this.state.byFidelity, practices, selectedFidelities, chosenFormatsOf(formatChoices))
-      this.store.change(() => ({ practices, selectedFidelities, formatChoices, entries }))
+      const listed = fidelitiesOfStages(chat.stages, chat.shownStages, this.link.fidelities)
+      const formatChoices = await this.formatChips.read(listed)
+      const now = { practices, selectedFidelities: chat.selectedFidelities, formatChoices, stages: chat.stages, shownStages: chat.shownStages }
+      if (this.state.practices.length && this.isUnchanged(now)) return
+      await this.loadMissing(listed)
+      this.store.change(state => ({ ...now, entries: this.shownFrom({ ...state, ...now }) }))
     } catch (failure) {
-      this.fail(`The Files app did not read the session's practices, formats or the chat bar's selection: ${reasonOf(failure)}`, isQuiet ? 'Reading them again every second while the page shows' : 'Opening the Files app')
+      this.fail(`The Files app did not read the session's practices, formats, stages or the chat bar's selection: ${reasonOf(failure)}`, isQuiet ? 'Reading them again every second while the page shows' : 'Opening the Files app')
     }
   }
 
-  // The fidelities selected for the chat that opened the page, as cdd holds them for its chat bar and this page alike;
-  // none for a page no chat opened.
-  private async selectedOnChatBar(): Promise<string[]> {
-    if (!this.link.chat) return []
-    return (await ChatClientGenerated.named(this.api, this.link.chat).show())?.selectedFidelities ?? []
+  private isUnchanged(now: Pick<FilesPage['state'], 'practices' | 'selectedFidelities' | 'formatChoices' | 'stages' | 'shownStages'>): boolean {
+    const was = this.state
+    const key = (of: typeof now) => [onOff(of.practices, of.selectedFidelities, chosenKeyOf(of.formatChoices)), of.formatChoices.length, JSON.stringify(of.stages), of.shownStages.join(',')].join('|')
+    return key(now) === key(was)
+  }
+
+  // The files of the fidelities listed that the page has not read yet, such as a stage turned on for the first time.
+  private async loadMissing(listed: string[]): Promise<void> {
+    if (this.link.isSessionFolder || this.state.isListing) return
+    const missing = listed.filter(slug => !this.state.byFidelity.some(each => each.slug === slug))
+    if (!missing.length) return
+    const read = await this.filesByFidelity(missing)
+    this.store.change(state => ({ byFidelity: [...state.byFidelity, ...read] }))
+  }
+
+  // What cdd holds for the chat that opened the page: the fidelities selected and the stages shown, the chat bar's and
+  // this page's alike; none for a page no chat opened.
+  private async chatShown(): Promise<{ selectedFidelities: string[]; shownStages: string[]; stages: Record<string, string[]> }> {
+    if (!this.link.chat) return { selectedFidelities: [], shownStages: [], stages: {} }
+    const chat = await ChatClientGenerated.named(this.api, this.link.chat).show()
+    return { selectedFidelities: chat?.selectedFidelities ?? [], shownStages: chat?.shownStages ?? [], stages: chat?.stages ?? {} }
+  }
+
+  // A press on a stage button shows that stage's files beside those shown, or no longer, here and on the chat bar, the
+  // one choice cdd holds; none left, the stage the page was opened on.
+  async toggleStage(stage: string): Promise<void> {
+    if (!this.link.chat) return
+    const shown = this.shownStageNames
+    const next = shown.includes(stage) ? shown.filter(each => each !== stage) : [...shown, stage]
+    await this.attemptQuietly(`The ${stage} stage was not shown`, () => ChatClientGenerated.named(this.api, this.link.chat).showStages(next))
+    await this.readPractices()
+  }
+
+  // The stages whose files show: those turned on, else the stage the link's fidelities are in.
+  get shownStageNames(): string[] {
+    const { stages, shownStages } = this.state
+    if (shownStages.length) return shownStages
+    return Object.keys(stages).filter(stage => (stages[stage] ?? []).some(slug => this.link.fidelities.includes(slug)))
   }
 
   // Whether the page follows the chat bar's selection: while any fidelity it lists is selected there, the toggles show
@@ -160,7 +216,7 @@ export class FilesPage {
   // whose fidelities write only documents and diagrams; else there are no files yet.
   get emptyReason(): string {
     const chosen = this.state.formatChoices.filter(choice => choice.is_chosen).map(choice => formatGlyphOf(choice.label))
-    const anyFiles = filesShown(this.state.byFidelity, this.state.practices, this.state.selectedFidelities).length > 0
+    const anyFiles = filesShown(this.state.byFidelity, this.state.practices, this.state.selectedFidelities, [], this.listed).length > 0
     if (chosen.length && anyFiles) return `None of these files is in the formats chosen (${chosen.join(' ')}): press a chosen format to show every format.`
     return 'No files here yet.'
   }
@@ -171,11 +227,11 @@ export class FilesPage {
   async toggleFormat(label: string): Promise<void> {
     let answered: Awaited<ReturnType<FormatChips['toggle']>> = null
     const isChosen = await this.attemptQuietly(`The ${label} format was not chosen`, async () => {
-      answered = await this.formatChips.toggle(label)
+      answered = await this.formatChips.toggle(label, this.listed)
     })
     const formatChoices = answered as Awaited<ReturnType<FormatChips['toggle']>>
     if (!isChosen || !formatChoices) return
-    this.store.change(state => ({ formatChoices, entries: filesShown(state.byFidelity, state.practices, state.selectedFidelities, chosenFormatsOf(formatChoices)) }))
+    this.store.change(state => ({ formatChoices, entries: this.shownFrom({ ...state, formatChoices }) }))
     if (this.link.chat) await this.attemptQuietly('The chat bar was not told to show the format', () => ChatClientGenerated.named(this.api, this.link.chat).send('refresh', 'formats'))
   }
 

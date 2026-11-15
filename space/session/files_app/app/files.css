@@ -47,7 +47,7 @@ button:disabled { cursor: default; opacity: 0.5; }
 .files-kind { font-family: var(--font-mono); font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
 .files-subject { font-family: var(--font-mono); color: var(--muted); }
 /* Each practice in its own colour: filled while on, an outline while off. */
-.practice-toggles { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin-left: auto; align-self: center; }
+.practice-toggles { display: flex; flex-wrap: wrap; gap: var(--space-xs); align-self: center; }
 .practice-toggle { font: inherit; font-size: 0.8rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--practice-colour); cursor: pointer; }
 .practice-toggle.is-on { background: var(--practice-colour); color: #fff; }
 .practice-toggle.is-off { background: transparent; color: var(--practice-colour); opacity: 0.7; }
@@ -117,3 +117,6 @@ a.file-entry.is-published:hover { text-decoration: underline; }
 .format-toggle.is-chosen { background: var(--accent); border-color: var(--accent); color: #fff; }
 .format-toggle.is-made { color: var(--success); }
 .format-toggle.is-not-made { color: var(--muted); }
+.stage-toggles { display: flex; gap: var(--space-2xs); align-self: center; margin-left: auto; }
+.stage-toggle { padding: 1px 8px; border-radius: var(--radius-sm); color: var(--accent); border-color: var(--border); }
+.stage-toggle.is-shown { background: var(--accent); border-color: var(--accent); color: #fff; }

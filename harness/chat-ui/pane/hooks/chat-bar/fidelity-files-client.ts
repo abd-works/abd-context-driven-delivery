@@ -60,7 +60,7 @@ export async function openFiles($: EngineInterface, fidelity: FidelityProgressCl
 export async function openStageFiles($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
   const slugs = chatBar.stageFidelitySlugs.join(',')
   if (!slugs) return
-  await openFilesLink($, `${chatBar.shownStage} files`, { files: chatBar.ticketName, fidelity: slugs })
+  await openFilesLink($, `${chatBar.shownStages.join(' · ')} files`, { files: chatBar.ticketName, fidelity: slugs })
 }
 
 // Every file in the chat's session folder, .sessions/<session>: a ticket chat's session name opens it.

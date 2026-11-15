@@ -9,7 +9,7 @@ import type { ChatBarJson } from '../../types'
 import { reasonOf, showFailure } from '../error-display/failure-client'
 import { SERVER } from '../health/server-health-client'
 import { FidelityProgressClient, selectedFidelitySlugs } from './fidelity-progress-client'
-import { StageClient, shownStageName } from './stage-client'
+import { StageClient, shownStageNames } from './stage-client'
 
 // The chat bar: the active session's line above the prompt. Sources: harness/chat-ui/.context/story-map.md,
 // cdr/0001-stage-strip-band.md, design/StageStrip.dc.html. Every rule lives in the Python Ticket; this file shows its answers.
@@ -25,7 +25,7 @@ export class ChatBarClient {
 
   constructor(
     json: ChatBarJson,
-    private readonly shown: string | null,
+    private readonly shown: string[],
     private readonly selected: string[],
   ) {
     this.board = json.board as BoardOverviewData | null
@@ -68,9 +68,17 @@ export class ChatBarClient {
     return this.ticket?.column.name ?? ''
   }
 
-  // A stage icon a person picked shows that stage's fidelities; otherwise the dots show the stage the session is in.
+  // The stages whose fidelities the dots show, in the board's order: those turned on with the stage buttons, here or in
+  // a page the chat opened; none turned on, the stage the session is in.
+  get shownStages(): string[] {
+    const stages = (this.board?.columns ?? []).filter(column => column.kind === 'stage').map(column => column.name)
+    const shown = stages.filter(stage => this.shown.includes(stage))
+    return shown.length ? shown : stages.filter(stage => stage === this.stage)
+  }
+
+  // The first stage shown, whose actions the action button offers: every stage takes the same steps.
   get shownStage(): string {
-    return this.shown && this.board?.columns.some(column => column.name === this.shown && column.kind === 'stage') ? this.shown : this.stage
+    return this.shownStages[0] ?? this.stage
   }
 
   // Ticket.is_done answers whether every fidelity of the stage has passed validate, so the action button moves the session on;
@@ -84,7 +92,7 @@ export class ChatBarClient {
   get stages(): StageClient[] {
     const columns = this.board?.columns ?? []
     const sessionPlace = columns.findIndex(column => column.name === this.stage)
-    return columns.map((column, place) => new StageClient(column, place, sessionPlace, column.name === this.shownStage && column.name !== this.stage))
+    return columns.map((column, place) => new StageClient(column, place, sessionPlace, this.shownStages.includes(column.name)))
   }
 
   // Every action a person can run on a fidelity of the shown stage, its steps first, as the stage sends them.
@@ -120,14 +128,22 @@ export class ChatBarClient {
     const ticket = this.ticket
     if (!ticket) return []
     return ticket.progress
-      .filter(progress => progress.stage.name === this.shownStage && progress.is_enabled)
+      .filter(progress => this.shownStages.includes(progress.stage.name) && progress.is_enabled)
       .map(progress => new FidelityProgressClient(progress, ticket, this.practiceNamed(progress.practice.key), this.selected.includes(progress.fidelity.slug), this.labelOf(progress.fidelity.slug)))
+  }
+
+  // Each stage of the ticket with its fidelities by slug, in the board's order, for a page the chat opened, such as the
+  // Files app, whose stage toggles show them.
+  get stagesWithFidelities(): Record<string, string[]> {
+    const stages = (this.board?.columns ?? []).filter(column => column.kind === 'stage').map(column => column.name)
+    const progress = this.ticket?.progress ?? []
+    return Object.fromEntries(stages.map(stage => [stage, progress.filter(each => each.stage.name === stage).map(each => each.fidelity.slug)]))
   }
 
   // Every fidelity of the shown stage, its practice on or off for the session: the Files app shows a toggle for each
   // practice and lists the files of the ones turned on, so turning one on there shows its files at once.
   get stageFidelitySlugs(): string[] {
-    return (this.ticket?.progress ?? []).filter(progress => progress.stage.name === this.shownStage).map(progress => progress.fidelity.slug)
+    return (this.ticket?.progress ?? []).filter(progress => this.shownStages.includes(progress.stage.name)).map(progress => progress.fidelity.slug)
   }
 
   // The fidelities the session card lists a folder beside: practices that write under one folder share it, so each
@@ -250,7 +266,7 @@ export async function callToolText($: EngineInterface, tool: string, args: objec
 
 // Atom chatBar, declared in pane/types/index.d.ts and kept in this file: the last board.overview answer.
 export async function currentChatBar($: EngineInterface): Promise<ChatBarClient> {
-  return new ChatBarClient(await read($, chatBar), await shownStageName($), await selectedFidelitySlugs($))
+  return new ChatBarClient(await read($, chatBar), await shownStageNames($), await selectedFidelitySlugs($))
 }
 
 // A failed read keeps the last board and says why, so the bar never draws old state as if it were current.

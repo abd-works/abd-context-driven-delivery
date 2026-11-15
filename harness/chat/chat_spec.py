@@ -154,6 +154,22 @@ with description("a chat") as self:
                 Chat.load(CHAT).check_in(is_busy=False, name="repo · first words")
                 expect(Chat.load(CHAT).show().selected_fidelities).to(equal(["clean-engineering-code", "ux-front-end-code"]))
 
+        # The chat bar's stage buttons and a page the chat opened, such as the Files app, show and change one choice.
+        with context("that has stages shown for it and its ticket's stages listed"):
+            with before.each:
+                Chat.load(CHAT).list_stages({"Discovery": ["stories-story-map"], "Implementation": ["clean-engineering-code"]})
+                Chat.load(CHAT).show_stages(["Discovery", "Implementation"])
+
+            with it("should answer the stages shown"):
+                expect(Chat.load(CHAT).show().shown_stages).to(equal(["Discovery", "Implementation"]))
+
+            with it("should answer each stage with its fidelities, in the board's order"):
+                expect(Chat.load(CHAT).show().stages).to(equal({"Discovery": ["stories-story-map"], "Implementation": ["clean-engineering-code"]}))
+
+            with it("should keep them through its next check-in"):
+                Chat.load(CHAT).check_in(is_busy=False, name="repo · first words")
+                expect(Chat.load(CHAT).show().shown_stages).to(equal(["Discovery", "Implementation"]))
+
         # The board finds a ticket's chat by the worktree the chat works in.
         with context("from the folder it works in"):
             with before.each:

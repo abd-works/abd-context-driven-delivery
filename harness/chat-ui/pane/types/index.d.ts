@@ -92,8 +92,7 @@ declare module 'claude-code' {
       selectedFidelities: string[]
       actionPicker: ActionPickerJson
       fidelityHelp: FidelityHelpJson
-      shownStage: string | null
-      stagePicker: boolean
+      shownStages: string[]
       formatChoices: FormatChoicesJson
       overlayChoices: OverlayChoicesJson
       busy: BusyJson

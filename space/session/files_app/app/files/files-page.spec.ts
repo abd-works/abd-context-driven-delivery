@@ -15,6 +15,9 @@ class FakeFilesServer implements CddApi {
   readonly posts: { path: string; body: Record<string, unknown> }[] = []
   // The fidelities the opening chat's chat bar has selected, as it said at its last check-in.
   selected: string[] = []
+  // The stages cdd holds for the chat: each with its fidelities, and those shown; none shown, the link's stage.
+  stages: Record<string, string[]> = {}
+  shownStages: string[] = []
   // The session's format chips for the page's fidelities, markdown and diagram, none chosen.
   formats = [
     { label: 'markdown', formats: ['markdown'], offered: 2, made: 2, is_chosen: false },
@@ -33,7 +36,8 @@ class FakeFilesServer implements CddApi {
       return this.formats as Result
     }
     if (path.startsWith('/chat/') && path.endsWith('/select')) this.selected = [...(body.selected_fidelities as string[])]
-    if (path.startsWith('/chat/') && (path.endsWith('/show') || path.endsWith('/select'))) return { id: 'chat-1', name: 'release-2', is_busy: false, folder: '', selected_fidelities: this.selected } as Result
+    if (path.startsWith('/chat/') && path.endsWith('/show-stages')) this.shownStages = [...(body.shown_stages as string[])]
+    if (path.startsWith('/chat/') && (path.endsWith('/show') || path.endsWith('/select') || path.endsWith('/show-stages'))) return { id: 'chat-1', name: 'release-2', is_busy: false, folder: '', selected_fidelities: this.selected, shown_stages: this.shownStages, stages: this.stages } as Result
     if (path.endsWith('/show')) return { name: 'release-2', session_file: SESSION, practices: this.practices } as Result
     if (path.endsWith('/enable')) {
       const name = decodeURIComponent(path.split('/')[3] ?? '')
@@ -347,6 +351,43 @@ describe('Filter Files By Format In Files App', () => {
       it('should tell the chat bar to read its format chips again', async () => {
         const { server } = await pressedDiagram()
         expect(server.posted('/send').map(post => post.body)).toEqual([{ kind: 'refresh', text: 'formats' }])
+      })
+    })
+  })
+})
+
+describe('Show Stages In Files App', () => {
+  describe('with a ticket of two stages, the page opened on Discovery', () => {
+    function twoStages(): FakeFilesServer {
+      const server = new FakeFilesServer()
+      server.practices.ddd = practice('ddd', 'DDD', '#2471a3', true)
+      server.stages = { Discovery: ['stories-story-map', 'ddd-bounded-context'], Specification: ['stories-scenarios'] }
+      return server
+    }
+
+    it("should show a button for each stage, Discovery's shown", async () => {
+      const page = new FilesPage(twoStages(), new FilesLink(STAGE_LINK))
+      await started(page)
+      expect([Object.keys(page.state.stages), page.shownStageNames]).toEqual([['Discovery', 'Specification'], ['Discovery']])
+    })
+
+    describe('that has Specification turned on', () => {
+      async function withSpecification(): Promise<{ page: FilesPage; server: FakeFilesServer }> {
+        const server = twoStages()
+        const page = new FilesPage(server, new FilesLink(STAGE_LINK))
+        await started(page)
+        await page.toggleStage('Specification')
+        return { page, server }
+      }
+
+      it('should show both stages for the chat, as its chat bar shows them', async () => {
+        const { server } = await withSpecification()
+        expect(server.shownStages).toEqual(['Discovery', 'Specification'])
+      })
+
+      it("should list both stages' files", async () => {
+        const { page } = await withSpecification()
+        expect(page.state.entries.map(each => each.path)).toContain('.context/stories-scenarios.md')
       })
     })
   })
