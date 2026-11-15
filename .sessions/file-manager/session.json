@@ -2,5 +2,7 @@
   "name": "file-manager",
   "title": "file-manager",
   "scope": "feature",
-  "workpath": "harness"
+  "workpath": "harness",
+  "branch": "file-manager",
+  "worktree": "C:\\dev\\abd-cdd-file-manager"
 }
