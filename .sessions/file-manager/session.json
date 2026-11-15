@@ -9,6 +9,36 @@
     "stages": [
       "discovery"
     ],
-    "version": 1
+    "version": 3
+  },
+  "practices": {
+    "stories": {
+      "formats": {
+        "story_map": [
+          "markdown",
+          "drawio"
+        ]
+      }
+    },
+    "ux": {
+      "formats": {
+        "ia": [
+          "drawio"
+        ]
+      }
+    },
+    "clean_engineering": {
+      "formats": {
+        "modules": [
+          "markdown",
+          "drawio"
+        ]
+      }
+    },
+    "bdd": {
+      "formats": {
+        "behavior": []
+      }
+    }
   }
 }

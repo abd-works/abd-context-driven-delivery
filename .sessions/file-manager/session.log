@@ -1,2 +1,20 @@
 2026-11-15T19:17:58Z --- 1
 2026-11-15T19:48:13Z tool sessions.switch af5894a3-9c9f-4aa3-be83-2ef5749adcca C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\af5894a3-9c9f-4aa3-be83-2ef5749adcca.jsonl 1-69
+2026-11-15T19:55:04Z tool graph.practice_names
+2026-11-15T19:55:04Z tool graph.load_practice_roots
+2026-11-15T19:55:19Z tool graph.inventory
+2026-11-15T19:55:19Z tool graph.filter_choices
+2026-11-15T19:55:20Z tool graph.explorer_trees
+2026-11-15T19:55:23Z tool graph.practice_names
+2026-11-15T19:55:24Z tool graph.load_practice_roots
+2026-11-15T19:55:40Z tool graph.inventory
+2026-11-15T19:55:40Z tool graph.filter_choices
+2026-11-15T19:55:41Z tool graph.explorer_trees
+2026-11-15T19:55:58Z tool graph.explorer_branch
+2026-11-15T19:57:12Z tool graph.practice_names
+2026-11-15T19:57:12Z tool graph.load_practice_roots
+2026-11-15T19:57:29Z tool graph.inventory
+2026-11-15T19:57:29Z tool graph.filter_choices
+2026-11-15T19:57:30Z tool graph.explorer_trees
+2026-11-15T19:58:23Z tool app.open af5894a3-9c9f-4aa3-be83-2ef5749adcca C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\af5894a3-9c9f-4aa3-be83-2ef5749adcca.jsonl 1-172
+2026-11-15T19:58:31Z tool app.open af5894a3-9c9f-4aa3-be83-2ef5749adcca C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\af5894a3-9c9f-4aa3-be83-2ef5749adcca.jsonl 1-172
