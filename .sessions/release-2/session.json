@@ -20,7 +20,7 @@
       }
     },
     "stories": {
-      "enabled": false,
+      "enabled": true,
       "formats": {
         "story_map": [],
         "acceptance_tests": [],
@@ -69,6 +69,6 @@
       "specification",
       "implementation"
     ],
-    "version": 76
+    "version": 77
   }
 }
