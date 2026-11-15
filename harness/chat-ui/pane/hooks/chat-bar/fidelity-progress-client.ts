@@ -109,6 +109,51 @@ export class FidelityProgressClient {
   }
 }
 
+// The states from least to most done, so a practice's dot shows its least finished fidelity; violations count as less
+// done than work under way, so they are never hidden behind it.
+const STATES_BY_PROGRESS = ['violations', 'not_started', 'in_progress', 'done']
+
+// One practice's dot on the chat bar: its fidelities in every stage shown, one dot whatever how many stages show. It is
+// shaded by the least finished of them, carries their violations together, and is selected while all of them are.
+export class PracticeDotClient {
+  constructor(readonly fidelities: FidelityProgressClient[]) {}
+
+  get key(): string {
+    return this.fidelities.map(fidelity => fidelity.slug).join('+')
+  }
+
+  get least(): FidelityProgressClient {
+    const rank = (fidelity: FidelityProgressClient) => STATES_BY_PROGRESS.indexOf(fidelity.state)
+    return [...this.fidelities].sort((one, other) => rank(one) - rank(other))[0]!
+  }
+
+  get shade(): string {
+    return this.least.shade
+  }
+
+  get violationCount(): number {
+    return this.fidelities.reduce((count, fidelity) => count + fidelity.violationCount, 0)
+  }
+
+  // The first fidelity with violations, whose validation report a press on the count opens.
+  get violating(): FidelityProgressClient | undefined {
+    return this.fidelities.find(fidelity => fidelity.violationCount > 0)
+  }
+
+  get isSelected(): boolean {
+    return this.fidelities.every(fidelity => fidelity.isSelected)
+  }
+}
+
+// A press on a practice's dot selects all its fidelities in the stages shown, or clears them while all are selected.
+export async function selectPractice($: EngineInterface, dot: PracticeDotClient): Promise<void> {
+  const slugs = (await read($, selectedFidelities)) ?? []
+  const own = dot.fidelities.map(fidelity => fidelity.slug)
+  const next = dot.isSelected ? slugs.filter(slug => !own.includes(slug)) : [...slugs, ...own.filter(slug => !slugs.includes(slug))]
+  const answer = await post($, { chat: await $.session.id(), operation: 'select', body: { selected_fidelities: next } })
+  await showSelected($, (JSON.parse(answer.text) as { selected_fidelities: string[] }).selected_fidelities)
+}
+
 // Atom selectedFidelities, declared in pane/types/index.d.ts and kept in this file.
 export async function selectedFidelitySlugs($: EngineInterface): Promise<string[]> {
   return (await read($, selectedFidelities)) ?? []

@@ -13,7 +13,7 @@ import type { FailureClient } from '../error-display/failure-client'
 import { FailureView } from '../error-display/failure-view'
 import { openReport, openSessionFolder, openStageFiles } from './fidelity-files-client'
 import { openHelp } from './fidelity-help-client'
-import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
+import { selectPractice, type PracticeDotClient } from './fidelity-progress-client'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
 import { openClose, toggleRepoListWithRepos } from './session-client'
 import { toggleSessionList } from './session-dialogs-client'
@@ -42,16 +42,31 @@ export type ChatBarDraw = {
 
 const SEPARATOR = '│'
 
-// One square in its practice colour, fainter the less is done, underlined on a light tint when selected, with the
-// violation count in red beside it, a press on the count opening the validation report; the fidelity's name shows above
-// it on hover, its state being on the session card, and a press on that name opens the fidelity's help in a pane beside the chat.
-export function FidelityView($: EngineInterface, elements: ElementTable, fidelity: FidelityProgressClient) {
+// One square for each practice in its colour, standing for its fidelities in every stage shown: fainter the less is done,
+// underlined on a light tint while they are all selected, their violations counted in red beside it, a press on the
+// count opening the first one's report. Its fidelities show above it on hover, each opening its help in a pane beside
+// the chat; their states are on the session card.
+export function PracticeDotView($: EngineInterface, elements: ElementTable, dot: PracticeDotClient) {
   const { Box } = elements
+  const violating = dot.violating
   return (
-    <Box key={`fidelity-${fidelity.slug}`} flexDirection="row" gap={0} backgroundColor={fidelity.isSelected ? BRAND.selectedTint : undefined}>
-      {GlyphButtonView(elements, `dot-${fidelity.slug}`, '■', fidelity.shade, () => selectFidelity($, fidelity), fidelity.isSelected)}
-      {fidelity.violationCount ? GlyphButtonView(elements, `violations-${fidelity.slug}`, String(fidelity.violationCount), BRAND.error, () => openReport($, fidelity)) : null}
-      {TipView(elements, fidelity.slug, '', BRAND.muted, () => openHelp($, fidelity), `help-${fidelity.slug}`)}
+    <Box key={`practice-${dot.key}`} flexDirection="row" gap={0} backgroundColor={dot.isSelected ? BRAND.selectedTint : undefined}>
+      {GlyphButtonView(elements, `dot-${dot.key}`, '■', dot.shade, () => selectPractice($, dot), dot.isSelected)}
+      {violating ? GlyphButtonView(elements, `violations-${dot.key}`, String(dot.violationCount), BRAND.error, () => openReport($, violating)) : null}
+      {PracticeTipView($, elements, dot)}
+    </Box>
+  )
+}
+
+// The practice's fidelities above its dot on hover, each a button that opens its help.
+function PracticeTipView($: EngineInterface, { Box, Button, Text }: ElementTable, dot: PracticeDotClient) {
+  return (
+    <Box position="absolute" top={-1} left={0} paddingX={1} gap={1} flexDirection="row" backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
+      {dot.fidelities.map(fidelity => (
+        <Button key={`help-${fidelity.slug}`} plain onPress={() => openHelp($, fidelity)}>
+          <Text color={BRAND.text}>{fidelity.slug}</Text>
+        </Button>
+      ))}
     </Box>
   )
 }
@@ -230,7 +245,7 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
         {StageButtonsView($, elements, draw)}
         <Text color={BRAND.border}>{SEPARATOR}</Text>
         <Box key="fidelity-column" flexDirection="row" gap={1} alignItems="center">
-          {chatBar.fidelities.map(fidelity => FidelityView($, elements, fidelity))}
+          {chatBar.practiceDots.map(dot => PracticeDotView($, elements, dot))}
           {OverlayChipsView($, elements, draw)}
           {FormatChipsView($, elements, draw)}
           {ActionButtonView($, elements, draw)}

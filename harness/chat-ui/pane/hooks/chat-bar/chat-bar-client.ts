@@ -8,7 +8,7 @@ import type { TicketData } from '@cdd/space/kanban/ticket'
 import type { ChatBarJson } from '../../types'
 import { reasonOf, showFailure } from '../error-display/failure-client'
 import { SERVER } from '../health/server-health-client'
-import { FidelityProgressClient, selectedFidelitySlugs } from './fidelity-progress-client'
+import { FidelityProgressClient, PracticeDotClient, selectedFidelitySlugs } from './fidelity-progress-client'
 import { StageClient, shownStageNames } from './stage-client'
 
 // The chat bar: the active session's line above the prompt. Sources: harness/chat-ui/.context/story-map.md,
@@ -130,6 +130,13 @@ export class ChatBarClient {
     return ticket.progress
       .filter(progress => this.shownStages.includes(progress.stage.name) && progress.is_enabled)
       .map(progress => new FidelityProgressClient(progress, ticket, this.practiceNamed(progress.practice.key), this.selected.includes(progress.fidelity.slug), this.labelOf(progress.fidelity.slug)))
+  }
+
+  // One dot per practice, in the order its first fidelity shows: its fidelities in every stage shown.
+  get practiceDots(): PracticeDotClient[] {
+    const byPractice = new Map<string, FidelityProgressClient[]>()
+    for (const fidelity of this.fidelities) byPractice.set(fidelity.progress.practice.key, [...(byPractice.get(fidelity.progress.practice.key) ?? []), fidelity])
+    return [...byPractice.values()].map(fidelities => new PracticeDotClient(fidelities))
   }
 
   // Each stage of the ticket with its fidelities by slug, in the board's order, for a page the chat opened, such as the
