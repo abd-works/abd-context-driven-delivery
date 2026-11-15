@@ -6,7 +6,7 @@
   "worktree": "C:\\dev\\abd-cdd-2",
   "practices": {
     "clean_engineering": {
-      "enabled": false,
+      "enabled": true,
       "formats": {
         "modules": [
           "drawio"
@@ -35,7 +35,7 @@
       }
     },
     "ddd": {
-      "enabled": false,
+      "enabled": true,
       "formats": {
         "bounded_context": [],
         "tactics": [
@@ -47,7 +47,7 @@
       }
     },
     "ux": {
-      "enabled": false,
+      "enabled": true,
       "formats": {
         "ia": [
           "drawio",
@@ -63,7 +63,7 @@
       }
     },
     "bdd": {
-      "enabled": false,
+      "enabled": true,
       "formats": {
         "behavior": [],
         "development": [],
@@ -76,7 +76,7 @@
       "specification",
       "implementation"
     ],
-    "version": 141
+    "version": 146
   },
   "stage": "Implementation",
   "stage_mark": "in-progress"
