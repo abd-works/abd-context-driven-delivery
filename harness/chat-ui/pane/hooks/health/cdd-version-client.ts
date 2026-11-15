@@ -6,7 +6,6 @@ import type { CddVersionData } from '@cdd/harness/diagnostics/cdd-version'
 import type { CddVersionJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { showFailure } from '../error-display/failure-client'
-import { commandOf } from '../shared/chat-command'
 
 const SERVER = 'plugin:cdd:cdd'
 const CHECK_TOOL = 'cdd-version.check'
@@ -119,17 +118,23 @@ export async function cancelUpdate($: EngineInterface): Promise<void> {
   await update($, cddVersion, version => ({ ...version, isAsking: false }))
 }
 
-// The update runs in the chat as the person's own /install-latest, so the chat lists its steps and ticks each one off
-// as the script reports it. The engine queues the command until the chat is idle and resolves once its turn has run.
+// The update is sent to the chat as the person's own /install-latest, so the agent runs it as a turn: it lists the
+// steps in its task list and ticks each one off as the script reports it. Run as a command without a turn, nothing
+// read those instructions. The engine queues the prompt until the chat is idle; the turn's end finishes the update.
 export async function updateToLatest($: EngineInterface): Promise<void> {
   await update($, cddVersion, version => ({ ...version, isAsking: false, update: 'running', error: null }))
-  try {
-    await $.command.run(commandOf(INSTALL_LATEST_COMMAND))
-  } catch (failure) {
-    await update($, cddVersion, version => ({ ...version, update: 'failed', error: String(failure) }))
-    await showFailure($, `${INSTALL_LATEST_COMMAND} did not run`, `Update and reinstall on the version badge, running ${INSTALL_LATEST_COMMAND} in the chat`, failure)
-    return
-  }
+  const dropped = await $.prompt.submit({ text: INSTALL_LATEST_COMMAND, asUser: true }).then(
+    answer => (answer.drop === undefined ? '' : `the chat dropped it: ${answer.drop || 'no reason given'}`),
+    (failure: unknown) => String(failure),
+  )
+  if (!dropped) return
+  await update($, cddVersion, version => ({ ...version, update: 'failed', error: dropped }))
+  await showFailure($, `${INSTALL_LATEST_COMMAND} did not run: ${dropped}`, `Update and reinstall on the version badge, sending ${INSTALL_LATEST_COMMAND} to the chat`)
+}
+
+// Once the turn that ran the update has ended, the badge says the update is done and reads the version again.
+export async function finishUpdate($: EngineInterface): Promise<void> {
+  if ((await read($, cddVersion)).update !== 'running') return
   await update($, cddVersion, version => ({ ...version, update: 'installed' }))
   await checkVersion($)
 }
