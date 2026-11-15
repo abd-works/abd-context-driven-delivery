@@ -70,8 +70,8 @@
   },
   "guidance": {
     "stages": [
-      "specification"
+      "implementation"
     ],
-    "version": 130
+    "version": 132
   }
 }
