@@ -8,6 +8,7 @@ from functools import cache
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Callable
 
+from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
 from harness.agent_tools.tool_call import ToolCall
@@ -30,6 +31,15 @@ _OUTPUT_PATTERN_MARKS = {"*", "{"}
 _CODE_EXTENSIONS = {"typescript": (".ts", ".tsx"), "javascript": (".js", ".jsx")}
 # Report and handoff names end with the time they were made, written so names sort by time.
 REPORT_DATE_FORMAT = "%Y%m%dT%H%M%S"
+
+
+def _canvas_link(file: Path) -> str:
+    """The link a design canvas's ``canvas.json`` is published at (``<design-canvas>/version-N/project/canvas.json``),
+    as its versions record it; none for any other file, or a version not yet published."""
+    if file.name != "canvas.json" or file.parent.name != "project":
+        return ""
+    version = file.parent.parent
+    return CanvasVersions(version.parent).links().get(version.name, "")
 
 
 @identity("session_file", "name")
@@ -96,6 +106,25 @@ class PracticeSessionOutput:
 
     @property
     @data_field
+    def short_name(self) -> str:
+        """The practice's short name, such as DDD, which a toggle for it shows."""
+        return self._guidance.short_name
+
+    @property
+    @data_field
+    def colour(self) -> str:
+        """The practice's colour, which its toggles and fidelity dots are drawn in."""
+        return self._guidance.colour
+
+    @property
+    @data_field
+    def fidelity_slugs(self) -> list[str]:
+        """The slugs of this practice's fidelities, such as stories-story-map, so a page listing a stage's files knows
+        which of them this practice owns and hides them while it is off."""
+        return [fidelity.slug for fidelity in self.fidelities]
+
+    @property
+    @data_field
     def enabled(self) -> bool:
         """Whether the session works on this practice: true until a person turns it off."""
         return self.saved.get("enabled", True)
@@ -104,8 +133,9 @@ class PracticeSessionOutput:
     @agent_tool
     @noSessionLog
     def enable(self, is_enabled: bool) -> PracticeSessionOutput:
-        """Turn this practice on or off for its session, saved in its session.json."""
+        """Turn this practice on or off for its session, saved in its session.json; its guidance selection changes."""
         self.save(enabled=is_enabled)
+        self._session.guidance_changed()
         return self
 
     @property
@@ -264,6 +294,7 @@ class FidelitySessionOutput:
         others = [each for each in self.chosen_formats if each != named]
         chosen = self.chosen_formats if is_chosen and named in self.chosen_formats else others + ([named] if is_chosen else [])
         self._practice.save(formats={**self._practice.saved.get("formats", {}), self._fidelity.name: chosen})
+        self._session.guidance_changed()
         return self
 
     @property
@@ -383,15 +414,18 @@ class FidelitySessionOutput:
             named = repo.root / declared.glob
             return [FileEntry(declared.glob, named.exists(), named.exists() and named.resolve() in changed())]
         found = self._found(label, declared)
-        return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed()) for file in found] or [FileEntry(declared.glob, False)]
+        return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed(), _canvas_link(file)) for file in found] or [FileEntry(declared.glob, False)]
 
     def _worked_on_code(self, label: str, changed: Callable[[], set[Path]]) -> list[FileEntry]:
         """The code a fidelity that declares a folder per module writes, such as Clean Engineering's ``{module}/``: the
         files in that format under its root that the session's branch changed, the code the ticket worked on, not every
-        file of that language in the repository."""
+        file of that language in the repository. Specs, tests, and what only they use are the acceptance tests' and the
+        development specs' files, not production code, so they are left out."""
         root = self.root.resolve()
         extensions = _CODE_EXTENSIONS.get(Format(label).name, (Format(label).extension,))
-        worked_on = sorted(file for file in changed() if file.suffix in extensions and (file == root or root in file.parents))
+        worked_on = sorted(
+            file for file in changed() if file.suffix in extensions and (file == root or root in file.parents) and not is_test_code(file.as_posix())
+        )
         return [FileEntry(self._session.repo.path_from_top(file), file.exists(), True) for file in worked_on]
 
     def _found(self, label: str, declared: DeclaredFile) -> list[Path]:

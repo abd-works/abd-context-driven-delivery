@@ -1,5 +1,5 @@
 import { Component, useEffect } from 'react'
-import type { ReactNode } from 'react'
+import type { ErrorInfo, ReactNode } from 'react'
 
 import { ActivationView } from '../ticket/activation-view'
 import { RootChoiceView } from '../ticket/root-choice-view'
@@ -10,6 +10,7 @@ import { BoardContext, useBoard } from '../shared/board-context'
 import { BoardHeaderView } from './board-header-view'
 import type { BoardPage } from './board-page'
 import { BOARD_SERVER_DOWN } from './board-api'
+import type { PageFailures } from './page-failures'
 import { useDragGrip } from './drag-grip'
 import { SidePanelsView } from './side-panels-view'
 
@@ -139,12 +140,17 @@ function PageBodyView() {
   )
 }
 
-// A view that throws would otherwise leave an empty black page, so the person sees what broke and can read the board again.
-export class PageFailureView extends Component<{ children: ReactNode }, { failure: string }> {
+// A view that throws would otherwise leave an empty black page, so the person sees what broke and can read the board again,
+// and the chat that opened the page is told, as every other failure is.
+export class PageFailureView extends Component<{ failures: PageFailures; children: ReactNode }, { failure: string }> {
   state = { failure: '' }
 
   static getDerivedStateFromError(error: unknown) {
     return { failure: error instanceof Error ? error.message : String(error) }
+  }
+
+  componentDidCatch(error: unknown, info: ErrorInfo) {
+    this.props.failures.failWith(error, `A Kanban board view failed to draw:${info.componentStack ?? ''}`)
   }
 
   render() {
@@ -162,7 +168,7 @@ export class PageFailureView extends Component<{ children: ReactNode }, { failur
 
 export function BoardPageView({ page }: { page: BoardPage }) {
   return (
-    <PageFailureView>
+    <PageFailureView failures={page.failures}>
       <BoardContext.Provider value={page}>
         <PageBodyView />
       </BoardContext.Provider>

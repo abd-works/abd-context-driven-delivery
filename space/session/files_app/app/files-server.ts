@@ -3,20 +3,37 @@ import { join } from 'node:path'
 
 import type { ProjectConnections } from '@cdd/cdd-connection'
 import { CddRequestError, type CddRoute } from '@cdd/cdd-shared'
+import { ChatAdapter, chatRoutes } from '@cdd/harness/chat/chat'
 import { fidelityProgressRoutes } from '@cdd/space/kanban/fidelity-progress'
+import { ticketRoutes } from '@cdd/space/kanban/ticket'
 import { fileCommentsRoutes } from '@cdd/space/session/file-comments'
+import { practiceSessionOutputRoutes } from '@cdd/space/session/practice-session-output'
 import { sessionRoutes } from '@cdd/space/session/session'
 
 import { DrawioViewer } from './drawio-viewer'
-import { API_ROOT, DRAWIO_PATH, FILES_HEADER } from './files/files-paths'
+import { API_ROOT, DRAWIO_PAGE, FILES_HEADER } from './files/files-paths'
 
 const CHANGING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE']
 const BAD_REQUEST = 400
 const FORBIDDEN = 403
 const FAILED = 500
 
-// The Files app reads a session's files, a fidelity's files, and the comments on them; it never reads the board.
-export const filesRoutes: CddRoute[] = [...sessionRoutes, ...fileCommentsRoutes, ...fidelityProgressRoutes]
+// The one chat route the page needs: telling the chat that opened it a failure. The stages, practices and formats
+// selected are the session's guidance selection, reached through its routes. Opening or removing chats stays with the board.
+const CHAT_ROUTES = ['/chat/:chat/send']
+// The ticket route the page lists its files through: every fidelity's files in one call.
+const TICKET_ROUTES = ['/ticket/:ticket/fidelity-files']
+
+// The Files app reads a session's files, a fidelity's files, and the comments on them, turns the session's practices on
+// or off, and tells the chat that opened it; it never reads the board.
+export const filesRoutes: CddRoute[] = [
+  ...sessionRoutes,
+  ...fileCommentsRoutes,
+  ...fidelityProgressRoutes,
+  ...practiceSessionOutputRoutes,
+  ...chatRoutes.filter(route => CHAT_ROUTES.includes(route.path)),
+  ...ticketRoutes.filter(route => TICKET_ROUTES.includes(route.path)),
+]
 
 const textOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
 
@@ -29,6 +46,16 @@ function onlyThisMachine(port: number) {
     if (isLocalHost && !isForeignPost) return next()
     response.status(FORBIDDEN).json({ error: 'Refused: this server answers only its own page on this machine.' })
   }
+}
+
+// A failure the server meets serving the page, sent to the chat that opened it, which shows it on its chat bar. A chat
+// that cannot be told is written to the server's log beside the failure the tab already shows.
+async function tellChat(projects: ProjectConnections, request: Request, failure: string, context: string): Promise<void> {
+  const chat = String(request.query.chat ?? '')
+  if (!chat) return
+  await new ChatAdapter(projects.of(request), chat)
+    .send('failure', JSON.stringify({ failure, context }))
+    .catch(reason => console.error(`The chat ${chat} was not told "${failure}": ${textOf(reason)}`))
 }
 
 async function answer(projects: ProjectConnections, route: CddRoute, request: Request, response: Response): Promise<void> {
@@ -44,11 +71,16 @@ export function createFilesApp(projects: ProjectConnections, port: number, stati
   app.use(onlyThisMachine(port))
   app.use(express.json())
   for (const route of filesRoutes) app.post(`${API_ROOT}${route.path}`, (request, response) => void answer(projects, route, request, response))
-  app.post(`${API_ROOT}${DRAWIO_PATH}`, async (request, response) => {
+  // A .drawio file's link: start the viewer on the file and send the tab on to it. A viewer that does not start is shown
+  // in the tab and told to the chat that opened the page, as the page tells every failure.
+  app.get(`${API_ROOT}${DRAWIO_PAGE}`, async (request, response) => {
+    const path = String(request.query.path ?? '')
     try {
-      response.json({ url: await drawio.urlOf(String(request.body?.path ?? '')) })
+      response.redirect(302, await drawio.urlOf(path))
     } catch (failure) {
-      response.status(FAILED).json({ error: textOf(failure) })
+      const said = `${path} did not open in the draw.io viewer: ${textOf(failure)}`
+      response.status(FAILED).type('text/plain').send(said)
+      await tellChat(projects, request, said, `Opening ${path} from the Files app`)
     }
   })
   app.use(express.static(staticRoot))

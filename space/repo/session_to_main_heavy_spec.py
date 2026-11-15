@@ -96,6 +96,14 @@ with description("a session's work taken to main") as self:
             with it("should answer the commit main is on"):
                 expect(self.landed.sha).to(equal(_git(self.clone, "rev-parse", "main")))
 
+        with context("and the clone's own changes not committed, such as the session's log written in main"):
+            with before.each:
+                (self.clone / "seed.txt").write_text("seed\ntool repo.merge_to_main\n", encoding="utf-8")
+                Repo(self.tree).merge_to_main()
+
+            with it("should hold the clone's changes on main beside the work"):
+                expect(_git(self.clone, "show", "main:seed.txt")).to(contain("tool repo.merge_to_main"))
+
         with context("that is pushed to main"):
             with before.each:
                 Repo(self.tree).push_to_main()

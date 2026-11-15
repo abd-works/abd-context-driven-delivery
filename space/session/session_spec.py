@@ -22,6 +22,7 @@ from mamba import after, before, context, description, it
 
 from harness.graph.graph import Graph
 from harness.guidance.guidance import PracticeGuidance
+from harness.installation.data_class import data_of
 from harness.guidance_actions import GuidanceAction
 from harness.hooks.hook_server import HookPayload
 from harness.agent_tools.tool_call import ToolCall
@@ -887,6 +888,15 @@ with description("a practice"):
             with it("should be left out of the practices the session works on"):
                 expect(sorted(self.session.practices)).to(equal(["bdd", "clean_engineering", "stories", "ux"]))
 
+            with it("should still be shown, turned off, so a toggle can turn it on again"):
+                expect(data_of(self.session.show())["practices"]["ddd"]["enabled"]).to(equal(False))
+
+            with it("should name its own fidelities, so a page can hide their files"):
+                expect(data_of(self.session.show())["practices"]["ddd"]["fidelity_slugs"]).to(equal(["ddd-bounded-context", "ddd-model", "ddd-tactics"]))
+
+            with it("should be shown in its practice's colour"):
+                expect(data_of(self.session.show())["practices"]["ddd"]["colour"]).to(equal(self.session.practice("ddd").guidance.colour))
+
             with context("that is turned on again"):
                 with before.each:
                     self.session.practice("ddd").enable(True)
@@ -1106,7 +1116,14 @@ with description("a session whose branch changed code in the folder it works in"
         self.repo = Path(tempfile.mkdtemp(prefix="session-code-")).resolve()
         (self.repo / ".git").mkdir()
         self.work = self.repo / "work"
-        changed = [self.work / "orders" / "order.py", self.work / "orders" / "order_view.tsx", self.work / "orders" / "notes.md", self.repo / "elsewhere.py"]
+        changed = [
+            self.work / "orders" / "order.py",
+            self.work / "orders" / "order_view.tsx",
+            self.work / "orders" / "notes.md",
+            self.work / "orders" / "order_spec.py",
+            self.work / "orders" / "order-view.spec.tsx",
+            self.repo / "elsewhere.py",
+        ]
         for file in changed:
             file.parent.mkdir(parents=True, exist_ok=True)
             file.write_text("x\n", encoding="utf-8")
@@ -1124,6 +1141,108 @@ with description("a session whose branch changed code in the folder it works in"
 
     with it("should list the changed TypeScript, components included, as the code's TypeScript"):
         expect([entry.path for entry in self.code.files()["typescript"]]).to(equal(["work/orders/order_view.tsx"]))
+
+    # Specs and tests are the acceptance tests' and the development specs' files, not production code.
+    with it("should leave the changed specs out of the code"):
+        listed = [entry.path for entries in self.code.files().values() for entry in entries]
+        expect(listed).not_to(contain("work/orders/order_spec.py"))
+
+
+# UX's front-end code is reviewed against the screens it was built from: its view code is Clean Engineering's code to
+# review, so the files a person reviews for it are the IA's and the mockup's, the design canvas opening at its link.
+with description("a session whose UX work has an information architecture, a published design canvas, and view code") as self:
+    with before.each:
+        self.home = ExampleHome()
+        self.repo = Path(tempfile.mkdtemp(prefix="session-ux-")).resolve()
+        (self.repo / ".git").mkdir()
+        self.work = self.repo / "work"
+        canvas = self.work / "design-canvas"
+        written = {
+            self.work / "checkout" / ".context" / "information-architecture.drawio": "<mxfile/>",
+            canvas / "version-1" / "project" / "canvas.json": "{}",
+            canvas / "versions.json": json.dumps({"version-1": "https://claude.ai/artifact/checkout-canvas"}),
+            self.work / "checkout" / "OrderView.tsx": "export function OrderView() {}",
+        }
+        for file, text in written.items():
+            file.parent.mkdir(parents=True, exist_ok=True)
+            file.write_text(text, encoding="utf-8")
+        Sessions(self.repo).switch("alpha", self.work)
+        self.front_end_code = Sessions(self.repo).current().practice("ux").fidelities["front_end_code"]
+
+    with after.each:
+        shutil.rmtree(self.repo, ignore_errors=True)
+        self.home.close()
+
+    with it("should review the information architecture's diagram"):
+        expect([entry.path for entry in self.front_end_code.files_to_review()["drawio"]]).to(contain("work/checkout/.context/information-architecture.drawio"))
+
+    with it("should review the design canvas at the link it is published at"):
+        expect([(entry.path, entry.link) for entry in self.front_end_code.files_to_review()["claude_design"]]).to(
+            equal([("work/design-canvas/version-1/project/canvas.json", "https://claude.ai/artifact/checkout-canvas")])
+        )
+
+    with it("should leave its view code to Clean Engineering's review"):
+        reviewed = [entry.path for entries in self.front_end_code.files_to_review().values() for entry in entries]
+        expect(reviewed).not_to(contain("work/checkout/OrderView.tsx"))
+
+
+# The chat bar's stage buttons, practice dots, and format chips, and the Files app's toggles, are one selection the
+# session holds; every change raises its version, which a page waits on.
+with description("a session's guidance selection") as self:
+    with before.each:
+        self.home = ExampleHome()
+        self.repo = Path(tempfile.mkdtemp(prefix="session-guidance-")).resolve()
+        (self.repo / ".git").mkdir()
+        (self.repo / "work").mkdir()
+        Sessions(self.repo).switch("alpha", self.repo / "work")
+        self.session = Sessions(self.repo).current()
+
+    with after.each:
+        shutil.rmtree(self.repo, ignore_errors=True)
+        self.home.close()
+
+    with it("should name its repository, branch, and root, as a page heads them"):
+        expect([self.session.repo_name, self.session.branch, self.session.root]).to(equal([self.repo.name, "alpha", str((self.repo / "work").resolve())]))
+
+    with context("that nothing has selected yet"):
+        with it("should have no stage chosen"):
+            expect(self.session.guidance_selection().is_stage_chosen).to(equal(False))
+
+        with it("should have every practice selected, as the session works on each until one is turned off"):
+            expect(all(practice.is_selected for practice in self.session.guidance_selection().practices)).to(equal(True))
+
+    with context("that has Discovery and Stories selected"):
+        with before.each:
+            self.selected = self.session.update_guidance_selection(stages=["discovery"], practices=["stories"])
+
+        with it("should cover Stories' Discovery fidelity alone"):
+            expect(self.selected.fidelities).to(equal(["stories-story-map"]))
+
+        with it("should turn every other practice off for the session"):
+            expect(self.session.practice("ddd").enabled).to(equal(False))
+
+        with it("should raise the version once"):
+            expect(self.selected.version).to(equal(1))
+
+        with it("should keep the stages for the next read"):
+            expect([stage.name for stage in Sessions(self.repo).current().guidance_selection().stages if stage.is_selected]).to(equal(["discovery"]))
+
+        with context("that has every stage turned off"):
+            with it("should cover no fidelity, the stages still chosen"):
+                selected = self.session.update_guidance_selection(stages=[])
+                expect([selected.fidelities, selected.is_stage_chosen]).to(equal([[], True]))
+
+    with context("that a page waits on at version 0"):
+        with it("should answer at once once the selection is past it"):
+            self.session.update_guidance_selection(stages=["discovery"])
+            expect(self.session.guidance_selection_after(0).version).to(equal(1))
+
+        with it("should answer as soon as another call changes the selection"):
+            changer = threading.Timer(0.01, lambda: Sessions(self.repo).current().update_guidance_selection(stages=["specification"]))
+            changer.start()
+            answered = self.session.guidance_selection_after(0)
+            changer.join()
+            expect([stage.name for stage in answered.stages if stage.is_selected]).to(equal(["specification"]))
 
 
 # (E) Open Work Session

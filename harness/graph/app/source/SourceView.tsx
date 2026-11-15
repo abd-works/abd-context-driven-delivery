@@ -4,6 +4,8 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { initialOpenFolds, inlineCallLayout, type FoldMember, type InlineFold } from './call-expansion';
 import type { NodeSourceData } from '@cdd/harness/graph/graph';
 import { buildViolationCorrectPrompt, type ViolationFocus } from './violation-prompt';
+import { reasonOf } from '../graph/graph-failures';
+import { failures } from '../graph/graph-page';
 import './source.css';
 
 const LINE_HEIGHT = 20;
@@ -186,7 +188,11 @@ function SourceEditor({
       endLine: violation?.endLine ?? source.end_line,
       excerpt: text,
     });
-    await navigator.clipboard.writeText(prompt);
+    try {
+      await navigator.clipboard.writeText(prompt);
+    } catch (cause) {
+      failures.fail(`The prompt was not copied: ${reasonOf(cause)}`, `Copy the correction prompt for ${violation.rule} in the Graph app`);
+    }
   }
 
   return (

@@ -67,15 +67,33 @@ class ExplorerEntry(NodeAnswer):
     (under its home parent and under every relationship that names it) but only its home place lists its children, and
     a node already on the path to this place lists none, so the place is not the node."""
 
-    def __init__(self, node: Node, children: list | None = None) -> None:
+    def __init__(self, node: Node, children: list | None = None, children_left_out: int = 0) -> None:
         super().__init__(node)
         self._children = list(children or [])
+        self._children_left_out = children_left_out
 
     @property
     @data_field
     def children(self) -> list[ExplorerEntry | GraphRulesCollection]:
         """The entries below this one, and last the node's rules when it has any to show."""
         return list(self._children)
+
+    @property
+    @data_field
+    def children_left_out(self) -> int:
+        """How many entries below this one an answer left out; ``graph.explorer_branch`` answers them."""
+        return self._children_left_out
+
+    def opened(self) -> ExplorerEntry:
+        """This entry with the entries below it, each closed. A whole repository's tree runs to hundreds of megabytes,
+        so an answer sends one level and a person opens the next."""
+        return ExplorerEntry(self._node, [child.closed() if isinstance(child, ExplorerEntry) else child for child in self._children])
+
+    def closed(self) -> ExplorerEntry:
+        """This entry with its rules, which mark it and show when it is picked, and the entries below it left out."""
+        entries = [child for child in self._children if isinstance(child, ExplorerEntry)]
+        rules = [child for child in self._children if not isinstance(child, ExplorerEntry)]
+        return ExplorerEntry(self._node, rules, children_left_out=len(entries))
 
     def kept_by(self, wanted: Filter) -> ExplorerEntry | None:
         """This entry with only what the filter keeps below it: a node the filter matches keeps its rules, a practice's
@@ -89,7 +107,9 @@ class ExplorerEntry(NodeAnswer):
 
 class PracticeInventory:
     """One loaded practice as the explorer's inventory shows it, read from the graph that holds it: how many nodes of
-    each type it holds, how many edges, its node types, edge kinds, rules, and explorer tree."""
+    each type it holds, how many edges, its node types, edge kinds, and rules. Its explorer tree comes from
+    ``graph.explorer_trees``, as the explorer's filter leaves it: a whole repository's tree runs to hundreds of
+    megabytes, which no page reads and no call sends within its ten minutes."""
 
     def __init__(self, graph: Graph, practice: PracticeGuidance) -> None:
         self._graph = graph
@@ -124,12 +144,6 @@ class PracticeInventory:
     def rules(self) -> list[str]:
         """Each rule the practice runs, named ``practice.node.rule`` with the pattern that owns it in front."""
         return self._practice.reading.in_graph.rule_run.rule_labels
-
-    @property
-    @data_field
-    def tree(self) -> ExplorerEntry:
-        """The explorer tree, from the practice's root."""
-        return self._practice.reading.in_graph.root.serialize()
 
 
 class Overlay:

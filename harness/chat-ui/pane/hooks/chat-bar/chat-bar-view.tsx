@@ -6,19 +6,20 @@ import { GlyphButtonView } from '../shared/glyph-button-view'
 import { TipView } from '../shared/tip-view'
 import { ActionButtonView, pickerRowsOf } from './action-button-view'
 import { formatGlyphOf, REPO_GLYPH, repoWordOf, sessionWordOf } from './bar-columns'
-import { toggleFormat, type FormatChips } from './format-choices-client'
+import type { FormatChips } from './format-choices-client'
+import { toggleFormat, togglePractice, toggleStage } from './guidance-client'
 import { toggleOverlay, toggleOverlayList, type OverlayChips } from './overlay-choices-client'
 import { askChatToFixBoard, restartServer, runHandoff, type ChatBarClient } from './chat-bar-client'
 import type { FailureClient } from '../error-display/failure-client'
 import { FailureView } from '../error-display/failure-view'
-import { openFilesOf, openReport, openSessionFolder } from './fidelity-files-client'
+import { openReport, openSessionFolder, openStageFiles } from './fidelity-files-client'
 import { openHelp } from './fidelity-help-client'
-import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
+import type { PracticeDotClient } from './fidelity-progress-client'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
 import { openClose, toggleRepoListWithRepos } from './session-client'
 import { toggleSessionList } from './session-dialogs-client'
 import { CloseView, RepoListView, repoListRowsOf, SessionListView, sessionListRowsOf } from './session-dialogs-view'
-import { selectStage, toggleStagePicker, type StageClient } from './stage-client'
+import type { StageClient } from './stage-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
@@ -29,7 +30,6 @@ export type ChatBarDraw = {
   failure: FailureClient | null
   view: ChatBarViewJson
   picker: ActionPickerJson
-  isStagePickerOpen: boolean
   formats: FormatChips
   overlays: OverlayChips
   busy: { doing: string; wheel: string }
@@ -43,61 +43,54 @@ export type ChatBarDraw = {
 
 const SEPARATOR = '│'
 
-// One square in its practice colour, fainter the less is done, underlined on a light tint when selected, with the
-// violation count in red beside it, a press on the count opening the validation report; the fidelity's name shows above
-// it on hover, its state being on the session card, and a press on that name opens the fidelity's help in a pane beside the chat.
-export function FidelityView($: EngineInterface, elements: ElementTable, fidelity: FidelityProgressClient) {
+// One square for each practice in its colour, standing for its fidelities in every stage shown: while the practice is on,
+// fainter the less is done, their violations counted in red beside it, a press on the count opening the first one's
+// report; while it is off, faint. A press on the square turns the practice on or off for the session. Its fidelities show
+// above it on hover, each opening its help in a pane beside the chat; their states are on the session card.
+export function PracticeDotView($: EngineInterface, elements: ElementTable, dot: PracticeDotClient, session: string) {
   const { Box } = elements
+  const violating = dot.violating
   return (
-    <Box key={`fidelity-${fidelity.slug}`} flexDirection="row" gap={0} backgroundColor={fidelity.isSelected ? BRAND.selectedTint : undefined}>
-      {GlyphButtonView(elements, `dot-${fidelity.slug}`, '■', fidelity.shade, () => selectFidelity($, fidelity), fidelity.isSelected)}
-      {fidelity.violationCount ? GlyphButtonView(elements, `violations-${fidelity.slug}`, String(fidelity.violationCount), BRAND.error, () => openReport($, fidelity)) : null}
-      {TipView(elements, fidelity.slug, '', BRAND.muted, () => openHelp($, fidelity), `help-${fidelity.slug}`)}
+    <Box key={`practice-${dot.key}`} flexDirection="row" gap={0}>
+      {GlyphButtonView(elements, `dot-${dot.key}`, '■', dot.shade, () => togglePractice($, session, dot.practice))}
+      {violating ? GlyphButtonView(elements, `violations-${dot.key}`, String(dot.violationCount), BRAND.error, () => openReport($, violating)) : null}
+      {PracticeTipView($, elements, dot)}
     </Box>
   )
 }
 
-// The shown stage as one orange chip, its icon and ▾, like the action button; a press opens the list of stages.
-// The list opened from it is drawn beside the chip, in a box of its own, so hovering the list does not show the chip's tip.
-function StageButtonView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
-  const { Box, Text } = elements
-  const { chatBar } = draw
-  const shown = chatBar.stages.find(stage => stage.stage === chatBar.shownStage)
-  if (!shown) return null
+// The practice's fidelities above its dot on hover, each a button that opens its help.
+function PracticeTipView($: EngineInterface, { Box, Button, Text }: ElementTable, dot: PracticeDotClient) {
   return (
-    <Box key="stage-anchor">
-      <Box key="stage-button" flexDirection="row" gap={0} paddingX={1} backgroundColor={BRAND.accent}>
-        {GlyphButtonView(elements, 'stage-shown', shown.icon, BRAND.onAccent, () => toggleStagePicker($))}
-        {GlyphButtonView(elements, 'stage-picker', '▾', BRAND.onAccent, () => toggleStagePicker($))}
-        <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
-          <Text color={BRAND.text}>{shown.stage}</Text>
+    <Box position="absolute" top={-1} left={0} paddingX={1} gap={1} flexDirection="row" backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
+      {dot.fidelities.map(fidelity => (
+        <Button key={`help-${fidelity.slug}`} plain onPress={() => openHelp($, fidelity)}>
+          <Text color={BRAND.text}>{fidelity.slug}</Text>
+        </Button>
+      ))}
+    </Box>
+  )
+}
+
+// Every stage button is this many columns wide, its icon centred: the desktop draws a stage icon wider than the one column
+// a glyph is measured at, so a box sized to its icon came out a different width for each.
+const STAGE_BUTTON_COLUMNS = 4
+
+// A button for each stage, its icon filled orange while the stage is shown, its name above it on hover. A press shows
+// that stage's fidelities beside those already shown, or no longer, here and in a page the chat opened, such as the Files
+// app, so one action can run across several stages.
+function StageButtonsView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
+  const { Box } = elements
+  const stages = chatBar.stages.filter(stage => stage.canShow)
+  if (!stages.length) return null
+  return (
+    <Box key="stage-buttons" flexDirection="row" gap={1}>
+      {stages.map((stage: StageClient) => (
+        <Box key={`stage-${stage.stage}`} width={STAGE_BUTTON_COLUMNS} justifyContent="center" backgroundColor={stage.isShown ? BRAND.accent : undefined}>
+          {GlyphButtonView(elements, `stage-button-${stage.stage}`, stage.icon, stage.isShown ? BRAND.onAccent : stage.ink, () => toggleStage($, chatBar.sessionFile, stage.stage.toLowerCase()))}
+          {TipView(elements, stage.stage, stage.isCurrent ? 'the session is here' : '', BRAND.muted)}
         </Box>
-      </Box>
-      {StagePickerView($, elements, draw)}
-    </Box>
-  )
-}
-
-// The stages the stage list shows.
-const shownStagesOf = (chatBar: ChatBarClient): StageClient[] => chatBar.stages.filter(stage => stage.canShow)
-
-// Every stage as a list above the stage button, its left edge under the button's: its icon and name, the session's
-// own marked, the shown one highlighted; a press shows that stage's fidelities.
-function StagePickerView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar, isStagePickerOpen }: ChatBarDraw) {
-  if (!isStagePickerOpen) return null
-  return (
-    <Box key="stage-list" flexDirection="column" position="absolute" bottom={1} left={0} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
-      {shownStagesOf(chatBar).map((stage: StageClient) => {
-        const isShown = stage.stage === chatBar.shownStage
-        return (
-          <Box key={`stage-row-${stage.stage}`} backgroundColor={isShown ? BRAND.accentTint : undefined}>
-            <Button key={`stage-pick-${stage.stage}`} plain onPress={() => selectStage($, stage)}>
-              <Text color={stage.ink}>{`${stage.icon} `}</Text>
-              <Text color={BRAND.text} weight={stage.isCurrent ? 'bold' : undefined}>{stage.stage}</Text>
-            </Button>
-          </Box>
-        )
-      })}
+      ))}
     </Box>
   )
 }
@@ -168,10 +161,9 @@ function IconButtonView(elements: ElementTable, key: string, icon: string, words
   )
 }
 
-// Files right after the action button: the action fidelity's files, else the first fidelity's.
+// Files right after the action button: the shown stage's files in the Files app, every practice there with its toggle.
 function FilesButtonView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
-  const fidelities = chatBar.actionFidelities.length ? chatBar.actionFidelities : chatBar.fidelities.slice(0, 1)
-  return fidelities.length ? IconButtonView(elements, 'files-button', '▤', 'files', () => openFilesOf($, fidelities)) : null
+  return chatBar.stageFidelitySlugs.length ? IconButtonView(elements, 'files-button', '▤', 'files', () => openStageFiles($, chatBar)) : null
 }
 
 // Push, push & merge to origin/main, restart and close as icons.
@@ -196,11 +188,11 @@ function FormatChipsView($: EngineInterface, elements: ElementTable, { chatBar, 
     <Box key="format-chips" flexDirection="row" gap={0} marginX={1}>
       {formats.choices.map(choice => {
         const isOn = choice.is_chosen
-        const colour = isOn ? BRAND.onAccent : choice.made && choice.made === choice.offered ? BRAND.success : BRAND.muted
+        const colour = isOn ? BRAND.onAccent : BRAND.muted
         return (
           <Box key={`format-${choice.label}`} paddingX={1} backgroundColor={isOn ? BRAND.accent : undefined}>
-            {GlyphButtonView(elements, `format-chip-${choice.label}`, formatGlyphOf(choice.label), colour, () => toggleFormat($, chatBar, formats, choice.label))}
-            {TipView(elements, choice.label, `${choice.made}/${choice.offered} made`, BRAND.muted)}
+            {GlyphButtonView(elements, `format-chip-${choice.label}`, formatGlyphOf(choice.label), colour, () => toggleFormat($, chatBar.sessionFile, choice.label))}
+            {TipView(elements, choice.label, `offered by ${choice.offered}`, BRAND.muted)}
           </Box>
         )
       })}
@@ -255,10 +247,10 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
   if (!chatBar.hasSession) return <Box key="line" flexDirection="row" gap={1}><Box flexGrow={1} />{SessionNameView($, elements, draw)}{draw.health.band}{draw.version.badge}</Box>
   return (
     <Box key="line" flexDirection="row" gap={1} alignItems="center">
-        {StageButtonView($, elements, draw)}
+        {StageButtonsView($, elements, draw)}
         <Text color={BRAND.border}>{SEPARATOR}</Text>
         <Box key="fidelity-column" flexDirection="row" gap={1} alignItems="center">
-          {chatBar.fidelities.map(fidelity => FidelityView($, elements, fidelity))}
+          {chatBar.practiceDots.map(dot => PracticeDotView($, elements, dot, chatBar.sessionFile))}
           {OverlayChipsView($, elements, draw)}
           {FormatChipsView($, elements, draw)}
           {ActionButtonView($, elements, draw)}
@@ -298,7 +290,6 @@ const LINE_ROWS = 1
 function ListRoomView({ Box }: ElementTable, draw: ChatBarDraw) {
   const { chatBar, overlays } = draw
   const rows = Math.max(
-    draw.isStagePickerOpen ? shownStagesOf(chatBar).length + LIST_BORDER_ROWS : 0,
     overlays.isOpen ? overlays.choices.length + LIST_BORDER_ROWS : 0,
     pickerRowsOf(draw),
     sessionListRowsOf(draw),

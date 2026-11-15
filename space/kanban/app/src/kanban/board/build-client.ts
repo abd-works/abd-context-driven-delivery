@@ -1,4 +1,4 @@
-import { BOARD_SERVER_DOWN, type Send } from './board-api'
+import { BOARD_SERVER_DOWN, type Failures, type Send } from './board-api'
 import type { BoardStore } from '../shared/board-store'
 
 // The page itself, as the board server serves it now: its index names the hashed script of its build.
@@ -11,15 +11,17 @@ export class BuildClient {
 
   constructor(
     private readonly store: BoardStore,
+    private readonly failures: Failures,
     private readonly send: Send,
   ) {}
 
   // The page the board server serves now, empty while it serves none; null when the server does not answer. The answer
   // says nothing about whether cdd is back.
   async served(): Promise<string | null> {
+    // fetch rejects only when no server answered at all, which is what BOARD_SERVER_DOWN says.
     const response = await this.send(SERVED_PAGE, { cache: 'no-store' }).catch(() => null)
     if (!response) {
-      this.store.change({ serverFailure: BOARD_SERVER_DOWN })
+      this.failures.serverDown(BOARD_SERVER_DOWN, 'Checking every two seconds whether the board server serves a new build')
       return null
     }
     return response.ok ? response.text() : ''

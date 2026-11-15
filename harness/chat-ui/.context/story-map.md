@@ -93,13 +93,9 @@ Mirrors Open Practice Tile at stage level: clicking a stage icon shows that stag
 
 Mirrors Move Ticket, forward only: once every fidelity of the stage is reviewed, the action button calls `ticket.move_next` (CDR "Action button and ▾ picker").
 
-### (S) Person --> [List Session Files](../pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/list-session-files/list_session_files_story.test.ts)
+### (S) Person --> List Session Files, View Fidelity Files
 
-Mirrors List Ticket Files, for the selected fidelity only: files opens a tab per file `fidelity-progress.files` declares (CDR "Handoff, files, close").
-
-### (S) Person --> [View Fidelity Files](../pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/view-fidelity-files/view_fidelity_files_story.test.ts)
-
-Mirrors View Fidelity Files: each tab's text comes from `session.read_file`, which refuses a file outside the session's roots (CDR "Handoff, files, close"). Requested: pressing a fidelity's red violation count opens its latest validation report, from `fidelity-progress.report`, in its own tab drawn as markdown, as the board does.
+Moved (2026-11-14) to the main map's file viewer epic ([Review Generated Work In File Viewer](../../.context/stories/story-map.md)): the files button opens the Files app beside the chat on the shown stage's files, with a toggle for each practice kept in sync with the bar; the session name opens it on the session's folder. A fidelity's red violation count still opens its report in the board's report panel.
 
 ---
 

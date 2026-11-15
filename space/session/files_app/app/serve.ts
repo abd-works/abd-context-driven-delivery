@@ -25,6 +25,9 @@ const server = app.listen(port, HOST, () => {
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
     server.close()
-    void projects.close().finally(() => process.exit(0))
+    projects
+      .close()
+      .catch(failure => console.error(`The Files server did not close its cdd connections: ${failure instanceof Error ? failure.stack : String(failure)}`))
+      .finally(() => process.exit(0))
   })
 }

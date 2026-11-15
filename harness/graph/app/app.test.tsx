@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { GraphView } from './graph/GraphView';
+import type { ExplorerEntryData } from '@cdd/harness/graph/graph';
 import { SourceView } from './source/SourceView';
 import { buildViolationCorrectPrompt } from './source/violation-prompt';
 import filterChoices from './filter-choices.json';
@@ -352,6 +353,14 @@ it('should leave every practice collapsed until it is opened', async () => {
   expect(screen.queryByText('AccountCredentials')).toBeNull();
 });
 
+it('should read the entries a closed entry left out when it is opened', async () => {
+  const user = userEvent.setup();
+  await openFolder(user);
+  await expand(user, 'clean_engineering');
+  await expand(user, 'account');
+  expect(calls.filter((call) => call.operation === 'explorer_branch').map((call) => call.body.node_id)).toEqual(['module-1']);
+});
+
 it('should show the customer aggregate with its entity, repository, and value objects', async () => {
   const user = userEvent.setup();
   await openFolder(user);
@@ -457,9 +466,13 @@ it('should select every node, connector, and rule for the practice', async () =>
   expect(options('filter-node')).toEqual(['Module', 'OoadClass', 'Operation']);
   expect(chosen('filter-connector')).toEqual(['contains', 'owns', 'invokes']);
   expect(options('filter-connector')).toEqual(['contains', 'owns', 'invokes']);
+  // conforms-to-schema is the framework's rule, so every node type has it beside its practice's own rules.
   expect(chosen('filter-rule')).toEqual([
+    'clean_engineering.Module.conforms-to-schema',
     'clean_engineering.Module.module-rule',
     'clean_engineering.OoadClass.class-rule',
+    'clean_engineering.OoadClass.conforms-to-schema',
+    'clean_engineering.Operation.conforms-to-schema',
     'clean_engineering.Operation.limit-operation-parameters',
   ]);
 });
@@ -477,7 +490,12 @@ it('should keep the first practice filters when another practice is added', asyn
   await waitFor(() => expect(chosen('filter-node')).toEqual(['Epic', 'Module']));
   expect(options('filter-node')).toEqual(['Epic', 'Module', 'OoadClass', 'Operation']);
   expect(chosen('filter-connector')).toEqual(['tells', 'contains']);
-  expect(chosen('filter-rule')).toEqual(['clean_engineering.Module.module-rule', 'stories.Epic.verb-noun']);
+  expect(chosen('filter-rule')).toEqual([
+    'clean_engineering.Module.conforms-to-schema',
+    'clean_engineering.Module.module-rule',
+    'stories.Epic.conforms-to-schema',
+    'stories.Epic.verb-noun',
+  ]);
   const asked = calls.filter((call) => call.operation === 'filter_choices').at(-1);
   expect(asked?.body).toMatchObject({ node_types: ['Module'], practices_before: ['clean_engineering'] });
 });
@@ -531,6 +549,7 @@ it('should put the chosen folder on the page and show its classes', async () => 
     'inventory',
     'filter_choices',
     'explorer_trees',
+    'explorer_branch',
   ]);
 });
 
@@ -569,9 +588,18 @@ it('should list rules as practice, node, then rule', async () => {
   const user = userEvent.setup();
   await openFolder(user);
   expect(options('filter-rule')).toEqual([
+    'clean_engineering.Module.conforms-to-schema',
     'clean_engineering.Module.module-rule',
     'clean_engineering.OoadClass.class-rule',
+    'clean_engineering.OoadClass.conforms-to-schema',
+    'clean_engineering.Operation.conforms-to-schema',
     'clean_engineering.Operation.limit-operation-parameters',
+    'ddd.Aggregate.conforms-to-schema',
+    'ddd.BoundedContext.conforms-to-schema',
+    'ddd.EntityRoot.conforms-to-schema',
+    'ddd.Repository.conforms-to-schema',
+    'ddd.ValueObject.conforms-to-schema',
+    'stories.Epic.conforms-to-schema',
     'stories.Epic.verb-noun',
   ]);
 });
@@ -790,7 +818,7 @@ it('should show invokes, observes, and demonstrates on a step', async () => {
       },
     ],
   };
-  render(<GraphView trees={[step]} loading={false} error="" selectedId="" activeRule="" onSelect={() => undefined} />);
+  render(<GraphView trees={[step] as unknown as ExplorerEntryData[]} loading={false} error="" selectedId="" activeRule="" onSelect={() => undefined} onOpenBranch={async () => undefined} />);
   await user.click(screen.getByRole('button', { name: 'Expand when the User enters valid account credentials' }));
   expect(document.querySelector('[data-node-id="invokes-valid"]')).toBeTruthy();
   expect(document.querySelector('[data-node-id="observes-valid"]')).toBeTruthy();
@@ -843,10 +871,14 @@ async function openFolder(user: UserEvent) {
   await screen.findByRole('button', { name: 'Expand clean_engineering' });
 }
 
+// Opens an entry and waits for the branch the page reads for it.
 async function expand(user: UserEvent, name: string) {
-  const closed = screen.queryByRole('button', { name: `Expand ${name}` });
-  if (closed) {
-    await user.click(closed);
+  const shut = screen.queryByRole('button', { name: `Expand ${name}` });
+  if (shut) {
+    await user.click(shut);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
   }
 }
 
@@ -900,7 +932,13 @@ function answer(operation: string, body: Record<string, unknown>): unknown {
   if (operation === 'explorer_trees') {
     const picked = body.filter as { practices?: string[]; types?: string[]; violations?: boolean };
     shownViolations = Boolean(picked.violations);
-    return treesFor(picked.practices ?? [], picked.types ?? [], shownViolations);
+    return treesFor(picked.practices ?? [], picked.types ?? [], shownViolations).map(opened);
+  }
+  if (operation === 'explorer_branch') {
+    const picked = body.filter as { practices?: string[]; types?: string[]; violations?: boolean };
+    const trees = treesFor(picked.practices ?? [], picked.types ?? [], Boolean(picked.violations));
+    const home = trees.flatMap((tree) => [...walked(tree)]).find((entry) => entry.node_id === body.node_id && entry.children.length > 0);
+    return home ? opened(home) : null;
   }
   if (operation === 'source') {
     const nodeId = String(body.node_id);
@@ -1015,7 +1053,23 @@ function violationTree(node: Entry): Entry | null {
 }
 
 // An explorer tree item as the fixtures write it: an entry, a rules collection, or a rule with its status.
-type Entry = { type: string; name: string; node_id: string; children: Entry[]; status?: string };
+type Entry = { type: string; name: string; node_id: string; children: Entry[]; status?: string; children_left_out?: number };
+
+// An entry as Python's explorer answers send it: the entries below it, each closed, keeping its rules and counting the
+// entries it left out, which explorer_branch answers.
+function opened(entry: Entry): Entry {
+  return { ...entry, children: entry.children.map((child) => (child.type === 'rules' ? child : closed(child))), children_left_out: 0 };
+}
+
+function closed(entry: Entry): Entry {
+  const rules = entry.children.filter((child) => child.type === 'rules');
+  return { ...entry, children: rules, children_left_out: entry.children.length - rules.length };
+}
+
+function* walked(entry: Entry): Generator<Entry> {
+  yield entry;
+  for (const child of entry.children) yield* walked(child);
+}
 
 // Graph.explorer_trees as Python answers it: each named practice's tree, every practice's when none is named, keeping
 // its root, the nodes the filter matches with their rules, and the nodes on the way to them.

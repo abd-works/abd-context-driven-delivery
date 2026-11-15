@@ -1,16 +1,18 @@
-"""Review Files In Viewer: the shared scenarios the Python tiers replay.
+"""Review Files In Files App: the shared scenarios the Python tiers replay.
 
-Scenarios: harness/.context/stories/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md.
-Realizations: harness/.context/stories/review-work-in-board-files-scenario-realization.md.
-Map: harness/.context/stories/story-map.md, (E) Review Files In Viewer.
+Scenarios: harness/.context/stories/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md.
+Realizations: harness/.context/stories/review-work-in-board-files-scenario-realization.md, written for the board's files
+panel when these scenarios lived there; the session operations they name are the ones the Files app calls.
+Map: harness/.context/stories/story-map.md, (E) Review Generated Work In File Viewer. Moved here from
+space/kanban/review-files-in-viewer.story.shared.py on 2026-11-14, when the Files app became the one place files are viewed.
 
 Steps reach the session only through the namespace a tier hands them (`world.Ticket`, `world.Chat`), so the domain spec
-and the cdd tools spec replay the same steps. A file is named from the project, as the board names it.
+and the cdd tools spec replay the same steps. A file is named from the project, as the Files app names it.
 
-Covered by the board app's TypeScript client specs, not here, because only the page shows them: the viewer drawing
-Python or a rendered heading, being read-only or in edit mode, a comment marker beside a line, opening a comment from
-its marker, a toast, and the viewer showing a file again once its comment is processed. The Thens below check what the
-session answers for each: the file's text and language, the comments and their state, and the chat's queue.
+Covered by the Files app's own specs (`app/files/*.spec.ts`), not here, because only the page shows them: the source
+view drawing Python, a comment marker beside a line, opening a comment from its marker, a toast, the practice toggles,
+and the page showing a file again once its comment is processed. The Thens below check what the session answers for
+each: the file's text and language, the comments and their state, and the chat's queue.
 """
 
 from __future__ import annotations
@@ -44,7 +46,7 @@ from space.kanban.session_board_examples import (
 from space.kanban.story_test import SharedStories, expect_refused, refusal_of
 from harness.chat.chat import ChatNotConnectedError
 
-shared_stories = SharedStories("Review Files In Viewer")
+shared_stories = SharedStories("Review Files In Files App")
 
 CHECKOUT_FLOW = CHECKOUT_FLOW_IN_SRC_CHECKOUT
 # Interaction: the words a person changes a comment to.
@@ -64,7 +66,7 @@ def queued_fills(world) -> list[str]:
 # --- View Files In Rich Viewer ------------------------------------------------------------------------------------
 
 
-@shared_stories.scenario("View Files In Rich Viewer", "Show a code file in the viewer with its lines numbered")
+@shared_stories.scenario("View File In Source View", "Show a code file in the viewer with its lines numbered")
 def _(s):
     @s.given("checkout-flow's session holds order.py")
     def _(world):
@@ -79,7 +81,7 @@ def _(s):
         expect((world.opened["language"], world.opened["text"].splitlines()[11])).to(equal(("python", PLACE_LINES[0])))
 
 
-@shared_stories.scenario("View Files In Rich Viewer", "Render a markdown file as the page it describes")
+@shared_stories.scenario("View File In Source View", "Render a markdown file as the page it describes")
 def _(s):
     @s.given("checkout-flow's session holds README.md, which starts # Checkout")
     def _(world):
@@ -96,7 +98,7 @@ def _(s):
 
 
 
-@shared_stories.scenario("View Files In Rich Viewer", "Fold the file's class and its operations")
+@shared_stories.scenario("Fold Classes And Operations", "Fold the file's class and its operations")
 def _(s):
     @s.given("checkout-flow's session holds order.py")
     def _(world):
@@ -106,9 +108,9 @@ def _(s):
     def _(world):
         world.project.seed_session_file(CHECKOUT_FLOW, GRAPH_FILE_NAME, json.dumps(ORDER_GRAPH))
 
-    @s.when("the Person views order.py")
+    @s.when("the Person views order.py with Rules turned on")
     def _(world):
-        world.opened = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file(path=ORDER_FILE))
+        world.opened = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file(path=ORDER_FILE, rules=True))
 
     @s.then("the viewer offers a fold of Order over lines 5 to 41, and a fold of place over lines 12 to 14")
     def _(world):
@@ -116,7 +118,7 @@ def _(s):
         expect(folds).to(equal([("Order", "class", *ORDER_CLASS_LINES), ("place", "block", 12, 14)]))
 
 
-@shared_stories.scenario("View Files In Rich Viewer", "Mark the lines a broken rule names")
+@shared_stories.scenario("Mark Lines A Broken Rule Names", "Mark the lines a broken rule names")
 def _(s):
     @s.given("checkout-flow's session holds order.py")
     def _(world):
@@ -126,9 +128,9 @@ def _(s):
     def _(world):
         world.project.seed_session_file(CHECKOUT_FLOW, GRAPH_FILE_NAME, json.dumps(ORDER_GRAPH))
 
-    @s.when("the Person views order.py")
+    @s.when("the Person views order.py with Rules turned on")
     def _(world):
-        world.opened = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file(path=ORDER_FILE))
+        world.opened = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file(path=ORDER_FILE, rules=True))
 
     @s.then("the viewer marks lines 12 to 14 with vocabulary-traces-to-source: EmptyCartError should say which cart and why")
     def _(world):
@@ -137,6 +139,25 @@ def _(s):
 
 
 # --- Save Edited File ---------------------------------------------------------------------------------------------
+
+
+@shared_stories.scenario("Mark Lines A Broken Rule Names", "Browse a file with Rules off")
+def _(s):
+    @s.given("checkout-flow's session holds order.py")
+    def _(world):
+        seed_checkout_flow(world)
+
+    @s.and_("checkout-flow's graph found vocabulary-traces-to-source broken on lines 12 to 14 of order.py")
+    def _(world):
+        world.project.seed_session_file(CHECKOUT_FLOW, GRAPH_FILE_NAME, json.dumps(ORDER_GRAPH))
+
+    @s.when("the Person views order.py with Rules off")
+    def _(world):
+        world.opened = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file(path=ORDER_FILE))
+
+    @s.then("the source view shows order.py with no folds and no broken rules")
+    def _(world):
+        expect([world.opened["folds"], world.opened["violations"]]).to(equal([[], []]))
 
 
 @shared_stories.scenario("Save Edited File", "Save the edited text to the file on disk")
@@ -190,7 +211,7 @@ def _(s):
         expect((held["range"]["start_line"], held["range"]["end_line"], held["range"]["content"], held["text"])).to(equal((12, 14, EMPTY_CART_COMMENT.selected_text, EMPTY_CART_COMMENT.text)))
 
 
-@shared_stories.scenario("Add Comment To File Selection", "Open a file comment from its marker")
+@shared_stories.scenario("Open Edit And Delete File Comment", "Open a file comment from its marker")
 def _(s):
     @s.given("checkout-flow's file comments hold order.py:L12-L14, an empty cart should say which cart and why")
     def _(world):
@@ -206,7 +227,7 @@ def _(s):
         expect([(held["range"]["start_line"], held["range"]["end_line"], held["text"]) for held in world.opened]).to(equal([(12, 14, EMPTY_CART_COMMENT.text)]))
 
 
-@shared_stories.scenario("Add Comment To File Selection", "Edit a file comment")
+@shared_stories.scenario("Open Edit And Delete File Comment", "Edit a file comment")
 def _(s):
     @s.given("checkout-flow's file comments hold order.py:L12-L14, an empty cart should say which cart and why, not sent")
     def _(world):
@@ -223,7 +244,7 @@ def _(s):
         expect([(comment["anchor"], comment["text"], comment["state"]) for comment in held]).to(equal([(EMPTY_CART_COMMENT.anchor, EDITED_COMMENT, "not_sent")]))
 
 
-@shared_stories.scenario("Add Comment To File Selection", "Delete a file comment")
+@shared_stories.scenario("Open Edit And Delete File Comment", "Delete a file comment")
 def _(s):
     @s.given("checkout-flow's file comments hold order.py:L12-L14, not sent")
     def _(world):
@@ -392,7 +413,7 @@ def _(s):
 # --- Show Changed File In Viewer ----------------------------------------------------------------------------------
 
 
-@shared_stories.scenario("Show Changed File In Viewer", "Show the agent's change to the open file")
+@shared_stories.scenario("Show Changed File After Comment", "Show the agent's change to the open file")
 def _(s):
     @s.given("the viewer shows order.py of checkout-flow, read-only")
     def _(world):

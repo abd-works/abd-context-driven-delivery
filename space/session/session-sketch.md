@@ -119,8 +119,8 @@ Sessions, a session, and its log
 	// `session.json` in the session's folder: title, workpath, practice roots, practices
 + session_file_from_project: str
 	// data field `session_file`: the name every board command gives this session
-+ workpath_from_project: str
-	// data field `workpath`
++ workpath_from_checkout: str
+	// data field `workpath`: from the top of the session's own checkout, its worktree when it has one
 + title: str
 	// data field
 + scope: str

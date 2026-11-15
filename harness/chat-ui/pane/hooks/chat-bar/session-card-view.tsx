@@ -5,7 +5,8 @@ import { GlyphButtonView } from '../shared/glyph-button-view'
 import type { ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
 import { openFiles, openReport } from './fidelity-files-client'
-import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
+import type { FidelityProgressClient } from './fidelity-progress-client'
+import { togglePractice } from './guidance-client'
 import { closeCard } from './session-dialogs-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
@@ -35,7 +36,7 @@ function HeaderView($: EngineInterface, elements: ElementTable, chatBar: ChatBar
   const { Box, Text } = elements
   return (
     <Box key="card-header" flexDirection="row" gap={2} alignItems="center">
-      <Text weight="bold" color={BRAND.accent}>{chatBar.shownStage}</Text>
+      <Text weight="bold" color={BRAND.accent}>{chatBar.shownStages.join(' · ')}</Text>
       <Box flexGrow={1} />
       <Text weight="bold" color={BRAND.text} wrap="truncate-end">{chatBar.sessionName}</Text>
       {GlyphButtonView(elements, 'card-close', '✕', BRAND.muted, () => closeCard($))}
@@ -55,7 +56,7 @@ function FidelityRowView($: EngineInterface, elements: ElementTable, fidelity: F
       <Box width={columns.fidelities}>
         <Box key={`card-cell-${fidelity.slug}`} flexDirection="row" alignItems="center">
           <Box width={columns.names}>
-            <Button key={`card-pick-${fidelity.slug}`} plain onPress={() => selectFidelity($, fidelity)}>
+            <Button key={`card-pick-${fidelity.slug}`} plain onPress={() => togglePractice($, fidelity.sessionFile, fidelity.progress.practice.key)}>
               <Text key="card-square" color={fidelity.shade}>{`${boxOf(fidelity)} `}</Text>
               <Text key="card-name" color={nameColour}>{fidelity.name}</Text>
             </Button>

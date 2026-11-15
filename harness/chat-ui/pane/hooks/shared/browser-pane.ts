@@ -54,20 +54,39 @@ async function openedTab($: EngineInterface, url: string): Promise<string> {
 
 // The pane's tab on origin, the active one first; none while the pane is closed. A refused call or an answer that
 // cannot be read throws, so openInBrowserPane says why. The answer is the tabs as JSON followed by a sentence about the
-// pane, so the JSON is read up to its last brace.
+// pane, and that sentence can hold braces of its own (a closed pane's says to navigate with {"url": ...}), so only the
+// first whole JSON object is read.
 async function tabOn($: EngineInterface, origin: string): Promise<string | null> {
   const answer = await $.mcp.call(BROWSER_PANE, TABS, {})
   const text = saidBy(answer)
   if (answer.isError) throw new Error(`${BROWSER_PANE} ${TABS} failed: ${text || 'no reason given'}`)
   let pane: PaneTabs
   try {
-    pane = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as PaneTabs
+    pane = JSON.parse(firstJsonObject(text)) as PaneTabs
   } catch (failure) {
     throw new Error(`${BROWSER_PANE} ${TABS} answered what is not its tabs (${reasonOf(failure)}): ${text || 'nothing'}`)
   }
   if (!pane.browserOpen) return null
   const onOrigin = pane.tabs.filter(tab => tab.origin === origin)
   return (onOrigin.find(tab => tab.isActive) ?? onOrigin[0])?.tabId ?? null
+}
+
+// The first JSON object in text, from its first brace to the brace that closes it, braces inside strings not counted.
+// Text with no whole object answers what follows its first brace, which JSON.parse then refuses, saying why.
+function firstJsonObject(text: string): string {
+  const start = text.indexOf('{')
+  let depth = 0
+  let isInString = false
+  for (let index = start; index >= 0 && index < text.length; index += 1) {
+    const character = text[index]
+    if (isInString) {
+      if (character === '\\') index += 1
+      else if (character === '"') isInString = false
+    } else if (character === '"') isInString = true
+    else if (character === '{') depth += 1
+    else if (character === '}' && --depth === 0) return text.slice(start, index + 1)
+  }
+  return start < 0 ? text : text.slice(start)
 }
 
 // The engine wraps a hook's refusal as "<plugin>: $.mcp.call(<server>, <tool>) refused: PreToolUse:<tool> hook error:

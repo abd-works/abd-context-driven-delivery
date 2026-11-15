@@ -177,6 +177,17 @@ class Violation:
         return f"Violation({self.rule!r}, {self.described!r} at {self._location}:{self._line})"
 
 
+class Finding(str):
+    """A rule's message that names the lines it was found on when they are not its node's, such as a module helper only
+    one class uses, which a class rule finds on the class but is on the helper's own lines. A viewer marks those lines."""
+
+    def __new__(cls, message: str, line: int, end_line: int | None = None) -> Finding:
+        found = super().__new__(cls, message)
+        found.line = line
+        found.end_line = end_line or line
+        return found
+
+
 class NodeViolation(Violation):
     """A rule broken on a graph node: it holds the node's rule that found it (a *GraphRule*), and through that rule the
     node and its practice, so its rule, practice, node, and subject are theirs, not copies. A saved graph keeps it as
@@ -197,8 +208,11 @@ class NodeViolation(Violation):
 
     @classmethod
     def at_node(cls, found_by: Any, message: str) -> NodeViolation:
-        """A violation the rule found_by found on its node, at the node's place in its file."""
+        """A violation the rule found_by found on its node, at the node's place in its file, or on the lines a Finding
+        names."""
         source = found_by.node.source
+        if isinstance(message, Finding):
+            return cls(found_by, message, location=source.file or "", line=message.line, end_line=message.end_line)
         return cls(found_by, message, location=source.file or "", line=source.start_line, end_line=source.end_line)
 
     @property
