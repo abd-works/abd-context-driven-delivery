@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 import type { CddApi } from '@cdd/cdd-shared'
 import type { FileEntryData } from '@cdd/space/session/session'
 
-import { foldersOf, type FileFolder } from './file-bar'
+import { treeOf, type FileFolder } from './file-bar'
 import { FilesLink } from './files-link'
 import { FilesPage } from './files-page'
 
@@ -35,8 +35,10 @@ async function pageWithOrderOpen(): Promise<FilesPage> {
 
 const named = (folder: FileFolder | undefined): string[] => folder?.files.map(each => each.path) ?? []
 
+const allFolders = (folder: FileFolder): FileFolder[] => folder.folders.flatMap(inner => [inner, ...allFolders(inner)])
+
 function folderShown(page: FilesPage, path: string): FileFolder | undefined {
-  return page.fileBar.folders.find(folder => folder.path === path)
+  return allFolders(page.fileBar.tree).find(folder => folder.path === path)
 }
 
 describe('Switch File Bar Between Folders And List', () => {
@@ -57,16 +59,16 @@ describe('Switch File Bar Between Folders And List', () => {
     })
 
     describe('that has the file bar shown as folders', () => {
-      it('should show each folder the files are in', async () => {
+      it('should show each folder the files are in at the top of the tree', async () => {
         const page = await pageWithOrderOpen()
         page.fileBar.show('folders')
-        expect(page.fileBar.folders.map(folder => folder.path)).toEqual(['.context', 'src/checkout'])
+        expect(page.fileBar.tree.folders.map(folder => folder.name)).toEqual(['.context', 'src/checkout'])
       })
 
       it("should open the open file's folder, showing its files", async () => {
         const page = await pageWithOrderOpen()
         page.fileBar.show('folders')
-        expect([page.fileBar.isOpen(folderShown(page, 'src/checkout')!), named(folderShown(page, 'src/checkout'))]).toEqual([true, [ORDER, CART]])
+        expect([page.fileBar.isOpen(folderShown(page, 'src/checkout')!), named(folderShown(page, 'src/checkout'))]).toEqual([true, [CART, ORDER]])
       })
 
       it('should keep every other folder closed', async () => {
@@ -102,18 +104,40 @@ describe('Switch File Bar Between Folders And List', () => {
   })
 })
 
-describe('folders of the files', () => {
-  it('should join a folder that holds only one folder to it, as one path', () => {
-    const [docs] = foldersOf([entry('docs/guide/intro.md'), entry('docs/guide/setup.md')])
-    expect([docs!.path, named(docs)]).toEqual(['docs/guide', ['docs/guide/intro.md', 'docs/guide/setup.md']])
+describe('folder tree of the files', () => {
+  it('should nest each folder in the folder it is in', () => {
+    const tree = treeOf([entry('src/checkout/order.py'), entry('src/pay/card.py'), entry('src/main.py')])
+    expect([tree.folders.map(folder => folder.name), tree.folders[0]!.folders.map(folder => folder.name), named(tree.folders[0])]).toEqual([['src'], ['checkout', 'pay'], ['src/main.py']])
   })
 
-  it('should name each folder below the folder every file shares', () => {
-    const folders = foldersOf([entry('C:/dev/work/.context/story-map.md'), entry('C:/dev/work/src/checkout/order.py')])
-    expect(folders.map(folder => folder.name)).toEqual(['.context', 'src/checkout'])
+  it('should join a folder that holds only one folder to it, as one row', () => {
+    const [docs] = treeOf([entry('docs/guide/intro.md'), entry('docs/guide/setup.md')]).folders
+    expect([docs!.path, docs!.name, named(docs)]).toEqual(['docs/guide', 'docs/guide', ['docs/guide/intro.md', 'docs/guide/setup.md']])
   })
 
-  it('should keep a file at the top as a folder of no path', () => {
-    expect(foldersOf([entry('README.md')]).map(folder => [folder.path, named(folder)])).toEqual([['', ['README.md']]])
+  it('should sort folders and files by name, as Explorer does', () => {
+    const tree = treeOf([entry('b/z.py'), entry('b/a.py'), entry('a/x.py')])
+    expect([tree.folders.map(folder => folder.name), named(tree.folders[1])]).toEqual([['a', 'b'], ['b/a.py', 'b/z.py']])
+  })
+
+  it('should keep a file at the top at the top of the tree', () => {
+    expect(named(treeOf([entry('README.md')]))).toEqual(['README.md'])
+  })
+
+  it('should open every folder down to the open file', async () => {
+    const page = new FilesPage(new NestedFilesServer(), new FilesLink(`?files=checkout-flow&fidelity=clean-engineering-code&file=src/checkout/order.py`))
+    page.start()()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    page.fileBar.show('folders')
+    expect(page.state.fileBar.openFolders).toEqual(['src', 'src/checkout'])
   })
 })
+
+// A server answering files in nested folders, src holding a file of its own beside two folders.
+class NestedFilesServer implements CddApi {
+  async post<Result>(path: string): Promise<Result | null> {
+    if (path.endsWith('/show')) return { practices: {} } as Result
+    if (path.endsWith('/files')) return { python: [entry('src/main.py'), entry('src/checkout/order.py'), entry('src/pay/card.py')] } as Result
+    return null
+  }
+}

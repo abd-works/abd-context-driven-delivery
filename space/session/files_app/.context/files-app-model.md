@@ -27,11 +27,11 @@ The *Files app* shows the files a link names and turns a person's reading into w
 
 ### FileBar (`files/file-bar.ts`)
 
-- The page's side bar: collapsed to its buttons or expanded, showing the files the page lists as one list or in their folders. Holds no files of its own; reads the page's *FilesStore* and keeps what it shows there (`fileBar`: open, view, open folders).
-- `folders` is each folder the listed files are in, once, in the order its first file is listed, with the files directly in it, each named below the folder every listed file shares, so a session naming its files from the root of the disk still shows short names (`foldersOf`).
+- The page's side bar: collapsed to its buttons or expanded, showing the files the page lists as one list or in their folder tree, as Windows Explorer shows it. Holds no files of its own; reads the page's *FilesStore* and keeps what it shows there (`fileBar`: open, view, open folders).
+- `tree` is the folder tree of the listed files (`treeOf`): each folder nested in the folder it is in, folders before files, each sorted by name; a folder holding only one folder and no files shows joined to it as one row (`src/checkout`).
 - `toggle()` collapses or expands the bar.
-- `show(view)` shows the files as a list or in their folders.
-  - **Invariant:** shown as folders, the open file's folder is open.
+- `show(view)` shows the files as a list or in their folder tree.
+  - **Invariant:** shown as folders, every folder down to the open file is open.
 - `toggleFolder(path)` opens or closes one folder; `isOpen(folder)` says which it is.
 
 ### FidelityFiles (`files/files-state.ts`)

@@ -42,31 +42,43 @@ function FileListView({ page }: { page: FilesPage }) {
   )
 }
 
-// The files in their folders, each folder a row that opens and closes to show the files directly in it.
+// The files in their folder tree, as Windows Explorer shows it: folders open and close, each level indented.
 function FileFoldersView({ page }: { page: FilesPage }) {
   const { openPath } = useFilesState(page)
   return (
-    <ul className="file-folders" aria-label="Folders">
-      {page.fileBar.folders.map(folder => (
-        <FileFolderView key={folder.path} page={page} folder={folder} openPath={openPath} />
-      ))}
+    <ul className="file-tree" role="tree" aria-label="Folders">
+      <FolderContentsView page={page} folder={page.fileBar.tree} openPath={openPath} />
     </ul>
   )
 }
 
-// One folder: a row that opens and closes it, and its files while it is open.
+// What a folder holds: its folders, then its files.
+function FolderContentsView({ page, folder, openPath }: { page: FilesPage; folder: FileFolder; openPath: string }) {
+  return (
+    <>
+      {folder.folders.map(inner => (
+        <FileFolderView key={inner.path} page={page} folder={inner} openPath={openPath} />
+      ))}
+      {folder.files.map(entry => (
+        <FileEntryView key={entry.path} page={page} entry={entry} isOpen={entry.path === openPath} />
+      ))}
+    </>
+  )
+}
+
+// One folder: a row that opens and closes it, and what it holds, one level in, while it is open.
 function FileFolderView({ page, folder, openPath }: { page: FilesPage; folder: FileFolder; openPath: string }) {
   const isOpen = page.fileBar.isOpen(folder)
   return (
-    <li>
-      <button className="file-folder" title={folder.path || 'the project folder'} aria-expanded={isOpen} onClick={() => page.fileBar.toggleFolder(folder.path)}>
-        <span className="file-folder-mark">{isOpen ? '▾' : '▸'}</span> {folder.name || '/'}<span className="file-entry-note">{folder.files.length}</span>
+    <li role="treeitem" aria-expanded={isOpen}>
+      <button className="file-folder" title={folder.path} onClick={() => page.fileBar.toggleFolder(folder.path)}>
+        <span className="file-folder-mark">{isOpen ? '▾' : '▸'}</span>
+        <span className="file-folder-icon">{isOpen ? '📂' : '📁'}</span>
+        <span className="file-folder-name">{folder.name}</span>
       </button>
       {isOpen ? (
-        <ul className="file-list">
-          {folder.files.map(entry => (
-            <FileEntryView key={entry.path} page={page} entry={entry} isOpen={entry.path === openPath} />
-          ))}
+        <ul className="file-tree-level" role="group">
+          <FolderContentsView page={page} folder={folder} openPath={openPath} />
         </ul>
       ) : null}
     </li>
