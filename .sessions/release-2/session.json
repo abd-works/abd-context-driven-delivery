@@ -60,7 +60,7 @@
       }
     },
     "bdd": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
         "behavior": [],
         "development": [],
@@ -74,6 +74,6 @@
       "specification",
       "implementation"
     ],
-    "version": 122
+    "version": 123
   }
 }
