@@ -5,12 +5,10 @@ asked, where the person switches to or creates sessions as usual."""
 
 from __future__ import annotations
 
-import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-from urllib.parse import quote
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
@@ -30,8 +28,6 @@ _CONFIG_FILE = "config.json"
 _REPOS_FOLDER = "repos_folder"
 _DEFAULT_BRANCH = "main"
 _VISIBILITIES = ("private", "public", "internal")
-# Where a new chat opens in the Claude desktop app: the person confirms the folder and sends the first prompt.
-_NEW_CHAT_LINK = "claude://code/new"
 _GITIGNORE_HEADER = "# Ignored as the CDD checkout ignores (written by repos.open)"
 _INSTALL_SECONDS = 600
 _PUBLISH_SECONDS = 180
@@ -98,7 +94,7 @@ class NewChat:
 
     @property
     def link(self) -> str:
-        return f"{_NEW_CHAT_LINK}?folder={quote(str(self._root), safe='')}&q={quote(self.first_prompt, safe='')}"
+        return Chat.opener.link_to_new(str(self._root), self.first_prompt)
 
     @property
     def instructions(self) -> str:
@@ -111,10 +107,7 @@ class NewChat:
     def open(self) -> str:
         """Hand the link to the desktop app; when the system cannot open it, say how to start the chat instead."""
         try:
-            if sys.platform == "win32":
-                os.startfile(self.link)  # noqa: S606 - the link names the desktop app's own scheme
-            else:
-                subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", self.link], check=True, timeout=30)
+            Chat.opener.hand_over(self.link)
         except (OSError, subprocess.SubprocessError):
             return self.instructions
         return f"Opened a new chat on {self._root} in the Claude app: send its first prompt there to open the session {self._session}."

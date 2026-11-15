@@ -6,7 +6,6 @@ import json
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
-from urllib.parse import quote, urlencode
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
@@ -42,8 +41,6 @@ if TYPE_CHECKING:
     from space.kanban.backlog_item import BacklogItem
 
 GRAPH_RULE_VIOLATION = "graph-rule"
-# The Claude app opens a new chat from this link, on the folder it names, with its prompt typed in for the person to send.
-NEW_CHAT_LINK = "claude://code/new"
 MOVED_INTO = "move"
 MARKED_DONE = "done"
 MARKED_IN_PROGRESS = "in-progress"
@@ -384,7 +381,7 @@ class Ticket(Card):
             f"ticket. First call sessions.switch with name {self.name}, so every tool works on its session, then read the "
             "session's latest handoff."
         )
-        return f"{NEW_CHAT_LINK}?{urlencode({'folder': self.worktree, 'q': prompt}, quote_via=quote)}"
+        return Chat.opener.link_to_new(self.worktree, prompt)
 
     @property
     @data_field

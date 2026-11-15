@@ -121,9 +121,9 @@ function SessionNameView($: EngineInterface, elements: ElementTable, { chatBar }
   }
   if (chatBar.isMain) {
     return (
-      <Box key="session-name" flexDirection="row" gap={1}>
+      <Box key="session-name" flexDirection="row" gap={0}>
         {WordGlyphButtonView(elements, 'repo-list-button', repoWordOf(chatBar), REPO_GLYPH, () => toggleRepoListWithRepos($))}
-        <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
+        <Box flexDirection="row" marginLeft={-1} hover={{ scope: CARD_SCOPE }}>
           {WordGlyphButtonView(elements, 'session-list-button', sessionWordOf(chatBar), '+', () => toggleSessionList($))}
         </Box>
       </Box>
@@ -226,13 +226,13 @@ function OverlayListView($: EngineInterface, { Box, Button, Text }: ElementTable
 }
 
 // The line, left to right: health mark, the stage button, │, fidelity dots and the action chip, then at the right end
-// the session name and its buttons.
+// the session name, its buttons, and the version badge.
 function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
   const { Box, Text } = elements
   const { chatBar } = draw
   if (!chatBar.hasSession) return <Box key="line" flexDirection="row" gap={1}>{draw.health.band}<Box flexGrow={1} />{SessionNameView($, elements, draw)}{draw.version.badge}</Box>
   return (
-    <Box key="line" flexDirection="row" gap={1} flexWrap="wrap" alignItems="center">
+    <Box key="line" flexDirection="row" gap={1} alignItems="center">
         {draw.health.band}
         {StageButtonView($, elements, draw)}
         <Text color={BRAND.border}>{SEPARATOR}</Text>

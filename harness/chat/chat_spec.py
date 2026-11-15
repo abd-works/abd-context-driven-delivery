@@ -1,5 +1,6 @@
 """The chats the cdd-board mod connects, and the commands a person sends them, kept as a folder per chat."""
 import json
+from contextlib import ExitStack
 import os
 import sys
 import tempfile
@@ -11,9 +12,11 @@ for _root in (_REPO_ROOT, _REPO_ROOT / "tools"):
     if str(_root) not in sys.path:
         sys.path.insert(0, str(_root))
 
-from expects import be_empty, equal, expect, have_keys, raise_error
+from expects import be_empty, contain, equal, expect, have_keys, raise_error, start_with
 from mamba import after, before, context, description, it
 
+from harness.agent_tools.chat_pointer import ChatPointer
+from harness.agent_tools.tool_call import ToolCall
 from harness.chat.chat import KEPT_MESSAGES, Chat, ChatNotConnectedError, RecordedChatLinks
 from harness.installation.data_class import data_of
 
@@ -33,6 +36,17 @@ def _states() -> list[str]:
 
 def _titled(title: str) -> str:
     return json.dumps({"type": "custom-title", "customTitle": title, "sessionId": CHAT})
+
+
+def _prompt_opened_by(chat: str) -> str:
+    """The prompt of a new chat that chat asked chat.open for."""
+    # Mamba reads every with statement in a spec file as a context, so the call is answered through an ExitStack.
+    answering = ExitStack()
+    answering.enter_context(ToolCall(chat=ChatPointer(chat), tool="chat.open").being_answered())
+    try:
+        return parse_qs(urlsplit(Chat.open(WORKTREE, NEW_CHAT_PROMPT)).query)["q"][0]
+    finally:
+        answering.close()
 
 
 with description("a chat") as self:
@@ -72,6 +86,23 @@ with description("a chat") as self:
 
         with it("should fill its prompt in for the person to send"):
             expect(parse_qs(urlsplit(self.link).query)["q"]).to(equal([NEW_CHAT_PROMPT]))
+
+    # The app files a new chat under its repository's name; a chat that opens one has it join its own sidebar section.
+    with context("that a titled chat opens a new chat"):
+        with before.each:
+            folder = self.projects / "C--dev-repo"
+            folder.mkdir()
+            (folder / f"{CHAT}.jsonl").write_text(_titled("main") + "\n", encoding="utf-8")
+            CLOCK[0] += 31
+            Chat.load(CHAT).check_in(is_busy=False, name="repo · first words", folder="C:\\dev\\repo")
+            Chat.opener = RecordedChatLinks(self.chats / "opened-chats.txt")
+            self.prompt = _prompt_opened_by(CHAT)
+
+        with it("should keep its prompt first"):
+            expect(self.prompt).to(start_with(NEW_CHAT_PROMPT))
+
+        with it("should have the new chat join the section of the chat that opened it"):
+            expect(self.prompt).to(contain('opened from the chat titled "main" in C:\\dev\\repo', "move_sessions"))
 
     # Two check-ins written over each other left state files that no longer read, beside chats still checking in.
     with context("with a state file that does not read beside a chat that has checked in"):
