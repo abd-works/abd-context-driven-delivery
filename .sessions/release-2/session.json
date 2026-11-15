@@ -15,8 +15,6 @@
           "python"
         ],
         "model": [
-          "python",
-          "markdown",
           "drawio"
         ]
       }
@@ -82,6 +80,6 @@
     "stages": [
       "specification"
     ],
-    "version": 44
+    "version": 46
   }
 }
