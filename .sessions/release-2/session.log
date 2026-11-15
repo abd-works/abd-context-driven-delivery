@@ -271,3 +271,42 @@
 2026-11-15T18:56:39Z tool graph.inventory
 2026-11-15T18:56:39Z tool graph.filter_choices
 2026-11-15T18:56:40Z tool graph.explorer_trees
+2026-11-15T19:03:03Z tool graph.practice_names
+2026-11-15T19:03:03Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-8679
+2026-11-15T19:03:04Z tool graph.practice_names
+2026-11-15T19:03:04Z tool graph.load_practice_roots
+2026-11-15T19:03:27Z tool graph.inventory
+2026-11-15T19:03:27Z tool graph.filter_choices
+2026-11-15T19:03:28Z tool graph.explorer_trees
+2026-11-15T19:03:47Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-8725
+2026-11-15T19:03:49Z tool graph.practice_names
+2026-11-15T19:03:58Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-8738
+2026-11-15T19:03:59Z tool graph.practice_names
+2026-11-15T19:04:00Z tool graph.load_practice_roots
+2026-11-15T19:04:04Z tool graph.practice_names
+2026-11-15T19:04:22Z tool graph.inventory
+2026-11-15T19:04:22Z tool graph.inventory
+2026-11-15T19:04:23Z tool graph.filter_choices
+2026-11-15T19:04:24Z tool graph.explorer_trees
+2026-11-15T19:06:12Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-8814
+2026-11-15T19:06:21Z tool graph.practice_names
+2026-11-15T19:06:21Z tool app.open 4a2b62f1-74ad-4426-aafe-9c9618581953 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\4a2b62f1-74ad-4426-aafe-9c9618581953.jsonl 1-2382
+2026-11-15T19:06:22Z tool graph.load_practice_roots
+2026-11-15T19:06:31Z tool graph.practice_names
+2026-11-15T19:06:47Z tool graph.inventory
+2026-11-15T19:06:47Z tool graph.filter_choices
+2026-11-15T19:06:49Z tool graph.explorer_trees
+2026-11-15T19:07:27Z tool graph.explorer_branch
+2026-11-15T19:07:37Z tool graph.explorer_branch
+2026-11-15T19:07:40Z tool graph.explorer_branch
+2026-11-15T19:07:43Z tool graph.explorer_branch
+2026-11-15T19:09:00Z tool graph.practice_names
+2026-11-15T19:09:00Z tool graph.load_practice_roots
+2026-11-15T19:09:22Z tool graph.inventory
+2026-11-15T19:09:22Z tool graph.filter_choices
+2026-11-15T19:09:24Z tool graph.explorer_trees
+2026-11-15T19:09:56Z tool graph.practice_names
+2026-11-15T19:09:56Z tool graph.load_practice_roots
+2026-11-15T19:10:19Z tool graph.inventory
+2026-11-15T19:10:19Z tool graph.filter_choices
+2026-11-15T19:10:28Z tool graph.explorer_trees
