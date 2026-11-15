@@ -88,7 +88,8 @@ with description("the next CDD version") as self:
     with before.each:
         self.project = Path(tempfile.mkdtemp(prefix="cdd-next-version-"))
         (self.project / "pyproject.toml").write_text(pyproject("0.1.0") + '\n[tool.setuptools]\npackages = []\n', encoding="utf-8")
-        self.subject = CddVersion(self.project, git=OriginStub("0.1.0"), project=self.project)
+        self.project_git = OriginStub("0.1.0")
+        self.subject = CddVersion(self.project, git=OriginStub("0.1.0"), project=self.project, project_git=self.project_git)
 
     with after.each:
         shutil.rmtree(self.project, ignore_errors=True)
@@ -97,6 +98,14 @@ with description("the next CDD version") as self:
         return (self.project / "pyproject.toml").read_text(encoding="utf-8")
 
     with context("set with no version given"):
+        with it("should commit pyproject.toml alone, naming the new version"):
+            self.subject.set_next()
+            expect(self.project_git.ran).to(contain(("commit", "-m", "Version v0.2", "--", "pyproject.toml")))
+
+        with it("should push that commit to origin, so the next version is the latest there"):
+            self.subject.set_next()
+            expect(self.project_git.ran[-1]).to(equal(("push", "origin", "HEAD")))
+
         with it("should raise the minor version in pyproject.toml"):
             self.subject.set_next()
             expect(self.written()).to(contain('version = "0.2.0"'))
