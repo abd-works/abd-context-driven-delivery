@@ -189,3 +189,18 @@
 2026-11-15T17:51:48Z tool graph.inventory 4a2b62f1-74ad-4426-aafe-9c9618581953 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\4a2b62f1-74ad-4426-aafe-9c9618581953.jsonl 1-1140
 2026-11-15T17:51:57Z error chat.send C:\dev\abd-context-driven-delivery\.sessions\release-2\session.err 1985 no-chat
 2026-11-15T17:52:37Z tool graph.inventory
+2026-11-15T17:53:23Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-6698
+2026-11-15T17:54:31Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-6765
+2026-11-15T17:54:37Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-6765
+2026-11-15T18:00:29Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-7011
+2026-11-15T18:02:43Z tool graph.practice_names
+2026-11-15T18:02:43Z tool graph.filter_choices
+2026-11-15T18:02:44Z tool graph.practice_names
+2026-11-15T18:02:45Z tool graph.load_practice_roots
+2026-11-15T18:02:45Z tool graph.explorer_trees
+2026-11-15T18:03:32Z tool graph.inventory
+2026-11-15T18:05:36Z tool graph.inventory
+2026-11-15T18:05:57Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-7106
+2026-11-15T18:06:55Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-7163
+2026-11-15T18:07:54Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-7197
+2026-11-15T18:08:49Z tool graph.inventory

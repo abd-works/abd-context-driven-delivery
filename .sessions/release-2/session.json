@@ -14,7 +14,10 @@
     "stories": {
       "enabled": true,
       "formats": {
-        "story_map": []
+        "story_map": [],
+        "acceptance_tests": [
+          "python"
+        ]
       }
     },
     "ddd": {
