@@ -121,6 +121,26 @@ with description("the test cadence") as self:
             self.record.save(TestRun(TestTier.HEAVY, "old", NOON - timedelta(hours=2), pid=GONE))
             expect(self.cadence.latest_runs[0].state).to(equal("abandoned"))
 
+    with context("that another process is looking at what is due"):
+        with it("should start nothing"):
+            self.record.folder.mkdir(parents=True)
+            (self.record.folder / "test-runs.claim").write_text("", encoding="utf-8")
+            expect(self.cadence.start_due()).to(be_none)
+
+    with context("whose run will not start"):
+        with before.each:
+            def refuse(*_):
+                raise PermissionError(5, "Access is denied")
+            self.runner.start = refuse
+            self.cadence.start_due()
+
+        with it("should record it abandoned, saying why"):
+            expect(self.cadence.latest_runs[0].summary).to(contain("Access is denied"))
+
+        with it("should start it again on the next look"):
+            self.runner.start = lambda *_: os.getpid()
+            expect(self.cadence.start_due().tier).to(equal(TestTier.E2E))
+
     with context("with no main checkout"):
         with it("should start nothing"):
             cadence = TestCadence(None, self.record, self.runner, GitStub(), self.clock)

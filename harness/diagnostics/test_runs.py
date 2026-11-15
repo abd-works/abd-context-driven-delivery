@@ -5,15 +5,17 @@ that fails after one that passed is a new failure, which the chat raises as a to
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import subprocess
 import sys
 import threading
+import time
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Iterator
 
 from harness.installation.data_class import data_field
 from harness.process.git import Git, RepoConnectError
@@ -22,6 +24,9 @@ from harness.process.process import BackgroundStart, PythonInterpreter, RunningP
 TEST_SCRIPT = Path("scripts") / "test.ps1"
 MAIN_BRANCH = "main"
 RECORD_FILE = "test-runs.json"
+# Held while one process looks at what is due and starts it.
+CLAIM_FILE = "test-runs.claim"
+CLAIM_STALE_SECONDS = 60
 # How many of a run's last output lines its result keeps, enough to name what failed.
 SUMMARY_LINES = 12
 
@@ -85,7 +90,8 @@ class TestRun:
         return TestRun(self.tier, self.commit, self.started_at, outcome, pid=self.pid, finished_at=now, summary=last_lines, is_new_failure=is_new)
 
     def is_due(self, now: datetime) -> bool:
-        return now - self.started_at >= self.tier.interval
+        """Its interval has passed since it started; at once when it was abandoned, since it gave no result."""
+        return self.outcome is RunOutcome.ABANDONED or now - self.started_at >= self.tier.interval
 
     @property
     def is_run_by_this_process(self) -> bool:
@@ -162,6 +168,26 @@ class TestRunRecord:
             self.folder.mkdir(parents=True, exist_ok=True)
             self.path.write_text(json.dumps(runs, indent=2), encoding="utf-8")
 
+    @contextlib.contextmanager
+    def claimed(self) -> Iterator[bool]:
+        """Hold the record against every other process for one look at what is due: True when this one holds it. Each
+        chat's health report asks, and two asking at once must not start the same tier twice. A claim older than a
+        minute was left by a process that died holding it, and is taken over."""
+        claim = self.folder / CLAIM_FILE
+        self.folder.mkdir(parents=True, exist_ok=True)
+        try:
+            if claim.exists() and time.time() - claim.stat().st_mtime > CLAIM_STALE_SECONDS:
+                claim.unlink(missing_ok=True)
+            handle = os.open(claim, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except OSError:
+            yield False
+            return
+        try:
+            os.close(handle)
+            yield True
+        finally:
+            claim.unlink(missing_ok=True)
+
     def log_path(self, tier: TestTier) -> Path:
         return self.folder / f"test-run-{tier.value}.log"
 
@@ -188,7 +214,11 @@ class TestRunner:
         command = [PythonInterpreter().windowless, "-m", "harness.diagnostics.test_runs", tier.value, str(checkout), str(record.folder)]
         with record.log_path(tier).open("w", encoding="utf-8") as log:
             env = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[2]), "PYTHONIOENCODING": "utf-8"}
-            return BackgroundStart().run(command, cwd=checkout, env=env, log=log).pid
+            try:
+                return BackgroundStart().run(command, cwd=checkout, env=env, log=log).pid
+            except PermissionError:
+                # A Windows job that refuses to let its children leave, such as the one a chat's tools run in.
+                return BackgroundStart().inside_starters_job().run(command, cwd=checkout, env=env, log=log).pid
 
     def run(self, tier: TestTier, checkout: Path) -> tuple[int, str]:
         """Run the tier in checkout to its end, its output going to this process's output as well."""
@@ -254,13 +284,17 @@ class TestCadence:
         there is no main checkout."""
         if self.checkout is None:
             return None
-        with self.record.lock:
-            due = self.due()
+        with self.record.lock, self.record.claimed() as is_claimed:
+            due = self.due() if is_claimed else []
             if not due:
                 return None
             run = TestRun(due[0], self._head(), self._clock())
             self.record.save(run)
-            run.pid = self._runner.start(run.tier, self.checkout, self.record)
+            try:
+                run.pid = self._runner.start(run.tier, self.checkout, self.record)
+            except OSError as not_started:
+                run.outcome = RunOutcome.ABANDONED
+                run._summary = f"The run did not start: {not_started}"
             self.record.save(run)
             return run
 
