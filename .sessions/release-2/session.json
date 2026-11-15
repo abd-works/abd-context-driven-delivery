@@ -80,9 +80,8 @@
   "guidance": {
     "stages": [
       "discovery",
-      "specification",
       "implementation"
     ],
-    "version": 21
+    "version": 22
   }
 }
