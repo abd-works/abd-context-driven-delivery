@@ -13,13 +13,14 @@ import { FilesStore, type FidelityFiles } from './files-state'
 // While a comment on the open file is with a chat, the file is read again this often, so the chat's change and the
 // comment's processed state show without a reload. Nothing else is read again: never the list, never a board.
 export const SENT_REFRESH_MILLISECONDS = 2_000
-// The session's practices are read again this often while the page shows, so a practice turned on or off on the chat
-// bar or the board hides or shows its files here: a page in a side pane is never focused again to read them.
+// The session's practices and the chat bar's selection are read again this often while the page shows, so a practice
+// turned on or off, or a fidelity selected on the chat bar, shows here: a page in a side pane is never focused again.
 export const PRACTICES_REFRESH_MILLISECONDS = 3_000
 const TOAST_MILLISECONDS = 8_000
 
-// Which practices are on, the one thing about them the file list depends on.
-const onOff = (practices: PracticeSessionOutputData[]): string => practices.map(practice => `${practice.name}:${practice.enabled}`).join(',')
+// Which practices are on and which fidelities are selected, the one thing about them the file list depends on.
+const onOff = (practices: PracticeSessionOutputData[], selected: string[]): string =>
+  [...practices.map(practice => `${practice.name}:${practice.enabled}`), ...selected].join(',')
 
 // The tab a .drawio file opens in: sent to the viewer once its address is known, closed when it never comes.
 export type DrawioTab = { location: { href: string }; close(): void }
@@ -30,9 +31,16 @@ const reasonOf =(failure: unknown): string => (failure instanceof Error ? failur
 const practiceOwning = (slug: string, practices: PracticeSessionOutputData[]): PracticeSessionOutputData | undefined =>
   practices.find(practice => practice.fidelity_slugs.includes(slug))
 
-// The files of the fidelities whose practice is on, each once; a fidelity of no practice the session knows is shown.
-export const filesShown = (byFidelity: FidelityFiles[], practices: PracticeSessionOutputData[]): FileEntryData[] =>
-  eachOnce(byFidelity.filter(({ slug }) => practiceOwning(slug, practices)?.enabled ?? true).flatMap(({ entries }) => entries))
+// The fidelities the chat bar selected that the page lists: while there are any, the page shows only theirs.
+const selectedListed = (byFidelity: FidelityFiles[], selected: string[]): string[] => byFidelity.map(({ slug }) => slug).filter(slug => selected.includes(slug))
+
+// The files the page shows, each once: those of the fidelities selected on the chat bar, else of the fidelities whose
+// practice is on; a fidelity of no practice the session knows is shown.
+export const filesShown = (byFidelity: FidelityFiles[], practices: PracticeSessionOutputData[], selected: string[] = []): FileEntryData[] => {
+  const chosen = selectedListed(byFidelity, selected)
+  const isShown = ({ slug }: FidelityFiles) => (chosen.length ? chosen.includes(slug) : (practiceOwning(slug, practices)?.enabled ?? true))
+  return eachOnce(byFidelity.filter(isShown).flatMap(({ entries }) => entries))
+}
 
 // Each file once, in the order its fidelities and formats send them.
 const eachOnce = (entries: FileEntryData[]): FileEntryData[] => entries.filter((entry, index) => entries.findIndex(other => other.path === entry.path) === index)
@@ -79,7 +87,7 @@ export class FilesPage {
     if (!this.link.namesFiles) return this.store.change(() => ({ isListing: false, problem: 'This link names no files: open the Files app from the chat bar.' }))
     try {
       const [byFidelity] = await Promise.all([this.filesByFidelity(), this.readPractices()])
-      this.store.change(state => ({ byFidelity, entries: filesShown(byFidelity, state.practices), isListing: false }))
+      this.store.change(state => ({ byFidelity, entries: filesShown(byFidelity, state.practices, state.selectedFidelities), isListing: false }))
       const entries = this.state.entries
       // A .drawio file opens in a tab of its own only on a click, so a link naming one opens the first other file here.
       const named = isDrawio(this.link.file) ? '' : this.link.file
@@ -103,13 +111,32 @@ export class FilesPage {
   // practice did; a quiet read that fails is tried again on the next, with no toast.
   private async readPractices({ isQuiet = false } = {}): Promise<void> {
     try {
-      const shown = await this.session.show()
+      const [shown, selectedFidelities] = await Promise.all([this.session.show(), this.selectedOnChatBar()])
       const practices = Object.values(shown?.practices ?? {})
-      if (this.state.practices.length && onOff(practices) === onOff(this.state.practices)) return
-      this.store.change(state => ({ practices, entries: filesShown(state.byFidelity, practices) }))
+      if (this.state.practices.length && onOff(practices, selectedFidelities) === onOff(this.state.practices, this.state.selectedFidelities)) return
+      this.store.change(state => ({ practices, selectedFidelities, entries: filesShown(state.byFidelity, practices, selectedFidelities) }))
     } catch (failure) {
       if (!isQuiet) this.toast(`The session's practices did not load: ${reasonOf(failure)}`)
     }
+  }
+
+  // The fidelities selected on the chat bar of the chat that opened the page, as it said at its last check-in; none for a
+  // page no chat opened.
+  private async selectedOnChatBar(): Promise<string[]> {
+    if (!this.link.chat) return []
+    return (await ChatClientGenerated.named(this.api, this.link.chat).show())?.selectedFidelities ?? []
+  }
+
+  // Whether the page follows the chat bar's selection: while any fidelity it lists is selected there, the toggles show
+  // the selected fidelities' practices, and the chat bar's dots change them.
+  get isFollowingChatBar(): boolean {
+    return selectedListed(this.state.byFidelity, this.state.selectedFidelities).length > 0
+  }
+
+  // Whether a practice's files are shown: one of its fidelities selected on the chat bar, else the practice turned on.
+  isShown(practice: PracticeSessionOutputData): boolean {
+    if (!this.isFollowingChatBar) return practice.enabled
+    return practice.fidelity_slugs.some(slug => this.state.selectedFidelities.includes(slug))
   }
 
   // The practices toggled at the top of the page are the practices the session works on: a press turns one on or off

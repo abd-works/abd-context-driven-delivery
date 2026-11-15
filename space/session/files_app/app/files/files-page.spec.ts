@@ -12,6 +12,8 @@ import { FilesPage, filesShown, PRACTICES_REFRESH_MILLISECONDS, type DrawioTab }
 // The Files app's page against a fake of its own server: each post answers what the route would, and is kept in order.
 class FakeFilesServer implements CddApi {
   readonly posts: { path: string; body: Record<string, unknown> }[] = []
+  // The fidelities the opening chat's chat bar has selected, as it said at its last check-in.
+  selected: string[] = []
   readonly practices: Record<string, PracticeSessionOutputData> = {
     stories: practice('stories', 'Stories', '#c0392b', true),
     ddd: practice('ddd', 'DDD', '#2471a3', false),
@@ -19,6 +21,7 @@ class FakeFilesServer implements CddApi {
 
   async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
     this.posts.push({ path, body })
+    if (path.startsWith('/chat/') && path.endsWith('/show')) return { id: 'chat-1', name: 'release-2', is_busy: false, folder: '', selected_fidelities: this.selected } as Result
     if (path.endsWith('/show')) return { name: 'release-2', session_file: SESSION, practices: this.practices } as Result
     if (path.endsWith('/enable')) {
       const name = decodeURIComponent(path.split('/')[3] ?? '')
@@ -146,6 +149,47 @@ describe('Open Diagram In Draw.io Tab', () => {
       const page = new FilesPage(failing, new FilesLink(STAGE_LINK), () => tab)
       await page.open('a.drawio')
       expect(tab.isClosed).toBe(true)
+    })
+  })
+})
+
+describe('Follow Chat Bar Selection In Files App', () => {
+  describe('with a stage of two practices, both turned on', () => {
+    describe('that has the DDD dot selected on the chat bar', () => {
+      async function followingDdd(): Promise<FilesPage> {
+        const server = new FakeFilesServer()
+        server.practices.ddd = practice('ddd', 'DDD', '#2471a3', true)
+        server.selected = ['ddd-bounded-context']
+        const page = new FilesPage(server, new FilesLink(STAGE_LINK))
+        await started(page)
+        return page
+      }
+
+      it("should list only the selected fidelity's files", async () => {
+        const page = await followingDdd()
+        expect(page.state.entries.map(each => each.path)).toEqual(['.context/ddd-bounded-context.md'])
+      })
+
+      it("should show the selected fidelity's practice on and the other off", async () => {
+        const page = await followingDdd()
+        expect(page.state.practices.map(each => `${each.short_name}:${page.isShown(each)}`)).toEqual(['Stories:false', 'DDD:true'])
+      })
+    })
+
+    describe('that has the selection cleared on the chat bar', () => {
+      it('should list the files of every practice turned on again', async () => {
+        vi.useFakeTimers()
+        const server = new FakeFilesServer()
+        server.practices.ddd = practice('ddd', 'DDD', '#2471a3', true)
+        server.selected = ['ddd-bounded-context']
+        const page = new FilesPage(server, new FilesLink(STAGE_LINK))
+        page.start()
+        await vi.advanceTimersByTimeAsync(0)
+        server.selected = []
+        await vi.advanceTimersByTimeAsync(PRACTICES_REFRESH_MILLISECONDS)
+        vi.useRealTimers()
+        expect(page.state.entries.map(each => each.path)).toEqual(['.context/stories-story-map.md', '.context/ddd-bounded-context.md'])
+      })
     })
   })
 })

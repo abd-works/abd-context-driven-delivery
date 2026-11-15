@@ -8,6 +8,8 @@ export type FidelityFiles = { slug: string; entries: FileEntryData[] }
 // answer itself (text, comments, folds, violations, changes), never a copy kept beside it.
 export type FilesState = {
   practices: PracticeSessionOutputData[]
+  // The fidelities selected on the chat bar of the chat that opened the page; none selected, its practices turned on.
+  selectedFidelities: string[]
   byFidelity: FidelityFiles[]
   entries: FileEntryData[]
   isListing: boolean
@@ -20,6 +22,7 @@ export type FilesState = {
 
 export const NO_FILES: FilesState = {
   practices: [],
+  selectedFidelities: [],
   byFidelity: [],
   entries: [],
   isListing: true,

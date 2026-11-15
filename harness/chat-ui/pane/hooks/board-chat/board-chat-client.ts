@@ -3,6 +3,7 @@ import type { EngineInterface } from 'claude-code'
 
 import { refreshChatBar } from '../chat-bar/chat-bar-client'
 import { openFileInViewer } from '../chat-bar/fidelity-files-client'
+import { selectedFidelitySlugs } from '../chat-bar/fidelity-progress-client'
 import { commandOf, filledPrompt, REFUSED_WITHIN_MILLISECONDS } from '../shared/chat-command'
 import { reasonOf, showFailure } from '../error-display/failure-client'
 import { after, post } from './board'
@@ -75,9 +76,11 @@ async function refreshed($: EngineInterface, chat: string, command: ChatCommandD
 }
 
 // Checks in through the board, which runs chat.check_in on the cdd server every chat shares. The folder the chat works in
-// lets the board find a ticket's chat: the one working in the ticket's worktree.
+// lets the board find a ticket's chat: the one working in the ticket's worktree. The fidelities selected on the chat bar
+// go with it, so a page the chat opened, such as the Files app, shows the same ones.
 export async function checkIn($: EngineInterface, chat: string): Promise<void> {
-  const answer = await post($, { chat, operation: 'check-in', body: { is_busy: isChatBusy(), name: currentChatName(), folder: await $.session.root() } })
+  const body = { is_busy: isChatBusy(), name: currentChatName(), folder: await $.session.root(), selected_fidelities: await selectedFidelitySlugs($) }
+  const answer = await post($, { chat, operation: 'check-in', body })
   if (!answer.ok) return
   const commands = JSON.parse(answer.text) as ChatCommandData[]
   if (commands.length) chatWorked()

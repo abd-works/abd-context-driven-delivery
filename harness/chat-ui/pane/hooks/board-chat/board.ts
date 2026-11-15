@@ -17,7 +17,7 @@ export const CHAT_QUERY = 'chat'
 
 // One call on the board's chat routes, each with the body that chat tool takes.
 export type ChatRequest = { chat: string } & (
-  | { operation: 'check-in'; body: { is_busy: boolean; name: string; folder: string } }
+  | { operation: 'check-in'; body: { is_busy: boolean; name: string; folder: string; selected_fidelities: string[] } }
   | { operation: 'confirm'; body: { message: string; is_shown: boolean; reason: string } }
   | { operation: 'finish'; body: { message: string } }
 )

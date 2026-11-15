@@ -132,20 +132,28 @@ function FileBarButtonsView({ page }: { page: FilesPage }) {
 function PracticeTogglesView({ page }: { page: FilesPage }) {
   const { practices } = useFilesState(page)
   if (!practices.length) return null
+  const isFollowing = page.isFollowingChatBar
   return (
     <div className="practice-toggles" role="group" aria-label="Practices">
-      {practices.map(practice => (
-        <button
-          key={practice.name}
-          className={`practice-toggle ${practice.enabled ? 'is-on' : 'is-off'}`}
-          style={{ '--practice-colour': practice.colour } as CSSProperties}
-          aria-pressed={practice.enabled}
-          title={`${practice.short_name}: ${practice.enabled ? 'on, press to hide its files' : 'off, press to show its files'}`}
-          onClick={() => void page.togglePractice(practice.name)}
-        >
-          {practice.short_name}
-        </button>
-      ))}
+      {isFollowing ? <span className="files-hint">as selected on the chat bar</span> : null}
+      {practices.map(practice => {
+        const isShown = page.isShown(practice)
+        const hint = isFollowing ? 'select or clear its dots on the chat bar' : isShown ? 'on, press to hide its files' : 'off, press to show its files'
+        return (
+          <button
+            key={practice.name}
+            type="button"
+            className={`practice-toggle ${isShown ? 'is-on' : 'is-off'}`}
+            style={{ '--practice-colour': practice.colour } as CSSProperties}
+            aria-pressed={isShown}
+            disabled={isFollowing}
+            title={`${practice.short_name}: ${hint}`}
+            onClick={() => void page.togglePractice(practice.name)}
+          >
+            {practice.short_name}
+          </button>
+        )
+      })}
     </div>
   )
 }

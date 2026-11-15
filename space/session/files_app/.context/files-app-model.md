@@ -15,6 +15,8 @@ The *Files app* shows the files a link names and turns a person's reading into w
   - -> Session.show
 - `readPractices()` (private) keeps the session's practices, on and off, each with its colour, short name and fidelities, and lists the files of the practices turned on.
   - -> Session.show
+- The page follows the chat bar of the chat that opened it: while fidelities it lists are selected there (the chat bar's dots), it shows only their files and its toggles show their practices, disabled, `isFollowingChatBar`; with none selected, the practices turned on. `isShown(practice)` says which a toggle shows.
+  - -> Chat.show (`selected_fidelities`, which the chat bar sends at its check-in every second)
 - `togglePractice(name)` turns that practice on or off for the session, reads the practices again, and tells the chat that opened the page to read the board again.
   - -> PracticeSessionOutput.enable
   - -> Chat.send("refresh", "practices")

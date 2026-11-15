@@ -139,6 +139,17 @@ with description("a chat") as self:
         with it("should name no folder while its mod has sent none"):
             expect(Chat.list()[0].folder).to(equal(""))
 
+        with it("should have no fidelity selected while its chat bar has selected none"):
+            expect(Chat.load(CHAT).show().selected_fidelities).to(equal([]))
+
+        # A page the chat opened, such as the Files app, follows the fidelities its chat bar has selected.
+        with context("with fidelities its chat bar has selected"):
+            with before.each:
+                Chat.load(CHAT).check_in(is_busy=False, name="repo · first words", selected_fidelities=["clean-engineering-code", "ux-front-end-code"])
+
+            with it("should answer the selected fidelities"):
+                expect(Chat.load(CHAT).show().selected_fidelities).to(equal(["clean-engineering-code", "ux-front-end-code"]))
+
         # The board finds a ticket's chat by the worktree the chat works in.
         with context("from the folder it works in"):
             with before.each:

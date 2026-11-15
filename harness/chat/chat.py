@@ -246,16 +246,24 @@ class Chat:
     @mcp
     @agent_tool
     @noSessionLog
-    def check_in(self, is_busy: bool = False, name: str = "", folder: str = "") -> list[ChatCommand]:
-        """Check chat in, as its cdd-board mod does every second: say whether a turn is running, what to call the chat, and the folder it works in, and take the commands ready for it. A fill stays waiting while a turn runs, because one made during a turn can report success and show nothing."""
+    def check_in(self, is_busy: bool = False, name: str = "", folder: str = "", selected_fidelities: list[str] | None = None) -> list[ChatCommand]:
+        """Check chat in, as its cdd-board mod does every second: say whether a turn is running, what to call the chat, the folder it works in, and the fidelities its chat bar has selected, and take the commands ready for it. A fill stays waiting while a turn runs, because one made during a turn can report success and show nothing."""
         with _checking_in(self._folder):
-            return self._check_in(is_busy, name, folder)
+            return self._check_in(is_busy, name, folder, list(selected_fidelities or []))
 
-    def _check_in(self, is_busy: bool, name: str, folder: str) -> list[ChatCommand]:
+    def _check_in(self, is_busy: bool, name: str, folder: str, selected_fidelities: list[str]) -> list[ChatCommand]:
         self._folder.mkdir(parents=True, exist_ok=True)
-        self._write({"name": name, "is_busy": is_busy, "seen": self.clock(), "folder": folder, **self._title_state(self._state)})
+        state = {"name": name, "is_busy": is_busy, "seen": self.clock(), "folder": folder, "selected_fidelities": selected_fidelities}
+        self._write({**state, **self._title_state(self._state)})
         self._finish_worked_on(is_busy)
         return self._take_ready(is_busy)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def show(self) -> Chat:
+        """Answer chat as it last checked in: its name, whether a turn is running, its folder, and the fidelities its chat bar has selected, which a page it opened, such as the Files app, follows."""
+        return self
 
     @mcp
     @agent_tool
@@ -329,6 +337,13 @@ class Chat:
     @data_field
     def folder(self) -> str:
         return self._state.get("folder", "")
+
+    @property
+    @data_field
+    def selected_fidelities(self) -> list[str]:
+        """The fidelities the chat's chat bar has selected, by slug, as it said at its last check-in; none selected, the
+        chat works on every fidelity of the stage it shows."""
+        return list(self._state.get("selected_fidelities", []))
 
     @property
     def is_connected(self) -> bool:
