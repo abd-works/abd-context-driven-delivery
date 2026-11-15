@@ -28,7 +28,7 @@ import {
   runInstall,
 } from './health/server-health-client'
 import { ServerHealthBandView, ServerHealthPanelView } from './health/server-health-view'
-import { askToUpdate, cancelUpdate, checkVersionSoon, checkVersionUntilRead, currentCddVersion, finishUpdate, updateToLatest } from './health/cdd-version-client'
+import { askToUpdate, cancelUpdate, checkVersionSoon, currentCddVersion, finishUpdate, readVersionAfterTurn, updateToLatest } from './health/cdd-version-client'
 import { UpdateDialogView, VersionBadgeView } from './health/cdd-version-view'
 import { askToPush, cancelPush, currentRepo, pushToMain, pushWork } from './repo/repo-client'
 import { PushButtonsView, PushDialogView } from './repo/repo-view'
@@ -81,7 +81,7 @@ async function readBoardAfterTurn($: EngineInterface, isMainChat: boolean): Prom
   await readName($).catch(shownAsFailure($, 'The chat was not named', 'Finishing a turn, reading the chat name'))
   await Promise.all([readActive($), refreshHealth($)]).catch(shownAsFailure($, 'The board did not load', 'Finishing a turn, calling board.show and reading the server health'))
   await finishUpdate($).catch(shownAsFailure($, 'The finished update was not shown', 'Finishing the turn that ran /install-latest, calling cdd-version.check'))
-  await checkVersionUntilRead($).catch(shownAsFailure($, 'The CDD version was not read', 'Finishing a turn, calling cdd-version.check'))
+  await readVersionAfterTurn($).catch(shownAsFailure($, 'The CDD version was not read', 'Finishing a turn, calling cdd-version.read'))
 }
 
 async function readBoardAfterSubmit($: EngineInterface): Promise<void> {

@@ -102,6 +102,15 @@ class CddVersion:
             self._fetch_problem = str(unreachable)
         return self
 
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def read(self) -> CddVersion:
+        """Answer the version this chat runs, read from disk now, against the version origin main had when last fetched,
+        without fetching. The chat bar reads it after every turn, so a changed version shows at once without asking
+        origin on each turn; ``check`` fetches."""
+        return self
+
     @command(name="version")
     @mcp
     @agent_tool

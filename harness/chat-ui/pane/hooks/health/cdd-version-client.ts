@@ -9,6 +9,8 @@ import { showFailure } from '../error-display/failure-client'
 
 const SERVER = 'plugin:cdd:cdd'
 const CHECK_TOOL = 'cdd-version.check'
+// Reads the version on disk against origin main as last fetched, without fetching: cheap enough for every turn.
+const READ_TOOL = 'cdd-version.read'
 const INSTALL_LATEST_COMMAND = '/harness:installation:install-latest'
 // The cdd server is still connecting as a chat opens, so the first check waits as the server health's first look does.
 const FIRST_CHECK_WAIT_MS = 5000
@@ -85,18 +87,22 @@ async function checkUntilReadOrTriesRunOut($: EngineInterface, attempt: number):
   if ((await read($, cddVersion)).data === null && attempt < CHECK_TRIES) checkVersionSoon($, attempt + 1)
 }
 
-// Check again after a turn while the version is not read yet; once read it stays, since the check fetches origin main,
-// too slow to repeat on every turn.
-export async function checkVersionUntilRead($: EngineInterface): Promise<void> {
-  if ((await read($, cddVersion)).data === null) await checkVersion($)
+// After a turn: the version on disk read again without fetching, so a version changed by a reset or a pull shows at
+// once; while it is not read yet, the full check, as cdd may only now have connected.
+export async function readVersionAfterTurn($: EngineInterface): Promise<void> {
+  await askVersion($, (await read($, cddVersion)).data === null ? CHECK_TOOL : READ_TOOL)
 }
 
 // A call that cannot reach cdd, which is still connecting or down, leaves the badge grey with the reason on hover: the
 // server health mark already says cdd is not connected. An answer that is an error or not JSON is a failure.
 export async function checkVersion($: EngineInterface): Promise<void> {
+  await askVersion($, CHECK_TOOL)
+}
+
+async function askVersion($: EngineInterface, tool: string): Promise<void> {
   let result
   try {
-    result = await $.mcp.call(SERVER, CHECK_TOOL, {})
+    result = await $.mcp.call(SERVER, tool, {})
   } catch (failure) {
     await update($, cddVersion, version => ({ ...version, problem: String(failure) }))
     return
@@ -104,7 +110,7 @@ export async function checkVersion($: EngineInterface): Promise<void> {
   const text = result.content[0]?.text ?? ''
   const data = result.isError ? null : versionFrom(text)
   if (data === null) {
-    await showFailure($, `The CDD version was not read: ${text || `${CHECK_TOOL} sent back nothing`}`, `Opening the chat, calling ${CHECK_TOOL}`)
+    await showFailure($, `The CDD version was not read: ${text || `${tool} sent back nothing`}`, `Reading the CDD version, calling ${tool}`)
     return
   }
   await update($, cddVersion, version => ({ ...version, data, problem: null }))

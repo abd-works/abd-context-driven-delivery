@@ -57,6 +57,22 @@ with description("the CDD version a chat runs") as self:
         with it("should name its version by major and minor"):
             expect(self.checked(OriginStub("0.1.0")).version).to(equal("v0.1"))
 
+    # The chat bar reads it after every turn, so a version changed on disk shows at once without asking origin each time.
+    with context("read again without fetching"):
+        with before.each:
+            self.origin = OriginStub("0.2.0")
+            (self.checkout / "pyproject.toml").write_text(pyproject("0.2.0"), encoding="utf-8")
+            self.read = CddVersion(self.checkout, git=self.origin).read()
+
+        with it("should not fetch origin main"):
+            expect([args[0] for args in self.origin.ran]).not_to(contain("fetch"))
+
+        with it("should name the version now on disk"):
+            expect(self.read.version).to(equal("v0.2"))
+
+        with it("should read against the version origin main had when last fetched"):
+            expect(self.read.standing).to(equal(VersionStanding.CURRENT))
+
     with context("that origin main holds the same version"):
         with it("should read current"):
             expect(self.checked(OriginStub("0.1.3")).standing).to(equal(VersionStanding.CURRENT))
