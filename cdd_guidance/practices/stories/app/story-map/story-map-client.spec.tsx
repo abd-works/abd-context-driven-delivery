@@ -11,8 +11,9 @@ import type { StoryModelData } from '@cdd/practices/stories/model/story-model'
 
 import { SERVER_DOWN, StoryMapApi } from './story-map-api'
 import { StoryMapClient } from './story-map-client'
+import { StoryMapFailures } from './story-map-failures'
 import { StoryMapViewModel } from './story-map-view-models'
-import { StoryMapWorkspaceView } from './story-map-views'
+import { StoryMapFailureView, StoryMapWorkspaceView } from './story-map-views'
 
 const FILE = '.context/story-map.md'
 const SUB_EPIC = `${FILE}#move-work-forward-from-chat-bar.integrate-practice-content-editor-apps-in-chat-bar`
@@ -200,7 +201,7 @@ describe('a Story UI opened on a repository', () => {
 // The Story UI page opened on story-map.md, its story expanded, with its server answering as the board's does.
 async function openedPage(answers: Record<string, unknown>, chat: string, posted: Posted[] = []): Promise<Posted[]> {
   vi.stubGlobal('fetch', serverAnswering({ '/show': WITH_EXAMPLES, ...answers }, posted))
-  render(<StoryMapWorkspaceView file={FILE} chat={chat} />)
+  render(<StoryMapWorkspaceView file={FILE} failures={new StoryMapFailures(chat)} />)
   fireEvent.click((await screen.findAllByText('Open Story UI Side Panel From Chat Bar'))[0]!.closest('.story-card-header')!)
   return posted
 }
@@ -271,7 +272,7 @@ describe('with the cdd server not answering', () => {
   it('should show the page what failed, still showing the story as it was', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     vi.stubGlobal('fetch', serverAnswering({ '/show': CHECKOUT_FLOW }))
-    render(<StoryMapWorkspaceView file={FILE} />)
+    render(<StoryMapWorkspaceView file={FILE} failures={new StoryMapFailures('')} />)
     await screen.findAllByText('Trace Story Through Artifacts')
     vi.stubGlobal('fetch', serverAnswering({}))
     await act(async () => {
@@ -279,5 +280,53 @@ describe('with the cdd server not answering', () => {
     })
     expect([screen.getByRole('alert').textContent, screen.getAllByText('Trace Story Through Artifacts').length > 0]).toEqual([`${SERVER_DOWN}Dismiss`, true])
     vi.useRealTimers()
+  })
+})
+
+// Every failure the page meets goes to the chat that opened it, as the Files app sends its own.
+describe('a failure on a Story UI page a chat opened', () => {
+  const failuresSent = (posted: Posted[]) => posted.filter(post => post.path === `/api/chat/${CHAT}/send` && post.body.kind === 'failure').map(post => JSON.parse(String(post.body.text)))
+
+  it('should send the failure and where it happened to that chat', async () => {
+    const posted: Posted[] = []
+    const failures = new StoryMapFailures(CHAT, serverAnswering({ '/send': { id: CHAT, name: 'checkout-flow', is_busy: false, folder: '' } }, posted))
+    await new StoryMapApi(failures.fail, serverAnswering({})).post('/story/x/rename', { name: 'Trace' })
+    await waitFor(() => expect(failuresSent(posted)).toEqual([{ failure: SERVER_DOWN, context: 'Calling /story/x/rename from the Story UI' }]))
+  })
+
+  it('should show the failure on the page', async () => {
+    const failures = new StoryMapFailures(CHAT, serverAnswering({ '/send': { id: CHAT, name: 'checkout-flow', is_busy: false, folder: '' } }))
+    await new StoryMapApi(failures.fail, serverAnswering({})).post('/story/x/rename', { name: 'Trace' })
+    expect(failures.shown).toBe(SERVER_DOWN)
+  })
+
+  describe('that the read every two seconds meets again', () => {
+    it('should send the failure to the chat once', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      const posted: Posted[] = []
+      const failures = new StoryMapFailures(CHAT, serverAnswering({ '/send': { id: CHAT, name: 'checkout-flow', is_busy: false, folder: '' } }, posted))
+      vi.stubGlobal('fetch', serverAnswering({ '/show': CHECKOUT_FLOW }))
+      render(<StoryMapWorkspaceView file={FILE} failures={failures} />)
+      await screen.findAllByText('Trace Story Through Artifacts')
+      vi.stubGlobal('fetch', serverAnswering({}))
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(6_000)
+      })
+      expect(failuresSent(posted)).toHaveLength(1)
+      vi.useRealTimers()
+    })
+  })
+
+  describe('with a view that throws', () => {
+    it('should send what the view threw to that chat', async () => {
+      const posted: Posted[] = []
+      const failures = new StoryMapFailures(CHAT, serverAnswering({ '/send': { id: CHAT, name: 'checkout-flow', is_busy: false, folder: '' } }, posted))
+      const Broken = (): React.ReactNode => {
+        throw new Error('a view broke')
+      }
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      render(<StoryMapFailureView failures={failures}><Broken /></StoryMapFailureView>)
+      await waitFor(() => expect(failuresSent(posted).map(sent => sent.failure)).toEqual(['a view broke']))
+    })
   })
 })

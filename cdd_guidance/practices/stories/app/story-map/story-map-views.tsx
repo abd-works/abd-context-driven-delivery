@@ -2,11 +2,12 @@
 // draw what the Python story model sends (StoryMapClient over the generated StoryModel client) and hand every edit to
 // that client, which saves it through the node's own tool; nothing here holds a story map of its own.
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Component, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ErrorInfo, type ReactNode } from 'react';
 import { useStoryModel } from '@cdd/practices/stories/model/story-model-views';
 
 import { StoryMapApi } from './story-map-api';
 import { StoryMapClient, type NodeKind } from './story-map-client';
+import type { StoryMapFailures } from './story-map-failures';
 import {
   StoryMapViewModel,
   type EpicViewModel,
@@ -25,10 +26,11 @@ const READ_EVERY_MILLISECONDS = 2_000;
 
 type EditStatus = 'synced' | 'saving' | 'error';
 
-// The story map a page shows: the file its link names, else the story map of the session open in the project.
-export function useStoryMapPage(file: string | null) {
-  const [failure, setFailure] = useState<string | null>(null);
-  const api = useMemo(() => new StoryMapApi(setFailure), []);
+// The story map a page shows: the file its link names, else the story map of the session open in the project. Every
+// failure, from a call, a read or an edit, goes through failures.fail: shown on the page and sent to the opening chat.
+export function useStoryMapPage(file: string | null, failures: StoryMapFailures) {
+  const failure = useSyncExternalStore(failures.subscribe, () => failures.shown);
+  const api = useMemo(() => new StoryMapApi(failures.fail), [failures]);
   const [client, setClient] = useState<StoryMapClient | null>(null);
   const [status, setStatus] = useState<EditStatus>('synced');
   const editing = useRef(false);
@@ -47,25 +49,38 @@ export function useStoryMapPage(file: string | null) {
       held = next;
       setClient(next);
     };
-    void read();
-    const timer = setInterval(() => void read(), READ_EVERY_MILLISECONDS);
+    const readReporting = (context: string) => read().catch((thrown: unknown) => failures.failWith(thrown, context));
+    void readReporting('Opening the story map in the Story UI');
+    const timer = setInterval(() => void readReporting('Reading the story map again every two seconds'), READ_EVERY_MILLISECONDS);
     return () => {
       stopped = true;
       clearInterval(timer);
     };
-  }, [api, file]);
+  }, [api, file, failures]);
 
   // An edit answers the map as its file now holds it; one that fails leaves the map as it was and says why.
   const edit = useCallback(async (change: (held: StoryMapClient) => Promise<StoryMapClient | null>) => {
     if (!client) return;
     editing.current = true;
     setStatus('saving');
-    const answered = await change(client);
-    editing.current = false;
-    setStatus(answered ? 'synced' : 'error');
-  }, [client]);
+    try {
+      const answered = await change(client);
+      setStatus(answered ? 'synced' : 'error');
+    } catch (thrown) {
+      setStatus('error');
+      failures.failWith(thrown, 'An edit in the Story UI');
+    } finally {
+      editing.current = false;
+    }
+  }, [client, failures]);
 
-  return { client, failure, status, edit, dismissFailure: () => setFailure(null) };
+  // A story's acceptance-test file, sent to the chat the page was opened beside, whose file viewer shows it.
+  const showInChat = useCallback((path: string) => {
+    if (!client) return;
+    client.showInChat(failures.chat, path).catch((thrown: unknown) => failures.failWith(thrown, `Showing ${path} in the chat from the Story UI`));
+  }, [client, failures]);
+
+  return { client, failure, status, edit, showInChat, dismissFailure: () => failures.dismiss() };
 }
 
 // ---------------------------------------------------------------------------
@@ -1663,9 +1678,33 @@ function AcceptanceTestsView({ files, onOpen }: { files: string[]; onOpen?: (pat
 interface StoryMapWorkspaceViewProps {
   // The Stories file to open, from the page's ?file= link; none follows the session open in the project.
   file: string | null;
-  // The chat the page was opened beside, from its ?chat= link, whose file viewer shows a story's acceptance tests;
-  // empty for a page no chat opened.
-  chat?: string;
+  // What failed on the page, shown here and sent to the chat the page was opened beside (its ?chat= link), whose file
+  // viewer also shows a story's acceptance tests; that chat is empty for a page no chat opened.
+  failures: StoryMapFailures;
+}
+
+// A view that throws would otherwise leave an empty page, so the person sees what broke, and the chat that opened the
+// page is told, as every other failure is.
+export class StoryMapFailureView extends Component<{ failures: StoryMapFailures; children: ReactNode }, { failure: string }> {
+  state = { failure: '' };
+
+  static getDerivedStateFromError(error: unknown) {
+    return { failure: error instanceof Error ? error.message : String(error) };
+  }
+
+  componentDidCatch(error: unknown, info: ErrorInfo) {
+    this.props.failures.failWith(error, `A Story UI view failed to draw:${info.componentStack ?? ''}`);
+  }
+
+  render() {
+    if (!this.state.failure) return this.props.children;
+    return (
+      <div className="loading" role="alert">
+        <span className="status-dot error" />The Story UI page failed: {this.state.failure}
+        <button type="button" className="toolbar-btn" onClick={() => location.reload()}>Reload</button>
+      </div>
+    );
+  }
 }
 
 type ColorMode = 'executive' | 'engineering';
@@ -1721,8 +1760,9 @@ function useCanvasPanning() {
   return { canvasRef, isPanning: panStart !== null, onMouseDown, onContextMenu: (e: React.MouseEvent) => e.preventDefault() };
 }
 
-export function StoryMapWorkspaceView({ file, chat = '' }: StoryMapWorkspaceViewProps) {
-  const { client, failure, status, edit, dismissFailure } = useStoryMapPage(file);
+export function StoryMapWorkspaceView({ file, failures }: StoryMapWorkspaceViewProps) {
+  const { client, failure, status, edit, showInChat, dismissFailure } = useStoryMapPage(file, failures);
+  const chat = failures.chat;
   const { viewMode, toggleViewMode, scoped, toggleScoped, showScenarios, expandedNodeIds, toggleShowScenarios, expandNode, collapseNode, expandDescendants, collapseAll } = useStoryMapViewState();
   const [theme, setTheme] = useState<ColorMode>(themeOnOpen);
   const panning = useCanvasPanning();
@@ -1737,7 +1777,7 @@ export function StoryMapWorkspaceView({ file, chat = '' }: StoryMapWorkspaceView
       ? <div className="loading"><span className="status-dot error" />{failure}</div>
       : <div className="loading"><span className="status-dot pending" />Loading story map…</div>;
   }
-  return <StoryMapCanvasView client={client} chat={chat} failure={failure} status={status} edit={edit} dismissFailure={dismissFailure} viewMode={viewMode} toggleViewMode={toggleViewMode} scoped={scoped} toggleScoped={toggleScoped} showScenarios={showScenarios} toggleShowScenarios={toggleShowScenarios} expandedNodeIds={expandedNodeIds} expandNode={expandNode} collapseNode={collapseNode} expandDescendants={expandDescendants} collapseAll={collapseAll} theme={theme} setTheme={setTheme} panning={panning} />;
+  return <StoryMapCanvasView client={client} chat={chat} failure={failure} status={status} edit={edit} showInChat={showInChat} dismissFailure={dismissFailure} viewMode={viewMode} toggleViewMode={toggleViewMode} scoped={scoped} toggleScoped={toggleScoped} showScenarios={showScenarios} toggleShowScenarios={toggleShowScenarios} expandedNodeIds={expandedNodeIds} expandNode={expandNode} collapseNode={collapseNode} expandDescendants={expandDescendants} collapseAll={collapseAll} theme={theme} setTheme={setTheme} panning={panning} />;
 }
 
 type StoryMapCanvasProps = Omit<ReturnType<typeof useStoryMapPage>, 'client'> & Pick<ReturnType<typeof useStoryMapViewState>, 'viewMode' | 'toggleViewMode' | 'scoped' | 'toggleScoped' | 'showScenarios' | 'toggleShowScenarios' | 'expandedNodeIds' | 'expandNode' | 'collapseNode' | 'expandDescendants' | 'collapseAll'> & {
@@ -1748,7 +1788,7 @@ type StoryMapCanvasProps = Omit<ReturnType<typeof useStoryMapPage>, 'client'> & 
   panning: ReturnType<typeof useCanvasPanning>;
 };
 
-function StoryMapCanvasView({ client, chat, failure, status, edit, dismissFailure, viewMode, toggleViewMode, scoped, toggleScoped, showScenarios, toggleShowScenarios, expandedNodeIds, expandNode, collapseNode, expandDescendants, collapseAll, theme, setTheme, panning }: StoryMapCanvasProps) {
+function StoryMapCanvasView({ client, chat, failure, status, edit, showInChat, dismissFailure, viewMode, toggleViewMode, scoped, toggleScoped, showScenarios, toggleShowScenarios, expandedNodeIds, expandNode, collapseNode, expandDescendants, collapseAll, theme, setTheme, panning }: StoryMapCanvasProps) {
   const map = useStoryModel(client);
   const storyMap = useMemo(() => StoryMapViewModel.of(map.toJSON(), scoped), [map, map.toJSON(), scoped]);
   const kindOf = (node: string): NodeKind => (storyMap.kinds.get(node) ?? 'epic') as NodeKind;
@@ -1835,7 +1875,7 @@ function StoryMapCanvasView({ client, chat, failure, status, edit, dismissFailur
           onEditExample={(example, field, value) => void edit((held) => held.editExample(example, field, value))}
           onRemoveExample={(example) => void edit((held) => held.removeExample(example))}
           onEditDescription={(node, description) => void edit((held) => held.describeNode(node, kindOf(node), description))}
-          onOpenFile={chat ? (path) => void client.showInChat(chat, path) : undefined}
+          onOpenFile={chat ? showInChat : undefined}
           onAppendIncrement={() => void edit((held) => held.newIncrement(NEW_NAMES.increment))}
           onRemoveIncrement={(increment) => void edit((held) => held.removeNode(increment, 'increment'))}
           onReorderIncrements={(order) => void edit((held) => held.reorder(storyMap.increments.map((each) => each.id), order, 'increment'))}
