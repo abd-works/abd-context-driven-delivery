@@ -58,3 +58,9 @@
 2026-11-15T20:41:52Z tool graph.inventory
 2026-11-15T20:41:53Z tool graph.filter_choices
 2026-11-15T20:41:53Z tool graph.explorer_trees
+2026-11-15T20:45:24Z tool graph.practice_names
+2026-11-15T20:45:24Z tool graph.load_practice_roots
+2026-11-15T20:45:26Z tool sessions.switch af5894a3-9c9f-4aa3-be83-2ef5749adcca C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\af5894a3-9c9f-4aa3-be83-2ef5749adcca.jsonl 1-553
+2026-11-15T20:45:37Z tool graph.inventory
+2026-11-15T20:45:37Z tool graph.filter_choices
+2026-11-15T20:45:37Z tool graph.explorer_trees
