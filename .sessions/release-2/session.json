@@ -21,7 +21,7 @@
       }
     },
     "stories": {
-      "enabled": false,
+      "enabled": true,
       "formats": {
         "story_map": [
           "drawio"
@@ -76,6 +76,6 @@
       "specification",
       "implementation"
     ],
-    "version": 139
+    "version": 140
   }
 }
