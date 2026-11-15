@@ -58,9 +58,9 @@ A rule names something you can see in the finished tests and code, so validate c
 
 ## Table of contents
 
-1. **Overview** — what TDD adds at implementation: every behavior the code has is proven by a test at the fastest tier that can prove it.
+1. **Overview** — what TDD adds at implementation: every behavior is proven working for real before it is trusted, then kept proven by a test at the fastest tier that can prove it.
 2. **Guidance** (process, all decorated fidelities)
-   1. The test shape ladder — real conditions first on brownfield, test-first on greenfield; one ladder, three tiers (absorbs `testing-approach.md`).
+   1. **Choose the flow** — first crossing of an architectural boundary runs end to end first; a story on a known area tests first (see below; replaces the test shape ladder in `testing-approach.md`).
    2. Red, green, refactor — write the test, see it fail for the right reason, write the least code to green, refactor only while green.
    3. One at a time — one signature or scenario to green before the next.
    4. Arrange, act, assert — how to lay out a test body.
@@ -73,6 +73,32 @@ A rule names something you can see in the finished tests and code, so validate c
 5. **Stories · acceptance_tests** — guidance + rules
 6. **BDD · development** — guidance + rules
 7. **DDD · tactics** — guidance + rules
+
+## Guidance emphasis: two flows, picked by how known the area is
+
+The Guidance opens with this choice, because the rest of the steps depend on it.
+
+### Flow A — a new feature or story that crosses an architectural boundary for the first time
+
+Run it for real first, because the danger here is an AI that believes its own stubs.
+
+1. **Run it end to end, directly.** The AI drives it through the real stack itself (browser, server, store, agent) or asks the person to run it. Record every failure as it happens.
+2. **Iterate until it works for real.** A person verifies the result. Only a human seeing the real thing work rules out hallucination.
+3. **Capture it in an e2e or heavy test.** Write the test that runs the same path end to end, and see it pass against the real stack, so the success can't be hallucinated later.
+4. **Then write the stubbed and mocked unit tests.** Write them only where a stub or mock was actually used, and check each one against the real seam you just ran. AI tends to stub critical functionality, or to put the stub at the wrong seam, faking what should be real.
+
+### Flow B — another story or feature on an area already known
+
+Here the seams are proven, so it runs the other way round:
+
+1. **Unit tests first.** Write them on the seams that already exist (red).
+2. **Write the code and run the tests** until they are green.
+3. **Hand it to the person to try.**
+4. **Write the heavy and/or e2e tests in a sub-task.** Hand them to a background agent so the person isn't kept waiting, and tell the person when they are done.
+
+### How the choice is made
+
+The area is "known" when an e2e or heavy test already runs real code across every architectural boundary this story touches. If any boundary is crossed for the first time (a new module seam, a new external system, a new tier), use Flow A for that boundary.
 
 ## Shared rules
 
@@ -168,8 +194,8 @@ Guidance: settle how each building block is tested when you choose its pattern; 
 
 ## Open decisions for step 2
 
-1. **Order on brownfield.** The ladder says run real conditions first, with no automated tests. Every other source says write the test first. The sketch keeps both: greenfield goes test first, brownfield runs real conditions first. Is that right?
-2. **Moving rules.** Decided: the tier rules move here, and BDD `tier-by-speed` and Stories `story-tier-by-speed` are removed. Also decided: `one-assertion-per-test`, `layer-isolation` and `system-stubs-domain-real` move here as shared rules. Still open: BDD's `red-then-green`, `minimum-green` and `one-signature-at-a-time` are process — move them out of BDD's rules into this overlay's Guidance?
+1. **Order.** Decided: chosen by whether this crosses an architectural boundary for the first time (Flow A: real end to end first) or works on a known area (Flow B: unit tests first). See Guidance emphasis.
+2. **Moving rules.** Decided: the tier rules move here, and BDD `tier-by-speed` and Stories `story-tier-by-speed` are removed. Also decided: `one-assertion-per-test`, `layer-isolation` and `system-stubs-domain-real` move here as shared rules. BDD's process rules (`red-then-green`, `minimum-green`, `one-signature-at-a-time`) stay in BDD for now; moving them is in the backlog (`.sessions/_backlog/maybe-later.md`).
 3. **The `always_apply` setting.** Should it go in `tdd.md` front matter, or in the project's yaml so a project can turn it off?
 4. **Overlay reading.** Teach the practice catalogue that a practice may decorate others (its `decorates:` list and `practices/` folder), and have `PatternOverlays` read stack patterns only? Or one overlay reader for both?
 5. **Agent BDD.** Agent BDD isn't decorated in this sketch. Should it be?
