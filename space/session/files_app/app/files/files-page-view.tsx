@@ -230,11 +230,11 @@ function ScopeTogglesView({ page }: { page: FilesPage }) {
   const { scope } = useFilesState(page)
   return (
     <div className="scope-toggles" role="group" aria-label="Files listed">
-      <button type="button" className={`scope-toggle ${scope === 'all' ? 'is-shown' : ''}`} aria-pressed={scope === 'all'} title="Every file of the stages, practices and formats selected, older work included" onClick={() => page.showScope('all')}>
-        All session files
+      <button type="button" className={`scope-toggle ${scope === 'all' ? 'is-shown' : ''}`} aria-pressed={scope === 'all'} aria-label="All session files" title="All session files: every file of the stages, practices and formats selected, older work included" onClick={() => page.showScope('all')}>
+        ▤
       </button>
-      <button type="button" className={`scope-toggle ${scope === 'session' ? 'is-shown' : ''}`} aria-pressed={scope === 'session'} title="The files this session's branch changed, among those its stages, practices and formats select" onClick={() => page.showScope('session')}>
-        This session {page.fileBar.changedCount}
+      <button type="button" className={`scope-toggle ${scope === 'session' ? 'is-shown' : ''}`} aria-pressed={scope === 'session'} aria-label="This session" title={`This session: the ${page.fileBar.changedCount} files this session's branch changed, among those its stages, practices and formats select`} onClick={() => page.showScope('session')}>
+        Δ<sup className="scope-count">{page.fileBar.changedCount}</sup>
       </button>
     </div>
   )
