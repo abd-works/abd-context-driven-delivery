@@ -72,6 +72,11 @@ export class FilesPage {
   // Read the files the link names and open the one it names, else the first; reading the open file again whenever the
   // person comes back to the page. Answers what stops it.
   start(): () => void {
+    const uncaught = (failure: unknown) => this.fail(`The Files page met a failure nothing caught: ${reasonOf(failure)}`, 'An uncaught failure in the Files page')
+    const onError = (event: ErrorEvent) => uncaught(event.error ?? event.message)
+    const onRejection = (event: PromiseRejectionEvent) => uncaught(event.reason)
+    window.addEventListener('error', onError)
+    window.addEventListener('unhandledrejection', onRejection)
     void this.list()
     const reread = () => void Promise.all([this.refreshOpen(), this.readPractices()])
     window.addEventListener('focus', reread)
@@ -79,6 +84,8 @@ export class FilesPage {
       if (document.visibilityState === 'visible') void this.readPractices({ isQuiet: true })
     }, PRACTICES_REFRESH_MILLISECONDS)
     return () => {
+      window.removeEventListener('error', onError)
+      window.removeEventListener('unhandledrejection', onRejection)
       window.removeEventListener('focus', reread)
       clearInterval(practicesTimer)
       this.stopRefreshing()
@@ -97,7 +104,7 @@ export class FilesPage {
       if (first) await this.open(first)
     } catch (failure) {
       this.store.change(() => ({ isListing: false, problem: `The files did not list: ${reasonOf(failure)}` }))
-      this.tellChat(`The Files app did not list the files: ${reasonOf(failure)}`, `Opening the Files app on ${this.link.subject}`)
+      this.fail(`The Files app did not list the files: ${reasonOf(failure)}`, `Opening the Files app on ${this.link.subject}`, { isShownOnPage: true })
     }
   }
 
@@ -198,7 +205,7 @@ export class FilesPage {
       if (file?.comments.some(comment => comment.state === 'sent')) this.refreshTimer = setTimeout(() => void this.refreshOpen(), SENT_REFRESH_MILLISECONDS)
     } catch (failure) {
       this.store.change(() => ({ problem: `${path} did not open: ${reasonOf(failure)}` }))
-      this.tellChat(`The Files app did not open ${path}: ${reasonOf(failure)}`, `Opening ${path} in the Files app`)
+      this.fail(`The Files app did not open ${path}: ${reasonOf(failure)}`, `Opening ${path} in the Files app`, { isShownOnPage: true })
     }
   }
 
@@ -223,19 +230,20 @@ export class FilesPage {
     }
   }
 
-  // A failure is shown here and sent to the chat that opened the page, which shows it on its chat bar as it shows its
-  // own, so the person can have the chat fix it.
-  // Each failure is shown and sent once, however often a read every few seconds meets it again.
-  fail(failure: string, context: string): void {
+  // Every failure in the page goes through here: it is shown here and sent to the chat that opened the page, which shows
+  // it on its chat bar as it shows its own, so the person can have the chat fix it. A failure the page already shows in
+  // its problem line gets no toast as well. Each failure is shown and sent once, however often a read every few seconds
+  // or a return to the page meets it again.
+  fail(failure: string, context: string, { isShownOnPage = false } = {}): void {
     if (this.toldChat.has(failure)) return
-    this.toast(failure)
-    this.tellChat(failure, context)
     this.toldChat.add(failure)
+    if (!isShownOnPage) this.toast(failure)
+    this.tellChat(failure, context)
   }
 
   // A failure that cannot reach the chat stays on the page, since telling the chat again would fail the same way.
   private tellChat(failure: string, context: string): void {
-    if (!this.link.chat || this.toldChat.has(failure)) return
+    if (!this.link.chat) return
     const told = ChatClientGenerated.named(this.api, this.link.chat).send('failure', JSON.stringify({ failure, context }))
     void told.catch(reason => this.toast(`The chat was not told: ${reasonOf(reason)}`))
   }

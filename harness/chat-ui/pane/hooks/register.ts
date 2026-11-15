@@ -33,7 +33,7 @@ import { UpdateDialogView, VersionBadgeView } from './health/cdd-version-view'
 import { askToPush, cancelPush, currentRepo, pushToMain, pushWork } from './repo/repo-client'
 import { PushButtonsView, PushDialogView } from './repo/repo-view'
 import { currentAppOpening, openAppBesideChat } from './health/app-client'
-import { FOLDER_QUERY, PROJECT_QUERY, projectPageUrl } from './board-chat/board'
+import { CHAT_QUERY, FOLDER_QUERY, PROJECT_QUERY, projectPageUrl } from './board-chat/board'
 import { CARD_SCOPE } from './chat-bar/session-card-view'
 import { toggleCard } from './chat-bar/session-dialogs-client'
 import { withChatNamed } from './session/session-log-client'
@@ -174,11 +174,13 @@ export const register: Register = on => {
       reconnect: () => reconnect($, () => readActive($)),
       runInstall: () => runInstall($),
       // An app opens on the project this chat works in, its worktree for a ticket's chat, so it shows the session open
-      // there, not the main checkout's; and on the folder that session works in, which the Graph loads.
+      // there, not the main checkout's; on the folder that session works in, which the Graph loads; and naming this chat,
+      // which the app sends its failures to, so they show on this chat bar's failure line.
       openApp: (label: string) =>
         openAppBesideChat($, label, async url => {
           const { workpath } = await currentChatBar($)
-          return projectPageUrl($, url, { [PROJECT_QUERY]: await $.session.root(), ...(workpath ? { [FOLDER_QUERY]: workpath } : {}) })
+          const query = { [PROJECT_QUERY]: await $.session.root(), [CHAT_QUERY]: await $.session.id(), ...(workpath ? { [FOLDER_QUERY]: workpath } : {}) }
+          return projectPageUrl($, url, query)
         }),
     }
     const band = { health: await currentServerHealth($), view: await currentHealthView($), install: await currentInstall($), opening: await currentAppOpening($), actions }

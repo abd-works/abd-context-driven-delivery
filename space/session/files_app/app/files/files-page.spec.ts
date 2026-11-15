@@ -237,4 +237,40 @@ describe('Send Files App Failures To Chat', () => {
       expect(sent).toEqual([['failure', 'The Files app did not list the files: cdd did not answer']])
     })
   })
+
+  describe('with an open file that does not read', () => {
+    class UnreadableFileServer extends FakeFilesServer {
+      override async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
+        if (path.endsWith('/file')) throw new Error('the file is locked')
+        return super.post<Result>(path, body)
+      }
+    }
+
+    describe('that the person comes back to twice', () => {
+      it('should send the failure to the chat once', async () => {
+        const server = new UnreadableFileServer()
+        const page = new FilesPage(server, new FilesLink(STAGE_LINK))
+        const stop = page.start()
+        await settled()
+        window.dispatchEvent(new Event('focus'))
+        window.dispatchEvent(new Event('focus'))
+        await settled()
+        stop()
+        expect(server.posted('/send').filter(post => post.body.kind === 'failure')).toHaveLength(1)
+      })
+    })
+  })
+
+  describe('with a failure nothing in the page caught', () => {
+    it('should send it to the chat that opened the page', async () => {
+      const server = new FakeFilesServer()
+      const page = new FilesPage(server, new FilesLink(STAGE_LINK))
+      const stop = page.start()
+      await settled()
+      window.dispatchEvent(new ErrorEvent('error', { error: new Error('a view broke') }))
+      stop()
+      const sent = server.posted('/send').map(post => JSON.parse(String(post.body.text)).failure)
+      expect(sent).toEqual(['The Files page met a failure nothing caught: a view broke'])
+    })
+  })
 })

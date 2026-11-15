@@ -200,11 +200,12 @@ function ToastsView({ page }: { page: FilesPage }) {
 }
 
 // Dark engineering by default; a press turns the light look on or off.
-function ThemeToggleView() {
-  const [theme, setTheme] = useState<FilesTheme>(storedTheme)
+function ThemeToggleView({ page }: { page: FilesPage }) {
+  const failed = (failure: string) => page.fail(failure, "Changing the Files app's look")
+  const [theme, setTheme] = useState<FilesTheme>(() => storedTheme(failed))
   const toggle = () => {
     const next = theme === 'engineering' ? 'light' : 'engineering'
-    applyTheme(next)
+    applyTheme(next, failed)
     setTheme(next)
   }
   return (
@@ -224,7 +225,7 @@ export function FilesPageView({ page }: { page: FilesPage }) {
         <span className="files-kind">FILES</span>
         <span className="files-subject">{page.link.subject}</span>
         <PracticeTogglesView page={page} />
-        <ThemeToggleView />
+        <ThemeToggleView page={page} />
       </header>
       {problem ? <div className="files-problem" role="alert">{problem}</div> : null}
       <div className={`files-body ${fileBar.isOpen ? '' : 'is-bar-collapsed'}`}>
@@ -240,11 +241,16 @@ export function FilesPageView({ page }: { page: FilesPage }) {
 }
 
 // A view that throws would otherwise leave an empty page, so the person sees what broke.
-export class FilesFailureView extends Component<{ children: ReactNode }, { failure: string }> {
+export class FilesFailureView extends Component<{ page: FilesPage; children: ReactNode }, { failure: string }> {
   state = { failure: '' }
 
   static getDerivedStateFromError(error: unknown) {
     return { failure: error instanceof Error ? error.message : String(error) }
+  }
+
+  // What stopped the page goes to the chat that opened it too, since the page can show nothing else now.
+  componentDidCatch(error: unknown) {
+    this.props.page.fail(`The Files page stopped: ${error instanceof Error ? error.message : String(error)}`, 'Drawing the Files page', { isShownOnPage: true })
   }
 
   render() {

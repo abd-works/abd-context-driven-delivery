@@ -18,7 +18,8 @@ import type { FidelityProgressClient } from './fidelity-progress-client'
 const FILES_APP = 'Files'
 const BOARD_PAGE = '/'
 
-// A page of the board's server, the board started first when it is not running. Every function here that takes `$` is
+// A page of the board's server, the board started first when it is not running, naming this chat, which the page sends
+// its failures to. Every function here that takes `$` is
 // a function declaration: the engine follows `$` only into those, and refuses a module that hides one in a const.
 async function openBoardPage($: EngineInterface, page: string, what: string, query: Record<string, string>): Promise<void> {
   let url: string
@@ -28,7 +29,7 @@ async function openBoardPage($: EngineInterface, page: string, what: string, que
     return showFailure($, `${what} did not open: the board is not running and did not start`, `Opening ${what}, starting the board server`, failure)
   }
   if (!url) return showFailure($, `${what} did not open: the board is not running and did not start`, `Opening ${what}, starting the board server`)
-  const link = await projectPageUrl($, new URL(page, url).toString(), query)
+  const link = await projectPageUrl($, new URL(page, url).toString(), { [CHAT_QUERY]: await $.session.id(), ...query })
   const problem = await openInBrowserPane($, link)
   if (problem) await showFailure($, `${what} did not open: ${problem}`, `Opening ${link} in Claude's Browser pane`)
 }
