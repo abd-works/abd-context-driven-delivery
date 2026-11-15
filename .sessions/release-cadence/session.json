@@ -1,0 +1,6 @@
+{
+  "name": "release-cadence",
+  "title": "release-cadence",
+  "scope": "feature",
+  "parent": "tdd-practice"
+}
