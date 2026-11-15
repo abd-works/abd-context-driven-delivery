@@ -311,3 +311,5 @@
 2026-11-15T19:10:19Z tool graph.filter_choices
 2026-11-15T19:10:28Z tool graph.explorer_trees
 2026-11-15T19:23:50Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-9461
+2026-11-15T19:44:15Z tool repo.merge_to_main 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-9597
+2026-11-15T19:44:18Z error repo.merge_to_main C:\dev\abd-context-driven-delivery\.sessions\release-2\session.err 2050 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-9597
