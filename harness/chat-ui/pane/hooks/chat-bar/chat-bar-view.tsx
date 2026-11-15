@@ -151,14 +151,18 @@ function IconButtonView(elements: ElementTable, key: string, icon: string, words
   )
 }
 
-// Push, push & merge to origin/main, files, handoff, restart and close as icons. Files shows the action fidelity's files, else the first fidelity's.
+// Files right after the action button: the action fidelity's files, else the first fidelity's.
+function FilesButtonView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
+  const fidelities = chatBar.actionFidelities.length ? chatBar.actionFidelities : chatBar.fidelities.slice(0, 1)
+  return fidelities.length ? IconButtonView(elements, 'files-button', '▤', 'files', () => openFilesOf($, fidelities)) : null
+}
+
+// Push, push & merge to origin/main, handoff, restart and close as icons.
 function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBar, push }: ChatBarDraw) {
   const { Box } = elements
-  const fidelities = chatBar.actionFidelities.length ? chatBar.actionFidelities : chatBar.fidelities.slice(0, 1)
   return (
     <Box key="session-buttons" flexDirection="row" gap={1}>
       {chatBar.isClone ? push.buttons : null}
-      {fidelities.length ? IconButtonView(elements, 'files-button', '▤', 'files', () => openFilesOf($, fidelities)) : null}
       {IconButtonView(elements, 'handoff', '⇥', 'handoff', () => runHandoff($, chatBar))}
       {IconButtonView(elements, 'restart-button', '↻', 'restart cdd server', () => restartServer($))}
       {chatBar.isMain || chatBar.isPlainFolder ? null : IconButtonView(elements, 'close-button', '✕', 'close session', () => openClose($, chatBar))}
@@ -239,6 +243,7 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
           {OverlayChipsView($, elements, draw)}
           {FormatChipsView($, elements, draw)}
           {ActionButtonView($, elements, draw)}
+          {FilesButtonView($, elements, draw)}
         </Box>
         <Box flexGrow={1} />
         {SessionNameView($, elements, draw)}
