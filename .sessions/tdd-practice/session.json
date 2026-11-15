@@ -12,6 +12,9 @@
           "drawio"
         ]
       }
+    },
+    "clean_engineering": {
+      "enabled": false
     }
   },
   "guidance": {
@@ -19,6 +22,6 @@
       "specification",
       "implementation"
     ],
-    "version": 4
+    "version": 5
   }
 }
