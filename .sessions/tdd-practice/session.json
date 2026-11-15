@@ -15,7 +15,7 @@
       "enabled": false
     },
     "clean_engineering": {
-      "enabled": true
+      "enabled": false
     },
     "bdd": {
       "enabled": false
@@ -26,6 +26,6 @@
       "specification",
       "implementation"
     ],
-    "version": 12
+    "version": 13
   }
 }
