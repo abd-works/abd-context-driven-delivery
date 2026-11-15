@@ -4,8 +4,8 @@ import type { ActionPickerJson, ChatBarViewJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { GlyphButtonView } from '../shared/glyph-button-view'
 import { TipView } from '../shared/tip-view'
-import { ActionButtonView, PickerView } from './action-button-view'
-import { formatGlyphOf, overlayColumnOf, REPO_GLYPH, repoWordOf, sessionWordOf, stageColumn } from './bar-columns'
+import { ActionButtonView, pickerRowsOf } from './action-button-view'
+import { formatGlyphOf, REPO_GLYPH, repoWordOf, sessionWordOf } from './bar-columns'
 import { toggleFormat, type FormatChips } from './format-choices-client'
 import { toggleOverlay, toggleOverlayList, type OverlayChips } from './overlay-choices-client'
 import { askChatToFixBoard, restartServer, runHandoff, type ChatBarClient } from './chat-bar-client'
@@ -17,7 +17,7 @@ import { selectFidelity, type FidelityProgressClient } from './fidelity-progress
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
 import { openClose, toggleRepoListWithRepos } from './session-client'
 import { toggleSessionList } from './session-dialogs-client'
-import { CloseView, RepoListView, SessionListView } from './session-dialogs-view'
+import { CloseView, RepoListView, repoListRowsOf, SessionListView, sessionListRowsOf } from './session-dialogs-view'
 import { selectStage, toggleStagePicker, type StageClient } from './stage-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
@@ -34,7 +34,11 @@ export type ChatBarDraw = {
   overlays: OverlayChips
   busy: { doing: string; wheel: string }
   health: { band: unknown; panel: unknown }
+  version: { label: string; badge: unknown; dialog: unknown }
+  push: { buttons: unknown; dialog: unknown }
   width: number
+  // The rows the band may take; a taller bar scrolls, and its window starts at the top, which hides the line.
+  maxRows: number
 }
 
 const SEPARATOR = '│'
@@ -54,28 +58,36 @@ export function FidelityView($: EngineInterface, elements: ElementTable, fidelit
 }
 
 // The shown stage as one orange chip, its icon and ▾, like the action button; a press opens the list of stages.
-function StageButtonView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
+// The list opened from it is drawn beside the chip, in a box of its own, so hovering the list does not show the chip's tip.
+function StageButtonView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
   const { Box, Text } = elements
+  const { chatBar } = draw
   const shown = chatBar.stages.find(stage => stage.stage === chatBar.shownStage)
   if (!shown) return null
   return (
-    <Box key="stage-button" flexDirection="row" gap={0} paddingX={1} backgroundColor={BRAND.accent}>
-      {GlyphButtonView(elements, 'stage-shown', shown.icon, BRAND.onAccent, () => toggleStagePicker($))}
-      {GlyphButtonView(elements, 'stage-picker', '▾', BRAND.onAccent, () => toggleStagePicker($))}
-      <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
-        <Text color={BRAND.text}>{shown.stage}</Text>
+    <Box key="stage-anchor">
+      <Box key="stage-button" flexDirection="row" gap={0} paddingX={1} backgroundColor={BRAND.accent}>
+        {GlyphButtonView(elements, 'stage-shown', shown.icon, BRAND.onAccent, () => toggleStagePicker($))}
+        {GlyphButtonView(elements, 'stage-picker', '▾', BRAND.onAccent, () => toggleStagePicker($))}
+        <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
+          <Text color={BRAND.text}>{shown.stage}</Text>
+        </Box>
       </Box>
+      {StagePickerView($, elements, draw)}
     </Box>
   )
 }
 
-// Every stage as a list above the stage button: its icon and name, the session's own marked, the shown one highlighted;
-// a press shows that stage's fidelities.
-export function StagePickerView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar, isStagePickerOpen }: ChatBarDraw) {
+// The stages the stage list shows.
+const shownStagesOf = (chatBar: ChatBarClient): StageClient[] => chatBar.stages.filter(stage => stage.canShow)
+
+// Every stage as a list above the stage button, its left edge under the button's: its icon and name, the session's
+// own marked, the shown one highlighted; a press shows that stage's fidelities.
+function StagePickerView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar, isStagePickerOpen }: ChatBarDraw) {
   if (!isStagePickerOpen) return null
   return (
-    <Box key="stage-list" flexDirection="column" alignSelf="flex-start" marginLeft={stageColumn} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
-      {chatBar.stages.filter(stage => stage.canShow).map((stage: StageClient) => {
+    <Box key="stage-list" flexDirection="column" position="absolute" bottom={1} left={0} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
+      {shownStagesOf(chatBar).map((stage: StageClient) => {
         const isShown = stage.stage === chatBar.shownStage
         return (
           <Box key={`stage-row-${stage.stage}`} backgroundColor={isShown ? BRAND.accentTint : undefined}>
@@ -106,7 +118,8 @@ function WordGlyphButtonView({ Button, Text }: ElementTable, key: string, word: 
 // ticket, so it shows the name alone: a press opens the session's folder in the files pane, its card showing on hover.
 // A chat in a plain folder, in any session, has neither other repositories nor tickets nor a branch to close, so it
 // shows the folder's path alone, read only, and no close button.
-function SessionNameView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
+function SessionNameView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
+  const { chatBar } = draw
   const { Box, Button, Text } = elements
   if (chatBar.isPlainFolder) {
     return (
@@ -119,10 +132,16 @@ function SessionNameView($: EngineInterface, elements: ElementTable, { chatBar }
   }
   if (chatBar.isMain) {
     return (
-      <Box key="session-name" flexDirection="row" gap={1}>
-        {WordGlyphButtonView(elements, 'repo-list-button', repoWordOf(chatBar), REPO_GLYPH, () => toggleRepoListWithRepos($))}
-        <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
-          {WordGlyphButtonView(elements, 'session-list-button', sessionWordOf(chatBar), '+', () => toggleSessionList($))}
+      <Box key="session-name" flexDirection="row" gap={0}>
+        <Box key="repo-anchor">
+          {WordGlyphButtonView(elements, 'repo-list-button', repoWordOf(chatBar), REPO_GLYPH, () => toggleRepoListWithRepos($))}
+          {RepoListView($, elements, draw)}
+        </Box>
+        <Box key="session-anchor" marginLeft={-1}>
+          <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
+            {WordGlyphButtonView(elements, 'session-list-button', sessionWordOf(chatBar), '+', () => toggleSessionList($))}
+          </Box>
+          {SessionListView($, elements, draw)}
         </Box>
       </Box>
     )
@@ -149,14 +168,18 @@ function IconButtonView(elements: ElementTable, key: string, icon: string, words
   )
 }
 
-// Handoff, files, restart and close as icons. Files shows the action fidelity's files, else the first fidelity's.
-function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
-  const { Box } = elements
+// Files right after the action button: the action fidelity's files, else the first fidelity's.
+function FilesButtonView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
   const fidelities = chatBar.actionFidelities.length ? chatBar.actionFidelities : chatBar.fidelities.slice(0, 1)
+  return fidelities.length ? IconButtonView(elements, 'files-button', '▤', 'files', () => openFilesOf($, fidelities)) : null
+}
+
+// Push, push & merge to origin/main, restart and close as icons.
+function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBar, push }: ChatBarDraw) {
+  const { Box } = elements
   return (
     <Box key="session-buttons" flexDirection="row" gap={1}>
-      {IconButtonView(elements, 'handoff', '⇥', 'handoff', () => runHandoff($, chatBar))}
-      {fidelities.length ? IconButtonView(elements, 'files-button', '▤', 'files', () => openFilesOf($, fidelities)) : null}
+      {chatBar.isClone ? push.buttons : null}
       {IconButtonView(elements, 'restart-button', '↻', 'restart cdd server', () => restartServer($))}
       {chatBar.isMain || chatBar.isPlainFolder ? null : IconButtonView(elements, 'close-button', '✕', 'close session', () => openClose($, chatBar))}
     </Box>
@@ -187,12 +210,16 @@ function FormatChipsView($: EngineInterface, elements: ElementTable, { chatBar, 
 
 // The + right after the fidelity dots, then one icon per pattern the session overlays on its graph, its first and last
 // letter, the pattern's name above it on hover; the format chips and the action button follow them.
-function OverlayChipsView($: EngineInterface, elements: ElementTable, { overlays }: ChatBarDraw) {
+function OverlayChipsView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
   const { Box } = elements
+  const { overlays } = draw
   if (!overlays.choices.length) return null
   return (
     <Box key="overlay-chips" flexDirection="row" gap={1} alignItems="center">
-      {GlyphButtonView(elements, 'overlay-list', '+', overlays.isOpen ? BRAND.accent : BRAND.muted, () => toggleOverlayList($))}
+      <Box key="overlay-anchor">
+        {GlyphButtonView(elements, 'overlay-list', '+', overlays.isOpen ? BRAND.accent : BRAND.muted, () => toggleOverlayList($))}
+        {OverlayListView($, elements, draw)}
+      </Box>
       {overlays.chosen.map(choice => (
         <Box key={`overlay-${choice.pattern}`}>
           <elements.Text color={BRAND.text}>{choice.icon}</elements.Text>
@@ -205,10 +232,10 @@ function OverlayChipsView($: EngineInterface, elements: ElementTable, { overlays
 
 // Every pattern as a list box above the +, the session's overlays marked; a press on one adds it or takes it out, and
 // the list stays open so a person can pick several.
-function OverlayListView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar, overlays }: ChatBarDraw) {
+function OverlayListView($: EngineInterface, { Box, Button, Text }: ElementTable, { overlays }: ChatBarDraw) {
   if (!overlays.isOpen) return null
   return (
-    <Box key="overlay-list-box" flexDirection="column" alignSelf="flex-start" marginLeft={overlayColumnOf(chatBar)} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
+    <Box key="overlay-list-box" flexDirection="column" position="absolute" bottom={1} left={0} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
       {overlays.choices.map(choice => (
         <Box key={`overlay-row-${choice.pattern}`} flexDirection="row" gap={1} alignItems="center" backgroundColor={choice.is_chosen ? BRAND.accentTint : undefined}>
           <Text color={choice.is_chosen ? BRAND.accent : BRAND.muted}>{choice.is_chosen ? '✓' : ' '}</Text>
@@ -220,15 +247,14 @@ function OverlayListView($: EngineInterface, { Box, Button, Text }: ElementTable
   )
 }
 
-// The line, left to right: health mark, the stage button, │, fidelity dots and the action chip, then at the right end
-// the session name and its buttons.
+// The line, left to right: the stage button, │, fidelity dots and the action chip, then at the right end the session
+// name, its buttons, the health mark, and the version badge.
 function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
   const { Box, Text } = elements
   const { chatBar } = draw
-  if (!chatBar.hasSession) return <Box key="line" flexDirection="row" gap={1}>{draw.health.band}<Box flexGrow={1} />{SessionNameView($, elements, draw)}</Box>
+  if (!chatBar.hasSession) return <Box key="line" flexDirection="row" gap={1}><Box flexGrow={1} />{SessionNameView($, elements, draw)}{draw.health.band}{draw.version.badge}</Box>
   return (
-    <Box key="line" flexDirection="row" gap={1} flexWrap="wrap" alignItems="center">
-        {draw.health.band}
+    <Box key="line" flexDirection="row" gap={1} alignItems="center">
         {StageButtonView($, elements, draw)}
         <Text color={BRAND.border}>{SEPARATOR}</Text>
         <Box key="fidelity-column" flexDirection="row" gap={1} alignItems="center">
@@ -236,10 +262,14 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
           {OverlayChipsView($, elements, draw)}
           {FormatChipsView($, elements, draw)}
           {ActionButtonView($, elements, draw)}
+          {FilesButtonView($, elements, draw)}
+          {IconButtonView(elements, 'handoff', '⇥', 'handoff', () => runHandoff($, chatBar))}
         </Box>
         <Box flexGrow={1} />
         {SessionNameView($, elements, draw)}
         {SessionButtonsView($, elements, draw)}
+        {draw.health.band}
+        {draw.version.badge}
     </Box>
   )
 }
@@ -256,6 +286,28 @@ function ProblemView($: EngineInterface, { Box, Button, Text }: ElementTable, sh
 
 // The chat bar above the prompt: the boxes a person opened sit above one line holding the server health mark, the
 // session name, the fidelity dots, the action button, and the stage icons. A failed board read says so above the line.
+// A list box's round border, a row above and below its lines.
+const LIST_BORDER_ROWS = 2
+
+// The line itself, which the room above it must leave in view.
+const LINE_ROWS = 1
+
+// Empty rows above the line, as many as the open list box is tall. Each list is drawn against its button, out of the
+// bar's flow, and the bar cuts off whatever is drawn outside it, so these rows give the list its room. They stop short
+// of the band's limit so the line stays in view; a list taller than that loses its top rows instead.
+function ListRoomView({ Box }: ElementTable, draw: ChatBarDraw) {
+  const { chatBar, overlays } = draw
+  const rows = Math.max(
+    draw.isStagePickerOpen ? shownStagesOf(chatBar).length + LIST_BORDER_ROWS : 0,
+    overlays.isOpen ? overlays.choices.length + LIST_BORDER_ROWS : 0,
+    pickerRowsOf(draw),
+    sessionListRowsOf(draw),
+    repoListRowsOf(draw),
+  )
+  const room = Math.min(rows, Math.max(0, draw.maxRows - LINE_ROWS))
+  return room ? <Box key="list-room" height={room} /> : null
+}
+
 export function ChatBarView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
   const { Box, Text } = elements
   const { chatBar } = draw
@@ -264,13 +316,11 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
       {chatBar.problem ? ProblemView($, elements, `The board did not answer: ${chatBar.problem}`) : null}
       {FailureView($, elements, draw.failure)}
       {draw.busy.doing ? <Text key="busy" color={BRAND.accent}>{`${draw.busy.wheel} ${draw.busy.doing}…`}</Text> : null}
+      {draw.version.dialog}
+      {draw.push.dialog}
       {CloseView($, elements, draw)}
-      {SessionListView($, elements, draw)}
-      {RepoListView($, elements, draw)}
       {SessionCardView($, elements, draw)}
-      {StagePickerView($, elements, draw)}
-      {PickerView($, elements, draw)}
-      {OverlayListView($, elements, draw)}
+      {ListRoomView(elements, draw)}
       {LineView($, elements, draw)}
     </Box>
   )

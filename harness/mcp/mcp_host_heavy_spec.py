@@ -14,7 +14,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
-from expects import contain, equal, expect
+from expects import contain, equal, expect, start_with
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.parameter_schema import ParameterSchema
@@ -602,11 +602,13 @@ with description("an MCP install that deploys to the IDE's user-level config") a
         with it("should point the plugin's cdd server at the one cdd server over HTTP"):
             expect(self.server["url"]).to(equal(McpDaemon(CddHome()).url))
 
-        with it("should run the connect script in ~/.cdd"):
-            expect(self.server["headersHelper"]).to(contain(str(self.root / ".cdd" / "connect.py")))
+        # A headers helper has about ten seconds while a chat starts; the server names the chat from its connection.
+        with it("should run nothing before a chat connects"):
+            expect("headersHelper" in self.server).to(equal(False))
 
-        with it("should pass the chat's folder to the connect script"):
-            expect(self.server["headersHelper"]).to(contain('"${CLAUDE_PROJECT_DIR}"'))
+        with it("should version the plugin by the server it declares, so Claude Code takes a changed one"):
+            manifest = json.loads((self.plugin / "cdd" / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+            expect(manifest["version"]).to(start_with("1.0.0-"))
 
         with context("that is installed again from another checkout"):
             with before.each:

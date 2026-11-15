@@ -151,6 +151,18 @@ class AppServer:
         wrote: a server keeps the routes and the built page it started with, and answers a path it does not know with
         another app's page. The server started again runs on its own, past the install. A server that is not running
         is left for the chat that opens its app to start; answers whether it restarted."""
+        if not self.stop():
+            return False
+        try:
+            subprocess.Popen(self.command, cwd=self._folder, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=_DETACHED, start_new_session=sys.platform != "win32")
+        except OSError as failed:
+            raise AppServerNotRestarted(self, f"{' '.join(self.command)} did not start: {failed}") from failed
+        self._wait_until(lambda: self.port is not None, f"nothing answered on {', '.join(map(str, self.ports))} within {RESTART_SECONDS} s")
+        return True
+
+    def stop(self) -> bool:
+        """Stop the server while it runs, so an install can replace the code it serves; the chat that next opens its app
+        starts it again. A server that is not running needs nothing; answers whether one was stopped."""
         port = self.port
         if port is None:
             return False
@@ -162,11 +174,6 @@ class AppServer:
         except ProcessNotStopped as held:
             raise AppServerNotRestarted(self, str(held)) from held
         self._wait_until(lambda: self.port is None, f"it still answers on port {port} after it was stopped")
-        try:
-            subprocess.Popen(self.command, cwd=self._folder, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=_DETACHED, start_new_session=sys.platform != "win32")
-        except OSError as failed:
-            raise AppServerNotRestarted(self, f"{' '.join(self.command)} did not start: {failed}") from failed
-        self._wait_until(lambda: self.port is not None, f"nothing answered on {', '.join(map(str, self.ports))} within {RESTART_SECONDS} s")
         return True
 
     def _wait_until(self, done, reason: str) -> None:

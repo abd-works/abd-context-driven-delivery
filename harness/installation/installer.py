@@ -1,6 +1,7 @@
 """Installer: install every toolset a repository defines into one IDE folder, through every destination."""
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any, ClassVar, Iterable, TypeVar
@@ -156,8 +157,35 @@ class Installer:
 
         Installer-only refresh (``/install`` and ``/clean`` without walking the catalog): ``python scripts/install.py --self`` from this repo — not MCP.
 
-        When install finishes, read ``.cursor/diagnostics.json`` (latest ``diagnose_install`` report) and paste the full summary: color, channel deltas, cdd server, hook server, hooks registered."""
+        Before you run it, write these steps in the chat as a checklist. Then, as each one completes, write ``✓`` and the step in the chat with what the output said for it, so the person follows the install as it goes:
+
+        1. Install every toolset: skills, commands, rules, MCP, and hooks (the line ``hook: …, mcp: …, cdd plugin: …, board: …``).
+        2. Check the cdd server runs, moved onto this commit when it ran an older one (``mcp: running (pid …)``, or ``cdd server: …``).
+        3. Read ``diagnostics.json`` in the install folder (latest ``diagnose_install`` report) and paste the full summary: color, channel deltas, cdd server, hook server, hooks registered.
+
+        When a step fails, write ``✗`` and the step with its error, stop, and follow "When install fails" in ``harness/installation/installer.md``."""
         return self._install_run(toolsets, replace)
+
+    @command(name="install-latest")
+    @agent_tool
+    def install_latest(self) -> int:
+        """Pull origin main and reinstall CDD on it, restarting every server, so this chat and the apps run the latest code.
+
+        Before you run it, put these seven steps in your task list (in Claude Code, the plan the app shows under your message) and write them in the chat as a checklist:
+
+        1. Pull origin main into this checkout. A pull that fails or conflicts stops here, before anything is stopped: tell the person and wait.
+        2. Stop every app's server and the hook server.
+        3. Restart the cdd server.
+        4. Install every toolset: skills, commands, rules, MCP, and hooks. This is the long step, about a minute.
+        5. Ping the cdd server.
+        6. Reconnect this chat: when the cdd server reads failed, reconnect it, or ask the person to run ``/reload-plugins``.
+        7. Read ``diagnostics.json`` in the install folder (latest ``diagnose_install`` report) and paste the summary: color, channel deltas, cdd server, hook server.
+
+        Run the command in the background and watch its output as it runs, rather than waiting for it to end, so the person sees each step finish as it happens. The script writes ``▶ n/7 <step>`` as a step starts and ``✓ n/7 <step>: <result>`` as it is done. On each ``✓`` line, mark that step done in your task list and write the same line in the chat; on a ``✗ n/7`` line, write it, stop, and follow "When install fails" in ``harness/installation/installer.md``. Steps 6 and 7 are yours: mark and write each the same way once you have done it.
+
+        Other chats share the cdd server, so message their sessions before you run it."""
+        script = self.repo / "scripts" / "install-latest.py"
+        return subprocess.run([sys.executable, str(script)], cwd=self.repo, check=False).returncode
 
     def install_self(self, *, replace: bool = False) -> InstallChannels:
         """Deploy only this Installer toolset — ``/install``, ``/clean`` — and the toolsets the server channels publish

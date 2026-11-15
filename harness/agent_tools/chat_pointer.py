@@ -8,7 +8,7 @@ import os
 import re
 from pathlib import Path
 
-from harness.agent_tools.claude_chat_process import is_desktop_spare
+from harness.process.claude_chat_process import is_desktop_spare
 
 
 # A chat id becomes part of a file pattern, so only the letters, digits, and dashes of an id may reach it.

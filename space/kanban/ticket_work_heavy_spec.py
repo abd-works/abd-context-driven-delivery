@@ -19,7 +19,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import be_true, contain, equal, expect
 from mamba import after, before, context, description, it
 
-from harness.mcp.mcp_daemon import CHAT_HEADER, CHAT_PROCESS_HEADER, PROJECT_HEADER
+from harness.mcp.mcp_address import CHAT_HEADER, CHAT_PROCESS_HEADER, PROJECT_HEADER
 from harness.mcp.spec_support import SpecServer
 
 TOOLSETS = (

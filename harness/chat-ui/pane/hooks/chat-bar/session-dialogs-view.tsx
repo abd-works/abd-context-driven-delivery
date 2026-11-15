@@ -3,7 +3,7 @@ import type { EngineInterface } from 'claude-code'
 import { BRAND } from '../shared/brand'
 import { TipView } from '../shared/tip-view'
 import type { ChatBarDraw } from './chat-bar-view'
-import { repoListRightOf, sessionListRightOf } from './bar-columns'
+import { repoListShiftOf, sessionListShiftOf } from './bar-columns'
 import { MAIN_SESSION } from './chat-bar-client'
 import { activateTicket, chooseFolder, chooseSessionFolder, closeSession, createSession, openFolder, openRepo } from './session-client'
 import { cancelClose, chooseNewSessionFolder, toggleLeaving } from './session-dialogs-client'
@@ -52,6 +52,14 @@ function leaveHeadingOf(session: string, branch: string): string {
   return `LEAVE ${session}${branch ? ` on ${branch}` : ''}`
 }
 
+// A list box's round border, a row above and below its lines.
+const LIST_BORDER_ROWS = 2
+// The cells of the field that names a new session with its ▸ folder button, and of the repo list's fields, as drawn.
+const NEW_SESSION_ROW_CELLS = 30
+const REPO_FIELD_CELLS = 26
+// The folder row: ▸ Choose a folder… with the folder path's field beside it, as drawn.
+const FOLDER_ROW_CELLS = 40
+
 // Each open ticket's label, its stage icon and name, padded to the longest so the buttons share one width.
 function sessionLabels(tickets: { name: string; stage: string }[]): { name: string; label: string }[] {
   const labels = tickets.map(ticket => ({ name: ticket.name, label: `${stageIconOf(ticket.stage)} ${ticket.name}` }))
@@ -60,13 +68,14 @@ function sessionLabels(tickets: { name: string; stage: string }[]): { name: stri
 }
 
 // In the main chat, the tickets a person can open, each after its stage's orange icon, and a field to name a new one,
-// its right edge under the end of "main +", the button after the repository's name that opens it.
+// its left edge under the start of "main +", the button after the repository's name that opens it.
 // Main is listed first as the session this chat works on; opening a ticket finds its chat or starts one in its worktree.
 // A ticket's own chat works only on that ticket, so it has no list.
-export function SessionListView($: EngineInterface, { Box, Button, Input, Text }: ElementTable, { chatBar, view }: ChatBarDraw) {
+export function SessionListView($: EngineInterface, { Box, Button, Input, Text }: ElementTable, { chatBar, view, version }: ChatBarDraw) {
   if (!view.isSessionListOpen || !chatBar.isMain) return null
+  const widest = Math.max(NEW_SESSION_ROW_CELLS, ...sessionLabels(chatBar.openTickets).map(({ label }) => label.length))
   return (
-    <Box key="session-list" flexDirection="column" alignSelf="flex-end" marginRight={sessionListRightOf(chatBar)} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
+    <Box key="session-list" flexDirection="column" position="absolute" bottom={1} left={sessionListShiftOf(chatBar, version.label, widest)} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
       <Box key="session-row-main" flexDirection="row" gap={1}>
         <Text color={BRAND.muted}>⌂</Text>
         <Text color={BRAND.accent}>{MAIN_SESSION}</Text>
@@ -74,6 +83,14 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
       {chatBar.isClone ? TicketChoicesView($, { Box, Button, Input, Text }, { chatBar, view }) : <Text key="session-no-git" color={BRAND.muted}>No git here, so no ticket chats</Text>}
     </Box>
   )
+}
+
+// How many rows the open session list takes, its border included: main, the tickets, the new session's field, and the
+// folder chosen for it; none while it is closed.
+export function sessionListRowsOf({ chatBar, view }: ChatBarDraw): number {
+  if (!view.isSessionListOpen || !chatBar.isMain) return 0
+  const tickets = chatBar.isClone ? chatBar.openTickets.length + 1 + (view.newSessionFolder ? 1 : 0) : 1
+  return 1 + tickets + LIST_BORDER_ROWS
 }
 
 // Each ticket is a whole button, its stage icon in its label: a see-through Button laid over the name took no press in
@@ -115,22 +132,29 @@ function folderFromTop(repository: string, folder: string): string {
 }
 
 // In the main chat, the repositories beside this one, opened from the repository's own button before "main +",
-// alone, so the bar stays in view, its right edge under the end of that button. Opening one starts a top-level chat on it; a new
+// alone, so the bar stays in view, its left edge under the start of that button. Opening one starts a top-level chat on it; a new
 // name creates the repository, private. Folder Only (No Repo), above them, opens any folder as it is in a top-level
 // chat, chosen with the system's folder picker or typed, and creates nothing there; its tip says when to choose it.
 const FOLDER_ONLY_TIP = "Choose a path if you don't want to work with a repository and want to just work within your local file system"
 
-export function RepoListView($: EngineInterface, elements: ElementTable, { chatBar, view }: ChatBarDraw) {
+// Each repository's label: whether it has CDD, its name, and its branch.
+const repoLabelOf = (repo: { name: string; has_cdd: boolean; branch: string }): string =>
+  `${repo.has_cdd ? '◆' : '◇'} ${repo.name}${repo.branch ? ` · ${repo.branch}` : ''}`
+
+export function RepoListView($: EngineInterface, elements: ElementTable, { chatBar, view, version }: ChatBarDraw) {
   const { Box, Button, Input, Text } = elements
   if (!view.isRepoListOpen || !chatBar.isMain) return null
+  const widest = Math.max(REPO_FIELD_CELLS, FOLDER_ROW_CELLS, ...(view.repos ?? []).map(repo => repoLabelOf(repo).length))
   return (
-    <Box key="repo-list" flexDirection="column" alignSelf="flex-end" marginRight={repoListRightOf(chatBar)} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
+    <Box key="repo-list" flexDirection="column" position="absolute" bottom={1} left={repoListShiftOf(chatBar, version.label, widest)} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
       <Box key="folder-heading-box">
         <Text key="folder-heading" color={BRAND.muted}>Folder Only (No Repo)</Text>
         {TipView(elements, FOLDER_ONLY_TIP, '', BRAND.muted)}
       </Box>
-      <Button key="repo-folder-choose" plain label="▸ Choose a folder…" onPress={() => chooseFolder($)} />
-      <Input key="repo-folder-path" placeholder="Folder path" value="" onSubmit={value => (value.trim() ? openFolder($, value.trim()) : undefined)} />
+      <Box key="repo-folder-row" flexDirection="row" gap={1}>
+        <Button key="repo-folder-choose" plain label="▸ Choose a folder…" onPress={() => chooseFolder($)} />
+        <Input key="repo-folder-path" placeholder="Folder path" value="" onSubmit={value => (value.trim() ? openFolder($, value.trim()) : undefined)} />
+      </Box>
       <Text key="repos-heading" color={BRAND.muted}>REPOS</Text>
       {/* A chat bar whose view was saved before repos existed has none. Each repository is a whole button: a
           see-through one laid over its name took no press. */}
@@ -138,13 +162,20 @@ export function RepoListView($: EngineInterface, elements: ElementTable, { chatB
         <Button
           key={`repo-${repo.name}`}
           plain
-          label={`${repo.has_cdd ? '◆' : '◇'} ${repo.name}${repo.branch ? ` · ${repo.branch}` : ''}`}
+          label={repoLabelOf(repo)}
           onPress={() => openRepo($, repo.name)}
         />
       ))}
       <Input key="new-repo" placeholder="New repo name (private)" value="" onSubmit={value => (value.trim() ? openRepo($, value.trim()) : undefined)} />
     </Box>
   )
+}
+
+// How many rows the open repo list takes, its border included: the folder heading, the folder row, the REPOS heading,
+// each repository, and the new repository's field; none while it is closed.
+export function repoListRowsOf({ chatBar, view }: ChatBarDraw): number {
+  if (!view.isRepoListOpen || !chatBar.isMain) return 0
+  return 3 + (view.repos ?? []).length + 1 + LIST_BORDER_ROWS
 }
 
 // Closing offers what ticket.close_choices answers: a handoff always, and a commit and a push of the branch the

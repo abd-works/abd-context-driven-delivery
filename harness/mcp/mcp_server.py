@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetReference
 from harness.agent_tools.chat_pointer import ChatPointer
-from harness.agent_tools.claude_chat_process import ClaudeChatProcess, is_desktop_spare
+from harness.process.claude_chat_process import ClaudeChatProcess, is_desktop_spare
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.destination import ServerInstallation, SkippedTool, SkippedTools
 from harness.installation.data_class import data_of
@@ -34,7 +34,8 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_annotations import LongCall, Mcp  # noqa: F401 - importing the server defines Mcp, the channel install reads
 from harness.mcp.claude_plugins import ClaudePlugins
-from harness.mcp.mcp_daemon import CHAT_HEADER, CHAT_PROCESS_HEADER, MCP_PATH, PING_PATH, PROJECT_HEADER, McpDaemon
+from harness.mcp.mcp_address import CHAT_HEADER, CHAT_PROCESS_HEADER, MCP_PATH, PING_PATH, PROJECT_HEADER
+from harness.mcp.mcp_daemon import McpDaemon
 from harness.mcp.server_hooks import CddServerHooks
 from harness.mcp.restart_gate import _RestartGate
 from harness.mcp.tool_calls import ThrottledReporter, _StillRunning, _ToolCalls
@@ -197,11 +198,10 @@ class McpInstallation(ServerInstallation):
         config_file.write(data)
 
     def _claude_plugin_server(self) -> dict[str, Any]:
-        """The cdd server as the cdd plugin declares it: Claude Code fills in ``${CLAUDE_PROJECT_DIR}`` with the chat's
-        folder and passes it to the connect script."""
-        home = self.server_home
-        helper = f'"{home.interpreter.executable}" "{home.connect_script}" "${{CLAUDE_PROJECT_DIR}}"'
-        return {"type": "http", "url": self.daemon.url, "headersHelper": helper}
+        """The cdd server as the cdd plugin declares it: its address alone. The server names each call's project from
+        the Claude Code process holding the connection, so a chat runs nothing before it connects: a headers helper
+        has about ten seconds while a chat starts, and one that ran past them left the chat without cdd."""
+        return {"type": "http", "url": self.daemon.url}
 
     def _server_manifest(self) -> dict[str, Any]:
         """The one ``cdd`` entry: the shared server's URL plus how each request names its project. A user-level entry
@@ -279,6 +279,11 @@ class McpInstallation(ServerInstallation):
     def pin_server(self) -> str:
         """Serve this checkout's current commit from ``~/.cdd/runtime``, restarting the server onto it."""
         return self.daemon.pin_from(self._checkout)
+
+    def update_server(self) -> str:
+        """Serve this checkout's current code the way the server already serves it, restarting the server onto it: a
+        server serving the checkout on disk keeps doing so, and a pinned one is pinned to the current commit."""
+        return self.daemon.update_from(self._checkout)
 
     def keep_pinned_current(self) -> str | None:
         """After a plain install, serve this checkout's current commit when the server is pinned to an older one, so
@@ -484,36 +489,15 @@ class McpServer:
         return published[resolved].answer(call)
 
 
-class _ProjectNamedOnly:
-    """The ``/mcp`` endpoint for requests that name their project. A request that names none is refused as a bad
-    request (400), naming the missing header. It is never refused as unauthorized (401): Claude Code answers a 401 with
-    a sign-in attempt, Dynamic Client Registration, which this server does not offer, and then cuts cdd off for that
-    chat until its plugins are reloaded."""
-
-    def __init__(self, app: Any) -> None:
-        self._app = app
-        self._header = PROJECT_HEADER.lower().encode("latin-1")
-        self._refusal = {"error": f"name the chat's project in the {PROJECT_HEADER} header"}
-
-    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
-        from starlette.responses import JSONResponse
-
-        if scope["type"] == "http" and not any(name == self._header and value for name, value in scope["headers"]):
-            await JSONResponse(self._refusal, status_code=400)(scope, receive, send)
-            return
-        await self._app(scope, receive, send)
-
-
 class ProjectNotNamed(Exception):
     """A tool call arrived from a chat whose folder the server cannot find, so it cannot tell which project it is for."""
 
     def __init__(self, tool: str) -> None:
         super().__init__(
-            f"{tool} was called from a chat whose folder the server cannot find: the X-CDD-Project header names none or "
-            "only a desktop spare folder, and neither the chat's Claude Code process, the process holding its "
-            "connection, nor its transcript records one. Open the chat in a project folder and run /reload-plugins so "
-            "the cdd header helper runs again; when it still fails, run python scripts/install.py from a CDD checkout "
-            "to write the cdd entry again."
+            f"{tool} was called from a chat whose folder the server cannot find: the Claude Code process holding its "
+            f"connection records none, nor does its transcript, and no {PROJECT_HEADER} header names one. Open the "
+            "chat in a project folder and call again; a client that is not a Claude Code chat names its project in the "
+            f"{PROJECT_HEADER} header."
         )
         self.tool = tool
 
@@ -884,7 +868,7 @@ class McpHost:
             )
 
         return Starlette(
-            routes=[Route(PING_PATH, ping), Route(MCP_PATH, endpoint=_ProjectNamedOnly(StreamableHTTPASGIApp(manager)))],
+            routes=[Route(PING_PATH, ping), Route(MCP_PATH, endpoint=StreamableHTTPASGIApp(manager))],
             lifespan=lambda _app: manager.run(),
         )
 

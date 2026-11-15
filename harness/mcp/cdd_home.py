@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import functools
 import hashlib
+import json
 import os
 import shutil
 import sys
@@ -17,7 +18,9 @@ from harness.process.process import PythonInterpreter
 CDD_HOME_ENV = "CDD_HOME"
 CLAUDE_MARKETPLACE = "cdd-home"
 CLAUDE_PLUGIN = "cdd"
-CLAUDE_PLUGIN_DESCRIPTION = "Connects every Claude Code chat to the one cdd server, naming the chat's folder as its project"
+CLAUDE_PLUGIN_DESCRIPTION = "Connects every Claude Code chat to the one cdd server, starting it when a chat starts"
+# How long the chat-start hook may take to start a server that was not running: a cold start imports every toolset.
+SERVER_START_SECONDS = 90
 # The cdd-board mod is published from the code the server runs, so every chat's mod matches the server it talks to.
 BOARD_PLUGIN = "cdd-board"
 BOARD_MOD_FOLDER = Path("harness") / "chat-ui" / "pane"
@@ -98,17 +101,28 @@ class CddHome:
         return self.folder / "connect.py"
 
     @property
+    def _start_command(self) -> str:
+        """What the cdd plugin runs when a chat starts: the connect script, starting the server when none answers. It
+        prints nothing, so it runs without a console window."""
+        return f'"{self.interpreter.windowless}" "{self.connect_script}" --start'
+
+    @property
     def claude_plugins(self) -> Path:
         """The local marketplace holding the ``cdd`` plugin, which declares the cdd server for every Claude Code chat."""
         return self.folder / "claude-plugins"
 
     def write_claude_plugin(self, server: dict[str, object]) -> list[Path]:
-        """Write the ``cdd`` plugin and its marketplace. A server a plugin declares gets ``${CLAUDE_PROJECT_DIR}`` filled
-        in with the chat's folder, which a user-level entry never sees. Returns the files written."""
+        """Write the ``cdd`` plugin and its marketplace: the server every chat connects to, and the hook that starts it
+        when a chat starts. Its version gains a hash of both: Claude Code keeps a plugin it has already seen at the same
+        version, so a changed one needs a new one. Returns the files written."""
         plugin = self.claude_plugins / CLAUDE_PLUGIN
+        declared = {_CLAUDE_CODE.mcp_servers_key: {"cdd": server}}
+        hooks = {"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": self._start_command, "timeout": SERVER_START_SECONDS}]}]}}
+        version = f"1.0.0-{hashlib.sha256(json.dumps([declared, hooks], sort_keys=True).encode('utf-8')).hexdigest()[:12]}"
         files = {
-            plugin / ".claude-plugin" / "plugin.json": {"name": CLAUDE_PLUGIN, "version": "1.0.0", "description": CLAUDE_PLUGIN_DESCRIPTION},
-            plugin / ".mcp.json": {_CLAUDE_CODE.mcp_servers_key: {"cdd": server}},
+            plugin / ".claude-plugin" / "plugin.json": {"name": CLAUDE_PLUGIN, "version": version, "description": CLAUDE_PLUGIN_DESCRIPTION},
+            plugin / ".mcp.json": declared,
+            plugin / "hooks" / "hooks.json": hooks,
         }
         for path, content in files.items():
             JsonFile(path).write(content)
@@ -255,6 +269,14 @@ class CddHome:
         url = self._git(source, source_git, "remote", "get-url", "origin")
         has_origin = self._pinned.succeeds("remote", "get-url", "origin")
         self._git(source, self._pinned, "remote", "set-url" if has_origin else "add", "origin", url)
+
+    def serve_current(self, checkout: Path | str) -> None:
+        """Serve ``checkout``'s current code the way the server already serves it: as it is on disk for a person working
+        on CDD itself, who chose that, else pinned to its current commit."""
+        if self.is_installed and self.mode == self.CHECKOUT:
+            self.serve_from(checkout)
+            return
+        self.pin(checkout)
 
     def serve_from(self, checkout: Path | str) -> None:
         """Run the server on ``checkout`` as it is on disk, so a ``cdd.restart`` picks up its edits."""

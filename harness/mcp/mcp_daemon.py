@@ -1,8 +1,6 @@
 """The one cdd server process: started on demand, found through ``~/.cdd/server.json``, answering every chat over HTTP."""
 from __future__ import annotations
 
-import http.client
-import json
 import os
 import socket
 import sys
@@ -11,23 +9,14 @@ import time
 from pathlib import Path
 
 from harness.mcp.cdd_home import CddHome
-from harness.process.process import BackgroundStart, ExclusivePort, RunningProcess, StoppableProcess
+from harness.mcp.mcp_address import McpAddress
+from harness.process.process import BackgroundStart, ExclusivePort, ListeningPorts, RunningProcess, StoppableProcess
 
-SERVER_PORT_ENV = "CDD_SERVER_PORT"
 # The process a throwaway server belongs to, such as the spec run that started it on a port of its own. The server ends
 # when that process does, so a run that is killed or hangs leaves no server behind; the person's own server names none.
 SERVER_OWNER_ENV = "CDD_SERVER_OWNER"
 # How often a throwaway server checks that the process it belongs to still runs.
 OWNER_CHECK_SECONDS = 2
-DEFAULT_SERVER_PORT = 47800
-PROJECT_HEADER = "X-CDD-Project"
-# The Claude Code chat a request comes from, so the server can follow that chat into whatever folder it works in now.
-CHAT_HEADER = "X-CDD-Chat"
-# The Claude Code process a request comes from. Its session file names the folder the session works in now, which stays
-# right after the desktop app moves a chat out of the spare folder it started in.
-CHAT_PROCESS_HEADER = "X-CDD-Chat-Process"
-PING_PATH = "/ping"
-MCP_PATH = "/mcp"
 _PING_SECONDS = 2
 _START_SECONDS = 60
 _STOP_SECONDS = 10
@@ -62,30 +51,24 @@ class McpDaemon:
 
     Holding the port exclusively is the claim: two servers cannot both hold it, so a second start exits quietly."""
 
-    HOST = "127.0.0.1"
-
-    def __init__(self, home: CddHome, port: int | None = None) -> None:
+    def __init__(self, home: CddHome, port: int | None = None, listening: ListeningPorts | None = None) -> None:
         self.home = home
-        self.port = port or int(os.environ.get(SERVER_PORT_ENV) or DEFAULT_SERVER_PORT)
+        self.address = McpAddress(port)
+        self._listening = listening or ListeningPorts()
+
+    @property
+    def port(self) -> int:
+        return self.address.port
 
     @property
     def url(self) -> str:
-        return f"http://{self.HOST}:{self.port}{MCP_PATH}"
+        return self.address.url
 
     def ping(self) -> RunningServer | None:
         """Ask the running server about itself over HTTP: the server it describes, or ``None`` when nothing answers on
         the port."""
-        connection = http.client.HTTPConnection(self.HOST, self.port)
-        try:
-            connection.sock = ExclusivePort(self.HOST, self.port).connect(_PING_SECONDS)
-            connection.request("GET", PING_PATH)
-            reply = connection.getresponse()
-            answer = json.loads(reply.read().decode("utf-8")) if reply.status == 200 else None
-        except (OSError, http.client.HTTPException, json.JSONDecodeError):
-            return None
-        finally:
-            connection.close()
-        return RunningServer(answer) if isinstance(answer, dict) and answer.get("ok") else None
+        answer = self.address.ping_answer(_PING_SECONDS)
+        return RunningServer(answer) if answer is not None else None
 
     def is_running(self) -> bool:
         return self.ping() is not None
@@ -104,9 +87,13 @@ class McpDaemon:
         return self.ensure()
 
     def stop(self) -> None:
+        """Stop the server on the port. One that holds the port but does not answer, such as a deadlocked one, is found
+        by the port it listens on and stopped too: left running, it would keep every new server from claiming the
+        port."""
         running = self.ping()
-        if running is not None:
-            running.process.stop(_STOP_SECONDS)
+        process = running.process if running is not None else self._listening.holder(self.port)
+        if process is not None:
+            process.stop(_STOP_SECONDS)
 
     def ensure_from(self, checkout: Path) -> str:
         """Install ``~/.cdd/`` from checkout on first use and start the server when none answers. A server already
@@ -118,6 +105,13 @@ class McpDaemon:
         """Serve checkout's current commit from ``~/.cdd/runtime``, restarting the server onto it."""
         self.home.install(checkout, CONNECT_SCRIPT)
         self.home.pin(checkout)
+        return self._status(self.restart())
+
+    def update_from(self, checkout: Path) -> str:
+        """Serve checkout's current code the way the server already serves it, pinned or as it is on disk, restarting
+        the server onto it."""
+        self.home.install(checkout, CONNECT_SCRIPT)
+        self.home.serve_current(checkout)
         return self._status(self.restart())
 
     def serve_checkout(self, checkout: Path) -> str:
@@ -147,7 +141,7 @@ class McpDaemon:
 
     def claim_port(self) -> socket.socket | None:
         """A listening socket on the server port, or ``None`` when another server already holds it."""
-        return ExclusivePort(self.HOST, self.port).claim()
+        return ExclusivePort(self.address.HOST, self.port).claim()
 
     def publish(self, source: Path) -> None:
         """Write the address and pid for tools that look for the server without calling it."""

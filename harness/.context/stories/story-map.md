@@ -668,9 +668,17 @@ Observed: Reconnect retries `cdd` up to three times (`RECONNECT_TRIES`), then re
 
 Observed: Run install runs the installer and says installing, installed (open a new session) or failed; Details shows the tool, error, server and fix.
 
+### (S) Chat Bar --> Display CDD Version Badge
+
+Observed (requested 2026-11-14, "a small button with v.<major.minor> ... green current version; yellow behind minor; red behind major"): as the chat opens, `cdd-version.check` (`CddVersion.check`, `harness/diagnostics/cdd_version.py`) fetches origin main and answers the version the cdd server runs, read as major and minor from `pyproject.toml`, the version on origin main, and how the two stand; the badge at the end of the line shows `v0.1` green when current, yellow a minor version behind, red a major version behind, grey when origin main was never fetched, with the summary on hover (`health/cdd-version-view.tsx`). Specs: `harness/diagnostics/cdd_version_spec.py`.
+
+### (S) Person --> Set Next CDD Version
+
+Observed (requested 2026-11-14, "/version --> enters the next version to repo config e.g. push", "dont version automatically"): `/version` (`cdd-version.set_next`, `CddVersion.set_next`) writes the next version into the `version` of the repository's `pyproject.toml`: the version given, such as `0.2` or `1.0.1`, or with none given the next minor version; text that is not a version is refused (*VersionNotValid*). Nothing raises the version by itself, so a person runs it when a change is a release, before pushing to main; the version badge in other chats turns yellow or red once that push reaches origin main. Specs: `harness/diagnostics/cdd_version_spec.py`.
+
 ### (S) Person --> Update CDD From Chat Bar
 
-Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "checkout latest and build"), and Requested on 2026-11-06 as the CDD Kanban does: get the latest commit, rebuild the board, pin the cdd server to that commit, and restart the board.
+Observed (requested 2026-11-14, "click opens dialog update and reinstall? use above script if yes"): pressing the version badge asks to update and reinstall; Update and reinstall runs `/harness:installation:install-latest` in the chat (`updateToLatest`, `health/cdd-version-client.ts`), so the chat lists its seven steps and ticks each off as it finishes: pull origin main, stop every app and the hook server, restart the cdd server, install every toolset, ping the server; once the command's turn ends the badge reads the version again; hovering the badge says updating…, up to date, or update failed, and a failure shows why on the failure line. The agent does the same with `/install-latest` (`Installer.install_latest`), which ticks off each step as `scripts/install.py` reports it.
 
 ### (S) Person --> [Open App From Health Panel](../../chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/open-app-from-health-panel/open_app_from_health_panel_story.test.ts)
 
@@ -740,9 +748,13 @@ Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add fe
 
 Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add feature to backlog button and buttons for common repo actions eg push, pull, commit"): a Commit button commits the active session's changes (`Repo.commit` in `space/repo/repo.py`).
 
-### (S) Person --> Push Work From Chat Bar
+### (S) Person --> [Push Work From Chat Bar](../../../space/repo/session_to_main_spec.py)
 
-Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add feature to backlog button and buttons for common repo actions eg push, pull, commit"): a Push button pushes the active session's branch (`repo.push_commit`).
+Observed (2026-11-14): the ⤴ icon, first of the session buttons, calls `repo.push_work` (`Repo.push_work`) for the folder the chat works in: the checkout commits its work on its branch and pushes the branch; nothing is merged. Was Requested (2026-11-10): a Push button pushes the active session's branch.
+
+### (S) Person --> [Push Session To Main From Chat Bar](../../../space/repo/session_to_main_heavy_spec.py)
+
+Observed (2026-11-14): the ⇪ icon after ⤴, "push & merge to origin/main", asks "Push <session> and merge it to origin/main?", and yes calls `repo.push_to_main` (`Repo.push_to_main`) for the folder the chat works in, whichever repository holds it: the checkout commits its work on its branch and pushes the branch, the main clone merges that branch into the repository's default branch (`Branch.merge_into_default`; `Repo.default_branch` is the branch origin's HEAD names, else main or master), pushes it, and goes back to the branch it had. On main itself it commits and pushes main. The version is not raised; `/version` does that when the person chooses. `repo.merge_to_main` does the same without pushing, for an agent; the chat bar has no button for it (2026-11-14: "we only need the other button").
 
 ### (S) Person --> Pull Latest From Chat Bar
 

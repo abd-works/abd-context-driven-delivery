@@ -323,7 +323,15 @@ class Sessions:
         ticket = self._ticket_of_worktree()
         if ticket is not None:
             return ticket.name
-        return self.open_state(chat).session or MAIN_SESSION_NAME
+        chosen = self.open_state(chat).session
+        # Another chat may have closed the chosen session since. Working on it would write its folder back among the
+        # open sessions, where the board lists it again, so a chat whose session was closed works on main.
+        if not chosen or self._is_closed_since(chosen):
+            return MAIN_SESSION_NAME
+        return chosen
+
+    def _is_closed_since(self, name: str) -> bool:
+        return not self.folder_of(name).is_dir() and (self.folder / COMPLETE_FOLDER / name).is_dir()
 
     @property
     def open_name(self) -> str:

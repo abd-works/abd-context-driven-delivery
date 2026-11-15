@@ -18,6 +18,7 @@ from harness.installation.data_class import data_field, identity, language_adapt
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.mcp.mcp_annotations import mcp
 from harness.agent_tools.chat_pointer import ChatPointer
+from harness.agent_tools.tool_call import ToolCall
 
 # The mod checks in every second, so a chat silent for this long has gone.
 CHAT_GONE_SECONDS = 5
@@ -111,6 +112,20 @@ def _chats_folder() -> Path:
     return Path(os.environ.get("CDD_CHATS_FOLDER") or Path.home() / ".claude" / "cdd-chats")
 
 
+def _join_opener_section() -> str:
+    """What a new chat is told so it lands beside the chat that opened it: the app knows that chat by its title and
+    folder, not by the transcript id cdd has, so the new chat finds it by those. Empty when no titled chat asked."""
+    call = ToolCall.answering()
+    opener = Chat.load(call.chat_id) if call is not None and call.chat_id else None
+    if opener is None or not opener.title:
+        return ""
+    return (
+        f'This chat was opened from the chat titled "{opener.title}" in {opener.folder}. When list_sessions shows that '
+        'chat filed under a sidebar section, move this chat into the same section with move_sessions and session "self"; '
+        "otherwise leave it where the app put it."
+    )
+
+
 class ChatLinks:
     """Opens a new chat in the Claude app by handing its link to the system, which passes it to the app registered for
     its scheme. A page in the app's Browser pane cannot, so the board opens a ticket's chat through the cdd server."""
@@ -122,7 +137,9 @@ class ChatLinks:
         return link
 
     def link_to_new(self, folder: str, prompt: str) -> str:
-        """The link that opens a new chat on folder with prompt filled in."""
+        """The link that opens a new chat on folder with prompt filled in. The app files a new chat under its
+        repository's name; when a chat asked for it, the prompt also has the new chat join that chat's sidebar section."""
+        prompt = " ".join(part for part in (prompt, _join_opener_section()) if part)
         return f"{NEW_CHAT_LINK}?folder={quote(folder, safe='')}&q={quote(prompt, safe='')}"
 
     def hand_over(self, link: str) -> None:
@@ -297,6 +314,11 @@ class Chat:
         """The chat goes by the title the app shows for it, and by the name its mod sent until the app has given it one."""
         state = self._state
         return state.get("title") or state.get("name", "")
+
+    @property
+    def title(self) -> str:
+        """The title the app shows for the chat in its sidebar; empty until the app has given it one."""
+        return self._state.get("title", "")
 
     @property
     @data_field

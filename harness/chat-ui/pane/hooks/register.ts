@@ -4,7 +4,7 @@ import { checkIn } from './board-chat/board-chat-client'
 import { isCheckInDue, turnCompleted, turnStarted } from './board-chat/chat-turns'
 import { readName } from './board-chat/chat-name'
 import { openedBoard } from './board-chat/board-server'
-import { currentChatBar, refreshChatBar } from './chat-bar/chat-bar-client'
+import { currentChatBar, readChatBarUntilAnswered, refreshChatBar } from './chat-bar/chat-bar-client'
 import { ChatBarView } from './chat-bar/chat-bar-view'
 import { clearBusy, currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
@@ -28,6 +28,10 @@ import {
   runInstall,
 } from './health/server-health-client'
 import { ServerHealthBandView, ServerHealthPanelView } from './health/server-health-view'
+import { askToUpdate, cancelUpdate, checkVersionSoon, currentCddVersion, readVersionAfterTurn, updateToLatest } from './health/cdd-version-client'
+import { UpdateDialogView, VersionBadgeView } from './health/cdd-version-view'
+import { askToPush, cancelPush, currentRepo, pushToMain, pushWork } from './repo/repo-client'
+import { PushButtonsView, PushDialogView } from './repo/repo-view'
 import { currentAppOpening, openAppBesideChat } from './health/app-client'
 import { FOLDER_QUERY, PROJECT_QUERY, projectPageUrl } from './board-chat/board'
 import { CARD_SCOPE } from './chat-bar/session-card-view'
@@ -67,13 +71,16 @@ async function readActive($: EngineInterface): Promise<void> {
 async function readBoardAfterStart($: EngineInterface): Promise<void> {
   await readName($).catch(shownAsFailure($, 'The chat was not named', 'Starting the chat, reading its name'))
   await readActive($).catch(shownAsFailure($, 'The board did not load', 'Starting the chat, calling board.show'))
+  readChatBarUntilAnswered($, () => readActive($).catch(shownAsFailure($, 'The board did not load', 'Opening the chat while cdd connects, calling board.show')))
   refreshHealthSoon($)
+  checkVersionSoon($)
 }
 
 async function readBoardAfterTurn($: EngineInterface, isMainChat: boolean): Promise<void> {
   if (isMainChat) await turnCompleted($).catch(shownAsFailure($, 'The turn was not recorded as finished', 'Finishing a turn in the main chat'))
   await readName($).catch(shownAsFailure($, 'The chat was not named', 'Finishing a turn, reading the chat name'))
   await Promise.all([readActive($), refreshHealth($)]).catch(shownAsFailure($, 'The board did not load', 'Finishing a turn, calling board.show and reading the server health'))
+  await readVersionAfterTurn($).catch(shownAsFailure($, 'The CDD version was not read', 'Finishing a turn, calling cdd-version.read'))
 }
 
 async function readBoardAfterSubmit($: EngineInterface): Promise<void> {
@@ -176,6 +183,10 @@ export const register: Register = on => {
     }
     const band = { health: await currentServerHealth($), view: await currentHealthView($), install: await currentInstall($), opening: await currentAppOpening($), actions }
     const elements = $.ui.resolve(e)
+    const version = await currentCddVersion($)
+    const versionActions = { askToUpdate: () => askToUpdate($), cancelUpdate: () => cancelUpdate($), updateToLatest: () => updateToLatest($) }
+    const repo = await currentRepo($)
+    const pushActions = { pushWork: () => pushWork($), ask: () => askToPush($), cancel: () => cancelPush($), pushToMain: () => pushToMain($) }
     try {
     const chatBar = await currentChatBar($)
     return ChatBarView($, elements, {
@@ -188,7 +199,10 @@ export const register: Register = on => {
       isStagePickerOpen: await isStagePickerOpen($),
       busy: await currentBusy($),
       health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band) },
+      version: { label: version.label, badge: VersionBadgeView(elements, version, versionActions), dialog: UpdateDialogView(elements, version, versionActions) },
+      push: { buttons: PushButtonsView(elements, repo, pushActions), dialog: PushDialogView(elements, repo, chatBar.title || chatBar.sessionName, pushActions) },
       width: e.props.bodyColumns,
+      maxRows: e.props.maxRows,
     })
     } catch (failure) {
       // A draw that throws shows why, in red, instead of leaving no bar at all.
