@@ -70,8 +70,9 @@ export class FilesPage {
     window.addEventListener('error', onError)
     window.addEventListener('unhandledrejection', onRejection)
     void this.list()
-    void this.readPlace()
-    const stopFollowing = this.link.isSessionFolder ? () => undefined : this.guidance.follow()
+    // A link naming no session, such as the app's bare address, has nothing to ask cdd about: list() says so.
+    if (this.link.namesFiles) void this.readPlace()
+    const stopFollowing = this.link.isSessionFolder || !this.link.namesFiles ? () => undefined : this.guidance.follow()
     const reread = () => void this.refreshOpen()
     window.addEventListener('focus', reread)
     return () => {
