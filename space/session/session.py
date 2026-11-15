@@ -3,16 +3,18 @@
 from __future__ import annotations
 
 import threading
+from contextlib import contextmanager
 import time
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterator
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.agent_tools.agent_tools import noSessionLog, subAgent, tool_subject
 from harness.agent_tools.tool_call import ToolCall
 from harness.graph.graph import Graph
 from harness.graph.saved_graph import GRAPH_FILE_NAME, SavedGraph
+from harness.guidance.stages import STAGES
 from harness.graph.pattern_overlays import PatternOverlays
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.documents import load_document
@@ -30,6 +32,7 @@ from space.session.handoffs import HANDOFF_FORMAT_FILE, Handoffs
 from space.session.idea_file import IdeaFile
 from space.session.practice_session_output import PracticeSessionOutput
 from space.session.progress_cache import ProgressCache
+from space.session.guidance_selection import GUIDANCE_FIELD, GuidanceSelection
 from space.session.session_file import SessionFile
 from space.session.session_files import SessionFiles
 from space.session.session_log import HookLog, SessionLog
@@ -59,6 +62,11 @@ def _shown(value: object) -> str:
     text = str(value)
     return text if len(text) <= _SHOWN_CHARACTERS else f"{text[:_SHOWN_CHARACTERS]}…"
 
+
+# How long a page's waiting read of the guidance selection waits for a change before answering it unchanged, and how
+# often it looks.
+GUIDANCE_WAIT_SECONDS = 25
+GUIDANCE_CHECK_SECONDS = 0.05
 
 class SessionNotFoundError(LookupError):
     """A tool named a session.json that is not there, such as a session closed or moved since the board read it."""
@@ -121,6 +129,8 @@ class Session:
         # them into: reading one file into the graph takes a second or two, so a file is read again only once it changed.
         self._files_read: tuple[Graph | None, dict[Path, float]] = (None, {})
         self._graph_opened_at = 0.0
+        # While an update changes many practices and formats, each change leaves the version alone; the update raises it once.
+        self._is_guidance_batched = False
         # The small graph a viewer reads one file into, apart from the knowledge graph: the practices it was made with,
         # the graph, and the file it last read with that file's modification time.
         self._file_graph: tuple[list[str], Graph, tuple[Path, float] | None] | None = None
@@ -615,6 +625,67 @@ class Session:
     def write_file(self, path: str, text: str) -> FileText:
         """Save text as the whole of path, a file in this repository or under a folder this session's practices write to, named as read_file names it; the file as saved."""
         return self.session_files.write(path, text)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def guidance_selection(self) -> GuidanceSelection:
+        """Return the session's guidance selection: each stage and practice selected or not, the formats the selected stages' fidelities of the selected practices offer, each selected or not, those fidelities by slug, and the version every change raises. The chat bar's stage buttons, practice dots and format chips and the Files app's toggles all show it."""
+        return GuidanceSelection(self)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def update_guidance_selection(self, stages: list[str] | None = None, practices: list[str] | None = None, formats: list[str] | None = None) -> GuidanceSelection:
+        """Select exactly these stages (such as discovery), practices (such as stories), and format groups (such as markdown), each list in place of what was selected, a list left out unchanged; save it in session.json, raise the version once, and return the selection. A practice selected is one the session works on; a format group selected is chosen for every selected fidelity offering it."""
+        with self._guidance_batch():
+            if practices is not None:
+                for output in self.own_practices.values():
+                    if output.enabled != (output.name in practices):
+                        output.enable(output.name in practices)
+            if stages is not None:
+                self._save_guidance(stages=[stage for stage in STAGES.names if stage in stages])
+            if formats is not None:
+                for group in GuidanceSelection(self).formats:
+                    if group.is_selected != (group.label in formats):
+                        group.select(group.label in formats)
+        self.guidance_changed()
+        return GuidanceSelection(self)
+
+    @long_call
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def guidance_selection_after(self, version: int) -> GuidanceSelection:
+        """Return the session's guidance selection once its version is past version: at once when it already is, else as soon as a change raises it, else after GUIDANCE_WAIT_SECONDS with it unchanged. A page holds one such call open, so a selection made anywhere reaches it in a fraction of a second."""
+        deadline = time.monotonic() + GUIDANCE_WAIT_SECONDS
+        while self._guidance_version_on_disk() <= version and time.monotonic() < deadline:
+            time.sleep(GUIDANCE_CHECK_SECONDS)
+        self._fields.drop()
+        return GuidanceSelection(self)
+
+    def guidance_changed(self) -> None:
+        """Raise the guidance selection's version, so every page waiting on it hears the change; once for a whole
+        update, however many practices and formats it changed."""
+        if self._is_guidance_batched:
+            return
+        self._save_guidance(version=self._guidance_version_on_disk() + 1)
+
+    def _save_guidance(self, **values: object) -> None:
+        self.save_fields(**{GUIDANCE_FIELD: {**dict(self.fields.get(GUIDANCE_FIELD, {})), **values}})
+
+    def _guidance_version_on_disk(self) -> int:
+        """The version as session.json holds it now, read past this answer's reads: another call raises it."""
+        held = self._session_json
+        return int(dict(held.read().get(GUIDANCE_FIELD, {})).get("version", 0)) if held is not None else 0
+
+    @contextmanager
+    def _guidance_batch(self) -> Iterator[None]:
+        self._is_guidance_batched = True
+        try:
+            yield
+        finally:
+            self._is_guidance_batched = False
 
     @long_call
     @mcp

@@ -133,8 +133,9 @@ class PracticeSessionOutput:
     @agent_tool
     @noSessionLog
     def enable(self, is_enabled: bool) -> PracticeSessionOutput:
-        """Turn this practice on or off for its session, saved in its session.json."""
+        """Turn this practice on or off for its session, saved in its session.json; its guidance selection changes."""
         self.save(enabled=is_enabled)
+        self._session.guidance_changed()
         return self
 
     @property
@@ -293,6 +294,7 @@ class FidelitySessionOutput:
         others = [each for each in self.chosen_formats if each != named]
         chosen = self.chosen_formats if is_chosen and named in self.chosen_formats else others + ([named] if is_chosen else [])
         self._practice.save(formats={**self._practice.saved.get("formats", {}), self._fidelity.name: chosen})
+        self._session.guidance_changed()
         return self
 
     @property

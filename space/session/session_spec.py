@@ -1186,6 +1186,61 @@ with description("a session whose UX work has an information architecture, a pub
         expect(reviewed).not_to(contain("work/checkout/OrderView.tsx"))
 
 
+# The chat bar's stage buttons, practice dots, and format chips, and the Files app's toggles, are one selection the
+# session holds; every change raises its version, which a page waits on.
+with description("a session's guidance selection") as self:
+    with before.each:
+        self.home = ExampleHome()
+        self.repo = Path(tempfile.mkdtemp(prefix="session-guidance-")).resolve()
+        (self.repo / ".git").mkdir()
+        Sessions(self.repo).switch("alpha", self.repo / "work")
+        self.session = Sessions(self.repo).current()
+
+    with after.each:
+        shutil.rmtree(self.repo, ignore_errors=True)
+        self.home.close()
+
+    with context("that nothing has selected yet"):
+        with it("should have no stage chosen"):
+            expect(self.session.guidance_selection().is_stage_chosen).to(equal(False))
+
+        with it("should have every practice selected, as the session works on each until one is turned off"):
+            expect(all(practice.is_selected for practice in self.session.guidance_selection().practices)).to(equal(True))
+
+    with context("that has Discovery and Stories selected"):
+        with before.each:
+            self.selected = self.session.update_guidance_selection(stages=["discovery"], practices=["stories"])
+
+        with it("should cover Stories' Discovery fidelity alone"):
+            expect(self.selected.fidelities).to(equal(["stories-story-map"]))
+
+        with it("should turn every other practice off for the session"):
+            expect(self.session.practice("ddd").enabled).to(equal(False))
+
+        with it("should raise the version once"):
+            expect(self.selected.version).to(equal(1))
+
+        with it("should keep the stages for the next read"):
+            expect([stage.name for stage in Sessions(self.repo).current().guidance_selection().stages if stage.is_selected]).to(equal(["discovery"]))
+
+        with context("that has every stage turned off"):
+            with it("should cover no fidelity, the stages still chosen"):
+                selected = self.session.update_guidance_selection(stages=[])
+                expect([selected.fidelities, selected.is_stage_chosen]).to(equal([[], True]))
+
+    with context("that a page waits on at version 0"):
+        with it("should answer at once once the selection is past it"):
+            self.session.update_guidance_selection(stages=["discovery"])
+            expect(self.session.guidance_selection_after(0).version).to(equal(1))
+
+        with it("should answer as soon as another call changes the selection"):
+            changer = threading.Timer(0.01, lambda: Sessions(self.repo).current().update_guidance_selection(stages=["specification"]))
+            changer.start()
+            answered = self.session.guidance_selection_after(0)
+            changer.join()
+            expect([stage.name for stage in answered.stages if stage.is_selected]).to(equal(["specification"]))
+
+
 # (E) Open Work Session
 # (S) Session --> Switch Session
 with description("a session on an MCP host whose CDD_REPO is the CDD checkout, not the project"):
