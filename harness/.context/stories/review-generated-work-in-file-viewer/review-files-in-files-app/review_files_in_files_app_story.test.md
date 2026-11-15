@@ -178,6 +178,23 @@ Requested (the person, 2026-11-15): "keep folder the default view and not reset 
 *When* the Person opens *.context*
 *Then* *.context* shows *story-map.md*
 
+## Story: Resize File Bar
+
+Requested (the person, 2026-11-15): "can allow drag resize for folder pane in file viewer". Only the page shows it, so it has no step in the Python story tiers.
+
+#### Scenario: Drag the file bar wider
+
+*Given* the Files app shows its file bar at its usual width, 288 pixels
+*When* the Person drags the line between the file bar and the open file to 420 pixels
+*Then* the file bar is 420 pixels wide
+*And* the next Files page this browser opens shows it 420 pixels wide
+
+#### Scenario: Stop at the narrowest and widest widths
+
+*Given* the Files app shows its file bar
+*When* the Person drags the line to 20 pixels, then to 5000
+*Then* the file bar stops at 160 pixels, then at 900
+
 ## Story: List This Session Or All Session Files
 
 Requested (the person, 2026-11-15): two buttons. All session files lists every file under the session's root; This session lists the files the session's branch changed against main. The stages, practices and formats selected narrow both: a file shows in a format selected, and when it belongs to a fidelity of a stage and practice selected, or to no fidelity at all. So a person can list, for example, every drawio file, or only this session's markdown and code. The session answers each file with its format and the fidelities it belongs to; the page filters.

@@ -28,9 +28,14 @@ export type FilesState = {
   toasts: string[]
   // The file or folder a person right-clicked and where, whose menu shows there; none while no menu shows.
   menu: { path: string; x: number; y: number } | null
-  // The folders a person closed: every other folder is open, so a folder a filter change brings is open too.
-  fileBar: { isOpen: boolean; view: 'list' | 'folders'; closedFolders: string[] }
+  // The folders a person closed: every other folder is open, so a folder a filter change brings is open too. Its width
+  // is what the person dragged it to, in pixels.
+  fileBar: { isOpen: boolean; view: 'list' | 'folders'; closedFolders: string[]; width: number }
 }
+
+// How wide the file bar may be dragged, in pixels: narrow enough to give the open file the page, wide enough for deep
+// folders, and where it starts.
+export const FILE_BAR_WIDTH = { narrowest: 160, usual: 288, widest: 900 }
 
 export const NO_FILES: FilesState = {
   guidance: null,
@@ -46,7 +51,7 @@ export const NO_FILES: FilesState = {
   problem: '',
   toasts: [],
   menu: null,
-  fileBar: { isOpen: true, view: 'folders', closedFolders: [] },
+  fileBar: { isOpen: true, view: 'folders', closedFolders: [], width: FILE_BAR_WIDTH.usual },
 }
 
 // A change to the state, applied by the store that holds it.

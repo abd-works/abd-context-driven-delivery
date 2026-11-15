@@ -140,6 +140,27 @@ function FileFolderView({ page, folder, openPath }: { page: FilesPage; folder: F
   )
 }
 
+// The line between the file bar and the open file: dragged, it makes the bar as wide as the pointer is from the bar's
+// left edge. The divider keeps the pointer while dragging, so the drag goes on over the editor.
+function FileBarDividerView({ page }: { page: FilesPage }) {
+  const widthAt = (event: React.PointerEvent<HTMLDivElement>) => {
+    const bar = event.currentTarget.previousElementSibling
+    if (bar) page.fileBar.resize(event.clientX - bar.getBoundingClientRect().left)
+  }
+  return (
+    <div
+      className="file-bar-divider"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Drag to resize the file bar"
+      title="Drag to resize the file bar"
+      onPointerDown={event => event.currentTarget.setPointerCapture(event.pointerId)}
+      onPointerMove={event => (event.currentTarget.hasPointerCapture(event.pointerId) ? widthAt(event) : undefined)}
+      onPointerUp={event => event.currentTarget.releasePointerCapture(event.pointerId)}
+    />
+  )
+}
+
 // The file bar's buttons: collapse or expand it, and show its files as a list or in their folders.
 function FileBarButtonsView({ page }: { page: FilesPage }) {
   const { fileBar } = useFilesState(page)
@@ -363,11 +384,12 @@ export function FilesPageView({ page }: { page: FilesPage }) {
         <ThemeToggleView page={page} />
       </header>
       {problem ? <div className="files-problem" role="alert">{problem}</div> : null}
-      <div className={`files-body ${fileBar.isOpen ? '' : 'is-bar-collapsed'}`}>
+      <div className={`files-body ${fileBar.isOpen ? '' : 'is-bar-collapsed'}`} style={fileBar.isOpen ? { gridTemplateColumns: `${fileBar.width}px auto 1fr` } : undefined}>
         <nav className="files-side">
           <FileBarButtonsView page={page} />
           {fileBar.isOpen ? <FileListView page={page} /> : null}
         </nav>
+        {fileBar.isOpen ? <FileBarDividerView page={page} /> : null}
         <OpenFileView page={page} />
       </div>
       <FileMenuView page={page} />

@@ -954,6 +954,10 @@ Built (2026-11-14): the file bar collapses to its buttons and expands again, and
 
 What the file list shows follows the session's guidance selection and the chat bar's dots, so the same filter holds wherever the session is worked.
 
+
+### (S) Person --> [Resize File Bar](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-resize-file-bar)
+
+Built (2026-11-15): a line between the file bar and the open file drags the bar between 160 and 900 pixels wide, and this browser remembers the width (`file-bar.ts` `resize`).
 ### (S) Person --> [List Only The Files The Branch Changed](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-list-only-the-files-the-branch-changed)
 
 Built (2026-11-15): the file bar's Changed button, with its count, lists only the files the session's branch changed, a published design canvas kept (`file-bar.ts` `toggleChangedOnly`, `entries`). Requested (the person, 2026-11-15): "Yes, add it", to a changed-only filter for a session on the whole repository, where UX's mockup pattern lists about 150 files.

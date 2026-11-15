@@ -1,6 +1,6 @@
 import type { FileEntryData } from '@cdd/space/session/session'
 
-import type { FilesStore } from './files-state'
+import { FILE_BAR_WIDTH, type FilesStore } from './files-state'
 
 // The file bar's two ways of showing the files the page lists: one list, or the folder tree they are in.
 export type FileBarView = 'list' | 'folders'
@@ -54,6 +54,9 @@ const foldersAbove = (tree: FileFolder, path: string): string[] =>
 
 // The side bar of the Files app: collapsed to its buttons or expanded, showing the files as a list or in their folder
 // tree. What it shows is held in the page's store, so the view redraws with it; the files are the page's own.
+// Where this browser keeps the width the person last dragged the file bar to.
+const STORED_WIDTH = 'cdd-files-bar-width'
+
 export class FileBar {
   constructor(private readonly store: FilesStore) {}
 
@@ -88,6 +91,29 @@ export class FileBar {
       const above = view === 'folders' && openPath ? foldersAbove(this.tree, openPath) : []
       return { fileBar: { ...fileBar, view, closedFolders: fileBar.closedFolders.filter(path => !above.includes(path)) } }
     })
+  }
+
+  // The width the person dragged the bar to, kept between its narrowest and widest, and remembered in this browser so
+  // the next page opens at it.
+  resize(width: number): void {
+    const kept = Math.round(Math.min(FILE_BAR_WIDTH.widest, Math.max(FILE_BAR_WIDTH.narrowest, width)))
+    this.store.change(({ fileBar }) => ({ fileBar: { ...fileBar, width: kept } }))
+    try {
+      window.localStorage.setItem(STORED_WIDTH, String(kept))
+    } catch {
+      // A browser that keeps nothing, such as a private window, opens the next page at the usual width.
+    }
+  }
+
+  // The width this browser remembered, when it remembered one; the usual width otherwise.
+  restoreWidth(): void {
+    let stored = NaN
+    try {
+      stored = Number(window.localStorage.getItem(STORED_WIDTH) ?? NaN)
+    } catch {
+      return
+    }
+    if (Number.isFinite(stored)) this.resize(stored)
   }
 
   toggleFolder(path: string): void {

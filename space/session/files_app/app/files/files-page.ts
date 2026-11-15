@@ -73,6 +73,7 @@ export class FilesPage {
   // Read the files the link names and open the one it names, else the first; reading the open file again whenever the
   // person comes back to the page. Answers what stops it.
   start(): () => void {
+    this.fileBar.restoreWidth()
     const uncaught = (failure: unknown) => this.fail(`The Files page met a failure nothing caught: ${reasonOf(failure)}`, 'An uncaught failure in the Files page')
     const onError = (event: ErrorEvent) => uncaught(event.error ?? event.message)
     const onRejection = (event: PromiseRejectionEvent) => uncaught(event.reason)
