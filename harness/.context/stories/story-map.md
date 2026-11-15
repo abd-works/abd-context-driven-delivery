@@ -726,7 +726,7 @@ Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add fe
 
 ### (S) Person --> [Push Work From Chat Bar](../../../space/repo/session_to_main_spec.py)
 
-Observed (2026-11-14): the ⤴ icon after files calls `repo.push_work` (`Repo.push_work`) for the folder the chat works in: the checkout commits its work on its branch and pushes the branch; nothing is merged. Was Requested (2026-11-10): a Push button pushes the active session's branch.
+Observed (2026-11-14): the ⤴ icon, first of the session buttons, calls `repo.push_work` (`Repo.push_work`) for the folder the chat works in: the checkout commits its work on its branch and pushes the branch; nothing is merged. Was Requested (2026-11-10): a Push button pushes the active session's branch.
 
 ### (S) Person --> [Push Session To Main From Chat Bar](../../../space/repo/session_to_main_heavy_spec.py)
 
