@@ -25,9 +25,21 @@
   --space-md: 16px;
 }
 
+/* The dark engineering look, the page's default (files/files-theme.ts), with the Graph app's colours. */
+html[data-theme="engineering"] {
+  --bg: #0B0B0B;
+  --surface: #111113;
+  --raised: #1B1B20;
+  --border: #2A2A2A;
+  --text: #E8E8ED;
+  --muted: #9B9BA8;
+  --select: #60A5FA;
+  color-scheme: dark;
+}
+
 body { background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: var(--text-sm); }
 
-button { font: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-sm); padding: 2px var(--space-xs); }
+button { color: inherit; font: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-sm); padding: 2px var(--space-xs); }
 button:disabled { cursor: default; opacity: 0.5; }
 
 .files-page { display: flex; flex-direction: column; min-height: 100vh; }
@@ -89,3 +101,6 @@ button:disabled { cursor: default; opacity: 0.5; }
 
 .toasts { position: fixed; right: var(--space-md); bottom: var(--space-md); display: grid; gap: var(--space-xs); max-width: 28rem; }
 .toast { padding: var(--space-xs) var(--space-sm); background: var(--text); color: var(--surface); border-radius: var(--radius-sm); }
+
+.theme-toggle { align-self: center; color: var(--muted); }
+.comment-box textarea { background: var(--bg); color: var(--text); }

@@ -1,4 +1,4 @@
-import { Component, useEffect, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react'
+import { Component, useEffect, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react'
 
 import type { FileEntryData, SessionFileData } from '@cdd/space/session/session'
 
@@ -6,6 +6,7 @@ import type { FileFolder } from './file-bar'
 import { FileSourceView } from './file-source-view'
 import type { FilesPage } from './files-page'
 import { isDrawio } from './files-paths'
+import { applyTheme, storedTheme, type FilesTheme } from './files-theme'
 
 const fileNameOf = (path: string): string => path.split('/').at(-1) ?? path
 
@@ -159,6 +160,21 @@ function ToastsView({ page }: { page: FilesPage }) {
   )
 }
 
+// Dark engineering by default; a press turns the light look on or off.
+function ThemeToggleView() {
+  const [theme, setTheme] = useState<FilesTheme>(storedTheme)
+  const toggle = () => {
+    const next = theme === 'engineering' ? 'light' : 'engineering'
+    applyTheme(next)
+    setTheme(next)
+  }
+  return (
+    <button type="button" className="theme-toggle" aria-pressed={theme === 'light'} title={theme === 'engineering' ? 'Light look' : 'Dark engineering look'} onClick={toggle}>
+      {theme === 'engineering' ? '☀' : '◐'}
+    </button>
+  )
+}
+
 // The Files app's page: the files its link names down the side, the open one beside them, and what went wrong.
 export function FilesPageView({ page }: { page: FilesPage }) {
   const { problem, fileBar } = useFilesState(page)
@@ -169,6 +185,7 @@ export function FilesPageView({ page }: { page: FilesPage }) {
         <span className="files-kind">FILES</span>
         <span className="files-subject">{page.link.subject}</span>
         <PracticeTogglesView page={page} />
+        <ThemeToggleView />
       </header>
       {problem ? <div className="files-problem" role="alert">{problem}</div> : null}
       <div className={`files-body ${fileBar.isOpen ? '' : 'is-bar-collapsed'}`}>
