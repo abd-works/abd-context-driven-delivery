@@ -121,21 +121,19 @@ These are checked on what a test run leaves behind, the way `scripts/test.ps1` c
 |---|---|---|
 | `unit-example-within-100-ms` | spec file (`example_ms`) | Every unit example runs within 100 ms, its before-each and after-each included. Today: `-ExampleBudgetMs 100`, and an example over it fails its file. |
 | `unit-file-within-2-seconds` | spec file (`file_seconds`) | A unit spec file runs within 2 s. Today the slowest is about 1 s; the runner's 20 s (`$soloSeconds`) is only where it gives a file a batch of its own. |
-| `unit-tier-within-30-seconds` | the run (`run_seconds`) | The whole unit tier finishes in under 30 s of wall clock (today 29 s). Unit runs after every pass, and a slow unit tier stops being run. |
+| `unit-tier-within-25-seconds` | the run (`run_seconds`) | The whole unit tier finishes in under 25 s of wall clock (today 20 s on an idle machine). Unit runs after every pass, and a slow unit tier stops being run. |
 | `specs-run-in-parallel` | spec file | A spec can run beside any other: no fixed port, no shared temp folder, no shared `CDD_HOME`, no order between files. The runner splits files into `ProcessorCount - 2` parallel batches, longest first. |
 | `heavy-spec-owns-its-resources` | heavy spec file | A heavy spec makes its own throwaway resources (repo, server port, `CDD_HOME`), so heavy specs can run in parallel too. Today they run one file at a time. |
 | `expensive-fixture-built-once` | spec file | A read-only fixture that is slow to build, such as a parsed graph or a loaded practice, is built once per file and shared, not once per example. |
 | `no-wait-in-unit-test` | unit spec file | A unit test never sleeps or polls. Time, retries and timeouts come from a fake clock. |
-| `budget-never-raised` | runner settings | The 100 ms, 2 s and 30 s budgets are never raised to make a slow test pass. The slow test gets fast or moves tier. |
+| `budget-never-raised` | runner settings | The 100 ms, 2 s and 25 s budgets are never raised to make a slow test pass. The slow test gets fast or moves tier. |
 
-Measured on 2026-11-15, `scripts/test.ps1 -Suite unit` in this worktree on a 24-core machine:
-- **Whole run:** 29 s of wall clock, for 312 files and 5,340 examples.
-- **Parallel pass:** 9 batches, about 91 s of work in total. It ends with its slowest batch, `space/kanban`, at 18 s.
-- **Re-run alone:** 3 files went over budget in parallel and ran again alone, taking 6.7 s.
+Measured on 2026-11-15, `scripts/test.ps1 -Suite unit` in this worktree on a 24-core machine with nothing else running (an earlier run beside a game took 29 s):
+- **Whole run:** 20 s of wall clock, for 312 files and 5,340 examples.
+- **Parallel pass:** 7 batches. It ends with its slowest batch, `cdd_guidance/actions .. clean_engineering` (75 files), at 15.2 s. The two `space/kanban` batches take 14.2 s and 11.3 s.
+- **Re-run alone:** 2 files went over budget in parallel and ran again alone, taking 1.6 s.
 - **Per file:** the slowest file takes about 1 s (`.pycache/spec-seconds.json`), and 292 of the 312 take under 1 s.
 - **Over budget:** one file, `harness/mcp/mcp_daemon_spec.py`, has 2 examples at about 515 ms each, so the run fails. That spec arrived with the merge from main.
-
-The biggest saving is the slowest batch. Splitting `space/kanban` into more batches would bring the parallel pass down to about the next batch, 16 s.
 
 Guidance (process, not rules):
 - **Unit after every pass.** Run it after each change or pass. The run is fast enough that the next pass starts from known-good code.
@@ -226,6 +224,6 @@ Guidance: settle how each building block is tested when you choose its pattern; 
 1. **Order.** Decided: chosen by whether this crosses an architectural boundary for the first time (Flow A: real end to end first) or works on a known area (Flow B: unit tests first). See Guidance emphasis.
 2. **Moving rules.** Decided: the tier rules move here, and BDD `tier-by-speed` and Stories `story-tier-by-speed` are removed. Also decided: `one-assertion-per-test`, `layer-isolation` and `system-stubs-domain-real` move here as shared rules. BDD's process rules (`red-then-green`, `minimum-green`, `one-signature-at-a-time`) stay in BDD for now; moving them is in the backlog (`.sessions/_backlog/maybe-later.md`).
 3. **The `always_apply` setting.** Should it go in `tdd.md` front matter, or in the project's yaml so a project can turn it off?
-4. **Speed budgets.** Today the unit tier takes 29 s and its slowest file about 1 s. The proposed budgets are 30 s for the tier and 2 s per file. Should the tier aim lower, say 20 s, by splitting `space/kanban`? And should heavy specs run in parallel once `heavy-spec-owns-its-resources` holds?
+4. **Speed budgets.** Today, on an idle machine, the unit tier takes 20 s and its slowest file about 1 s. The proposed budgets are 25 s for the tier and 2 s per file. The run time depends on how busy the machine is, so should the tier budget be checked only on an idle run? And should heavy specs run in parallel once `heavy-spec-owns-its-resources` holds?
 5. **Overlay reading.** Teach the practice catalogue that a practice may decorate others (its `decorates:` list and `practices/` folder), and have `PatternOverlays` read stack patterns only? Or one overlay reader for both?
 6. **Agent BDD.** Agent BDD isn't decorated in this sketch. Should it be?
