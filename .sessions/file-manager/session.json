@@ -9,13 +9,12 @@
     "stages": [
       "discovery"
     ],
-    "version": 7
+    "version": 8
   },
   "practices": {
     "stories": {
       "formats": {
         "story_map": [
-          "markdown",
           "drawio"
         ]
       }
