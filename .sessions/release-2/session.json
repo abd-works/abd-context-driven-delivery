@@ -9,14 +9,16 @@
       "enabled": true,
       "formats": {
         "modules": [
-          "drawio"
+          "drawio",
+          "markdown"
         ],
         "code": [
           "python"
         ],
         "model": [
           "python",
-          "markdown"
+          "markdown",
+          "drawio"
         ]
       }
     },
@@ -82,6 +84,6 @@
       "discovery",
       "specification"
     ],
-    "version": 26
+    "version": 28
   }
 }
