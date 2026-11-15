@@ -18,10 +18,10 @@ const TOAST_MILLISECONDS = 8_000
 
 const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
 
-// The fidelities whose files the page lists: those the session's guidance selection covers, its stages selected by its
-// practices selected; before any stage was selected, the ones the link names.
+// The fidelities whose files the page lists: those the session's guidance selection lists, its stages selected by its
+// practices selected, none selected meaning every one; before any stage was selected, the ones the link names.
 export const listedBy = (selection: GuidanceSelectionData | null, linked: string[]): string[] =>
-  selection?.is_stage_chosen ? selection.fidelities : linked
+  selection?.is_stage_chosen ? selection.fidelities_listed : linked
 
 // The formats of the format groups selected, each once; none selected, every format shows.
 export const selectedFormatsOf = (selection: GuidanceSelectionData | null): string[] =>
@@ -34,13 +34,13 @@ export const filesShown = (byFidelity: FidelityFiles[], listed: string[], format
 }
 
 // The files under the session's root a page shows: in a format selected while any is, and belonging to a fidelity listed.
-// A file no fidelity declares, such as a practice's example, shows only while every practice is on, so narrowing to
-// Stories shows Stories' files alone.
+// A file no fidelity declares, such as a practice's example, belongs to no practice, so it shows only while no practice
+// is selected, which filters no practice; Stories selected shows Stories' files alone.
 export const rootFilesShown = (rootFiles: FileEntryData[], listed: string[], formats: string[], withUnclaimed: boolean): FileEntryData[] =>
   rootFiles.filter(entry => (!formats.length || formats.includes(entry.format)) && (entry.fidelities.length ? entry.fidelities.some(slug => listed.includes(slug)) : withUnclaimed))
 
-// Whether the selection leaves every practice on; with no selection read yet, nothing is narrowed.
-export const isEveryPracticeOn = (selection: GuidanceSelectionData | null): boolean => (selection?.practices ?? []).every(practice => practice.is_selected)
+// Whether no practice is selected, so no practice filters the files; with no selection read yet, none is.
+export const isNoPracticeSelected = (selection: GuidanceSelectionData | null): boolean => !(selection?.practices ?? []).some(practice => practice.is_selected)
 
 // Each file once, in the order its fidelities and formats send them.
 const eachOnce = (entries: FileEntryData[]): FileEntryData[] => entries.filter((entry, index) => entries.findIndex(other => other.path === entry.path) === index)
@@ -137,7 +137,7 @@ export class FilesPage {
     const formats = selectedFormatsOf(state.guidance)
     if (this.link.isSessionFolder) return filesShown(state.byFidelity, [''], formats)
     const listed = listedBy(state.guidance, this.link.fidelities)
-    return eachOnce([...filesShown(state.byFidelity, listed, formats), ...rootFilesShown(state.rootFiles ?? [], listed, formats, isEveryPracticeOn(state.guidance))])
+    return eachOnce([...filesShown(state.byFidelity, listed, formats), ...rootFilesShown(state.rootFiles ?? [], listed, formats, isNoPracticeSelected(state.guidance))])
   }
 
   // Every file under the session's root, read once as the page opens: what All session files lists, and This session

@@ -1227,10 +1227,25 @@ with description("a session's guidance selection") as self:
         with it("should keep the stages for the next read"):
             expect([stage.name for stage in Sessions(self.repo).current().guidance_selection().stages if stage.is_selected]).to(equal(["discovery"]))
 
+        with it("should list the files of Stories' Discovery fidelity alone"):
+            expect(self.selected.fidelities_listed).to(equal(["stories-story-map"]))
+
         with context("that has every stage turned off"):
+            with before.each:
+                self.selected = self.session.update_guidance_selection(stages=[])
+
             with it("should cover no fidelity, the stages still chosen"):
-                selected = self.session.update_guidance_selection(stages=[])
-                expect([selected.fidelities, selected.is_stage_chosen]).to(equal([[], True]))
+                expect([self.selected.fidelities, self.selected.is_stage_chosen]).to(equal([[], True]))
+
+            with it("should list the files of Stories' fidelities of every stage, as no stage filter"):
+                expect(self.selected.fidelities_listed).to(equal(["stories-story-map", "stories-scenarios", "stories-acceptance-tests"]))
+
+        with context("that has every practice turned off"):
+            with before.each:
+                self.selected = self.session.update_guidance_selection(practices=[])
+
+            with it("should list the files of every practice's Discovery fidelity, as no practice filter"):
+                expect(self.selected.fidelities_listed).to(equal(["stories-story-map", "ddd-bounded-context", "ux-ia", "clean-engineering-modules", "bdd-behavior"]))
 
     with context("that a page waits on at version 0"):
         with it("should answer at once once the selection is past it"):

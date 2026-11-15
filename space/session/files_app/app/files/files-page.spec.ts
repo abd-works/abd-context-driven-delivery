@@ -70,7 +70,15 @@ class FakeFilesServer implements CddApi {
         { label: 'diagram', formats: ['drawio'], offered: fidelities.length, is_selected: this.formats.includes('diagram') },
       ],
       fidelities,
+      fidelities_listed: this.listed(),
     } as GuidanceSelectionData
+  }
+
+  // A filter with nothing selected filters nothing: no stage lists every stage, no practice every practice.
+  private listed(): string[] {
+    const stages = this.stages?.length ? this.stages : Object.keys(FIDELITIES)
+    const practices = this.practices.length ? this.practices : PRACTICES.map(practice => practice.key)
+    return stages.flatMap(stage => practices.map(key => FIDELITIES[stage]![key]).filter((slug): slug is string => Boolean(slug)))
   }
 
   posted(ending: string): { path: string; body: Record<string, unknown> }[] {
@@ -82,11 +90,12 @@ function entry(path: string) {
   return { path, exists: true, is_changed: false, link: '', format: '', fidelities: [] } as never
 }
 
-// The files under the session's root, as ticket.root_files answers them: the story map, a scenario of Specification, and
-// two files no fidelity declares, the branch having changed only order.py.
+// The files under the session's root, as ticket.root_files answers them: two of the story map, a scenario of
+// Specification, and two files no fidelity declares, the branch having changed story-flow.md and order.py.
 const rootFile = (path: string, format: string, fidelities: string[], is_changed = false) => ({ path, exists: true, is_changed, link: '', format, fidelities })
 const ROOT_FILES = [
   rootFile('.context/stories-story-map.md', 'markdown', ['stories-story-map']),
+  rootFile('.context/story-flow.md', 'markdown', ['stories-story-map'], true),
   rootFile('specs/checkout.md', 'markdown', ['stories-scenarios']),
   rootFile('notes/plain.txt', '', []),
   rootFile('src/order.py', 'python', [], true),
@@ -167,12 +176,12 @@ describe('Select Guidance In Files App', () => {
     })
 
     describe('that has every stage turned off', () => {
-      it('should list no file', async () => {
+      it('should list the files of every stage, as no stage filter', async () => {
         const { page, stop } = await following(discovery())
         await page.toggleStage('discovery')
         await settled()
         stop()
-        expect(paths(page)).toEqual([])
+        expect(paths(page)).toEqual(['.context/stories-story-map.md', '.context/stories-story-map.drawio', '.context/ddd-bounded-context.md', '.context/ddd-bounded-context.drawio', '.context/stories-scenarios.md', '.context/stories-scenarios.drawio'])
       })
     })
 
@@ -249,10 +258,10 @@ describe('Review All Session Files Or This Session', () => {
   }
 
   describe('that has All session files pressed', () => {
-    it('should list every file under the root of the stages selected, and of no fidelity while every practice is on', async () => {
+    it('should list every file under the root of the stages and practices selected', async () => {
       const page = await discovery()
       page.showScope('all')
-      expect(page.fileBar.entries.map(each => each.path)).toEqual(expect.arrayContaining(['.context/stories-story-map.md', 'notes/plain.txt', 'src/order.py']))
+      expect(page.fileBar.entries.map(each => each.path)).toEqual(expect.arrayContaining(['.context/stories-story-map.md', '.context/story-flow.md']))
     })
 
     it('should leave out a file of a stage not selected', async () => {
@@ -261,25 +270,31 @@ describe('Review All Session Files Or This Session', () => {
       expect(page.fileBar.entries.map(each => each.path)).not.toContain('specs/checkout.md')
     })
 
-    describe('with a practice turned off', () => {
-      it('should leave out a file of no fidelity', async () => {
-        const page = await discovery([], ['stories'])
+    it('should leave out a file of no fidelity while a practice is selected', async () => {
+      const page = await discovery()
+      page.showScope('all')
+      expect(page.fileBar.entries.map(each => each.path)).not.toContain('notes/plain.txt')
+    })
+
+    describe('with no practice selected', () => {
+      it('should list the files of every practice and of no fidelity', async () => {
+        const page = await discovery([], [])
         page.showScope('all')
-        expect(page.fileBar.entries.map(each => each.path)).not.toContain('notes/plain.txt')
+        expect(page.fileBar.entries.map(each => each.path)).toEqual(expect.arrayContaining(['.context/stories-story-map.md', '.context/ddd-bounded-context.md', 'notes/plain.txt', 'src/order.py']))
       })
     })
 
     it('should list only the files in the formats selected', async () => {
       const page = await discovery(['markdown'])
       page.showScope('all')
-      expect(page.fileBar.entries.map(each => each.path)).toEqual(['.context/stories-story-map.md', '.context/ddd-bounded-context.md'])
+      expect(page.fileBar.entries.map(each => each.path)).toEqual(['.context/stories-story-map.md', '.context/ddd-bounded-context.md', '.context/story-flow.md'])
     })
   })
 
   describe('that lists This session, its default', () => {
     it('should list only the files the branch changed', async () => {
       const page = await discovery()
-      expect(page.fileBar.entries.map(each => each.path)).toEqual(['src/order.py'])
+      expect(page.fileBar.entries.map(each => each.path)).toEqual(['.context/story-flow.md'])
     })
   })
 })
