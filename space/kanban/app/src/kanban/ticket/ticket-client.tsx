@@ -177,10 +177,12 @@ export class TicketClient extends TicketClientGenerated {
     return this.dropTargets.includes(edge)
   }
 
+  // Complete closes it: an open ticket through its Close dialog, which asks what to do with its work, and one not opened,
+  // which has no worktree or chat to wind up, at once.
   async dropOn(edge: string): Promise<void> {
     if (this.page.board.columnNamed(edge)?.isBacklog) await this.moveTo(edge, false)
     else if (this.isOpen) await this.page.activation.startClosing(this)
-    else await this.moveNext()
+    else await this.close()
   }
 
   // Python names the tickets another can be dropped on to become their child.

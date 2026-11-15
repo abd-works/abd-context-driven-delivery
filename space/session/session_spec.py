@@ -1286,6 +1286,17 @@ with description("a session read for a board") as self:
         with it("should write its handoffs into that folder"):
             expect(Path(self.beta.write_handoff("moved")).parent).to(equal(self.beta.session_path))
 
+        # A cache written for it before the move, or a folder Windows would not let go of, can leave its old folder behind.
+        with context("with its old folder left among the open sessions"):
+            with before.each:
+                left = self.repo / ".sessions" / "beta"
+                left.mkdir()
+                (left / "progress-cache.json").write_text("{}", encoding="utf-8")
+
+            with it("should be listed once, among the closed sessions"):
+                listed = [session.session_path for session in Sessions(self.repo).all() if session.name == "beta"]
+                expect(listed).to(equal([self.repo.resolve() / ".sessions" / "_complete" / "beta"]))
+
     with context("that its sessions loaded"):
         with before.each:
             self.sessions = Sessions(self.repo)

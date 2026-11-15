@@ -86,8 +86,9 @@ with description("the board tools") as self:
             with it("should let the open ticket be dropped on the Backlog and on Complete"):
                 expect(self.project.ticket_json("sign-up")["drop_targets"]).to(equal(["Backlog", "Complete"]))
 
-            with it("should let a ticket not opened be dropped only on the Backlog"):
-                expect(self.project.ticket_json("pet-visits")["drop_targets"]).to(equal(["Backlog"]))
+            # A ticket not opened has no worktree or chat to wind up, so dropping it on Complete closes it at once.
+            with it("should let a ticket not opened be dropped on the Backlog and on Complete"):
+                expect(self.project.ticket_json("pet-visits")["drop_targets"]).to(equal(["Backlog", "Complete"]))
 
             # The board offers Close on an open ticket's card even while no chosen chat works on it.
             with it("should say the ticket is open"):
