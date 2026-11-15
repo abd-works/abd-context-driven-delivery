@@ -466,9 +466,13 @@ it('should select every node, connector, and rule for the practice', async () =>
   expect(options('filter-node')).toEqual(['Module', 'OoadClass', 'Operation']);
   expect(chosen('filter-connector')).toEqual(['contains', 'owns', 'invokes']);
   expect(options('filter-connector')).toEqual(['contains', 'owns', 'invokes']);
+  // conforms-to-schema is the framework's rule, so every node type has it beside its practice's own rules.
   expect(chosen('filter-rule')).toEqual([
+    'clean_engineering.Module.conforms-to-schema',
     'clean_engineering.Module.module-rule',
     'clean_engineering.OoadClass.class-rule',
+    'clean_engineering.OoadClass.conforms-to-schema',
+    'clean_engineering.Operation.conforms-to-schema',
     'clean_engineering.Operation.limit-operation-parameters',
   ]);
 });
@@ -486,7 +490,12 @@ it('should keep the first practice filters when another practice is added', asyn
   await waitFor(() => expect(chosen('filter-node')).toEqual(['Epic', 'Module']));
   expect(options('filter-node')).toEqual(['Epic', 'Module', 'OoadClass', 'Operation']);
   expect(chosen('filter-connector')).toEqual(['tells', 'contains']);
-  expect(chosen('filter-rule')).toEqual(['clean_engineering.Module.module-rule', 'stories.Epic.verb-noun']);
+  expect(chosen('filter-rule')).toEqual([
+    'clean_engineering.Module.conforms-to-schema',
+    'clean_engineering.Module.module-rule',
+    'stories.Epic.conforms-to-schema',
+    'stories.Epic.verb-noun',
+  ]);
   const asked = calls.filter((call) => call.operation === 'filter_choices').at(-1);
   expect(asked?.body).toMatchObject({ node_types: ['Module'], practices_before: ['clean_engineering'] });
 });
@@ -579,9 +588,18 @@ it('should list rules as practice, node, then rule', async () => {
   const user = userEvent.setup();
   await openFolder(user);
   expect(options('filter-rule')).toEqual([
+    'clean_engineering.Module.conforms-to-schema',
     'clean_engineering.Module.module-rule',
     'clean_engineering.OoadClass.class-rule',
+    'clean_engineering.OoadClass.conforms-to-schema',
+    'clean_engineering.Operation.conforms-to-schema',
     'clean_engineering.Operation.limit-operation-parameters',
+    'ddd.Aggregate.conforms-to-schema',
+    'ddd.BoundedContext.conforms-to-schema',
+    'ddd.EntityRoot.conforms-to-schema',
+    'ddd.Repository.conforms-to-schema',
+    'ddd.ValueObject.conforms-to-schema',
+    'stories.Epic.conforms-to-schema',
     'stories.Epic.verb-noun',
   ]);
 });
