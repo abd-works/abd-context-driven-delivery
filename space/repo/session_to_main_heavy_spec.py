@@ -43,7 +43,6 @@ def _files_on(root: Path, ref: str) -> list[str]:
 
 
 # (E) Steer Sessions
-# (S) Person --> Merge Session To Main From Chat Bar
 # (S) Person --> Push Session To Main From Chat Bar
 with description("a session's work taken to main") as self:
     with before.each:

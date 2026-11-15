@@ -35,7 +35,7 @@ export type ChatBarDraw = {
   busy: { doing: string; wheel: string }
   health: { band: unknown; panel: unknown }
   version: { badge: unknown; dialog: unknown }
-  toMain: { buttons: unknown; dialog: unknown }
+  push: { button: unknown; dialog: unknown }
   width: number
 }
 
@@ -242,7 +242,7 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
         <Box flexGrow={1} />
         {SessionNameView($, elements, draw)}
         {SessionButtonsView($, elements, draw)}
-        {chatBar.isClone ? draw.toMain.buttons : null}
+        {chatBar.isClone ? draw.push.button : null}
         {draw.version.badge}
     </Box>
   )
@@ -269,7 +269,7 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
       {FailureView($, elements, draw.failure)}
       {draw.busy.doing ? <Text key="busy" color={BRAND.accent}>{`${draw.busy.wheel} ${draw.busy.doing}…`}</Text> : null}
       {draw.version.dialog}
-      {draw.toMain.dialog}
+      {draw.push.dialog}
       {CloseView($, elements, draw)}
       {SessionListView($, elements, draw)}
       {RepoListView($, elements, draw)}

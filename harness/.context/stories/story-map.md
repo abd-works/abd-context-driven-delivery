@@ -728,13 +728,9 @@ Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add fe
 
 Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add feature to backlog button and buttons for common repo actions eg push, pull, commit"): a Push button pushes the active session's branch (`repo.push_commit`).
 
-### (S) Person --> [Merge Session To Main From Chat Bar](../../../space/repo/session_to_main_heavy_spec.py)
-
-Observed (2026-11-14): the ⤵ icon asks "Merge <session> into main?", and yes calls `repo.merge_to_main` (`Repo.merge_to_main`): the chat's checkout commits its work on its branch, and the main clone merges that branch into main and goes back to the branch it had. Nothing is pushed, and the version is not raised; `/version` does that when the person chooses. Closing a session with merge chosen merges the same way (`Branch.merge_into_default`), then pushes main.
-
 ### (S) Person --> [Push Session To Main From Chat Bar](../../../space/repo/session_to_main_heavy_spec.py)
 
-Observed (2026-11-14): the ⇪ icon asks "Push <session> to main on origin?", and yes calls `repo.push_to_main` (`Repo.push_to_main`): as Merge to main, and the session's branch and main are pushed to origin. On main itself it commits and pushes main.
+Observed (2026-11-14): the ⇪ icon asks "Push <session> to main on origin?", and yes calls `repo.push_to_main` (`Repo.push_to_main`) for the folder the chat works in, whichever repository holds it: the checkout commits its work on its branch and pushes the branch, the main clone merges that branch into main (`Branch.merge_into_default`), pushes main, and goes back to the branch it had. On main itself it commits and pushes main. The version is not raised; `/version` does that when the person chooses. `repo.merge_to_main` does the same without pushing, for an agent; the chat bar has no button for it (2026-11-14: "we only need the other button").
 
 ### (S) Person --> Pull Latest From Chat Bar
 
