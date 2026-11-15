@@ -15,7 +15,7 @@
       "enabled": true
     },
     "ux": {
-      "enabled": false
+      "enabled": true
     },
     "bdd": {
       "enabled": false
