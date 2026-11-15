@@ -167,8 +167,8 @@ Rules this adds (checked on the output):
 
 Guidance (process, not rules):
 - **Unit after every pass.** Run it after each change or pass. The run is fast enough that the next pass starts from known-good code.
-- **Heavy once, at the end, in the background.** Don't wait on it. Commit and push after unit passes, and report the heavy result when it comes back.
-- **E2E only when the work touches a browser or an agent,** also once at the end.
+- **Heavy once at the end of the work, in the background,** on top of the hourly run. Don't wait on it. Commit and push after unit passes, and report the heavy result when it comes back.
+- **E2E at the end of work that touches a browser or an agent,** on top of the daily and release runs.
 - **A slow test: optimize first.** The first step for any example over budget is to find out why it is slow and make it fast. Measure where the time goes, then look for these, in order:
   1. **A real boundary the unit test doesn't need.** A socket, a subprocess, git, the file system or a server. Put a fake at that boundary, and make sure a heavy test covers the real one (see below). An example: `mcp_daemon_spec`'s two examples pinged a closed port, and Windows waits out the full 0.5 s connect timeout instead of refusing straight away. A fake ping makes them about 1 ms.
   2. **A wait.** A sleep, a poll or a retry loop. Use a fake clock or an event.
