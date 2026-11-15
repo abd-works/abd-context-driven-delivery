@@ -16,7 +16,7 @@
         ],
         "model": [
           "python",
-          "drawio"
+          "markdown"
         ]
       }
     },
@@ -28,6 +28,10 @@
         ],
         "acceptance_tests": [
           "python"
+        ],
+        "scenarios": [
+          "python",
+          "markdown"
         ]
       }
     },
@@ -39,8 +43,7 @@
           "python"
         ],
         "model": [
-          "markdown",
-          "drawio"
+          "markdown"
         ]
       }
     },
@@ -64,6 +67,9 @@
         ],
         "development": [
           "python"
+        ],
+        "realization": [
+          "markdown"
         ]
       }
     }
