@@ -8,17 +8,13 @@
     "clean_engineering": {
       "enabled": true,
       "formats": {
-        "modules": [
-          "drawio"
-        ]
+        "modules": []
       }
     },
     "stories": {
       "enabled": true,
       "formats": {
-        "story_map": [
-          "drawio"
-        ]
+        "story_map": []
       }
     },
     "ddd": {
@@ -30,9 +26,7 @@
     "ux": {
       "enabled": true,
       "formats": {
-        "ia": [
-          "drawio"
-        ]
+        "ia": []
       }
     },
     "bdd": {
