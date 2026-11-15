@@ -48,10 +48,11 @@ function FileListView({ page }: { page: FilesPage }) {
   const state = useFilesState(page)
   if (state.isListing) return <p className="files-note">Reading the files…</p>
   if (!state.entries.length) return <p className="files-note">No files here yet.</p>
+  if (!page.fileBar.entries.length) return <p className="files-note">The branch changed none of these files.</p>
   if (state.fileBar.view === 'folders') return <FileFoldersView page={page} />
   return (
     <ul className="file-list" aria-label="Files">
-      {state.entries.map(entry => (
+      {page.fileBar.entries.map(entry => (
         <FileEntryView key={entry.path} page={page} entry={entry} isOpen={entry.path === state.openPath} />
       ))}
     </ul>
@@ -116,6 +117,9 @@ function FileBarButtonsView({ page }: { page: FilesPage }) {
           </button>
           <button className="file-bar-view" aria-pressed={fileBar.view === 'folders'} title="Show the files in their folders" onClick={() => page.fileBar.show('folders')}>
             Folders
+          </button>
+          <button className="file-bar-view" aria-pressed={fileBar.isChangedOnly} title="List only the files the session's branch changed" onClick={() => page.fileBar.toggleChangedOnly()}>
+            Changed <span className="file-entry-note">{page.fileBar.changedCount}</span>
           </button>
         </>
       ) : null}

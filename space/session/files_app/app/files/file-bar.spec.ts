@@ -14,13 +14,13 @@ const STORY_MAP = '.context/story-map.md'
 const ORDER = 'src/checkout/order.py'
 const CART = 'src/checkout/cart.py'
 
-const entry = (path: string): FileEntryData => ({ path, exists: true, is_changed: false }) as FileEntryData
+const entry = (path: string, is_changed = false): FileEntryData => ({ path, exists: true, is_changed, link: '' }) as FileEntryData
 
 // The Files app's server, answering the session's files in the order the link names them, and nothing else.
 class FakeFilesServer implements CddApi {
   async post<Result>(path: string): Promise<Result | null> {
     if (path.endsWith('/show')) return { practices: {} } as Result
-    if (path.endsWith('/files')) return { markdown: [entry(STORY_MAP)], python: [entry(ORDER), entry(CART)] } as Result
+    if (path.endsWith('/files')) return { markdown: [entry(STORY_MAP)], python: [entry(ORDER, true), entry(CART)] } as Result
     return null
   }
 }
@@ -101,6 +101,44 @@ describe('Switch File Bar Between Folders And List', () => {
         expect(page.fileBar.isOpen(folderShown(page, '.context')!)).toBe(false)
       })
     })
+  })
+})
+
+describe('List Only The Files The Branch Changed', () => {
+  describe('with order.py changed and the story map and cart.py not', () => {
+    describe('that has the file bar listing changed files only', () => {
+      it('should list order.py alone', async () => {
+        const page = await pageWithOrderOpen()
+        page.fileBar.toggleChangedOnly()
+        expect(page.fileBar.entries.map(each => each.path)).toEqual([ORDER])
+      })
+
+      it('should show only its folder in the folder tree', async () => {
+        const page = await pageWithOrderOpen()
+        page.fileBar.toggleChangedOnly()
+        expect(page.fileBar.tree.folders.map(folder => folder.name)).toEqual(['src/checkout'])
+      })
+
+      it('should count the one changed file on its button', async () => {
+        const page = await pageWithOrderOpen()
+        expect(page.fileBar.changedCount).toBe(1)
+      })
+
+      it('should list every file again once turned off', async () => {
+        const page = await pageWithOrderOpen()
+        page.fileBar.toggleChangedOnly()
+        page.fileBar.toggleChangedOnly()
+        expect(page.fileBar.entries.map(each => each.path)).toEqual([STORY_MAP, ORDER, CART])
+      })
+    })
+  })
+
+  it('should keep a published design canvas, which opens at its link', () => {
+    const canvas = { path: 'design-canvas/version-1/project/canvas.json', exists: true, is_changed: false, link: 'https://claude.ai/artifact/canvas' } as FileEntryData
+    const page = new FilesPage(new FakeFilesServer(), new FilesLink('?files=checkout-flow&fidelity=ux-front-end-code'))
+    page.store.change(() => ({ entries: [canvas, entry(CART)] }))
+    page.fileBar.toggleChangedOnly()
+    expect(page.fileBar.entries).toEqual([canvas])
   })
 })
 

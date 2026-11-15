@@ -144,6 +144,25 @@ Requested (the person, 2026-11-14): "expand collapse file bar with buttons to sw
 *When* the Person closes *.context*
 *Then* *.context* shows no file
 
+## Story: List Only The Files The Branch Changed
+
+Requested (the person, 2026-11-15): add a "changed only" filter, since a session working on the whole repository lists every file a fidelity's pattern matches there. The session answers every file with whether the branch changed it; the page filters.
+
+#### Scenario: List only the changed files, then every file again
+
+*Given* the [Files app](../files-app-model.md#filebar-filesfile-barts) lists *.context/story-map.md*, *src/checkout/order.py* and *src/checkout/cart.py*, and the session's branch changed only *order.py*
+*When* the Person turns on Changed, its count 1
+*Then* the file bar lists *order.py* alone
+*And* as folders it shows only *src/checkout*
+*When* the Person turns Changed off
+*Then* the file bar lists *story-map.md*, *order.py* and *cart.py* again
+
+#### Scenario: Keep a published design canvas
+
+*Given* the Files app lists a design canvas published at its link, unchanged, and *cart.py*, unchanged
+*When* the Person turns on Changed
+*Then* the file bar lists the design canvas alone, which opens at its link
+
 ## Story: Toggle Practice In Files App
 
 #### Scenario: Show each practice as a toggle in its colour

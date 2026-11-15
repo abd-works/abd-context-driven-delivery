@@ -32,6 +32,7 @@ The *Files app* shows the files a link names and turns a person's reading into w
 - `toggle()` collapses or expands the bar.
 - `show(view)` shows the files as a list or in their folder tree.
   - **Invariant:** shown as folders, every folder down to the open file is open.
+- `entries` are the files the bar lists: every listed file, or, changed only (`toggleChangedOnly()`), those the session's branch changed and any design canvas published at a link; `changedCount` counts the changed ones for the Changed button. The list and the tree both show `entries`.
 - `toggleFolder(path)` opens or closes one folder; `isOpen(folder)` says which it is.
 
 ### FidelityFiles (`files/files-state.ts`)
