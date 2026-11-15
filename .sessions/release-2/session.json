@@ -13,6 +13,10 @@
         ],
         "code": [
           "python"
+        ],
+        "model": [
+          "python",
+          "drawio"
         ]
       }
     },
@@ -33,6 +37,10 @@
         "bounded_context": [],
         "tactics": [
           "python"
+        ],
+        "model": [
+          "markdown",
+          "drawio"
         ]
       }
     },
