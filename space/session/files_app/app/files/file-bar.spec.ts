@@ -18,7 +18,7 @@ const CART = 'src/checkout/cart.py'
 const byFidelity = (body: Record<string, unknown> | undefined, files: Record<string, FileEntryData[]>) =>
   Object.fromEntries(((body?.fidelities as string[] | undefined) ?? []).map(slug => [slug, files]))
 
-const entry = (path: string, is_changed = false): FileEntryData => ({ path, exists: true, is_changed, link: '' }) as FileEntryData
+const entry = (path: string, is_changed = false): FileEntryData => ({ path, exists: true, is_changed, link: '', format: '', fidelities: [] }) as FileEntryData
 
 // The Files app's server, answering the session's files in the order the link names them, and nothing else; each file
 // the branch changed unless named unchanged, so This session lists it.
