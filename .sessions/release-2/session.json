@@ -8,13 +8,20 @@
     "clean_engineering": {
       "enabled": true,
       "formats": {
-        "modules": []
+        "modules": [
+          "drawio"
+        ],
+        "code": [
+          "python"
+        ]
       }
     },
     "stories": {
       "enabled": true,
       "formats": {
-        "story_map": [],
+        "story_map": [
+          "drawio"
+        ],
         "acceptance_tests": [
           "python"
         ]
@@ -23,19 +30,31 @@
     "ddd": {
       "enabled": true,
       "formats": {
-        "bounded_context": []
+        "bounded_context": [],
+        "tactics": [
+          "python"
+        ]
       }
     },
     "ux": {
       "enabled": true,
       "formats": {
-        "ia": []
+        "ia": [
+          "drawio"
+        ],
+        "front_end_code": [
+          "html",
+          "typescript"
+        ]
       }
     },
     "bdd": {
       "enabled": true,
       "formats": {
         "behavior": [
+          "python"
+        ],
+        "development": [
           "python"
         ]
       }
