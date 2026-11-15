@@ -20,7 +20,7 @@
       }
     },
     "stories": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
         "story_map": [
           "drawio"
@@ -60,7 +60,7 @@
       }
     },
     "bdd": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
         "behavior": [],
         "development": [],
@@ -74,6 +74,6 @@
       "specification",
       "implementation"
     ],
-    "version": 118
+    "version": 120
   }
 }
