@@ -79,6 +79,8 @@ set_keys: tuple[str, ...]
 extends: str
 extended: PracticeGuidance | None
 	// the practice extends names, held by reference from the same set of practices
+supplements: list[PracticeSupplement]
+	// the supplements of its set that supplement one of its fidelities, held by reference (hold_set); none for a practice made apart from any set
 sketch_lens: SketchLens
 	// the headings that open this practice's section of a sketch, such as "stories:"; the practice holds the one lens its sketch format reads its section with
 SHORT_NAME: str
@@ -98,6 +100,8 @@ instructions: str
 	// Guidance.instructions (its schema guide first), every fidelity's instructions, and scoped_markdown
 examples: str
 ----
+hold_set(practices: dict[str, PracticeGuidance], supplements: list[PracticeSupplement]): None
+	// holds the practice it extends, its Clean Engineering companion, and each supplement whose supplements name its key
 answers_to(slug: str): PracticeGuidance | FidelityGuidance | None
 	// itself for its slug, the fidelity whose slug it is, else none
 fidelity_called(name: str): FidelityGuidance | None
@@ -113,6 +117,38 @@ render(format: str, content: Any, source: str | None, previous: str): dict
 	// at the fidelity the practice was made at, which renders it; a practice with no fidelity renders through its formats
 	-> fidelities.current.render
 	-> formats.render
+
+## PracticeSupplement : PracticeGuidance
+
+Guidance that adds to other practices at the fidelities it names, such as TDD on Clean Engineering code, Stories acceptance_tests, BDD development, and DDD tactics. It is a practice of its own (its folder sits with the practices), but it has no stage and no fidelities on the board: it never moves work forward, it only adds guidance and rules to the fidelities it supplements. Its markdown's front matter names them:
+
+```yaml
+always_apply: true
+supplements:
+  clean_engineering: code
+  stories: acceptance_tests
+  bdd: development
+  ddd: tactics
+```
+
+Its markdown keeps the usual Overview, Guidance and Shared rules, then one `## {Practice} · {fidelity}` section per supplemented fidelity with its own guidance and rules. Its graph rules live in its own folder the way a pattern's do: `rules/` for those it checks on every supplemented practice, and `practices/<practice>/rules` and `model/{schema,rules}.yaml` for those of one practice.
+
+PracticeSupplement(format)
+------
+supplements: dict[str, str]
+	// practice key to the fidelity name it supplements, read once from the front matter
+	Invariant: every key is a registered practice and every fidelity is one that practice has; otherwise UnknownSupplementedFidelity at construction
+always_apply: bool
+	// on for every session without being chosen; a supplement that is not always on applies only when a session's overlays name it
+graph_overlay: GraphOverlay
+	// made once: its rules for each practice it supplements, read from its own folder (harness/graph)
+----
+supplements_fidelity(fidelity: FidelityGuidance): bool
+	// the fidelity's practice key is named, with that fidelity's name
+text_for(fidelity: FidelityGuidance): str
+	// its Overview and Guidance, then the section for that fidelity, headed "## Supplement: {name}"; empty for a fidelity it does not supplement
+rules_for(fidelity: FidelityGuidance): RulesCollection
+	// its Shared rules, then that fidelity section's rules; empty for a fidelity it does not supplement
 
 ## PracticeFormats
 
@@ -218,15 +254,21 @@ section: str
 guidance: str
 rules: RulesCollection
 	// the fidelity's Rules section
+supplements: list[PracticeSupplement]
+	// its practice's supplements that name this fidelity, such as TDD for BDD development
+	-> practice_guidance.supplements
+	-> PracticeSupplement.supplements_fidelity
 instructions: str
-	// practice overview, guidance, and shared rules, the companion's instructions, the template, and this fidelity's own text
+	// practice overview, guidance, and shared rules, the companion's instructions, the template, this fidelity's own text, then each supplement's text for it
+	-> PracticeSupplement.text_for
 templates: str
 	// its template in the format it works in, else its default format
 examples: str
 	// its practice's examples at this fidelity and format
 ----
 checked_rule_collections(): list[RulesCollection]
-	// the practice's shared rules, then its own
+	// the practice's shared rules, then its own, then each supplement's rules for this fidelity
+	-> PracticeSupplement.rules_for
 every_rule(): list[Rule]
 	-> practice_guidance.every_rule
 generate_output(): str
@@ -316,7 +358,10 @@ has(key: str): bool
 create(key: str): PracticeGuidance
 	Invariant: outside a session, a caller that changes a practice's fidelity or format makes its own instance here; a session makes its set once with create_all
 	// made with the practices of its set it works with (set_keys), each holding the others (hold_set)
+register_supplements(*supplement_classes: type[PracticeSupplement])
+	// called by cdd_guidance/practices when it is imported; held apart from the practices, so keys() and the board never list a supplement
 create_all(): list[PracticeGuidance]
+	// also makes one of each registered supplement that is always on, and hands the set and them to each practice
 	-> PracticeGuidance.hold_set
 	// each practice holds the one it extends and the Clean Engineering practice whose fidelities accompany its own, from the same set
 practice_class(key: str): type[PracticeGuidance]

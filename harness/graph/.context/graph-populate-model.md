@@ -329,23 +329,26 @@ What one practice gives the graph is its reading part, a *PracticeReading* (`har
 + own_graph_checks(): dict[str, PracticeGraphRule]
 	// -> rules_in(f"{package}.rules"): the module's BY_SLUG, else its RULES
 
-`PracticeReading.checks()` is its part of the graph's `checks`, which adds each active overlay's `rules_for(practice)` to the practice's own (`PatternOverlays.checks_of`); `node.rules` keeps those whose `node_types` hold the node's type, its file language's, or the Clean Engineering type a pattern's schema anchors it to.
+`PracticeReading.checks()` is its part of the graph's `checks`, which adds each active overlay's `rules_for(practice)` to the practice's own, then each always-on supplement the practice holds (`practice.supplements`), whatever overlays the session chose (`PatternOverlays.checks_of`); `node.rules` keeps those whose `node_types` hold the node's type, its file language's, or the Clean Engineering type a pattern's schema anchors it to.
 
 ## GraphOverlay
 
-What one pattern gives the graph on top of the practices.
+What one pattern or one practice supplement gives the graph on top of the practices.
 
 + GraphOverlay(pattern: PracticeGuidance)
-	// made once by the pattern that owns it, as pattern.graph_overlay
+	// made once by the pattern or supplement that owns it, as its graph_overlay
 ------
 + pattern: PracticeGuidance
-	// the pattern's guidance, which gives each overlay rule its prose
+	// the pattern's or supplement's guidance, which gives each overlay rule its prose
 + name: str
-	// the pattern's folder name, such as lern_domain_driven
+	// its folder name, such as lern_domain_driven or tdd
 ----
 + read(graph: Graph): None
 + rules_for(practice: PracticeGuidance): dict[str, PracticeGraphRule]
-	// read once per practice from the pattern's own practices/{practice}/rules
+	// read once per practice: its own practices/{practice}/rules, then its shared rules/ bound to that practice
+	-> rules_in(f"{package}.practices.{practice.key}.rules")
+	-> rules_in(f"{package}.rules")
+	-> SharedPracticeGraphRule.for_practice(practice.key)
 
 ## PracticeGraphRule
 
@@ -359,6 +362,17 @@ One rule a practice checks on loaded nodes (`practice_rule.py`). A practice writ
 + check_practice(context: RuleCheckContext): list[tuple[str, str]]
 	// (node_id, message) pairs from one pass over the whole practice
 + applies_to(node_type): bool
+
+## SharedPracticeGraphRule : PracticeGraphRule
+
+One rule an overlay checks on several practices' nodes, such as TDD's `one-outcome-per-test` on BDD observations and Stories Thens (`practice_rule.py`). It lives once, in the overlay's `rules/` package; each practice runs a copy bound to its own node types.
+
++ node_types_by_practice: dict[str, tuple[str, ...]]
+	// practice key to the node types it checks there, such as {"bdd": ("Observation",), "stories": ("Then",)}
+----
++ for_practice(practice_key: str): PracticeGraphRule | None
+	// a copy whose node_types are that practice's; none for a practice it does not name
+	Invariant: check reads only facts every named practice's reading records on its nodes
 
 ## RuleCheckContext
 
