@@ -68,7 +68,7 @@ A rule names something you can see in the finished tests and code, so validate c
    6. Fixtures and example data — where example data lives, when to extract shared setup.
    7. Tiers by speed — what each tier holds; when each runs.
    8. When stuck — two failed fix attempts, then diagnose.
-3. **Shared rules** (output, every decorated fidelity)
+3. **Shared rules** — the test tiers: unit, heavy, e2e (BDD development and Stories acceptance_tests)
 4. **Clean Engineering · code** — guidance + rules
 5. **Stories · acceptance_tests** — guidance + rules
 6. **BDD · development** — guidance + rules
@@ -76,20 +76,26 @@ A rule names something you can see in the finished tests and code, so validate c
 
 ## Shared rules
 
-File: `rules/shared_tdd_rules.py`. The overlay supplies only rules no practice has yet. Each is checked on the output; a rule the graph cannot decide is a bullet in `tdd.md` that validate judges.
+File: `rules/shared_tdd_rules.py`. What BDD development and Stories acceptance_tests have in common is the test tiers: unit, heavy and e2e. These rules replace BDD `tier-by-speed` and Stories `story-tier-by-speed`; both practices drop theirs and get the overlay's. Each rule is checked on a spec file node; validate judges what the graph cannot see.
 
 | Rule | Checked on | One line |
 |---|---|---|
-| `no-skipped-or-empty-test` | graph: observation, scenario | No test is skipped, commented out, or left without an assertion. |
+| `suffix-names-the-tier` | spec file | `*_spec` is unit, `*_heavy_spec` is heavy, `*_e2e_spec` / `*_agent_spec` is e2e; a story test's tier file follows the same suffixes. |
+| `unit-tier-within-budget` | spec file | A unit example, with its before-each and after-each, runs within the budget (100 ms); a fake sits at every architecture boundary. |
+| `heavy-tier-holds-a-real-resource` | spec file | A heavy spec uses a real resource (git, a server, a daemon, an installer, a worker, a big load); without one it belongs in the unit tier. |
+| `e2e-tier-drives-browser-or-agent` | spec file | An e2e spec drives a real browser or a real agent, and nothing else does. |
+| `slow-example-moves-not-the-file` | spec file | An example over budget moves to the heavy spec beside its unit spec, under the same described subject; the rest of the file stays unit, and the budget is never raised. |
+| `no-skipped-or-empty-test` | observation, scenario | No test is skipped, commented out, or left without an assertion. |
 
-Not supplied, because a practice already has the rule (open decision 2 asks whether these move here):
+Guidance (not rules): which tier runs when, from `cdd_guidance/rules/test-timing.md` — unit after every change, heavy once at the end of the work, e2e when the work touches a browser or an agent.
+
+Not supplied, because one practice already has it and it is not shared by both:
 
 | Proposed | Already exists as |
 |---|---|
-| `one-outcome-per-test` | BDD `one-assertion-per-test` |
+| `one-outcome-per-test` | BDD `one-assertion-per-test` (Stories chains outcomes with `and-chaining`) |
 | `double-only-at-boundaries` | BDD `layer-isolation` |
 | `double-honours-real-seam` | Stories `system-stubs-domain-real` |
-| `tier-by-speed` | BDD `tier-by-speed`, Stories `story-tier-by-speed` |
 
 Moved to Guidance as process: `test-before-code`, `minimum-to-green`, `one-at-a-time`, `diagnose-after-two-misses`.
 
@@ -154,7 +160,7 @@ Guidance: settle how each building block is tested when you choose its pattern; 
 ## Open decisions for step 2
 
 1. **Order on brownfield.** The ladder says run real conditions first, with no automated tests. Every other source says write the test first. The sketch keeps both: greenfield goes test first, brownfield runs real conditions first. Is that right?
-2. **Moving rules.** `tier-by-speed`, `story-tier-by-speed` and `layer-isolation` would move out of BDD and Stories into this overlay, and BDD's `red-then-green`, `minimum-green` and `one-signature-at-a-time` are process, so they would leave BDD's rules for this overlay's Guidance. Or should they stay where they are, with the overlay only pointing to them?
+2. **Moving rules.** Decided: the tier rules move here and BDD `tier-by-speed` and Stories `story-tier-by-speed` are removed. Still open: whether `layer-isolation` moves too, and whether BDD's `red-then-green`, `minimum-green` and `one-signature-at-a-time` are process, so leave BDD's rules for this overlay's Guidance. Or should they stay where they are, with the overlay only pointing to them?
 3. **The `always_apply` setting.** Should it go in `tdd.md` front matter, or in the project's yaml so a project can turn it off?
 4. **Overlay reading.** Teach the practice catalogue that a practice may decorate others (its `decorates:` list and `practices/` folder), and have `PatternOverlays` read stack patterns only? Or one overlay reader for both?
 5. **Agent BDD.** Agent BDD isn't decorated in this sketch. Should it be?
