@@ -9,7 +9,7 @@
       "enabled": true
     },
     "stories": {
-      "enabled": false
+      "enabled": true
     },
     "ddd": {
       "enabled": false
