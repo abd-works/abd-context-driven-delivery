@@ -21,7 +21,8 @@ class FakeFilesServer implements CddApi {
 
   async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
     this.posts.push({ path, body })
-    if (path.startsWith('/chat/') && path.endsWith('/show')) return { id: 'chat-1', name: 'release-2', is_busy: false, folder: '', selected_fidelities: this.selected } as Result
+    if (path.startsWith('/chat/') && path.endsWith('/select')) this.selected = [...(body.selected_fidelities as string[])]
+    if (path.startsWith('/chat/') && (path.endsWith('/show') || path.endsWith('/select'))) return { id: 'chat-1', name: 'release-2', is_busy: false, folder: '', selected_fidelities: this.selected } as Result
     if (path.endsWith('/show')) return { name: 'release-2', session_file: SESSION, practices: this.practices } as Result
     if (path.endsWith('/enable')) {
       const name = decodeURIComponent(path.split('/')[3] ?? '')
@@ -186,9 +187,9 @@ describe('Follow Chat Bar Selection In Files App', () => {
         return { page, server }
       }
 
-      it("should select the other practice's dots on the chat bar", async () => {
+      it("should select the other practice's fidelity for the chat, which its chat bar's dots show", async () => {
         const { server } = await pressedStories()
-        expect(server.posted('/send').map(post => post.body)).toEqual([{ kind: 'select', text: 'ddd-bounded-context' }])
+        expect(server.selected).toEqual(['ddd-bounded-context'])
       })
 
       it("should list only the other practice's files", async () => {
@@ -199,7 +200,7 @@ describe('Follow Chat Bar Selection In Files App', () => {
       it('should clear the selection once pressed again, every practice shown', async () => {
         const { page, server } = await pressedStories()
         await page.togglePractice('stories')
-        expect(server.posted('/send').at(-1)?.body).toEqual({ kind: 'select', text: '' })
+        expect(server.selected).toEqual([])
       })
     })
 

@@ -17,9 +17,9 @@ const BAD_REQUEST = 400
 const FORBIDDEN = 403
 const FAILED = 500
 
-// The chat routes the page needs: sending the chat that opened it a refresh, a selection or a failure, and reading the
-// fidelities its chat bar has selected. Opening or removing chats stays with the board.
-const CHAT_ROUTES = ['/chat/:chat/send', '/chat/:chat/show']
+// The chat routes the page needs: sending the chat that opened it a refresh or a failure, and reading and changing the
+// one selection cdd holds for its chat bar and this page. Opening or removing chats stays with the board.
+const CHAT_ROUTES = ['/chat/:chat/send', '/chat/:chat/show', '/chat/:chat/select']
 
 // The Files app reads a session's files, a fidelity's files, and the comments on them, turns the session's practices on
 // or off, and tells the chat that opened it; it never reads the board.

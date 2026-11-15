@@ -130,8 +130,8 @@ export class FilesPage {
     }
   }
 
-  // The fidelities selected on the chat bar of the chat that opened the page, as it said at its last check-in; none for a
-  // page no chat opened.
+  // The fidelities selected for the chat that opened the page, as cdd holds them for its chat bar and this page alike;
+  // none for a page no chat opened.
   private async selectedOnChatBar(): Promise<string[]> {
     if (!this.link.chat) return []
     return (await ChatClientGenerated.named(this.api, this.link.chat).show())?.selectedFidelities ?? []
@@ -181,10 +181,16 @@ export class FilesPage {
     return next.length === working.length && working.every(slug => next.includes(slug)) ? kept : [...kept, ...next]
   }
 
-  // Shows the selection here at once and sends it to the chat bar, which takes it at its next check-in.
+  // Saves the selection with cdd, which holds the one selection the chat bar's dots and this page both show, and shows
+  // what cdd answered; the chat bar draws it at its next check-in.
   private async select(selectedFidelities: string[]): Promise<void> {
-    this.store.change(state => ({ selectedFidelities, entries: filesShown(state.byFidelity, state.practices, selectedFidelities) }))
-    await this.attemptQuietly('The chat bar did not take the selection', () => ChatClientGenerated.named(this.api, this.link.chat).send('select', selectedFidelities.join(',')))
+    let held: string[] | null = null
+    const isSaved = await this.attemptQuietly('The selection was not saved', async () => {
+      held = (await ChatClientGenerated.named(this.api, this.link.chat).select(selectedFidelities))?.selectedFidelities ?? []
+    })
+    const answered = held as string[] | null
+    if (!isSaved || answered === null) return
+    this.store.change(state => ({ selectedFidelities: answered, entries: filesShown(state.byFidelity, state.practices, answered) }))
   }
 
   async open(path: string): Promise<void> {
