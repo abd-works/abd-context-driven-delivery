@@ -9,7 +9,7 @@ The *Files app* shows the files a link names and turns a person's reading into w
 
 ### FilesPage (`files/files-page.ts`)
 
-- The page: the files its link names, read once and kept by fidelity; the session's practices; the one file open; and what went wrong. Holds its *FilesStore*, its session client, and its *FileCommentsActions*.
+- The page: the files its link names, read once and kept by fidelity; the session's practices; the one file open; and what went wrong. Holds its *FilesStore*, its session client, and the parts that each do one job on it: *FileBar*, *GuidanceSelector* (`guidance`), *FileCommentsActions* (`comments`), *FileMenu* (`menu`, with its *FileBrowser*), *ChatContext* (`chatContext`), and *FilesNotices* (`notices`). Its own operations are reading and showing the files: `start`, `showScope`, `toggleRules`, `toggleCrossFile`, `open`, and `attempt`.
 - `start()` lists the files and reads the practices; it reads the practices and the selection again every second while the page shows, so a practice turned on or off on the chat bar or the board hides or shows its files here, and whenever the person comes back to the page it reads the open file and the practices again.
   - -> Session.folderFiles, or FidelityProgress.files for each fidelity the link names
   - -> Session.show
@@ -17,7 +17,7 @@ The *Files app* shows the files a link names and turns a person's reading into w
   - -> Session.show
 - The page follows the chat bar of the chat that opened it: while fidelities it lists are selected there (the chat bar's dots), it shows only their files and its toggles show their practices, disabled, `isFollowingChatBar`; with none selected, the practices turned on. `isShown(practice)` says which a toggle shows.
   - -> Chat.show (`selected_fidelities`: the one selection cdd holds for the chat; the chat bar's dots write it through `Chat.select` and draw it from `Chat.show` at each check-in)
-- `guidance` (*GuidanceSelector*, `files/guidance-selector.ts`) follows the session's guidance selection, the stages, practices, and format groups selected, which the chat bar's stage buttons, practice dots, and format chips show too. One waiting read (`Session.guidance_selection_after(version)`) answers as soon as a change anywhere raises the version. A press on a stage, practice, or format button draws at once, then sends one `Session.update_guidance_selection`; an answer older than the version drawn is ignored, so a late read never undoes a press. The page lists the files of the selection's fidelities (before any stage is chosen, the link's), reading a stage's files the first time it shows, and only those in the format groups selected while any is.
+- `guidance` (*GuidanceSelector*, `files/guidance-selector.ts`) follows the session's guidance selection, the stages, practices, and format groups selected, which the chat bar's stage buttons, practice dots, and format chips show too. One waiting read (`Session.guidance_selection_after(version)`) answers as soon as a change anywhere raises the version. The page's stage, practice, and format buttons call it directly (`toggleStage`, `togglePractice`, `toggleFormat`). A press draws at once, then sends one `Session.update_guidance_selection`; an answer older than the version drawn is ignored, so a late read never undoes a press. The page lists the files of the selection's fidelities (before any stage is chosen, the link's), reading a stage's files the first time it shows, and only those in the format groups selected while any is.
   - -> Session.guidance_selection, Session.guidance_selection_after, Session.update_guidance_selection
 - `showScope(scope)`: All session files (▤) lists every file under the session's root, read once as the page opens (`Ticket.root_files`), with the files the fidelities listed declare but have not generated yet; This session (Δ with its count), the default, lists those the session's branch changed against main and any design canvas published at a link. The stages, practices and formats selected narrow both: a file shows in a format selected while any is, and when it belongs to a fidelity listed; a file of no fidelity shows only while no practice is selected (`rootFilesShown`). The two buttons sit first along the top, before the stages, orange while selected. Nothing is read again.
   - -> Ticket.root_files (each file's format and the fidelities it belongs to come from Python)
@@ -35,6 +35,26 @@ The *Files app* shows the files a link names and turns a person's reading into w
   - **Invariant:** shown as folders, every folder down to the open file is open.
 - `entries` are the files the bar lists: under This session, those the session's branch changed and any design canvas published at a link; under All session files, every listed file. `changedCount` counts the changed ones for the This session button. The list and the tree both show `entries`.
 - `toggleFolder(path)` opens or closes one folder; `isOpen(folder)` says which it is.
+
+### FileMenu (`files/file-menu.ts`)
+
+- The menu a right-click on a file or folder shows where the person clicked; it keeps what it is on in the page's *FilesStore* (`menu`). `open(path, left, top)` shows it and `close()` hides it.
+- `addToContext()` adds the file it is on, whole, to the chat's context through *ChatContext*.
+- `reveal()` shows the file or folder in the system's file browser through *FileBrowser*.
+
+### FileBrowser (`files/file-browser.ts`)
+
+- The system's file browser on this machine: Explorer, Finder, or the desktop's file manager. `reveal(path)` has the Files server start it on the file or folder (`/reveal`, `app/file-explorer.ts`); a browser that does not open is a failure told to the chat.
+
+### ChatContext (`files/chat-context.ts`)
+
+- The context of the chat that opened the page. `add(path, lines?)` has the session put a file, or lines of it, in that chat's prompt box, to go with the person's next prompt; the source view's Add to context calls it for the selected lines.
+  - -> Session.add_to_chat_context
+
+### FilesNotices (`files/files-notices.ts`)
+
+- What the page tells the person. `toast(text)` shows a toast once while it shows; `fail(failure, context)` shows a failure and sends it to the chat that opened the page, once, so its chat bar shows it too.
+  - -> Chat.send("failure")
 
 ### FidelityFiles (`files/files-state.ts`)
 

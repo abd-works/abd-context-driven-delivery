@@ -110,6 +110,7 @@ class Operation(InvariantHolder, OoadNode):
         "swallows_exceptions",
         "unnamed_literal_numbers",
         "is_static",
+        "is_private",
         "is_classmethod",
         "is_property",
         "is_setter",
@@ -163,6 +164,9 @@ class Operation(InvariantHolder, OoadNode):
         # A property's setter, such as Python's `@total.setter`; a getter is `is_property`.
         self.is_setter = False
         self.is_static = False
+        # Declared private with the language's own keyword, such as TypeScript's `private`; a name starting with `_`
+        # says the same in every language.
+        self.is_private = False
         self.is_classmethod = False
         self.max_control_flow_depth: int = 0
         self.has_bare_catch: bool = False
@@ -272,6 +276,7 @@ class Operation(InvariantHolder, OoadNode):
         cloned.is_property = self.is_property
         cloned.is_setter = self.is_setter
         cloned.is_static = self.is_static
+        cloned.is_private = self.is_private
         cloned.is_classmethod = self.is_classmethod
         cloned.max_control_flow_depth = self.max_control_flow_depth
         cloned.has_bare_catch = self.has_bare_catch
@@ -360,6 +365,7 @@ class Operation(InvariantHolder, OoadNode):
         self.is_property = copied.is_property
         self.is_setter = copied.is_setter
         self.is_static = copied.is_static
+        self.is_private = copied.is_private
         self.is_classmethod = copied.is_classmethod
         self.max_control_flow_depth = copied.max_control_flow_depth
         self.has_bare_catch = copied.has_bare_catch

@@ -99,7 +99,7 @@ function FolderContentsView({ page, folder, openPath }: { page: FilesPage; folde
 // A right-click on a file or folder: its menu instead of the browser's.
 const menuOn = (page: FilesPage, path: string) => (event: React.MouseEvent) => {
   event.preventDefault()
-  page.openMenu(path, event.clientX, event.clientY)
+  page.menu.open(path, event.clientX, event.clientY)
 }
 
 // The menu a right-click shows, where the person clicked: show the file or folder in the system's file browser, named
@@ -108,12 +108,12 @@ function FileMenuView({ page }: { page: FilesPage }) {
   const { menu } = useFilesState(page)
   if (!menu) return null
   return (
-    <div className="file-menu-backdrop" onClick={() => page.closeMenu()} onContextMenu={event => { event.preventDefault(); page.closeMenu() }}>
+    <div className="file-menu-backdrop" onClick={() => page.menu.close()} onContextMenu={event => { event.preventDefault(); page.menu.close() }}>
       <div className="file-menu" role="menu" style={{ left: menu.x, top: menu.y }} onClick={event => event.stopPropagation()}>
-        <button role="menuitem" title={`${menu.path}: goes with your next prompt in the chat that opened this page`} onClick={() => void page.addToContext()}>
+        <button role="menuitem" title={`${menu.path}: goes with your next prompt in the chat that opened this page`} onClick={() => void page.menu.addToContext()}>
           Add to context
         </button>
-        <button role="menuitem" title={menu.path} onClick={() => void page.reveal()}>
+        <button role="menuitem" title={menu.path} onClick={() => void page.menu.reveal()}>
           {revealLabelOf(navigator.platform)}
         </button>
       </div>
@@ -198,7 +198,7 @@ function PracticeTogglesView({ page }: { page: FilesPage }) {
           style={{ '--practice-colour': practice.colour } as CSSProperties}
           aria-pressed={practice.is_selected}
           title={`${practice.short_name}: ${practice.is_selected ? 'on, press to turn it off here and on the chat bar' : 'off, press to turn it on here and on the chat bar'}`}
-          onClick={() => void page.togglePractice(practice.key)}
+          onClick={() => void page.guidance.togglePractice(practice.key)}
         >
           {practice.short_name}
         </button>
@@ -242,7 +242,7 @@ function OpenFileView({ page }: { page: FilesPage }) {
   const state = useFilesState(page)
   const path = state.file?.path ?? ''
   // The open file's selected lines, added to the chat's context; made once per file, so the editor keeps its action.
-  const addLines = useCallback((lines: { start: number; end: number }) => void page.addLinesToContext(path, lines), [page, path])
+  const addLines = useCallback((lines: { start: number; end: number }) => void page.chatContext.add(path, lines), [page, path])
   if (!state.openPath) return <p className="files-note">Choose a file.</p>
   if (isDrawio(state.openPath)) return <DrawioFileView page={page} path={state.openPath} />
   if (!state.file) return <p className="files-note">Opening {state.openPath}…</p>
@@ -301,7 +301,7 @@ function StageTogglesView({ page }: { page: FilesPage }) {
           className={`stage-toggle ${stage.is_selected ? 'is-shown' : ''}`}
           aria-pressed={stage.is_selected}
           title={`${stage.title}: ${stage.is_selected ? 'selected, press to hide its files here and on the chat bar' : 'press to show its files here and on the chat bar'}`}
-          onClick={() => void page.toggleStage(stage.name)}
+          onClick={() => void page.guidance.toggleStage(stage.name)}
         >
           {STAGE_ICONS[stage.title] ?? stage.title}
         </button>
@@ -325,7 +325,7 @@ function FormatTogglesView({ page }: { page: FilesPage }) {
           className={`format-toggle ${format.is_selected ? 'is-chosen' : 'is-not-made'}`}
           aria-pressed={format.is_selected}
           title={`${format.label}: offered by ${format.offered}; ${format.is_selected ? 'selected, press to show every format' : 'press to show only the formats selected'}`}
-          onClick={() => void page.toggleFormat(format.label)}
+          onClick={() => void page.guidance.toggleFormat(format.label)}
         >
           {formatGlyphOf(format.label)}
         </button>
@@ -353,7 +353,7 @@ function ReadsTogglesView({ page }: { page: FilesPage }) {
 
 // Dark engineering by default; a press turns the light look on or off.
 function ThemeToggleView({ page }: { page: FilesPage }) {
-  const failed = (failure: string) => page.fail(failure, "Changing the Files app's look")
+  const failed = (failure: string) => page.notices.fail(failure, "Changing the Files app's look")
   const [theme, setTheme] = useState<FilesTheme>(() => storedTheme(failed))
   const toggle = () => {
     const next = theme === 'engineering' ? 'light' : 'engineering'
@@ -408,7 +408,7 @@ export class FilesFailureView extends Component<{ page: FilesPage; children: Rea
 
   // What stopped the page goes to the chat that opened it too, since the page can show nothing else now.
   componentDidCatch(error: unknown) {
-    this.props.page.fail(`The Files page stopped: ${error instanceof Error ? error.message : String(error)}`, 'Drawing the Files page', { isShownOnPage: true })
+    this.props.page.notices.fail(`The Files page stopped: ${error instanceof Error ? error.message : String(error)}`, 'Drawing the Files page', { isShownOnPage: true })
   }
 
   render() {

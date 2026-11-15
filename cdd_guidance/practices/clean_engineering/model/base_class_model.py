@@ -245,7 +245,7 @@ class OoadClass(OoadNode):
         constructor = next((op for op in operations if op.name in {"__init__", "constructor"}), None)
         self.method_count = len(operations)
         self.operation_shapes = [
-            {"name": op.name, "is_property": op.is_property, "callees": [callee for callee in op.callees if callee]}
+            {"name": op.name, "is_property": op.is_property, "is_private": op.is_private, "callees": [callee for callee in op.callees if callee]}
             for op in operations
         ]
         self.property_names = sorted(prop.name for prop in self.properties)

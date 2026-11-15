@@ -140,14 +140,14 @@ describe('Select Guidance In Files App', () => {
       it('should turn DDD off in the session', async () => {
         const server = discovery()
         const { page, stop } = await following(server)
-        await page.togglePractice('ddd')
+        await page.guidance.togglePractice('ddd')
         stop()
         expect(server.posted('/update-guidance-selection').map(post => post.body.practices)).toEqual([['stories']])
       })
 
       it("should list only Stories' files", async () => {
         const { page, stop } = await following(discovery())
-        await page.togglePractice('ddd')
+        await page.guidance.togglePractice('ddd')
         await settled()
         stop()
         expect(paths(page)).toEqual(['.context/stories-story-map.md', '.context/stories-story-map.drawio'])
@@ -157,7 +157,7 @@ describe('Select Guidance In Files App', () => {
     describe('that has Specification selected in the Files app', () => {
       it("should list both stages' files, reading Specification's the first time it shows", async () => {
         const { page, stop } = await following(discovery())
-        await page.toggleStage('specification')
+        await page.guidance.toggleStage('specification')
         await settled()
         stop()
         expect(paths(page)).toContain('.context/stories-scenarios.md')
@@ -167,7 +167,7 @@ describe('Select Guidance In Files App', () => {
     describe('that has the diagram format selected in the Files app', () => {
       it('should list only the diagrams', async () => {
         const { page, stop } = await following(discovery())
-        await page.toggleFormat('diagram')
+        await page.guidance.toggleFormat('diagram')
         await settled()
         stop()
         expect(paths(page)).toEqual(['.context/stories-story-map.drawio', '.context/ddd-bounded-context.drawio'])
@@ -177,7 +177,7 @@ describe('Select Guidance In Files App', () => {
     describe('that has every stage turned off', () => {
       it('should list the files of every stage, as no stage filter', async () => {
         const { page, stop } = await following(discovery())
-        await page.toggleStage('discovery')
+        await page.guidance.toggleStage('discovery')
         await settled()
         stop()
         expect(paths(page)).toEqual(['.context/stories-story-map.md', '.context/stories-story-map.drawio', '.context/ddd-bounded-context.md', '.context/ddd-bounded-context.drawio', '.context/stories-scenarios.md', '.context/stories-scenarios.drawio'])
@@ -199,7 +199,7 @@ describe('Select Guidance In Files App', () => {
       it('should keep the press drawn', async () => {
         const server = discovery()
         const { page, stop } = await following(server)
-        await page.togglePractice('ddd')
+        await page.guidance.togglePractice('ddd')
         await (page as unknown as { guidance: { accept(answer: GuidanceSelectionData): Promise<void> } }).guidance.accept({ ...server.selection(), version: 0, practices: [] })
         stop()
         expect(page.state.guidance?.version).toBe(1)
@@ -348,7 +348,7 @@ describe('Open File In File Browser', () => {
     async function rightClicked(server = new FakeFilesServer()) {
       const page = new FilesPage(server, new FilesLink(STAGE_LINK))
       await started(page)
-      page.openMenu('.context/stories-story-map.md', 40, 80)
+      page.menu.open('.context/stories-story-map.md', 40, 80)
       return { page, server }
     }
 
@@ -360,7 +360,7 @@ describe('Open File In File Browser', () => {
       describe('and opens in the file browser', () => {
         async function revealed(server = new FakeFilesServer()) {
           const opened = await rightClicked(server)
-          await opened.page.reveal()
+          await opened.page.menu.reveal()
           return opened
         }
 
@@ -392,7 +392,7 @@ describe('Open File In File Browser', () => {
       describe('and presses elsewhere', () => {
         it('should close the menu', async () => {
           const { page } = await rightClicked()
-          page.closeMenu()
+          page.menu.close()
           expect(page.state.menu).toBeNull()
         })
       })
@@ -417,8 +417,8 @@ describe('Add File Or Selection To Chat Context', () => {
     describe("that the Person adds to the chat's context from its menu", () => {
       async function added(server = new FakeFilesServer()) {
         const done = await opened(server)
-        done.page.openMenu('src/checkout/order.py', 40, 80)
-        await done.page.addToContext()
+        done.page.menu.open('src/checkout/order.py', 40, 80)
+        await done.page.menu.addToContext()
         return done
       }
 
@@ -454,7 +454,7 @@ describe('Add File Or Selection To Chat Context', () => {
     describe("that the Person adds to the chat's context", () => {
       it('should ask the session to add those lines to the chat that opened the page', async () => {
         const { page, server } = await opened()
-        await page.addLinesToContext('src/checkout/order.py', { start: 12, end: 14 })
+        await page.chatContext.add('src/checkout/order.py', { start: 12, end: 14 })
         expect(addedBodies(server)).toEqual([{ chat: 'chat-1', path: 'src/checkout/order.py', start_line: 12, end_line: 14 }])
       })
     })

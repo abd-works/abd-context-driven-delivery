@@ -315,9 +315,17 @@ export function refreshChatBar($: EngineInterface): void {}
     with context("keep-classes-single-responsibility"):
         with before.all:
             self.pair = python_example_pair("keep-classes-single-responsibility")
+            public = "".join(f"  step{index}(): number {{\n    return {index};\n  }}\n" for index in range(11))
+            mostly_private = "".join(f"  {'private ' if index > 4 else ''}step{index}(): number {{\n    return {index};\n  }}\n" for index in range(11))
+            self.private_operations = rule_pair(
+                "keep-classes-single-responsibility", f"export class Steps {{\n{public}}}\n", f"export class Steps {{\n{mostly_private}}}\n", lang="typescript"
+            )
 
         with it("should flag faultyAsset and accept repairedAsset"):
             self.pair.check()
+
+        with it("should count only the public operations of a TypeScript class, not those it declares private"):
+            self.private_operations.check()
     with context("use-typed-signatures"):
         with before.all:
             self.pair = python_example_pair("use-typed-signatures")
