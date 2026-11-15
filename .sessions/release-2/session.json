@@ -6,7 +6,7 @@
   "worktree": "C:\\dev\\abd-cdd-2",
   "practices": {
     "clean_engineering": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
         "modules": [
           "drawio"
@@ -32,7 +32,7 @@
       }
     },
     "ddd": {
-      "enabled": false,
+      "enabled": true,
       "formats": {
         "bounded_context": [],
         "tactics": [
@@ -72,6 +72,6 @@
     "stages": [
       "implementation"
     ],
-    "version": 134
+    "version": 136
   }
 }
