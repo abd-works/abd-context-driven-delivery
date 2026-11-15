@@ -148,23 +148,29 @@ Requested (the person, 2026-11-15): "keep folder the default view and not reset 
 *When* the Person opens *.context*
 *Then* *.context* shows *story-map.md*
 
-## Story: List Only The Files The Branch Changed
+## Story: List This Session Or All Session Files
 
-Requested (the person, 2026-11-15): add a "changed only" filter, since a session working on the whole repository lists every file a fidelity's pattern matches there. The session answers every file with whether the branch changed it; the page filters.
+Requested (the person, 2026-11-15): two buttons, All session files or This session, the files the branch changed. The stages, practices and formats selected filter both, so a person can list, for example, every drawio file, or only this session's markdown and code. The session answers every file with whether the branch changed it; the page filters.
 
-#### Scenario: List only the changed files, then every file again
+#### Scenario: List this session's files, then all session files
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filebar-filesfile-barts) lists *.context/story-map.md*, *src/checkout/order.py* and *src/checkout/cart.py*, and the session's branch changed only *order.py*
-*When* the Person turns on Changed, its count 1
+*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filebar-filesfile-barts) lists *.context/story-map.md*, *src/checkout/order.py* and *src/checkout/cart.py* for the stages, practices and formats selected, and the session's branch changed only *order.py*
+*When* the Person lists This session, its count 1
 *Then* the file bar lists *order.py* alone
 *And* as folders it shows only *src/checkout*
-*When* the Person turns Changed off
-*Then* the file bar lists *story-map.md*, *order.py* and *cart.py* again
+*When* the Person lists All session files
+*Then* the file bar lists *story-map.md*, *order.py* and *cart.py*
+
+#### Scenario: List all session files in the formats selected
+
+*Given* the Files app lists the files of Discovery, with the diagram format selected
+*When* the Person lists All session files
+*Then* the file bar lists only the drawio files, the branch's changes or not
 
 #### Scenario: Keep a published design canvas
 
 *Given* the Files app lists a design canvas published at its link, unchanged, and *cart.py*, unchanged
-*When* the Person turns on Changed
+*When* the Person lists This session
 *Then* the file bar lists the design canvas alone, which opens at its link
 
 ## Story: Toggle Practice In Files App

@@ -57,14 +57,14 @@ const foldersAbove = (tree: FileFolder, path: string): string[] =>
 export class FileBar {
   constructor(private readonly store: FilesStore) {}
 
-  // The files the bar lists: every file the page lists, a practice turned off hiding its own; or, changed only, the
-  // ones the session's branch changed, the ticket's own work, and a design canvas, which opens at its link.
+  // The files the bar lists: in This session, the ones the session's branch changed, its own work, and a design canvas,
+  // which opens at its link; in All session files, every one.
   get entries(): FileEntryData[] {
-    const { entries, fileBar } = this.store.state
-    return fileBar.isChangedOnly ? entries.filter(entry => entry.is_changed || entry.link) : entries
+    const { entries, scope } = this.store.state
+    return scope === 'session' ? entries.filter(entry => entry.is_changed || entry.link) : entries
   }
 
-  // How many of the listed files the session's branch changed, for the changed-only button.
+  // How many files the session's branch changed among those the page lists, for the This session button.
   get changedCount(): number {
     return this.store.state.entries.filter(entry => entry.is_changed).length
   }
@@ -88,11 +88,6 @@ export class FileBar {
       const above = view === 'folders' && openPath ? foldersAbove(this.tree, openPath) : []
       return { fileBar: { ...fileBar, view, closedFolders: fileBar.closedFolders.filter(path => !above.includes(path)) } }
     })
-  }
-
-  // Lists only the files the session's branch changed, or every file again.
-  toggleChangedOnly(): void {
-    this.store.change(({ fileBar }) => ({ fileBar: { ...fileBar, isChangedOnly: !fileBar.isChangedOnly } }))
   }
 
   toggleFolder(path: string): void {

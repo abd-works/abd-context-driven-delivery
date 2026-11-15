@@ -19,8 +19,7 @@ The *Files app* shows the files a link names and turns a person's reading into w
   - -> Chat.show (`selected_fidelities`: the one selection cdd holds for the chat; the chat bar's dots write it through `Chat.select` and draw it from `Chat.show` at each check-in)
 - `guidance` (*GuidanceSelector*, `files/guidance-selector.ts`) follows the session's guidance selection, the stages, practices, and format groups selected, which the chat bar's stage buttons, practice dots, and format chips show too. One waiting read (`Session.guidance_selection_after(version)`) answers as soon as a change anywhere raises the version. A press on a stage, practice, or format button draws at once, then sends one `Session.update_guidance_selection`; an answer older than the version drawn is ignored, so a late read never undoes a press. The page lists the files of the selection's fidelities (before any stage is chosen, the link's), reading a stage's files the first time it shows, and only those in the format groups selected while any is.
   - -> Session.guidance_selection, Session.guidance_selection_after, Session.update_guidance_selection
-- `showScope(scope)`: This session lists the session's own files, as its guidance selection covers them; All files lists every file and folder under the session's root, read once with no stage, practice or format filtering, to review older work (`Session.root_files`, the files git tracks or would track there). The Changed button still lists the branch's own among either.
-  - -> Session.root_files
+- `showScope(scope)`: the stages, practices and formats selected choose the files either way. All session files lists every one of them, older work included; This session, the default, lists those the session's branch changed and any design canvas published at a link. Nothing is read again.
 - `toggleRules()` and `toggleCrossFile()` each turn one read of the open file on or off, both off by default so browsing never reads a graph: Rules reads the file on its own and shows its folds and its own broken rules, under a second (`Session.file_alone`); Cross-file shows only the rules the whole working copy finds beyond those, linking files and practices, which takes far longer (`Session.file_in_whole`).
   - -> Session.file(path, rules, cross_file)
 - `refreshOpen()` (private) reads the open file again, and again every two seconds while a comment on it is sent.
@@ -33,7 +32,7 @@ The *Files app* shows the files a link names and turns a person's reading into w
 - `toggle()` collapses or expands the bar.
 - `show(view)` shows the files as a list or in their folder tree.
   - **Invariant:** shown as folders, every folder down to the open file is open.
-- `entries` are the files the bar lists: every listed file, or, changed only (`toggleChangedOnly()`), those the session's branch changed and any design canvas published at a link; `changedCount` counts the changed ones for the Changed button. The list and the tree both show `entries`.
+- `entries` are the files the bar lists: under This session, those the session's branch changed and any design canvas published at a link; under All session files, every listed file. `changedCount` counts the changed ones for the This session button. The list and the tree both show `entries`.
 - `toggleFolder(path)` opens or closes one folder; `isOpen(folder)` says which it is.
 
 ### FidelityFiles (`files/files-state.ts`)

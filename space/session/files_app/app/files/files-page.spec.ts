@@ -33,7 +33,6 @@ class FakeFilesServer implements CddApi {
   async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
     this.posts.push({ path, body })
     if (path.endsWith('/guidance-selection')) return this.selection() as Result
-    if (path.endsWith('/root-files')) return [entry('C:/dev/abd-cdd-2/old/notes.md'), entry('C:/dev/abd-cdd-2/src/app.py')] as Result
     if (path.endsWith('/show')) return { name: 'release-2', repo_name: 'abd-cdd', branch: 'release-2', root: 'C:/dev/abd-cdd-2' } as Result
     if (path.endsWith('/update-guidance-selection')) return this.update(body) as Result
     if (path.endsWith('/guidance-selection-after')) return (await this.after(Number(body.version))) as Result
@@ -78,7 +77,7 @@ class FakeFilesServer implements CddApi {
 }
 
 function entry(path: string) {
-  return { path, exists: true, is_changed: false } as never
+  return { path, exists: true, is_changed: false, link: '' } as never
 }
 
 const STAGE_LINK = '?files=release-2&fidelity=stories-story-map,ddd-bounded-context&chat=chat-1'
@@ -205,26 +204,25 @@ describe('Head The Files App With Where The Files Are', () => {
   })
 })
 
-describe('Review Every File Under The Session Root', () => {
-  describe('that has All files pressed', () => {
-    it('should list every file under the root, no stage, practice or format filtering it', async () => {
+describe('Review All Session Files Or This Session', () => {
+  describe('that has All session files pressed', () => {
+    it('should list the files of the stages selected that the branch has not changed', async () => {
+      const server = new FakeFilesServer()
+      server.stages = ['discovery']
+      const { page, stop } = await following(server)
+      page.showScope('all')
+      stop()
+      expect(page.fileBar.entries.map(each => each.path)).toContain('.context/stories-story-map.md')
+    })
+
+    it('should list only the files in the formats selected', async () => {
       const server = new FakeFilesServer()
       server.stages = ['discovery']
       server.formats = ['diagram']
       const { page, stop } = await following(server)
-      await page.showScope('all')
+      page.showScope('all')
       stop()
-      expect(paths(page)).toEqual(['C:/dev/abd-cdd-2/old/notes.md', 'C:/dev/abd-cdd-2/src/app.py'])
-    })
-
-    it("should list the session's own files again once This session is pressed", async () => {
-      const server = new FakeFilesServer()
-      server.stages = ['discovery']
-      const { page, stop } = await following(server)
-      await page.showScope('all')
-      await page.showScope('session')
-      stop()
-      expect(paths(page)).toContain('.context/stories-story-map.md')
+      expect(page.fileBar.entries.every(each => each.path.endsWith('.drawio'))).toBe(true)
     })
   })
 })

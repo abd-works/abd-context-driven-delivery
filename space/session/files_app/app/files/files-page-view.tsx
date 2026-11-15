@@ -128,20 +128,17 @@ function FileBarButtonsView({ page }: { page: FilesPage }) {
       </button>
       {fileBar.isOpen ? (
         <>
-          <button className="file-bar-view" aria-pressed={scope === 'session'} title="The session's own files, as its stages, practices and formats select them" onClick={() => void page.showScope('session')}>
-            This session
+          <button className="file-bar-view" aria-pressed={scope === 'all'} title="Every file of the stages, practices and formats selected, older work included" onClick={() => page.showScope('all')}>
+            All session files
           </button>
-          <button className="file-bar-view" aria-pressed={scope === 'all'} title="Every file and folder under the session's root, to review older work" onClick={() => void page.showScope('all')}>
-            All files
+          <button className="file-bar-view" aria-pressed={scope === 'session'} title="The files this session's branch changed, among those its stages, practices and formats select" onClick={() => page.showScope('session')}>
+            This session <span className="file-entry-note">{scope === 'session' ? page.fileBar.changedCount : ''}</span>
           </button>
           <button className="file-bar-view" aria-pressed={fileBar.view === 'list'} title="Show the files as a list" onClick={() => page.fileBar.show('list')}>
             List
           </button>
           <button className="file-bar-view" aria-pressed={fileBar.view === 'folders'} title="Show the files in their folders" onClick={() => page.fileBar.show('folders')}>
             Folders
-          </button>
-          <button className="file-bar-view" aria-pressed={fileBar.isChangedOnly} title="List only the files the session's branch changed" onClick={() => page.fileBar.toggleChangedOnly()}>
-            Changed <span className="file-entry-note">{page.fileBar.changedCount}</span>
           </button>
         </>
       ) : null}

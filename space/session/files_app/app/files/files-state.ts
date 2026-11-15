@@ -11,10 +11,9 @@ export type FilesState = {
   guidance: GuidanceSelectionData | null
   // Where the files are, as the header shows it: the repository, the branch, and the session's root.
   place: string
-  // What the page lists: the session's own files, as its guidance selection covers them, or every file under its
-  // root, read the first time it is asked for, to review older work.
+  // What the page lists of the files its guidance selection covers: This session, those the session's branch changed;
+  // or All session files, every one, older work included.
   scope: 'session' | 'all'
-  rootFiles: FileEntryData[] | null
   // What the open file is read with: its own rules, read on its own, and the rules across the whole working copy. Both
   // off by default, so browsing never reads a graph.
   reads: { rules: boolean; crossFile: boolean }
@@ -26,14 +25,13 @@ export type FilesState = {
   problem: string
   toasts: string[]
   // The folders a person closed: every other folder is open, so a folder a filter change brings is open too.
-  fileBar: { isOpen: boolean; view: 'list' | 'folders'; closedFolders: string[]; isChangedOnly: boolean }
+  fileBar: { isOpen: boolean; view: 'list' | 'folders'; closedFolders: string[] }
 }
 
 export const NO_FILES: FilesState = {
   guidance: null,
   place: '',
   scope: 'session',
-  rootFiles: null,
   reads: { rules: false, crossFile: false },
   byFidelity: [],
   entries: [],
@@ -42,7 +40,7 @@ export const NO_FILES: FilesState = {
   file: null,
   problem: '',
   toasts: [],
-  fileBar: { isOpen: true, view: 'folders', closedFolders: [], isChangedOnly: false },
+  fileBar: { isOpen: true, view: 'folders', closedFolders: [] },
 }
 
 // A change to the state, applied by the store that holds it.

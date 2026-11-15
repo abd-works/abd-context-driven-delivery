@@ -20,18 +20,22 @@ const byFidelity = (body: Record<string, unknown> | undefined, files: Record<str
 
 const entry = (path: string, is_changed = false): FileEntryData => ({ path, exists: true, is_changed, link: '' }) as FileEntryData
 
-// The Files app's server, answering the session's files in the order the link names them, and nothing else.
+// The Files app's server, answering the session's files in the order the link names them, and nothing else; each file
+// the branch changed unless named unchanged, so This session lists it.
 class FakeFilesServer implements CddApi {
+  constructor(private readonly unchanged: string[] = []) {}
+
   async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
     if (path.endsWith('/show')) return { practices: {} } as Result
-    if (path.endsWith('/fidelity-files')) return byFidelity(body, { markdown: [entry(STORY_MAP)], python: [entry(ORDER, true), entry(CART)] }) as Result
+    const changed = (named: string) => entry(named, !this.unchanged.includes(named))
+    if (path.endsWith('/fidelity-files')) return byFidelity(body, { markdown: [changed(STORY_MAP)], python: [changed(ORDER), changed(CART)] }) as Result
     return null
   }
 }
 
 // The page with its files listed and order.py open, as the person finds it.
-async function pageWithOrderOpen(): Promise<FilesPage> {
-  const page = new FilesPage(new FakeFilesServer(), new FilesLink(`?files=checkout-flow&fidelity=stories-story-map&file=${ORDER}`))
+async function pageWithOrderOpen(server = new FakeFilesServer()): Promise<FilesPage> {
+  const page = new FilesPage(server, new FilesLink(`?files=checkout-flow&fidelity=stories-story-map&file=${ORDER}`))
   page.start()()
   await new Promise(resolve => setTimeout(resolve, 0))
   return page
@@ -106,48 +110,40 @@ describe('Switch File Bar Between Folders And List', () => {
       it('should keep it closed once a filter changes the files listed', async () => {
         const page = await pageWithOrderOpen()
         page.fileBar.toggleFolder('.context')
-        page.fileBar.toggleChangedOnly()
-        page.fileBar.toggleChangedOnly()
+        page.store.change(state => ({ entries: state.entries.slice(1) }))
+        page.store.change(state => ({ entries: [entry(STORY_MAP, true), ...state.entries] }))
         expect(page.fileBar.isOpen(folderShown(page, '.context')!)).toBe(false)
       })
     })
   })
 })
 
-describe('List Only The Files The Branch Changed', () => {
+describe('List This Session Or All Session Files', () => {
   describe('with order.py changed and the story map and cart.py not', () => {
-    describe('that has the file bar listing changed files only', () => {
+    const onlyOrderChanged = () => pageWithOrderOpen(new FakeFilesServer([STORY_MAP, CART]))
+
+    describe('that lists This session, its default', () => {
       it('should list order.py alone', async () => {
-        const page = await pageWithOrderOpen()
-        page.fileBar.toggleChangedOnly()
+        const page = await onlyOrderChanged()
         expect(page.fileBar.entries.map(each => each.path)).toEqual([ORDER])
       })
 
       it('should show only its folder in the folder tree', async () => {
-        const page = await pageWithOrderOpen()
-        page.fileBar.toggleChangedOnly()
+        const page = await onlyOrderChanged()
         expect(page.fileBar.tree.folders.map(folder => folder.name)).toEqual(['src/checkout'])
       })
 
       it('should count the one changed file on its button', async () => {
-        const page = await pageWithOrderOpen()
+        const page = await onlyOrderChanged()
         expect(page.fileBar.changedCount).toBe(1)
-      })
-
-      it('should list every file again once turned off', async () => {
-        const page = await pageWithOrderOpen()
-        page.fileBar.toggleChangedOnly()
-        page.fileBar.toggleChangedOnly()
-        expect(page.fileBar.entries.map(each => each.path)).toEqual([STORY_MAP, ORDER, CART])
       })
     })
   })
 
-  it('should keep a published design canvas, which opens at its link', () => {
+  it('should keep a published design canvas in This session, which opens at its link', () => {
     const canvas = { path: 'design-canvas/version-1/project/canvas.json', exists: true, is_changed: false, link: 'https://claude.ai/artifact/canvas' } as FileEntryData
     const page = new FilesPage(new FakeFilesServer(), new FilesLink('?files=checkout-flow&fidelity=ux-front-end-code'))
     page.store.change(() => ({ entries: [canvas, entry(CART)] }))
-    page.fileBar.toggleChangedOnly()
     expect(page.fileBar.entries).toEqual([canvas])
   })
 })
@@ -182,11 +178,11 @@ describe('folder tree of the files', () => {
   })
 })
 
-// A server answering files in nested folders, src holding a file of its own beside two folders.
+// A server answering files the branch changed in nested folders, src holding a file of its own beside two folders.
 class NestedFilesServer implements CddApi {
   async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
     if (path.endsWith('/show')) return { practices: {} } as Result
-    if (path.endsWith('/fidelity-files')) return byFidelity(body, { python: [entry('src/main.py'), entry('src/checkout/order.py'), entry('src/pay/card.py')] }) as Result
+    if (path.endsWith('/fidelity-files')) return byFidelity(body, { python: [entry('src/main.py', true), entry('src/checkout/order.py', true), entry('src/pay/card.py', true)] }) as Result
     return null
   }
 }

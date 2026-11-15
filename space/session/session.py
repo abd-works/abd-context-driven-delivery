@@ -625,14 +625,6 @@ class Session:
         """List every file in this session's folder, each with its path from the project: its log, handoffs, kept notes, and validation reports."""
         return self.session_files.in_folder()
 
-    @long_call
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def root_files(self) -> list[FileEntry]:
-        """List every file under the folder this session works in, its folders included, each with its path from the project and whether the session's branch changed it: in a repository the files git tracks or would track there, so what .gitignore leaves out is left out. What the Files app shows in place of the session's own files, to review older work."""
-        return self.session_files.under_root()
-
     @mcp
     @agent_tool
     @noSessionLog

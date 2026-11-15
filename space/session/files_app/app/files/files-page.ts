@@ -121,7 +121,6 @@ export class FilesPage {
 
   // The files shown from state: of the fidelities listed, those in the formats selected.
   private shownFrom(state: FilesPage['state']): FileEntryData[] {
-    if (state.scope === 'all') return state.rootFiles ?? []
     return filesShown(state.byFidelity, this.link.isSessionFolder ? [''] : listedBy(state.guidance, this.link.fidelities), selectedFormatsOf(state.guidance))
   }
 
@@ -153,17 +152,10 @@ export class FilesPage {
     }
   }
 
-  // Lists the session's own files, or every file under its root, read the first time with no filtering: the Changed
-  // button still lists the branch's own among them.
-  async showScope(scope: 'session' | 'all'): Promise<void> {
-    this.store.change(state => ({ scope, entries: this.shownFrom({ ...state, scope }) }))
-    if (scope !== 'all' || this.state.rootFiles) return
-    try {
-      const rootFiles = (await this.session.rootFiles()) ?? []
-      this.store.change(state => ({ rootFiles, entries: this.shownFrom({ ...state, rootFiles }) }))
-    } catch (failure) {
-      this.fail(`The Files app did not list every file under the session's root: ${reasonOf(failure)}`, 'Pressing All files, calling session.root_files')
-    }
+  // This session lists the files the branch changed; All session files lists every file of the fidelities listed, older
+  // work included. The stages, practices and formats selected filter both.
+  showScope(scope: 'session' | 'all'): void {
+    this.store.change(() => ({ scope }))
   }
 
   // A press on a stage, practice, or format button: the session's one guidance selection, which the chat bar's buttons
