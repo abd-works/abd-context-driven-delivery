@@ -40,5 +40,10 @@
         "behavior": []
       }
     }
+  },
+  "outputs": {
+    "stories": {
+      "root": ".context/stories"
+    }
   }
 }
