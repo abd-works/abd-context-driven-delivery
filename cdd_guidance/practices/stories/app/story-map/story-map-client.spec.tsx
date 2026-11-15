@@ -159,7 +159,7 @@ describe('an edit through the story map tools', () => {
     const posted: Posted[] = []
     const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/edit-field': WITH_EXAMPLES }, posted)), WITH_EXAMPLES)
     await client.editExample(EXAMPLE, 'status', 'not running')
-    expect(posted).toEqual([{ path: `/api/example/${encodeURIComponent(EXAMPLE)}/edit-field`, body: { field: 'status', value: 'not running' } }])
+    expect(posted).toEqual([{ path: `/api/example/${encodeURIComponent(EXAMPLE)}/edit-field`, body: { field: 'status', text: 'not running' } }])
   })
 
   it("should remove an example through its own tool", async () => {
@@ -234,7 +234,7 @@ describe("a scenario's example row on the page", () => {
     const cell = screen.getByRole('textbox', { name: 'status of Story UI editor' })
     fireEvent.change(cell, { target: { value: 'not running' } })
     fireEvent.blur(cell)
-    await waitFor(() => expect(posted.at(-1)).toEqual({ path: `/api/example/${encodeURIComponent(EXAMPLE)}/edit-field`, body: { field: 'status', value: 'not running' } }))
+    await waitFor(() => expect(posted.at(-1)).toEqual({ path: `/api/example/${encodeURIComponent(EXAMPLE)}/edit-field`, body: { field: 'status', text: 'not running' } }))
   })
 })
 
