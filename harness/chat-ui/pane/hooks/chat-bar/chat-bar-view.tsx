@@ -1,5 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 
+import type { ServerHealthIconsView } from '../health/server-health-view'
 import type { ActionPickerJson, ChatBarViewJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { GlyphButtonView } from '../shared/glyph-button-view'
@@ -25,6 +26,8 @@ type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
 // What one draw of the chat bar reads: the client built from board.show, which boxes are open above the line, the
 // server health mark, its panel above the line, the failure shown above it, the same panel for the session card, and the columns the band may fill.
+type HealthIcons = ReturnType<typeof ServerHealthIconsView>
+
 export type ChatBarDraw = {
   chatBar: ChatBarClient
   failure: FailureClient | null
@@ -33,7 +36,7 @@ export type ChatBarDraw = {
   formats: FormatChips
   overlays: OverlayChips
   busy: { doing: string; wheel: string }
-  health: { band: unknown; panel: unknown }
+  health: { band: unknown; panel: unknown; icons: HealthIcons }
   version: { label: string; badge: unknown; dialog: unknown }
   push: { buttons: unknown; dialog: unknown }
   width: number
