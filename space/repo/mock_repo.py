@@ -184,12 +184,15 @@ class MockRepo(Repo):
 
     def __init__(self, root: Path, held: MockGit) -> None:
         self.root = Path(root).resolve()
-        self.default_branch = held.default_branch
         self.git = _NoGit()
         self.worktrees = MockWorktrees(self, held)
         self._from_top: dict[Path, str] = {}
         self.writing_index = held.lock
         self._held = held
+
+    @property
+    def default_branch(self) -> str:
+        return self._held.default_branch
 
     @property
     def is_clone(self) -> bool:

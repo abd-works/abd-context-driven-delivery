@@ -88,3 +88,46 @@ with description("a session's work taken to main") as self:
 
             with it("should push the work to main on origin"):
                 expect(self.held.origin_trees["main"]).to(have_key("work.txt"))
+
+    with context("from a repository whose default branch is master"):
+        with before.each:
+            self.held.default_branch = "master"
+            self.held.trees["master"] = self.held.trees.pop("main")
+            self.held.logs["master"] = self.held.logs.pop("main")
+            self.held.checked_out[self.clone] = "master"
+            self.held.add_origin()
+            self.tree = self.tmp / "clone-demo"
+            self.held.add_worktree(SESSION_BRANCH, self.tree)
+            (self.tree / "work.txt").write_text("work\n", encoding="utf-8")
+
+        with context("that is pushed to main"):
+            with before.each:
+                self.held.serve(self.tree).push_to_main()
+
+            with it("should push the work to master on origin"):
+                expect(self.held.origin_trees["master"]).to(have_key("work.txt"))
+
+# (E) Steer Sessions
+# (S) Person --> Push Work From Chat Bar
+with description("a session's work pushed on its own branch") as self:
+    with before.each:
+        self.tmp = Path(tempfile.mkdtemp(prefix="session-push-"))
+        self.clone = self.tmp / "clone"
+        self.clone.mkdir()
+        (self.clone / "seed.txt").write_text("seed\n", encoding="utf-8")
+        self.held = MockGit(self.clone)
+        self.held.make_clone()
+        self.held.add_origin()
+        self.tree = self.tmp / "clone-demo"
+        self.held.add_worktree(SESSION_BRANCH, self.tree)
+        (self.tree / "work.txt").write_text("work\n", encoding="utf-8")
+        self.held.serve(self.tree).push_work()
+
+    with after.each:
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    with it("should push the work on the session's branch to origin"):
+        expect(self.held.origin_trees[SESSION_BRANCH]).to(have_key("work.txt"))
+
+    with it("should leave main without the work"):
+        expect(self.held.trees["main"]).not_to(have_key("work.txt"))

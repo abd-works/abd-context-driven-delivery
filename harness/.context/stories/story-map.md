@@ -724,13 +724,13 @@ Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add fe
 
 Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add feature to backlog button and buttons for common repo actions eg push, pull, commit"): a Commit button commits the active session's changes (`Repo.commit` in `space/repo/repo.py`).
 
-### (S) Person --> Push Work From Chat Bar
+### (S) Person --> [Push Work From Chat Bar](../../../space/repo/session_to_main_spec.py)
 
-Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add feature to backlog button and buttons for common repo actions eg push, pull, commit"): a Push button pushes the active session's branch (`repo.push_commit`).
+Observed (2026-11-14): the ⤴ icon after files calls `repo.push_work` (`Repo.push_work`) for the folder the chat works in: the checkout commits its work on its branch and pushes the branch; nothing is merged. Was Requested (2026-11-10): a Push button pushes the active session's branch.
 
 ### (S) Person --> [Push Session To Main From Chat Bar](../../../space/repo/session_to_main_heavy_spec.py)
 
-Observed (2026-11-14): the ⇪ icon asks "Push <session> to main on origin?", and yes calls `repo.push_to_main` (`Repo.push_to_main`) for the folder the chat works in, whichever repository holds it: the checkout commits its work on its branch and pushes the branch, the main clone merges that branch into main (`Branch.merge_into_default`), pushes main, and goes back to the branch it had. On main itself it commits and pushes main. The version is not raised; `/version` does that when the person chooses. `repo.merge_to_main` does the same without pushing, for an agent; the chat bar has no button for it (2026-11-14: "we only need the other button").
+Observed (2026-11-14): the ⇪ icon after ⤴, "push & merge to origin/main", asks "Push <session> and merge it to origin/main?", and yes calls `repo.push_to_main` (`Repo.push_to_main`) for the folder the chat works in, whichever repository holds it: the checkout commits its work on its branch and pushes the branch, the main clone merges that branch into the repository's default branch (`Branch.merge_into_default`; `Repo.default_branch` is the branch origin's HEAD names, else main or master), pushes it, and goes back to the branch it had. On main itself it commits and pushes main. The version is not raised; `/version` does that when the person chooses. `repo.merge_to_main` does the same without pushing, for an agent; the chat bar has no button for it (2026-11-14: "we only need the other button").
 
 ### (S) Person --> Pull Latest From Chat Bar
 

@@ -38,6 +38,25 @@ def _clone_with_origin(root: Path) -> None:
 _REPOSITORIES = BuiltOnce("session-to-main-spec-", _clone_with_origin)
 
 
+def _clone_of_master(root: Path) -> None:
+    """A clone of an origin whose default branch is master, as a repository made before git named it main."""
+    origin = root / "origin.git"
+    seed = root / "seed"
+    subprocess.run(["git", "init", "-q", "-b", "master", str(seed)], check=True, capture_output=True)
+    _git(seed, "config", "user.email", "session@test")
+    _git(seed, "config", "user.name", "session")
+    (seed / "seed.txt").write_text("seed\n", encoding="utf-8")
+    _git(seed, "add", "-A")
+    _git(seed, "commit", "-q", "-m", "seed")
+    subprocess.run(["git", "clone", "-q", "--bare", str(seed), str(origin)], check=True, capture_output=True)
+    subprocess.run(["git", "clone", "-q", str(origin), str(root / "clone")], check=True, capture_output=True)
+    _git(root / "clone", "config", "user.email", "session@test")
+    _git(root / "clone", "config", "user.name", "session")
+
+
+_MASTER_REPOSITORIES = BuiltOnce("session-to-master-spec-", _clone_of_master)
+
+
 def _files_on(root: Path, ref: str) -> list[str]:
     return _git(root, "ls-tree", "-r", "--name-only", ref).splitlines()
 
@@ -112,3 +131,45 @@ with description("a session's work taken to main") as self:
 
             with it("should push the work to main on origin"):
                 expect(_files_on(self.origin, "main")).to(contain("work.txt"))
+
+
+with description("a session's work taken to the default branch of a repository whose default is master") as self:
+    with before.each:
+        self.tmp = _MASTER_REPOSITORIES.copy()
+        self.origin, self.clone = self.tmp / "origin.git", self.tmp / "clone"
+        self.tree = self.tmp / "clone-demo"
+        _git(self.clone, "worktree", "add", "-q", "-b", SESSION_BRANCH, str(self.tree))
+        (self.tree / "work.txt").write_text("work\n", encoding="utf-8")
+
+    with after.each:
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    with context("that is pushed to main"):
+        with before.each:
+            Repo(self.tree).push_to_main()
+
+        with it("should push the work to master on origin"):
+            expect(_files_on(self.origin, "master")).to(contain("work.txt"))
+
+        with it("should make no main branch on origin"):
+            expect(_git(self.origin, "branch", "--list", "main")).to(equal(""))
+
+# (E) Steer Sessions
+# (S) Person --> Push Work From Chat Bar
+with description("a session's work pushed on its own branch") as self:
+    with before.each:
+        self.tmp = _REPOSITORIES.copy()
+        self.origin, self.clone = self.tmp / "origin.git", self.tmp / "clone"
+        self.tree = self.tmp / "clone-demo"
+        _git(self.clone, "worktree", "add", "-q", "-b", SESSION_BRANCH, str(self.tree))
+        (self.tree / "work.txt").write_text("work\n", encoding="utf-8")
+        Repo(self.tree).push_work()
+
+    with after.each:
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    with it("should push the work on the session's branch to origin"):
+        expect(_files_on(self.origin, SESSION_BRANCH)).to(contain("work.txt"))
+
+    with it("should leave main without the work"):
+        expect(_files_on(self.origin, "main")).not_to(contain("work.txt"))

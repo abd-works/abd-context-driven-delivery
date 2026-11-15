@@ -30,8 +30,8 @@ import {
 import { ServerHealthBandView, ServerHealthPanelView } from './health/server-health-view'
 import { askToUpdate, cancelUpdate, checkVersionSoon, checkVersionUntilRead, currentCddVersion, updateToLatest } from './health/cdd-version-client'
 import { UpdateDialogView, VersionBadgeView } from './health/cdd-version-view'
-import { askToPush, cancelPush, currentRepo, pushToMain } from './repo/repo-client'
-import { PushButtonView, PushDialogView } from './repo/repo-view'
+import { askToPush, cancelPush, currentRepo, pushToMain, pushWork } from './repo/repo-client'
+import { PushButtonsView, PushDialogView } from './repo/repo-view'
 import { currentAppOpening, openAppBesideChat } from './health/app-client'
 import { FOLDER_QUERY, PROJECT_QUERY, projectPageUrl } from './board-chat/board'
 import { CARD_SCOPE } from './chat-bar/session-card-view'
@@ -185,7 +185,7 @@ export const register: Register = on => {
     const version = await currentCddVersion($)
     const versionActions = { askToUpdate: () => askToUpdate($), cancelUpdate: () => cancelUpdate($), updateToLatest: () => updateToLatest($) }
     const repo = await currentRepo($)
-    const pushActions = { ask: () => askToPush($), cancel: () => cancelPush($), push: () => pushToMain($) }
+    const pushActions = { pushWork: () => pushWork($), ask: () => askToPush($), cancel: () => cancelPush($), pushToMain: () => pushToMain($) }
     try {
     const chatBar = await currentChatBar($)
     return ChatBarView($, elements, {
@@ -199,7 +199,7 @@ export const register: Register = on => {
       busy: await currentBusy($),
       health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band) },
       version: { badge: VersionBadgeView(elements, version, versionActions), dialog: UpdateDialogView(elements, version, versionActions) },
-      push: { button: PushButtonView(elements, repo, pushActions), dialog: PushDialogView(elements, repo, chatBar.title || chatBar.sessionName, pushActions) },
+      push: { buttons: PushButtonsView(elements, repo, pushActions), dialog: PushDialogView(elements, repo, chatBar.title || chatBar.sessionName, pushActions) },
       width: e.props.bodyColumns,
     })
     } catch (failure) {
