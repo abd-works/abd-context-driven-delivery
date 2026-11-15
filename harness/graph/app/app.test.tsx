@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { GraphView } from './graph/GraphView';
+import type { ExplorerEntryData } from '@cdd/harness/graph/graph';
 import { SourceView } from './source/SourceView';
 import { buildViolationCorrectPrompt } from './source/violation-prompt';
 import filterChoices from './filter-choices.json';
@@ -539,6 +540,7 @@ it('should put the chosen folder on the page and show its classes', async () => 
     'inventory',
     'filter_choices',
     'explorer_trees',
+    'explorer_branch',
   ]);
 });
 
@@ -798,7 +800,7 @@ it('should show invokes, observes, and demonstrates on a step', async () => {
       },
     ],
   };
-  render(<GraphView trees={[step]} loading={false} error="" selectedId="" activeRule="" onSelect={() => undefined} />);
+  render(<GraphView trees={[step] as unknown as ExplorerEntryData[]} loading={false} error="" selectedId="" activeRule="" onSelect={() => undefined} onOpenBranch={async () => undefined} />);
   await user.click(screen.getByRole('button', { name: 'Expand when the User enters valid account credentials' }));
   expect(document.querySelector('[data-node-id="invokes-valid"]')).toBeTruthy();
   expect(document.querySelector('[data-node-id="observes-valid"]')).toBeTruthy();
@@ -1038,7 +1040,7 @@ type Entry = { type: string; name: string; node_id: string; children: Entry[]; s
 // An entry as Python's explorer answers send it: the entries below it, each closed, keeping its rules and counting the
 // entries it left out, which explorer_branch answers.
 function opened(entry: Entry): Entry {
-  return { ...entry, children: entry.children.map((child) => (child.type === 'rules' ? child : closed(child))) };
+  return { ...entry, children: entry.children.map((child) => (child.type === 'rules' ? child : closed(child))), children_left_out: 0 };
 }
 
 function closed(entry: Entry): Entry {

@@ -117,11 +117,12 @@ function TreeNode({
   const [open, setOpen] = useState(false);
   const children = childrenOf(node);
   const leftOut = childrenLeftOut(node);
-  // A closed entry the answer left children out of reads them the first time a person opens it.
-  const toggle = () => {
-    if (!open && leftOut > 0) void onOpenBranch(node.node_id);
-    setOpen((value) => !value);
-  };
+  // An open entry whose answer left its children out reads them: when a person opens it, and when new trees, after a
+  // change of filter, arrive under an entry already open.
+  useEffect(() => {
+    if (open && leftOut > 0) void onOpenBranch(node.node_id);
+  }, [open, leftOut, node.node_id]);
+  const toggle = () => setOpen((value) => !value);
   const rule = node.type === 'Rule';
   const rulesHolder = node.type === 'rules';
   const selected = rule ? ownerId === selectedId && node.name === activeRule : node.node_id === selectedId;

@@ -25,7 +25,7 @@ export function withBranch(trees: ExplorerEntryData[], branch: ExplorerEntryData
 function opening(item: TreeItem, branch: ExplorerEntryData): TreeItem {
   if (item.node_id === branch.node_id && childrenLeftOut(item) > 0) return branch;
   if (isRule(item) || !('children_left_out' in item)) return item;
-  return { ...item, children: item.children.map((child) => opening(child, branch)) as ExplorerEntryData['children'] };
+  return { ...item, children: item.children.map((child) => opening(child, branch) as ExplorerEntryData | GraphRulesCollectionData) };
 }
 
 export type GraphSelection = {
