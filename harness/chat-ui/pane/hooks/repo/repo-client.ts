@@ -1,8 +1,6 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { CommitData } from '@cdd/space/repo/repo'
-
 import type { ToMainJson } from '../../types'
 import { callTool, refreshChatBar } from '../chat-bar/chat-bar-client'
 import { showFailure } from '../error-display/failure-client'
@@ -13,9 +11,8 @@ export type PushTarget = 'branch' | 'main'
 const TOOLS: Record<PushTarget, string> = { branch: 'repo.push_work', main: 'repo.push_to_main' }
 const PRESSED: Record<PushTarget, string> = { branch: 'Push on the chat bar', main: 'Push & merge to origin/main on the chat bar' }
 const FAILED: Record<PushTarget, string> = { branch: 'The push failed', main: 'The push to main failed' }
-const SHORT_SHA = 7
 
-const toMain = atom({ plugin: 'cdd-board', key: 'toMain' } as const, { isAsking: false, state: 'idle', target: 'branch', landed: null, error: null } as ToMainJson, { shape: 'to-main-3' })
+const toMain = atom({ plugin: 'cdd-board', key: 'toMain' } as const, { isAsking: false, state: 'idle', error: null } as ToMainJson, { shape: 'to-main-4' })
 
 // Mirrors the Python Repo for the chat bar's two pushes: whether Push to main's dialog is open, and how the last push went.
 export class RepoClient {
@@ -29,19 +26,8 @@ export class RepoClient {
     return this.json.state
   }
 
-  get target(): PushTarget {
-    return this.json.target
-  }
-
   get error(): string | null {
     return this.json.error
-  }
-
-  // What the bar says once it is done, such as pushed at 1a2b3c4, or main at 1a2b3c4.
-  get landed(): string {
-    const commit = this.json.landed as CommitData | null
-    if (!commit) return ''
-    return `${this.json.target === 'main' ? 'main' : 'pushed'} at ${commit.sha.slice(0, SHORT_SHA)}`
   }
 }
 
@@ -70,10 +56,10 @@ export async function pushToMain($: EngineInterface): Promise<void> {
 
 // The one call both pushes share; then the board is read again so the bar shows the session as it now is.
 async function pushTo($: EngineInterface, target: PushTarget): Promise<void> {
-  await update($, toMain, json => ({ ...json, isAsking: false, state: 'running', target, error: null }))
+  await update($, toMain, json => ({ ...json, isAsking: false, state: 'running', error: null }))
   try {
-    const landed = await callTool<CommitData>($, TOOLS[target], {})
-    await update($, toMain, json => ({ ...json, state: 'installed', landed }))
+    await callTool<object>($, TOOLS[target], {})
+    await update($, toMain, json => ({ ...json, state: 'installed' }))
   } catch (failure) {
     await update($, toMain, json => ({ ...json, state: 'failed', error: String(failure) }))
     await showFailure($, FAILED[target], `${PRESSED[target]}, calling ${TOOLS[target]}`, failure)

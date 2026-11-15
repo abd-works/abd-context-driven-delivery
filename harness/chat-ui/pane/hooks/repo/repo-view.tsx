@@ -11,10 +11,10 @@ export type PushActions = { pushWork: () => unknown; ask: () => unknown; cancel:
 
 const DOING: Record<string, string> = { running: 'pushing…', failed: 'not pushed' }
 
-// Push and Push & merge to origin/main, as icons among the session's buttons, with how the last push went.
+// Push and Push & merge to origin/main, as icons among the session's buttons, with pushing… or not pushed while one runs or after one fails.
 export function PushButtonsView(elements: ElementTable, repo: RepoClient, actions: PushActions) {
   const { Box, Text } = elements
-  const doing = repo.state === 'installed' ? repo.landed : DOING[repo.state]
+  const doing = DOING[repo.state]
   return (
     <Box key="push-buttons" flexDirection="row" gap={1}>
       <Box key="push-work-box">
