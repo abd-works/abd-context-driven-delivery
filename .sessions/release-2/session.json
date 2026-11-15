@@ -9,7 +9,6 @@
       "enabled": true,
       "formats": {
         "modules": [
-          "markdown",
           "drawio"
         ]
       }
@@ -18,25 +17,21 @@
       "enabled": true,
       "formats": {
         "story_map": [
-          "drawio",
-          "markdown"
+          "drawio"
         ]
       }
     },
     "ddd": {
       "enabled": true,
       "formats": {
-        "bounded_context": [
-          "markdown"
-        ]
+        "bounded_context": []
       }
     },
     "ux": {
       "enabled": true,
       "formats": {
         "ia": [
-          "drawio",
-          "markdown"
+          "drawio"
         ]
       }
     },

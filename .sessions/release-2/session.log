@@ -183,3 +183,8 @@
 2026-11-15T17:43:03Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-6178
 2026-11-15T17:44:19Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-6219
 2026-11-15T17:49:39Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-6530
+2026-11-15T17:51:10Z tool graph.practice_names
+2026-11-15T17:51:10Z tool graph.load_practice_roots
+2026-11-15T17:51:31Z tool graph.inventory
+2026-11-15T17:51:48Z tool graph.inventory 4a2b62f1-74ad-4426-aafe-9c9618581953 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\4a2b62f1-74ad-4426-aafe-9c9618581953.jsonl 1-1140
+2026-11-15T17:51:57Z error chat.send C:\dev\abd-context-driven-delivery\.sessions\release-2\session.err 1985 no-chat
