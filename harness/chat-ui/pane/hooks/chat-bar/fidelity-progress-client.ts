@@ -10,7 +10,6 @@ import { promptCommand } from '../shared/chat-command'
 import { post } from '../board-chat/board'
 import { clearChosenAction } from './action-picker-client'
 
-const selectedFidelities = atom({ plugin: 'cdd-board', key: 'selectedFidelities' } as const, [] as string[])
 
 // The canvas's progress looks (design/StageStrip.dc.html), one for each state FidelityProgress.state sends; each
 // practice's colour comes with the board.
@@ -87,6 +86,11 @@ export class FidelityProgressClient {
     return this.progress.next_action
   }
 
+  // The session.json of the ticket's session, which the session tools name it by.
+  get sessionFile(): string {
+    return this.ticket.session.session_file
+  }
+
   // The practice root this fidelity's files are written under, as the ticket's session holds it.
   get folder(): string {
     return this.ticket.session.practices[this.progress.practice.key]?.root ?? ''
@@ -113,13 +117,18 @@ export class FidelityProgressClient {
 // done than work under way, so they are never hidden behind it.
 const STATES_BY_PROGRESS = ['violations', 'not_started', 'in_progress', 'done']
 
-// One practice's dot on the chat bar: its fidelities in every stage shown, one dot whatever how many stages show. It is
-// shaded by the least finished of them, carries their violations together, and is selected while all of them are.
+// One practice's dot on the chat bar: its fidelities in every stage shown, one dot however many stages show. While the
+// practice is on it is shaded by the least finished of them and carries their violations together; while it is off it
+// is faint. A press turns the practice on or off for the session.
 export class PracticeDotClient {
-  constructor(readonly fidelities: FidelityProgressClient[]) {}
+  constructor(
+    readonly practice: string,
+    readonly fidelities: FidelityProgressClient[],
+    readonly isOn: boolean,
+  ) {}
 
   get key(): string {
-    return this.fidelities.map(fidelity => fidelity.slug).join('+')
+    return this.practice
   }
 
   get least(): FidelityProgressClient {
@@ -128,58 +137,21 @@ export class PracticeDotClient {
   }
 
   get shade(): string {
-    return this.least.shade
+    return this.isOn ? this.least.shade : `${this.least.colour}${OFF_SHADE}`
   }
 
   get violationCount(): number {
-    return this.fidelities.reduce((count, fidelity) => count + fidelity.violationCount, 0)
+    return this.isOn ? this.fidelities.reduce((count, fidelity) => count + fidelity.violationCount, 0) : 0
   }
 
   // The first fidelity with violations, whose validation report a press on the count opens.
   get violating(): FidelityProgressClient | undefined {
-    return this.fidelities.find(fidelity => fidelity.violationCount > 0)
-  }
-
-  get isSelected(): boolean {
-    return this.fidelities.every(fidelity => fidelity.isSelected)
+    return this.isOn ? this.fidelities.find(fidelity => fidelity.violationCount > 0) : undefined
   }
 }
 
-// A press on a practice's dot selects all its fidelities in the stages shown, or clears them while all are selected.
-export async function selectPractice($: EngineInterface, dot: PracticeDotClient): Promise<void> {
-  const slugs = (await read($, selectedFidelities)) ?? []
-  const own = dot.fidelities.map(fidelity => fidelity.slug)
-  const next = dot.isSelected ? slugs.filter(slug => !own.includes(slug)) : [...slugs, ...own.filter(slug => !slugs.includes(slug))]
-  // The dot redraws at once; cdd's answer then replaces it.
-  await showSelected($, next)
-  const answer = await post($, { chat: await $.session.id(), operation: 'select', body: { selected_fidelities: next } })
-  await showSelected($, (JSON.parse(answer.text) as { selected_fidelities: string[] }).selected_fidelities)
-}
-
-// Atom selectedFidelities, declared in pane/types/index.d.ts and kept in this file.
-export async function selectedFidelitySlugs($: EngineInterface): Promise<string[]> {
-  return (await read($, selectedFidelities)) ?? []
-}
-
-// A press on a fidelity adds it to the selection, or takes it out when it is already there, so one action can run on
-// several fidelities at once. The selection is the chat's, held by cdd (chat.select), so a page the chat opened, such as
-// the Files app, shows and changes the same one; the dots draw what cdd answered. A change drops an action picked
-// before, so the button shows the next action again.
-export async function selectFidelity($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
-  const slugs = (await read($, selectedFidelities)) ?? []
-  const next = slugs.includes(fidelity.slug) ? slugs.filter(slug => slug !== fidelity.slug) : [...slugs, fidelity.slug]
-  const answer = await post($, { chat: await $.session.id(), operation: 'select', body: { selected_fidelities: next } })
-  await showSelected($, (JSON.parse(answer.text) as { selected_fidelities: string[] }).selected_fidelities)
-}
-
-// The dots draw the selection cdd holds for the chat, as chat.select or chat.show answered it; a change from elsewhere,
-// such as a practice pressed in the Files app, drops an action picked before.
-export async function showSelected($: EngineInterface, slugs: string[]): Promise<void> {
-  const shown = (await read($, selectedFidelities)) ?? []
-  if (shown.length === slugs.length && shown.every(slug => slugs.includes(slug))) return
-  await update($, selectedFidelities, () => slugs)
-  await clearChosenAction($)
-}
+// How faint a practice turned off draws its dot.
+const OFF_SHADE = '30'
 
 // The action's command goes in the prompt box for the person to send. Generate renders the earlier fidelity first
 // itself when that fidelity has no file in the format, so every action is one command.

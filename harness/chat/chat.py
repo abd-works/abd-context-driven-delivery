@@ -254,42 +254,15 @@ class Chat:
     def _check_in(self, is_busy: bool, name: str, folder: str) -> list[ChatCommand]:
         self._folder.mkdir(parents=True, exist_ok=True)
         state = {"name": name, "is_busy": is_busy, "seen": self.clock(), "folder": folder}
-        self._write({**state, **self._kept_state(self._state)})
+        self._write({**state, **self._title_state(self._state)})
         self._finish_worked_on(is_busy)
         return self._take_ready(is_busy)
 
     @mcp
     @agent_tool
     @noSessionLog
-    def select(self, selected_fidelities: list[str]) -> Chat:
-        """Select these fidelities, by slug, for chat: the one selection its chat bar's dots and a page it opened, such as the Files app, both show and both change; none selected, every fidelity of the stage shown."""
-        return self._kept_with({"selected_fidelities": list(dict.fromkeys(selected_fidelities))})
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def show_stages(self, shown_stages: list[str]) -> Chat:
-        """Show these stages for chat: the one choice its chat bar's stage buttons and a page it opened, such as the Files app, both show and both change. The dots show, and an action runs on, the fidelities of every stage shown."""
-        return self._kept_with({"shown_stages": list(dict.fromkeys(shown_stages))})
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def list_stages(self, stages: dict[str, list[str]]) -> Chat:
-        """Say each stage of the ticket chat's chat bar shows, with its fidelities by slug, in the board's order, as the board lists them: a page the chat opened shows a button for each and the files of those shown."""
-        return self._kept_with({"stages": {stage: list(slugs) for stage, slugs in stages.items()}})
-
-    def _kept_with(self, changed: dict) -> Chat:
-        with _checking_in(self._folder):
-            self._folder.mkdir(parents=True, exist_ok=True)
-            self._write({**self._state, **changed})
-        return self
-
-    @mcp
-    @agent_tool
-    @noSessionLog
     def show(self) -> Chat:
-        """Answer chat as it last checked in: its name, whether a turn is running, its folder, and the fidelities its chat bar has selected, which a page it opened, such as the Files app, follows."""
+        """Answer chat as it last checked in: its name, whether a turn is running, and its folder."""
         return self
 
     @mcp
@@ -366,33 +339,6 @@ class Chat:
         return self._state.get("folder", "")
 
     @property
-    @data_field
-    def selected_fidelities(self) -> list[str]:
-        """The fidelities selected for the chat, by slug, as its chat bar or a page it opened last selected them; none
-        selected, the chat works on every fidelity of the stage it shows."""
-        return list(self._state.get("selected_fidelities", []))
-
-    @property
-    @data_field
-    def shown_stages(self) -> list[str]:
-        """The stages shown for the chat, as its chat bar or a page it opened last chose them; none before either chose,
-        or once every stage was turned off."""
-        return list(self._state.get("shown_stages", []))
-
-    @property
-    @data_field
-    def is_stage_chosen(self) -> bool:
-        """Whether its chat bar or a page it opened has chosen the stages shown, none included: before that, the chat bar
-        starts the choice at the session's own stage."""
-        return "shown_stages" in self._state
-
-    @property
-    @data_field
-    def stages(self) -> dict[str, list[str]]:
-        """Each stage of the ticket the chat's chat bar shows, with its fidelities by slug, in the board's order."""
-        return {stage: list(slugs) for stage, slugs in self._state.get("stages", {}).items()}
-
-    @property
     def is_connected(self) -> bool:
         return self.clock() - self._state.get("seen", 0) < CHAT_GONE_SECONDS
 
@@ -438,12 +384,6 @@ class Chat:
                 record.write({**sent, "is_worked_on": True})
             elif not is_busy and sent.get("is_worked_on"):
                 self._move(path, DONE)
-
-    def _kept_state(self, state: dict) -> dict:
-        """What a check-in keeps of the chat's state: its title, read again now and then, the fidelities selected for
-        it, which only ``select`` changes, and the stages shown, which only ``show_stages`` and ``list_stages`` change."""
-        kept = {key: state[key] for key in ("selected_fidelities", "shown_stages", "stages") if key in state}
-        return {**self._title_state(state), "selected_fidelities": [], **kept}
 
     def _title_state(self, state: dict) -> dict:
         """The chat's title, when it was read, and the transcript it was read from: read again once the last read is

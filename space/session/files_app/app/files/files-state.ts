@@ -1,6 +1,4 @@
-import type { FormatChoiceData } from '@cdd/space/kanban/ticket'
-import type { PracticeSessionOutputData } from '@cdd/space/session/practice-session-output'
-import type { FileEntryData, SessionFileData } from '@cdd/space/session/session'
+import type { FileEntryData, GuidanceSelectionData, SessionFileData } from '@cdd/space/session/session'
 
 // One fidelity's files as the link names them, kept by fidelity so a practice turned off hides its own, with the format
 // each file is in, so a format chip turned on shows only its own.
@@ -9,21 +7,10 @@ export type FidelityFiles = { slug: string; entries: FileEntryData[]; formatOf?:
 // What the page draws: the session's practices with their toggles, the files its link names, the one open, and what went wrong. The open file is the session's
 // answer itself (text, comments, folds, violations, changes), never a copy kept beside it.
 export type FilesState = {
-  practices: PracticeSessionOutputData[]
-  // The fidelities selected on the chat bar of the chat that opened the page; none selected, its practices turned on.
-  selectedFidelities: string[]
-  // The format chips of the link's fidelities, chosen or not in the session, as the chat bar shows them; none chosen,
-  // every format is shown.
-  formatChoices: FormatChoiceData[]
-  // Each stage of the ticket with its fidelities, and the stages shown, as cdd holds them for the chat that opened the
-  // page and its chat bar alike; none shown, the stage the page was opened on.
-  stages: Record<string, string[]>
-  shownStages: string[]
-  // Whether the chat bar or this page has chosen the stages shown, none included; before that, the stage the page was
-  // opened on shows.
-  isStageChosen: boolean
-  // What the open file is read with: its folds and broken rules from the session's graph, and the graph holding the
-  // whole working copy so rules across files hold too. Both off by default, so browsing never reads the graph.
+  // The session's guidance selection as last drawn: its stages, practices and formats, the chat bar's buttons' too.
+  guidance: GuidanceSelectionData | null
+  // What the open file is read with: its own rules, read on its own, and the rules across the whole working copy. Both
+  // off by default, so browsing never reads a graph.
   reads: { rules: boolean; crossFile: boolean }
   byFidelity: FidelityFiles[]
   entries: FileEntryData[]
@@ -36,12 +23,7 @@ export type FilesState = {
 }
 
 export const NO_FILES: FilesState = {
-  practices: [],
-  selectedFidelities: [],
-  formatChoices: [],
-  stages: {},
-  shownStages: [],
-  isStageChosen: false,
+  guidance: null,
   reads: { rules: false, crossFile: false },
   byFidelity: [],
   entries: [],

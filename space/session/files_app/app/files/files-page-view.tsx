@@ -142,32 +142,26 @@ function FileBarButtonsView({ page }: { page: FilesPage }) {
   )
 }
 
-// The session's practices along the top, each a toggle in its practice colour: filled while the session works on it,
-// an outline while it is off. A press turns it on or off for the session, here and on the chat bar.
+// The session's practices along the top, each a toggle in its practice colour: filled while selected, which is the
+// session working on it, an outline while it is off. A press turns it on or off for the session, here and on the chat bar.
 function PracticeTogglesView({ page }: { page: FilesPage }) {
-  const { practices } = useFilesState(page)
-  if (!practices.length) return null
-  const isFollowing = page.isFollowingChatBar
+  const { guidance } = useFilesState(page)
+  if (!guidance?.practices.length) return null
   return (
     <div className="practice-toggles" role="group" aria-label="Practices">
-      {isFollowing ? <span className="files-hint">as selected on the chat bar</span> : null}
-      {practices.map(practice => {
-        const isShown = page.isShown(practice)
-        const hint = !practice.enabled ? 'off for the session, press to turn it on' : isShown ? 'shown, press to hide its files here and on the chat bar' : 'hidden, press to show its files here and on the chat bar'
-        return (
-          <button
-            key={practice.name}
-            type="button"
-            className={`practice-toggle ${isShown ? 'is-on' : 'is-off'}`}
-            style={{ '--practice-colour': practice.colour } as CSSProperties}
-            aria-pressed={isShown}
-            title={`${practice.short_name}: ${hint}`}
-            onClick={() => void page.togglePractice(practice.name)}
-          >
-            {practice.short_name}
-          </button>
-        )
-      })}
+      {guidance.practices.map(practice => (
+        <button
+          key={practice.key}
+          type="button"
+          className={`practice-toggle ${practice.is_selected ? 'is-on' : 'is-off'}`}
+          style={{ '--practice-colour': practice.colour } as CSSProperties}
+          aria-pressed={practice.is_selected}
+          title={`${practice.short_name}: ${practice.is_selected ? 'on, press to turn it off here and on the chat bar' : 'off, press to turn it on here and on the chat bar'}`}
+          onClick={() => void page.togglePractice(practice.key)}
+        >
+          {practice.short_name}
+        </button>
+      ))}
     </div>
   )
 }
@@ -218,54 +212,49 @@ function ToastsView({ page }: { page: FilesPage }) {
 // the same on the bar and here.
 const STAGE_ICONS: Record<string, string> = { Discovery: '⌕', Specification: '▤', Implementation: '⚙' }
 
-// A button for each stage of the ticket, before the practices, as the chat bar's stage buttons: filled orange while the
-// stage is shown. A press shows that stage's files beside those shown, or no longer, here and on the chat bar.
+// A button for each stage, before the practices, as the chat bar's stage buttons: filled orange while selected. A press
+// selects the stage beside those selected, or no longer, here and on the chat bar.
 function StageTogglesView({ page }: { page: FilesPage }) {
-  const { stages } = useFilesState(page)
-  const names = Object.keys(stages)
-  if (!names.length) return null
-  const shown = page.shownStageNames
+  const { guidance } = useFilesState(page)
+  if (!guidance?.stages.length) return null
   return (
     <div className="stage-toggles" role="group" aria-label="Stages">
-      {names.map(stage => (
+      {guidance.stages.map(stage => (
         <button
-          key={stage}
+          key={stage.name}
           type="button"
-          className={`stage-toggle ${shown.includes(stage) ? 'is-shown' : ''}`}
-          aria-pressed={shown.includes(stage)}
-          title={`${stage}: ${shown.includes(stage) ? 'shown, press to hide its files here and on the chat bar' : 'press to show its files here and on the chat bar'}`}
-          onClick={() => void page.toggleStage(stage)}
+          className={`stage-toggle ${stage.is_selected ? 'is-shown' : ''}`}
+          aria-pressed={stage.is_selected}
+          title={`${stage.title}: ${stage.is_selected ? 'selected, press to hide its files here and on the chat bar' : 'press to show its files here and on the chat bar'}`}
+          onClick={() => void page.toggleStage(stage.name)}
         >
-          {STAGE_ICONS[stage] ?? stage}
+          {STAGE_ICONS[stage.title] ?? stage.title}
         </button>
       ))}
     </div>
   )
 }
 
-// The format chips after the practices, with the chat bar's glyphs and colours: filled orange while the format is chosen
-// in the session, green when every fidelity has a file in it already, grey otherwise. A press chooses it or no longer,
-// here and on the chat bar; while any is chosen, the list shows only the files in the formats chosen.
+// The format groups the selected fidelities offer, after the practices, with the chat bar's glyphs: filled orange while
+// selected. A press selects it or no longer, here and on the chat bar; while any is selected, the list shows only the
+// files in the formats selected.
 function FormatTogglesView({ page }: { page: FilesPage }) {
-  const { formatChoices } = useFilesState(page)
-  if (!formatChoices.length) return null
+  const { guidance } = useFilesState(page)
+  if (!guidance?.formats.length) return null
   return (
     <div className="format-toggles" role="group" aria-label="Formats">
-      {formatChoices.map(choice => {
-        const look = choice.is_chosen ? 'is-chosen' : choice.made && choice.made === choice.offered ? 'is-made' : 'is-not-made'
-        return (
-          <button
-            key={choice.label}
-            type="button"
-            className={`format-toggle ${look}`}
-            aria-pressed={choice.is_chosen}
-            title={`${choice.label}: ${choice.made}/${choice.offered} made; ${choice.is_chosen ? 'chosen, press to show every format' : 'press to show only the formats chosen'}`}
-            onClick={() => void page.toggleFormat(choice.label)}
-          >
-            {formatGlyphOf(choice.label)}
-          </button>
-        )
-      })}
+      {guidance.formats.map(format => (
+        <button
+          key={format.label}
+          type="button"
+          className={`format-toggle ${format.is_selected ? 'is-chosen' : 'is-not-made'}`}
+          aria-pressed={format.is_selected}
+          title={`${format.label}: offered by ${format.offered}; ${format.is_selected ? 'selected, press to show every format' : 'press to show only the formats selected'}`}
+          onClick={() => void page.toggleFormat(format.label)}
+        >
+          {formatGlyphOf(format.label)}
+        </button>
+      ))}
     </div>
   )
 }

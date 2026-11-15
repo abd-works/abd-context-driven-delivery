@@ -8,7 +8,8 @@ import { currentChatBar, readChatBarUntilAnswered, refreshChatBar } from './chat
 import { ChatBarView } from './chat-bar/chat-bar-view'
 import { clearBusy, currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
-import { currentFormatChips, forgetFormatChips, loadFormatChips } from './chat-bar/format-choices-client'
+import { currentFormatChips } from './chat-bar/format-choices-client'
+import { followGuidance } from './chat-bar/guidance-client'
 import { currentOverlayChips, loadOverlayChoices } from './chat-bar/overlay-choices-client'
 import { currentFidelityHelp, forgetHelp, HELP_PANE } from './chat-bar/fidelity-help-client'
 import { FidelityHelpView } from './chat-bar/fidelity-help-view'
@@ -38,8 +39,6 @@ import { toggleCard } from './chat-bar/session-dialogs-client'
 import { withChatNamed } from './session/session-log-client'
 
 const PLUGIN = 'cdd-board'
-// The presses that change which fidelities or stage the action button acts on: a fidelity's dot or card row, a stage.
-const CHANGES_FIDELITIES = /^(dot-|card-pick-|stage-pick-)/
 const CHECK_IN_MILLISECONDS = 1000
 const CDD_TOOL = /^mcp__(plugin_cdd_)?cdd__/
 
@@ -59,7 +58,6 @@ async function readActive($: EngineInterface): Promise<void> {
   await showStatus($)
   const chatBar = await currentChatBar($)
   if (chatBar.problem) return
-  await loadFormatChips($, chatBar)
   await loadOverlayChoices($, chatBar).catch(shownAsFailure($, 'The overlay choices did not load', 'Reading the board, calling ticket.overlay_choices'))
   // The system prompt is cached; when the active session's summary changes, it is composed again next turn.
   if (chatBar.agentContext !== shownContext) await $.ui.invalidate('prompt.section')
@@ -95,6 +93,8 @@ export const register: Register = on => {
     // The cdd server can still be connecting at session start, or restarting for a repin; a check-in that keeps failing
     // shows on the bar.
     $.clock.every(CHECK_IN_MILLISECONDS, () => void keepInTouch($, chat, isCheckInDue()))
+    // The stages, practices and formats selected: the session's guidance selection, followed with one waiting read.
+    void followGuidance($, async () => (await currentChatBar($)).sessionFile, async () => (await currentChatBar($)).stage)
     // The chat opens first and the bar fills in after it, so a slow or still-connecting cdd server never holds the chat up.
     const started = await next(e)
     void readBoardAfterStart($)
@@ -120,7 +120,6 @@ export const register: Register = on => {
   on('tool.call', async ($, e, next) => {
     const ran = await next(await withChatNamed($, e))
     if (CDD_TOOL.test(e.tool)) {
-      forgetFormatChips()
       await refreshChatBar($)
       await showStatus($)
     }
@@ -132,7 +131,6 @@ export const register: Register = on => {
   on('ui.press', async ($, e, next) => {
     const pressed = await next(e)
     if (e.plugin === PLUGIN) await closeOptionListsOutside($, e.element)
-    if (e.plugin === PLUGIN && CHANGES_FIDELITIES.test(e.element)) void loadFormatChips($, await currentChatBar($)).catch(shownAsFailure($, 'The format chips did not load', `Pressing ${e.element}, reading the format choices`))
     return pressed
   })
 
@@ -191,7 +189,7 @@ export const register: Register = on => {
     return ChatBarView($, elements, {
       chatBar,
       failure: await currentFailure($),
-      formats: await currentFormatChips($, chatBar),
+      formats: currentFormatChips(chatBar),
       overlays: await currentOverlayChips($, chatBar),
       view: await currentChatBarView($),
       picker: await currentActionPicker($),

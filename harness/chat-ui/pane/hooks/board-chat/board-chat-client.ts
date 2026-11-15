@@ -2,10 +2,7 @@ import type { ChatCommandData, ChatData } from '@cdd/harness/chat/chat'
 import type { EngineInterface } from 'claude-code'
 
 import { currentChatBar, refreshChatBar } from '../chat-bar/chat-bar-client'
-import { loadFormatChips, reloadFormatChips } from '../chat-bar/format-choices-client'
 import { openFileInViewer } from '../chat-bar/fidelity-files-client'
-import { showSelected } from '../chat-bar/fidelity-progress-client'
-import { showStagesHeld } from '../chat-bar/stage-client'
 import { commandOf, filledPrompt, REFUSED_WITHIN_MILLISECONDS } from '../shared/chat-command'
 import { reasonOf, showFailure } from '../error-display/failure-client'
 import { after, post } from './board'
@@ -74,7 +71,6 @@ async function run($: EngineInterface, chat: string, command: ChatCommandData): 
 // or a format on or off for the session, which the bar shows only after it reads them.
 async function refreshed($: EngineInterface, chat: string, command: ChatCommandData): Promise<void> {
   const reason = await refreshChatBar($)
-    .then(async () => reloadFormatChips($, await currentChatBar($)))
     .then(() => '', reasonOf)
   if (reason) await showFailure($, `The chat bar did not read the board again: ${reason}`, `A refresh ${command.text} sent to this chat`)
   await post($, { chat, operation: 'confirm', body: { message: command.message, is_shown: !reason, reason } })
@@ -97,43 +93,14 @@ let failedCheckIns = 0
 // keeps happening, with the reason the last one gave and how long it has gone on.
 export async function keepInTouch($: EngineInterface, chat: string, isCheckIn: boolean): Promise<void> {
   try {
-    await (isCheckIn ? checkIn($, chat) : readSelection($, chat))
+    if (!isCheckIn) return
+    await checkIn($, chat)
     failedCheckIns = 0
   } catch (failure) {
     failedCheckIns += 1
     if (failedCheckIns !== FAILED_CHECK_INS_SHOWN) return
-    const call = isCheckIn ? 'chat.check_in' : 'chat.show'
-    await showFailure($, `This chat has not reached cdd for ${FAILED_CHECK_INS_SHOWN} seconds`, `The check-in every second, calling ${call}`, failure)
+    await showFailure($, `This chat has not reached cdd for ${FAILED_CHECK_INS_SHOWN} check-ins`, 'The check-in every second, calling chat.check_in', failure)
   }
-}
-
-// The dots draw the selection cdd holds for the chat, read every second even while an idle chat checks in less often,
-// so a practice or a stage pressed in the Files app shows on the dots within a second, and the format chips are read
-// again once the fidelities they cover changed.
-export async function readSelection($: EngineInterface, chat: string): Promise<void> {
-  const shown = JSON.parse((await post($, { chat, operation: 'show', body: {} })).text) as ChatData
-  await showSelected($, shown.selected_fidelities)
-  await showStagesHeld($, shown.is_stage_chosen ? shown.shown_stages : null)
-  await listStages($, chat, shown)
-  await startStageChoice($, chat, shown)
-  await loadFormatChips($, await currentChatBar($))
-}
-
-// Before the bar or a page chose the stages shown, the bar starts the choice at the session's own stage, so turning
-// every stage off later shows none, here and in a page the chat opened.
-async function startStageChoice($: EngineInterface, chat: string, held: ChatData): Promise<void> {
-  const chatBar = await currentChatBar($)
-  if (held.is_stage_chosen || !chatBar.ticketName || !chatBar.shownStages.length) return
-  await post($, { chat, operation: 'show-stages', body: { shown_stages: chatBar.shownStages } })
-}
-
-// cdd holds each stage of the ticket with its fidelities for a page the chat opened, such as the Files app, whose stage
-// buttons show them; the bar tells it again only once they differ from what cdd holds, as when the board is read again.
-async function listStages($: EngineInterface, chat: string, held: ChatData): Promise<void> {
-  const chatBar = await currentChatBar($)
-  const stages = chatBar.stagesWithFidelities
-  if (!chatBar.ticketName || JSON.stringify(held.stages) === JSON.stringify(stages)) return
-  await post($, { chat, operation: 'list-stages', body: { stages } })
 }
 
 // Checks in with cdd every second: whether a turn is running, what to call the chat, and the folder it works in, which
@@ -141,7 +108,6 @@ async function listStages($: EngineInterface, chat: string, held: ChatData): Pro
 // opened, such as the Files app, may have changed.
 export async function checkIn($: EngineInterface, chat: string): Promise<void> {
   const answer = await post($, { chat, operation: 'check-in', body: { is_busy: isChatBusy(), name: currentChatName(), folder: await $.session.root() } })
-  await readSelection($, chat)
   if (!answer.ok) return
   const commands = JSON.parse(answer.text) as ChatCommandData[]
   if (commands.length) chatWorked()

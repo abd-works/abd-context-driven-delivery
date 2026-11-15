@@ -6,19 +6,20 @@ import { GlyphButtonView } from '../shared/glyph-button-view'
 import { TipView } from '../shared/tip-view'
 import { ActionButtonView, pickerRowsOf } from './action-button-view'
 import { formatGlyphOf, REPO_GLYPH, repoWordOf, sessionWordOf } from './bar-columns'
-import { toggleFormat, type FormatChips } from './format-choices-client'
+import type { FormatChips } from './format-choices-client'
+import { toggleFormat, togglePractice, toggleStage } from './guidance-client'
 import { toggleOverlay, toggleOverlayList, type OverlayChips } from './overlay-choices-client'
 import { askChatToFixBoard, restartServer, runHandoff, type ChatBarClient } from './chat-bar-client'
 import type { FailureClient } from '../error-display/failure-client'
 import { FailureView } from '../error-display/failure-view'
 import { openReport, openSessionFolder, openStageFiles } from './fidelity-files-client'
 import { openHelp } from './fidelity-help-client'
-import { selectPractice, type PracticeDotClient } from './fidelity-progress-client'
+import type { PracticeDotClient } from './fidelity-progress-client'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
 import { openClose, toggleRepoListWithRepos } from './session-client'
 import { toggleSessionList } from './session-dialogs-client'
 import { CloseView, RepoListView, repoListRowsOf, SessionListView, sessionListRowsOf } from './session-dialogs-view'
-import { toggleStage, type StageClient } from './stage-client'
+import type { StageClient } from './stage-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
@@ -42,16 +43,16 @@ export type ChatBarDraw = {
 
 const SEPARATOR = '│'
 
-// One square for each practice in its colour, standing for its fidelities in every stage shown: fainter the less is done,
-// underlined on a light tint while they are all selected, their violations counted in red beside it, a press on the
-// count opening the first one's report. Its fidelities show above it on hover, each opening its help in a pane beside
-// the chat; their states are on the session card.
-export function PracticeDotView($: EngineInterface, elements: ElementTable, dot: PracticeDotClient) {
+// One square for each practice in its colour, standing for its fidelities in every stage shown: while the practice is on,
+// fainter the less is done, their violations counted in red beside it, a press on the count opening the first one's
+// report; while it is off, faint. A press on the square turns the practice on or off for the session. Its fidelities show
+// above it on hover, each opening its help in a pane beside the chat; their states are on the session card.
+export function PracticeDotView($: EngineInterface, elements: ElementTable, dot: PracticeDotClient, session: string) {
   const { Box } = elements
   const violating = dot.violating
   return (
-    <Box key={`practice-${dot.key}`} flexDirection="row" gap={0} backgroundColor={dot.isSelected ? BRAND.selectedTint : undefined}>
-      {GlyphButtonView(elements, `dot-${dot.key}`, '■', dot.shade, () => selectPractice($, dot), dot.isSelected)}
+    <Box key={`practice-${dot.key}`} flexDirection="row" gap={0}>
+      {GlyphButtonView(elements, `dot-${dot.key}`, '■', dot.shade, () => togglePractice($, session, dot.practice))}
       {violating ? GlyphButtonView(elements, `violations-${dot.key}`, String(dot.violationCount), BRAND.error, () => openReport($, violating)) : null}
       {PracticeTipView($, elements, dot)}
     </Box>
@@ -86,7 +87,7 @@ function StageButtonsView($: EngineInterface, elements: ElementTable, { chatBar 
     <Box key="stage-buttons" flexDirection="row" gap={1}>
       {stages.map((stage: StageClient) => (
         <Box key={`stage-${stage.stage}`} width={STAGE_BUTTON_COLUMNS} justifyContent="center" backgroundColor={stage.isShown ? BRAND.accent : undefined}>
-          {GlyphButtonView(elements, `stage-button-${stage.stage}`, stage.icon, stage.isShown ? BRAND.onAccent : stage.ink, () => toggleStage($, chatBar.shownStages, stage))}
+          {GlyphButtonView(elements, `stage-button-${stage.stage}`, stage.icon, stage.isShown ? BRAND.onAccent : stage.ink, () => toggleStage($, chatBar.sessionFile, stage.stage.toLowerCase()))}
           {TipView(elements, stage.stage, stage.isCurrent ? 'the session is here' : '', BRAND.muted)}
         </Box>
       ))}
@@ -187,11 +188,11 @@ function FormatChipsView($: EngineInterface, elements: ElementTable, { chatBar, 
     <Box key="format-chips" flexDirection="row" gap={0} marginX={1}>
       {formats.choices.map(choice => {
         const isOn = choice.is_chosen
-        const colour = isOn ? BRAND.onAccent : choice.made && choice.made === choice.offered ? BRAND.success : BRAND.muted
+        const colour = isOn ? BRAND.onAccent : BRAND.muted
         return (
           <Box key={`format-${choice.label}`} paddingX={1} backgroundColor={isOn ? BRAND.accent : undefined}>
-            {GlyphButtonView(elements, `format-chip-${choice.label}`, formatGlyphOf(choice.label), colour, () => toggleFormat($, chatBar, formats, choice.label))}
-            {TipView(elements, choice.label, `${choice.made}/${choice.offered} made`, BRAND.muted)}
+            {GlyphButtonView(elements, `format-chip-${choice.label}`, formatGlyphOf(choice.label), colour, () => toggleFormat($, chatBar.sessionFile, choice.label))}
+            {TipView(elements, choice.label, `offered by ${choice.offered}`, BRAND.muted)}
           </Box>
         )
       })}
@@ -249,7 +250,7 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
         {StageButtonsView($, elements, draw)}
         <Text color={BRAND.border}>{SEPARATOR}</Text>
         <Box key="fidelity-column" flexDirection="row" gap={1} alignItems="center">
-          {chatBar.practiceDots.map(dot => PracticeDotView($, elements, dot))}
+          {chatBar.practiceDots.map(dot => PracticeDotView($, elements, dot, chatBar.sessionFile))}
           {OverlayChipsView($, elements, draw)}
           {FormatChipsView($, elements, draw)}
           {ActionButtonView($, elements, draw)}
