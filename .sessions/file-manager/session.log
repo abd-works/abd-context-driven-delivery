@@ -47,3 +47,14 @@
 2026-11-15T20:34:29Z tool graph.inventory
 2026-11-15T20:34:29Z tool graph.filter_choices
 2026-11-15T20:34:30Z tool graph.explorer_trees
+2026-11-15T20:39:42Z tool graph.practice_names
+2026-11-15T20:39:42Z tool graph.load_practice_roots
+2026-11-15T20:39:52Z error server-health.report C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 36 af5894a3-9c9f-4aa3-be83-2ef5749adcca C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\af5894a3-9c9f-4aa3-be83-2ef5749adcca.jsonl 1-503
+2026-11-15T20:39:55Z tool graph.inventory
+2026-11-15T20:39:55Z tool graph.filter_choices
+2026-11-15T20:39:55Z tool graph.explorer_trees
+2026-11-15T20:41:40Z tool graph.practice_names
+2026-11-15T20:41:40Z tool graph.load_practice_roots
+2026-11-15T20:41:52Z tool graph.inventory
+2026-11-15T20:41:53Z tool graph.filter_choices
+2026-11-15T20:41:53Z tool graph.explorer_trees
