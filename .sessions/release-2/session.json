@@ -6,19 +6,19 @@
   "worktree": "C:\\dev\\abd-cdd-2",
   "practices": {
     "clean_engineering": {
-      "enabled": false
+      "enabled": true
     },
     "stories": {
-      "enabled": true
+      "enabled": false
     },
     "ddd": {
-      "enabled": true
+      "enabled": false
     },
     "ux": {
-      "enabled": true
+      "enabled": false
     },
     "bdd": {
-      "enabled": true
+      "enabled": false
     }
   }
 }
