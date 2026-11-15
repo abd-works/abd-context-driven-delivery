@@ -263,14 +263,14 @@ class Chat:
     @noSessionLog
     def select(self, selected_fidelities: list[str]) -> Chat:
         """Select these fidelities, by slug, for chat: the one selection its chat bar's dots and a page it opened, such as the Files app, both show and both change; none selected, every fidelity of the stage shown."""
-        return self._kept_with({"selected_fidelities": list(selected_fidelities)})
+        return self._kept_with({"selected_fidelities": list(dict.fromkeys(selected_fidelities))})
 
     @mcp
     @agent_tool
     @noSessionLog
     def show_stages(self, shown_stages: list[str]) -> Chat:
         """Show these stages for chat: the one choice its chat bar's stage buttons and a page it opened, such as the Files app, both show and both change. The dots show, and an action runs on, the fidelities of every stage shown."""
-        return self._kept_with({"shown_stages": list(shown_stages)})
+        return self._kept_with({"shown_stages": list(dict.fromkeys(shown_stages))})
 
     @mcp
     @agent_tool

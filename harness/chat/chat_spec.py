@@ -153,6 +153,10 @@ with description("a chat") as self:
             with it("should answer the selected fidelities"):
                 expect(Chat.load(CHAT).show().selected_fidelities).to(equal(["clean-engineering-code", "ux-front-end-code"]))
 
+            with it("should hold each fidelity once, however often a page names it"):
+                Chat.load(CHAT).select(["clean-engineering-code", "clean-engineering-code", "ux-front-end-code"])
+                expect(Chat.load(CHAT).show().selected_fidelities).to(equal(["clean-engineering-code", "ux-front-end-code"]))
+
             with it("should keep them through its next check-in"):
                 Chat.load(CHAT).check_in(is_busy=False, name="repo · first words")
                 expect(Chat.load(CHAT).show().selected_fidelities).to(equal(["clean-engineering-code", "ux-front-end-code"]))
