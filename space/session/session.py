@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+import time
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -11,6 +12,7 @@ from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, t
 from harness.agent_tools.agent_tools import noSessionLog, subAgent, tool_subject
 from harness.agent_tools.tool_call import ToolCall
 from harness.graph.graph import Graph
+from harness.graph.saved_graph import GRAPH_FILE_NAME
 from harness.graph.pattern_overlays import PatternOverlays
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.documents import load_document
@@ -118,6 +120,7 @@ class Session:
         # When the session's graph last read each file a viewer showed, by its modification time, and the graph it read
         # them into: reading one file into the graph takes a second or two, so a file is read again only once it changed.
         self._files_read: tuple[Graph | None, dict[Path, float]] = (None, {})
+        self._graph_opened_at = 0.0
         # Calls from several chats reach this one object at once; the first to ask makes the practices and the graph,
         # and the others wait for them, so the session never holds two. Reentrant, because the graph asks for the
         # practices while it is being made.
@@ -250,14 +253,16 @@ class Session:
                 if self.overlays:
                     graph.overlays = self.overlays
                 self._graph = graph
+                self._graph_opened_at = time.time()
             return self._graph
 
     def graph_reading(self, path: Path, is_held: bool, cross_file: bool = False) -> Graph:
         """The session's graph holding the file at path as it is now, with its folds and the rules it breaks, as the Graph
         app reads what it shows, so a viewer needs no graph saved first. The file is read into the graph when the graph
-        holds nothing of it (is_held false) or it changed since a viewer last showed it; reading one takes a second or
-        two, so an unchanged file the graph holds, such as one the saved graph brought back, is not read again. With
-        cross_file, the graph first holds the whole working copy, so rules linking files and practices hold."""
+        holds nothing of it (is_held false) or it changed since the graph last read it: since a viewer last showed it,
+        or, before that, since the graph was opened or saved. Reading one takes a second or two, so a file the graph
+        holds as it is now is not read again. With cross_file, the graph first holds the whole working copy, so rules
+        linking files and practices hold."""
         graph = self.graph
         if cross_file:
             graph.hold_whole()
@@ -267,11 +272,17 @@ class Session:
             if held is not graph:
                 reads = {}
                 self._files_read = (graph, reads)
-            is_current = is_held and reads.get(path, modified) == modified
-            reads[path] = modified
+            is_current = is_held and modified <= reads.get(path, self._graph_read_at())
+            reads[path] = max(modified, time.time())
         if not is_current:
             graph.refresh([str(path)])
         return graph
+
+    def _graph_read_at(self) -> float:
+        """When the session's graph read the files it holds, for one no viewer has shown since: when it was opened, or
+        when the graph it opened was saved, whichever is earlier."""
+        saved = Path(self.session_path) / GRAPH_FILE_NAME
+        return min(self._graph_opened_at, saved.stat().st_mtime) if saved.is_file() else self._graph_opened_at
 
     @property
     def _own_outputs(self) -> dict[str, PracticeSessionOutput]:
