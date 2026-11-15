@@ -1717,7 +1717,7 @@ Observed: selecting a violating rule opens the node's source with a banner namin
 
 ### (S) Person --> Display Drawio File As Diagram
 
-Requested on 2026-11-06: a `.drawio` file opens as its diagram, with a Source tab for the XML; a violation marks the shape it names in red, and pressing a shape opens its lines in the source. Opening a diagram moved (2026-11-14) to the Files app's Open Diagram In Draw.io Tab ([Review Files In Files App](../../../space/session/files_app/.context/story-map.md)), which opens the draw.io editor in a tab of its own. Missing still: a Source tab, marking the shape a violation names, and opening a pressed shape's lines.
+Requested on 2026-11-06: a `.drawio` file opens as its diagram, with a Source tab for the XML; a violation marks the shape it names in red, and pressing a shape opens its lines in the source. Opening a diagram moved (2026-11-14) to the Files app's Open Diagram In Files App ([Review Files In Files App](../../../space/session/files_app/.context/story-map.md)), which shows the draw.io editor beside the file list. Missing still: a Source tab, marking the shape a violation names, and opening a pressed shape's lines.
 
 ### (S) Person --> Copy Correct Prompt
 

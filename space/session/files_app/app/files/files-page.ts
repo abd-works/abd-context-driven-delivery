@@ -46,7 +46,7 @@ export const isNoPracticeSelected = (selection: GuidanceSelectionData | null): b
 const eachOnce = (entries: FileEntryData[]): FileEntryData[] => entries.filter((entry, index) => entries.findIndex(other => other.path === entry.path) === index)
 
 // The Files app's page: the files its link names, read once, and the one open, read when opened and again while a
-// comment on it is with a chat. A .drawio file opens in the draw.io viewer instead.
+// comment on it is with a chat. A .drawio file shows in the draw.io editor instead.
 export class FilesPage {
   readonly store = new FilesStore()
   readonly session: SessionClientGenerated
@@ -115,9 +115,7 @@ export class FilesPage {
       const byFidelity = await this.filesByFidelity(this.listed)
       this.store.change(state => ({ byFidelity, isListing: false, entries: this.shownFrom({ ...state, byFidelity }) }))
       const entries = this.state.entries
-      // A .drawio file opens in a tab of its own only on a click, so a link naming one opens the first other file here.
-      const named = isDrawio(this.link.file) ? '' : this.link.file
-      const first = named || entries.find(entry => entry.exists && !isDrawio(entry.path))?.path || ''
+      const first = this.link.file || entries.find(entry => entry.exists && !isDrawio(entry.path))?.path || ''
       if (first) await this.open(first)
     } catch (failure) {
       this.store.change(() => ({ isListing: false, problem: `The files did not list: ${reasonOf(failure)}` }))
@@ -223,9 +221,9 @@ export class FilesPage {
   }
 
   async open(path: string): Promise<void> {
-    // A .drawio file is a link to the draw.io viewer, which opens in a tab of its own; this tab keeps its file list.
-    if (isDrawio(path)) return
     this.store.change(() => ({ openPath: path, file: null }))
+    // A .drawio file shows in the draw.io editor beside the file list, which reads the file itself.
+    if (isDrawio(path)) return this.stopRefreshing()
     await this.refreshOpen()
   }
 

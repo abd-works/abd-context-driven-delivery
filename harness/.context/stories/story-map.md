@@ -910,7 +910,7 @@ Built: a page the chat opened, such as the Story UI editor, sends the chat an `o
 
 Observed (2026-11-14): the page reads only the files its link names, each once, and never the board (`files-page.ts` `list`); a file not generated yet is listed but cannot be opened. Was View Fidelity Files on the board and the chat bar.
 
-### (S) Person --> [Open Diagram In Draw.io Tab](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-diagram-in-drawio-tab)
+### (S) Person --> [Open Diagram In Files App](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-diagram-in-files-app)
 
 Built (2026-11-14): a press on a `.drawio` file opens the draw.io editor in a new tab, and the Files tab stays on its file list (`files-page.ts` `openDrawio`). Requested (the person, 2026-11-14): "open in new tab works but orig tab also getting moved to drawio; leave it on file explorer". Was the chat bar's Open a diagram in the draw.io editor and the graph's Display Drawio File As Diagram; that story's Source tab and shape marking stay Intended.
 

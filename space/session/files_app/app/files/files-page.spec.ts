@@ -315,18 +315,30 @@ describe('Filter Files By Format In Files App', () => {
   })
 })
 
-describe('Open Diagram In Draw.io Tab', () => {
+describe('Open Diagram In Files App', () => {
   describe('with a .drawio file listed', () => {
-    it("should link it to the Files server's draw.io page, which sends a tab of its own to the viewer", () => {
+    it("should show it at the Files server's draw.io page, which starts the viewer on it", () => {
       expect(drawioPageOf('C:/dev/work/.context/a.drawio', 'chat-1')).toBe('/api/drawio/page?path=C%3A%2Fdev%2Fwork%2F.context%2Fa.drawio&chat=chat-1')
     })
 
-    it('should leave this tab on its file list once pressed', async () => {
-      const page = new FilesPage(new FakeFilesServer(), new FilesLink(STAGE_LINK))
-      await started(page)
-      const shown = page.state.openPath
-      await page.open('.context/stories-story-map.drawio')
-      expect(page.state.openPath).toBe(shown)
+    describe('that the Person opens', () => {
+      async function opened() {
+        const server = new FakeFilesServer()
+        const page = new FilesPage(server, new FilesLink(STAGE_LINK))
+        await started(page)
+        const read = server.posted('/file').length
+        await page.open('.context/stories-story-map.drawio')
+        return { page, server, read }
+      }
+
+      it('should show it in the file view, beside the file list', async () => {
+        expect((await opened()).page.state.openPath).toBe('.context/stories-story-map.drawio')
+      })
+
+      it('should ask the session for no text of it, as the draw.io editor reads it', async () => {
+        const { server, read } = await opened()
+        expect(server.posted('/file').length).toBe(read)
+      })
     })
   })
 })

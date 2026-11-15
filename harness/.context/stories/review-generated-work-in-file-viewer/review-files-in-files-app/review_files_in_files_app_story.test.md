@@ -94,25 +94,28 @@ In every scenario, the [session](../../../../../space/kanban/.context/kanban-mod
 *Then* it lists *story-map.md* as not generated yet
 *And* the Person cannot open it
 
-## Story: Open Diagram In Draw.io Tab
+## Story: Open Diagram In Files App
 
-#### Scenario: Open a diagram in a tab of its own, keeping the file list
+Requested (the person, 2026-11-15): the app's browser pane opens no tab of its own from a page, so a diagram opened in a new tab took the Files app's place there. It opens beside the file list instead.
+
+#### Scenario: Open a diagram beside the file list
 
 *Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) lists *story-map.drawio*
 *When* the Person opens *story-map.drawio*
-*Then* the draw.io editor opens on *story-map.drawio* in a new tab
-*And* the Files app's tab still shows its file list
+*Then* the draw.io editor shows *story-map.drawio* in the Files app's file view
+*And* the file list still shows beside it
+*And* a ↗ link beside it opens *story-map.drawio* in the draw.io editor in a tab of its own, where the browser opens one
 *And* nothing is sent to the chat
 
-#### Scenario: Close the new tab when the draw.io viewer does not start
+#### Scenario: Say so when the draw.io viewer does not start
 
-Required by the cdd_web_domain_access rule `fail-loud-on-mcp` this session overlays: when a call fails, the page shows the person what failed instead of an empty tab.
+Required by the cdd_web_domain_access rule `fail-loud-on-mcp` this session overlays: when a call fails, the page shows the person what failed instead of an empty view.
 
 *Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) lists *story-map.drawio*
 *But* the draw.io viewer does not start
 *When* the Person opens *story-map.drawio*
-*Then* the new tab closes
-*And* a toast says *story-map.drawio did not open in the draw.io viewer*, with the reason
+*Then* the file view says *story-map.drawio did not open in the draw.io viewer*, with the reason
+*And* the chat that opened the Files app is told the same
 
 ## Story: Switch File Bar Between Folders And List
 

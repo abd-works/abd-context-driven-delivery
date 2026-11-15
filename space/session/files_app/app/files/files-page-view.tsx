@@ -17,34 +17,31 @@ function useFilesState(page: FilesPage) {
   return useSyncExternalStore(page.store.subscribe, () => page.store.state)
 }
 
-// One file the link names: a .drawio file says it opens in the draw.io viewer, a file not there yet says so, and a file
-// published at a link, such as a design canvas, opens there, in Claude Design, in a tab of its own.
+// One file the link names: a file not there yet says so, and a file published at a link, such as a design canvas, opens
+// there, in Claude Design, in a tab of its own; a .drawio file also offers its draw.io editor in a tab of its own.
 function FileEntryView({ page, entry, isOpen }: { page: FilesPage; entry: FileEntryData; isOpen: boolean }) {
   if (entry.link) return <PublishedFileView entry={entry} />
   const classes = ['file-entry', isOpen ? 'is-open' : '', entry.exists ? '' : 'is-missing', entry.is_changed ? 'is-changed' : ''].filter(Boolean).join(' ')
-  if (isDrawio(entry.path) && entry.exists) return <DrawioFileView page={page} entry={entry} />
   const hint = entry.exists ? entry.path : `${entry.path}: not generated yet`
   return (
-    <li>
+    <li className="file-entry-row">
       <button className={classes} title={hint} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void page.open(entry.path)}>
         {fileNameOf(entry.path)}
         {entry.exists ? null : <span className="file-entry-note"> not generated yet</span>}
       </button>
+      {isDrawio(entry.path) && entry.exists ? <DrawioTabLinkView page={page} path={entry.path} /> : null}
     </li>
   )
 }
 
-// A .drawio file: a link that opens the draw.io viewer on it in a tab of its own, so this tab keeps its file list. A
-// link is a navigation the browser always allows, where a tab a script opens can be refused.
-function DrawioFileView({ page, entry }: { page: FilesPage; entry: FileEntryData }) {
-  const classes = ['file-entry', 'is-drawio', entry.is_changed ? 'is-changed' : ''].filter(Boolean).join(' ')
+// The draw.io editor on a .drawio file in a tab of its own, where the browser opens one; the app's browser pane opens
+// none, which is why the file view shows the editor too. A link is a navigation the browser always allows, where a tab
+// a script opens can be refused.
+function DrawioTabLinkView({ page, path }: { page: FilesPage; path: string }) {
   return (
-    <li>
-      <a className={classes} href={drawioPageOf(entry.path, page.link.chat)} target="_blank" rel="noreferrer" title={`${entry.path}: opens in the draw.io viewer`}>
-        {fileNameOf(entry.path)}
-        <span className="file-entry-note"> ↗ draw.io</span>
-      </a>
-    </li>
+    <a className="drawio-tab-link" href={drawioPageOf(path, page.link.chat)} target="_blank" rel="noreferrer" title={`${path}: opens in the draw.io editor in a tab of its own`}>
+      ↗
+    </a>
   )
 }
 
@@ -187,9 +184,24 @@ function CommentToolbarView({ page, file }: { page: FilesPage; file: SessionFile
   )
 }
 
+// A .drawio file in the draw.io editor, beside the file list: the Files server's draw.io page starts the viewer on it,
+// or says in the frame why it did not, as it tells the chat.
+function DrawioFileView({ page, path }: { page: FilesPage; path: string }) {
+  return (
+    <section className="open-file open-diagram" aria-label={path}>
+      <div className="comment-toolbar">
+        <span className="source-path">{path}</span>
+        <DrawioTabLinkView page={page} path={path} />
+      </div>
+      <iframe className="drawio-frame" title={`${path} in the draw.io editor`} src={drawioPageOf(path, page.link.chat)} />
+    </section>
+  )
+}
+
 function OpenFileView({ page }: { page: FilesPage }) {
   const state = useFilesState(page)
   if (!state.openPath) return <p className="files-note">Choose a file.</p>
+  if (isDrawio(state.openPath)) return <DrawioFileView page={page} path={state.openPath} />
   if (!state.file) return <p className="files-note">Opening {state.openPath}…</p>
   return (
     <section className="open-file" aria-label={state.file.path}>
