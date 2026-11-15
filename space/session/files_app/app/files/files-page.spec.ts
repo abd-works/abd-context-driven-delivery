@@ -237,10 +237,11 @@ describe('Head The Files App With Where The Files Are', () => {
 })
 
 describe('Review All Session Files Or This Session', () => {
-  async function discovery(formats: string[] = []): Promise<FilesPage> {
+  async function discovery(formats: string[] = [], practices = ['stories', 'ddd']): Promise<FilesPage> {
     const server = new FakeFilesServer()
     server.stages = ['discovery']
     server.formats = formats
+    server.practices = practices
     server.rootFiles = ROOT_FILES
     const { page, stop } = await following(server)
     stop()
@@ -248,7 +249,7 @@ describe('Review All Session Files Or This Session', () => {
   }
 
   describe('that has All session files pressed', () => {
-    it('should list every file under the root of the stages selected or of no fidelity', async () => {
+    it('should list every file under the root of the stages selected, and of no fidelity while every practice is on', async () => {
       const page = await discovery()
       page.showScope('all')
       expect(page.fileBar.entries.map(each => each.path)).toEqual(expect.arrayContaining(['.context/stories-story-map.md', 'notes/plain.txt', 'src/order.py']))
@@ -258,6 +259,14 @@ describe('Review All Session Files Or This Session', () => {
       const page = await discovery()
       page.showScope('all')
       expect(page.fileBar.entries.map(each => each.path)).not.toContain('specs/checkout.md')
+    })
+
+    describe('with a practice turned off', () => {
+      it('should leave out a file of no fidelity', async () => {
+        const page = await discovery([], ['stories'])
+        page.showScope('all')
+        expect(page.fileBar.entries.map(each => each.path)).not.toContain('notes/plain.txt')
+      })
     })
 
     it('should list only the files in the formats selected', async () => {
