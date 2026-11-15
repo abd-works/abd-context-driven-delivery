@@ -305,12 +305,12 @@ class Ticket(Card):
     @data_field
     def drop_targets(self) -> list[str]:
         """The columns besides the stages a person can drop it on. The Backlog takes any ticket, which keeps its whole
-        folder there. Complete takes one from Implementation's Done, or an open ticket, through its Close dialog, because
-        closing it asks what to do with its work."""
+        folder there. Complete takes any ticket not closed yet, from whatever stage it reached: an open one through its
+        Close dialog, because closing it asks what to do with its work, and one not opened at once. A parent waits for
+        its children, since it moves only with them."""
         if self.is_main:
             return []
-        final = self._board.stages[-1]
-        closes = self.is_open or (not self.is_closed and self.column is final and self.is_done)
+        closes = not self.is_closed and not any(not child.is_closed for child in self.children)
         return [BACKLOG_COLUMN, *([COMPLETE_COLUMN] if closes else [])]
 
     @property

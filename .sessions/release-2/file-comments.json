@@ -1,3 +1,14 @@
 {
-  "comments": []
+  "comments": [
+    {
+      "path": "../abd-cdd-2/space/repo/repo.py",
+      "start_line": 105,
+      "end_line": 109,
+      "selected_text": "    @staticmethod\n    def _marked_checkout(folder: Path) -> Path | None:\n        \"\"\"The nearest folder at or above folder that git marks as a checkout's top; none when no folder is marked.\"\"\"\n        current = folder.parent if folder.is_file() else folder\n        return next((candidate for candidate in (current, *current.parents) if (candidate / \".git\").exists()), None)",
+      "text": "why is this static - could this be an insdtasnce method of repo?",
+      "chat": "",
+      "message": "",
+      "sent_text": ""
+    }
+  ]
 }

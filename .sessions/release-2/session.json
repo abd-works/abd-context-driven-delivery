@@ -6,19 +6,75 @@
   "worktree": "C:\\dev\\abd-cdd-2",
   "practices": {
     "clean_engineering": {
-      "enabled": true
+      "enabled": true,
+      "formats": {
+        "modules": [
+          "drawio"
+        ],
+        "code": [
+          "python"
+        ],
+        "model": [
+          "python",
+          "markdown"
+        ]
+      }
     },
     "stories": {
-      "enabled": true
+      "enabled": true,
+      "formats": {
+        "story_map": [
+          "drawio"
+        ],
+        "acceptance_tests": [
+          "python"
+        ],
+        "scenarios": [
+          "python",
+          "markdown"
+        ]
+      }
     },
     "ddd": {
-      "enabled": true
+      "enabled": true,
+      "formats": {
+        "bounded_context": [],
+        "tactics": [
+          "python"
+        ],
+        "model": [
+          "markdown"
+        ]
+      }
     },
     "ux": {
-      "enabled": true
+      "enabled": true,
+      "formats": {
+        "ia": [
+          "drawio"
+        ],
+        "front_end_code": [
+          "html",
+          "typescript"
+        ],
+        "mockup": [
+          "html"
+        ]
+      }
     },
     "bdd": {
-      "enabled": false
+      "enabled": true,
+      "formats": {
+        "behavior": [
+          "python"
+        ],
+        "development": [
+          "python"
+        ],
+        "realization": [
+          "markdown"
+        ]
+      }
     }
   }
 }
