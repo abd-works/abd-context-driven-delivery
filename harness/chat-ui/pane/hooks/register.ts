@@ -199,9 +199,10 @@ export const register: Register = on => {
       isStagePickerOpen: await isStagePickerOpen($),
       busy: await currentBusy($),
       health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band) },
-      version: { badge: VersionBadgeView(elements, version, versionActions), dialog: UpdateDialogView(elements, version, versionActions) },
+      version: { label: version.label, badge: VersionBadgeView(elements, version, versionActions), dialog: UpdateDialogView(elements, version, versionActions) },
       push: { buttons: PushButtonsView(elements, repo, pushActions), dialog: PushDialogView(elements, repo, chatBar.title || chatBar.sessionName, pushActions) },
       width: e.props.bodyColumns,
+      maxRows: e.props.maxRows,
     })
     } catch (failure) {
       // A draw that throws shows why, in red, instead of leaving no bar at all.

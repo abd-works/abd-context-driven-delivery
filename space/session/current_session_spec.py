@@ -59,6 +59,18 @@ with description("the session a tool call opens"):
                     call.join()
                 expect(seen).to(equal({self.first.name: "alpha", self.second.name: "beta"}))
 
+    with context("that the session a chat has open was closed since"):
+        with before.each:
+            # A close made from another chat moves the folder among the closed sessions and leaves this chat's choice.
+            Sessions(self.first).named("alpha").move_to_closed()
+
+        with it("should be the main session"):
+            expect(ToolCall({}, self.first).session.name).to(equal("main"))
+
+        with it("should leave no folder for it among the open sessions once a call logs a failure"):
+            ToolCall({}, self.first).session.log.by(None).failure(RuntimeError("the call failed"), tool="ticket.activate")
+            expect((self.first / ".sessions" / "alpha").exists()).to(equal(False))
+
     with context("that a call names a folder inside a project"):
         with before.each:
             (self.first / "docs").mkdir()

@@ -3,7 +3,6 @@ import type { EngineInterface } from 'claude-code'
 import { BRAND } from '../shared/brand'
 import { GlyphButtonView } from '../shared/glyph-button-view'
 import { chooseAction, clearChosenAction, toggleActionPicker } from './action-picker-client'
-import { actionColumnOf } from './bar-columns'
 import { moveNext, type ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
 import { runActionOn } from './fidelity-progress-client'
@@ -52,24 +51,32 @@ export function ActionButtonView($: EngineInterface, elements: ElementTable, dra
   if (!action) return null
   const target = action === 'advance' ? `move ${chatBar.sessionName} on` : `${action} ${chatBar.actionFidelities.map(fidelity => fidelity.slug).join(' ')}`
   return (
-    <Box key="action" flexDirection="row" gap={0} paddingX={1} backgroundColor={BRAND.accent}>
-      {GlyphButtonView(elements, 'next-action', iconOf(action), BRAND.onAccent, () => pressAction($, draw, action))}
-      {GlyphButtonView(elements, 'action-picker', '▾', BRAND.onAccent, () => toggleActionPicker($))}
-      <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
-        <Text color={BRAND.text}>{target}</Text>
+    <Box key="action-anchor">
+      <Box key="action" flexDirection="row" gap={0} paddingX={1} backgroundColor={BRAND.accent}>
+        {GlyphButtonView(elements, 'next-action', iconOf(action), BRAND.onAccent, () => pressAction($, draw, action))}
+        {GlyphButtonView(elements, 'action-picker', '▾', BRAND.onAccent, () => toggleActionPicker($))}
+        <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
+          <Text color={BRAND.text}>{target}</Text>
+        </Box>
       </Box>
+      {PickerView($, elements, draw)}
     </Box>
   )
+}
+
+// How many rows the open action list takes, its border included; none while it is closed.
+export function pickerRowsOf({ chatBar, picker }: ChatBarDraw): number {
+  return picker.isOpen && chatBar.actionFidelity ? chatBar.actions.length + 2 : 0
 }
 
 // Every action the shown stage sends, as a menu above the button: its icon, its name, and next beside the fidelity's
 // next one, opening at the button's column so it reads as the button's list box. The one on the button is
 // highlighted; picking another puts it on the button in place of the next.
-export function PickerView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar, picker, overlays, formats }: ChatBarDraw) {
+function PickerView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar, picker }: ChatBarDraw) {
   const fidelity = chatBar.actionFidelity
   if (!picker.isOpen || !fidelity) return null
   return (
-    <Box key="picker" flexDirection="column" alignSelf="flex-start" marginLeft={actionColumnOf(chatBar, overlays, formats)} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
+    <Box key="picker" flexDirection="column" position="absolute" bottom={1} left={0} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
       {chatBar.actions.map(action => {
         const isNext = action === fidelity.nextAction
         const isShown = action === shownActionOf(chatBar, picker.chosenAction)
