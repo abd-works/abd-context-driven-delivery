@@ -9,7 +9,8 @@
       "enabled": true,
       "formats": {
         "modules": [
-          "markdown"
+          "markdown",
+          "drawio"
         ]
       }
     },
