@@ -19,6 +19,10 @@ export type InstallJson = { state: 'idle' | 'running' | 'installed' | 'failed'; 
 // and reinstall went.
 export type CddVersionJson = { data: object | null; problem: string | null; isAsking: boolean; update: InstallJson['state']; error: string | null }
 
+// The chat bar's Merge to main and Push to main. asking names the one the dialog asks about; state and error say how the
+// last one went, and landed is repo.merge_to_main's or repo.push_to_main's answer, the commit main is on.
+export type ToMainJson = { asking: 'merge' | 'push' | null; state: InstallJson['state']; landed: object | null; error: string | null }
+
 // The app a person last pressed in the status row: opening while App.open readies it, failed with what failed and how to
 // fix it, idle once it opened in the side panel.
 // url: where the app answers once it is ready, drawn as a link; null until then.
@@ -81,6 +85,7 @@ declare module 'claude-code' {
       healthView: HealthViewJson
       install: InstallJson
       cddVersion: CddVersionJson
+      toMain: ToMainJson
       appOpening: AppOpeningJson
       chatBar: ChatBarJson
       failure: FailureJson

@@ -30,6 +30,8 @@ import {
 import { ServerHealthBandView, ServerHealthPanelView } from './health/server-health-view'
 import { askToUpdate, cancelUpdate, checkVersionSoon, checkVersionUntilRead, currentCddVersion, updateToLatest } from './health/cdd-version-client'
 import { UpdateDialogView, VersionBadgeView } from './health/cdd-version-view'
+import { askToMain, cancelToMain, currentRepo, takeToMain } from './repo/repo-client'
+import { ToMainButtonsView, ToMainDialogView } from './repo/repo-view'
 import { currentAppOpening, openAppBesideChat } from './health/app-client'
 import { FOLDER_QUERY, PROJECT_QUERY, projectPageUrl } from './board-chat/board'
 import { CARD_SCOPE } from './chat-bar/session-card-view'
@@ -182,6 +184,8 @@ export const register: Register = on => {
     const elements = $.ui.resolve(e)
     const version = await currentCddVersion($)
     const versionActions = { askToUpdate: () => askToUpdate($), cancelUpdate: () => cancelUpdate($), updateToLatest: () => updateToLatest($) }
+    const repo = await currentRepo($)
+    const toMainActions = { ask: (taking: 'merge' | 'push') => askToMain($, taking), cancel: () => cancelToMain($), take: (taking: 'merge' | 'push') => takeToMain($, taking) }
     try {
     const chatBar = await currentChatBar($)
     return ChatBarView($, elements, {
@@ -195,6 +199,7 @@ export const register: Register = on => {
       busy: await currentBusy($),
       health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band) },
       version: { badge: VersionBadgeView(elements, version, versionActions), dialog: UpdateDialogView(elements, version, versionActions) },
+      toMain: { buttons: ToMainButtonsView(elements, repo, toMainActions), dialog: ToMainDialogView(elements, repo, chatBar.title || chatBar.sessionName, toMainActions) },
       width: e.props.bodyColumns,
     })
     } catch (failure) {
