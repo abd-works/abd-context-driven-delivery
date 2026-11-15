@@ -111,6 +111,7 @@ File: `rules/shared_tdd_rules.py`. What BDD development and Stories acceptance_t
 | `heavy-tier-holds-a-real-resource` | spec file | A heavy spec uses a real resource (git, a server, a daemon, an installer, a worker, a big load); without one it belongs in the unit tier. |
 | `e2e-tier-drives-browser-or-agent` | spec file | An e2e spec drives a real browser or a real agent, and nothing else does. |
 | `slow-example-moves-not-the-file` | spec file | An example over budget that still needs a real resource after optimizing moves to the heavy spec beside its unit spec, under the same described subject; the rest of the file stays unit, and the budget is never raised. |
+| `heavy-example-has-a-stubbed-twin` | heavy spec file | Every example in a heavy spec has a twin in the unit spec beside it, the same `should` sentence under the same subject, with a stub at the boundary the heavy one runs for real. Unit keeps catching the break after every pass; heavy proves the stub matches the real thing. |
 | `no-skipped-or-empty-test` | observation, scenario | No test is skipped, commented out, or left without an assertion. |
 
 ### Test speed rules
@@ -144,7 +145,7 @@ Guidance (process, not rules):
   2. **A wait.** A sleep, a poll or a retry loop. Use a fake clock or an event.
   3. **An expensive fixture rebuilt for every example.** Build it once per file and share it.
   4. **Work the example doesn't assert on.** For example, loading every practice to check one.
-- **Move to heavy only if it is still slow.** If none of these applies, or the example exists to prove the real resource, move it to the heavy spec under the same subject.
+- **Move to heavy only if it is still slow, and keep a stubbed twin in unit.** If none of these applies, or the example exists to prove the real resource, move it to the heavy spec under the same subject. Leave a copy in the unit spec with a stub at that boundary, using the same `should` sentence. The unit copy runs after every pass, and the heavy one checks once at the end that the stub still behaves like the real thing.
 - **Read the slow list after every unit run.** The runner lists each example over budget. Fix each one in the same pass, optimizing first.
 - **Keep the timings.** `spec-seconds.json` orders the next run's batches, longest first, so the run ends when its slowest batch does and no later.
 
