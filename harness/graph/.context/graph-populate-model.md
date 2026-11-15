@@ -369,6 +369,7 @@ One rule a practice checks on loaded nodes (`practice_rule.py`). A practice writ
 
 One rule an overlay checks on several practices' nodes, such as TDD's `one-outcome-per-test` on BDD observations and Stories Thens (`practice_rule.py`). It lives once, in the overlay's `rules/` package; each practice runs a copy bound to its own node types.
 
+------
 + node_types_by_practice: dict[type[PracticeGuidance], tuple[str, ...]]
 	// each practice's class to the node types it checks there, such as {Bdd: ("Observation",), Stories: ("Then",)}
 ----
