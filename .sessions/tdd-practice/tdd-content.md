@@ -6,22 +6,22 @@ This is the raw material for one common TDD practice or overlay. It gathers ever
 
 Read section 2 to see which files hold testing advice and whether an agent ever sees them. Read section 3 theme by theme; each theme lists every source's version together. Section 4 lists the duplications, conflicts and broken pointers. Section 5 shows which fidelity consumes which piece.
 
-"Installed" means a copy exists under `C:\dev\abd-context-driven-delivery\.claude\` (the main checkout's Claude install). Installed rule files under `.claude/rules/practices/...` hold only a fidelity's `#### Rules` (and the practice file holds its `## Shared rules`); the fidelity's `#### Guidance` prose (procedures, RED-GREEN-REFACTOR, AAA) is not in any installed file. The installed `skills/<fidelity>/SKILL.md` holds a schema and rule names only (for example `.claude/skills/practices-bdd-bdd-development/SKILL.md:1-40`). Whether the Guidance reaches an agent through the cdd MCP fidelity tools was not checked.
+"Delivered" means an agent receives the text. Every practice markdown file is delivered in full: each fidelity is an MCP tool (for example `bdd-development`, `clean-engineering-code`) and a skill (`practices-bdd-bdd-development`), and the tool returns the fidelity's schema, the practice Overview, Guidance and Shared rules, the fidelity's Overview, Guidance and Rules, and its template. So the procedures, RED-GREEN-REFACTOR and AAA do reach the agent (checked on 2026-11-15 by calling `bdd-development`). The `## Shared rules` and `#### Rules` sections are also installed under `.claude/rules/` by path. What is not delivered are files outside a practice markdown file: separate rule files under a practice's `rules/` folder (such as `testing-approach.md`) and the persona files under a practice's `agents/` folder.
 
 ## 2. Inventory
 
-| Source file | Practice / fidelity | What it covers | Installed? |
+| Source file | Practice / fidelity | What it covers | Delivered? |
 |---|---|---|---|
-| `cdd_guidance/practices/clean_engineering/rules/testing-approach.md` | Clean Engineering (claims all code tests) | Test shape ladder: real conditions first, stub TDD at boundaries, e2e swap; `_spec` / `_e2e_spec` layout | **No.** Front matter says `alwaysApply: true` (`:4`) but no installed file contains "shape ladder" |
+| `cdd_guidance/practices/clean_engineering/rules/testing-approach.md` | Clean Engineering (claims all code tests) | Test shape ladder: real conditions first, stub TDD at boundaries, e2e swap; `_spec` / `_e2e_spec` layout | **No.** Not part of a practice markdown file; front matter says `alwaysApply: true` (`:4`) but no installed rule, skill or MCP tool output contains "shape ladder" (`clean-engineering-code` and `bdd-development` output checked) |
 | `cdd_guidance/practices/bdd/bdd.md` shared rules (`:100-119`) | BDD, all fidelities | Observable behaviour, usage order, describe naming, `that`/`with` not `when`, setup expresses state, coverage, rule-example pairs | Yes, `.claude/rules/practices/bdd.md` |
-| `cdd_guidance/practices/bdd/bdd.md` behavior (`:123-177`) | BDD behavior | Confirm framework, `BDD: SIGNATURE` markers, no implementation | Rules yes, `rules/practices/bdd/bdd-behavior.md`; Guidance no |
-| `cdd_guidance/practices/bdd/bdd.md` development (`:248-324`) | BDD development | Procedure (pointer to ladder), coverage check, RED-GREEN-REFACTOR, AAA, rules incl. `tier-by-speed` | Rules yes, `rules/practices/bdd/bdd-development.md`; Guidance (`:264-296`) no |
-| `cdd_guidance/practices/bdd/bdd.md` Common mistakes (`:328-388`) | BDD | Nesting, setup labels, missing subject | No (not in rules) |
-| `cdd_guidance/practices/bdd/templates/bdd.py`, `bdd.ts`, `bdd-sketch.md` | BDD | SIGNATURE → realization → AAA, one assertion per behaviour | Not as rules |
+| `cdd_guidance/practices/bdd/bdd.md` behavior (`:123-177`) | BDD behavior | Confirm framework, `BDD: SIGNATURE` markers, no implementation | Yes, in full through its fidelity MCP tool and skill; Rules also in `.claude/rules/` |
+| `cdd_guidance/practices/bdd/bdd.md` development (`:248-324`) | BDD development | Procedure (pointer to ladder), coverage check, RED-GREEN-REFACTOR, AAA, rules incl. `tier-by-speed` | Yes, in full through its fidelity MCP tool and skill; Rules also in `.claude/rules/` |
+| `cdd_guidance/practices/bdd/bdd.md` Common mistakes (`:328-388`) | BDD | Nesting, setup labels, missing subject | Yes, part of the practice text the BDD tools return |
+| `cdd_guidance/practices/bdd/templates/bdd.py`, `bdd.ts`, `bdd-sketch.md` | BDD | SIGNATURE → realization → AAA, one assertion per behaviour | Yes, the fidelity tool returns its template |
 | `cdd_guidance/practices/bdd/agents/behavior-developer.md` | BDD agent persona | Red-green-refactor one signature at a time | **No** (`.claude/agents/` holds only context, discoverer, implementation, specification) |
 | `cdd_guidance/practices/stories/stories.md` scenarios (`:127-155`) | Stories scenarios | Rules that also bind acceptance tests (explore surface, reconcile live, seed prior story as Given) | Yes, `rules/practices/stories/stories-scenarios.md` |
-| `cdd_guidance/practices/stories/stories.md` acceptance_tests (`:172-238`) | Stories acceptance_tests | Pointer to ladder, develop one scenario at a time, failing test first, seed/stub/fixture rules, `story-tier-by-speed` | Rules yes, `rules/practices/stories/stories-acceptance-tests.md`; Guidance (`:200-208`) no |
-| `cdd_guidance/practices/stories/templates/py/scenarios.py`, `ts/scenarios.ts`, `py/story_test.py`, `ts/story-test.ts` | Stories acceptance_tests | Lifecycle hooks, assertion helpers, `examples/` fixture layout, GWT step library | Not as rules |
+| `cdd_guidance/practices/stories/stories.md` acceptance_tests (`:172-238`) | Stories acceptance_tests | Pointer to ladder, develop one scenario at a time, failing test first, seed/stub/fixture rules, `story-tier-by-speed` | Yes, in full through its fidelity MCP tool and skill; Rules also in `.claude/rules/` |
+| `cdd_guidance/practices/stories/templates/py/scenarios.py`, `ts/scenarios.ts`, `py/story_test.py`, `ts/story-test.ts` | Stories acceptance_tests | Lifecycle hooks, assertion helpers, `examples/` fixture layout, GWT step library | Yes, the fidelity tool returns its template |
 | `cdd_guidance/practices/clean_engineering/clean_engineering.md` code (`:264-341`) | Clean Engineering code | No test procedure at all; "implement real behaviour", "update tests on rename" | Rules yes, `rules/practices/clean-engineering/clean-engineering-code.md` |
 | `cdd_guidance/practices/clean_engineering/agents/engineer.md` | CE agent persona | "Always test-then-code-then-test", MUST follow the ladder | **No** |
 | `cdd_guidance/practices/agent_bdd/agent_bdd.md` (+ `guide.md`) | Agent BDD | Harness rules, assert on artifacts, no mocking the harness, triage prompt vs code | Yes, `rules/practices/agent-bdd.md` (shared rules) |
@@ -31,7 +31,7 @@ Read section 2 to see which files hold testing advice and whether an agent ever 
 | `cdd_guidance/rules/test-timing.md` | Always-on | Which tier to run when | Yes, `.claude/rules/test-timing.md` |
 | `cdd_guidance/rules/coding.mdc` | Always-on | Update tests in the same change as a renamed seam | Yes, `.claude/rules/coding.md` |
 | `cdd_guidance/references/language-tools.md` | Reference (BDD, Stories, CE, agent BDD point here) | Runners, assertion libraries, story file shape, universal AAA / one assertion / example factories | Yes, `.claude/references/language-tools.md` |
-| `AGENTS.md:38-55` | Project instructions | Setup, mamba command, tier table, Mamba spec style | Read through `CLAUDE.md` (`@AGENTS.md`), not installed |
+| `AGENTS.md:38-55` | Project instructions | Setup, mamba command, tier table, Mamba spec style | Yes, loaded through `CLAUDE.md` (`@AGENTS.md`) |
 | `scripts/test.ps1` | Runner | Tier selection, 100 ms budget, throwaway `CDD_HOME`, agent runs off outside e2e | Script, not guidance |
 | `cdd_guidance/patterns/lern_domain_driven/lern_domain_driven.md` | LERN overlay | Shared-story tiers, Playwright, BDD tiers with drivers, real server tier | Yes, `rules/patterns/lern-domain-driven.md` |
 | `cdd_guidance/patterns/mern_domain_driven/mern_domain_driven.md` | MERN overlay | Tier/stub table, example factories, test scripts | Yes, `rules/patterns/mern-domain-driven.md` |
@@ -159,7 +159,7 @@ Also DDD tactics: settle "how it is tested" per building block (`ddd.md:287`), `
 
 **Broken pointers**
 1. `bdd.md:266` and `engineer.md:8` send the reader to "`@clean_engineering` `## code` § Procedure" (`code-procedure`). `clean_engineering.md` code fidelity (`:264-341`) has Overview, Sketch, Guidance, Scaffold, Rules; no Procedure, and no testing guidance at all. The ladder lives only in `clean_engineering/rules/testing-approach.md`.
-2. `testing-approach.md` says it is always-on (`:4`) and that `@bdd` and `@stories` "refer here" (`:9`), but it is not installed: no file under `.claude/` contains "shape ladder", and no `.py` file names `testing-approach`. Only `stories.md:202` points at it by its real location.
+2. `testing-approach.md` says it is always-on (`:4`) and that `@bdd` and `@stories` "refer here" (`:9`), but it is never delivered: it sits outside the practice markdown, no file under `.claude/` and no fidelity tool output contains "shape ladder", and no `.py` file names `testing-approach`. Only `stories.md:202` points at it by its real location.
 3. `bdd.md:146`, `:216`, `:273` name `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`) with "DEVELOPMENT TESTS" and "PRODUCTION CODE" sections. The files are `templates/bdd.py` and `templates/bdd.ts` (no Java); `bdd.py` has a "DEVELOPMENT" block (`:22-27`) and no production-code section.
 4. `agent_bdd.md:11`, `:80` name `templates/agent_bdd-templates.py`; the file is `templates/agent_bdd.py`.
 
@@ -186,16 +186,16 @@ Also DDD tactics: settle "how it is tested" per building block (`ddd.md:287`), `
 22. Production "no stubs left" (not a test rule but often read as one): `clean_engineering.md:289`, `implementation.md:10`, `ux.md:211-212,234`, `front_end_code.md:7-8,14-18`, LERN/MERN `implement-full-interfaces`.
 
 **Gaps**
-23. Clean Engineering `code` — the fidelity that writes production code — holds no test procedure, no test rule, and no pointer to the ladder; only the persona `engineer.md` (not installed) says to follow one.
+23. Clean Engineering `code` — the fidelity that writes production code — holds no test procedure, no test rule, and no pointer to the ladder; only the persona `engineer.md` (not delivered) says to follow one.
 24. UX `front_end_code` says nothing about how the front end is tested; only the patterns (LERN Playwright, MERN client tier, Claude mod `claude plugin test`) do.
-25. The procedural pieces (BDD procedure, RGR, AAA, coverage check; Stories "one Scenario at a time", "two failed fix attempts") are Guidance, so none appear in installed rule files.
+25. The procedural pieces (BDD procedure, RGR, AAA, coverage check; Stories "one Scenario at a time", "two failed fix attempts") are Guidance. They reach the agent through the fidelity MCP tools and skills, but not as path rules under `.claude/rules/`, so an agent editing a spec without calling the fidelity tool sees only the Rules.
 26. "Two-pass tests" (`testing-approach.md:21`) is not defined anywhere.
 27. The "two failed fix attempts then diagnose" stop rule exists only in Stories (`stories.md:206`).
-28. Agent personas `engineer.md` and `behavior-developer.md`, which carry the strongest test-first wording, are not installed as agents.
+28. Agent personas `engineer.md` and `behavior-developer.md`, which carry the strongest test-first wording, are not delivered: not installed as agents and not part of any practice markdown a tool returns.
 
 ## 5. Which fidelities consume which pieces
 
-Legend: **O** = the fidelity's own text states it; **P** = it points to it; **I** = an installed always-on piece applies to it; blank = nothing found.
+Legend: **O** = the fidelity's own text states it; **P** = it points to it; **I** = an always-on installed rule applies to it; blank = nothing found.
 
 | Piece | CE `code` | Stories `acceptance_tests` | BDD `development` | Agent BDD | UX `front_end_code` |
 |---|---|---|---|---|---|
