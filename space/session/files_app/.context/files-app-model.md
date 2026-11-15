@@ -26,7 +26,7 @@ The *Files app* shows the files a link names and turns a person's reading into w
 
 ### FileBar (`files/file-bar.ts`)
 
-- The page's side bar: collapsed to its buttons or expanded, showing the files the page lists as one list or in their folder tree, as Windows Explorer shows it. Holds no files of its own; reads the page's *FilesStore* and keeps what it shows there (`fileBar`: open, view, open folders).
+- The page's side bar: collapsed to its buttons or expanded, showing the files the page lists as one list or in their folder tree, as Windows Explorer shows it. Holds no files of its own; reads the page's *FilesStore* and keeps what it shows there (`fileBar`: open, view, folders closed). It shows folders by default, and every folder starts open: the bar keeps the folders a person closed, so a folder a filter change brings is open and one closed stays closed.
 - `tree` is the folder tree of the listed files (`treeOf`): each folder nested in the folder it is in, folders before files, each sorted by name; a folder holding only one folder and no files shows joined to it as one row (`src/checkout`).
 - `toggle()` collapses or expands the bar.
 - `show(view)` shows the files as a list or in their folder tree.

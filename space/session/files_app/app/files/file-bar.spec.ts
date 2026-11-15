@@ -71,10 +71,10 @@ describe('Switch File Bar Between Folders And List', () => {
         expect([page.fileBar.isOpen(folderShown(page, 'src/checkout')!), named(folderShown(page, 'src/checkout'))]).toEqual([true, [CART, ORDER]])
       })
 
-      it('should keep every other folder closed', async () => {
+      it('should keep every other folder open, as every folder starts open', async () => {
         const page = await pageWithOrderOpen()
         page.fileBar.show('folders')
-        expect(page.fileBar.isOpen(folderShown(page, '.context')!)).toBe(false)
+        expect(page.fileBar.isOpen(folderShown(page, '.context')!)).toBe(true)
       })
 
       it('should list the files in the order the link names them once shown as a list again', async () => {
@@ -85,19 +85,25 @@ describe('Switch File Bar Between Folders And List', () => {
       })
     })
 
-    describe('that has a closed folder opened', () => {
-      it('should show its files', async () => {
+    describe('that has a folder closed', () => {
+      it('should hide its files', async () => {
         const page = await pageWithOrderOpen()
-        page.fileBar.show('folders')
+        page.fileBar.toggleFolder('.context')
+        expect(page.fileBar.isOpen(folderShown(page, '.context')!)).toBe(false)
+      })
+
+      it('should show them once opened again', async () => {
+        const page = await pageWithOrderOpen()
+        page.fileBar.toggleFolder('.context')
         page.fileBar.toggleFolder('.context')
         expect(page.fileBar.isOpen(folderShown(page, '.context')!)).toBe(true)
       })
 
-      it('should hide them once closed again', async () => {
+      it('should keep it closed once a filter changes the files listed', async () => {
         const page = await pageWithOrderOpen()
-        page.fileBar.show('folders')
         page.fileBar.toggleFolder('.context')
-        page.fileBar.toggleFolder('.context')
+        page.fileBar.toggleChangedOnly()
+        page.fileBar.toggleChangedOnly()
         expect(page.fileBar.isOpen(folderShown(page, '.context')!)).toBe(false)
       })
     })
@@ -162,12 +168,13 @@ describe('folder tree of the files', () => {
     expect(named(treeOf([entry('README.md')]))).toEqual(['README.md'])
   })
 
-  it('should open every folder down to the open file', async () => {
+  it('should open every folder down to the open file once shown as folders, a closed one included', async () => {
     const page = new FilesPage(new NestedFilesServer(), new FilesLink(`?files=checkout-flow&fidelity=clean-engineering-code&file=src/checkout/order.py`))
     page.start()()
     await new Promise(resolve => setTimeout(resolve, 0))
+    page.fileBar.toggleFolder('src/checkout')
     page.fileBar.show('folders')
-    expect(page.state.fileBar.openFolders).toEqual(['src', 'src/checkout'])
+    expect(page.state.fileBar.closedFolders).toEqual([])
   })
 })
 

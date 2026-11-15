@@ -21,7 +21,8 @@ export type FilesState = {
   file: SessionFileData | null
   problem: string
   toasts: string[]
-  fileBar: { isOpen: boolean; view: 'list' | 'folders'; openFolders: string[]; isChangedOnly: boolean }
+  // The folders a person closed: every other folder is open, so a folder a filter change brings is open too.
+  fileBar: { isOpen: boolean; view: 'list' | 'folders'; closedFolders: string[]; isChangedOnly: boolean }
 }
 
 export const NO_FILES: FilesState = {
@@ -35,7 +36,7 @@ export const NO_FILES: FilesState = {
   file: null,
   problem: '',
   toasts: [],
-  fileBar: { isOpen: true, view: 'list', openFolders: [], isChangedOnly: false },
+  fileBar: { isOpen: true, view: 'folders', closedFolders: [], isChangedOnly: false },
 }
 
 // A change to the state, applied by the store that holds it.

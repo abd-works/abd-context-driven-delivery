@@ -132,17 +132,21 @@ Requested (the person, 2026-11-14): "expand collapse file bar with buttons to sw
 *When* the Person shows the file bar as folders
 *Then* the file bar shows the folders *.context* and *src/checkout*
 *And* *src/checkout* is open, showing *cart.py* and *order.py*
-*But* *.context* is closed
+*And* *.context* is open too, as every folder starts open
 *When* the Person shows the file bar as a list
 *Then* the file bar lists *story-map.md*, *order.py* and *cart.py* again, in the order the link names them
 
-#### Scenario: Open and close a folder
+#### Scenario: Close and open a folder
 
-*Given* the [Files app](../files-app-model.md#filebar-filesfile-barts) shows its files as folders, *.context* closed
-*When* the Person opens *.context*
-*Then* *.context* shows *story-map.md*
+Requested (the person, 2026-11-15): "keep folder the default view and not reset it every time we change a filter".
+
+*Given* the [Files app](../files-app-model.md#filebar-filesfile-barts) shows its files as folders, its default, *.context* open
 *When* the Person closes *.context*
 *Then* *.context* shows no file
+*When* a filter changes the files listed
+*Then* *.context* stays closed
+*When* the Person opens *.context*
+*Then* *.context* shows *story-map.md*
 
 ## Story: List Only The Files The Branch Changed
 

@@ -75,7 +75,7 @@ export class FileBar {
   }
 
   isOpen(folder: FileFolder): boolean {
-    return this.store.state.fileBar.openFolders.includes(folder.path)
+    return !this.store.state.fileBar.closedFolders.includes(folder.path)
   }
 
   toggle(): void {
@@ -86,7 +86,7 @@ export class FileBar {
   show(view: FileBarView): void {
     this.store.change(({ fileBar, openPath }) => {
       const above = view === 'folders' && openPath ? foldersAbove(this.tree, openPath) : []
-      return { fileBar: { ...fileBar, view, openFolders: [...new Set([...fileBar.openFolders, ...above])] } }
+      return { fileBar: { ...fileBar, view, closedFolders: fileBar.closedFolders.filter(path => !above.includes(path)) } }
     })
   }
 
@@ -97,8 +97,8 @@ export class FileBar {
 
   toggleFolder(path: string): void {
     this.store.change(({ fileBar }) => {
-      const isOpen = fileBar.openFolders.includes(path)
-      return { fileBar: { ...fileBar, openFolders: isOpen ? fileBar.openFolders.filter(each => each !== path) : [...fileBar.openFolders, path] } }
+      const isClosed = fileBar.closedFolders.includes(path)
+      return { fileBar: { ...fileBar, closedFolders: isClosed ? fileBar.closedFolders.filter(each => each !== path) : [...fileBar.closedFolders, path] } }
     })
   }
 }
