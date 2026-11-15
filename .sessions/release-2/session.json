@@ -32,7 +32,7 @@
       }
     },
     "ddd": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
         "bounded_context": [],
         "tactics": [
@@ -74,6 +74,6 @@
       "specification",
       "implementation"
     ],
-    "version": 126
+    "version": 127
   }
 }
