@@ -10,9 +10,12 @@ export const FOLDER_QUERY = 'folder'
 // CHAT_QUERY; the mod takes only types from the language adapter, so the word is spelled here as PROJECT_QUERY is).
 export const CHAT_QUERY = 'chat'
 
-// One call on a chat tool (chat.check_in, chat.confirm, chat.finish), each with the body that tool takes.
+// One call on a chat tool (chat.check_in, chat.confirm, chat.finish, chat.select, chat.show), each with the body that
+// tool takes.
 export type ChatRequest = { chat: string } & (
-  | { operation: 'check-in'; body: { is_busy: boolean; name: string; folder: string; selected_fidelities: string[] } }
+  | { operation: 'check-in'; body: { is_busy: boolean; name: string; folder: string } }
+  | { operation: 'select'; body: { selected_fidelities: string[] } }
+  | { operation: 'show'; body: Record<string, never> }
   | { operation: 'confirm'; body: { message: string; is_shown: boolean; reason: string } }
   | { operation: 'finish'; body: { message: string } }
 )
@@ -40,7 +43,8 @@ export async function projectPageUrl($: EngineInterface, url: string, query: Rec
 }
 
 // A chat call goes to the cdd server every chat shares, as each chat tool does, so a chat checks in, confirms and
-// finishes whether or not any app, the Kanban board included, is running. A failed call is the server's own text.
+// finishes whether or not any app, the Kanban board included, is running, and the selection it holds is the one state
+// the chat bar and its pages show. A failed call is the server's own text.
 export async function post($: EngineInterface, { chat, operation, body }: ChatRequest): Promise<{ ok: boolean; text: string }> {
   const tool = `chat.${operation.replace('-', '_')}`
   const result = await $.mcp.call(SERVER, tool, { chat, ...body })

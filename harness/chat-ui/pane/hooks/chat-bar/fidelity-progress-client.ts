@@ -7,6 +7,7 @@ import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
 import { promptCommand } from '../shared/chat-command'
+import { post } from '../board-chat/board'
 import { clearChosenAction } from './action-picker-client'
 
 const selectedFidelities = atom({ plugin: 'cdd-board', key: 'selectedFidelities' } as const, [] as string[])
@@ -114,15 +115,21 @@ export async function selectedFidelitySlugs($: EngineInterface): Promise<string[
 }
 
 // A press on a fidelity adds it to the selection, or takes it out when it is already there, so one action can run on
-// several fidelities at once. A change drops an action picked before, so the button shows the next action again.
+// several fidelities at once. The selection is the chat's, held by cdd (chat.select), so a page the chat opened, such as
+// the Files app, shows and changes the same one; the dots draw what cdd answered. A change drops an action picked
+// before, so the button shows the next action again.
 export async function selectFidelity($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
-  await update($, selectedFidelities, slugs => ((slugs ?? []).includes(fidelity.slug) ? (slugs ?? []).filter(slug => slug !== fidelity.slug) : [...(slugs ?? []), fidelity.slug]))
-  await clearChosenAction($)
+  const slugs = (await read($, selectedFidelities)) ?? []
+  const next = slugs.includes(fidelity.slug) ? slugs.filter(slug => slug !== fidelity.slug) : [...slugs, fidelity.slug]
+  const answer = await post($, { chat: await $.session.id(), operation: 'select', body: { selected_fidelities: next } })
+  await showSelected($, (JSON.parse(answer.text) as { selected_fidelities: string[] }).selected_fidelities)
 }
 
-// The fidelities a page the chat opened asked the bar to select, such as a practice pressed in the Files app, in place of
-// the selection: the bar's dots and that page then show the same ones.
-export async function selectFidelities($: EngineInterface, slugs: string[]): Promise<void> {
+// The dots draw the selection cdd holds for the chat, as chat.select or chat.show answered it; a change from elsewhere,
+// such as a practice pressed in the Files app, drops an action picked before.
+export async function showSelected($: EngineInterface, slugs: string[]): Promise<void> {
+  const shown = (await read($, selectedFidelities)) ?? []
+  if (shown.length === slugs.length && shown.every(slug => slugs.includes(slug))) return
   await update($, selectedFidelities, () => slugs)
   await clearChosenAction($)
 }

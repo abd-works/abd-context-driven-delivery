@@ -47,7 +47,7 @@ OPEN_LINK_SECONDS = 30
 # A file that keeps every link a new chat was opened with instead of opening the Claude app, as a test run names it.
 OPENED_CHATS_VARIABLE = "CDD_OPENED_CHATS"
 
-CommandKind = Literal["submit", "fill", "command", "open_file", "refresh", "select", "failure"]
+CommandKind = Literal["submit", "fill", "command", "open_file", "refresh", "failure"]
 MessageState = Literal["waiting", "taken", "shown", "done", "failed"]
 T = TypeVar("T")
 
@@ -246,17 +246,27 @@ class Chat:
     @mcp
     @agent_tool
     @noSessionLog
-    def check_in(self, is_busy: bool = False, name: str = "", folder: str = "", selected_fidelities: list[str] | None = None) -> list[ChatCommand]:
-        """Check chat in, as its cdd-board mod does every second: say whether a turn is running, what to call the chat, the folder it works in, and the fidelities its chat bar has selected, and take the commands ready for it. A fill stays waiting while a turn runs, because one made during a turn can report success and show nothing."""
+    def check_in(self, is_busy: bool = False, name: str = "", folder: str = "") -> list[ChatCommand]:
+        """Check chat in, as its cdd-board mod does every second: say whether a turn is running, what to call the chat, and the folder it works in, and take the commands ready for it. A fill stays waiting while a turn runs, because one made during a turn can report success and show nothing."""
         with _checking_in(self._folder):
-            return self._check_in(is_busy, name, folder, list(selected_fidelities or []))
+            return self._check_in(is_busy, name, folder)
 
-    def _check_in(self, is_busy: bool, name: str, folder: str, selected_fidelities: list[str]) -> list[ChatCommand]:
+    def _check_in(self, is_busy: bool, name: str, folder: str) -> list[ChatCommand]:
         self._folder.mkdir(parents=True, exist_ok=True)
-        state = {"name": name, "is_busy": is_busy, "seen": self.clock(), "folder": folder, "selected_fidelities": selected_fidelities}
-        self._write({**state, **self._title_state(self._state)})
+        state = {"name": name, "is_busy": is_busy, "seen": self.clock(), "folder": folder}
+        self._write({**state, **self._kept_state(self._state)})
         self._finish_worked_on(is_busy)
         return self._take_ready(is_busy)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def select(self, selected_fidelities: list[str]) -> Chat:
+        """Select these fidelities, by slug, for chat: the one selection its chat bar's dots and a page it opened, such as the Files app, both show and both change; none selected, every fidelity of the stage shown."""
+        with _checking_in(self._folder):
+            self._folder.mkdir(parents=True, exist_ok=True)
+            self._write({**self._state, "selected_fidelities": list(selected_fidelities)})
+        return self
 
     @mcp
     @agent_tool
@@ -341,8 +351,8 @@ class Chat:
     @property
     @data_field
     def selected_fidelities(self) -> list[str]:
-        """The fidelities the chat's chat bar has selected, by slug, as it said at its last check-in; none selected, the
-        chat works on every fidelity of the stage it shows."""
+        """The fidelities selected for the chat, by slug, as its chat bar or a page it opened last selected them; none
+        selected, the chat works on every fidelity of the stage it shows."""
         return list(self._state.get("selected_fidelities", []))
 
     @property
@@ -391,6 +401,11 @@ class Chat:
                 record.write({**sent, "is_worked_on": True})
             elif not is_busy and sent.get("is_worked_on"):
                 self._move(path, DONE)
+
+    def _kept_state(self, state: dict) -> dict:
+        """What a check-in keeps of the chat's state: its title, read again now and then, and the fidelities selected
+        for it, which only ``select`` changes."""
+        return {**self._title_state(state), "selected_fidelities": state.get("selected_fidelities", [])}
 
     def _title_state(self, state: dict) -> dict:
         """The chat's title, when it was read, and the transcript it was read from: read again once the last read is
