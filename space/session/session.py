@@ -64,9 +64,11 @@ def _shown(value: object) -> str:
 
 
 # How long a page's waiting read of the guidance selection waits for a change before answering it unchanged, and how
-# often it looks.
+# often it looks for a change another process wrote.
 GUIDANCE_WAIT_SECONDS = 25
-GUIDANCE_CHECK_SECONDS = 0.05
+GUIDANCE_CHECK_SECONDS = 1.0
+# Wakes every waiting read of a guidance selection this server changed, so none of them checks the disk in a loop.
+_GUIDANCE_CHANGED = threading.Condition()
 
 class SessionNotFoundError(LookupError):
     """A tool named a session.json that is not there, such as a session closed or moved since the board read it."""
@@ -686,7 +688,9 @@ class Session:
         """Return the session's guidance selection once its version is past version: at once when it already is, else as soon as a change raises it, else after GUIDANCE_WAIT_SECONDS with it unchanged. A page holds one such call open, so a selection made anywhere reaches it in a fraction of a second."""
         deadline = time.monotonic() + GUIDANCE_WAIT_SECONDS
         while self._guidance_version_on_disk() <= version and time.monotonic() < deadline:
-            time.sleep(GUIDANCE_CHECK_SECONDS)
+            # Woken at once by a change this server makes; a change another process writes is seen within a check.
+            with _GUIDANCE_CHANGED:
+                _GUIDANCE_CHANGED.wait(min(GUIDANCE_CHECK_SECONDS, max(0.0, deadline - time.monotonic())))
         self._fields.drop()
         return GuidanceSelection(self)
 
@@ -696,6 +700,8 @@ class Session:
         if self._is_guidance_batched:
             return
         self._save_guidance(version=self._guidance_version_on_disk() + 1)
+        with _GUIDANCE_CHANGED:
+            _GUIDANCE_CHANGED.notify_all()
 
     def _save_guidance(self, **values: object) -> None:
         self.save_fields(**{GUIDANCE_FIELD: {**dict(self.fields.get(GUIDANCE_FIELD, {})), **values}})

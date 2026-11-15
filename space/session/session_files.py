@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -126,17 +127,28 @@ class SessionFiles:
 
     def changed(self) -> set[Path]:
         """The files the session's branch changed since it left the default branch, with its uncommitted changes when
-        it is checked out; none for a project that is no clone, or a session with no branch of its own."""
+        it is checked out; none for a project that is no clone, or a session with no branch of its own. Asking git takes
+        a moment, and a page lists many fidelities at once, so the answer is kept for CHANGED_KEPT_SECONDS and shared."""
         repo = self._session.repo
         if not repo.is_clone:
             return set()
         # A branch checked out in a worktree of its own, such as a ticket's, has its changed files there, not in the
         # clone the session was reached through.
+        key = (str(repo.root), self._session.name)
+        held = _CHANGED.get(key)
+        if held is not None and time.monotonic() - held[0] < CHANGED_KEPT_SECONDS:
+            return held[1]
         branch = repo.branch_named(self._session.name)
         checkout = branch.checkout if branch.exists else None
         root = checkout.root if checkout is not None else repo.root
-        return {(root / path).resolve() for path in branch.changed_files()}
+        changed = {(root / path).resolve() for path in branch.changed_files()}
+        _CHANGED[key] = (time.monotonic(), changed)
+        return changed
 
 
 # The folders a root outside a repository never lists files from: version control, dependencies, builds, caches.
 _UNREAD_FOLDERS = {".git", "node_modules", "dist", "build", "__pycache__", ".venv", ".pytest_cache"}
+
+# How long the branch's changed files are kept, by checkout and session, before git is asked again.
+CHANGED_KEPT_SECONDS = 3.0
+_CHANGED: dict[tuple[str, str], tuple[float, set[Path]]] = {}

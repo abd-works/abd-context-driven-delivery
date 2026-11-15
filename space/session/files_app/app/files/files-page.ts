@@ -1,6 +1,6 @@
 import type { CddApi } from '@cdd/cdd-shared'
 import { ChatClientGenerated } from '@cdd/harness/chat/chat'
-import { FidelityProgressClientGenerated } from '@cdd/space/kanban/fidelity-progress'
+import { TicketClientGenerated } from '@cdd/space/kanban/ticket'
 import { SessionClientGenerated, type FileEntryData, type GuidanceSelectionData } from '@cdd/space/session/session'
 
 import { FileBar } from './file-bar'
@@ -128,13 +128,14 @@ export class FilesPage {
   // A session folder is one list of no fidelity; a ticket's fidelities are kept apart, so a practice can hide its own.
   private async filesByFidelity(slugs: string[]): Promise<FidelityFiles[]> {
     if (this.link.isSessionFolder) return [{ slug: '', entries: (await this.session.folderFiles()) ?? [] }]
-    return Promise.all(
-      slugs.map(async slug => {
-        const byFormat = Object.entries((await FidelityProgressClientGenerated.named(this.api, this.link.ticket, slug).files()) ?? {})
-        const formatOf = Object.fromEntries(byFormat.flatMap(([format, entries]) => entries.map(entry => [entry.path, format])))
-        return { slug, entries: byFormat.flatMap(([, entries]) => entries), formatOf }
-      }),
-    )
+    if (!slugs.length) return []
+    // One call for every fidelity, which shares one look at what the branch changed.
+    const bySlug = (await TicketClientGenerated.named(this.api, this.link.ticket).fidelityFiles(slugs)) ?? {}
+    return slugs.map(slug => {
+      const byFormat = Object.entries(bySlug[slug] ?? {})
+      const formatOf = Object.fromEntries(byFormat.flatMap(([format, entries]) => entries.map(entry => [entry.path, format])))
+      return { slug, entries: byFormat.flatMap(([, entries]) => entries), formatOf }
+    })
   }
 
   // A selection drawn: the list shows its fidelities' files at once, then reads the files of any it shows for the first

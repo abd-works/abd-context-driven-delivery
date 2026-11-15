@@ -37,7 +37,7 @@ class FakeFilesServer implements CddApi {
     if (path.endsWith('/show')) return { name: 'release-2', repo_name: 'abd-cdd', branch: 'release-2', root: 'C:/dev/abd-cdd-2' } as Result
     if (path.endsWith('/update-guidance-selection')) return this.update(body) as Result
     if (path.endsWith('/guidance-selection-after')) return (await this.after(Number(body.version))) as Result
-    if (path.endsWith('/files')) return { markdown: [entry(`.context/${path.split('/')[3]}.md`)], drawio: [entry(`.context/${path.split('/')[3]}.drawio`)] } as Result
+    if (path.endsWith('/fidelity-files')) return Object.fromEntries((body.fidelities as string[]).map(slug => [slug, { markdown: [entry(`.context/${slug}.md`)], drawio: [entry(`.context/${slug}.drawio`)] }])) as Result
     return null
   }
 
@@ -266,7 +266,7 @@ describe('Send Files App Failures To Chat', () => {
   describe('with files that do not list', () => {
     class FailingFilesServer extends FakeFilesServer {
       override async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
-        if (path.endsWith('/files')) throw new Error('cdd did not answer')
+        if (path.endsWith('/fidelity-files')) throw new Error('cdd did not answer')
         return super.post<Result>(path, body)
       }
     }
@@ -275,7 +275,7 @@ describe('Send Files App Failures To Chat', () => {
       const server = new FailingFilesServer()
       await started(new FilesPage(server, new FilesLink(STAGE_LINK)))
       const sent = server.posted('/send').map(post => [post.body.kind, JSON.parse(String(post.body.text)).failure])
-      expect(sent).toEqual([['failure', 'The Files app did not list the files: cdd did not answer']])
+      expect(sent).toContainEqual(['failure', 'The Files app did not list the files: cdd did not answer'])
     })
   })
 

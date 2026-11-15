@@ -14,13 +14,17 @@ const STORY_MAP = '.context/story-map.md'
 const ORDER = 'src/checkout/order.py'
 const CART = 'src/checkout/cart.py'
 
+// The files of each fidelity the page asks for, as ticket.fidelity_files answers them.
+const byFidelity = (body: Record<string, unknown> | undefined, files: Record<string, FileEntryData[]>) =>
+  Object.fromEntries(((body?.fidelities as string[] | undefined) ?? []).map(slug => [slug, files]))
+
 const entry = (path: string, is_changed = false): FileEntryData => ({ path, exists: true, is_changed, link: '' }) as FileEntryData
 
 // The Files app's server, answering the session's files in the order the link names them, and nothing else.
 class FakeFilesServer implements CddApi {
-  async post<Result>(path: string): Promise<Result | null> {
+  async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
     if (path.endsWith('/show')) return { practices: {} } as Result
-    if (path.endsWith('/files')) return { markdown: [entry(STORY_MAP)], python: [entry(ORDER, true), entry(CART)] } as Result
+    if (path.endsWith('/fidelity-files')) return byFidelity(body, { markdown: [entry(STORY_MAP)], python: [entry(ORDER, true), entry(CART)] }) as Result
     return null
   }
 }
@@ -180,9 +184,9 @@ describe('folder tree of the files', () => {
 
 // A server answering files in nested folders, src holding a file of its own beside two folders.
 class NestedFilesServer implements CddApi {
-  async post<Result>(path: string): Promise<Result | null> {
+  async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
     if (path.endsWith('/show')) return { practices: {} } as Result
-    if (path.endsWith('/files')) return { python: [entry('src/main.py'), entry('src/checkout/order.py'), entry('src/pay/card.py')] } as Result
+    if (path.endsWith('/fidelity-files')) return byFidelity(body, { python: [entry('src/main.py'), entry('src/checkout/order.py'), entry('src/pay/card.py')] }) as Result
     return null
   }
 }

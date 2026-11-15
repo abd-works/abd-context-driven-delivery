@@ -416,6 +416,13 @@ class Ticket(Card):
     @mcp
     @agent_tool
     @noSessionLog
+    def fidelity_files(self, fidelities: list[str]) -> dict[str, dict[str, list[FileEntry]]]:
+        """Return the files a person reviews for each of fidelities, slugs such as stories-story-map, on ticket, by slug and then by format, as each fidelity-progress.files answers them: one call for a page listing many fidelities, sharing one look at what the branch changed."""
+        return {slug: self.work.progress_of(slug).files() for slug in fidelities}
+
+    @mcp
+    @agent_tool
+    @noSessionLog
     def format_choices(self, fidelities: list[str]) -> list[FormatChoice]:
         """Return the format chips of an action bar on ticket over fidelities, slugs such as stories-story-map: each group of formats they offer, the format each fidelity uses from it, how many offer it and have a file in it already, and whether it is chosen for them in the session."""
         read = [(progress.fidelity, progress.files()) for progress in (self.work.progress_of(slug) for slug in fidelities)]
