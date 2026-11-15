@@ -6,7 +6,7 @@ import { SessionClientGenerated, type FileEntryData, type GuidanceSelectionData 
 import { FileBar } from './file-bar'
 import { FileCommentsActions } from './file-comments-actions'
 import type { FilesLink } from './files-link'
-import { isDrawio } from './files-paths'
+import { isDrawio, REVEAL_PATH } from './files-paths'
 import { FilesStore, type FidelityFiles } from './files-state'
 import { formatGlyphOf } from './format-chips'
 import { GuidanceSelector } from './guidance-selector'
@@ -18,8 +18,8 @@ const TOAST_MILLISECONDS = 8_000
 
 const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
 
-// The fidelities whose files the page lists: those the session's guidance selection covers, its stages selected by its
-// practices selected; before any stage was selected, the ones the link names.
+// The fidelities whose files the page lists: those the session's guidance selection lists, its stages selected by its
+// practices selected, none selected meaning every one; before any stage was selected, the ones the link names.
 export const listedBy = (selection: GuidanceSelectionData | null, linked: string[]): string[] =>
   selection?.is_stage_chosen ? selection.fidelities : linked
 
@@ -33,16 +33,20 @@ export const filesShown = (byFidelity: FidelityFiles[], listed: string[], format
   return eachOnce(byFidelity.filter(({ slug }) => !slug || listed.includes(slug)).flatMap(inFormat))
 }
 
-// The files under the session's root a page shows: in a format selected while any is, and belonging to a fidelity listed
-// or to none, so a practice or stage turned off hides its files and a file no fidelity declares always shows.
-export const rootFilesShown = (rootFiles: FileEntryData[], listed: string[], formats: string[]): FileEntryData[] =>
-  rootFiles.filter(entry => (!formats.length || formats.includes(entry.format)) && (!entry.fidelities.length || entry.fidelities.some(slug => listed.includes(slug))))
+// The files under the session's root a page shows: in a format selected while any is, and belonging to a fidelity listed.
+// A file no fidelity declares, such as a practice's example, belongs to no practice, so it shows only while no practice
+// is selected, which filters no practice; Stories selected shows Stories' files alone.
+export const rootFilesShown = (rootFiles: FileEntryData[], listed: string[], formats: string[], withUnclaimed: boolean): FileEntryData[] =>
+  rootFiles.filter(entry => (!formats.length || formats.includes(entry.format)) && (entry.fidelities.length ? entry.fidelities.some(slug => listed.includes(slug)) : withUnclaimed))
+
+// Whether no practice is selected, so no practice filters the files; with no selection read yet, none is.
+export const isNoPracticeSelected = (selection: GuidanceSelectionData | null): boolean => !(selection?.practices ?? []).some(practice => practice.is_selected)
 
 // Each file once, in the order its fidelities and formats send them.
 const eachOnce = (entries: FileEntryData[]): FileEntryData[] => entries.filter((entry, index) => entries.findIndex(other => other.path === entry.path) === index)
 
 // The Files app's page: the files its link names, read once, and the one open, read when opened and again while a
-// comment on it is with a chat. A .drawio file opens in the draw.io viewer instead.
+// comment on it is with a chat. A .drawio file shows in the draw.io editor instead.
 export class FilesPage {
   readonly store = new FilesStore()
   readonly session: SessionClientGenerated
@@ -111,9 +115,7 @@ export class FilesPage {
       const byFidelity = await this.filesByFidelity(this.listed)
       this.store.change(state => ({ byFidelity, isListing: false, entries: this.shownFrom({ ...state, byFidelity }) }))
       const entries = this.state.entries
-      // A .drawio file opens in a tab of its own only on a click, so a link naming one opens the first other file here.
-      const named = isDrawio(this.link.file) ? '' : this.link.file
-      const first = named || entries.find(entry => entry.exists && !isDrawio(entry.path))?.path || ''
+      const first = this.link.file || entries.find(entry => entry.exists && !isDrawio(entry.path))?.path || ''
       if (first) await this.open(first)
     } catch (failure) {
       this.store.change(() => ({ isListing: false, problem: `The files did not list: ${reasonOf(failure)}` }))
@@ -133,7 +135,7 @@ export class FilesPage {
     const formats = selectedFormatsOf(state.guidance)
     if (this.link.isSessionFolder) return filesShown(state.byFidelity, [''], formats)
     const listed = listedBy(state.guidance, this.link.fidelities)
-    return eachOnce([...filesShown(state.byFidelity, listed, formats), ...rootFilesShown(state.rootFiles ?? [], listed, formats)])
+    return eachOnce([...filesShown(state.byFidelity, listed, formats), ...rootFilesShown(state.rootFiles ?? [], listed, formats, isNoPracticeSelected(state.guidance))])
   }
 
   // Every file under the session's root, read once as the page opens: what All session files lists, and This session
@@ -218,10 +220,50 @@ export class FilesPage {
     await this.refreshOpen()
   }
 
+  // A right-click on a file or folder shows its menu where the person clicked.
+  openMenu(path: string, x: number, y: number): void {
+    this.store.change(() => ({ menu: { path, x, y } }))
+  }
+
+  closeMenu(): void {
+    this.store.change(() => ({ menu: null }))
+  }
+
+  // The file the menu is on, added whole to the context of the chat that opened the page.
+  async addToContext(): Promise<void> {
+    const path = this.state.menu?.path
+    this.closeMenu()
+    if (path) await this.addLinesToContext(path)
+  }
+
+  // A file, or lines of it, added to the context of the chat that opened the page: the session puts them in its prompt
+  // box, to go with the person's next prompt, as Claude's own file viewer does.
+  async addLinesToContext(path: string, lines?: { start: number; end: number }): Promise<void> {
+    const name = path.split('/').at(-1) ?? path
+    try {
+      await this.session.addToChatContext(this.link.chat, path, lines?.start, lines?.end)
+      this.toast(`${name} added to the chat's context`)
+    } catch (failure) {
+      this.fail(`${name} was not added to the chat's context: ${reasonOf(failure)}`, `Adding ${path} to the chat's context`)
+    }
+  }
+
+  // The file or folder the menu is on, shown in the system's file browser by the Files server, on this machine.
+  async reveal(): Promise<void> {
+    const path = this.state.menu?.path
+    this.closeMenu()
+    if (!path) return
+    try {
+      await this.api.post(REVEAL_PATH, { path })
+    } catch (failure) {
+      this.fail(`${path} did not open in the file browser: ${reasonOf(failure)}`, `Opening ${path} in the file browser`)
+    }
+  }
+
   async open(path: string): Promise<void> {
-    // A .drawio file is a link to the draw.io viewer, which opens in a tab of its own; this tab keeps its file list.
-    if (isDrawio(path)) return
     this.store.change(() => ({ openPath: path, file: null }))
+    // A .drawio file shows in the draw.io editor beside the file list, which reads the file itself.
+    if (isDrawio(path)) return this.stopRefreshing()
     await this.refreshOpen()
   }
 

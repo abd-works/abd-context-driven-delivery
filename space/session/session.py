@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Iterator
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.agent_tools.agent_tools import noSessionLog, subAgent, tool_subject
 from harness.agent_tools.tool_call import ToolCall
+from harness.chat.chat import Chat
 from harness.graph.graph import Graph
 from harness.graph.saved_graph import GRAPH_FILE_NAME, SavedGraph
 from harness.guidance.stages import STAGES
@@ -715,6 +716,16 @@ class Session:
         """Return path, a file named as read_file names it, as the viewer shows it: its text and language, the comments on it, and with either of rules or cross_file the folds of its classes, operations, and properties. With rules, the rules it breaks read on its own, under a second; with cross_file, the rules only the whole working copy finds broken in it, linking files and practices, which takes far longer. Each on its range of lines. Both off, browsing never reads a graph."""
         return SessionFile(self, path, rules, cross_file)
 
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def add_to_chat_context(self, chat: str, path: str, start_line: int = 0, end_line: int = 0) -> Chat:
+        """Add path, a file named from the project, or its lines start_line to end_line, to the context of chat, a chat's id: a fill in its prompt box that goes with the person's next prompt, as Claude's own file viewer adds a file. The whole file goes as an @ mention of its path; lines go as the path and range with each line quoted. A chat that is not connected refuses it."""
+        text = self.file(path).range(start_line, end_line).context if start_line else f"@{path} "
+        added_to = Chat.load(chat)
+        added_to.queue("fill", text)
+        return added_to
+
     @property
     def file_comments(self) -> FileComments:
         """The comments a person wrote on this session's files, kept in its folder."""
@@ -797,6 +808,19 @@ class Session:
         tools(self.write_handoff)
         """Step 4 - Commit and push the handoff on the current branch with repo.push_commit (message: "Handoff: {session}"). Report the handoff path and the pushed commit."""
         return "Handoff written, committed and pushed."
+
+    @mcp
+    @skill
+    @agent_instructions
+    def debug_session(self, choice: str = "", details: str = "") -> str:
+        """Debug what went wrong in this session: capture as much context as can be found, ask the person for more, then fix the bug or request help. The chat bar's debug button starts this with no choice; its Fix buttons start it with {{choice}} set to fix and {{details}} naming the failure. Pass the same session argument to every session tool this calls."""
+        """Step 1 - Capture the context. Gather, as fully as can be found: {{details}} when given; every failure and stack trace this chat met (tool errors, tracebacks, failed commands with their output), quoted whole; the failures the CDD chat bar shows; the latest lines of this session's session.log; server-health.report; the diagnostics.json of the install folder; the session's name, branch, and git status; cdd-version.read; and the operating system. Say what could not be read rather than leaving it out."""
+        """Step 2 - Write it as markdown with session.write_file to debug/debug-{time}.md in this session's folder (time as YYYYMMDDTHHMMSS): a one-line summary first, then each part under its own heading, stack traces in fences. Tell the person its path."""
+        """Step 3 - Unless {{choice}} is fix or help, ask the person with AskUserQuestion, one question: what to do, with the options "Fix the bug" (a sub-agent fixes it and takes the fix to main) and "Request help" (an email to the CDD maintainer). Its notes and Other take more detail: add what the person writes to the report with session.write_file before going on."""
+        """Step 4 - Request help: draft an email to the CDD maintainer for the person to send; never send it yourself. Build a mailto:jeff.anderson@abdworks.com link, subject "CDD debug: " and the summary, body the summary, the person's details, the report's path, and the first stack trace, URL-encoded and kept under 1800 characters, and open it with the system's opener: `start "" "<link>"` on Windows, `open "<link>"` on a Mac, `xdg-open "<link>"` elsewhere. Ask the person to attach the report and send it."""
+        """Step 5 - Fix the bug: start a background sub-agent with the Agent tool and run_in_background, so this chat stays free, and tell the person it is running. Hand it the report's path and these steps: (a) Find the CDD repository: this project when it is the CDD checkout, else the clone at the origin of `git -C ~/.cdd/runtime remote get-url origin`; work on a new branch in a worktree of it. (b) Fix the cause with the diagnose action's discipline: a failing spec first, then the fix, then the unit tier. (c) Take it to main: when `gh api repos/<owner>/<repo> --jq .permissions.push` answers true, merge to main and push (repo.push_to_main in the CDD checkout); otherwise, or when gh is missing or not signed in, fork with `gh repo fork --remote`, push the branch, and open a pull request with `gh pr create --repo <owner>/<repo>`, its body the report's summary and what was changed. (d) Report the cause, the change, and the commit pushed or the pull request's link."""
+        """Step 6 - When the sub-agent reports, pass its result on to the person: the cause, the change, and where it went."""
+        return "Debug report written; fix or help request under way."
 
     @mcp
     @skill

@@ -12,10 +12,12 @@ tactical rules all read it.
 
 from __future__ import annotations
 
+import re
+
 from typing import Iterable, List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
-from cdd_guidance.practices.clean_engineering.model.class_stereotypes import without_marks
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import stereotype_named, without_marks
 
 # Each DDD stereotype, lower-cased, and the building block it names. Order matters: the first one a class carries wins.
 KIND_OF_STEREOTYPE = (
@@ -70,6 +72,29 @@ def kind_named_by(stereotypes: Iterable[str]) -> Optional[str]:
     if marks_another_system(lowered):
         return None
     return next((kind for stereotype, kind in KIND_OF_STEREOTYPE if stereotype in lowered), None)
+
+
+# A decorator line with no arguments, which is how code carries a stereotype, and a class a source declares.
+_STEREOTYPE_DECORATOR = re.compile(r"^\s*@([A-Za-z_]\w*)(?:\(\s*\))?\s*$", re.MULTILINE)
+_DECLARED_CLASS = re.compile(r"\bclass\s+([A-Za-z_]\w*)")
+_FACTORY = "Factory"
+
+
+def carries_a_stereotype(source: str) -> bool:
+    """Whether source code declares a class carrying a DDD stereotype as its decorator, such as `@aggregate_root`."""
+    return any(kind_named_by([stereotype_named(decorator)]) for decorator in _STEREOTYPE_DECORATOR.findall(source))
+
+
+def names_a_building_block(source: str) -> bool:
+    """Whether source code declares a class named by a building block's naming convention, such as `CartRepository`
+    or `ShippingCode`; the name says so only in a folder that holds a domain."""
+    return any(_named_as_a_building_block(name) for name in _DECLARED_CLASS.findall(source))
+
+
+def _named_as_a_building_block(name: str) -> bool:
+    if name.endswith(_NON_TACTICAL_SUFFIXES):
+        return False
+    return any(name.endswith(endings) for endings in _NAME_ENDINGS.values()) or _SPECIFICATION in name or name.endswith(_FACTORY)
 
 
 def marks_another_system(stereotypes: Iterable[str]) -> bool:

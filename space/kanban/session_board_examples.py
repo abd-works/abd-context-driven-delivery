@@ -290,6 +290,9 @@ class FileCommentExample:
 EMPTY_CART_COMMENT = FileCommentExample(ORDER_FILE, 12, 14, "\n".join(PLACE_LINES), "an empty cart should say which cart and why")
 LINE_30_COMMENT = FileCommentExample(ORDER_FILE, 30, 31, "# order line 30\n# order line 31", "name these lines")
 LINE_40_COMMENT = FileCommentExample(ORDER_FILE, 40, 41, "# order line 40\n# order line 41", "drop these lines")
+# Add File Or Selection To Chat Context: what order.py, and lines 12 to 14 of it, add to checkout-chat's prompt box.
+ORDER_CONTEXT_FILL = f"@{ORDER_FILE} "
+PLACE_CONTEXT_FILL = "\n".join([f"{ORDER_FILE}:12-14", *(f"> {12 + offset} | {line}" for offset, line in enumerate(PLACE_LINES))])
 EMPTY_CART_FILL = "\n".join([
     "src/checkout/order.py:12-14: an empty cart should say which cart and why",
     *(f"> {12 + offset} | {line}" for offset, line in enumerate(PLACE_LINES)),

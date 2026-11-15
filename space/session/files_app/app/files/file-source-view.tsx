@@ -4,14 +4,14 @@ import type { SessionFileData } from '@cdd/space/session/session'
 import { SourceView, type SourceEditorInstance } from '@source-view/SourceView'
 
 import { CommentCardView, CommentComposerView } from './comment-box-view'
-import { placeUnder, useAddCommentAction, useFileMarks, useMarkerPresses } from './editor-comments'
+import { placeUnder, useAddCommentAction, useAddToContextAction, useFileMarks, useMarkerPresses } from './editor-comments'
 import type { CommentLines, FileCommentsActions } from './file-comments-actions'
 import { foldsOf, monacoLanguageOf, rulesOf, sourceOf, violationFocusOf } from './source-of-file'
 
 // The open file in the graph explorer's source view: folds from the session's graph, its broken rules as chips with the
-// chosen one marked, and the comments on it: Add comment on the right-click menu, a marker beside each comment's first
-// line, and the box a marker opens.
-export function FileSourceView({ file, actions }: { file: SessionFileData; actions: FileCommentsActions }) {
+// chosen one marked, and the comments on it: Add comment and Add to context on the right-click menu, a marker beside
+// each comment's first line, and the box a marker opens.
+export function FileSourceView({ file, actions, onAddToContext }: { file: SessionFileData; actions: FileCommentsActions; onAddToContext: (lines: CommentLines) => void }) {
   const wrapper = useRef<HTMLDivElement>(null)
   const held = useRef(file)
   held.current = file
@@ -32,6 +32,7 @@ export function FileSourceView({ file, actions }: { file: SessionFileData; actio
     setOpened(current => (current === anchor ? '' : anchor))
   }, [])
   useAddCommentAction(editor, compose)
+  useAddToContextAction(editor, onAddToContext)
   useFileMarks(editor, file)
   useMarkerPresses(editor, held, open)
   const openedComment = file.comments.find(comment => comment.anchor === opened)

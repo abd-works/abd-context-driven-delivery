@@ -24,6 +24,7 @@ from expects import contain, equal, expect
 from harness.graph.saved_graph import GRAPH_FILE_NAME
 from space.kanban.session_board_examples import (
     ORDER_CLASS_LINES,
+    ORDER_CONTEXT_FILL,
     ORDER_GRAPH,
     ORDER_RULE,
     CHECKOUT_CHAT,
@@ -35,6 +36,7 @@ from space.kanban.session_board_examples import (
     LINE_40_COMMENT,
     ORDER_FILE,
     ORDER_TEXT,
+    PLACE_CONTEXT_FILL,
     PLACE_LINES,
     README_FILE,
     README_TEXT,
@@ -559,3 +561,58 @@ def _(s):
     @s.then("the markers beside lines 30 and 40 still show, sent and not sent")
     def _(world):
         expect(states_on_order(world)).to(equal({LINE_30_COMMENT.anchor: "sent", LINE_40_COMMENT.anchor: "not_sent"}))
+
+# --- Add File Or Selection To Chat Context ------------------------------------------------------------------------
+
+
+@shared_stories.scenario("Add File Or Selection To Chat Context", "Add a file to the chat's context")
+def _(s):
+    @s.given("ticket checkout-flow is assigned the chat checkout-chat, which has checked in")
+    def _(world):
+        seed_checkout_flow(world)
+        seed_connected_chat(world)
+
+    @s.when("the Person adds order.py to the chat's context")
+    def _(world):
+        world.Ticket.load(CHECKOUT_FLOW.name).session.add_to_chat_context(chat=CHECKOUT_CHAT, path=ORDER_FILE)
+
+    @s.then("the checkout-chat queue holds a fill that reads @src/checkout/order.py, to go with the person's next prompt")
+    def _(world):
+        expect(queued_fills(world)).to(equal([ORDER_CONTEXT_FILL]))
+
+
+@shared_stories.scenario("Add File Or Selection To Chat Context", "Add selected lines to the chat's context")
+def _(s):
+    @s.given("ticket checkout-flow is assigned the chat checkout-chat, which has checked in")
+    def _(world):
+        seed_checkout_flow(world)
+        seed_connected_chat(world)
+
+    @s.when("the Person adds lines 12 to 14 of order.py to the chat's context")
+    def _(world):
+        world.Ticket.load(CHECKOUT_FLOW.name).session.add_to_chat_context(chat=CHECKOUT_CHAT, path=ORDER_FILE, start_line=12, end_line=14)
+
+    @s.then("the checkout-chat queue holds a fill naming order.py:12-14, each line marked with its number")
+    def _(world):
+        expect(queued_fills(world)).to(equal([PLACE_CONTEXT_FILL]))
+
+
+@shared_stories.scenario("Add File Or Selection To Chat Context", "Say so when the chat is not connected")
+def _(s):
+    @s.given("ticket checkout-flow is assigned the chat checkout-chat")
+    def _(world):
+        seed_checkout_flow(world)
+        world.Ticket.load(CHECKOUT_FLOW.name).assign_chat(chat=CHECKOUT_CHAT)
+
+    @s.but_("checkout-chat has not checked in")
+    def _(world):
+        # A chat checks in only from its own mod; this scenario's chat never did.
+        pass
+
+    @s.when("the Person adds order.py to the chat's context")
+    def _(world):
+        world.refusal = refusal_of(lambda: world.Ticket.load(CHECKOUT_FLOW.name).session.add_to_chat_context(chat=CHECKOUT_CHAT, path=ORDER_FILE))
+
+    @s.then("a toast says chat 'checkout-chat' is not connected: is the cdd-board mod loaded in it?")
+    def _(world):
+        expect_refused(world.refusal, ChatNotConnectedError, "chat 'checkout-chat' is not connected: is the cdd-board mod loaded in it?")

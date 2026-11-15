@@ -159,15 +159,16 @@ class GuidanceSelection:
     @property
     @data_field
     def fidelities(self) -> list[str]:
-        """The fidelities of the stages selected whose practices are selected, by slug, in stage order: what the dots
-        show, what an action runs on, and whose files a page lists."""
+        """The fidelities the stages and practices selected translate to, by slug, in stage order: what the dots stand
+        for, what an action runs on, and whose files a page lists. A filter with nothing selected filters nothing, so no
+        stage selected means every stage, and no practice selected every practice."""
         return [fidelity.slug for fidelity in self.covered]
 
     @property
     def covered(self) -> list[FidelityGuidance]:
-        chosen = self._stages or []
-        working = [output for output in self._outputs if output.enabled]
-        return [fidelity for stage in STAGES if stage.name in chosen for output in working for fidelity in output.guidance.fidelities.entries.values() if fidelity.stage == stage.name]
+        stages = self._stages or [stage.name for stage in STAGES]
+        outputs = [output for output in self._outputs if output.enabled] or self._outputs
+        return [fidelity for stage in STAGES if stage.name in stages for output in outputs for fidelity in output.guidance.fidelities.entries.values() if fidelity.stage == stage.name]
 
     @property
     def stages_chosen(self) -> list[str]:

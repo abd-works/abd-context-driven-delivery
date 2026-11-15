@@ -622,11 +622,19 @@ with description("the board tools") as self:
                 def root_files(project: ProjectTools) -> dict[str, dict]:
                     sign_up(project)
                     story_map = project.call("ticket.fidelity_files", ticket="sign-up", fidelities=["stories-story-map"])["stories-story-map"]["markdown"][0]["path"]
-                    for written in (story_map, "notes/plain.txt"):
-                        (project.root / written).parent.mkdir(parents=True, exist_ok=True)
-                        (project.root / written).write_text("text\n", encoding="utf-8")
+                    written = {
+                        story_map: "text\n",
+                        "notes/plain.txt": "text\n",
+                        "src/orders/chat_bar.py": "class ChatBar:\n    pass\n",
+                        "src/carts/cart.py": "@aggregate_root\nclass Cart:\n    pass\n",
+                        "src/carts/carts.py": "class CartRepository:\n    pass\n",
+                        "lib/billing/billing.py": "class Billing:\n    pass\n",
+                    }
+                    for path, text in written.items():
+                        (project.root / path).parent.mkdir(parents=True, exist_ok=True)
+                        (project.root / path).write_text(text, encoding="utf-8")
                     entries = project.call("ticket.root_files", ticket="sign-up")
-                    return {entry["path"]: entry for entry in entries if entry["path"] in (story_map, "notes/plain.txt")}
+                    return {entry["path"]: entry for entry in entries if entry["path"] in written}
 
                 self.root_files = ProjectTools.answer_of(root_files)
 
@@ -635,6 +643,28 @@ with description("the board tools") as self:
 
             with it("should name no fidelity for a file none declares"):
                 expect(self.root_files["notes/plain.txt"]["fidelities"]).to(equal([]))
+
+            with context("with code the session did not change"):
+                with it("should name Clean Engineering code for it"):
+                    expect(self.root_files["src/orders/chat_bar.py"]["fidelities"]).to(contain("clean-engineering-code"))
+
+                with it("should name no DDD fidelity for code declaring no building block"):
+                    expect([slug for slug in self.root_files["src/orders/chat_bar.py"]["fidelities"] if slug.startswith("ddd-")]).to(equal([]))
+
+                with it("should name DDD tactics for code declaring a building block in a domain"):
+                    expect(self.root_files["src/carts/carts.py"]["fidelities"]).to(contain("ddd-tactics"))
+
+                with it("should name no DDD fidelity for code that only fits a DDD file pattern"):
+                    expect([slug for slug in self.root_files["lib/billing/billing.py"]["fidelities"] if slug.startswith("ddd-")]).to(equal([]))
+
+        with context("with a fidelity whose patterns find no file"):
+            with it("should list no file for it, a pattern being no file"):
+                def acceptance_tests(project: ProjectTools) -> dict:
+                    sign_up(project)
+                    return project.call("ticket.fidelity_files", ticket="sign-up", fidelities=["stories-acceptance-tests"])["stories-acceptance-tests"]
+
+                listed = ProjectTools.answer_of(acceptance_tests)
+                expect([entry["path"] for entries in listed.values() for entry in entries]).to(equal([]))
 
         # (S) Person --> Choose Action And Formats
         with context("with an action bar opened on its story map"):
@@ -942,7 +972,7 @@ with description("the board tools") as self:
                 "ticket.edit_text", "ticket.tag", "ticket.delete", "ticket.add_child", "ticket.pull_out", "ticket.reassign_parent", "ticket.move_before",
                 "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
-                "session.choose_workpath", "session.folder_files", "session.workpath_files", "session.read_file", "session.write_file", "session.file", "session.show",
+                "session.choose_workpath", "session.folder_files", "session.workpath_files", "session.read_file", "session.write_file", "session.file", "session.add_to_chat_context", "session.show",
                 "session.guidance_selection", "session.update_guidance_selection", "session.guidance_selection_after",
                 "session.write_handoff", "session.read_handoff_format", "session.read_cdr_format", "session.list_cdrs", "session.write_cdr",
                 "practice-session-output.enable", "practice-session-output.choose_root", "practice-session-output.use_default_root", "fidelity-session-output.choose_format",

@@ -6,6 +6,8 @@ export const FILES_HEADER = 'x-cdd-files'
 // tab on to it. A link is a navigation the browser always allows, where a tab opened from a script can be refused.
 export const DRAWIO_PAGE = '/drawio/page'
 export const DRAWIO_PORT = 8791
+// The route that shows a file or folder in the system's file browser, on the machine the Files server runs on.
+export const REVEAL_PATH = '/reveal'
 
 export const SESSION_FOLDER_QUERY = 'session-folder'
 export const SESSION_QUERY = 'session'
@@ -24,3 +26,11 @@ export const drawioPageOf = (path: string, chat: string): string => {
 
 // The draw.io editor on a file named from the repository's root (.claude/rules/drawio-viewer.md).
 export const drawioEditorUrl = (path: string): string => `http://127.0.0.1:${DRAWIO_PORT}/edit?f=${encodeURIComponent(path)}`
+
+// What the menu calls showing a file in the system's file browser, by the platform the page runs on, as
+// navigator.platform names it: Windows Explorer, the Mac's Finder, or a desktop's file manager.
+export const revealLabelOf = (platform: string): string => {
+  if (/^win/i.test(platform)) return 'Open in Explorer'
+  if (/^mac/i.test(platform)) return 'Reveal in Finder'
+  return 'Open in file manager'
+}

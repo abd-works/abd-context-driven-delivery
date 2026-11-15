@@ -94,25 +94,55 @@ In every scenario, the [session](../../../../../space/kanban/.context/kanban-mod
 *Then* it lists *story-map.md* as not generated yet
 *And* the Person cannot open it
 
-## Story: Open Diagram In Draw.io Tab
+## Story: Open Diagram In Files App
 
-#### Scenario: Open a diagram in a tab of its own, keeping the file list
+Requested (the person, 2026-11-15): the app's browser pane opens no tab of its own from a page, so a diagram opened in a new tab took the Files app's place there. It opens beside the file list instead.
+
+#### Scenario: Open a diagram beside the file list
 
 *Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) lists *story-map.drawio*
 *When* the Person opens *story-map.drawio*
-*Then* the draw.io editor opens on *story-map.drawio* in a new tab
-*And* the Files app's tab still shows its file list
+*Then* the draw.io editor shows *story-map.drawio* in the Files app's file view
+*And* the file list still shows beside it
+*And* a ↗ link beside it opens *story-map.drawio* in the draw.io editor in a tab of its own, where the browser opens one
 *And* nothing is sent to the chat
 
-#### Scenario: Close the new tab when the draw.io viewer does not start
+#### Scenario: Say so when the draw.io viewer does not start
 
-Required by the cdd_web_domain_access rule `fail-loud-on-mcp` this session overlays: when a call fails, the page shows the person what failed instead of an empty tab.
+Required by the cdd_web_domain_access rule `fail-loud-on-mcp` this session overlays: when a call fails, the page shows the person what failed instead of an empty view.
 
 *Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) lists *story-map.drawio*
 *But* the draw.io viewer does not start
 *When* the Person opens *story-map.drawio*
-*Then* the new tab closes
-*And* a toast says *story-map.drawio did not open in the draw.io viewer*, with the reason
+*Then* the file view says *story-map.drawio did not open in the draw.io viewer*, with the reason
+*And* the chat that opened the Files app is told the same
+
+## Story: Open File In File Browser
+
+Requested (the person, 2026-11-15): "add right click to file and folder -> open in explorer (windows) or whatever mac is based on os".
+
+#### Scenario: Show a file in the system's file browser
+
+*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) lists *story-map.md*
+*When* the Person right-clicks *story-map.md*
+*Then* a menu shows where the Person clicked, its one choice named for the system: *Open in Explorer* on Windows, *Reveal in Finder* on a Mac, *Open in file manager* elsewhere
+*When* the Person chooses it
+*Then* the system's file browser opens with *story-map.md* selected, or on its folder where the browser cannot select a file
+*And* the menu closes
+
+#### Scenario: Open a folder in the system's file browser
+
+*Given* the Files app shows its files in their folders
+*When* the Person right-clicks the *.context* folder and chooses to open it
+*Then* the system's file browser opens on *.context*
+
+#### Scenario: Say so when the file browser does not open
+
+Required by the cdd_web_domain_access rule `fail-loud-on-mcp` this session overlays.
+
+*Given* the system's file browser does not start
+*When* the Person chooses to open *story-map.md* in it
+*Then* the chat that opened the Files app is told *story-map.md did not open in the file browser*, with the reason
 
 ## Story: Switch File Bar Between Folders And List
 
@@ -440,3 +470,40 @@ Intended in the Files app (`.sessions/_backlog/review-work-in-board-files.md`, "
 *When* the Person clears checkout-flow's processed file comments
 *Then* the source view marks no line of *order.py* as changed
 *And* line 14 still reads *raise EmptyCartError(cart.id, "a cart needs one item to be placed")*
+
+## Story: Add File Or Selection To Chat Context
+
+Requested (2026-11-15, "on right click of file we also need an add to context option; same with selected text in file viewer; adds to chat context like Claude functionality does in file viewer"). The file or the selection goes to the chat as a fill, as a file comment does, so it waits in the chat's prompt box and goes with the person's next prompt rather than being sent on its own, as an `@` mention from Claude's own file viewer does.
+
+#### Scenario: Add a file to the chat's context
+
+*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) was opened from the [chat](../../../../../space/kanban/.context/kanban-model.md#chat) *checkout-chat*, which has checked in
+*And* it lists *order.py*
+*When* the Person adds *order.py* to the chat's context
+*Then* the *checkout-chat* queue holds a fill that reads `@src/checkout/order.py `
+*And* the fill waits in *checkout-chat*'s prompt box, to go with the person's next prompt
+
+#### Scenario: Add selected lines to the chat's context
+
+*Given* the Files app was opened from *checkout-chat*, which has checked in
+*And* it shows *order.py* with lines 12 to 14 selected
+*When* the Person adds the selection to the chat's context
+*Then* the *checkout-chat* queue holds a fill that reads:
+
+```
+src/checkout/order.py:12-14
+> 12 |     def place(self, cart: Cart) -> Order:
+> 13 |         if not cart.items:
+> 14 |             raise EmptyCartError(cart.id)
+```
+
+*And* the fill waits in *checkout-chat*'s prompt box, to go with the person's next prompt
+
+#### Scenario: Say so when the chat is not connected
+
+Required by the cdd_web_domain_access rule `fail-loud-on-mcp` this session overlays.
+
+*Given* the Files app was opened from *checkout-chat*
+*But* *checkout-chat* has not checked in
+*When* the Person adds *order.py* to the chat's context
+*Then* a toast says *chat 'checkout-chat' is not connected: is the cdd-board mod loaded in it?*

@@ -4,6 +4,7 @@ import type { EngineInterface } from 'claude-code'
 import type { FailureData } from '@cdd/tools/error_display/failure'
 
 import type { FailureJson } from '../../types'
+import { debugCommandOf } from '../shared/debug-command'
 
 // Every failure in the mod is shown the same way, above the chat bar's line: what failed with the reason it gave, the
 // context it failed in, Fix, which sends both to this chat to find the cause and fix it, and ✕ to dismiss it. It stays
@@ -27,9 +28,10 @@ export class FailureClient {
     return Boolean((this.json as FailureData & { is_fixing?: boolean }).is_fixing)
   }
 
-  // What Fix sends to the chat: the failure and its context, and the ask to find the cause and fix it.
+  // What Fix sends to the chat: the debug command with the failure and its context, which captures what went wrong,
+  // fixes it in a sub-agent, and pushes the fix to main, or opens a pull request where the person cannot push there.
   get fixPrompt(): string {
-    return `The CDD chat bar above the prompt shows this failure; find its cause and fix it.\n\nFailure: ${this.failure}\nContext: ${this.context}`
+    return debugCommandOf('', `The CDD chat bar above the prompt shows this failure. Failure: ${this.failure} Context: ${this.context}`)
   }
 }
 

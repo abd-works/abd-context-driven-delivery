@@ -49,5 +49,15 @@ class Range:
         """Where the range is, such as src/checkout/order.py:L12-L14."""
         return f"{self._path}:L{self._start_line}-L{self._end_line}"
 
+    @property
+    def quoted(self) -> list[str]:
+        """Each line of the range marked > with its number, as a chat reads lines it is shown: `> 12 |     def place`."""
+        return [f"> {self._start_line + offset} | {line}" for offset, line in enumerate(self._content.splitlines())]
+
+    @property
+    def context(self) -> str:
+        """The range as a chat's context: the file and its lines, then each line quoted."""
+        return "\n".join([f"{self._path}:{self._start_line}-{self._end_line}", *self.quoted])
+
     def contains(self, line: int) -> bool:
         return self._start_line <= line <= self._end_line

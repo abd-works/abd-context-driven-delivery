@@ -31,6 +31,17 @@ export function useAddCommentAction(editor: SourceEditorInstance | null, onCompo
   }, [editor, onCompose])
 }
 
+export const ADD_TO_CONTEXT_ACTION = 'files.add-to-context'
+
+// Add to context on the editor's right-click menu, beside Add comment: it adds the selected lines to the chat's context.
+export function useAddToContextAction(editor: SourceEditorInstance | null, onAdd: (lines: CommentLines) => void): void {
+  useEffect(() => {
+    if (!editor) return
+    const action = editor.addAction({ id: ADD_TO_CONTEXT_ACTION, label: 'Add to context', contextMenuGroupId: 'navigation', contextMenuOrder: 1, run: shown => onAdd(selectedLines(shown)) })
+    return () => action.dispose()
+  }, [editor, onAdd])
+}
+
 // The file's comment markers, violation marks and the chat's changes, drawn again each time the file is read.
 export function useFileMarks(editor: SourceEditorInstance | null, file: SessionFileData): void {
   useEffect(() => {

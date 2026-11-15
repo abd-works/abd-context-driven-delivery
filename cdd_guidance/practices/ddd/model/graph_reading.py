@@ -38,6 +38,8 @@ _SCREEN_NAME = re.compile(r"^(Select|Screen|Dialog|Modal|View|Page)\w*$")
 _BLOCK_KINDS = frozenset(kind for _stereotype, kind in KIND_OF_STEREOTYPE)
 # A React screen module, whose classes present the domain rather than belong to it.
 _SCREEN_MODULE = ".tsx"
+# The file whose folder is a bounded context: the folder holding .context/bounded-context.md.
+BOUNDED_CONTEXT_MARKER = Path(".context") / "bounded-context.md"
 
 
 class BuildingBlock(Node):
@@ -192,7 +194,7 @@ class DddReading(PracticeReading):
         found = []
         for dirpath, dirnames, _filenames in os.walk(self.root):
             dirnames[:] = [name for name in dirnames if not skips_folder(name)]
-            marker = Path(dirpath) / ".context" / "bounded-context.md"
+            marker = Path(dirpath) / BOUNDED_CONTEXT_MARKER
             if not marker.is_file():
                 continue
             folder = Path(dirpath)

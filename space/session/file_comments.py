@@ -90,9 +90,7 @@ class FileComment:
     def prompt(self) -> str:
         """What the chat reads: the file and lines with the comment, then each line of the range marked >, as the
         report's Fix marks the lines it names."""
-        start = self._range.start_line
-        marked = [f"> {start + offset} | {line}" for offset, line in enumerate(self._range.content.splitlines())]
-        return "\n".join([f"{self.path}:{start}-{self._range.end_line}: {self._text}", *marked])
+        return "\n".join([f"{self.path}:{self._range.start_line}-{self._range.end_line}: {self._text}", *self._range.quoted])
 
     @property
     def sent_text(self) -> str:

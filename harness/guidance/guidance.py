@@ -316,6 +316,12 @@ class PracticeGuidance(Guidance):
     app sets it on the practice's class (``Stories.editor = STORY_UI_APP``), and the framework and the practice import no
     app."""
 
+    def claims(self, file: Path) -> bool:
+        """Whether file, production code under a folder one of its fidelities writes code to, is this practice's own:
+        a fidelity that declares a folder per module, such as Clean Engineering's ``{module}/``, names no file, so the
+        practice says which code there is its. Every practice claims all of it unless it narrows that."""
+        return True
+
     def __init__(
         self,
         format: str | None = None,

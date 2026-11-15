@@ -95,7 +95,7 @@ Moved (2026-11-14) to `harness/.context/stories/review-generated-work-in-file-vi
 
 #### Scenario: Open a diagram in the draw.io editor
 
-Moved (2026-11-14) to the Files app's scenarios, Open Diagram In Draw.io Tab.
+Moved (2026-11-14) to the Files app's scenarios, Open Diagram In Files App.
 
 ## Story: List Available Patterns
 

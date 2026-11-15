@@ -1,11 +1,11 @@
-import { Component, useEffect, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react'
+import { Component, useCallback, useEffect, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react'
 
 import type { FileEntryData, SessionFileData } from '@cdd/space/session/session'
 
 import type { FileFolder } from './file-bar'
 import { FileSourceView } from './file-source-view'
 import type { FilesPage } from './files-page'
-import { drawioPageOf, isDrawio } from './files-paths'
+import { drawioPageOf, isDrawio, revealLabelOf } from './files-paths'
 import { formatGlyphOf } from './format-chips'
 import { applyTheme, storedTheme, type FilesTheme } from './files-theme'
 
@@ -17,34 +17,31 @@ function useFilesState(page: FilesPage) {
   return useSyncExternalStore(page.store.subscribe, () => page.store.state)
 }
 
-// One file the link names: a .drawio file says it opens in the draw.io viewer, a file not there yet says so, and a file
-// published at a link, such as a design canvas, opens there, in Claude Design, in a tab of its own.
+// One file the link names: a file not there yet says so, and a file published at a link, such as a design canvas, opens
+// there, in Claude Design, in a tab of its own; a .drawio file also offers its draw.io editor in a tab of its own.
 function FileEntryView({ page, entry, isOpen }: { page: FilesPage; entry: FileEntryData; isOpen: boolean }) {
   if (entry.link) return <PublishedFileView entry={entry} />
   const classes = ['file-entry', isOpen ? 'is-open' : '', entry.exists ? '' : 'is-missing', entry.is_changed ? 'is-changed' : ''].filter(Boolean).join(' ')
-  if (isDrawio(entry.path) && entry.exists) return <DrawioFileView page={page} entry={entry} />
   const hint = entry.exists ? entry.path : `${entry.path}: not generated yet`
   return (
-    <li>
-      <button className={classes} title={hint} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void page.open(entry.path)}>
+    <li className="file-entry-row">
+      <button className={classes} title={hint} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void page.open(entry.path)} onContextMenu={menuOn(page, entry.path)}>
         {fileNameOf(entry.path)}
         {entry.exists ? null : <span className="file-entry-note"> not generated yet</span>}
       </button>
+      {isDrawio(entry.path) && entry.exists ? <DrawioTabLinkView page={page} path={entry.path} /> : null}
     </li>
   )
 }
 
-// A .drawio file: a link that opens the draw.io viewer on it in a tab of its own, so this tab keeps its file list. A
-// link is a navigation the browser always allows, where a tab a script opens can be refused.
-function DrawioFileView({ page, entry }: { page: FilesPage; entry: FileEntryData }) {
-  const classes = ['file-entry', 'is-drawio', entry.is_changed ? 'is-changed' : ''].filter(Boolean).join(' ')
+// The draw.io editor on a .drawio file in a tab of its own, where the browser opens one; the app's browser pane opens
+// none, which is why the file view shows the editor too. A link is a navigation the browser always allows, where a tab
+// a script opens can be refused.
+function DrawioTabLinkView({ page, path }: { page: FilesPage; path: string }) {
   return (
-    <li>
-      <a className={classes} href={drawioPageOf(entry.path, page.link.chat)} target="_blank" rel="noreferrer" title={`${entry.path}: opens in the draw.io viewer`}>
-        {fileNameOf(entry.path)}
-        <span className="file-entry-note"> ↗ draw.io</span>
-      </a>
-    </li>
+    <a className="drawio-tab-link" href={drawioPageOf(path, page.link.chat)} target="_blank" rel="noreferrer" title={`${path}: opens in the draw.io editor in a tab of its own`}>
+      ↗
+    </a>
   )
 }
 
@@ -99,12 +96,37 @@ function FolderContentsView({ page, folder, openPath }: { page: FilesPage; folde
   )
 }
 
+// A right-click on a file or folder: its menu instead of the browser's.
+const menuOn = (page: FilesPage, path: string) => (event: React.MouseEvent) => {
+  event.preventDefault()
+  page.openMenu(path, event.clientX, event.clientY)
+}
+
+// The menu a right-click shows, where the person clicked: show the file or folder in the system's file browser, named
+// for this system. A press anywhere else closes it.
+function FileMenuView({ page }: { page: FilesPage }) {
+  const { menu } = useFilesState(page)
+  if (!menu) return null
+  return (
+    <div className="file-menu-backdrop" onClick={() => page.closeMenu()} onContextMenu={event => { event.preventDefault(); page.closeMenu() }}>
+      <div className="file-menu" role="menu" style={{ left: menu.x, top: menu.y }} onClick={event => event.stopPropagation()}>
+        <button role="menuitem" title={`${menu.path}: goes with your next prompt in the chat that opened this page`} onClick={() => void page.addToContext()}>
+          Add to context
+        </button>
+        <button role="menuitem" title={menu.path} onClick={() => void page.reveal()}>
+          {revealLabelOf(navigator.platform)}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // One folder: a row that opens and closes it, and what it holds, one level in, while it is open.
 function FileFolderView({ page, folder, openPath }: { page: FilesPage; folder: FileFolder; openPath: string }) {
   const isOpen = page.fileBar.isOpen(folder)
   return (
     <li role="treeitem" aria-expanded={isOpen}>
-      <button className="file-folder" title={folder.path} onClick={() => page.fileBar.toggleFolder(folder.path)}>
+      <button className="file-folder" title={folder.path} onClick={() => page.fileBar.toggleFolder(folder.path)} onContextMenu={menuOn(page, folder.path)}>
         <span className="file-folder-mark">{isOpen ? '▾' : '▸'}</span>
         <span className="file-folder-icon">{isOpen ? '📂' : '📁'}</span>
         <span className="file-folder-name">{folder.name}</span>
@@ -120,7 +142,7 @@ function FileFolderView({ page, folder, openPath }: { page: FilesPage; folder: F
 
 // The file bar's buttons: collapse or expand it, and show its files as a list or in their folders.
 function FileBarButtonsView({ page }: { page: FilesPage }) {
-  const { fileBar, scope } = useFilesState(page)
+  const { fileBar } = useFilesState(page)
   return (
     <div className="file-bar-buttons" role="toolbar" aria-label="File bar">
       <button aria-label={fileBar.isOpen ? 'Collapse the file bar' : 'Expand the file bar'} title={fileBar.isOpen ? 'Collapse the file bar' : 'Expand the file bar'} onClick={() => page.fileBar.toggle()}>
@@ -128,12 +150,6 @@ function FileBarButtonsView({ page }: { page: FilesPage }) {
       </button>
       {fileBar.isOpen ? (
         <>
-          <button className="file-bar-view" aria-pressed={scope === 'all'} title="Every file of the stages, practices and formats selected, older work included" onClick={() => page.showScope('all')}>
-            All session files
-          </button>
-          <button className="file-bar-view" aria-pressed={scope === 'session'} title="The files this session's branch changed, among those its stages, practices and formats select" onClick={() => page.showScope('session')}>
-            This session <span className="file-entry-note">{scope === 'session' ? page.fileBar.changedCount : ''}</span>
-          </button>
           <button className="file-bar-view" aria-pressed={fileBar.view === 'list'} title="Show the files as a list" onClick={() => page.fileBar.show('list')}>
             List
           </button>
@@ -182,19 +198,37 @@ function CommentToolbarView({ page, file }: { page: FilesPage; file: SessionFile
       <button disabled={!processed} onClick={() => void page.comments.clearProcessed()}>
         Clear processed{processed ? ` (${processed})` : ''}
       </button>
-      <span className="files-hint">Select lines, right-click, Add comment</span>
+      <span className="files-hint">Select lines, right-click, Add comment or Add to context</span>
     </div>
+  )
+}
+
+// A .drawio file in the draw.io editor, beside the file list: the Files server's draw.io page starts the viewer on it,
+// or says in the frame why it did not, as it tells the chat.
+function DrawioFileView({ page, path }: { page: FilesPage; path: string }) {
+  return (
+    <section className="open-file open-diagram" aria-label={path}>
+      <div className="comment-toolbar">
+        <span className="source-path">{path}</span>
+        <DrawioTabLinkView page={page} path={path} />
+      </div>
+      <iframe className="drawio-frame" title={`${path} in the draw.io editor`} src={drawioPageOf(path, page.link.chat)} />
+    </section>
   )
 }
 
 function OpenFileView({ page }: { page: FilesPage }) {
   const state = useFilesState(page)
+  const path = state.file?.path ?? ''
+  // The open file's selected lines, added to the chat's context; made once per file, so the editor keeps its action.
+  const addLines = useCallback((lines: { start: number; end: number }) => void page.addLinesToContext(path, lines), [page, path])
   if (!state.openPath) return <p className="files-note">Choose a file.</p>
+  if (isDrawio(state.openPath)) return <DrawioFileView page={page} path={state.openPath} />
   if (!state.file) return <p className="files-note">Opening {state.openPath}…</p>
   return (
     <section className="open-file" aria-label={state.file.path}>
       <CommentToolbarView page={page} file={state.file} />
-      <FileSourceView key={state.file.path} file={state.file} actions={page.comments} />
+      <FileSourceView key={state.file.path} file={state.file} actions={page.comments} onAddToContext={addLines} />
     </section>
   )
 }
@@ -218,6 +252,22 @@ const STAGE_ICONS: Record<string, string> = { Discovery: '⌕', Specification: '
 
 // A button for each stage, before the practices, as the chat bar's stage buttons: filled orange while selected. A press
 // selects the stage beside those selected, or no longer, here and on the chat bar.
+// Which files the page lists, first of the filters along the top and orange while selected, as the stages are: every
+// file under the session's root, or the ones this session's branch changed, with how many.
+function ScopeTogglesView({ page }: { page: FilesPage }) {
+  const { scope } = useFilesState(page)
+  return (
+    <div className="scope-toggles" role="group" aria-label="Files listed">
+      <button type="button" className={`scope-toggle ${scope === 'all' ? 'is-shown' : ''}`} aria-pressed={scope === 'all'} aria-label="All session files" title="All session files: every file of the stages, practices and formats selected, older work included" onClick={() => page.showScope('all')}>
+        ▤
+      </button>
+      <button type="button" className={`scope-toggle ${scope === 'session' ? 'is-shown' : ''}`} aria-pressed={scope === 'session'} aria-label="This session" title={`This session: the ${page.fileBar.changedCount} files this session's branch changed, among those its stages, practices and formats select`} onClick={() => page.showScope('session')}>
+        Δ<sup className="scope-count">{page.fileBar.changedCount}</sup>
+      </button>
+    </div>
+  )
+}
+
 function StageTogglesView({ page }: { page: FilesPage }) {
   const { guidance } = useFilesState(page)
   if (!guidance?.stages.length) return null
@@ -305,6 +355,7 @@ export function FilesPageView({ page }: { page: FilesPage }) {
       <header className="files-head">
         <span className="files-kind">FILES</span>
         <span className="files-subject">{page.heading}</span>
+        <ScopeTogglesView page={page} />
         <StageTogglesView page={page} />
         <PracticeTogglesView page={page} />
         <FormatTogglesView page={page} />
@@ -319,6 +370,7 @@ export function FilesPageView({ page }: { page: FilesPage }) {
         </nav>
         <OpenFileView page={page} />
       </div>
+      <FileMenuView page={page} />
       <ToastsView page={page} />
     </main>
   )

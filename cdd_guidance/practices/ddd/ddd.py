@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 
@@ -9,6 +11,22 @@ from cdd_guidance.practices.ddd.ddd_formats import DddFormats
 from cdd_guidance.practices.ddd.model.graph_reading import DddReading
 from cdd_guidance.practices.ddd.model.nodes import DomainNode
 from cdd_guidance.practices.ddd.model.sketch.sketch_ddd_model import SketchDddModel
+from cdd_guidance.practices.ddd.model.graph_reading import BOUNDED_CONTEXT_MARKER
+from cdd_guidance.practices.ddd.model.stereotypes import carries_a_stereotype, names_a_building_block
+
+
+# The words a path holds when it is a domain model or a bounded context, written with a hyphen or an underscore.
+_DOMAIN_NAMES = ("domain-model", "domain_model", "bounded-context", "bounded_context")
+# The code files whose classes say whether a folder holds a domain.
+_CODE_SUFFIXES = (".py", ".ts", ".tsx", ".js", ".jsx")
+
+
+def _holds_a_domain(folder: Path) -> bool:
+    """Whether folder holds a domain, as DDD's graph reading decides one: a bounded context, the folder holding
+    ``.context/bounded-context.md``, or an aggregate under one; or a folder where a class carries a DDD stereotype."""
+    if any((each / BOUNDED_CONTEXT_MARKER).is_file() for each in (folder, *folder.parents)):
+        return True
+    return any(carries_a_stereotype(file.read_text(encoding="utf-8", errors="replace")) for file in folder.iterdir() if file.suffix in _CODE_SUFFIXES and file.is_file())
 
 
 @agent_toolset
@@ -35,6 +53,17 @@ class Ddd(PracticeGuidance):
         "blurb": "Organize the code around domain state, domain logic, and domain rules.",
         "spec_blurb": "An aggregate model of the core domain, then the building blocks that implement it",
     }
+
+    def claims(self, file: Path) -> bool:
+        """DDD's files are a domain's: a file whose path names a domain model or a bounded context, code declaring a
+        class with a DDD stereotype, or code declaring a class named for a building block in a folder that holds a
+        domain, as DDD's graph reading decides one, so a page filtering on DDD shows no other file."""
+        if any(name in file.as_posix().lower() for name in _DOMAIN_NAMES):
+            return True
+        if not file.is_file():
+            return False
+        source = file.read_text(encoding="utf-8", errors="replace")
+        return carries_a_stereotype(source) or (names_a_building_block(source) and _holds_a_domain(file.parent))
 
     def __init__(
         self,

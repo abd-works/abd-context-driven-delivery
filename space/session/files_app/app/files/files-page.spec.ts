@@ -8,7 +8,7 @@ import type { GuidanceSelectionData } from '@cdd/space/session/session'
 
 import { FilesLink } from './files-link'
 import { FilesPage, filesShown } from './files-page'
-import { drawioPageOf } from './files-paths'
+import { drawioPageOf, revealLabelOf } from './files-paths'
 
 // Each stage's fidelities by practice, as the session's practices declare them.
 const FIDELITIES: Record<string, Record<string, string>> = {
@@ -59,7 +59,7 @@ class FakeFilesServer implements CddApi {
 
   selection(): GuidanceSelectionData {
     const chosen = this.stages ?? []
-    const fidelities = Object.keys(FIDELITIES).filter(stage => chosen.includes(stage)).flatMap(stage => this.practices.map(key => FIDELITIES[stage]![key]).filter((slug): slug is string => Boolean(slug)))
+    const fidelities = this.listed()
     return {
       version: this.version,
       is_stage_chosen: this.stages !== null,
@@ -73,6 +73,13 @@ class FakeFilesServer implements CddApi {
     } as GuidanceSelectionData
   }
 
+  // A filter with nothing selected filters nothing: no stage lists every stage, no practice every practice.
+  private listed(): string[] {
+    const stages = this.stages?.length ? this.stages : Object.keys(FIDELITIES)
+    const practices = this.practices.length ? this.practices : PRACTICES.map(practice => practice.key)
+    return stages.flatMap(stage => practices.map(key => FIDELITIES[stage]![key]).filter((slug): slug is string => Boolean(slug)))
+  }
+
   posted(ending: string): { path: string; body: Record<string, unknown> }[] {
     return this.posts.filter(post => post.path.endsWith(ending))
   }
@@ -82,11 +89,12 @@ function entry(path: string) {
   return { path, exists: true, is_changed: false, link: '', format: '', fidelities: [] } as never
 }
 
-// The files under the session's root, as ticket.root_files answers them: the story map, a scenario of Specification, and
-// two files no fidelity declares, the branch having changed only order.py.
+// The files under the session's root, as ticket.root_files answers them: two of the story map, a scenario of
+// Specification, and two files no fidelity declares, the branch having changed story-flow.md and order.py.
 const rootFile = (path: string, format: string, fidelities: string[], is_changed = false) => ({ path, exists: true, is_changed, link: '', format, fidelities })
 const ROOT_FILES = [
   rootFile('.context/stories-story-map.md', 'markdown', ['stories-story-map']),
+  rootFile('.context/story-flow.md', 'markdown', ['stories-story-map'], true),
   rootFile('specs/checkout.md', 'markdown', ['stories-scenarios']),
   rootFile('notes/plain.txt', '', []),
   rootFile('src/order.py', 'python', [], true),
@@ -167,12 +175,12 @@ describe('Select Guidance In Files App', () => {
     })
 
     describe('that has every stage turned off', () => {
-      it('should list no file', async () => {
+      it('should list the files of every stage, as no stage filter', async () => {
         const { page, stop } = await following(discovery())
         await page.toggleStage('discovery')
         await settled()
         stop()
-        expect(paths(page)).toEqual([])
+        expect(paths(page)).toEqual(['.context/stories-story-map.md', '.context/stories-story-map.drawio', '.context/ddd-bounded-context.md', '.context/ddd-bounded-context.drawio', '.context/stories-scenarios.md', '.context/stories-scenarios.drawio'])
       })
     })
 
@@ -237,10 +245,11 @@ describe('Head The Files App With Where The Files Are', () => {
 })
 
 describe('Review All Session Files Or This Session', () => {
-  async function discovery(formats: string[] = []): Promise<FilesPage> {
+  async function discovery(formats: string[] = [], practices = ['stories', 'ddd']): Promise<FilesPage> {
     const server = new FakeFilesServer()
     server.stages = ['discovery']
     server.formats = formats
+    server.practices = practices
     server.rootFiles = ROOT_FILES
     const { page, stop } = await following(server)
     stop()
@@ -248,10 +257,10 @@ describe('Review All Session Files Or This Session', () => {
   }
 
   describe('that has All session files pressed', () => {
-    it('should list every file under the root of the stages selected or of no fidelity', async () => {
+    it('should list every file under the root of the stages and practices selected', async () => {
       const page = await discovery()
       page.showScope('all')
-      expect(page.fileBar.entries.map(each => each.path)).toEqual(expect.arrayContaining(['.context/stories-story-map.md', 'notes/plain.txt', 'src/order.py']))
+      expect(page.fileBar.entries.map(each => each.path)).toEqual(expect.arrayContaining(['.context/stories-story-map.md', '.context/story-flow.md']))
     })
 
     it('should leave out a file of a stage not selected', async () => {
@@ -260,17 +269,31 @@ describe('Review All Session Files Or This Session', () => {
       expect(page.fileBar.entries.map(each => each.path)).not.toContain('specs/checkout.md')
     })
 
+    it('should leave out a file of no fidelity while a practice is selected', async () => {
+      const page = await discovery()
+      page.showScope('all')
+      expect(page.fileBar.entries.map(each => each.path)).not.toContain('notes/plain.txt')
+    })
+
+    describe('with no practice selected', () => {
+      it('should list the files of every practice and of no fidelity', async () => {
+        const page = await discovery([], [])
+        page.showScope('all')
+        expect(page.fileBar.entries.map(each => each.path)).toEqual(expect.arrayContaining(['.context/stories-story-map.md', '.context/ddd-bounded-context.md', 'notes/plain.txt', 'src/order.py']))
+      })
+    })
+
     it('should list only the files in the formats selected', async () => {
       const page = await discovery(['markdown'])
       page.showScope('all')
-      expect(page.fileBar.entries.map(each => each.path)).toEqual(['.context/stories-story-map.md', '.context/ddd-bounded-context.md'])
+      expect(page.fileBar.entries.map(each => each.path)).toEqual(['.context/stories-story-map.md', '.context/ddd-bounded-context.md', '.context/story-flow.md'])
     })
   })
 
   describe('that lists This session, its default', () => {
     it('should list only the files the branch changed', async () => {
       const page = await discovery()
-      expect(page.fileBar.entries.map(each => each.path)).toEqual(['src/order.py'])
+      expect(page.fileBar.entries.map(each => each.path)).toEqual(['.context/story-flow.md'])
     })
   })
 })
@@ -292,18 +315,148 @@ describe('Filter Files By Format In Files App', () => {
   })
 })
 
-describe('Open Diagram In Draw.io Tab', () => {
+describe('Open Diagram In Files App', () => {
   describe('with a .drawio file listed', () => {
-    it("should link it to the Files server's draw.io page, which sends a tab of its own to the viewer", () => {
+    it("should show it at the Files server's draw.io page, which starts the viewer on it", () => {
       expect(drawioPageOf('C:/dev/work/.context/a.drawio', 'chat-1')).toBe('/api/drawio/page?path=C%3A%2Fdev%2Fwork%2F.context%2Fa.drawio&chat=chat-1')
     })
 
-    it('should leave this tab on its file list once pressed', async () => {
-      const page = new FilesPage(new FakeFilesServer(), new FilesLink(STAGE_LINK))
+    describe('that the Person opens', () => {
+      async function opened() {
+        const server = new FakeFilesServer()
+        const page = new FilesPage(server, new FilesLink(STAGE_LINK))
+        await started(page)
+        const read = server.posted('/file').length
+        await page.open('.context/stories-story-map.drawio')
+        return { page, server, read }
+      }
+
+      it('should show it in the file view, beside the file list', async () => {
+        expect((await opened()).page.state.openPath).toBe('.context/stories-story-map.drawio')
+      })
+
+      it('should ask the session for no text of it, as the draw.io editor reads it', async () => {
+        const { server, read } = await opened()
+        expect(server.posted('/file').length).toBe(read)
+      })
+    })
+  })
+})
+
+describe('Open File In File Browser', () => {
+  describe('with a file listed', () => {
+    async function rightClicked(server = new FakeFilesServer()) {
+      const page = new FilesPage(server, new FilesLink(STAGE_LINK))
       await started(page)
-      const shown = page.state.openPath
-      await page.open('.context/stories-story-map.drawio')
-      expect(page.state.openPath).toBe(shown)
+      page.openMenu('.context/stories-story-map.md', 40, 80)
+      return { page, server }
+    }
+
+    describe('that the Person right-clicks', () => {
+      it('should show its menu where the Person clicked', async () => {
+        expect((await rightClicked()).page.state.menu).toEqual({ path: '.context/stories-story-map.md', x: 40, y: 80 })
+      })
+
+      describe('and opens in the file browser', () => {
+        async function revealed(server = new FakeFilesServer()) {
+          const opened = await rightClicked(server)
+          await opened.page.reveal()
+          return opened
+        }
+
+        it("should ask the Files server to show it in the system's file browser", async () => {
+          const { server } = await revealed()
+          expect(server.posted('/reveal').map(post => post.body.path)).toEqual(['.context/stories-story-map.md'])
+        })
+
+        it('should close the menu', async () => {
+          expect((await revealed()).page.state.menu).toBeNull()
+        })
+
+        describe('with a file browser that does not open', () => {
+          class RefusingFilesServer extends FakeFilesServer {
+            override async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
+              if (path.endsWith('/reveal')) throw new Error('explorer.exe is not there')
+              return super.post<Result>(path, body)
+            }
+          }
+
+          it('should tell the chat that opened the page', async () => {
+            const { server } = await revealed(new RefusingFilesServer())
+            const sent = server.posted('/send').map(post => JSON.parse(String(post.body.text)).failure)
+            expect(sent).toContain('.context/stories-story-map.md did not open in the file browser: explorer.exe is not there')
+          })
+        })
+      })
+
+      describe('and presses elsewhere', () => {
+        it('should close the menu', async () => {
+          const { page } = await rightClicked()
+          page.closeMenu()
+          expect(page.state.menu).toBeNull()
+        })
+      })
+    })
+  })
+
+  it("should name the menu's choice for the system the page runs on", () => {
+    expect(['Win32', 'MacIntel', 'Linux x86_64'].map(revealLabelOf)).toEqual(['Open in Explorer', 'Reveal in Finder', 'Open in file manager'])
+  })
+})
+
+describe('Add File Or Selection To Chat Context', () => {
+  async function opened(server = new FakeFilesServer()) {
+    const page = new FilesPage(server, new FilesLink(STAGE_LINK))
+    await started(page)
+    return { page, server }
+  }
+
+  const addedBodies = (server: FakeFilesServer) => server.posted('/add-to-chat-context').map(post => post.body)
+
+  describe('with a file listed', () => {
+    describe("that the Person adds to the chat's context from its menu", () => {
+      async function added(server = new FakeFilesServer()) {
+        const done = await opened(server)
+        done.page.openMenu('src/checkout/order.py', 40, 80)
+        await done.page.addToContext()
+        return done
+      }
+
+      it('should ask the session to add the whole file to the chat that opened the page', async () => {
+        expect(addedBodies((await added()).server)).toEqual([{ chat: 'chat-1', path: 'src/checkout/order.py' }])
+      })
+
+      it('should close the menu', async () => {
+        expect((await added()).page.state.menu).toBeNull()
+      })
+
+      it('should say so in a toast', async () => {
+        expect((await added()).page.state.toasts).toContain("order.py added to the chat's context")
+      })
+
+      describe('with a chat that is not connected', () => {
+        class NotConnectedServer extends FakeFilesServer {
+          override async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
+            if (path.endsWith('/add-to-chat-context')) throw new Error("chat 'chat-1' is not connected: is the cdd-board mod loaded in it?")
+            return super.post<Result>(path, body)
+          }
+        }
+
+        it('should say so in a toast', async () => {
+          const { page } = await added(new NotConnectedServer())
+          expect(page.state.toasts).toContain("order.py was not added to the chat's context: chat 'chat-1' is not connected: is the cdd-board mod loaded in it?")
+        })
+      })
+    })
+  })
+
+  describe('with lines 12 to 14 of the open file selected', () => {
+    describe("that the Person adds to the chat's context", () => {
+      it('should ask the session to add those lines to the chat that opened the page', async () => {
+        const { page, server } = await opened()
+        await page.addLinesToContext('src/checkout/order.py', { start: 12, end: 14 })
+        expect(addedBodies(server)).toEqual([{ chat: 'chat-1', path: 'src/checkout/order.py', start_line: 12, end_line: 14 }])
+      })
     })
   })
 })

@@ -726,6 +726,10 @@ Observed (2026-11-14): the ⤴ icon, first of the session buttons, calls `repo.p
 
 Observed (2026-11-14): the ⇪ icon after ⤴, "push & merge to origin/main", asks "Push <session> and merge it to origin/main?", and yes calls `repo.push_to_main` (`Repo.push_to_main`) for the folder the chat works in, whichever repository holds it: the checkout commits its work on its branch and pushes the branch, the main clone merges that branch into the repository's default branch (`Branch.merge_into_default`; `Repo.default_branch` is the branch origin's HEAD names, else main or master), pushes it, and goes back to the branch it had. On main itself it commits and pushes main. The version is not raised; `/version` does that when the person chooses. `repo.merge_to_main` does the same without pushing, for an agent; the chat bar has no button for it (2026-11-14: "we only need the other button").
 
+### (S) Person --> [Debug A Failure From Chat Bar](../../../space/session/debug_spec.py)
+
+Requested (the person, 2026-11-15): a debug button right after handoff sends the agent to capture what went wrong as fully as it can, stack traces included, then asks for more detail and whether to fix the bug or request help; help emails jeff.anderson@abdworks.com, and a fix is made in a sub-agent and pushed to main, or sent as a pull request to the CDD repository where the person cannot push there. The chat bar's Fix buttons take the same fix. Built (2026-11-15): the 🐞 icon after ⇥ puts `/space-session-debug-session` in the prompt box (`Session.debug_session`); it writes `debug/debug-{time}.md` in the session's folder, asks with AskUserQuestion, opens the help email as a draft in the person's mail program for them to send, and checks `gh api repos/<owner>/<repo> --jq .permissions.push` before pushing or opening the pull request. Fix on a failure line starts it with `choice=fix` and the failure as its details; Fix on a board that did not answer adds it as a last step.
+
 ### (S) Person --> Pull Latest From Chat Bar
 
 Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add feature to backlog button and buttons for common repo actions eg push, pull, commit"): a Pull button pulls the latest commits into the active session's checkout (`Repo.pull` in `space/repo/repo.py`).
@@ -934,9 +938,13 @@ Built: a page the chat opened, such as the Story UI editor, sends the chat an `o
 
 Observed (2026-11-14): the page reads only the files its link names, each once, and never the board (`files-page.ts` `list`); a file not generated yet is listed but cannot be opened. Was View Fidelity Files on the board and the chat bar.
 
-### (S) Person --> [Open Diagram In Draw.io Tab](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-diagram-in-drawio-tab)
+### (S) Person --> [Open Diagram In Files App](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-diagram-in-files-app)
 
-Built (2026-11-14): a press on a `.drawio` file opens the draw.io editor in a new tab, and the Files tab stays on its file list (`files-page.ts` `openDrawio`). Requested (the person, 2026-11-14): "open in new tab works but orig tab also getting moved to drawio; leave it on file explorer". Was the chat bar's Open a diagram in the draw.io editor and the graph's Display Drawio File As Diagram; that story's Source tab and shape marking stay Intended.
+Built (2026-11-15): a press on a `.drawio` file shows the draw.io editor in the file view, beside the file list, with a ↗ link to a tab of its own (`files-page-view.tsx` `DrawioFileView`); the app's browser pane opens no tab of its own, so a new tab took the Files app's place there. Was the chat bar's Open a diagram in the draw.io editor and the graph's Display Drawio File As Diagram; that story's Source tab and shape marking stay Intended.
+
+### (S) Person --> [Open File In File Browser](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-file-in-file-browser)
+
+Built (2026-11-15): a right-click on a file or folder shows a menu whose one choice opens it in the system's file browser, named for the system (`files-page.ts` `reveal`, `file-explorer.ts`).
 
 ### (S) Person --> [Switch File Bar Between Folders And List](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-switch-file-bar-between-folders-and-list)
 
@@ -1025,6 +1033,12 @@ Built: Clear processed removes the processed comments and keeps the ones not sen
 ### (S) Files App --> [Show AI Changes As Diff](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-show-ai-changes-as-diff)
 
 Intended: the page marks what the chat changed in the file, as VS Code and Cursor do (`SessionFile.changes`); the board's panel draws it, the Files app does not yet.
+
+### (S) Person --> [Add File Or Selection To Chat Context](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-add-file-or-selection-to-chat-context)
+
+Requested (2026-11-15, "on right click of file we also need an add to context option; same with selected text in file viewer; adds to chat context like Claude functionality does in file viewer"). Intended: Add to context, in the right-click menu of a file in the file bar and, beside Add comment, of lines selected in the source view, attaches the file by its path from the session's root, or the path, line range and selected text, to the chat that opened the Files app. As Claude's own file viewer does, it goes with the chat's next prompt rather than being sent on its own. One mechanic, so a file and a selection are two scenarios of this story.
+
+Built (2026-11-15): Add to context on a file's or folder's right-click menu in the file bar, and beside Add comment on the source view's right-click menu for selected lines, calls `session.add_to_chat_context` (`Session.add_to_chat_context`), which queues a fill for the chat that opened the Files app: `@path ` for a whole file, the path, the range and each line quoted (`Range.context`) for a selection. A chat not connected refuses it, and the page says so in a toast.
 
 ## (E) Switch Files App Between Files And Graph
 

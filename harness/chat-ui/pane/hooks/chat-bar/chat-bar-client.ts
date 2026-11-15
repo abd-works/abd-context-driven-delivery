@@ -8,6 +8,7 @@ import type { TicketData } from '@cdd/space/kanban/ticket'
 import type { ChatBarJson } from '../../types'
 import { reasonOf, showFailure } from '../error-display/failure-client'
 import { SERVER } from '../health/server-health-client'
+import { debugCommandOf } from '../shared/debug-command'
 import type { GuidanceSelectionData } from '@cdd/space/session/session'
 
 import { FidelityProgressClient, PracticeDotClient } from './fidelity-progress-client'
@@ -71,11 +72,18 @@ export class ChatBarClient {
   }
 
   // The stages whose fidelities the dots show, in the board's order: those turned on with the stage buttons, here or in
-  // a page the chat opened, none included; before either chose, the stage the session is in.
+  // a page the chat opened, none turned on meaning every stage; before either chose, the stage the session is in.
   get shownStages(): string[] {
     const stages = (this.board?.columns ?? []).filter(column => column.kind === 'stage').map(column => column.name)
-    const chosen = this.guidance?.is_stage_chosen ? this.guidance.stages.filter(stage => stage.is_selected).map(stage => stage.title) : [this.stage]
-    return stages.filter(stage => chosen.includes(stage))
+    const selected = this.selectedStages
+    if (!this.guidance?.is_stage_chosen || selected.length) return stages.filter(stage => selected.includes(stage))
+    return stages
+  }
+
+  // The stages the stage buttons have turned on, by title; before any was chosen, the stage the session is in.
+  private get selectedStages(): string[] {
+    if (!this.guidance?.is_stage_chosen) return [this.stage]
+    return this.guidance.stages.filter((stage: { is_selected: boolean }) => stage.is_selected).map((stage: { title: string }) => stage.title)
   }
 
   // The first stage shown, whose actions the action button offers: every stage takes the same steps.
@@ -94,7 +102,7 @@ export class ChatBarClient {
   get stages(): StageClient[] {
     const columns = this.board?.columns ?? []
     const sessionPlace = columns.findIndex(column => column.name === this.stage)
-    return columns.map((column, place) => new StageClient(column, place, sessionPlace, this.shownStages.includes(column.name)))
+    return columns.map((column, place) => new StageClient(column, place, sessionPlace, this.selectedStages.includes(column.name)))
   }
 
   // Every action a person can run on a fidelity of the shown stage, its steps first, as the stage sends them.
@@ -130,10 +138,12 @@ export class ChatBarClient {
     return practice ? practice.is_selected : (this.ticket?.progress.find(progress => progress.practice.key === key)?.is_enabled ?? true)
   }
 
-  // The selected stages' fidelities of the practices selected: what the dots stand for and every action runs on, in the
-  // order the stages require them.
+  // The fidelities the session's guidance selection translates its stages and practices to, no practice selected meaning
+  // every practice: what the dots stand for and every action runs on, in the order the stages require them. Before the
+  // selection is read, those of the practices the board shows on.
   get fidelities(): FidelityProgressClient[] {
-    return this.fidelitiesOfShownStages.filter(fidelity => fidelity.isSelected)
+    const listed = this.guidance?.fidelities
+    return this.fidelitiesOfShownStages.filter(fidelity => (listed ? listed.includes(fidelity.slug) : fidelity.isSelected))
   }
 
   // One dot per practice with fidelities in the stages shown, on or off: a press turns the practice on or off for the
@@ -356,6 +366,9 @@ export const BOARD_PROBLEM_STEPS = [
     + 'update the themes in .sessions/_backlog/install-failure-themes.md.',
   'Ask me to run /reload-plugins, so this chat loads the new cdd entry and header helper, then check that the chat bar '
     + 'reads the board again.',
+  'If the cause is a bug in CDD rather than an older server or install, run /space-session-debug-session choice=fix with '
+    + 'this failure as its details: it fixes the bug in a sub-agent and pushes the fix to main where you can push there, '
+    + 'or opens a pull request to the CDD repository where you cannot.',
 ]
 
 export function boardProblemPrompt(shown: string): string {
@@ -377,6 +390,12 @@ export async function moveNext($: EngineInterface, chatBar: ChatBarClient): Prom
   }
   await refreshChatBar($)
   return currentChatBar($)
+}
+
+// The debug button, right after handoff: puts the debug command in the prompt box, which captures what went wrong, asks
+// the person for more, and fixes the bug or requests help.
+export async function runDebug($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
+  await $.prompt.fill({ text: debugCommandOf(chatBar.sessionFile), mode: 'append' })
 }
 
 export async function runHandoff($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
