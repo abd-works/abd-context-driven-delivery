@@ -9,7 +9,7 @@
     "stages": [
       "discovery"
     ],
-    "version": 8
+    "version": 9
   },
   "practices": {
     "stories": {
@@ -34,7 +34,7 @@
           "drawio"
         ]
       },
-      "enabled": false
+      "enabled": true
     },
     "bdd": {
       "formats": {
