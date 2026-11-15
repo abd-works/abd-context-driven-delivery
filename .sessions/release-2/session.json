@@ -12,7 +12,6 @@
       "enabled": true,
       "formats": {
         "story_map": [
-          "markdown",
           "drawio"
         ]
       }
