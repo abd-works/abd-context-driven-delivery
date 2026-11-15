@@ -21,7 +21,7 @@
       }
     },
     "stories": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
         "story_map": [
           "drawio"
@@ -36,7 +36,7 @@
       }
     },
     "ddd": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
         "bounded_context": [],
         "tactics": [
@@ -63,7 +63,7 @@
       }
     },
     "bdd": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
         "behavior": [
           "python"
@@ -81,6 +81,6 @@
     "stages": [
       "implementation"
     ],
-    "version": 12
+    "version": 15
   }
 }
