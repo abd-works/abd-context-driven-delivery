@@ -9,13 +9,17 @@ import { isDrawio } from './files-paths'
 import { applyTheme, storedTheme, type FilesTheme } from './files-theme'
 
 const fileNameOf = (path: string): string => path.split('/').at(-1) ?? path
+// A design canvas's canvas.json is named by its version's folder: `design-canvas/version-2/project/canvas.json` is version-2.
+const canvasNameOf = (path: string): string => path.split('/').at(-3) ?? path
 
 function useFilesState(page: FilesPage) {
   return useSyncExternalStore(page.store.subscribe, () => page.store.state)
 }
 
-// One file the link names: a .drawio file says it opens in the draw.io viewer, a file not there yet says so.
+// One file the link names: a .drawio file says it opens in the draw.io viewer, a file not there yet says so, and a file
+// published at a link, such as a design canvas, opens there, in Claude Design, in a tab of its own.
 function FileEntryView({ page, entry, isOpen }: { page: FilesPage; entry: FileEntryData; isOpen: boolean }) {
+  if (entry.link) return <PublishedFileView entry={entry} />
   const classes = ['file-entry', isOpen ? 'is-open' : '', entry.exists ? '' : 'is-missing', entry.is_changed ? 'is-changed' : ''].filter(Boolean).join(' ')
   const hint = isDrawio(entry.path) ? `${entry.path}: opens in the draw.io viewer` : entry.exists ? entry.path : `${entry.path}: not generated yet`
   return (
@@ -24,6 +28,18 @@ function FileEntryView({ page, entry, isOpen }: { page: FilesPage; entry: FileEn
         {fileNameOf(entry.path)}
         {isDrawio(entry.path) ? <span className="file-entry-note"> ↗ draw.io</span> : null}
       </button>
+    </li>
+  )
+}
+
+// A design canvas: its version's folder names it, and it opens at the link it is published at.
+function PublishedFileView({ entry }: { entry: FileEntryData }) {
+  return (
+    <li>
+      <a className="file-entry is-published" href={entry.link} target="_blank" rel="noreferrer" title={`${entry.path}: opens the design canvas at ${entry.link}`}>
+        {canvasNameOf(entry.path)}
+        <span className="file-entry-note"> ↗ design canvas</span>
+      </a>
     </li>
   )
 }

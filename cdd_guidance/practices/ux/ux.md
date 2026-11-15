@@ -196,6 +196,7 @@ stage: implementation
 outputs:
   typescript: "**/*View.tsx"
   javascript: "**/*View.jsx"
+reviews_files_of: [ia, mockup]
 ```
 
 #### Overview

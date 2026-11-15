@@ -93,12 +93,14 @@ class Folder:
 
 class FileEntry:
     """One file something declares, such as a fidelity's output, as a path from the project, whether it is there yet,
-    and whether the session's branch changed it, which a page filters on."""
+    whether the session's branch changed it, which a page filters on, and the link it is published at, such as a design
+    canvas's, which a page opens instead of the file."""
 
-    def __init__(self, path: str, exists: bool, is_changed: bool = False) -> None:
+    def __init__(self, path: str, exists: bool, is_changed: bool = False, link: str = "") -> None:
         self._path = path
         self._exists = exists
         self._is_changed = is_changed
+        self._link = link
 
     @property
     @data_field
@@ -114,6 +116,11 @@ class FileEntry:
     @data_field
     def is_changed(self) -> bool:
         return self._is_changed
+
+    @property
+    @data_field
+    def link(self) -> str:
+        return self._link
 
 
 # The language a viewer shows a file in, by its suffix; a file of any other suffix is plain text.

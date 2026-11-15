@@ -37,6 +37,7 @@ The *Files app* shows the files a link names and turns a person's reading into w
 ### FidelityFiles (`files/files-state.ts`)
 
 - One fidelity's files as the link names them, kept apart so a practice turned off hides its own. A session folder is one *FidelityFiles* of no fidelity.
+- The files of a fidelity are the ones a person reviews for it (`FidelityProgress.files`): UX's front-end code lists its IA's and mockup's files, not its view code, which Clean Engineering's code lists with every other code file the branch changed. A design canvas's `canvas.json` comes with the link its version is published at, and the file bar shows it as a link that opens the canvas in Claude Design.
 - `filesShown(byFidelity, practices)` is every file of the fidelities whose practice is on, each once; a fidelity no practice owns is shown.
   - -> PracticeSessionOutput.fidelity_slugs
 

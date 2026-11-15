@@ -109,3 +109,5 @@ button:disabled { cursor: default; opacity: 0.5; }
 .file-tree .file-entry::before { content: '🗎'; margin-right: var(--space-2xs); color: var(--muted); }
 .file-folder-name { overflow: hidden; text-overflow: ellipsis; }
 .file-tree { display: grid; gap: 1px; }
+a.file-entry.is-published { display: block; color: var(--select); text-decoration: none; padding: 2px var(--space-xs); }
+a.file-entry.is-published:hover { text-decoration: underline; }

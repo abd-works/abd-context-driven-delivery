@@ -1038,8 +1038,8 @@ class FidelityProgress:
     @agent_tool
     @noSessionLog
     def files(self) -> dict[str, list[FileEntry]]:
-        """List the files this fidelity declares by format in its ticket's session, each with its path from the project and whether it exists, formats in the order files are shown (``Format.file_order``: markdown, code, diagrams). A pattern lists the files the ticket worked on, not every match in the repository."""
-        files = self._fidelity.files()
+        """List the files a person reviews for this fidelity by format in its ticket's session, each with its path from the project, whether it exists, and the published link of a design canvas, formats in the order files are shown (``Format.file_order``: markdown, code, diagrams). They are the files it declares, or those of the fidelities its practice document says it reviews files of (UX front-end code: its IA and mockup). A pattern lists the files the ticket worked on, not every match in the repository."""
+        files = self._fidelity.files_to_review()
         return dict(sorted(files.items(), key=lambda formats: Format(formats[0]).file_order))
 
     def with_violations(self) -> FidelityProgress:

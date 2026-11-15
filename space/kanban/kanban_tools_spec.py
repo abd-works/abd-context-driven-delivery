@@ -504,7 +504,7 @@ with description("the board tools") as self:
             # (S) Person --> View Fidelity Files
             with it("should list the files a pattern finds there"):
                 files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="bdd-behavior")["python"]
-                expect(files).to(equal([{"path": (self.outside / "src" / "visits_spec.py").as_posix(), "exists": True, "is_changed": False}]))
+                expect(files).to(equal([{"path": (self.outside / "src" / "visits_spec.py").as_posix(), "exists": True, "is_changed": False, "link": ""}]))
 
             # (S) Person --> View Fidelity Files, a path that names its module
             with it("should list the files a named part of the path finds there, in folders at any depth"):
@@ -512,7 +512,7 @@ with description("the board tools") as self:
                 model.parent.mkdir(parents=True)
                 model.write_text("# Visits\n", encoding="utf-8")
                 files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="clean-engineering-model")["markdown"]
-                expect(files).to(equal([{"path": model.as_posix(), "exists": True, "is_changed": False}]))
+                expect(files).to(equal([{"path": model.as_posix(), "exists": True, "is_changed": False, "link": ""}]))
 
         with context("with a fidelity's markdown generated"):
             with before.all:
@@ -531,7 +531,7 @@ with description("the board tools") as self:
 
             with it("should list the file with whether it exists"):
                 files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="stories-story-map")["markdown"]
-                expect(files).to(equal([{"path": "docs/.context/story-map.md", "exists": True, "is_changed": False}]))
+                expect(files).to(equal([{"path": "docs/.context/story-map.md", "exists": True, "is_changed": False, "link": ""}]))
 
             # (S) Person --> View Fidelity Files: the page opens tabs in the order Python sends the formats.
             with it("should send the formats in the order files are shown, markdown before code, and the diagram last"):
@@ -916,7 +916,7 @@ with description("the board tools") as self:
                 "ticket.edit_text", "ticket.tag", "ticket.delete", "ticket.add_child", "ticket.pull_out", "ticket.reassign_parent", "ticket.move_before",
                 "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
-                "session.choose_workpath", "session.folder_files", "session.workpath_files", "session.read_file", "session.write_file", "session.file",
+                "session.choose_workpath", "session.folder_files", "session.workpath_files", "session.read_file", "session.write_file", "session.file", "session.show",
                 "session.write_handoff", "session.read_handoff_format", "session.read_cdr_format", "session.list_cdrs", "session.write_cdr",
                 "practice-session-output.enable", "practice-session-output.choose_root", "practice-session-output.use_default_root", "fidelity-session-output.choose_format",
                 "backlog-item.create", "backlog-item.start", "backlog-item.start_under", "backlog-item.edit_text", "backlog-item.move_before",

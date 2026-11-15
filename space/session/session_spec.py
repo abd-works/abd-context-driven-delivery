@@ -1136,6 +1136,44 @@ with description("a session whose branch changed code in the folder it works in"
         expect([entry.path for entry in self.code.files()["typescript"]]).to(equal(["work/orders/order_view.tsx"]))
 
 
+# UX's front-end code is reviewed against the screens it was built from: its view code is Clean Engineering's code to
+# review, so the files a person reviews for it are the IA's and the mockup's, the design canvas opening at its link.
+with description("a session whose UX work has an information architecture, a published design canvas, and view code") as self:
+    with before.each:
+        self.home = ExampleHome()
+        self.repo = Path(tempfile.mkdtemp(prefix="session-ux-")).resolve()
+        (self.repo / ".git").mkdir()
+        self.work = self.repo / "work"
+        canvas = self.work / "design-canvas"
+        written = {
+            self.work / "checkout" / ".context" / "information-architecture.drawio": "<mxfile/>",
+            canvas / "version-1" / "project" / "canvas.json": "{}",
+            canvas / "versions.json": json.dumps({"version-1": "https://claude.ai/artifact/checkout-canvas"}),
+            self.work / "checkout" / "OrderView.tsx": "export function OrderView() {}",
+        }
+        for file, text in written.items():
+            file.parent.mkdir(parents=True, exist_ok=True)
+            file.write_text(text, encoding="utf-8")
+        Sessions(self.repo).switch("alpha", self.work)
+        self.front_end_code = Sessions(self.repo).current().practice("ux").fidelities["front_end_code"]
+
+    with after.each:
+        shutil.rmtree(self.repo, ignore_errors=True)
+        self.home.close()
+
+    with it("should review the information architecture's diagram"):
+        expect([entry.path for entry in self.front_end_code.files_to_review()["drawio"]]).to(contain("work/checkout/.context/information-architecture.drawio"))
+
+    with it("should review the design canvas at the link it is published at"):
+        expect([(entry.path, entry.link) for entry in self.front_end_code.files_to_review()["claude_design"]]).to(
+            equal([("work/design-canvas/version-1/project/canvas.json", "https://claude.ai/artifact/checkout-canvas")])
+        )
+
+    with it("should leave its view code to Clean Engineering's review"):
+        reviewed = [entry.path for entries in self.front_end_code.files_to_review().values() for entry in entries]
+        expect(reviewed).not_to(contain("work/checkout/OrderView.tsx"))
+
+
 # (E) Open Work Session
 # (S) Session --> Switch Session
 with description("a session on an MCP host whose CDD_REPO is the CDD checkout, not the project"):

@@ -32,6 +32,15 @@ _CODE_EXTENSIONS = {"typescript": (".ts", ".tsx"), "javascript": (".js", ".jsx")
 REPORT_DATE_FORMAT = "%Y%m%dT%H%M%S"
 
 
+def _canvas_link(file: Path) -> str:
+    """The link a design canvas's ``canvas.json`` is published at (``<design-canvas>/version-N/project/canvas.json``),
+    as its versions record it; none for any other file, or a version not yet published."""
+    if file.name != "canvas.json" or file.parent.name != "project":
+        return ""
+    version = file.parent.parent
+    return CanvasVersions(version.parent).links().get(version.name, "")
+
+
 @identity("session_file", "name")
 @language_adapter(language="typescript")
 @agent_toolset
@@ -402,7 +411,7 @@ class FidelitySessionOutput:
             named = repo.root / declared.glob
             return [FileEntry(declared.glob, named.exists(), named.exists() and named.resolve() in changed())]
         found = self._found(label, declared)
-        return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed()) for file in found] or [FileEntry(declared.glob, False)]
+        return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed(), _canvas_link(file)) for file in found] or [FileEntry(declared.glob, False)]
 
     def _worked_on_code(self, label: str, changed: Callable[[], set[Path]]) -> list[FileEntry]:
         """The code a fidelity that declares a folder per module writes, such as Clean Engineering's ``{module}/``: the
