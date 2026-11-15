@@ -17,6 +17,8 @@ from space.repo.worktree import Worktree, Worktrees
 
 # A file git reports as changed that is the hook server's running log, not work: it never blocks a switch or a close.
 _RUNTIME_LOG = "events.log"
+# The names a default branch goes by, the newer first: a repository made before git named its first branch main has master.
+_DEFAULT_BRANCH_NAMES = ("main", "master")
 # The session files every branch only appends to, which a merge keeps both sides of.
 _UNION_MERGED_LOGS = (".sessions/**/session.log merge=union", ".sessions/**/session.err merge=union")
 
@@ -78,7 +80,6 @@ class Repo:
 
     def __init__(self, root: str | Path = ".") -> None:
         self.root = Path(root).resolve()
-        self.default_branch = "main"
         # The git command line, run in this clone.
         self.git = Git(self.root)
         # The checkouts of this repository: the main clone and the linked worktrees beside it.
@@ -190,6 +191,21 @@ class Repo:
         read = folder.head_commit() if folder is not None else ""
         return read or self.git.run("rev-parse", "HEAD")
 
+    @cached_property
+    def default_branch(self) -> str:
+        """The repository's default branch, read once: the branch origin's HEAD names, else main or master, whichever
+        the clone or origin has, else main. A repository made before git named its first branch main keeps master,
+        and a merge or push to its default branch must land there, not on a new main."""
+        try:
+            named = self.git.run("symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD")
+        except RepoConnectError:
+            named = ""
+        if named.startswith("origin/"):
+            return named.removeprefix("origin/")
+        candidates = [f"{place}{name}" for place in ("refs/heads/", "refs/remotes/origin/") for name in _DEFAULT_BRANCH_NAMES]
+        found = next((ref for ref in candidates if self.has_ref(ref)), "")
+        return found.rsplit("/", 1)[-1] if found else _DEFAULT_BRANCH_NAMES[0]
+
     @property
     def default_start_point(self) -> str:
         """Where a branch origin has never seen starts: origin's default branch, else the local default branch."""
@@ -287,6 +303,11 @@ class Repo:
             return
         self._merge(tracked, "")
 
+    @property
+    def head_message(self) -> str:
+        """The message of the commit the checked-out branch is on."""
+        return self.git.run("log", "-1", "--format=%B")
+
     def needs_push(self) -> bool:
         """True when origin has no copy of the current branch yet or the branch is ahead of it. A git failure is raised,
         not read as nothing to push, so a close never reports a branch pushed that was not."""
@@ -362,6 +383,51 @@ class Repo:
         if sync_remote:
             self.push_upstream()
         return Commit(sha, text)
+
+    @long_call
+    @agent_tool
+    @mcp
+    def push_work(self) -> Commit:
+        """Commit this checkout's work on its branch and push the branch, nothing merged: the chat bar's push. The
+        checkout is the one of the project the call names, the folder the calling chat works in. Answer the commit the
+        branch is on."""
+        branch = self.current_branch
+        self.commit([str(self.root)], f"{branch.name}: work pushed", untracked=True)
+        if self.has_origin:
+            self.push_upstream()
+        return Commit(self.current_commit, self.head_message)
+
+    @long_call
+    @agent_tool
+    @mcp
+    def merge_to_main(self) -> Commit:
+        """Commit this checkout's work on its branch, then merge that branch into main in the main clone, which goes back
+        to the branch it had; nothing is pushed. The checkout is the one of the project the call names, the folder the
+        calling chat works in, such as a session's own worktree. Answer the commit main is on."""
+        return self._take_work_to_main(push=False)
+
+    @long_call
+    @agent_tool
+    @mcp
+    def push_to_main(self) -> Commit:
+        """Commit this checkout's work on its branch and push the branch, merge it into main in the main clone, and push
+        main, so origin's main holds the work; the main clone goes back to the branch it had. Answer the commit main is
+        on."""
+        return self._take_work_to_main(push=True)
+
+    def _take_work_to_main(self, push: bool) -> Commit:
+        branch = self.current_branch
+        self.commit([str(self.root)], f"{branch.name}: work taken to main", untracked=True)
+        if push and not branch.is_default and self.has_origin:
+            self.push_upstream()
+        clone = self.main_clone
+        returning_to = clone.current_branch
+        branch.merge_into_default()
+        if push and clone.has_origin:
+            clone.push_upstream()
+        landed = Commit(clone.current_commit, clone.head_message)
+        returning_to.switch_to()
+        return landed
 
     @command(name="push")
     @agent_instructions
@@ -489,15 +555,19 @@ class Branch:
             repository.push_upstream()
 
     def land_on_default(self) -> None:
-        """Merge this branch into the default branch in the main clone and push the default branch. A linked worktree
-        cannot check the default branch out while the main clone has it, and may be gone by now, so the main clone does
-        the merge whichever checkout this branch was found from."""
+        """Merge this branch into the default branch in the main clone and push the default branch."""
+        self.merge_into_default().push_upstream()
+
+    def merge_into_default(self) -> Repo:
+        """Merge this branch into the default branch in the main clone, after origin's copy of it, and answer the main
+        clone, left on the default branch. A linked worktree cannot check the default branch out while the main clone
+        has it, and may be gone by now, so the main clone does the merge whichever checkout this branch was found from."""
         repository = self._repo.main_clone
         default = repository.default_branch
         repository.branch_named(default).check_out()
         repository.catch_up_with_origin()
         repository.merge_from(self, message=f"merge {self.name} into {default}")
-        repository.push_upstream()
+        return repository
 
     def delete(self, unmerged: bool = False) -> None:
         """Delete this branch here and on origin. git refuses a branch not merged into the default branch unless

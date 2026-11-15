@@ -14,6 +14,14 @@ export type HealthViewJson = { areDetailsOpen: boolean }
 
 export type InstallJson = { state: 'idle' | 'running' | 'installed' | 'failed'; error: string | null }
 
+// The CDD version badge. data is cdd-version.check's answer, read as the chat opens; isAsking while the update dialog
+// is open; problem is why it is not read yet, such as cdd still connecting; update and error say how the last Update
+// and reinstall went.
+export type CddVersionJson = { data: object | null; problem: string | null; isAsking: boolean; update: InstallJson['state']; error: string | null }
+
+// The chat bar's two pushes. isAsking while Push & merge's dialog is open; state and error say how the last push went.
+export type ToMainJson = { isAsking: boolean; state: InstallJson['state']; error: string | null }
+
 // The app a person last pressed in the status row: opening while App.open readies it, failed with what failed and how to
 // fix it, idle once it opened in the side panel.
 // url: where the app answers once it is ready, drawn as a link; null until then.
@@ -75,6 +83,8 @@ declare module 'claude-code' {
       serverHealth: ServerHealthJson
       healthView: HealthViewJson
       install: InstallJson
+      cddVersion: CddVersionJson
+      toMain: ToMainJson
       appOpening: AppOpeningJson
       chatBar: ChatBarJson
       failure: FailureJson

@@ -11,9 +11,10 @@ from pathlib import Path
 
 _COMMAND_TIMEOUT_SECONDS = 10
 # Push, fetch, and pull wait on the network. Checkout, merge, and worktree rewrite the working
-# tree, and stopping one partway leaves a half-switched checkout with a stale index.lock.
+# tree, and stopping one partway leaves a half-switched checkout with a stale index.lock. Add and commit read every
+# file of the working tree, many seconds in a large checkout, and a commit stopped partway leaves that lock too.
 _LONG_COMMAND_TIMEOUT_SECONDS = 180
-_LONG_COMMANDS = frozenset({"push", "fetch", "pull", "checkout", "merge", "worktree"})
+_LONG_COMMANDS = frozenset({"push", "fetch", "pull", "checkout", "merge", "worktree", "add", "commit"})
 # Where Git for Windows installs git when it is not on the PATH, such as under the cdd server.
 _WINDOWS_GIT_INSTALLS = (Path(r"C:\Program Files\Git\cmd\git.exe"), Path(r"C:\Program Files\Git\bin\git.exe"))
 

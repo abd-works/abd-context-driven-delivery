@@ -418,11 +418,11 @@ class TypeScriptToolset:
         return f"import type {{ {', '.join(names)} }} from '{path if path.startswith('.') else f'./{path}'}'"
 
     def _data_lines(self) -> list[str]:
+        # A toolset with no data of its own still states the data its operations answer, such as a repository's commit.
         root = self._data_shape
-        if root is None:
-            return [f"export type {self.data_name} = {_OPEN_DATA}", ""]
-        self._shapes[self.shape_of(root).name] = root
-        lines: list[str] = []
+        lines: list[str] = [f"export type {self.data_name} = {_OPEN_DATA}", ""] if root is None else []
+        if root is not None:
+            self._shapes[self.shape_of(root).name] = root
         written: set[str] = set()
         while unwritten := [name for name in self._shapes if name not in written]:
             for name in unwritten:

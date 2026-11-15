@@ -10,7 +10,7 @@ _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from expects import equal, expect, raise_error
+from expects import end_with, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -58,6 +58,13 @@ with description("a cdd home's Claude Code plugins") as self:
 
         with it("should list only the cdd plugin"):
             expect(_plugin_names(self.home)).to(equal(["cdd"]))
+
+        # The server names a Claude Code chat from its connection, so the plugin runs nothing before a chat connects;
+        # the hook only starts a server that is not running.
+        with it("should start the server when a chat starts"):
+            hooks = json.loads((self.home.claude_plugins / "cdd" / "hooks" / "hooks.json").read_text(encoding="utf-8"))
+            command = hooks["hooks"]["SessionStart"][0]["hooks"][0]["command"]
+            expect(command).to(end_with(f'"{self.home.connect_script}" --start'))
 
     # A chat runs the board mod its marketplace names; one named in a worktree runs that branch's mod, whatever the server runs.
     with context("that serves a checkout"):

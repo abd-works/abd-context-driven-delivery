@@ -39,7 +39,7 @@ class ClaudePlugins:
             return "watched"
         installed = self.installed
         from_checkout = self.CHECKOUT_BOARD in installed
-        if not from_checkout and installed.get(self.BOARD) == self.published_board_version:
+        if not from_checkout and installed.get(self.BOARD) == self.published_version(BOARD_PLUGIN):
             return "installed"
         claude = self.claude_cli
         if claude is None:
@@ -51,9 +51,10 @@ class ClaudePlugins:
         return self._install(claude, self.BOARD)
 
     def install_cdd(self) -> str:
-        """Install the ``cdd`` plugin. Without it Claude Code has no cdd at all, so a miss is printed with the command
-        to run by hand. Claude Code reads it from its folder, so one already installed needs no claude command."""
-        if self.CDD in self.installed:
+        """Install the ``cdd`` plugin, or update it when the server it declares has changed. Without it Claude Code has no
+        cdd at all, so a miss is printed with the command to run by hand. One installed at the published version needs
+        no claude command."""
+        if self.installed.get(self.CDD) == self.published_version(CLAUDE_PLUGIN):
             return "installed"
         claude = self.claude_cli
         if claude is None:
@@ -76,9 +77,9 @@ class ClaudePlugins:
             return {}
         return {name: str((entries or [{}])[0].get("version", "")) for name, entries in plugins.items()}
 
-    @property
-    def published_board_version(self) -> str:
-        manifest = JsonFile(self._home.claude_plugins / BOARD_PLUGIN / ".claude-plugin" / "plugin.json")
+    def published_version(self, plugin: str) -> str:
+        """The version ``~/.cdd`` publishes the plugin named plugin at; empty when it publishes none."""
+        manifest = JsonFile(self._home.claude_plugins / plugin / ".claude-plugin" / "plugin.json")
         try:
             return str(manifest.read().get("version", ""))
         except JsonFileUnreadable:

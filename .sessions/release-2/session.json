@@ -5,11 +5,20 @@
   "branch": "release-2",
   "worktree": "C:\\dev\\abd-cdd-2",
   "practices": {
+    "clean_engineering": {
+      "enabled": true
+    },
+    "stories": {
+      "enabled": true
+    },
     "ddd": {
       "enabled": true
     },
+    "ux": {
+      "enabled": true
+    },
     "bdd": {
-      "enabled": false
+      "enabled": true
     }
   }
 }

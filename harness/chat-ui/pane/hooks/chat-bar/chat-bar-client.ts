@@ -263,6 +263,23 @@ export async function refreshChatBar($: EngineInterface): Promise<void> {
   }
 }
 
+// cdd is often still connecting when a chat opens, so the first read fails and the bar would stay empty until a turn
+// ended. Reading again every two seconds, for up to a minute, fills the bar in as soon as cdd answers.
+const OPENING_RETRY_MILLISECONDS = 2000
+const OPENING_TRIES = 30
+
+// Read the board with read, then again after a short wait while the board has not answered, until it does or the tries
+// run out; a chat whose cdd stays down reads it again after its next turn.
+export function readChatBarUntilAnswered($: EngineInterface, readBar: () => Promise<void>, attempt = 1): void {
+  $.clock.after(OPENING_RETRY_MILLISECONDS, () => void readAgainWhileUnanswered($, readBar, attempt))
+}
+
+async function readAgainWhileUnanswered($: EngineInterface, readBar: () => Promise<void>, attempt: number): Promise<void> {
+  if ((await read($, chatBar)).problem === null) return
+  await readBar()
+  if ((await read($, chatBar)).problem !== null && attempt < OPENING_TRIES) readChatBarUntilAnswered($, readBar, attempt + 1)
+}
+
 // A restart of the cdd server, as an install does, cuts off a call in flight. board.overview only reads, so a read cut
 // off that way is asked again once the server is back, before the bar says the board did not answer.
 const CUT_OFF = 'connection closed'
