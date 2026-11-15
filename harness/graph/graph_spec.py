@@ -59,6 +59,14 @@ def owned_types(node: dict, practice: str) -> set[str]:
     }
 
 
+def opened_tree(graph: Graph, entry: dict) -> dict:
+    """The entry with every branch below it opened through explorer_branch, as a person opening each one sees it."""
+    if entry.get("children_left_out"):
+        entry = data_of(graph.explorer_branch(entry["node_id"]))
+    children = [child if child.get("type") in _RULE_TYPES else opened_tree(graph, child) for child in entry.get("children") or []]
+    return {**entry, "children": children}
+
+
 def tree_child(node: dict, name: str) -> dict:
     for child in node.get("children") or []:
         if child.get("name") == name:
@@ -838,15 +846,32 @@ with description("a graph"):
                     with it("should keep the practice's root as the explorer tree"):
                         expect([tree["type"] for tree in data_of(self.graph.explorer_trees())]).to(equal(["Practice"]))
 
+                    with it("should send the explorer tree with the entries below its first level left out"):
+                        tree = data_of(self.graph.explorer_trees())[0]
+                        below = [entry for child in tree["children"] for entry in child.get("children") or [] if entry["type"] not in _RULE_TYPES]
+                        expect(below).to(equal([]))
+
+                    with it("should say how many entries each first-level entry left out"):
+                        tree = data_of(self.graph.explorer_trees())[0]
+                        expect(sum(child.get("children_left_out", 0) for child in tree["children"])).to(be_above(0))
+
+                    with context("that has a branch opened"):
+                        with it("should answer the entries the branch left out"):
+                            closed = next(child for child in data_of(self.graph.explorer_trees())[0]["children"] if child.get("children_left_out"))
+                            opened = data_of(self.graph.explorer_branch(closed["node_id"]))
+                            expect(len([child for child in opened["children"] if child["type"] not in _RULE_TYPES])).to(equal(closed["children_left_out"]))
+
                     with it("should keep the account-credentials aggregate in the explorer tree"):
-                        expect([item["name"] for item in walk_tree(data_of(self.graph.explorer_trees())[0])]).to(contain("account-credentials"))
+                        tree = opened_tree(self.graph, data_of(self.graph.explorer_trees())[0])
+                        expect([item["name"] for item in walk_tree(tree)]).to(contain("account-credentials"))
 
                     with it("should keep an entity root in the explorer tree only as the way to an aggregate, without its rules"):
-                        roots = [item for item in walk_tree(data_of(self.graph.explorer_trees())[0]) if item["type"] == "EntityRoot"]
+                        tree = opened_tree(self.graph, data_of(self.graph.explorer_trees())[0])
+                        roots = [item for item in walk_tree(tree) if item["type"] == "EntityRoot"]
                         expect([child["type"] for root in roots for child in root["children"] if child["type"] in _RULE_TYPES]).to(equal([]))
 
                     with it("should keep the aggregates' rules in the explorer tree"):
-                        aggregate = tree_named(data_of(self.graph.explorer_trees())[0], "account-credentials", "Aggregate")
+                        aggregate = tree_named(opened_tree(self.graph, data_of(self.graph.explorer_trees())[0]), "account-credentials", "Aggregate")
                         expect([child["type"] for child in aggregate["children"]]).to(contain("rules"))
 
         with context("with behavior-driven development that has one story spec without describes"):

@@ -1,4 +1,4 @@
-"""Review Files In Viewer at the server tier: the shared scenarios through the cdd tools session.read_file,
+"""Review Files In Files App at the server tier: the shared scenarios through the cdd tools session.read_file,
 session.write_file, the file-comments tools and the chat tools, on a cdd server started on a throwaway project."""
 
 from space.kanban.session_board_tiers import ServerTier
@@ -18,4 +18,4 @@ WIRING = [
     "Clear the processed comments, keeping the rest",
 ]
 
-globals().update(replay(load_shared(__file__, "review-files-in-viewer"), ServerTier(), only=WIRING))
+globals().update(replay(load_shared(__file__, "review-files-in-files-app"), ServerTier(), only=WIRING))

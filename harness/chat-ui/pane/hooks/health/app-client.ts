@@ -29,10 +29,10 @@ export function currentAppOpening($: EngineInterface) {
 export async function openApp($: EngineInterface, label: string): Promise<AppData> {
   const app = await installedApp($, label)
   if (app.status === 'running') return app
-  startServer($, app.server)
-  if (await cameUp($, app.url)) return app
+  const server = startServer($, app.server)
+  if (await cameUp($, app.url, server)) return app
   const { port } = new URL(app.url)
-  throw new AppNotOpened(`The ${label} did not start: nothing answered on port ${port}. Run ${app.server.command.join(' ')} in ${app.server.folder}.`)
+  throw new AppNotOpened(`The ${label} did not start: ${server.whyNotUp(port)}. Run ${app.server.command.join(' ')} in ${app.server.folder}.`)
 }
 
 // An install runs npm and can outlast the seconds the server waits on a call: it then answers that the call is still
@@ -51,12 +51,46 @@ async function installedApp($: EngineInterface, label: string): Promise<AppData>
   throw new AppNotOpened(`The ${label} is still installing after fifteen minutes; press it again to wait for that install.`)
 }
 
+// How much of what the server wrote is kept, to say why it did not come up: its last lines hold the error.
+const KEPT_OUTPUT_CHARACTERS = 4_000
+const LAST_LINES_SHOWN = 2
+// A line naming an error, as Node and npm print one (`Error: listen EADDRINUSE: ...`); the stack and its echoes follow.
+const ERROR_LINE = /(^|\s)(\w*Error|ERR!?)\b:?/
+
+// An app server this chat started, and what it wrote. A server that dies as it starts, such as one whose port another
+// process holds (EADDRINUSE), says why only in what it wrote, so that is kept for the failure the person reads.
+class StartedServer {
+  private output = ''
+  hasEnded = false
+
+  wrote(text: string): void {
+    this.output = (this.output + text).slice(-KEPT_OUTPUT_CHARACTERS)
+  }
+
+  // The first line naming its error, else its last lines; else that nothing answered on the port.
+  whyNotUp(port: string): string {
+    const lines = this.output.split(/\r?\n/).map(line => line.trim()).filter(Boolean)
+    const shown = lines.find(line => ERROR_LINE.test(line)) ?? lines.slice(-LAST_LINES_SHOWN).join(' / ')
+    const ended = this.hasEnded ? 'its server ended' : `nothing answered on port ${port}`
+    return shown ? `${ended}: ${shown}` : ended
+  }
+}
+
 // The server lives as long as this chat's mod: leaving the loop, or the module unloading, ends it.
-function startServer($: EngineInterface, server: AppServerData): void {
+function startServer($: EngineInterface, server: AppServerData): StartedServer {
+  const started = new StartedServer()
   void (async () => {
     const running = $.process.spawn({ argv: server.command, cwd: server.folder })
-    for await (const { text } of running) $.ui.log(text, { to: 'debug' })
-  })().catch(shownAsFailure($, `The app server stopped: ${server.command.join(' ')}`, `Running the app server in ${server.folder}`))
+    for await (const { text } of running) {
+      started.wrote(text)
+      $.ui.log(text, { to: 'debug' })
+    }
+  })()
+    .catch(shownAsFailure($, `The app server stopped: ${server.command.join(' ')}`, `Running the app server in ${server.folder}`))
+    .finally(() => {
+      started.hasEnded = true
+    })
+  return started
 }
 
 function answers($: EngineInterface, url: string): Promise<boolean> {
@@ -66,12 +100,13 @@ function answers($: EngineInterface, url: string): Promise<boolean> {
     .catch(() => false)
 }
 
-async function cameUp($: EngineInterface, url: string): Promise<boolean> {
-  for (let waited = 0; waited < STARTED_WITHIN_MILLISECONDS; waited += STARTED_CHECK_MILLISECONDS) {
+// Waits for the app to answer, and stops waiting once its server has ended: it will not answer then.
+async function cameUp($: EngineInterface, url: string, server: StartedServer): Promise<boolean> {
+  for (let waited = 0; waited < STARTED_WITHIN_MILLISECONDS && !server.hasEnded; waited += STARTED_CHECK_MILLISECONDS) {
     if (await answers($, url)) return true
     await after($, STARTED_CHECK_MILLISECONDS, '')
   }
-  return false
+  return answers($, url)
 }
 
 // A press on an app in the status row opens it in the side panel, readied first; a refusal stays in the server health

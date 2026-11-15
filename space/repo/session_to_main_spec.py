@@ -53,6 +53,14 @@ with description("a session's work taken to main") as self:
             with it("should answer the commit main is on"):
                 expect(self.landed.subject).to(equal(f"merge {SESSION_BRANCH} into main"))
 
+        with context("and the clone's own changes not committed, such as the session's log written in main"):
+            with before.each:
+                (self.clone / "session.log").write_text("tool repo.merge_to_main", encoding="utf-8")
+                self.held.serve(self.tree).merge_to_main()
+
+            with it("should hold the clone's changes on main beside the work"):
+                expect(self.held.trees["main"]).to(have_key("session.log"))
+
         with context("that is pushed to main"):
             with before.each:
                 self.held.serve(self.tree).push_to_main()

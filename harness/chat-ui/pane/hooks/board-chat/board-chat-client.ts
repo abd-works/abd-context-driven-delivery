@@ -1,6 +1,7 @@
-import type { ChatCommandData } from '@cdd/harness/chat/chat'
+import type { ChatCommandData, ChatData } from '@cdd/harness/chat/chat'
 import type { EngineInterface } from 'claude-code'
 
+import { currentChatBar, refreshChatBar } from '../chat-bar/chat-bar-client'
 import { openFileInViewer } from '../chat-bar/fidelity-files-client'
 import { commandOf, filledPrompt, REFUSED_WITHIN_MILLISECONDS } from '../shared/chat-command'
 import { reasonOf, showFailure } from '../error-display/failure-client'
@@ -45,12 +46,17 @@ async function ranOrFilled($: EngineInterface, chat: string, command: ChatComman
 function shown($: EngineInterface, chat: string, command: ChatCommandData): Promise<string> {
   if (command.kind === 'open_file') return openFileInViewer($, command.text).then(() => '', reasonOf)
   if (command.kind === 'fill') return filledPrompt($, command.text).catch(reasonOf)
+  // A kind this bar does not know is refused, never submitted: an older bar submitted a refresh's text as the
+  // person's own message.
+  if (command.kind !== 'command' && command.kind !== 'submit') return Promise.resolve(`this chat bar does not know the command kind ${command.kind}: run /reload-plugins`)
   return command.text.startsWith('/') ? ranOrFilled($, chat, command) : submitted($, command.text)
 }
 
 // The board shows each message as shown or failed, so a message the chat could not take is never silent. A fill waits
 // for the person to send it, so only a command or a submit has work for the chat to finish.
 async function run($: EngineInterface, chat: string, command: ChatCommandData): Promise<void> {
+  if (command.kind === 'refresh') return refreshed($, chat, command)
+  if (command.kind === 'failure') return failed($, chat, command)
   const hasTurn = command.kind === 'command' || command.kind === 'submit'
   $.ui.toast(`Board message arrived: ${command.text}`)
   if (hasTurn) awaitTurn(command.message)
@@ -61,8 +67,45 @@ async function run($: EngineInterface, chat: string, command: ChatCommandData): 
   await post($, { chat, operation: 'confirm', body: { message: command.message, is_shown: !reason, reason } })
 }
 
-// Checks in through the board, which runs chat.check_in on the cdd server every chat shares. The folder the chat works in
-// lets the board find a ticket's chat: the one working in the ticket's worktree.
+// A refresh reads the board and the format chips again, with no toast: a page such as the Files app turned a practice
+// or a format on or off for the session, which the bar shows only after it reads them.
+async function refreshed($: EngineInterface, chat: string, command: ChatCommandData): Promise<void> {
+  const reason = await refreshChatBar($)
+    .then(() => '', reasonOf)
+  if (reason) await showFailure($, `The chat bar did not read the board again: ${reason}`, `A refresh ${command.text} sent to this chat`)
+  await post($, { chat, operation: 'confirm', body: { message: command.message, is_shown: !reason, reason } })
+}
+
+// A page the chat opened, such as the Files app, failed: its failure shows on the chat bar as the bar's own do, where
+// the person can have the chat fix it.
+async function failed($: EngineInterface, chat: string, command: ChatCommandData): Promise<void> {
+  const { failure, context } = JSON.parse(command.text) as { failure: string; context: string }
+  await showFailure($, failure, context)
+  await post($, { chat, operation: 'confirm', body: { message: command.message, is_shown: true, reason: '' } })
+}
+
+// How many check-ins in a row may fail before the bar shows it: a cdd server restarting, as a repin restarts it, drops
+// the call in flight, and the check-in a second later answers again. Ten failed in a row is a cdd that is not coming back.
+const FAILED_CHECK_INS_SHOWN = 10
+let failedCheckIns = 0
+
+// The check-in every second, or, between an idle chat's check-ins, the read of its selection: a failure shows once it
+// keeps happening, with the reason the last one gave and how long it has gone on.
+export async function keepInTouch($: EngineInterface, chat: string, isCheckIn: boolean): Promise<void> {
+  try {
+    if (!isCheckIn) return
+    await checkIn($, chat)
+    failedCheckIns = 0
+  } catch (failure) {
+    failedCheckIns += 1
+    if (failedCheckIns !== FAILED_CHECK_INS_SHOWN) return
+    await showFailure($, `This chat has not reached cdd for ${FAILED_CHECK_INS_SHOWN} check-ins`, 'The check-in every second, calling chat.check_in', failure)
+  }
+}
+
+// Checks in with cdd every second: whether a turn is running, what to call the chat, and the folder it works in, which
+// lets the board find a ticket's chat. The dots then draw the selection cdd holds for the chat, which a page the chat
+// opened, such as the Files app, may have changed.
 export async function checkIn($: EngineInterface, chat: string): Promise<void> {
   const answer = await post($, { chat, operation: 'check-in', body: { is_busy: isChatBusy(), name: currentChatName(), folder: await $.session.root() } })
   if (!answer.ok) return

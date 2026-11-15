@@ -1,7 +1,7 @@
 import { CHAT_QUERY, PROJECT_QUERY, type CddApi } from '@cdd/cdd-shared'
 import { AppClientGenerated, type AppData } from '@cdd/harness/diagnostics/app'
 
-import type { BoardStore } from '../shared/board-store'
+import type { Failures } from './board-api'
 
 // The apps' identities, the labels they registered under, as their generated clients name them.
 const GRAPH_APP = 'Graph'
@@ -18,7 +18,7 @@ export class EditorAppClient {
   readonly kanban: AppClientGenerated
 
   constructor(
-    private readonly store: BoardStore,
+    private readonly failures: Failures,
     private readonly api: CddApi,
     private readonly openWindow: (url: string) => void = url => void window.open(url, '_blank'),
   ) {
@@ -37,7 +37,7 @@ export class EditorAppClient {
     const opened = await app.open()
     if (!opened) return
     if (opened.status !== 'running') {
-      this.store.toast(`The ${opened.label} app is ${opened.status}: open it from the chat bar's status row, which starts it for that chat.`, true)
+      this.failures.fail(`The ${opened.label} app is ${opened.status}: open it from the chat bar's status row, which starts it for that chat.`, `Opening the ${opened.label} app from the Kanban board`)
       return
     }
     const page = new URL(opened.url)

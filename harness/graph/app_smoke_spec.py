@@ -5,7 +5,7 @@ from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
 
-from expects import contain, equal, expect
+from expects import contain, equal, expect, have_key
 from harness.installation.data_class import data_of  # noqa: E402
 from mamba import before, context, description, it
 
@@ -38,6 +38,9 @@ with description("an example graph"):
 
             with it("should list the same node types as the graph"):
                 expect(self.inventory["clean_engineering"]["node_types"]).to(equal(sorted(self.graph.practice("clean_engineering").reading.in_graph.node_types)))
+
+            with it("should leave the explorer tree to explorer_trees"):
+                expect(self.inventory["clean_engineering"]).not_to(have_key("tree"))
 
         with context("with stories"):
             with it("should count the same nodes as the graph"):

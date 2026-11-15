@@ -3,21 +3,25 @@
 from __future__ import annotations
 
 import threading
+from contextlib import contextmanager
+import time
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterator
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.agent_tools.agent_tools import noSessionLog, subAgent, tool_subject
 from harness.agent_tools.tool_call import ToolCall
 from harness.graph.graph import Graph
+from harness.graph.saved_graph import GRAPH_FILE_NAME, SavedGraph
+from harness.guidance.stages import STAGES
 from harness.graph.pattern_overlays import PatternOverlays
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.documents import load_document
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.files import command, skill
 from harness.installation.json_file import HeldJsonFile, JsonFile
-from harness.mcp.mcp_annotations import mcp
+from harness.mcp.mcp_annotations import long_call, mcp
 from harness.installation.context_config import CONTEXT_FOLDER, ContextConfig
 from space.repo.repo import Repo
 from space.session.answer_reads import AnswerReads, HeldForAnswer
@@ -28,6 +32,7 @@ from space.session.handoffs import HANDOFF_FORMAT_FILE, Handoffs
 from space.session.idea_file import IdeaFile
 from space.session.practice_session_output import PracticeSessionOutput
 from space.session.progress_cache import ProgressCache
+from space.session.guidance_selection import GUIDANCE_FIELD, GuidanceSelection
 from space.session.session_file import SessionFile
 from space.session.session_files import SessionFiles
 from space.session.session_log import HookLog, SessionLog
@@ -57,6 +62,13 @@ def _shown(value: object) -> str:
     text = str(value)
     return text if len(text) <= _SHOWN_CHARACTERS else f"{text[:_SHOWN_CHARACTERS]}…"
 
+
+# How long a page's waiting read of the guidance selection waits for a change before answering it unchanged, and how
+# often it looks for a change another process wrote.
+GUIDANCE_WAIT_SECONDS = 25
+GUIDANCE_CHECK_SECONDS = 1.0
+# Wakes every waiting read of a guidance selection this server changed, so none of them checks the disk in a loop.
+_GUIDANCE_CHANGED = threading.Condition()
 
 class SessionNotFoundError(LookupError):
     """A tool named a session.json that is not there, such as a session closed or moved since the board read it."""
@@ -115,6 +127,16 @@ class Session:
         self._graph: Graph | None = None
         # The practices the graph was made with, so turning one on or off makes it again.
         self._graph_practices: frozenset[str] = frozenset()
+        # When the session's graph last read each file a viewer showed, by its modification time, and the graph it read
+        # them into: reading one file into the graph takes a second or two, so a file is read again only once it changed.
+        self._files_read: tuple[Graph | None, dict[Path, float]] = (None, {})
+        self._graph_opened_at = 0.0
+        # While an update changes many practices and formats, each change leaves the version alone; the update raises it once.
+        self._is_guidance_batched = False
+        # The small graph a viewer reads one file into, apart from the knowledge graph: the practices it was made with,
+        # the graph, and the file it last read with that file's modification time.
+        self._file_graph: tuple[list[str], Graph, tuple[Path, float] | None] | None = None
+        self._file_graph_lock = threading.Lock()
         # Calls from several chats reach this one object at once; the first to ask makes the practices and the graph,
         # and the others wait for them, so the session never holds two. Reentrant, because the graph asks for the
         # practices while it is being made.
@@ -247,7 +269,50 @@ class Session:
                 if self.overlays:
                     graph.overlays = self.overlays
                 self._graph = graph
+                self._graph_opened_at = time.time()
             return self._graph
+
+    def file_alone(self, path: Path) -> SavedGraph:
+        """The file at path read on its own, as it is now, with only its own rules run: no other file is read or linked
+        to it, so a viewer shows its folds and the rules it breaks in under a second. The session keeps one small graph
+        for this, apart from its knowledge graph, made with its own instance of each practice the session works on, and
+        reads a file into it again only once it changed."""
+        working = sorted(key for key, output in self._own_outputs.items() if output.enabled)
+        modified = path.stat().st_mtime if path.is_file() else -1.0
+        with self._file_graph_lock:
+            if self._file_graph is None or self._file_graph[0] != working:
+                practices = [practice for practice in PracticeCatalogue.create_all() if practice.key in working]
+                self._file_graph = (working, Graph(practices), None)
+            _working, graph, read = self._file_graph
+            if read != (path, modified):
+                graph.load_files(str(self.work_root), working, [str(path)])
+                self._file_graph = (working, graph, (path, modified))
+            return SavedGraph.from_graph(graph)
+
+    def file_in_whole(self, path: Path, is_held: bool) -> SavedGraph:
+        """The file at path in the session's knowledge graph holding the whole working copy, so the rules that link files
+        and practices hold, which takes far longer than reading the file alone. The file is read into the graph when the
+        graph holds nothing of it (is_held false) or it changed since the graph last read it: since a viewer last showed
+        it, or, before that, since the graph was opened or saved."""
+        graph = self.graph
+        graph.hold_whole()
+        modified = path.stat().st_mtime if path.is_file() else -1.0
+        with self._parts_lock:
+            held, reads = self._files_read
+            if held is not graph:
+                reads = {}
+                self._files_read = (graph, reads)
+            is_current = is_held and modified <= reads.get(path, self._graph_read_at())
+            reads[path] = max(modified, time.time())
+        if not is_current:
+            graph.refresh([str(path)])
+        return SavedGraph.from_graph(graph)
+
+    def _graph_read_at(self) -> float:
+        """When the session's graph read the files it holds, for one no viewer has shown since: when it was opened, or
+        when the graph it opened was saved, whichever is earlier."""
+        saved = Path(self.session_path) / GRAPH_FILE_NAME
+        return min(self._graph_opened_at, saved.stat().st_mtime) if saved.is_file() else self._graph_opened_at
 
     @property
     def _own_outputs(self) -> dict[str, PracticeSessionOutput]:
@@ -273,12 +338,6 @@ class Session:
         entries = [paths] if isinstance(paths, (str, Path)) else list(paths)
         return load_document(content, [str(self.path_named(entry)) for entry in entries])
 
-    @property
-    @data_field(key="workpath")
-    def workpath_from_project(self) -> str:
-        """The folder the session works in, as a path from the project; empty for the whole repository."""
-        return self.from_project(self.work_root)
-
     def from_project(self, path: Path | str) -> str:
         """path as written from the project's top, the way the board names every file and folder."""
         return self.repo.path_from_top(path)
@@ -288,6 +347,24 @@ class Session:
     def title(self) -> str:
         """The title a person gave the session's ticket; empty when it has none."""
         return self.fields.get("title", "")
+
+    @property
+    @data_field
+    def repo_name(self) -> str:
+        """The repository the session works in, by its folder's name, as a page heads it."""
+        return self.repo.root.name
+
+    @property
+    @data_field
+    def branch(self) -> str:
+        """The branch the session works on, as its session.json names it, else the session's own name."""
+        return self.fields.get("branch") or self.name
+
+    @property
+    @data_field
+    def root(self) -> str:
+        """The whole path of the folder the session works in, as a page heads it."""
+        return str(self.work_root)
 
     @property
     @data_field
@@ -412,13 +489,15 @@ class Session:
         self.save_fields(name=self.name, workpath=self.workpath_from_checkout, repo_path=str(self.repo_path))
 
     @property
+    @data_field(key="workpath")
     def workpath_from_checkout(self) -> str:
-        """The session's root as saved in its session.json: from its checkout's top, so it can never name a folder in
+        """The folder the session works in, as its session.json saves it and the board shows it: from its checkout's
+        top, so a ticket working in its own worktree shows the folder it chose there, and it can never name a folder in
         another checkout of the repository; empty for the whole checkout, and absolute when it lies outside it."""
         root = self.work_root
         checkout = self._resolved(self.repo_path)
         if not root.is_relative_to(checkout):
-            return str(root)
+            return root.as_posix()
         relative = root.relative_to(checkout).as_posix()
         return "" if relative == "." else relative
 
@@ -531,6 +610,13 @@ class Session:
     @mcp
     @agent_tool
     @noSessionLog
+    def show(self) -> Session:
+        """This session as it stands, changing nothing: its title, workpath, and each practice with whether it is on and its colour."""
+        return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
     def folder_files(self) -> list[FileEntry]:
         """List every file in this session's folder, each with its path from the project: its log, handoffs, kept notes, and validation reports."""
         return self.session_files.in_folder()
@@ -559,9 +645,75 @@ class Session:
     @mcp
     @agent_tool
     @noSessionLog
-    def file(self, path: str) -> SessionFile:
-        """Return path, a file named as read_file names it, as the viewer shows it: its text and language, the comments on it, the folds of its classes, operations, and properties, and the rules the session's saved graph found broken in it, each on its range of lines."""
-        return SessionFile(self, path)
+    def guidance_selection(self) -> GuidanceSelection:
+        """Return the session's guidance selection: each stage and practice selected or not, the formats the selected stages' fidelities of the selected practices offer, each selected or not, those fidelities by slug, and the version every change raises. The chat bar's stage buttons, practice dots and format chips and the Files app's toggles all show it."""
+        return GuidanceSelection(self)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def update_guidance_selection(self, stages: list[str] | None = None, practices: list[str] | None = None, formats: list[str] | None = None) -> GuidanceSelection:
+        """Select exactly these stages (such as discovery), practices (such as stories), and format groups (such as markdown), each list in place of what was selected, a list left out unchanged; save it in session.json, raise the version once, and return the selection. A practice selected is one the session works on; a format group selected is chosen for every selected fidelity offering it."""
+        with self._guidance_batch():
+            if practices is not None:
+                for output in self.own_practices.values():
+                    if output.enabled != (output.name in practices):
+                        output.enable(output.name in practices)
+            if stages is not None:
+                self._save_guidance(stages=[stage for stage in STAGES.names if stage in stages])
+            if formats is not None:
+                for group in GuidanceSelection(self).formats:
+                    if group.is_selected != (group.label in formats):
+                        group.select(group.label in formats)
+        self.guidance_changed()
+        return GuidanceSelection(self)
+
+    @long_call
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def guidance_selection_after(self, version: int) -> GuidanceSelection:
+        """Return the session's guidance selection once its version is past version: at once when it already is, else as soon as a change raises it, else after GUIDANCE_WAIT_SECONDS with it unchanged. A page holds one such call open, so a selection made anywhere reaches it in a fraction of a second."""
+        deadline = time.monotonic() + GUIDANCE_WAIT_SECONDS
+        while self._guidance_version_on_disk() <= version and time.monotonic() < deadline:
+            # Woken at once by a change this server makes; a change another process writes is seen within a check.
+            with _GUIDANCE_CHANGED:
+                _GUIDANCE_CHANGED.wait(min(GUIDANCE_CHECK_SECONDS, max(0.0, deadline - time.monotonic())))
+        self._fields.drop()
+        return GuidanceSelection(self)
+
+    def guidance_changed(self) -> None:
+        """Raise the guidance selection's version, so every page waiting on it hears the change; once for a whole
+        update, however many practices and formats it changed."""
+        if self._is_guidance_batched:
+            return
+        self._save_guidance(version=self._guidance_version_on_disk() + 1)
+        with _GUIDANCE_CHANGED:
+            _GUIDANCE_CHANGED.notify_all()
+
+    def _save_guidance(self, **values: object) -> None:
+        self.save_fields(**{GUIDANCE_FIELD: {**dict(self.fields.get(GUIDANCE_FIELD, {})), **values}})
+
+    def _guidance_version_on_disk(self) -> int:
+        """The version as session.json holds it now, read past this answer's reads: another call raises it."""
+        held = self._session_json
+        return int(dict(held.read().get(GUIDANCE_FIELD, {})).get("version", 0)) if held is not None else 0
+
+    @contextmanager
+    def _guidance_batch(self) -> Iterator[None]:
+        self._is_guidance_batched = True
+        try:
+            yield
+        finally:
+            self._is_guidance_batched = False
+
+    @long_call
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def file(self, path: str, rules: bool = False, cross_file: bool = False) -> SessionFile:
+        """Return path, a file named as read_file names it, as the viewer shows it: its text and language, the comments on it, and with either of rules or cross_file the folds of its classes, operations, and properties. With rules, the rules it breaks read on its own, under a second; with cross_file, the rules only the whole working copy finds broken in it, linking files and practices, which takes far longer. Each on its range of lines. Both off, browsing never reads a graph."""
+        return SessionFile(self, path, rules, cross_file)
 
     @property
     def file_comments(self) -> FileComments:

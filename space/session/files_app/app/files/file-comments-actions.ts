@@ -53,13 +53,13 @@ export class FileCommentsActions {
 
   async send(anchor: string): Promise<void> {
     const chat = this.page.link.chat
-    if (!chat) return this.page.toast(NO_CHAT)
+    if (!chat) return this.page.fail(NO_CHAT, 'Sending a comment from the Files app')
     await this.page.attempt(`The comment ${anchor} was not sent`, () => this.comments.send(anchor, chat))
   }
 
   async sendOpen(): Promise<void> {
     const chat = this.page.link.chat
-    if (!chat) return this.page.toast(NO_CHAT)
+    if (!chat) return this.page.fail(NO_CHAT, 'Sending a comment from the Files app')
     await this.page.attempt('The open comments were not sent', () => this.comments.sendOpen(chat))
   }
 

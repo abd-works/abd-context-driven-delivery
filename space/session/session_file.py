@@ -5,6 +5,7 @@ between them."""
 from __future__ import annotations
 
 from difflib import SequenceMatcher
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Literal
 
@@ -99,11 +100,15 @@ class FileViolation:
 
 
 class SessionFile:
-    """A file of the session, named from the project: its text, the comments on it, its folds, and its violations.
-    Folds and violations come from the graph the session last saved, so a file the graph never read has none."""
+    """A file of the session, named from the project: its text, the comments on it, and, when the viewer asks, its folds
+    and the rules it breaks. With rules, the file is read on its own and only its own rules run; with cross_file, the
+    session's knowledge graph holds the whole working copy and adds the rules only it finds, linking files and
+    practices. Either read gives the folds."""
 
-    def __init__(self, session: Session, path: str) -> None:
+    def __init__(self, session: Session, path: str, rules: bool = False, cross_file: bool = False) -> None:
         self._session = session
+        self._reads_rules = rules
+        self._cross_file = cross_file
         self._text = session.session_files.read(path)
         self._path = self._text.path
 
@@ -148,31 +153,71 @@ class SessionFile:
     @property
     @data_field
     def folds(self) -> list[Fold]:
-        """A fold for each class, operation, and property the session's graph places in this file, in line order."""
-        nodes = [node for node in self._saved_nodes() if node.type in CLASS_TYPES | MEMBER_TYPES]
+        """A fold for each class, operation, and property read in this file, in line order; none while the viewer reads
+        no rules."""
+        if not (self._reads_rules or self._cross_file):
+            return []
+        nodes = [node for node in self._nodes() if node.type in CLASS_TYPES | MEMBER_TYPES]
         folds = [Fold(self.range(node.line, node.end_line), "class" if node.type in CLASS_TYPES else "block", node.name) for node in nodes if node.end_line > node.line]
         return sorted(folds, key=lambda fold: (fold.range.start_line, -fold.range.end_line))
 
     @property
     @data_field
     def violations(self) -> list[FileViolation]:
-        """Each rule the session's graph found broken in this file, on the lines it names; one naming no line covers
-        the first."""
-        graph = self._saved_graph()
-        found = [violation for violation in (graph.violations() if graph else []) if self._is_this_file(violation.location)]
+        """Each rule broken in this file, on the lines it names, one naming no line covering the first: with rules, those
+        its own read finds and the session's last validate saved; with cross_file, those only the whole working copy
+        finds."""
+        own = self._own_violations() if self._reads_rules else []
+        found = self._unique([*own, *(self._cross_file_violations() if self._cross_file else [])])
         return [FileViolation(violation, self.range(violation.line or 1, violation.end_line or violation.line or 1)) for violation in found]
 
     def range(self, start_line: int, end_line: int) -> Range:
         """Lines start_line to end_line of this file, with the text they hold now."""
         return Range.of_text(self._path, self.text, start_line, end_line)
 
-    def _saved_nodes(self):
-        graph = self._saved_graph()
-        return [node for practice in (graph.practices.values() if graph else []) for node in practice.nodes if self._is_this_file(node.file)]
+    def _nodes(self) -> list:
+        """This file's nodes as its own read found them, else as the session's last validate saved them."""
+        return self._in_this_file(self._alone) or self._in_this_file(self._last_validate)
 
-    def _saved_graph(self) -> SavedGraph | None:
-        """The graph saved in the session's folder; none before the session has saved one, or when it was saved in a
-        shape the graph no longer writes."""
+    def _own_violations(self) -> list[Violation]:
+        """What reading the file on its own finds broken, and what the session's last validate saved, which can hold a
+        rule a validating agent judged."""
+        return [violation for violation in [*self._alone.violations(), *(self._last_validate.violations() if self._last_validate else [])] if self._is_this_file(violation.location)]
+
+    def _cross_file_violations(self) -> list[Violation]:
+        """What the whole working copy finds broken in this file that reading it alone does not."""
+        alone = {self._key(violation) for violation in self._alone.violations()}
+        return [violation for violation in self._whole.violations() if self._is_this_file(violation.location) and self._key(violation) not in alone]
+
+    def _unique(self, violations: list[Violation]) -> list[Violation]:
+        """Each broken rule once, however many reads found it on the same lines."""
+        seen: set[tuple] = set()
+        kept = []
+        for violation in violations:
+            if self._key(violation) not in seen:
+                seen.add(self._key(violation))
+                kept.append(violation)
+        return kept
+
+    def _key(self, violation: Violation) -> tuple:
+        return (violation.rule, violation.line, violation.end_line, violation.message)
+
+    def _in_this_file(self, graph: SavedGraph | None) -> list:
+        return [node for practice in graph.practices.values() for node in practice.nodes if self._is_this_file(node.file)] if graph else []
+
+    @cached_property
+    def _alone(self) -> SavedGraph:
+        return self._session.file_alone(self._session.path_named(self._path))
+
+    @cached_property
+    def _whole(self) -> SavedGraph:
+        is_held = bool(self._in_this_file(SavedGraph.from_graph(self._session.graph)))
+        return self._session.file_in_whole(self._session.path_named(self._path), is_held)
+
+    @cached_property
+    def _last_validate(self) -> SavedGraph | None:
+        """What the session's last validate saved; none before it saved a graph, or one in a shape the graph no longer
+        writes, which the next validate writes again."""
         saved = Path(self._session.session_path) / GRAPH_FILE_NAME
         if not saved.is_file():
             return None

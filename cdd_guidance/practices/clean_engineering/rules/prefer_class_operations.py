@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
+from harness.graph.violation import Finding
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -16,8 +17,8 @@ class PreferClassOperations(ProductionCodeRule):
     node_types = ("OoadClass",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+        """Each module helper only this class uses, found on the helper's own line, where it is to be moved from."""
         return [
-            f"Module function '{function}' (line {line}) is only used from '{node.name}'. "
-            f"Move it onto '{node.name}' as a method."
+            Finding(f"Module function '{function}' (line {line}) is only used from '{node.name}'. Move it onto '{node.name}' as a method.", line)
             for function, line in node.get_fact("module_helpers", [])
         ]

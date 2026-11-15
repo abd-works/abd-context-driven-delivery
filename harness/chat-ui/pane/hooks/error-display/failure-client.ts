@@ -22,6 +22,11 @@ export class FailureClient {
     return this.json.context
   }
 
+  // Whether Fix was pressed and its prompt is on its way into the chat: the line shows Claude working instead of Fix.
+  get isFixing(): boolean {
+    return Boolean((this.json as FailureData & { is_fixing?: boolean }).is_fixing)
+  }
+
   // What Fix sends to the chat: the failure and its context, and the ask to find the cause and fix it.
   get fixPrompt(): string {
     return `The CDD chat bar above the prompt shows this failure; find its cause and fix it.\n\nFailure: ${this.failure}\nContext: ${this.context}`
@@ -55,7 +60,15 @@ export async function dismissFailure($: EngineInterface): Promise<void> {
 }
 
 // Fix sends the failure and its context to this chat's agent and clears it from the line.
+// Until the prompt is in the chat the line shows Claude working in place of Fix, so a second press cannot send it twice;
+// a prompt the chat did not take is a failure of its own, shown in place of the one it was fixing.
 export async function fixFailure($: EngineInterface, failure: FailureClient): Promise<void> {
-  await $.prompt.submit({ text: failure.fixPrompt, asUser: true })
+  if (failure.isFixing) return
+  await update($, shownFailure, json => (json ? { ...json, is_fixing: true } : json))
+  try {
+    await $.prompt.submit({ text: failure.fixPrompt, asUser: true })
+  } catch (thrown) {
+    return showFailure($, 'The fix did not reach the chat', `Pressing Fix on: ${failure.failure}`, thrown)
+  }
   await dismissFailure($)
 }

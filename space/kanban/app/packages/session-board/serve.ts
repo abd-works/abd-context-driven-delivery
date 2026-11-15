@@ -23,6 +23,10 @@ const server = app.listen(port, HOST, () => {
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
     server.close()
-    void projects.close().finally(() => process.exit(0))
+    // No request waits on the close, so a failure to close the cdd connections goes to stderr before the server exits.
+    projects
+      .close()
+      .catch((failure: unknown) => console.error('The session board server did not close its cdd connections:', failure))
+      .finally(() => process.exit(0))
   })
 }

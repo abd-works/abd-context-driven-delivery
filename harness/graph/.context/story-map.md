@@ -182,7 +182,7 @@ Observed: `violations: true` returns only nodes that fail a rule, each with only
 
 ### (S) Agent --> List Practice Inventory
 
-Observed: `graph.inventory` returns each loaded practice's node counts, edge count, node types, edge kinds, rules and explorer tree, with the overlays applied and available, and the app shows the same counts (`graph.py` `Graph.inventory`, `app_smoke_spec.py` "should count the same nodes as the graph").
+Observed: `graph.inventory` returns each loaded practice's node counts, edge count, node types, edge kinds and rules, with the overlays applied and available; `graph.explorer_trees` returns the trees, and the app shows the same counts (`graph.py` `Graph.inventory`, `app_smoke_spec.py` "should count the same nodes as the graph").
 
 ### (S) Agent --> List Filter Choices
 

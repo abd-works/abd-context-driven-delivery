@@ -1,25 +1,6 @@
-import { atom, read, update } from 'claude-code'
-import type { EngineInterface } from 'claude-code'
 
 import type { ColumnOverviewData } from '@cdd/space/kanban/board'
 
-import { clearChosenAction } from './action-picker-client'
-
-const shownStage = atom({ plugin: 'cdd-board', key: 'shownStage' } as const, null as string | null)
-// Atom stagePicker, declared in pane/types/index.d.ts: whether the stage button's list is open.
-const stagePicker = atom({ plugin: 'cdd-board', key: 'stagePicker' } as const, false)
-
-export function isStagePickerOpen($: EngineInterface) {
-  return read($, stagePicker)
-}
-
-export async function toggleStagePicker($: EngineInterface): Promise<void> {
-  await update($, stagePicker, isOpen => !isOpen)
-}
-
-export async function closeStagePicker($: EngineInterface): Promise<void> {
-  await update($, stagePicker, () => false)
-}
 
 // One glyph for each column board.overview sends, standing for the canvas's icons: Backlog, Discovery (magnifier),
 // Specification (document), Implementation (gear), Complete (check). A column the canvas has no icon for shows a dot.
@@ -78,19 +59,4 @@ export class StageClient {
   get tint(): string | undefined {
     return this.isShown ? TINT : undefined
   }
-}
-
-// Atom shownStage, declared in pane/types/index.d.ts and kept in this file: the stage whose fidelities the dots show.
-export function shownStageName($: EngineInterface) {
-  return read($, shownStage)
-}
-
-// Showing the session's own stage goes back to it. A fidelity of the last stage then reads as none selected, because
-// ChatBarClient.selectedFidelity looks only among the shown stage's fidelities.
-// Showing another stage drops an action picked from the menu, so the button shows the shown stage's next action.
-export async function selectStage($: EngineInterface, stage: StageClient): Promise<void> {
-  if (!stage.canShow) return
-  await update($, shownStage, () => (stage.isCurrent ? null : stage.stage))
-  await update($, stagePicker, () => false)
-  await clearChosenAction($)
 }
