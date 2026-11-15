@@ -72,12 +72,13 @@ class CddVersion:
     """Say which CDD version a chat runs and how it stands against the latest on origin main, so the chat bar's version
     badge can show it green, yellow, or red and offer the update."""
 
-    def __init__(self, checkout: Path | str, git: Git | None = None, project: Path | str | None = None) -> None:
+    def __init__(self, checkout: Path | str, git: Git | None = None, project: Path | str | None = None, project_git: Git | None = None) -> None:
         """checkout is the CDD checkout whose version the chat runs; project is the repository /version writes the next
-        version in, the one the chat works in."""
+        version in, commits it in, and pushes from, the one the chat works in."""
         self._checkout = Path(checkout)
         self._project = Path(project) if project is not None else self._checkout
         self._git = git or Git(self._checkout)
+        self._project_git = project_git or Git(self._project)
         self._fetch_problem = ""
 
     @classmethod
@@ -101,17 +102,29 @@ class CddVersion:
             self._fetch_problem = str(unreachable)
         return self
 
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def read(self) -> CddVersion:
+        """Answer the version this chat runs, read from disk now, against the version origin main had when last fetched,
+        without fetching. The chat bar reads it after every turn, so a changed version shows at once without asking
+        origin on each turn; ``check`` fetches."""
+        return self
+
     @command(name="version")
     @mcp
     @agent_tool
     def set_next(self, version: str = "") -> CddVersion:
-        """Set the next CDD version in the repository's pyproject.toml, so the next push to main carries it: the version
-        given, such as 0.2 or 1.0.1, or with none given the next minor version. Nothing raises the version by itself; run
-        this when a change is a release, before you push. Then tell the person the version it wrote."""
+        """Set the next CDD version in the repository's pyproject.toml, then commit that file alone and push the branch
+        to origin, so the version is the latest there at once: the version given, such as 0.2 or 1.0.1, or with none
+        given the next minor version. Nothing raises the version by itself; run this when a change is a release. Then
+        tell the person the version it wrote and pushed."""
         file = self._project / PYPROJECT
         text = file.read_text(encoding="utf-8")
         next_version = self._next_version_from(version, Release.from_pyproject(text))
         file.write_text(_VERSION_LINE.sub(f'version = "{next_version}"', text, count=1), encoding="utf-8")
+        self._project_git.run("commit", "-m", f"Version {Release.from_pyproject(file.read_text(encoding='utf-8')).label}", "--", PYPROJECT)
+        self._project_git.run("push", "origin", "HEAD")
         return self
 
     def _next_version_from(self, version: str, current: Release) -> str:

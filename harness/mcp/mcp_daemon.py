@@ -107,6 +107,13 @@ class McpDaemon:
         self.home.pin(checkout)
         return self._status(self.restart())
 
+    def update_from(self, checkout: Path) -> str:
+        """Serve checkout's current code the way the server already serves it, pinned or as it is on disk, restarting
+        the server onto it."""
+        self.home.install(checkout, CONNECT_SCRIPT)
+        self.home.serve_current(checkout)
+        return self._status(self.restart())
+
     def serve_checkout(self, checkout: Path) -> str:
         """Serve checkout as it is on disk, for working on CDD itself, restarting the server onto it."""
         self.home.install(checkout, CONNECT_SCRIPT)

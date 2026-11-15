@@ -43,9 +43,10 @@ def main() -> int:
     serving.add_argument(
         "--update",
         action="store_true",
-        help="Bring this checkout onto its latest commit (merging in what origin has) and serve that commit from "
-        "~/.cdd/runtime to every chat, restarting the cdd server, then rebuild the Session Board's page. The Session "
-        "Board's Update runs this.",
+        help="Bring this checkout onto its latest commit (merging in what origin has) and serve it to every chat the way "
+        "the server already serves it, restarting the cdd server: pinned to that commit in ~/.cdd/runtime, or as the "
+        "checkout is on disk when it serves the checkout. Then rebuild the Session Board's page. The Session Board's "
+        "Update runs this.",
     )
     serving.add_argument(
         "--serve-from-checkout",
@@ -95,7 +96,7 @@ def main() -> int:
 
         Repo.of_project(_REPO).catch_up_with_origin()
     if args.pin_runtime or args.update or args.serve_from_checkout:
-        print(f"cdd server: {server.serve_from_checkout() if args.serve_from_checkout else server.pin_server()}")
+        print(f"cdd server: {_switch_server(args, server)}")
         if installer.layout.is_claude_code:
             print(f"cdd-board: {server.claude_plugins.install_board()}")
         print(f"language adapters: {len(installer.write_language_adapters())} written")
@@ -178,6 +179,16 @@ def _match_origin_version() -> str:
     with pyproject.open("w", encoding="utf-8", newline="") as file:
         file.write(re.sub(r'^version = "[^"]*"(?=\r?$)', origin_line.group(0), local, count=1, flags=re.MULTILINE))
     return f"{origin_line.group(0)} (set from origin main)"
+
+
+def _switch_server(args, server) -> str:
+    """Serve the code the flags name: the checkout on disk, the pinned commit, or for an update, the current code served
+    the way it already is, so an update from the board leaves a person working on CDD itself on their checkout."""
+    if args.serve_from_checkout:
+        return server.serve_from_checkout()
+    if args.update:
+        return server.update_server()
+    return server.pin_server()
 
 
 def _restart_everything(installer, server) -> None:

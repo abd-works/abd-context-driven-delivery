@@ -6,10 +6,12 @@ import type { CddVersionData } from '@cdd/harness/diagnostics/cdd-version'
 import type { CddVersionJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { showFailure } from '../error-display/failure-client'
-import { commandOf } from '../shared/chat-command'
+import { promptCommand } from '../shared/chat-command'
 
 const SERVER = 'plugin:cdd:cdd'
 const CHECK_TOOL = 'cdd-version.check'
+// Reads the version on disk against origin main as last fetched, without fetching: cheap enough for every turn.
+const READ_TOOL = 'cdd-version.read'
 const INSTALL_LATEST_COMMAND = '/harness:installation:install-latest'
 // The cdd server is still connecting as a chat opens, so the first check waits as the server health's first look does.
 const FIRST_CHECK_WAIT_MS = 5000
@@ -86,18 +88,22 @@ async function checkUntilReadOrTriesRunOut($: EngineInterface, attempt: number):
   if ((await read($, cddVersion)).data === null && attempt < CHECK_TRIES) checkVersionSoon($, attempt + 1)
 }
 
-// Check again after a turn while the version is not read yet; once read it stays, since the check fetches origin main,
-// too slow to repeat on every turn.
-export async function checkVersionUntilRead($: EngineInterface): Promise<void> {
-  if ((await read($, cddVersion)).data === null) await checkVersion($)
+// After a turn: the version on disk read again without fetching, so a version changed by a reset or a pull shows at
+// once; while it is not read yet, the full check, as cdd may only now have connected.
+export async function readVersionAfterTurn($: EngineInterface): Promise<void> {
+  await askVersion($, (await read($, cddVersion)).data === null ? CHECK_TOOL : READ_TOOL)
 }
 
 // A call that cannot reach cdd, which is still connecting or down, leaves the badge grey with the reason on hover: the
 // server health mark already says cdd is not connected. An answer that is an error or not JSON is a failure.
 export async function checkVersion($: EngineInterface): Promise<void> {
+  await askVersion($, CHECK_TOOL)
+}
+
+async function askVersion($: EngineInterface, tool: string): Promise<void> {
   let result
   try {
-    result = await $.mcp.call(SERVER, CHECK_TOOL, {})
+    result = await $.mcp.call(SERVER, tool, {})
   } catch (failure) {
     await update($, cddVersion, version => ({ ...version, problem: String(failure) }))
     return
@@ -105,7 +111,7 @@ export async function checkVersion($: EngineInterface): Promise<void> {
   const text = result.content[0]?.text ?? ''
   const data = result.isError ? null : versionFrom(text)
   if (data === null) {
-    await showFailure($, `The CDD version was not read: ${text || `${CHECK_TOOL} sent back nothing`}`, `Opening the chat, calling ${CHECK_TOOL}`)
+    await showFailure($, `The CDD version was not read: ${text || `${tool} sent back nothing`}`, `Reading the CDD version, calling ${tool}`)
     return
   }
   await update($, cddVersion, version => ({ ...version, data, problem: null }))
@@ -119,19 +125,12 @@ export async function cancelUpdate($: EngineInterface): Promise<void> {
   await update($, cddVersion, version => ({ ...version, isAsking: false }))
 }
 
-// The update runs in the chat as the person's own /install-latest, so the chat lists its steps and ticks each one off
-// as the script reports it. The engine queues the command until the chat is idle and resolves once its turn has run.
+// The update goes in the prompt box, as the action button's command does, and the person's Enter sends it as their own
+// /install-latest: the agent runs it as a turn, lists its steps in the task list, and ticks each one off as the script
+// reports it. The badge reads the version again after that turn, as after every turn.
 export async function updateToLatest($: EngineInterface): Promise<void> {
-  await update($, cddVersion, version => ({ ...version, isAsking: false, update: 'running', error: null }))
-  try {
-    await $.command.run(commandOf(INSTALL_LATEST_COMMAND))
-  } catch (failure) {
-    await update($, cddVersion, version => ({ ...version, update: 'failed', error: String(failure) }))
-    await showFailure($, `${INSTALL_LATEST_COMMAND} did not run`, `Update and reinstall on the version badge, running ${INSTALL_LATEST_COMMAND} in the chat`, failure)
-    return
-  }
-  await update($, cddVersion, version => ({ ...version, update: 'installed' }))
-  await checkVersion($)
+  await update($, cddVersion, version => ({ ...version, isAsking: false }))
+  await promptCommand($, INSTALL_LATEST_COMMAND)
 }
 
 function versionFrom(text: string): CddVersionData | null {

@@ -117,6 +117,14 @@ with description("a cdd home's Claude Code plugins") as self:
             with it("should give it a new version"):
                 expect(_board_version(self.home)).not_to(equal(self.first_version))
 
+        # A person working on CDD itself chose to serve the checkout, so an update from the board keeps serving it.
+        with context("that is brought up to date"):
+            with before.each:
+                self.home.serve_current(self.checkout)
+
+            with it("should still serve the checkout as it is on disk"):
+                expect((self.home.mode, self.home.source)).to(equal((CddHome.CHECKOUT, self.checkout.resolve())))
+
 
 with description("a cdd home's runtime record") as self:
     with before.each:

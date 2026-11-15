@@ -28,7 +28,7 @@ import {
   runInstall,
 } from './health/server-health-client'
 import { ServerHealthBandView, ServerHealthPanelView } from './health/server-health-view'
-import { askToUpdate, cancelUpdate, checkVersionSoon, checkVersionUntilRead, currentCddVersion, updateToLatest } from './health/cdd-version-client'
+import { askToUpdate, cancelUpdate, checkVersionSoon, currentCddVersion, readVersionAfterTurn, updateToLatest } from './health/cdd-version-client'
 import { UpdateDialogView, VersionBadgeView } from './health/cdd-version-view'
 import { askToPush, cancelPush, currentRepo, pushToMain, pushWork } from './repo/repo-client'
 import { PushButtonsView, PushDialogView } from './repo/repo-view'
@@ -80,7 +80,7 @@ async function readBoardAfterTurn($: EngineInterface, isMainChat: boolean): Prom
   if (isMainChat) await turnCompleted($).catch(shownAsFailure($, 'The turn was not recorded as finished', 'Finishing a turn in the main chat'))
   await readName($).catch(shownAsFailure($, 'The chat was not named', 'Finishing a turn, reading the chat name'))
   await Promise.all([readActive($), refreshHealth($)]).catch(shownAsFailure($, 'The board did not load', 'Finishing a turn, calling board.show and reading the server health'))
-  await checkVersionUntilRead($).catch(shownAsFailure($, 'The CDD version was not read', 'Finishing a turn, calling cdd-version.check'))
+  await readVersionAfterTurn($).catch(shownAsFailure($, 'The CDD version was not read', 'Finishing a turn, calling cdd-version.read'))
 }
 
 async function readBoardAfterSubmit($: EngineInterface): Promise<void> {
@@ -199,9 +199,10 @@ export const register: Register = on => {
       isStagePickerOpen: await isStagePickerOpen($),
       busy: await currentBusy($),
       health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band) },
-      version: { badge: VersionBadgeView(elements, version, versionActions), dialog: UpdateDialogView(elements, version, versionActions) },
+      version: { label: version.label, badge: VersionBadgeView(elements, version, versionActions), dialog: UpdateDialogView(elements, version, versionActions) },
       push: { buttons: PushButtonsView(elements, repo, pushActions), dialog: PushDialogView(elements, repo, chatBar.title || chatBar.sessionName, pushActions) },
       width: e.props.bodyColumns,
+      maxRows: e.props.maxRows,
     })
     } catch (failure) {
       // A draw that throws shows why, in red, instead of leaving no bar at all.
