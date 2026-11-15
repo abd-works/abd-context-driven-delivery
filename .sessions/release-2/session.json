@@ -23,7 +23,8 @@
       "enabled": true,
       "formats": {
         "story_map": [
-          "drawio"
+          "drawio",
+          "markdown"
         ],
         "acceptance_tests": [
           "python"
@@ -62,7 +63,7 @@
       }
     },
     "bdd": {
-      "enabled": false,
+      "enabled": true,
       "formats": {
         "behavior": [
           "python"
@@ -82,6 +83,6 @@
       "specification",
       "implementation"
     ],
-    "version": 61
+    "version": 63
   }
 }
