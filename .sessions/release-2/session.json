@@ -6,21 +6,38 @@
   "worktree": "C:\\dev\\abd-cdd-2",
   "practices": {
     "clean_engineering": {
-      "enabled": true
+      "enabled": true,
+      "formats": {
+        "modules": [
+          "markdown"
+        ]
+      }
     },
     "stories": {
       "enabled": true,
       "formats": {
         "story_map": [
-          "drawio"
+          "drawio",
+          "markdown"
         ]
       }
     },
     "ddd": {
-      "enabled": true
+      "enabled": true,
+      "formats": {
+        "bounded_context": [
+          "markdown"
+        ]
+      }
     },
     "ux": {
-      "enabled": true
+      "enabled": true,
+      "formats": {
+        "ia": [
+          "drawio",
+          "markdown"
+        ]
+      }
     },
     "bdd": {
       "enabled": true,
