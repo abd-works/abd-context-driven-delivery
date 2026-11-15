@@ -9,8 +9,7 @@
       "enabled": true,
       "formats": {
         "modules": [
-          "drawio",
-          "markdown"
+          "drawio"
         ],
         "code": [
           "python"
@@ -83,6 +82,6 @@
     "stages": [
       "discovery"
     ],
-    "version": 33
+    "version": 34
   }
 }
