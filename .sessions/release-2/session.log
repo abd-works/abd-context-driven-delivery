@@ -247,3 +247,9 @@
 2026-11-15T18:42:46Z tool graph.explorer_trees
 2026-11-15T18:43:41Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-8033
 2026-11-15T18:47:34Z error session.guidance_selection_after C:\dev\abd-context-driven-delivery\.sessions\release-2\session.err 2007 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-8156
+2026-11-15T18:47:59Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-8165
+2026-11-15T18:48:04Z tool graph.practice_names
+2026-11-15T18:48:04Z tool graph.load_practice_roots
+2026-11-15T18:48:22Z tool graph.inventory
+2026-11-15T18:48:22Z tool graph.filter_choices
+2026-11-15T18:48:23Z tool graph.explorer_trees
