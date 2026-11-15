@@ -22,7 +22,9 @@
     "stories": {
       "enabled": true,
       "formats": {
-        "story_map": [],
+        "story_map": [
+          "drawio"
+        ],
         "acceptance_tests": [
           "python"
         ],
@@ -79,6 +81,6 @@
       "discovery",
       "specification"
     ],
-    "version": 59
+    "version": 60
   }
 }
