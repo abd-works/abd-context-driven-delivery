@@ -79,8 +79,8 @@
   },
   "guidance": {
     "stages": [
-      "discovery"
+      "implementation"
     ],
-    "version": 9
+    "version": 11
   }
 }
