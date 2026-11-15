@@ -25,9 +25,65 @@ export class CddNotConnectedError extends Error {
   }
 }
 
+// The server answered that it no longer knows this connection's session: it ran nothing.
+class SessionGoneError extends CddNotConnectedError {}
+
+// Nothing answered on the server's port, as for the seconds a repin restarts it: the call never reached a server.
+class ServerNotAnsweringError extends CddNotConnectedError {}
+
+// The connection refusals of Node's fetch: nothing was listening, so the request was never sent.
+const REFUSED = 'ECONNREFUSED'
+const isRefused = (failure: unknown): boolean => (failure as { cause?: { code?: string } } | null)?.cause?.code === REFUSED
+
+export class CddAnswerUnreadableError extends Error {
+  constructor(request: number, detail: string) {
+    super(`The cdd server's answer to request ${request} could not be read: ${detail}`)
+    this.name = 'CddAnswerUnreadableError'
+  }
+}
+
+// The events of a stream the server writes, each ended by a blank line, read piece by piece as they arrive.
+const EVENT_END = /\r?\n\r?\n/g
+// The longest end of an event, \r\n\r\n, less one: how far back into the text already read a new piece's end can begin.
+const EVENT_END_REACH = 3
+
+class EventStream {
+  // The pieces of the event not ended yet, kept apart and joined once its end arrives: searching all the text read so
+  // far again for every piece takes hours on an answer of 300 MB.
+  private readonly pieces: string[] = []
+  private tail = ''
+
+  // The events piece completes, oldest first; what follows the last one waits for the next piece. Only the new piece,
+  // and the few characters before it where an end could begin, are searched.
+  read(piece: string): string[] {
+    const searched = this.tail + piece
+    EVENT_END.lastIndex = 0
+    if (!EVENT_END.test(searched)) {
+      this.keep(piece)
+      return []
+    }
+    const text = [...this.pieces, piece].join('')
+    this.pieces.length = 0
+    this.tail = ''
+    const events = text.split(EVENT_END)
+    this.keep(events.pop() ?? '')
+    return events
+  }
+
+  private keep(piece: string): void {
+    if (!piece) return
+    this.pieces.push(piece)
+    this.tail = (this.tail + piece).slice(-EVENT_END_REACH)
+  }
+}
+
 type Session = { url: string; headers: Record<string, string> }
 type Message = { id?: number; method?: string; params?: { progressToken?: number; message?: string }; result?: unknown; error?: { message?: string } }
 type ToolResult = { content?: { text?: string }[]; isError?: boolean }
+// What the cdd server answers for a call still running at its time limit (harness/mcp/tool_calls.py), after the tool's
+// name; and how often a connection asks again, each ask waiting up to the server's own limit, before it gives up.
+const STILL_RUNNING = 'is still running after'
+const STILL_RUNNING_ASKS = 60
 
 const cddHome = (): string => process.env.CDD_HOME ?? join(homedir(), '.cdd')
 
@@ -41,12 +97,33 @@ export class CddConnection {
 
   constructor(private readonly project: string = SOURCE_ROOT) {}
 
+  // A server restarted since this connection opened no longer knows its session and runs nothing for it, so the call
+  // is sent once more on a new session rather than failing the page that made it.
   async call<Result>(tool: string, args: Record<string, unknown>): Promise<Result> {
-    const session = await this.connected()
-    const result = (await this.request(session, 'tools/call', { name: tool, arguments: args }, tool)) as ToolResult
+    for (let asked = 1; ; asked += 1) {
+      const text = await this.answerText(tool, args)
+      if (!text.startsWith(`${tool} ${STILL_RUNNING}`)) return this.parsed<Result>(text)
+      if (asked >= STILL_RUNNING_ASKS) throw new CddToolError(tool, text)
+    }
+  }
+
+  // A call that outlives the server's wait is still running there and answers so; asking again with the same arguments
+  // waits for that same run, so the page gets the call's result, never the notice. A server that no longer knows this
+  // connection's session (restarted), or that did not answer at all (restarting), ran nothing, so the call is sent once
+  // more on a new session, whose connect script starts the server when none answers. A call cut off while it was
+  // answered may already have run, so it is never sent again.
+  private async answerText(tool: string, args: Record<string, unknown>): Promise<string> {
+    const result = (await this.calledOnce(tool, args).catch(failure => {
+      if (failure instanceof SessionGoneError || failure instanceof ServerNotAnsweringError) return this.calledOnce(tool, args)
+      throw failure
+    })) as ToolResult
     const text = result.content?.[0]?.text
     if (result.isError || text === undefined) throw new CddToolError(tool, text ?? 'no result')
-    return this.parsed<Result>(text)
+    return text
+  }
+
+  private async calledOnce(tool: string, args: Record<string, unknown>): Promise<unknown> {
+    return this.request(await this.connected(), 'tools/call', { name: tool, arguments: args }, tool)
   }
 
   // The newest step each running call has reported, for a page waiting on one; a finished call reports nothing.
@@ -119,42 +196,56 @@ export class CddConnection {
       })
     } catch (failure) {
       this.session = null
-      throw new CddNotConnectedError(failure instanceof Error ? failure.message : String(failure))
+      if (isRefused(failure)) throw new ServerNotAnsweringError(`nothing answered at ${session.url}`)
+      throw this.stopped(failure)
     }
     // A restarted server no longer knows this session, so the next call opens a new one.
-    if (response.status === 404) this.session = null
+    if (response.status === 404 && session.headers[SESSION_HEADER]) {
+      this.session = null
+      throw new SessionGoneError(`${response.status} ${await response.text()}`)
+    }
     if (!response.ok) throw new CddNotConnectedError(`${response.status} ${await response.text()}`)
     return response
+  }
+
+  // A request the server took and then stopped answering: cut off, as when a repin restarts the server, or past the
+  // ten-minute limit. It may already have run, so the failure says so and the call is not sent again.
+  private stopped(failure: unknown): CddNotConnectedError {
+    const reason = failure instanceof Error ? failure.message : String(failure)
+    if (failure instanceof Error && failure.name === 'TimeoutError') return new CddNotConnectedError(`no answer within ${LONGEST_TOOL_MILLISECONDS / 60_000} minutes (${reason})`)
+    return new CddNotConnectedError(`the cdd server stopped while answering, as when a repin restarts it; the call may have run, so it was not sent again (${reason})`)
   }
 
   // The server answers a request as plain JSON or as a stream of events: progress reports first, the reply last.
   private async replyTo(id: number, response: Response): Promise<Message> {
     if (!(response.headers.get('content-type') ?? '').includes('text/event-stream')) return (await response.json()) as Message
     const reader = response.body!.pipeThrough(new TextDecoderStream()).getReader()
-    let buffered = ''
+    const events = new EventStream()
     for (;;) {
-      const { value, done } = await reader.read()
+      const { value, done } = await reader.read().catch(failure => {
+        this.session = null
+        throw this.stopped(failure)
+      })
       if (done) throw new CddNotConnectedError(`the server closed the stream before answering request ${id}`)
-      buffered += value
-      const events = buffered.split(/\r?\n\r?\n/)
-      buffered = events.pop() ?? ''
-      for (const message of events.map(event => this.messageIn(event))) {
+      for (const message of events.read(value).map(event => this.messageIn(id, event))) {
         if (message?.method === 'notifications/progress') this.reported(message)
         else if (message?.id === id) return message
       }
     }
   }
 
-  private messageIn(event: string): Message | null {
+  // An event whose data is not JSON fails the call: dropped, it would leave the call waiting for a reply already sent.
+  private messageIn(id: number, event: string): Message | null {
     const data = event
       .split(/\r?\n/)
       .filter(line => line.startsWith('data:'))
       .map(line => line.slice(5).trimStart())
       .join('\n')
+    if (!data) return null
     try {
-      return data ? (JSON.parse(data) as Message) : null
-    } catch {
-      return null
+      return JSON.parse(data) as Message
+    } catch (failure) {
+      throw new CddAnswerUnreadableError(id, `${failure instanceof Error ? failure.message : String(failure)}; it began ${JSON.stringify(data.slice(0, 200))}`)
     }
   }
 

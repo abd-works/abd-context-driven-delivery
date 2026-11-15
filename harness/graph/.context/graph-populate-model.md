@@ -65,8 +65,10 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 	// @mcp. raises GraphFailure when the folder and its parents hold no practices/
 + practice_names(): list[str]
 	// @mcp. the key of every practice the graph holds
-+ inventory(), filter_choices(...), source(node_id), return_nodes(filter=None), explorer_trees(filter=None)
-	// @mcp. -> explorer
++ inventory(), filter_choices(...), source(node_id), return_nodes(filter=None), explorer_trees(filter=None),
+  explorer_branch(node_id, filter=None)
+	// @mcp. -> explorer. explorer_trees sends each root with the entries below it closed; explorer_branch sends one
+	// entry's next level, so the page reads only the levels a person opens
 + report_progress(message): None
 	// -> harness.agent_tools.progress.report_progress
 
@@ -138,8 +140,8 @@ One loaded practice as the explorer's inventory shows it, read from the graph th
 	// in EDGE_ORDER
 + rules: list[str]
 	// -> practice.reading.in_graph.rule_run.rule_labels
-+ tree: ExplorerEntry
-	// -> practice.reading.in_graph.root.serialize()
+	// no tree: graph.explorer_trees answers each practice's tree as the explorer's filter leaves it; a whole
+	// repository's tree runs to hundreds of megabytes, which no page reads and no call sends within ten minutes
 
 ## Node
 

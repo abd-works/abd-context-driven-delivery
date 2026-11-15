@@ -13,5 +13,11 @@
         ]
       }
     }
+  },
+  "guidance": {
+    "stages": [
+      "specification"
+    ],
+    "version": 1
   }
 }

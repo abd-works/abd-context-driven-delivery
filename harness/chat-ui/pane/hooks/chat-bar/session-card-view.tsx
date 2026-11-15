@@ -5,7 +5,8 @@ import { GlyphButtonView } from '../shared/glyph-button-view'
 import type { ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
 import { openFiles, openReport } from './fidelity-files-client'
-import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
+import type { FidelityProgressClient } from './fidelity-progress-client'
+import { togglePractice } from './guidance-client'
 import { closeCard } from './session-dialogs-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
@@ -29,14 +30,15 @@ function cardColumnsOf(chatBar: ChatBarClient): CardColumns {
   return { names, fidelities: names + Math.max(0, ...chatBar.fidelities.map(stateWidthOf)) + FOLDER_GAP }
 }
 
-// The shown stage in orange over the fidelities, and at the right end the session name and a ✕ that closes a card
-// pinned open.
-function HeaderView($: EngineInterface, elements: ElementTable, chatBar: ChatBarClient) {
+// The shown stage in orange over the fidelities, and at the right end the health icons, the session name, and a ✕ that
+// closes a card pinned open.
+function HeaderView($: EngineInterface, elements: ElementTable, chatBar: ChatBarClient, healthIcons: ChatBarDraw['health']['icons']) {
   const { Box, Text } = elements
   return (
     <Box key="card-header" flexDirection="row" gap={2} alignItems="center">
-      <Text weight="bold" color={BRAND.accent}>{chatBar.shownStage}</Text>
+      <Text weight="bold" color={BRAND.accent}>{chatBar.shownStages.join(' · ')}</Text>
       <Box flexGrow={1} />
+      {healthIcons}
       <Text weight="bold" color={BRAND.text} wrap="truncate-end">{chatBar.sessionName}</Text>
       {GlyphButtonView(elements, 'card-close', '✕', BRAND.muted, () => closeCard($))}
     </Box>
@@ -55,7 +57,7 @@ function FidelityRowView($: EngineInterface, elements: ElementTable, fidelity: F
       <Box width={columns.fidelities}>
         <Box key={`card-cell-${fidelity.slug}`} flexDirection="row" alignItems="center">
           <Box width={columns.names}>
-            <Button key={`card-pick-${fidelity.slug}`} plain onPress={() => selectFidelity($, fidelity)}>
+            <Button key={`card-pick-${fidelity.slug}`} plain onPress={() => togglePractice($, fidelity.sessionFile, fidelity.progress.practice.key)}>
               <Text key="card-square" color={fidelity.shade}>{`${boxOf(fidelity)} `}</Text>
               <Text key="card-name" color={nameColour}>{fidelity.name}</Text>
             </Button>
@@ -74,8 +76,9 @@ function FidelityRowView($: EngineInterface, elements: ElementTable, fidelity: F
   )
 }
 
-// The session card above the line, as wide as the chat with a line of space below it: the server health panel on top,
-// then, once there is a session, the shown stage's fidelities directly under it. Hovering the session name or the
+// The session card above the line, as wide as the chat with a line of space below it: the server health panel on top
+// while something needs a person, then, once there is a session, the shown stage's fidelities under a header holding
+// the health icons; with no session, the icons alone. Hovering the session name or the
 // health mark shows it; a press on either pins it, and ✕ or another press closes it.
 export function SessionCardView($: EngineInterface, elements: ElementTable, { chatBar, view, health, width }: ChatBarDraw) {
   const { Box } = elements
@@ -87,10 +90,14 @@ export function SessionCardView($: EngineInterface, elements: ElementTable, { ch
         {health.panel}
         {chatBar.hasSession ? (
           <Box key="card-grid" flexDirection="column" width={width} borderStyle="round" borderColor={BRAND.card} backgroundColor={BRAND.card}>
-            {HeaderView($, elements, chatBar)}
+            {HeaderView($, elements, chatBar, health.icons)}
             {chatBar.fidelities.map(fidelity => FidelityRowView($, elements, fidelity, columns, chatBar.foldersListedBeside.has(fidelity.slug)))}
           </Box>
-        ) : null}
+        ) : (
+          <Box key="card-icons" flexDirection="row" width={width} justifyContent="flex-end" borderStyle="round" borderColor={BRAND.card} backgroundColor={BRAND.card}>
+            {health.icons}
+          </Box>
+        )}
       </Box>
     </Box>
   )

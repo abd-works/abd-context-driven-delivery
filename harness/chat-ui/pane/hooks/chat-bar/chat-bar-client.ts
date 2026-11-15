@@ -8,8 +8,11 @@ import type { TicketData } from '@cdd/space/kanban/ticket'
 import type { ChatBarJson } from '../../types'
 import { reasonOf, showFailure } from '../error-display/failure-client'
 import { SERVER } from '../health/server-health-client'
-import { FidelityProgressClient, selectedFidelitySlugs } from './fidelity-progress-client'
-import { StageClient, shownStageName } from './stage-client'
+import type { GuidanceSelectionData } from '@cdd/space/session/session'
+
+import { FidelityProgressClient, PracticeDotClient } from './fidelity-progress-client'
+import { currentGuidance } from './guidance-client'
+import { StageClient } from './stage-client'
 
 // The chat bar: the active session's line above the prompt. Sources: harness/chat-ui/.context/story-map.md,
 // cdr/0001-stage-strip-band.md, design/StageStrip.dc.html. Every rule lives in the Python Ticket; this file shows its answers.
@@ -25,8 +28,7 @@ export class ChatBarClient {
 
   constructor(
     json: ChatBarJson,
-    private readonly shown: string | null,
-    private readonly selected: string[],
+    private readonly guidance: GuidanceSelectionData | null,
   ) {
     this.board = json.board as BoardOverviewData | null
     this.problem = json.problem
@@ -68,9 +70,17 @@ export class ChatBarClient {
     return this.ticket?.column.name ?? ''
   }
 
-  // A stage icon a person picked shows that stage's fidelities; otherwise the dots show the stage the session is in.
+  // The stages whose fidelities the dots show, in the board's order: those turned on with the stage buttons, here or in
+  // a page the chat opened, none included; before either chose, the stage the session is in.
+  get shownStages(): string[] {
+    const stages = (this.board?.columns ?? []).filter(column => column.kind === 'stage').map(column => column.name)
+    const chosen = this.guidance?.is_stage_chosen ? this.guidance.stages.filter(stage => stage.is_selected).map(stage => stage.title) : [this.stage]
+    return stages.filter(stage => chosen.includes(stage))
+  }
+
+  // The first stage shown, whose actions the action button offers: every stage takes the same steps.
   get shownStage(): string {
-    return this.shown && this.board?.columns.some(column => column.name === this.shown && column.kind === 'stage') ? this.shown : this.stage
+    return this.shownStages[0] ?? this.stage
   }
 
   // Ticket.is_done answers whether every fidelity of the stage has passed validate, so the action button moves the session on;
@@ -84,7 +94,7 @@ export class ChatBarClient {
   get stages(): StageClient[] {
     const columns = this.board?.columns ?? []
     const sessionPlace = columns.findIndex(column => column.name === this.stage)
-    return columns.map((column, place) => new StageClient(column, place, sessionPlace, column.name === this.shownStage && column.name !== this.stage))
+    return columns.map((column, place) => new StageClient(column, place, sessionPlace, this.shownStages.includes(column.name)))
   }
 
   // Every action a person can run on a fidelity of the shown stage, its steps first, as the stage sends them.
@@ -114,14 +124,44 @@ export class ChatBarClient {
     return (this.board?.columns.find(column => column.name === this.shownStage)?.actions ?? [])
   }
 
-  // The shown stage's fidelities of the practices this session has turned on: the ticket's progress on each fidelity
-  // names its stage and holds the fidelity itself, in the order the stage requires them.
+  // Whether the session works on a practice, as its guidance selection says, else as the board read it.
+  isPracticeOn(key: string): boolean {
+    const practice = this.guidance?.practices.find(each => each.key === key)
+    return practice ? practice.is_selected : (this.ticket?.progress.find(progress => progress.practice.key === key)?.is_enabled ?? true)
+  }
+
+  // The selected stages' fidelities of the practices selected: what the dots stand for and every action runs on, in the
+  // order the stages require them.
   get fidelities(): FidelityProgressClient[] {
+    return this.fidelitiesOfShownStages.filter(fidelity => fidelity.isSelected)
+  }
+
+  // One dot per practice with fidelities in the stages shown, on or off: a press turns the practice on or off for the
+  // session, all its fidelities of those stages.
+  get practiceDots(): PracticeDotClient[] {
+    const byPractice = new Map<string, FidelityProgressClient[]>()
+    for (const fidelity of this.fidelitiesOfShownStages) byPractice.set(fidelity.progress.practice.key, [...(byPractice.get(fidelity.progress.practice.key) ?? []), fidelity])
+    return [...byPractice].map(([key, fidelities]) => new PracticeDotClient(key, fidelities, this.isPracticeOn(key)))
+  }
+
+  // Every fidelity of the stages shown, its practice on or off, each marked selected while its practice is on.
+  private get fidelitiesOfShownStages(): FidelityProgressClient[] {
     const ticket = this.ticket
     if (!ticket) return []
     return ticket.progress
-      .filter(progress => progress.stage.name === this.shownStage && progress.is_enabled)
-      .map(progress => new FidelityProgressClient(progress, ticket, this.practiceNamed(progress.practice.key), this.selected.includes(progress.fidelity.slug), this.labelOf(progress.fidelity.slug)))
+      .filter(progress => this.shownStages.includes(progress.stage.name))
+      .map(progress => new FidelityProgressClient(progress, ticket, this.practiceNamed(progress.practice.key), this.isPracticeOn(progress.practice.key), this.labelOf(progress.fidelity.slug)))
+  }
+
+  // The format chips: each format group the selected fidelities offer, selected or not, as the session holds them.
+  get formatChoices(): { label: string; formats: string[]; offered: number; made: number; is_chosen: boolean }[] {
+    return (this.guidance?.formats ?? []).map(format => ({ label: format.label, formats: format.formats, offered: format.offered, made: 0, is_chosen: format.is_selected }))
+  }
+
+  // Every fidelity of the shown stage, its practice on or off for the session: the Files app shows a toggle for each
+  // practice and lists the files of the ones turned on, so turning one on there shows its files at once.
+  get stageFidelitySlugs(): string[] {
+    return (this.ticket?.progress ?? []).filter(progress => this.shownStages.includes(progress.stage.name)).map(progress => progress.fidelity.slug)
   }
 
   // The fidelities the session card lists a folder beside: practices that write under one folder share it, so each
@@ -132,22 +172,14 @@ export class ChatBarClient {
     return new Set(first.values())
   }
 
-  // The fidelity the action button acts on: the one a person selected, else the ticket's next, else the first shown.
+  // The fidelity whose next action the action button names: the ticket's next among those selected, else the first.
   get actionFidelity(): FidelityProgressClient | null {
-    return this.selectedFidelity ?? this.fidelities.find(fidelity => fidelity.slug === this.ticket?.next?.fidelity.slug) ?? this.fidelities[0] ?? null
+    return this.fidelities.find(fidelity => fidelity.slug === this.ticket?.next?.fidelity.slug) ?? this.fidelities[0] ?? null
   }
 
-  // The first selected of the shown stage's fidelities; a selection in a hidden stage is ignored.
-  get selectedFidelity(): FidelityProgressClient | null {
-    return this.fidelities.find(fidelity => fidelity.isSelected) ?? null
-  }
-
-  // Every fidelity the action button acts on: each one selected, else the one actionFidelity names.
+  // Every fidelity an action runs on: all the selected stages' fidelities of the practices selected.
   get actionFidelities(): FidelityProgressClient[] {
-    const selected = this.fidelities.filter(fidelity => fidelity.isSelected)
-    if (selected.length) return selected
-    const one = this.actionFidelity
-    return one ? [one] : []
+    return this.fidelities
   }
 
   // The repository the board shows, by its folder's name.
@@ -244,7 +276,7 @@ export async function callToolText($: EngineInterface, tool: string, args: objec
 
 // Atom chatBar, declared in pane/types/index.d.ts and kept in this file: the last board.overview answer.
 export async function currentChatBar($: EngineInterface): Promise<ChatBarClient> {
-  return new ChatBarClient(await read($, chatBar), await shownStageName($), await selectedFidelitySlugs($))
+  return new ChatBarClient(await read($, chatBar), await currentGuidance($))
 }
 
 // A failed read keeps the last board and says why, so the bar never draws old state as if it were current.

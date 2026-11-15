@@ -142,9 +142,15 @@ describe('Move Ticket', () => {
     expect(page.board.backlogItems.map(item => item.title)).toContain('Almost shipped')
   })
 
-  it('should let only the active ticket, or one done in Implementation, be dropped on Complete', async () => {
+  it('should let a ticket from any stage be dropped on Complete', async () => {
     const { page } = await board.page()
-    expect([ticketOn(page, ACTIVE).canDropOn('Complete'), ticketOn(page, 'almost-shipped').canDropOn('Complete'), ticketOn(page, OTHER).canDropOn('Complete')]).toEqual([true, true, false])
+    expect([ticketOn(page, ACTIVE).canDropOn('Complete'), ticketOn(page, 'almost-shipped').canDropOn('Complete'), ticketOn(page, OTHER).canDropOn('Complete')]).toEqual([true, true, true])
+  })
+
+  it('should close a ticket not opened at once when it is dropped on Complete', async () => {
+    const { page } = await board.page()
+    await ticketOn(page, OTHER).dropOn('Complete')
+    expect(page.board.tickets.find(ticket => ticket.name === OTHER)?.column.name).toBe('Complete')
   })
 })
 

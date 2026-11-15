@@ -576,6 +576,10 @@ class FidelityGuidance(Guidance):
     """What a validate judges this fidelity's rules against, as its practice document's ``judged_on`` says: the
     ``artifacts`` it writes, read as text, or the ``graph`` validate builds from the code, where rules about the object
     model the code holds (one model, classes with one job, one-way dependencies) can be checked."""
+    reviews_files_of: tuple[str, ...] = ()
+    """The fidelities of its own practice whose files a person reviews for this one, as its practice document's
+    ``reviews_files_of`` names them: UX's front-end code is reviewed against its information architecture and mockup,
+    since its view code is Clean Engineering's code to review. None reviews its own files."""
 
     def __init__(
         self,
@@ -608,6 +612,8 @@ class FidelityGuidance(Guidance):
             self.clean_engineering = str(settings[COMPANION_PRACTICE] or "")
         if "judged_on" in settings:
             self.judged_on = str(settings["judged_on"] or "artifacts")
+        if "reviews_files_of" in settings:
+            self.reviews_files_of = tuple(str(name) for name in settings["reviews_files_of"] or ())
 
     @property
     def stage(self) -> str:
@@ -667,6 +673,20 @@ class FidelityGuidance(Guidance):
         """The files this fidelity declares, by format, in the session its practice works in, each with its path from
         the project and whether it exists; none when its practice works in no session."""
         return self.session_output.files() if self.session_output is not None else {}
+
+    def files_to_review(self) -> dict[str, list]:
+        """The files a person reviews for this fidelity, by format: its own, or those of the fidelities of its practice
+        it reviews files of, in the order it names them, each file once."""
+        practice = self.practice_guidance
+        if not self.reviews_files_of or practice is None:
+            return self.files()
+        reviewed: dict[str, list] = {}
+        for name in self.reviews_files_of:
+            fidelity = practice.fidelities.entries.get(name)
+            for label, entries in (fidelity.files() if fidelity is not None else {}).items():
+                known = {entry.path for entry in reviewed.get(label, [])}
+                reviewed.setdefault(label, []).extend(entry for entry in entries if entry.path not in known)
+        return reviewed
 
     def has_declared_output(self) -> bool:
         """Whether a file this fidelity declares is already in the session its practice works in, such as one a person

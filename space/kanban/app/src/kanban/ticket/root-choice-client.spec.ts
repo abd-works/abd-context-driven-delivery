@@ -19,6 +19,7 @@ beforeEach(async () => {
   await board.reset()
   board.write('src/visits/visit.ts', '')
   board.write('src/billing/bill.ts', '')
+  board.commit('src/visits and src/billing', 'src')
 })
 
 afterAll(() => board.close())

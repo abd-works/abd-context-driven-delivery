@@ -422,6 +422,9 @@ class Repo:
             self.push_upstream()
         clone = self.main_clone
         returning_to = clone.current_branch
+        # The clone's own changes are its work too, such as the session's log, which this call has just written there; a
+        # merge refuses to run over them.
+        clone.commit([str(clone.root)], f"{returning_to.name}: work kept before merging {branch.name}", untracked=True)
         branch.merge_into_default()
         if push and clone.has_origin:
             clone.push_upstream()
@@ -515,10 +518,20 @@ class Branch:
             return []
         git = self._repo.git
         committed = git.run("diff", "--name-only", f"{self._repo.default_branch}...{self.name}").splitlines()
-        if self._repo.current_branch != self:
+        checkout = self.checkout
+        if checkout is None:
             return committed
-        uncommitted = git.run("status", "--porcelain", "--untracked-files=all", "--no-renames").splitlines()
+        uncommitted = checkout.git.run("status", "--porcelain", "--untracked-files=all", "--no-renames").splitlines()
         return [*committed, *(line[3:].strip('"') for line in uncommitted)]
+
+    @property
+    def checkout(self) -> Repo | None:
+        """The checkout that has this branch checked out: this clone, or the linked worktree beside it, such as a
+        ticket's; none when no checkout has it. Its root is where the branch's changed paths are."""
+        if self._repo.current_branch == self:
+            return self._repo
+        tree = self.worktree
+        return tree.repository if tree is not None else None
 
     def check_out(self) -> Branch:
         """Check this branch out in its clone; a branch the clone does not have starts from ``start_point``. Changes

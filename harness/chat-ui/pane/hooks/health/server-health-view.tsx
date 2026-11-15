@@ -1,5 +1,5 @@
 import type { AppOpeningJson, HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
-import { appLineOf, colourOf, detailsOf, headlineOf, installLineOf, partsOf, type Part } from './server-health-wording'
+import { appLineOf, colourOf, detailsOf, headlineOf, installLineOf, partsOf, tooltipOf, type Part } from './server-health-wording'
 import type { EngineInterface } from 'claude-code'
 
 import { BRAND } from '../shared/brand'
@@ -30,33 +30,33 @@ const LOOKS = {
 }
 
 
-// The surface has no tooltip, so the part's name is a card revealed while the pointer is over its icon and value. An
-// app's icon and value are a Button, a press readying the app and opening it in the side panel; a Button holds only
-// strings and Text, so the card sits beside it in the part's Box, never inside it.
+// Each part is its icon alone, coloured by how it stands. The surface has no tooltip, so hovering the icon reveals a card
+// above it with the part's name and state, Files: running :8783, right-aligned so it stays inside the chat. An app's icon
+// is a Button, a press readying the app and opening it in the side panel; a Button holds only strings and Text, so the
+// card sits beside it in the part's Box, never inside it.
 function PartView({ Box, Button, Text }: ElementTable, part: Part, actions: Actions) {
   const { app } = part
   const icon = <Text color={colourOf(part)}>{part.icon}</Text>
-  const value = <Text color={colourOf(part)}>{part.value}</Text>
   return (
-    <Box key={part.label} flexDirection="row" gap={1}>
-      {app === undefined ? <>{icon}{value}</> : (
+    <Box key={part.label} flexDirection="row">
+      {app === undefined ? icon : (
         <Button key={`health-app-${app}`} plain onPress={() => actions.openApp(app)}>
-          {icon} {value}
+          {icon}
         </Button>
       )}
-      <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
-        <Text color={BRAND.text}>{part.label}</Text>
+      <Box position="absolute" top={-1} right={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
+        <Text color={BRAND.text} wrap="truncate-end">{tooltipOf(part)}</Text>
       </Box>
     </Box>
   )
 }
 
-function PartsView(elements: ElementTable, health: ServerHealthJson, actions: Actions) {
+// The MCP host, each app, and the hook server as a row of icons, for the top right of the session card.
+export function ServerHealthIconsView(elements: ElementTable, band: Band) {
   const { Box } = elements
   return (
-    // The parts spread across the panel's width, as wide as the text above them.
-    <Box flexDirection="row" columnGap={3} width="100%" justifyContent="space-between">
-      {partsOf(health).map(part => PartView(elements, part, actions))}
+    <Box key="health-icons" flexDirection="row" gap={1}>
+      {partsOf(band.health).map(part => PartView(elements, part, band.actions))}
     </Box>
   )
 }
@@ -114,10 +114,13 @@ function InstallLineView({ Text }: ElementTable, install: InstallJson) {
   return line ? <Text color={BRAND.text}>{line}</Text> : null
 }
 
+// The panel shows only what needs a person: a problem with the server, an install, or an app opening. While all is well
+// it is not drawn, and the icons on the session card say so.
 function ExpandedView(elements: ElementTable, band: Band) {
   const { Box } = elements
   const { health, view, install } = band
   const look = LOOKS[health.connection]
+  if (health.connection === 'connected' && !installLineOf(install) && !appLineOf(band.opening)) return null
   return (
     <Box
       key="card-health"
@@ -128,7 +131,6 @@ function ExpandedView(elements: ElementTable, band: Band) {
     >
       {HeadlineView(elements, health)}
       {InstallLineView(elements, install)}
-      {health.connection === 'connected' ? PartsView(elements, health, band.actions) : null}
       {AppLineView(elements, band.opening)}
       {view.areDetailsOpen && health.connection !== 'connected' ? DetailsView(elements, health, install) : null}
       {ButtonsView(elements, band)}

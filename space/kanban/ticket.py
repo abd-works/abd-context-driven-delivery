@@ -305,12 +305,12 @@ class Ticket(Card):
     @data_field
     def drop_targets(self) -> list[str]:
         """The columns besides the stages a person can drop it on. The Backlog takes any ticket, which keeps its whole
-        folder there. Complete takes one from Implementation's Done, or an open ticket, through its Close dialog, because
-        closing it asks what to do with its work."""
+        folder there. Complete takes any ticket not closed yet, from whatever stage it reached: an open one through its
+        Close dialog, because closing it asks what to do with its work, and one not opened at once. A parent waits for
+        its children, since it moves only with them."""
         if self.is_main:
             return []
-        final = self._board.stages[-1]
-        closes = self.is_open or (not self.is_closed and self.column is final and self.is_done)
+        closes = not self.is_closed and not any(not child.is_closed for child in self.children)
         return [BACKLOG_COLUMN, *([COMPLETE_COLUMN] if closes else [])]
 
     @property
@@ -412,6 +412,13 @@ class Ticket(Card):
     def stage_work(self) -> list[StageWork]:
         """Its work in each stage taken together, in stage order: what a stage head's action bar shows and acts on."""
         return [self.work.in_stage(stage) for stage in self._board.stages]
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def fidelity_files(self, fidelities: list[str]) -> dict[str, dict[str, list[FileEntry]]]:
+        """Return the files a person reviews for each of fidelities, slugs such as stories-story-map, on ticket, by slug and then by format, as each fidelity-progress.files answers them: one call for a page listing many fidelities, sharing one look at what the branch changed."""
+        return {slug: self.work.progress_of(slug).files() for slug in fidelities}
 
     @mcp
     @agent_tool
@@ -1035,8 +1042,8 @@ class FidelityProgress:
     @agent_tool
     @noSessionLog
     def files(self) -> dict[str, list[FileEntry]]:
-        """List the files this fidelity declares by format in its ticket's session, each with its path from the project and whether it exists, formats in the order files are shown (``Format.file_order``: markdown, code, diagrams). A pattern lists the files the ticket worked on, not every match in the repository."""
-        files = self._fidelity.files()
+        """List the files a person reviews for this fidelity by format in its ticket's session, each with its path from the project, whether it exists, and the published link of a design canvas, formats in the order files are shown (``Format.file_order``: markdown, code, diagrams). They are the files it declares, or those of the fidelities its practice document says it reviews files of (UX front-end code: its IA and mockup). A pattern lists the files the ticket worked on, not every match in the repository."""
+        files = self._fidelity.files_to_review()
         return dict(sorted(files.items(), key=lambda formats: Format(formats[0]).file_order))
 
     def with_violations(self) -> FidelityProgress:

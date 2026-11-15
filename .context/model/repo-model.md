@@ -1856,6 +1856,7 @@ One graph. Builders fill nodes, edges, and rules; the explorer reads the tree. E
 + source(node_id: str): NodeSource | None
 + return_nodes(filter: dict | None = None): list[FilteredNode]
 + explorer_trees(filter: dict | None = None): list[ExplorerEntry]
++ explorer_branch(node_id: str, filter: dict | None = None): ExplorerEntry | None
 ---<<makes its practices with>>--> PracticeCatalogue
 ---<<gives each practice its part through>>--> PracticeReading
 ---<<creates>>--> PracticeNodes
@@ -2927,7 +2928,7 @@ One named piece of work in a project, kept in `.sessions/{name}/`. It holds wher
 + session_file_from_project: str
 + work_root: Path
 + << composition >> graph: Graph
-+ workpath_from_project: str
++ workpath_from_checkout: str
 + title: str
 + scope: str
 + parent: str

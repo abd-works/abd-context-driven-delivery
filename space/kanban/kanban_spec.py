@@ -345,6 +345,11 @@ with description("a backlog item") as self:
                 board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
                 expect(board.ticket(self.child.name).parent_choices).not_to(contain("checkout-flow"))
 
+            # A parent moves only with its children, so it waits for them before it can go to Complete.
+            with it("should not let its parent be dropped on Complete while it is open"):
+                board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+                expect(board.ticket("checkout-flow").drop_targets).not_to(contain("Complete"))
+
         with context("that has been started"):
             with before.each:
                 self.written = self.item_path.read_text(encoding="utf-8")
@@ -753,6 +758,15 @@ with description("a ticket") as self:
 
         with it("should be done with the one practice it works on"):
             expect(self.ticket.is_done).to(be_true)
+
+    # A person finishing or dropping work closes it from whatever stage it reached, not only from Implementation's Done.
+    with context("that is in progress in a stage and not open"):
+        with before.each:
+            self.root, board = board_with([GENERATE_STORY_MAP])
+            self.ticket = board.ticket("pet-visits")
+
+        with it("should take Complete as a place to drop it"):
+            expect(self.ticket.drop_targets).to(contain("Complete"))
 
     # (S) Person --> Close Active Session
     with context("that has been closed"):

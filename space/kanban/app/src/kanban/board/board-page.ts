@@ -1,4 +1,4 @@
-import { projectOfPage } from '@cdd/cdd-shared'
+import { chatOfPage, projectOfPage } from '@cdd/cdd-shared'
 import type { BacklogItemData } from '@cdd/space/kanban/backlog-item'
 import type { BoardData } from '@cdd/space/kanban/board'
 import type { TicketData } from '@cdd/space/kanban/ticket'
@@ -21,6 +21,7 @@ import { BoardReader } from './board-reader'
 import { BoardStore } from '../shared/board-store'
 import { BuildClient } from './build-client'
 import { EditorAppClient } from './editor-app-client'
+import { PageFailures } from './page-failures'
 import { SidePanelClient } from './side-panel-client'
 
 const CHAT_POLL_MILLISECONDS = 2000
@@ -39,6 +40,8 @@ const SHOWN_CHAT_ID = 8
 
 export class BoardPage {
   readonly store = new BoardStore()
+  // What failed on the page: shown here and sent to the chat that opened the page.
+  readonly failures: PageFailures
   readonly api: BoardApi
   // The api the board's own two-second read posts through, which says nothing when slow.
   readonly readingApi: BoardApi
@@ -56,14 +59,16 @@ export class BoardPage {
   readonly roots = new RootChoiceClient(this)
   readonly draft = new BacklogDraftClient(this)
 
-  constructor(send: Send = sendWithFetch) {
-    this.api = new BoardApi(this.store, send)
-    this.readingApi = new BoardApi(this.store, send, projectOfPage(), false)
+  // chat is the chat that opened the page, from its ?chat= link, which is told every failure the page meets.
+  constructor(send: Send = sendWithFetch, chat: string = chatOfPage()) {
+    this.failures = new PageFailures(this.store, send, chat)
+    this.api = new BoardApi(this.store, this.failures, send)
+    this.readingApi = new BoardApi(this.store, this.failures, send, projectOfPage(), false)
     this.chat = new ChatClient(this.store, this.api)
     this.panels = new SidePanelClient(this.store, this.api)
     this.files = new FilesPanelClient(this.store)
-    this.build = new BuildClient(this.store, send)
-    this.editorApp = new EditorAppClient(this.store, this.api)
+    this.build = new BuildClient(this.store, this.failures, send)
+    this.editorApp = new EditorAppClient(this.failures, this.api)
   }
 
   // The board as last read, made once for that read and again only when the store holds a new read, since the views
@@ -134,7 +139,7 @@ export class BoardPage {
     if (!this.store.state.board) await this.reader.refresh()
     const ticket = this.board.tickets.find(shown => shown.name === name)
     const progress = ticket?.progressNamed(slug)
-    if (!ticket || !progress) return this.store.toast(`The board has no ${slug} report for ${name}.`, true)
+    if (!ticket || !progress) return this.failures.fail(`The board has no ${slug} report for ${name}.`, 'Opening the Kanban board from a chat bar link')
     this.store.change({ selected: ticket.address })
     await this.panels.openReport(ticket, progress)
   }
@@ -149,7 +154,7 @@ export class BoardPage {
     if (!this.store.state.board) await this.reader.refresh()
     const ticket = this.board.tickets.find(shown => shown.name === name)
     const progress = ticket?.progressNamed(slug)
-    if (!ticket || !progress) return this.store.toast(`The board has no ${slug} help for ${name}.`, true)
+    if (!ticket || !progress) return this.failures.fail(`The board has no ${slug} help for ${name}.`, 'Opening the Kanban board from a chat bar link')
     this.store.change({ selected: ticket.address })
     await this.panels.openFidelityHelp(progress)
   }
@@ -165,7 +170,7 @@ export class BoardPage {
     if (!this.store.state.board) await this.reader.refresh()
     const ticket = this.board.tickets.find(shown => shown.name === name)
     const progress = slugs.flatMap(slug => ticket?.progressNamed(slug) ?? [])
-    if (!ticket || !progress.length) return this.store.toast(`The board has no ${slugs.join(', ')} files for ${name}.`, true)
+    if (!ticket || !progress.length) return this.failures.fail(`The board has no ${slugs.join(', ')} files for ${name}.`, 'Opening the Kanban board from a chat bar link')
     this.store.change({ selected: ticket.address })
     this.layout.expandRegion('details')
     await this.files.openFiles(ticket, progress)
@@ -180,7 +185,7 @@ export class BoardPage {
     if (!name) return
     if (!this.store.state.board) await this.reader.refresh()
     const ticket = this.board.tickets.find(shown => shown.name === name)
-    if (!ticket) return this.store.toast(`The board has no ticket ${name}.`, true)
+    if (!ticket) return this.failures.fail(`The board has no ticket ${name}.`, 'Opening the Kanban board from a chat bar link')
     this.store.change({ selected: ticket.address })
     this.layout.expandRegion('details')
     const file = query.get(FILE_QUERY)
@@ -194,7 +199,7 @@ export class BoardPage {
     if (!name) return
     if (!this.store.state.board) await this.reader.refresh()
     const ticket = this.board.tickets.find(shown => shown.name === name)
-    if (!ticket) return this.store.toast(`The board has no ticket ${name}.`, true)
+    if (!ticket) return this.failures.fail(`The board has no ticket ${name}.`, 'Opening the Kanban board from a chat bar link')
     this.cards.open(ticket)
   }
 

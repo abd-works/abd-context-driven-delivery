@@ -38,6 +38,11 @@ export class BacklogItemClient extends BacklogItemClientGenerated {
     this.page.board.select(this.address)
   }
 
+  // A press on the card shows its text, and a second press collapses it again.
+  toggleShown(): void {
+    this.page.board.select(this.page.board.selectedItem === this ? '' : this.address)
+  }
+
   // Whether it can take dragged as its child: the Backlog nests one level, and never in a folder kept with a ticket's work.
   canTakeAsChild(dragged: BacklogItemClient): boolean {
     const isFolderOfWork = Boolean(this.ticket || dragged.ticket)

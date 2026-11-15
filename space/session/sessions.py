@@ -181,13 +181,22 @@ class Sessions:
     def _work_session_folders(self) -> list[Path]:
         if not self.folder.is_dir():
             return []
-        open_folders = [folder for folder in sorted(self.folder.iterdir()) if folder.is_dir() and self._is_work_session(folder.name)]
+        open_folders = [folder for folder in sorted(self.folder.iterdir()) if self._is_open_session_folder(folder)]
         closed = self.folder / COMPLETE_FOLDER
         closed_folders = sorted(folder for folder in closed.iterdir() if folder.is_dir()) if closed.is_dir() else []
         return open_folders + closed_folders
 
     def _is_work_session(self, name: str) -> bool:
         return bool(name) and name != MAIN_SESSION_NAME and not name.startswith(_SHARED_FOLDER_MARK)
+
+    def _is_open_session_folder(self, folder: Path) -> bool:
+        return folder.is_dir() and self._is_work_session(folder.name) and not self._is_left_behind(folder)
+
+    def _is_left_behind(self, folder: Path) -> bool:
+        """Whether folder, among the open sessions, is only what a closed session of its name left there, such as a
+        progress cache written before its move or a folder Windows would not let go of: it holds no session.json, and
+        the session is kept among the closed ones. The board would otherwise list that session twice."""
+        return not (folder / SESSION_FILE).is_file() and (self.folder / COMPLETE_FOLDER / folder.name).is_dir()
 
     def named(self, name: str) -> Session | None:
         """The session called name: the main session, or a work session, open before closed; none when there is none.
@@ -196,7 +205,9 @@ class Sessions:
             return self.load(self.folder_of(name))
         if not self._is_work_session(name):
             return None
-        found = next((folder for folder in (self.folder / name, self.folder / COMPLETE_FOLDER / name) if folder.is_dir()), None)
+        open_folder = self.folder / name
+        candidates = (open_folder, self.folder / COMPLETE_FOLDER / name) if self._is_open_session_folder(open_folder) else (self.folder / COMPLETE_FOLDER / name,)
+        found = next((folder for folder in candidates if folder.is_dir()), None)
         return self.load(found) if found is not None else None
 
     def with_file(self, session_file: str) -> Session:
@@ -331,7 +342,8 @@ class Sessions:
         return chosen
 
     def _is_closed_since(self, name: str) -> bool:
-        return not self.folder_of(name).is_dir() and (self.folder / COMPLETE_FOLDER / name).is_dir()
+        open_folder = self.folder_of(name)
+        return (not open_folder.is_dir() or self._is_left_behind(open_folder)) and (self.folder / COMPLETE_FOLDER / name).is_dir()
 
     @property
     def open_name(self) -> str:
@@ -382,7 +394,7 @@ class Sessions:
         """The names of the open work sessions in the repository's own .sessions."""
         if not self.folder.is_dir():
             return []
-        return [folder.name for folder in self.folder.iterdir() if folder.is_dir() and self._is_work_session(folder.name)]
+        return [folder.name for folder in self.folder.iterdir() if self._is_open_session_folder(folder)]
 
     @mcp
     @command(name="switch-session")

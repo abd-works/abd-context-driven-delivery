@@ -32,6 +32,6 @@ export class FilesLink {
   }
 
   get subject(): string {
-    return this.isSessionFolder ? `.sessions/${this.ticket}` : `${this.ticket} · ${this.fidelities.join(', ')}`
+    return this.isSessionFolder ? `.sessions/${this.ticket}` : this.ticket
   }
 }

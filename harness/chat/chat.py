@@ -47,7 +47,7 @@ OPEN_LINK_SECONDS = 30
 # A file that keeps every link a new chat was opened with instead of opening the Claude app, as a test run names it.
 OPENED_CHATS_VARIABLE = "CDD_OPENED_CHATS"
 
-CommandKind = Literal["submit", "fill", "command", "open_file"]
+CommandKind = Literal["submit", "fill", "command", "open_file", "refresh", "failure"]
 MessageState = Literal["waiting", "taken", "shown", "done", "failed"]
 T = TypeVar("T")
 
@@ -214,7 +214,7 @@ class Chat:
     @agent_tool
     @noSessionLog
     def send(self, kind: CommandKind, text: str) -> Chat:
-        """Send chat a command: a fill puts text in its prompt for the person to review, a submit sends it, a command runs a slash command, and an open_file shows the file text names, a path from the project, in its chat bar's file viewer. A fill waits until the chat's turn has ended."""
+        """Send chat a command: a fill puts text in its prompt for the person to review, a submit sends it, a command runs a slash command, an open_file shows the file text names, a path from the project, in its chat bar's file viewer, a refresh has its chat bar read the board again, as after a page such as the Files app changed the session, and a select has its chat bar select the fidelities text names, slugs separated by commas, none to clear the selection, as a practice pressed in the Files app does, and a failure shows a page's failure on its chat bar as the bar shows its own, text a JSON object with the failure and the context it happened in. A fill waits until the chat's turn has ended."""
         self.queue(kind, text)
         return self
 
@@ -253,9 +253,17 @@ class Chat:
 
     def _check_in(self, is_busy: bool, name: str, folder: str) -> list[ChatCommand]:
         self._folder.mkdir(parents=True, exist_ok=True)
-        self._write({"name": name, "is_busy": is_busy, "seen": self.clock(), "folder": folder, **self._title_state(self._state)})
+        state = {"name": name, "is_busy": is_busy, "seen": self.clock(), "folder": folder}
+        self._write({**state, **self._title_state(self._state)})
         self._finish_worked_on(is_busy)
         return self._take_ready(is_busy)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def show(self) -> Chat:
+        """Answer chat as it last checked in: its name, whether a turn is running, and its folder."""
+        return self
 
     @mcp
     @agent_tool

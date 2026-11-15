@@ -584,37 +584,7 @@ Intended (`.sessions/_backlog/review-work-in-board-files.md` "session informatio
 
 ### (E) Review Files In Viewer
 
-#### (S) Person --> [View Files In Rich Viewer](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-view-files-in-rich-viewer)
-
-Intended (`.sessions/_backlog/review-work-in-board-files.md` "integrate with monaco viewer OR native file rendering"): files open in an editor-grade viewer, or rendered as the file type. Requested (2026-11-12, "use the graph app file viewer for this - make this a common component ... with a typed file shape along with typescript monaco viewer that renders"): one Monaco file viewer in `space/`, beside `space/session/file_manager.py`, shared by the board and the graph app, typed on the file manager's `FileText` (`.sessions/review-work-in-board-files/file-viewer-research.md`).
-
-#### (S) Person --> [Save Edited File](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-save-edited-file)
-
-Requested (2026-11-12, "clicking edit opens in edit mode and can be saved"): Edit turns the viewer's file editable, and Save writes the text to the file on disk through the file manager, kept to the workpath's folders as reading is. No MCP operation writes a file's content today (`file-viewer-research.md`, "The file viewer today").
-
-#### (S) Person --> [Add Comment To File Selection](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-add-comment-to-file-selection)
-
-Intended (`.sessions/_backlog/review-work-in-board-files.md` "select some text in file view and add comment that gets sent to chat like in design view"): a person selects text in a file and sends a comment on it to the chat. Requested (2026-11-12, "select text, right click -> add comment, type the comment; comment widget appears beside the line number of beginning of comment; click to open, press delete to delete selected comment"): Add comment on the right-click menu opens a comment box at the selection; the comment shows as a marker beside the selection's first line number; clicking the marker opens the comment, and Delete removes it.
-
-#### (S) Person --> [Send File Comments To Chat](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-send-file-comments-to-chat)
-
-Requested (2026-11-12, "finish editing press enter; added to chat q"): Enter finishes a comment and adds it to the chat queue, carrying the file's path, the selected lines, the selected text and the comment, as the report's Fix sends a file and line (`chat.send`, `report-client.ts`; `file-viewer-research.md`, "Recommendation"). Requested (2026-11-12, "a send all open comment button top left of viewer"): Send all sends every comment not yet sent in one message.
-
-#### (S) Chat --> [Mark File Comment Processed](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-mark-file-comment-processed)
-
-Requested (2026-11-12, "chat process comment and changes files then ... comment is at processed stage; comment --> not sent, sent, processed"): a sent comment becomes processed once the chat's turn that worked on its message has ended, as `chat.check_in` moves a shown message to done (`harness/chat/chat.py:279-286`).
-
-#### (S) Board App --> [Show Changed File In Viewer](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-show-changed-file-in-viewer)
-
-Requested (2026-11-12, "then viewer is updated to reflect changes"): when a comment on the open file is processed, the viewer reads the file again and shows the agent's changes.
-
-#### (S) Person --> [Clear Processed File Comments](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-clear-processed-file-comments)
-
-Requested (2026-11-12, "a clear processed comments button"): clearing removes the processed comments and keeps the ones not sent or still sent.
-
-#### (S) Board App --> [Show AI Changes As Diff](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-show-ai-changes-as-diff)
-
-Intended (`.sessions/_backlog/review-work-in-board-files.md` "change viewer from ai change like vscode / cursor"): the viewer marks what the agent changed in a file, as VS Code and Cursor do.
+Moved (2026-11-15) to [Review Generated Work In File Viewer](#e-review-generated-work-in-file-viewer): the Files app is the one place a session's files are viewed and commented on. The board's own files panel (`space/kanban/app/src/kanban/ticket/file-viewer-view.tsx`) still draws the same behaviour; its UI spec stays in `space/kanban/review-files-in-viewer.story.ui.spec.ts`.
 
 ### (E) Integrate Practice Content Editor Apps On Board
 
@@ -840,13 +810,9 @@ Observed: pressing the button on validate, render, iterate, sketch or document p
 Requested (2026-11-11, "doesnt result in LERN being passed in as a param? shouldnt it?"): the command the action button puts in the prompt names the session's chosen overlays in an `overlays=` word beside `format=` (`overlay-choices-client.ts` `overlayArgumentOf`); an action run with that word chooses those overlays on the session first (`WorkList.take`), and Generate adds each overlay's shared rules on top of the practices' rules (`Generate._overlay_rules`).
 ### (E) Review Fidelity Outputs In Chat Bar
 
-#### (S) Person --> [List Session Files](../../chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/list-session-files/list_session_files_story.test.ts)
+#### (S) Person --> List Session Files, View Session Files
 
-Observed: the ▤ files icon, or a folder chip on the session card, opens a tab per file `fidelity-progress.files` declares for the selected fidelity (`fidelity-files-client.ts` `openFiles`).
-
-#### (S) Person --> [View Session Files](../../chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/view-fidelity-files/view_fidelity_files_story.test.ts)
-
-Observed: each tab's text comes from `session.read_file`, which refuses a file outside the session's roots. This covers `.sessions/_backlog/bring-chat-bar-level-with-board.md` "Show the file list, with each file clickable to open it": the files view has one tab per file.
+Moved (2026-11-15) to [Review Generated Work In File Viewer](#e-review-generated-work-in-file-viewer) as Open Stage Files From Chat Bar, Open Session Folder From Chat Bar and List Files The Link Names: the chat bar's files button and session name open the Files app beside the chat, no longer a tab per file in the chat bar.
 
 #### (S) Person --> Open Validation Report From Violation Count
 
@@ -943,6 +909,198 @@ Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "Banned word check
 ### (S) Claude Code --> Warn On Branch Mismatch
 
 Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "Branch guard"): a warning shows before a commit when the branch does not match the active ticket's session.
+
+# (E) Review Generated Work In File Viewer
+
+The file viewer is the Files app (`space/session/files_app/`): a page of its own, opened beside the chat, where a person reads, filters and comments on the files a session generated, and, once its graph view is built, works the session's graph on those same files. Moved back (2026-11-15) from the Files app's own map, where release-2 had gathered every story about viewing a session's files on 2026-11-14 (commit 5aa8569f3); the person: "move the file viewer stories back to the main map under its own epic". Scenarios: [review_files_in_files_app_story.test.md](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md). Evidence words as there: **Observed** walked in the browser pane on 2026-11-14, **Built** in code and specs but not walked, **Intended** asked for and not done yet.
+
+Requested (2026-11-15): the file viewer becomes where the graph is worked too. A toggle at its top switches between its files and the graph; the graph view does what the Graph app does, but on the files the Files app lists, opening every file a person selects and folding them to the nodes selected. The person: "the actual file viewer is going to have a toggle that can switch from folder files and graph ... we basically ingest all of the stories and functionality that the Graph application can do except for you're now selecting file(s), eg more than one file opens; expand and collapse in file viewer based on the nodes in the graph; graph filtered like file filter is". Once these stories work, the Graph app's own epics (Explore Graph In Graph App, Filter Graph In Graph App, Review Violations In Graph App) retire into them.
+
+## (E) Open Files In Files App
+
+### (S) Person --> [Open Stage Files From Chat Bar](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-stage-files-from-chat-bar)
+
+Built (2026-11-14): the chat bar's ▤ files button opens the Files app beside the chat on every fidelity of the shown stage, every practice's, so the app's practice toggles filter them (`fidelity-files-client.ts` `openStageFiles`). A folder chip on the session card opens one fidelity's files (`openFiles`). Was the chat bar's List Session Files, which opened a tab per file in the chat bar.
+
+### (S) Person --> [Open Session Folder From Chat Bar](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-session-folder-from-chat-bar)
+
+Observed (2026-11-14): pressing the session's name opens the Files app on `.sessions/<session>`, listing its log, handoffs, notes and reports (`openSessionFolder`, `session.folder_files`).
+
+### (S) Story UI --> [Open File From Another Page](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-file-from-another-page)
+
+Built: a page the chat opened, such as the Story UI editor, sends the chat an `open_file`, and the chat opens that file in the Files app on its session folder (`board-chat-client.ts` `shown`, `openFileInViewer`).
+
+### (S) Files App --> [List Files The Link Names](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-list-files-the-link-names)
+
+Observed (2026-11-14): the page reads only the files its link names, each once, and never the board (`files-page.ts` `list`); a file not generated yet is listed but cannot be opened. Was View Fidelity Files on the board and the chat bar.
+
+### (S) Person --> [Open Diagram In Draw.io Tab](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-diagram-in-drawio-tab)
+
+Built (2026-11-14): a press on a `.drawio` file opens the draw.io editor in a new tab, and the Files tab stays on its file list (`files-page.ts` `openDrawio`). Requested (the person, 2026-11-14): "open in new tab works but orig tab also getting moved to drawio; leave it on file explorer". Was the chat bar's Open a diagram in the draw.io editor and the graph's Display Drawio File As Diagram; that story's Source tab and shape marking stay Intended.
+
+### (S) Person --> [Switch File Bar Between Folders And List](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-switch-file-bar-between-folders-and-list)
+
+Built (2026-11-14): the file bar collapses to its buttons and expands again, and shows its files as a list or in their folders, the open file's folders open (`file-bar.ts` *FileBar*, `files-page-view.tsx` `FileBarView`). Requested (the person, 2026-11-14): "expand collapse file bar with buttons to swap a folder view and file list".
+
+## (E) Filter Files In Files App
+
+What the file list shows follows the session's guidance selection and the chat bar's dots, so the same filter holds wherever the session is worked.
+
+### (S) Person --> [List Only The Files The Branch Changed](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-list-only-the-files-the-branch-changed)
+
+Built (2026-11-15): the file bar's Changed button, with its count, lists only the files the session's branch changed, a published design canvas kept (`file-bar.ts` `toggleChangedOnly`, `entries`). Requested (the person, 2026-11-15): "Yes, add it", to a changed-only filter for a session on the whole repository, where UX's mockup pattern lists about 150 files.
+
+### (S) Person --> Follow Chat Bar Selection In Files App
+
+Built (2026-11-15): the chat bar sends its selected fidelity dots at check-in (`Chat.check_in` `selected_fidelities`, `Chat.show`); the Files app reads them every second and, while any it lists are selected, shows only their files, its practice toggles following the dots (`files-page.ts` `filesShown`, `isShown`). Requested (the person, 2026-11-15): "make sure that the filter in the Files window is inherited from the filter in the chatbar", pointing at the chat bar's fidelity dots.
+
+### (S) Person --> Select Guidance On The Session
+
+Built (2026-11-15): the stages, practices and format groups selected are one guidance selection the session holds (`Session.guidance_selection`, `update_guidance_selection`, and the waiting read `guidance_selection_after`), with a version every change raises. The chat bar and the Files app each follow it with one waiting read and draw a press at once; a practice's dot is the practice on or off for the session, all its fidelities of the stages selected. The chat's own selection, stage list, chip cache and refresh messages are gone. Requested (the person, 2026-11-15): "the CDD session object should already have this; it needs to follow the domain model: session.updateGuidanceSelection({stage, practice, format}) ... subscriber.notify()".
+
+### (S) Person --> Show Stages In Files App And Chat Bar
+
+Built (2026-11-15): the chat bar's single stage chip and its list become a button per stage, toggled on together; the dots show, and the action runs on, the fidelities of every stage shown. The Files app has the same buttons first in its header. The stages shown are the chat's, one choice held by cdd (`Chat.show_stages`), with each stage's fidelities listed by the chat bar from the board (`Chat.list_stages`). Requested (the person, 2026-11-15): "we don't have a sync for stages", "toggles to select one or more stage, default stage from chat bar", "a collection of buttons so you can toggle and generate across multiple stages; the action would then submit fidelities of all toggled-on stages", "and we have exact same thing on top of file viewer".
+
+### (S) Person --> Filter Files By Format In Files App
+
+Built (2026-11-15): format chips after the practice toggles, with the chat bar's glyphs (M↓, ◇, </>, ▦) and colours; a press chooses the format in the session (`ticket.choose_formats`), the same choice as the chat bar's chips, which read again on the refresh the page sends; while any is chosen the list shows only those formats' files (`format-chips.ts`, `filesShown`). Requested (the person, 2026-11-15): "we want formats to be a filter as well ... same exact functionality as practice filter; place buttons after practices; use same images as chat bar".
+
+### (S) Person --> [Toggle Practice In Files App](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-toggle-practice-in-files-app)
+
+Built (2026-11-14): the session's practices sit along the top as toggles, each in its practice colour, filled while on and an outline while off; a press turns the practice on or off for the session and the list shows only the files of the practices turned on (`files-page.ts` `togglePractice`, `practice_session_output.enable`). Requested (the person, 2026-11-14): "the patterns should be toggles at the top; be the practice color; and allow us to toggle the practice filter here". Builds on the board's Browse Ticket Files By Practice (2026-11-12): "put the filter toggles on the top".
+
+### (S) Files App --> [Keep Chat Bar Practices In Sync](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-keep-chat-bar-practices-in-sync)
+
+Built (2026-11-14): a practice turned on or off in the Files app sends the chat that opened it a `refresh`, and its chat bar reads the board again, so its fidelity dots show the same practices (`chat.send` kind `refresh`, `board-chat-client.ts` `refreshed`); the page reads the practices again every three seconds while it shows (and when the person comes back to it), so a practice turned off on the chat bar or the board hides its files there with no press: a page in a side pane is never focused again (fixed 2026-11-14, the person: "the file filter needs to respect the practice that is toggled"). Requested (the person, 2026-11-14): "also toggles the command bar so they stay in sync".
+
+## (E) View Files In Source View
+
+### (S) Person --> [View File In Source View](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-view-file-in-source-view)
+
+Observed (2026-11-14): the open file shows in the graph explorer's Monaco source view, read-only, its lines numbered and coloured by language (`file-source-view.tsx`, `@source-view/SourceView`). Was the board's View Files In Rich Viewer and the graph's Open Node Source. Intended: a markdown file rendered as the page it describes.
+
+### (S) Person --> [Fold Classes And Operations](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-fold-classes-and-operations)
+
+Built: the session's graph places each class and operation, and the source view folds each one as a block (`session.file` folds). Was the graph's Unfold Calls And Classes In Source.
+
+### (S) Person --> [Mark Lines A Broken Rule Names](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-mark-lines-a-broken-rule-names)
+
+Built: the rules the session's saved graph found broken in the file mark their lines with a rule chip (`session.file` violations). Was the graph's Open Violation In Source.
+
+### (S) Person --> Browse Files Without Reading Rules
+
+Built (2026-11-15): Rules and Cross-file toggles at the top of the Files app, both off by default. With Rules on, `Session.file(rules=True)` reads the open file into the session's live graph when it changed (about 1.5 s) and answers its folds and broken rules, with the last validate's saved findings beside them, as the Graph app's source view shows them; Cross-file has the graph hold the whole working copy first (`Graph.hold_whole`). Fixed (2026-11-15): the two toggles are independent; Rules reads the file alone (`Session.file_alone`, about 0.8 s), Cross-file adds only what the whole working copy finds. The person: "when loading files don't use cross file unless cross file is toggled, and vice versa". Requested (the person, 2026-11-15): "I don't see code folding in here I don't see any of the violations", then "toggle at top and have it off by default; for rules; same with cross file that way we don't incur a performance penalty when we just want to browse files".
+
+### (S) Person --> [Save Edited File](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-save-edited-file)
+
+Intended: Edit turns the file editable and Save writes it through the file manager (`session.write_file`). The board's panel does it; the Files app is read-only today.
+
+## (E) Review Files With Comments
+
+### (S) Person --> [Add Comment To File Selection](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-add-comment-to-file-selection)
+
+Observed (2026-11-14): select lines, right-click, Add comment; Enter adds the comment and sends it, Add keeps it unsent; a marker shows beside the selection's first line (`comment-box-view.tsx`, `file-comments.add`). The menu opened from the keyboard (Shift+F10); a right-click from the browser tool closed it at once, not yet checked by hand.
+
+### (S) Person --> [Open Edit And Delete File Comment](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-edit-and-delete-file-comment)
+
+Observed (2026-11-14): a press on the marker opens the comment under its lines with its state; Save keeps an edited comment, not sent again; Delete removes it.
+
+### (S) Person --> [Send File Comments To Chat](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-send-file-comments-to-chat)
+
+Observed (2026-11-14): a sent comment lands in the prompt box of the chat that opened the page, with its file, lines and session (`file-comments.send`, a fill); Send all open comments sends every comment not yet sent in one message.
+
+### (S) Chat --> [Mark File Comment Processed](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-mark-file-comment-processed)
+
+Built: a sent comment is processed once the chat's turn that worked on it has ended; the page reads the open file again every two seconds while a comment on it is sent (`SENT_REFRESH_MILLISECONDS`).
+
+### (S) Files App --> [Show Changed File After Comment](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-show-changed-file-after-comment)
+
+Built: when a comment on the open file is processed, the page shows the file as the chat changed it.
+
+### (S) Person --> [Clear Processed File Comments](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-clear-processed-file-comments)
+
+Built: Clear processed removes the processed comments and keeps the ones not sent or still sent. Not walked: no comment was processed on 2026-11-14.
+
+### (S) Files App --> [Show AI Changes As Diff](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-show-ai-changes-as-diff)
+
+Intended: the page marks what the chat changed in the file, as VS Code and Cursor do (`SessionFile.changes`); the board's panel draws it, the Files app does not yet.
+
+## (E) Switch Files App Between Files And Graph
+
+[Scenarios](review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md).
+
+### (S) Person --> [Switch Files App To Graph View](review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-switch-files-app-to-graph-view)
+
+Requested (2026-11-15, "the actual file viewer is going to have a toggle that can switch from folder files and graph"): a toggle at the top of the Files app switches its file bar between the files it lists, as a list or in folders (`file-bar.ts` *FileBar*), and the practice trees of the session's graph, as the Graph app's tree shows them. Switching back shows the files again.
+
+### (S) Files App --> [Filter Graph Like The File List](review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-filter-graph-like-the-file-list)
+
+Requested (2026-11-15, "graph filtered like file filter is"): the graph view holds only the nodes of the files the file list would show: the stages, practices and format groups of the session's guidance selection, the chat bar's selected fidelity dots while any are selected, and the Changed button's branch changes while it is on (`files-page.ts` `filesShown`, `file-bar.ts` `entries`). A filter changed in either view shows in both.
+
+### (S) Person --> [Open Several Files From Graph Nodes](review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-open-several-files-from-graph-nodes)
+
+Requested (2026-11-15, "except for you're now selecting file(s), eg more than one file opens"): selecting a node in the graph view opens its file in the source view; selecting nodes in more than one file opens each of those files, where the Files app opens one file today and the Graph app shows one node's source.
+
+### (S) Files App --> [Fold Open Files To Selected Nodes](review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-fold-open-files-to-selected-nodes)
+
+Requested (2026-11-15, "expand and collapse in file viewer based on the nodes in the graph"): each open file unfolds the blocks of the nodes selected in the graph and folds its other classes and operations, from the folds the session's graph places (`session.file` folds); selecting another node unfolds it and leaves the rest folded. Builds on the Files app's Fold Classes And Operations and the Graph app's Unfold Calls And Classes In Source.
+
+## (E) Explore Graph In Files App
+
+[Scenarios](review-generated-work-in-file-viewer/explore-graph-in-files-app/explore_graph_in_files_app_story.test.md). Requested (2026-11-15, "we basically ingest all of the stories and functionality that the Graph application can do"): each story brings one of the Graph app's into the Files app's graph view, working on the files it lists rather than on a folder chosen in the app.
+
+### (S) Person --> [Expand Practice Tree In Files App](review-generated-work-in-file-viewer/explore-graph-in-files-app/explore_graph_in_files_app_story.test.md#story-expand-practice-tree-in-files-app)
+
+Brings in the Graph app's Expand Practice Tree: each practice starts collapsed, and the person opens nodes one level at a time (`GraphView.tsx` `TreeNode`).
+
+### (S) Person --> [Follow Relationships Under Node In Files App](review-generated-work-in-file-viewer/explore-graph-in-files-app/explore_graph_in_files_app_story.test.md#story-follow-relationships-under-node-in-files-app)
+
+Brings in the Graph app's Follow Relationships Under Node: a node shows its relationship groups as children, such as the invokes under an operation, and selecting a related node opens its file beside the files already open.
+
+### (S) Person --> [Filter Graph By Node Type And Connector In Files App](review-generated-work-in-file-viewer/explore-graph-in-files-app/explore_graph_in_files_app_story.test.md#story-filter-graph-by-node-type-and-connector-in-files-app)
+
+Brings in the Graph app's Filter By Node Type, Filter By Connector and Select All Or No Filter Choices, on top of the file list's filters: choosing node types keeps only those nodes and narrows the connectors and rules offered (`Graph.filter_choices`). The Graph app's Filter By Practice is the Files app's practice toggles already.
+
+### (S) Person --> [Apply Pattern Overlays In Files App](review-generated-work-in-file-viewer/explore-graph-in-files-app/explore_graph_in_files_app_story.test.md#story-apply-pattern-overlays-in-files-app)
+
+Brings in the graph's Apply Pattern Overlays: the graph view shows the overlays the session has chosen, the same choice as the chat bar's overlay chips (`ticket.choose_overlays`), with each overlay's nodes and rules in the tree.
+
+### (S) Files App --> [Show Graph Load Steps In Files App](review-generated-work-in-file-viewer/explore-graph-in-files-app/explore_graph_in_files_app_story.test.md#story-show-graph-load-steps-in-files-app)
+
+Brings in the Graph app's Show Load Steps While Loading and Copy Load Failure For Agent: while the session's graph loads, the graph view shows the step it is on and how long it has run (`graph/query-progress.ts`); a failed load shows the server's reason, with a copy for the chat, instead of loading forever.
+
+## (E) Review Graph Violations In Files App
+
+[Scenarios](review-generated-work-in-file-viewer/review-graph-violations-in-files-app/review_graph_violations_in_files_app_story.test.md). These take in the board's and the chat bar's Read Graph Violations sub-epics (2026-11-06): a violation is read from the session's live graph wherever it shows, and fixed from where it is read.
+
+### (S) Person --> [Show Only Violating Nodes In Files App](review-generated-work-in-file-viewer/review-graph-violations-in-files-app/review_graph_violations_in_files_app_story.test.md#story-show-only-violating-nodes-in-files-app)
+
+Brings in the Graph app's Show Only Violations and Filter Violations By Rule: the Violations switch keeps only the nodes that break a rule, and with rules chosen, only those that break a chosen one (`Filter._fails_selected_rule`).
+
+### (S) Person --> [See Rules Under Node In Files App](review-generated-work-in-file-viewer/review-graph-violations-in-files-app/review_graph_violations_in_files_app_story.test.md#story-see-rules-under-node-in-files-app)
+
+Brings in the Graph app's See Rules Under Node and Hover Violating Rule For Message: each node lists its passing, broken and prompt rules, a node that breaks one is marked in the tree, and hovering a broken rule shows its messages.
+
+### (S) Person --> [Open Violation In Files App Source](review-generated-work-in-file-viewer/review-graph-violations-in-files-app/review_graph_violations_in_files_app_story.test.md#story-open-violation-in-files-app-source)
+
+Brings in the Graph app's Open Violation In Source: selecting a broken rule opens its node's file with the rule and its message above the lines it names, unfolded, as the Files app's Mark Lines A Broken Rule Names marks them.
+
+### (S) Person --> [Fix Graph Violations From Files App](review-generated-work-in-file-viewer/review-graph-violations-in-files-app/review_graph_violations_in_files_app_story.test.md#story-fix-graph-violations-from-files-app)
+
+Requested (2026-11-06, "board and chat ... fix"; "/fix is a first class action; fix rule; file; default across all rules / files"): Fix this one on a violation, Fix rule on a rule and Fix all on the view send the Fix action to the chat that opened the page, for that violation, rule, or every violation the graph view shows. Takes in the board's Fix Graph Violations From Board and the Graph app's Copy Correct Prompt, whose prompt names the node, file and lines, rule, excerpt and message (`source/violation-prompt.ts`).
+
+### (S) Person --> [Fix Graph Violations From Chat Bar](review-generated-work-in-file-viewer/review-graph-violations-in-files-app/review_graph_violations_in_files_app_story.test.md#story-fix-graph-violations-from-chat-bar)
+
+Requested (2026-11-06, "board and chat ... fix"): Fix in the action picker sends the Fix action for the selected fidelities, every violation the live graph holds for them by default.
+
+### (S) Chat Bar --> [Count Session Violations From Live Graph](review-generated-work-in-file-viewer/review-graph-violations-in-files-app/review_graph_violations_in_files_app_story.test.md#story-count-session-violations-from-live-graph)
+
+Requested (2026-11-06, "default is to have a graph and just read the violations"; "board and chat generate"): each fidelity dot's red count comes from the session's live graph, not from the last validation report, so a generate, or a file read again in the Files app, updates the dots. Takes in Read Session Violations From Latest Graph and Generate And Judge Fidelity From Chat Bar.
+
+### (S) Board App --> [Count Fidelity Violations From Live Graph](review-generated-work-in-file-viewer/review-graph-violations-in-files-app/review_graph_violations_in_files_app_story.test.md#story-count-fidelity-violations-from-live-graph)
+
+Requested (2026-11-06, "default is to have a graph and just read the violations"; "board and chat generate"): a tile's violation count comes from the session's live graph, not from the last validation report. Also Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "better graph integration - load up front on session open, show all violations as a result of graph, no need for explicit run"). Takes in Read Fidelity Violations From Latest Graph and Generate And Judge Fidelity From Board.
 
 # (E) Author Story Maps
 
@@ -1629,6 +1787,9 @@ Observed: `graph.set_overlays` applies the overlays, reloads the open folder, an
 Inferred: the app stores the applied overlays in browser storage and sends them with the next load (`App.tsx` `LAST_OVERLAYS`, `readSavedOverlays`).
 
 ## (E) Explore Graph In Graph App
+
+Retires (2026-11-15) into [Explore Graph In Files App](#e-explore-graph-in-files-app) once the Files app's graph view works.
+
 ### (S) Person --> Choose Repo Folder
 
 Observed: the Repo folder button opens a folder dialog on the server's machine, or the person types a path, and the app loads every practice on that folder and shows its classes (`App.tsx` `browse`, `choose_folder.py`, `app.test.tsx` "should put the chosen folder on the page and show its classes").
@@ -1666,6 +1827,9 @@ Observed: a failed call shows the server's diagnosis and traceback instead of lo
 Inferred: the Executive and Engineering buttons switch the page and editor between light and dark themes and remember the choice (`App.tsx` `applyTheme`, `main.tsx`).
 
 ## (E) Filter Graph In Graph App
+
+Retires (2026-11-15) into [Filter Graph Like The File List](#s-files-app----filter-graph-like-the-file-list) and [Filter Graph By Node Type And Connector In Files App](#s-person----filter-graph-by-node-type-and-connector-in-files-app) once the Files app's graph view works.
+
 ### (S) Person --> Filter By Practice
 
 Observed: choosing practices selects every node type, connector and rule those practices hold, and adding another practice keeps the first practice's choices (`Graph.filter_choices`, which `App.tsx` `offerChoices` asks, `app.test.tsx` "should select every node, connector, and rule for the practice", "should keep the first practice filters when another practice is added").
@@ -1773,6 +1937,9 @@ Intended (`.sessions/_backlog/check-clean-engineering-across-files.md` "One-clas
 Intended (`.sessions/_backlog/check-clean-engineering-across-files.md` "Other cross-file checks"): where the graph cannot answer, Clean Engineering's validation judges the whole codebase in one pass, not one folder at a time, for second object models, the same behaviour in several files, second registries of practices, actions or stages, global or ambient state, state passed as parameters the object already holds, legacy names and dead code, and swallowed failures.
 
 ## (E) Review Violations In Graph App
+
+Retires (2026-11-15) into [Review Graph Violations In Files App](#e-review-graph-violations-in-files-app) once the Files app's graph view works.
+
 ### (S) Person --> See Rules Under Node
 
 Observed: each node has a rules entry listing its passing, violating and prompt rules, and a violating node is marked in the tree (`graph.py` `Node.rule_category`, `GraphView.tsx`, `app.test.tsx` "should show a passing rule and a violating rule under the operation").
@@ -1828,7 +1995,7 @@ Observed: the session board reads the graph saved beside a validation report and
 
 # (E) Connect Sessions Across Channels And Apps
 
-The chat bar, the CDD Kanban, the Story UI editor and the knowledge graph work on one ticket's session at a time, so each one opens the others on that ticket and shows what the others are doing. Validation moves into generate: the graph is rebuilt from what changed, its violations are read straight from it, and Fix is an action of its own. Every story here was requested on 2026-11-06 and none is built yet.
+The chat bar, the CDD Kanban, the Story UI editor and the knowledge graph work on one ticket's session at a time, so each one opens the others on that ticket and shows what the others are doing. Validation moves into generate: the graph is rebuilt from what changed, its violations are read straight from it, and Fix is an action of its own. The stories were requested on 2026-11-06.
 
 ## (E) Connect Chat Bar Board And Story UI
 
@@ -1876,35 +2043,7 @@ Requested (2026-11-06, "validate still exists as independent action"; "validate 
 
 ### (S:system) Claude Code --> Check Graph Rules When An Artifact Changes
 
-Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "Validate on save"): when an artifact in a session changes, the graph rules run on it and the band's violation count updates, with no explicit validate.
-
-## (E) Read Graph Violations On Board
-
-### (S) Board App --> Read Fidelity Violations From Latest Graph
-
-Requested (2026-11-06, "default is to have a graph and just read the violations"): a tile's violation count and list come from the latest graph, not from the last validation report. Also Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "better graph integration - load up front on session open, show all violations as a result of graph, no need for explicit run").
-
-### (S) Person --> Generate And Judge Fidelity From Board
-
-Requested (2026-11-06, "board and chat generate"): an expanded tile offers ▶ generate, which runs generate with its judgment on the ticket's enabled practices, and the tile shows the violations the refreshed graph holds. Built today (checked 2026-11-10): a tile's generate sends `/actions-generate`, which chains to validate. Missing: the tile's violations come from the report, not the refreshed graph.
-
-### (S) Person --> Fix Graph Violations From Board
-
-Requested (2026-11-06, "board and chat ... fix"): an expanded tile offers fix, and the Inspector offers Fix rule and Fix this one; each sends the Fix action for that scope, and with nothing picked it fixes every violation. Built today (checked 2026-11-10): the report panel has Fix per violation, Fix all per rule and Fix all violations (`report-rule-view.tsx:56,79`, `report-panel-view.tsx:71`), as prompts built from the report. Missing: Fix on the expanded tile, fed from the graph.
-
-## (E) Read Graph Violations In Chat Bar
-
-### (S) Chat Bar --> Read Session Violations From Latest Graph
-
-Requested (2026-11-06, "default is to have a graph and just read the violations"): each fidelity dot's red count comes from the latest graph, not from the last validation report.
-
-### (S) Person --> Generate And Judge Fidelity From Chat Bar
-
-Requested (2026-11-06, "board and chat generate"): generate from the action button runs generate with its judgment, and the dots update from the refreshed graph. Built today (checked 2026-11-10): generate from the action button chains to validate. Missing: the dots update from the report, not the graph.
-
-### (S) Person --> Fix Graph Violations From Chat Bar
-
-Requested (2026-11-06, "board and chat ... fix"): Fix in the action picker sends the Fix action for the selected fidelity, a rule or a file, every violation by default.
+Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "Validate on save"): when an artifact in a session changes, the graph rules run on it and the band's violation count updates, with no explicit validate. Built on release-2 (2026-11-15) for one file: with the Files app's Rules toggle on, `Session.file_alone` reads the open file into the session's live graph when it changed, in under a second, and answers its broken rules.
 
 ## (E) Change Stories From Canvas And Story UI
 
