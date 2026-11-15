@@ -55,100 +55,102 @@ decorates:                  # the fidelities it adds guidance and rules to
 
 Rules apply to the domain: each rule in `rules.yaml` is keyed to the practice's knowledge-graph node at that fidelity, the way LERN keys `server-tier-calls-the-real-thing` to `behaviorServer`. The graph checks it on the node; validate judges the rest.
 
+## Rules check the output, guidance steers the process
+
+A rule names something you can see in the finished tests and code, so validate can check it after the fact. How the work got there (test first, red then green, one at a time, stop after two misses) is process: it lives in Guidance as steps, never as a rule, because nothing in the output proves or disproves it. Rechecked every rule against that test; the process ones moved to Guidance.
+
 ## Table of contents
 
-1. **Overview** — what TDD adds at implementation: a failing test drives every production change, at the fastest tier that can prove it.
-2. **Guidance** (general, all decorated fidelities)
+1. **Overview** — what TDD adds at implementation: every behavior the code has is proven by a test at the fastest tier that can prove it.
+2. **Guidance** (process, all decorated fidelities)
    1. The test shape ladder — real conditions first on brownfield, test-first on greenfield; one ladder, three tiers (absorbs `testing-approach.md`).
-   2. Red, green, refactor — one signature or scenario at a time.
-   3. Arrange, act, assert — one outcome per test.
-   4. Test doubles — fakes at the architecture boundary only; a stub mirrors the real seam.
-   5. Fixtures and example data — one home for example data, shared setup at three siblings.
-   6. Tiers by speed — unit, heavy, e2e; what each holds; when each runs.
-   7. When stuck — two failed fix attempts, then diagnose.
-3. **Shared rules** (every decorated fidelity)
-4. **Clean Engineering · code**
-5. **Stories · acceptance_tests**
-6. **BDD · development**
-7. **DDD · tactics**
+   2. Red, green, refactor — write the test, see it fail for the right reason, write the least code to green, refactor only while green.
+   3. One at a time — one signature or scenario to green before the next.
+   4. Arrange, act, assert — how to lay out a test body.
+   5. Test doubles — where to put a fake and how to build it from the real seam.
+   6. Fixtures and example data — where example data lives, when to extract shared setup.
+   7. Tiers by speed — what each tier holds; when each runs.
+   8. When stuck — two failed fix attempts, then diagnose.
+3. **Shared rules** (output, every decorated fidelity)
+4. **Clean Engineering · code** — guidance + rules
+5. **Stories · acceptance_tests** — guidance + rules
+6. **BDD · development** — guidance + rules
+7. **DDD · tactics** — guidance + rules
 
 ## Shared rules
 
-File: `rules/shared_tdd_rules.py` (graph-checked ones); judged ones are bullets in `tdd.md`.
+File: `rules/shared_tdd_rules.py`. Each is checked on the output; a rule the graph cannot decide is a bullet in `tdd.md` that validate judges.
 
-| Rule | Checked by | One line |
+| Rule | Checked on | One line |
 |---|---|---|
-| `test-before-code` | judged | No production change without a test that failed for the right reason first. |
-| `minimum-to-green` | judged | Write the least production code that turns the failing test green; refactor only while green. |
-| `one-at-a-time` | judged | Take one failing test to green before opening the next. |
-| `one-outcome-per-test` | graph: observation, then | A test proves one outcome, so a failure names the behavior that broke. |
-| `double-only-at-boundaries` | graph: observation, step | Replace only what crosses the architecture boundary; never the subject under test. |
-| `double-honours-real-seam` | graph: class (fake vs real seam) | A fake has the real seam's operations and failure cases, and a heavy test runs the real one. |
-| `tier-by-speed` | graph: spec file | The file suffix names the tier and the tier is about speed (moved here from BDD and Stories). |
-| `diagnose-after-two-misses` | judged | After two failed fixes for the same failure, stop and diagnose before a third. |
+| `one-outcome-per-test` | graph: observation, then | A test asserts one outcome, so a failure names the behavior that broke. |
+| `double-only-at-boundaries` | graph: observation, step | A test fakes only what crosses the architecture boundary, never the subject under test. |
+| `double-honours-real-seam` | graph: class | A fake has the real seam's operations and failure cases, and a heavy test runs the real one. |
+| `tier-by-speed` | graph: spec file | The file suffix names the tier, and what the file touches fits that tier. |
+| `no-skipped-or-empty-test` | graph: observation, scenario | No test is skipped, commented out, or left without an assertion. |
+
+Moved to Guidance as process: `test-before-code`, `minimum-to-green`, `one-at-a-time`, `diagnose-after-two-misses`.
 
 ## Clean Engineering · code
 
 File: `practices/clean_engineering/rules/code_tdd_rules.py`
 
-
-General: production code is written only to turn a test green; a new class or operation arrives with the test that needed it.
+Guidance: production code is written only to turn a test green; when a new class or operation is needed, write the test that needs it first.
 
 | Rule | Graph node | One line |
 |---|---|---|
 | `operation-has-a-proving-test` | `operation` | Every public operation is invoked by at least one observation or step (`invokedBy`). |
 | `class-demonstrated-by-a-test` | `class` | Every public class is demonstrated through an example or observation (`demonstratedThrough`). |
 | `invariant-has-a-failing-case` | `invariant` | Every invariant has a test that tries to break it and sees the named failure. |
-| `no-untested-branch-added` | `operation` | A new branch in an operation body arrives with the test that takes it. |
+| `every-branch-taken-by-a-test` | `operation` | Every branch in a public operation's body is taken by some test (was `no-untested-branch-added`, which described the process). |
 
 ## Stories · acceptance_tests
 
 File: `practices/stories/rules/acceptance_test_tdd_rules.py`
 
-
-General: one scenario at a time — scenario test red, production code green, then the next scenario.
+Guidance: one scenario at a time — scenario test red on its Then, production code to green, then the next scenario.
 
 | Rule | Graph node | One line |
 |---|---|---|
-| `scenario-runs-red-first` | `scenario` | A scenario's test is seen failing on its Then before its production code exists. |
 | `given-seeds-state-only` | `given` | A Given builds state through repositories or fixtures; it never asserts and never calls the When. |
 | `when-calls-the-domain-operation` | `when` | A When calls the operation it `invokes`, through the public seam, nothing else. |
 | `then-observes-one-outcome` | `then` | A Then checks the example it `observes`; an And adds an outcome of the same interaction only. |
 | `example-data-from-one-home` | `example` | Example rows come from the story's examples file, never typed inline in a step. |
 
+Moved to Guidance as process: `scenario-runs-red-first`.
+
 ## BDD · development
 
 File: `practices/bdd/rules/development_tdd_rules.py`
 
-
-General: one `BDD: SIGNATURE` at a time, arrange-act-assert from the realization call graph.
+Guidance: one `BDD: SIGNATURE` at a time — fill it, see it fail, write the least code to green; arrange-act-assert from the realization call graph.
 
 | Rule | Graph node | One line |
 |---|---|---|
-| `signature-goes-red-first` | `observation` | Each signature is filled and seen failing before production code is written for it. |
 | `act-follows-the-realization` | `observation` | The act calls what the observation `invokes`, in the realization's order. |
 | `setup-builds-the-named-state` | `context` | A `that`/`with` setup arranges exactly the state its label names (pairs with BDD's `context-setup-expresses-state`). |
-| `no-signature-left` | `spec` | A development spec is done only when no `BDD: SIGNATURE` marker remains. |
+| `no-signature-left` | `spec` | A development spec holds no `BDD: SIGNATURE` marker. |
+
+Moved to Guidance as process: `signature-goes-red-first`.
 
 ## DDD · tactics
 
 File: `practices/ddd/rules/tactics_tdd_rules.py`
 
-
-General: each building block is proven the way its kind demands, through its aggregate root.
+Guidance: settle how each building block is tested when you choose its pattern; prove it through its aggregate root.
 
 | Rule | Graph node | One line |
 |---|---|---|
 | `aggregate-tested-through-its-root` | `aggregate` | Tests reach entities and values only through the aggregate root's operations. |
 | `invariant-guarded-by-a-test` | `entityRoot` | Each aggregate invariant has a test where an operation refuses to break it. |
 | `value-object-tested-by-equality` | `valueObject` | A value object's tests prove equality by value and immutability. |
-| `repository-tested-on-a-real-store` | `repository` | A repository's unit tests run on the in-memory one; a heavy test runs the real store. |
-| `domain-service-tested-with-fakes-at-boundary` | `domainService` | A domain service's collaborators outside the domain are fakes; its domain collaborators are real. |
+| `repository-tested-on-a-real-store` | `repository` | A repository has unit tests on the in-memory one and a heavy test on the real store. |
+| `domain-service-tested-with-fakes-at-boundary` | `domainService` | A domain service's tests fake its collaborators outside the domain and use its domain collaborators for real. |
 
 ## Open decisions for step 2
 
 1. **Order on brownfield.** The ladder says run real conditions first, with no automated tests. Every other source says write the test first. The sketch keeps both: greenfield goes test first, brownfield runs real conditions first. Is that right?
-2. **Moving rules.** `tier-by-speed`, `story-tier-by-speed`, `layer-isolation` and `red-then-green` would move out of BDD and Stories into this overlay. Or should they stay where they are, with the overlay only pointing to them?
+2. **Moving rules.** `tier-by-speed`, `story-tier-by-speed` and `layer-isolation` would move out of BDD and Stories into this overlay, and BDD's `red-then-green`, `minimum-green` and `one-signature-at-a-time` are process, so they would leave BDD's rules for this overlay's Guidance. Or should they stay where they are, with the overlay only pointing to them?
 3. **The `always_apply` setting.** Should it go in `tdd.md` front matter, or in the project's yaml so a project can turn it off?
 4. **Overlay reading.** Teach the practice catalogue that a practice may decorate others (its `decorates:` list and `practices/` folder), and have `PatternOverlays` read stack patterns only? Or one overlay reader for both?
 5. **Agent BDD.** Agent BDD isn't decorated in this sketch. Should it be?
