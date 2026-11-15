@@ -1,13 +1,13 @@
 # TDD overlay — sketch (step 1)
 
-Shell only: table of contents, rule names, one line each. Built like the LERN and MERN overlays (`cdd_guidance/patterns/<name>/` with `practices/<practice>/model/schema.yaml` + `rules.yaml`), but switched on by a yaml setting instead of chosen per session. Source material: `tdd-content.md`.
+Shell only: table of contents, rule names, one line each. It is practice guidance, not a stack pattern, so it lives with the practices. It overlays the way LERN and MERN do (`practices/<practice>/model/schema.yaml` + `rules.yaml` per decorated practice), but is switched on by a yaml setting instead of chosen per session. Source material: `tdd-content.md`.
 
 ## Where it lives and how it switches on
 
 ```
-cdd_guidance/patterns/tdd/
+cdd_guidance/practices/tdd/
   tdd.md                       # Overview, Guidance, Shared rules, one section per decorated practice
-  tdd.py                       # thin @agent_toolset, like lern_domain_driven.py
+  tdd.py                       # thin @agent_toolset PracticeGuidance, like stories.py
   practices/
     clean_engineering/model/{schema.yaml, rules.yaml}
     stories/model/{schema.yaml, rules.yaml}
@@ -16,7 +16,7 @@ cdd_guidance/patterns/tdd/
   _examples/<rule>/{faulty,repaired}/
 ```
 
-`tdd.md` front matter (new setting, read by `PatternOverlays`):
+`tdd.md` front matter (new setting). Today only `PatternOverlays` reads `practices/<practice>/model` overlays, and only from `cdd_guidance/patterns/`; a practice that decorates other practices needs that reading to come from the guidance side too:
 
 ```yaml
 always_apply: true          # in every session, no overlays= word needed
@@ -111,4 +111,5 @@ General: each building block is proven the way its kind demands, through its agg
 1. **Order on brownfield.** The ladder says run real conditions first, with no automated tests. Every other source says write the test first. The sketch keeps both: greenfield goes test first, brownfield runs real conditions first. Is that right?
 2. **Moving rules.** `tier-by-speed`, `story-tier-by-speed`, `layer-isolation` and `red-then-green` would move out of BDD and Stories into this overlay. Or should they stay where they are, with the overlay only pointing to them?
 3. **The `always_apply` setting.** Should it go in `tdd.md` front matter, or in the project's yaml so a project can turn it off?
-4. **Agent BDD.** Agent BDD isn't decorated in this sketch. Should it be?
+4. **Overlay reading.** Teach the practice catalogue that a practice may decorate others (its `decorates:` list and `practices/` folder), and have `PatternOverlays` read stack patterns only? Or one overlay reader for both?
+5. **Agent BDD.** Agent BDD isn't decorated in this sketch. Should it be?
