@@ -7,7 +7,8 @@ import type { CddApi } from '@cdd/cdd-shared'
 import type { PracticeSessionOutputData } from '@cdd/space/session/practice-session-output'
 
 import { FilesLink } from './files-link'
-import { FilesPage, filesShown, PRACTICES_REFRESH_MILLISECONDS, type DrawioTab } from './files-page'
+import { FilesPage, filesShown, PRACTICES_REFRESH_MILLISECONDS } from './files-page'
+import { drawioPageOf } from './files-paths'
 
 // The Files app's page against a fake of its own server: each post answers what the route would, and is kept in order.
 class FakeFilesServer implements CddApi {
@@ -40,7 +41,6 @@ class FakeFilesServer implements CddApi {
       return this.practices[name] as Result
     }
     if (path.endsWith('/files')) return { markdown: [entry(`.context/${path.split('/')[3]}.md`)], drawio: [entry(`.context/${path.split('/')[3]}.drawio`)] } as Result
-    if (path.endsWith('/drawio/open')) return { url: 'http://127.0.0.1:8791/edit?f=a.drawio' } as Result
     return null
   }
 
@@ -62,13 +62,6 @@ function entry(path: string) {
 
 const STAGE_LINK = '?files=release-2&fidelity=stories-story-map,ddd-bounded-context&chat=chat-1'
 
-class FakeTab implements DrawioTab {
-  location = { href: '' }
-  isClosed = false
-  close(): void {
-    this.isClosed = true
-  }
-}
 
 async function settled(): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, 0))
@@ -140,26 +133,17 @@ describe('Toggle Practice In Files App', () => {
 })
 
 describe('Open Diagram In Draw.io Tab', () => {
-  describe('with a .drawio file pressed', () => {
-    it('should send a tab opened during the press to the draw.io viewer, leaving this tab on the file list', async () => {
-      const tab = new FakeTab()
-      const page = new FilesPage(new FakeFilesServer(), new FilesLink(STAGE_LINK), () => tab)
-      const opening = page.open('a.drawio')
-      expect(tab.location.href).toBe('')
-      await opening
-      await settled()
-      expect(tab.location.href).toBe('http://127.0.0.1:8791/edit?f=a.drawio')
+  describe('with a .drawio file listed', () => {
+    it("should link it to the Files server's draw.io page, which sends a tab of its own to the viewer", () => {
+      expect(drawioPageOf('C:/dev/work/.context/a.drawio', 'chat-1')).toBe('/api/drawio/page?path=C%3A%2Fdev%2Fwork%2F.context%2Fa.drawio&chat=chat-1')
     })
 
-    it('should close the tab when the viewer does not open', async () => {
-      const tab = new FakeTab()
-      const failing = new FakeFilesServer()
-      failing.post = async () => {
-        throw new Error('the viewer did not start')
-      }
-      const page = new FilesPage(failing, new FilesLink(STAGE_LINK), () => tab)
-      await page.open('a.drawio')
-      expect(tab.isClosed).toBe(true)
+    it('should leave this tab on its file list once pressed', async () => {
+      const page = new FilesPage(new FakeFilesServer(), new FilesLink(STAGE_LINK))
+      await started(page)
+      const shown = page.state.openPath
+      await page.open('.context/stories-story-map.drawio')
+      expect(page.state.openPath).toBe(shown)
     })
   })
 })

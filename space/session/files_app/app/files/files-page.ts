@@ -7,7 +7,7 @@ import { SessionClientGenerated, type FileEntryData } from '@cdd/space/session/s
 import { FileBar } from './file-bar'
 import { FileCommentsActions } from './file-comments-actions'
 import type { FilesLink } from './files-link'
-import { DRAWIO_PATH, isDrawio } from './files-paths'
+import { isDrawio } from './files-paths'
 import { FilesStore, type FidelityFiles } from './files-state'
 import { chosenFormatsOf, chosenKeyOf, FormatChips } from './format-chips'
 
@@ -22,9 +22,6 @@ const TOAST_MILLISECONDS = 8_000
 // Which practices are on and which fidelities are selected, the one thing about them the file list depends on.
 const onOff = (practices: PracticeSessionOutputData[], selected: string[], formats = ''): string =>
   [...practices.map(practice => `${practice.name}:${practice.enabled}`), ...selected, formats].join(',')
-
-// The tab a .drawio file opens in: sent to the viewer once its address is known, closed when it never comes.
-export type DrawioTab = { location: { href: string }; close(): void }
 
 const reasonOf =(failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
 
@@ -63,7 +60,6 @@ export class FilesPage {
   constructor(
     readonly api: CddApi,
     readonly link: FilesLink,
-    private readonly openTab: () => DrawioTab | null = () => window.open('', '_blank'),
   ) {
     this.session = SessionClientGenerated.named(api, link.sessionFile)
     this.comments = new FileCommentsActions(this)
@@ -233,7 +229,8 @@ export class FilesPage {
   }
 
   async open(path: string): Promise<void> {
-    if (isDrawio(path)) return this.openDrawio(path)
+    // A .drawio file is a link to the draw.io viewer, which opens in a tab of its own; this tab keeps its file list.
+    if (isDrawio(path)) return
     this.store.change(() => ({ openPath: path, file: null }))
     await this.refreshOpen()
   }
@@ -258,22 +255,6 @@ export class FilesPage {
   private stopRefreshing(): void {
     if (this.refreshTimer) clearTimeout(this.refreshTimer)
     this.refreshTimer = null
-  }
-
-  // The new tab opens while the person's click is still running, before the viewer's address comes back: a tab opened
-  // after a wait is no longer the click's, and the browser pane then loads the viewer in this tab instead, so the file
-  // list was lost. This tab keeps the list; the new one is sent to the viewer once its address arrives.
-  private async openDrawio(path: string): Promise<void> {
-    const tab = this.openTab()
-    try {
-      const opened = await this.api.post<{ url: string }>(DRAWIO_PATH, { path })
-      if (!opened?.url) throw new Error('the viewer sent back no address')
-      if (!tab) return this.fail(`${path} did not open in the draw.io viewer: the browser refused a new tab`, `Opening ${path} from the Files app`)
-      tab.location.href = opened.url
-    } catch (failure) {
-      tab?.close()
-      this.fail(`${path} did not open in the draw.io viewer: ${reasonOf(failure)}`, `Opening ${path} from the Files app`)
-    }
   }
 
   // Every failure in the page goes through here: it is shown here and sent to the chat that opened the page, which shows

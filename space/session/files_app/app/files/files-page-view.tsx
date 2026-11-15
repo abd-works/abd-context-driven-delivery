@@ -5,7 +5,7 @@ import type { FileEntryData, SessionFileData } from '@cdd/space/session/session'
 import type { FileFolder } from './file-bar'
 import { FileSourceView } from './file-source-view'
 import type { FilesPage } from './files-page'
-import { isDrawio } from './files-paths'
+import { drawioPageOf, isDrawio } from './files-paths'
 import { formatGlyphOf } from './format-chips'
 import { applyTheme, storedTheme, type FilesTheme } from './files-theme'
 
@@ -22,13 +22,27 @@ function useFilesState(page: FilesPage) {
 function FileEntryView({ page, entry, isOpen }: { page: FilesPage; entry: FileEntryData; isOpen: boolean }) {
   if (entry.link) return <PublishedFileView entry={entry} />
   const classes = ['file-entry', isOpen ? 'is-open' : '', entry.exists ? '' : 'is-missing', entry.is_changed ? 'is-changed' : ''].filter(Boolean).join(' ')
-  const hint = isDrawio(entry.path) ? `${entry.path}: opens in the draw.io viewer` : entry.exists ? entry.path : `${entry.path}: not generated yet`
+  if (isDrawio(entry.path) && entry.exists) return <DrawioFileView page={page} entry={entry} />
+  const hint = entry.exists ? entry.path : `${entry.path}: not generated yet`
   return (
     <li>
       <button className={classes} title={hint} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void page.open(entry.path)}>
         {fileNameOf(entry.path)}
-        {isDrawio(entry.path) ? <span className="file-entry-note"> ↗ draw.io</span> : null}
       </button>
+    </li>
+  )
+}
+
+// A .drawio file: a link that opens the draw.io viewer on it in a tab of its own, so this tab keeps its file list. A
+// link is a navigation the browser always allows, where a tab a script opens can be refused.
+function DrawioFileView({ page, entry }: { page: FilesPage; entry: FileEntryData }) {
+  const classes = ['file-entry', 'is-drawio', entry.is_changed ? 'is-changed' : ''].filter(Boolean).join(' ')
+  return (
+    <li>
+      <a className={classes} href={drawioPageOf(entry.path, page.link.chat)} target="_blank" rel="noreferrer" title={`${entry.path}: opens in the draw.io viewer`}>
+        {fileNameOf(entry.path)}
+        <span className="file-entry-note"> ↗ draw.io</span>
+      </a>
     </li>
   )
 }

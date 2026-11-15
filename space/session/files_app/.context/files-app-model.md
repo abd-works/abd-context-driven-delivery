@@ -23,9 +23,9 @@ The *Files app* shows the files a link names and turns a person's reading into w
 - `fail(failure, context, {isShownOnPage})` shows a failure here and sends it to the opening chat once (`Chat.send("failure", {failure, context})`), which shows it on its chat bar as the bar shows its own; every failure on the page goes through it: a call that fails, a file or list that does not read (already in the problem line, so no toast), the look that this browser will not keep, what stopped the page (`FilesFailureView.componentDidCatch`), and any error or rejected promise nothing caught (window `error` and `unhandledrejection`, listened to while the page runs). A failure met again, on a timer or a return to the page, is not sent again.
   - -> Chat.select(selected_fidelities), the one selection cdd holds for the chat, or PracticeSessionOutput.enable and Chat.send("refresh", "practices")
   - **Invariant:** the practices and the selection shown are the session's and the chat bar's; the page keeps no filter of its own.
-- `open(path)` opens a file in the source view, or a `.drawio` file in the draw.io editor.
+- `open(path)` opens a file in the source view. A `.drawio` file is a link instead (`drawioPageOf`): the Files server's draw.io page starts the viewer and sends that new tab on to it, a navigation the browser always allows, where a tab opened from a script can be refused; a viewer that does not start is shown in the tab and told to the chat.
   - -> Session.file
-  - **Invariant:** a `.drawio` file opens in a tab opened during the click, so this tab keeps its file list; a tab whose viewer never answers is closed.
+  - **Invariant:** a `.drawio` file opens in a tab of its own, so this tab keeps its file list.
 - `toggleRules()` and `toggleCrossFile()` each turn one read of the open file on or off, both off by default so browsing never reads a graph: Rules reads the file on its own and shows its folds and its own broken rules, under a second (`Session.file_alone`); Cross-file shows only the rules the whole working copy finds beyond those, linking files and practices, which takes far longer (`Session.file_in_whole`).
   - -> Session.file(path, rules, cross_file)
 - `refreshOpen()` (private) reads the open file again, and again every two seconds while a comment on it is sent.
