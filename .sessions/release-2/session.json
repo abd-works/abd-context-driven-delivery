@@ -32,7 +32,7 @@
       }
     },
     "ddd": {
-      "enabled": false,
+      "enabled": true,
       "formats": {
         "bounded_context": [],
         "tactics": [
@@ -44,7 +44,7 @@
       }
     },
     "ux": {
-      "enabled": false,
+      "enabled": true,
       "formats": {
         "ia": [
           "drawio",
@@ -60,7 +60,7 @@
       }
     },
     "bdd": {
-      "enabled": false,
+      "enabled": true,
       "formats": {
         "behavior": [],
         "development": [],
@@ -74,6 +74,6 @@
       "specification",
       "implementation"
     ],
-    "version": 113
+    "version": 116
   }
 }
