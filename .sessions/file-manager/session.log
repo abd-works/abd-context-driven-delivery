@@ -42,3 +42,8 @@
 2026-11-15T20:31:26Z tool repo.merge_to_main af5894a3-9c9f-4aa3-be83-2ef5749adcca C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\af5894a3-9c9f-4aa3-be83-2ef5749adcca.jsonl 1-451
 2026-11-15T20:31:28Z error repo.merge_to_main C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1 af5894a3-9c9f-4aa3-be83-2ef5749adcca C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\af5894a3-9c9f-4aa3-be83-2ef5749adcca.jsonl 1-451
 2026-11-15T20:31:55Z tool repo.merge_to_main af5894a3-9c9f-4aa3-be83-2ef5749adcca C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\af5894a3-9c9f-4aa3-be83-2ef5749adcca.jsonl 1-482
+2026-11-15T20:34:16Z tool graph.practice_names
+2026-11-15T20:34:17Z tool graph.load_practice_roots
+2026-11-15T20:34:29Z tool graph.inventory
+2026-11-15T20:34:29Z tool graph.filter_choices
+2026-11-15T20:34:30Z tool graph.explorer_trees
