@@ -422,6 +422,9 @@ class Repo:
             self.push_upstream()
         clone = self.main_clone
         returning_to = clone.current_branch
+        # The clone's own changes are its work too, such as the session's log, which this call has just written there; a
+        # merge refuses to run over them.
+        clone.commit([str(clone.root)], f"{returning_to.name}: work kept before merging {branch.name}", untracked=True)
         branch.merge_into_default()
         if push and clone.has_origin:
             clone.push_upstream()
