@@ -62,7 +62,7 @@
       }
     },
     "bdd": {
-      "enabled": false,
+      "enabled": true,
       "formats": {
         "behavior": [
           "python"
@@ -81,6 +81,6 @@
       "discovery",
       "specification"
     ],
-    "version": 49
+    "version": 50
   }
 }
