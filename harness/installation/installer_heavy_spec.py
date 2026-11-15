@@ -34,9 +34,8 @@ class _ScriptedClaude(ClaudePlugins):
     def is_board_watched(self) -> bool:
         return self.board_watched
 
-    @property
-    def published_board_version(self) -> str:
-        return "0.6.3-abc"
+    def published_version(self, plugin: str) -> str:
+        return {"cdd-board": "0.6.3-abc", "cdd": "1.0.0-abc"}.get(plugin, "")
 
     @property
     def claude_cli(self) -> str | None:
@@ -1462,10 +1461,9 @@ with description("toolsets installed for Claude Code") as self:
         with before.each:
             self.plugins = _ScriptedClaude(listed="cdd@cdd-home")
 
-        # Claude Code reads the cdd plugin from its folder in ~/.cdd, so an installed one needs nothing more.
-        with context("that is already installed"):
+        with context("that is already installed at the published version"):
             with before.each:
-                self.plugins.plugins_installed = {"cdd@cdd-home": "1.0.0"}
+                self.plugins.plugins_installed = {"cdd@cdd-home": "1.0.0-abc"}
                 self.answer = self.plugins.install_cdd()
 
             with it("should say it is installed"):
@@ -1478,6 +1476,13 @@ with description("toolsets installed for Claude Code") as self:
             with it("should install it at user scope"):
                 self.plugins.install_cdd()
                 expect(("plugin", "install", "cdd@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
+
+        # Claude Code keeps the copy it installed for a version, so a changed server entry reaches chats only as an update.
+        with context("that is installed at an older version"):
+            with it("should update it at user scope"):
+                self.plugins.plugins_installed = {"cdd@cdd-home": "1.0.0"}
+                self.plugins.install_cdd()
+                expect(("plugin", "update", "cdd@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
 
     with context("finding Claude Code in the desktop app"):
         with before.each:

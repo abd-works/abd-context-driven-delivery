@@ -1,9 +1,10 @@
-"""Run by an IDE before it connects to the cdd server: start the server when none answers, then name the project.
+"""Run before something connects to the cdd server: start the server when none answers, then name the project.
 
-The installer copies this file to ``~/.cdd/connect.py``. In Claude Code the cdd plugin runs it as its server's
-``headersHelper`` with the chat's folder as its argument. It prints the headers to send, so every request says which
-project its chat works on. A language adapter runs it with ``--address`` and reads the server's address from it too, so
-only the server reads and writes the file it publishes its address in."""
+The installer copies this file to ``~/.cdd/connect.py``. In Claude Code the cdd plugin runs it with ``--start`` when a
+chat starts, which only starts the server; the server names a Claude Code chat's project from its connection. Run with
+the project's folder as its argument, it prints the headers to send, so every request says which project it works on. A
+language adapter runs it with ``--address`` and reads the server's address from it too, so only the server reads and
+writes the file it publishes its address in."""
 from __future__ import annotations
 
 import json
@@ -11,9 +12,15 @@ import os
 import sys
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-HOME = Path(__file__).resolve().parent
+if TYPE_CHECKING:
+    from harness.mcp.mcp_address import McpAddress
+
+HOME =Path(__file__).resolve().parent
 ADDRESS_FLAG = "--address"
+# Start the server when none answers, and print nothing: what the cdd plugin's chat-start hook runs.
+START_FLAG = "--start"
 # Claude Code runs a chat's tools, this script among them, with the chat's id in this variable. The id stays the same
 # when the chat moves to another folder, which the folder Claude Code fills into the arguments does not.
 CHAT_ID_VARIABLE = "CLAUDE_CODE_SESSION_ID"
@@ -26,19 +33,34 @@ UNNAMED_CHAT = "unnamed"
 # long rather than exit, because a header helper that prints nothing leaves its chat cut off from cdd until a reload.
 RUNTIME_SWAP_SECONDS = 30
 RUNTIME_RETRY_SECONDS = 0.5
+# How long a running server has to answer the ping before the script starts one.
+PING_SECONDS = 2
 
 
+# While a chat starts every file a Python import reads is slow, so the script imports only what names the server and the
+# chat. The framework that starts a server loads only when none answers.
 def main() -> None:
     import_runtime()
-    from harness.mcp.cdd_home import CddHome
-    from harness.agent_tools.claude_chat_process import ClaudeChatProcess
-    from harness.mcp.mcp_daemon import CHAT_HEADER, CHAT_PROCESS_HEADER, PROJECT_HEADER, McpDaemon
+    from harness.mcp.mcp_address import CHAT_HEADER, CHAT_PROCESS_HEADER, PROJECT_HEADER, McpAddress
+    from harness.process.claude_chat_process import ClaudeChatProcess
 
-    daemon = McpDaemon(CddHome(HOME))
-    daemon.ensure()
+    address = McpAddress()
+    ensure_server(address)
+    if START_FLAG in sys.argv[1:]:
+        return
     process = ClaudeChatProcess.from_ancestors()
     chat_process = {CHAT_PROCESS_HEADER: str(process.pid)} if process is not None else {}
-    print(json.dumps(answer(sys.argv[1:], daemon.url, PROJECT_HEADER, CHAT_HEADER, chat_process)))
+    print(json.dumps(answer(sys.argv[1:], address.url, PROJECT_HEADER, CHAT_HEADER, chat_process)))
+
+
+def ensure_server(address: McpAddress) -> None:
+    """Start the cdd server when it does not answer a ping at address."""
+    if address.ping_answer(PING_SECONDS) is not None:
+        return
+    from harness.mcp.cdd_home import CddHome
+    from harness.mcp.mcp_daemon import McpDaemon
+
+    McpDaemon(CddHome(HOME)).ensure()
 
 
 def import_runtime() -> None:
@@ -62,8 +84,8 @@ def _import_pinned_runtime() -> None:
     runtime = json.loads((HOME / "runtime.json").read_text(encoding="utf-8"))
     if runtime["source"] not in sys.path:
         sys.path.insert(0, runtime["source"])
-    import harness.agent_tools.claude_chat_process  # noqa: F401
-    import harness.mcp.mcp_daemon  # noqa: F401
+    import harness.mcp.mcp_address  # noqa: F401
+    import harness.process.claude_chat_process  # noqa: F401
 
 
 def _forget_partial_imports() -> None:

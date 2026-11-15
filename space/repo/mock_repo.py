@@ -184,12 +184,15 @@ class MockRepo(Repo):
 
     def __init__(self, root: Path, held: MockGit) -> None:
         self.root = Path(root).resolve()
-        self.default_branch = held.default_branch
         self.git = _NoGit()
         self.worktrees = MockWorktrees(self, held)
         self._from_top: dict[Path, str] = {}
         self.writing_index = held.lock
         self._held = held
+
+    @property
+    def default_branch(self) -> str:
+        return self._held.default_branch
 
     @property
     def is_clone(self) -> bool:
@@ -263,6 +266,11 @@ class MockRepo(Repo):
     def merge_origin_copy(self) -> None:
         return None
 
+    @property
+    def head_message(self) -> str:
+        log = self._held.logs.get(self._held.branch_of(self.root), [])
+        return log[-1] if log else ""
+
     def needs_push(self) -> bool:
         return self._held.needs_push(self._held.branch_of(self.root))
 
@@ -303,13 +311,6 @@ class MockBranch(Branch):
     def check_out(self) -> Branch:
         self._held.check_out(self._repo.root, self.name)
         return self
-
-    def land_on_default(self) -> None:
-        held = self._held
-        default = held.default_branch
-        held.check_out(held.root, default)
-        held.merge(default, self.name, f"merge {self.name} into {default}")
-        held.push(default)
 
     def delete(self, unmerged: bool = False) -> None:
         self._held.delete_branch(self.name)

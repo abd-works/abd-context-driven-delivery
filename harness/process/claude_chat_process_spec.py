@@ -11,7 +11,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import be_none, equal, expect
 from mamba import after, before, context, description, it
 
-from harness.agent_tools.claude_chat_process import ClaudeChatProcess
+from harness.process.claude_chat_process import ClaudeChatProcess
 
 SHELL = 41
 CHAT = 42

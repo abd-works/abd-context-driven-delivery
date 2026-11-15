@@ -349,6 +349,13 @@ with description("a language adapter"):
                     app = (install_path / _ADAPTERS / "harness/diagnostics/app.ts").read_text(encoding="utf-8")
                     expect(app).to(contain("  status: 'not installed' | 'not running' | 'running'\n"))
 
+            with context("of a toolset with no data of its own, whose operation answers an object that has data"):
+                with it("should state the answered object's data"):
+                    install_path = Path(tempfile.mkdtemp(prefix="language-adapter-"))
+                    _install(install_path, ("space.repo.repo:Repo",))
+                    repo = (install_path / _ADAPTERS / "space/repo/repo.ts").read_text(encoding="utf-8")
+                    expect(repo).to(contain("export type CommitData = {"))
+
         with description("its shared base"):
             with before.all:
                 self.base = _between(self.ticket, "export class Ticket {", "export class TicketClientGenerated")

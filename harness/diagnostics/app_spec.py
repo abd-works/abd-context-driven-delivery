@@ -190,6 +190,10 @@ with description("an app's server"):
     with it("should start a JavaScript script with node alone"):
         expect(AppServer(Path("app"), "serve.js", (8778,)).command).to(equal(["node", "serve.js"]))
 
+    with context("that is not running"):
+        with it("should stop nothing when stopped"):
+            expect(AppServer(Path("app"), "serve.js", (8778,), probe=NothingListening()).stop()).to(equal(False))
+
 
 with description("the registry of apps") as self:
     with before.each:

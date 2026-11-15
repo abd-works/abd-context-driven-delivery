@@ -283,17 +283,19 @@ with description("the cdd server") as self:
             second = self.chat.run(lambda session: session.call_tool("hosting-demo.read_count", arguments={}), self.worktrees.second)
             expect(_text(second)).to(equal("0"))
 
-    # Claude Code answers a 401 with a sign-in attempt that this server does not offer, and cuts cdd off for the chat,
-    # so a request that names no project is refused as a bad request instead.
-    with context("that a chat names no project"):
+    # A Claude Code chat sends no header: the server names its project from the process holding the connection, so a
+    # chat whose headers would have come too late still connects.
+    with context("that a chat connects naming no project"):
         with before.each:
-            self.answer = httpx.post(self.server.url, json={"jsonrpc": "2.0", "id": 1, "method": "ping"}, headers={"Accept": "application/json, text/event-stream"})
+            hello = {"protocolVersion": "2025-03-26", "capabilities": {}, "clientInfo": {"name": "spec", "version": "0"}}
+            self.answer = httpx.post(
+                self.server.url,
+                json={"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": hello},
+                headers={"Accept": "application/json, text/event-stream"},
+            )
 
-        with it("should refuse the request as a bad request, never as unauthorized"):
-            expect(self.answer.status_code).to(equal(400))
-
-        with it("should say which header is missing"):
-            expect(self.answer.text).to(contain("X-CDD-Project"))
+        with it("should accept the connection"):
+            expect(self.answer.status_code).to(equal(200))
 
     with context("that has been restarted"):
         with it("should start its toolsets again on the code as it is now"):

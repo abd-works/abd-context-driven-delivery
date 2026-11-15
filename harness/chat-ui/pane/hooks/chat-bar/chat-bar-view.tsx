@@ -34,6 +34,8 @@ export type ChatBarDraw = {
   overlays: OverlayChips
   busy: { doing: string; wheel: string }
   health: { band: unknown; panel: unknown }
+  version: { badge: unknown; dialog: unknown }
+  push: { buttons: unknown; dialog: unknown }
   width: number
 }
 
@@ -149,14 +151,18 @@ function IconButtonView(elements: ElementTable, key: string, icon: string, words
   )
 }
 
-// Handoff, files, restart and close as icons. Files shows the action fidelity's files, else the first fidelity's.
-function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
-  const { Box } = elements
+// Files right after the action button: the action fidelity's files, else the first fidelity's.
+function FilesButtonView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
   const fidelities = chatBar.actionFidelities.length ? chatBar.actionFidelities : chatBar.fidelities.slice(0, 1)
+  return fidelities.length ? IconButtonView(elements, 'files-button', '▤', 'files', () => openFilesOf($, fidelities)) : null
+}
+
+// Push, push & merge to origin/main, restart and close as icons.
+function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBar, push }: ChatBarDraw) {
+  const { Box } = elements
   return (
     <Box key="session-buttons" flexDirection="row" gap={1}>
-      {IconButtonView(elements, 'handoff', '⇥', 'handoff', () => runHandoff($, chatBar))}
-      {fidelities.length ? IconButtonView(elements, 'files-button', '▤', 'files', () => openFilesOf($, fidelities)) : null}
+      {chatBar.isClone ? push.buttons : null}
       {IconButtonView(elements, 'restart-button', '↻', 'restart cdd server', () => restartServer($))}
       {chatBar.isMain || chatBar.isPlainFolder ? null : IconButtonView(elements, 'close-button', '✕', 'close session', () => openClose($, chatBar))}
     </Box>
@@ -225,7 +231,7 @@ function OverlayListView($: EngineInterface, { Box, Button, Text }: ElementTable
 function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
   const { Box, Text } = elements
   const { chatBar } = draw
-  if (!chatBar.hasSession) return <Box key="line" flexDirection="row" gap={1}>{draw.health.band}<Box flexGrow={1} />{SessionNameView($, elements, draw)}</Box>
+  if (!chatBar.hasSession) return <Box key="line" flexDirection="row" gap={1}>{draw.health.band}<Box flexGrow={1} />{SessionNameView($, elements, draw)}{draw.version.badge}</Box>
   return (
     <Box key="line" flexDirection="row" gap={1} flexWrap="wrap" alignItems="center">
         {draw.health.band}
@@ -236,10 +242,13 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
           {OverlayChipsView($, elements, draw)}
           {FormatChipsView($, elements, draw)}
           {ActionButtonView($, elements, draw)}
+          {FilesButtonView($, elements, draw)}
+          {IconButtonView(elements, 'handoff', '⇥', 'handoff', () => runHandoff($, chatBar))}
         </Box>
         <Box flexGrow={1} />
         {SessionNameView($, elements, draw)}
         {SessionButtonsView($, elements, draw)}
+        {draw.version.badge}
     </Box>
   )
 }
@@ -264,6 +273,8 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
       {chatBar.problem ? ProblemView($, elements, `The board did not answer: ${chatBar.problem}`) : null}
       {FailureView($, elements, draw.failure)}
       {draw.busy.doing ? <Text key="busy" color={BRAND.accent}>{`${draw.busy.wheel} ${draw.busy.doing}…`}</Text> : null}
+      {draw.version.dialog}
+      {draw.push.dialog}
       {CloseView($, elements, draw)}
       {SessionListView($, elements, draw)}
       {RepoListView($, elements, draw)}
