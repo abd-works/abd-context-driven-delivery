@@ -28,6 +28,7 @@ class FakeFilesServer implements CddApi {
   stages: string[] | null = null
   practices = ['stories', 'ddd']
   formats: string[] = []
+  rootFiles: object[] = []
   private readonly waiting: (() => void)[] = []
 
   async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
@@ -37,6 +38,7 @@ class FakeFilesServer implements CddApi {
     if (path.endsWith('/update-guidance-selection')) return this.update(body) as Result
     if (path.endsWith('/guidance-selection-after')) return (await this.after(Number(body.version))) as Result
     if (path.endsWith('/fidelity-files')) return Object.fromEntries((body.fidelities as string[]).map(slug => [slug, { markdown: [entry(`.context/${slug}.md`)], drawio: [entry(`.context/${slug}.drawio`)] }])) as Result
+    if (path.endsWith('/root-files')) return this.rootFiles as Result
     return null
   }
 
@@ -77,8 +79,18 @@ class FakeFilesServer implements CddApi {
 }
 
 function entry(path: string) {
-  return { path, exists: true, is_changed: false, link: '' } as never
+  return { path, exists: true, is_changed: false, link: '', format: '', fidelities: [] } as never
 }
+
+// The files under the session's root, as ticket.root_files answers them: the story map, a scenario of Specification, and
+// two files no fidelity declares, the branch having changed only order.py.
+const rootFile = (path: string, format: string, fidelities: string[], is_changed = false) => ({ path, exists: true, is_changed, link: '', format, fidelities })
+const ROOT_FILES = [
+  rootFile('.context/stories-story-map.md', 'markdown', ['stories-story-map']),
+  rootFile('specs/checkout.md', 'markdown', ['stories-scenarios']),
+  rootFile('notes/plain.txt', '', []),
+  rootFile('src/order.py', 'python', [], true),
+]
 
 const STAGE_LINK = '?files=release-2&fidelity=stories-story-map,ddd-bounded-context&chat=chat-1'
 
@@ -225,24 +237,40 @@ describe('Head The Files App With Where The Files Are', () => {
 })
 
 describe('Review All Session Files Or This Session', () => {
+  async function discovery(formats: string[] = []): Promise<FilesPage> {
+    const server = new FakeFilesServer()
+    server.stages = ['discovery']
+    server.formats = formats
+    server.rootFiles = ROOT_FILES
+    const { page, stop } = await following(server)
+    stop()
+    return page
+  }
+
   describe('that has All session files pressed', () => {
-    it('should list the files of the stages selected that the branch has not changed', async () => {
-      const server = new FakeFilesServer()
-      server.stages = ['discovery']
-      const { page, stop } = await following(server)
+    it('should list every file under the root of the stages selected or of no fidelity', async () => {
+      const page = await discovery()
       page.showScope('all')
-      stop()
-      expect(page.fileBar.entries.map(each => each.path)).toContain('.context/stories-story-map.md')
+      expect(page.fileBar.entries.map(each => each.path)).toEqual(expect.arrayContaining(['.context/stories-story-map.md', 'notes/plain.txt', 'src/order.py']))
+    })
+
+    it('should leave out a file of a stage not selected', async () => {
+      const page = await discovery()
+      page.showScope('all')
+      expect(page.fileBar.entries.map(each => each.path)).not.toContain('specs/checkout.md')
     })
 
     it('should list only the files in the formats selected', async () => {
-      const server = new FakeFilesServer()
-      server.stages = ['discovery']
-      server.formats = ['diagram']
-      const { page, stop } = await following(server)
+      const page = await discovery(['markdown'])
       page.showScope('all')
-      stop()
-      expect(page.fileBar.entries.every(each => each.path.endsWith('.drawio'))).toBe(true)
+      expect(page.fileBar.entries.map(each => each.path)).toEqual(['.context/stories-story-map.md', '.context/ddd-bounded-context.md'])
+    })
+  })
+
+  describe('that lists This session, its default', () => {
+    it('should list only the files the branch changed', async () => {
+      const page = await discovery()
+      expect(page.fileBar.entries.map(each => each.path)).toEqual(['src/order.py'])
     })
   })
 })

@@ -52,8 +52,8 @@ async function brokenRule(page: BoardPage): Promise<ReportRuleData> {
 }
 
 // A panel over two practices' fidelities, as the files panel holds it, for the filters' own specs.
-const STORIES_FILES = { markdown: [{ path: 'stories/story-map.md', exists: true, is_changed: false, link: '' }, { path: 'stories/checkout_story.test.md', exists: true, is_changed: true }] }
-const BDD_FILES = { python: [{ path: 'src/order_spec.py', exists: true, is_changed: false, link: '' }] }
+const STORIES_FILES = { markdown: [{ path: 'stories/story-map.md', exists: true, is_changed: false, link: '', format: '', fidelities: [] }, { path: 'stories/checkout_story.test.md', exists: true, is_changed: true }] }
+const BDD_FILES = { python: [{ path: 'src/order_spec.py', exists: true, is_changed: false, link: '', format: '', fidelities: [] }] }
 const progressOf = (slug: string, practice: string) => ({ fidelity: { slug }, practice: { key: practice } }) as unknown as FidelityProgressClient
 const twoPractices = (changes: Partial<FilesPanel> = {}): FilesPanel =>
   ({
@@ -164,7 +164,7 @@ describe("Browse Ticket's Session Folder", () => {
 
 describe('View Fidelity Files', () => {
   it('should open the tabs in the order Python sends the formats', () => {
-    const files: FilesByFidelity = { [SLUG]: { markdown: [{ path: 'a.md', exists: true, is_changed: false, link: '' }], python: [{ path: 'c.py', exists: true, is_changed: false, link: '' }], drawio: [{ path: 'b.drawio', exists: true, is_changed: false, link: '' }] } }
+    const files: FilesByFidelity = { [SLUG]: { markdown: [{ path: 'a.md', exists: true, is_changed: false, link: '', format: '', fidelities: [] }], python: [{ path: 'c.py', exists: true, is_changed: false, link: '', format: '', fidelities: [] }], drawio: [{ path: 'b.drawio', exists: true, is_changed: false, link: '', format: '', fidelities: [] }] } }
     expect(pathsOf(twoPractices({ progress: [progressOf(SLUG, 'stories')], files }))).toEqual(['a.md', 'c.py', 'b.drawio'])
   })
 
