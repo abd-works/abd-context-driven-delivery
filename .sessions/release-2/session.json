@@ -79,7 +79,9 @@
     }
   },
   "guidance": {
-    "stages": [],
-    "version": 41
+    "stages": [
+      "discovery"
+    ],
+    "version": 42
   }
 }
