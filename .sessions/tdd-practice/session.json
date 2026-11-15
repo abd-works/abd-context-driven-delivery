@@ -11,7 +11,8 @@
           "markdown",
           "drawio"
         ]
-      }
+      },
+      "enabled": false
     },
     "clean_engineering": {
       "enabled": false
@@ -25,6 +26,6 @@
       "specification",
       "implementation"
     ],
-    "version": 6
+    "version": 7
   }
 }
