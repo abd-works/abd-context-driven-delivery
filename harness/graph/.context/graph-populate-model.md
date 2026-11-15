@@ -65,8 +65,10 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 	// @mcp. raises GraphFailure when the folder and its parents hold no practices/
 + practice_names(): list[str]
 	// @mcp. the key of every practice the graph holds
-+ inventory(), filter_choices(...), source(node_id), return_nodes(filter=None), explorer_trees(filter=None)
-	// @mcp. -> explorer
++ inventory(), filter_choices(...), source(node_id), return_nodes(filter=None), explorer_trees(filter=None),
+  explorer_branch(node_id, filter=None)
+	// @mcp. -> explorer. explorer_trees sends each root with the entries below it closed; explorer_branch sends one
+	// entry's next level, so the page reads only the levels a person opens
 + report_progress(message): None
 	// -> harness.agent_tools.progress.report_progress
 

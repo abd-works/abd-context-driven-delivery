@@ -1856,6 +1856,7 @@ One graph. Builders fill nodes, edges, and rules; the explorer reads the tree. E
 + source(node_id: str): NodeSource | None
 + return_nodes(filter: dict | None = None): list[FilteredNode]
 + explorer_trees(filter: dict | None = None): list[ExplorerEntry]
++ explorer_branch(node_id: str, filter: dict | None = None): ExplorerEntry | None
 ---<<makes its practices with>>--> PracticeCatalogue
 ---<<gives each practice its part through>>--> PracticeReading
 ---<<creates>>--> PracticeNodes
