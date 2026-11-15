@@ -199,6 +199,23 @@ function ToastsView({ page }: { page: FilesPage }) {
   )
 }
 
+// What the open file is read with, both off by default so browsing never reads the graph: Rules shows its folds and
+// broken rules from the session's graph; Cross-file has the graph hold the whole working copy first, so rules linking
+// files and practices hold too, which takes far longer.
+function ReadsTogglesView({ page }: { page: FilesPage }) {
+  const { reads } = useFilesState(page)
+  return (
+    <div className="reads-toggles" role="group" aria-label="Read the open file with">
+      <button type="button" className="file-bar-view" aria-pressed={reads.rules} title="Folds and broken rules from the session's graph: a second or two for a changed file" onClick={() => void page.toggleRules()}>
+        Rules
+      </button>
+      <button type="button" className="file-bar-view" aria-pressed={reads.crossFile} title="Rules across files and practices: the graph reads the whole working copy first, which takes far longer" onClick={() => void page.toggleCrossFile()}>
+        Cross-file
+      </button>
+    </div>
+  )
+}
+
 // Dark engineering by default; a press turns the light look on or off.
 function ThemeToggleView({ page }: { page: FilesPage }) {
   const failed = (failure: string) => page.fail(failure, "Changing the Files app's look")

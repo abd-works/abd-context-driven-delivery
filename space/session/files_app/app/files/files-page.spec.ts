@@ -275,3 +275,37 @@ describe('Send Files App Failures To Chat', () => {
     })
   })
 })
+
+describe('Browse Files Without Reading Rules', () => {
+  describe('with a file open', () => {
+    async function opened(): Promise<{ page: FilesPage; server: FakeFilesServer }> {
+      const server = new FakeFilesServer()
+      const page = new FilesPage(server, new FilesLink(`${STAGE_LINK}&file=.context/stories-story-map.md`))
+      await started(page)
+      return { page, server }
+    }
+
+    const lastRead = (server: FakeFilesServer) => server.posted('/file').at(-1)?.body
+
+    it('should read it with no rules and no cross-file rules', async () => {
+      const { server } = await opened()
+      expect(lastRead(server)).toMatchObject({ rules: false, cross_file: false })
+    })
+
+    describe('that has Rules turned on', () => {
+      it('should read it again with its rules', async () => {
+        const { page, server } = await opened()
+        await page.toggleRules()
+        expect(lastRead(server)).toMatchObject({ rules: true, cross_file: false })
+      })
+    })
+
+    describe('that has Cross-file turned on', () => {
+      it('should read it again with its rules across the whole working copy', async () => {
+        const { page, server } = await opened()
+        await page.toggleCrossFile()
+        expect(lastRead(server)).toMatchObject({ rules: true, cross_file: true })
+      })
+    })
+  })
+})

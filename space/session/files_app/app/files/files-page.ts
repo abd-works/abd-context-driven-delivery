@@ -193,6 +193,19 @@ export class FilesPage {
     this.store.change(state => ({ selectedFidelities: answered, entries: filesShown(state.byFidelity, state.practices, answered) }))
   }
 
+  // Turns on or off reading the open file's folds and broken rules from the session's graph (a second or two for a
+  // changed file), and reading them with the graph holding the whole working copy (far longer); the open file is read
+  // again with them. Cross-file reads the rules too.
+  async toggleRules(): Promise<void> {
+    this.store.change(({ reads }) => ({ reads: { rules: !reads.rules, crossFile: reads.rules ? false : reads.crossFile } }))
+    await this.refreshOpen()
+  }
+
+  async toggleCrossFile(): Promise<void> {
+    this.store.change(({ reads }) => ({ reads: { rules: !reads.crossFile || reads.rules, crossFile: !reads.crossFile } }))
+    await this.refreshOpen()
+  }
+
   async open(path: string): Promise<void> {
     if (isDrawio(path)) return this.openDrawio(path)
     this.store.change(() => ({ openPath: path, file: null }))
@@ -205,7 +218,8 @@ export class FilesPage {
     if (!path) return
     this.stopRefreshing()
     try {
-      const file = await this.session.file(path)
+      const { rules, crossFile } = this.state.reads
+      const file = await this.session.file(path, rules, crossFile)
       if (this.state.openPath !== path) return
       this.store.change(() => ({ file, problem: '' }))
       if (file?.comments.some(comment => comment.state === 'sent')) this.refreshTimer = setTimeout(() => void this.refreshOpen(), SENT_REFRESH_MILLISECONDS)

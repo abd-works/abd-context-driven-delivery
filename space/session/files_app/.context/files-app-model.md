@@ -24,6 +24,8 @@ The *Files app* shows the files a link names and turns a person's reading into w
 - `open(path)` opens a file in the source view, or a `.drawio` file in the draw.io editor.
   - -> Session.file
   - **Invariant:** a `.drawio` file opens in a tab opened during the click, so this tab keeps its file list; a tab whose viewer never answers is closed.
+- `toggleRules()` and `toggleCrossFile()` turn on or off what the open file is read with, both off by default so browsing never reads the graph: Rules shows its folds and broken rules from the session's graph (a second or two for a changed file); Cross-file has the graph hold the whole working copy first, so rules linking files and practices hold too (far longer), and turns Rules on with it.
+  - -> Session.file(path, rules, cross_file)
 - `refreshOpen()` (private) reads the open file again, and again every two seconds while a comment on it is sent.
 - `attempt(what, work)` runs a call a person started; its failure is a toast naming what failed, and the open file is read again after it.
 

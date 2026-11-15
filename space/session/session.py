@@ -115,6 +115,9 @@ class Session:
         self._graph: Graph | None = None
         # The practices the graph was made with, so turning one on or off makes it again.
         self._graph_practices: frozenset[str] = frozenset()
+        # When the session's graph last read each file a viewer showed, by its modification time, and the graph it read
+        # them into: reading one file into the graph takes a second or two, so a file is read again only once it changed.
+        self._files_read: tuple[Graph | None, dict[Path, float]] = (None, {})
         # Calls from several chats reach this one object at once; the first to ask makes the practices and the graph,
         # and the others wait for them, so the session never holds two. Reentrant, because the graph asks for the
         # practices while it is being made.
@@ -248,6 +251,27 @@ class Session:
                     graph.overlays = self.overlays
                 self._graph = graph
             return self._graph
+
+    def graph_reading(self, path: Path, is_held: bool, cross_file: bool = False) -> Graph:
+        """The session's graph holding the file at path as it is now, with its folds and the rules it breaks, as the Graph
+        app reads what it shows, so a viewer needs no graph saved first. The file is read into the graph when the graph
+        holds nothing of it (is_held false) or it changed since a viewer last showed it; reading one takes a second or
+        two, so an unchanged file the graph holds, such as one the saved graph brought back, is not read again. With
+        cross_file, the graph first holds the whole working copy, so rules linking files and practices hold."""
+        graph = self.graph
+        if cross_file:
+            graph.hold_whole()
+        modified = path.stat().st_mtime if path.is_file() else -1.0
+        with self._parts_lock:
+            held, reads = self._files_read
+            if held is not graph:
+                reads = {}
+                self._files_read = (graph, reads)
+            is_current = is_held and reads.get(path, modified) == modified
+            reads[path] = modified
+        if not is_current:
+            graph.refresh([str(path)])
+        return graph
 
     @property
     def _own_outputs(self) -> dict[str, PracticeSessionOutput]:
@@ -566,9 +590,9 @@ class Session:
     @mcp
     @agent_tool
     @noSessionLog
-    def file(self, path: str) -> SessionFile:
-        """Return path, a file named as read_file names it, as the viewer shows it: its text and language, the comments on it, the folds of its classes, operations, and properties, and the rules the session's saved graph found broken in it, each on its range of lines."""
-        return SessionFile(self, path)
+    def file(self, path: str, rules: bool = False, cross_file: bool = False) -> SessionFile:
+        """Return path, a file named as read_file names it, as the viewer shows it: its text and language and the comments on it. With rules, also the folds of its classes, operations, and properties and the rules the session's graph finds broken in it, each on its range of lines: the file is read into the graph when it changed, a second or two. With cross_file, the graph first holds the whole working copy, so rules that link files and practices are checked too, which takes far longer. Both off, browsing never reads the graph."""
+        return SessionFile(self, path, rules or cross_file, cross_file)
 
     @property
     def file_comments(self) -> FileComments:

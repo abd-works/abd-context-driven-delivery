@@ -108,9 +108,9 @@ def _(s):
     def _(world):
         world.project.seed_session_file(CHECKOUT_FLOW, GRAPH_FILE_NAME, json.dumps(ORDER_GRAPH))
 
-    @s.when("the Person views order.py")
+    @s.when("the Person views order.py with Rules turned on")
     def _(world):
-        world.opened = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file(path=ORDER_FILE))
+        world.opened = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file(path=ORDER_FILE, rules=True))
 
     @s.then("the viewer offers a fold of Order over lines 5 to 41, and a fold of place over lines 12 to 14")
     def _(world):
@@ -128,9 +128,9 @@ def _(s):
     def _(world):
         world.project.seed_session_file(CHECKOUT_FLOW, GRAPH_FILE_NAME, json.dumps(ORDER_GRAPH))
 
-    @s.when("the Person views order.py")
+    @s.when("the Person views order.py with Rules turned on")
     def _(world):
-        world.opened = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file(path=ORDER_FILE))
+        world.opened = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file(path=ORDER_FILE, rules=True))
 
     @s.then("the viewer marks lines 12 to 14 with vocabulary-traces-to-source: EmptyCartError should say which cart and why")
     def _(world):
@@ -139,6 +139,25 @@ def _(s):
 
 
 # --- Save Edited File ---------------------------------------------------------------------------------------------
+
+
+@shared_stories.scenario("Mark Lines A Broken Rule Names", "Browse a file with Rules off")
+def _(s):
+    @s.given("checkout-flow's session holds order.py")
+    def _(world):
+        seed_checkout_flow(world)
+
+    @s.and_("checkout-flow's graph found vocabulary-traces-to-source broken on lines 12 to 14 of order.py")
+    def _(world):
+        world.project.seed_session_file(CHECKOUT_FLOW, GRAPH_FILE_NAME, json.dumps(ORDER_GRAPH))
+
+    @s.when("the Person views order.py with Rules off")
+    def _(world):
+        world.opened = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file(path=ORDER_FILE))
+
+    @s.then("the source view shows order.py with no folds and no broken rules")
+    def _(world):
+        expect([world.opened["folds"], world.opened["violations"]]).to(equal([[], []]))
 
 
 @shared_stories.scenario("Save Edited File", "Save the edited text to the file on disk")

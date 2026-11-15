@@ -5,6 +5,7 @@ between them."""
 from __future__ import annotations
 
 from difflib import SequenceMatcher
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Literal
 
@@ -99,11 +100,14 @@ class FileViolation:
 
 
 class SessionFile:
-    """A file of the session, named from the project: its text, the comments on it, its folds, and its violations.
-    Folds and violations come from the graph the session last saved, so a file the graph never read has none."""
+    """A file of the session, named from the project: its text, the comments on it, and, when the viewer asks for its
+    rules, its folds and its violations. Those come from the session's graph, which reads the file again whenever it
+    changed, as the Graph app reads what it shows; with cross_file the graph holds the whole working copy first."""
 
-    def __init__(self, session: Session, path: str) -> None:
+    def __init__(self, session: Session, path: str, rules: bool = False, cross_file: bool = False) -> None:
         self._session = session
+        self._reads_rules = rules
+        self._cross_file = cross_file
         self._text = session.session_files.read(path)
         self._path = self._text.path
 
@@ -149,6 +153,8 @@ class SessionFile:
     @data_field
     def folds(self) -> list[Fold]:
         """A fold for each class, operation, and property the session's graph places in this file, in line order."""
+        if not self._reads_rules:
+            return []
         nodes = [node for node in self._saved_nodes() if node.type in CLASS_TYPES | MEMBER_TYPES]
         folds = [Fold(self.range(node.line, node.end_line), "class" if node.type in CLASS_TYPES else "block", node.name) for node in nodes if node.end_line > node.line]
         return sorted(folds, key=lambda fold: (fold.range.start_line, -fold.range.end_line))
@@ -158,8 +164,9 @@ class SessionFile:
     def violations(self) -> list[FileViolation]:
         """Each rule the session's graph found broken in this file, on the lines it names; one naming no line covers
         the first."""
-        graph = self._saved_graph()
-        found = [violation for violation in (graph.violations() if graph else []) if self._is_this_file(violation.location)]
+        if not self._reads_rules:
+            return []
+        found = self._unique([violation for violation in self._found_violations() if self._is_this_file(violation.location)])
         return [FileViolation(violation, self.range(violation.line or 1, violation.end_line or violation.line or 1)) for violation in found]
 
     def range(self, start_line: int, end_line: int) -> Range:
@@ -167,19 +174,41 @@ class SessionFile:
         return Range.of_text(self._path, self.text, start_line, end_line)
 
     def _saved_nodes(self):
-        graph = self._saved_graph()
-        return [node for practice in (graph.practices.values() if graph else []) for node in practice.nodes if self._is_this_file(node.file)]
+        return [node for practice in self._graph.practices.values() for node in practice.nodes if self._is_this_file(node.file)]
 
-    def _saved_graph(self) -> SavedGraph | None:
-        """The graph saved in the session's folder; none before the session has saved one, or when it was saved in a
-        shape the graph no longer writes."""
+    def _found_violations(self) -> list[Violation]:
+        """What the session's graph finds broken now, and what its last validate saved, which can hold rules the graph
+        did not run again, such as one a validating agent judged."""
+        return [*self._graph.violations(), *self._last_validate_violations()]
+
+    def _last_validate_violations(self) -> list[Violation]:
+        """What the session's last validate saved; none before it saved a graph, or one in a shape the graph no longer
+        writes, which the next validate writes again."""
         saved = Path(self._session.session_path) / GRAPH_FILE_NAME
         if not saved.is_file():
-            return None
+            return []
         try:
-            return SavedGraph.from_file(saved)
+            return SavedGraph.from_file(saved).violations()
         except SavedGraphOutdated:
-            return None
+            return []
+
+    def _unique(self, violations: list[Violation]) -> list[Violation]:
+        """Each broken rule once, however many of the graphs found it on the same lines."""
+        seen: set[tuple] = set()
+        kept = []
+        for violation in violations:
+            key = (violation.rule, violation.line, violation.end_line, violation.message)
+            if key not in seen:
+                seen.add(key)
+                kept.append(violation)
+        return kept
+
+    @cached_property
+    def _graph(self) -> SavedGraph:
+        """The session's graph as it saves, holding this file as it is now: read once for both folds and violations."""
+        held = SavedGraph.from_graph(self._session.graph)
+        is_held = any(self._is_this_file(node.file) for practice in held.practices.values() for node in practice.nodes)
+        return SavedGraph.from_graph(self._session.graph_reading(self._session.path_named(self._path), is_held, self._cross_file))
 
     def _is_this_file(self, named: str) -> bool:
         """Whether named, as the graph names a file (from the session's root, or absolute), is this file."""

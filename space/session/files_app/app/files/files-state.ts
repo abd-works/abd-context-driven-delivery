@@ -10,6 +10,9 @@ export type FilesState = {
   practices: PracticeSessionOutputData[]
   // The fidelities selected on the chat bar of the chat that opened the page; none selected, its practices turned on.
   selectedFidelities: string[]
+  // What the open file is read with: its folds and broken rules from the session's graph, and the graph holding the
+  // whole working copy so rules across files hold too. Both off by default, so browsing never reads the graph.
+  reads: { rules: boolean; crossFile: boolean }
   byFidelity: FidelityFiles[]
   entries: FileEntryData[]
   isListing: boolean
@@ -23,6 +26,7 @@ export type FilesState = {
 export const NO_FILES: FilesState = {
   practices: [],
   selectedFidelities: [],
+  reads: { rules: false, crossFile: false },
   byFidelity: [],
   entries: [],
   isListing: true,

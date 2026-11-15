@@ -243,7 +243,7 @@ Inherited from the graph's Unfold Calls And Classes In Source: the Files app reu
 
 *Given* checkout-flow's session holds *order.py*
 *And* checkout-flow's graph places the class *Order* on lines 5 to 41 of *order.py*, and its operation *place* on lines 12 to 14
-*When* the Person views *order.py*
+*When* the Person views *order.py* with Rules turned on
 *Then* the source view offers a fold of *Order* over lines 5 to 41, and a fold of *place* over lines 12 to 14
 
 ## Story: Mark Lines A Broken Rule Names
@@ -254,8 +254,17 @@ Inherited from the graph's Open Violation In Source.
 
 *Given* checkout-flow's session holds *order.py*
 *And* checkout-flow's graph found *vocabulary-traces-to-source* broken on lines 12 to 14 of *order.py*
-*When* the Person views *order.py*
+*When* the Person views *order.py* with Rules turned on
 *Then* the source view marks lines 12 to 14 with *vocabulary-traces-to-source*: *EmptyCartError should say which cart and why*
+
+#### Scenario: Browse a file with Rules off
+
+Requested (the person, 2026-11-15): Rules and Cross-file toggles at the top, off by default, so browsing files never pays for reading the graph.
+
+*Given* checkout-flow's session holds *order.py*
+*And* checkout-flow's graph found *vocabulary-traces-to-source* broken on lines 12 to 14 of *order.py*
+*When* the Person views *order.py* with Rules off
+*Then* the source view shows *order.py* with no folds and no broken rules
 
 ## Story: Save Edited File
 
