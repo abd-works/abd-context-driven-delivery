@@ -4,5 +4,11 @@
   "scope": "feature",
   "workpath": "harness",
   "branch": "file-manager",
-  "worktree": "C:\\dev\\abd-cdd-file-manager"
+  "worktree": "C:\\dev\\abd-cdd-file-manager",
+  "guidance": {
+    "stages": [
+      "discovery"
+    ],
+    "version": 1
+  }
 }
