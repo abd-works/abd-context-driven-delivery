@@ -145,3 +145,38 @@
 2026-11-15T17:21:38Z error chat.check_in C:\dev\abd-context-driven-delivery\.sessions\release-2\session.err 1949 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-5248
 2026-11-15T17:21:39Z error chat.check_in C:\dev\abd-context-driven-delivery\.sessions\release-2\session.err 1967 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-5248
 2026-11-15T17:27:31Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-5522
+2026-11-15T17:29:20Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-5602
+2026-11-15T17:30:29Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-5666
+2026-11-15T17:31:13Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-5715
+2026-11-15T17:34:16Z tool app.open 4a2b62f1-74ad-4426-aafe-9c9618581953 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\4a2b62f1-74ad-4426-aafe-9c9618581953.jsonl 1-504
+2026-11-15T17:34:33Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-5811
+2026-11-15T17:35:06Z tool app.open 4a2b62f1-74ad-4426-aafe-9c9618581953 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\4a2b62f1-74ad-4426-aafe-9c9618581953.jsonl 1-614
+2026-11-15T17:35:06Z tool app.open 4a2b62f1-74ad-4426-aafe-9c9618581953 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\4a2b62f1-74ad-4426-aafe-9c9618581953.jsonl 1-614
+2026-11-15T17:35:08Z tool app.open 4a2b62f1-74ad-4426-aafe-9c9618581953 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\4a2b62f1-74ad-4426-aafe-9c9618581953.jsonl 1-623
+2026-11-15T17:35:11Z tool app.open 4a2b62f1-74ad-4426-aafe-9c9618581953 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\4a2b62f1-74ad-4426-aafe-9c9618581953.jsonl 1-624
+2026-11-15T17:35:51Z tool story-model.open_in_session
+2026-11-15T17:35:55Z tool story-model.open_in_session
+2026-11-15T17:35:57Z tool story-model.open_in_session
+2026-11-15T17:36:01Z tool story-model.open_in_session
+2026-11-15T17:36:03Z tool graph.practice_names
+2026-11-15T17:36:03Z tool graph.load_practice_roots
+2026-11-15T17:36:58Z tool graph.inventory
+2026-11-15T17:37:32Z tool graph.practice_names
+2026-11-15T17:37:32Z tool graph.load_practice_roots
+2026-11-15T17:37:32Z tool graph.practice_names
+2026-11-15T17:37:32Z tool graph.practice_names
+2026-11-15T17:38:01Z tool app.open 4a2b62f1-74ad-4426-aafe-9c9618581953 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\4a2b62f1-74ad-4426-aafe-9c9618581953.jsonl 1-850
+2026-11-15T17:38:25Z tool graph.inventory
+2026-11-15T17:39:00Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-6025
+2026-11-15T17:39:22Z tool app.open 4a2b62f1-74ad-4426-aafe-9c9618581953 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\4a2b62f1-74ad-4426-aafe-9c9618581953.jsonl 1-937
+2026-11-15T17:39:25Z tool graph.practice_names
+2026-11-15T17:39:25Z tool graph.load_practice_roots
+2026-11-15T17:39:26Z tool graph.practice_names
+2026-11-15T17:39:32Z tool graph.practice_names
+2026-11-15T17:39:36Z tool graph.practice_names
+2026-11-15T17:39:45Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-6046
+2026-11-15T17:40:06Z tool graph.inventory
+2026-11-15T17:40:12Z tool graph.practice_names
+2026-11-15T17:40:20Z tool graph.inventory
+2026-11-15T17:41:02Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-6100
+2026-11-15T17:42:21Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-6157

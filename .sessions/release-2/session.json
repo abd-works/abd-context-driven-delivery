@@ -9,7 +9,13 @@
       "enabled": true
     },
     "stories": {
-      "enabled": true
+      "enabled": true,
+      "formats": {
+        "story_map": [
+          "markdown",
+          "drawio"
+        ]
+      }
     },
     "ddd": {
       "enabled": true
