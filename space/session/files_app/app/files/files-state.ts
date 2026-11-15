@@ -26,6 +26,8 @@ export type FilesState = {
   file: SessionFileData | null
   problem: string
   toasts: string[]
+  // The file or folder a person right-clicked and where, whose menu shows there; none while no menu shows.
+  menu: { path: string; x: number; y: number } | null
   // The folders a person closed: every other folder is open, so a folder a filter change brings is open too.
   fileBar: { isOpen: boolean; view: 'list' | 'folders'; closedFolders: string[] }
 }
@@ -43,6 +45,7 @@ export const NO_FILES: FilesState = {
   file: null,
   problem: '',
   toasts: [],
+  menu: null,
   fileBar: { isOpen: true, view: 'folders', closedFolders: [] },
 }
 

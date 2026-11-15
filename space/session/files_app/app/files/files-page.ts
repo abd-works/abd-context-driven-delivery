@@ -6,7 +6,7 @@ import { SessionClientGenerated, type FileEntryData, type GuidanceSelectionData 
 import { FileBar } from './file-bar'
 import { FileCommentsActions } from './file-comments-actions'
 import type { FilesLink } from './files-link'
-import { isDrawio } from './files-paths'
+import { isDrawio, REVEAL_PATH } from './files-paths'
 import { FilesStore, type FidelityFiles } from './files-state'
 import { formatGlyphOf } from './format-chips'
 import { GuidanceSelector } from './guidance-selector'
@@ -218,6 +218,27 @@ export class FilesPage {
   async toggleCrossFile(): Promise<void> {
     this.store.change(({ reads }) => ({ reads: { ...reads, crossFile: !reads.crossFile } }))
     await this.refreshOpen()
+  }
+
+  // A right-click on a file or folder shows its menu where the person clicked.
+  openMenu(path: string, x: number, y: number): void {
+    this.store.change(() => ({ menu: { path, x, y } }))
+  }
+
+  closeMenu(): void {
+    this.store.change(() => ({ menu: null }))
+  }
+
+  // The file or folder the menu is on, shown in the system's file browser by the Files server, on this machine.
+  async reveal(): Promise<void> {
+    const path = this.state.menu?.path
+    this.closeMenu()
+    if (!path) return
+    try {
+      await this.api.post(REVEAL_PATH, { path })
+    } catch (failure) {
+      this.fail(`${path} did not open in the file browser: ${reasonOf(failure)}`, `Opening ${path} in the file browser`)
+    }
   }
 
   async open(path: string): Promise<void> {

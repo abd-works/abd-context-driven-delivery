@@ -72,6 +72,10 @@ button:disabled { cursor: default; opacity: 0.5; }
 .open-file { min-width: 0; }
 .open-diagram { display: flex; flex-direction: column; height: calc(100vh - 7rem); }
 .drawio-frame { flex: 1; width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); background: #fff; }
+.file-menu-backdrop { position: fixed; inset: 0; z-index: 20; }
+.file-menu { position: fixed; display: grid; padding: var(--space-2xs); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: 0 4px 16px rgb(0 0 0 / 0.35); }
+.file-menu button { text-align: left; border-color: transparent; background: transparent; white-space: nowrap; }
+.file-menu button:hover { border-color: var(--select); color: var(--select); }
 .file-entry-row { display: flex; align-items: center; gap: var(--space-2xs); }
 .drawio-tab-link { color: var(--muted); text-decoration: none; padding: 0 var(--space-2xs); }
 .drawio-tab-link:hover { color: var(--select); }

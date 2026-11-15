@@ -5,7 +5,7 @@ import type { FileEntryData, SessionFileData } from '@cdd/space/session/session'
 import type { FileFolder } from './file-bar'
 import { FileSourceView } from './file-source-view'
 import type { FilesPage } from './files-page'
-import { drawioPageOf, isDrawio } from './files-paths'
+import { drawioPageOf, isDrawio, revealLabelOf } from './files-paths'
 import { formatGlyphOf } from './format-chips'
 import { applyTheme, storedTheme, type FilesTheme } from './files-theme'
 
@@ -25,7 +25,7 @@ function FileEntryView({ page, entry, isOpen }: { page: FilesPage; entry: FileEn
   const hint = entry.exists ? entry.path : `${entry.path}: not generated yet`
   return (
     <li className="file-entry-row">
-      <button className={classes} title={hint} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void page.open(entry.path)}>
+      <button className={classes} title={hint} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void page.open(entry.path)} onContextMenu={menuOn(page, entry.path)}>
         {fileNameOf(entry.path)}
         {entry.exists ? null : <span className="file-entry-note"> not generated yet</span>}
       </button>
@@ -96,12 +96,34 @@ function FolderContentsView({ page, folder, openPath }: { page: FilesPage; folde
   )
 }
 
+// A right-click on a file or folder: its menu instead of the browser's.
+const menuOn = (page: FilesPage, path: string) => (event: React.MouseEvent) => {
+  event.preventDefault()
+  page.openMenu(path, event.clientX, event.clientY)
+}
+
+// The menu a right-click shows, where the person clicked: show the file or folder in the system's file browser, named
+// for this system. A press anywhere else closes it.
+function FileMenuView({ page }: { page: FilesPage }) {
+  const { menu } = useFilesState(page)
+  if (!menu) return null
+  return (
+    <div className="file-menu-backdrop" onClick={() => page.closeMenu()} onContextMenu={event => { event.preventDefault(); page.closeMenu() }}>
+      <div className="file-menu" role="menu" style={{ left: menu.x, top: menu.y }} onClick={event => event.stopPropagation()}>
+        <button role="menuitem" title={menu.path} onClick={() => void page.reveal()}>
+          {revealLabelOf(navigator.platform)}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // One folder: a row that opens and closes it, and what it holds, one level in, while it is open.
 function FileFolderView({ page, folder, openPath }: { page: FilesPage; folder: FileFolder; openPath: string }) {
   const isOpen = page.fileBar.isOpen(folder)
   return (
     <li role="treeitem" aria-expanded={isOpen}>
-      <button className="file-folder" title={folder.path} onClick={() => page.fileBar.toggleFolder(folder.path)}>
+      <button className="file-folder" title={folder.path} onClick={() => page.fileBar.toggleFolder(folder.path)} onContextMenu={menuOn(page, folder.path)}>
         <span className="file-folder-mark">{isOpen ? '▾' : '▸'}</span>
         <span className="file-folder-icon">{isOpen ? '📂' : '📁'}</span>
         <span className="file-folder-name">{folder.name}</span>
@@ -342,6 +364,7 @@ export function FilesPageView({ page }: { page: FilesPage }) {
         </nav>
         <OpenFileView page={page} />
       </div>
+      <FileMenuView page={page} />
       <ToastsView page={page} />
     </main>
   )

@@ -8,7 +8,7 @@ import type { GuidanceSelectionData } from '@cdd/space/session/session'
 
 import { FilesLink } from './files-link'
 import { FilesPage, filesShown } from './files-page'
-import { drawioPageOf } from './files-paths'
+import { drawioPageOf, revealLabelOf } from './files-paths'
 
 // Each stage's fidelities by practice, as the session's practices declare them.
 const FIDELITIES: Record<string, Record<string, string>> = {
@@ -340,6 +340,67 @@ describe('Open Diagram In Files App', () => {
         expect(server.posted('/file').length).toBe(read)
       })
     })
+  })
+})
+
+describe('Open File In File Browser', () => {
+  describe('with a file listed', () => {
+    async function rightClicked(server = new FakeFilesServer()) {
+      const page = new FilesPage(server, new FilesLink(STAGE_LINK))
+      await started(page)
+      page.openMenu('.context/stories-story-map.md', 40, 80)
+      return { page, server }
+    }
+
+    describe('that the Person right-clicks', () => {
+      it('should show its menu where the Person clicked', async () => {
+        expect((await rightClicked()).page.state.menu).toEqual({ path: '.context/stories-story-map.md', x: 40, y: 80 })
+      })
+
+      describe('and opens in the file browser', () => {
+        async function revealed(server = new FakeFilesServer()) {
+          const opened = await rightClicked(server)
+          await opened.page.reveal()
+          return opened
+        }
+
+        it("should ask the Files server to show it in the system's file browser", async () => {
+          const { server } = await revealed()
+          expect(server.posted('/reveal').map(post => post.body.path)).toEqual(['.context/stories-story-map.md'])
+        })
+
+        it('should close the menu', async () => {
+          expect((await revealed()).page.state.menu).toBeNull()
+        })
+
+        describe('with a file browser that does not open', () => {
+          class RefusingFilesServer extends FakeFilesServer {
+            override async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
+              if (path.endsWith('/reveal')) throw new Error('explorer.exe is not there')
+              return super.post<Result>(path, body)
+            }
+          }
+
+          it('should tell the chat that opened the page', async () => {
+            const { server } = await revealed(new RefusingFilesServer())
+            const sent = server.posted('/send').map(post => JSON.parse(String(post.body.text)).failure)
+            expect(sent).toContain('.context/stories-story-map.md did not open in the file browser: explorer.exe is not there')
+          })
+        })
+      })
+
+      describe('and presses elsewhere', () => {
+        it('should close the menu', async () => {
+          const { page } = await rightClicked()
+          page.closeMenu()
+          expect(page.state.menu).toBeNull()
+        })
+      })
+    })
+  })
+
+  it("should name the menu's choice for the system the page runs on", () => {
+    expect(['Win32', 'MacIntel', 'Linux x86_64'].map(revealLabelOf)).toEqual(['Open in Explorer', 'Reveal in Finder', 'Open in file manager'])
   })
 })
 

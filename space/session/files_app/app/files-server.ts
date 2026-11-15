@@ -2,7 +2,7 @@ import express, { type Express, type NextFunction, type Request, type Response }
 import { join } from 'node:path'
 
 import type { ProjectConnections } from '@cdd/cdd-connection'
-import { CddRequestError, type CddRoute } from '@cdd/cdd-shared'
+import { CddRequestError, PROJECT_HEADER, type CddRoute } from '@cdd/cdd-shared'
 import { ChatAdapter, chatRoutes } from '@cdd/harness/chat/chat'
 import { fidelityProgressRoutes } from '@cdd/space/kanban/fidelity-progress'
 import { ticketRoutes } from '@cdd/space/kanban/ticket'
@@ -11,7 +11,8 @@ import { practiceSessionOutputRoutes } from '@cdd/space/session/practice-session
 import { sessionRoutes } from '@cdd/space/session/session'
 
 import { DrawioViewer } from './drawio-viewer'
-import { API_ROOT, DRAWIO_PAGE, FILES_HEADER } from './files/files-paths'
+import { FileExplorer } from './file-explorer'
+import { API_ROOT, DRAWIO_PAGE, FILES_HEADER, REVEAL_PATH } from './files/files-paths'
 
 const CHANGING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE']
 const BAD_REQUEST = 400
@@ -66,7 +67,7 @@ async function answer(projects: ProjectConnections, route: CddRoute, request: Re
   }
 }
 
-export function createFilesApp(projects: ProjectConnections, port: number, staticRoot: string, drawio: DrawioViewer): Express {
+export function createFilesApp(projects: ProjectConnections, port: number, staticRoot: string, drawio: DrawioViewer, explorer = new FileExplorer()): Express {
   const app = express()
   app.use(onlyThisMachine(port))
   app.use(express.json())
@@ -81,6 +82,16 @@ export function createFilesApp(projects: ProjectConnections, port: number, stati
       const said = `${path} did not open in the draw.io viewer: ${textOf(failure)}`
       response.status(FAILED).type('text/plain').send(said)
       await tellChat(projects, request, said, `Opening ${path} from the Files app`)
+    }
+  })
+  // A file or folder the page names, from the project its header names, shown in the system's file browser here, on the
+  // person's own machine, which only this machine's page reaches.
+  app.post(`${API_ROOT}${REVEAL_PATH}`, (request, response) => {
+    try {
+      explorer.reveal(request.get(PROJECT_HEADER) || process.cwd(), String(request.body?.path ?? ''))
+      response.json(null)
+    } catch (failure) {
+      response.status(FAILED).json({ error: textOf(failure) })
     }
   })
   app.use(express.static(staticRoot))

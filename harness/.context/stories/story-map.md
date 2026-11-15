@@ -912,7 +912,11 @@ Observed (2026-11-14): the page reads only the files its link names, each once, 
 
 ### (S) Person --> [Open Diagram In Files App](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-diagram-in-files-app)
 
-Built (2026-11-14): a press on a `.drawio` file opens the draw.io editor in a new tab, and the Files tab stays on its file list (`files-page.ts` `openDrawio`). Requested (the person, 2026-11-14): "open in new tab works but orig tab also getting moved to drawio; leave it on file explorer". Was the chat bar's Open a diagram in the draw.io editor and the graph's Display Drawio File As Diagram; that story's Source tab and shape marking stay Intended.
+Built (2026-11-15): a press on a `.drawio` file shows the draw.io editor in the file view, beside the file list, with a ↗ link to a tab of its own (`files-page-view.tsx` `DrawioFileView`); the app's browser pane opens no tab of its own, so a new tab took the Files app's place there. Was the chat bar's Open a diagram in the draw.io editor and the graph's Display Drawio File As Diagram; that story's Source tab and shape marking stay Intended.
+
+### (S) Person --> [Open File In File Browser](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-file-in-file-browser)
+
+Built (2026-11-15): a right-click on a file or folder shows a menu whose one choice opens it in the system's file browser, named for the system (`files-page.ts` `reveal`, `file-explorer.ts`).
 
 ### (S) Person --> [Switch File Bar Between Folders And List](review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-switch-file-bar-between-folders-and-list)
 

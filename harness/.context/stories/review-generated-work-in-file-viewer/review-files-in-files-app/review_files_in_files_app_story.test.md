@@ -117,6 +117,33 @@ Required by the cdd_web_domain_access rule `fail-loud-on-mcp` this session overl
 *Then* the file view says *story-map.drawio did not open in the draw.io viewer*, with the reason
 *And* the chat that opened the Files app is told the same
 
+## Story: Open File In File Browser
+
+Requested (the person, 2026-11-15): "add right click to file and folder -> open in explorer (windows) or whatever mac is based on os".
+
+#### Scenario: Show a file in the system's file browser
+
+*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) lists *story-map.md*
+*When* the Person right-clicks *story-map.md*
+*Then* a menu shows where the Person clicked, its one choice named for the system: *Open in Explorer* on Windows, *Reveal in Finder* on a Mac, *Open in file manager* elsewhere
+*When* the Person chooses it
+*Then* the system's file browser opens with *story-map.md* selected, or on its folder where the browser cannot select a file
+*And* the menu closes
+
+#### Scenario: Open a folder in the system's file browser
+
+*Given* the Files app shows its files in their folders
+*When* the Person right-clicks the *.context* folder and chooses to open it
+*Then* the system's file browser opens on *.context*
+
+#### Scenario: Say so when the file browser does not open
+
+Required by the cdd_web_domain_access rule `fail-loud-on-mcp` this session overlays.
+
+*Given* the system's file browser does not start
+*When* the Person chooses to open *story-map.md* in it
+*Then* the chat that opened the Files app is told *story-map.md did not open in the file browser*, with the reason
+
 ## Story: Switch File Bar Between Folders And List
 
 Requested (the person, 2026-11-14): "expand collapse file bar with buttons to swap a folder view and file list". Only the page shows it: the session answers the same files either way.
