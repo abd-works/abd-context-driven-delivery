@@ -38,11 +38,23 @@ class PracticeCatalogue:
     """
 
     _classes: ClassVar[dict[str, type[PracticeGuidance]]] = {}
+    _supplement_classes: ClassVar[tuple[type[PracticeGuidance], ...]] = ()
 
     @classmethod
     def register(cls, *practice_classes: type[PracticeGuidance]) -> None:
         """Hold practice_classes as the practices CDD ships, in the order the approach walks them, each by its key."""
         PracticeCatalogue._classes = {practice_class.class_key(): practice_class for practice_class in practice_classes}
+
+    @classmethod
+    def register_supplements(cls, *supplement_classes: type[PracticeGuidance]) -> None:
+        """Hold supplement_classes as the practice supplements CDD ships, apart from the practices, so ``keys()`` and the
+        board never list one; registering none clears them."""
+        PracticeCatalogue._supplement_classes = tuple(supplement_classes)
+
+    @classmethod
+    def supplement_classes(cls) -> tuple[type[PracticeGuidance], ...]:
+        """The practice supplements registered, in the order they were registered."""
+        return cls._supplement_classes
 
     @classmethod
     def keys(cls) -> tuple[str, ...]:
@@ -77,9 +89,19 @@ class PracticeCatalogue:
         holds the others of the same set it works with, such as the practice it extends. A session makes its practices
         this way, so its graph and its actions work with the same objects."""
         made = {key: practice_class(**arguments) for key, practice_class in cls._registered().items()}
+        supplements = cls._always_on_supplements(made)
         for practice in made.values():
-            practice.hold_set(made)
+            practice.hold_set(made, supplements)
         return list(made.values())
+
+    @classmethod
+    def _always_on_supplements(cls, made: dict[str, PracticeGuidance]) -> list[PracticeGuidance]:
+        """One of each registered supplement that is on in every session, each holding the set's own fidelities it
+        supplements."""
+        supplements = [supplement_class() for supplement_class in cls._supplement_classes]
+        for supplement in supplements:
+            supplement.hold_set(made)
+        return [supplement for supplement in supplements if supplement.always_apply]
 
     @classmethod
     def practice_class(cls, key: str) -> type[PracticeGuidance]:

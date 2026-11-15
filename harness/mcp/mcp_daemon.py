@@ -51,9 +51,15 @@ class McpDaemon:
 
     Holding the port exclusively is the claim: two servers cannot both hold it, so a second start exits quietly."""
 
-    def __init__(self, home: CddHome, port: int | None = None, listening: ListeningPorts | None = None) -> None:
+    def __init__(
+        self,
+        home: CddHome,
+        port: int | None = None,
+        listening: ListeningPorts | None = None,
+        address: McpAddress | None = None,
+    ) -> None:
         self.home = home
-        self.address = McpAddress(port)
+        self.address = address or McpAddress(port)
         self._listening = listening or ListeningPorts()
 
     @property
