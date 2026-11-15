@@ -15,7 +15,8 @@
           "python"
         ],
         "model": [
-          "drawio"
+          "drawio",
+          "markdown"
         ]
       }
     },
@@ -28,7 +29,9 @@
         "acceptance_tests": [
           "python"
         ],
-        "scenarios": []
+        "scenarios": [
+          "markdown"
+        ]
       }
     },
     "ddd": {
@@ -73,6 +76,6 @@
       "specification",
       "implementation"
     ],
-    "version": 137
+    "version": 138
   }
 }
