@@ -6,7 +6,7 @@
   "worktree": "C:\\dev\\abd-cdd-2",
   "practices": {
     "clean_engineering": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
         "modules": [
           "drawio"
@@ -62,7 +62,7 @@
       }
     },
     "bdd": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
         "behavior": [
           "python"
@@ -81,6 +81,6 @@
       "discovery",
       "specification"
     ],
-    "version": 56
+    "version": 58
   }
 }
