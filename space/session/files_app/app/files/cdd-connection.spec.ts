@@ -40,4 +40,30 @@ describe('cdd connection', () => {
       expect(sessionsCalled).toEqual(['before-restart', 'after-restart'])
     })
   })
+
+  // A slow call, such as session.file reading the whole working copy, outlives the server's wait; the server says it is
+  // still running, and the same call asked again waits for that run.
+  describe("that makes a call still running at the server's time limit", () => {
+    function serverStillRunningOnce(): number[] {
+      const asks: number[] = []
+      vi.stubGlobal('fetch', async (_url: string, init: { body: string }) => {
+        const { id } = JSON.parse(init.body) as { id: number }
+        asks.push(id)
+        const text = asks.length === 1 ? 'session.file is still running after 10 seconds; it was not started again.' : '{"text":"the file"}'
+        return Response.json({ jsonrpc: '2.0', id, result: { content: [{ text }] } })
+      })
+      return asks
+    }
+
+    it("should answer the call's result, never the notice", async () => {
+      serverStillRunningOnce()
+      expect(await connectionFromBeforeRestart().call('session.file', {})).toEqual({ text: 'the file' })
+    })
+
+    it('should ask the server again for the same call', async () => {
+      const asks = serverStillRunningOnce()
+      await connectionFromBeforeRestart().call('session.file', {})
+      expect(asks.length).toBe(2)
+    })
+  })
 })

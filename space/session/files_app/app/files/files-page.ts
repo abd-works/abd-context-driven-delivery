@@ -9,6 +9,7 @@ import { FileCommentsActions } from './file-comments-actions'
 import type { FilesLink } from './files-link'
 import { DRAWIO_PATH, isDrawio } from './files-paths'
 import { FilesStore, type FidelityFiles } from './files-state'
+import { chosenFormatsOf, chosenKeyOf, FormatChips } from './format-chips'
 
 // While a comment on the open file is with a chat, the file is read again this often, so the chat's change and the
 // comment's processed state show without a reload. Nothing else is read again: never the list, never a board.
@@ -19,8 +20,8 @@ export const PRACTICES_REFRESH_MILLISECONDS = 1_000
 const TOAST_MILLISECONDS = 8_000
 
 // Which practices are on and which fidelities are selected, the one thing about them the file list depends on.
-const onOff = (practices: PracticeSessionOutputData[], selected: string[]): string =>
-  [...practices.map(practice => `${practice.name}:${practice.enabled}`), ...selected].join(',')
+const onOff = (practices: PracticeSessionOutputData[], selected: string[], formats = ''): string =>
+  [...practices.map(practice => `${practice.name}:${practice.enabled}`), ...selected, formats].join(',')
 
 // The tab a .drawio file opens in: sent to the viewer once its address is known, closed when it never comes.
 export type DrawioTab = { location: { href: string }; close(): void }
@@ -35,11 +36,13 @@ const practiceOwning = (slug: string, practices: PracticeSessionOutputData[]): P
 const selectedListed = (byFidelity: FidelityFiles[], selected: string[]): string[] => byFidelity.map(({ slug }) => slug).filter(slug => selected.includes(slug))
 
 // The files the page shows, each once: those of the fidelities selected on the chat bar, else of the fidelities whose
-// practice is on; a fidelity of no practice the session knows is shown.
-export const filesShown = (byFidelity: FidelityFiles[], practices: PracticeSessionOutputData[], selected: string[] = []): FileEntryData[] => {
+// practice is on, a fidelity of no practice the session knows shown; and of those, only the ones in a format chosen,
+// while any is.
+export const filesShown = (byFidelity: FidelityFiles[], practices: PracticeSessionOutputData[], selected: string[] = [], formats: string[] = []): FileEntryData[] => {
   const chosen = selectedListed(byFidelity, selected)
   const isShown = ({ slug }: FidelityFiles) => (chosen.length ? chosen.includes(slug) : (practiceOwning(slug, practices)?.enabled ?? true))
-  return eachOnce(byFidelity.filter(isShown).flatMap(({ entries }) => entries))
+  const inFormat = ({ entries, formatOf = {} }: FidelityFiles) => (formats.length ? entries.filter(entry => formats.includes(formatOf[entry.path] ?? '')) : entries)
+  return eachOnce(byFidelity.filter(isShown).flatMap(inFormat))
 }
 
 // Each file once, in the order its fidelities and formats send them.
@@ -52,6 +55,7 @@ export class FilesPage {
   readonly session: SessionClientGenerated
   readonly comments: FileCommentsActions
   readonly fileBar = new FileBar(this.store)
+  readonly formatChips: FormatChips
   private refreshTimer: ReturnType<typeof setTimeout> | null = null
   // The failures already shown here and sent to the chat that opened the page.
   private readonly toldChat = new Set<string>()
@@ -63,6 +67,7 @@ export class FilesPage {
   ) {
     this.session = SessionClientGenerated.named(api, link.sessionFile)
     this.comments = new FileCommentsActions(this)
+    this.formatChips = new FormatChips(api, link, this.store)
   }
 
   get state() {
@@ -96,7 +101,7 @@ export class FilesPage {
     if (!this.link.namesFiles) return this.store.change(() => ({ isListing: false, problem: 'This link names no files: open the Files app from the chat bar.' }))
     try {
       const [byFidelity] = await Promise.all([this.filesByFidelity(), this.readPractices()])
-      this.store.change(state => ({ byFidelity, entries: filesShown(byFidelity, state.practices, state.selectedFidelities), isListing: false }))
+      this.store.change(state => ({ byFidelity, entries: filesShown(byFidelity, state.practices, state.selectedFidelities, chosenFormatsOf(state.formatChoices)), isListing: false }))
       const entries = this.state.entries
       // A .drawio file opens in a tab of its own only on a click, so a link naming one opens the first other file here.
       const named = isDrawio(this.link.file) ? '' : this.link.file
@@ -112,7 +117,11 @@ export class FilesPage {
   private async filesByFidelity(): Promise<FidelityFiles[]> {
     if (this.link.isSessionFolder) return [{ slug: '', entries: (await this.session.folderFiles()) ?? [] }]
     return Promise.all(
-      this.link.fidelities.map(async slug => ({ slug, entries: Object.values((await FidelityProgressClientGenerated.named(this.api, this.link.ticket, slug).files()) ?? {}).flat() })),
+      this.link.fidelities.map(async slug => {
+        const byFormat = Object.entries((await FidelityProgressClientGenerated.named(this.api, this.link.ticket, slug).files()) ?? {})
+        const formatOf = Object.fromEntries(byFormat.flatMap(([format, entries]) => entries.map(entry => [entry.path, format])))
+        return { slug, entries: byFormat.flatMap(([, entries]) => entries), formatOf }
+      }),
     )
   }
 
@@ -121,12 +130,14 @@ export class FilesPage {
   // practice did; a read that fails goes to the chat once and is tried again on the next.
   private async readPractices({ isQuiet = false } = {}): Promise<void> {
     try {
-      const [shown, selectedFidelities] = await Promise.all([this.session.show(), this.selectedOnChatBar()])
+      const [shown, selectedFidelities, formatChoices] = await Promise.all([this.session.show(), this.selectedOnChatBar(), this.formatChips.read()])
       const practices = Object.values(shown?.practices ?? {})
-      if (this.state.practices.length && onOff(practices, selectedFidelities) === onOff(this.state.practices, this.state.selectedFidelities)) return
-      this.store.change(state => ({ practices, selectedFidelities, entries: filesShown(state.byFidelity, practices, selectedFidelities) }))
+      const isSame = onOff(practices, selectedFidelities, chosenKeyOf(formatChoices)) === onOff(this.state.practices, this.state.selectedFidelities, chosenKeyOf(this.state.formatChoices))
+      if (this.state.practices.length && isSame && formatChoices.length === this.state.formatChoices.length) return
+      const entries = filesShown(this.state.byFidelity, practices, selectedFidelities, chosenFormatsOf(formatChoices))
+      this.store.change(() => ({ practices, selectedFidelities, formatChoices, entries }))
     } catch (failure) {
-      this.fail(`The Files app did not read the session's practices or the chat bar's selection: ${reasonOf(failure)}`, isQuiet ? 'Reading them again every second while the page shows' : 'Opening the Files app')
+      this.fail(`The Files app did not read the session's practices, formats or the chat bar's selection: ${reasonOf(failure)}`, isQuiet ? 'Reading them again every second while the page shows' : 'Opening the Files app')
     }
   }
 
@@ -147,6 +158,20 @@ export class FilesPage {
   isShown(practice: PracticeSessionOutputData): boolean {
     if (!this.isFollowingChatBar) return practice.enabled
     return practice.fidelity_slugs.some(slug => this.state.selectedFidelities.includes(slug))
+  }
+
+  // A press on a format chip at the top of the page chooses that format in the session, or no longer, for every fidelity
+  // the page lists, as the chat bar's chip does, and the list shows only the files in the formats chosen; the chat that
+  // opened the page reads its chips again.
+  async toggleFormat(label: string): Promise<void> {
+    let answered: Awaited<ReturnType<FormatChips['toggle']>> = null
+    const isChosen = await this.attemptQuietly(`The ${label} format was not chosen`, async () => {
+      answered = await this.formatChips.toggle(label)
+    })
+    const formatChoices = answered as Awaited<ReturnType<FormatChips['toggle']>>
+    if (!isChosen || !formatChoices) return
+    this.store.change(state => ({ formatChoices, entries: filesShown(state.byFidelity, state.practices, state.selectedFidelities, chosenFormatsOf(formatChoices)) }))
+    if (this.link.chat) await this.attemptQuietly('The chat bar was not told to show the format', () => ChatClientGenerated.named(this.api, this.link.chat).send('refresh', 'formats'))
   }
 
   // A press on a practice at the top of the page. A practice the session does not work on is turned on for it, and the

@@ -1,7 +1,8 @@
 import type { ChatCommandData } from '@cdd/harness/chat/chat'
 import type { EngineInterface } from 'claude-code'
 
-import { refreshChatBar } from '../chat-bar/chat-bar-client'
+import { currentChatBar, refreshChatBar } from '../chat-bar/chat-bar-client'
+import { reloadFormatChips } from '../chat-bar/format-choices-client'
 import { openFileInViewer } from '../chat-bar/fidelity-files-client'
 import { showSelected } from '../chat-bar/fidelity-progress-client'
 import { commandOf, filledPrompt, REFUSED_WITHIN_MILLISECONDS } from '../shared/chat-command'
@@ -68,10 +69,12 @@ async function run($: EngineInterface, chat: string, command: ChatCommandData): 
   await post($, { chat, operation: 'confirm', body: { message: command.message, is_shown: !reason, reason } })
 }
 
-// A refresh reads the board again, with no toast: a page such as the Files app turned a practice on or off for the
-// session, which the bar shows only after it reads the board.
+// A refresh reads the board and the format chips again, with no toast: a page such as the Files app turned a practice
+// or a format on or off for the session, which the bar shows only after it reads them.
 async function refreshed($: EngineInterface, chat: string, command: ChatCommandData): Promise<void> {
-  const reason = await refreshChatBar($).then(() => '', reasonOf)
+  const reason = await refreshChatBar($)
+    .then(async () => reloadFormatChips($, await currentChatBar($)))
+    .then(() => '', reasonOf)
   if (reason) await showFailure($, `The chat bar did not read the board again: ${reason}`, `A refresh ${command.text} sent to this chat`)
   await post($, { chat, operation: 'confirm', body: { message: command.message, is_shown: !reason, reason } })
 }

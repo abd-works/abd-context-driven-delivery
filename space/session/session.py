@@ -19,7 +19,7 @@ from harness.guidance.documents import load_document
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.files import command, skill
 from harness.installation.json_file import HeldJsonFile, JsonFile
-from harness.mcp.mcp_annotations import mcp
+from harness.mcp.mcp_annotations import long_call, mcp
 from harness.installation.context_config import CONTEXT_FOLDER, ContextConfig
 from space.repo.repo import Repo
 from space.session.answer_reads import AnswerReads, HeldForAnswer
@@ -616,6 +616,7 @@ class Session:
         """Save text as the whole of path, a file in this repository or under a folder this session's practices write to, named as read_file names it; the file as saved."""
         return self.session_files.write(path, text)
 
+    @long_call
     @mcp
     @agent_tool
     @noSessionLog

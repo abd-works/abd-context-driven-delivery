@@ -14,6 +14,11 @@ class FakeFilesServer implements CddApi {
   readonly posts: { path: string; body: Record<string, unknown> }[] = []
   // The fidelities the opening chat's chat bar has selected, as it said at its last check-in.
   selected: string[] = []
+  // The session's format chips for the page's fidelities, markdown and diagram, none chosen.
+  formats = [
+    { label: 'markdown', formats: ['markdown'], offered: 2, made: 2, is_chosen: false },
+    { label: 'diagram', formats: ['drawio'], offered: 2, made: 1, is_chosen: false },
+  ]
   readonly practices: Record<string, PracticeSessionOutputData> = {
     stories: practice('stories', 'Stories', '#c0392b', true),
     ddd: practice('ddd', 'DDD', '#2471a3', false),
@@ -21,6 +26,11 @@ class FakeFilesServer implements CddApi {
 
   async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
     this.posts.push({ path, body })
+    if (path.endsWith('/format-choices')) return this.formats as Result
+    if (path.endsWith('/choose-formats')) {
+      this.formats = this.formats.map(chip => (chip.label === body.label ? { ...chip, is_chosen: Boolean(body.is_chosen) } : chip))
+      return this.formats as Result
+    }
     if (path.startsWith('/chat/') && path.endsWith('/select')) this.selected = [...(body.selected_fidelities as string[])]
     if (path.startsWith('/chat/') && (path.endsWith('/show') || path.endsWith('/select'))) return { id: 'chat-1', name: 'release-2', is_busy: false, folder: '', selected_fidelities: this.selected } as Result
     if (path.endsWith('/show')) return { name: 'release-2', session_file: SESSION, practices: this.practices } as Result
@@ -29,7 +39,7 @@ class FakeFilesServer implements CddApi {
       this.practices[name] = { ...this.practices[name]!, enabled: Boolean(body.is_enabled) }
       return this.practices[name] as Result
     }
-    if (path.endsWith('/files')) return { markdown: [entry(`.context/${path.split('/')[3]}.md`)] } as Result
+    if (path.endsWith('/files')) return { markdown: [entry(`.context/${path.split('/')[3]}.md`)], drawio: [entry(`.context/${path.split('/')[3]}.drawio`)] } as Result
     if (path.endsWith('/drawio/open')) return { url: 'http://127.0.0.1:8791/edit?f=a.drawio' } as Result
     return null
   }
@@ -168,7 +178,7 @@ describe('Follow Chat Bar Selection In Files App', () => {
 
       it("should list only the selected fidelity's files", async () => {
         const page = await followingDdd()
-        expect(page.state.entries.map(each => each.path)).toEqual(['.context/ddd-bounded-context.md'])
+        expect(page.state.entries.map(each => each.path)).toEqual(['.context/ddd-bounded-context.md', '.context/ddd-bounded-context.drawio'])
       })
 
       it("should show the selected fidelity's practice on and the other off", async () => {
@@ -194,7 +204,7 @@ describe('Follow Chat Bar Selection In Files App', () => {
 
       it("should list only the other practice's files", async () => {
         const { page } = await pressedStories()
-        expect(page.state.entries.map(each => each.path)).toEqual(['.context/ddd-bounded-context.md'])
+        expect(page.state.entries.map(each => each.path)).toEqual(['.context/ddd-bounded-context.md', '.context/ddd-bounded-context.drawio'])
       })
 
       it('should clear the selection once pressed again, every practice shown', async () => {
@@ -216,7 +226,12 @@ describe('Follow Chat Bar Selection In Files App', () => {
         server.selected = []
         await vi.advanceTimersByTimeAsync(PRACTICES_REFRESH_MILLISECONDS)
         vi.useRealTimers()
-        expect(page.state.entries.map(each => each.path)).toEqual(['.context/stories-story-map.md', '.context/ddd-bounded-context.md'])
+        expect(page.state.entries.map(each => each.path)).toEqual([
+          '.context/stories-story-map.md',
+          '.context/stories-story-map.drawio',
+          '.context/ddd-bounded-context.md',
+          '.context/ddd-bounded-context.drawio',
+        ])
       })
     })
   })
@@ -305,6 +320,41 @@ describe('Browse Files Without Reading Rules', () => {
         const { page, server } = await opened()
         await page.toggleCrossFile()
         expect(lastRead(server)).toMatchObject({ rules: false, cross_file: true })
+      })
+    })
+  })
+})
+
+describe('Filter Files By Format In Files App', () => {
+  describe('with markdown and diagram files, no format chosen', () => {
+    it('should show a chip for each format, none chosen', async () => {
+      const page = new FilesPage(new FakeFilesServer(), new FilesLink(STAGE_LINK))
+      await started(page)
+      expect(page.state.formatChoices.map(chip => `${chip.label}:${chip.is_chosen}`)).toEqual(['markdown:false', 'diagram:false'])
+    })
+
+    describe('that has the diagram chip pressed', () => {
+      async function pressedDiagram(): Promise<{ page: FilesPage; server: FakeFilesServer }> {
+        const server = new FakeFilesServer()
+        const page = new FilesPage(server, new FilesLink(STAGE_LINK))
+        await started(page)
+        await page.toggleFormat('diagram')
+        return { page, server }
+      }
+
+      it('should choose the diagram format in the session, as the chat bar shows it', async () => {
+        const { server } = await pressedDiagram()
+        expect(server.posted('/choose-formats').map(post => post.body)).toEqual([{ fidelities: ['stories-story-map', 'ddd-bounded-context'], label: 'diagram', is_chosen: true }])
+      })
+
+      it('should list only the diagrams of the practice turned on', async () => {
+        const { page } = await pressedDiagram()
+        expect(page.state.entries.map(each => each.path)).toEqual(['.context/stories-story-map.drawio'])
+      })
+
+      it('should tell the chat bar to read its format chips again', async () => {
+        const { server } = await pressedDiagram()
+        expect(server.posted('/send').map(post => post.body)).toEqual([{ kind: 'refresh', text: 'formats' }])
       })
     })
   })

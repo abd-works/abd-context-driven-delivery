@@ -1,8 +1,10 @@
+import type { FormatChoiceData } from '@cdd/space/kanban/ticket'
 import type { PracticeSessionOutputData } from '@cdd/space/session/practice-session-output'
 import type { FileEntryData, SessionFileData } from '@cdd/space/session/session'
 
-// One fidelity's files as the link names them, kept by fidelity so a practice turned off hides its own.
-export type FidelityFiles = { slug: string; entries: FileEntryData[] }
+// One fidelity's files as the link names them, kept by fidelity so a practice turned off hides its own, with the format
+// each file is in, so a format chip turned on shows only its own.
+export type FidelityFiles = { slug: string; entries: FileEntryData[]; formatOf?: Record<string, string> }
 
 // What the page draws: the session's practices with their toggles, the files its link names, the one open, and what went wrong. The open file is the session's
 // answer itself (text, comments, folds, violations, changes), never a copy kept beside it.
@@ -10,6 +12,9 @@ export type FilesState = {
   practices: PracticeSessionOutputData[]
   // The fidelities selected on the chat bar of the chat that opened the page; none selected, its practices turned on.
   selectedFidelities: string[]
+  // The format chips of the link's fidelities, chosen or not in the session, as the chat bar shows them; none chosen,
+  // every format is shown.
+  formatChoices: FormatChoiceData[]
   // What the open file is read with: its folds and broken rules from the session's graph, and the graph holding the
   // whole working copy so rules across files hold too. Both off by default, so browsing never reads the graph.
   reads: { rules: boolean; crossFile: boolean }
@@ -26,6 +31,7 @@ export type FilesState = {
 export const NO_FILES: FilesState = {
   practices: [],
   selectedFidelities: [],
+  formatChoices: [],
   reads: { rules: false, crossFile: false },
   byFidelity: [],
   entries: [],

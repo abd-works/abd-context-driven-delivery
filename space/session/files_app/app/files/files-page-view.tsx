@@ -6,6 +6,7 @@ import type { FileFolder } from './file-bar'
 import { FileSourceView } from './file-source-view'
 import type { FilesPage } from './files-page'
 import { isDrawio } from './files-paths'
+import { formatGlyphOf } from './format-chips'
 import { applyTheme, storedTheme, type FilesTheme } from './files-theme'
 
 const fileNameOf = (path: string): string => path.split('/').at(-1) ?? path
@@ -199,6 +200,33 @@ function ToastsView({ page }: { page: FilesPage }) {
   )
 }
 
+// The format chips after the practices, with the chat bar's glyphs and colours: filled orange while the format is chosen
+// in the session, green when every fidelity has a file in it already, grey otherwise. A press chooses it or no longer,
+// here and on the chat bar; while any is chosen, the list shows only the files in the formats chosen.
+function FormatTogglesView({ page }: { page: FilesPage }) {
+  const { formatChoices } = useFilesState(page)
+  if (!formatChoices.length) return null
+  return (
+    <div className="format-toggles" role="group" aria-label="Formats">
+      {formatChoices.map(choice => {
+        const look = choice.is_chosen ? 'is-chosen' : choice.made && choice.made === choice.offered ? 'is-made' : 'is-not-made'
+        return (
+          <button
+            key={choice.label}
+            type="button"
+            className={`format-toggle ${look}`}
+            aria-pressed={choice.is_chosen}
+            title={`${choice.label}: ${choice.made}/${choice.offered} made; ${choice.is_chosen ? 'chosen, press to show every format' : 'press to show only the formats chosen'}`}
+            onClick={() => void page.toggleFormat(choice.label)}
+          >
+            {formatGlyphOf(choice.label)}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 // What the open file is read with, each on its own and both off by default, so browsing never reads a graph: Rules shows
 // its folds and its own broken rules, the file read alone; Cross-file the rules only the whole working copy finds,
 // linking files and practices, which takes far longer.
@@ -242,6 +270,7 @@ export function FilesPageView({ page }: { page: FilesPage }) {
         <span className="files-kind">FILES</span>
         <span className="files-subject">{page.link.subject}</span>
         <PracticeTogglesView page={page} />
+        <FormatTogglesView page={page} />
         <ReadsTogglesView page={page} />
         <ThemeToggleView page={page} />
       </header>

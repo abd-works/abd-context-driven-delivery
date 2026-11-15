@@ -31,6 +31,10 @@ class SessionGoneError extends CddNotConnectedError {}
 type Session = { url: string; headers: Record<string, string> }
 type Message = { id?: number; method?: string; params?: { progressToken?: number; message?: string }; result?: unknown; error?: { message?: string } }
 type ToolResult = { content?: { text?: string }[]; isError?: boolean }
+// What the cdd server answers for a call still running at its time limit (harness/mcp/tool_calls.py), after the tool's
+// name; and how often a connection asks again, each ask waiting up to the server's own limit, before it gives up.
+const STILL_RUNNING = 'is still running after'
+const STILL_RUNNING_ASKS = 60
 
 const cddHome = (): string => process.env.CDD_HOME ?? join(homedir(), '.cdd')
 
@@ -47,13 +51,24 @@ export class CddConnection {
   // A server restarted since this connection opened no longer knows its session and runs nothing for it, so the call
   // is sent once more on a new session rather than failing the page that made it.
   async call<Result>(tool: string, args: Record<string, unknown>): Promise<Result> {
+    for (let asked = 1; ; asked += 1) {
+      const text = await this.answerText(tool, args)
+      if (!text.startsWith(`${tool} ${STILL_RUNNING}`)) return this.parsed<Result>(text)
+      if (asked >= STILL_RUNNING_ASKS) throw new CddToolError(tool, text)
+    }
+  }
+
+  // A call that outlives the server's wait is still running there and answers so; asking again with the same arguments
+  // waits for that same run, so the page gets the call's result, never the notice. A server that no longer knows this
+  // connection's session (restarted) is asked once more on a new session.
+  private async answerText(tool: string, args: Record<string, unknown>): Promise<string> {
     const result = (await this.calledOnce(tool, args).catch(failure => {
       if (failure instanceof SessionGoneError) return this.calledOnce(tool, args)
       throw failure
     })) as ToolResult
     const text = result.content?.[0]?.text
     if (result.isError || text === undefined) throw new CddToolError(tool, text ?? 'no result')
-    return this.parsed<Result>(text)
+    return text
   }
 
   private async calledOnce(tool: string, args: Record<string, unknown>): Promise<unknown> {

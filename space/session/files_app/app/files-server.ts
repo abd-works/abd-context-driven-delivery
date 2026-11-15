@@ -5,6 +5,7 @@ import type { ProjectConnections } from '@cdd/cdd-connection'
 import { CddRequestError, type CddRoute } from '@cdd/cdd-shared'
 import { chatRoutes } from '@cdd/harness/chat/chat'
 import { fidelityProgressRoutes } from '@cdd/space/kanban/fidelity-progress'
+import { ticketRoutes } from '@cdd/space/kanban/ticket'
 import { fileCommentsRoutes } from '@cdd/space/session/file-comments'
 import { practiceSessionOutputRoutes } from '@cdd/space/session/practice-session-output'
 import { sessionRoutes } from '@cdd/space/session/session'
@@ -20,6 +21,8 @@ const FAILED = 500
 // The chat routes the page needs: sending the chat that opened it a refresh or a failure, and reading and changing the
 // one selection cdd holds for its chat bar and this page. Opening or removing chats stays with the board.
 const CHAT_ROUTES = ['/chat/:chat/send', '/chat/:chat/show', '/chat/:chat/select']
+// The ticket routes the page needs: reading and choosing the session's formats, the chat bar's format chips.
+const TICKET_ROUTES = ['/ticket/:ticket/format-choices', '/ticket/:ticket/choose-formats']
 
 // The Files app reads a session's files, a fidelity's files, and the comments on them, turns the session's practices on
 // or off, and tells the chat that opened it; it never reads the board.
@@ -29,6 +32,7 @@ export const filesRoutes: CddRoute[] = [
   ...fidelityProgressRoutes,
   ...practiceSessionOutputRoutes,
   ...chatRoutes.filter(route => CHAT_ROUTES.includes(route.path)),
+  ...ticketRoutes.filter(route => TICKET_ROUTES.includes(route.path)),
 ]
 
 const textOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))

@@ -51,6 +51,14 @@ export async function loadFormatChips($: EngineInterface, chatBar: ChatBarClient
   await update($, formatChoices, () => ({ key, choices }))
 }
 
+// The chips read again from the session, as after a page the chat opened, such as the Files app, chose a format: the
+// last chips stay drawn until the new ones come.
+export async function reloadFormatChips($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
+  CACHE.clear()
+  await update($, formatChoices, held => ({ key: '', choices: held?.choices ?? [] }))
+  await loadFormatChips($, chatBar)
+}
+
 // A press on a chip turns it on or off in the session; the bar shows the chips Python answers.
 export async function toggleFormat($: EngineInterface, chatBar: ChatBarClient, chips: FormatChips, label: string): Promise<void> {
   const chip = chips.choices.find(choice => choice.label === label)
