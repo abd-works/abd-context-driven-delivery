@@ -88,6 +88,12 @@ class TestRun:
         return now - self.started_at >= self.tier.interval
 
     @property
+    def is_run_by_this_process(self) -> bool:
+        """Recorded as running for this process: the cadence records a run, then starts the process that runs it,
+        which may read the record before its id is in it. A run another live process holds is not this one's."""
+        return self.outcome is RunOutcome.RUNNING and (self.pid in (0, os.getpid()) or not RunningProcess(self.pid).alive)
+
+    @property
     def is_live(self) -> bool:
         return self.outcome is RunOutcome.RUNNING and RunningProcess(self.pid).alive
 
@@ -262,7 +268,7 @@ class TestCadence:
         """Run tier here to its end and record its result: the background process the cadence starts runs this, and so
         can a person. A run the cadence recorded as running is the one finished; otherwise a new one starts."""
         started = self.record.latest(tier)
-        if started is None or started.outcome is not RunOutcome.RUNNING:
+        if started is None or not started.is_run_by_this_process:
             started = TestRun(tier, self._head(), self._clock(), pid=os.getpid())
             self.record.save(started)
         exit_code, output = self._runner.run(tier, self.checkout)
