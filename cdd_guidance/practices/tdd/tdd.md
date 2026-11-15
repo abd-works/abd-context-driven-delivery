@@ -27,8 +27,8 @@ The order of work depends on whether the story crosses an architectural boundary
 **Flow B — another story or feature on a known area.** The seams are proven, so the order reverses:
 
 1. **Write the unit tests** on the seams that already exist, and see them fail for the right reason.
-2. **Write the code and run the tests** until they pass.
-3. **Hand it to the person to try.**
+2. **Write the code and run only the tests for the change** — the specs of the files it touched — until they pass. Not the whole tier.
+3. **Hand it to the person to try,** and while they test it, run the whole unit tier in a sub-task off the person's thread; report its result when it comes back.
 4. **Write the heavy and/or e2e tests in a sub-task:** hand them to a background agent so the person is not kept waiting, and tell the person when they are done.
 
 ### Red, green, refactor
@@ -70,13 +70,16 @@ Only an example that is still slow, or that exists to prove the real resource, m
 
 ### Cadence
 
+Stay off the person's thread. In the foreground run only what proves the change just made; every larger run (the whole unit tier, heavy, e2e) goes to a sub-task or background process, and its result is reported when it comes back.
+
 | Tier | When it runs | Who runs it |
 |---|---|---|
-| unit | After every change or pass | The agent, in the foreground (about 20 s) |
+| unit, for the change | After every change | The agent, in the foreground: only the specs of the files the change touched, so the answer comes in seconds |
+| unit, whole tier | While the person tries the change, and before a push | A sub-task off the person's thread (about 20 s); nobody waits on it |
 | heavy | Every hour, and once at the end of multi-pass work | A background process; push without waiting, report its result when it comes back |
 | e2e | Every day, before every release, and at the end of work that touches a browser or an agent | The daily scheduled run and the release command |
 
-Read the runner's slow list after every unit run and fix each example in the same pass, optimizing first. Keep the runner's timings (`.pycache/spec-seconds.json`): they order the next run's batches, longest first.
+Read the runner's slow list after every whole-tier unit run and fix each example in the same pass, optimizing first. Keep the runner's timings (`.pycache/spec-seconds.json`): they order the next run's batches, longest first.
 
 ### When stuck
 
@@ -102,7 +105,7 @@ Whenever you create, alter, or delete tests or the code they prove at an impleme
 **Speed**
 - **`unit-example-within-100-ms`** — Every unit example runs within 100 ms, its before-each and after-each included.
 - **`unit-file-within-2-seconds`** — A unit spec file runs within 2 s.
-- **`unit-tier-within-25-seconds`** — The whole unit tier finishes in under 25 s of wall clock on an idle machine, because it runs after every pass, and a slow unit tier stops being run.
+- **`unit-tier-within-25-seconds`** — The whole unit tier finishes in under 25 s of wall clock on an idle machine, because it runs in a sub-task while the person tries each change, and a slow unit tier stops being run.
 - **`specs-run-in-parallel`** — A spec can run beside any other: no fixed port, no shared temp folder, no shared `CDD_HOME`, no order between files.
 - **`heavy-spec-owns-its-resources`** — A heavy spec makes its own throwaway resources (repository, server port, `CDD_HOME`), so heavy specs can run in parallel too.
 - **`expensive-fixture-built-once`** — A read-only fixture that is slow to build is built once per file and shared, not once per example.
