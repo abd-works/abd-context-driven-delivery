@@ -22,12 +22,9 @@
     "stories": {
       "enabled": true,
       "formats": {
-        "story_map": [
-          "markdown"
-        ],
+        "story_map": [],
         "acceptance_tests": [],
         "scenarios": [
-          "markdown",
           "realization"
         ]
       }
@@ -64,9 +61,7 @@
       "formats": {
         "behavior": [],
         "development": [],
-        "realization": [
-          "markdown"
-        ]
+        "realization": []
       }
     }
   },
@@ -76,6 +71,6 @@
       "specification",
       "implementation"
     ],
-    "version": 69
+    "version": 70
   }
 }
