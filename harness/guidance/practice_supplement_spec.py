@@ -18,6 +18,7 @@ def practices_by_key(practices):
 with description("a practice supplement") as self:
     with context("that the catalogue makes with a set of practices"):
         with before.all:
+            self.registered = PracticeCatalogue.supplement_classes()
             PracticeCatalogue.register_supplements(SampleSupplement)
             self.practices = practices_by_key(PracticeCatalogue.create_all(fidelity=None))
             self.bdd_development = self.practices["bdd"].fidelity_called("development")
@@ -26,7 +27,7 @@ with description("a practice supplement") as self:
             self.supplement = self.practices["bdd"].supplements[0]
 
         with after.all:
-            PracticeCatalogue.register_supplements()
+            PracticeCatalogue.register_supplements(*self.registered)
 
         with it("should supplement the set's own fidelities its front matter names"):
             expect(self.supplement.supplemented_fidelities).to(equal([self.bdd_development, self.code]))
@@ -65,8 +66,11 @@ with description("a practice supplement") as self:
                 expect(slugs).not_to(contain("sample-shared-rule"))
 
     with context("that names a fidelity its practice does not have"):
+        with before.each:
+            self.registered = PracticeCatalogue.supplement_classes()
+
         with after.each:
-            PracticeCatalogue.register_supplements()
+            PracticeCatalogue.register_supplements(*self.registered)
 
         with it("should refuse the set it is made with"):
             PracticeCatalogue.register_supplements(UnknownSupplement)

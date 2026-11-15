@@ -14,11 +14,12 @@ from harness.guidance.practice_catalogue import PracticeCatalogue
 
 with description("a rule a practice supplement shares across practices") as self:
     with before.all:
+        self.registered = PracticeCatalogue.supplement_classes()
         PracticeCatalogue.register_supplements(SampleSupplement)
         self.practices = {practice.key: practice for practice in PracticeCatalogue.create_all(fidelity=None)}
 
     with after.all:
-        PracticeCatalogue.register_supplements()
+        PracticeCatalogue.register_supplements(*self.registered)
 
     with context("that is bound to a practice it names"):
         with it("should check that practice's own node types"):

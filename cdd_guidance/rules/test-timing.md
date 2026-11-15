@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Test Timing
 
-The suite has three tiers, `scripts/test.ps1 -Suite unit | heavy | e2e`. What belongs in each is the BDD practice's `tier-by-speed` rule (`@bdd` development).
+The suite has three tiers, `scripts/test.ps1 -Suite unit | heavy | e2e`. What belongs in each, and the speed budgets, are the TDD supplement's tier and speed rules (`cdd_guidance/practices/tdd/tdd.md`), which supplement every implementation fidelity.
 
 When a piece of work runs in several passes, such as a series of merges, refactor rounds, or agents' branches landing one after another, run the **unit tier** after each pass and the **heavy tier** once, at the end of the whole approach.
 

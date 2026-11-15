@@ -52,6 +52,11 @@ class PracticeCatalogue:
         PracticeCatalogue._supplement_classes = tuple(supplement_classes)
 
     @classmethod
+    def supplement_classes(cls) -> tuple[type[PracticeGuidance], ...]:
+        """The practice supplements registered, in the order they were registered."""
+        return cls._supplement_classes
+
+    @classmethod
     def keys(cls) -> tuple[str, ...]:
         """Each practice's key, its folder's name, such as ``clean_engineering``."""
         return tuple(cls._registered())
