@@ -22,7 +22,7 @@ const FAILED = 500
 // selected are the session's guidance selection, reached through its routes. Opening or removing chats stays with the board.
 const CHAT_ROUTES = ['/chat/:chat/send']
 // The ticket route the page lists its files through: every fidelity's files in one call.
-const TICKET_ROUTES = ['/ticket/:ticket/fidelity-files']
+const TICKET_ROUTES = ['/ticket/:ticket/fidelity-files', '/ticket/:ticket/root-files']
 
 // The Files app reads a session's files, a fidelity's files, and the comments on them, turns the session's practices on
 // or off, and tells the chat that opened it; it never reads the board.

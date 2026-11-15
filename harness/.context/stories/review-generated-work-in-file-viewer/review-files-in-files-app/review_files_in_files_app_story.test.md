@@ -150,22 +150,22 @@ Requested (the person, 2026-11-15): "keep folder the default view and not reset 
 
 ## Story: List This Session Or All Session Files
 
-Requested (the person, 2026-11-15): two buttons, All session files or This session, the files the branch changed. The stages, practices and formats selected filter both, so a person can list, for example, every drawio file, or only this session's markdown and code. The session answers every file with whether the branch changed it; the page filters.
+Requested (the person, 2026-11-15): two buttons. All session files lists every file under the session's root; This session lists the files the session's branch changed against main. The stages, practices and formats selected narrow both: a file shows in a format selected, and when it belongs to a fidelity of a stage and practice selected, or to no fidelity at all. So a person can list, for example, every drawio file, or only this session's markdown and code. The session answers each file with its format and the fidelities it belongs to; the page filters.
 
-#### Scenario: List this session's files, then all session files
+#### Scenario: List all session files, then this session's
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filebar-filesfile-barts) lists *.context/story-map.md*, *src/checkout/order.py* and *src/checkout/cart.py* for the stages, practices and formats selected, and the session's branch changed only *order.py*
-*When* the Person lists This session, its count 1
-*Then* the file bar lists *order.py* alone
-*And* as folders it shows only *src/checkout*
+*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filebar-filesfile-barts) has Discovery selected, and the session's root holds *.context/stories-story-map.md* of the story map, *specs/checkout.md* of Specification's scenarios, and *notes/plain.txt* and *src/order.py* of no fidelity, the branch having changed only *order.py*
 *When* the Person lists All session files
-*Then* the file bar lists *story-map.md*, *order.py* and *cart.py*
+*Then* the file bar lists *stories-story-map.md*, *plain.txt* and *order.py*
+*And* leaves out *checkout.md*, whose stage is not selected
+*When* the Person lists This session
+*Then* the file bar lists *order.py* alone
 
 #### Scenario: List all session files in the formats selected
 
-*Given* the Files app lists the files of Discovery, with the diagram format selected
+*Given* the Files app has Discovery and the markdown format selected
 *When* the Person lists All session files
-*Then* the file bar lists only the drawio files, the branch's changes or not
+*Then* the file bar lists only the Discovery markdown files
 
 #### Scenario: Keep a published design canvas
 

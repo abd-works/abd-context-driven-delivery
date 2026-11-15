@@ -420,6 +420,18 @@ class Ticket(Card):
         """Return the files a person reviews for each of fidelities, slugs such as stories-story-map, on ticket, by slug and then by format, as each fidelity-progress.files answers them: one call for a page listing many fidelities, sharing one look at what the branch changed."""
         return {slug: self.work.progress_of(slug).files() for slug in fidelities}
 
+    @long_call
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def root_files(self) -> list[FileEntry]:
+        """Return every file under the folder ticket's session works in, each with its path from the project, whether the branch changed it, its format, and the fidelities whose files it is, so a page narrows it by the stages, practices, and formats selected; a file no fidelity declares names none."""
+        belongs: dict[str, list[str]] = {}
+        for progress in self.work.progress:
+            for entry in (entry for entries in progress.files().values() for entry in entries):
+                belongs.setdefault(entry.path, []).append(progress.fidelity.slug)
+        return [entry.belonging_to(belongs.get(entry.path, [])) for entry in self._session.session_files.under_root()]
+
     @mcp
     @agent_tool
     @noSessionLog
