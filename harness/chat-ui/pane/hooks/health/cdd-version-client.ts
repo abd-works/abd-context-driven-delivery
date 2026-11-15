@@ -6,15 +6,13 @@ import type { CddVersionData } from '@cdd/harness/diagnostics/cdd-version'
 import type { CddVersionJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { showFailure } from '../error-display/failure-client'
+import { promptCommand } from '../shared/chat-command'
 
 const SERVER = 'plugin:cdd:cdd'
 const CHECK_TOOL = 'cdd-version.check'
 // Reads the version on disk against origin main as last fetched, without fetching: cheap enough for every turn.
 const READ_TOOL = 'cdd-version.read'
 const INSTALL_LATEST_COMMAND = '/harness:installation:install-latest'
-// What the person says to the chat to update: a message, since the engine refuses a prompt that starts with / and runs a
-// command sent through $.command.run without a turn, where nothing lists its steps.
-const UPDATE_REQUEST = `Update CDD: run ${INSTALL_LATEST_COMMAND} and follow its steps.`
 // The cdd server is still connecting as a chat opens, so the first check waits as the server health's first look does.
 const FIRST_CHECK_WAIT_MS = 5000
 // Twelve tries five seconds apart: a minute for cdd to connect after the chat opens or the plugins reload.
@@ -127,25 +125,12 @@ export async function cancelUpdate($: EngineInterface): Promise<void> {
   await update($, cddVersion, version => ({ ...version, isAsking: false }))
 }
 
-// The update is asked of the chat in the person's own words, so the agent runs /install-latest as a turn: it lists the
-// steps in its task list and ticks each one off as the script reports it. The engine queues the message until the chat
-// is idle; the turn's end finishes the update.
+// The update goes in the prompt box, as the action button's command does, and the person's Enter sends it as their own
+// /install-latest: the agent runs it as a turn, lists its steps in the task list, and ticks each one off as the script
+// reports it. The badge reads the version again after that turn, as after every turn.
 export async function updateToLatest($: EngineInterface): Promise<void> {
-  await update($, cddVersion, version => ({ ...version, isAsking: false, update: 'running', error: null }))
-  const dropped = await $.prompt.submit({ text: UPDATE_REQUEST, asUser: true }).then(
-    answer => (answer.drop === undefined ? '' : `the chat dropped it: ${answer.drop || 'no reason given'}`),
-    (failure: unknown) => String(failure),
-  )
-  if (!dropped) return
-  await update($, cddVersion, version => ({ ...version, update: 'failed', error: dropped }))
-  await showFailure($, `${INSTALL_LATEST_COMMAND} did not run: ${dropped}`, `Update and reinstall on the version badge, sending ${INSTALL_LATEST_COMMAND} to the chat`)
-}
-
-// Once the turn that ran the update has ended, the badge says the update is done and reads the version again.
-export async function finishUpdate($: EngineInterface): Promise<void> {
-  if ((await read($, cddVersion)).update !== 'running') return
-  await update($, cddVersion, version => ({ ...version, update: 'installed' }))
-  await checkVersion($)
+  await update($, cddVersion, version => ({ ...version, isAsking: false }))
+  await promptCommand($, INSTALL_LATEST_COMMAND)
 }
 
 function versionFrom(text: string): CddVersionData | null {
