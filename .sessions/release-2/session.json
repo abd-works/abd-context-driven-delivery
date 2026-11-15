@@ -56,6 +56,10 @@
         "front_end_code": [
           "html",
           "typescript"
+        ],
+        "mockup": [
+          "html",
+          "claude_design"
         ]
       }
     },

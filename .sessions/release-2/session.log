@@ -215,3 +215,15 @@
 2026-11-15T18:14:56Z tool graph.load_practice_roots
 2026-11-15T18:15:05Z tool graph.inventory
 2026-11-15T18:15:25Z tool graph.inventory
+2026-11-15T18:25:58Z tool graph.practice_names
+2026-11-15T18:25:58Z tool graph.load_practice_roots
+2026-11-15T18:26:19Z tool graph.inventory
+2026-11-15T18:26:19Z tool graph.filter_choices
+2026-11-15T18:26:21Z tool graph.explorer_trees
+2026-11-15T18:30:14Z tool app.open 4a2b62f1-74ad-4426-aafe-9c9618581953 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\4a2b62f1-74ad-4426-aafe-9c9618581953.jsonl 1-1822
+2026-11-15T18:30:20Z tool graph.practice_names
+2026-11-15T18:30:20Z tool graph.load_practice_roots
+2026-11-15T18:30:42Z tool graph.inventory
+2026-11-15T18:30:42Z tool graph.filter_choices
+2026-11-15T18:30:43Z tool graph.explorer_trees
+2026-11-15T18:31:32Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-7566
