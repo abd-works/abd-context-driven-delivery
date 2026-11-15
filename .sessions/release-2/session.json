@@ -23,7 +23,8 @@
       "enabled": true,
       "formats": {
         "story_map": [
-          "drawio"
+          "drawio",
+          "markdown"
         ],
         "acceptance_tests": [],
         "scenarios": []
@@ -45,7 +46,8 @@
       "enabled": true,
       "formats": {
         "ia": [
-          "drawio"
+          "drawio",
+          "markdown"
         ],
         "front_end_code": [
           "html",
@@ -70,6 +72,6 @@
       "discovery",
       "implementation"
     ],
-    "version": 83
+    "version": 84
   }
 }
