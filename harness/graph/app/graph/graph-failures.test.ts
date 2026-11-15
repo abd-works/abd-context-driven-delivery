@@ -97,6 +97,18 @@ describe('Graph app failures', () => {
         await settled();
         expect(server.posts).toHaveLength(1);
       });
+
+      describe('that meets two failures while the chat is down', () => {
+        it('should show that the chat was not told once', async () => {
+          const server = new FakeGraphServer();
+          server.isChatDown = true;
+          const failures = new GraphFailures(server, 'chat-1');
+          failures.fail(DIAGNOSIS, CONTEXT);
+          failures.fail('The Graph app did not read the progress', 'Reading the progress');
+          await settled();
+          expect(failures.shown.filter((shown) => shown.startsWith('The chat was not told'))).toHaveLength(1);
+        });
+      });
     });
   });
 

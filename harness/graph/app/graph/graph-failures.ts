@@ -52,7 +52,9 @@ export class GraphFailures {
     void told.catch((reason) => this.toast(`The chat was not told: ${reasonOf(reason)}`));
   }
 
+  // A toast already showing is not shown twice: toasts are known by their text, and two alike confuse the list.
   toast(text: string): void {
+    if (this.toasts.includes(text)) return;
     this.change([...this.toasts, text]);
     setTimeout(() => this.change(this.toasts.filter((shown) => shown !== text)), TOAST_MILLISECONDS);
   }

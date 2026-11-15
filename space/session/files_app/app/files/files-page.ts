@@ -268,7 +268,9 @@ export class FilesPage {
     void told.catch(reason => this.toast(`The chat was not told: ${reasonOf(reason)}`))
   }
 
+  // A toast already showing is not shown twice: toasts are known by their text, and two alike confuse the list.
   toast(text: string): void {
+    if (this.state.toasts.includes(text)) return
     this.store.change(state => ({ toasts: [...state.toasts, text] }))
     setTimeout(() => this.store.change(state => ({ toasts: state.toasts.filter(shown => shown !== text) })), TOAST_MILLISECONDS)
   }
