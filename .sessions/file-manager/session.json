@@ -9,7 +9,7 @@
     "stages": [
       "discovery"
     ],
-    "version": 5
+    "version": 7
   },
   "practices": {
     "stories": {
@@ -25,7 +25,8 @@
         "ia": [
           "drawio"
         ]
-      }
+      },
+      "enabled": false
     },
     "clean_engineering": {
       "formats": {
@@ -40,6 +41,9 @@
       "formats": {
         "behavior": []
       },
+      "enabled": false
+    },
+    "ddd": {
       "enabled": false
     }
   },
