@@ -301,10 +301,10 @@ describe('Browse Files Without Reading Rules', () => {
     })
 
     describe('that has Cross-file turned on', () => {
-      it('should read it again with its rules across the whole working copy', async () => {
+      it('should read it again with only the rules across the whole working copy', async () => {
         const { page, server } = await opened()
         await page.toggleCrossFile()
-        expect(lastRead(server)).toMatchObject({ rules: true, cross_file: true })
+        expect(lastRead(server)).toMatchObject({ rules: false, cross_file: true })
       })
     })
   })

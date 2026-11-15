@@ -199,17 +199,17 @@ function ToastsView({ page }: { page: FilesPage }) {
   )
 }
 
-// What the open file is read with, both off by default so browsing never reads the graph: Rules shows its folds and
-// broken rules from the session's graph; Cross-file has the graph hold the whole working copy first, so rules linking
-// files and practices hold too, which takes far longer.
+// What the open file is read with, each on its own and both off by default, so browsing never reads a graph: Rules shows
+// its folds and its own broken rules, the file read alone; Cross-file the rules only the whole working copy finds,
+// linking files and practices, which takes far longer.
 function ReadsTogglesView({ page }: { page: FilesPage }) {
   const { reads } = useFilesState(page)
   return (
     <div className="reads-toggles" role="group" aria-label="Read the open file with">
-      <button type="button" className="file-bar-view" aria-pressed={reads.rules} title="Folds and broken rules from the session's graph: a second or two for a changed file" onClick={() => void page.toggleRules()}>
+      <button type="button" className="file-bar-view" aria-pressed={reads.rules} title="The file's own rules, read on its own: under a second" onClick={() => void page.toggleRules()}>
         Rules
       </button>
-      <button type="button" className="file-bar-view" aria-pressed={reads.crossFile} title="Rules across files and practices: the graph reads the whole working copy first, which takes far longer" onClick={() => void page.toggleCrossFile()}>
+      <button type="button" className="file-bar-view" aria-pressed={reads.crossFile} title="Only the rules that link files and practices: the graph reads the whole working copy first, which takes far longer" onClick={() => void page.toggleCrossFile()}>
         Cross-file
       </button>
     </div>

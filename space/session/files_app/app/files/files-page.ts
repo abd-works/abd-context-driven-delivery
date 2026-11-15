@@ -193,16 +193,17 @@ export class FilesPage {
     this.store.change(state => ({ selectedFidelities: answered, entries: filesShown(state.byFidelity, state.practices, answered) }))
   }
 
-  // Turns on or off reading the open file's folds and broken rules from the session's graph (a second or two for a
-  // changed file), and reading them with the graph holding the whole working copy (far longer); the open file is read
-  // again with them. Cross-file reads the rules too.
+  // Turns on or off the open file's own rules: it is read on its own and only its rules run, under a second. The open
+  // file is read again with them.
   async toggleRules(): Promise<void> {
-    this.store.change(({ reads }) => ({ reads: { rules: !reads.rules, crossFile: reads.rules ? false : reads.crossFile } }))
+    this.store.change(({ reads }) => ({ reads: { ...reads, rules: !reads.rules } }))
     await this.refreshOpen()
   }
 
+  // Turns on or off the rules only the whole working copy finds in the open file, linking files and practices, which
+  // takes far longer; apart from its own rules, which Rules turns on.
   async toggleCrossFile(): Promise<void> {
-    this.store.change(({ reads }) => ({ reads: { rules: !reads.crossFile || reads.rules, crossFile: !reads.crossFile } }))
+    this.store.change(({ reads }) => ({ reads: { ...reads, crossFile: !reads.crossFile } }))
     await this.refreshOpen()
   }
 
