@@ -58,8 +58,7 @@
           "typescript"
         ],
         "mockup": [
-          "html",
-          "claude_design"
+          "html"
         ]
       }
     },
