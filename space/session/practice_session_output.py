@@ -164,6 +164,12 @@ class PracticeSessionOutput:
         """Whether a person chose this practice's root, rather than it being the default."""
         return bool(self.chosen_outputs.get("root"))
 
+    @property
+    def is_root_default(self) -> bool:
+        """Whether nobody said where this practice writes: no root chosen in the session, none configured for the
+        project, so it writes under its own default folder."""
+        return not self._chosen_or_configured_root
+
     @mcp
     @agent_tool
     @noSessionLog

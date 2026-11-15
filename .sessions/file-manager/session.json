@@ -2,5 +2,10 @@
   "name": "file-manager",
   "title": "file-manager",
   "scope": "feature",
-  "workpath": "harness"
+  "workpath": "harness",
+  "outputs": {
+    "stories": {
+      "root": ".context/stories"
+    }
+  }
 }

@@ -34,6 +34,14 @@ _OUTSIDE_WORKTREE_NOTE = (
     "This chat works in {chat}, but {session}'s worktree is {worktree}. Do this session's work in a chat started there "
     "(start_session with cwd {worktree}), not in this chat.\n\n"
 )
+_DEFAULT_ROOTS_NOTE = (
+    "**Output roots.** These practices write under their default folders, which nobody has checked: {roots}. Before "
+    "generating anything, look for where the repository already keeps each one's artifacts (for example a story map "
+    "in harness/.context/stories/ rather than harness/.context/). When they live elsewhere, call "
+    "practice-session-output.choose_root for that practice with that folder, so the Files app, the board and validate "
+    "find the existing files and new work lands beside them. Leave a default that already holds them, or where none "
+    "exist yet.\n\n"
+)
 _WORKTREE_TICKET_NOTE = (
     "This chat works in {ticket}'s own worktree, so its session is {ticket}, not {asked}. To work on {asked}, open it "
     "from the main chat.\n\n"
@@ -411,12 +419,27 @@ class Sessions:
         chat = call.chat_id if call is not None else ""
         ticket = self._ticket_of_worktree()
         if ticket is not None:
-            return self._worktree_ticket_note(ticket, name) + self.open(ticket, chat).log.instructions()
+            opened = self.open(ticket, chat)
+            return self._worktree_ticket_note(ticket, name) + self._default_roots_note(opened) + opened.log.instructions()
         wanted = self._name_to_switch_to(name, chat)
         folder = self.folder_of(wanted)
         is_kept = (folder / SESSION_FILE).is_file() or wanted == MAIN_SESSION_NAME
         session = self.load(folder) if is_kept else self.create(wanted, workpath)
-        return self._outside_worktree_note(session, call) + self.open(session, chat).log.instructions()
+        opened = self.open(session, chat)
+        return self._outside_worktree_note(session, call) + self._default_roots_note(opened) + opened.log.instructions()
+
+    @staticmethod
+    def _default_roots_note(session: Session) -> str:
+        """What a chat opening session is told about the practices it works on whose roots nobody set, so it points each
+        at the folder that already holds its artifacts; nothing for main, or when every root was set."""
+        if session.name == MAIN_SESSION_NAME:
+            return ""
+        defaults = [
+            f"{key} → {practice.root}"
+            for key, practice in session.own_practices.items()
+            if practice.enabled and practice.is_root_default
+        ]
+        return _DEFAULT_ROOTS_NOTE.format(roots=", ".join(defaults)) if defaults else ""
 
     @staticmethod
     def _worktree_ticket_note(ticket: Session, asked: str) -> str:
