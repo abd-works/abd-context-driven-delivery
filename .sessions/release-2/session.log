@@ -727,3 +727,35 @@
 2026-11-15T23:41:59Z error repo.push_to_main C:\dev\abd-context-driven-delivery\.sessions\release-2\session.err 2328 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-13670
 2026-11-15T23:42:12Z render C:\dev\abd-cdd-2 stories story_map drawio 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-13691
 2026-11-15T23:42:37Z tool repo.push_to_main 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-13708
+2026-11-15T23:44:36Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-13737
+2026-11-15T23:44:37Z tool graph.practice_names
+2026-11-15T23:44:37Z tool graph.practice_names
+2026-11-15T23:44:37Z tool graph.load_practice_roots
+2026-11-15T23:44:51Z tool graph.inventory
+2026-11-15T23:44:51Z tool graph.filter_choices
+2026-11-15T23:44:51Z tool graph.explorer_trees
+2026-11-15T23:44:59Z tool graph.explorer_branch
+2026-11-15T23:45:01Z tool graph.explorer_branch
+2026-11-15T23:45:09Z tool graph.practice_names
+2026-11-15T23:45:09Z tool graph.load_practice_roots
+2026-11-15T23:45:15Z tool graph.source
+2026-11-15T23:45:17Z tool graph.explorer_branch
+2026-11-15T23:45:25Z tool graph.explorer_branch
+2026-11-15T23:45:25Z tool graph.inventory
+2026-11-15T23:45:25Z tool graph.source
+2026-11-15T23:45:25Z tool graph.filter_choices
+2026-11-15T23:45:27Z tool graph.explorer_trees
+2026-11-15T23:45:30Z tool graph.explorer_branch
+2026-11-15T23:45:34Z tool graph.explorer_branch
+2026-11-15T23:45:38Z tool graph.source
+2026-11-15T23:45:42Z tool graph.explorer_branch
+2026-11-15T23:45:44Z tool graph.source
+2026-11-15T23:45:55Z tool graph.explorer_branch
+2026-11-15T23:45:57Z tool graph.source
+2026-11-15T23:46:00Z tool graph.source
+2026-11-15T23:46:05Z tool graph.source
+2026-11-15T23:46:13Z tool graph.source
+2026-11-15T23:46:15Z tool graph.explorer_branch
+2026-11-15T23:46:17Z tool graph.source
+2026-11-15T23:46:20Z tool graph.source
+2026-11-15T23:46:22Z tool graph.source
