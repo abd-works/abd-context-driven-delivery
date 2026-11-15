@@ -234,3 +234,6 @@
 2026-11-15T18:32:28Z tool graph.inventory
 2026-11-15T18:32:29Z tool graph.filter_choices
 2026-11-15T18:32:31Z tool graph.explorer_trees
+2026-11-15T18:40:48Z tool app.open 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-7924
+2026-11-15T18:40:55Z tool graph.practice_names
+2026-11-15T18:40:55Z tool graph.load_practice_roots
