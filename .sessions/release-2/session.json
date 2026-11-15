@@ -23,7 +23,10 @@
       "enabled": true
     },
     "bdd": {
-      "enabled": true
+      "enabled": true,
+      "formats": {
+        "behavior": []
+      }
     }
   }
 }
