@@ -20,19 +20,34 @@
     "bdd": {
       "enabled": true,
       "formats": {
-        "realization": []
+        "realization": [],
+        "development": [
+          "python"
+        ]
       }
     },
     "ddd": {
       "formats": {
-        "model": []
+        "model": [],
+        "tactics": [
+          "python"
+        ]
+      }
+    },
+    "ux": {
+      "formats": {
+        "front_end_code": [
+          "html",
+          "typescript"
+        ]
       }
     }
   },
   "guidance": {
     "stages": [
+      "specification",
       "implementation"
     ],
-    "version": 16
+    "version": 18
   }
 }
