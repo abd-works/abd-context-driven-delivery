@@ -28,6 +28,7 @@ function FileEntryView({ page, entry, isOpen }: { page: FilesPage; entry: FileEn
     <li>
       <button className={classes} title={hint} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void page.open(entry.path)}>
         {fileNameOf(entry.path)}
+        {entry.exists ? null : <span className="file-entry-note"> not generated yet</span>}
       </button>
     </li>
   )
