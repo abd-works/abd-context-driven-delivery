@@ -4,5 +4,6 @@
   "scope": "feature",
   "parent": "tdd-practice",
   "branch": "release-cadence",
-  "worktree": "C:\\dev\\abd-cdd-release-cadence"
+  "worktree": "C:\\dev\\abd-cdd-release-cadence",
+  "pulled_out": true
 }
