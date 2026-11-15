@@ -1116,7 +1116,14 @@ with description("a session whose branch changed code in the folder it works in"
         self.repo = Path(tempfile.mkdtemp(prefix="session-code-")).resolve()
         (self.repo / ".git").mkdir()
         self.work = self.repo / "work"
-        changed = [self.work / "orders" / "order.py", self.work / "orders" / "order_view.tsx", self.work / "orders" / "notes.md", self.repo / "elsewhere.py"]
+        changed = [
+            self.work / "orders" / "order.py",
+            self.work / "orders" / "order_view.tsx",
+            self.work / "orders" / "notes.md",
+            self.work / "orders" / "order_spec.py",
+            self.work / "orders" / "order-view.spec.tsx",
+            self.repo / "elsewhere.py",
+        ]
         for file in changed:
             file.parent.mkdir(parents=True, exist_ok=True)
             file.write_text("x\n", encoding="utf-8")
@@ -1134,6 +1141,11 @@ with description("a session whose branch changed code in the folder it works in"
 
     with it("should list the changed TypeScript, components included, as the code's TypeScript"):
         expect([entry.path for entry in self.code.files()["typescript"]]).to(equal(["work/orders/order_view.tsx"]))
+
+    # Specs and tests are the acceptance tests' and the development specs' files, not production code.
+    with it("should leave the changed specs out of the code"):
+        listed = [entry.path for entries in self.code.files().values() for entry in entries]
+        expect(listed).not_to(contain("work/orders/order_spec.py"))
 
 
 # UX's front-end code is reviewed against the screens it was built from: its view code is Clean Engineering's code to

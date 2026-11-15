@@ -9,7 +9,7 @@ import { FileCommentsActions } from './file-comments-actions'
 import type { FilesLink } from './files-link'
 import { isDrawio } from './files-paths'
 import { FilesStore, type FidelityFiles } from './files-state'
-import { chosenFormatsOf, chosenKeyOf, FormatChips } from './format-chips'
+import { chosenFormatsOf, chosenKeyOf, FormatChips, formatGlyphOf } from './format-chips'
 
 // While a comment on the open file is with a chat, the file is read again this often, so the chat's change and the
 // comment's processed state show without a reload. Nothing else is read again: never the list, never a board.
@@ -154,6 +154,15 @@ export class FilesPage {
   isShown(practice: PracticeSessionOutputData): boolean {
     if (!this.isFollowingChatBar) return practice.enabled
     return practice.fidelity_slugs.some(slug => this.state.selectedFidelities.includes(slug))
+  }
+
+  // Why the list is empty: the formats chosen hold none of the files the practices shown have, such as code at a stage
+  // whose fidelities write only documents and diagrams; else there are no files yet.
+  get emptyReason(): string {
+    const chosen = this.state.formatChoices.filter(choice => choice.is_chosen).map(choice => formatGlyphOf(choice.label))
+    const anyFiles = filesShown(this.state.byFidelity, this.state.practices, this.state.selectedFidelities).length > 0
+    if (chosen.length && anyFiles) return `None of these files is in the formats chosen (${chosen.join(' ')}): press a chosen format to show every format.`
+    return 'No files here yet.'
   }
 
   // A press on a format chip at the top of the page chooses that format in the session, or no longer, for every fidelity

@@ -62,7 +62,7 @@ function PublishedFileView({ entry }: { entry: FileEntryData }) {
 function FileListView({ page }: { page: FilesPage }) {
   const state = useFilesState(page)
   if (state.isListing) return <p className="files-note">Reading the files…</p>
-  if (!state.entries.length) return <p className="files-note">No files here yet.</p>
+  if (!state.entries.length) return <p className="files-note">{page.emptyReason}</p>
   if (!page.fileBar.entries.length) return <p className="files-note">The branch changed none of these files.</p>
   if (state.fileBar.view === 'folders') return <FileFoldersView page={page} />
   return (

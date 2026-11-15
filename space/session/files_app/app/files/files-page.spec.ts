@@ -336,6 +336,14 @@ describe('Filter Files By Format In Files App', () => {
         expect(page.state.entries.map(each => each.path)).toEqual(['.context/stories-story-map.drawio'])
       })
 
+      it('should say why no file shows once the formats chosen hold none of them', async () => {
+        const server = new FakeFilesServer()
+        server.formats = [{ label: 'code', formats: ['python'], offered: 2, made: 0, is_chosen: true }]
+        const page = new FilesPage(server, new FilesLink(STAGE_LINK))
+        await started(page)
+        expect(page.emptyReason).toBe('None of these files is in the formats chosen (</>): press a chosen format to show every format.')
+      })
+
       it('should tell the chat bar to read its format chips again', async () => {
         const { server } = await pressedDiagram()
         expect(server.posted('/send').map(post => post.body)).toEqual([{ kind: 'refresh', text: 'formats' }])

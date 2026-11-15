@@ -8,6 +8,7 @@ from functools import cache
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Callable
 
+from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
 from harness.agent_tools.tool_call import ToolCall
@@ -416,10 +417,13 @@ class FidelitySessionOutput:
     def _worked_on_code(self, label: str, changed: Callable[[], set[Path]]) -> list[FileEntry]:
         """The code a fidelity that declares a folder per module writes, such as Clean Engineering's ``{module}/``: the
         files in that format under its root that the session's branch changed, the code the ticket worked on, not every
-        file of that language in the repository."""
+        file of that language in the repository. Specs, tests, and what only they use are the acceptance tests' and the
+        development specs' files, not production code, so they are left out."""
         root = self.root.resolve()
         extensions = _CODE_EXTENSIONS.get(Format(label).name, (Format(label).extension,))
-        worked_on = sorted(file for file in changed() if file.suffix in extensions and (file == root or root in file.parents))
+        worked_on = sorted(
+            file for file in changed() if file.suffix in extensions and (file == root or root in file.parents) and not is_test_code(file.as_posix())
+        )
         return [FileEntry(self._session.repo.path_from_top(file), file.exists(), True) for file in worked_on]
 
     def _found(self, label: str, declared: DeclaredFile) -> list[Path]:
