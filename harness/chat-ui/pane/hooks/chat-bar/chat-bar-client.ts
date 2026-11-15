@@ -8,6 +8,7 @@ import type { TicketData } from '@cdd/space/kanban/ticket'
 import type { ChatBarJson } from '../../types'
 import { reasonOf, showFailure } from '../error-display/failure-client'
 import { SERVER } from '../health/server-health-client'
+import { debugCommandOf } from '../shared/debug-command'
 import type { GuidanceSelectionData } from '@cdd/space/session/session'
 
 import { FidelityProgressClient, PracticeDotClient } from './fidelity-progress-client'
@@ -365,6 +366,9 @@ export const BOARD_PROBLEM_STEPS = [
     + 'update the themes in .sessions/_backlog/install-failure-themes.md.',
   'Ask me to run /reload-plugins, so this chat loads the new cdd entry and header helper, then check that the chat bar '
     + 'reads the board again.',
+  'If the cause is a bug in CDD rather than an older server or install, run /space-session-debug-session choice=fix with '
+    + 'this failure as its details: it fixes the bug in a sub-agent and pushes the fix to main where you can push there, '
+    + 'or opens a pull request to the CDD repository where you cannot.',
 ]
 
 export function boardProblemPrompt(shown: string): string {
@@ -386,6 +390,12 @@ export async function moveNext($: EngineInterface, chatBar: ChatBarClient): Prom
   }
   await refreshChatBar($)
   return currentChatBar($)
+}
+
+// The debug button, right after handoff: puts the debug command in the prompt box, which captures what went wrong, asks
+// the person for more, and fixes the bug or requests help.
+export async function runDebug($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
+  await $.prompt.fill({ text: debugCommandOf(chatBar.sessionFile), mode: 'append' })
 }
 
 export async function runHandoff($: EngineInterface, chatBar: ChatBarClient): Promise<void> {

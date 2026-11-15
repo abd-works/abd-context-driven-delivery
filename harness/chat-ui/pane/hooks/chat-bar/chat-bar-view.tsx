@@ -10,7 +10,7 @@ import { formatGlyphOf, REPO_GLYPH, repoWordOf, sessionWordOf } from './bar-colu
 import type { FormatChips } from './format-choices-client'
 import { toggleFormat, togglePractice, toggleStage } from './guidance-client'
 import { toggleOverlay, toggleOverlayList, type OverlayChips } from './overlay-choices-client'
-import { askChatToFixBoard, restartServer, runHandoff, type ChatBarClient } from './chat-bar-client'
+import { askChatToFixBoard, restartServer, runDebug, runHandoff, type ChatBarClient } from './chat-bar-client'
 import type { FailureClient } from '../error-display/failure-client'
 import { FailureView } from '../error-display/failure-view'
 import { openReport, openSessionFolder, openStageFiles } from './fidelity-files-client'
@@ -259,6 +259,7 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
           {ActionButtonView($, elements, draw)}
           {FilesButtonView($, elements, draw)}
           {IconButtonView(elements, 'handoff', '⇥', 'handoff', () => runHandoff($, chatBar))}
+          {IconButtonView(elements, 'debug', '🐞', 'debug: capture what went wrong, then fix it or request help', () => runDebug($, chatBar))}
         </Box>
         <Box flexGrow={1} />
         {SessionNameView($, elements, draw)}
