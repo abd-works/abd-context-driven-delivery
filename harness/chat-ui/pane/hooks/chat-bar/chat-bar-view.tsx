@@ -121,9 +121,9 @@ function SessionNameView($: EngineInterface, elements: ElementTable, { chatBar }
   }
   if (chatBar.isMain) {
     return (
-      <Box key="session-name" flexDirection="row" gap={1}>
+      <Box key="session-name" flexDirection="row" gap={0}>
         {WordGlyphButtonView(elements, 'repo-list-button', repoWordOf(chatBar), REPO_GLYPH, () => toggleRepoListWithRepos($))}
-        <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
+        <Box flexDirection="row" marginLeft={-1} hover={{ scope: CARD_SCOPE }}>
           {WordGlyphButtonView(elements, 'session-list-button', sessionWordOf(chatBar), '+', () => toggleSessionList($))}
         </Box>
       </Box>
@@ -233,7 +233,7 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
   const { chatBar } = draw
   if (!chatBar.hasSession) return <Box key="line" flexDirection="row" gap={1}>{draw.health.band}<Box flexGrow={1} />{SessionNameView($, elements, draw)}{draw.version.badge}</Box>
   return (
-    <Box key="line" flexDirection="row" gap={1} flexWrap="wrap" alignItems="center">
+    <Box key="line" flexDirection="row" gap={1} alignItems="center">
         {draw.health.band}
         {draw.version.badge}
         {StageButtonView($, elements, draw)}
