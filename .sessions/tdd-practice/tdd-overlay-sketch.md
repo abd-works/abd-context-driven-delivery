@@ -160,7 +160,7 @@ Guidance: settle how each building block is tested when you choose its pattern; 
 ## Open decisions for step 2
 
 1. **Order on brownfield.** The ladder says run real conditions first, with no automated tests. Every other source says write the test first. The sketch keeps both: greenfield goes test first, brownfield runs real conditions first. Is that right?
-2. **Moving rules.** Decided: the tier rules move here and BDD `tier-by-speed` and Stories `story-tier-by-speed` are removed. Still open: whether `layer-isolation` moves too, and whether BDD's `red-then-green`, `minimum-green` and `one-signature-at-a-time` are process, so leave BDD's rules for this overlay's Guidance. Or should they stay where they are, with the overlay only pointing to them?
+2. **Moving rules.** Decided: the tier rules move here, and BDD `tier-by-speed` and Stories `story-tier-by-speed` are removed. Still open: should `layer-isolation` move too? And BDD's `red-then-green`, `minimum-green` and `one-signature-at-a-time` are process — move them out of BDD's rules into this overlay's Guidance?
 3. **The `always_apply` setting.** Should it go in `tdd.md` front matter, or in the project's yaml so a project can turn it off?
 4. **Overlay reading.** Teach the practice catalogue that a practice may decorate others (its `decorates:` list and `practices/` folder), and have `PatternOverlays` read stack patterns only? Or one overlay reader for both?
 5. **Agent BDD.** Agent BDD isn't decorated in this sketch. Should it be?
