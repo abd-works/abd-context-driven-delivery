@@ -8,9 +8,7 @@
     "clean_engineering": {
       "enabled": true,
       "formats": {
-        "modules": [
-          "drawio"
-        ],
+        "modules": [],
         "code": [
           "python"
         ],
@@ -22,9 +20,7 @@
     "stories": {
       "enabled": true,
       "formats": {
-        "story_map": [
-          "drawio"
-        ],
+        "story_map": [],
         "acceptance_tests": [
           "python"
         ],
@@ -73,6 +69,6 @@
       "discovery",
       "implementation"
     ],
-    "version": 108
+    "version": 109
   }
 }
