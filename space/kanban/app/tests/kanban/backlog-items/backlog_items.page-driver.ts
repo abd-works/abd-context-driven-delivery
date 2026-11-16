@@ -17,9 +17,9 @@ export class BacklogItemsPageDriver implements BacklogItemsDriver {
     this.page = page
   }
 
-  // Starting an item starts its chat; the link is caught, so a run opens no real chat in the Claude app.
+  // Starting an item starts its chat; the run's cdd server keeps the link, so a run opens no real chat in the Claude app.
   static async fromPage(page: Page): Promise<BacklogItemsPageDriver> {
-    await catchClaudeLinks(page)
+    catchClaudeLinks()
     await openBoard(page)
     await turnOffActiveSessionOnly(page)
     return new BacklogItemsPageDriver(page)
@@ -57,9 +57,12 @@ export class BacklogItemsPageDriver implements BacklogItemsDriver {
     await expect(card(this.page, ticket)).toHaveCount(0)
   }
 
+  // An item just added is already open, and a press on an open card collapses it, so the card is pressed only when its
+  // text is not shown.
   async textOf(title: string): Promise<string> {
-    await this.item(title).locator('.card-hit').click()
-    return this.page.locator('.item-text').innerText()
+    const text = this.item(title).locator('.ticket-text')
+    if (!(await text.isVisible())) await this.item(title).locator('.card-hit').click()
+    return text.innerText()
   }
 
   async isInBacklog(title: string): Promise<boolean> {

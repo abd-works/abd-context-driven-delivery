@@ -18,8 +18,18 @@ CHAT_HEADER = "X-CDD-Chat"
 CHAT_PROCESS_HEADER = "X-CDD-Chat-Process"
 PING_PATH = "/ping"
 MCP_PATH = "/mcp"
+# Where the stable lane's server sends a dev-lane chat's tool call for the dev lane's server to answer.
+LANE_CALL_PATH = "/lane-call"
 # How long a connection to the loopback port may take before nothing is taken to listen there.
 _CONNECT_SECONDS = 0.5
+
+
+class LaneUnreachable(Exception):
+    """The server on the other lane did not take or answer a tool call sent to it."""
+
+    def __init__(self, port: int, detail: str) -> None:
+        super().__init__(f"the cdd server on port {port} did not answer a tool call sent from the other lane: {detail}")
+        self.port = port
 
 
 class McpAddress:
@@ -50,3 +60,16 @@ class McpAddress:
         finally:
             connection.close()
         return answer if isinstance(answer, dict) and answer.get("ok") else None
+
+    def send_lane_call(self, lane_call: dict, reply_seconds: float) -> dict:
+        """Hand a tool call to the server on this port and wait up to reply_seconds for its reply: ``answer`` holds the
+        tool's answer, or ``failure`` names what failed."""
+        connection = http.client.HTTPConnection(self.HOST, self.port, timeout=reply_seconds)
+        try:
+            connection.request("POST", LANE_CALL_PATH, body=json.dumps(lane_call), headers={"Content-Type": "application/json"})
+            reply = connection.getresponse()
+            return json.loads(reply.read().decode("utf-8"))
+        except (OSError, http.client.HTTPException, json.JSONDecodeError) as failure:
+            raise LaneUnreachable(self.port, str(failure)) from failure
+        finally:
+            connection.close()

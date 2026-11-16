@@ -82,11 +82,10 @@ test.describe('Display Board', () => {
 
     test.afterEach(() => stop())
 
-    // Fails today, most runs: a board whose CDD_PYTHON names no program often shows no band, as
-    // story-actions.spec's own 'should show a band when cdd cannot be reached' also finds. The scenario words it "The
-    // cdd server is not connected"; the band's text is "cdd is not connected".
+    // The scenario words it "The cdd server is not connected"; the band says the cdd server is not answering, and how to
+    // start it again.
     test('Then a band across the top of the page says The cdd server is not connected', async ({ page }) => {
-      await expect(page.locator('.band-failure')).toContainText('cdd is not connected', { timeout: 15_000 })
+      await expect(page.locator('.band-failure')).toContainText('The cdd server is not answering', { timeout: 15_000 })
     })
 
     test('And the header offers Update', async ({ page }) => {

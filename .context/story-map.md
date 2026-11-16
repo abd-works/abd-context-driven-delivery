@@ -56,6 +56,16 @@ The map reads in the order the work happens: authors register and install toolse
 ### (S) Author --> Register Hook Event
 ### (S) Hook Installation --> Publish Hooks Manifest
 
+## (E) Serve CDD Code In Lanes
+
+Intended (requested 2026-11-16; `harness/mcp/.context/cdr/0003-two-lanes-main-stable-features-dev.md`): the stable lane runs main for chats in a main checkout, and every other session is in the dev lane by default, which runs the one served feature pinned straight from its branch.
+
+### (S:system) CDD Server --> [Choose The Lane For A Project](../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/choose-the-lane-for-a-project/choose_the_lane_for_a_project_story.test.py)
+### (S) Person --> [Install Into The Lane Of The Checkout](../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/install-into-the-lane-of-the-checkout/install_into_the_lane_of_the_checkout_story.test.py)
+### (S) Person --> [Serve A Feature Branch On The Dev Lane](../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/serve-a-feature-branch-on-the-dev-lane/serve_a_feature_branch_on_the_dev_lane_story.test.py)
+### (S:system) CDD Server --> [Send A Dev-Lane Chat's Calls To The Dev Lane](../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/send-a-dev-lane-chats-calls-to-the-dev-lane/send_a_dev_lane_chats_calls_to_the_dev_lane_story.test.py)
+### (S) Person --> Switch The Served Feature After Other Chats Agree
+
 # (E) Deliver Work With Context Guidance
 
 A practice is a lens on the work (Stories, DDD, UX, Clean Engineering, BDD), a fidelity is how deep that lens goes, and an action is what you do with it. A person composes the three into one command; the agent loads that practice's guidance at that fidelity and uses it to turn source material into context, shape the solution, produce the formal artifacts, and check them against the same rules. Sources: `catalog/workflow.md`, `cdd_guidance/actions/.context/module-context.md`, `.context/cdd-approach.md`.

@@ -15,7 +15,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { card, catchClaudeLinks, dragCard, expect, FakeChat, fixtureRoot, openBoard, receivedBy, resetSessions, test, toast, waitForChat, waitForNoChat, writeInto } from '../../../space/kanban/app/tests/story-ui'
+import { card, catchClaudeLinks, type ClaudeLinks, dragCard, expect, FakeChat, fixtureRoot, openBoard, receivedBy, resetSessions, test, toast, waitForChat, waitForNoChat, writeInto } from '../../../space/kanban/app/tests/story-ui'
 import type { Page } from '../../../space/kanban/app/tests/story-ui'
 
 const CHAT_CHECKED_IN_MILLISECONDS = 10_000
@@ -72,10 +72,10 @@ test.describe('with no chat connected', () => {
     })
 
     test.describe('Start a backlog item in a chosen folder', () => {
-      let links: string[] = []
+      let links: ClaudeLinks
 
       test.beforeEach(async ({ page }) => {
-        links = await catchClaudeLinks(page)
+        links = catchClaudeLinks()
         writeInto(join(fixtureRoot, '.sessions', '_backlog', 'gift-cards.md'), '# Gift cards\n\nSell gift cards.\n')
         for (const folder of ['src/billing', 'src/visits']) mkdirSync(join(fixtureRoot, folder), { recursive: true })
         await openBoard(page)
@@ -100,7 +100,7 @@ test.describe('with no chat connected', () => {
       })
 
       test("And a new chat opens on gift-cards' own worktree", async () => {
-        expect(links.map(link => new URL(link).searchParams.get('folder'))).toEqual([expect.stringContaining('gift-cards')])
+        expect(links.opened.map(link => new URL(link).searchParams.get('folder'))).toEqual([expect.stringContaining('gift-cards')])
       })
     })
   })
@@ -169,10 +169,10 @@ test.describe('with no chat connected', () => {
     // Activating opens the ticket in its own worktree in one press: no chat moves between folders, so there is nothing
     // to ask first. With no chat working there yet, it starts one there.
     test.describe('Open a ticket in its own worktree', () => {
-      let links: string[] = []
+      let links: ClaudeLinks
 
       test.beforeEach(async ({ page }) => {
-        links = await catchClaudeLinks(page)
+        links = catchClaudeLinks()
         await openBoard(page)
         await card(page, 'billing-report').getByRole('button', { name: 'Activate' }).first().click()
         // Activating makes a worktree in the background; the next scenario's reset must not start while it still runs.
@@ -184,7 +184,7 @@ test.describe('with no chat connected', () => {
       })
 
       test("And a new chat opens on Billing report's worktree", async () => {
-        expect(links.map(link => new URL(link).searchParams.get('folder'))).toEqual([expect.stringContaining('billing-report')])
+        expect(links.opened.map(link => new URL(link).searchParams.get('folder'))).toEqual([expect.stringContaining('billing-report')])
       })
     })
   })

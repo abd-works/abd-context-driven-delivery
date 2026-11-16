@@ -30,7 +30,10 @@ const barOf = (page: Page, slug: string) => details(page).locator(`[data-tile="$
 const chip = (bar: Locator, label: string) => bar.getByRole('button', { name: new RegExp(`^${label}:`) })
 const runOf = (bar: Locator) => bar.getByRole('button', { name: 'Run', exact: true })
 
+// A card already shown opens over its own press, so it is pressed only while another ticket is shown.
 async function selectBillingReport(page: Page): Promise<void> {
+  const title = page.locator('.details-title h2')
+  if ((await title.count()) && (await title.innerText()) === 'Billing report') return
   await card(page, 'billing-report').getByRole('button', { name: 'Show Billing report' }).click({ position: { x: 4, y: 4 } })
   await expect(page.locator('.details-title h2')).toHaveText('Billing report')
 }
@@ -65,16 +68,16 @@ test.describe('with no chat connected', () => {
       })
     })
 
-    test.describe('Leave a generated format unpicked', () => {
+    test.describe('Keep a generated format picked', () => {
       test.beforeEach(async ({ page }) => {
         writeInto(DECLARED_STORY_MAP, '# Check Out Order\n')
         await openBoard(page)
       })
 
-      test('Then the markdown chip is green and not picked', async ({ page }) => {
+      test('Then the markdown chip is green and still picked', async ({ page }) => {
         const bar = await openStoryMapTile(page)
-        await expect(chip(bar, 'markdown')).toHaveAttribute('aria-label', 'markdown: done')
-        await expect(chip(bar, 'markdown')).toHaveAttribute('aria-pressed', 'false')
+        await expect(chip(bar, 'markdown')).toHaveAttribute('aria-label', 'markdown: done, selected')
+        await expect(chip(bar, 'markdown')).toHaveAttribute('aria-pressed', 'true')
       })
     })
 
@@ -88,11 +91,12 @@ test.describe('with no chat connected', () => {
         await details(page).getByRole('button', { name: 'Actions for Discovery' }).click()
       })
 
-      test('Then the bar shows a diagram chip and a markdown chip', async ({ page }) => {
+      test('Then the bar shows a diagram chip, a markdown chip and a thin_slice chip', async ({ page }) => {
         const bar = details(page).locator('.expansion').first()
-        await expect(bar.locator('.format-icon')).toHaveCount(2)
+        await expect(bar.locator('.format-icon')).toHaveCount(3)
         await expect(chip(bar, 'diagram')).toBeVisible()
         await expect(chip(bar, 'markdown')).toBeVisible()
+        await expect(chip(bar, 'thin_slice')).toBeVisible()
       })
 
       test('And the markdown chip reads 1 of 2 with the hint markdown: 1 of 2 done, selected', async ({ page }) => {
@@ -127,8 +131,11 @@ test.describe('with a chat connected', () => {
 
   test.afterAll(() => chat.stop())
 
+  // Opening a ticket shows its own chat at the top, and none while it has none, so the chat is picked with
+  // billing-report shown, which makes it billing-report's chat.
   async function openWithChat(page: Page): Promise<void> {
     await openBoard(page)
+    await selectBillingReport(page)
     await waitForChat(page, chat)
   }
 
@@ -137,10 +144,14 @@ test.describe('with a chat connected', () => {
       test.beforeEach(async ({ page }) => {
         writeInto(DECLARED_STORY_MAP, '# Check Out Order\n')
         await openWithChat(page)
+        // A bar's chips are off on a ticket that is not the active session while Active session only is on.
+        await turnOffActiveSessionOnly(page)
       })
 
       test('Then Run is off', async ({ page }) => {
         const bar = await openStoryMapTile(page)
+        await expect(chip(bar, 'markdown')).toHaveAttribute('aria-pressed', 'true')
+        await chip(bar, 'markdown').click()
         await expect(bar.locator('[aria-pressed="true"]')).toHaveCount(0)
         await expect(runOf(bar)).toBeDisabled()
       })
@@ -183,9 +194,9 @@ test.describe('with a chat connected', () => {
         await runOf(bar).click()
       })
 
-      test("And the bar's picks are cleared", async ({ page }) => {
+      test('And the bar keeps the markdown chip picked for the next run', async ({ page }) => {
         await expect.poll(() => receivedBy(chat)).toContain('/actions-generate stories-story-map session=.sessions/billing-report/session.json format=markdown')
-        await expect(barOf(page, 'stories-story-map').locator('[aria-pressed="true"]')).toHaveCount(0)
+        await expect(chip(barOf(page, 'stories-story-map'), 'markdown')).toHaveAttribute('aria-pressed', 'true')
       })
     })
   })
@@ -198,8 +209,14 @@ test.describe('with a chat connected', () => {
         await openWithChat(page)
         const bar = await openStoryMapTile(page)
         await bar.getByRole('combobox', { name: 'Action' }).selectOption('render')
+        // The markdown the map is already in stays picked until the Person unpicks it; each press waits for the session's
+        // answer, so Run sends the formats it chose.
+        await expect(chip(bar, 'markdown')).toHaveAttribute('aria-pressed', 'true')
+        await chip(bar, 'markdown').click()
+        await expect(chip(bar, 'markdown')).toHaveAttribute('aria-pressed', 'false')
         await chip(bar, 'diagram').click()
-        await runOf(bar).click({ timeout: 5_000 }).catch(() => undefined)
+        await expect(chip(bar, 'diagram')).toHaveAttribute('aria-pressed', 'true')
+        await runOf(bar).click()
       })
 
       test('Then the chat receives the command /actions-render stories-story-map format=drawio', async () => {

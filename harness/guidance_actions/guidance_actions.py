@@ -502,6 +502,12 @@ class ActionFiles:
             self._action.graph.refresh([str(path) for path in paths], self._action.call)
 
 
+# Where a pattern a report holds the work to came from: the folder's patterns file, which generate wrote, or the session's
+# own overlays. A report that names the wrong one sends the reader looking in the wrong place.
+_RECORDED_IN_PATTERNS_FILE = "This content was generated with the {name} pattern, as `.context/patterns.md` records"
+_OVERLAID_BY_SESSION = "This session overlays the {name} pattern"
+
+
 class SessionBrief:
     """What an agent following one action's instructions is told about the session the action works in: the session
     itself, the project root paths are named from, the session's root and where each listed practice writes
@@ -521,8 +527,10 @@ class SessionBrief:
             return ""
         patterns = self._action.graph.applied_patterns
         root = session.work_root
-        names = patterns.recorded_for([root / path for path in paths or []], root) or list(session.overlays)
-        rules = [self._overlay_rules_of(patterns.pattern_named(name), name) for name in names if name in patterns.names]
+        recorded = patterns.recorded_for([root / path for path in paths or []], root)
+        names = recorded or list(session.overlays)
+        source = _RECORDED_IN_PATTERNS_FILE if recorded else _OVERLAID_BY_SESSION
+        rules = [self._overlay_rules_of(patterns.pattern_named(name), name, source) for name in names if name in patterns.names]
         return "\n\n".join(part for part in [*rules, self._story_scope(names)] if part)
 
     def _story_scope(self, patterns: list[str]) -> str:
@@ -541,10 +549,11 @@ class SessionBrief:
             *(f"- {story}" for story in stories),
         ])
 
-    def _overlay_rules_of(self, pattern: PracticeGuidance, name: str) -> str:
+    def _overlay_rules_of(self, pattern: PracticeGuidance, name: str, source: str) -> str:
+        """The pattern's shared rules, opened by where the pattern came from, so the reader can check that claim."""
         return (
             f"## Pattern overlay: {name}\n\n"
-            f"This session overlays the {name} pattern, so its shared rules below apply on top of the practices' rules. "
+            f"{source.format(name=name)}, so its shared rules below apply on top of the practices' rules. "
             f"Its whole guidance is its instructions, `{pattern.slug}_instructions`.\n\n"
             f"{pattern.section_text('Shared rules')}"
         )

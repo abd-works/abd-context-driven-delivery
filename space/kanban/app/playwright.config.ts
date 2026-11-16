@@ -14,6 +14,9 @@ const CHATS_FOLDER = join(tmpdir(), 'cdd-board-surface-chats')
 const CLAUDE_CONFIG = join(tmpdir(), 'cdd-board-surface-claude')
 // A command left waiting by an earlier run would reach this run's chat, so each run starts with no chats.
 rmSync(CHATS_FOLDER, { recursive: true, force: true })
+// The run's cdd server keeps each new chat's link in this file instead of opening the Claude app, which would start a real
+// chat and hold its folder open. Set before the cdd home is installed, so the server it starts inherits it.
+process.env.CDD_OPENED_CHATS ??= join(tmpdir(), 'cdd-board-surface-opened-chats.txt')
 // The board talks to a cdd server of the run's own, serving this checkout, so a spec that restarts cdd or connects a chat
 // never reaches the server every real chat uses. Workers load this file again and keep the one the run installed.
 const cddHome = ThrowawayCddHome.forRun()

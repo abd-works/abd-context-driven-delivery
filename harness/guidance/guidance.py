@@ -878,6 +878,17 @@ class FidelityGuidance(Guidance):
     @agent_instructions
     def instructions(self) -> str:
         """overview"""
+        return "\n\n".join(part for part in (self.process, self.own_instructions) if part)
+
+    @property
+    def process(self) -> str:
+        """The order of work its supplements give, such as TDD's flows: what to do first, ahead of any rule."""
+        return "\n\n".join(supplement.process for supplement in self.supplements)
+
+    @property
+    def own_instructions(self) -> str:
+        """Its instructions without its supplements' process, for a reply that gives that process once for several
+        fidelities: its own words, then each supplement's section written for it."""
         added = (supplement.text_for(self) for supplement in self.supplements)
         return "\n\n".join(part for part in (self._instructions_in(self.format), *added) if part)
 

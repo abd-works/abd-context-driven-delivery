@@ -149,6 +149,11 @@ class ServedCheckout:
         self._home = daemon.home
         self.checkout = checkout
 
+    @property
+    def home(self) -> CddHome:
+        """The home this checkout is installed into: the stable lane's for a main checkout, the dev lane's otherwise."""
+        return self._home
+
     def ensure(self) -> str:
         """Install ``~/.cdd/`` from the checkout on first use and start the server when none answers. A server already
         running is left, with the code it serves, alone."""

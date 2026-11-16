@@ -22,6 +22,8 @@ import { card, expect, fixtureRoot, openBoard, resetSessions, test, writeInto } 
 import type { Locator, Page } from '../../../../space/kanban/app/tests/story-ui'
 
 const files = (page: Page) => page.locator('[data-panel="files"]')
+// The story_map fidelity writes the story map in three formats and its thin slice in two, each a tab, generated or not.
+const STORY_MAP_TABS = ['story-map.md', 'story-map.drawio', 'story-map.whiteboard', 'thin-slice.md', 'thin-slice.drawio']
 
 async function openStoryMapBar(page: Page, ticket: string, title: string): Promise<Locator> {
   await card(page, ticket).getByRole('button', { name: `Show ${title}` }).click({ position: { x: 4, y: 4 } })
@@ -37,8 +39,21 @@ async function openStoryMapFiles(page: Page): Promise<void> {
   await expect(files(page).getByRole('tab', { name: 'story-map.md' })).toBeVisible()
 }
 
+// checkout-flow's BDD file, src/order_spec.py, as the Background names it: BDD lists only the specs that exist. The
+// cdd server keeps the files it found under a folder for FILES_KEPT_SECONDS (space/session/file_manager.py), so the
+// file is written once, before the first test, and the run waits that long for the next search to find it.
+const ORDER_SPEC = join(fixtureRoot, 'src', 'order_spec.py')
+const FILES_KEPT_MILLISECONDS = 3_100
+
+test.beforeAll(async () => {
+  writeInto(ORDER_SPEC, 'with description("an order"):\n    with it("should hold its lines"):\n        pass\n')
+  await new Promise(done => setTimeout(done, FILES_KEPT_MILLISECONDS))
+})
 test.beforeEach(() => resetSessions(fixtureRoot))
-test.afterAll(() => resetSessions(fixtureRoot))
+test.afterAll(() => {
+  rmSync(ORDER_SPEC, { force: true })
+  resetSessions(fixtureRoot)
+})
 
 test.describe('List Ticket Files', () => {
   test.describe("Filter the tabs to the files the ticket's branch changed", () => {
@@ -60,7 +75,7 @@ test.describe('List Ticket Files', () => {
     })
 
     test('Then the tabs show every file again', async ({ page }) => {
-      await expect(files(page).getByRole('tab')).toHaveText(['story-map.md', 'story-map.drawio'])
+      await expect(files(page).getByRole('tab')).toHaveText(STORY_MAP_TABS)
     })
   })
 })
@@ -79,7 +94,7 @@ test.describe('Browse Ticket Files By Practice', () => {
 
     test("And the tabs below them show the story map's files in Stories' color", async ({ page }) => {
       const tabs = files(page).locator('.file-tab')
-      await expect(tabs).toHaveCount(2)
+      await expect(tabs).toHaveCount(STORY_MAP_TABS.length)
       for (const tab of await tabs.all()) await expect(tab).toHaveAttribute('data-practice', 'stories')
     })
   })
@@ -108,8 +123,8 @@ test.describe('Browse Ticket Files By Practice', () => {
 
     test("Then BDD's tabs show in BDD's color, after the Stories tabs", async ({ page }) => {
       const practices = await files(page).locator('.file-tab').evaluateAll(tabs => tabs.map(tab => tab.getAttribute('data-practice')))
-      expect(practices.slice(0, 2)).toEqual(['stories', 'stories'])
-      expect([...new Set(practices.slice(2))]).toEqual(['bdd'])
+      expect(practices.slice(0, STORY_MAP_TABS.length)).toEqual(STORY_MAP_TABS.map(() => 'stories'))
+      expect([...new Set(practices.slice(STORY_MAP_TABS.length))]).toEqual(['bdd'])
     })
   })
 
@@ -133,8 +148,8 @@ test.describe('View Fidelity Files', () => {
       await openStoryMapFiles(page)
     })
 
-    test('Then the tabs along the top show .context/story-map.md and .context/story-map.drawio', async ({ page }) => {
-      await expect(files(page).getByRole('tab')).toHaveText(['story-map.md', 'story-map.drawio'])
+    test("Then the tabs along the top show the story map's and the thin slice's files", async ({ page }) => {
+      await expect(files(page).getByRole('tab')).toHaveText(STORY_MAP_TABS)
     })
 
     test('And the drawio tab says it is not generated yet', async ({ page }) => {

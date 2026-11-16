@@ -7,8 +7,9 @@
 #           example, so hundreds run in seconds. An example over -ExampleBudgetMs fails its file.
 #   heavy - *_heavy_spec.py: real git, servers, the hook daemon, the installer, worker builds, big loads.
 #           Each runs in its own process, one at a time.
-#   e2e   (alias agent) - *_e2e_spec.py (a real browser through Playwright) and agentic BDD
-#           (*_agent_spec.py, which drive a real agent). Only this tier may start an agent.
+#   e2e   (alias agent) - *_e2e_spec.py (a real browser through Playwright), agentic BDD
+#           (*_agent_spec.py, which drive a real agent), and the kanban app's Playwright suite: the board's layout and
+#           every *.story.ui.spec.ts under story_tests. Only this tier may start an agent.
 param(
     [ValidateSet("unit", "vanilla", "heavy", "e2e", "agent")]
     [string]$Suite = "unit",
@@ -358,7 +359,20 @@ try {
         foreach ($relative in @($agentFailures)) {
             if ($relative) { $failures.Add($relative) | Out-Null }
         }
-        $total = @($endToEndSpecs).Count
+        # The kanban app's Playwright suite drives the board and the Files viewer in a real browser, the story UI
+        # specs under story_tests among them. Its config starts its own board server and cdd server, so it runs alone.
+        $playwrightApp = Join-Path $repo "space/kanban/app"
+        Write-Host ""
+        Write-Host "Playwright suite (space/kanban/app)"
+        Push-Location $playwrightApp
+        try {
+            & npx playwright test 2>&1 | Out-Host
+            $playwrightExit = $LASTEXITCODE
+        } finally {
+            Pop-Location
+        }
+        if ($playwrightExit -ne 0) { $failures.Add("space/kanban/app (Playwright)") | Out-Null }
+        $total = @($endToEndSpecs).Count + 1
     }
 } finally {
     Pop-Location
