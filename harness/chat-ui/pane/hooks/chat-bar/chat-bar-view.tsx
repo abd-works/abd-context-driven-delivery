@@ -6,7 +6,7 @@ import { BRAND } from '../shared/brand'
 import { GlyphButtonView } from '../shared/glyph-button-view'
 import { TipView } from '../shared/tip-view'
 import { ActionButtonView, pickerRowsOf } from './action-button-view'
-import { formatGlyphOf, REPO_GLYPH, repoWordOf, sessionWordOf } from './bar-columns'
+import { formatGlyphOf, REPO_GLYPH, repoWordOf, SESSION_GLYPH, sessionWordOf } from './bar-columns'
 import type { FormatChips } from './format-choices-client'
 import { toggleFormat, togglePractice, toggleStage } from './guidance-client'
 import { toggleOverlay, toggleOverlayList, type OverlayChips } from './overlay-choices-client'
@@ -98,19 +98,9 @@ function StageButtonsView($: EngineInterface, elements: ElementTable, { chatBar 
   )
 }
 
-// A word and its glyph as one whole button, the word in the text colour and the glyph muted. A see-through Button laid
-// over text takes no press in the desktop app, so the words are the Button's own children.
-function WordGlyphButtonView({ Button, Text }: ElementTable, key: string, word: string, glyph: string, onPress: () => unknown) {
-  return (
-    <Button key={key} plain onPress={onPress}>
-      <Text weight="semibold" color={BRAND.text}>{word}</Text>
-      <Text color={BRAND.muted}>{` ${glyph}`}</Text>
-    </Button>
-  )
-}
-
-// In the main chat, the repository's name with its ⑂ comes first, one button that opens the list of repositories, then
-// "main +", one button that opens the list of tickets to open, its card showing on hover. A ticket's own chat works only on that
+// In the main chat, ⑂ comes first, a button that opens the list of repositories, then +, a button that opens the list of
+// tickets to open; each shows its name above it on hover, and + shows the session card too. The line under the chat
+// names the repository and branch, so the icons alone keep the line short. A ticket's own chat works only on that
 // ticket, so it shows the name alone: a press opens the session's folder in the files pane, its card showing on hover.
 // A chat in a plain folder, in any session, has neither other repositories nor tickets nor a branch to close, so it
 // shows the folder's path alone, read only, and no close button.
@@ -130,13 +120,15 @@ function SessionNameView($: EngineInterface, elements: ElementTable, draw: ChatB
     return (
       <Box key="session-name" flexDirection="row" gap={0}>
         <Box key="repo-anchor">
-          {WordGlyphButtonView(elements, 'repo-list-button', repoWordOf(chatBar), REPO_GLYPH, () => toggleRepoListWithRepos($))}
+          {GlyphButtonView(elements, 'repo-list-button', REPO_GLYPH, BRAND.muted, () => toggleRepoListWithRepos($))}
+          {draw.view.isRepoListOpen ? null : TipView(elements, repoWordOf(chatBar), 'other repositories', BRAND.muted)}
           {RepoListView($, elements, draw)}
         </Box>
-        <Box key="session-anchor" marginLeft={-1}>
+        <Box key="session-anchor" marginLeft={1}>
           <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
-            {WordGlyphButtonView(elements, 'session-list-button', sessionWordOf(chatBar), '+', () => toggleSessionList($))}
+            {GlyphButtonView(elements, 'session-list-button', SESSION_GLYPH, BRAND.muted, () => toggleSessionList($))}
           </Box>
+          {draw.view.isSessionListOpen ? null : TipView(elements, sessionWordOf(chatBar), 'tickets to open', BRAND.muted)}
           {SessionListView($, elements, draw)}
         </Box>
       </Box>
@@ -163,6 +155,28 @@ function IconButtonView(elements: ElementTable, key: string, icon: string, words
     </Box>
   )
 }
+
+// The debug button's bug: a flat outline in the muted brand grey, since the 🐞 emoji draws as a pink 3D bug. The desktop
+// draws it as an image; a surface with no Svg element shows ⚑ instead.
+const BUG_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="${BRAND.muted}" stroke-width="1.3" stroke-linecap="round">`
+  + '<ellipse cx="8" cy="9.5" rx="3.6" ry="4.5"/><path d="M8 5v9M5.6 4.6 4.5 3M10.4 4.6 11.5 3M4.4 8H2M11.6 8H14M4.6 11.5 2.6 13M11.4 11.5 13.4 13"/></svg>'
+
+function DebugButtonView($: EngineInterface, elements: ElementTable, chatBar: ChatBarClient) {
+  if (!('Svg' in elements)) return IconButtonView(elements, 'debug', '⚑', DEBUG_WORDS, () => runDebug($, chatBar))
+  const { Box, Button, Svg } = elements
+  return (
+    <Box key="debug-box">
+      <Box key="debug-mark">
+        <Svg source={BUG_SVG} alt="debug" width={14} height={14} />
+        <Box position="absolute" top={0} left={0}>
+          <Button key="debug" plain label=" " onPress={() => runDebug($, chatBar)} />
+        </Box>
+      </Box>
+      {TipView(elements, DEBUG_WORDS, '', BRAND.muted)}
+    </Box>
+  )
+}
+const DEBUG_WORDS = 'debug: capture what went wrong, then fix it or request help'
 
 // Files right after the action button: the shown stage's files in the Files app, every practice there with its toggle.
 function FilesButtonView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
@@ -259,7 +273,7 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
           {ActionButtonView($, elements, draw)}
           {FilesButtonView($, elements, draw)}
           {IconButtonView(elements, 'handoff', '⇥', 'handoff', () => runHandoff($, chatBar))}
-          {IconButtonView(elements, 'debug', '⚑', 'debug: capture what went wrong, then fix it or request help', () => runDebug($, chatBar))}
+          {DebugButtonView($, elements, chatBar)}
         </Box>
         <Box flexGrow={1} />
         {SessionNameView($, elements, draw)}

@@ -23,15 +23,15 @@ function sessionButtonCellsOf(chatBar: ChatBarClient): number {
   return GAP + icons + (icons - 1) * GAP
 }
 
-// The repo button: the repository's name, or "repo" while it has none, and its ⑂.
+// The repo button, ⑂, its tip the repository's name, or "repo" while it has none.
 export const REPO_GLYPH = '⑂'
 export const repoWordOf = (chatBar: ChatBarClient): string => chatBar.repoName || 'repo'
 
-// The session button after the repo button: the session's name, or "main", and its +.
-const SESSION_GLYPH = '+'
+// The session button after the repo button, +, its tip the session's name, or "main".
+export const SESSION_GLYPH = '+'
 export const sessionWordOf = (chatBar: ChatBarClient): string => chatBar.sessionName || 'main'
-const sessionButtonWordCellsOf = (chatBar: ChatBarClient): number => sessionWordOf(chatBar).length + 1 + SESSION_GLYPH.length
-const repoButtonWordCellsOf = (chatBar: ChatBarClient): number => repoWordOf(chatBar).length + 1 + REPO_GLYPH.length
+const sessionButtonWordCellsOf = (_chatBar: ChatBarClient): number => SESSION_GLYPH.length
+const repoButtonWordCellsOf = (_chatBar: ChatBarClient): number => GAP + REPO_GLYPH.length
 
 // The health mark and the version badge, such as v0.4, that end the line, a gap before each.
 const endMarkCellsOf = (versionLabel: string): number => GAP + HEALTH_MARK + GAP + versionLabel.length

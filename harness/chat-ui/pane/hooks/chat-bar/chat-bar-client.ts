@@ -220,10 +220,12 @@ export class ChatBarClient {
     return this.ticket?.session.workpath ?? ''
   }
 
-  // The status line below the chat: the whole path of the folder the session works in, which already names the
-  // repository, and a worktree's folder its branch.
+  // The status line below the chat: the repository and branch the session works on, as repo\branch, then the whole
+  // path of its folder. The chat bar shows the repository and session as icons alone, so their names are read here.
   get statusLine(): string {
-    return this.sessionPath
+    const session = this.ticket?.session
+    const place = session?.repo_name && session.branch ? `${session.repo_name}\\${session.branch}` : ''
+    return [place, this.sessionPath].filter(Boolean).join('  ')
   }
 
   // The agent context: what the Python Ticket tells the agent about the active session in its system prompt, the same
