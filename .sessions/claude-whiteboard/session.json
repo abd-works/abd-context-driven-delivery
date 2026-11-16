@@ -10,14 +10,13 @@
       "specification",
       "implementation"
     ],
-    "version": 4
+    "version": 5
   },
   "practices": {
     "ux": {
       "formats": {
         "mockup": [
-          "html",
-          "claude_design"
+          "html"
         ]
       }
     }
