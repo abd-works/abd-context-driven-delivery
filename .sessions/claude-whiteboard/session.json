@@ -3,5 +3,11 @@
   "title": "claude-whiteboard",
   "scope": "feature",
   "branch": "claude-whiteboard",
-  "worktree": "C:\\dev\\abd-cdd-claude-whiteboard"
+  "worktree": "C:\\dev\\abd-cdd-claude-whiteboard",
+  "guidance": {
+    "stages": [
+      "discovery"
+    ],
+    "version": 1
+  }
 }
