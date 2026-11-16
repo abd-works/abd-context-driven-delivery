@@ -69,7 +69,7 @@ section: body
   *And* an old story map is left in harness/.context/stories, from before maps moved to the project's .context  
 *When* the Person switches the file bar to the graph view  
 *Then* the Stories tree holds Delete Ticket, read from .context/story-map.md  
-  *But* none of the old story map's epics
+  *And* holds none of the old story map's epics
 
 #### Scenario: The Stories tree holds a story listed only by its story test in code
 
@@ -110,7 +110,7 @@ section: body
 #### Scenario: The Changed button keeps only the nodes of changed files
 
 *Given* the Files app shows checkout-flow's graph with Clean Engineering on  
-*When* the Person turns the Changed button on  
+*When* the Person narrows the files to those the branch changed  
 *Then* the Clean Engineering tree holds Ticket and its operations  
   *But* not Board, since board.py is unchanged on the branch
 

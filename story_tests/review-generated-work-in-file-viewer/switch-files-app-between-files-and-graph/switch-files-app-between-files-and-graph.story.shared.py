@@ -81,7 +81,7 @@ def _(s):
     def _(world):
         world.names = names_in(world, [STORY_MAP])
 
-    @s.then("the Stories tree holds Delete Ticket, but none of the old story map's epics")
+    @s.then("the Stories tree holds Delete Ticket, and none of the old story map's epics")
     def _(world):
         expect(("Delete Ticket" in world.names, "Run Old Layout" in world.names)).to(equal((True, False)))
 
@@ -145,7 +145,7 @@ def _(s):
     def _(world):
         seed_checkout_flow_with_graph_files(world)
 
-    @s.when("the Person turns the Changed button on, so the file bar lists only ticket.py of the code")
+    @s.when("the Person narrows the files to those the branch changed, so the file bar lists only ticket.py of the code")
     def _(world):
         world.names = names_in(world, [TICKET_CODE])
 
