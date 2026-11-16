@@ -509,3 +509,9 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 - **`domain-tier-only-for-domain-logic`** — Add a domain tier only when `<aggregate>.ts` holds logic worth proving alone. A core that only states structure has nothing to run, and the server tier already exercises it.
 - **`same-signature-across-languages`** — When the domain is in another language, as a CDD-backed domain is, a behavior the Mamba spec states keeps the same `should` sentence in the shared behavior. A sentence on one side only shows a behavior untested on the other.
 - **`ask-cross-aggregate-sync`** — **Hard gate** when generating stories. Use AskQuestion; persist the answer under **Cross-aggregate sync** in `.context/grill-answers.md` before writing story files.
+## Judgment — `harness/graph/graph.py`
+
+### `every-branch-taken-by-a-test` — Fail
+- graph.py:927 `PracticeNodes.close`: clearing `_groups` is not shown by any test (no spec reopens a group's id after a close and sees None).
+
+Passes, with evidence: `put-logic-on-the-owning-resource` and `do-not-invent-parallel-object-models` (`PracticeNodes` already answers `Graph.node` by id; `_groups` sits beside `_by_id` on that owner, kept out of `nodes()` so counts and rules stay the same, not a copy elsewhere); `operation-has-a-proving-test` (`hold_group` and `node` are proven by Follow Relationships Under Node In Files App, domain and server tiers); `limit-comments` (one comment says why groups are kept apart from nodes); `source-parses` (graph_spec 204 examples green).

@@ -509,3 +509,23 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 - **`domain-tier-only-for-domain-logic`** — Add a domain tier only when `<aggregate>.ts` holds logic worth proving alone. A core that only states structure has nothing to run, and the server tier already exercises it.
 - **`same-signature-across-languages`** — When the domain is in another language, as a CDD-backed domain is, a behavior the Mamba spec states keeps the same `should` sentence in the shared behavior. A sentence on one side only shows a behavior untested on the other.
 - **`ask-cross-aggregate-sync`** — **Hard gate** when generating stories. Use AskQuestion; persist the answer under **Cross-aggregate sync** in `.context/grill-answers.md` before writing story files.
+## Judgment — `story_tests/review-generated-work-in-file-viewer/explore-graph-in-files-app/explore-graph-in-files-app.story.shared.py`
+
+### `domain-operations-inline-in-steps` — Fail
+- explore-graph-in-files-app.story.shared.py:52 `the Person opens Ticket.delete`: finds the node through `node_id_of(world, "delete", LISTED)` from `space/session/graph_view_examples.py`, an examples-file helper that walks session.graph_trees and session.graph_branch and matches a node by its name string, so the step hides which graph calls it makes. The helper predates this change (the Switch sub-epic uses it too); replacing it needs a seeded node id or an inline walk.
+- explore-graph-in-files-app.story.shared.py:65 `Ticket.delete is selected and ticket.py is open`: the same `node_id_of` lookup by name string.
+
+### `unit-file-within-2-seconds` — Fail
+- explore-graph-in-files-app.story.shared.py:1 `Explore Graph In Files App`: its server tier (`explore-graph-in-files-app.story.server.spec.py`) replays every scenario through a cdd server it starts and ran 5 examples in 3.44 s, over the 2 s budget. The domain tier ran in 0.91 s.
+
+Passes, with evidence: `assert-domain-behavior-not-seeded-state` (each Then reads session.graph_branch, session.graph_node_ranges or session.graph_members answers after the When, not the seeded files); `no-skipped-or-empty-test` (every new Then asserts); `do-not-invent-requirements` (the four new scenarios are the markdown's own; LERN overlay, node type, connector and violation scenarios were left unbuilt as open questions rather than invented around).
+
+## Judgment — `story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review-files-in-files-app.story.shared.py`
+
+### `unit-file-within-2-seconds` — Fail
+- review-files-in-files-app.story.shared.py:1 `Review Files In Files App`: its server tier ran 6.5 s at the last handoff, over the 2 s budget; not run in this pass and not changed (no scenario was added to its WIRING), so `session.update_guidance_selection` is not replayed through the cdd tools by this sub-epic.
+
+### `stubbed-boundary-has-heavy-coverage` — Fail
+- review-files-in-files-app.story.shared.py:72 `Turn a practice on to show its files`: the domain tier's mocked git and the tool `session.update_guidance_selection` have no server or heavy replay for this scenario (see above).
+
+Fix pass applied: `domain-operations-inline-in-steps` on `practices_saved`, a story-file helper wrapping `session.guidance_selection()`, was inlined into each Given and Then (lines 66-99); the domain tier is green after it (37 examples, 1.64 s).
