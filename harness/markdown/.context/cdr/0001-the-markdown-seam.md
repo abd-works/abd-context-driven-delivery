@@ -10,7 +10,7 @@ The round-6 and round-7 reviews (harness core, row 8 in round 7) counted 8 of th
 ## What stays public, and why
 
 - ***MarkdownScope*** is how an owner hands its markdown where to look (`markdown_scope`: folder, slug, fidelity, format). The guidance module builds one for each practice and fidelity, because only the owner knows its fidelity and format; taking it out of the seam would send the module back to asking owners for their attributes, which round 5 removed.
-- ***OperationProperty*** is the one way a property is made from an operation with an empty body. `@collect` in harness/agent_tools builds its properties with it, as `@markdown` and `@markdownCollection` do here, so the three annotations make properties the same way.
+- **`operation_property(operation, read)`** (once the class *OperationProperty*, made a function so it is no class of the seam) is the one way a property is made from an operation with an empty body. `@collect` in harness/agent_tools builds its properties with it, as `@markdown` and `@markdownCollection` do here, so the three annotations make properties the same way.
 - *Markdown*, *MarkdownCollection*, *MarkdownText*, *HTML*, *FrontMatter*, *Format* and the two annotations are what callers read markdown through.
 
 ## harness/process

@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from contextvars import ContextVar
 from pathlib import Path
-from typing import Any, ClassVar, Iterator, Protocol
+from typing import Any, Iterator, Protocol
 
 from harness.agent_tools.chat_pointer import ChatPointer
 
@@ -24,7 +24,7 @@ _NO_CHAT = "unknown"
 
 class SessionOpener(Protocol):
     """How a call finds the sessions it works in. The framework keeps no sessions of its own: the module that does
-    registers its opener with ``ToolCall.open_sessions_with`` when it is imported, so the framework never imports it."""
+    registers its opener with ``SESSION_OPENING.open_with`` when it is imported, so the framework never imports it."""
 
     def saved_in(self, project: Path) -> Any:
         """The session saved as open in project's checkout, read for one caller that serves no call, such as a hook
@@ -52,7 +52,7 @@ class SessionsNotLoaded(LookupError):
     """A call named a session, and no module that keeps sessions has registered how to open one in this process."""
 
     def __init__(self, session_file: str) -> None:
-        super().__init__(f"cannot open {session_file!r}: no sessions are registered with ToolCall in this process")
+        super().__init__(f"cannot open {session_file!r}: no sessions are registered with SESSION_OPENING in this process")
         self.session_file = session_file
 
 
@@ -103,6 +103,40 @@ class CallsBeingAnswered:
 CALLS_BEING_ANSWERED = CallsBeingAnswered()
 
 
+class SessionOpening:
+    """How the process's calls open their sessions: the one *SessionOpener* the module that keeps sessions
+    (space/session) registers when it is imported (``SESSION_OPENING.open_with(opener)``), so the framework opens a
+    call's session without importing it. The process keeps one (``SESSION_OPENING``); where no opener is registered,
+    a call works in no session."""
+
+    def __init__(self) -> None:
+        self._opener: SessionOpener | None = None
+
+    def open_with(self, opener: SessionOpener) -> None:
+        """Have every call find its sessions through opener."""
+        self._opener = opener
+
+    def saved_in(self, project: Path | str) -> Any:
+        """The session saved as open in the ``.sessions/session.json`` of the checkout holding project, main when none
+        is, for work on a project that serves no call, such as the agent BDD harness or a diagnostics probe; none when
+        no sessions are registered. It is read again on each ask, so a switch or a close made through MCP is seen at
+        once."""
+        return self._opener.saved_in(Path(project).resolve()) if self._opener is not None else None
+
+    def open_in(self, call: ToolCall) -> Any:
+        """The session saved as open in the call's project; none when no sessions are registered."""
+        return self._opener.open_in(call) if self._opener is not None else None
+
+    def named_in(self, session_file: str, call: ToolCall) -> Any:
+        """The session whose session.json is session_file, for call."""
+        if self._opener is None:
+            raise SessionsNotLoaded(session_file)
+        return self._opener.named_in(session_file, call)
+
+
+SESSION_OPENING = SessionOpening()
+
+
 class ToolCall:
     """One call of a tool as its caller made it: the arguments it sent, the folder of the project the calling chat
     works on, and the request it answers (``request``): the chat it came from, and for a call the cdd server answers,
@@ -110,8 +144,6 @@ class ToolCall:
     chat, and the session open there from its own call; read from whatever the process worked on last, a call from one
     chat would act on another chat's project. A call that names no project, such as one a spec makes in process, works
     in no session."""
-
-    _sessions: ClassVar[SessionOpener | None] = None
 
     def __init__(
         self,
@@ -155,35 +187,19 @@ class ToolCall:
         values = [self.arguments.get(key) for key in _PATH_ARGUMENTS] + (listed if isinstance(listed, list) else [])
         return list(dict.fromkeys(str(value).strip() for value in values if isinstance(value, str) and value.strip()))
 
-    @classmethod
-    def open_sessions_with(cls, opener: SessionOpener) -> None:
-        """Have every call find its sessions through opener."""
-        ToolCall._sessions = opener
-
     @property
     def session(self) -> Any:
         """The session saved as open in the ``.sessions/session.json`` of the checkout holding the project, main when
         none is, read once for this call; none when the call names no project or no sessions are registered. Every call
         in a session works on the one object its sessions hold for it; the lines a call logs point at this call's
         chat."""
-        if self.project is None or ToolCall._sessions is None:
+        if self.project is None:
             return None
         if self._session is None:
-            self._session = ToolCall._sessions.open_in(self)
+            self._session = SESSION_OPENING.open_in(self)
         return self._session
-
-    @classmethod
-    def session_in(cls, project: Path | str) -> Any:
-        """The session saved as open in the ``.sessions/session.json`` of the checkout holding project, main when none
-        is, for work on a project that serves no call, such as a hook event or a diagnostics probe; none when no sessions
-        are registered. It is read again on each ask, so a switch or a close made through MCP is seen at once."""
-        if ToolCall._sessions is None:
-            return None
-        return ToolCall._sessions.saved_in(Path(project).resolve())
 
     def session_named(self, session_file: str) -> Any:
         """The session whose session.json is session_file, a path from the project or an absolute one, for this call.
         A board command names its ticket's session this way, because it runs in whichever chat it is sent to."""
-        if ToolCall._sessions is None:
-            raise SessionsNotLoaded(session_file)
-        return ToolCall._sessions.named_in(session_file, self)
+        return SESSION_OPENING.named_in(session_file, self)

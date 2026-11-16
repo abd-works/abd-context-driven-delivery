@@ -21,7 +21,7 @@ from mamba import before, description, it
 from harness.catalog_generator.catalog_generator import LifecycleAction, Utility
 from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.installation.destination import NoCatalog, noCatalog
-from harness.guidance.action_catalogue import Action
+from harness.guidance.action_catalogue import ACTION_CATALOGUE, Action
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.installation.files import Skill, skill
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -55,7 +55,7 @@ with description("noCatalog"):
             sys.modules[module.__name__] = module
             shown = [
                 action.name
-                for action in (LifecycleAction(Action(name, Toolset)) for name in ("sketch", "generate"))
+                for action in (LifecycleAction(Action(name, Toolset, ACTION_CATALOGUE)) for name in ("sketch", "generate"))
                 if action.tool is not None
             ]
             expect(shown).to(equal(["generate"]))

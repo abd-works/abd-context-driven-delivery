@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Callable
 
 from harness.agent_tools.agent_tools import InstallDestination
-from harness.annotations.annotation import Annotation, Destination
+from harness.annotations.annotation import Annotation, Destination, DestinationKind
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 
@@ -38,7 +38,18 @@ class Hooks(Annotation):
         return getattr(toolset_class, cls.flag, None) or cls()
 
 
-class Hook(Destination):
+class HookKind(DestinationKind):
+    """The kind of ``@Hook``, which records whether the hook it puts on an operation is turned off."""
+
+    def companion_flags(kind) -> tuple[str, ...]:
+        return (*super().companion_flags(), kind.disabled_flag)
+
+    def disabled_on(kind, operation: Callable[..., object]) -> bool:
+        """True when ``@Hook(..., disabled=True)`` turned the hook on this operation off."""
+        return bool(getattr(operation, kind.disabled_flag, False))
+
+
+class Hook(Destination, metaclass=HookKind):
     flag = "_hook"
     channel = InstallDestination.HOOK
     enlists_member = True
@@ -87,15 +98,6 @@ class Hook(Destination):
         if self.disabled:
             setattr(annotated, self.disabled_flag, True)
         return annotated
-
-    @classmethod
-    def companion_flags(cls) -> tuple[str, ...]:
-        return (*super().companion_flags(), cls.disabled_flag)
-
-    @classmethod
-    def disabled_on(cls, operation: Callable[..., object]) -> bool:
-        """True when ``@Hook(..., disabled=True)`` turned the hook on this operation off."""
-        return bool(getattr(operation, cls.disabled_flag, False))
 
 
 hook = Hook

@@ -5,7 +5,6 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from harness.catalog_generator.stage_columns import STAGE_COLUMNS
 from harness.guidance.stages import STAGES, StageScope
 from harness.annotations.name import Name
 
@@ -53,12 +52,6 @@ class ApproachCopy:
     @classmethod
     def load(cls, path: str | Path = APPROACH_MARKDOWN) -> ApproachCopy:
         return _ApproachMarkdown(Path(path).read_text(encoding="utf-8")).copy()
-
-    @property
-    def board_stages(self) -> dict[str, StageCopy]:
-        """The stages the catalog board has a column for, by the column's key."""
-        columns = ((STAGE_COLUMNS.of(STAGES.of(stage.id)), stage) for stage in self.stages)
-        return {column.key: stage for column, stage in columns if column is not None}
 
 
 class _ApproachMarkdown:

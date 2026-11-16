@@ -914,24 +914,18 @@ class Markdown:
         return hints.get("return", default)
 
 
-class OperationProperty:
-    """A property made from an operation whose body is empty: its value comes from the reader it is given, such as the
-    operation's section of its owner's markdown or the same property of a collection's children, and it carries the
-    operation's name, docstring, annotations, and copied annotations, so it installs the way the operation would."""
+def operation_property(operation: Callable[..., Any], read: Callable[[Any], Any]) -> property:
+    """A property made from an operation whose body is empty: its value comes from read, such as the operation's
+    section of its owner's markdown or the same property of a collection's children, and it carries the operation's
+    name, docstring, annotations, and copied annotations, so it installs the way the operation would."""
+    def getter(owner: Any) -> Any:
+        return read(owner)
 
-    def __init__(self, operation: Callable[..., Any]) -> None:
-        self._operation = operation
-
-    def reading(self, read: Callable[[Any], Any]) -> property:
-        """A property whose getter is read, wrapped to look like the operation."""
-        def getter(owner: Any) -> Any:
-            return read(owner)
-
-        getter.__doc__ = self._operation.__doc__
-        getter.__name__ = self._operation.__name__
-        getter.__annotations__ = dict(getattr(self._operation, "__annotations__", {}))
-        annotation_kinds.copy_annotations(self._operation, getter)
-        return property(getter)
+    getter.__doc__ = operation.__doc__
+    getter.__name__ = operation.__name__
+    getter.__annotations__ = dict(getattr(operation, "__annotations__", {}))
+    annotation_kinds.copy_annotations(operation, getter)
+    return property(getter)
 
 
 def _section_text(operation: _F, label: str) -> property:
@@ -942,7 +936,7 @@ def _section_text(operation: _F, label: str) -> property:
         section = Markdown.held_by(owner, label)
         return section.read_for(operation, str)
 
-    return OperationProperty(operation).reading(read)
+    return operation_property(operation, read)
 
 
 def _section_collection(operation: _F, label: str) -> property:
@@ -962,7 +956,7 @@ def _section_collection(operation: _F, label: str) -> property:
             vars(owner)[operation.__name__] = result
         return result
 
-    return OperationProperty(operation).reading(read)
+    return operation_property(operation, read)
 
 
 def _labelled(build: Callable[[_F, str], property], operation_or_label: _F | str | None, label: str | None) -> property | Callable[[_F], property]:

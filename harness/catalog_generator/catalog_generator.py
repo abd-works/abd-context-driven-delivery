@@ -19,7 +19,7 @@ from pathlib import Path
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.agent_tools.agent_tools import tool_subject
 from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN, ApproachCopy
-from harness.catalog_generator.approach_page import ApproachPage
+from harness.catalog_generator.approach_page import ApproachGrids, ApproachPage
 from harness.catalog_generator.brand import Brand
 from harness.catalog_generator.catalog_examples import CatalogExamples, CatalogFidelity
 from harness.catalog_generator.catalog_practice import CatalogPractice
@@ -28,7 +28,7 @@ from harness.catalog_generator.hub_board import BoardTools, HubBoard
 from harness.catalog_generator.markdown_html import MarkdownHtml
 from harness.catalog_generator.page_shell import PageShell
 from harness.catalog_generator.project_approach import ProjectApproach, ProjectFiles
-from harness.guidance.action_catalogue import Action, ActionCatalogue
+from harness.guidance.action_catalogue import ACTION_CATALOGUE, Action
 from harness.installation.destination import NoCatalog
 from harness.installation.files import skill
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -102,7 +102,7 @@ class LifecycleAction:
     def load_all(cls) -> list[LifecycleAction]:
         """Every action in the action catalogue whose toolset has a live tool for it that the catalog shows: a toolset
         or an operation annotated ``@noCatalog`` stays out."""
-        shown = [cls(action) for action in ActionCatalogue.actions() if not NoCatalog.annotates(action.toolset_class)]
+        shown = [cls(action) for action in ACTION_CATALOGUE.actions if not NoCatalog.annotates(action.toolset_class)]
         return [action for action in shown if action.tool is not None]
 
     @property
@@ -677,7 +677,8 @@ class Catalog:
 
     @property
     def board(self) -> HubBoard:
-        return HubBoard(self.practices, BoardTools(self.lifecycle_actions, self.utilities), self.approach_copy.board_stages)
+        approach = ApproachGrids(self.practices, self.approach_copy.stages, CatalogExamples(self.out_root))
+        return HubBoard(approach, BoardTools(self.lifecycle_actions, self.utilities))
 
     @property
     def brands(self) -> dict[str, Path]:
@@ -721,7 +722,7 @@ class Catalog:
         artifacts. ``examples_json`` is optional JSON mapping practice → stage → path relative to the project; when
         blank, use ``.context/project-approach-examples.json`` and auto-discovery. ``project_title`` names the page;
         blank uses the saved title, else the project folder's name."""
-        files = ProjectFiles(self.project.root, self.practices)
+        files = ProjectFiles.load(self.project.root, self.practices)
         approach = ProjectApproach.for_project(files, project_title).with_examples_json(examples_json)
         approach.save_examples()
         written = self._write_project_approach(approach)
@@ -922,7 +923,7 @@ class Catalog:
     @property
     def _fidelity_cards(self) -> list[str]:
         return [
-            _GridCard(shown.name, practice.fidelity_href(shown.fidelity), f"{practice.display_name} · {shown.column.key}", "Fidelity").html
+            _GridCard(shown.name, practice.fidelity_href(shown.fidelity), f"{practice.display_name} · {shown.column.label}", "Fidelity").html
             for practice in self.practices
             for shown in practice.board_fidelities
         ]

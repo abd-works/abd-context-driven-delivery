@@ -45,7 +45,7 @@ with description("the catalog board's stage columns"):
         with before.all:
             path = Path(tempfile.mkdtemp()) / "cdd-approach.md"
             path.write_text(_HAND_EDITED_MD, encoding="utf-8")
-            self.html = HubBoard([], BoardTools(), ApproachCopy.load(path).board_stages).html()
+            self.html = HubBoard(ApproachGrids([], ApproachCopy.load(path).stages, CatalogExamples(None)), BoardTools()).html()
 
         with it("should show each stage's chips in its column"):
             expect("ZZ-CHIP" in self.html).to(equal(True))
@@ -55,7 +55,7 @@ with description("the catalog board's stage columns"):
 
     with context("whose stages name the Stories practice's catalog examples"):
         with it("should link each column heading to its stage's example page"):
-            html = HubBoard(CatalogPractice.load_all(), BoardTools(), ApproachCopy.load(APPROACH_MARKDOWN).board_stages).html()
+            html = HubBoard(ApproachGrids(CatalogPractice.load_all(), ApproachCopy.load(APPROACH_MARKDOWN).stages, CatalogExamples(None)), BoardTools()).html()
             links = ('href="examples/discovery.html"', 'href="examples/specification.html"', 'href="examples/implementation.html"')
             expect(all(link in html for link in links)).to(equal(True))
 

@@ -144,7 +144,7 @@ class ServedCheckout:
     in ``~/.cdd/runtime``, or the checkout as it is on disk."""
 
     def __init__(self, daemon: McpDaemon, checkout: Path) -> None:
-        self._daemon = daemon
+        self.daemon = daemon
         self._home = daemon.home
         self.checkout = checkout
 
@@ -152,37 +152,37 @@ class ServedCheckout:
         """Install ``~/.cdd/`` from the checkout on first use and start the server when none answers. A server already
         running is left, with the code it serves, alone."""
         self._home.install(self.checkout, CONNECT_SCRIPT)
-        return self._daemon.status(self._daemon.ensure())
+        return self.daemon.status(self.daemon.ensure())
 
     def pin(self) -> str:
         """Serve the checkout's current commit from ``~/.cdd/runtime``, restarting the server onto it."""
         self._home.install(self.checkout, CONNECT_SCRIPT)
         self._home.pin(self.checkout)
-        return self._daemon.status(self._daemon.restart())
+        return self.daemon.status(self.daemon.restart())
 
     def update(self) -> str:
         """Serve the checkout's current code the way the server already serves it, pinned or as it is on disk,
         restarting the server onto it."""
         self._home.install(self.checkout, CONNECT_SCRIPT)
         self._home.serve_current(self.checkout)
-        return self._daemon.status(self._daemon.restart())
+        return self.daemon.status(self.daemon.restart())
 
     def serve_on_disk(self) -> str:
         """Serve the checkout as it is on disk, for working on CDD itself, restarting the server onto it."""
         self._home.install(self.checkout, CONNECT_SCRIPT)
         self._home.serve_from(self.checkout)
-        return self._daemon.status(self._daemon.restart())
+        return self.daemon.status(self.daemon.restart())
 
     def keep_pinned_current(self) -> str | None:
         """After a plain install, serve the checkout's current commit when the server is pinned to an older one, so
         every chat runs the code just installed. Left alone: a server serving a checkout on disk, an install run from
         a linked worktree (its commit is not what every chat should run), and an install run inside the server itself.
         Returns the server's status when it was restarted, else None."""
-        if self._daemon.this_process.is_this_process() or (self.checkout / ".git").is_file():
+        if self.daemon.this_process.is_this_process() or (self.checkout / ".git").is_file():
             return None
         if self._home.is_installed and self._home.mode != self._home.PINNED:
             return None
-        if self._home.is_installed and self._home.is_pinned_to(self.checkout) and self._daemon.is_running():
+        if self._home.is_installed and self._home.is_pinned_to(self.checkout) and self.daemon.is_running():
             return None
         return self.pin()
 

@@ -230,17 +230,27 @@ class McpInstallation(ServerInstallation):
     channel = "mcp"
     toolsets = (CddServerHooks,)
 
-    def __init__(self, layout: IdeLayout, path: Path | str, repo: Path | str | None = None) -> None:
-        super().__init__(layout, path, repo=repo)
-        self.daemon = McpDaemon(CddHome())
-        self.claude_plugins = ClaudePlugins(self.daemon.home)
+    def __init__(self, layout: IdeLayout, path: Path | str, served: ServedCheckout) -> None:
+        """served is the checkout the one cdd server is installed from and serves, through its daemon."""
+        super().__init__(layout, path, repo=served.checkout)
+        self.served = served
+        self.claude_plugins = ClaudePlugins(served.daemon.home)
         # The IDE's cdd entry, written once the whole install has been recorded.
         self.cdd_entry = CddEntry(self)
-        # The checkout the server is installed from and serves: this installation's repository, else the running one.
-        self.served = ServedCheckout(self.daemon, Path(self.repo or RepositoryToolsets.of_running_checkout().root).resolve())
         self.mcp_operations: list[AgentTool] = []
         self.host: McpHost | None = None
         self.diagnosis: dict[str, Any] | None = None
+
+    @property
+    def daemon(self) -> McpDaemon:
+        """The one cdd server's daemon, which the served checkout starts."""
+        return self.served.daemon
+
+    @classmethod
+    def create(cls, layout: IdeLayout, path: Path | str, repo: Path | str | None = None) -> McpInstallation:
+        """The cdd server's installation into path: the server in ``~/.cdd`` serves repo, else the running checkout."""
+        checkout = Path(repo or RepositoryToolsets.of_running_checkout().root).resolve()
+        return cls(layout, path, ServedCheckout(McpDaemon(CddHome()), checkout))
 
     def write(self, tool: AgentTool) -> None:
         """Record the tool; the MCP config and the plugins are written once the whole install has been recorded, in

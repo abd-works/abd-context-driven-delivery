@@ -197,22 +197,60 @@ class RecordedChatLinks(ChatLinks):
         return self._file.read_text(encoding="utf-8").splitlines() if self._file.is_file() else []
 
 
+def links_of_run() -> ChatLinks:
+    """What a new chat's link is handed to: the system's, unless the run names a file to keep the links in."""
+    kept = os.environ.get(OPENED_CHATS_VARIABLE)
+    return RecordedChatLinks(Path(kept)) if kept else ChatLinks()
+
+
+@language_adapter(language="typescript")
+@agent_toolset
+class Chats:
+    """The Claude Code chats on this machine: list the ones connected now, and open a new one in the Claude app.
+
+    Every chat runs its own cdd server and the board runs another, so the chats are folders every process can read,
+    one a chat; a new chat's link is handed to the opener the chats hold.
+    """
+
+    def __init__(self, folder: Path, opener: ChatLinks) -> None:
+        self._folder = folder
+        self.opener = opener
+
+    @classmethod
+    @tool_subject
+    def load(cls) -> Chats:
+        """The chats in the folder every process reads, opening new ones through the run's opener."""
+        return cls(CHATS_FOLDER.path, links_of_run())
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def list(self) -> list[Chat]:
+        """List the chats whose cdd-board mod has checked in lately: each one's id, the title the app shows for it, and whether a turn is running."""
+        chats = [Chat(entry) for entry in sorted(self._folder.iterdir())] if self._folder.is_dir() else []
+        return [chat for chat in chats if chat.is_connected]
+
+    @mcp
+    @agent_tool
+    def open(self, folder: str, prompt: str) -> str:
+        """Open a new chat in the Claude app on folder, with prompt filled in; the app asks the person to confirm the folder and send. Answers the link it opened."""
+        return self.opener.open_new(folder, prompt)
+
+
 @identity("id")
 @language_adapter(language="typescript")
 @agent_toolset
 class Chat:
-    """Reach a Claude Code chat from outside it: list the chats that are connected, and send one a command.
+    """Reach a Claude Code chat from outside it and send it a command; it checks in, takes the commands, and says
+    which it showed and finished.
 
-    Every chat runs its own cdd server and the board runs another, so a chat is a folder every process can read: the
-    chat alone writes its state when it checks in, and a sender adds one file per command to its waiting folder.
+    The chat alone writes its state when it checks in, and a sender adds one file per command to its waiting folder.
     """
 
     # Seconds since the epoch; a spec sets its own.
     clock = staticmethod(time.time)
     # How many of the latest messages a chat keeps and lists; a spec keeps fewer, so it sends fewer to pass the limit.
     kept_messages = KEPT_MESSAGES
-    # What a new chat's link is handed to: the system's, unless the run names a file to keep the links in.
-    opener: ChatLinks = RecordedChatLinks(Path(os.environ[OPENED_CHATS_VARIABLE])) if os.environ.get(OPENED_CHATS_VARIABLE) else ChatLinks()
 
     def __init__(self, folder: Path) -> None:
         self._folder = folder
@@ -225,23 +263,6 @@ class Chat:
     @tool_subject
     def load(cls, chat: str) -> Chat:
         return cls(CHATS_FOLDER.path / chat)
-
-    @classmethod
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def list(cls) -> list[Chat]:
-        """List the chats whose cdd-board mod has checked in lately: each one's id, the title the app shows for it, and whether a turn is running."""
-        folder = CHATS_FOLDER.path
-        chats = [cls.load(entry.name) for entry in sorted(folder.iterdir())] if folder.is_dir() else []
-        return [chat for chat in chats if chat.is_connected]
-
-    @classmethod
-    @mcp
-    @agent_tool
-    def open(cls, folder: str, prompt: str) -> str:
-        """Open a new chat in the Claude app on folder, with prompt filled in; the app asks the person to confirm the folder and send. Answers the link it opened."""
-        return cls.opener.open_new(folder, prompt)
 
     @mcp
     @agent_tool

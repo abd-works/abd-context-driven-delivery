@@ -25,8 +25,8 @@
 .foundry-board-grid--cdd > .kb-col > .aad-skill-row[data-family="ddd"] { grid-row: 6; }
 
 .foundry-board-grid--cdd > .kb-col[data-stage="discovery"] { grid-column: 2; }
-.foundry-board-grid--cdd > .kb-col[data-stage="spec"] { grid-column: 3; }
-.foundry-board-grid--cdd > .kb-col[data-stage="engineer"] { grid-column: 4; }
+.foundry-board-grid--cdd > .kb-col[data-stage="specification"] { grid-column: 3; }
+.foundry-board-grid--cdd > .kb-col[data-stage="implementation"] { grid-column: 4; }
 
 .foundry-board-grid--cdd .foundry-practice-col__card--header,
 .foundry-board-grid--cdd .foundry-practice-col__cdd-head {
@@ -315,12 +315,12 @@ html[data-abd-theme="engineering"] .kanban-stage-questions--cdd .kanban-stage-qu
 
 /* Spec-focus: keep only the specification column's detail slot, swap copy via JS. */
 .foundry-kanban-surface.is-tour-spec-focus .tour-stage-detail,
-.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail {
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="specification"] > .tour-stage-detail {
   display: none !important;
 }
 
 .foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="discovery"],
-.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="engineer"] {
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="implementation"] {
   transition: opacity 0.4s ease, flex 0.45s ease;
 }
 
@@ -328,7 +328,7 @@ html[data-abd-theme="engineering"] .kanban-stage-questions--cdd .kanban-stage-qu
   opacity: 1 !important;
 }
 
-.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__title {
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="specification"] > .tour-stage-detail .foundry-tour-spec-box__title {
   margin: 0 0 8px;
   font-family: var(--font-mono, monospace);
   font-size: 10px;
@@ -338,13 +338,13 @@ html[data-abd-theme="engineering"] .kanban-stage-questions--cdd .kanban-stage-qu
   color: var(--accent, #e5531a);
 }
 
-.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__rows {
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="specification"] > .tour-stage-detail .foundry-tour-spec-box__rows {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__row {
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="specification"] > .tour-stage-detail .foundry-tour-spec-box__row {
   display: grid;
   grid-template-columns: 132px minmax(0, 1fr);
   gap: 8px;
@@ -353,20 +353,20 @@ html[data-abd-theme="engineering"] .kanban-stage-questions--cdd .kanban-stage-qu
   border-left: 3px solid var(--abd-border, #2a2a2a);
 }
 
-.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__row--sdd { border-left-color: var(--fam-sdd, #6bcb77); }
-.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__row--arc { border-left-color: var(--fam-arc, #4fc3f7); }
-.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__row--uxd { border-left-color: var(--fam-uxd, #e84393); }
-.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__row--bdd { border-left-color: var(--fam-bdd, #00b894); }
-.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__row--ddd { border-left-color: var(--fam-ddd, #6c5ce7); }
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="specification"] > .tour-stage-detail .foundry-tour-spec-box__row--sdd { border-left-color: var(--fam-sdd, #6bcb77); }
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="specification"] > .tour-stage-detail .foundry-tour-spec-box__row--arc { border-left-color: var(--fam-arc, #4fc3f7); }
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="specification"] > .tour-stage-detail .foundry-tour-spec-box__row--uxd { border-left-color: var(--fam-uxd, #e84393); }
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="specification"] > .tour-stage-detail .foundry-tour-spec-box__row--bdd { border-left-color: var(--fam-bdd, #00b894); }
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="specification"] > .tour-stage-detail .foundry-tour-spec-box__row--ddd { border-left-color: var(--fam-ddd, #6c5ce7); }
 
-.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__name {
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="specification"] > .tour-stage-detail .foundry-tour-spec-box__name {
   font-family: var(--font-mono, monospace);
   font-size: 10.5px;
   font-weight: 700;
   color: var(--abd-text, #e8e8ed);
 }
 
-.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__desc {
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="specification"] > .tour-stage-detail .foundry-tour-spec-box__desc {
   font-size: 11px;
   line-height: 1.35;
   color: var(--abd-muted, #9b9ba8);
@@ -403,23 +403,23 @@ html[data-abd-theme="engineering"] .kanban-stage-questions--cdd .kanban-stage-qu
 }
 
 .foundry-kanban-surface.is-tour-spec-focus .foundry-board-grid--cdd > .kb-col[data-stage="discovery"] > .aad-skill-row,
-.foundry-kanban-surface.is-tour-spec-focus .foundry-board-grid--cdd > .kb-col[data-stage="engineer"] > .aad-skill-row {
+.foundry-kanban-surface.is-tour-spec-focus .foundry-board-grid--cdd > .kb-col[data-stage="implementation"] > .aad-skill-row {
   visibility: hidden;
   pointer-events: none;
 }
 
 .foundry-kanban-surface.is-tour-spec-focus .foundry-board-grid--cdd > .kb-col[data-stage="discovery"],
-.foundry-kanban-surface.is-tour-spec-focus .foundry-board-grid--cdd > .kb-col[data-stage="engineer"] {
+.foundry-kanban-surface.is-tour-spec-focus .foundry-board-grid--cdd > .kb-col[data-stage="implementation"] {
   opacity: 0.45;
 }
 
-.foundry-kanban-surface.is-tour-spec-focus .foundry-board-grid--cdd > .kb-col[data-stage="spec"] {
+.foundry-kanban-surface.is-tour-spec-focus .foundry-board-grid--cdd > .kb-col[data-stage="specification"] {
   box-shadow: none;
   border-radius: 4px;
 }
 
 .foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="discovery"] > .kb-col-head,
-.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="engineer"] > .kb-col-head {
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="implementation"] > .kb-col-head {
   visibility: hidden;
 }
 

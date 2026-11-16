@@ -10,7 +10,7 @@ Markdown channel for **`harness/hooks`**. The module's purpose, seam, and depend
 
 *HookServer* is the long-running process for one repository: it takes each event's stdin, finds every enabled hook for that event, runs them, merges their results, and returns one JSON object. It is not an MCP client.
 
-A hook's result can carry a `toast`, a short notice the person sees beside the chat. It is not sent to the IDE: the hook server hands the merged toast to the notifier registered with `HookServer.show_toasts_with` (`tools/prompt_notify` registers when it is loaded). `rules_toast(source, labels)` writes the toast for injected rules, and `TOAST_ARROW` separates a toast's source from the rest.
+A hook's result can carry a `toast`, a short notice the person sees beside the chat. It is not sent to the IDE: the hook server hands the merged toast to the notifier registered with the process's one *HookToasts* (`HOOK_TOASTS.show_with`) (`tools/prompt_notify` registers when it is loaded). `rules_toast(source, labels)` writes the toast for injected rules, and `TOAST_ARROW` separates a toast's source from the rest.
 
 ---
 
@@ -143,7 +143,7 @@ The stdin JSON for one firing. Handlers read it through the named properties; it
 	// the first workspace root, else the folder Claude Code ran in
 + session: Session | None
 	// the session open in the project, else in the checkout that received the event; read once for the event
-	-> ToolCall.session_in(project or checkout)
+	-> SESSION_OPENING.saved_in(project or checkout)
 ----
 + received_in(checkout: Path): HookPayload
 	// itself when it already names the checkout that received it
@@ -223,6 +223,18 @@ The toolsets whose hooks the server runs.
 + for_event(event_name: str): list[HookHandler]
 	// tools_for(InstallDestination.HOOK) serving the event: events_served(hook_event), so a postToolUse hook also serves afterFileEdit
 
+## HookToasts                                                     <!-- Md -->
+
+How the process shows the toast a hook gives in its result: the one notifier registers itself when it is loaded, so a hook names its toast and never the notifier. The process keeps one, `HOOK_TOASTS`.
+
++ HookToasts()
+------
++ shown_by: Callable[[str, list[Path]], Any] | None
+----
++ show_with(show: Callable[[str, list[Path]], Any] | None): None
++ show(toast: str, workspace_roots: list[Path]): None
+	// shows nothing when the toast is empty or no notifier is registered
+
 ## HookServer                                                     <!-- Md -->
 
 The hooks of one checkout, loaded once in its hook daemon. It runs the enabled handlers for each event and merges their answers.
@@ -233,8 +245,6 @@ The hooks of one checkout, loaded once in its hook daemon. It runs the enabled h
 + << composition >> skipped: SkippedTools
 	// harness/installation's one record of what a server skipped, shared with the cdd server: skip, as_data, notice, notify
 ----
-+ show_toasts_with(show: Callable[[str, list[Path]], Any]): None
-	// the notifier registers itself when it is loaded, so a hook names its toast and never the notifier
 + from_repository(toolsets: RepositoryToolsets): HookServer
 	// the toolsets the hook-handlers.json of every hook-running IDE folder lists (InstalledHookHandlers), else every class the repository defines; every module is imported either way
 + from_handlers(handlers: Path, repo: Path): HookServer

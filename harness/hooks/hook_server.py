@@ -9,7 +9,7 @@ import logging
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, fields as dataclass_fields, replace
 from pathlib import Path
-from typing import Any, Callable, ClassVar, Protocol
+from typing import Any, Callable, Protocol
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetConfiguration, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
@@ -424,18 +424,35 @@ class HandlerCatalog:
 
 
 
+class HookToasts:
+    """How the process shows the toast a hook gives in its result: the one notifier, which registers itself when it is
+    loaded (``HOOK_TOASTS.show_with(show)``, tools/prompt_notify), so a hook names its toast in its result and never the
+    notifier. The process keeps one (``HOOK_TOASTS``); with no notifier registered, no toast is shown."""
+
+    def __init__(self) -> None:
+        self._show: Callable[[str, list[Path]], Any] | None = None
+
+    def show_with(self, show: Callable[[str, list[Path]], Any] | None) -> None:
+        """Have show(toast, workspace_roots) show each toast a dispatched event's hooks give; none shows no toast."""
+        self._show = show
+
+    @property
+    def shown_by(self) -> Callable[[str, list[Path]], Any] | None:
+        """The notifier that shows toasts now; none when no notifier registered."""
+        return self._show
+
+    def show(self, toast: str, workspace_roots: list[Path]) -> None:
+        """Show toast in the chat's workspace folders, when there is a toast and a notifier to show it."""
+        if toast and self._show is not None:
+            self._show(toast, workspace_roots)
+
+
+HOOK_TOASTS = HookToasts()
+
+
 class HookServer:
     """The hooks of one checkout, loaded once: it runs the enabled handlers for each event and merges their answers.
     The checkout's hook daemon holds one and hands it every event its hook commands receive."""
-
-    # Shows a merged result's toast in the chat's workspace folders. The notifier registers itself when it is loaded,
-    # so a hook names its toast in its result and never the notifier; with none registered, no toast is shown.
-    _toast_shown_by: ClassVar[Callable[[str, list[Path]], Any] | None] = None
-
-    @classmethod
-    def show_toasts_with(cls, show: Callable[[str, list[Path]], Any]) -> None:
-        """Have show(toast, workspace_roots) show each toast a dispatched event's hooks give."""
-        cls._toast_shown_by = show
 
     def __init__(self, repo_root: Path, catalog: HandlerCatalog) -> None:
         self._repo_root = repo_root
@@ -504,7 +521,7 @@ class HookServer:
         for result in self._invoke_enabled(event, payload):
             merged = merged.merge(result)
         self._append_debug(payload, f"MERGED {json.dumps(merged.as_dict())}")
-        self._show_toast(merged, payload)
+        HOOK_TOASTS.show(merged.toast, payload.workspace_roots)
         return merged
 
     def diagnose(self) -> dict[str, Any]:
@@ -541,11 +558,6 @@ class HookServer:
             self._append_debug(payload, f"HANDLER {handler.label} result={json.dumps(result.as_dict())}")
         self._append_debug(payload, f"ENABLED {enabled or ['(none)']}")
         return results
-
-    def _show_toast(self, result: HookResult, payload: HookPayload) -> None:
-        show = type(self)._toast_shown_by
-        if result.toast and show is not None:
-            show(result.toast, payload.workspace_roots)
 
     def _append_debug(self, payload: HookPayload, message: str) -> None:
         """Append message to the dispatch log of the session payload's event works in."""

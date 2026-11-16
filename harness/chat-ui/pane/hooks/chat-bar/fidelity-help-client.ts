@@ -5,7 +5,7 @@ import type { HelpData } from '@cdd/space/kanban/board'
 
 import type { FidelityHelpJson } from '../../types'
 import { shownAsFailure } from '../error-display/failure-client'
-import { callTool } from './chat-bar-client'
+import { callTool } from '../shared/cdd-tool'
 import type { FidelityProgressClient } from './fidelity-progress-client'
 
 // A fidelity's help in a pane of its own beside the chat: what the ? beside a practice on a board ticket shows, read
