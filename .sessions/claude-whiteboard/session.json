@@ -6,9 +6,11 @@
   "worktree": "C:\\dev\\abd-cdd-claude-whiteboard",
   "guidance": {
     "stages": [
+      "discovery",
+      "specification",
       "implementation"
     ],
-    "version": 29
+    "version": 31
   },
   "practices": {
     "ux": {
