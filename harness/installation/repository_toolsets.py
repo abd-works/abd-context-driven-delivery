@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Iterable
 
 from harness.agent_tools.agent_tools import ToolsetReference
-from harness.annotations.annotation import annotation_kinds
+from harness.annotations.annotation import HostedOnly, annotation_kinds
 from harness.annotations.name import Name
 
 # The last name of every decorator a source file could carry, ``@mcp`` and ``@Hook("...")`` alike.
@@ -222,8 +222,9 @@ class RepositoryToolsets:
         return None
 
     def _is_hosted_only(self, class_def: ast.ClassDef) -> bool:
-        """Whether the class is annotated ``@hosted_only``: its tools run only through what holds it."""
-        return any(self._annotation_id(dec) == "hosted_only" for dec in class_def.decorator_list)
+        """Whether the class is annotated ``@hosted_only`` or ``@HostedOnly``: its tools run only through what holds it.
+        A decorator is matched by its snake-case name, as the kinds that make a member installable are."""
+        return any(Name(self._annotation_id(dec) or "").snake == HostedOnly.written_as() for dec in class_def.decorator_list)
 
     def _class_is_installable(self, class_def: ast.ClassDef) -> bool:
         if any(self._annotation_id(dec) == "agent_toolset" for dec in class_def.decorator_list):

@@ -10,8 +10,8 @@ from expects import be_none, equal, expect
 from mamba import description, it
 
 from harness.guidance.stages import STAGES
-from harness.guidance.action_catalogue import ActionCatalogue
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.action_catalogue import ACTION_CATALOGUE
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.installation.data_class import data_of
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
@@ -22,7 +22,7 @@ with description("the stages of the approach"):
         expect([stage.title for stage in STAGES]).to(equal(["Discovery", "Specification", "Implementation"]))
 
     with it("should hold every stage a practice's fidelity names"):
-        named = {fidelity.stage for practice in PracticeCatalogue.create_all() for fidelity in practice.fidelities}
+        named = {fidelity.stage for practice in PRACTICE_CATALOGUE.create_all() for fidelity in practice.fidelities}
         expect(named - set(STAGES.names)).to(equal(set()))
 
     with it("should find a stage by the name a fidelity gives it"):
@@ -53,7 +53,7 @@ with description("the stages of the approach"):
             )
 
         with it("should name only actions in the action catalogue"):
-            unknown = {action for stage in STAGES for action in stage.actions} - set(ActionCatalogue.names())
+            unknown = {action for stage in STAGES for action in stage.actions} - set(ACTION_CATALOGUE.names)
             expect(unknown).to(equal(set()))
 
         with it("should name generate and render as the actions that take the formats a person picks"):

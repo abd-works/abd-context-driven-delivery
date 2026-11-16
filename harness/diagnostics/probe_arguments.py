@@ -8,14 +8,11 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, NamedTuple
+from typing import Any, Callable, NamedTuple
 
-from harness.agent_tools.tool_call import ToolCall
+from harness.agent_tools.tool_call import SESSION_OPENING
 from harness.diagnostics.cdd_diagnostic_bridge import CddDiagnosticFixtures
-from harness.guidance.practice_catalogue import PracticeCatalogue
-
-if TYPE_CHECKING:
-    from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE, PracticeSet
 
 
 class OperationArguments(NamedTuple):
@@ -37,23 +34,19 @@ class ProbeArguments:
         self._created: list[Path] = []
 
     @functools.cached_property
-    def practices(self) -> list[PracticeGuidance]:
-        """The practices this probe reads, made once for it, so nothing it reads is another caller's."""
-        return PracticeCatalogue.create_all()
-
-    def practice_named(self, slug: str) -> PracticeGuidance | None:
-        """The practice slug names, by the practice's slug, such as ``clean-engineering``, or one of its fidelities'
-        slugs, such as ``stories-story-map``; none when no practice goes by it."""
-        return next((practice for practice in self.practices if practice.answers_to(slug) is not None), None)
+    def practices(self) -> PracticeSet:
+        """The practices this probe reads, made once for it, so nothing it reads is another caller's; the set answers
+        which practice or fidelity a slug names."""
+        return PRACTICE_CATALOGUE.create_all()
 
     @property
     def content_paths(self) -> list[str]:
-        """The folder of each practice the slugs name, or of the practice whose fidelity they name, as each practice
-        answers it; the folder that holds every practice's folder when no slug names a practice."""
+        """The folder of each practice or fidelity the slugs name, which is its practice's folder; the folder that holds
+        every practice's folder when no slug names a practice."""
         found: list[str] = []
         for slug in self.slugs:
-            practice = self.practice_named(slug)
-            folder = str(practice.module_dir) if practice is not None else ""
+            guidance = self.practices.answering(slug)
+            folder = str(guidance.module_dir) if guidance is not None else ""
             if folder and folder not in found:
                 found.append(folder)
         return found or [str(self._practices_folder)]
@@ -80,8 +73,8 @@ class ProbeArguments:
     def work_session(self) -> Any:
         """The main session of a new temp project, for probing operations that write under the session's root, so a
         probe never writes into the session being worked on; ``cleanup`` removes the project, its log included. It is
-        opened through the sessions registered with *ToolCall*, so diagnostics never import them."""
-        return ToolCall.session_in(self._temp_dir())
+        opened through the sessions registered with ``SESSION_OPENING``, so diagnostics never import them."""
+        return SESSION_OPENING.saved_in(self._temp_dir())
 
     def cleanup(self) -> None:
         """Remove the files and folders the probe made."""

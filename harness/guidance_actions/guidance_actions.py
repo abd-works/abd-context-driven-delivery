@@ -13,10 +13,10 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Mapping, NotRequired,
 from harness.agent_tools import AgentOperation, AgentToolSet, agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import InstallDestination, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
-from harness.guidance.action_catalogue import Action, ActionCatalogue
+from harness.guidance.action_catalogue import ACTION_CATALOGUE, Action
 from harness.guidance.documents import document_in
 from harness.guidance.guidance import FidelityGuidance, Guidance, PracticeGuidance
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE, PracticeSet
 from harness.hooks.hook_server import rules_toast
 from harness.hooks.hooks import hook
 from harness.annotations.annotation import Toast
@@ -72,6 +72,7 @@ GUIDANCE_PARAMETER = (
 )
 _TOOLSET_REF = re.compile(r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$")
 _GUIDANCE_SLUG = re.compile(r"^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$")
+# The formats a command writes its fidelities in, as the session board names them: `format=drawio,markdown`.
 _FORMAT_WORD = "format="
 # The session a command is for, as the session board names it: `session=.sessions/<name>/session.json`.
 _SESSION_WORD = "session="
@@ -85,21 +86,42 @@ PATHS_NOTE = (
 )
 
 
-def session_file_named(guidance: GuidanceArg | None) -> str:
-    """The session.json a ``session=`` word of guidance names, as the session board writes it; empty when none does. A
-    board command is chat text typed into whichever chat it is sent to, so the word is read here, once, at the call."""
-    if not isinstance(guidance, str):
-        return ""
-    return next((word[len(_SESSION_WORD):] for word in guidance.split() if word.startswith(_SESSION_WORD)), "")
+@dataclass(frozen=True)
+class GuidanceCommand:
+    """The guidance a call sends, read once where the call arrives: the Guidance it names (``guidance``), and the words a
+    board or chat-bar command adds to it, which are chat text a person reads and an agent sends on as the guidance
+    argument: the session it is for (``session=``), the pattern overlays it runs with (``overlays=``), and the formats it
+    writes in (``format=``). The action holds this object from then on, so nothing below the call reads the text again
+    (``cdr/0001-the-session-word-is-read-at-the-call.md``)."""
 
+    written: GuidanceArg
+    """The guidance as the call sent it, which the action runs once on when it names no Guidance."""
+    guidance: GuidanceArg
+    """The guidance with the command's words taken out."""
+    session_file: str = ""
+    """The session.json the command is for; empty when it names none, so the call works in its chat's session."""
+    overlays: tuple[str, ...] | None = None
+    """The patterns the command runs with; none when it names none, so the session keeps the overlays it has. A word
+    with nothing after it names no overlay, and clears them."""
+    formats: tuple[str, ...] = ()
+    """The formats the command writes its fidelities in, each fidelity in those it writes."""
 
-def overlays_named(guidance: GuidanceArg) -> list[str] | None:
-    """The patterns an ``overlays=`` word of guidance names, comma separated; none when no such word is there, so the
-    session keeps the overlays it has. A word with nothing after it names no overlay, and clears them."""
-    if not isinstance(guidance, str):
-        return None
-    word = next((word for word in guidance.split() if word.startswith(_OVERLAYS_WORD)), None)
-    return None if word is None else [name for name in word[len(_OVERLAYS_WORD):].split(",") if name]
+    @classmethod
+    def from_guidance(cls, written: GuidanceArg) -> GuidanceCommand:
+        """The command guidance is: a string's command words read out of it; any other guidance as it is."""
+        if not isinstance(written, str):
+            return cls(written, written)
+        words = written.split()
+        named = {prefix: next((word[len(prefix):] for word in words if word.startswith(prefix)), None) for prefix in (_SESSION_WORD, _OVERLAYS_WORD, _FORMAT_WORD)}
+        rest = [word for word in words if not word.startswith((_SESSION_WORD, _OVERLAYS_WORD, _FORMAT_WORD))]
+        overlays = named[_OVERLAYS_WORD]
+        return cls(
+            written,
+            " ".join(rest) if len(rest) < len(words) else written,
+            named[_SESSION_WORD] or "",
+            None if overlays is None else tuple(name for name in overlays.split(",") if name),
+            tuple(name for name in (named[_FORMAT_WORD] or "").split(",") if name),
+        )
 
 
 @dataclass(frozen=True)
@@ -132,36 +154,47 @@ class UnknownGuidance(ValueError):
 
 
 class GuidanceArgument:
-    """The guidance argument a call sends an action, read as what the action works on. It is the Guidance list, one
-    Guidance (a slug, a ``module:Class`` ref, a ``{"toolset": ...}`` mapping or its JSON, or a Guidance already made),
-    or text the action runs once on. Agents on MCP often send several slugs, a ``format=`` word, and a ``session=`` word
-    in one string; the slugs are Guidance, the format word is each one's format, and the session word names the
-    session the call is for. A string with any other word is text, so prose still runs once.
+    """The guidance a command names, read as what the action works on. It is the Guidance list, one Guidance (a slug, a
+    ``module:Class`` ref, a ``{"toolset": ...}`` mapping or its JSON, or a Guidance already made), or text the action
+    runs once on. Agents on MCP often send several slugs in one string; each is Guidance, written in each of the formats
+    the command names that it writes. A string with any other word is text, so prose still runs once.
 
     A slug or a ref names a practice or a fidelity of the practices the action works with (``practices``), and is read
     once into that object, so the action never looks it up again."""
 
-    def __init__(self, guidance: GuidanceArg, practices: Callable[[], Sequence[PracticeGuidance]]) -> None:
-        self._guidance = guidance
+    def __init__(self, command: GuidanceCommand, practices: Callable[[], PracticeSet]) -> None:
+        self._command = command
+        self._guidance = command.guidance
         self._practices = practices
 
     @property
     def text(self) -> str | None:
-        """The text the action runs once on; none when the argument names Guidance."""
+        """The text the action runs once on, as the call wrote it; none when the argument names Guidance."""
         if not isinstance(self._guidance, str) or self._one_item() is not None or self._slug_words():
             return None
-        return self._guidance
+        return self._command.written
 
     @property
     def items(self) -> list[ArgumentEntry]:
         """Each Guidance the argument names: a *NamedGuidance* for a practice of the action's set or one of its
-        fidelities; any other Guidance as the ref, ref mapping, or object it was sent as."""
+        fidelities, once for each format the command names that it writes; any other Guidance as the ref, ref mapping,
+        or object it was sent as."""
+        return [written for entry in self._entries() for written in self._in_formats(entry)]
+
+    def _entries(self) -> list[ArgumentEntry]:
         one = self._one_item() if not isinstance(self._guidance, list) else None
         if one is not None:
             return [one]
         if isinstance(self._guidance, str):
             return self._slug_words()
         return [self._listed(entry) for entry in list(self._guidance or [])]
+
+    def _in_formats(self, entry: ArgumentEntry) -> list[ArgumentEntry]:
+        """entry once for each format the command names that it writes; entry itself when the command names none or
+        entry names its own."""
+        if not isinstance(entry, NamedGuidance) or entry.format or not self._command.formats:
+            return [entry]
+        return [NamedGuidance(entry.guidance, format) for format in self._listed_formats_of(entry.guidance, list(self._command.formats))]
 
     def _listed(self, entry: GuidanceEntry) -> ArgumentEntry:
         """One entry of a Guidance list: the Guidance it names. A word in a list is a slug, so a word that names no
@@ -174,19 +207,17 @@ class GuidanceArgument:
     @property
     def slugs(self) -> list[str]:
         """Every slug a call can name: each practice's, then each of its fidelities'."""
-        return [slug for practice in self._practices() for slug in (practice.slug, *practice.fidelity_slugs)]
+        return self._practices().slugs
 
     def _one_item(self) -> ArgumentEntry | None:
         return self._item(self._guidance)
 
     def _slug_words(self) -> list[NamedGuidance]:
-        words = [word for word in self._guidance.split() if not word.startswith((_SESSION_WORD, _OVERLAYS_WORD))]
-        listed = next((word[len(_FORMAT_WORD):].split(",") for word in words if word.startswith(_FORMAT_WORD)), [])
-        slugs = [slug for word in words if not word.startswith(_FORMAT_WORD) for slug in word.split(",") if slug]
+        slugs = [slug for word in self._guidance.split() for slug in word.split(",") if slug]
         named = [self._named(slug) for slug in slugs]
         if not named or None in named:
             return []
-        return [NamedGuidance(guidance, format) for guidance in named for format in self._listed_formats_of(guidance, listed)]
+        return [NamedGuidance(guidance) for guidance in named]
 
     def _listed_formats_of(self, guidance: PracticeGuidance | FidelityGuidance, listed: list[str]) -> list[str]:
         """The listed formats the guidance writes, the action running once for each: a stage Run lists the formats of
@@ -227,14 +258,11 @@ class GuidanceArgument:
         return next((practice for practice in self._practices() if type(practice) is toolset_class), None)
 
     def _named(self, slug: str) -> PracticeGuidance | FidelityGuidance | None:
-        """The practice or fidelity slug names among the action's practices: by its slug, such as ``stories`` or
-        ``stories-story-map``, else a fidelity by its bare name in kebab case, such as ``story-map``, the first
-        practice's in catalogue order when two share it. None for anything else."""
+        """The practice or fidelity slug names among the action's practices (``PracticeSet.named``); none for a word
+        that is no slug."""
         if not _GUIDANCE_SLUG.match(slug):
             return None
-        practices = self._practices()
-        named = next((found for practice in practices if (found := practice.answers_to(slug)) is not None), None)
-        return named or next((found for practice in practices if (found := practice.fidelities.called(slug)) is not None), None)
+        return self._practices().named(slug)
 
     def _json_ref(self, text: str) -> GuidanceRef | None:
         if not (text.startswith("{") and text.endswith("}")):
@@ -261,7 +289,7 @@ class WorkList:
         self.text: str | None = None
         self._items: list[ArgumentEntry] = []
         self._listed: list[ListedGuidance] | None = None
-        self._practices: list[PracticeGuidance] | None = None
+        self._practices: PracticeSet | None = None
         self._worked_at: dict[PracticeGuidance, FidelityGuidance | None] = {}
         # Each listed entry's format and the fidelity (or practice) that writes it, by the entry's place in the list:
         # a fidelity listed once per format, such as a diagram in drawio and in whiteboard, is worked in each in turn.
@@ -272,14 +300,13 @@ class WorkList:
         """Whether this list was made inside another action's: the action that holds it was started by another."""
         return self._outer is not None
 
-    def take(self, guidance: GuidanceArg) -> None:
-        """Work on guidance, read once into the practices and fidelities of the action's set that it names. An
-        ``overlays=`` word chooses those pattern overlays on the session first, so the action runs with them."""
-        overlays = overlays_named(guidance)
-        if overlays is not None and self._session is not None:
-            self._session.choose_overlays(overlays)
-        argument = GuidanceArgument(guidance, self.practice_set)
-        self.worked_on = guidance
+    def take(self, command: GuidanceCommand) -> None:
+        """Work on the guidance command names, read once into the practices and fidelities of the action's set. The
+        overlays the command names are chosen on the session first, so the action runs with them."""
+        if command.overlays is not None and self._session is not None:
+            self._session.choose_overlays(list(command.overlays))
+        argument = GuidanceArgument(command, self.practice_set)
+        self.worked_on = command.written
         self._listed = None
         self.text = argument.text
         self._items = argument.items if self.text is None else []
@@ -325,7 +352,7 @@ class WorkList:
             writer.format = format
         return listed
 
-    def practice_set(self) -> list[PracticeGuidance]:
+    def practice_set(self) -> PracticeSet:
         """The practices worked with, made known once: the session's own instances, the ones its graph holds; for no
         session, a set of their own; for a list made inside another action's, that list's."""
         if self._outer is not None:
@@ -333,7 +360,7 @@ class WorkList:
         if self._practices is None:
             session = self._session
             self._practices = (
-                [output.guidance for output in session.practices.values()] if session is not None else PracticeCatalogue.create_all()
+                PracticeSet(output.guidance for output in session.practices.values()) if session is not None else PRACTICE_CATALOGUE.create_all()
             )
         return self._practices
 
@@ -476,6 +503,82 @@ class ActionFiles:
             self._action.graph.refresh([str(path) for path in paths], self._action.call)
 
 
+class SessionBrief:
+    """What an agent following one action's instructions is told about the session the action works in: the session
+    itself, the project root paths are named from, the session's root and where each listed practice writes
+    (``session_context``), and the rules of the patterns the work is held to with the stories the session's increment is
+    about (``overlay_rules``). The action holds one (``action.brief``), made with it; an action made for no session is
+    told nothing."""
+
+    def __init__(self, action: GuidanceAction) -> None:
+        self._action = action
+
+    def overlay_rules(self, paths: list[str] | None = None) -> str:
+        """The shared rules of each pattern the work is held to, such as lern_domain_driven, which apply on top of the
+        practices' rules: for content paths names, the patterns it was generated with; otherwise, as for generate, the
+        patterns the session overlays. None for an action made for no session."""
+        session = self._action.works_in
+        if session is None:
+            return ""
+        patterns = self._action.graph.applied_patterns
+        root = session.work_root
+        names = patterns.recorded_for([root / path for path in paths or []], root) or list(session.overlays)
+        rules = [self._overlay_rules_of(patterns.pattern_named(name), name) for name in names if name in patterns.names]
+        return "\n\n".join(part for part in [*rules, self._story_scope(names)] if part)
+
+    def _story_scope(self, patterns: list[str]) -> str:
+        """The stories this session's increment is about, which generate and validate work on, each with the patterns
+        its content was generated with. Stories outside them are other increments' work."""
+        stories = list(getattr(self._action.works_in, "stories", None) or [])
+        if not stories:
+            return ""
+        return "\n".join([
+            "## Stories in this session",
+            "",
+            "This session's increment is these stories, named in its ticket. Generate and validate every one of them with "
+            f"the patterns its content is generated with ({', '.join(patterns) or 'none'}). Stories outside this list "
+            "belong to other increments: do not generate, judge, or report them.",
+            "",
+            *(f"- {story}" for story in stories),
+        ])
+
+    def _overlay_rules_of(self, pattern: PracticeGuidance, name: str) -> str:
+        return (
+            f"## Pattern overlay: {name}\n\n"
+            f"This session overlays the {name} pattern, so its shared rules below apply on top of the practices' rules. "
+            f"Its whole guidance is its instructions, `{pattern.slug}_instructions`.\n\n"
+            f"{pattern.section_text('Shared rules')}"
+        )
+
+    @property
+    def session_context(self) -> str:
+        """The open session as an agent acting on this command needs it: its session.json, the project root paths
+        are named from, the session's root, and where each listed practice writes. The agent works from the project's
+        checkout, so every path it sees starts there; told nothing, it guesses where files go under a moved root."""
+        session = self._action.works_in
+        if session is None or session.session_path is None:
+            return ""
+        writes = self._practice_folders()
+        return "\n".join([
+            "## Session",
+            "",
+            f"Session {session.name}, kept in {session.session_file.resolve().as_posix()}.",
+            f"Name paths from the project's root, {session.repo_path.as_posix()}, or absolute.",
+            f"The session's root is {session.work_root.as_posix()}.",
+            *(["", "Where each listed practice writes:", *writes] if writes else []),
+            "",
+            "```json",
+            json.dumps(session.record.fields, indent=2),
+            "```",
+        ])
+
+    def _practice_folders(self) -> list[str]:
+        """One line per listed practice the session holds, naming the folder it writes in, so the agent never guesses
+        where a practice's files go under a moved root."""
+        held = [(listed, self._action.session_practice(listed)) for listed in self._action.listed() if not isinstance(listed, str)]
+        return [f"- {listed.slug}: {output.folder.as_posix()}" for listed, output in held if output is not None]
+
+
 @agent_toolset
 class GuidanceAction:
     """An action, such as generate, on the guidance a call names, such as stories-story-map, made for the session that
@@ -484,8 +587,10 @@ class GuidanceAction:
     The cdd server makes a new action for each call (``for_call``), so the guidance a call names, the session it works
     in, and the fidelity it works at on each practice it lists belong to that action alone. The practices themselves
     are the session's, which every call in the session shares, so an action never moves a practice's current fidelity:
-    it holds the fidelity it works at (``fidelity_of``) and hands that fidelity to each operation and log line. A board command names its ticket's session in a ``session=`` word,
-    because it runs in whichever chat it is sent to; any other call works in the session open in its project. An action
+    it holds the fidelity it works at (``fidelity_of``) and hands that fidelity to each operation and log line. A board
+    command names its ticket's session in a ``session=`` word, because it runs in whichever chat it is sent to, and the
+    action reads it once into the *GuidanceCommand* it works on; any other call works in the session open in its
+    project. What the agent is told about that session is the action's *SessionBrief* (``brief``). An action
     started inside another (``_inside``) is made for that action's session and works on the same practices, and logs
     nothing: only the action the call asked for has run. An action made for no session, such as one listed for install,
     logs nothing and keeps no format.
@@ -507,16 +612,19 @@ class GuidanceAction:
         # practice it lists. An action started inside another holds a list made inside that action's (``_inside``).
         self.work = WorkList(session)
         self.files = ActionFiles(self)
+        self.brief = SessionBrief(self)
 
     def for_call(self, call: ToolCall) -> GuidanceAction:
-        """An action of this kind made for call and working on the guidance it names: in the session that guidance names
-        in a ``session=`` word, else the session open in the call's project, else the session this action was made for.
-        A session is space/session's *Session*, which the call opens; the framework never names its class."""
+        """An action of this kind made for call and working on the guidance it names, read once into a
+        *GuidanceCommand*: in the session that command names, else the session open in the call's project, else the
+        session this action was made for. A session is space/session's *Session*, which the call opens; the framework
+        never names its class."""
         guidance = call.arguments.get("guidance")
-        named = session_file_named(guidance)
+        command = GuidanceCommand.from_guidance(guidance)
+        named = command.session_file
         action = self._made_for((call.session_named(named) if named else None) or call.session or self._session, call)
         if guidance is not None:
-            action.work.take(guidance)
+            action.work.take(command)
         return action
 
     def _made_for(self, session: ActionSession | None, call: ToolCall | None = None) -> GuidanceAction:
@@ -550,42 +658,6 @@ class GuidanceAction:
         whose agent writes files lists its ``refresh`` as the tool to call with exactly those files."""
         return self.session.graph
 
-    def _overlay_rules(self, paths: list[str] | None = None) -> str:
-        """The shared rules of each pattern the work is held to, such as lern_domain_driven, which apply on top of the
-        practices' rules: for content paths names, the patterns it was generated with; otherwise, as for generate, the
-        patterns the session overlays. None for an action made for no session."""
-        if self._session is None:
-            return ""
-        patterns = self.graph.applied_patterns
-        root = self.session.work_root
-        names = patterns.recorded_for([root / path for path in paths or []], root) or list(self.session.overlays)
-        rules = [self._overlay_rules_of(patterns.pattern_named(name), name) for name in names if name in patterns.names]
-        return "\n\n".join(part for part in [*rules, self._story_scope(names)] if part)
-
-    def _story_scope(self, patterns: list[str]) -> str:
-        """The stories this session's increment is about, which generate and validate work on, each with the patterns
-        its content was generated with. Stories outside them are other increments' work."""
-        stories = list(getattr(self._session, "stories", None) or [])
-        if not stories:
-            return ""
-        return "\n".join([
-            "## Stories in this session",
-            "",
-            "This session's increment is these stories, named in its ticket. Generate and validate every one of them with "
-            f"the patterns its content is generated with ({', '.join(patterns) or 'none'}). Stories outside this list "
-            "belong to other increments: do not generate, judge, or report them.",
-            "",
-            *(f"- {story}" for story in stories),
-        ])
-
-    def _overlay_rules_of(self, pattern: PracticeGuidance, name: str) -> str:
-        return (
-            f"## Pattern overlay: {name}\n\n"
-            f"This session overlays the {name} pattern, so its shared rules below apply on top of the practices' rules. "
-            f"Its whole guidance is its instructions, `{pattern.slug}_instructions`.\n\n"
-            f"{pattern.section_text('Shared rules')}"
-        )
-
     @property
     def operation_type(self) -> type[AgentOperation]:
         """Each ``@agent_tool`` of an action logs its call as the action, such as ``render``."""
@@ -596,7 +668,7 @@ class GuidanceAction:
         the Guidance it built, so its operations all work on the same objects."""
         if guidance is None or guidance == self.work.worked_on:
             return
-        self.work.take(guidance)
+        self.work.take(GuidanceCommand.from_guidance(guidance))
 
     def practice_of(self, guidance: WorkedGuidance) -> WorkedGuidance:
         """The practice guidance belongs to: a fidelity's practice; guidance itself for a practice, other guidance, or
@@ -616,7 +688,7 @@ class GuidanceAction:
         """The fidelity this action works at on guidance, one of the Guidance it lists (``WorkList.fidelity_of``)."""
         return self.work.fidelity_of(guidance)
 
-    def _session_practice(self, practice: WorkedGuidance) -> Any:
+    def session_practice(self, practice: WorkedGuidance) -> Any:
         """What practice, one of this action's practices, has in the session it works in (its PracticeSessionOutput);
         none when the action works in no session or practice is no practice of the session."""
         if self._session is None:
@@ -633,7 +705,7 @@ class GuidanceAction:
     def _worked_output(self, practice: ListedGuidance) -> Any:
         """What the fidelity this action works at on practice has in its session; none for guidance the session does
         not hold."""
-        held = self._session_practice(practice)
+        held = self.session_practice(practice)
         fidelity = self.fidelity_of(practice) if held is not None else None
         return fidelity.session_output if fidelity is not None else None
 
@@ -694,31 +766,8 @@ class GuidanceAction:
 
     @property
     def session_context(self) -> str:
-        """The open session as an agent acting on this command needs it: its session.json, the project root paths
-        are named from, the session's root, and where each listed practice writes. The agent works from the project's
-        checkout, so every path it sees starts there; told nothing, it guesses where files go under a moved root."""
-        session = self._session
-        if session is None or session.session_path is None:
-            return ""
-        writes = self._practice_folders()
-        return "\n".join([
-            "## Session",
-            "",
-            f"Session {session.name}, kept in {session.session_file.resolve().as_posix()}.",
-            f"Name paths from the project's root, {session.repo_path.as_posix()}, or absolute.",
-            f"The session's root is {session.work_root.as_posix()}.",
-            *(["", "Where each listed practice writes:", *writes] if writes else []),
-            "",
-            "```json",
-            json.dumps(session.record.fields, indent=2),
-            "```",
-        ])
-
-    def _practice_folders(self) -> list[str]:
-        """One line per listed practice the session holds, naming the folder it writes in, so the agent never guesses
-        where a practice's files go under a moved root."""
-        held = [(listed, self._session_practice(listed)) for listed in self.listed() if not isinstance(listed, str)]
-        return [f"- {listed.slug}: {output.folder.as_posix()}" for listed, output in held if output is not None]
+        """What the agent following this action's instructions is told about its session (``SessionBrief``)."""
+        return self.brief.session_context
 
     @agent_instructions
     def act_quickly(self) -> str:
@@ -780,4 +829,4 @@ class FidelityActionRunner:
         return getattr(made, action.name)(guidance=None, **arguments)
 
 
-ActionCatalogue.run_actions_with(FidelityActionRunner())
+ACTION_CATALOGUE.run_actions_with(FidelityActionRunner())

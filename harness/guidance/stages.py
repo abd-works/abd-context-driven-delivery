@@ -6,6 +6,8 @@ draw the stages from here, so a stage's order, scope, and actions are written on
 
 from __future__ import annotations
 
+from harness.annotations.annotation import Annotatable, Annotation, AnnotationKind
+from harness.guidance.action_catalogue import ACTION_CATALOGUE, Action, ActionCatalogue
 from harness.installation.data_class import data_field
 
 DISCOVERY: str = "discovery"
@@ -17,6 +19,39 @@ GENERATE: str = "generate"
 VALIDATE: str = "validate"
 # The action that converts a fidelity's output into other formats, so it needs output to convert.
 RENDER: str = "render"
+
+
+class OnStageKind(AnnotationKind):
+    """The kind of ``@OnStage``, which reads back where an action sits on a fidelity's stage."""
+
+    def placed(kind, operation: Annotatable) -> OnStage | None:
+        """Where the ``@OnStage`` on operation puts it among a stage's actions; none when it is run on no stage."""
+        return getattr(operation, kind.flag, None)
+
+
+class OnStage(Annotation, metaclass=OnStageKind):
+    """Annotate an action's operation, such as generate, with where it sits among the actions a person runs on a
+    fidelity in its stage: its place in the order a board lists them (``rank``), whether every fidelity goes through
+    it (``step``, as generate and validate are), whether it takes the formats a person picks (``takes_formats``, as
+    generate and render do), and whether it checks a fidelity's files rather than writing them (``checks``, as validate
+    does). Each stage reads its actions from the action catalogue by this annotation, so an action is added to the
+    stages, renamed, or moved by changing its own annotation, never a list of names kept here."""
+
+    flag = "_on_stage"
+    copied = False
+
+    def __new__(cls, rank: int, *, step: bool = False, takes_formats: bool = False, checks: bool = False):
+        return object.__new__(cls)
+
+    def __init__(self, rank: int, *, step: bool = False, takes_formats: bool = False, checks: bool = False) -> None:
+        self.rank = rank
+        self.step = step
+        self.takes_formats = takes_formats
+        self.checks = checks
+
+    def annotate(self, target: Annotatable) -> Annotatable:
+        setattr(target, self.flag, self)
+        return target
 
 
 class StageScope:
@@ -56,22 +91,19 @@ class StageScope:
 
 class ApproachStage:
     """One stage of the CDD approach: the name each fidelity's **Stage:** gives it, its title, its scope, and the
-    actions a person runs on a fidelity in it. The session board's stage columns and the catalog's columns are each
-    built on one."""
+    actions a person runs on a fidelity in it, which are the actions of its catalogue annotated ``@OnStage``. The
+    session board's stage columns and the catalog's columns are each built on one."""
 
-    # The steps every fidelity goes through, then the other actions a person can run on a fidelity in place of the
-    # next step. Each is an operation in the action catalogue; a fidelity is done once its latest validate passes.
-    _STEPS = (GENERATE, VALIDATE)
-    # Partition comes first: it turns the source into the index and segments that generate then works from.
-    _BEFORE_STEPS = ("partition",)
-    _OTHER_ACTIONS = ("iterate", "sketch", RENDER, "document")
-    # Generate writes a fidelity in the formats a person picks, and render converts it into them; every other action
-    # writes or reads a fidelity's files in the formats they already have.
-    _ACTIONS_WITH_FORMATS = (GENERATE, RENDER)
-
-    def __init__(self, name: str, scope: StageScope) -> None:
+    def __init__(self, name: str, scope: StageScope, catalogue: ActionCatalogue) -> None:
         self._name = name
         self._scope = scope
+        self._catalogue = catalogue
+
+    @property
+    def _placed(self) -> list[tuple[OnStage, Action]]:
+        """Each action of the catalogue run on a fidelity in this stage, with where it sits, in the order it sits."""
+        placed = [(place, action) for action in self._catalogue.actions if (place := OnStage.placed(action.operation)) is not None]
+        return sorted(placed, key=lambda entry: entry[0].rank)
 
     @property
     @data_field
@@ -93,27 +125,29 @@ class ApproachStage:
     @property
     @data_field
     def steps(self) -> list[str]:
-        """What every fidelity goes through in this stage, in order: generate, then validate."""
-        return list(self._STEPS)
+        """What every fidelity goes through in this stage, in order: generate, then validate. A fidelity is done once
+        its latest validate passes."""
+        return [action.name for place, action in self._placed if place.step]
 
     @property
     @data_field
     def actions(self) -> list[str]:
-        """Every action a person can run on a fidelity in this stage: partition, then its steps, then the others."""
-        return [*self._BEFORE_STEPS, *self._STEPS, *self._OTHER_ACTIONS]
+        """Every action a person can run on a fidelity in this stage, in the order they sit: partition, which turns a
+        source into what generate works from, then its steps, then the others a person runs in place of the next step."""
+        return [action.name for _place, action in self._placed]
 
     @property
     @data_field
     def producing_actions(self) -> list[str]:
         """The actions that write a fidelity's files: every action but validate, which checks them."""
-        return [action for action in self.actions if action != VALIDATE]
+        return [action.name for place, action in self._placed if not place.checks]
 
     @property
     @data_field
     def actions_with_formats(self) -> list[str]:
         """The actions whose command takes the formats a person picks: generate writes a fidelity in them and render
-        converts it into them."""
-        return list(self._ACTIONS_WITH_FORMATS)
+        converts it into them; every other action writes or reads a fidelity's files in the formats they already have."""
+        return [action.name for place, action in self._placed if place.takes_formats]
 
 
 class ApproachStages:
@@ -138,7 +172,7 @@ class ApproachStages:
 
 
 STAGES = ApproachStages((
-    ApproachStage(DISCOVERY, StageScope("solution", "Whole solution", "wide / shallow", "outcomes · scope · boundaries")),
-    ApproachStage(SPECIFICATION, StageScope("sprint", "Sprint", "narrow / deeper", "behaviour · design · logic")),
-    ApproachStage(IMPLEMENTATION, StageScope("story", "Story", "narrowest / deep", "tests · code · interface")),
+    ApproachStage(DISCOVERY, StageScope("solution", "Whole solution", "wide / shallow", "outcomes · scope · boundaries"), ACTION_CATALOGUE),
+    ApproachStage(SPECIFICATION, StageScope("sprint", "Sprint", "narrow / deeper", "behaviour · design · logic"), ACTION_CATALOGUE),
+    ApproachStage(IMPLEMENTATION, StageScope("story", "Story", "narrowest / deep", "tests · code · interface"), ACTION_CATALOGUE),
 ))

@@ -3,12 +3,14 @@ code, Stories acceptance_tests, BDD development, and DDD tactics."""
 from __future__ import annotations
 
 import functools
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 import yaml
 
 from harness.agent_tools.agent_tools import agent_instructions
 from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.working_set import WorkingSet
 from harness.installation.files import skill
 from harness.mcp.mcp_annotations import mcp
 from harness.guidance.rule import Rule, RulesCollection
@@ -34,6 +36,17 @@ class UnknownSupplementedFidelity(Exception):
         self.fidelity_name = fidelity_name
 
 
+class SupplementWorkingSet(WorkingSet):
+    """A supplement's working set: beside the practices it works with, it reads the fidelities the supplement names
+    into the set's own, once it is handed the set."""
+
+    _practice: PracticeSupplement
+
+    def hold(self, practices: Mapping[str, PracticeGuidance], supplements: Sequence[PracticeSupplement] = ()) -> None:
+        super().hold(practices)
+        self._practice.hold_supplemented(practices)
+
+
 class PracticeSupplement(PracticeGuidance):
     """Guidance that adds to other practices at the fidelities it names. It is a practice of its own, kept with the
     practices, but it has no stage and no fidelities on the board: it never moves work forward. Its front matter names
@@ -44,10 +57,12 @@ class PracticeSupplement(PracticeGuidance):
     fidelity it supplements: each rule names the fidelities it is for. A subclass that checks graph rules makes its *GraphOverlay* as ``graph_overlay``, as a pattern
     does."""
 
+    working_set_type = SupplementWorkingSet
+
     def __init__(self, format: str | None = None) -> None:
         super().__init__(format=format, fidelity=None)
         self.supplemented_fidelities: list[FidelityGuidance] = []
-        """The fidelities it supplements: the same set's own objects, held once hold_set gives it the set."""
+        """The fidelities it supplements: the same set's own objects, held once its working set is handed the set."""
 
     @functools.cached_property
     def _settings(self) -> dict[str, Any]:
@@ -59,15 +74,14 @@ class PracticeSupplement(PracticeGuidance):
         """On for every session without being chosen."""
         return bool(self._settings.get("always_apply"))
 
-    def hold_set(self, practices: dict[str, PracticeGuidance], supplements: list[PracticeSupplement] | None = None) -> None:
-        """Read the front matter's practice and fidelity names into the set's own fidelities, once: after this nothing
-        holds a practice key or fidelity name as text."""
-        super().hold_set(practices)
+    def hold_supplemented(self, practices: Mapping[str, PracticeGuidance]) -> None:
+        """Read the front matter's practice and fidelity names into the fidelities of practices, the set's own, once:
+        after this nothing holds a practice name or fidelity name as text."""
         self.supplemented_fidelities = [
             self._fidelity_in(practices, key, name) for key, name in (self._settings.get("supplements") or {}).items()
         ]
 
-    def _fidelity_in(self, practices: dict[str, PracticeGuidance], key: str, name: str) -> FidelityGuidance:
+    def _fidelity_in(self, practices: Mapping[str, PracticeGuidance], key: str, name: str) -> FidelityGuidance:
         practice = practices.get(key)
         fidelity = practice.fidelities.called(name) if practice is not None else None
         if fidelity is None:

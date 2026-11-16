@@ -7,7 +7,7 @@ from mamba import after, before, context, description, it
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 from harness.guidance.fixtures.sample_supplement.sample_supplement import SampleSupplement
 from harness.guidance.fixtures.unknown_supplement.unknown_supplement import UnknownSupplement
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.guidance.practice_supplement import UnknownSupplementedFidelity
 
 
@@ -18,28 +18,28 @@ def practices_by_key(practices):
 with description("a practice supplement") as self:
     with context("that the catalogue makes with a set of practices"):
         with before.all:
-            self.registered = PracticeCatalogue.supplement_classes()
-            PracticeCatalogue.register_supplements(SampleSupplement)
-            self.practices = practices_by_key(PracticeCatalogue.create_all(fidelity=None))
+            self.registered = PRACTICE_CATALOGUE.supplement_classes
+            PRACTICE_CATALOGUE.register_supplements(SampleSupplement)
+            self.practices = practices_by_key(PRACTICE_CATALOGUE.create_all(fidelity=None))
             self.bdd_development = self.practices["bdd"].fidelities.called("development")
             self.code = self.practices["clean_engineering"].fidelities.called("code")
             self.story_map = self.practices["stories"].fidelities.called("story_map")
-            self.supplement = self.practices["bdd"].supplements[0]
+            self.supplement = self.practices["bdd"].working_set.supplements[0]
 
         with after.all:
-            PracticeCatalogue.register_supplements(*self.registered)
+            PRACTICE_CATALOGUE.register_supplements(*self.registered)
 
         with it("should supplement the set's own fidelities its front matter names"):
             expect(self.supplement.supplemented_fidelities).to(equal([self.bdd_development, self.code]))
 
         with it("should be held by each practice it supplements"):
-            expect(self.practices["clean_engineering"].supplements).to(equal([self.supplement]))
+            expect(self.practices["clean_engineering"].working_set.supplements).to(equal([self.supplement]))
 
         with it("should not be held by a practice it does not supplement"):
-            expect(self.practices["stories"].supplements).to(be_empty)
+            expect(self.practices["stories"].working_set.supplements).to(be_empty)
 
         with it("should not be listed among the practices"):
-            expect(PracticeCatalogue.keys()).not_to(contain("sample_supplement"))
+            expect(PRACTICE_CATALOGUE.names).not_to(contain("sample_supplement"))
 
         with context("read on its own"):
             with it("should hold every section named for a fidelity in its instructions"):
@@ -75,11 +75,11 @@ with description("a practice supplement") as self:
 
     with context("that names a fidelity its practice does not have"):
         with before.each:
-            self.registered = PracticeCatalogue.supplement_classes()
+            self.registered = PRACTICE_CATALOGUE.supplement_classes
 
         with after.each:
-            PracticeCatalogue.register_supplements(*self.registered)
+            PRACTICE_CATALOGUE.register_supplements(*self.registered)
 
         with it("should refuse the set it is made with"):
-            PracticeCatalogue.register_supplements(UnknownSupplement)
-            expect(lambda: PracticeCatalogue.create_all(fidelity=None)).to(raise_error(UnknownSupplementedFidelity))
+            PRACTICE_CATALOGUE.register_supplements(UnknownSupplement)
+            expect(lambda: PRACTICE_CATALOGUE.create_all(fidelity=None)).to(raise_error(UnknownSupplementedFidelity))

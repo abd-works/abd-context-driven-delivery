@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from harness.annotations.annotation import hosted_only
 from harness.annotations.class_folder import class_folder
 from harness.annotations.name import Name
-from harness.guidance.action_catalogue import FidelityActions
+from harness.guidance.action_catalogue import ACTION_CATALOGUE, FidelityActions
 from harness.guidance.declared_outputs import DeclaredOutputs
 from harness.guidance.practice_formats import PracticeFormats, RenderContent, RenderRequest
 from harness.guidance.practice_reading import PracticeReading
@@ -17,6 +17,7 @@ from harness.guidance.rule import Rule, RulesCollection
 from harness.guidance.schema import Schema
 from harness.guidance.stages import STAGES, ApproachStage
 from harness.guidance.worked_session import FidelityOutput, NamedPaths, PracticeOutput
+from harness.guidance.working_set import COMPANION_PRACTICE, WorkingSet
 from harness.agent_tools.agent_tools import (
     collect,
     agent_instructions,
@@ -42,11 +43,6 @@ from harness.markdown.markdown import MarkdownOwner
 
 if TYPE_CHECKING:
     from harness.hooks.hook_server import HookPayload
-
-
-# The practice whose fidelities accompany other practices' fidelities, by its key: a fidelity's ``clean_engineering:``
-# setting names the fidelity of this practice whose instructions join its own.
-COMPANION_PRACTICE = "clean_engineering"
 
 
 class SketchLens:
@@ -269,16 +265,9 @@ class PracticeGuidance(Guidance):
     extends: str = ""
     """The practice whose types this practice's schema builds on with ``is:``, such as a DDD entity that is a Clean
     Engineering class; its types also carry that practice's rules."""
-    extended: PracticeGuidance | None = None
-    """The practice whose types this practice's schema builds on, which ``extends`` names, held by reference: the one of
-    the same set of practices, such as the session's Clean Engineering for its DDD."""
-    companion: PracticeGuidance | None = None
-    """The Clean Engineering practice whose fidelities accompany this practice's: the one of the set this practice was
-    made with, which the catalogue hands it, so a companion works in the same session; none for a practice made apart
-    from any set."""
-    supplements: tuple[Any, ...] = ()
-    """The supplements of the set this practice was made with that supplement one of its fidelities (each a
-    *PracticeSupplement*), held by reference; none for a practice made apart from any set."""
+    working_set_type: type[WorkingSet] = WorkingSet
+    """The kind of working set this practice holds: the practices of its set it works with. A supplement, which also
+    reads the fidelities it supplements from the set, names its own kind."""
     editor: ClassVar[Any] = None
     """The app that edits this practice's files beside the chat (an *App* of harness/diagnostics, which sits above this
     module, so it is not named here): the Story UI editor for Stories, none for every other practice. Every instance of the practice, in every session, edits with the same app, so the module that makes the
@@ -294,11 +283,17 @@ class PracticeGuidance(Guidance):
     # The format the practice works in while it has no current fidelity.
     _own_format: Format = Format()
 
-    def __init__(self, format: str | None = None, fidelity: str | None = None) -> None:
+    first_fidelity: ClassVar[str | None] = None
+    """The fidelity the practice starts at when it is made without naming one, such as DDD's ``bounded_context``;
+    none leaves it with no current fidelity."""
+
+    def __init__(self, format: str | None = None, fidelity: str | None = "") -> None:
+        """fidelity left out starts the practice at its ``first_fidelity``; ``None`` starts it at no fidelity."""
         super().__init__(format=format)
         self.formats = self.formats_type(self, dict(self.format_adapters))
         self.reading = self.reading_type(self)
-        self._start_at(fidelity)
+        self.working_set = self.working_set_type(self)
+        self._start_at(self.first_fidelity if fidelity == "" else fidelity)
         self._check_format()
 
     def _start_at(self, fidelity: str | None) -> None:
@@ -391,21 +386,6 @@ class PracticeGuidance(Guidance):
         is there to show beside it."""
         collections = (self.rules, *(fidelity.rules for fidelity in self.fidelities))
         return [rule for collection in collections if collection is not None for rule in collection]
-
-    @property
-    def set_keys(self) -> tuple[str, ...]:
-        """The keys of the practices this one works with in its set: the one it extends and its Clean Engineering
-        companion. The catalogue makes them with it when it makes this practice on its own."""
-        return tuple(key for key in (self.extends, COMPANION_PRACTICE) if key and key != self.key)
-
-    def hold_set(self, practices: dict[str, PracticeGuidance], supplements: list[Any] | None = None) -> None:
-        """Hold the practices of the set this one was made with, by key: the one it extends, and the Clean Engineering
-        practice whose fidelities accompany its own, so it works with the same objects as the rest of its set; and each
-        of supplements that supplements one of its fidelities."""
-        if self.extends:
-            self.extended = practices[self.extends]
-        self.companion = practices.get(COMPANION_PRACTICE)
-        self.supplements = [supplement for supplement in supplements or () if self in supplement.supplemented_practices]
 
     @property
     @data_field
@@ -713,7 +693,7 @@ class FidelityGuidance(Guidance):
         if isinstance(stored, FidelityGuidance):
             return stored
         practice = self.practice_guidance
-        companion = practice.companion if practice is not None else None
+        companion = practice.working_set.companion if practice is not None else None
         if not isinstance(stored, str) or not stored or companion is None:
             return None
         self._clean_engineering = companion.fidelities[stored]
@@ -807,7 +787,7 @@ class FidelityGuidance(Guidance):
     def supplements(self) -> list[Any]:
         """The supplements of its practice that supplement this fidelity, such as TDD for BDD development."""
         practice = self.practice_guidance
-        held = practice.supplements if practice is not None else ()
+        held = practice.working_set.supplements if practice is not None else ()
         return [supplement for supplement in held if self in supplement.supplemented_fidelities]
 
     @property
@@ -891,7 +871,7 @@ class FidelityGuidance(Guidance):
     def actions(self) -> FidelityActions:
         """The actions that work on this fidelity, each run on it: ``fidelity.actions.generate(format="drawio")``.
         The actions register with the action catalogue, so guidance names none of them."""
-        return FidelityActions(self)
+        return FidelityActions(self, ACTION_CATALOGUE)
 
     @property
     @mcp

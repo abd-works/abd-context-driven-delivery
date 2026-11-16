@@ -3,10 +3,38 @@ from __future__ import annotations
 
 import functools
 import importlib
-from typing import TYPE_CHECKING, Any
+from collections.abc import Iterable, Mapping
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import PracticeGuidance
+
+
+class HoldingGraph(Protocol):
+    """The knowledge graph that holds a practice, as a practice's reading names it: harness/graph's *Graph* answers it.
+    harness/graph sits above this module, so only what every reading asks of the graph is named here, as the action
+    catalogue names the fidelity an action runs on; a practice's own kind of reading imports harness/graph and reaches
+    the rest of the graph there."""
+
+    @property
+    def practices(self) -> Iterable[object]: ...
+
+
+class HeldRuleRun(Protocol):
+    """The run of a practice's graph rules in its graph, as a reading asks it for the rules it checks."""
+
+    @property
+    def checks(self) -> Mapping[str, object]: ...
+
+
+class HeldNodes(Protocol):
+    """The practice's part of the graph that holds it (harness/graph's *PracticeNodes*): its nodes and edges, the node
+    types it offers, and the run of its rules."""
+
+    @property
+    def rule_run(self) -> HeldRuleRun: ...
+
+    def offer_node_types(self, types: Iterable[str]) -> None: ...
 
 
 def rules_in(module_path: str) -> dict[str, Any]:
@@ -66,10 +94,10 @@ class PracticeReading:
         self.practice = practice
         # The graph that holds the practice (harness/graph's *Graph*) and the practice's part of it (its
         # *PracticeNodes*: its root node, its nodes, and its edges); none until a graph holds the practice.
-        self.graph: Any = None
-        self.in_graph: Any = None
+        self.graph: HoldingGraph | None = None
+        self.in_graph: HeldNodes | None = None
 
-    def held_in(self, graph: Any, nodes: Any) -> None:
+    def held_in(self, graph: HoldingGraph, nodes: HeldNodes) -> None:
         """Be read in graph, where nodes, the practice's part of it, holds the practice's nodes and edges."""
         self.graph = graph
         self.in_graph = nodes

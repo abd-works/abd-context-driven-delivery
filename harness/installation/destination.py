@@ -173,6 +173,12 @@ class ServerInstallation(Installation):
     # that start the cdd server.
     toolsets: tuple[type, ...] = ()
 
+    @classmethod
+    def create(cls, layout: IdeLayout, path: Path | str, repo: Path | str | None = None) -> ServerInstallation:
+        """The installation of this channel into path for layout, with the collaborators its server needs; the
+        Installer makes every server channel this way. A channel whose server needs none is made as it is."""
+        return cls(layout, path, repo=repo)
+
     def accepts(self, tool: AgentTool) -> bool:
         """Whether tool is written through this installation: it is annotated for this channel."""
         return self.channel in tool.destinations

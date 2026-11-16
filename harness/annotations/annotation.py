@@ -16,10 +16,10 @@ class AnnotationKinds:
     where it is published, without importing the publishers that define the kinds."""
 
     def __init__(self) -> None:
-        self._kinds: list[type[Annotation]] = []
-        self._channels: dict[str, type[Destination]] = {}
+        self._kinds: list[AnnotationKind] = []
+        self._channels: dict[str, DestinationKind] = {}
 
-    def register(self, kind: type[Annotation]) -> None:
+    def register(self, kind: AnnotationKind) -> None:
         """Add kind, the first kind with its flag; a destination also becomes the kind of its channel."""
         if kind.flag and all(known.flag != kind.flag for known in self._kinds):
             self._kinds.append(kind)
@@ -44,11 +44,11 @@ class AnnotationKinds:
     def withholds_install(self, target: Annotatable) -> bool:
         """True when a kind of omission that keeps members out of install annotates target."""
         return any(
-            issubclass(kind, OmissionAnnotation) and kind.omits_install and kind.annotates(target)
+            isinstance(kind, OmissionKind) and kind.omits_install and kind.annotates(target)
             for kind in self._kinds
         )
 
-    def of_channel(self, channel: str) -> type[Destination] | None:
+    def of_channel(self, channel: str) -> DestinationKind | None:
         """The kind of annotation that publishes to channel; none when its publisher was never imported."""
         return self._channels.get(channel)
 
@@ -86,47 +86,56 @@ class AnnotationKinds:
 annotation_kinds = AnnotationKinds()
 
 
-class Annotation:
+class AnnotationKind(type):
+    """A kind of annotation, such as *Skill* or *NoCatalog*: the class an author types as ``@skill`` or ``@noCatalog``
+    is the one instance of its kind, so install and discovery ask the kind itself whether it is on a member and how it
+    publishes one (``Skill.annotates(member)``). Each kind joins ``annotation_kinds`` as it is defined. A family of
+    kinds that answers these in a way of its own names its own kind of kind, as *Destination* does."""
+
+    flag: str
+    copied: bool
+    makes_installable: bool
+
+    def __init__(kind, name: str, bases: tuple[type, ...], namespace: dict[str, Any], **kwargs: Any) -> None:
+        super().__init__(name, bases, namespace, **kwargs)
+        annotation_kinds.register(kind)
+
+    def annotates(kind, target: Annotatable) -> bool:
+        """True when this kind of annotation is on target."""
+        return bool(getattr(target, kind.flag, False))
+
+    def written_as(kind) -> str:
+        """The name an author types for this kind, such as ``skill`` for *Skill*: its class name in snake case, unless
+        the kind names another, as ``agent_tool`` does for *AgentToolAnnotation*."""
+        return kind.__dict__.get("typed_name") or Name(kind.__name__).snake
+
+    def installs_member(kind) -> bool:
+        """Whether this kind on a member makes the member installable, so install counts its class as a toolset."""
+        return kind.makes_installable
+
+    def companion_flags(kind) -> tuple[str, ...]:
+        """The other attributes this kind of annotation sets beside its flag."""
+        return ()
+
+
+class Annotation(metaclass=AnnotationKind):
     """Install and discovery find what an author annotated: the operations and classes an annotation decorates. An
     annotation records itself by setting its ``flag`` on what it decorates, and each kind of annotation is a subclass
-    that names its flag and reads it with ``annotates``. Every kind registers in ``annotation_kinds`` as it is
-    defined, which is the one list of annotations."""
+    that names its flag; its kind (*AnnotationKind*) reads it back with ``annotates``. Every kind registers in
+    ``annotation_kinds`` as it is defined, which is the one list of annotations."""
 
     flag = ""
     # A wrapper of an annotated operation, such as a collected or markdown property, copies the annotations whose kinds
     # say so, so the wrapper installs the way the operation does.
     copied = True
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        super().__init_subclass__(**kwargs)
-        annotation_kinds.register(cls)
+    # Whether this kind on a member makes the member installable, so install counts its class as a toolset.
+    makes_installable: ClassVar[bool] = False
 
     def __new__(cls, target: Annotatable | None = None):
         annotation = object.__new__(cls)
         if callable(target):
             return annotation.annotate(target)
         return annotation
-
-    @classmethod
-    def annotates(cls, target: Annotatable) -> bool:
-        """True when this kind of annotation is on target."""
-        return bool(getattr(target, cls.flag, False))
-
-    @classmethod
-    def written_as(cls) -> str:
-        """The name an author types for this kind, such as ``skill`` for *Skill*: its class name in snake case, unless
-        the kind names another, as ``agent_tool`` does for *AgentToolAnnotation*."""
-        return cls.__dict__.get("typed_name") or Name(cls.__name__).snake
-
-    @classmethod
-    def installs_member(cls) -> bool:
-        """Whether this kind on a member makes the member installable, so install counts its class as a toolset."""
-        return False
-
-    @classmethod
-    def companion_flags(cls) -> tuple[str, ...]:
-        """The other attributes this kind of annotation sets beside its flag."""
-        return ()
 
     def annotate(self, target: Annotatable) -> Annotatable:
         setattr(target, self.flag, True)
@@ -136,10 +145,18 @@ class Annotation:
         return self.annotate(target)
 
 
-class NamesAnnotation(Annotation):
+class NamesKind(AnnotationKind):
+    """A kind of annotation that records a tuple of names on what it annotates and reads them back."""
+
+    def names_on(kind, target: Annotatable) -> tuple[str, ...]:
+        """The names this kind of annotation recorded on target; none when it carries none."""
+        return tuple(getattr(target, kind.flag, ()) or ())
+
+
+class NamesAnnotation(Annotation, metaclass=NamesKind):
     """An annotation that records a tuple of names on what it annotates, such as the fields that name one object of a
-    class or the arguments a tool takes from its call. Each kind names its flag; ``names_on`` reads the names back, and
-    nothing is recorded on what no such annotation decorates."""
+    class or the arguments a tool takes from its call. Each kind names its flag; its kind reads the names back
+    (``names_on``), and nothing is recorded on what no such annotation decorates."""
 
     copied = False
 
@@ -153,44 +170,68 @@ class NamesAnnotation(Annotation):
         setattr(target, self.flag, self.names)
         return target
 
-    @classmethod
-    def names_on(cls, target: Annotatable) -> tuple[str, ...]:
-        """The names this kind of annotation recorded on target; none when it carries none."""
-        return tuple(getattr(target, cls.flag, ()) or ())
 
+class OmissionKind(AnnotationKind):
+    """A kind of annotation that leaves what it annotates out of something. A classmethod or bound method is annotated
+    through the function it wraps, so the annotation is read there too."""
 
-class OmissionAnnotation(Annotation):
-    """An annotation that leaves what it annotates out of something. A classmethod or bound method is annotated
-    through the function it wraps, so the annotation is read there too. A kind that sets ``omits_install`` keeps what
-    it annotates out of every destination, so a member annotated for MCP or a skill is still not published."""
-
-    copied = False
-    omits_install: ClassVar[bool] = False
-
-    @classmethod
-    def annotates(cls, target: Annotatable) -> bool:
+    def annotates(kind, target: Annotatable) -> bool:
         """True when target, or the function it wraps, carries this annotation."""
         return super().annotates(target) or super().annotates(getattr(target, "__func__", None))
 
 
-class HostedOnly(OmissionAnnotation):
+class OmissionAnnotation(Annotation, metaclass=OmissionKind):
+    """An annotation that leaves what it annotates out of something. A kind that sets ``omits_install`` keeps what it
+    annotates out of every destination, so a member annotated for MCP or a skill is still not published."""
+
+    copied = False
+    omits_install: ClassVar[bool] = False
+
+
+class HostedOnlyKind(OmissionKind):
+    """The kind of ``@hosted_only``, which is read on the class it was written on and is not inherited."""
+
+    def annotates(kind, target: Annotatable) -> bool:
+        """True when target, a class or an instance of one, was itself annotated, not a class it derives from."""
+        owner = target if isinstance(target, type) else type(target)
+        return bool(vars(owner).get(kind.flag, False))
+
+
+class HostedOnly(OmissionAnnotation, metaclass=HostedOnlyKind):
     """A class whose tools run only through the practice or toolset that holds it, such as a practice's rules or its
     fidelities: install and the hook server load no toolset of it on its own. Each subclass, such as a practice, is a
     toolset of its own, so the annotation is read on the class it was written on and is not inherited."""
 
     flag = "_hosted_only"
 
-    @classmethod
-    def annotates(cls, target: Annotatable) -> bool:
-        """True when target, a class or an instance of one, was itself annotated, not a class it derives from."""
-        owner = target if isinstance(target, type) else type(target)
-        return bool(vars(owner).get(cls.flag, False))
-
 
 hosted_only = HostedOnly
 
 
-class Destination(Annotation):
+class DestinationKind(AnnotationKind):
+    """A kind of annotation that names where a member is published: its channel, and the name the annotation gave the
+    member there."""
+
+    channel: str
+
+    def installs_member(kind) -> bool:
+        """A destination with a channel publishes the member it annotates there."""
+        return bool(kind.channel)
+
+    def name_annotated_on(kind, operation: Annotatable) -> str:
+        """The name this destination's annotation gave the operation, such as the event a hook runs on; empty when the
+        operation carries no such annotation."""
+        return str(getattr(operation, f"{kind.flag}_name", "") or "")
+
+    def companion_flags(kind) -> tuple[str, ...]:
+        return (f"{kind.flag}_name",)
+
+    def disabled_on(kind, operation: Annotatable) -> bool:
+        """True when the annotation on operation is there but turned off, as ``@Hook(..., disabled=True)`` is."""
+        return False
+
+
+class Destination(Annotation, metaclass=DestinationKind):
     """An annotation that names where a member is published: a skill, a command, a rules file, an MCP tool, or a
     hook. Each publisher defines its own kind with the ``channel`` it writes, and the kind registers in
     ``annotation_kinds`` as it is defined, so the toolset that lists a member's destinations asks every channel
@@ -202,31 +243,11 @@ class Destination(Annotation):
     enlists_member: ClassVar[bool] = False
 
     def annotate(self, target: Annotatable) -> Annotatable:
-        setattr(target, self.flag, True)
+        super().annotate(target)
         name = getattr(self, "name", None)
         if name is not None:
             setattr(target, f"{self.flag}_name", name)
         return target
-
-    @classmethod
-    def installs_member(cls) -> bool:
-        """A destination with a channel publishes the member it annotates there."""
-        return bool(cls.channel)
-
-    @classmethod
-    def name_annotated_on(cls, operation: Annotatable) -> str:
-        """The name this destination's annotation gave the operation, such as the event a hook runs on; empty when the
-        operation carries no such annotation."""
-        return str(getattr(operation, f"{cls.flag}_name", "") or "")
-
-    @classmethod
-    def companion_flags(cls) -> tuple[str, ...]:
-        return (f"{cls.flag}_name",)
-
-    @classmethod
-    def disabled_on(cls, operation: Annotatable) -> bool:
-        """True when the annotation on operation is there but turned off, as ``@Hook(..., disabled=True)`` is."""
-        return False
 
 
 class Toast(Destination):

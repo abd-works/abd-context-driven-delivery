@@ -57,7 +57,7 @@ def _open_session(project: Path, name: str) -> None:
     from space.session import Sessions
 
     sessions = Sessions(project)
-    sessions.open(sessions.create(name, project))
+    sessions.opened.open(sessions.create(name, project))
 
 
 def _call(guidance, project: Path | None = None):
@@ -429,10 +429,10 @@ with description("a guidance action"):
         with before.all:
             import inspect
 
-            from harness.guidance.action_catalogue import ActionCatalogue
+            from harness.guidance.action_catalogue import ACTION_CATALOGUE
 
             self.shipped = []
-            for toolset_class in ActionCatalogue.toolsets():
+            for toolset_class in ACTION_CATALOGUE.toolsets:
                 toolset = toolset_class()
                 guidance_tools = [
                     tool
@@ -637,3 +637,36 @@ with description("a fidelity's actions"):
         self.fidelity.actions.generate(format="drawio")
         log = self.project / ".sessions" / "alpha" / "session.log"
         expect(log.read_text(encoding="utf-8")).to(contain("generate"))
+
+
+with description("the guidance command a board sends"):
+    with before.all:
+        from harness.guidance_actions.guidance_actions import GuidanceCommand
+
+        self.command = GuidanceCommand.from_guidance(
+            "stories-story-map ux-ia session=.sessions/checkout/session.json overlays=lern_domain_driven format=drawio,markdown"
+        )
+
+    with it("should hold the guidance without the command's words"):
+        expect(self.command.guidance).to(equal("stories-story-map ux-ia"))
+
+    with it("should hold the session the command is for"):
+        expect(self.command.session_file).to(equal(".sessions/checkout/session.json"))
+
+    with it("should hold the overlays the command runs with"):
+        expect(self.command.overlays).to(equal(("lern_domain_driven",)))
+
+    with it("should hold the formats the command writes in"):
+        expect(self.command.formats).to(equal(("drawio", "markdown")))
+
+    with context("that names no overlay after its word"):
+        with it("should hold no overlays, which clears the session's"):
+            from harness.guidance_actions.guidance_actions import GuidanceCommand
+
+            expect(GuidanceCommand.from_guidance("stories overlays=").overlays).to(equal(()))
+
+    with context("that names none of the words"):
+        with it("should leave the session's overlays as they are"):
+            from harness.guidance_actions.guidance_actions import GuidanceCommand
+
+            expect(GuidanceCommand.from_guidance("stories").overlays).to(equal(None))
