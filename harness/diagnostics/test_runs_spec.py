@@ -155,6 +155,10 @@ with description("the test cadence") as self:
             self.clock.now = NOON + timedelta(minutes=20)
             expect(self.cadence.run_now(TestTier.E2E).run_id).to(equal(started.run_id))
 
+        with it("should record HEAD, not take over a run left running on another commit"):
+            self.record.save(TestRun(TestTier.E2E, "old", NOON - timedelta(hours=1), pid=GONE))
+            expect(self.cadence.run_now(TestTier.E2E).commit).to(equal("abc123"))
+
         with it("should keep the last lines the run printed"):
             self.runner.output = "\n".join(f"line {number}" for number in range(40))
             expect(self.cadence.run_now(TestTier.HEAVY).summary.splitlines()).to(have_len(12))
