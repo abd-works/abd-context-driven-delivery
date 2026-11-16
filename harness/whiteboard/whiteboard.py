@@ -8,6 +8,7 @@ file beside its other formats, and an agent sends ``Whiteboard.batches(previous)
 from __future__ import annotations
 
 import json
+import math
 import re
 from dataclasses import dataclass, field, fields, replace
 from typing import ClassVar, Dict, Iterable, List, Optional
@@ -15,6 +16,10 @@ from typing import ClassVar, Dict, Iterable, List, Optional
 ID_PATTERN = re.compile(r"^[A-Za-z0-9_.~:@+-]{1,40}$")
 BATCH_SIZE = 50
 """The most writes the artifact store takes in one batch."""
+MAX_SIDE = 8000
+"""The widest or tallest block a board draws; the Whiteboard page draws a block over it at its default size."""
+PIECE_MARK = "~"
+"""What joins a block's id to the number of each further piece of it."""
 
 
 class UnreadableBoard(ValueError):
@@ -81,6 +86,19 @@ class BoardElement:
         return self.id.split(".", 1)[0]
 
     @property
+    def whole_id(self) -> str:
+        """The id of the element this one is a piece of; its own id when it is whole."""
+        return self.id.split(PIECE_MARK, 1)[0]
+
+    def pieces(self) -> List["BoardElement"]:
+        """The elements a board draws this one as: itself, unless it is too big for one."""
+        return [self]
+
+    def joined(self, piece: "BoardElement") -> "BoardElement":
+        """This element with another piece of it joined on; an element in no pieces is itself."""
+        return self
+
+    @property
     def place(self) -> Optional[Box]:
         """Where a person sees the element; none for an element placed by what it joins."""
         return None
@@ -129,6 +147,31 @@ class Block(BoardElement):
     def holds(self, other: "Block") -> bool:
         """Whether other sits inside this block, as a card inside the section drawn round it does."""
         return self.box.holds(other.box)
+
+    def pieces(self) -> List[BoardElement]:
+        """This block as the board draws it: a board draws no block wider than MAX_SIDE, so a wider one, such as the bar
+        of an epic over many stories, is cut into equal pieces side by side, each with the block's words, the first
+        under the block's own id and the rest under ``<id>~2``, ``<id>~3``, ..."""
+        if self.box.h > MAX_SIDE:
+            raise ValueError(f"Element {self.id!r} is {self.box.h} tall; a board draws none taller than {MAX_SIDE}")
+        count = math.ceil(self.box.w / MAX_SIDE)
+        if count <= 1:
+            return [self]
+        width = self.box.w / count
+        return [
+            replace(self, id=self.id if index == 0 else f"{self.id}{PIECE_MARK}{index + 1}",
+                    box=Box(self.box.x + index * width, self.box.y, width, self.box.h))
+            for index in range(count)
+        ]
+
+    def joined(self, piece: BoardElement) -> "Block":
+        """This block stretched over another piece of it."""
+        if not isinstance(piece, Block):
+            return self
+        left, top = min(self.box.x, piece.box.x), min(self.box.y, piece.box.y)
+        right = max(self.box.x + self.box.w, piece.box.x + piece.box.w)
+        bottom = max(self.box.y + self.box.h, piece.box.y + piece.box.h)
+        return replace(self, id=self.whole_id, box=Box(left, top, right - left, bottom - top))
 
 
 @dataclass
@@ -239,18 +282,32 @@ class Whiteboard:
     def order(self) -> List[str]:
         return list(self._elements)
 
+    @property
+    def whole_elements(self) -> List[BoardElement]:
+        """The elements as a practice drew them: a block written as several pieces, because it is wider than a board
+        draws one, is one block again, spanning all its pieces."""
+        wholes: Dict[str, BoardElement] = {}
+        for element in self.elements:
+            whole = element.whole_id
+            wholes[whole] = element if whole not in wholes else wholes[whole].joined(element)
+        return list(wholes.values())
+
     def add(self, element: BoardElement) -> BoardElement:
         """Put element in front of every element already on the board; a section goes behind every element but other
-        sections, so it never covers what it holds."""
+        sections, so it never covers what it holds. A block wider than a board draws one goes on as its pieces."""
+        for piece in element.pieces():
+            self._add_one(piece)
+        return element
+
+    def _add_one(self, element: BoardElement) -> None:
         if element.id in self._elements:
             raise ValueError(f"The board already holds an element {element.id!r}")
         if not isinstance(element, Section):
             self._elements[element.id] = element
-            return element
+            return
         sections = {key: held for key, held in self._elements.items() if isinstance(held, Section)}
         rest = {key: held for key, held in self._elements.items() if key not in sections}
         self._elements = {**sections, element.id: element, **rest}
-        return element
 
     def put(self, element: BoardElement) -> BoardElement:
         """Put element in place of the element with its id, where that one lay; a new id is added as ``add`` adds."""

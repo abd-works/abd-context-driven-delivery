@@ -129,3 +129,27 @@ with description("a whiteboard") as self:
             for index in range(60):
                 board.draw(CardNode(f"story.s{index}", (index * 70, 40, 60, 50)))
             expect([len(batch) for batch in board.batches()]).to(equal([50, 11]))
+
+    with context("with a block wider than a board draws one"):
+        with before.each:
+            self.board = Whiteboard("Orders")
+            self.board.add(Shape("epic.e1", box=Box(100, 0, 20000, 60), text="Move Work Forward"))
+
+        with it("should draw it as equal pieces side by side, none wider than a board draws"):
+            expect([(element.id, element.box) for element in self.board.elements]).to(equal([
+                ("epic.e1", Box(100, 0, 20000 / 3, 60)),
+                ("epic.e1~2", Box(100 + 20000 / 3, 0, 20000 / 3, 60)),
+                ("epic.e1~3", Box(100 + 2 * 20000 / 3, 0, 20000 / 3, 60)),
+            ]))
+
+        with it("should write the block's words on every piece"):
+            expect({element.text for element in self.board.elements}).to(equal({"Move Work Forward"}))
+
+        with it("should read the pieces back as the one block they draw"):
+            read = Whiteboard.from_text(self.board.save()).whole_elements
+            expect([(element.id, element.box) for element in read]).to(equal([("epic.e1", Box(100, 0, 20000, 60))]))
+
+    with context("with a block taller than a board draws one"):
+        with it("should refuse it"):
+            board = Whiteboard("Orders")
+            expect(lambda: board.add(Shape("lane.l1", box=Box(0, 0, 100, 9000)))).to(raise_error(ValueError))

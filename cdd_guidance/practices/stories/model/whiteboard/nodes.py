@@ -151,7 +151,7 @@ class WhiteboardStoryModel(DiagramStoryModel):
 
     def take_board(self, board: Whiteboard) -> "WhiteboardStoryModel":
         """The story map board draws, read by where its elements sit."""
-        cells = [cell for cell in (_BoardCell(element) for element in board.elements) if cell.role]
+        cells = [cell for cell in (_BoardCell(element) for element in board.whole_elements) if cell.role]
         if not any(cell.role == "epic" for cell in cells):
             raise UnreadableBoard("The board holds no story-map epic")
         story_map = WhiteboardStoryModel()

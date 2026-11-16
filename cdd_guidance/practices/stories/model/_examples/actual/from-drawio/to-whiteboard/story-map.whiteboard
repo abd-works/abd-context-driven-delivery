@@ -3,6 +3,7 @@
  "title": "Story Map",
  "order": [
   "epic.9f429a1c0a",
+  "epic.9f429a1c0a~2",
   "subepic.0.3e9eccb0db",
   "story.user.e35a882eaa",
   "story.user.4c6a9c0934",
@@ -111,9 +112,20 @@
    "text": "Onboard A Customer",
    "kind": "rounded",
    "size": "body",
-   "x": 20,
+   "x": 20.0,
    "y": 120,
-   "w": 13608,
+   "w": 6804.0,
+   "h": 60
+  },
+  "epic.9f429a1c0a~2": {
+   "type": "shape",
+   "color": "purple",
+   "text": "Onboard A Customer",
+   "kind": "rounded",
+   "size": "body",
+   "x": 6824.0,
+   "y": 120,
+   "w": 6804.0,
    "h": 60
   },
   "subepic.0.3e9eccb0db": {

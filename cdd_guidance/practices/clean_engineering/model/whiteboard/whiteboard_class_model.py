@@ -249,9 +249,9 @@ class WhiteboardCleanEngineeringModel(DiagramCleanEngineeringModel):
     def take_board(self, board: Whiteboard) -> "WhiteboardCleanEngineeringModel":
         """Read a modules view or a class view drawn on board into this model's own modules, and return it."""
         self.modules = []
-        if any(element.role == "module" for element in board.elements):
+        if any(element.role == "module" for element in board.whole_elements):
             self._read_modules(board)
-        elif any(isinstance(element, Section) for element in board.elements):
+        elif any(isinstance(element, Section) for element in board.whole_elements):
             self._read_classes(board)
         else:
             raise UnreadableBoard("The board holds no module and no class")
@@ -299,21 +299,21 @@ class WhiteboardCleanEngineeringModel(DiagramCleanEngineeringModel):
 
     def _read_modules(self, board: Whiteboard) -> None:
         by_id: Dict[str, WhiteboardModule] = {}
-        for box in (element for element in board.elements if isinstance(element, Shape) and element.role == "module"):
+        for box in (element for element in board.whole_elements if isinstance(element, Shape) and element.role == "module"):
             text = _BoardText(box.text)
             if text.name:
                 by_id[box.id] = WhiteboardModule(name=text.name, sequential_order=len(self.modules) + 1).take_text(text)
                 self.modules.append(by_id[box.id])
-        for arrow in (element for element in board.elements if isinstance(element, Arrow)):
+        for arrow in (element for element in board.whole_elements if isinstance(element, Arrow)):
             source, target = by_id.get(arrow.from_id), by_id.get(arrow.to_id)
             if source is not None and target is not None and target.name not in source.dependencies:
                 source.dependencies.append(target.name)
 
     def _read_classes(self, board: Whiteboard) -> None:
         by_id: Dict[str, WhiteboardClass] = {}
-        for section in (element for element in board.elements if isinstance(element, Section)):
+        for section in (element for element in board.whole_elements if isinstance(element, Section)):
             by_id.update(self._read_section(board, section))
-        for arrow in (element for element in board.elements if isinstance(element, Arrow)):
+        for arrow in (element for element in board.whole_elements if isinstance(element, Arrow)):
             source, target = by_id.get(arrow.from_id), by_id.get(arrow.to_id)
             if source is not None and target is not None:
                 source.take_board_arrow(arrow, target.name)
@@ -326,7 +326,7 @@ class WhiteboardCleanEngineeringModel(DiagramCleanEngineeringModel):
         module = WhiteboardModule(name=section.text.strip(), sequential_order=len(self.modules) + 1)
         self.modules.append(module)
         read: Dict[str, WhiteboardClass] = {}
-        cards = [element for element in board.elements if isinstance(element, Shape) and element.role == "class"]
+        cards = [element for element in board.whole_elements if isinstance(element, Shape) and element.role == "class"]
         for card in (found for found in cards if section.holds(found)):
             text = _BoardText(card.text)
             if text.name:
