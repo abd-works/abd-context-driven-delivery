@@ -1,6 +1,6 @@
 import type { CddApi } from '@cdd/cdd-shared'
 import { TicketClientGenerated } from '@cdd/space/kanban/ticket'
-import { SessionClientGenerated, type FileEntryData, type GuidanceSelectionData } from '@cdd/space/session/session'
+import { SessionClientGenerated, type FileEntryData, type GuidanceSelectionData, type SessionFileData } from '@cdd/space/session/session'
 
 import { ChatContext } from './chat-context'
 import { FileBar } from './file-bar'
@@ -16,6 +16,7 @@ import { FilesStore, type FidelityFiles, type SelectedNode } from './files-state
 import { formatGlyphOf } from './format-chips'
 import { GuidanceSelector } from './guidance-selector'
 import { OpenFiles } from './open-files'
+import { fileAnswered } from './source-of-file'
 
 // While a comment on the open file is with a chat, the file is read again this often, so the chat's change and the
 // comment's processed state show without a reload. Nothing else is read again: never the list, never a board.
@@ -249,8 +250,18 @@ export class FilesPage {
     if (!first) return
     if (this.state.openPath === first && this.state.file) await this.refreshOpen()
     else await this.openAt(first)
-    const read = await Promise.all(others.map(path => this.session.file(path, true, this.state.reads.crossFile)))
-    this.store.change(() => ({ moreFiles: read.filter(file => file !== null) }))
+    const read = await Promise.all(others.map(path => this.readBeside(path)))
+    this.store.change(() => ({ moreFiles: read.filter((file): file is SessionFileData => file !== null) }))
+  }
+
+  // A file opened below the first: one that does not read, or answers no file, is shown and told, and the others open.
+  private async readBeside(path: string): Promise<SessionFileData | null> {
+    try {
+      return fileAnswered(await this.session.file(path, true, this.state.reads.crossFile))
+    } catch (failure) {
+      this.notices.fail(`The Files app did not open ${path}: ${reasonOf(failure)}`, `Opening ${path} in the Files app`)
+      return null
+    }
   }
 
   // The lines of the nodes selected in the graph view that sit in the file at path.
@@ -273,7 +284,7 @@ export class FilesPage {
     try {
       const { rules, crossFile } = this.state.reads
       // A file opened from the graph view needs the folds its graph places, which only a read with rules answers.
-      const file = await this.session.file(path, rules || this.state.graph.selected.length > 0, crossFile)
+      const file = fileAnswered(await this.session.file(path, rules || this.state.graph.selected.length > 0, crossFile))
       if (this.state.openPath !== path) return
       this.store.change(() => ({ file, problem: '' }))
       if (file?.comments.some(comment => comment.state === 'sent')) this.refreshTimer = setTimeout(() => void this.refreshOpen(), SENT_REFRESH_MILLISECONDS)

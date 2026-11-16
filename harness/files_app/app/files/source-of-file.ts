@@ -10,6 +10,35 @@ const VIOLATING = 'violating'
 
 const fileNameOf = (path: string): string => path.split('/').at(-1) ?? path
 
+// The file session.file answered, as the page draws it: none is no file, a file missing a list it holds, as a cdd server
+// lane older than the page answers it (one without callouts, say), holds none of that list, and anything that is not a
+// file, such as the text or error a lane answers for a call it cannot run, is that call's failure, so the page shows it
+// rather than drawing it as a file.
+export function fileAnswered(answer: unknown): SessionFileData | null {
+  if (answer === null || answer === undefined) return null
+  const file = answer as Record<string, unknown>
+  if (typeof answer !== 'object' || typeof file.path !== 'string' || typeof file.text !== 'string') throw new Error(`session.file answered no file: ${saidBy(answer)}`)
+  const steps = listOf<Record<string, unknown>>(file.steps).map(step => ({ ...step, invokes: listOf(step.invokes), observes: listOf(step.observes) }))
+  return {
+    ...(file as SessionFileData),
+    language: typeof file.language === 'string' ? file.language : '',
+    comments: listOf(file.comments),
+    changes: listOf(file.changes),
+    folds: listOf(file.folds),
+    steps: steps as SessionFileData['steps'],
+    callouts: listOf(file.callouts),
+    violations: listOf(file.violations),
+  }
+}
+
+const listOf = <Item>(list: unknown): Item[] => (Array.isArray(list) ? (list as Item[]) : [])
+
+const saidBy = (answer: unknown): string => {
+  if (typeof answer === 'string') return answer
+  const error = (answer as { error?: unknown } | null)?.error
+  return error !== undefined ? String(error) : JSON.stringify(answer)
+}
+
 // How the graph explorer's source view reads a session's file: the whole file as one source, from its first line, so
 // each line the editor shows is that line of the file, with the members of the session's graph, from which a call opens
 // in place, in this file or another; none until the graph view read them.
