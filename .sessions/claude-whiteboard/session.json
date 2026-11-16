@@ -10,7 +10,7 @@
       "specification",
       "implementation"
     ],
-    "version": 20
+    "version": 21
   },
   "practices": {
     "ux": {
@@ -39,7 +39,7 @@
           "drawio"
         ]
       },
-      "enabled": false
+      "enabled": true
     },
     "ddd": {
       "enabled": false
