@@ -13,7 +13,7 @@ import type { FidelityProgressClient } from './fidelity-progress-client'
 // report panel. Each is readied as the status row readies its app (Python's App.open, then this chat starts the server
 // while it is not running), and opens by a link that names what to show. When the pane does not open, the failure line says why.
 
-// The Files app, space/session/files_app: its own server on its own port, readied by Python's App.open as the status
+// The Files app, harness/files_app: its own server on its own port, readied by Python's App.open as the status
 // row readies any app. Its page names the chat that opened it, which its comments are sent to.
 const FILES_APP = 'Files'
 const BOARD_PAGE = '/'

@@ -5,7 +5,7 @@ import '@src/kanban/board/board.css'
 import { BoardPage } from '@src/kanban/board/board-page'
 import { BoardPageView } from '@src/kanban/board/board-page-view'
 
-// The board's page. Files open in the Files app (space/session/files_app), never here.
+// The board's page. Files open in the Files app (harness/files_app), never here.
 const page = new BoardPage()
 
 // A failure nothing on the page caught still reaches the page and the chat that opened it.

@@ -11,8 +11,8 @@ import ports from './ports.json'
 const HOST = '127.0.0.1'
 
 const here = dirname(fileURLToPath(import.meta.url))
-// space/session/files_app/app sits four folders below the repository's root.
-const repository = resolve(here, '..', '..', '..', '..')
+// harness/files_app/app sits three folders below the repository's root.
+const repository = resolve(here, '..', '..', '..')
 const port = Number(process.env.FILES_PORT ?? ports.files[0])
 // A call that names no project is about FILES_PROJECT, which defaults to the checkout cdd was installed from.
 const projects = new ProjectConnections(new CddConnection(process.env.FILES_PROJECT))

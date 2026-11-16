@@ -7,7 +7,7 @@ section: body
 
 # Epic: Review Files In Files App
 
-Map: [story-map.md](../../story-map.md#e-review-generated-work-in-file-viewer). Acceptance tests: `space/session/files_app/review-files-in-files-app.story.shared.py`, replayed by `.story.domain.spec.py` and `.story.server.spec.py` beside it, for what the session answers; `space/session/files_app/app/files/*.spec.ts` for what only the page shows.
+Map: [story-map.md](../../story-map.md#e-review-generated-work-in-file-viewer). Acceptance tests: `space/session/review-files-in-files-app.story.shared.py`, replayed by `.story.domain.spec.py` and `.story.server.spec.py` beside it, for what the session answers; `harness/files_app/app/files/*.spec.ts` for what only the page shows.
 
 Consolidated on 2026-11-14 from the board's Review Files In Viewer scenarios (this file, moved from `harness/.context/stories/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/`), the chat bar's View Fidelity Files scenarios (`harness/.context/stories/move-work-forward-from-chat-bar/guide-work-through-practices/guide_work_through_practices_story.test.md`), the Story UI's acceptance-test link (`.../integrate_practice_content_editor_apps_in_chat_bar_story.test.md`), and the graph's source view stories (`harness/graph/.context/story-map.md`, Open Node Source, Unfold Calls And Classes In Source, Open Violation In Source). Scenario names kept from those sources are unchanged, so the shared steps still find them.
 
@@ -16,10 +16,10 @@ Consolidated on 2026-11-14 from the board's Review Files In Viewer scenarios (th
 - [ticket](../../../../../space/kanban/.context/kanban-model.md#ticket--card): one session on the board.
 - [session](../../../../../space/kanban/.context/kanban-model.md#session): the work behind a ticket. It works in its workpath, and its files are named from there. The Files app reaches no file outside the session's roots.
 - [chat](../../../../../space/kanban/.context/kanban-model.md#chat): a Claude Code chat whose cdd-board mod checks in. Its queue holds the messages sent to it. A message is done once the chat's turn that worked on it has ended.
-- [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets): the file viewer as an app of its own, on its own server and port, opened beside the chat by a link that names the files to show and the chat that opened it (`space/session/files_app/files_app.py`). It never reads the board.
-- [practice](../../../../../space/session/files_app/.context/files-app-model.md#session-practicesessionoutput-python-spacesession): a lens the session works through (Stories, DDD, UX, Clean Engineering, BDD), on or off for the session, with its own colour (`practice_session_output.py`).
+- [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets): the file viewer as an app of its own, on its own server and port, opened beside the chat by a link that names the files to show and the chat that opened it (`harness/files_app/files_app.py`). It never reads the board.
+- [practice](../../../../../harness/files_app/.context/files-app-model.md#session-practicesessionoutput-python-spacesession): a lens the session works through (Stories, DDD, UX, Clean Engineering, BDD), on or off for the session, with its own colour (`practice_session_output.py`).
 - file manager: the session's reader and writer of the files under its roots (`space/session/file_manager.py`).
-- [file comment](../../../../../space/session/files_app/.context/files-app-model.md#filecommentsactions-filesfile-comments-actionsts): a comment a person writes on lines of a file, kept in the session's folder. It is not sent, then sent, then processed.
+- [file comment](../../../../../harness/files_app/.context/files-app-model.md#filecommentsactions-filesfile-comments-actionsts): a comment a person writes on lines of a file, kept in the session's folder. It is not sent, then sent, then processed.
 
 ### Evidence
 
@@ -53,8 +53,8 @@ In every scenario, the [session](../../../../../space/kanban/.context/kanban-mod
 *Given* checkout-flow's Discovery stage holds the fidelities stories-story-map and ddd-bounded-context
 *And* checkout-flow is assigned the chat *checkout-chat*
 *When* the Person opens the stage's files from *checkout-chat*'s chat bar
-*Then* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) opens beside the chat, naming checkout-flow and *checkout-chat*
-*And* its link names both fidelities, stories-story-map and ddd-bounded-context, the [practice](../../../../../space/session/files_app/.context/files-app-model.md#session-practicesessionoutput-python-spacesession) turned off among them
+*Then* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) opens beside the chat, naming checkout-flow and *checkout-chat*
+*And* its link names both fidelities, stories-story-map and ddd-bounded-context, the [practice](../../../../../harness/files_app/.context/files-app-model.md#session-practicesessionoutput-python-spacesession) turned off among them
 *And* the chat bar draws no file, and no diagram is read into the chat
 *And* the Person can Toggle Practice In Files App there
 
@@ -64,7 +64,7 @@ In every scenario, the [session](../../../../../space/kanban/.context/kanban-mod
 
 *Given* checkout-flow's session folder *.sessions/checkout-flow* holds *session.log* and a handoff
 *When* the Person opens the session's folder from *checkout-chat*'s chat bar
-*Then* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) opens on *.sessions/checkout-flow*, listing *session.log* and the handoff
+*Then* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) opens on *.sessions/checkout-flow*, listing *session.log* and the handoff
 
 ## Story: Open File From Another Page
 
@@ -74,14 +74,14 @@ In every scenario, the [session](../../../../../space/kanban/.context/kanban-mod
 *And* the story *Open Story UI* has its acceptance test at *move-work-forward-from-chat-bar/open_story_ui_story.test.py*
 *When* the Person opens the acceptance-test link of *Open Story UI* there
 *Then* *checkout-chat* gets an open_file naming *move-work-forward-from-chat-bar/open_story_ui_story.test.py*
-*And* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) opens on checkout-flow's session folder with *open_story_ui_story.test.py* open
+*And* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) opens on checkout-flow's session folder with *open_story_ui_story.test.py* open
 *But* the Story UI editor opens no file of its own
 
 ## Story: List Files The Link Names
 
 #### Scenario: List each file once, without reading the board
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets)'s link names stories-story-map, whose files are *story-map.md* and *story-map.drawio*
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets)'s link names stories-story-map, whose files are *story-map.md* and *story-map.drawio*
 *When* the Files app opens
 *Then* it lists *story-map.md* and *story-map.drawio*, each once
 *And* opens *story-map.md*, the first file that is not a diagram
@@ -90,7 +90,7 @@ In every scenario, the [session](../../../../../space/kanban/.context/kanban-mod
 #### Scenario: List a file not generated yet, which cannot be opened
 
 *Given* stories-story-map declares *story-map.md*, which is not on disk yet
-*When* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) opens
+*When* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) opens
 *Then* it lists *story-map.md* as not generated yet
 *And* the Person cannot open it
 
@@ -100,7 +100,7 @@ Requested (the person, 2026-11-15): the app's browser pane opens no tab of its o
 
 #### Scenario: Open a diagram beside the file list
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) lists *story-map.drawio*
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) lists *story-map.drawio*
 *When* the Person opens *story-map.drawio*
 *Then* the draw.io editor shows *story-map.drawio* in the Files app's file view
 *And* the file list still shows beside it
@@ -111,7 +111,7 @@ Requested (the person, 2026-11-15): the app's browser pane opens no tab of its o
 
 Required by the cdd_web_domain_access rule `fail-loud-on-mcp` this session overlays: when a call fails, the page shows the person what failed instead of an empty view.
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) lists *story-map.drawio*
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) lists *story-map.drawio*
 *But* the draw.io viewer does not start
 *When* the Person opens *story-map.drawio*
 *Then* the file view says *story-map.drawio did not open in the draw.io viewer*, with the reason
@@ -123,7 +123,7 @@ Requested (the person, 2026-11-15): "add right click to file and folder -> open 
 
 #### Scenario: Show a file in the system's file browser
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) lists *story-map.md*
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) lists *story-map.md*
 *When* the Person right-clicks *story-map.md*
 *Then* a menu shows where the Person clicked, its one choice named for the system: *Open in Explorer* on Windows, *Reveal in Finder* on a Mac, *Open in file manager* elsewhere
 *When* the Person chooses it
@@ -150,7 +150,7 @@ Requested (the person, 2026-11-14): "expand collapse file bar with buttons to sw
 
 #### Scenario: Collapse the file bar to give the open file the page
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filebar-filesfile-barts) lists *story-map.md* and *src/checkout/order.py*, with *order.py* open
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filebar-filesfile-barts) lists *story-map.md* and *src/checkout/order.py*, with *order.py* open
 *When* the Person collapses the file bar
 *Then* the file bar shows only its buttons, and *order.py* takes the page's width
 *When* the Person expands the file bar
@@ -158,7 +158,7 @@ Requested (the person, 2026-11-14): "expand collapse file bar with buttons to sw
 
 #### Scenario: Show the files in their folders, the open file's folder open
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filebar-filesfile-barts) lists *.context/story-map.md*, *src/checkout/order.py* and *src/checkout/cart.py*, with *order.py* open
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filebar-filesfile-barts) lists *.context/story-map.md*, *src/checkout/order.py* and *src/checkout/cart.py*, with *order.py* open
 *When* the Person shows the file bar as folders
 *Then* the file bar shows the folders *.context* and *src/checkout*
 *And* *src/checkout* is open, showing *cart.py* and *order.py*
@@ -170,7 +170,7 @@ Requested (the person, 2026-11-14): "expand collapse file bar with buttons to sw
 
 Requested (the person, 2026-11-15): "keep folder the default view and not reset it every time we change a filter".
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filebar-filesfile-barts) shows its files as folders, its default, *.context* open
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filebar-filesfile-barts) shows its files as folders, its default, *.context* open
 *When* the Person closes *.context*
 *Then* *.context* shows no file
 *When* a filter changes the files listed
@@ -201,7 +201,7 @@ Requested (the person, 2026-11-15): two buttons. All session files lists every f
 
 #### Scenario: List all session files, then this session's
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filebar-filesfile-barts) has Discovery selected, and the session's root holds *.context/stories-story-map.md* of the story map, *specs/checkout.md* of Specification's scenarios, and *notes/plain.txt* and *src/order.py* of no fidelity, the branch having changed only *order.py*
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filebar-filesfile-barts) has Discovery selected, and the session's root holds *.context/stories-story-map.md* of the story map, *specs/checkout.md* of Specification's scenarios, and *notes/plain.txt* and *src/order.py* of no fidelity, the branch having changed only *order.py*
 *When* the Person lists All session files
 *Then* the file bar lists *stories-story-map.md*, *plain.txt* and *order.py*
 *And* leaves out *checkout.md*, whose stage is not selected
@@ -225,13 +225,13 @@ Requested (the person, 2026-11-15): two buttons. All session files lists every f
 #### Scenario: Show each practice as a toggle in its colour
 
 *Given* checkout-flow works on Stories and has DDD turned off
-*When* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) opens
+*When* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) opens
 *Then* the top of the page shows a Stories toggle filled in Stories' colour, *#6BCB77*
 *And* a DDD toggle drawn as an outline in DDD's colour, *#6C5CE7*
 
 #### Scenario: List only the files of the practices turned on
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets)'s link names stories-story-map and ddd-bounded-context
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets)'s link names stories-story-map and ddd-bounded-context
 *But* checkout-flow has DDD turned off
 *When* the Files app opens
 *Then* it lists *story-map.md*
@@ -239,7 +239,7 @@ Requested (the person, 2026-11-15): two buttons. All session files lists every f
 
 #### Scenario: Turn a practice on to show its files
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows the DDD toggle as an outline
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows the DDD toggle as an outline
 *When* the Person turns DDD on
 *Then* checkout-flow's session works on DDD, saved in its session.json
 *And* the DDD toggle fills in DDD's colour
@@ -248,7 +248,7 @@ Requested (the person, 2026-11-15): two buttons. All session files lists every f
 
 #### Scenario: Turn a practice off to hide its files
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows the Stories toggle filled
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows the Stories toggle filled
 *When* the Person turns Stories off
 *Then* checkout-flow's session no longer works on Stories
 *And* the Stories toggle shows as an outline
@@ -258,14 +258,14 @@ Requested (the person, 2026-11-15): two buttons. All session files lists every f
 
 #### Scenario: Show a practice turned on in the Files app on the chat bar
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) was opened from *checkout-chat*, which has checked in
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) was opened from *checkout-chat*, which has checked in
 *When* the Person turns DDD on in the Files app
 *Then* *checkout-chat* gets a refresh
 *And* *checkout-chat*'s chat bar reads the board again and shows ddd-bounded-context's dot
 
 #### Scenario: Show a practice turned off on the chat bar in the Files app
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows the DDD toggle filled
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows the DDD toggle filled
 *When* the Person turns DDD off on the chat bar
 *Then* within a second, with no press in the Files app, the DDD toggle shows as an outline
 *And* the Files app no longer lists *bounded-context-map.md*
@@ -280,7 +280,7 @@ Requested (the person, 2026-11-15): two buttons. All session files lists every f
 
 *Given* checkout-flow's session holds *order.py*
 *When* the Person views *order.py*
-*Then* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* in the source view as Python, with line 12 reading *def place(self, cart: Cart) -> Order:*
+*Then* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* in the source view as Python, with line 12 reading *def place(self, cart: Cart) -> Order:*
 *And* the source view is read-only
 *And* the Person can Add Comment To File Selection from there
 
@@ -290,7 +290,7 @@ Intended: the Files app shows markdown as text today.
 
 *Given* checkout-flow's session holds *README.md*, which starts *# Checkout*
 *When* the Person views *README.md*
-*Then* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *Checkout* rendered as a heading, not as *# Checkout*
+*Then* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *Checkout* rendered as a heading, not as *# Checkout*
 
 ## Story: Fold Classes And Operations
 
@@ -329,7 +329,7 @@ Requested (the person, 2026-11-15): Rules and Cross-file toggles at the top, off
 
 Intended in the Files app: the board's files panel does it, the Files app is read-only today.
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* of checkout-flow
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* of checkout-flow
 *And* the Person has edited line 14 to read *raise EmptyCartError(cart.id, "a cart needs one item to be placed")*
 *When* the Person saves the file
 *Then* *order.py* on disk reads that line 14
@@ -343,9 +343,9 @@ Intended in the Files app: the board's files panel does it, the Files app is rea
 
 #### Scenario: Mark a comment beside the selection's first line
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* of checkout-flow
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* of checkout-flow
 *And* the Person has selected lines 12 to 14
-*When* the Person adds the [file comment](../../../../../space/session/files_app/.context/files-app-model.md#filecommentsactions-filesfile-comments-actionsts) *an empty cart should say which cart and why* to the selection
+*When* the Person adds the [file comment](../../../../../harness/files_app/.context/files-app-model.md#filecommentsactions-filesfile-comments-actionsts) *an empty cart should say which cart and why* to the selection
 *Then* a comment marker shows beside line 12, not sent
 *And* checkout-flow's file comments hold *order.py:L12-L14* with that comment
 *And* the Person can Send File Comments To Chat with it
@@ -353,7 +353,7 @@ Intended in the Files app: the board's files panel does it, the Files app is rea
 #### Scenario: Keep file comments when the page reloads
 
 *Given* checkout-flow's file comments hold *order.py:L12-L14*
-*When* the Person views *order.py* again after the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) reloads
+*When* the Person views *order.py* again after the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) reloads
 *Then* the comment marker still shows beside line 12
 
 ## Story: Open Edit And Delete File Comment
@@ -362,7 +362,7 @@ Intended in the Files app: the board's files panel does it, the Files app is rea
 
 *Given* checkout-flow's file comments hold *order.py:L12-L14*, *an empty cart should say which cart and why*
 *When* the Person opens the comment at the marker beside line 12
-*Then* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *an empty cart should say which cart and why* under lines 12 to 14, with its state
+*Then* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *an empty cart should say which cart and why* under lines 12 to 14, with its state
 
 #### Scenario: Edit a file comment
 
@@ -381,7 +381,7 @@ Intended in the Files app: the board's files panel does it, the Files app is rea
 
 #### Scenario: Add a comment to the chat's queue
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) was opened from the [chat](../../../../../space/kanban/.context/kanban-model.md#chat) *checkout-chat*, which has checked in
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) was opened from the [chat](../../../../../space/kanban/.context/kanban-model.md#chat) *checkout-chat*, which has checked in
 *And* checkout-flow's file comments hold *order.py:L12-L14*, *an empty cart should say which cart and why*, not sent
 *When* the Person sends that comment to the chat
 *Then* the *checkout-chat* queue holds a fill that reads:
@@ -400,7 +400,7 @@ session=.sessions/checkout-flow/session.json
 
 #### Scenario: Send every open comment at once
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) was opened from *checkout-chat*, which has checked in
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) was opened from *checkout-chat*, which has checked in
 *And* checkout-flow's file comments hold *order.py:L12-L14* and *order.py:L30-L31*, both not sent
 *And* *order.py:L40-L41* already sent
 *When* the Person sends checkout-flow's open file comments to the chat
@@ -410,7 +410,7 @@ session=.sessions/checkout-flow/session.json
 
 #### Scenario: Keep the comment unsent when the chat is not connected
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) was opened from *checkout-chat*
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) was opened from *checkout-chat*
 *And* checkout-flow's file comments hold *order.py:L12-L14*, not sent
 *But* *checkout-chat* has not checked in
 *When* the Person sends the comment *order.py:L12-L14* to the chat
@@ -421,16 +421,16 @@ session=.sessions/checkout-flow/session.json
 
 #### Scenario: Mark a comment processed once the chat has worked on it
 
-*Given* checkout-flow's [file comment](../../../../../space/session/files_app/.context/files-app-model.md#filecommentsactions-filesfile-comments-actionsts) *order.py:L12-L14* is sent, as a message to *checkout-chat*
+*Given* checkout-flow's [file comment](../../../../../harness/files_app/.context/files-app-model.md#filecommentsactions-filesfile-comments-actionsts) *order.py:L12-L14* is sent, as a message to *checkout-chat*
 *And* *checkout-chat* has shown that message and its turn is working on it
 *When* *checkout-chat*'s turn ends
 *Then* checkout-flow's file comments show *order.py:L12-L14* as processed
 *And* the comment marker beside line 12 shows the comment as processed
-*And* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) can Show Changed File After Comment
+*And* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) can Show Changed File After Comment
 
 #### Scenario: Keep a comment sent while the chat still works on it
 
-*Given* checkout-flow's [file comment](../../../../../space/session/files_app/.context/files-app-model.md#filecommentsactions-filesfile-comments-actionsts) *order.py:L12-L14* is sent, as a message to *checkout-chat*
+*Given* checkout-flow's [file comment](../../../../../harness/files_app/.context/files-app-model.md#filecommentsactions-filesfile-comments-actionsts) *order.py:L12-L14* is sent, as a message to *checkout-chat*
 *But* *checkout-chat*'s turn has not ended
 *When* the Person views *order.py*
 *Then* the comment marker beside line 12 shows the comment as sent
@@ -439,9 +439,9 @@ session=.sessions/checkout-flow/session.json
 
 #### Scenario: Show the agent's change to the open file
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* of checkout-flow, read-only
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* of checkout-flow, read-only
 *And* the chat's turn changed line 14 of *order.py* to *raise EmptyCartError(cart.id, "a cart needs one item to be placed")*
-*When* the [file comment](../../../../../space/session/files_app/.context/files-app-model.md#filecommentsactions-filesfile-comments-actionsts) *order.py:L12-L14* is marked processed
+*When* the [file comment](../../../../../harness/files_app/.context/files-app-model.md#filecommentsactions-filesfile-comments-actionsts) *order.py:L12-L14* is marked processed
 *Then* the source view shows line 14 as *raise EmptyCartError(cart.id, "a cart needs one item to be placed")*
 *And* the comment marker still shows beside line 12, processed
 
@@ -460,7 +460,7 @@ Intended in the Files app (`.sessions/_backlog/review-work-in-board-files.md`, "
 
 #### Scenario: Mark the line the chat changed, with the line it replaced
 
-*Given* checkout-flow's [file comment](../../../../../space/session/files_app/.context/files-app-model.md#filecommentsactions-filesfile-comments-actionsts) *order.py:L12-L14* was sent while line 14 read *raise EmptyCartError(cart.id)*
+*Given* checkout-flow's [file comment](../../../../../harness/files_app/.context/files-app-model.md#filecommentsactions-filesfile-comments-actionsts) *order.py:L12-L14* was sent while line 14 read *raise EmptyCartError(cart.id)*
 *And* the chat's turn changed line 14 to *raise EmptyCartError(cart.id, "a cart needs one item to be placed")*
 *When* the file comment *order.py:L12-L14* is marked processed
 *Then* the source view marks line 14 as changed by the chat
@@ -468,7 +468,7 @@ Intended in the Files app (`.sessions/_backlog/review-work-in-board-files.md`, "
 
 #### Scenario: Mark the lines the chat added
 
-*Given* checkout-flow's [file comment](../../../../../space/session/files_app/.context/files-app-model.md#filecommentsactions-filesfile-comments-actionsts) *order.py:L12-L14* was sent
+*Given* checkout-flow's [file comment](../../../../../harness/files_app/.context/files-app-model.md#filecommentsactions-filesfile-comments-actionsts) *order.py:L12-L14* was sent
 *And* the chat's turn added two lines after line 14
 *When* the file comment *order.py:L12-L14* is marked processed
 *Then* the source view marks lines 15 and 16 as added by the chat
@@ -476,7 +476,7 @@ Intended in the Files app (`.sessions/_backlog/review-work-in-board-files.md`, "
 
 #### Scenario: Mark nothing when the chat left the file as it was
 
-*Given* checkout-flow's [file comment](../../../../../space/session/files_app/.context/files-app-model.md#filecommentsactions-filesfile-comments-actionsts) *order.py:L12-L14* was sent
+*Given* checkout-flow's [file comment](../../../../../harness/files_app/.context/files-app-model.md#filecommentsactions-filesfile-comments-actionsts) *order.py:L12-L14* was sent
 *And* the chat's turn changed no line of *order.py*
 *When* the file comment *order.py:L12-L14* is marked processed
 *Then* the source view marks no line of *order.py* as changed
@@ -494,7 +494,7 @@ Requested (2026-11-15, "on right click of file we also need an add to context op
 
 #### Scenario: Add a file to the chat's context
 
-*Given* the [Files app](../../../../../space/session/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) was opened from the [chat](../../../../../space/kanban/.context/kanban-model.md#chat) *checkout-chat*, which has checked in
+*Given* the [Files app](../../../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) was opened from the [chat](../../../../../space/kanban/.context/kanban-model.md#chat) *checkout-chat*, which has checked in
 *And* it lists *order.py*
 *When* the Person adds *order.py* to the chat's context
 *Then* the *checkout-chat* queue holds a fill that reads `@src/checkout/order.py `
