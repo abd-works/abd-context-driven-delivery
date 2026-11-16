@@ -121,14 +121,14 @@ function SessionNameView($: EngineInterface, elements: ElementTable, draw: ChatB
       <Box key="session-name" flexDirection="row" gap={0}>
         <Box key="repo-anchor">
           {GlyphButtonView(elements, 'repo-list-button', REPO_GLYPH, BRAND.muted, () => toggleRepoListWithRepos($))}
-          {draw.view.isRepoListOpen ? null : TipView(elements, repoWordOf(chatBar), 'other repositories', BRAND.muted)}
+          {draw.view.isRepoListOpen ? null : TipView(elements, repoWordOf(chatBar), '', BRAND.muted)}
           {RepoListView($, elements, draw)}
         </Box>
         <Box key="session-anchor" marginLeft={1}>
           <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
             {GlyphButtonView(elements, 'session-list-button', SESSION_GLYPH, BRAND.muted, () => toggleSessionList($))}
           </Box>
-          {draw.view.isSessionListOpen ? null : TipView(elements, sessionWordOf(chatBar), 'tickets to open', BRAND.muted)}
+          {draw.view.isSessionListOpen ? null : TipView(elements, sessionWordOf(chatBar), '', BRAND.muted)}
           {SessionListView($, elements, draw)}
         </Box>
       </Box>
