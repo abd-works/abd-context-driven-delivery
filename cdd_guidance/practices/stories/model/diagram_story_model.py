@@ -197,6 +197,45 @@ class DiagramStory(Story, DiagramStoryNode):
     actor_stroke = "#6c8ebf"
 
 
+
+class LaidOutStory(DiagramStory):
+    """A story card in a drawn map's story line: in its epic's column after the epic's inset, the stories before it in
+    the epic each taking one pitch. Every drawn format places its stories this way, with its own pitch and padding."""
+
+    column_pad = 0
+
+    @property
+    def x(self) -> int:
+        parent = self.parent
+        if not isinstance(parent, Epic):
+            return 0
+        return parent.x + type(parent).tighten + self.column_pad + parent.stories.index(self) * self.pitch
+
+    @property
+    def y(self) -> int:
+        return self._story_line_y()
+
+
+class LaidOutEpic(DiagramEpic):
+    """An epic bar in a drawn map: as wide as the story columns it spans at its format's story pitch, a sub-epic one
+    bar lower for each level it is nested. Every drawn format places its bars this way, with its own pitch."""
+
+    @property
+    def width(self) -> int:
+        if isinstance(self.parent, Epic):
+            return max(self.diagram_span_columns(), 1) * self.story_pitch
+        return self.span_columns() * self.story_pitch
+
+    @property
+    def height(self) -> int:
+        return self.bar_height
+
+    @property
+    def y(self) -> int:
+        if isinstance(self.parent, Epic):
+            return self._sub_epic_bar_y(self.depth)
+        return self.row_y
+
 class DiagramIncrement(Increment, DiagramStoryNode):
     label_width = 160
     lane_height = 70

@@ -14,6 +14,8 @@ from typing import Dict, List, Optional, Tuple
 
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramStoryCell,
+    LaidOutEpic,
+    LaidOutStory,
     DiagramEpic,
     DiagramIncrement,
     DiagramStory,
@@ -56,7 +58,7 @@ class DrawIOIncrement(DiagramIncrement):
         return (cls.lane_height - DiagramStory.size) // 2
 
 
-class DrawIOStory(DiagramStory):
+class DrawIOStory(LaidOutStory):
     shaping_row_y = 275
     inset = 10
     actor_style = (
@@ -83,18 +85,6 @@ class DrawIOStory(DiagramStory):
                 seen += 1
         return self.slug if seen == 0 else f"{self.slug}-{seen + 1}"
 
-    @property
-    def x(self) -> int:
-        parent = self.parent
-        if not isinstance(parent, Epic):
-            return 0
-        index = parent.stories.index(self)
-        return parent.x + DrawIOEpic.tighten + index * self.pitch
-
-    @property
-    def y(self) -> int:
-        return self._story_line_y()
-
     def cells(self, parent_id: str) -> List["DrawIOStoryModel.Vertex"]:
         actor = self.actors[0].strip() if self.actors else ""
         cell_id = f"{parent_id}/{self.cell_slug}"
@@ -112,7 +102,7 @@ class DrawIOStory(DiagramStory):
         return drawn
 
 
-class DrawIOEpic(DiagramEpic):
+class DrawIOEpic(LaidOutEpic):
     # A draw.io epic starts at the map's margin, its sub-epics after the stories it holds itself.
     first_x = DiagramEpic.left_margin
     epic_spacing = DiagramEpic.gap
@@ -136,24 +126,8 @@ class DrawIOEpic(DiagramEpic):
         return self.slug
 
     @property
-    def width(self) -> int:
-        if isinstance(self.parent, Epic):
-            return max(self.diagram_span_columns(), 1) * DrawIOStory.pitch
-        return self.span_columns() * DiagramStory.pitch
-
-    @property
     def bar_width(self) -> int:
         return self.width - self.tighten * 2
-
-    @property
-    def height(self) -> int:
-        return self.bar_height
-
-    @property
-    def y(self) -> int:
-        if not isinstance(self.parent, Epic):
-            return self.row_y
-        return self._sub_epic_bar_y(self.depth)
 
     @property
     def style(self) -> str:

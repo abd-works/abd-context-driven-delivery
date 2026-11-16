@@ -22,6 +22,8 @@ from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramStory,
     DiagramStoryCell,
     DiagramStoryModel,
+    LaidOutEpic,
+    LaidOutStory,
 )
 from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel
 
@@ -42,7 +44,7 @@ class _BoardStoryNode(WhiteboardNode):
         return hashlib.sha1("/".join(reversed(names)).encode("utf-8")).hexdigest()[:KEY_LENGTH]
 
 
-class WhiteboardStory(DiagramStory, _BoardStoryNode):
+class WhiteboardStory(LaidOutStory, _BoardStoryNode):
     """A story card on the story line under its epic: its actor in italics on the first line, then its name. A board
     grows a block too small for its words over its neighbours, so the card is sized for a story name of three lines
     at the board's small text, and cards stand the board's 24 units apart."""
@@ -54,17 +56,6 @@ class WhiteboardStory(DiagramStory, _BoardStoryNode):
     row_y = 280
     actor_height = 0
     actor_gap = 0
-
-    @property
-    def x(self) -> int:
-        parent = self.parent
-        if not isinstance(parent, Epic):
-            return 0
-        return parent.x + self.column_pad + parent.stories.index(self) * self.pitch
-
-    @property
-    def y(self) -> int:
-        return self._story_line_y()
 
     def board_box(self) -> Box:
         return Box(self.x, self.y, self.card_width, self.size)
@@ -85,7 +76,7 @@ class WhiteboardStory(DiagramStory, _BoardStoryNode):
                      kind="rounded", color="yellow", size="small", text=self.card_text)
 
 
-class WhiteboardEpic(DiagramEpic, _BoardStoryNode):
+class WhiteboardEpic(LaidOutEpic, _BoardStoryNode):
     """An epic bar; a sub-epic's bar sits one row lower for each level it is nested, under the epic that holds it."""
 
     tighten = 0
@@ -94,22 +85,6 @@ class WhiteboardEpic(DiagramEpic, _BoardStoryNode):
     first_x = DiagramEpic.left_margin
     epic_spacing = DiagramEpic.gap
     story_pitch = WhiteboardStory.pitch
-
-    @property
-    def width(self) -> int:
-        if isinstance(self.parent, Epic):
-            return max(self.diagram_span_columns(), 1) * WhiteboardStory.pitch
-        return self.span_columns() * WhiteboardStory.pitch
-
-    @property
-    def height(self) -> int:
-        return self.bar_height
-
-    @property
-    def y(self) -> int:
-        if isinstance(self.parent, Epic):
-            return self._sub_epic_bar_y(self.depth)
-        return self.row_y
 
     def board_box(self) -> Box:
         return Box(self.x, self.y, self.width - self.bar_gap, self.height)

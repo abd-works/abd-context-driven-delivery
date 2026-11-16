@@ -15,6 +15,8 @@ from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramIncrement,
     DiagramStory,
     DiagramStoryModel,
+    LaidOutEpic,
+    LaidOutStory,
 )
 from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel, StoryType
 
@@ -31,7 +33,7 @@ class MiroIncrement(DiagramIncrement):
             f"<td>{html.escape(cell, quote=True)}</td>" for cell in cells
         ) + "</tr>"
 
-class MiroStory(DiagramStory):
+class MiroStory(LaidOutStory):
     """A Miro board reads at a coarser zoom than a DrawIO page, so story cards and
     their columns are larger here than the shared diagram geometry."""
 
@@ -39,18 +41,6 @@ class MiroStory(DiagramStory):
     size = 60
     actor_height = size
     column_pad = 5
-
-    @property
-    def x(self) -> int:
-        parent = self.parent
-        if not isinstance(parent, Epic):
-            return 0
-        index = parent.stories.index(self)
-        return parent.x + MiroEpic.tighten + self.column_pad + index * self.pitch
-
-    @property
-    def y(self) -> int:
-        return self._story_line_y()
 
     def shapes(self, parent_id: str) -> List[dict]:
         parent = self.parent
@@ -84,7 +74,7 @@ class MiroStory(DiagramStory):
         return shapes
 
 
-class MiroEpic(DiagramEpic):
+class MiroEpic(LaidOutEpic):
     """A nested epic is inset from its parent's left edge and sits flush with its
     right edge, so the nesting reads as a bar under the epic that owns it."""
 
@@ -93,22 +83,6 @@ class MiroEpic(DiagramEpic):
     first_x = DiagramEpic.left_margin
     epic_spacing = DiagramEpic.gap
     story_pitch = MiroStory.pitch
-
-    @property
-    def width(self) -> int:
-        if isinstance(self.parent, Epic):
-            return max(self.diagram_span_columns(), 1) * MiroStory.pitch
-        return self.span_columns() * MiroStory.pitch
-
-    @property
-    def height(self) -> int:
-        return self.bar_height
-
-    @property
-    def y(self) -> int:
-        if isinstance(self.parent, Epic):
-            return self._sub_epic_bar_y(self.depth)
-        return self.row_y
 
     @property
     def fill(self) -> str:
