@@ -7,6 +7,7 @@ from space.kanban.story_test import load_shared, replay
 # The domain tier proves every scenario's behaviour; this tier proves the cdd tools reach it, so it replays only
 # the fewest scenarios that between them call each tool these scenarios use once.
 WIRING = [
+    "Show a practice turned on in the Files app on the chat bar",
     "Show a code file in the viewer with its lines numbered",
     "Fold the file's class and its operations",
     "Mark the lines a broken rule names",

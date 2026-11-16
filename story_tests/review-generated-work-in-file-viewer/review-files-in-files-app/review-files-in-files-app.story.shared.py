@@ -105,6 +105,33 @@ def _(s):
         expect([practice["key"] for practice in saved["practices"] if practice["is_selected"]]).not_to(contain("stories"))
 
 
+# --- Keep Chat Bar Practices In Sync ------------------------------------------------------------------------------
+
+
+@shared_stories.scenario("Keep Chat Bar Practices In Sync", "Show a practice turned on in the Files app on the chat bar")
+def _(s):
+    @s.given("the Files app was opened from checkout-chat, which has checked in")
+    def _(world):
+        world.project.seed_session(CHECKOUT_FLOW_WITHOUT_DDD)
+        seed_connected_chat(world)
+        world.drawn = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.guidance_selection())
+
+    @s.when("the Person turns DDD on in the Files app")
+    def _(world):
+        turned_on = [practice["key"] for practice in world.drawn["practices"] if practice["is_selected"] or practice["key"] == "ddd"]
+        world.Ticket.load(CHECKOUT_FLOW.name).session.update_guidance_selection(practices=turned_on)
+
+    @s.then("checkout-chat's chat bar, waiting on session.guidance_selection_after, shows ddd-bounded-context's dot")
+    def _(world):
+        heard = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.guidance_selection_after(version=world.drawn["version"]))
+        expect(("ddd-bounded-context" in world.drawn["fidelities"], "ddd-bounded-context" in heard["fidelities"])).to(equal((False, True)))
+
+    @s.then("no refresh message is sent to checkout-chat")
+    def _(world):
+        sent = world.data_of(world.Chat.load(CHECKOUT_CHAT).messages())
+        expect([message["kind"] for message in sent]).not_to(contain("refresh"))
+
+
 # --- View Files In Rich Viewer ------------------------------------------------------------------------------------
 
 
