@@ -1,0 +1,8 @@
+{
+  "name": "review-ai-changes-in-files-app",
+  "title": "Review AI Changes In Files App",
+  "scope": "feature",
+  "workpath": "harness",
+  "parent": "file-manager",
+  "pulled_out": false
+}
