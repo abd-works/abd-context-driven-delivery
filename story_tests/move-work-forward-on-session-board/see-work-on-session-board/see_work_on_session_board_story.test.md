@@ -209,6 +209,15 @@ section: body
 *When* a turn in a chat with the cdd-board mod loaded ends
 *Then* the chat's status line reads checkout-flow · Discovery · next: stories-story-map · 1 with violations
 
+#### Scenario: Place a ticket with no move in the earliest stage it has work in
+
+> From `story_tests/move-work-forward-on-session-board/see-work-on-session-board/display-ticket-card/display_ticket_card_story.test.py`, generated 2026-11-16 from the story test's code.
+
+*Given* the [session log](../../../.context/kanban-model.md#session) of the [ticket](../../../.context/kanban-model.md#ticket--card) pet-visits has one line, generate /work/ux ux mockup html ux  
+  *But* it has no move line  
+*When* the session board reads the [board](../../../.context/kanban-model.md#board)  
+*Then* pet-visits shows in the Specification [stage](../../../.context/kanban-model.md#stage--column)
+
 ## Story: Display Ticket Details
 
 #### Scenario: Show the ticket of a card pressed anywhere
@@ -345,3 +354,36 @@ section: body
 *When* the Person opens checkout-flow's files from its card
 *Then* checkout-flow's files show
 *And* checkout-flow's card stays collapsed
+
+## Story: Restrict Actions To Active Session
+
+#### Scenario: Lock tickets that are not the active session
+
+> From `story_tests/move-work-forward-on-session-board/see-work-on-session-board/restrict-actions-to-active-session/restrict_actions_to_active_session_story.test.py`, generated 2026-11-16 from the story test's code.
+
+*Given* Active session only is on  
+  *And* checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card)  
+*When* the session board draws billing-report's card and tiles  
+*Then* billing-report's Run next, Run, practice switches, Split, and Handoff are off  
+  *And* billing-report's Run next says Activate this session to run its next step  
+  *And* checkout-flow's actions stay on
+
+#### Scenario: Keep information and moves open on a locked ticket
+
+> From `story_tests/move-work-forward-on-session-board/see-work-on-session-board/restrict-actions-to-active-session/restrict_actions_to_active_session_story.test.py`, generated 2026-11-16 from the story test's code.
+
+*Given* Active session only is on  
+  *And* billing-report is not the active [ticket](../../../.context/kanban-model.md#ticket--card)  
+*When* the Person opens billing-report's files  
+*Then* the files panel lists billing-report's files  
+*When* the Person moves billing-report to Specification  
+*Then* billing-report moves to Specification  
+  *And* Activate stays on for billing-report
+
+#### Scenario: Unlock every ticket
+
+> From `story_tests/move-work-forward-on-session-board/see-work-on-session-board/restrict-actions-to-active-session/restrict_actions_to_active_session_story.test.py`, generated 2026-11-16 from the story test's code.
+
+*Given* Active session only is on  
+*When* the Person turns Active session only off  
+*Then* billing-report's actions are on like the active ticket's

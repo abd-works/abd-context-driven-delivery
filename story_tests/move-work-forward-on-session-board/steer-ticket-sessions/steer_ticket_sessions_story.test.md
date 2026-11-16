@@ -73,6 +73,18 @@ section: body
 *Then* nothing is sent
 *And* a toast asks to open checkout-flow's chat or pick one in the chat list
 
+#### Scenario: Choose a ticket's root
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* checkout-flow works on the whole repository  
+  *And* the repository has src/billing and src/visits under src  
+*When* the Person browses src for checkout-flow's root  
+*Then* the roots dialog lists src/billing and src/visits  
+*When* the Person chooses src/visits as checkout-flow's root  
+*Then* checkout-flow's root reads src/visits  
+  *And* each practice's default root sits under src/visits
+
 ## Story: Activate Ticket
 
 #### Scenario: Open a ticket in its own worktree
@@ -170,6 +182,53 @@ section: body
 *Then* checkout-flow shows in Complete
 *And* its folder is in .sessions/_complete/checkout-flow
 *But* checkout-flow's work is not committed
+
+#### Scenario: Commit the closed session's folder and return to main
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* checkout-flow is open in its own worktree  
+*When* the Person closes checkout-flow, committing and pushing  
+*Then* nothing is left uncommitted  
+  *And* the checkout is back on main
+
+#### Scenario: Offer to commit a branch open in its worktree
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* checkout-flow is the active ticket, its branch open in its own worktree  
+*When* the Person closes checkout-flow  
+*Then* the close dialog offers a handoff, and to commit and push checkout-flow
+
+#### Scenario: Close a session whose work is on main
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* checkout-flow is the active ticket, its work on main  
+*When* the Person closes checkout-flow  
+*Then* the close dialog offers to commit and push main  
+*When* the Person confirms  
+*Then* main on origin holds the commit checkout-flow: leave session  
+  *And* the checkout is still on main  
+  *And* checkout-flow shows in Complete
+
+#### Scenario: Write a handoff for the session being closed
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* checkout-flow is the active ticket, its story map held on violations  
+*When* the Person closes checkout-flow with Create handoff chosen  
+*Then* checkout-flow's folder in .sessions/_complete holds a handoff  
+  *And* the handoff names stories-story-map as what comes next
+
+#### Scenario: Return to main whatever is chosen
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* checkout-flow is open in its own worktree  
+*When* the Person closes checkout-flow with nothing chosen  
+*Then* the checkout is back on main  
+  *And* main is the active ticket
 
 ## Story: Move Ticket
 
@@ -306,3 +365,147 @@ section: body
 *When* the Person makes billing-report the active ticket on the board  
 *Then* billing-report's chat opens in the chat panel with the session  
   *And* the chat panel shows billing-report's last messages
+
+## Story: Add Backlog Item
+
+#### Scenario: Add an idea to the Backlog
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* the Backlog column has no backlog item titled Gift cards  
+*When* the Person adds the backlog item Gift cards with the text Sell gift cards.  
+*Then* the Backlog shows Gift cards with the text Sell gift cards.
+
+#### Scenario: Start a backlog item in a chosen folder
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* the backlog item Gift cards is in the Backlog  
+  *And* the repository has the folders src/billing and src/visits  
+*When* the Person starts Gift cards  
+*Then* the roots dialog lists the top folders of the repository  
+  *And* Gift cards is still in the Backlog  
+*When* the Person chooses src/visits as its root  
+*Then* the ticket gift-cards is In progress in Discovery with root src/visits
+
+#### Scenario: Keep the idea file with the new ticket
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* the backlog item Returns and refunds is the file .sessions/_backlog/returns-and-refunds.md  
+*When* the Person starts Returns and refunds on the whole repository  
+*Then* the ticket returns-and-refunds is In progress in Discovery  
+  *And* its session folder holds returns-and-refunds.md, text and all  
+  *And* its session log names the item's file  
+  *But* the Backlog no longer shows Returns and refunds
+
+#### Scenario: Bring a ticket back from the Backlog with its work
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* the ticket sign-up was moved back out of Discovery and waits in the Backlog as the backlog item Sign up  
+  *And* its folder .sessions/_backlog/sign-up/ keeps its session log  
+*When* the Person starts Sign up  
+*Then* sign-up is back on the board with its session log and session.json  
+  *But* no new ticket is opened
+
+#### Scenario: Keep Add off with no title
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/add-backlog-item/add_backlog_item_story.test.py`, generated 2026-11-16 from the story test's code.
+
+*Given* the new backlog item form is open  
+  *But* the Person has typed no title  
+*When* the Person tries to add the item  
+*Then* Add stays off  
+  *And* no [backlog item](../../../.context/kanban-model.md#backlogitem--card) is written
+
+## Story: Delete Ticket Branch
+
+#### Scenario: Delete the branch on closing without merging it
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* checkout-flow is open in its own worktree, with work in it  
+*When* the Person closes checkout-flow, committing, pushing, and deleting its branch  
+*Then* the checkout-flow branch is gone, here and on origin  
+  *But* main on origin does not hold checkout-flow's work  
+  *And* checkout-flow shows in Complete
+
+#### Scenario: Delete the branch and the worktree that has it
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* checkout-flow is open in its own worktree  
+*When* the Person closes checkout-flow, deleting its branch  
+*Then* the worktree folder is gone  
+  *And* the checkout-flow branch is gone  
+  *And* checkout-flow shows in Complete
+
+#### Scenario: Delete a branch checked out nowhere
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* checkout-flow has a branch  
+  *But* that branch is not checked out  
+*When* the Person asks what closing checkout-flow can do  
+*Then* closing offers to delete checkout-flow's branch  
+*When* the Person closes checkout-flow, deleting its branch  
+*Then* the checkout-flow branch is gone  
+  *And* checkout-flow shows in Complete
+
+## Story: Split Ticket Into Child Tickets
+
+#### Scenario: Ask the chat to split a ticket into child tickets
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* checkout-flow is the active ticket and a chat is connected  
+*When* the chat opens a child ticket Enter card details with parent checkout-flow  
+*Then* enter-card-details is In progress in Discovery  
+  *And* its details read enter-card-details · story of checkout-flow
+
+#### Scenario: Keep Split off where nothing can take the prompt
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/split-ticket-into-child-tickets/split_ticket_into_child_tickets_story.test.py`, generated 2026-11-16 from the story test's code.
+
+*Given* checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card)  
+  *But* no chat is connected  
+*When* the session board draws checkout-flow's card  
+*Then* Split is off
+
+#### Scenario: Keep Split off on a closed ticket
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/split-ticket-into-child-tickets/split_ticket_into_child_tickets_story.test.py`, generated 2026-11-16 from the story test's code.
+
+*Given* the [ticket](../../../.context/kanban-model.md#ticket--card) browse-pets is closed in Complete  
+*When* the session board draws browse-pets' card  
+*Then* Split is off
+
+#### Scenario: Keep Split off on a locked ticket
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/split-ticket-into-child-tickets/split_ticket_into_child_tickets_story.test.py`, generated 2026-11-16 from the story test's code.
+
+*Given* Active session only is on  
+  *And* billing-report is not the active [ticket](../../../.context/kanban-model.md#ticket--card)  
+*When* the session board draws billing-report's card  
+*Then* Split is off
+
+## Story: Archive Ticket
+
+#### Scenario: Archive a ticket off the board
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* the ticket pet-visits is In progress in Discovery with its story map generated  
+*When* the Person archives pet-visits  
+*Then* no column shows pet-visits  
+  *And* its folder is in .sessions/_archive/pet-visits
+
+#### Scenario: Refuse to archive a ticket the board does not have
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* the board shows no ticket named no-such-ticket  
+*When* the Person archives no-such-ticket  
+*Then* the board says no ticket named 'no-such-ticket' on the board  
+  *But* nothing is moved to .sessions/_archive
