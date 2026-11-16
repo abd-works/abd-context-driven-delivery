@@ -292,6 +292,24 @@ Intended: the Files app shows markdown as text today.
 *When* the Person views *README.md*
 *Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *Checkout* rendered as a heading, not as *# Checkout*
 
+#### Scenario: Scroll a long line sideways
+
+Requested by the person on 2026-11-16: the source view is as tall as its file, so the page scrolls up and down and a long line ran off the page.
+
+*Given* checkout-flow's session holds *order.py*, whose line 14 is wider than the source view
+*When* the Person scrolls sideways over the source view, or scrolls with shift held
+*Then* the [source view](../../../harness/graph/app/source/SourceView.tsx) scrolls *order.py*'s lines sideways, and the page stays as wide as the window
+*And* the wheel without shift still scrolls the page up and down
+
+#### Scenario: Wrap long lines in the source view
+
+Requested by the person on 2026-11-16.
+
+*Given* the Files app shows *order.py* with its long lines unwrapped
+*When* the Person turns on Wrap lines
+*Then* the [source view](../../../harness/graph/app/source/SourceView.tsx) wraps line 14 onto the lines below it, and grows as tall as the wrapped file
+*And* the Files app keeps Wrap lines on for the next file the Person opens
+
 ## Story: Fold Classes And Operations
 
 #### Scenario: Fold the file's class and its operations

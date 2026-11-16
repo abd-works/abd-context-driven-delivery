@@ -12,6 +12,8 @@ import filterChoices from './filter-choices.json';
 const foldMarks = vi.hoisted(() => ({
   names: [] as string[],
   scrollbar: undefined as { handleMouseWheel?: boolean; alwaysConsumeMouseWheel?: boolean } | undefined,
+  wordWrap: undefined as string | undefined,
+  scrollLeft: 0,
 }));
 
 vi.mock('@monaco-editor/react', () => ({
@@ -25,6 +27,7 @@ vi.mock('@monaco-editor/react', () => ({
     defaultValue?: string;
     options?: {
       scrollbar?: { handleMouseWheel?: boolean; alwaysConsumeMouseWheel?: boolean };
+      wordWrap?: string;
       lineNumbers?: (line: number) => string;
     };
     onMount?: (editor: {
@@ -38,6 +41,9 @@ vi.mock('@monaco-editor/react', () => ({
         clear: () => void;
       };
       setHiddenAreas: (ranges: { startLineNumber: number; endLineNumber: number }[]) => void;
+      onDidContentSizeChange: (listener: (size: { contentHeight: number }) => void) => { dispose: () => void };
+      getScrollLeft: () => number;
+      setScrollLeft: (left: number) => void;
     }) => void;
   }) => {
     const text = value ?? defaultValue ?? '';
@@ -45,6 +51,7 @@ vi.mock('@monaco-editor/react', () => ({
     const marks = useRef<{ range: { startLineNumber: number }; options: { glyphMarginClassName?: string; className?: string; isWholeLine?: boolean } }[]>([]);
     const hidden = useRef<{ startLineNumber: number; endLineNumber: number }[]>([]);
     foldMarks.scrollbar = options?.scrollbar;
+    foldMarks.wordWrap = options?.wordWrap;
     const paint = () => {
       const editor = host.current;
       if (!editor) {
@@ -102,6 +109,12 @@ vi.mock('@monaco-editor/react', () => ({
         setHiddenAreas: (ranges) => {
           hidden.current = ranges;
           paint();
+        },
+        onDidContentSizeChange: () => ({ dispose: () => undefined }),
+        // A line as wide as any scroll asks, so the editor scrolls as far as it is told, never left of its start.
+        getScrollLeft: () => foldMarks.scrollLeft,
+        setScrollLeft: (left) => {
+          foldMarks.scrollLeft = Math.max(0, left);
         },
       });
     }, [onMount, text]);
@@ -405,7 +418,7 @@ it('should fold calls, classes, and blocks in the source', async () => {
   expect(line('const account: AccountToken = input;')?.querySelector('.class-fold')).toBeTruthy();
   expect(line('if (input)')?.querySelector('.block-fold')).toBeTruthy();
   expect(editor.textContent).not.toContain('only-in-class-body');
-  expect(foldMarks.scrollbar).toEqual({ handleMouseWheel: false, alwaysConsumeMouseWheel: false });
+  expect(foldMarks.scrollbar).toMatchObject({ handleMouseWheel: false, alwaysConsumeMouseWheel: false });
 });
 
 it('should number a step from its line in the file', async () => {
@@ -433,6 +446,62 @@ it('should number a step from its line in the file', async () => {
   );
   expect(when?.dataset.line).toBe('93');
   expect(editor.textContent).not.toContain("then('the result");
+});
+
+const longLine = {
+  node_id: 'order',
+  name: 'Order',
+  type: 'OoadClass',
+  file: 'order.py',
+  text: `class Order:
+    def place(self, cart: Cart) -> Order:
+        raise EmptyCartError(cart.id, "${'a cart needs one item to be placed '.repeat(6)}")`,
+  start_line: 1,
+  end_line: 3,
+  owner: '',
+  members: [],
+};
+
+function turnWheel(editor: HTMLElement, wheel: WheelEventInit): WheelEvent {
+  const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, ...wheel });
+  editor.dispatchEvent(event);
+  return event;
+}
+
+it('should scroll a long line sideways when the wheel turns with shift held', async () => {
+  foldMarks.scrollLeft = 0;
+  render(<SourceView source={longLine} violation={null} rules={[]} activeRule="" />);
+  const editor = await screen.findByTestId('source-editor');
+  const wheel = turnWheel(editor, { deltaY: 120, shiftKey: true });
+  expect([foldMarks.scrollLeft, wheel.defaultPrevented]).toEqual([120, true]);
+});
+
+it('should scroll a long line sideways when the Person swipes sideways', async () => {
+  foldMarks.scrollLeft = 0;
+  render(<SourceView source={longLine} violation={null} rules={[]} activeRule="" />);
+  const editor = await screen.findByTestId('source-editor');
+  turnWheel(editor, { deltaX: 80, deltaY: 4 });
+  expect(foldMarks.scrollLeft).toBe(80);
+});
+
+it('should leave the wheel without shift to the page', async () => {
+  foldMarks.scrollLeft = 0;
+  render(<SourceView source={longLine} violation={null} rules={[]} activeRule="" />);
+  const editor = await screen.findByTestId('source-editor');
+  const wheel = turnWheel(editor, { deltaY: 120 });
+  expect([foldMarks.scrollLeft, wheel.defaultPrevented]).toEqual([0, false]);
+});
+
+it('should leave long lines unwrapped until the page asks to wrap them', async () => {
+  render(<SourceView source={longLine} violation={null} rules={[]} activeRule="" />);
+  await screen.findByTestId('source-editor');
+  expect(foldMarks.wordWrap).toBe('off');
+});
+
+it('should wrap long lines when the page asks', async () => {
+  render(<SourceView source={longLine} violation={null} rules={[]} activeRule="" wordWrap />);
+  await screen.findByTestId('source-editor');
+  expect(foldMarks.wordWrap).toBe('on');
 });
 
 it('should fold a story, a scenario, and a step the way a class folds', async () => {

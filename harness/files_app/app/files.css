@@ -53,11 +53,11 @@ button:disabled { cursor: default; opacity: 0.5; }
 .practice-toggle.is-off { background: transparent; color: var(--practice-colour); opacity: 0.7; }
 .practice-toggle:hover { opacity: 1; filter: brightness(1.1); }
 .files-problem { margin: var(--space-xs) var(--space-md); padding: var(--space-xs); border: 1px solid var(--error); color: var(--error); white-space: pre-wrap; }
-.files-body { display: grid; grid-template-columns: minmax(12rem, 18rem) 1fr; gap: var(--space-md); padding: var(--space-md); align-items: start; }
+.files-body { display: grid; grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr); gap: var(--space-md); padding: var(--space-md); align-items: start; }
 .files-side { position: sticky; top: var(--space-md); max-height: calc(100vh - 6rem); overflow: auto; }
 .files-note { color: var(--muted); }
 
-.files-body.is-bar-collapsed { grid-template-columns: auto 1fr; }
+.files-body.is-bar-collapsed { grid-template-columns: auto minmax(0, 1fr); }
 .file-bar-divider { position: sticky; top: var(--space-md); height: calc(100vh - 6rem); width: 6px; margin: 0 calc(-1 * var(--space-md) / 2); cursor: col-resize; border-radius: 3px; touch-action: none; }
 .file-bar-divider:hover, .file-bar-divider:active { background: var(--select); opacity: 0.6; }
 .file-bar-buttons { display: flex; flex-wrap: wrap; gap: var(--space-2xs); margin-bottom: var(--space-xs); }
@@ -107,7 +107,10 @@ button:disabled { cursor: default; opacity: 0.5; }
 .empty-state { color: var(--muted); }
 .copy-prompt { align-self: center; }
 
-.file-source { position: relative; }
+.file-source { position: relative; min-width: 0; }
+.file-source-bar { display: flex; justify-content: flex-end; margin-bottom: var(--space-2xs); }
+.file-wrap { font-size: var(--text-xs); }
+.file-wrap.is-on { border-color: var(--accent); color: var(--accent); }
 .comment-box { position: absolute; z-index: 20; width: min(32rem, 80%); display: grid; gap: var(--space-2xs); padding: var(--space-xs); background: var(--surface); border: 1px solid var(--select); border-radius: var(--radius-sm); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); }
 .comment-box-head { display: flex; justify-content: space-between; gap: var(--space-xs); font-family: var(--font-mono); font-size: var(--text-xs); color: var(--muted); }
 .comment-box textarea { min-height: 4rem; font: inherit; padding: var(--space-2xs); border: 1px solid var(--border); border-radius: var(--radius-sm); resize: vertical; }

@@ -32,13 +32,15 @@ export type SourceLines = { start: number; end: number };
 // What a page showing a whole file adds to the view: the folds its graph names, whether every fold starts open so the
 // file reads whole until a person folds it, the language the file is in, and the editor itself once it is made, so the
 // page can add its own gutter marks (each with the class SOURCE_MARK, which the fold toggle leaves alone) and menu
-// actions, such as the Files app's comments.
+// actions, such as the Files app's comments; and whether long lines wrap, or scroll sideways (shift+wheel or a sideways
+// swipe, since the page, not the editor, scrolls up and down).
 export type SourceHostProps = {
   folds?: SourceFold[];
   unfolded?: boolean;
   openAround?: SourceLines[];
   language?: string;
   keepGlyphMargin?: boolean;
+  wordWrap?: boolean;
   onEditor?: (editor: SourceEditorInstance) => void;
 };
 
@@ -80,6 +82,7 @@ function SourceEditor({
   openAround = NO_LINES,
   language = '',
   keepGlyphMargin = false,
+  wordWrap = false,
   onEditor,
 }: SourceHostProps & {
   source: NodeSourceData;
@@ -115,6 +118,8 @@ function SourceEditor({
     setOpenFor(openKey);
     setOpenFolds(initialOpen());
   }
+  // Wrapped lines take more than one line's height, so a wrapping editor is as tall as the editor says its content is.
+  const [contentHeight, setContentHeight] = useState(0);
   const glyphs = useRef(keepGlyphMargin);
   glyphs.current = keepGlyphMargin;
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
@@ -160,6 +165,8 @@ function SourceEditor({
       glyphs.current,
     );
     const nodeEl = editor.getDomNode();
+    editor.onDidContentSizeChange((size) => setContentHeight(size.contentHeight));
+    nodeEl?.addEventListener('wheel', (event) => scrollSideways(editor, event), { passive: false });
     nodeEl?.addEventListener(
       'mousedown',
       (event) => {
@@ -236,7 +243,7 @@ function SourceEditor({
       <p className="source-path">{file || source.name}</p>
       <div className="panel-source" data-testid="source-excerpt">
         <Editor
-          height={sourceHeight(prepared.text)}
+          height={wordWrap && contentHeight ? contentHeight + 16 : sourceHeight(prepared.text)}
           language={language || languageFor(file)}
           theme={document.documentElement.dataset.theme === 'engineering' ? 'vs-dark' : 'vs'}
           defaultValue={prepared.text}
@@ -248,13 +255,13 @@ function SourceEditor({
             showFoldingControls: 'never',
             minimap: { enabled: false },
             scrollBeyondLastLine: false,
-            wordWrap: 'off',
+            wordWrap: wordWrap ? 'on' : 'off',
             fontFamily: "'JetBrains Mono', ui-monospace, monospace",
             fontSize: 13,
             lineHeight: LINE_HEIGHT,
             glyphMargin: keepGlyphMargin || prepared.folds.length > 0,
             lineNumbers: (line: number) => prepared.lineNumbers[line - 1] ?? '',
-            scrollbar: { handleMouseWheel: false, alwaysConsumeMouseWheel: false },
+            scrollbar: { handleMouseWheel: false, alwaysConsumeMouseWheel: false, horizontal: 'auto', horizontalScrollbarSize: 10 },
           }}
         />
       </div>
@@ -336,6 +343,20 @@ function editorHasViewModel(editor: Parameters<OnMount>[0]): boolean {
     (editor as unknown as { _modelData?: { viewModel?: { getLineCount?: () => number } } })._modelData?.viewModel
       ?.getLineCount,
   );
+}
+
+// The editor leaves the wheel to the page, so the page scrolls up and down through a file as tall as it is; a sideways
+// swipe, or the wheel with shift held, scrolls the editor's long lines instead, and only while they have further to go.
+function scrollSideways(editor: Parameters<OnMount>[0], event: WheelEvent): void {
+  const sideways = event.shiftKey ? event.deltaY || event.deltaX : Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : 0;
+  if (!sideways) {
+    return;
+  }
+  const before = editor.getScrollLeft();
+  editor.setScrollLeft(before + sideways);
+  if (editor.getScrollLeft() !== before) {
+    event.preventDefault();
+  }
 }
 
 function sourceHeight(text: string): number {
