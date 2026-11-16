@@ -291,14 +291,8 @@ class FidelityPage(DetailPage):
 
     nav_current = "fidelities"
 
-    def __init__(
-        self,
-        practice: CatalogPractice,
-        fidelity: CatalogFidelity,
-        citation: GitCitation,
-        actions: list[LifecycleAction],
-    ) -> None:
-        self.practice = practice
+    def __init__(self, fidelity: CatalogFidelity, citation: GitCitation, actions: list[LifecycleAction]) -> None:
+        self.practice = fidelity.practice
         self.fidelity = fidelity
         self.citation = citation
         self.actions = actions
@@ -561,6 +555,22 @@ _SOURCE_DOCUMENTS = (
 )
 
 
+@dataclass(frozen=True)
+class _GridPage:
+    """One grid page of cards: its name, which is its file's and its entry in the site navigation, its heading, and its
+    tagline."""
+
+    name: str
+    heading: str
+    tagline: str
+
+
+_CONTEXT_TOOLS_GRID = _GridPage("context-tools", "Context tools", "Every context tool in the catalog")
+_ACTIONS_GRID = _GridPage("actions", "Actions", "Lifecycle actions")
+_UTILITIES_GRID = _GridPage("tools", "Utilities", "Foundational utilities")
+_FIDELITIES_GRID = _GridPage("fidelities", "Fidelities", "Every fidelity ticket")
+
+
 @agent_toolset
 class Catalog:
     """The top-level entry point - the only class ``generate_cdd_catalog.py`` calls. Holds the project it is generated
@@ -773,7 +783,7 @@ class Catalog:
     @property
     def _fidelity_pages(self) -> list[FidelityPage]:
         return [
-            FidelityPage(practice, shown, self.citation, self.lifecycle_actions)
+            FidelityPage(shown, self.citation, self.lifecycle_actions)
             for practice in self.practices
             for shown in practice.shown_fidelities
         ]
@@ -834,7 +844,7 @@ class Catalog:
         for practice in self.practices:
             practice.copy_examples_into(self.out_root)
         page = ApproachPage(self.approach_copy, self.practices, self.out_root)
-        self._write_approach(page, title=_SITE_TITLE, h1=_HEADLINE, after_subhead=self._repo_link)
+        self._write_approach(page, title=_SITE_TITLE, headline=_HEADLINE, after_subhead=self._repo_link)
         for file_name, page_html in page.principle_pages.items():
             self.write_page(file_name, page_html)
 
@@ -843,14 +853,14 @@ class Catalog:
         self.out_root.mkdir(parents=True, exist_ok=True)
         self.brand.copy_commons(self.out_root)
         page = ApproachPage(self.approach_copy, self.practices, self.out_root, approach.staged_into(self.out_root))
-        return self._write_approach(page, title=approach.page_title, h1=approach.headline, after_subhead=approach.repo_link)
+        return self._write_approach(page, title=approach.page_title, headline=approach.headline, after_subhead=approach.repo_link)
 
-    def _write_approach(self, page: ApproachPage, *, title: str, h1: str, after_subhead: str) -> Path:
+    def _write_approach(self, page: ApproachPage, *, title: str, headline: str, after_subhead: str) -> Path:
         """Write the approach page's stage example pages, then the page itself as ``cdd-approach.html``."""
         page.write_stage_example_pages()
         shell = PageShell(
             title=title,
-            h1=h1,
+            h1=headline,
             tagline="",
             subhead=self.approach_copy.subhead,
             after_subhead=after_subhead,
@@ -879,10 +889,10 @@ class Catalog:
         practices = [self._card(practice.display_name, practice.href, practice.display_name) for practice in self.practices]
         actions = [self._card(action.name, action.href, "Lifecycle action") for action in self.lifecycle_actions]
         utilities = [self._card(utility.name, utility.href, "Utility") for utility in self.utilities]
-        self._write_grid("context-tools", "Context tools", "Every context tool in the catalog", practices, practice_pages)
-        self._write_grid("actions", "Actions", "Lifecycle actions", actions, action_pages)
-        self._write_grid("tools", "Utilities", "Foundational utilities", utilities, utility_pages)
-        self._write_grid("fidelities", "Fidelities", "Every fidelity ticket", self._fidelity_cards, None)
+        self._write_grid(_CONTEXT_TOOLS_GRID, practices, practice_pages)
+        self._write_grid(_ACTIONS_GRID, actions, action_pages)
+        self._write_grid(_UTILITIES_GRID, utilities, utility_pages)
+        self._write_grid(_FIDELITIES_GRID, self._fidelity_cards, None)
 
     @property
     def _fidelity_cards(self) -> list[str]:
@@ -897,17 +907,17 @@ class Catalog:
             for shown in practice.board_fidelities
         ]
 
-    def _write_grid(self, name: str, heading: str, tagline: str, cards: list[str], pages: list[DetailPage] | None) -> None:
+    def _write_grid(self, grid: _GridPage, cards: list[str], pages: list[DetailPage] | None) -> None:
         """A grid page of cards; the pages' bodies are kept hidden in it, so a search of the page finds them."""
         hidden = f'<div hidden>{"".join(page.body for page in pages)}</div>' if pages is not None else ""
         shell = PageShell(
-            title=f"{heading} — CDD Catalog",
-            h1=heading,
-            tagline=tagline,
+            title=f"{grid.heading} — CDD Catalog",
+            h1=grid.heading,
+            tagline=grid.tagline,
             body_inner=f'<div class="cap-grid">{"".join(cards)}</div>{hidden}',
-            nav_current=name,
+            nav_current=grid.name,
         )
-        self.write_page(f"{name}.html", shell.html)
+        self.write_page(f"{grid.name}.html", shell.html)
 
     def _card(self, title: str, href: str, summary: str, label: str = "Catalog") -> str:
         return (

@@ -13,8 +13,8 @@ written plain (``  uses?: [module]``) or listed (``  - root: entityRoot``). The 
 from __future__ import annotations
 
 import re
-from functools import lru_cache
 from pathlib import Path
+from typing import ClassVar
 
 _TOP_TYPE = re.compile(r"^([A-Za-z]\w*):\s*$")
 _LISTED_TYPE = re.compile(r"^\s+-\s+([A-Za-z]\w*):\s*$")
@@ -51,16 +51,16 @@ class SchemaType:
         string satisfies are no relationship to require."""
         found: dict[str, tuple[str, ...]] = {}
         for name, value in self.fields:
-            references = self._references(value)
+            references = self._types_named(value)
             if references and name not in self.optional and name not in _DESCRIBING:
                 found.setdefault(name, references)
         return found
 
-    @staticmethod
-    def _references(value: str) -> tuple[str, ...]:
-        """The schema types value names, or none when any part of it is a value type, a quoted value, or no type."""
-        parts = tuple(part.strip() for part in value.strip().strip("[]").split("|"))
-        if not value.strip() or any(part in VALUE_TYPES or not _REFERENCE.match(part) for part in parts):
+    def _types_named(self, written: str) -> tuple[str, ...]:
+        """The schema types a field's written value names, or none when any part of it is a value type, a quoted value,
+        or no type."""
+        parts = tuple(part.strip() for part in written.strip().strip("[]").split("|"))
+        if not written.strip() or any(part in VALUE_TYPES or not _REFERENCE.match(part) for part in parts):
             return ()
         return parts
 
@@ -79,14 +79,20 @@ class Schema:
     """The types one schema file declares, keyed by their schema key, in the order written, and the file's own text,
     which tells an action the shape its output conforms to. A practice holds the one its ``model/schema.yaml`` holds."""
 
+    # Each schema file read in this process, by its path, so a file is read once however many practices load it.
+    _loaded: ClassVar[dict[Path, Schema]] = {}
+
     def __init__(self, text: str) -> None:
         self.types: dict[str, SchemaType] = {}
         self._read(text)
 
     @classmethod
-    def load(cls, path: Path) -> "Schema":
+    def load(cls, path: Path) -> Schema:
         """The schema at ``path``; an empty schema when there is no file. Each file is read once per process."""
-        return _loaded(Path(path))
+        path = Path(path)
+        if path not in cls._loaded:
+            cls._loaded[path] = cls(path.read_text(encoding="utf-8") if path.is_file() else "")
+        return cls._loaded[path]
 
     def guide(self) -> str:
         """What tells an action to conform its output to this schema; none for an empty schema."""
@@ -139,24 +145,24 @@ class Schema:
             if block and indent > block_indent:
                 self._read_block_item(current, block, line)
                 continue
-            block = ""
-            field = _FIELD.match(line)
-            if field is None:
-                continue
-            name, value = field.group(2), field.group(4)
-            if name in _BLOCKS and not value:
-                block, block_indent = name, indent
-                continue
-            current.fields.append((name, value))
-            if field.group(3):
-                current.optional.add(name)
+            block = self._read_field(current, line)
+            block_indent = indent
+
+    def _read_field(self, current: SchemaType, line: str) -> str:
+        """Read one ``name: value`` line of current into its fields; the name of the ``rules:`` or ``where:`` block the
+        line opens, else none."""
+        field = _FIELD.match(line)
+        if field is None:
+            return ""
+        name, value = field.group(2), field.group(4)
+        if name in _BLOCKS and not value:
+            return name
+        current.fields.append((name, value))
+        if field.group(3):
+            current.optional.add(name)
+        return ""
 
     def _read_block_item(self, current: SchemaType, block: str, line: str) -> None:
         bullet = _BULLET.match(line)
         if block == "rules" and bullet is not None and bullet.group(1) not in current.rules:
             current.rules.append(bullet.group(1))
-
-
-@lru_cache(maxsize=None)
-def _loaded(path: Path) -> Schema:
-    return Schema(path.read_text(encoding="utf-8") if path.is_file() else "")

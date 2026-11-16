@@ -10,18 +10,30 @@ import sys
 import types
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, Callable, ClassVar, Mapping, get_type_hints
+from typing import Any, Callable, ClassVar, Iterator, Mapping, get_type_hints
 
 from harness.annotations.class_folder import class_folder
 from harness.annotations.name import Name
-from harness.agent_tools.parameter_schema import ParameterSchema
+from harness.agent_tools.parameter_schema import ParameterSchema, TypeHint
 from harness.agent_tools.tool_call import ToolCall
 from harness.markdown.markdown import Markdown, MarkdownCollection, OperationProperty
-from harness.annotations.annotation import Annotation, NamesAnnotation, annotation_kinds
-from harness.agent_tools.recipe import ExpansionMode, ExpansionResult, RecipeExpansion, RecipePlaceholders, RecipeSource
+from harness.annotations.annotation import Annotatable, Annotation, NamesAnnotation, annotation_kinds
+from harness.agent_tools.recipe import ExpansionMode, ExpansionResult, RecipeExpansion, RecipePlaceholders, RecipeSource, RecipeTarget
 
 ContextDocument = dict[str, Any]
 ArgumentDocument = dict[str, Any]
+# A child a toolset collection holds by name, such as a fidelity, a rule, or a child toolset. A collection reads its
+# entries only through their attributes, so an entry may be an object of any class.
+type CollectionEntry = object
+# What configuration names a toolset by: a ``<module>:<Class>`` reference, ``{"toolset": reference, "context": {...}}``
+# with the constructor's arguments, the constructor's arguments alone, a toolset class, or a toolset already made.
+type ToolsetConfiguration = str | type | dict[str, object] | AgentToolSetOrigin | None
+# A member of a toolset class as its class declares it: a function, the function a static or class method wraps, or a
+# property's getter.
+type ClassMember = Callable[..., Any]
+# What a class annotation such as ``@toolset_collection`` decorates: a class it joins with its framework base, or a
+# property it marks.
+type JoinedTarget = Annotatable | property
 LISTED_INSTRUCTIONS_NOTE = "Call this tool for the full instructions."
 
 SUB_AGENT_CALLER_PREAMBLE = """Hand work to a background sub-agent and continue without waiting.
@@ -51,24 +63,16 @@ class CallNamesNoProject(Exception):
 
 
 class AgentToolValidationError(Exception):
-    def __init__(
-        self,
-        message: str,
-        *,
-        class_name: str = "",
-        action_name: str = "",
-        lineno: int | None = None,
-    ) -> None:
-        detail = message
-        if class_name or action_name:
-            where = f"{class_name}.{action_name}" if class_name and action_name else class_name or action_name
-            detail = f"{where}: {message}"
-        if lineno is not None:
-            detail = f"{detail} (line {lineno})"
-        super().__init__(detail)
-        self.class_name = class_name
-        self.action_name = action_name
+    """An ``@agent_instructions`` recipe that is wrong as its class is defined, named by the class and the recipe it
+    is on, and by its line when the failure has one."""
+
+    def __init__(self, message: str, recipe: Callable[..., Any], lineno: int | None = None) -> None:
+        self.class_name, _, self.action_name = recipe.__qualname__.rpartition(".")
+        self.class_name = self.class_name.rpartition(".")[2]
         self.lineno = lineno
+        where = f"{self.class_name}.{self.action_name}" if self.class_name else self.action_name
+        detail = f"{where}: {message}"
+        super().__init__(f"{detail} (line {lineno})" if lineno is not None else detail)
 
 
 class AgentToolSetOrigin:
@@ -145,11 +149,11 @@ class ToolSetCollection(AgentToolSetOrigin):
     """Named child toolsets, iterated in entry order. The collection itself may have tools, and it is named and found
     the way a toolset is."""
 
-    def __init__(self, entries: dict[str, Any] | None = None, parent: Any = None) -> None:
-        self.entries: dict[str, Any] = dict(entries or {})
+    def __init__(self, entries: dict[str, CollectionEntry] | None = None, parent: AgentToolSetOrigin | None = None) -> None:
+        self.entries: dict[str, CollectionEntry] = dict(entries or {})
         self.parent = parent
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[CollectionEntry]:
         return iter(self.entries.values())
 
     def __len__(self) -> int:
@@ -158,7 +162,7 @@ class ToolSetCollection(AgentToolSetOrigin):
     def __bool__(self) -> bool:
         return bool(self.entries)
 
-    def attach(self, instance: Any, name: str | None = None) -> None:
+    def attach(self, instance: AgentToolSetOrigin, name: str | None = None) -> None:
         MarkdownCollection.attach(self, instance, name)
 
     @property
@@ -170,7 +174,7 @@ class ToolSetCollection(AgentToolSetOrigin):
     def _declared_tools(self) -> dict[str, AgentTool]:
         members = ToolsetMembers.of(type(self))
         return {
-            name: AgentTool(name=name, callable=members.callable_on(self, name, member), toolset=self)
+            name: AgentTool(name=name, callable=members.declared.callable_on(self, name, member), toolset=self)
             for name, member in members.annotated
         }
 
@@ -179,7 +183,7 @@ class Collect:
     """Aggregate the same-named property across a collection's children: ``@collect`` on a collection's property
     answers its children's values joined as text, or bundled into the property's declared return type."""
 
-    def __new__(cls, operation: Callable[..., Any]) -> property:
+    def __new__(cls: type[Collect], operation: Callable[..., Any]) -> property:
         return object.__new__(cls)._property(operation)
 
     def _property(self, operation: Callable[..., Any]) -> property:
@@ -187,17 +191,17 @@ class Collect:
         self._return_type = self._declared_return(operation)
         return OperationProperty(operation).reading(self.of)
 
-    def of(self, collection: Any) -> Any:
+    def of(self, collection: AgentToolSetOrigin) -> Any:
         """The collected value of this property on collection's children."""
         if self._return_type is str or self._return_type in (inspect.Signature.empty, None):
             return "\n\n".join(value for child in collection if (value := self._value(child)))
         return self._bundled(collection)
 
-    def _value(self, child: Any) -> Any:
+    def _value(self, child: CollectionEntry) -> Any:
         value = getattr(child, self._name, None)
         return value() if callable(value) else value
 
-    def _bundled(self, collection: Any) -> Any:
+    def _bundled(self, collection: AgentToolSetOrigin) -> Any:
         entries = getattr(collection, "entries", None)
         if not isinstance(entries, dict):
             entries = {getattr(child, "name", str(index)): child for index, child in enumerate(collection)}
@@ -217,6 +221,64 @@ class Collect:
 collect = Collect
 
 
+# Python sets this flag on a built-in type, which keeps no attributes of its own (Py_TPFLAGS_IMMUTABLETYPE).
+_IMMUTABLE_TYPE_FLAG = 1 << 8
+
+
+class DeclaredMembers:
+    """Every function, class or static method, and property getter one class declares, by name, walked once, and how
+    an instance of the class calls each."""
+
+    def __init__(self, owner: type) -> None:
+        self._owner = owner
+
+    @functools.cached_property
+    def every(self) -> list[tuple[str, ClassMember]]:
+        """Every function, class or static method, and property getter on the class, by name."""
+        return self._walk()
+
+    def as_declared(self, name: str) -> object:
+        """The attribute name as the nearest class in the class order defines it, before Python resolves it."""
+        return next((base.__dict__[name] for base in self._owner.__mro__ if name in base.__dict__), None)
+
+    def callable_on(self, instance: AgentToolSetOrigin, name: str, member: ClassMember) -> ClassMember:
+        """The member as instance calls it: a static or class method on the class, an operation bound to instance."""
+        declared = self.as_declared(name)
+        if isinstance(declared, staticmethod):
+            return declared.__func__
+        if isinstance(declared, classmethod):
+            return declared.__get__(None, self._owner)
+        if inspect.isfunction(member) and getattr(self._owner, name, None) is member:
+            return getattr(instance, name)
+        return member
+
+    def _walk(self) -> list[tuple[str, ClassMember]]:
+        seen: set[str] = set()
+        members: list[tuple[str, ClassMember]] = []
+        for name, member in inspect.getmembers(self._owner, predicate=inspect.isfunction):
+            declared = self.as_declared(name)
+            seen.add(name)
+            members.append((name, self._annotated_function(declared) if isinstance(declared, (staticmethod, classmethod)) else member))
+        for base in self._owner.__mro__:
+            for name, declared in base.__dict__.items():
+                if name not in seen and isinstance(declared, (staticmethod, classmethod)):
+                    seen.add(name)
+                    members.append((name, self._annotated_function(declared)))
+        for name, member in inspect.getmembers(self._owner, predicate=inspect.isdatadescriptor):
+            getter = getattr(member, "fget", None)
+            if getter is not None and name not in seen:
+                members.append((name, getter))
+        return members
+
+    def _annotated_function(self, declared: staticmethod | classmethod) -> ClassMember:
+        """The function a static or class method wraps, carrying the annotations set on the wrapper."""
+        function = declared.__func__
+        for flag in annotation_kinds.copied_flags:
+            if getattr(declared, flag, None) and not getattr(function, flag, None):
+                setattr(function, flag, getattr(declared, flag))
+        return function
+
+
 class ToolsetMembers:
     """The members of one toolset class and which of them its annotations make tools. A class's functions and properties are
     fixed once it is imported, and every hook dispatch asks this of every toolset, so the class holds its members
@@ -232,26 +294,26 @@ class ToolsetMembers:
     @classmethod
     def of(cls, owner: type) -> ToolsetMembers:
         """The members owner holds, made and kept on owner itself the first time they are asked for. A subclass holds
-        its own, because it may add or replace members."""
+        its own, because it may add or replace members. A built-in type keeps no attributes, so its members are walked
+        for each read."""
         held = owner.__dict__.get(cls._HELD_AS)
-        if held is None or held._owner is not owner:
-            held = cls(owner)
-            try:
-                setattr(owner, cls._HELD_AS, held)
-            except TypeError:  # a built-in type keeps no attributes, so its members are walked for this read alone
-                pass
+        if held is not None and held._owner is owner:
+            return held
+        held = cls(owner)
+        if not owner.__flags__ & _IMMUTABLE_TYPE_FLAG:
+            setattr(owner, cls._HELD_AS, held)
         return held
 
     @functools.cached_property
-    def every(self) -> list[tuple[str, Any]]:
-        """Every function, class or static method, and property getter on the class, by name."""
-        return self._walk()
+    def declared(self) -> DeclaredMembers:
+        """Every member the class declares, walked once."""
+        return DeclaredMembers(self._owner)
 
     @functools.cached_property
-    def annotated(self) -> list[tuple[str, Any]]:
+    def annotated(self) -> list[tuple[str, ClassMember]]:
         """The members that are tools: annotated ``@agent_tool`` or ``@agent_instructions``, or enlisted by a destination
         such as a hook."""
-        return [(name, member) for name, member in self.every if self.is_tool(member)]
+        return [(name, member) for name, member in self.declared.every if self._is_tool(member)]
 
     @functools.cached_property
     def tool_names(self) -> set[str]:
@@ -266,16 +328,13 @@ class ToolsetMembers:
         """How the class finds the object a tool call acts on: its ``@tool_subject`` loader, read once."""
         return ToolSubjectLoader(self._owner)
 
-    def is_tool(self, member: Any) -> bool:
-        return AgentToolAnnotation.annotates(member) or AgentInstructionsAnnotation.annotates(member) or annotation_kinds.enlisting(member)
-
-    def is_rules(self, member: Any) -> bool:
-        return annotation_kinds.annotated_for(InstallDestination.RULE, member)
-
     @functools.cached_property
     def toolset_collection_names(self) -> list[str]:
         """The members annotated as toolset collections, such as a practice's fidelities, read once for the class."""
-        return [name for name, member in self.every if name not in self.COLLECTION_SKIP and ToolSetCollectionAnnotation.annotates(member)]
+        return [
+            name for name, member in self.declared.every
+            if name not in self.COLLECTION_SKIP and ToolSetCollectionAnnotation.annotates(member)
+        ]
 
     @functools.cached_property
     def collection_names(self) -> list[str]:
@@ -284,17 +343,26 @@ class ToolsetMembers:
         fixed once it is imported."""
         return [
             name
-            for name, member in self.every
+            for name, member in self.declared.every
             if name not in self.COLLECTION_SKIP
-            and (self.is_tool(member) or self.is_rules(member) or self._is_collection_type(self._return_type(member)))
+            and (self._is_tool(member) or self._is_rules(member) or self._is_collection_type(self._return_type(member)))
         ]
 
-    def collections_on(self, instance: Any) -> list[tuple[str, Any]]:
+    def collections_on(self, instance: AgentToolSetOrigin) -> list[tuple[str, AgentToolSetOrigin]]:
         """Each of those members that holds a collection of tools on instance, an instance of this class, by name."""
         held = ((name, getattr(instance, name, None)) for name in self.collection_names)
-        return [(name, value) for name, value in held if value is not instance and self._is_tool_collection(value)]
+        return [
+            (name, value) for name, value in held
+            if value is not instance and isinstance(value, AgentToolSetOrigin) and self._holds_tools(value)
+        ]
 
-    def _return_type(self, member: Any) -> Any:
+    def _is_tool(self, member: ClassMember) -> bool:
+        return AgentToolAnnotation.annotates(member) or AgentInstructionsAnnotation.annotates(member) or annotation_kinds.enlisting(member)
+
+    def _is_rules(self, member: ClassMember) -> bool:
+        return annotation_kinds.annotated_for(InstallDestination.RULE, member)
+
+    def _return_type(self, member: ClassMember) -> TypeHint:
         """The type member says it returns, its name resolved in the module that defines it, else the class's."""
         annotation = getattr(member, "__annotations__", {}).get("return")
         if not isinstance(annotation, str):
@@ -305,59 +373,16 @@ class ToolsetMembers:
             resolved = getattr(module, annotation, None)
         return resolved
 
-    def _is_collection_type(self, annotation: Any) -> bool:
+    def _is_collection_type(self, annotation: TypeHint) -> bool:
         if not isinstance(annotation, type):
             return False
         return issubclass(annotation, ToolSetCollection) or self._is_toolset_class(annotation)
 
-    def _is_tool_collection(self, value: Any) -> bool:
-        if value is None:
-            return False
-        return isinstance(value, ToolSetCollection) or self._is_toolset_class(type(value))
+    def _holds_tools(self, collection: AgentToolSetOrigin) -> bool:
+        return isinstance(collection, ToolSetCollection) or self._is_toolset_class(type(collection))
 
     def _is_toolset_class(self, owner: type) -> bool:
         return ToolSetCollectionAnnotation.annotates(owner) or AgentToolSetAnnotation.annotates(owner)
-
-    def declared(self, name: str) -> Any:
-        """The attribute name as the nearest class in the class order defines it, before Python resolves it."""
-        return next((base.__dict__[name] for base in self._owner.__mro__ if name in base.__dict__), None)
-
-    def callable_on(self, instance: Any, name: str, member: Any) -> Any:
-        """The member as instance calls it: a static or class method on the class, an operation bound to instance."""
-        declared = self.declared(name)
-        if isinstance(declared, staticmethod):
-            return declared.__func__
-        if isinstance(declared, classmethod):
-            return declared.__get__(None, self._owner)
-        if inspect.isfunction(member) and getattr(self._owner, name, None) is member:
-            return getattr(instance, name)
-        return member
-
-    def _walk(self) -> list[tuple[str, Any]]:
-        seen: set[str] = set()
-        members: list[tuple[str, Any]] = []
-        for name, member in inspect.getmembers(self._owner, predicate=inspect.isfunction):
-            declared = self.declared(name)
-            seen.add(name)
-            members.append((name, self._annotated_function(declared) if isinstance(declared, (staticmethod, classmethod)) else member))
-        for base in self._owner.__mro__:
-            for name, declared in base.__dict__.items():
-                if name not in seen and isinstance(declared, (staticmethod, classmethod)):
-                    seen.add(name)
-                    members.append((name, self._annotated_function(declared)))
-        for name, member in inspect.getmembers(self._owner, predicate=inspect.isdatadescriptor):
-            getter = getattr(member, "fget", None)
-            if getter is not None and name not in seen:
-                members.append((name, getter))
-        return members
-
-    def _annotated_function(self, declared: staticmethod | classmethod) -> Any:
-        """The function a static or class method wraps, carrying the annotations set on the wrapper."""
-        function = declared.__func__
-        for flag in annotation_kinds.copied_flags:
-            if getattr(declared, flag, None) and not getattr(function, flag, None):
-                setattr(function, flag, getattr(declared, flag))
-        return function
 
 
 class ToolsetReference:
@@ -447,12 +472,12 @@ class ToolsetValidator:
     def validate(self) -> None:
         """Raises AgentToolValidationError naming the recipe and what is wrong with it."""
         allowed = self._members.tool_names | set(self._members.instruction_names)
-        for name, member in self._members.every:
+        for name, member in self._members.declared.every:
             if AgentInstructionsAnnotation.annotates(member):
                 self._validate_recipe(member, self._receiver(name), allowed)
 
     def _receiver(self, name: str) -> str | None:
-        declared = self._members.declared(name)
+        declared = self._members.declared.as_declared(name)
         if isinstance(declared, staticmethod):
             return None
         return "cls" if isinstance(declared, classmethod) else "self"
@@ -460,45 +485,37 @@ class ToolsetValidator:
     def _validate_recipe(self, recipe: Callable[..., Any], receiver: str | None, allowed: set[str]) -> None:
         if receiver is not None:
             self._validate_receiver(recipe, receiver)
-        source = RecipeSource(recipe)
-        providers = {cross[0] for node in ast.walk(source.module) if (cross := source.provider_member(node)) is not None}
-        _RecipeLinesValidator(
-            source=source,
-            allowed_names=allowed,
-            all_providers=providers | source.loop_providers(),
-            class_name=self._toolset_class.__name__,
-            action_name=recipe.__name__,
-        ).visit(source.module)
+        _RecipeLinesValidator(recipe, allowed).validate()
 
     def _validate_receiver(self, recipe: Callable[..., Any], receiver: str) -> None:
         parameters = list(inspect.signature(recipe).parameters.values())
-        where = {"class_name": self._toolset_class.__name__, "action_name": recipe.__name__}
         if not parameters or parameters[0].name != receiver:
-            raise AgentToolValidationError(f"first parameter must be named '{receiver}'", **where)
+            raise AgentToolValidationError(f"first parameter must be named '{receiver}'", recipe)
         if parameters[0].default is not inspect.Parameter.empty:
-            raise AgentToolValidationError(f"{receiver} parameter must not have a default", **where)
+            raise AgentToolValidationError(f"{receiver} parameter must not have a default", recipe)
 
 
 class _RecipeLinesValidator(ast.NodeVisitor):
-    """Validate ``tools(...)`` and ``instructions(...)`` in one ``@agent_instructions`` body: raises
+    """Validate ``tools(...)`` and ``instructions(...)`` in one ``@agent_instructions`` recipe: raises
     ``AgentToolValidationError`` when a line names a member that is not an allowed ``@agent_tool``,
     ``@agent_instructions`` peer, loop item, or provider the recipe reads."""
 
-    def __init__(
-        self,
-        *,
-        source: RecipeSource,
-        allowed_names: set[str],
-        all_providers: set[str],
-        class_name: str,
-        action_name: str,
-    ) -> None:
-        self._source = source
+    def __init__(self, recipe: Callable[..., Any], allowed_names: set[str]) -> None:
+        self._recipe = recipe
+        self._source = RecipeSource(recipe)
         self._allowed_names = allowed_names
-        self._all_providers = all_providers
-        self._class_name = class_name
-        self._action_name = action_name
         self._loop_vars: list[str] = []
+
+    def validate(self) -> None:
+        """Visit every line of the recipe's body."""
+        self.visit(self._source.module)
+
+    @functools.cached_property
+    def _all_providers(self) -> set[str]:
+        """The members the recipe reads as providers: ``self.provider().member`` chains and ``for`` loops over them."""
+        source = self._source
+        read = {cross[0] for node in ast.walk(source.module) if (cross := source.provider_member(node)) is not None}
+        return read | source.loop_providers()
 
     def visit_For(self, node: ast.For) -> None:
         if not isinstance(node.target, ast.Name):
@@ -542,7 +559,7 @@ class _RecipeLinesValidator(ast.NodeVisitor):
             self._fail(f"{member_name!r} is not an allowed tool step")
 
     def _fail(self, message: str) -> None:
-        raise AgentToolValidationError(message, class_name=self._class_name, action_name=self._action_name)
+        raise AgentToolValidationError(message, self._recipe)
 
 
 class AgentToolSet(AgentToolSetOrigin):
@@ -568,7 +585,7 @@ class AgentToolSet(AgentToolSetOrigin):
         self._mode = ExpansionMode(str(new_mode)).value
 
     @classmethod
-    def instantiate(cls, toolset: Any = None) -> Any:
+    def instantiate(cls, toolset: ToolsetConfiguration = None) -> Any:
         """A toolset made from what configuration names: a ``<module>:<Class>`` reference, ``{"toolset": reference,
         "context": {...}}`` with the constructor's arguments, a toolset class, or a toolset already made."""
         if toolset is None:
@@ -578,13 +595,13 @@ class AgentToolSet(AgentToolSetOrigin):
             for key, value in toolset.items():
                 if key not in {"toolset", "context"}:
                     context.setdefault(key, value)
-            return cls._made(ToolsetReference(str(toolset["toolset"])).toolset_class, context)
+            return ToolsetMembers.of(ToolsetReference(str(toolset["toolset"])).toolset_class).subject_loader.made(context)
         if isinstance(toolset, dict):
             return cls(**toolset)
         if isinstance(toolset, str):
-            return cls._made(ToolsetReference(toolset).toolset_class, {})
+            return ToolsetMembers.of(ToolsetReference(toolset).toolset_class).subject_loader.made({})
         if isinstance(toolset, type):
-            return cls._made(toolset, {})
+            return ToolsetMembers.of(toolset).subject_loader.made({})
         return toolset
 
     @classmethod
@@ -596,14 +613,6 @@ class AgentToolSet(AgentToolSetOrigin):
             toolset = cls.instantiate({"toolset": item, "context": dict(context)} if isinstance(item, str) and context is not None else item)
             made.setdefault(type(toolset), toolset)
         return list(made.values())
-
-    @classmethod
-    def _made(cls, toolset: type, context: dict[str, Any]) -> Any:
-        """A toolset with a ``@tool_subject`` loader is a domain class whose constructor needs a real object's
-        collaborators. Listing its tools needs none of them, and each tool loads the object it acts on."""
-        if ToolsetMembers.of(toolset).subject_loader.loader is not None:
-            return toolset.__new__(toolset)
-        return toolset(**context)
 
     # -- the tools this toolset publishes -------------------------------------------------------------------------
 
@@ -681,13 +690,11 @@ class AgentToolSet(AgentToolSetOrigin):
 
     def session_for(self, call: ToolCall) -> Any:
         """The session this toolset's tools log call in: the session whose session.json the call names in ``session``,
-        as a board command names its ticket's, else the session the call's chat has open."""
+        as a board command names its ticket's, else the session the call's chat has open. A named session that is not
+        there fails the call, as it fails the board command that names it."""
         named = call.arguments.get("session")
         if isinstance(named, str) and named.strip().endswith("session.json"):
-            try:
-                return call.session_named(named.strip())
-            except LookupError:
-                pass
+            return call.session_named(named.strip())
         return call.session
 
     @property
@@ -706,24 +713,23 @@ class AgentToolSet(AgentToolSetOrigin):
             for name, member in self._members.annotated if AgentToolAnnotation.annotates(member)
         }
 
-    def _operation_callable(self, name: str, member: Any) -> Any:
+    def _operation_callable(self, name: str, member: ClassMember) -> ClassMember:
         subject_loader = self._members.subject_loader
-        load = subject_loader.loader
-        if load is None or isinstance(inspect.getattr_static(type(self), name), classmethod):
-            return subject_loader.given_the_call(self._members.callable_on(self, name, member))
-        return subject_loader.on_subject(load, member)
+        if subject_loader.loader is None or isinstance(inspect.getattr_static(type(self), name), classmethod):
+            return subject_loader.given_the_call(self._members.declared.callable_on(self, name, member))
+        return subject_loader.on_subject(member)
 
     def _discover_instruction_members(self) -> dict[str, AgentInstructions]:
         members = self._members
         return {
-            name: AgentInstructions(name=name, callable=members.callable_on(self, name, member), toolset=self)
+            name: AgentInstructions(name=name, callable=members.declared.callable_on(self, name, member), toolset=self)
             for name, member in members.annotated if AgentInstructionsAnnotation.annotates(member)
         }
 
     def _discover_enlisted_members(self) -> dict[str, AgentTool]:
         members = self._members
         return {
-            name: AgentTool(name=name, callable=members.callable_on(self, name, member), toolset=self)
+            name: AgentTool(name=name, callable=members.declared.callable_on(self, name, member), toolset=self)
             for name, member in members.annotated if annotation_kinds.enlisting(member)
         }
 
@@ -735,7 +741,7 @@ class AgentToolSet(AgentToolSetOrigin):
             found.update(self._rehost_collection_tools(collection, prefix=f"{key}."))
         return found
 
-    def _nested_tool_collections(self) -> list[tuple[str, Any]]:
+    def _nested_tool_collections(self) -> list[tuple[str, AgentToolSetOrigin]]:
         return [
             (key, bag)
             for collection in self.toolset_collections
@@ -743,7 +749,7 @@ class AgentToolSet(AgentToolSetOrigin):
             for _name, bag in ToolsetMembers.of(type(child)).collections_on(child)
         ]
 
-    def _rehost_collection_tools(self, collection: Any, prefix: str) -> dict[str, AgentTool]:
+    def _rehost_collection_tools(self, collection: AgentToolSetOrigin, prefix: str) -> dict[str, AgentTool]:
         found: dict[str, AgentTool] = {}
         for name, tool in (getattr(collection, "tools", None) or {}).items():
             if prefix and PublishedWhereHeld.annotates(tool.callable):
@@ -773,99 +779,20 @@ class ToolSubjectLoader:
                 return self.given_the_call(getattr(self._toolset_class, name))
         return None
 
-    def on_subject(self, load: Callable[..., Any], operation: Callable[..., Any]) -> Callable[..., Any]:
-        """A tool over ``operation`` that first loads the object the call names: it takes the loader's
-        arguments and the operation's own, so every reader of its signature sees what a caller passes. The loader is
-        handed what it takes from the call, and an operation that takes ``call`` is handed the call too, so a line it
-        logs points at the call's chat."""
-        operation_takes_call = SERVED_CALL in inspect.signature(operation).parameters
-        own = [param for param in inspect.signature(operation).parameters.values() if param.name not in ("self", SERVED_CALL)]
-        named_objects = self._named_objects(operation, own)
-        taken = tuple(dict.fromkeys([
-            *TakesFromCall.names_on(load), *(name for other in named_objects.values() for name in TakesFromCall.names_on(other)),
-            *([SERVED_CALL] if operation_takes_call else []),
-        ]))
-        on_subject = self._loading(load, operation, named_objects, taken)
-        self._publish(on_subject, load, operation, own, named_objects)
-        if taken:
-            TakesFromCall(*taken).annotate(on_subject)
-        return OnSubject(on_subject)
+    def made(self, context: dict[str, object]) -> Any:
+        """A toolset of the class, made with context as its constructor's arguments. A class with a ``@tool_subject``
+        loader is a domain class whose constructor needs a real object's collaborators: listing its tools needs none of
+        them, and each tool loads the object it acts on, so it is made without its constructor."""
+        if self.loader is not None:
+            return self._toolset_class.__new__(self._toolset_class)
+        return self._toolset_class(**context)
 
-    def _loading(
-        self, load: Callable[..., Any], operation: Callable[..., Any], named_objects: dict[str, Callable[..., Any]], taken: tuple[str, ...]
-    ) -> Callable[..., Any]:
-        """The tool's body: load each object the call names, then the subject, then run the operation on it."""
-        operation_takes_call = SERVED_CALL in inspect.signature(operation).parameters
-        identity_names = [*inspect.signature(load).parameters, *TakesFromCall.names_on(load)]
+    def on_subject(self, operation: ClassMember) -> ClassMember:
+        """The tool over ``operation``, an instance operation of the class, that first loads the object the call names
+        with the class's loader."""
+        return _OperationOnSubject(self.loader, operation).tool()
 
-        @functools.wraps(operation)
-        def on_subject(**arguments: Any) -> Any:
-            call = arguments.get(SERVED_CALL)
-            # What each object argument's loader takes from the call, the call itself included, as the subject's loader is handed it.
-            from_call = {name: arguments[name] for name in taken if name in arguments}
-            for name, load_other in named_objects.items():
-                if name in arguments:
-                    arguments[name] = self._object_named(load_other, arguments[name], from_call)
-            found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
-            for name in taken:
-                arguments.pop(name, None)
-            return operation(found, **arguments, **({SERVED_CALL: call} if operation_takes_call else {}))
-
-        return on_subject
-
-    def _publish(
-        self, on_subject: Callable[..., Any], load: Callable[..., Any], operation: Callable[..., Any],
-        own: list[inspect.Parameter], named_objects: dict[str, Callable[..., Any]],
-    ) -> None:
-        """Give the tool the signature a caller reads: the loader's arguments, then the operation's own, with each
-        object argument taken by name."""
-        identity = list(inspect.signature(load).parameters.values())
-        published = [self._by_name(param) if param.name in named_objects else param for param in own]
-        on_subject.__signature__ = inspect.Signature(identity + published, return_annotation=inspect.signature(operation).return_annotation)
-        on_subject.__annotations__ = {
-            name: (str if name in named_objects else hint)
-            for name, hint in {**load.__annotations__, **operation.__annotations__}.items() if name != SERVED_CALL
-        }
-
-    def _named_objects(self, operation: Callable[..., Any], own: list[inspect.Parameter]) -> dict[str, Callable[..., Any]]:
-        """The operation's arguments that are themselves objects a tool can load, such as another ``Ticket``, each with
-        its class's loader: a tool call names such an object, as it names the tool's own subject, and the tool loads it."""
-        try:
-            hints = get_type_hints(operation)
-        except (NameError, TypeError):  # a hint naming a class this module cannot see loads nothing
-            return {}
-        found = {}
-        for param in own:
-            owner = self._object_class_in(hints.get(param.name))
-            loader = ToolsetMembers.of(owner).subject_loader.loader if owner is not None else None
-            if loader is not None:
-                found[param.name] = loader
-        return found
-
-    def _object_named(self, load_other: Callable[..., Any], named: Any, from_call: dict[str, Any]) -> Any:
-        """The object a call names by its identity, loaded as its own tools load it; none when the call names none, and
-        an object a caller already holds as it is."""
-        if not isinstance(named, str):
-            return named
-        if not named:
-            return None
-        identity = next(iter(inspect.signature(load_other).parameters))
-        wanted = TakesFromCall.names_on(load_other)
-        return load_other(**{identity: named, **{name: value for name, value in from_call.items() if name in wanted}})
-
-    def _object_class_in(self, hint: Any) -> type | None:
-        """The class a hint names, a ``Ticket`` or a ``Ticket | None``; none for any other hint."""
-        if isinstance(hint, type):
-            return hint if hint.__module__ != "builtins" else None
-        named = [member for member in getattr(hint, "__args__", ()) if isinstance(member, type) and member is not type(None)]
-        return named[0] if len(named) == 1 and type(None) in getattr(hint, "__args__", ()) else None
-
-    def _by_name(self, param: inspect.Parameter) -> inspect.Parameter:
-        """An object argument as a tool publishes it: its name, empty for none when the operation allows none."""
-        default = "" if param.default is None else param.default
-        return param.replace(annotation=str, default=default)
-
-    def given_the_call(self, operation: Any) -> Any:
+    def given_the_call(self, operation: Callable[..., Any]) -> Callable[..., Any]:
         """A class operation that takes the call's project or the call itself, with those left out of its signature, so
         no caller passes them and its tool hands them over from the call it serves. Any other operation as it is."""
         taken = tuple(name for name in FROM_THE_CALL if inspect.ismethod(operation) and name in inspect.signature(operation).parameters)
@@ -881,6 +808,109 @@ class ToolSubjectLoader:
         on_the_call.__signature__ = signature.replace(parameters=[parameter for parameter in signature.parameters.values() if parameter.name not in taken])
         on_the_call.__annotations__ = {name: hint for name, hint in function.__annotations__.items() if name not in taken}
         return types.MethodType(TakesFromCall(*taken).annotate(on_the_call), operation.__self__)
+
+
+class _OperationOnSubject:
+    """One instance operation of a ``@tool_subject`` class as the tool that first loads the object the call names: it
+    takes the loader's arguments and the operation's own, so every reader of its signature sees what a caller passes.
+    The loader is handed what it takes from the call, and an operation that takes ``call`` is handed the call too, so a
+    line it logs points at the call's chat."""
+
+    def __init__(self, load: Callable[..., Any], operation: ClassMember) -> None:
+        self._load = load
+        self._operation = operation
+        parameters = inspect.signature(operation).parameters
+        self._takes_call = SERVED_CALL in parameters
+        self._own = [param for param in parameters.values() if param.name not in ("self", SERVED_CALL)]
+        self._identity_names = [*inspect.signature(load).parameters, *TakesFromCall.names_on(load)]
+
+    def tool(self) -> ClassMember:
+        """The tool: its body, with the signature and annotations a caller reads, marked as running on its subject."""
+        on_subject = self._body()
+        self._publish(on_subject)
+        if self._taken:
+            TakesFromCall(*self._taken).annotate(on_subject)
+        return OnSubject(on_subject)
+
+    @functools.cached_property
+    def _named_objects(self) -> dict[str, Callable[..., Any]]:
+        """The operation's arguments that are themselves objects a tool can load, such as another ``Ticket``, each with
+        its class's loader: a tool call names such an object, as it names the tool's own subject, and the tool loads it."""
+        try:
+            hints = get_type_hints(self._operation)
+        except (NameError, TypeError):  # a hint naming a class this module cannot see loads nothing
+            return {}
+        found = {}
+        for param in self._own:
+            owner = self._object_class_in(hints.get(param.name))
+            loader = ToolsetMembers.of(owner).subject_loader.loader if owner is not None else None
+            if loader is not None:
+                found[param.name] = loader
+        return found
+
+    @functools.cached_property
+    def _taken(self) -> tuple[str, ...]:
+        """What the subject's loader, each object argument's loader, and the operation take from the call, each once."""
+        return tuple(dict.fromkeys([
+            *TakesFromCall.names_on(self._load),
+            *(name for other in self._named_objects.values() for name in TakesFromCall.names_on(other)),
+            *([SERVED_CALL] if self._takes_call else []),
+        ]))
+
+    def _body(self) -> ClassMember:
+        """The tool's body: load each object the call names, then the subject, then run the operation on it."""
+
+        @functools.wraps(self._operation)
+        def on_subject(**arguments: Any) -> Any:
+            call = arguments.get(SERVED_CALL)
+            # What each object argument's loader takes from the call, the call itself included, as the subject's loader is handed it.
+            from_call = {name: arguments[name] for name in self._taken if name in arguments}
+            self._load_named_objects(arguments, from_call)
+            found = self._load(**{name: arguments.pop(name) for name in self._identity_names if name in arguments})
+            for name in self._taken:
+                arguments.pop(name, None)
+            return self._operation(found, **arguments, **({SERVED_CALL: call} if self._takes_call else {}))
+
+        return on_subject
+
+    def _load_named_objects(self, arguments: dict[str, Any], from_call: dict[str, Any]) -> None:
+        """Each object argument the call names by its identity, replaced in arguments by the object it names; an object
+        a caller already holds stays as it is."""
+        for name, load_other in self._named_objects.items():
+            named = arguments.get(name)
+            if isinstance(named, str):
+                arguments[name] = self._object_named(load_other, named, from_call)
+
+    def _object_named(self, load_other: Callable[..., Any], named: str, from_call: dict[str, Any]) -> Any:
+        """The object a call names by its identity, loaded as its own tools load it; none when the call names none."""
+        if not named:
+            return None
+        identity = next(iter(inspect.signature(load_other).parameters))
+        wanted = TakesFromCall.names_on(load_other)
+        return load_other(**{identity: named, **{name: value for name, value in from_call.items() if name in wanted}})
+
+    def _publish(self, on_subject: ClassMember) -> None:
+        """Give the tool the signature a caller reads: the loader's arguments, then the operation's own, with each
+        object argument taken by name."""
+        identity = list(inspect.signature(self._load).parameters.values())
+        published = [self._by_name(param) if param.name in self._named_objects else param for param in self._own]
+        on_subject.__signature__ = inspect.Signature(identity + published, return_annotation=inspect.signature(self._operation).return_annotation)
+        on_subject.__annotations__ = {
+            name: (str if name in self._named_objects else hint)
+            for name, hint in {**self._load.__annotations__, **self._operation.__annotations__}.items() if name != SERVED_CALL
+        }
+
+    def _object_class_in(self, hint: TypeHint) -> type | None:
+        """The class a hint names, a ``Ticket`` or a ``Ticket | None``; none for any other hint."""
+        if isinstance(hint, type):
+            return hint if hint.__module__ != "builtins" else None
+        named = [member for member in getattr(hint, "__args__", ()) if isinstance(member, type) and member is not type(None)]
+        return named[0] if len(named) == 1 and type(None) in getattr(hint, "__args__", ()) else None
+
+    def _by_name(self, param: inspect.Parameter) -> inspect.Parameter:
+        """An object argument as a tool publishes it: its name, empty for none when the operation allows none."""
+        default = "" if param.default is None else param.default
+        return param.replace(annotation=str, default=default)
 
 
 class InstallDestination:
@@ -1014,11 +1044,11 @@ class AgentTool(AgentToolDestination):
         """Answer call on its toolset made for it: log the call in the session it works in, then call the tool with each
         argument in the type its parameter declares."""
         with call.being_answered():
-            tool = self.on(self.toolset.for_call(call))
+            tool = self._on(self.toolset.for_call(call))
             tool.log_session_invocation(call)
             return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
 
-    def on(self, toolset: Any) -> AgentTool:
+    def _on(self, toolset: AgentToolSet) -> AgentTool:
         """This tool on toolset, a toolset of the same class made for one call; the tool as it is when toolset is its
         own."""
         if toolset is self.toolset:
@@ -1081,7 +1111,12 @@ class AgentTool(AgentToolDestination):
         return text
 
     def _with_sub_agent_preamble(self, text: str) -> str:
-        return SubAgentAnnotation.with_hand_off(text) if SubAgentAnnotation.annotates(self.callable) else text
+        """text with the hand-off to a background sub-agent in front of it, when the tool is annotated ``@subAgent``."""
+        if not SubAgentAnnotation.annotates(self.callable):
+            return text
+        preamble = SUB_AGENT_CALLER_PREAMBLE.strip()
+        body = (text or "").strip()
+        return f"{preamble}\n\n{body}" if body else preamble
 
     @functools.cached_property
     def listed_description(self) -> str:
@@ -1116,7 +1151,10 @@ class AgentOperation(AgentTool):
 @dataclass
 class AgentInstructions(AgentTool):
     """An ``@agent_instructions`` operation: its recipe body, expanded for a call, is the instructions an agent
-    follows. Each expansion runs in a *RecipeExpansion* of its own."""
+    follows. Each expansion runs in a *RecipeExpansion* of its own. A parent class's recipe that a recipe defers to
+    holds the class that defines it, so its own parent is looked for above that class."""
+
+    defining_class: type | None = field(default=None, repr=False)
 
     @property
     def kind(self) -> str:
@@ -1143,7 +1181,7 @@ class AgentInstructions(AgentTool):
 
     def answer(self, call: ToolCall) -> str:
         """The instructions an agent follows for call, expanded with its arguments by the toolset made for it."""
-        tool = self.on(self.toolset.for_call(call))
+        tool = self._on(self.toolset.for_call(call))
         tool.log_session_invocation(call)
         if tool.name == "instructions":
             return tool.toolset.instructions
@@ -1180,7 +1218,7 @@ class AgentInstructions(AgentTool):
             result=placeholders.filled(expansion.result or f"Instructions for {self.callable.__name__}"),
         )
 
-    def members_of(self, target: Any) -> ToolsetMembers:
+    def members_of(self, target: RecipeTarget) -> ToolsetMembers:
         """The members of target, a toolset this recipe names, that are its tools."""
         return ToolsetMembers.of(type(target))
 
@@ -1188,21 +1226,34 @@ class AgentInstructions(AgentTool):
         """The instructions operation member on target, a toolset this recipe names."""
         return target.instruction(member)
 
-    def provider_of(self, owner: Any, provider_name: str) -> Any:
+    def provider_of(self, owner: RecipeTarget, provider_name: str) -> Any:
         """The object owner's provider gives: a toolset it holds as it is, or what a provider operation answers."""
         provided = getattr(owner, provider_name)
         if AgentToolSetAnnotation.annotates(type(provided)):
             return provided
         return provided() if callable(provided) else provided
 
-    def parent_recipe(self, after_class: type | None = None) -> tuple[AgentInstructions, type] | None:
-        """The recipe of the same name on the nearest class above after_class (above the toolset's own class when none)
-        in the toolset's class order, with that class; none when no class above defines one."""
+    def parent_recipe(self) -> AgentInstructions | None:
+        """The recipe of the same name on the nearest class above the class defining this one (above the toolset's own
+        class when none is named) in the toolset's class order, holding that class; none when no class above defines
+        one."""
         own_class = type(self.toolset)
         method_name = self.callable.__name__
         own_recipe = own_class.__dict__.get(method_name)
+        after_class = self.defining_class
         if own_recipe is None:
             return None
+        classes = own_class.__mro__
+        if after_class is not None and after_class not in classes:
+            return None
+        above = classes[classes.index(after_class) + 1:] if after_class is not None else classes
+        for owner in above:
+            recipe = owner.__dict__.get(method_name)
+            if recipe is None or (after_class is None and recipe is own_recipe):
+                continue
+            if callable(recipe) and AgentInstructionsAnnotation.annotates(recipe):
+                return AgentInstructions(name=method_name, callable=recipe, toolset=self.toolset, defining_class=owner)
+        return None
         classes = own_class.__mro__
         if after_class is not None and after_class not in classes:
             return None
@@ -1282,11 +1333,11 @@ class _ClassJoiningAnnotation(Annotation):
 
     annotation_name = ""
 
-    def __new__(cls, target: Any = None):
+    def __new__(cls: type[_ClassJoiningAnnotation], target: JoinedTarget | None = None):
         annotation = object.__new__(cls)
         return annotation.annotate(target) if target is not None else annotation
 
-    def __call__(self, target: Any) -> Any:
+    def __call__(self, target: JoinedTarget) -> JoinedTarget:
         return self.annotate(target)
 
     def _joined(self, target: type, base: type) -> type:
@@ -1312,7 +1363,7 @@ class AgentToolSetAnnotation(_ClassJoiningAnnotation):
     annotation_name = "agent_toolset"
     copied = False
 
-    def __new__(cls, target: type | None = None):
+    def __new__(cls: type[AgentToolSetAnnotation], target: type | None = None):
         return super().__new__(cls, target if isinstance(target, type) else None)
 
     def annotate(self, toolset_class: type) -> type:
@@ -1329,7 +1380,7 @@ class ToolSetCollectionAnnotation(_ClassJoiningAnnotation):
     flag = "_is_toolset_collection"
     annotation_name = "toolset_collection"
 
-    def annotate(self, target: Any) -> Any:
+    def annotate(self, target: JoinedTarget) -> JoinedTarget:
         if inspect.isclass(target):
             return self._joined(target, ToolSetCollection)
         setattr(getattr(target, "fget", target), self.flag, True)
@@ -1352,13 +1403,6 @@ class SubAgentAnnotation(Annotation):
     tools/sub_agent."""
 
     flag = "_sub_agent"
-
-    @classmethod
-    def with_hand_off(cls, text: str) -> str:
-        """text with the hand-off to a background sub-agent in front of it."""
-        preamble = SUB_AGENT_CALLER_PREAMBLE.strip()
-        body = (text or "").strip()
-        return f"{preamble}\n\n{body}" if body else preamble
 
 
 class NoSessionLog(Annotation):

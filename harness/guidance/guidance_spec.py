@@ -434,8 +434,7 @@ with description("a fidelity read from its practice's document"):
         with it("should leave a setting it does not know to its reader"):
             from harness.guidance.guidance import FidelityGuidance
 
-            fidelity = FidelityGuidance(name="sample")
-            fidelity.apply_settings({"globs": "**/*.md", "stage": "discovery"})
+            fidelity = FidelityGuidance.from_block("sample", '```yaml\nglobs: "**/*.md"\nstage: discovery\n```')
             expect(hasattr(fidelity, "globs")).to(equal(False))
 
     with context("with a template in the format it works in"):

@@ -26,6 +26,8 @@ _NOT_EXAMPLE_FOLDERS = frozenset({".git", "node_modules", ".codeql", "dist", "bu
 _NOT_EXAMPLE_SUFFIXES = frozenset({".pyc", ".log"})
 
 Examples = dict[CatalogFidelity, Path]
+# Examples as a project saves them or a person writes them: practice key → stage → path from the project.
+type NamedExamples = dict[str, dict[str, str]]
 
 
 class ExampleClassifier:
@@ -84,7 +86,7 @@ class ProjectFiles:
     def saved_examples(self) -> Examples:
         return self.placed(self.saved.get("examples") or {})
 
-    def placed(self, mapping: dict) -> Examples:
+    def placed(self, mapping: NamedExamples) -> Examples:
         """The examples a mapping of practice key → stage → path from the project names, each under the board fidelity
         it names; a practice or stage the board does not show is left out. The mapping comes from the project's saved
         manifest or from a person, so its keys are the names they wrote."""

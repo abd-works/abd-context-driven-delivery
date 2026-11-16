@@ -10,6 +10,8 @@ from harness.agent_tools.agent_tools import (
     AgentTool,
     AgentToolSet,
     InstallDestination,
+    ToolsetConfiguration,
+    ToolsetReference,
     agent_instructions,
     agent_tool,
     agent_toolset,
@@ -35,7 +37,7 @@ _Server = TypeVar("_Server", bound=ServerInstallation)
 class ToolsetInstallFailed(Exception):
     """Publishing one toolset failed; the install stops so no IDE folder is left with part of a toolset."""
 
-    def __init__(self, toolset: Any, cause: Exception) -> None:
+    def __init__(self, toolset: ToolsetConfiguration | ToolsetReference, cause: Exception) -> None:
         super().__init__(f"install failed for {toolset}: {type(cause).__name__}: {cause}")
         self.toolset = toolset
         self.cause = cause
@@ -73,7 +75,7 @@ class InstallChannels:
         }
         self.standing_rules = FileInstallation(layout, path, InstallDestination.RULE, repo=repo)
         for installation in (*self.servers, self.language_adapters, *self._files.values(), self.standing_rules):
-            installer.track(installation)
+            installation.track_writes_with(lambda written: installer.record.track(written, installer.path))
         # The toolsets the server channels publish into every install, such as the hooks that start the cdd server.
         self.toolsets: list[Any] = [AgentToolSet.instantiate(toolset) for server in self.servers for toolset in server.toolsets]
 
@@ -134,10 +136,6 @@ class Installer:
         """The installer of project, the folder the call names, into the IDE folder it last installed into."""
         return cls(repo=project)
 
-    def track(self, installation: Installation) -> None:
-        """Have installation add each file it writes to the install record."""
-        installation.track_writes_with(lambda written: self.record.track(written, self.path))
-
     @command(name="clean")
     @agent_tool
     def clean(self) -> list[str]:
@@ -192,7 +190,7 @@ class Installer:
         into every install, such as the hooks that start the cdd server."""
         return self._install_run([], replace=replace)
 
-    def _install_run(self, toolsets: Iterable[Any] | None, replace: bool) -> InstallChannels:
+    def _install_run(self, toolsets: Iterable[ToolsetConfiguration] | None, replace: bool) -> InstallChannels:
         if replace:
             self.clean()
         else:
@@ -202,24 +200,37 @@ class Installer:
         if not Installer._servers:
             raise ServersNotRegistered()
         channels = self._channels = InstallChannels(self, Installer._servers, installing=True)
+        self._publish_every_toolset(items, channels)
+        self._save_installed_files(replace)
+        self._standup_channels()
+        self._report_diagnosis()
+        return channels
+
+    def _publish_every_toolset(self, items: list[ToolsetConfiguration], channels: InstallChannels) -> None:
+        """Write every channel's files for items, this Installer, and the toolsets the server channels publish, then the
+        language adapters, the agents, and the standing rules."""
         self._install_all(items)
         for toolset in (self, *channels.toolsets):
             self._install_toolset(toolset)
         channels.language_adapters.write_all()
         self._install_agents()
         self._install_standing_rules()
+
+    def _save_installed_files(self, replace: bool) -> None:
+        """Tidy the folder this run wrote into and save its record."""
         if replace:
             # Only after a full wipe and republish do the enrolled MCP names hold the whole catalog; a partial install
             # must not delete skills for toolsets not in this run.
             self._remove_skills_naming_missing_mcp()
         self.record.prune_empty_skill_folders(self.path)
         self.record.save(self.ide, self.path)
-        self._standup_channels()
+
+    def _report_diagnosis(self) -> None:
+        """Diagnose the finished install, printing each red report."""
         self.diagnosis = self.diagnose_after_install()
         for report in self.diagnosis:
             if report.startswith("!"):
                 print(report, file=sys.stderr)
-        return channels
 
     def write_language_adapters(self) -> list[Path]:
         """Write the TypeScript language adapters from the repository's toolsets as they are now, and nothing else. A
@@ -243,7 +254,7 @@ class Installer:
             raise ToolsetInstallFailed(unloadable.reference, unloadable.cause) from unloadable.cause
         return classes
 
-    def _install_all(self, toolsets: Iterable[Any]) -> None:
+    def _install_all(self, toolsets: Iterable[ToolsetConfiguration]) -> None:
         for item in toolsets:
             try:
                 toolset = AgentToolSet.instantiate(item)
@@ -256,7 +267,7 @@ class Installer:
             except Exception as error:  # noqa: BLE001
                 raise ToolsetInstallFailed(item, error) from error
 
-    def _install_toolset(self, toolset: Any) -> None:
+    def _install_toolset(self, toolset: AgentToolSet) -> None:
         channels = self._channels_of_run()
         if toolset.registration_name not in channels.deployed:
             channels.deployed.append(toolset.registration_name)
@@ -304,17 +315,20 @@ class Installer:
         if not skills.is_dir():
             return []
         enrolled = set(self._channels_of_run().published.get(InstallDestination.MCP, []))
-        removed: list[str] = []
-        for path in skills.rglob("SKILL.md"):
-            names = AgentTool.invoked_names(path.read_text(encoding="utf-8"))
-            if not names or all(name in enrolled for name in names):
-                continue
-            relative = path.resolve().relative_to(self.path.resolve()).as_posix()
-            path.unlink()
-            removed.append(relative)
-            self.record.prune_empty_parents(path, self.path)
-            self.record.forget(relative)
-        return removed
+        return [self._remove_skill(path) for path in skills.rglob("SKILL.md") if self._names_missing_mcp(path, enrolled)]
+
+    def _names_missing_mcp(self, skill: Path, enrolled: set[str]) -> bool:
+        """Whether the skill file names an MCP tool, and one of them is not among the enrolled names."""
+        names = AgentTool.invoked_names(skill.read_text(encoding="utf-8"))
+        return bool(names) and not all(name in enrolled for name in names)
+
+    def _remove_skill(self, skill: Path) -> str:
+        """Delete the skill file and forget it in the record; answer its path from the IDE folder."""
+        relative = skill.resolve().relative_to(self.path.resolve()).as_posix()
+        skill.unlink()
+        self.record.prune_empty_parents(skill, self.path)
+        self.record.forget(relative)
+        return relative
 
     def _standup_channels(self) -> None:
         """Stand up each server over what was installed, to check it loads, then start the servers. An install that

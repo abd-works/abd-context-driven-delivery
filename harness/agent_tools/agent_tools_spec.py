@@ -1034,6 +1034,14 @@ with description("a cross-instance call whose provider cannot resolve"):
         expect(lambda: body.tools).to(raise_error(RecipeLineFailed, contain("self.missing().finish_turn()", "no session")))
 
 
+class MyClass:
+    def my_action(self) -> None: ...
+
+
+class Cls:
+    def act(self) -> None: ...
+
+
 with description("AgentToolValidationError"):
     # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:
@@ -1044,30 +1052,16 @@ with description("AgentToolValidationError"):
 
     with context("when constructed without a line number"):
         with it("should format the message as class.action - message"):
-            err = AgentToolValidationError(
-                "self.foo is not allowed",
-                class_name="MyClass",
-                action_name="my_action",
-            )
+            err = AgentToolValidationError("self.foo is not allowed", MyClass.my_action)
             expect("MyClass.my_action" in str(err)).to(be_true)
 
     with context("when constructed with a line number"):
         with it("should include the line number in the message"):
-            err = AgentToolValidationError(
-                "self.foo is not allowed",
-                class_name="MyClass",
-                action_name="my_action",
-                lineno=42,
-            )
+            err = AgentToolValidationError("self.foo is not allowed", MyClass.my_action, lineno=42)
             expect("line 42" in str(err)).to(be_true)
 
         with it("should expose class_name, action_name, and lineno attributes"):
-            err = AgentToolValidationError(
-                "msg",
-                class_name="Cls",
-                action_name="act",
-                lineno=10,
-            )
+            err = AgentToolValidationError("msg", Cls.act, lineno=10)
             expect(err.class_name).to(equal("Cls"))
             expect(err.action_name).to(equal("act"))
             expect(err.lineno).to(equal(10))

@@ -4,16 +4,62 @@ from __future__ import annotations
 import importlib
 import inspect
 import json
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 from harness.guidance.documents import document_in
+from harness.guidance.worked_session import NamedPaths, WorkedSession
 from harness.markdown.format import Format
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
+
+# Text or data a format's adapter parses: a document's text, a code format's tree of files by path, or nothing.
+TextOrData = str | bytes | dict[str, Any] | list[Any] | None
+
+
+class ObjectModel(Protocol):
+    """A practice's object model, which a format's adapter reads from text and renders back to it: it names the kind of
+    model it is (``semantic_type``)."""
+
+    def semantic_type(self) -> str:
+        """The kind of model this is, such as a story map or a class model."""
+
+
+class FormatAdapter(Protocol):
+    """One format's adapter: it reads text or data into the practice's object model and renders a model back. A
+    renderer that takes the previous file or the folder of the files it links to names them as keywords."""
+
+    def parse(self, content: TextOrData) -> ObjectModel:
+        """The object model content holds."""
+
+    def render(self, model: ObjectModel, **options: Any) -> Any:
+        """model written in this format."""
+
+
+# What a render converts: text or data in a source format, an object model, or the practice itself, whose own model is
+# read from the code of the session it works in.
+type RenderContent = TextOrData | ObjectModel | PracticeGuidance
+
+
+class NoFormatReads(ValueError):
+    """A practice was asked for the model of a file none of its formats reads, such as a ``.png`` for Clean
+    Engineering. Callers pick files by ``suffixes``, so a file outside them is a broken call."""
+
+    def __init__(self, practice: PracticeGuidance, file: Path) -> None:
+        super().__init__(f"No {type(practice).__name__} format reads {file.name}")
+        self.file = file
+
+
+class SourceFormatNotSet(ValueError):
+    """A render was asked to read text or data with no format named for it, and the fidelity it works at works in
+    none, so nothing says which adapter reads it."""
+
+    def __init__(self, practice: PracticeGuidance) -> None:
+        super().__init__(f"source format is not set for {type(practice).__name__}")
+        self.practice = practice
 
 
 @dataclass(frozen=True)
@@ -25,7 +71,7 @@ class RenderRequest:
     content is in when the call names none."""
 
     format: Format
-    content: Any = ""
+    content: RenderContent = ""
     source: Format = Format()
     previous: str = ""
     folder: str = ""
@@ -66,7 +112,7 @@ class PracticeFormats:
         self._classes: dict[Format, Any] = {}
         self._made: dict[Format, Any] = {}
 
-    def __contains__(self, format: object) -> bool:
+    def __contains__(self, format: str) -> bool:
         return Format(str(format)) in self._named
 
     def __iter__(self) -> Iterator[Format]:
@@ -80,18 +126,7 @@ class PracticeFormats:
         """The formats its adapters read and write; none for a practice that has no adapters of its own."""
         return frozenset(self._named)
 
-    def check(self) -> None:
-        """Raise ValueError for a format the practice works in but does not write: one its adapters do not read, or,
-        for a practice with no adapters, one no fidelity names as its default."""
-        practice = self._practice
-        format = practice.format
-        supported = self.supported
-        if not supported and format:
-            supported = frozenset(child.default_format for child in practice.fidelities if child.default_format)
-        if supported and format and format not in supported:
-            raise ValueError(f"Unsupported format {format!r}. Choose from: {sorted(supported)}")
-
-    def adapter_class(self, format: str) -> Any:
+    def adapter_class(self, format: str) -> type[FormatAdapter] | FormatAdapter:
         """The adapter of format as the practice names it, imported once; raises ValueError for a format it has none
         for."""
         format = Format(format)
@@ -102,7 +137,7 @@ class PracticeFormats:
             self._classes[format] = getattr(importlib.import_module(named[0]), named[1]) if isinstance(named, tuple) else named
         return self._classes[format]
 
-    def adapter(self, format: str) -> Any:
+    def adapter(self, format: str) -> FormatAdapter:
         """The adapter of format, made once on first use and kept: every render and every read through it uses the
         same one."""
         format = Format(format)
@@ -128,11 +163,11 @@ class PracticeFormats:
         found = (practice.formats.reading(file) for practice in others)
         return self.reading(file) or next((name for name in found if name is not None), None)
 
-    def for_file(self, file: Path) -> Any:
-        """A new model of the format that reads file (``reading``). Raises ValueError when none of them reads it."""
+    def for_file(self, file: Path) -> FormatAdapter:
+        """A new model of the format that reads file (``reading``). Raises *NoFormatReads* when none of them reads it."""
         name = self.reading(file)
         if name is None:
-            raise ValueError(f"No {type(self._practice).__name__} format reads {file.name}")
+            raise NoFormatReads(self._practice, file)
         return self.adapter_class(name)()
 
     @property
@@ -141,7 +176,7 @@ class PracticeFormats:
         reading reads, the same table ``for_file`` picks a format from."""
         return frozenset(suffix for name in self._named for suffix in getattr(self.adapter_class(name), "suffixes", ()))
 
-    def read(self, paths: list[str] | str, request: RenderRequest) -> Any:
+    def read(self, paths: NamedPaths, request: RenderRequest) -> RenderContent:
         """What request converts from the files at paths: their text, one after another, read from the project of the
         session the practice works in. Formats that read their files another way, such as Stories' story tests, read
         them themselves."""
@@ -160,7 +195,7 @@ class PracticeFormats:
         target = self.adapter(request.format)
         return {"format": request.format, "content": self._call_render(target, self.model_for(target, model), request.keeping_sketch_wording())}
 
-    def parse(self, format: Format, content: Any) -> Any:
+    def parse(self, format: Format, content: TextOrData) -> ObjectModel:
         """The model format's adapter reads from content. A model that says it holds only classes, such as a DDD map
         with no aggregate in it, is read by the formats of the practice this one extends, through that practice's own
         adapter."""
@@ -170,7 +205,7 @@ class PracticeFormats:
             return extended.formats.parse(format, content)
         return parsed
 
-    def model_for(self, target: Any, model: Any) -> Any:
+    def model_for(self, target: FormatAdapter, model: ObjectModel) -> ObjectModel:
         """The object model in the form target renders; formats that read another practice's model convert it here."""
         return model
 
@@ -181,21 +216,25 @@ class PracticeFormats:
             return {"format": source or request.format, "content": request.content}
         return owner.formats.render(replace(request, fidelity=companion))
 
-    def _object_model(self, content: Any, source: Format) -> Any:
+    def _object_model(self, content: RenderContent, source: Format) -> ObjectModel:
         """content as an object model: itself when it is one; read from text or data in source; or, for guidance, read
         from the code of the session it works in."""
         if self._is_object_model(content):
             return content
-        if not _is_text_or_data(content):
+        if not self._is_text_or_data(content):
             return self._model_of_code(content, source)
         if not source:
-            raise ValueError("source format is not set")
+            raise SourceFormatNotSet(self._practice)
         return self.parse(source, content)
 
-    def _is_object_model(self, content: Any) -> bool:
-        return not _is_text_or_data(content) and callable(getattr(content, "semantic_type", None))
+    def _is_object_model(self, content: RenderContent) -> bool:
+        return not self._is_text_or_data(content) and callable(getattr(content, "semantic_type", None))
 
-    def _model_of_code(self, guidance: Any, source: Format) -> Any:
+    def _is_text_or_data(self, content: RenderContent) -> bool:
+        """Whether content is text or data an adapter parses, rather than an object model or guidance."""
+        return content is None or isinstance(content, (str, bytes, dict, list))
+
+    def _model_of_code(self, guidance: PracticeGuidance, source: Format) -> ObjectModel:
         """The model guidance's own code holds, read by the adapter of a code format from the session guidance works
         in; an empty model of a format that is not code."""
         format = source or guidance.format or self._practice.format
@@ -204,7 +243,7 @@ class PracticeFormats:
         adapter = self.adapter(format)
         return adapter.parse(self._code_of(guidance.session, adapter))
 
-    def _code_of(self, session: Any, adapter: Any) -> dict[str, str]:
+    def _code_of(self, session: WorkedSession | None, adapter: FormatAdapter) -> dict[str, str]:
         """The files of adapter's kind in the session's root, by path from that root, which the session finds and reads;
         none in no session, or for an adapter that names no file ending."""
         extension = getattr(adapter, "LEAF_EXTENSION", "") or ""
@@ -214,7 +253,7 @@ class PracticeFormats:
         found = session.session_files.find(f"{root.as_posix()}/**/*{extension}")
         return {path.relative_to(root).as_posix(): session.document_named("", [str(path)]) for path in found}
 
-    def _call_render(self, target: Any, parsed: Any, request: RenderRequest) -> Any:
+    def _call_render(self, target: FormatAdapter, parsed: ObjectModel, request: RenderRequest) -> Any:
         """Ask target to render parsed, giving it the previous file and the linked files' folder when it takes them."""
         try:
             parameters = inspect.signature(target.render).parameters
@@ -227,7 +266,7 @@ class PracticeFormats:
             kwargs["workspace"] = request.folder
         return target.render(parsed, **kwargs)
 
-    def _made_adapter(self, format: Format) -> Any:
+    def _made_adapter(self, format: Format) -> FormatAdapter:
         """The format's adapter, made the way its class says: through its own ``create``, with the settings its
         constructor takes (``adapter_settings``), or bare. An adapter whose constructor needs more is used as its class,
         whose operations read and write the format."""
@@ -243,20 +282,16 @@ class PracticeFormats:
             return adapter(**settings)
         return adapter() if self._takes_no_arguments(adapter) else adapter
 
-    def _takes_no_arguments(self, operation: Any) -> bool:
+    def _takes_no_arguments(self, operation: Callable[..., object]) -> bool:
         required = (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
         return all(
             parameter.default is not inspect.Parameter.empty or parameter.kind not in required
             for parameter in inspect.signature(operation).parameters.values()
         )
 
-    def _incoming(self, format: Format, content: Any) -> Any:
+    def _incoming(self, format: Format, content: TextOrData) -> TextOrData:
         """content as format's adapter reads it: a code format reads a tree of files, so JSON text of one is read."""
         if format.is_code and isinstance(content, str) and content.strip()[:1] in ("{", "["):
             return json.loads(content)
         return content
 
-
-def _is_text_or_data(content: Any) -> bool:
-    """Whether content is text or data an adapter parses, rather than an object model or guidance."""
-    return content is None or isinstance(content, (str, bytes, dict, list))

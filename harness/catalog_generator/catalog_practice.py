@@ -24,6 +24,19 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SLASH_COMMAND_IDE = "Claude"
 
 
+class _PracticeGroup:
+    """The practices one catalog shows together, made once: each keeps its place among them, and all share one skill
+    install."""
+
+    def __init__(self, practices: tuple[PracticeGuidance, ...] = ()) -> None:
+        self.practices = practices
+        self.skills = CatalogPractice.skill_install()
+
+    def position_of(self, practice: PracticeGuidance) -> int:
+        """Where practice sits among the group's practices; the first place for a practice made outside any group."""
+        return next((position for position, held in enumerate(self.practices) if held is practice), 0)
+
+
 class CatalogPractice:
     """One practice as the catalog shows it: the live ``PracticeGuidance``, the catalog card it gives itself, its place in
     the practice catalogue, and the catalog's view of each fidelity it shows (a ``CatalogFidelity``), made once and
@@ -45,18 +58,13 @@ class CatalogPractice:
     # (the board makes its practices once per checkout) answers from the first one that worked it out.
     _SKILL_FOLDERS: dict[tuple[str, str, type, str], str] = {}
 
-    def __init__(
-        self,
-        practice: PracticeGuidance,
-        skills: FileInstallation | None = None,
-        position: int = 0,
-        catalogue: tuple[PracticeGuidance, ...] = (),
-    ) -> None:
+    def __init__(self, practice: PracticeGuidance, group: _PracticeGroup | None = None) -> None:
         self.practice = practice
-        self.position = position
+        group = group if group is not None else _PracticeGroup()
+        self.position = group.position_of(practice)
         # Every practice of the catalog this one was made with, made once, whose formats name a file this one cannot.
-        self._catalogue = catalogue
-        self._skills = skills if skills is not None else self.skill_install()
+        self._catalogue = group.practices
+        self._skills = group.skills
         # Each guidance's skill folder, worked out once: it is fixed for the install, and the board asks it on every read.
         self._skill_names: dict[str, str] = {}
         self._card = self._card_of(type(practice))
@@ -75,9 +83,8 @@ class CatalogPractice:
     def of_practices(cls, practices: Iterable[PracticeGuidance]) -> list[CatalogPractice]:
         """The catalog's view of each of practices, in their order: each keeps its place among them, and all share one
         skill install, made once here. A reader that holds these, such as a checkout's session board, makes them once."""
-        skills = cls.skill_install()
-        catalogue = tuple(practices)
-        return [cls(practice, skills, position, catalogue) for position, practice in enumerate(catalogue)]
+        group = _PracticeGroup(tuple(practices))
+        return [cls(practice, group) for practice in group.practices]
 
     @classmethod
     def load_all(cls) -> list[CatalogPractice]:

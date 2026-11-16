@@ -4,9 +4,9 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Protocol
 
-from harness.agent_tools.agent_tools import AgentTool, InstallDestination
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination
 from harness.annotations.name import Name
 from harness.installation.destination import Installation
 from harness.installation.ide_layout import IdeLayout
@@ -61,7 +61,7 @@ class InstructionsUnreadableAtInstall(Exception):
     Writing the operation's docstring in their place would install a command that tells the agent something other
     than what the operation says, so the install stops and names the operation instead."""
 
-    def __init__(self, toolset: Any, operation: str, cause: BaseException) -> None:
+    def __init__(self, toolset: AgentToolSet, operation: str, cause: BaseException) -> None:
         self.toolset_name = type(toolset).__name__
         self.operation = operation
         super().__init__(
@@ -97,7 +97,7 @@ class FileInstallation(Installation):
         self.destination = destination
         self.mcp_mode = mcp_mode
 
-    def relative_path(self, toolset: Any, name: str) -> Path:
+    def relative_path(self, toolset: AgentToolSet, name: str) -> Path:
         """Where the file for toolset's operation name goes, from the IDE folder."""
         folder = self._kebab_folder(self.folder_for(toolset))
         operation = Name(name).kebab
@@ -153,14 +153,14 @@ class FileInstallation(Installation):
         dest.write_text(self._with_installed_references(text, dest), encoding="utf-8")
         self.track_write(dest)
 
-    def _guidance_slug(self, toolset: Any) -> str | None:
+    def _guidance_slug(self, toolset: AgentToolSet) -> str | None:
         """The kebab slug of a practice or fidelity's guidance toolset, whose files are named after it; none for any
         other toolset."""
         if not toolset.is_part_of_practice:
             return None
         return Name(toolset.slug).kebab if toolset.slug else None
 
-    def _rule_path(self, toolset: Any, folder: Path) -> Path:
+    def _rule_path(self, toolset: AgentToolSet, folder: Path) -> Path:
         suffix = self.layout.rule_suffix
         if not toolset.is_part_of_practice:
             return Path("rules") / folder.with_suffix(suffix)
@@ -179,16 +179,16 @@ class FileInstallation(Installation):
         ]
         return Path(*parts) if parts else folder
 
-    def _command_stem(self, toolset: Any, operation: str) -> str:
+    def _command_stem(self, toolset: AgentToolSet, operation: str) -> str:
         slug = self._guidance_slug(toolset)
         if slug is None:
             return operation
         return slug if operation in self._GUIDANCE_OWN_OPERATIONS else f"{slug}-{operation}"
 
-    def _skill_operations(self, toolset: Any) -> list[str]:
+    def _skill_operations(self, toolset: AgentToolSet) -> list[str]:
         return [Name(tool.deploy_name).kebab for tool in toolset.tools.values() if tool.install_to_skill]
 
-    def _skill_folder(self, toolset: Any, operation: str) -> Path:
+    def _skill_folder(self, toolset: AgentToolSet, operation: str) -> Path:
         folder = self._kebab_folder(self.folder_for(toolset))
         shares_folder = len(self._skill_operations(toolset)) > 1
         slug = self._guidance_slug(toolset)
@@ -230,7 +230,7 @@ class FileInstallation(Installation):
         """What the ``@rules`` member tool publishes answers, read from its toolset."""
         return getattr(tool.toolset, tool.name)
 
-    def _fidelity_one_liner(self, child: Any) -> str:
+    def _fidelity_one_liner(self, child: AgentToolSet) -> str:
         name = child.name or ""
         overview = (child.overview or "").strip()
         summary = next(
@@ -257,7 +257,7 @@ class FileInstallation(Installation):
     def _shell_invoke_line(self, tool: AgentTool) -> str:
         return f"{self._SHELL_INVOKE}\n\n```text\n{self._shell_command(tool)}\n```"
 
-    def _fidelity_invoke_parts(self, toolset: Any) -> list[str]:
+    def _fidelity_invoke_parts(self, toolset: AgentToolSet) -> list[str]:
         """One line for each part a toolset holds in its collections, such as each fidelity of a practice: its name and
         summary, then the MCP tool its instructions are published as, written by that tool."""
         parts: list[str] = []
@@ -286,7 +286,7 @@ class FileInstallation(Installation):
             self.track_write(target)
         return Path(os.path.relpath(target, dest.parent)).as_posix()
 
-    def _skill_overview(self, toolset: Any, parts: list[str]) -> str:
+    def _skill_overview(self, toolset: AgentToolSet, parts: list[str]) -> str:
         overview = (toolset.overview or "").strip()
         source = overview or (parts[0] if parts else "")
         return self._first_paragraph(self._without_mcp_invoke(source))

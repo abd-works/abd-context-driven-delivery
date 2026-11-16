@@ -76,10 +76,7 @@ class DrawioDiagram:
         placed = self._placed(root, include_structural=False)
         if not placed:
             return self
-        left = min(float(geometry.get("x") or 0) for geometry in placed)
-        top = min(float(geometry.get("y") or 0) for geometry in placed)
-        right = max(float(geometry.get("x") or 0) + float(geometry.get("width") or 0) for geometry in placed)
-        bottom = max(float(geometry.get("y") or 0) + float(geometry.get("height") or 0) for geometry in placed)
+        left, top, right, bottom = self._bounds(placed)
         for geometry in placed:
             geometry.set("x", str(int(float(geometry.get("x") or 0) + _FRAME_MARGIN - left)))
             geometry.set("y", str(int(float(geometry.get("y") or 0) + _FRAME_MARGIN - top)))
@@ -88,6 +85,14 @@ class DrawioDiagram:
             model.set("pageWidth", str(int(right - left + _FRAME_MARGIN * 2)))
             model.set("pageHeight", str(int(bottom - top + _FRAME_MARGIN * 2)))
         return DrawioDiagram(ET.tostring(root, encoding="unicode"), self.name)
+
+    def _bounds(self, placed: list[ET.Element]) -> tuple[float, float, float, float]:
+        """The left, top, right, and bottom edges of the placed cells together."""
+        left = min(float(geometry.get("x") or 0) for geometry in placed)
+        top = min(float(geometry.get("y") or 0) for geometry in placed)
+        right = max(float(geometry.get("x") or 0) + float(geometry.get("width") or 0) for geometry in placed)
+        bottom = max(float(geometry.get("y") or 0) + float(geometry.get("height") or 0) for geometry in placed)
+        return left, top, right, bottom
 
     def viewer_url(self, *, with_toolbar: bool) -> str:
         """The diagrams.net viewer showing the diagram: with its page navigation and zoom toolbar on a fidelity page,

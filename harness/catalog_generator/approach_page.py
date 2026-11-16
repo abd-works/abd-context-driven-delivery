@@ -218,14 +218,7 @@ class ApproachGrids:
     @property
     def iterate_and_learn(self) -> str:
         """The narrowing windows, with each stage's Stories example opening beneath them."""
-        stages = {stage.id: stage for stage in self.stages}
-        panels: dict[str, str] = {}
-        openings: dict[str, str] = {}
-        for stage_id in STAGE_COLUMNS.stages:
-            panel = self._stage_panel(stages[stage_id]) if stage_id in stages else ""
-            if panel:
-                panels[stage_id] = panel
-                openings[stage_id] = self._stories_opening(stage_id)
+        panels, openings = self._stage_panels()
         board = RefineBoard(
             host_id="approach-stage-examples",
             rail_label="Context",
@@ -276,6 +269,18 @@ class ApproachGrids:
             )
         return "".join(parts)
 
+    def _stage_panels(self) -> tuple[dict[str, str], dict[str, str]]:
+        """Each stage's Stories example panel and the opening shown above it, by stage, for the stages that have one."""
+        stages = {stage.id: stage for stage in self.stages}
+        panels: dict[str, str] = {}
+        openings: dict[str, str] = {}
+        for stage_id in STAGE_COLUMNS.stages:
+            panel = self._stage_panel(stages[stage_id]) if stage_id in stages else ""
+            if panel:
+                panels[stage_id] = panel
+                openings[stage_id] = self._stories_opening(stage_id)
+        return panels, openings
+
     def _stage_panel(self, stage: StageCopy) -> str:
         example = StageExample(stage, self.stories, self.project_examples)
         source = example.file(self.catalog_root)
@@ -283,7 +288,7 @@ class ApproachGrids:
             return ""
         return self._panel(stage.id, ExampleFile(source, self.stories).panel_html(catalog_href=example.catalog_path))
 
-    def _practice_panels(self, practice) -> tuple[dict[str, str], dict[str, str]]:
+    def _practice_panels(self, practice: CatalogPractice) -> tuple[dict[str, str], dict[str, str]]:
         panels: dict[str, str] = {}
         openings: dict[str, str] = {}
         for shown in practice.board_fidelities:
@@ -298,7 +303,7 @@ class ApproachGrids:
                 openings[shown.stage] = shown.opening
         return panels, openings
 
-    def _editor_id(self, practice, path: Path) -> str:
+    def _editor_id(self, practice: CatalogPractice, path: Path) -> str:
         """Each code viewer on the page needs its own element id, made from its practice and file."""
         suffix = path.suffix.lstrip(".")
         return f"monaco-{Name(f'{practice.key}-{path.stem}-{suffix}').title_slug}"
@@ -327,7 +332,7 @@ class ApproachGrids:
     def _monaco_scripts(self, panels: dict[str, str]) -> str:
         return MONACO_LOADER_SCRIPTS if any("catalog-monaco" in panel for panel in panels.values()) else ""
 
-    def _label(self, practice) -> str:
+    def _label(self, practice: CatalogPractice) -> str:
         return (
             f'<a class="approach-grid__label approach-grid__label--{html.escape(practice.perspective)}" '
             f'href="{html.escape(practice.href)}">'
@@ -340,7 +345,7 @@ class ApproachGrids:
             f'<span class="approach-grid__head-title">{html.escape(column.label)}</span></div>'
         )
 
-    def _ticket(self, practice, column: StageColumn) -> str:
+    def _ticket(self, practice: CatalogPractice, column: StageColumn) -> str:
         fidelity = practice.fidelity_in(column)
         if fidelity is None:
             return '<div class="approach-grid__ticket approach-grid__ticket--empty"></div>'
@@ -410,16 +415,19 @@ class ApproachPage:
             if self.project_examples is None:
                 folder.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source, folder / source.name)
-            page = PageShell(
-                title=f"{stage.title} — ABD Context Driven Delivery",
-                h1=html.escape(stage.title),
-                tagline=html.escape(source.name),
-                body_inner=ExampleFile(source, self.grids.stories).stage_page_html,
-                commons_prefix="../commons/",
-                nav_prefix="../",
-                body_wrap_class="approach-wrap",
-            )
-            (folder / f"{stage.id}.html").write_text(page.html, encoding="utf-8")
+            (folder / f"{stage.id}.html").write_text(self._stage_example_page(stage, source).html, encoding="utf-8")
+
+    def _stage_example_page(self, stage: StageCopy, source: Path) -> PageShell:
+        """The page of one stage's example, showing the file source."""
+        return PageShell(
+            title=f"{stage.title} — ABD Context Driven Delivery",
+            h1=html.escape(stage.title),
+            tagline=html.escape(source.name),
+            body_inner=ExampleFile(source, self.grids.stories).stage_page_html,
+            commons_prefix="../commons/",
+            nav_prefix="../",
+            body_wrap_class="approach-wrap",
+        )
 
     @property
     def principle_pages(self) -> dict[str, str]:

@@ -98,12 +98,12 @@ class _ApproachMarkdown:
             scope=self._scope(stage_id, settings, title),
         )
 
-    def _scope(self, stage_id: str, settings: dict[str, str], title: str) -> StageScope:
+    def _scope(self, stage_id: str, stage_fields: dict[str, str], title: str) -> StageScope:
         stage = STAGES.of(stage_id)
         if stage is not None:
             return stage.scope
         return StageScope(
-            settings.get("shape", "square"), settings.get("scope_name", title), settings.get("scope_width", ""), ""
+            stage_fields.get("shape", "square"), stage_fields.get("scope_name", title), stage_fields.get("scope_width", ""), ""
         )
 
     def _principle(self, title: str, text: str) -> PrincipleCopy:

@@ -36,6 +36,17 @@ class SessionOpener(Protocol):
         """The session whose session.json is session_file, a path from the call's project or an absolute one."""
 
 
+class AnsweringMcpHost(Protocol):
+    """The MCP host answering a call the cdd server serves, which a diagnostics tool probes: the server of the checkout
+    it serves from, and each tool it runs by its published name. The host is harness/mcp, which depends on this module,
+    so a call names only what it asks of the host."""
+
+    @property
+    def checkout_server(self) -> Any: ...
+
+    def dispatch(self, name: str, arguments: dict[str, object] | None = None, project: Path | None = None) -> object: ...
+
+
 class SessionsNotLoaded(LookupError):
     """A call named a session, and no module that keeps sessions has registered how to open one in this process."""
 
@@ -68,7 +79,7 @@ class ToolCall:
         chat: ChatPointer | None = None,
         *,
         tool: str = "",
-        mcp_host: Any = None,
+        mcp_host: AnsweringMcpHost | None = None,
         answers_a_chat: bool = False,
     ) -> None:
         self.arguments = dict(arguments or {})
@@ -86,7 +97,7 @@ class ToolCall:
         project: Path | str | None,
         *,
         tool: str = "",
-        mcp_host: Any = None,
+        mcp_host: AnsweringMcpHost | None = None,
         answers_a_chat: bool = False,
         sender: ChatPointer | None = None,
     ) -> ToolCall:

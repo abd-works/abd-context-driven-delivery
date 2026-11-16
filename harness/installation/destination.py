@@ -10,6 +10,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Callable
 
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSetOrigin
 from harness.annotations.annotation import OmissionAnnotation
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -86,7 +87,7 @@ class Installation:
         if self._install_tracker is not None:
             self._install_tracker(dest)
 
-    def folder_for(self, toolset: Any) -> Path:
+    def folder_for(self, toolset: AgentToolSetOrigin) -> Path:
         """Repo-relative package folder the toolset already knows (practice dir, fidelity leaf)."""
         folder = self._guidance_source_folder(Path(toolset.install_folder))
         repo = self.repo
@@ -105,10 +106,10 @@ class Installation:
             return Path(*rest) if rest else Path(".")
         return folder
 
-    def install(self, tool: Any) -> None:
+    def install(self, tool: AgentTool) -> None:
         self.write(tool)
 
-    def write(self, tool: Any) -> None:
+    def write(self, tool: AgentTool) -> None:
         raise NotImplementedError
 
 
@@ -172,7 +173,7 @@ class ServerInstallation(Installation):
     # that start the cdd server.
     toolsets: tuple[type, ...] = ()
 
-    def accepts(self, tool: Any) -> bool:
+    def accepts(self, tool: AgentTool) -> bool:
         """Whether tool is written through this installation: it is annotated for this channel."""
         return self.channel in tool.destinations
 
