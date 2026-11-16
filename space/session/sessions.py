@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import re
 import threading
-import time
 from functools import cached_property
 from pathlib import Path
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import tool_subject
-from harness.agent_tools.tool_call import ToolCall
+from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall
 from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.files import command
@@ -20,14 +19,15 @@ from space.repo.repo import Repo
 from space.session.file_manager import FileManager
 from space.session.session_saves import SERVED_SAVES, SessionSaves
 from space.session.answer_reads import ANSWER_READS
-from space.session.session import COMPLETE_FOLDER, MAIN_SESSION_NAME, SESSION_FILE, Session, SessionNotFoundError
+from space.session.session import MAIN_SESSION_NAME, Session, SessionNotFoundError
+from space.session.session_folder import COMPLETE_FOLDER
+from space.session.session_record import SESSION_FILE
+from space.session.session_roots import SessionRoots
 from space.work_state import SESSIONS_FOLDER, WorkState
 
 BACKLOG_FOLDER = "_backlog"
 # Folders in `.sessions` whose names start with this are the ones the sessions share, such as the backlog.
 _SHARED_FOLDER_MARK = "_"
-# How long one ``git worktree list`` answers for, so a board read that loads every session asks git once.
-_WORKTREE_LISTING_SECONDS = 2.0
 # Said first when a chat switches to a session whose own worktree is not where the chat works: work done here would
 # land in the wrong folder.
 _OUTSIDE_WORKTREE_NOTE = (
@@ -124,8 +124,8 @@ class Sessions:
         # The checkout holding the project, made once: every session this loads works in it.
         self.repo = Repo.of_project(project)
         self.root = self.repo.root
-        # One ``git worktree list``, read again after a moment, from which each session's root is derived.
-        self._worktree_listing: tuple[float, dict[str, Path]] = (0.0, {})
+        # Where each session works, derived from one ``git worktree list`` read again after a moment.
+        self.roots = SessionRoots(self)
         self._held: dict[Path, Session] = {}
         self._held_lock = threading.Lock()
         # Whether the process serves calls from these sessions (*CallSessions*), each call an answer of its own.
@@ -237,75 +237,11 @@ class Sessions:
         """The session kept in folder, read without opening it: the one object these sessions hold for that folder,
         working in the root ``root_of`` derives now, so a worktree opened or a workpath chosen since is seen."""
         session = self._held_at(Path(folder))
-        session.repo_path = self.checkout_of(session)
-        workpath = self.root_of(session)
+        session.repo_path = self.roots.checkout_of(session)
+        workpath = self.roots.root_of(session)
         if session.workpath is None or session.work_root != workpath:
             session.workpath = workpath
         return session
-
-    def root_of(self, session: Session) -> Path:
-        """Where session writes, derived when asked and never saved on a switch: a workpath a person chose by hand in
-        its session.json, else its own worktree as git lists it, else this checkout. A session's root is always in its
-        own checkout, so a chosen workpath that lies in another checkout of the repository names the same folder in it."""
-        stored = str(session.fields.get("workpath", "") or "").strip()
-        checkout = self.checkout_of(session)
-        chosen = self.in_checkout(checkout, checkout / stored) if stored else None
-        # WHY: older switches saved the checkout itself, or a worktree since removed, as the workpath; neither was chosen.
-        if chosen is not None and chosen.is_dir() and chosen not in (self.root, self.repo.main_clone.root, checkout):
-            return chosen
-        return checkout
-
-    def checkout_of(self, session: Session) -> Path:
-        """The checkout session works in: its own worktree, the one its ticket opened or the one git lists for its
-        branch, else this checkout."""
-        if not session.name or session.name == MAIN_SESSION_NAME:
-            return self.root
-        kept = str(session.fields.get("worktree", "") or "").strip()
-        if kept and Path(kept).is_dir():
-            return Path(kept).resolve()
-        worktree = self._worktree_of(session.name)
-        return worktree if worktree is not None else self.root
-
-    def in_checkout(self, checkout: Path, path: Path | str) -> Path:
-        """path, resolved, moved into checkout when it lies in another checkout of this repository, its main clone or
-        another worktree, at the same place from that checkout's top: ``<main>/harness/.context`` becomes
-        ``<checkout>/harness/.context``. A path outside every checkout is kept as it is."""
-        resolved = Path(path).resolve()
-        if resolved.is_relative_to(checkout):
-            return resolved
-        others = [self.repo.main_clone.root.resolve(), self.root.resolve(), *self._worktrees_by_branch().values()]
-        holding = [other for other in others if other != checkout and resolved.is_relative_to(other)]
-        if not holding:
-            return resolved
-        top = max(holding, key=lambda other: len(other.parts))
-        return (checkout / resolved.relative_to(top)).resolve()
-
-    def _worktree_of(self, name: str) -> Path | None:
-        """The linked worktree of the branch called name, else of the one branch whose name holds name as a whole word,
-        as git lists them now."""
-        listed = self._worktrees_by_branch()
-        if name in listed:
-            return listed[name]
-        word = re.compile(rf"(^|[/_-]){re.escape(name)}($|[/_-])")
-        matches = [folder for branch, folder in listed.items() if word.search(branch)]
-        return matches[0] if len(matches) == 1 else None
-
-    def _worktrees_by_branch(self) -> dict[str, Path]:
-        read_at, listed = self._worktree_listing
-        if read_at and time.monotonic() - read_at < _WORKTREE_LISTING_SECONDS:
-            return listed
-        main = self.repo.main_clone.root
-        try:
-            listing = self.repo.main_clone.worktree_listing()
-        except (RuntimeError, OSError):  # a folder in no repository has no worktrees
-            listing = []
-        listed = {}
-        for path, branch in listing:
-            folder = path.resolve()
-            if branch and folder != main and folder.is_dir():
-                listed[branch] = folder
-        self._worktree_listing = (time.monotonic(), listed)
-        return listed
 
     def _held_at(self, folder: Path) -> Session:
         """The one Session held for folder, made the first time it is asked for."""
@@ -334,7 +270,7 @@ class Sessions:
         """What chat keeps open, under ``~/.cdd``: the chat named, else the chat of the call being answered, else this
         checkout folder's own entry, for a call that names no chat."""
         if not chat:
-            call = ToolCall.answering()
+            call = CALLS_BEING_ANSWERED.current
             chat = call.chat_id if call is not None else ""
         return WorkState(self.root, chat)
 
@@ -369,9 +305,9 @@ class Sessions:
         chosen = Path(workpath).resolve() if workpath is not None else None
         kept = self.repo.path_from_top(chosen) if chosen is not None and chosen != self.root else ""
         fields = (("name", session.name), ("title", title), ("scope", scope), ("parent", parent), ("workpath", kept))
-        session.save_fields(**{key: value for key, value in fields if value})
-        session.repo_path = self.checkout_of(session)
-        session.workpath = self.root_of(session)
+        session.record.save_fields(**{key: value for key, value in fields if value})
+        session.repo_path = self.roots.checkout_of(session)
+        session.workpath = self.roots.root_of(session)
         session.log.seed_first_loop()
         return session
 
@@ -456,7 +392,7 @@ class Sessions:
         session has none."""
         if call is None or call.project is None or session.name == MAIN_SESSION_NAME:
             return ""
-        worktree = self._worktree_of(session.name)
+        worktree = self.roots.worktree_of(session.name)
         if worktree is None or worktree == call.project or worktree in call.project.parents:
             return ""
         return _OUTSIDE_WORKTREE_NOTE.format(chat=call.project, session=session.name, worktree=worktree)
@@ -482,7 +418,7 @@ class CallSessions:
     a tool call finds the sessions it works in: the session open in the call's project, or the one a board command names
     by its session.json; and the session open in a project for work that serves no call, such as a hook event. Each is
     the one object its sessions hold for its folder; the lines a call logs point at the call's chat through
-    ``session.log.by(call.chat)``. Registered with *ToolCall* when this module is imported,
+    ``session.log.by(call.request.chat)``. Registered with *ToolCall* when this module is imported,
     so the framework opens a session without importing space."""
 
     def __init__(self) -> None:

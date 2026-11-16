@@ -13,7 +13,7 @@ from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
 from harness.agent_tools.tool_call import ToolCall
 from harness.design_canvas.versions import CanvasVersions
-from harness.guidance.guidance import DeclaredFile
+from harness.guidance.declared_outputs import DeclaredFile
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.mcp.mcp_annotations import mcp
 from cdd_guidance.practices.stories.model.story_map_files import STORY_TESTS_FOLDER
@@ -91,12 +91,12 @@ class PracticeSessionOutput:
     def saved(self) -> dict:
         """What session.json's ``practices`` keeps for this practice: whether it is on, and the formats chosen for each
         fidelity, which each fidelity's FidelitySessionOutput reads and saves for itself."""
-        return dict(self._session.fields.get("practices", {}).get(self.name, {}))
+        return dict(self._session.record.fields.get("practices", {}).get(self.name, {}))
 
     def save(self, **values: object) -> None:
         """Merge values into what session.json's ``practices`` keeps for this practice."""
-        saved = self._session.fields.get("practices", {})
-        self._session.save_fields(practices={**saved, self.name: {**self.saved, **values}})
+        saved = self._session.record.fields.get("practices", {})
+        self._session.record.save_fields(practices={**saved, self.name: {**self.saved, **values}})
 
     @property
     @data_field
@@ -129,18 +129,18 @@ class PracticeSessionOutput:
     def enable(self, is_enabled: bool) -> PracticeSessionOutput:
         """Turn this practice on or off for its session, saved in its session.json; its guidance selection changes."""
         self.save(enabled=is_enabled)
-        self._session.guidance_changed()
+        self._session.guidance_version.changed()
         return self
 
     @property
     def chosen_outputs(self) -> ChosenOutputs:
         """What session.json's ``outputs`` keeps for this practice: the root a person chose, and under each fidelity's
         name what that fidelity keeps for itself."""
-        return dict(self._session.fields.get("outputs", {}).get(self.name, {}))
+        return dict(self._session.record.fields.get("outputs", {}).get(self.name, {}))
 
     def _save_chosen_outputs(self, chosen: ChosenOutputs) -> None:
-        outputs = dict(self._session.fields.get("outputs", {}))
-        self._session.save_fields(outputs={**outputs, self.name: chosen})
+        outputs = dict(self._session.record.fields.get("outputs", {}))
+        self._session.record.save_fields(outputs={**outputs, self.name: chosen})
 
     @property
     def _chosen_or_configured_root(self) -> str | None:
@@ -155,14 +155,14 @@ class PracticeSessionOutput:
         """The folder this practice writes its code under: the root chosen or configured,
         else the practice's own default folder under the session's root, such as src for BDD."""
         relative = self._chosen_or_configured_root or self._guidance.default_workspace_folder
-        return self._session.folder_under_root(relative)
+        return self._session.paths.folder_under_root(relative)
 
     @property
     def output_root(self) -> Path:
         """The folder this practice's fidelities declare their outputs under: the root chosen or configured, else the
         session's root itself. A declared output such as `.context/story-map.md` or `**/*_spec.py` is named from the
         workpath, so the practice's own default folder is not added."""
-        return self._session.folder_under_root(self._chosen_or_configured_root or ".")
+        return self._session.paths.folder_under_root(self._chosen_or_configured_root or ".")
 
     @property
     def output_folders(self) -> set[Path]:
@@ -188,7 +188,7 @@ class PracticeSessionOutput:
     def root(self) -> str:
         """The folder this practice writes under, as a path from the project: the one a person chose, or the
         workpath plus the practice's default folder."""
-        return self._session.from_project(self.folder)
+        return self._session.paths.from_project(self.folder)
 
     @property
     @data_field
@@ -263,6 +263,9 @@ class FidelitySessionOutput:
     def __init__(self, practice: PracticeSessionOutput, fidelity: FidelityGuidance) -> None:
         self._practice = practice
         self._fidelity = fidelity
+        # The formats it uses from each group of the formats it writes, and its validation reports in the session.
+        self.formats = FidelityFormats(self, fidelity)
+        self.validation_reports = ValidationReports(self)
 
     @classmethod
     @tool_subject
@@ -302,7 +305,7 @@ class FidelitySessionOutput:
         default format."""
         chosen = self._practice.saved.get("formats", {}).get(self._fidelity.name)
         if chosen is None:
-            return self.default_formats
+            return self.formats.default_formats
         # A session saved before formats were chosen kept the one format its fidelity was last given.
         return [chosen] if isinstance(chosen, str) else list(chosen)
 
@@ -326,42 +329,8 @@ class FidelitySessionOutput:
         others = [each for each in self.chosen_formats if each != named]
         chosen = self.chosen_formats if is_chosen and named in self.chosen_formats else others + ([named] if is_chosen else [])
         self._practice.save(formats={**self._practice.saved.get("formats", {}), self._fidelity.name: chosen})
-        self._session.guidance_changed()
+        self._session.guidance_version.changed()
         return self
-
-    def used_from(self, group: list[str]) -> list[str]:
-        """The formats this fidelity uses from a group of the formats it writes, such as its diagram formats: those
-        chosen there, else those it would choose. A chip standing for the group does each of them."""
-        return self.chosen_from(group) or self.wanted_from(group)
-
-    def chosen_from(self, group: list[str]) -> list[str]:
-        """The formats chosen for this fidelity from group, in the order chosen."""
-        return [name for name in self.chosen_formats if name in group]
-
-    def wanted_from(self, group: list[str]) -> list[str]:
-        """What choosing group chooses: the project's default formats for this fidelity in it, else its default format
-        when group holds it, else group's first."""
-        defaults = [name for name in self.default_formats if name in group]
-        own = self._fidelity.default_format.name if self._fidelity.default_format else ""
-        return defaults or [own if own in group else group[0]]
-
-    def choose_from(self, group: list[str], is_chosen: bool) -> None:
-        """Choose every format this fidelity would use from group, or leave out every one of group chosen for it."""
-        for name in (self.wanted_from(group) if is_chosen else self.chosen_from(group)):
-            self.choose_format(name, is_chosen)
-
-    @property
-    def default_formats(self) -> list[str]:
-        """The formats the project's ``.context/config.json`` chooses for this fidelity by default, ``default`` standing
-        for the fidelity's own default format, each the fidelity writes and each once; its own default format when the
-        project names none, or none it writes."""
-        own = [self._fidelity.default_format.name] if self._fidelity.default_format else []
-        configured = self._session.context_config.default_formats(self._practice.name, self._fidelity.name)
-        if configured is None:
-            return own
-        named = [name for each in configured for name in (own if each == DEFAULT_FORMAT else [Format(each).name])]
-        offered = [name for name in dict.fromkeys(named) if name in self.offered_formats]
-        return offered or own
 
     @property
     def _session(self) -> Session:
@@ -389,18 +358,6 @@ class FidelitySessionOutput:
     def reports_folder(self) -> Path:
         return self._session.reports_folder
 
-    def reports(self) -> list[Path]:
-        """This fidelity's validation reports in the session, oldest first: report names end with their date, which
-        sorts by time."""
-        folder = self.reports_folder
-        return sorted(folder.glob(f"{self._fidelity.slug}-*.md")) if folder.is_dir() else []
-
-    def new_report_path(self) -> Path:
-        """Where a validation report of this fidelity made now is saved in the session."""
-        folder = self.reports_folder
-        folder.mkdir(parents=True, exist_ok=True)
-        return folder / f"{self._fidelity.slug}-{datetime.now(timezone.utc).strftime(REPORT_DATE_FORMAT)}.md"
-
     @property
     def _chosen(self) -> dict:
         """What session.json's ``outputs`` keeps for this fidelity: its own root, and a file name per format for a
@@ -412,7 +369,7 @@ class FidelitySessionOutput:
         """The folder this fidelity writes under: its own root when session.json names one, else its practice's output
         root."""
         chosen = self._chosen.get("root")
-        return self._session.folder_under_root(chosen) if chosen else self._practice.output_root
+        return self._session.paths.folder_under_root(chosen) if chosen else self._practice.output_root
 
     def output_paths(self) -> dict[str, list[str]]:
         """Where this fidelity writes each format in the session: its declared paths under its root. session.json can
@@ -427,7 +384,7 @@ class FidelitySessionOutput:
         """The files this fidelity declares in the session, by format, each with its path from the project, whether it
         exists, and whether the session's branch changed it, so a page can show only the changed ones."""
         # Asking git what the branch changed is slow, so it is asked only once a file is there.
-        changed = cache(self._session.session_files.changed)
+        changed = cache(self._session.session_files.branch_changes.files)
         return {
             label: [entry for path in paths for entry in self._declared_files(label, path, changed)]
             for label, paths in self.output_paths().items()
@@ -438,7 +395,7 @@ class FidelitySessionOutput:
         of its outputs names, or production code under a folder it writes code to, and either way one its practice
         claims, since a pattern such as DDD's ``{bounded_context}/{aggregate}/{aggregate}.py`` fits files of no domain.
         A page lists every file of the fidelities it shows."""
-        if not (self._fidelity.declares(self._session.repo.path_from_top(file)) or self._writes_code_to(file)):
+        if not (self._fidelity.declared.includes(self._session.repo.path_from_top(file)) or self._writes_code_to(file)):
             return False
         practice = self._fidelity.practice_guidance
         return practice is None or practice.claims(file)
@@ -507,7 +464,7 @@ class FidelitySessionOutput:
         listed, declared = self._listed(path), self._declared(path)
         found = [] if listed.names_one_path else self._found(label, listed)
         if found:
-            return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed(), self._canvas_link(file)) for file in found]
+            return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed()).linked(self._canvas_link(file)) for file in found]
         if declared.names_one_path:
             named = repo.root / declared.glob
             return [FileEntry(declared.glob, named.exists(), named.exists() and named.resolve() in changed())]
@@ -528,7 +485,7 @@ class FidelitySessionOutput:
     def _found(self, label: str, declared: DeclaredFile) -> list[Path]:
         """The files a declared pattern's search finds that it declares: a name used twice in one declared path must be
         the same text both times."""
-        return [file for file in self._session.session_files.find(declared.glob) if self._fidelity.declares(file.as_posix(), label) or declared.pattern.search(file.as_posix())]
+        return [file for file in self._session.session_files.find(declared.glob) if self._fidelity.declared.includes(file.as_posix(), label) or declared.pattern.search(file.as_posix())]
 
     def _exists(self, label: str, declared: DeclaredFile) -> bool:
         """Whether a file the declared path names is in the repository."""
@@ -577,5 +534,66 @@ class FidelitySessionOutput:
         if file.name != "canvas.json" or file.parent.name != "project":
             return ""
         version = file.parent.parent
-        return CanvasVersions(version.parent).links().get(version.name, "")
+        return CanvasVersions(version.parent).published.of(version.name) or ""
 
+
+class FidelityFormats:
+    """The formats one fidelity uses from each group of the formats it writes in a session, such as its diagram formats:
+    those chosen there, else those choosing the group would choose."""
+
+    def __init__(self, output: FidelitySessionOutput, fidelity: FidelityGuidance) -> None:
+        self._output = output
+        self._fidelity = fidelity
+
+    def used_from(self, group: list[str]) -> list[str]:
+        """The formats this fidelity uses from a group of the formats it writes, such as its diagram formats: those
+        chosen there, else those it would choose. A chip standing for the group does each of them."""
+        return self.chosen_from(group) or self.wanted_from(group)
+
+    def chosen_from(self, group: list[str]) -> list[str]:
+        """The formats chosen for this fidelity from group, in the order chosen."""
+        return [name for name in self._output.chosen_formats if name in group]
+
+    def wanted_from(self, group: list[str]) -> list[str]:
+        """What choosing group chooses: the project's default formats for this fidelity in it, else its default format
+        when group holds it, else group's first."""
+        defaults = [name for name in self.default_formats if name in group]
+        own = self._fidelity.default_format.name if self._fidelity.default_format else ""
+        return defaults or [own if own in group else group[0]]
+
+    def choose_from(self, group: list[str], is_chosen: bool) -> None:
+        """Choose every format this fidelity would use from group, or leave out every one of group chosen for it."""
+        for name in (self.wanted_from(group) if is_chosen else self.chosen_from(group)):
+            self._output.choose_format(name, is_chosen)
+
+    @property
+    def default_formats(self) -> list[str]:
+        """The formats the project's ``.context/config.json`` chooses for this fidelity by default, ``default`` standing
+        for the fidelity's own default format, each the fidelity writes and each once; its own default format when the
+        project names none, or none it writes."""
+        own = [self._fidelity.default_format.name] if self._fidelity.default_format else []
+        configured = self._output.practice.session.context_config.default_formats(self._output.practice.name, self._fidelity.name)
+        if configured is None:
+            return own
+        named = [name for each in configured for name in (own if each == DEFAULT_FORMAT else [Format(each).name])]
+        offered = [name for name in dict.fromkeys(named) if name in self._output.offered_formats]
+        return offered or own
+
+
+class ValidationReports:
+    """One fidelity's validation reports in a session, each named with the fidelity's slug and the moment it was made."""
+
+    def __init__(self, output: FidelitySessionOutput) -> None:
+        self._output = output
+
+    def listed(self) -> list[Path]:
+        """This fidelity's validation reports in the session, oldest first: report names end with their date, which
+        sorts by time."""
+        folder = self._output.reports_folder
+        return sorted(folder.glob(f"{self._output.fidelity.slug}-*.md")) if folder.is_dir() else []
+
+    def new_path(self) -> Path:
+        """Where a validation report of this fidelity made now is saved in the session."""
+        folder = self._output.reports_folder
+        folder.mkdir(parents=True, exist_ok=True)
+        return folder / f"{self._output.fidelity.slug}-{datetime.now(timezone.utc).strftime(REPORT_DATE_FORMAT)}.md"

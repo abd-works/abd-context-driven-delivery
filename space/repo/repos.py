@@ -229,11 +229,7 @@ class Repos:
         or internal. With install, CDD is installed into its .claude; its .gitignore gets every line the CDD checkout's has.
         start_chat opens a new top-level Claude chat on the folder; the person sends its first prompt, which opens the
         repository's main session. Ask the person for visibility before publishing, offering private as the default."""
-        cleaned = (name or "").strip()
-        if not cleaned:
-            raise RepoNameRequiredError()
-        if visibility not in _VISIBILITIES:
-            raise UnknownVisibilityError(visibility)
+        cleaned = self._checked_name(name, visibility)
         root = (Path(folder).expanduser().resolve() if folder else self.folder) / cleaned
         steps = [self._create(root), self._ignore_as_cdd_does(root)]
         steps += [self._publish(root, visibility)] if publish else []
@@ -242,6 +238,15 @@ class Repos:
         chat = NewChat(root, cleaned, _DEFAULT_BRANCH)
         steps.append(chat.open() if start_chat else chat.instructions)
         return "\n".join(f"- {step}" for step in steps if step)
+
+    def _checked_name(self, name: str, visibility: str) -> str:
+        """name trimmed, refused when empty, as is a visibility GitHub does not offer."""
+        cleaned = (name or "").strip()
+        if not cleaned:
+            raise RepoNameRequiredError()
+        if visibility not in _VISIBILITIES:
+            raise UnknownVisibilityError(visibility)
+        return cleaned
 
     @mcp
     @command(name="open-folder")
@@ -296,8 +301,8 @@ class Repos:
     def _publish(self, root: Path, visibility: str) -> str:
         repo = Repo.of_project(root)
         if repo.has_origin:
-            if repo.needs_push():
-                repo.push_upstream()
+            if repo.origin.needs_push():
+                repo.origin.push_upstream()
                 return "Pushed main to its origin."
             return f"Already published: {Git(root).run('remote', 'get-url', 'origin')}."
         gh = shutil.which("gh")

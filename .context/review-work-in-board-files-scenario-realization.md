@@ -39,7 +39,7 @@ filesPanel.showChangedOnly(true)  the page filters the entries it already holds 
 
 ```realization
 sessionButton.open(ticket)  only for a ticket's own session, not main and not expanded
-  -> files.openSessionFolder(ticket)
+  -> files.openFolder(ticket, 'session')
     -> Session.folder_files()
     <- [FileEntry] under .sessions/checkout-flow
 ```
@@ -47,7 +47,7 @@ sessionButton.open(ticket)  only for a ticket's own session, not main and not ex
 ### Scenario: Open the latest handoff from the details
 
 ```realization
-page.files.openSessionFile(ticket, ticket.session.handoff)
+page.files.openFolder(ticket, 'session', ticket.session.handoff)
   -> Session.read_file(".sessions/checkout-flow/handoff-20261110.md")
   <- FileText{path, text}
 ```

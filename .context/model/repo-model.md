@@ -3702,7 +3702,7 @@ A validation report of one fidelity, saved in a session folder, with the graph t
 + is_judged_failing: bool
 ----
 + from_fidelity(fidelity: FidelityGuidance): ReportFile | None
-	-> FidelitySessionOutput.reports
+	-> ValidationReports.listed
 + report(): Report
 ---<<reads the saved graph through>>--> SavedGraph
 ---<<reads the agent's judgment as>>--> Judgment

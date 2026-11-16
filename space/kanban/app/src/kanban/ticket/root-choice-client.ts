@@ -62,13 +62,13 @@ export class RootChoiceClient {
     const ticket = this.ticket
     if (!ticket) return
     if (browsing.target === TICKET_ROOT) await ticket.sessionClient.chooseWorkpath(browsing.path)
-    else await ticket.practiceClient(browsing.target).chooseRoot(browsing.path)
+    else await ticket.practices.client(browsing.target).chooseRoot(browsing.path)
     await this.page.reader.refresh()
     this.change({ browsing: null })
   }
 
   async useDefault(practice: string): Promise<void> {
-    await this.ticket?.practiceClient(practice).useDefaultRoot()
+    await this.ticket?.practices.client(practice).useDefaultRoot()
     await this.page.reader.refresh()
   }
 

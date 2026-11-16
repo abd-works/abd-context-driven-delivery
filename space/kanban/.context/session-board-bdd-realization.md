@@ -337,21 +337,21 @@ Browse Ticket Folder
 
 Browse Ticket's Session Folder
   ```
-  -> FilesPanelClient.openSessionFolder(ticket: string)
+  -> FilesPanelClient.openFolder(ticket: string, 'session')
   -> _module.generatedPaths(panel: FilesPanel)
   it should list every file in the session folder
   ```
   ```
-  -> FilesPanelClient.openSessionFolder(ticket: string)
+  -> FilesPanelClient.openFolder(ticket: string, 'session')
   it should show them as folders
   ```
   with its latest handoff opened
     ```
-    -> FilesPanelClient.openSessionFile(ticket: string, path: string)
+    -> FilesPanelClient.openFolder(ticket: string, 'session', path: string)
     it should show the handoff in a tab
     ```
     ```
-    -> FilesPanelClient.openSessionFile(ticket: string, path: string)
+    -> FilesPanelClient.openFolder(ticket: string, 'session', path: string)
     it should read the handoff's text
     ```
 
@@ -945,12 +945,12 @@ Send Next Fidelity Action
 
 Choose Ticket Practices
   ```
-  -> TicketClient.enablePractice(practice: string, isEnabled: boolean)
+  -> TicketPractices.enable(practice: string, isEnabled: boolean)
   -> BoardPage.tiles
   it should let go of the tile of a practice turned off
   ```
   ```
-  -> TicketClient.enablePractice(practice: string, isEnabled: boolean)
+  -> TicketPractices.enable(practice: string, isEnabled: boolean)
   -> ReportClient.text
   it should say so and where it was saved
   ```
@@ -2222,7 +2222,7 @@ a ticket
     <- Ticket
     -> Ticket.archive()
       -> Session.close()
-      -> Session.move_to_archive()
+      -> SessionFolder.move_to_archive()
       <- Session
     <- Ticket
     it should be off the board
@@ -2232,7 +2232,7 @@ a ticket
     <- Ticket
     -> Ticket.archive()
       -> Session.close()
-      -> Session.move_to_archive()
+      -> SessionFolder.move_to_archive()
       <- Session
     <- Ticket
     it should have its folder in the archive
@@ -2342,7 +2342,7 @@ the board tools
           -> PracticeSessionOutput.keep_root(root: Path)
         <- PracticeSessionOutput
         -> FidelityProgress.files()
-          -> FidelityGuidance.files()
+          -> FidelityGuidance.declared.files()
             -> FidelitySessionOutput.output_paths()
               -> FidelityGuidance.outputs
               <- dict
@@ -2657,7 +2657,7 @@ the board tools
       ```
       -> Ticket.close(leaving: list[str])
         -> Session.close()
-        -> Session.move_to_closed()
+        -> SessionFolder.move_to_closed()
         <- Session
       <- Ticket
       it should show the ticket in Complete
@@ -2666,7 +2666,7 @@ the board tools
       ```
       -> Ticket.close(leaving: list[str])
         -> Session.close()
-        -> Session.move_to_closed()
+        -> SessionFolder.move_to_closed()
         <- Session
       <- Ticket
       -> Board.show()
@@ -2677,7 +2677,7 @@ the board tools
       ```
       -> Ticket.archive()
         -> Session.close()
-        -> Session.move_to_archive()
+        -> SessionFolder.move_to_archive()
         <- Session
       <- Ticket
       -> Board.show()
@@ -2791,7 +2791,7 @@ the board tools
       -> Board.ticket(name: str)
       <- Ticket
       -> FidelityProgress.files()
-        -> FidelityGuidance.files()
+        -> FidelityGuidance.declared.files()
           -> FidelitySessionOutput.output_paths()
             -> FidelityGuidance.outputs
             <- dict
@@ -2806,7 +2806,7 @@ the board tools
       -> Board.ticket(name: str)
       <- Ticket
       -> FidelityProgress.files()
-        -> FidelityGuidance.files()
+        -> FidelityGuidance.declared.files()
           -> FidelitySessionOutput.output_paths()
             -> FidelityGuidance.outputs
             <- dict
@@ -2822,7 +2822,7 @@ the board tools
       -> Board.ticket(name: str)
       <- Ticket
       -> FidelityProgress.files()
-        -> FidelityGuidance.files()
+        -> FidelityGuidance.declared.files()
           -> FidelitySessionOutput.output_paths()
             -> FidelityGuidance.outputs
             <- dict
@@ -2837,7 +2837,7 @@ the board tools
       -> Board.ticket(name: str)
       <- Ticket
       -> FidelityProgress.files()
-        -> FidelityGuidance.files()
+        -> FidelityGuidance.declared.files()
           -> FidelitySessionOutput.output_paths()
             -> FidelityGuidance.outputs
             <- dict
@@ -3139,7 +3139,7 @@ the board tools
       <- Ticket
       -> Ticket.close(leaving: list[str])
         -> Session.close()
-        -> Session.move_to_closed()
+        -> SessionFolder.move_to_closed()
         <- Session
       <- Ticket
       it should leave the branch checked out as it was
@@ -3168,7 +3168,7 @@ the board tools
       -> Board.ticket(name: str)
       <- Ticket
       -> FidelityProgress.files()
-        -> FidelityGuidance.files()
+        -> FidelityGuidance.declared.files()
           -> FidelitySessionOutput.output_paths()
             -> FidelityGuidance.outputs
             <- dict

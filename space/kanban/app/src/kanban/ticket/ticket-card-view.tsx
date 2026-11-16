@@ -30,7 +30,7 @@ function SegmentsView({ ticket, stage, onSkill }: { ticket: TicketClient; stage:
   const { page, state } = useBoard()
   return (
     <div className="segments">
-      {ticket.progressIn(stage).map(progress => {
+      {ticket.work.progressIn(stage).map(progress => {
         const { fidelity } = progress
         const slug = fidelity.slug
         const { key, label, color } = progress.look
@@ -87,7 +87,7 @@ function CardWorkView({ ticket, stage }: { ticket: TicketClient; stage: ColumnCl
     <>
       <SegmentsView ticket={ticket} stage={stage} onSkill={setSkill} />
       {skill ? <div className="card-skill">{skill}</div> : null}
-      {ticket.workIn(stage)?.hasViolations ? (
+      {ticket.work.workIn(stage)?.hasViolations ? (
         <button className="violations-link card-violations" onClick={withoutSelecting(() => page.panels.openReport(ticket, null))}>
           violations
         </button>
@@ -108,7 +108,7 @@ function CardFaceView({ ticket, stage, isOpen = false }: { ticket: TicketClient;
       <ChildRowsView ticket={ticket} />
       <div className="card-files">
         <SessionActionsView ticket={ticket} />
-        <FileViewsView ticket={ticket} progress={ticket.progressIn(stage)} />
+        <FileViewsView ticket={ticket} progress={ticket.work.progressIn(stage)} />
       </div>
     </>
   )
@@ -196,7 +196,7 @@ function OpenCardView({ ticket, stage, spot }: { ticket: TicketClient; stage: Co
     <div ref={card} className={opensLeft ? 'card-open grows-left' : 'card-open'} data-open-card={ticket.name} style={{ ...place, borderColor: borderColorOf(ticket), borderWidth: ticket.isActive ? ACTIVE_BORDER_WIDTH : 1 }}>
       <CardFaceView ticket={ticket} stage={stage} isOpen />
       <CardUpkeepView ticket={ticket} />
-      {ticket.progressIn(stage).map(progress => (
+      {ticket.work.progressIn(stage).map(progress => (
         <TileView key={progress.fidelity.slug} ticket={ticket} stage={stage} progress={progress} hasPracticeChip opensOnHover />
       ))}
     </div>

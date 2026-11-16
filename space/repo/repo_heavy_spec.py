@@ -52,7 +52,7 @@ with description("a Repo"):
             (self.clone / "a.py").write_text("work\n", encoding="utf-8")
             self.repo.commit([str(self.clone / "a.py")], "demo turn", untracked=True)
             self.repo.branch_named("main").check_out()
-            self.repo.merge_from(self.repo.branch_named("session/demo"), message="merge demo")
+            self.repo.merges.merge_from(self.repo.branch_named("session/demo"), message="merge demo")
             expect(_git(self.clone, "ls-tree", "--name-only", "main")).to(contain("a.py"))
 
         with it("should name the files a branch changed since it left main"):
@@ -81,7 +81,7 @@ with description("a Repo"):
                 self.repo.branch_named("session/demo").check_out()
                 (self.clone / "a.py").write_text("work\n", encoding="utf-8")
                 self.repo.commit([str(self.clone)], "first turn", untracked=True)
-                self.repo.push_upstream()
+                self.repo.origin.push_upstream()
                 self.elsewhere = _clone_of(self.origin, Path(self.tmp.name) / "elsewhere", "session/demo")
                 (self.elsewhere / "b.py").write_text("from elsewhere\n", encoding="utf-8")
                 _git(self.elsewhere, "add", "-A")
@@ -91,11 +91,11 @@ with description("a Repo"):
                 self.repo.commit([str(self.clone)], "second turn", untracked=True)
 
             with it("should take that commit in when it pushes"):
-                self.repo.push_upstream()
+                self.repo.origin.push_upstream()
                 expect((self.clone / "b.py").is_file()).to(be_true)
 
             with it("should push its own commit after it"):
-                self.repo.push_upstream()
+                self.repo.origin.push_upstream()
                 expect(_git(self.origin, "log", "--format=%s", "session/demo")).to(contain("second turn"))
 
             with context("that changed the same lines of the same file"):
@@ -105,11 +105,11 @@ with description("a Repo"):
                     _git(self.elsewhere, "push", "origin", "session/demo")
 
                 with it("should refuse the push, naming the conflict"):
-                    expect(lambda: self.repo.push_upstream()).to(raise_error(RepoConnectError))
+                    expect(lambda: self.repo.origin.push_upstream()).to(raise_error(RepoConnectError))
 
                 with it("should leave no merge half done"):
                     try:
-                        self.repo.push_upstream()
+                        self.repo.origin.push_upstream()
                     except RepoConnectError:
                         pass
                     expect((self.clone / ".git" / "MERGE_HEAD").exists()).to(be_false)
@@ -121,14 +121,14 @@ with description("a Repo"):
                 log.parent.mkdir(parents=True)
                 log.write_text("start\n", encoding="utf-8")
                 self.repo.commit([str(self.clone)], "log start", untracked=True)
-                self.repo.push_upstream()
+                self.repo.origin.push_upstream()
                 self.repo.branch_named("session/demo").check_out()
                 log.write_text("start\non the branch\n", encoding="utf-8")
                 self.repo.commit([str(self.clone)], "branch line", untracked=True)
                 self.repo.branch_named("main").check_out()
                 log.write_text("start\non main\n", encoding="utf-8")
                 self.repo.commit([str(self.clone)], "main line", untracked=True)
-                self.repo.merge_from(self.repo.branch_named("session/demo"), message="merge demo")
+                self.repo.merges.merge_from(self.repo.branch_named("session/demo"), message="merge demo")
                 self.merged = log.read_text(encoding="utf-8")
 
             with it("should keep the lines main wrote"):
@@ -144,7 +144,7 @@ with description("a Repo"):
                 log.parent.mkdir(parents=True)
                 log.write_text("start\n", encoding="utf-8")
                 self.repo.commit([str(self.clone)], "log start", untracked=True)
-                self.repo.push_upstream()
+                self.repo.origin.push_upstream()
                 self.repo.branch_named("session/demo").check_out()
                 log.write_text("start\non the branch\n", encoding="utf-8")
                 self.repo.commit([str(self.clone)], "branch line", untracked=True)

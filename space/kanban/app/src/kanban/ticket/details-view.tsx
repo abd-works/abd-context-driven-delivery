@@ -43,13 +43,13 @@ function TicketBarView({ ticket }: { ticket: TicketClient }) {
 function TicketPlaceView({ ticket }: { ticket: TicketClient }) {
   const { page } = useBoard()
   const stage = page.board.stageOf(ticket)
-  const stageProgress = stage ? ticket.progressIn(stage) : []
+  const stageProgress = stage ? ticket.work.progressIn(stage) : []
   return (
     <span className="details-place">
-      <PlaceLinkView label={ticket.name} hint="Browse the session folder" onPress={() => page.files.openSessionFolder(ticket)} />
+      <PlaceLinkView label={ticket.name} hint="Browse the session folder" onPress={() => page.files.openFolder(ticket, 'session')} />
       {ticket.origin ? ` · ${ticket.origin}` : ''}
       {' · root '}
-      <PlaceLinkView label={ticket.session.workpath || 'whole repository'} hint="Browse the folder the session works in" onPress={() => page.files.openWorkpath(ticket)} />{' '}
+      <PlaceLinkView label={ticket.session.workpath || 'whole repository'} hint="Browse the folder the session works in" onPress={() => page.files.openFolder(ticket, 'workpath')} />{' '}
       <PlaceLinkView label="roots" hint="Choose the session's workpath and each practice's practice root" onPress={() => page.roots.openFor(ticket)} />
       {' · '}
       <PlaceLinkView label={ticket.stagePlace} hint={`Browse the files of ${stage?.name ?? 'this stage'}`} isOff={!stageProgress.length} onPress={() => page.files.openFiles(ticket, stageProgress)} />
@@ -64,7 +64,7 @@ function TicketNotesView({ ticket }: { ticket: TicketClient }) {
     <div className="details-place">
       {ticket.session.handoff ? (
         <>
-          Latest handoff: <PlaceLinkView label={ticket.session.handoff} hint="Open the handoff" onPress={() => page.files.openSessionFile(ticket, ticket.session.handoff)} />
+          Latest handoff: <PlaceLinkView label={ticket.session.handoff} hint="Open the handoff" onPress={() => page.files.openFolder(ticket, 'session', ticket.session.handoff)} />
         </>
       ) : (
         'No handoff yet'

@@ -45,12 +45,12 @@ with description("a session's reads"):
             expect(Sessions.of_project(self.repo).named("alpha").title).to(equal("A much longer second title"))
 
         with it("should read its own write at once"):
-            self.session.save_fields(title="Its own title")
+            self.session.record.save_fields(title="Its own title")
             expect(self.session.title).to(equal("Its own title"))
 
         with it("should keep what another process wrote when it writes"):
             _written_by_another_process(self.session, scope="story")
-            self.session.save_fields(title="Its own title")
+            self.session.record.save_fields(title="Its own title")
             expect(self.session.scope).to(equal("story"))
 
     with context("that the process serves no calls from"):

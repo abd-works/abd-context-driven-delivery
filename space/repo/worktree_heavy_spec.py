@@ -112,7 +112,7 @@ with description("a branch on a clone") as self:
             _git(self.clone, "commit", "-q", "-m", "work")
 
         with it("should need a push"):
-            expect(Repo(self.clone).needs_push()).to(be_true)
+            expect(Repo(self.clone).origin.needs_push()).to(be_true)
 
 
 with description("a Repo and its checkouts") as self:

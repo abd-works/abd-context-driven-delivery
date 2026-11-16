@@ -47,7 +47,7 @@ Sessions, a session, and its log
 	// only that session's folder is read
 + folder_of(name: str): Path
 	// a ticket's session lives in the main checkout's `.sessions`, so a chat in the ticket's linked worktree logs there too
-	-> Repo.primary_root
+	-> Worktrees.primary_root
 + load(folder: Path): Session
 	// read without opening it
 + with_file(session_file: str): Session

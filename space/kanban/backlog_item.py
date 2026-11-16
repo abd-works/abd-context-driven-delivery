@@ -17,7 +17,7 @@ from space.kanban.board import BACKLOG_COLUMN, Board, Card, Column
 # ticket the call names.
 from space.kanban.ticket import Ticket
 from space.session.idea_file import IdeaFile
-from space.session.session import SESSION_FILE
+from space.session.session_record import SESSION_FILE
 from harness.mcp.mcp_annotations import mcp
 
 
@@ -118,7 +118,7 @@ class BacklogItem(Card):
     def parent(self) -> str:
         """The title of the item whose folder keeps this one's file, as its child; empty for an item of its own."""
         parent_file = self._parent_file
-        return self._board.make_backlog_item(parent_file).title if parent_file is not None else ""
+        return self._board.placement.make_backlog_item(parent_file).title if parent_file is not None else ""
 
     @property
     @data_field
@@ -155,7 +155,7 @@ class BacklogItem(Card):
         ticket = self._ticket_brought_back(self._held_ticket_folder) if self._holds_ticket else self._ticket_opened(scope, path)
         # An item kept inside its folder went back with the folder; a file beside it or on its own moves in now.
         if self._path.exists():
-            ticket.session.keep_file(self._path)
+            ticket.session.folder.keep_file(self._path)
         for child in children:
             child.start("story", path).reassign_parent(ticket)
         self._remove_emptied_folder()
@@ -293,9 +293,9 @@ class BacklogItem(Card):
         self._board.reread()
 
     def _ticket_brought_back(self, kept_folder: Path) -> Ticket:
-        return self._board.ticket_of(self._board.sessions.load(kept_folder).reopen())
+        return self._board.placement.ticket_of(self._board.sessions.load(kept_folder).folder.reopen())
 
     def _ticket_opened(self, scope: str, path: str) -> Ticket:
-        ticket = self._board.open_ticket(self.title, scope, "", path)
+        ticket = self._board.open_ticket(self.title, scope, path)
         ticket.work.record(f"backlog {self._path}")
         return ticket

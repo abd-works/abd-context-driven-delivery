@@ -4,7 +4,8 @@ import type { ReportRuleData } from '@cdd/space/kanban/ticket'
 import { practicesOf, shownTabs } from '@src/kanban/ticket/files-panel-client'
 import { BoardOnProject, ticketOn as shownTicket } from 'test-utils/board-page-support'
 import type { FidelityProgressClient } from '@src/kanban/ticket/fidelity-progress-client'
-import type { FilesByFidelity, TicketClient } from '@src/kanban/ticket/ticket-client'
+import type { TicketClient } from '@src/kanban/ticket/ticket-client'
+import type { FilesByFidelity } from '@src/kanban/ticket/ticket-work'
 
 import type { BoardPage } from './board-page'
 import type { FilesPanel, ReportPanel } from '../shared/board-store'
@@ -35,7 +36,7 @@ const reportPanel = (page: BoardPage) => page.store.state.panels.find(panel => p
 const ticketOn = (page: BoardPage): TicketClient => shownTicket(page, TICKET)
 
 // The ticket's progress on its story map, whose report and files the panels show.
-const storyMapOn = (page: BoardPage): FidelityProgressClient => ticketOn(page).progressNamed(SLUG)!
+const storyMapOn = (page: BoardPage): FidelityProgressClient => ticketOn(page).work.progressNamed(SLUG)!
 
 // A ticket the page still holds after the board stopped showing it: its tools name a ticket the board does not have.
 const goneTicket = (page: BoardPage, name: string): TicketClient => {
@@ -99,7 +100,7 @@ describe('List Ticket Files', () => {
     async function refused() {
       const { page } = await board.page()
       const gone = goneTicket(page, 'no-such-ticket')
-      await page.files.openFiles(gone, [gone.progressNamed(SLUG)!])
+      await page.files.openFiles(gone, [gone.work.progressNamed(SLUG)!])
       return page
     }
 
@@ -138,7 +139,7 @@ describe('Browse Ticket Files By Practice', () => {
 describe("Browse Ticket's Session Folder", () => {
   it('should show every file in the session folder as a tab', async () => {
     const { page } = await board.page()
-    await page.files.openSessionFolder(ticketOn(page))
+    await page.files.openFolder(ticketOn(page), 'session')
     expect(pathsOf(filesPanel(page))).toContain(REPORT_PATH)
   })
 
@@ -148,7 +149,7 @@ describe("Browse Ticket's Session Folder", () => {
     async function opened() {
       board.write(HANDOFF, '# Handoff\n')
       const { page } = await board.page()
-      await page.files.openSessionFile(ticketOn(page), HANDOFF)
+      await page.files.openFolder(ticketOn(page), 'session', HANDOFF)
       return page
     }
 

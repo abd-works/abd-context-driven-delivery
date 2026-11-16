@@ -58,7 +58,7 @@ function ViolationsBandView({ ticket }: { ticket: TicketClient }) {
   return (
     <div className="band" role="status" aria-label="Active ticket's violations">
       <span className="band-words">
-        {ticket.name} · {ticket.column.name} · violations: {ticket.violatedSlugs.join(', ')}
+        {ticket.name} · {ticket.column.name} · violations: {ticket.work.violatedSlugs.join(', ')}
       </span>
     </div>
   )
@@ -71,7 +71,7 @@ function BandsView() {
   return (
     <>
       {page.board.unsaved ? <UnsavedBandView changes={page.board.unsaved.changes} error={page.board.unsaved.error} /> : null}
-      {active?.violatedSlugs.length ? <ViolationsBandView ticket={active} /> : null}
+      {active?.work.violatedSlugs.length ? <ViolationsBandView ticket={active} /> : null}
     </>
   )
 }

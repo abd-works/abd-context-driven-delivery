@@ -17,7 +17,7 @@ RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 from harness.installation.data_class import data_of  # noqa: E402
 from space.kanban.session_board_examples import saved_graph, saved_practice  # noqa: E402
 from space.kanban.story_test import progress_in  # noqa: E402
-from harness.agent_tools.tool_call import ToolCall  # noqa: E402
+from harness.agent_tools.tool_call import ToolCall, ToolRequest  # noqa: E402
 from harness.diagnostics.app import AppServer  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
 from space.session.throwaway_project import ThrowawayProject
@@ -180,7 +180,7 @@ class ProjectTools:
         (folder / file_name).write_text(f"# {heading}\n\nAn idea.\n", encoding="utf-8")
 
     def call(self, tool: str, **arguments):
-        result = self.server.answer_tool(tool, ToolCall(arguments, self.root.resolve(), tool=tool))
+        result = self.server.answer(tool, ToolCall(arguments, self.root.resolve(), ToolRequest(tool=tool)))
         return json.loads(json.dumps(result, default=data_of))
 
     def column(self, name: str) -> dict:

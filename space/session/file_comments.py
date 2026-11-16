@@ -14,7 +14,7 @@ from harness.chat.chat import DONE, FAILED, Chat
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_annotations import mcp
-from space.session.file_range import Range
+from space.session.file_range import LineSpan, Range
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -52,23 +52,34 @@ class FileCommentNotFoundError(LookupError):
         self.anchor = anchor
 
 
+class CommentSending:
+    """Where a comment was sent: the chat, the message it went in, and the whole file's text as it read then; empty
+    before it is sent."""
+
+    def __init__(self, chat: str = "", message: str = "", sent_text: str = "") -> None:
+        self.chat = chat
+        self.message = message
+        self.sent_text = sent_text
+
+
 class FileComment:
     """One comment on a range of a file, with the text the range held when the comment was written; the chat and
     message it was sent in, and the whole file's text then, once it is sent."""
 
     # A comment's state is read from the chat's message, never kept twice: sent until the chat is done with the message.
 
-    def __init__(self, range: Range, text: str, chat: str = "", message: str = "", sent_text: str = "") -> None:
+    def __init__(self, range: Range, text: str, sending: CommentSending | None = None) -> None:
+        sending = sending or CommentSending()
         self._range = range
         self._text = text
-        self._chat = chat
-        self._message = message
-        self._sent_text = sent_text
+        self._chat = sending.chat
+        self._message = sending.message
+        self._sent_text = sending.sent_text
 
     @classmethod
     def from_record(cls, record: CommentRecord) -> FileComment:
-        range = Range(record["path"], record["start_line"], record["end_line"], record["selected_text"])
-        return cls(range, record["text"], record.get("chat", ""), record.get("message", ""), record.get("sent_text", ""))
+        range = Range(record["path"], LineSpan(record["start_line"], record["end_line"]), record["selected_text"])
+        return cls(range, record["text"], CommentSending(record.get("chat", ""), record.get("message", ""), record.get("sent_text", "")))
 
     @property
     @data_field
@@ -97,7 +108,7 @@ class FileComment:
         it once handled; a message the chat could not show leaves the comment not sent."""
         if not self._message:
             return NOT_SENT
-        sent = Chat.load(self._chat).message(self._message)
+        sent = Chat.load(self._chat).mailbox.message(self._message)
         if sent is None or sent.state == DONE:
             return PROCESSED
         return NOT_SENT if sent.state in _UNDELIVERED else SENT
@@ -118,9 +129,9 @@ class FileComment:
         """This comment on the same lines, saying text instead, not sent: a chat that had the old words never had these."""
         return FileComment(self._range, text)
 
-    def sent_in(self, chat: str, message: str, sent_text: str) -> FileComment:
-        """This comment, sent to chat in message while its file read sent_text."""
-        return FileComment(self._range, self._text, chat, message, sent_text)
+    def sent_in(self, sending: CommentSending) -> FileComment:
+        """This comment, sent as sending says: to its chat, in its message, while the file read its text."""
+        return FileComment(self._range, self._text, sending)
 
     @property
     def record(self) -> CommentRecord:
@@ -155,7 +166,7 @@ class FileComments:
     @property
     @data_field
     def session_file(self) -> str:
-        return self._session.from_project(self._session.session_file)
+        return self._session.paths.from_project(self._session.session_file)
 
     @property
     @data_field
@@ -226,10 +237,10 @@ class FileComments:
         """Queue the comments for chat in one message, then keep each as sent in it, with its file's text as it reads
         now; a chat that is not connected refuses the message, and the comments stay not sent."""
         prompt = "\n\n".join([*(comment.prompt for comment in sending), f"session={self.session_file}"])
-        message = Chat.load(chat).queue("fill", prompt).message
+        message = Chat.load(chat).mailbox.queue("fill", prompt).message
         anchors = {comment.anchor for comment in sending}
         texts = {path: self._session.session_files.read(path).text for path in {comment.path for comment in sending}}
-        kept = [comment.sent_in(chat, message, texts[comment.path]) if comment.anchor in anchors else comment for comment in self.comments]
+        kept = [comment.sent_in(CommentSending(chat, message, texts[comment.path])) if comment.anchor in anchors else comment for comment in self.comments]
         self._save(kept)
 
     def _held(self, anchor: str) -> FileComment:

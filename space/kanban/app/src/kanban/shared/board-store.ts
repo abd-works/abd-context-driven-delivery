@@ -8,7 +8,8 @@ import type { ChatData, ChatMessageData } from '@cdd/harness/chat/chat'
 import type { FidelityProgressClient } from '../ticket/fidelity-progress-client'
 import type { ReportClient } from '../ticket/report-client'
 import type { ColumnClient } from '../board/column-client'
-import type { FilesByFidelity, TicketClient } from '../ticket/ticket-client'
+import type { TicketClient } from '../ticket/ticket-client'
+import type { FilesByFidelity } from '../ticket/ticket-work'
 
 export type Toast = { id: number; text: string; isFailure: boolean }
 export type Region = 'board' | 'details'

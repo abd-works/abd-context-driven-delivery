@@ -90,7 +90,7 @@ export function ActionBarView({ ticket, tile, onMouseEnter, onMouseLeave }: Acti
   return (
     <div className="expansion" data-bar={tile.place} onClick={() => page.tiles.pin(tile.ticket.name, tile.place)} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       <div className="bar-line bar-files">
-        <FileViewsView ticket={ticket} progress={ticket.progressOn(tile.fidelities)} />
+        <FileViewsView ticket={ticket} progress={ticket.work.progressOn(tile.fidelities)} />
       </div>
       <RunLineView tile={tile} bar={bar} />
       <ValidateLineView ticket={ticket} tile={tile} bar={bar} />

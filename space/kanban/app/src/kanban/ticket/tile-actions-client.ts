@@ -4,7 +4,8 @@ import { ACTION_STANDINGS, countOf, STEP_FAILED } from '../shared/board-brand'
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../shared/board-store'
 import type { FidelityProgressClient } from './fidelity-progress-client'
-import type { TicketClient, WorkStanding } from './ticket-client'
+import type { TicketClient } from './ticket-client'
+import type { WorkStanding } from './ticket-work'
 import { headPlace, slugsOf } from './tile-client'
 import { chosenFormats } from './tile-formats'
 
@@ -73,8 +74,8 @@ export class TileActionsClient {
   // A stage head's bar acts on the ticket's work in that stage, which Python answers taken together; a tile's bar acts
   // on its one fidelity.
   private workOf(ticket: TicketClient, tile: Tile): WorkStanding | undefined {
-    if (tile.place === headPlace(tile.stage.name)) return ticket.workIn(tile.stage)
-    return ticket.progressOn(tile.fidelities)[0]
+    if (tile.place === headPlace(tile.stage.name)) return ticket.work.workIn(tile.stage)
+    return ticket.work.progressOn(tile.fidelities)[0]
   }
 
   // Python says which actions have something to work on; Render waits for output to convert.
@@ -99,7 +100,7 @@ export class TileActionsClient {
       // Validate runs in the chat.
       validateOff: !this.chat.canSend || !this.allows(ticket, work, 'validate'),
       validate,
-      report: reportOf(ticket.progressOn(tile.fidelities)),
+      report: reportOf(ticket.work.progressOn(tile.fidelities)),
       hasViolations: validate.text !== '',
     }
   }

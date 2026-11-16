@@ -199,7 +199,7 @@ describe('Send Next Fidelity Action', () => {
 
     it('should mark its tile as the next one', async () => {
       const { page } = await ran()
-      expect(ticketOn(page, OTHER).progressNamed('stories-story-map')!.isNext).toBe(true)
+      expect(ticketOn(page, OTHER).work.progressNamed('stories-story-map')!.isNext).toBe(true)
     })
   })
 
@@ -237,7 +237,7 @@ describe('Choose Ticket Practices', () => {
     const discovery = page.board.stageNamed('Discovery')!
     const boundedContext = discovery.workRequired.find(fidelity => fidelity.slug === 'ddd-bounded-context')!
     page.store.change({ tiles: [{ ticket: ticketOn(page, ACTIVE), place: 'cell-Discovery-ddd-bounded-context', stage: discovery, fidelities: [boundedContext], action: 'generate', isPinned: true, choices: [] }] })
-    await ticketOn(page, ACTIVE).enablePractice('ddd', false)
+    await ticketOn(page, ACTIVE).practices.enable('ddd', false)
     return page
   }
 

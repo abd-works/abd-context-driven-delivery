@@ -50,7 +50,7 @@ export class PageLinks {
     const slugs = (query.get(FIDELITY_QUERY) ?? '').split(',').filter(Boolean)
     if (!name || !slugs.length) return
     const ticket = await this.ticketNamed(name)
-    const progress = slugs.flatMap(slug => ticket?.progressNamed(slug) ?? [])
+    const progress = slugs.flatMap(slug => ticket?.work.progressNamed(slug) ?? [])
     if (!ticket || !progress.length) return this.page.failures.fail(`The board has no ${slugs.join(', ')} files for ${name}.`, OPENING_FROM_A_LINK)
     this.select(ticket)
     await this.page.files.openFiles(ticket, progress)
@@ -67,7 +67,7 @@ export class PageLinks {
     if (!ticket) return this.page.failures.fail(`The board has no ticket ${name}.`, OPENING_FROM_A_LINK)
     this.select(ticket)
     const file = query.get(FILE_QUERY)
-    await (file ? this.page.files.openSessionFile(ticket, file) : this.page.files.openSessionFolder(ticket))
+    await this.page.files.openFolder(ticket, 'session', file ?? '')
   }
 
   // The ticket a link names, the board read first when it has not been yet.
@@ -83,7 +83,7 @@ export class PageLinks {
     const slug = query.get(FIDELITY_QUERY)
     if (!name || !slug) return undefined
     const ticket = await this.ticketNamed(name)
-    const progress = ticket?.progressNamed(slug)
+    const progress = ticket?.work.progressNamed(slug)
     if (!ticket || !progress) {
       this.page.failures.fail(`The board has no ${slug} ${opened} for ${name}.`, OPENING_FROM_A_LINK)
       return undefined

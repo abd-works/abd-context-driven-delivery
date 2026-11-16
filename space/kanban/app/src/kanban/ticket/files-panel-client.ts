@@ -4,7 +4,8 @@ import type { SessionFileData } from '@cdd/space/session/session'
 import type { BoardStore, FilesPanel, FilesSource, SidePanel } from '../shared/board-store'
 import type { FidelityProgressClient } from './fidelity-progress-client'
 import { OpenFileComments } from './open-file-comments'
-import type { FilesByFidelity, TicketClient } from './ticket-client'
+import type { TicketClient } from './ticket-client'
+import type { FilesByFidelity } from './ticket-work'
 
 // A folder's files are read as the files of one entry, which no practice filter hides.
 const FOLDER_ENTRY = 'folder'
@@ -58,7 +59,7 @@ export class FilesPanelClient {
   }
 
   private async read(ticket: TicketClient, { source, progress }: Pick<FilesChoice, 'source' | 'progress'>): Promise<FilesByFidelity | null> {
-    if (source === 'fidelities') return ticket.filesOf(progress)
+    if (source === 'fidelities') return ticket.work.filesOf(progress)
     const entries = await (source === 'session' ? ticket.sessionClient.folderFiles() : ticket.sessionClient.workpathFiles())
     return entries && { [FOLDER_ENTRY]: { [FOLDER_ENTRY]: entries } }
   }
@@ -66,23 +67,15 @@ export class FilesPanelClient {
   // The files of every fidelity of the ticket's stage, with the filters on for the practices of the fidelities given:
   // a fidelity's files button shows its own practice's files, and the others are a toggle away.
   async openFiles(ticket: TicketClient, progress: FidelityProgressClient[]): Promise<void> {
-    const offered = ticket.stageProgress.length ? ticket.stageProgress : progress
+    const offered = ticket.work.stageProgress.length ? ticket.work.stageProgress : progress
     const stage = [...offered, ...progress.filter(entry => !offered.some(shown => shown.fidelity.slug === entry.fidelity.slug))]
     await this.openPanel(ticket, { source: 'fidelities', progress: stage, practicesOn: [...new Set(progress.map(entry => entry.practice.key))] })
   }
 
-  async openSessionFolder(ticket: TicketClient): Promise<void> {
-    await this.openPanel(ticket, folderOf('session'))
-  }
-
-  // The folder the session works in, as the details' workpath link opens it.
-  async openWorkpath(ticket: TicketClient): Promise<void> {
-    await this.openPanel(ticket, folderOf('workpath'))
-  }
-
-  // The session folder, with one of its files open, such as its latest handoff.
-  async openSessionFile(ticket: TicketClient, path: string): Promise<void> {
-    await this.openPanel(ticket, folderOf('session'), path)
+  // The ticket's session folder, or the folder the session works in as the details' workpath link opens it, with one of
+  // its files open when path names one, such as its latest handoff.
+  async openFolder(ticket: TicketClient, source: Exclude<FilesSource, 'fidelities'>, path: string = ''): Promise<void> {
+    await this.openPanel(ticket, folderOf(source), path)
   }
 
   private async openPanel(ticket: TicketClient, choice: FilesChoice, tab: string = ''): Promise<void> {

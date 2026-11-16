@@ -42,7 +42,7 @@ export class SidePanelClient {
 
   // With no fidelity's progress, a report panel holds the violations of every fidelity of its ticket.
   async openReport(ticket: TicketClient, progress: FidelityProgressClient | null): Promise<void> {
-    const report = await ticket.reportOf(progress)
+    const report = await ticket.work.reportOf(progress)
     if (report) this.show({ kind: 'report', ticket, progress, report, closedRules: [], isExpanded: false })
   }
 
@@ -83,7 +83,7 @@ export class SidePanelClient {
   async reload(): Promise<void> {
     const open = this.reportPanel
     if (!open) return
-    const report = await open.ticket.reportOf(open.progress)
+    const report = await open.ticket.work.reportOf(open.progress)
     if (report) this.changeReport(panel => ({ ...panel, report }))
   }
 }

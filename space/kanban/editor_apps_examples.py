@@ -17,7 +17,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from harness.diagnostics.app import App, AppServer, AppStatus, Npm, NpmRun, PortProbe
+from harness.diagnostics.app import App, AppPackage, AppPage, AppServer, AppStatus, NodeScript, Npm, NpmRun, PortProbe
 import space.kanban  # noqa: F401 - registers the Kanban and Story UI apps, as the cdd server does when it loads every toolset
 from space.kanban.session_board_examples import BacklogFileSeed
 
@@ -117,8 +117,8 @@ class ThrowawayApp:
         self._ports = ports
         self._replaced = App.load(example.label, project=self.folder)
         self._listener: socket.socket | None = None
-        server = AppServer(self.folder, "serve.js", (self.port,), probe=ports)
-        self.app = App(example.label, self.folder, server, example.page, npm=self.npm).register()
+        server = AppServer(NodeScript(self.folder, "serve.js"), (self.port,), ports)
+        self.app = App(example.label, AppPackage(self.folder, npm=self.npm), AppPage(server, example.page)).register()
         self.write_code(FOUND_DEPENDENCY, SERVE)
 
     def write_code(self, dependency: str, server: str) -> None:

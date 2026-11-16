@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from harness.agent_tools.chat_pointer import ChatPointer
-from harness.agent_tools.tool_call import ToolCall
+from harness.agent_tools.tool_call import ToolCall, ToolRequest
 from harness.diagnostics.probe_outcome import raised_by_a_bug
 
 if TYPE_CHECKING:
@@ -61,7 +61,7 @@ class SessionProbe:
         sessions.switch(_SESSION_PROBE_NAME, self._work)
         session = sessions.current()
         transcript = self._probe_transcript(session)
-        call = ToolCall(chat=ChatPointer("guidance-probe", transcript, "1"))
+        call = ToolCall(request=ToolRequest(ChatPointer("guidance-probe", transcript, "1")))
         Generate(session, call).generate(["bdd"])
         Validate(session, call).validate(["bdd"])
         return session, transcript
