@@ -99,17 +99,17 @@ export class FoldKeys {
   static from(json: string): FoldKeys {
     try {
       const given: unknown = JSON.parse(json);
-      if (!Array.isArray(given)) return FoldKeys.refused('it is not a list of { "key", "command" }');
+      if (!Array.isArray(given)) return FoldKeys.fromFailure('it is not a list of { "key", "command" }');
       const wrong = given.find((each) => typeof each?.key !== 'string' || !FOLD_COMMANDS.has(each?.command));
-      if (wrong !== undefined) return FoldKeys.refused(`${JSON.stringify(wrong)} binds no fold command (${[...FOLD_COMMANDS].join(', ')})`);
+      if (wrong !== undefined) return FoldKeys.fromFailure(`${JSON.stringify(wrong)} binds no fold command (${[...FOLD_COMMANDS].join(', ')})`);
       const chosen = given as FoldKey[];
       return new FoldKeys([...VS_CODE_FOLD_KEYS.filter((each) => !chosen.some((held) => held.command === each.command)), ...chosen], '');
     } catch (failure) {
-      return FoldKeys.refused(failure instanceof Error ? failure.message : String(failure));
+      return FoldKeys.fromFailure(failure instanceof Error ? failure.message : String(failure));
     }
   }
 
-  static refused(why: string): FoldKeys {
+  static fromFailure(why: string): FoldKeys {
     return new FoldKeys(VS_CODE_FOLD_KEYS, why);
   }
 
@@ -117,7 +117,7 @@ export class FoldKeys {
   bindIn(monacoApi: Monaco): FoldKeys {
     const rules = this.keys.map((each) => ({ keybinding: keybindingOf(monacoApi, each.key), command: each.command }));
     const unknown = rules.find((rule) => rule.keybinding === 0);
-    if (unknown) return FoldKeys.refused(`no key Monaco knows in ${JSON.stringify(this.keys[rules.indexOf(unknown)])}`).bindIn(monacoApi);
+    if (unknown) return FoldKeys.fromFailure(`no key Monaco knows in ${JSON.stringify(this.keys[rules.indexOf(unknown)])}`).bindIn(monacoApi);
     monacoApi.editor.addKeybindingRules(rules);
     return this;
   }

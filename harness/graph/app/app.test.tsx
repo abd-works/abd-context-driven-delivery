@@ -28,7 +28,7 @@ const foldMarks = vi.hoisted(() => ({
 // Monaco's own keys, as a chord of two parts and modifiers: the fake keeps each code as a plain number.
 const fakeMonaco = vi.hoisted(() => ({
   KeyMod: { CtrlCmd: 2048, Shift: 1024, Alt: 512, WinCtrl: 256, chord: (first: number, second: number) => first * 65536 + second },
-  KeyCode: { KeyK: 41, KeyJ: 40, KeyL: 42, KeyM: 43, Digit0: 21, Digit1: 22, Digit2: 23, Digit3: 24, Digit4: 25, Digit5: 26, Digit6: 27, Digit7: 28, BracketLeft: 92, BracketRight: 94, Slash: 90, Backslash: 93, Minus: 88, Equal: 86, Period: 89, Comma: 87, Semicolon: 85 },
+  KeyCode: { KeyK: 41, KeyJ: 40, KeyL: 42, KeyM: 43, Digit0: 21, Digit1: 22, Digit2: 23, Digit3: 24, Digit4: 25, Digit5: 26, Digit6: 27, Digit7: 28, BracketLeft: 92, BracketRight: 94, F9: 66, Slash: 90, Backslash: 93, Minus: 88, Equal: 86, Period: 89, Comma: 87, Semicolon: 85 },
   languages: { registerFoldingRangeProvider: (_language: string, _provider: unknown) => undefined as unknown },
   editor: { addKeybindingRules: (_rules: unknown[]) => undefined as unknown },
 }));
@@ -730,6 +730,15 @@ it("should keep VS Code's keys and say why when a keybindings file is no list of
     [true, true],
     [true, true],
   ]);
+});
+
+it('should bind a key with shift, and a function key, as a keybindings file writes them', () => {
+  foldMarks.keybindings = [];
+  FoldKeys.from('[{ "key": "f9", "command": "editor.toggleFold" }]').bindIn(monacoApi);
+  expect(foldMarks.keybindings).toEqual(expect.arrayContaining([
+    { keybinding: fakeMonaco.KeyMod.CtrlCmd | fakeMonaco.KeyMod.Shift | fakeMonaco.KeyCode.BracketLeft, command: 'editor.fold' },
+    { keybinding: fakeMonaco.KeyCode.F9, command: 'editor.toggleFold' },
+  ]));
 });
 
 it("should keep VS Code's keys and say why when a keybindings file names a key Monaco has none for", () => {

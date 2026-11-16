@@ -241,8 +241,7 @@ class SessionFile:
         found = [FileStep(node.source.start_line, self._sources(graph, "invokes", node), self._sources(graph, "observes", node)) for node in nodes]
         return sorted((step for step in found if step.invokes or step.observes), key=lambda step: step.line)
 
-    @staticmethod
-    def _sources(graph: Graph, kind: str, node: Node) -> list[NodeSource]:
+    def _sources(self, graph: Graph, kind: str, node: Node) -> list[NodeSource]:
         """What node reaches by kind, each with its source and the class it belongs to; a module's function belongs to none."""
         owners = ((edge.child, str(edge.child.get_fact("owner", "") or "")) for edge in graph.edges_from(kind, node) if edge.child.source is not None)
         return [NodeSource(child, owner="" if owner == MODULE_FUNCTION_HOLDER else owner) for child, owner in owners]

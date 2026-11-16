@@ -21,7 +21,6 @@ export type SourceRule = {
 };
 
 export type SourceEditorInstance = Parameters<OnMount>[0];
-export type { SourceLines };
 
 // What a page showing a whole file adds to the view: the lines to open, such as the nodes selected in the graph, around
 // which every other fold closes; the language the file is in; whether calls and classes the code names open in place,
@@ -234,4 +233,3 @@ function sourceHeight(text: string): number {
   return Math.max(1, text.split('\n').length) * LINE_HEIGHT + 16;
 }
 
-export type { FoldMember };

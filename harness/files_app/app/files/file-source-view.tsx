@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { NodeSourceData } from '@cdd/harness/graph/graph'
 import type { SessionFileData } from '@cdd/space/session/session'
-import { SourceView, type SourceEditorInstance, type SourceLines } from '@source-view/SourceView'
+import { SourceView, type SourceEditorInstance } from '@source-view/SourceView'
+import type { SourceLines } from '@source-view/source-folding'
 import type { Monaco } from '@monaco-editor/react'
 
 import { CommentCardView, CommentComposerView } from './comment-box-view'

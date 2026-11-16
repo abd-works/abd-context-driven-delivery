@@ -26,7 +26,7 @@ export class FilesFoldKeys {
       const written = (await this.session.readFile(KEYBINDINGS_FILE))?.text ?? ''
       this.keys = written.trim() ? FoldKeys.from(written) : FoldKeys.VS_CODE
     } catch (failure) {
-      this.keys = FoldKeys.refused(failure instanceof Error ? failure.message : String(failure))
+      this.keys = FoldKeys.fromFailure(failure instanceof Error ? failure.message : String(failure))
     }
     this.tellProblem(this.keys)
     this.monacos.forEach(monacoApi => this.bind(monacoApi))
