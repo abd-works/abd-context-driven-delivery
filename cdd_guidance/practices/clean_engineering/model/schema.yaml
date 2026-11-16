@@ -64,7 +64,7 @@ class:
   dependsOn?: [class]
   relationships?: [relationship]
   demonstratedThrough?: [example | observation]
-  participants: [operation | property]
+  participants?: [operation | property]
   where:
     - id is the module id, then this class name, joined by dots
     - a class exists when a property, an instance, and a subtype do not fit
@@ -117,7 +117,7 @@ operation:
   parameters?: [parameter]
   returnType: class | string
   body?: string
-  invokes: [operation | property]
+  invokes?: [operation | property]
   invokedBy?: [step | observation]
   invariants?: [invariant]
   where:

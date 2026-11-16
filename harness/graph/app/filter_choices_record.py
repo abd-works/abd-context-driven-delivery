@@ -20,7 +20,6 @@ from typing import Any
 if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-import cdd_guidance.practices  # noqa: E402,F401 - registers the practices with the practice catalogue
 from harness.graph.graph import Graph, Source  # noqa: E402
 from harness.graph.schema_rules import PracticeSchema  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
@@ -82,4 +81,6 @@ def read() -> dict[str, Any]:
 
 
 if __name__ == "__main__":
+    import cdd_guidance.practices  # noqa: F401 - registers the practices the fixture names with the practice catalogue
+
     FILE.write(recorded(read()))

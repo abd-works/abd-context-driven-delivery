@@ -20,7 +20,6 @@ from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_annotations import long_call, mcp
 from harness.process.git import Git
 from space.repo.repo import Repo
-from space.session.session import MAIN_SESSION_NAME
 
 # The checkout serving these tools: its .gitignore is what a new repository ignores, and its install script installs CDD.
 _CDD_CHECKOUT = Path(__file__).resolve().parents[2]
@@ -237,7 +236,8 @@ class Repos:
             steps.append(self._publish(root, visibility))
         if install:
             steps.append(self._install_cdd(root))
-        chat = NewChat(root, cleaned, MAIN_SESSION_NAME)
+        # A new repository's main session is the session of the branch it is created on.
+        chat = NewChat(root, cleaned, _DEFAULT_BRANCH)
         steps.append(chat.open() if start_chat else chat.instructions)
         return "\n".join(f"- {step}" for step in steps if step)
 
