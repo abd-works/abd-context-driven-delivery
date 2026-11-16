@@ -65,12 +65,39 @@ SCENARIOS_GIVEN_LINE = 7
 # Seed: Restore Ticket's story test, in code, for a story the markdown map does not have yet.
 RESTORE_TEST = "story_tests/manage-tickets/remove-tickets/restore-ticket/restore_ticket_story.test.py"
 RESTORE_TEST_TEXT = STORY_TEST_TEXT.replace("Delete Ticket", "Restore Ticket").replace("deleted", "restored")
+# Seed: Remove Tickets' shared story test, in Python, its scenarios and steps decorated functions: Delete Ticket's
+# first scenario on lines 7 to 15, its Given on lines 9 to 11, its second scenario on lines 18 to 22.
+SHARED_STORY = "story_tests/manage-tickets/remove-tickets/remove-tickets.story.shared.py"
+SHARED_STORY_TEXT = (
+    '"""Remove Tickets: the shared scenarios."""\n'
+    'from space.kanban.story_test import SharedStories\n'
+    '\n'
+    'shared_stories = SharedStories("Remove Tickets")\n'
+    '\n'
+    '\n'
+    '@shared_stories.scenario("Delete Ticket", "a ticket is deleted")\n'
+    'def _(s):\n'
+    '    @s.given("a ticket on the board")\n'
+    '    def _(world):\n'
+    '        world.ticket = "checkout"\n'
+    '\n'
+    '    @s.when("the Person deletes it")\n'
+    '    def _(world):\n'
+    '        world.deleted = True\n'
+    '\n'
+    '\n'
+    '@shared_stories.scenario("Delete Ticket", "a deleted ticket leaves the board")\n'
+    'def _(s):\n'
+    '    @s.then("the board no longer shows it")\n'
+    '    def _(world):\n'
+    '        world.shown = False\n'
+)
 LISTED = [STORY_MAP, TICKET_CODE, BOARD_CODE]
 
 
 def seed_checkout_flow_with_graph_files(world) -> None:
     world.project.seed_session(CHECKOUT_FLOW)
-    for path, text in ((TICKET_CODE, TICKET_TEXT), (BOARD_CODE, BOARD_TEXT), (STORY_MAP, STORY_MAP_TEXT), (OLD_MAP, OLD_MAP_TEXT), (STORY_TEST, STORY_TEST_TEXT), (RESTORE_TEST, RESTORE_TEST_TEXT), (SCENARIOS, SCENARIOS_TEXT)):
+    for path, text in ((TICKET_CODE, TICKET_TEXT), (BOARD_CODE, BOARD_TEXT), (STORY_MAP, STORY_MAP_TEXT), (OLD_MAP, OLD_MAP_TEXT), (STORY_TEST, STORY_TEST_TEXT), (RESTORE_TEST, RESTORE_TEST_TEXT), (SCENARIOS, SCENARIOS_TEXT), (SHARED_STORY, SHARED_STORY_TEXT)):
         world.project.seed_file(path, text)
 
 

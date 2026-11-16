@@ -154,6 +154,28 @@ section: body
 *When* the Person selects the Given step a ticket on the board  
 *Then* the scenarios file opens at the Given's own line
 
+#### Scenario: Selecting a scenario in a Python story test spans its whole function
+
+Requested by the person on 2026-11-16: a scenario or step selected in code opened on its decorator's line alone.
+
+*Given* the Files app shows the Stories tree of Remove Tickets' shared story test  
+*When* the Person selects the scenario a ticket is deleted  
+*Then* the shared story test opens at lines 7 to 15, its decorator through the last line of its function
+
+#### Scenario: Selecting a step in a Python story test spans its whole function
+
+*Given* the Files app shows the Stories tree of Remove Tickets' shared story test  
+*When* the Person selects the Given step a ticket on the board  
+*Then* the shared story test opens at lines 9 to 11, the Given's decorator through its function
+
+#### Scenario: Selecting a story in a Python story test spans its scenarios
+
+Requested by the person on 2026-11-16: a story or sub-epic selected in code opened on one line, so it looked like the wrong file.
+
+*Given* the Files app shows the Stories tree of Remove Tickets' shared story test  
+*When* the Person selects the story Delete Ticket  
+*Then* the shared story test opens at lines 7 to 22, its first scenario through its last
+
 ## Story: Fold Open Files To Selected Nodes
 
 ### Evidence
@@ -181,4 +203,13 @@ section: body
 
 *Given* ticket.py is open at its first line  
 *When* the Person selects Ticket.close, at line 538  
-*Then* the page scrolls so line 538 shows a third of the way down the window
+*Then* the page scrolls so line 538 shows near the top of the window, so it is plain where the page went
+
+#### Scenario: Selecting a node marks its lines
+
+Requested by the person on 2026-11-16.
+
+*Given* ticket.py is open at its first line  
+*When* the Person selects Ticket.close, which covers lines 538 to 560  
+*Then* the source view marks lines 538 to 560 as selected  
+  *And* a node that covers the whole file marks no lines

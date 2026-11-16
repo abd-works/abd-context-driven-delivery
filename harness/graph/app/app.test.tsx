@@ -504,6 +504,23 @@ it('should wrap long lines when the page asks', async () => {
   expect(foldMarks.wordWrap).toBe('on');
 });
 
+function markedLines(editor: HTMLElement): string[] {
+  return Array.from(editor.querySelectorAll<HTMLElement>('[data-line].selected-lines')).map((row) => row.dataset.line ?? '');
+}
+
+it('should mark the lines of the node the page asks to show', async () => {
+  render(<SourceView source={longLine} violation={null} rules={[]} activeRule="" unfolded openAround={[{ start: 2, end: 3 }]} />);
+  const editor = await screen.findByTestId('source-editor');
+  await waitFor(() => expect(markedLines(editor)).toEqual(['2', '3']));
+});
+
+it('should mark no lines for a node that covers the whole file', async () => {
+  render(<SourceView source={longLine} violation={null} rules={[]} activeRule="" unfolded openAround={[{ start: 1, end: 3 }]} />);
+  const editor = await screen.findByTestId('source-editor');
+  await screen.findAllByText(/class Order/);
+  expect(markedLines(editor)).toEqual([]);
+});
+
 it('should fold a story, a scenario, and a step the way a class folds', async () => {
   const user = userEvent.setup();
   await openFolder(user);

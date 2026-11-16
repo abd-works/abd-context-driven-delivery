@@ -58,6 +58,11 @@
   color: var(--error);
 }
 
+.source-snippet .selected-lines {
+  background-color: color-mix(in srgb, var(--select, var(--accent)) 16%, transparent);
+  box-shadow: inset 3px 0 0 var(--select, var(--accent));
+}
+
 .source-snippet .violation-highlight {
   background-color: color-mix(in srgb, var(--error) 22%, transparent) !important;
 }

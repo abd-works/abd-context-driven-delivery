@@ -48,6 +48,23 @@ class Call:
         self.operation = operation
 
 
+def _decorated_end(lines: list[str], after: int) -> int:
+    """The last line of the function or class a Python decorator ending on line after (counted from 1) decorates: the
+    last line indented under its def. After decorators stacked below, or no def at all, the decorator's own line."""
+    found = next((index for index in range(after, len(lines)) if not lines[index].lstrip().startswith("@")), None)
+    if found is None or not re.match(r"\s*(async\s+)?(def|class)\b", lines[found]):
+        return after
+    indent = len(lines[found]) - len(lines[found].lstrip())
+    end = found
+    for index in range(found + 1, len(lines)):
+        if not lines[index].strip():
+            continue
+        if len(lines[index]) - len(lines[index].lstrip()) <= indent:
+            break
+        end = index
+    return end + 1
+
+
 class _BracketDepth:
     """How deep a run of source lines is inside parentheses, braces, and brackets, and the string it is inside, if any,
     read one line after another; brackets inside a string do not count."""
@@ -214,12 +231,13 @@ class Source:
 
     def _call_end(self, lines: list[str], start: int) -> int:
         """The line the call or block that opens at start closes on: the first where its parentheses and braces are
-        all closed again after one has opened."""
+        all closed again after one has opened. A Python decorator, such as a shared story's scenario or step, closes
+        its call on its own line, so it runs on through the function it decorates."""
         depth = _BracketDepth()
         for index in range(start, len(lines)):
             depth.read(lines[index])
             if depth.opened_call and depth.closed:
-                return index + 1
+                return _decorated_end(lines, index + 1) if lines[start].lstrip().startswith("@") else index + 1
         return max(self.end_line, start + 1)
 
     def _read(self) -> str:

@@ -10,8 +10,9 @@ import type { CommentLines, FileCommentsActions } from './file-comments-actions'
 import { keepWrap, storedWrap, type ThemeFailure } from './files-theme'
 import { foldsOf, monacoLanguageOf, rulesOf, sourceOf, violationFocusOf } from './source-of-file'
 
-// How far down the window the first line asked to show sits once the page scrolls to it.
-const SHOWN_FROM_TOP = 1 / 3
+// How far down the window the first line asked to show sits once the page scrolls to it: near the top, so it is plain
+// where the page went, with a line or two above it for context.
+const SHOWN_FROM_TOP = 1 / 10
 
 // The open file in the graph explorer's source view: folds from the session's graph, its broken rules as chips with the
 // chosen one marked, and the comments on it: Add comment and Add to context on the right-click menu, a marker beside

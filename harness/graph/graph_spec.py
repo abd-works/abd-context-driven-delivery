@@ -1134,6 +1134,57 @@ with description("a scenario row with only a start line"):
         expect(self.source.text).to(contain("then("))
 
 
+with description("a scenario in a Python shared story with only its decorator's line"):
+    with before.each:
+        import tempfile
+
+        self.temp = tempfile.TemporaryDirectory()
+        relative = "remove-tickets.story.shared.py"
+        body = "\n".join(
+            [
+                '@shared_stories.scenario("Delete Ticket", "a ticket is deleted")',
+                "def _(s):",
+                '    @s.given("a ticket on the board")',
+                "    def _(world):",
+                "        world.ticket = 1",
+                "",
+                "",
+                '@shared_stories.scenario("Delete Ticket", "a deleted ticket leaves the board")',
+                "def _(s):",
+                "    pass",
+            ]
+        )
+        path = Path(self.temp.name) / relative
+        path.write_text(body, encoding="utf-8")
+        self.relative = relative
+
+    with it("should run through the last line of the function it decorates"):
+        source = Source(self.relative, 1, 1, self.temp.name)
+        source.widen_to_call_close()
+        expect((source.start_line, source.end_line)).to(equal((1, 5)))
+
+    with it("should stop a step at the end of its own function"):
+        source = Source(self.relative, 3, 3, self.temp.name)
+        source.widen_to_call_close()
+        expect((source.start_line, source.end_line)).to(equal((3, 5)))
+
+    with context("with stacked decorators"):
+        with it("should run through the function below the last of them"):
+            path = Path(self.temp.name) / "stacked.py"
+            path.write_text("@first()\n@second()\ndef run():\n    return 1\n", encoding="utf-8")
+            source = Source("stacked.py", 1, 1, self.temp.name)
+            source.widen_to_call_close()
+            expect(source.end_line).to(equal(4))
+
+    with context("that decorates nothing"):
+        with it("should keep to the decorator's own line"):
+            path = Path(self.temp.name) / "alone.py"
+            path.write_text("@first()\nvalue = 1\n", encoding="utf-8")
+            source = Source("alone.py", 1, 1, self.temp.name)
+            source.widen_to_call_close()
+            expect(source.end_line).to(equal(1))
+
+
 with description("an example a story test imports"):
     with before.each:
         import tempfile

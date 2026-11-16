@@ -147,10 +147,10 @@ function SourceEditor({
       hideSource.current,
       decorations,
       prepared.depths,
-      violationLineDecorations(prepared.lineNumbers, markStart, markEnd, Boolean(violation)),
+      [...violationLineDecorations(prepared.lineNumbers, markStart, markEnd, Boolean(violation)), ...selectedLineDecorations(prepared.lineNumbers, openAround)],
       glyphs.current,
     );
-  }, [prepared.text, prepared.folds, prepared.depths, openFolds, prepared.lineNumbers, markStart, markEnd, violation]);
+  }, [prepared.text, prepared.folds, prepared.depths, openFolds, prepared.lineNumbers, markStart, markEnd, violation, openAround]);
 
   const onMount: OnMount = (editor) => {
     editorRef.current = editor;
@@ -161,7 +161,7 @@ function SourceEditor({
       hideSource.current,
       decorations,
       depthsRef.current,
-      violationLineDecorations(prepared.lineNumbers, markStart, markEnd, Boolean(violation)),
+      [...violationLineDecorations(prepared.lineNumbers, markStart, markEnd, Boolean(violation)), ...selectedLineDecorations(prepared.lineNumbers, openAround)],
       glyphs.current,
     );
     const nodeEl = editor.getDomNode();
@@ -383,17 +383,31 @@ function violationLineDecorations(
   if (!active || startLine < 1) {
     return [];
   }
-  const last = endLine >= startLine ? endLine : startLine;
+  return fileLineDecorations(lineNumbers, startLine, endLine >= startLine ? endLine : startLine, 'violation-highlight');
+}
+
+// The lines of the nodes a page asked to show, such as those selected in a graph view, marked so it is plain where the
+// page went; a node that covers the whole file marks nothing, since every line would be marked.
+function selectedLineDecorations(lineNumbers: string[], openAround: SourceLines[]): Decoration[] {
+  const lastLine = Math.max(0, ...lineNumbers.map((shown) => Number.parseInt(shown, 10)).filter(Number.isFinite));
+  return openAround
+    .filter((lines) => lines.start > 1 || lines.end < lastLine)
+    .flatMap((lines) => fileLineDecorations(lineNumbers, lines.start, Math.max(lines.start, lines.end), 'selected-lines'));
+}
+
+// Each editor line that shows a file line from startLine to endLine, marked whole with className; lineNumbers names the
+// file line each editor line shows, since calls opened in place add lines the file does not have there.
+function fileLineDecorations(lineNumbers: string[], startLine: number, endLine: number, className: string): Decoration[] {
   const rows: Decoration[] = [];
   for (let index = 0; index < lineNumbers.length; index += 1) {
     const fileLine = Number.parseInt(lineNumbers[index] ?? '', 10);
-    if (!Number.isFinite(fileLine) || fileLine < startLine || fileLine > last) {
+    if (!Number.isFinite(fileLine) || fileLine < startLine || fileLine > endLine) {
       continue;
     }
     const editorLine = index + 1;
     rows.push({
       range: { startLineNumber: editorLine, startColumn: 1, endLineNumber: editorLine, endColumn: 1 },
-      options: { isWholeLine: true, className: 'violation-highlight' },
+      options: { isWholeLine: true, className },
     });
   }
   return rows;

@@ -26,6 +26,7 @@ from space.session.graph_view_examples import (
     RESTORE_TEST,
     SCENARIOS,
     SCENARIOS_GIVEN_LINE,
+    SHARED_STORY,
     STORY_TEST,
     TICKET_CODE,
     node_id_of,
@@ -185,6 +186,56 @@ def _(s):
     @s.then("ticket.py and board.py both open, board.py at the lines Board covers")
     def _(world):
         expect(sorted(world.lines)).to(equal([(BOARD_CODE, 1, 3), (TICKET_CODE, 1, 9)]))
+
+
+def shared_story_lines(world, name: str) -> list[tuple[str, int, int]]:
+    ranges = world.data_of(session_of(world).graph_node_ranges(node_id=node_id_of(world, name, [SHARED_STORY]), paths=[SHARED_STORY]))
+    return [(found["path"], found["start_line"], found["end_line"]) for found in ranges]
+
+
+@shared_stories.scenario("Open Several Files From Graph Nodes", "Selecting a scenario in a Python story test spans its whole function")
+def _(s):
+    @s.given("the Files app shows the Stories tree of Remove Tickets' shared story test")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person selects the scenario a ticket is deleted")
+    def _(world):
+        world.lines = shared_story_lines(world, "a ticket is deleted")
+
+    @s.then("the shared story test opens at lines 7 to 15, its decorator through the last line of its function")
+    def _(world):
+        expect(world.lines).to(equal([(SHARED_STORY, 7, 15)]))
+
+
+@shared_stories.scenario("Open Several Files From Graph Nodes", "Selecting a step in a Python story test spans its whole function")
+def _(s):
+    @s.given("the Files app shows the Stories tree of Remove Tickets' shared story test")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person selects the Given step a ticket on the board")
+    def _(world):
+        world.lines = shared_story_lines(world, "given a ticket on the board")
+
+    @s.then("the shared story test opens at lines 9 to 11, the Given's decorator through its function")
+    def _(world):
+        expect(world.lines).to(equal([(SHARED_STORY, 9, 11)]))
+
+
+@shared_stories.scenario("Open Several Files From Graph Nodes", "Selecting a story in a Python story test spans its scenarios")
+def _(s):
+    @s.given("the Files app shows the Stories tree of Remove Tickets' shared story test")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person selects the story Delete Ticket")
+    def _(world):
+        world.lines = shared_story_lines(world, "Delete Ticket")
+
+    @s.then("the shared story test opens at lines 7 to 22, its first scenario through its last")
+    def _(world):
+        expect(world.lines).to(equal([(SHARED_STORY, 7, 22)]))
 
 
 @shared_stories.scenario("Open Several Files From Graph Nodes", "Selecting a step opens its scenarios file at the step's line")
