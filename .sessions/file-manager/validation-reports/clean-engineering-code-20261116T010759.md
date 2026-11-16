@@ -564,3 +564,17 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 - **`domain-tier-only-for-domain-logic`** — Add a domain tier only when `<aggregate>.ts` holds logic worth proving alone. A core that only states structure has nothing to run, and the server tier already exercises it.
 - **`same-signature-across-languages`** — When the domain is in another language, as a CDD-backed domain is, a behavior the Mamba spec states keeps the same `should` sentence in the shared behavior. A sentence on one side only shows a behavior untested on the other.
 - **`ask-cross-aggregate-sync`** — **Hard gate** when generating stories. Use AskQuestion; persist the answer under **Cross-aggregate sync** in `.context/grill-answers.md` before writing story files.
+## Judgment — `harness/files_app/app/files/files-page.ts`
+
+### `limit-operation-parameters` — Fail
+- files-page.ts:42 `rootFilesShown` takes four parameters; it was there before this change and is left for its own fix.
+
+### `use-explicit-dependencies` — Fail
+- files-page.ts:53 `FilesPage` builds `FilesGraph` in its constructor, as it already builds its file bar, notices, menu and guidance selector; the page is the composition root of its collaborators, so this follows the class's existing shape, but the rule as written fails it.
+
+Fixed after this report: `keep-operations-small-focused` on `start` (the following moved to `follow`) and on `GraphEntryView` (its row is `GraphRowView`); `use-typed-signatures` on `select`'s `also`.
+
+Passes: `do-not-invent-parallel-object-models` (the graph view keeps the session's answers in the page's one store and adds no model of the graph; the session's own graph answers through `Session.graph_trees`, `graph_branch`, `graph_node_range`), `hold-state-on-the-object-not-in-parameters` (the listed files are the page's state, passed once per call as the files the session reads for), `domain-lives-in-python` (which nodes a file list holds is the graph filter's `paths`; the page decides only what shows), `one-line-to-the-domain`, `same-verb-across-layers` (`graphTrees` → `/session/:session/graph-trees` → `session.graph_trees`), `fail-loud-on-mcp` (each failed call is a notice and, for the trees, a line in the bar).
+
+### `report-progress-on-long-calls` — Fail
+- files-graph.ts:36 `read` shows only "Reading the session's graph…" while `session.graph_trees` holds the whole working copy, which can take long; the load's steps are the Explore sub-epic's Show Graph Load Steps In Files App, not built yet.
