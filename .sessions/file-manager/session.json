@@ -7,25 +7,20 @@
   "worktree": "C:\\dev\\abd-cdd-file-manager",
   "guidance": {
     "stages": [
-      "implementation"
+      "specification"
     ],
-    "version": 95
+    "version": 108
   },
   "practices": {
     "stories": {
       "formats": {
         "story_map": [
-          "drawio",
-          "whiteboard",
           "markdown"
         ],
         "scenarios": [
-          "python",
           "markdown"
         ],
-        "acceptance_tests": [
-          "python"
-        ]
+        "acceptance_tests": []
       },
       "enabled": true
     },
@@ -49,15 +44,10 @@
     "clean_engineering": {
       "formats": {
         "modules": [
-          "drawio",
-          "whiteboard",
           "markdown"
         ],
-        "code": [
-          "python"
-        ],
+        "code": [],
         "model": [
-          "python",
           "drawio",
           "whiteboard",
           "markdown"
