@@ -7,29 +7,11 @@ import { SourceView, type SourceEditorInstance, type SourceLines } from '@source
 import { CommentCardView, CommentComposerView } from './comment-box-view'
 import { placeUnder, useAddCommentAction, useAddToContextAction, useFileMarks, useMarkerPresses } from './editor-comments'
 import type { CommentLines, FileCommentsActions } from './file-comments-actions'
+import { keepWrap, storedWrap, type ThemeFailure } from './files-theme'
 import { foldsOf, monacoLanguageOf, rulesOf, sourceOf, violationFocusOf } from './source-of-file'
 
 // How far down the window the first line asked to show sits once the page scrolls to it.
 const SHOWN_FROM_TOP = 1 / 3
-
-// Whether long lines wrap is the reader's own choice, kept in their browser across files and visits.
-const WRAP_KEY = 'files.wrap-lines'
-
-function wrapChosen(): boolean {
-  try {
-    return localStorage.getItem(WRAP_KEY) === 'on'
-  } catch {
-    return false
-  }
-}
-
-function keepWrap(wrap: boolean): void {
-  try {
-    localStorage.setItem(WRAP_KEY, wrap ? 'on' : 'off')
-  } catch {
-    // The choice still holds for this page; only the next visit forgets it.
-  }
-}
 
 // The open file in the graph explorer's source view: folds from the session's graph, its broken rules as chips with the
 // chosen one marked, and the comments on it: Add comment and Add to context on the right-click menu, a marker beside
@@ -44,12 +26,14 @@ export function FileSourceView({
   onAddToContext,
   openAround = [],
   members = [],
+  fail,
 }: {
   file: SessionFileData
   actions: FileCommentsActions
   onAddToContext: (lines: CommentLines) => void
   openAround?: SourceLines[]
   members?: NodeSourceData[]
+  fail: ThemeFailure
 }) {
   const wrapper = useRef<HTMLDivElement>(null)
   const held = useRef(file)
@@ -58,13 +42,11 @@ export function FileSourceView({
   const [chosenRule, setChosenRule] = useState('')
   const [composing, setComposing] = useState<CommentLines | null>(null)
   const [opened, setOpened] = useState('')
-  const [wrap, setWrap] = useState(wrapChosen)
-  const toggleWrap = useCallback(() => {
-    setWrap(current => {
-      keepWrap(!current)
-      return !current
-    })
-  }, [])
+  const [wrap, setWrap] = useState(() => storedWrap(fail))
+  const toggleWrap = () => {
+    keepWrap(!wrap, fail)
+    setWrap(!wrap)
+  }
   const source = useMemo(() => sourceOf(file, members), [file, members])
   const folds = useMemo(() => foldsOf(file), [file])
   const rules = useMemo(() => rulesOf(file), [file])

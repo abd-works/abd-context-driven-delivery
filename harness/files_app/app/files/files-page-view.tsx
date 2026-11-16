@@ -99,6 +99,9 @@ function FolderContentsView({ page, folder, openPath }: { page: FilesPage; folde
 }
 
 // A right-click on a file or folder: its menu instead of the browser's.
+// Where the source view tells a Wrap lines choice the browser would not read or keep.
+const wrapFailed = (page: FilesPage) => (failure: string) => page.notices.fail(failure, 'Wrapping long lines in the source view')
+
 const menuOn = (page: FilesPage, path: string) => (event: React.MouseEvent) => {
   event.preventDefault()
   page.menu.open(path, event.clientX, event.clientY)
@@ -254,7 +257,7 @@ function OpenFileView({ page }: { page: FilesPage }) {
   return (
     <section className="open-file" aria-label={state.file.path}>
       <CommentToolbarView page={page} file={state.file} />
-      <FileSourceView key={state.file.path} file={state.file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(state.file.path)} members={state.graph.members} />
+      <FileSourceView key={state.file.path} file={state.file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(state.file.path)} members={state.graph.members} fail={wrapFailed(page)} />
       {state.moreFiles.map(file => (
         <MoreFileView key={file.path} page={page} file={file} />
       ))}
@@ -268,7 +271,7 @@ function MoreFileView({ page, file }: { page: FilesPage; file: SessionFileData }
   return (
     <section className="open-file more-file" aria-label={file.path}>
       <p className="more-file-path">{file.path}</p>
-      <FileSourceView file={file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(file.path)} members={page.state.graph.members} />
+      <FileSourceView file={file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(file.path)} members={page.state.graph.members} fail={wrapFailed(page)} />
     </section>
   )
 }
