@@ -13,9 +13,13 @@ Sample supplement overview: prove the work with tests.
 
 Sample supplement guidance: choose the flow first.
 
-## Shared rules
+## bdd-development, clean-engineering-code
 
-- **`sample-shared-rule`** — Every supplemented fidelity keeps this sample rule.
+Sample guidance both fidelities share.
+
+### Rules
+
+- **`sample-shared-rule`** — BDD development and Clean Engineering code both keep this sample rule.
 
 ## bdd-development
 

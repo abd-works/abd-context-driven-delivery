@@ -9,7 +9,7 @@ supplements:
 
 ## Overview
 
-Test-driven development at implementation: every behavior is proven working for real before it is trusted, then kept proven by a test at the fastest tier that can prove it. TDD supplements the implementation fidelities of Clean Engineering (code), Stories (acceptance tests), BDD (development), and DDD (tactics); UX front-end code is not supplemented. Its guidance is the process; its rules check what the finished tests and code show.
+Test-driven development at implementation: every behavior is proven working for real before it is trusted, then kept proven by a test at the fastest tier that can prove it. TDD supplements the implementation fidelities of Clean Engineering (code), Stories (acceptance tests), BDD (development), and DDD (tactics); UX front-end code is not supplemented. Its guidance is the process; its rules check what the finished tests and code show. It has no rules for every fidelity it supplements: each section of rules names the fidelities it is for.
 
 ## Guidance
 
@@ -85,14 +85,18 @@ Read the runner's slow list after every whole-tier unit run and fix each example
 
 After two failed fixes for the same failure, stop and diagnose before a third: read the failure, reproduce it on its own, and find the cause.
 
-## Shared rules
+## stories-acceptance-tests, bdd-development
+
+The tests Stories acceptance tests and BDD development write share their tiers, their speed, their stubs and heavy coverage, and the cadence they run on.
+
+### Rules
 
 ```yaml
 alwaysApply: false
 globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,**/*.story.*,**/*_story.test.*"
 ```
 
-Whenever you create, alter, or delete tests or the code they prove at an implementation fidelity. Follow these rules.
+Whenever you create, alter, or delete acceptance tests or BDD specs. Follow these rules.
 
 **Tiers**
 - **`suffix-names-the-tier`** — `*_spec` is unit, `*_heavy_spec` is heavy, and `*_e2e_spec` / `*_agent_spec` is e2e; a story test's tier file follows the same suffixes. A suffix that names the wrong tier puts a slow test in the run that must stay fast.

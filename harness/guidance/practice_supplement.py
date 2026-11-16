@@ -32,9 +32,10 @@ class PracticeSupplement(PracticeGuidance):
     """Guidance that adds to other practices at the fidelities it names. It is a practice of its own, kept with the
     practices, but it has no stage and no fidelities on the board: it never moves work forward. Its front matter names
     the fidelities it supplements (``supplements:``, practice key to fidelity name) and whether it is on in every
-    session (``always_apply``). Its document keeps the usual Overview, Guidance and Shared rules, then one section per
-    supplemented fidelity, headed with that fidelity's slug (``## bdd-development``), with its own guidance and a
-    ``### Rules`` list. A subclass that checks graph rules makes its *GraphOverlay* as ``graph_overlay``, as a pattern
+    session (``always_apply``). Its document keeps the usual Overview and Guidance, then sections headed with the slugs of
+    the fidelities they apply to (``## bdd-development``, or ``## stories-acceptance-tests, bdd-development`` for one
+    that applies to both), each with its guidance and a ``### Rules`` list. It holds no rules that apply to every
+    fidelity it supplements: each rule names the fidelities it is for. A subclass that checks graph rules makes its *GraphOverlay* as ``graph_overlay``, as a pattern
     does."""
 
     def __init__(self, format: str | None = None) -> None:
@@ -73,25 +74,24 @@ class PracticeSupplement(PracticeGuidance):
         return list(dict.fromkeys(fidelity.practice_guidance for fidelity in self.supplemented_fidelities))
 
     def text_for(self, fidelity: FidelityGuidance) -> str:
-        """Its Overview, Guidance and Shared rules, then its section for fidelity, under ``## Supplement: {key}``;
+        """Its Overview and Guidance, then each of its sections that names fidelity, under ``## Supplement: {key}``;
         empty for a fidelity it does not supplement."""
         if fidelity not in self.supplemented_fidelities:
             return ""
-        parts = (
-            f"## Supplement: {self.key}",
-            (self.overview or "").strip(),
-            (self.guidance or "").strip(),
-            (self.rules.markdown or "").strip(),
-            self._section_of(fidelity),
-        )
+        parts = (f"## Supplement: {self.key}", (self.overview or "").strip(), (self.guidance or "").strip(), *self._sections_of(fidelity))
         return "\n\n".join(part for part in parts if part)
 
     def rules_for(self, fidelity: FidelityGuidance) -> list[RulesCollection]:
-        """Its Shared rules, then the rules of its section for fidelity; none for a fidelity it does not supplement."""
+        """The rules of each of its sections that names fidelity; none for a fidelity it does not supplement."""
         if fidelity not in self.supplemented_fidelities:
             return []
-        own = RulesCollection.from_markdown(MarkdownText(self._section_of(fidelity)).slice_heading("Rules"), fidelity.name, self)
-        return [collection for collection in (self.rules, own) if collection is not None]
+        return [
+            RulesCollection.from_markdown(MarkdownText(section).slice_heading("Rules"), fidelity.name, self)
+            for section in self._sections_of(fidelity)
+        ]
 
-    def _section_of(self, fidelity: FidelityGuidance) -> str:
-        return self.document.slice_heading(fidelity.slug)
+    def _sections_of(self, fidelity: FidelityGuidance) -> list[str]:
+        """Each of its top sections whose heading names fidelity's slug, alone or among others, in document order."""
+        headings = [name for _start, _end, level, name in self.document.headings() if level == 2]
+        named = [name for name in headings if fidelity.slug in (slug.strip() for slug in name.split(","))]
+        return [self.document.slice_heading(name) for name in named]
