@@ -10,7 +10,7 @@
       "specification",
       "implementation"
     ],
-    "version": 23
+    "version": 24
   },
   "practices": {
     "ux": {
@@ -30,7 +30,7 @@
           "drawio"
         ]
       },
-      "enabled": false
+      "enabled": true
     },
     "clean_engineering": {
       "formats": {
