@@ -6,9 +6,10 @@
   "worktree": "C:\\dev\\abd-cdd-claude-whiteboard",
   "guidance": {
     "stages": [
+      "discovery",
       "specification"
     ],
-    "version": 37
+    "version": 39
   },
   "practices": {
     "ux": {
@@ -29,7 +30,7 @@
           "python"
         ]
       },
-      "enabled": true
+      "enabled": false
     },
     "clean_engineering": {
       "formats": {
