@@ -10,14 +10,14 @@ section: body
 ### Domain terms
 
 - ++Files app++ — the page beside the chat that lists the files a link names and shows the open ones in the source view (`harness/files_app/`).
-- ++file bar++ — the Files app's side bar: the listed files as a list or in their folders today, and the session's graph in the graph view.
+- ++file bar++ — the Files app's side bar: the listed files as a list or in their folders, or the session's graph in the graph view.
 - ++graph view++ — the file bar showing the practice trees of the session's graph, holding only the nodes of the files the file list would show.
 - ++guidance selection++ — the stages, practices and format groups the session has selected, which the Files app's buttons and the chat bar's dots and chips show (`Session.guidance_selection`).
 - ++node++ — a class, operation, story or other element the session's graph reads from a file, with the lines it covers.
 
 > In steps: ++example++ names a row of a table below; ${field} is a column of the scenario's Examples.
 
-> Evidence: every scenario here is Intended (requested 2026-11-15). The Files app on release-2 has the file list, its filters, one open file and the session graph's folds; it has no graph view yet.
+> Evidence: every scenario here was requested on 2026-11-15 and is Built on the file-manager branch, held by `harness/files_app/app/files/files-graph.spec.ts` (the page) and `space/session/session_graph_view_spec.py` (the session's graph); none is walked in the browser yet.
 
 ## Examples
 

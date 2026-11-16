@@ -1,8 +1,26 @@
-import type { FileEntryData, GuidanceSelectionData, SessionFileData } from '@cdd/space/session/session'
+import type { ExplorerEntryData, FileEntryData, GuidanceSelectionData, RangeData, SessionFileData } from '@cdd/space/session/session'
 
 // One fidelity's files as the link names them, kept by fidelity so a practice turned off hides its own, with the format
 // each file is in, so a format chip turned on shows only its own.
 export type FidelityFiles = { slug: string; entries: FileEntryData[]; formatOf?: Record<string, string> }
+
+// A node a person selected in the graph view, with the lines it covers in its file, which open and unfold there.
+export type SelectedNode = { nodeId: string; lines: RangeData }
+
+// The graph view of the file bar: the practice trees of the session's graph holding only the nodes of the files the bar
+// lists, read for those files (readFor names them), the branches a person opened and the entries read below them, the
+// nodes selected, and whether a read is under way or failed.
+export type FilesGraphState = {
+  trees: ExplorerEntryData[] | null
+  readFor: string
+  branches: Record<string, ExplorerEntryData>
+  openNodes: string[]
+  selected: SelectedNode[]
+  isReading: boolean
+  problem: string
+}
+
+export const NO_GRAPH: FilesGraphState = { trees: null, readFor: '', branches: {}, openNodes: [], selected: [], isReading: false, problem: '' }
 
 // What the page draws: the session's practices with their toggles, the files its link names, the one open, and what went wrong. The open file is the session's
 // answer itself (text, comments, folds, violations, changes), never a copy kept beside it.
@@ -24,13 +42,16 @@ export type FilesState = {
   isListing: boolean
   openPath: string
   file: SessionFileData | null
+  // The other files open beside the first, each holding a node selected in the graph view; none outside it.
+  moreFiles: SessionFileData[]
+  graph: FilesGraphState
   problem: string
   toasts: string[]
   // The file or folder a person right-clicked and where, whose menu shows there; none while no menu shows.
   menu: { path: string; x: number; y: number } | null
   // The folders a person closed: every other folder is open, so a folder a filter change brings is open too. Its width
   // is what the person dragged it to, in pixels.
-  fileBar: { isOpen: boolean; view: 'list' | 'folders'; closedFolders: string[]; width: number }
+  fileBar: { isOpen: boolean; view: 'list' | 'folders' | 'graph'; closedFolders: string[]; width: number }
 }
 
 // How wide the file bar may be dragged, in pixels: narrow enough to give the open file the page, wide enough for deep
@@ -48,6 +69,8 @@ export const NO_FILES: FilesState = {
   isListing: true,
   openPath: '',
   file: null,
+  moreFiles: [],
+  graph: NO_GRAPH,
   problem: '',
   toasts: [],
   menu: null,
