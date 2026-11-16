@@ -15,12 +15,12 @@ if _DIAG.is_dir() and str(_DIAG) not in sys.path:
     sys.path.insert(0, str(_DIAG))
 os.environ.setdefault("CDD_DIAGNOSTIC_REPO", str(_REPO.parent / "cdd-diagnostic"))
 
+REPORT_HEADER_LINES = 4
+"""The probe's summary lines, which carry its red, yellow, or green status."""
+
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--path", required=True)
-    parser.add_argument("--guidance", action="append", default=None)
-    args = parser.parse_args()
+    args = _arguments()
     from harness.diagnostics.agent_tools_probe import AgentToolsProbe
     from harness.installation.installer import Installer
 
@@ -28,8 +28,19 @@ def main() -> int:
     installer.toolsets.ensure_import_path()
     report = AgentToolsProbe(installer, args.guidance).run()
     print(report)
-    first_lines = [line.lstrip("!") for line in report.split("\n") if line.strip()]
-    return 1 if any(line.startswith("red") for line in first_lines[:4]) else 0
+    return 1 if _is_red(report) else 0
+
+
+def _arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--path", required=True)
+    parser.add_argument("--guidance", action="append", default=None)
+    return parser.parse_args()
+
+
+def _is_red(report: str) -> bool:
+    summary = [line.lstrip("!") for line in report.split("\n") if line.strip()][:REPORT_HEADER_LINES]
+    return any(line.startswith("red") for line in summary)
 
 
 if __name__ == "__main__":

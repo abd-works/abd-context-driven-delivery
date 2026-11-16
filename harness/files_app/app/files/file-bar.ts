@@ -101,8 +101,10 @@ export class FileBar {
     this.store.change(({ fileBar }) => ({ fileBar: { ...fileBar, width: kept } }))
     try {
       window.localStorage.setItem(STORED_WIDTH, String(kept))
-    } catch {
-      // A browser that keeps nothing, such as a private window, opens the next page at the usual width.
+    } catch (refusal) {
+      // A browser that keeps nothing, such as a private window, refuses with a DOMException and opens the next page at
+      // the usual width; anything else is a fault and is raised.
+      if (!(refusal instanceof DOMException)) throw refusal
     }
   }
 
@@ -111,7 +113,9 @@ export class FileBar {
     let stored = NaN
     try {
       stored = Number(window.localStorage.getItem(STORED_WIDTH) ?? NaN)
-    } catch {
+    } catch (refusal) {
+      // A browser that keeps nothing refuses with a DOMException, and the bar keeps the usual width.
+      if (!(refusal instanceof DOMException)) throw refusal
       return
     }
     if (Number.isFinite(stored)) this.resize(stored)

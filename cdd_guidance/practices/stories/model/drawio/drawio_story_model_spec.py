@@ -34,7 +34,7 @@ class DrawIOStoryModelFixture:
     def with_4_epics_and_3_epics_and_1_story(self) -> StoryModel:
         story_map = DrawIOStoryModel()
         for i in range(1, 5):
-            story_map.append_epic(DrawIOEpic(f"Epic {i}", i))
+            story_map.epics.append(DrawIOEpic(f"Epic {i}", i))
         first_epic = story_map.epics[0]
         for j in range(1, 4):
             sub = DrawIOEpic(f"Epic 1.{j}", j)
@@ -42,8 +42,8 @@ class DrawIOStoryModelFixture:
             story.scenarios.append(
                 Scenario(name="scenario step", sequential_order=1)
             )
-            sub.append_story(story)
-            first_epic.append_epic(sub)
+            sub.stories.append(story)
+            first_epic.epics.append(sub)
         return story_map
 
 
@@ -71,7 +71,7 @@ with description("a DrawIO Story Map") as self:
 
         with context("with an Epic appended and the DrawIO document re-rendered"):
             with before.each:
-                self.source.append_epic(DrawIOEpic("Epic 5", 5))
+                self.source.epics.append(DrawIOEpic("Epic 5", 5))
                 self.new_text = self.source.save()
 
             with context("the document"):
@@ -129,7 +129,7 @@ with description("a DrawIO Story Map") as self:
             self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
             story = DrawIOStory("Story 2.1", 1, StoryType.USER)
             story.actors = ["Customer"]
-            self.source.epics[1].append_story(story)
+            self.source.epics[1].stories.append(story)
             self.parsed = self.drawio.load(self.source.save())
 
         with it("should draw the Story under its Epic"):
@@ -139,7 +139,7 @@ with description("a DrawIO Story Map") as self:
         with before.each:
             self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
             for order in range(1, 4):
-                self.source.epics[1].append_story(DrawIOStory(f"Story 2.{order}", order, StoryType.USER))
+                self.source.epics[1].stories.append(DrawIOStory(f"Story 2.{order}", order, StoryType.USER))
 
         with it("should start the next Epic after the last of those Stories"):
             last_story = self.source.epics[1].stories[-1]
@@ -148,8 +148,8 @@ with description("a DrawIO Story Map") as self:
     with context("rendering the thin-slice view with a story directly under an epic"):
         with before.each:
             self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
-            self.source.epics[1].append_story(DrawIOStory("Story 2.1", 1, StoryType.USER))
-            self.source.append_increment(Increment("Increment A", 1, [Story("Story 2.1", 1)]))
+            self.source.epics[1].stories.append(DrawIOStory("Story 2.1", 1, StoryType.USER))
+            self.source.increments.append(Increment("Increment A", 1, [Story("Story 2.1", 1)]))
             cells = ET.fromstring(self.source.save_thin_slice()).findall(".//mxCell")
             self.stories = [c for c in cells if c.attrib.get("style", "").startswith("increment-story;")]
 
@@ -160,7 +160,7 @@ with description("a DrawIO Story Map") as self:
         with before.each:
             self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
             self.source.epics[0].epics[1].stories[0].name = "Story 1.1.1"
-            self.source.append_increment(
+            self.source.increments.append(
                 Increment("Increment A", 1, [Story("Story 1.1.1", 1), Story("Story 1.1.1", 2)])
             )
             cells = ET.fromstring(self.source.save_thin_slice()).findall(".//mxCell")
@@ -181,10 +181,10 @@ with description("a DrawIO Story Map") as self:
             nested_sub_epic = DrawIOEpic("Epic 1.1.1", 1)
             story = DrawIOStory("Story 1.1.1.1", 1, StoryType.USER)
             story.actors = ["Customer"]
-            nested_sub_epic.append_story(story)
-            sub_epic.append_epic(nested_sub_epic)
-            epic.append_epic(sub_epic)
-            self.source.append_epic(epic)
+            nested_sub_epic.stories.append(story)
+            sub_epic.epics.append(nested_sub_epic)
+            epic.epics.append(sub_epic)
+            self.source.epics.append(epic)
             self.text = self.source.save()
 
         with it("should draw the actor above the Story"):
@@ -195,7 +195,7 @@ with description("a DrawIO Story Map") as self:
         with before.each:
             self.original = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
             first_sub_epic = self.original.epics[0].epics[0]
-            first_sub_epic.append_story(DrawIOStory("Story 1.1.2", 2, StoryType.USER))
+            first_sub_epic.stories.append(DrawIOStory("Story 1.1.2", 2, StoryType.USER))
             first_sub_epic.stories[1].actors = ["Customer"]
             tree = ET.fromstring(self.original.save())
             root = tree.find(".//root")
@@ -227,15 +227,15 @@ with description("a DrawIO Story Map") as self:
     with context("rendering the thin-slice view for a StoryModel with 2 increments"):
         with before.each:
             self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
-            stories = {story.name: story for story in self.source.every_story()}
+            stories = {story.name: story for story in self.source.descendants.stories()}
             inc_a = Increment(
                 "Increment A - first outcome",
                 1,
                 [stories["Story 1.1.1"], stories["Story 1.2.1"]],
             )
             inc_b = Increment("Increment B - second outcome", 2, [stories["Story 1.3.1"]])
-            self.source.append_increment(inc_a)
-            self.source.append_increment(inc_b)
+            self.source.increments.append(inc_a)
+            self.source.increments.append(inc_b)
             self.text = self.source.save_thin_slice()
 
         with it("should serialize as a valid DrawIO document with mxfile envelope"):
@@ -264,8 +264,8 @@ with description("a DrawIO Story Map") as self:
             expect(increment_stories).to(have_len(3))
 
         with it("should widen a sub-epic to hold its fullest lane's stories on one row"):
-            stories = {story.name: story for story in self.source.every_story()}
-            self.source.append_increment(Increment("Increment C - crowded", 3, [stories["Story 1.1.1"]] * 4))
+            stories = {story.name: story for story in self.source.descendants.stories()}
+            self.source.increments.append(Increment("Increment C - crowded", 3, [stories["Story 1.1.1"]] * 4))
             cells = ET.fromstring(self.source.save_thin_slice()).findall(".//mxCell[@vertex='1']")
             crowded = [c for c in cells if c.attrib.get("id", "").startswith("inc-lane/increment-c-crowded/story")]
             expect(len({c.find("mxGeometry").attrib["y"] for c in crowded})).to(equal(1))
@@ -315,7 +315,7 @@ with description("a DrawIO Story Map") as self:
                 )
 
             with it("should deliver the map's own stories"):
-                own = self.read.every_story()
+                own = self.read.descendants.stories()
                 expect(all(any(story is mine for mine in own) for increment in self.read.increments for story in increment.stories)).to(be_true)
 
             with it("should leave each story under its own epic"):
@@ -327,16 +327,16 @@ with description("a DrawIO Story Map") as self:
             epic = DrawIOEpic("Create Hero", 1)
             compose = DrawIOEpic("Compose Powers", 1)
             attack = DrawIOEpic("Compose Attack Power", 1)
-            attack.append_story(DrawIOStory("Compose Damage Effect", 1, StoryType.USER))
+            attack.stories.append(DrawIOStory("Compose Damage Effect", 1, StoryType.USER))
             extras = DrawIOEpic("Apply Power Extra", 2)
-            extras.append_story(DrawIOStory("Apply Area Extra", 1, StoryType.USER))
+            extras.stories.append(DrawIOStory("Apply Area Extra", 1, StoryType.USER))
             delivery = DrawIOEpic("Apply Delivery Extra", 1)
-            delivery.append_story(DrawIOStory("Apply Accurate Extra", 1, StoryType.USER))
-            extras.append_epic(delivery)
-            compose.append_epic(attack)
-            compose.append_epic(extras)
-            epic.append_epic(compose)
-            self.source.append_epic(epic)
+            delivery.stories.append(DrawIOStory("Apply Accurate Extra", 1, StoryType.USER))
+            extras.epics.append(delivery)
+            compose.epics.append(attack)
+            compose.epics.append(extras)
+            epic.epics.append(compose)
+            self.source.epics.append(epic)
             self.text = self.source.save()
             self.tree = ET.fromstring(self.text)
             self.row_pitch = SUBEPIC_HEIGHT + SUBEPIC_DEPTH_GAP
@@ -401,13 +401,13 @@ with description("a DrawIO Story Map") as self:
             epic = DrawIOEpic("Move money", 1)
             epic.estimate = "approx 22-27 total stories"
             compose = DrawIOEpic("Compose transfer", 1)
-            compose.append_story(DrawIOStory("Draft transfer details", 1, StoryType.USER))
+            compose.stories.append(DrawIOStory("Draft transfer details", 1, StoryType.USER))
             compose.estimate = "approx 2-3 more stories (validation)"
             approve = DrawIOEpic("Approve transfer", 2)
             approve.estimate = "approx 4-6 more stories (review)"
-            epic.append_epic(compose)
-            epic.append_epic(approve)
-            self.source.append_epic(epic)
+            epic.epics.append(compose)
+            epic.epics.append(approve)
+            self.source.epics.append(epic)
             self.text = self.source.save()
             self.tree = ET.fromstring(self.text)
 

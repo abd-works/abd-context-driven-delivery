@@ -70,7 +70,7 @@ def _(s):
         # Board.ticket("checkout-flow")
         #   <- checkout-flow
         # checkout-flow.add_child("Enter card details")
-        #   -> self.session.open_child("Enter card details", scope="story")
+        #   -> self.session.hierarchy.open_child("Enter card details", scope="story")
         #   <- enter-card-details In progress in Discovery, its parent checkout-flow
         world.child = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).add_child(title=ENTER_CARD_DETAILS.title))
 
@@ -101,7 +101,7 @@ def _(s):
         # Board.ticket("checkout-flow")
         #   <- checkout-flow
         # pet-visits.reassign_parent(checkout-flow)
-        #   -> self.session.set_parent(checkout-flow.session)
+        #   -> self.session.hierarchy.set_parent(checkout-flow.session)
         #   <- pet-visits inside checkout-flow
         world.Ticket.load(PET_VISITS.name).reassign_parent(world.Ticket.load(CHECKOUT_FLOW.name))
 
@@ -126,7 +126,7 @@ def _(s):
         # Board.ticket("enter-card-details")
         #   <- enter-card-details
         # enter-card-details.pull_out()
-        #   -> self.session.mark_pulled_out()
+        #   -> self.session.hierarchy.mark_pulled_out()
         #   <- enter-card-details pulled out, its parent still checkout-flow
         world.Ticket.load(ENTER_CARD_DETAILS_CHILD.name).pull_out()
 
@@ -187,7 +187,7 @@ def _(s):
         # Board.ticket("billing-report")
         #   <- billing-report
         # enter-card-details.reassign_parent(billing-report)
-        #   -> self.session.set_parent(billing-report.session)
+        #   -> self.session.hierarchy.set_parent(billing-report.session)
         #   <- enter-card-details, its parent billing-report
         world.Ticket.load(ENTER_CARD_DETAILS_CHILD.name).reassign_parent(world.Ticket.load(BILLING_REPORT.name))
 
@@ -216,7 +216,7 @@ def _(s):
         # Board.ticket("enter-card-details")
         #   <- enter-card-details
         # enter-card-details.reassign_parent(None)
-        #   -> self.session.set_parent(None)
+        #   -> self.session.hierarchy.set_parent(None)
         #   <- enter-card-details with no parent
         world.Ticket.load(ENTER_CARD_DETAILS_CHILD.name).reassign_parent(None)
 

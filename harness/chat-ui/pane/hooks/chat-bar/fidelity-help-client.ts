@@ -4,7 +4,7 @@ import type { EngineInterface } from 'claude-code'
 import type { HelpData } from '@cdd/space/kanban/board'
 
 import type { FidelityHelpJson } from '../../types'
-import { showFailure } from '../error-display/failure-client'
+import { shownAsFailure } from '../error-display/failure-client'
 import { callTool } from './chat-bar-client'
 import type { FidelityProgressClient } from './fidelity-progress-client'
 
@@ -40,7 +40,7 @@ export async function openHelp($: EngineInterface, fidelity: FidelityProgressCli
     const opened = await $.ui.open({ id: HELP_PANE, title: `${fidelity.name} help` })
     if (!opened.isPlaced) $.ui.log(`cdd-board: the help pane waits to be placed: ${opened.reason}`, { to: 'debug' })
   } catch (failure) {
-    await showFailure($, `The ${fidelity.slug} help did not open`, `Pressing the ${fidelity.slug} name above its dot, calling fidelity-progress.help`, failure)
+    await shownAsFailure($, `The ${fidelity.slug} help did not open`, `Pressing the ${fidelity.slug} name above its dot, calling fidelity-progress.help`)(failure)
   }
 }
 

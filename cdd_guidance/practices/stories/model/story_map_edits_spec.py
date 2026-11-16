@@ -147,7 +147,7 @@ class StoryMapProject:
         return (self.root / file).read_text(encoding="utf-8")
 
     def call(self, tool: str, **arguments):
-        return json.loads(json.dumps(self.server.invoke_tool(tool, arguments), default=data_of))
+        return json.loads(json.dumps(self.server.invoke(tool, arguments), default=data_of))
 
     def choose(self, format: str, is_chosen: bool) -> dict:
         return self.call("fidelity-session-output.choose_format", session=SESSION_FILE, practice="stories", fidelity="story_map", format=format, is_chosen=is_chosen)

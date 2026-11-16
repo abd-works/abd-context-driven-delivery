@@ -104,7 +104,7 @@ ce:
 clean-engineering-model (Skill)
   // agent already has the python model artifact; conversion starts here
   -> render (Skill)
-       -> McpServer.invoke_tool render.render
+       -> McpServer.invoke render.render
             -> Render.render guidance format paths
                  -> _work_on guidance
                  -> load_document content paths

@@ -25,15 +25,34 @@ from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, WrittenBlock
 
 from . import name_facts
-from .opened_story_map import OpenedStoryMap, StoryMapEditRefused
+from .opened_story_map import OpenedStoryMap, StoryMapEditRefused, UnopenedStoryMap
 from .story_copies import StoryCopies
 from .story_map_files import source_at
-from .story_recording import StoryRecording, declared_evidence, file_of, folder_of, step_node_id, step_semantic
+from .story_recording import StoryRecording, StorySources, file_of, folder_of, step_checksum, step_semantic
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from harness.graph.graph import Node, Source
+
+    from .story_file import CodeBlock
+    from harness.guidance.guidance import PracticeGuidance
+
     from space.session.practice_session_output import FidelitySessionOutput
+
+# A step goes by its text, cut to this many characters, so a long step still reads as one name.
+_STEP_NAME_LENGTH = 80
+# A leaf epic with an estimate widens by a column for about this many characters of the estimate: wider for an epic
+# that has stories beside it, as its estimate shares their columns.
+_ESTIMATE_CHARACTERS_PER_COLUMN = 18
+_ESTIMATE_CHARACTERS_PER_EXTRA_COLUMN = 22
+_ESTIMATE_LEAD_CHARACTERS = 12
+_ESTIMATE_EXTRA_LEAD_CHARACTERS = 15
+_EMPTY_EPIC_COLUMNS = (2, 8)
+_EXTRA_EPIC_COLUMNS = (1, 5)
+
+# What an example stands for: a field map, a class, an object whose fields are its cells, or its own name.
+ExampleValue = Any
 
 # Pairs the schema names with belongsTo. The facade does not grow a method for them.
 _BELONGS = {
@@ -96,6 +115,13 @@ class StoryNode(ModelNode, ABC):
         # What the story map says about this node in prose: the paragraphs under its heading in a story map. A save
         # writes it back unchanged.
         self.description_text: str = ""
+        self.evidence: List[str] = []
+        self.written: Optional[WrittenBlock] = None
+        self.setup = CodeBody()
+        self._start_map_facts()
+
+    def _start_map_facts(self) -> None:
+        """The name and child-count facts a node holds before its map loads them (``load_map_facts``)."""
         self.opening_token = ""
         self.opening_class = ""
         self.child_count = 0
@@ -107,9 +133,6 @@ class StoryNode(ModelNode, ABC):
         self.one_time_task = False
         self.artifact_name = ""
         self.camel_case_path = False
-        self.evidence: List[str] = []
-        self.written: Optional[WrittenBlock] = None
-        self.setup = CodeBody()
 
     def load_map_facts(self) -> None:
         """Fill the name, evidence, and child-count facts this node already owns."""
@@ -119,7 +142,7 @@ class StoryNode(ModelNode, ABC):
         self.near_duplicate = False
         self.shared_verb = ""
         self.one_time_task = name_facts.names_one_time_task(self.name)
-        self.load_child_band(0, "children")
+        self._load_child_band(0, "children")
 
     def _load_opening(self) -> None:
         self.opening_token, self.opening_class = name_facts.opening_of(self.name)
@@ -127,11 +150,7 @@ class StoryNode(ModelNode, ABC):
     def _load_path_case(self) -> None:
         self.artifact_name, self.camel_case_path = name_facts.file_name_facts(getattr(self, "source", None))
 
-    def opens_with_verb(self) -> bool:
-        """The name's first word is a verb the story map knows, generic or not."""
-        return name_facts.opens_with_verb(self.name)
-
-    def load_child_band(self, count: int, label: str) -> None:
+    def _load_child_band(self, count: int, label: str) -> None:
         self.child_count = count
         self.child_label = label
         self.child_band = "" if count == 0 or 4 <= count <= 9 else "error"
@@ -166,7 +185,7 @@ class StoryNode(ModelNode, ABC):
     def load(cls, node: str, *, call: ToolCall) -> "StoryNode":
         """The node the call names, `{file}#{path}`, on the story map read from that file now."""
         file, _, path = node.partition("#")
-        found = StoryModel.load(file, call=call).node_at(path)
+        found = StoryModel.load(file, call=call).descendants.node_at(path)
         if not isinstance(found, cls):
             raise StoryNodeNotFound(node, cls)
         return found
@@ -222,28 +241,28 @@ class StoryNode(ModelNode, ABC):
     def rename(self, name: str) -> "StoryModel":
         """Rename this node of its story map, save the map, and return it."""
         self.name = name
-        return self.story_map.write_back()
+        return self.story_map.opened.save()
 
     @mcp
     @agent_tool
     def edit_description(self, description: str) -> "StoryModel":
         """Change what the story map says about this node under its heading, save the map, and return it."""
         self.description_text = description.strip()
-        return self.story_map.write_back()
+        return self.story_map.opened.save()
 
     @mcp
     @agent_tool
     def move_before(self, other: "StoryNode") -> "StoryModel":
         """Move this node to just before other, a node of its own kind on the same story map, under other's parent; save
         the map and return it. A node of another kind is refused with StoryMapEditRefused."""
-        target = self.story_map.node_at(other.path)
+        target = self.story_map.descendants.node_at(other.path)
         if target.semantic_type() != self.semantic_type():
             raise StoryMapEditRefused(self, "move_before", f"{target.name} is a {target.semantic_type()}, not a {self.semantic_type()}")
         self._leave()
         siblings = target.parent.holding(target)
         siblings.insert(siblings.index(target), self)
         _renumber(siblings)
-        return self.story_map.write_back()
+        return self.story_map.opened.save()
 
     @mcp
     @agent_tool
@@ -251,7 +270,7 @@ class StoryNode(ModelNode, ABC):
         """Take this node, and everything under it, off its story map; save the map and return it."""
         story_map = self.story_map
         self._leave()
-        return story_map.write_back()
+        return story_map.opened.save()
 
     def _leave(self) -> None:
         parent = getattr(self, "parent", None)
@@ -277,31 +296,28 @@ class Example(StoryNode):
     # The columns an example's row may name it by, in the order a table is read for its name.
     naming_columns = ("example", "name")
 
-    def __init__(
-        self,
-        name: str,
-        value: Any = None,
-        sequential_order: int = 0,
-        scope: Optional["StoryNode"] = None,
-    ) -> None:
-        super().__init__(name=name, sequential_order=sequential_order)
-        self.value = {} if value is None else value
-        self.scope = scope
+    def __init__(self, name: str, example_value: ExampleValue = None) -> None:
+        super().__init__(name=name, sequential_order=0)
+        self.value = {} if example_value is None else example_value
+        self.scope: Optional["StoryNode"] = None
 
-    def record(self, recording: StoryRecording, scenario, at: "Source") -> None:
+    def record(self, recording: StoryRecording, scenario: "Node", lines: "Source") -> None:
         """Add this example to the graph under scenario, the node of the scenario that uses it, at that scenario's
         lines; an example two scenarios of one file share is one node. Its graph parent is the scenario that uses it,
         not its scope, so the scenario is handed in."""
-        node = recording.add(self, f"stories:Example:{at.file}:{self.name}", at, self.recorded_facts(recording, at.file))
-        recording.graph.link("examples", scenario, node)
+        node = recording.add(self, f"stories:Example:{lines.file}:{self.name}", lines)
+        for fact, held in self.recorded_facts(recording, lines.file).items():
+            node.set_fact(fact, held)
+        recording.graph.edges.link("examples", scenario, node)
 
     def recorded_facts(self, recording: StoryRecording, file: str) -> dict:
         """The facts this example records with: those the story file at file gives the example of its name."""
         return recording.example_facts(file, self.name)
 
     def clone(self) -> "Example":
-        value = dict(self.value) if isinstance(self.value, dict) else self.value
-        return type(self)(self.name, value, self.sequential_order, self.scope)
+        cloned = type(self)(self.name, dict(self.value) if isinstance(self.value, dict) else self.value)
+        cloned.sequential_order, cloned.scope = self.sequential_order, self.scope
+        return cloned
 
     def cells(self) -> Dict[str, Any]:
         """Columns for a table row, whether the value is a field map or an object."""
@@ -351,7 +367,7 @@ class Example(StoryNode):
         if not isinstance(self.value, dict):
             raise StoryMapEditRefused(self, "edit_field", f"{self.name} keeps its fields in a {type(self.value).__name__}, not a table row")
         self.value[field] = text
-        return self.story_map.write_back()
+        return self.story_map.opened.save()
 
     @mcp
     @agent_tool
@@ -363,7 +379,7 @@ class Example(StoryNode):
         for column in named:
             self.value[column] = name
         self.scope.examples.rename(self, name)
-        return self.story_map.write_back()
+        return self.story_map.opened.save()
 
     def edit_description(self, description: str) -> "StoryModel":
         """An example's row holds no description, so none is kept: refused with StoryMapEditRefused, and no tool offers
@@ -391,13 +407,13 @@ class Examples(dict):
         super().__init__()
         self.scope = scope
 
-    def __setitem__(self, name: str, value: Any) -> None:
-        if not isinstance(value, Example):
-            value = Example(str(name), value)
-        value.scope = self.scope
-        super().__setitem__(name, value)
+    def __setitem__(self, name: str, example: "Example | ExampleValue") -> None:
+        if not isinstance(example, Example):
+            example = Example(str(name), example)
+        example.scope = self.scope
+        super().__setitem__(name, example)
         if isinstance(self.scope, StoryNode):
-            self.scope.attach(value, "examples")
+            self.scope.attach(example, "examples")
 
     def rename(self, example: Example, name: str) -> None:
         """Keep example under name, in the place it stood."""
@@ -483,19 +499,19 @@ class Increment(StoryNode):
     def add_story(self, story: "Story") -> "StoryModel":
         """Deliver story, a story of the same story map, in this increment, taking it off the increment that delivered
         it before; save the map and return it."""
-        found = self.story_map.node_at(story.path)
+        found = self.story_map.descendants.node_at(story.path)
         for increment in self.story_map.increments:
             increment.stories = [each for each in increment.stories if each is not found]
         self.stories = [*self.stories, found]
-        return self.story_map.write_back()
+        return self.story_map.opened.save()
 
     @mcp
     @agent_tool
     def remove_story(self, story: "Story") -> "StoryModel":
         """Stop delivering story in this increment; the story stays on its story map. Save the map and return it."""
-        found = self.story_map.node_at(story.path)
+        found = self.story_map.descendants.node_at(story.path)
         self.stories = [each for each in self.stories if each is not found]
-        return self.story_map.write_back()
+        return self.story_map.opened.save()
 
     def clone(self) -> "Increment":
         """A copy delivering the same stories; a map that copies its stories as well hands the copy those."""
@@ -508,46 +524,38 @@ class Step(StoryNode):
     _semantic_type_name = "Step"
     graph_facts = ("keyword", "text", "phase", "concepts", "values", "actor", "continuation", "callees", "body_text")
 
-    def __init__(
-        self,
-        text: "str | Step",
-        step_type: "StepType | None" = None,
-        sequential_order: int = 0,
-        *,
-        keyword: str = "",
-        concepts: Optional[List[str]] = None,
-        values: Optional[List[str]] = None,
-        actor: str = "",
-        source: Optional["Source"] = None,
-        name: str = "",
-    ) -> None:
+    def __init__(self, text: "str | Step", step_type: "StepType | None" = None, sequential_order: int = 0) -> None:
+        """A step saying text, of step_type, at sequential_order; given a step, a copy of it. What a format reads about
+        the step beyond that, its keyword, the concepts, values and actor its line names, and where it sits, is set on
+        the step afterwards."""
         origin = text if isinstance(text, Step) else None
+        name = ""
         if origin is not None:
-            text = origin.text
-            step_type = origin.step_type
-            sequential_order = origin.sequential_order
-            keyword = origin._keyword
-            concepts = list(origin.concepts)
-            values = list(origin.values)
-            actor = origin.actor
-            source = origin.source
-            name = origin.name
-        label = name or (text.strip()[:80] if text.strip() else f"step-{sequential_order}")
+            text, step_type, sequential_order, name = origin.text, origin.step_type, origin.sequential_order, origin.name
+        label = name or (text.strip()[:_STEP_NAME_LENGTH] if text.strip() else f"step-{sequential_order}")
         super().__init__(name=label, sequential_order=sequential_order)
         self.text = text
         self.step_type = step_type
-        self._keyword = (keyword or "").strip()
+        self._keyword = ""
         self._ands = ModelChildren(self, "ands")
-        self.concepts: List[str] = list(concepts) if concepts is not None else []
-        self.values: List[str] = list(values) if values is not None else []
-        self.actor = actor
-        self.source = source
-        self.call_graph = CallGraph(origin.call_graph if origin is not None and getattr(origin, "call_graph", None) else [])
+        self.concepts: List[str] = []
+        self.values: List[str] = []
+        self.actor = ""
+        self.source: Optional["Source"] = None
+        self.call_graph = CallGraph([])
         self.body = CodeBody()
         if origin is not None:
-            self.take_code_from(origin)
-            for extra in origin.ands:
-                self._ands.append(type(self)(extra))
+            self._copy_from(origin)
+
+    def _copy_from(self, origin: "Step") -> None:
+        """Take what origin was read with, its code, and a copy of each step chained onto it."""
+        self._keyword = origin._keyword
+        self.concepts, self.values = list(origin.concepts), list(origin.values)
+        self.actor, self.source = origin.actor, origin.source
+        self.call_graph = CallGraph(getattr(origin, "call_graph", None) or [])
+        self.take_code_from(origin)
+        for extra in origin.ands:
+            self._ands.append(type(self)(extra))
 
     @property
     def segment(self) -> str:
@@ -571,8 +579,8 @@ class Step(StoryNode):
     def edit_text(self, text: str) -> "StoryModel":
         """Change what this step says, save its story map, and return it."""
         self.text = text
-        self.name = text.strip()[:80] or self.name
-        return self.story_map.write_back()
+        self.name = text.strip()[:_STEP_NAME_LENGTH] or self.name
+        return self.story_map.opened.save()
 
     @property
     def body_text(self) -> str:
@@ -585,7 +593,7 @@ class Step(StoryNode):
         """What this step says in code: while it still says it, the lines it was read with stand."""
         return (self.keyword, self.text, self.body.text)
 
-    def read_code(self, block) -> None:
+    def read_code(self, block: "CodeBlock") -> None:
         """The body of the step block found where this step sits in its file, when that block is this step's call; a
         step whose text differs keeps no body."""
         if self.text == block.name:
@@ -609,6 +617,18 @@ class Step(StoryNode):
             return self._keyword[0].upper() + self._keyword[1:].lower()
         value = getattr(self.step_type, "value", self.step_type)
         return str(value).capitalize()
+
+    @keyword.setter
+    def keyword(self, word: str) -> None:
+        self._keyword = (word or "").strip()
+
+    def continue_with(self, keyword: str, text: str) -> "Step":
+        """Chain an And or But line saying text onto this step, of this step's type, after the lines chained onto it
+        already, and answer it."""
+        continued = type(self)(text, self.step_type, len(self.ands) + 1)
+        continued.keyword = keyword
+        self.ands = [*self.ands, continued]
+        return continued
 
     @property
     def continuation(self) -> bool:
@@ -642,32 +662,23 @@ class Step(StoryNode):
         """Given, When, or Then; a step with none of them is a Step."""
         return step_semantic(self)
 
-    def record(self, recording: StoryRecording, file: str, parent) -> None:
+    def record(self, recording: StoryRecording, file: str, parent: "Node") -> None:
         """Add this step under parent, its scenario's or background's node (``steps``) or the step it continues
         (``ands``), then the steps chained onto it."""
-        at = recording.span_of(self, file, fallback_text=self.text)
+        lines = recording.span_of(self, file, fallback_text=self.text)
         continuations = list(self.ands)
-        node = recording.add(self, step_node_id(self.recorded_type, file, at.start_line, self.recorded_name), at)
-        recording.graph.link("ands" if isinstance(self.parent, Step) else "steps", parent, node)
+        node = recording.add(self, self._node_id(lines), lines)
+        recording.graph.edges.link("ands" if isinstance(self.parent, Step) else "steps", parent, node)
         for continuation in continuations:
             continuation.record(recording, file, node)
 
+    def _node_id(self, lines: "Source") -> str:
+        """Its graph id: its kind, file, line, and a checksum of its name, so it keeps the same id in every process."""
+        return f"stories:{self.recorded_type}:{lines.file}:{lines.start_line}:{step_checksum(self.recorded_name)}"
+
     def clone(self) -> "Step":
-        cloned = type(self)(
-            text=self.text,
-            step_type=self.step_type,
-            sequential_order=self.sequential_order,
-            keyword=self._keyword,
-            concepts=list(self.concepts),
-            values=list(self.values),
-            actor=self.actor,
-            source=self.source,
-            name=self.name,
-        )
-        cloned.ands = [step.clone() for step in self.ands]
-        cloned.call_graph = CallGraph(self.call_graph)
-        cloned.take_code_from(self)
-        return cloned
+        """A copy of this step, its code, and a copy of each step chained onto it."""
+        return type(self)(self)
 
 
 def _steps_key(steps: List["Step"]) -> tuple:
@@ -708,13 +719,13 @@ class Background(StoryNode):
     def recorded_name(self) -> str:
         return self.name or "background"
 
-    def record(self, recording: StoryRecording, file: str, parent) -> None:
+    def record(self, recording: StoryRecording, file: str, parent: "Node") -> None:
         """Add this background under parent, its story's node, then its steps."""
-        at = recording.span_of(self, file)
-        recording.place(self, at)
+        lines = recording.span_of(self, file)
+        recording.place(self, lines)
         self.load_map_facts()
-        node = recording.add(self, f"stories:Background:{file}:{self.recorded_name}", at)
-        recording.graph.link("background", parent, node)
+        node = recording.add(self, f"stories:Background:{file}:{self.recorded_name}", lines)
+        recording.graph.edges.link("background", parent, node)
         for step in self.steps:
             step.record(recording, file, node)
 
@@ -805,7 +816,7 @@ class Scenario(StoryNode):
         """Add a step saying text, of step_type (given, when or then), after this scenario's steps; save its story map
         and return it."""
         self.steps.append(type(self).step_type(text, StepType(step_type), len(self.steps) + 1))
-        return self.story_map.write_back()
+        return self.story_map.opened.save()
 
     def steps_in(self, step_type: StepType) -> List[Step]:
         return [step for step in self.steps if step.step_type == step_type]
@@ -813,24 +824,16 @@ class Scenario(StoryNode):
     def when_then_runs(self) -> List[tuple]:
         """Walk steps. A When after a Then starts the next run."""
         runs: List[tuple] = []
-        when_steps: List[Step] = []
-        then_steps: List[Step] = []
-
-        def close() -> None:
-            nonlocal when_steps, then_steps
-            if when_steps or then_steps:
-                runs.append((when_steps, then_steps))
-            when_steps, then_steps = [], []
-
+        run: tuple = ([], [])
         for step in self.steps:
+            if step.step_type == StepType.WHEN and run[1]:
+                runs.append(run)
+                run = ([], [])
             if step.step_type == StepType.WHEN:
-                if then_steps:
-                    close()
-                when_steps.append(step)
+                run[0].append(step)
             elif step.step_type == StepType.THEN:
-                then_steps.append(step)
-        close()
-        return runs
+                run[1].append(step)
+        return runs + [run] if run[0] or run[1] else runs
 
     def load_map_facts(self) -> None:
         self._load_opening()
@@ -849,22 +852,25 @@ class Scenario(StoryNode):
         backgrounds = tuple(background.code_key for background in self.backgrounds)
         return (self.name, tuple(self.examples), backgrounds, _steps_key(self.steps))
 
-    def record(self, recording: StoryRecording, file: str, parent, scoped: List[Example]) -> None:
-        """Add this scenario under its story with its steps and the examples it uses: its own, those its own
-        Background holds, and scoped, those its story's Background holds. A scenario read from a story test sits in
-        that file, not in the story map its Story came from."""
-        file = file_of(self) or file
-        at = recording.span_of(self, file)
-        recording.place(self, at)
+    def record(self, recording: StoryRecording, story: "Story", parent: "Node") -> None:
+        """Add this scenario under parent, the node of story, the Story walking it, with its steps and the examples it
+        uses: its own, those its own Background holds, and those story's Background holds. A scenario read from a story
+        test sits in that file, not in the story map its Story came from, and is shared by every Story of that name, so
+        the story walking it is handed in rather than read from its parent."""
+        file = file_of(self) or file_of(story)
+        scoped = [example for background in story.backgrounds for example in background.examples.values()]
+        lines = recording.span_of(self, file)
+        recording.place(self, lines)
         self.load_map_facts()
-        node = recording.add(self, f"stories:Scenario:{file}:{self.name}", at, {"is_outline": bool(self.is_outline)})
-        recording.graph.link("scenarios", parent, node)
+        node = recording.add(self, f"stories:Scenario:{file}:{self.name}", lines)
+        node.set_fact("is_outline", bool(self.is_outline))
+        recording.graph.edges.link("scenarios", parent, node)
         for step in self.steps:
             step.record(recording, file, node)
         own_background = [example for background in self.backgrounds for example in background.examples.values()]
         used = {example.name: example for example in [*self.examples.values(), *own_background, *scoped]}
         for example in used.values():
-            example.record(recording, node, at)
+            example.record(recording, node, lines)
 
     def clone(self) -> "Scenario":
         cloned = type(self)(self.name, self.sequential_order)
@@ -915,6 +921,8 @@ class Epic(StoryNode):
         self._epics = ModelChildren(self, "decomposedInto")
         self._stories = ModelChildren(self, "decomposedInto")
         self.examples = source.examples.clone(self) if source is not None else Examples(self)
+        self.columns = EpicColumns(self)
+        self.descendants = Descendants(self)
         if source is None:
             return
         self.estimate = source.estimate or ""
@@ -922,9 +930,9 @@ class Epic(StoryNode):
         self.take_code_from(source)
         build_story = story_class or Story
         for child in source.epics:
-            self.append_epic(type(self)(child, story_class=build_story))
+            self.epics.append(type(self)(child, story_class=build_story))
         for story in source.stories:
-            self.append_story(build_story(story))
+            self.stories.append(build_story(story))
 
     @property
     @data_field
@@ -955,27 +963,19 @@ class Epic(StoryNode):
     @agent_tool
     def new_epic(self, name: str) -> "StoryModel":
         """Add a sub-epic called name after this epic's sub-epics; save its story map and return it."""
-        self.append_epic(type(self)(name, len(self.epics) + 1))
-        return self.story_map.write_back()
+        self.epics.append(type(self)(name, len(self.epics) + 1))
+        return self.story_map.opened.save()
 
     @mcp
     @agent_tool
     def new_story(self, name: str) -> "StoryModel":
         """Add a story called name after this epic's stories; save its story map and return it."""
-        self.append_story(self.story_map.story_type(name, len(self.stories) + 1))
-        return self.story_map.write_back()
+        self.stories.append(self.story_map.story_type(name, len(self.stories) + 1))
+        return self.story_map.opened.save()
 
     @property
     def has_epics(self) -> bool:
         return len(self.epics) > 0
-
-    def estimate_label(self) -> str:
-        estimate = (self.estimate or "").strip()
-        if not estimate:
-            return ""
-        if estimate.startswith("*"):
-            return estimate
-        return f"* {estimate}"
 
     @property
     def is_sub_epic(self) -> bool:
@@ -991,42 +991,35 @@ class Epic(StoryNode):
         """The epic of the story map this epic sits under: itself when it is one."""
         return self.parent.top_epic if self.is_sub_epic else self
 
-    def leaf_epics(self) -> List["Epic"]:
-        """The epics whose stories sit in columns under this epic: its innermost sub-epics, or itself when it has
-        none."""
-        if not self.epics:
-            return [self]
-        return [leaf for child in self.epics for leaf in child.leaf_epics()]
-
-    def record(self, recording: StoryRecording, parent) -> None:
+    def record(self, recording: StoryRecording, parent: "Node") -> None:
         """Add this epic or sub-epic under parent, the practice's root or its epic's node, then its sub-epics and its
         stories. An epic sits on the line that names it in the first file any story under it was read from."""
-        story_file = self.first_story_file() or file_of(self)
-        folder = folder_of(story_file, up=1 if not self.is_sub_epic and self.epics else 0)
+        story_file = self._first_story_file() or file_of(self)
+        folder = folder_of(story_file, levels_up=1 if not self.is_sub_epic and self.epics else 0)
         self.source = recording.name_span(story_file, self.name, folder)
         self.load_map_facts()
-        self.evidence = self.evidence_in(recording, story_file)
+        self.evidence = self._evidence_in(recording, story_file)
         node = recording.add(self, f"stories:{self.recorded_type}:{folder}:{self.name}", self.source)
-        recording.graph.link("decomposedInto", parent, node)
+        recording.graph.edges.link("decomposedInto", parent, node)
         for child in self.epics:
             child.record(recording, node)
         for story in self.stories:
             story.record(recording, node)
 
-    def first_story_file(self) -> str:
+    def _first_story_file(self) -> str:
         """The first file any story under this epic was read from; empty when none names a file."""
-        return next((file for story in self.every_story() for file in [file_of(story)] if file), "")
+        return next((file for story in self.descendants.stories() for file in [file_of(story)] if file), "")
 
-    def evidence_in(self, recording: StoryRecording, story_file: str) -> List[str]:
+    def _evidence_in(self, recording: StoryRecording, story_file: str) -> List[str]:
         """What this epic declares, else its sub-epic file's opening docblock, else the labels its children carry."""
         if self.evidence:
             return list(self.evidence)
-        declared = declared_evidence(recording.text_of(story_file)) if self.is_sub_epic else []
+        declared = recording.source_of(story_file).evidence if self.is_sub_epic else []
         if declared:
             return declared
         labels: List[str] = []
         for child in self.epics:
-            labels.extend(child.evidence_in(recording, child.first_story_file()))
+            labels.extend(child._evidence_in(recording, child._first_story_file()))
         for story in self.stories:
             labels.extend(story.evidence)
         return list(dict.fromkeys(labels))
@@ -1053,7 +1046,7 @@ class Epic(StoryNode):
         self.generic_handler = False
         self.near_duplicate = False
         self.one_time_task = False
-        self.load_child_band(len(self.epics) + len(self.stories), "children")
+        self._load_child_band(len(self.epics) + len(self.stories), "children")
         self.shared_verb = self._shared_opening()
 
     def _shared_opening(self) -> str:
@@ -1062,60 +1055,6 @@ class Epic(StoryNode):
         if len(verbs) < 2 or len(set(verbs)) != 1 or len(set(names)) < 2:
             return ""
         return verbs[0]
-
-    def every_epic(self) -> List["Epic"]:
-        """This epic and every epic nested under it, each before its own children."""
-        return [self, *(found for child in self.epics for found in child.every_epic())]
-
-    def every_story(self) -> List["Story"]:
-        """Every Story this epic and its nested epics hold, in map order."""
-        return [story for epic in self.every_epic() for story in epic.stories]
-
-    def append_epic(self, epic: "Epic") -> None:
-        epic.parent = self
-        self.epics.append(epic)
-
-    def append_story(self, story: "Story") -> None:
-        story.parent = self
-        self.stories.append(story)
-
-    def place_in(self, file: str) -> None:
-        """Name *file* on this epic and everything under it that names no file yet; the line stays unknown."""
-        if not self.has_source_file:
-            self.source = source_at(file)
-        for child in self.epics:
-            child.place_in(file)
-        for story in self.stories:
-            if not story.has_source_file:
-                story.source = source_at(file)
-
-    def _has_estimate(self) -> bool:
-        if (self.estimate or "").strip():
-            return True
-        return any(child._has_estimate() for child in self.epics)
-
-    def span_columns(self) -> int:
-        """Story-grid columns a top-level epic occupies: its own stories, then each nested epic. An empty epic is one
-        column."""
-        nested = sum(max(child.diagram_span_columns(), 1) for child in self.epics)
-        return max(len(self.stories) + nested, 1)
-
-    def diagram_span_columns(self) -> int:
-        """Bar width in story-pitch columns. Stories and nested epics both consume columns.
-
-        Estimates widen a leaf epic.
-        """
-        nested = sum(child.diagram_span_columns() for child in self.epics)
-        story_cols = len(self.stories)
-        if self.epics:
-            return max(nested + story_cols, 1)
-        estimate = self.estimate.strip()
-        if not estimate:
-            return max(story_cols, 1)
-        if story_cols == 0:
-            return max(2, min(8, (len(estimate) + 12) // 18))
-        extra = max(1, min(5, (len(estimate) + 15) // 22))
-        return story_cols + extra
 
     @property
     def depth(self) -> int:
@@ -1126,10 +1065,6 @@ class Epic(StoryNode):
             return 0
         return parent.depth + 1
 
-    def tree_depth(self) -> int:
-        if not self.epics:
-            return self.depth
-        return max(child.tree_depth() for child in self.epics)
 
 
 @language_adapter(language="typescript")
@@ -1150,14 +1085,19 @@ class Story(StoryNode):
             source.name if source is not None else name,
             source.sequential_order if source is not None else sequential_order,
         )
-        self.story_type = source.story_type if source is not None else story_type
-        self.actors: List[str] = list(source.actors) if source is not None else []
-        self.domain_terms: List[str] = list(source.domain_terms) if source is not None else []
-        self.evidence: List[str] = list(source.evidence) if source is not None else []
+        self.story_type = story_type
+        self.actors: List[str] = []
+        self.domain_terms: List[str] = []
+        self.evidence: List[str] = []
         self._backgrounds = ModelChildren(self, "background")
         self._scenarios = ModelChildren(self, "scenarios")
-        if source is None:
-            return
+        if source is not None:
+            self._copy_from(source)
+
+    def _copy_from(self, source: "Story") -> None:
+        """Take what source says, its code, and a copy of each of its backgrounds and scenarios in this story's types."""
+        self.story_type = source.story_type
+        self.actors, self.domain_terms, self.evidence = list(source.actors), list(source.domain_terms), list(source.evidence)
         self.description_text = source.description_text
         self.take_code_from(source)
         for background in source.backgrounds:
@@ -1193,7 +1133,7 @@ class Story(StoryNode):
     def acceptance_tests(self) -> List[str]:
         """The acceptance-test files of its story map's session that hold this story, as paths from the project: they
         are read, not edited, through the story map; none for a map opened in no session."""
-        return self.story_map.acceptance_tests_of(self)
+        return self.story_map.opened.acceptance_tests_of(self)
 
     @property
     def parts(self) -> List["StoryNode"]:
@@ -1207,7 +1147,7 @@ class Story(StoryNode):
     def new_scenario(self, name: str) -> "StoryModel":
         """Add a scenario called name after this story's scenarios; save its story map and return it."""
         self.scenarios.append(type(self).scenario_type(name, len(self.scenarios) + 1))
-        return self.story_map.write_back()
+        return self.story_map.opened.save()
 
     def load_map_facts(self) -> None:
         self._load_opening()
@@ -1251,20 +1191,21 @@ class Story(StoryNode):
         """The epic of the story map this story sits under; none for a story under no epic."""
         return self.parent.top_epic if isinstance(self.parent, Epic) else None
 
-    def record(self, recording: StoryRecording, parent) -> None:
+    def record(self, recording: StoryRecording, parent: "Node") -> None:
         """Add this story under parent, its epic's node, with the facts of the file it was read from, then its
         backgrounds and its scenarios."""
         recording.announce(self)
         file = file_of(self)
-        at = recording.span_of(self, file)
+        lines = recording.span_of(self, file)
         self.load_map_facts()
-        node = recording.add(self, f"stories:Story:{file}:{self.name}", at, recording.facts_of(file))
-        recording.graph.link("decomposedInto", parent, node)
+        node = recording.add(self, f"stories:Story:{file}:{self.name}", lines)
+        for fact, held in recording.source_of(file).facts.items():
+            node.set_fact(fact, held)
+        recording.graph.edges.link("decomposedInto", parent, node)
         for background in self.backgrounds:
             background.record(recording, file, node)
-        scoped = [example for background in self.backgrounds for example in background.examples.values()]
         for scenario in self.scenarios:
-            scenario.record(recording, file, node, scoped)
+            scenario.record(recording, self, node)
 
     def clone(self) -> "Story":
         cloned = type(self)(self.name, self.sequential_order, self.story_type)
@@ -1299,24 +1240,32 @@ class StoryModel(StoryNode):
             graph = source
             source = None
         super().__init__(name="StoryModel", sequential_order=0, graph=graph)
-        self._epics = ModelChildren(self, "decomposedInto")
-        self._increments = ModelChildren(self, "increments")
+        self._epics = NumberedChildren(self, "decomposedInto")
+        self._increments = NumberedChildren(self, "increments")
         self.examples = Examples(self)
-        # The text of each file this map was read from, by the path its nodes name, so recording the map on a graph
-        # finds each node's lines without reading the file again.
-        self.source_texts: Dict[str, str] = {}
+        self.descendants = Descendants(self)
+        self.test_scenarios = StoryTestScenarios(self)
+        # The files this map was read from, so recording the map on a graph finds each node's lines without reading a
+        # file again.
+        self.sources = StorySources()
         # Where each node links in the folder this map was placed in to be drawn; none until a render places it.
         self.links = None
-        self._opened: Optional[OpenedStoryMap] = None
+        # The file it was opened from in a session, which saves it after every edit; nowhere for a map read any other
+        # way, which saves no edit.
+        self.opened: "OpenedStoryMap | UnopenedStoryMap" = UnopenedStoryMap(self)
         # The file that keeps its increments and writes them on a save (``write(increments)``), such as the thin slice
         # beside a markdown story map; None for a map that keeps none.
         self.slicing = None
         if isinstance(source, StoryModel):
-            self.description_text = source.description_text
-            self.examples = source.examples.clone(self)
-            for epic in source.epics:
-                self.append_epic(self.epic_type(epic, story_class=self.story_type))
-            StoryCopies(source, self).copy_increments(self.increment_type)
+            self._copy_from(source)
+
+    def _copy_from(self, source: "StoryModel") -> None:
+        """Take source's description and examples, and a copy of its epics and increments in this map's types."""
+        self.description_text = source.description_text
+        self.examples = source.examples.clone(self)
+        for epic in source.epics:
+            self.epics.append(self.epic_type(epic, story_class=self.story_type))
+        StoryCopies(source, self).copy_increments(self.increment_type)
 
     @classmethod
     @tool_subject
@@ -1325,12 +1274,12 @@ class StoryModel(StoryNode):
         merged onto its story map, read by the Stories practice of the session the call works in. A file outside the
         session's roots is refused (PathOutsideRootsError)."""
         session = call.session
-        path = session.path_named(file)
+        path = session.paths.path_named(file)
         files = session.session_files.file_manager
         files.read(os.path.relpath(path, files.workpath))
         stories = session.graph.practices.of(cls.practice_kind())
         model = stories.open_file(path, session.repo_path)
-        model._opened = OpenedStoryMap(model, path, session)
+        model.opened = OpenedStoryMap(model, path, session)
         return model
 
     @classmethod
@@ -1341,7 +1290,7 @@ class StoryModel(StoryNode):
         declares there, so a page that follows the open session shows the ticket activated last."""
         stories = call.session.graph.practices.of(cls.practice_kind())
         story_map = next(iter(stories.fidelities))
-        made = [entry.path for entries in story_map.files().values() for entry in entries if entry.exists]
+        made = [entry.path for entries in story_map.declared.files().values() for entry in entries if entry.exists]
         if not made:
             raise StoryNodeNotFound(f"{call.session.name}: no story map", cls)
         return cls.load(made[0], call=call)
@@ -1350,28 +1299,20 @@ class StoryModel(StoryNode):
     @data_field
     def file(self) -> Annotated[str, SourceFile]:
         """The file it was opened from, as a path from the project; empty for a map read any other way."""
-        return self._opened.file if self._opened is not None else ""
+        return self.opened.file
 
     @property
     @data_field
     def formats(self) -> "FidelitySessionOutput":
         """What the fidelity declaring its file keeps in the session: the formats it offers, and the ones chosen, which
         a save renders beside its file."""
-        return self._opened.fidelity.session_output
+        return self.opened.fidelity.session_output
 
     @property
     @data_field
     def refusal(self) -> str:
         """Why an edit to it is not saved, such as a scenario file opened to be read; empty when edits are saved."""
-        return self._opened.refusal if self._opened is not None else "it was opened from no file"
-
-    def write_back(self) -> "StoryModel":
-        """Write it to the file it was opened from and to the formats chosen beside it, then answer itself. An edit its
-        file cannot take is refused with StoryMapEditRefused, and nothing is written."""
-        if self.refusal:
-            raise StoryMapEditRefused(self, "save", self.refusal)
-        self._opened.write()
-        return self
+        return self.opened.refusal
 
     @mcp
     @agent_tool
@@ -1384,8 +1325,8 @@ class StoryModel(StoryNode):
     @agent_tool
     def new_epic(self, name: str) -> "StoryModel":
         """Add an epic called name after the map's epics; save the map and return it."""
-        self.append_epic(self.epic_type(name, len(self.epics) + 1))
-        return self.write_back()
+        self.epics.append(self.epic_type(name, len(self.epics) + 1))
+        return self.opened.save()
 
     @mcp
     @agent_tool
@@ -1394,8 +1335,8 @@ class StoryModel(StoryNode):
         it. A map that keeps no increments, such as a scenario file, refuses it with StoryMapEditRefused."""
         if self.slicing is None:
             raise StoryMapEditRefused(self, "new_increment", f"{self.file} keeps no increments")
-        self.append_increment(self.increment_type(name, len(self.increments) + 1))
-        return self.write_back()
+        self.increments.append(self.increment_type(name, len(self.increments) + 1))
+        return self.opened.save()
 
     increment_type = Increment
     """The increment type this format's maps are sliced by."""
@@ -1405,12 +1346,7 @@ class StoryModel(StoryNode):
     def scope(self) -> List[str]:
         """The stories of this map the session it was opened in names, by address: the part of the map that session's
         ticket covers. None when the session names no story, or the map was opened in no session."""
-        names = self._opened.session_stories if self._opened is not None else []
-        return [story.address for story in self.stories_named(names)]
-
-    def acceptance_tests_of(self, story: "Story") -> List[str]:
-        """The acceptance-test files of the session it was opened in that hold story; none outside a session."""
-        return self._opened.acceptance_tests_of(story) if self._opened is not None else []
+        return [story.address for story in self.descendants.stories_named(self.opened.session_stories)]
 
     @property
     def parts(self) -> List["StoryNode"]:
@@ -1418,16 +1354,6 @@ class StoryModel(StoryNode):
 
     def holding(self, part: "StoryNode") -> List["StoryNode"]:
         return self._increments if isinstance(part, Increment) else self._epics
-
-    def node_at(self, path: str) -> StoryNode:
-        """The node path names on this map; the map itself for an empty path. StoryNodeNotFound for one it does not
-        hold."""
-        node: StoryNode = self
-        for segment in filter(None, path.split(".")):
-            node = next((part for part in node.parts if part.segment == segment), None)
-            if node is None:
-                raise StoryNodeNotFound(path, StoryNode)
-        return node
 
     def copy_of(self, source: "StoryModel") -> "StoryModel":
         """source copied into this format's node types, with this model's settings, so this format's nodes write it.
@@ -1439,87 +1365,12 @@ class StoryModel(StoryNode):
     def epics(self) -> List[Epic]:
         return self._epics
 
-    @epics.setter
-    def epics(self, epics: List[Epic]) -> None:
-        self._epics.refill(epics)
-
     @property
     @data_field
     def increments(self) -> List[Increment]:
         return self._increments
 
-    def take_scenarios(self, stories: List["Story"], file: str) -> None:
-        """Give the scenarios of each of stories, read from the story test file, to every Story of the same name in
-        this model, each scenario keeping the story test as its source. A story test names the Story it specifies,
-        and the markdown and the drawio of one story map each hold that Story, so both take its scenarios. A Story the
-        map does not have adds nothing."""
-        for read in stories:
-            for scenario in read.scenarios:
-                scenario.source = source_at(file)
-            for story in self.every_story():
-                if story.name == read.name:
-                    story.backgrounds = list(read.backgrounds)
-                    story.scenarios = list(read.scenarios)
-
-    def add_scenarios(self, stories: List["Story"], file: str) -> None:
-        """Add the scenarios of each of stories, read from the story file at file, to every Story of the same name in
-        this model, after the ones it holds: a story whose scenarios are written in several files, such as its shared
-        story file and its screen spec, holds them all."""
-        for read in stories:
-            for scenario in read.scenarios:
-                scenario.source = source_at(file)
-            for story in self.every_story():
-                if story.name == read.name:
-                    story.scenarios = [*story.scenarios, *read.scenarios]
-
-    def drop_scenarios(self) -> None:
-        """Take every story's scenarios and backgrounds away, leaving the map: at a fidelity whose scenarios come from
-        other files, the ones the map's own story tests hold are not read."""
-        for story in self.every_story():
-            story.scenarios = []
-            story.backgrounds = []
-
-    def every_epic(self) -> List[Epic]:
-        """Every epic and nested epic, each before its own children."""
-        return [found for epic in self.epics for found in epic.every_epic()]
-
-    def every_story(self) -> List["Story"]:
-        """Every Story under every epic and sub-epic, in map order."""
-        return [story for epic in self.every_epic() for story in epic.stories]
-
-    def stories_named(self, names: List[str]) -> List["Story"]:
-        """This map's own stories that names name, in the order names gives them; a name no story has adds nothing. A
-        thin slice names the stories it delivers, so an increment read from one takes the map's stories through this."""
-        first = self.stories_by_name()
-        return [first[name] for name in names if name in first]
-
-    def stories_by_name(self) -> Dict[str, "Story"]:
-        """Each name a story of this map has, mapped to the first story in map order that has it."""
-        first: Dict[str, "Story"] = {}
-        for story in self.every_story():
-            first.setdefault(story.name, story)
-        return first
-
-    def place_in(self, file: str) -> None:
-        """Name file on every epic and story of this map that names no file yet; the line stays unknown."""
-        for epic in self.epics:
-            epic.place_in(file)
-
-    # -- Epic mutations -------------------------------------------------------
-
-    def append_epic(self, epic: Epic) -> None:
-        epic.parent = self
-        self.epics.append(epic)
-        _renumber(self.epics)
-
-    # -- Increment mutations --------------------------------------------------
-
-    def append_increment(self, increment: Increment) -> None:
-        increment.parent = self
-        self.increments.append(increment)
-        _renumber(self.increments)
-
-    def record(self, practice, *, on_node: Optional[Callable[[str], None]] = None) -> None:
+    def record(self, practice: "PracticeGuidance", *, on_node: Optional[Callable[[str], None]] = None) -> None:
         """Write this map's epics, stories, backgrounds, scenarios, steps, and examples onto practice, the practice
         that holds Stories in a graph; on_node hears each story as it is written."""
         with self.batch_schema_sync():
@@ -1528,12 +1379,165 @@ class StoryModel(StoryNode):
     def clone(self) -> "StoryModel":
         cloned = type(self)()
         for epic in self.epics:
-            cloned.append_epic(epic.clone())
+            cloned.epics.append(epic.clone())
         StoryCopies(self, cloned).copy_increments(lambda increment, stories: type(increment)(increment, stories=stories))
         cloned.examples = self.examples.clone(cloned)
         cloned.description_text = self.description_text
         return cloned
 
+
+class NumberedChildren(ModelChildren):
+    """The epics or increments of a story map, numbered in the order they stand: one appended takes the next number."""
+
+    def append(self, held: StoryNode) -> None:
+        super().append(held)
+        _renumber(self)
+
+
+class Descendants:
+    """The epics and stories under an epic or a story map, at any depth, in map order, and the node a path names
+    among them: what a story map is searched and placed by."""
+
+    def __init__(self, holder: "Epic | StoryModel") -> None:
+        self._holder = holder
+
+    def epics(self) -> List[Epic]:
+        """Every epic nested under its holder, each before its own children."""
+        return [found for epic in self._holder.epics for found in (epic, *epic.descendants.epics())]
+
+    def stories(self) -> List["Story"]:
+        """Every Story its holder and its nested epics hold, in map order."""
+        return [story for epic in self._holding_stories() for story in epic.stories]
+
+    def stories_named(self, names: List[str]) -> List["Story"]:
+        """Its stories that names name, in the order names gives them; a name no story has adds nothing. A thin slice
+        names the stories it delivers, so an increment read from one takes the map's stories through this."""
+        first = self.stories_by_name()
+        return [first[name] for name in names if name in first]
+
+    def stories_by_name(self) -> Dict[str, "Story"]:
+        """Each name one of its stories has, mapped to the first story in map order that has it."""
+        first: Dict[str, "Story"] = {}
+        for story in self.stories():
+            first.setdefault(story.name, story)
+        return first
+
+    def place_in(self, file: str) -> None:
+        """Name file on every epic and story under its holder, and on an epic holder itself, that names no file yet;
+        the line stays unknown."""
+        for node in [*self._holding_stories(), *self.stories()]:
+            if not node.has_source_file:
+                node.source = source_at(file)
+
+    def node_at(self, path: str) -> StoryNode:
+        """The node path names below its holder; the holder itself for an empty path. StoryNodeNotFound for one it does
+        not hold."""
+        node: StoryNode = self._holder
+        for segment in filter(None, path.split(".")):
+            node = next((part for part in node.parts if part.segment == segment), None)
+            if node is None:
+                raise StoryNodeNotFound(path, StoryNode)
+        return node
+
+    def _holding_stories(self) -> List[Epic]:
+        """The epics whose own stories are its stories: an epic holder itself, then every epic under it."""
+        own = [self._holder] if isinstance(self._holder, Epic) else []
+        return [*own, *self.epics()]
+
+
+class EpicColumns:
+    """How many story columns an epic spans on a drawn map, and how deep its sub-epics nest: what a diagram format
+    lays its bars out by."""
+
+    def __init__(self, epic: Epic) -> None:
+        self._epic = epic
+
+    def leaf_epics(self) -> List[Epic]:
+        """The epics whose stories sit in columns under the epic: its innermost sub-epics, or itself when it has none."""
+        if not self._epic.epics:
+            return [self._epic]
+        return [leaf for child in self._epic.epics for leaf in child.columns.leaf_epics()]
+
+    def estimate_label(self) -> str:
+        """The epic's estimate as a bar writes it, `* {estimate}`; empty for an epic with none."""
+        estimate = (self._epic.estimate or "").strip()
+        if not estimate:
+            return ""
+        if estimate.startswith("*"):
+            return estimate
+        return f"* {estimate}"
+
+    def has_estimate(self) -> bool:
+        """The epic or a sub-epic under it gives an estimate."""
+        if (self._epic.estimate or "").strip():
+            return True
+        return any(child.columns.has_estimate() for child in self._epic.epics)
+
+    def span(self) -> int:
+        """Story-grid columns a top-level epic occupies: its own stories, then each nested epic. An empty epic is one
+        column."""
+        nested = sum(max(child.columns.diagram_span(), 1) for child in self._epic.epics)
+        return max(len(self._epic.stories) + nested, 1)
+
+    def diagram_span(self) -> int:
+        """Bar width in story-pitch columns. Stories and nested epics both take columns; an estimate widens a leaf
+        epic."""
+        nested = sum(child.columns.diagram_span() for child in self._epic.epics)
+        story_columns = len(self._epic.stories)
+        if self._epic.epics:
+            return max(nested + story_columns, 1)
+        estimate = self._epic.estimate.strip()
+        if not estimate:
+            return max(story_columns, 1)
+        if story_columns == 0:
+            fewest, most = _EMPTY_EPIC_COLUMNS
+            return max(fewest, min(most, (len(estimate) + _ESTIMATE_LEAD_CHARACTERS) // _ESTIMATE_CHARACTERS_PER_COLUMN))
+        fewest, most = _EXTRA_EPIC_COLUMNS
+        return story_columns + max(fewest, min(most, (len(estimate) + _ESTIMATE_EXTRA_LEAD_CHARACTERS) // _ESTIMATE_CHARACTERS_PER_EXTRA_COLUMN))
+
+    def tree_depth(self) -> int:
+        """The depth of the deepest sub-epic under the epic; its own depth when it has none."""
+        if not self._epic.epics:
+            return self._epic.depth
+        return max(child.columns.tree_depth() for child in self._epic.epics)
+
+
+class StoryTestScenarios:
+    """The scenarios a story map's stories take from the story tests that specify them. A story test names the Story
+    it specifies, and the markdown and the drawio of one story map each hold that Story, so every Story of that name
+    takes its scenarios. A Story the map does not have takes nothing."""
+
+    def __init__(self, story_map: "StoryModel") -> None:
+        self._story_map = story_map
+
+    def take(self, stories: List["Story"], file: str) -> None:
+        """Give the scenarios and backgrounds of each of stories, read from the story test file, to every Story of the
+        same name, in place of the ones it holds, each scenario keeping the story test as its source."""
+        for read, story in self._same_named(stories, file):
+            story.backgrounds = list(read.backgrounds)
+            story.scenarios = list(read.scenarios)
+
+    def add(self, stories: List["Story"], file: str) -> None:
+        """Add the scenarios of each of stories, read from the story file at file, after the ones every Story of the
+        same name holds: a story whose scenarios are written in several files, such as its shared story file and its
+        screen spec, holds them all."""
+        for read, story in self._same_named(stories, file):
+            story.scenarios = [*story.scenarios, *read.scenarios]
+
+    def drop(self) -> None:
+        """Take every story's scenarios and backgrounds away, leaving the map: at a fidelity whose scenarios come from
+        other files, the ones the map's own story tests hold are not read."""
+        for story in self._story_map.descendants.stories():
+            story.scenarios = []
+            story.backgrounds = []
+
+    def _same_named(self, stories: List["Story"], file: str) -> List[tuple]:
+        """Each read story beside each Story of the map with its name, its scenarios placed in file."""
+        for read in stories:
+            for scenario in read.scenarios:
+                scenario.source = source_at(file)
+        held = self._story_map.descendants.stories()
+        return [(read, story) for read in stories for story in held if story.name == read.name]
 
 
 def _renumber(nodes: List[StoryNode]) -> None:

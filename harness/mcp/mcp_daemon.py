@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from typing import Any
 
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_address import McpAddress
@@ -35,11 +36,15 @@ class ServerDidNotStart(Exception):
         self.url = url
 
 
+PingAnswer = dict[str, Any]
+"""What the cdd server's ``/ping`` answers, as JSON: its pid, the checkout it serves, and its chats' projects."""
+
+
 class RunningServer:
     """The cdd server answering on the port, as its ping describes it: its process, the checkout it serves code from,
     and the projects its chats have worked on."""
 
-    def __init__(self, answer: dict) -> None:
+    def __init__(self, answer: PingAnswer) -> None:
         self.pid = int(answer.get("pid") or 0)
         self.source = str(answer.get("source") or "")
         self.projects = [str(project) for project in answer.get("projects") or []]
@@ -51,16 +56,12 @@ class McpDaemon:
 
     Holding the port exclusively is the claim: two servers cannot both hold it, so a second start exits quietly."""
 
-    def __init__(
-        self,
-        home: CddHome,
-        port: int | None = None,
-        listening: ListeningPorts | None = None,
-        address: McpAddress | None = None,
-    ) -> None:
+    def __init__(self, home: CddHome, address: McpAddress | None = None, listening: ListeningPorts | None = None) -> None:
         self.home = home
-        self.address = address or McpAddress(port)
+        self.address = address or McpAddress()
         self._listening = listening or ListeningPorts()
+        # This process, when it is the server: the port it claims and the address it publishes.
+        self.this_process = ServingProcess(home, self.address)
 
     @property
     def port(self) -> int:
@@ -101,79 +102,25 @@ class McpDaemon:
         if process is not None:
             process.stop(_STOP_SECONDS)
 
-    def ensure_from(self, checkout: Path) -> str:
-        """Install ``~/.cdd/`` from checkout on first use and start the server when none answers. A server already
-        running is left, with the code it serves, alone."""
-        self.home.install(checkout, CONNECT_SCRIPT)
-        return self._status(self.ensure())
-
-    def pin_from(self, checkout: Path) -> str:
-        """Serve checkout's current commit from ``~/.cdd/runtime``, restarting the server onto it."""
-        self.home.install(checkout, CONNECT_SCRIPT)
-        self.home.pin(checkout)
-        return self._status(self.restart())
-
-    def update_from(self, checkout: Path) -> str:
-        """Serve checkout's current code the way the server already serves it, pinned or as it is on disk, restarting
-        the server onto it."""
-        self.home.install(checkout, CONNECT_SCRIPT)
-        self.home.serve_current(checkout)
-        return self._status(self.restart())
-
-    def serve_checkout(self, checkout: Path) -> str:
-        """Serve checkout as it is on disk, for working on CDD itself, restarting the server onto it."""
-        self.home.install(checkout, CONNECT_SCRIPT)
-        self.home.serve_from(checkout)
-        return self._status(self.restart())
-
-    def _status(self, running: RunningServer) -> str:
+    def status(self, running: RunningServer) -> str:
+        """How the server runs, as an install reports it: its process, and the code it serves, pinned or on disk."""
         return f"running (pid {running.pid}, {self.home.mode} {running.source})"
 
     def spawn(self) -> None:
         self.home.folder.mkdir(parents=True, exist_ok=True)
         with open(self.home.log_path, "a", encoding="utf-8") as log:
             try:
-                self._start_process(log, BackgroundStart())
+                self._start_process(BackgroundStart(log))
             except PermissionError:
                 # Some Windows jobs refuse to let a child break away; the server then lives in its starter's job, and
                 # the next connect starts it again if that job ends.
                 log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')} breakaway refused; starting inside the caller's job\n")
                 log.flush()
-                self._start_process(log, BackgroundStart().inside_starters_job())
+                self._start_process(BackgroundStart(log).inside_starters_job())
 
-    def _start_process(self, log, start: BackgroundStart) -> None:
+    def _start_process(self, start: BackgroundStart) -> None:
         command = [self.home.interpreter.windowless, "-m", "harness.mcp", "--port", str(self.port)]
-        start.run(command, cwd=self.home.source, env={**os.environ, **self.home.server_environment}, log=log)
-
-    def claim_port(self) -> socket.socket | None:
-        """A listening socket on the server port, or ``None`` when another server already holds it."""
-        return ExclusivePort(self.address.HOST, self.port).claim()
-
-    def publish(self, source: Path) -> None:
-        """Write the address and pid for tools that look for the server without calling it."""
-        self.home.state_file.write({"url": self.url, "port": self.port, "pid": os.getpid(), "source": str(source)})
-
-    def end_with_owner(self) -> None:
-        """When ``CDD_SERVER_OWNER`` names the process this server belongs to, end this server once that process has
-        ended, withdrawing its address first; a server that names no owner runs until it is stopped."""
-        owner = RunningProcess(int(os.environ.get(SERVER_OWNER_ENV) or 0))
-        if owner.pid <= 0:
-            return
-        threading.Thread(target=self._end_after, args=(owner,), name="cdd-server-owner", daemon=True).start()
-
-    def _end_after(self, owner: RunningProcess) -> None:
-        while owner.alive:
-            time.sleep(OWNER_CHECK_SECONDS)
-        self.withdraw()
-        os._exit(0)
-
-    def withdraw(self) -> None:
-        if self.runs_this_process():
-            self.home.state_path.unlink(missing_ok=True)
-
-    def runs_this_process(self) -> bool:
-        """True when the server this home publishes is this process, as it is for code a tool call runs inside it."""
-        return self.home.state_file.read().get("pid") == os.getpid()
+        start.run(command, self.home.source, {**os.environ, **self.home.server_environment})
 
     def _wait_for_ping(self) -> RunningServer:
         deadline = time.time() + _START_SECONDS
@@ -189,3 +136,98 @@ class McpDaemon:
             return "(no log)"
         lines = self.home.log_path.read_text(encoding="utf-8", errors="replace").splitlines()
         return "\n".join(lines[-_LOG_LINES_SHOWN:])
+
+
+class ServedCheckout:
+    """The checkout the one cdd server is installed from and serves, and the ways an install switches the server onto
+    its code: ``~/.cdd/`` is installed from it on first use, and the server serves either its current commit, pinned
+    in ``~/.cdd/runtime``, or the checkout as it is on disk."""
+
+    def __init__(self, daemon: McpDaemon, checkout: Path) -> None:
+        self._daemon = daemon
+        self._home = daemon.home
+        self.checkout = checkout
+
+    @property
+    def home(self) -> CddHome:
+        """The home this checkout is installed into: the stable lane's for a main checkout, the dev lane's otherwise."""
+        return self._home
+
+    def ensure(self) -> str:
+        """Install ``~/.cdd/`` from the checkout on first use and start the server when none answers. A server already
+        running is left, with the code it serves, alone."""
+        self._home.install(self.checkout, CONNECT_SCRIPT)
+        return self._daemon.status(self._daemon.ensure())
+
+    def pin(self) -> str:
+        """Serve the checkout's current commit from ``~/.cdd/runtime``, restarting the server onto it."""
+        self._home.install(self.checkout, CONNECT_SCRIPT)
+        self._home.pin(self.checkout)
+        return self._daemon.status(self._daemon.restart())
+
+    def update(self) -> str:
+        """Serve the checkout's current code the way the server already serves it, pinned or as it is on disk,
+        restarting the server onto it."""
+        self._home.install(self.checkout, CONNECT_SCRIPT)
+        self._home.serve_current(self.checkout)
+        return self._daemon.status(self._daemon.restart())
+
+    def serve_on_disk(self) -> str:
+        """Serve the checkout as it is on disk, for working on CDD itself, restarting the server onto it."""
+        self._home.install(self.checkout, CONNECT_SCRIPT)
+        self._home.serve_from(self.checkout)
+        return self._daemon.status(self._daemon.restart())
+
+    def keep_pinned_current(self) -> str | None:
+        """After a plain install, serve the checkout's current commit when the server is pinned to an older one, so
+        every chat runs the code just installed. Left alone: a server serving a checkout on disk, an install run from
+        a linked worktree (its commit is not what every chat should run), and an install run inside the server itself.
+        Returns the server's status when it was restarted, else None."""
+        if self._daemon.this_process.is_this_process() or (self.checkout / ".git").is_file():
+            return None
+        if self._home.is_installed and self._home.mode != self._home.PINNED:
+            return None
+        if self._home.is_installed and self._home.is_pinned_to(self.checkout) and self._daemon.is_running():
+            return None
+        return self.pin()
+
+
+class ServingProcess:
+    """The cdd server as the process that runs it: it claims the server port, publishes its address for tools that
+    look for the server without calling it, withdraws that address when it ends, and ends with the process it belongs
+    to when one is named."""
+
+    def __init__(self, home: CddHome, address: McpAddress) -> None:
+        self.home = home
+        self.address = address
+
+    def claim_port(self) -> socket.socket | None:
+        """A listening socket on the server port, or ``None`` when another server already holds it."""
+        return ExclusivePort(self.address.HOST, self.address.port).claim()
+
+    def publish(self, source: Path) -> None:
+        """Write the address and pid for tools that look for the server without calling it."""
+        self.home.state_file.write({"url": self.address.url, "port": self.address.port, "pid": os.getpid(), "source": str(source)})
+
+    def end_with_owner(self) -> None:
+        """When ``CDD_SERVER_OWNER`` names the process this server belongs to, end this server once that process has
+        ended, withdrawing its address first; a server that names no owner runs until it is stopped."""
+        owner = RunningProcess(int(os.environ.get(SERVER_OWNER_ENV) or 0))
+        if owner.pid <= 0:
+            return
+        threading.Thread(target=self._end_after, args=(owner,), name="cdd-server-owner", daemon=True).start()
+
+    def withdraw(self) -> None:
+        if self.is_this_process():
+            self.home.state_path.unlink(missing_ok=True)
+
+    def is_this_process(self) -> bool:
+        """True when the server this home publishes is this process, as it is for code a tool call runs inside it."""
+        return self.home.state_file.read().get("pid") == os.getpid()
+
+    def _end_after(self, owner: RunningProcess) -> None:
+        while owner.alive:
+            time.sleep(OWNER_CHECK_SECONDS)
+        self.withdraw()
+        # The server's threads would keep the process alive past its owner; nothing is left to clean up after withdraw.
+        os._exit(0)

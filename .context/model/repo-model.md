@@ -332,7 +332,7 @@ The settings at the top of a file: a YAML block between `---` lines, or, in a co
 An *AgentToolSet* is an ordinary class an agent can list and run: each `@agent_tool` member is an *AgentOperation* and each `@agent_instructions` member is *AgentInstructions*. A *ToolCall* is one call as a chat made it, with its project and chat. The whole model of this module, internals included, is `harness/agent_tools/.context/agent-tools-model.md`; that document is canonical, and this section shows only the classes other modules use.
 
 - **Purpose:** Let an author publish an ordinary class as operations and instructions an agent can list and use, and let every publisher read those members from one place.
-- **Seam (terms):** AgentToolSet, ToolSetCollection, ToolsetMembers, ToolsetReference, AgentTool, AgentOperation, AgentInstructions, InstallDestination, AgentToolAnnotation, AgentInstructionsAnnotation, AgentToolSetAnnotation, ToolSetCollectionAnnotation, Collect, ToolSubject, OnSubject, TakesFromCall, NoSessionLog, PublishedWhereHeld, SubAgentAnnotation, ToolSubjectLoader, RecipePlaceholders, ToolCall, ChatPointer; `tools(...)`, `instructions(...)`, `report_progress`, `reporting_to`, `NO_CHAT`, `SUB_AGENT_CALLER_PREAMBLE`
+- **Seam (terms):** AgentToolSet, ToolSetCollection, ToolsetMembers, ToolsetReference, AgentTool, InvokeLine, ToolRequest, CallsBeingAnswered (`CALLS_BEING_ANSWERED`), `names_alike`, `is_built_in`, AgentOperation, AgentInstructions, InstallDestination, AgentToolAnnotation, AgentInstructionsAnnotation, AgentToolSetAnnotation, ToolSetCollectionAnnotation, Collect, ToolSubject, OnSubject, TakesFromCall, NoSessionLog, PublishedWhereHeld, SubAgentAnnotation, ToolSubjectLoader, RecipePlaceholders, ToolCall, ChatPointer; `tools(...)`, `instructions(...)`, `report_progress`, `reporting_to`, `NO_CHAT`, `SUB_AGENT_CALLER_PREAMBLE`
 - **Dependencies (one-way):** harness/annotations, harness/markdown
 
 ## AgentToolSet : AgentToolSetOrigin
@@ -438,13 +438,10 @@ One published member of a toolset: its name in every channel, its input schema, 
 + kind: str
 + docstring: str
 + description: str
++ << composition >> invoke_line: InvokeLine
 ----
-+ invoked_names(text: str): list[str]
-+ is_invoke_line(line: str): bool
-+ spelled(name: str): str
 + is_called(called: str): bool
 + install_to(destination: str): bool
-+ invoke_line(): str
 + invoke(arguments: dict[str, Any] | None = None, project: Path | str | None = None): Any
 + answer(call: ToolCall): Any
 + on(toolset: Any): AgentTool
@@ -458,6 +455,16 @@ One published member of a toolset: its name in every channel, its input schema, 
 ---<<creates>>--> ToolCall
 ---<<keeps out of the session log the calls annotated>>--> NoSessionLog
 ---<<prepends the sub-agent hand-off for>>--> SubAgentAnnotation
+
+## InvokeLine
+
+Text that holds the `Use MCP tool:` line a skill or command ends with; a tool writes it and the installer reads the tool names back through it.
+
++ InvokeLine(text: str)
+------
++ text: str
++ names: list[str]
++ is_invoke_line: bool
 ---<<hands the project or call to callables annotated>>--> TakesFromCall
 
 ## AgentOperation : AgentTool
@@ -613,31 +620,49 @@ One call's values for a recipe's placeholders: `{{name}}` takes the argument of 
 
 ## ToolCall
 
-One call of a tool as its caller made it: the arguments it sent, the folder of the project the calling chat works on, and that chat.
+One call of a tool as its caller made it: the arguments it sent, the folder of the project the calling chat works on, and the request it answers.
 
-+ ToolCall(arguments: dict[str, Any] | None = None, project: Path | str | None = None, chat: ChatPointer | None = None, tool: str = '', mcp_host: Any = None, answers_a_chat: bool = False)
++ ToolCall(arguments: dict[str, Any] | None = None, project: Path | str | None = None, request: ToolRequest = ToolRequest())
 ------
 + arguments: dict[str, Any]
 + project: Path
-+ << association >> chat: ChatPointer | None
++ << association >> request: ToolRequest
 + chat_id: str
-+ tool: str
-+ mcp_host: Any
-+ answers_a_chat: bool
 + identity: str
 + named_paths: list[str]
 + session: Any
 	// the session open in this call's own project, never the one the process worked on last; a call that names no project works in no session
 ----
-+ sent(arguments: dict[str, Any] | None, project: Path | str | None, tool: str = '', mcp_host: Any = None, answers_a_chat: bool = False): ToolCall
-+ answering(): ToolCall | None
-+ being_answered(): Iterator[ToolCall]
++ sent(arguments: dict[str, Any] | None, project: Path | str | None, request: ToolRequest = ToolRequest()): ToolCall
 + open_sessions_with(opener: SessionOpener): None
 + session_in(project: Path | str): Any
 + session_named(session_file: str): Any
 ---<<takes the chat out of the arguments with>>--> ChatPointer
 ---<<opens sessions through>>--> SessionOpener
 ---<<raises>>--> SessionsNotLoaded
+
+## ToolRequest
+
+The request a call answers: the chat that sent it and, for a call the cdd server answers, the tool it names, the MCP host answering it, and whether that host answers it for a chat.
+
++ ToolRequest(chat: ChatPointer | None = None, tool: str = '', mcp_host: AnsweringMcpHost | None = None, answers_a_chat: bool = False)
+------
++ << association >> chat: ChatPointer | None
++ tool: str
++ << association >> mcp_host: AnsweringMcpHost | None
++ answers_a_chat: bool
+----
++ sent_by(chat: ChatPointer | None): ToolRequest
+
+## CallsBeingAnswered
+
+The call a tool is answering on each thread; the process keeps one, `CALLS_BEING_ANSWERED`.
+
++ CallsBeingAnswered()
+------
++ current: ToolCall | None
+----
++ answering(call: ToolCall): Iterator[ToolCall]
 
 ## ChatPointer
 
@@ -669,7 +694,7 @@ The *Installer* publishes every annotated member of a repository's toolsets into
 
 ## Installer
 
-Publish every annotated member of the toolsets a repository defines into one IDE folder, through the installation of each channel its annotations name, then start the servers the installed files point at. harness/mcp and harness/hooks register their server installations with `installs_through` when they are imported, so this module imports neither.
+Publish every annotated member of the toolsets a repository defines into one IDE folder, through the installation of each channel its annotations name, then start the servers the installed files point at. harness/mcp and harness/hooks register their server installations with `SERVER_CHANNELS` when they are imported, so this module imports neither.
 
 + Installer(ide: str | None = None, path: str | Path | None = None, repo: str | Path)
 ------
@@ -680,33 +705,48 @@ Publish every annotated member of the toolsets a repository defines into one IDE
 + record: InstallRecord
 + << composition >> diagnostics: InstallDiagnostics
 + << composition >> toolsets: RepositoryToolsets
-+ diagnosis: list[str]
++ << composition >> deployment: Deployment
 ----
-+ installs_through(kind: type[ServerInstallation]): None
 + load(project: Path | str): Installer
-+ track(installation: Installation): None
 + clean(): list[str]
 + install(toolsets: Iterable[Any] | None = None, replace: bool = True): Any
-+ install_self(replace: bool = False): InstallChannels
-+ ensure_runtimes(): dict[str, str]
-+ diagnose_after_install(): list[str]
++ install_latest(): int
 + diagnose_install(): str
-+ install_instructions(): str
-+ clean_instructions(): str
-+ diagnose_install_instructions(): str
-+ runtime_instructions(): str
 + diagnose_instructions(): str
----<<loads>>--> AgentToolSet
----<<reads destinations of>>--> AgentTool
----<<creates>>--> FileInstallation
----<<creates one of each registered>>--> ServerInstallation
----<<tracks writes with>>--> Installation
----<<creates>>--> IdeLayout
 ---<<reads toolsets with>>--> RepositoryToolsets
 ---<<writes sections with>>--> InstallDiagnostics
----<<raises>>--> ServersNotRegistered
----<<raises>>--> ToolsetInstallFailed
 ---<<annotated with>>--> NoCatalog
+
+## Deployment
+
+One installer's publishing of the repository's toolsets into its IDE folder: a run writes every channel's files, saves the install record, stands each server up and diagnoses what it wrote.
+
++ Deployment(installer: Installer)
+------
++ << composition >> channels: InstallChannels
++ diagnosis: list[str]
+----
++ run(toolsets: Iterable[ToolsetConfiguration] | None, replace: bool): InstallChannels
++ install_self(replace: bool = False): InstallChannels
++ write_language_adapters(): list[Path]
++ ensure_runtimes(): dict[str, str]
++ diagnose_after_install(): list[str]
+---<<loads>>--> AgentToolSet
+---<<reads destinations of>>--> AgentTool
+---<<creates one of each registered>>--> ServerInstallation
+---<<reads the names of>>--> InvokeLine
+---<<raises>>--> ToolsetInstallFailed
+
+## ServerChannels
+
+The kinds of server installation every install publishes through; the process keeps one, `SERVER_CHANNELS`.
+
++ ServerChannels()
+------
++ kinds: list[type[ServerInstallation]]
+----
++ register(kind: type[ServerInstallation]): None
+---<<raises>>--> ServersNotRegistered
 
 ## InstallDiagnostics
 
@@ -765,10 +805,9 @@ An installation whose files point the IDE at a server process: the MCP entry at 
 
 Write the markdown files of one channel — skills, slash commands, or rules — where the IDE reads them.
 
-+ FileInstallation(layout: IdeLayout, path: Path | str, destination: str = '', mcp_mode: bool = False, repo: Path | str | None = None)
++ FileInstallation(layout: IdeLayout, path: Path | str, channel: FileChannel = FileChannel(), repo: Path | str | None = None)
 ------
-+ destination: str
-+ mcp_mode: bool
++ channel: FileChannel
 ----
 + relative_path(toolset: Any, name: str): Path
 + write(tool: AgentTool): None
@@ -826,7 +865,7 @@ How one IDE lays out the folder CDD installs into: the folder's name in a projec
 + names_mcp_transport: bool
 ----
 + every(): list[IdeLayout]
-+ installed_guidance_kind(path: str): str
++ guidance_kind_of(path: str): str
 
 ## RepositoryToolsets
 
@@ -1341,13 +1380,13 @@ Words and rules an agent follows, read from markdown beside the class.
 + sketch_template: str
 + schema: Schema
 + instructions: str
++ checked_rule_collections: list[RulesCollection]
++ every_rule: list[Rule]
 ----
 + section_text(label: str): str
 + rules(): RulesCollection
-+ checked_rule_collections(): list[RulesCollection]
 + checked_rules(): list[Rule]
 + checked_rules_text(): str
-+ every_rule(): list[Rule]
 + templates(): str
 + rules_after_edit(payload: Any): str
 + schema_guide(): str
@@ -1361,7 +1400,7 @@ Words and rules an agent follows, read from markdown beside the class.
 
 One practice as a class plus its markdown: its identity, overview, shared rules, fidelities, templates, examples, and the set of practices it works with. It holds three parts, each made once: its formats, its part in the knowledge graph, and its schema.
 
-+ PracticeGuidance(format: str | None = None, fidelity: str | None = None, default_workspace_folder: str = '.', formats: dict[str, Any] | None = None)
++ PracticeGuidance(format: str | None = None, fidelity: str | None = None)
 ------
 + sketch_lens: SketchLens
 + SHORT_NAME: str
@@ -1373,6 +1412,7 @@ One practice as a class plus its markdown: its identity, overview, shared rules,
 + << association >> extended: PracticeGuidance | None
 + << association >> companion: PracticeGuidance | None
 + default_workspace_folder: str
++ format_adapters: dict[str, Any]
 + << composition >> formats: PracticeFormats
 + << composition >> reading: PracticeReading
 + format: Format
@@ -1387,22 +1427,21 @@ One practice as a class plus its markdown: its identity, overview, shared rules,
 + fidelity_slugs: list[str]
 + guidance: str
 + instructions: str
++ checked_rule_collections: list[RulesCollection]
++ every_rule: list[Rule]
++ domain_markdown_path: Path
++ scoped_markdown: str
 ----
++ claims(file: Path): bool
 + rules(): RulesCollection
-+ checked_rule_collections(): list[RulesCollection]
-+ every_rule(): list[Rule]
-+ class_key(): str
-+ hold_set(practices: dict[str, PracticeGuidance]): None
++ hold_set(practices: dict[str, PracticeGuidance], supplements: list[Any] | None = None): None
 + answers_to(slug: str): PracticeGuidance | FidelityGuidance | None
-+ fidelity_called(name: str): FidelityGuidance | None
 + work_in(session_output: Any): None
 + generate_output(): str
 + fidelities(): GuidanceCollection
-+ domain_markdown_path(): Path
 + examples(): str
 + render(format: str, content: Any = '', source: str | None = None, previous: str = ''): dict
 	-> PracticeFormats.render
-+ scoped_markdown(): str
 ---<<creates>>--> PracticeFormats
 ---<<creates>>--> PracticeReading
 ---<<creates>>--> Schema
@@ -1418,7 +1457,7 @@ One practice as a class plus its markdown: its identity, overview, shared rules,
 
 One fidelity of a practice, such as the story map: its stage, its outputs, its rules, its template, and the actions that work on it.
 
-+ FidelityGuidance(name: str = '', stage: str = '', default_format: str = '', clean_engineering: FidelityGuidance | None = None)
++ FidelityGuidance(name: str = '', stage: str = '')
 ------
 + session_output: Any
 + judged_on: str
@@ -1427,6 +1466,7 @@ One fidelity of a practice, such as the story map: its stage, its outputs, its r
 + approach_stage: ApproachStage | None
 + is_judged_on_graph: bool
 + outputs: dict[str, str | list[str]]
++ << composition >> declared: DeclaredOutputs
 + << association >> practice_guidance: PracticeGuidance | None
 + format: Format
 + default_format: Format
@@ -1444,23 +1484,17 @@ One fidelity of a practice, such as the story map: its stage, its outputs, its r
 + template_file: Path | None
 + << composition >> actions: FidelityActions
 + instructions: str
++ checked_rule_collections: list[RulesCollection]
++ every_rule: list[Rule]
 ----
-+ apply_settings(settings: dict[str, Any]): None
++ from_block(name: str, body: str = ''): FidelityGuidance
 + work_in(session_output: Any): None
-+ output_paths(): dict[str, list[str]]
-+ files(): dict[str, list]
-+ has_declared_output(): bool
-+ declares(path: str, format: str = ''): bool
 + schema_guide(): str
 + rules(): RulesCollection
-+ checked_rule_collections(): list[RulesCollection]
-+ every_rule(): list[Rule]
 + generate_output(): str
-+ render(format: str, content: Any = '', source: str | None = None, previous: str = ''): dict
++ render(format: str, content: Any = '', source: str | None = None): dict
 + render_files(format: str, paths: list[str] | str, source: str | None = None): dict
 + guidance_parts(): list[str]
-+ templates_in(format: Format): str
-+ instructions_in(format: Format): str
 ---<<reads its stage from>>--> ApproachStage
 ---<<runs actions through>>--> ActionCatalogue
 ---<<renders through the formats of>>--> PracticeGuidance
@@ -1468,6 +1502,7 @@ One fidelity of a practice, such as the story map: its stage, its outputs, its r
 ---<<creates>>--> Format
 ---<<creates>>--> MarkdownText
 ---<<creates>>--> Name
+---<<holds the files it declares in>>--> DeclaredOutputs
 ---<<annotated with>>--> Identity
 
 ## GuidanceCollection : MarkdownCollection, Guidance
@@ -1479,6 +1514,7 @@ A practice's fidelities, read from its markdown, published together, with the on
 + << association >> current: Guidance | None
 ----
 + child(name: str, body: str = ''): FidelityGuidance
++ called(name: str): FidelityGuidance | None
 + overview(): str
 + guidance(): str
 + rules(): RulesCollection
@@ -1508,6 +1544,21 @@ A path a fidelity declares as its output, as a glob over the session's current r
 + names_one_path: bool
 + pattern: re.Pattern[str]
 ----
+
+## DeclaredOutputs
+
+The files one fidelity declares, made from its outputs: whether a path is one of them, and where they are in the session its practice works in.
+
++ DeclaredOutputs(fidelity: FidelityGuidance, outputs: dict[str, str | list[str]])
+------
++ outputs: dict[str, str | list[str]]
+----
++ includes(path: str, format: str = ''): bool
++ output_paths(): dict[str, list[str]]
++ files(): dict[str, list]
++ has_output(): bool
++ files_to_review(): dict[str, list]
+---<<matches with>>--> DeclaredFile
 
 ## PracticeFormats
 
@@ -1738,6 +1789,8 @@ An action, such as generate, on the guidance a call names, such as stories-story
 + injects_rules: bool
 + << association >> call: ToolCall | None
 + << composition >> work: WorkList
++ << composition >> files: ActionFiles
++ works_in: Any
 + session: Any
 + log: Any
 + graph: Any
@@ -1747,23 +1800,13 @@ An action, such as generate, on the guidance a call names, such as stories-story
 ----
 + for_call(call: ToolCall): GuidanceAction
 	-> ToolCall.session_named
-	-> made_for
-+ made_for(session: Any, call: ToolCall | None = None): GuidanceAction
 + session_for(call: ToolCall): Any
-+ wrote(paths: list[str | Path]): None
-+ source_label(content: str = '', paths: list[str] | str | None = None): str
-+ path_named(named: str | Path): Path
-+ document_named(content: str = '', paths: list[str] | str | None = None): str
 + listed(): list
 + practice_of(item: Any): Any
 + fidelity_of(item: Any): Any
-+ at_fidelity(item: Any): Any
-+ work_on_fidelity(fidelity: FidelityGuidance, format: str = ''): None
-+ each(operation: Callable[[Any], Any]): list
 + run(operation: Callable[[Any], Any], action: str = ''): list
+	-> WorkList.each
 + log_running(action: str): None
-+ as_tool(): GuidanceAction
-+ rules_to_follow(): str
 + begin(guidance: GuidanceArg | None = None, action: str = ''): str
 + act_quickly(): str
 + inject_rules(payload: HookPayload): dict[str, Any]
@@ -1779,6 +1822,18 @@ An action, such as generate, on the guidance a call names, such as stories-story
 ---<<reads tool input of>>--> HookPayload
 ---<<injects rules on the event>>--> Hook
 ---<<annotated with>>--> Toast
+
+## ActionFiles
+
+The files one guidance action names and writes in the session it works in.
+
++ ActionFiles(action: GuidanceAction)
+------
+----
++ path_named(named: str | Path): Path
++ read(content: str = '', paths: list[str] | str | None = None): str
++ wrote(paths: list[str | Path]): None
+---<<refreshes the graph of>>--> GuidanceAction
 
 ## GuidanceAgentOperation : AgentOperation
 
@@ -1827,6 +1882,7 @@ One graph. Builders fill nodes, edges, and rules; the explorer reads the tree. E
 + scope: LoadScope
 + << composition >> applied_patterns: PatternOverlays
 + << composition >> schema_edges: SchemaEdges
++ << composition >> edges: GraphEdges
 + << composition >> explorer: GraphExplorer
 + folder: str
 + overlays: list[str]
@@ -1835,13 +1891,8 @@ One graph. Builders fill nodes, edges, and rules; the explorer reads the tree. E
 + for_call(call: ToolCall): Graph
 + open(folder: Path): None
 + open_saved(folder: Path): None
-+ report_progress(message: str): None
 + practice(key: str): PracticeGuidance
 + node(node_id: str): Node | None
-+ link(kind: str, parent: Node, child: Node, display: Display = 'direct'): None
-+ record(edge_type: EdgeType, parent: Node, child: Node): None
-+ edges_from(kind: str, parent: Node): list[Edge]
-+ direct_parent(child: Node): Node | None
 + restored_from(saved: SavedGraph): None
 + load_working_copy(folder: str, practices: dict[str, str], database: str | None = None, overlays: list[str] | None = None, force: bool = False, call: ToolCall | None = None): GraphLoaded
 + load_files(folder: str, practices: list[str], files: list[str], overlays: list[str] | None = None, call: ToolCall | None = None): GraphLoaded
@@ -1888,10 +1939,6 @@ The practices one graph holds, which the graph makes once and keeps (`graph.prac
 + open_chosen(): None
 + reopen(saved: SavedGraph, folder: Path): None
 + hold(saved: SavedGraph, folder: Path | None): None
-+ take(changes: GraphChanges): None
-+ forget(files: list[Path]): None
-+ in_reading_order(): list[PracticeGuidance]
-+ check(): None
 + rebuild_trees(): None
 ---<<keeps>>--> PracticeGuidance
 ---<<reads the part of a practice from>>--> PracticeNodes
@@ -1914,16 +1961,14 @@ One practice's part of the graph that holds it: the root node its explorer tree 
 + root: Node
 + node_types: list[str]
 ----
-+ changed(): None
 + open(root: Path | None): None
 + close(): None
 + nodes(type: str | None = None): list[Node]
 + nodes_read_now(type: str | None = None): list[Node]
-+ files_from_root(files: Iterable[Path]): set[str]
 + node(node_id: str): Node | None
 + holds(node_id: str): bool
 + offer_node_types(types: Iterable[str]): None
-+ add(node: Node, node_id: str, file: str, start_line: int, end_line: int): Node
++ add(node: Node, node_id: str, location: Location): Node
 + add_named(type: str, node_id: str, name: str, source: Source): Node
 + hold(node: Node): None
 + release(node: Node): None
@@ -1933,10 +1978,7 @@ One practice's part of the graph that holds it: the root node its explorer tree 
 + put_in_source_order(): None
 + renew_rules(): None
 + rebuild_tree(): None
-+ take_saved(kept: SavedNode): None
 + edges(kind: str | None = None): list[Edge]
-+ record(edge_type: EdgeType, parent: Node, child: Node): None
-+ drop_edges(dropped: Callable[[Edge], bool]): list[Edge]
 ---<<keeps>>--> Node
 ---<<creates>>--> Source
 ---<<creates>>--> EdgeIndex
@@ -1989,17 +2031,14 @@ children is the list populate writes on this node. Direct edges are the children
 + get_fact(key: str, default = None): None
 + merge_fact(key: str, values: list): None
 + has_fact(key: str): bool
-+ rule_checks(): dict
-+ applying_rule_types(): set[str]
 + forget_rules(): None
 + leave_tree(): None
 + place(file: str, start_line: int, end_line: int): None
 + populate(parent: Node | None = None): None
 + serialize(seen: set[str] | None = None, via: Node | None = None, stack: set[str] | None = None): ExplorerEntry
-+ rule_category(): GraphRulesCollection | None
 ---<<reads its part of the graph from>>--> PracticeReading
 ---<<calls changed on>>--> PracticeNodes
----<<calls edges_from on>>--> Graph
+---<<calls from_parent on>>--> GraphEdges
 ---<<reads schema from>>--> PracticeRuleRun
 ---<<creates>>--> GraphRulesCollection
 
@@ -2017,17 +2056,15 @@ Base model object for one practice. An object made without a graph is detached: 
 + register_practice(practice_class: type): None
 + practice_kind(): type
 + semantic_type(): str
-+ holds_parts(parts: ModelChildren): None
-+ holds_references(references: ModelReferences): None
++ finish_building(): None
++ keeps_list(listed: ModelChildren | ModelReferences): None
 + attach(child, kind: str): None
-+ detach(child, kind: str): None
-+ refer(target, kind: str): None
 + join(practice): None
 + subtree(): list[ModelNode]
 + batch_schema_sync(): Iterator[None]
 ---<<joins a practice through>>--> GraphPractices
 ---<<calls add on>>--> PracticeNodes
----<<calls record on>>--> Graph
+---<<calls record on>>--> GraphEdges
 ---<<calls held on>>--> SchemaEdges
 ---<<keeps>>--> ModelChildren
 ---<<keeps>>--> ModelReferences
@@ -2160,18 +2197,16 @@ The practice one load checks, the graph that holds it, and the folder its source
 + child_count(node, edge_kinds: tuple[str, ...]): int
 + children(node, edge_kind: str): list
 + node_data(node): dict
-+ scenario_outline(node): bool
-+ scenario_evidence(node): list[str]
 ---<<calls nodes on>>--> PracticeNodes
 ---<<calls edges on>>--> PracticeNodes
----<<calls edges_from on>>--> Graph
+---<<calls from_parent on>>--> GraphEdges
 ---<<calls node on>>--> Graph
 
 ## Violation
 
 A rule broken at one place: the rule and the practice that checks it, the node it was found on, what that node is (`Operation `checkout``), the file and lines, the message, and how severe it is. A violation found on a graph node is a *NodeViolation*, which holds the node's rule that found it (`NodeViolation.at_node`).
 
-+ Violation(rule: str, message: str, practice: str = '', node_id: str = '', subject: str = '', location: str = '', line: int | None = None, end_line: int | None = None, severity: str = 'error', source: list[SourceLine] | None = None)
++ Violation(found_by: FoundBy, message: str, location: Location = NOWHERE)
 ------
 + rule: str
 + practice: str
@@ -2188,7 +2223,7 @@ A rule broken at one place: the rule and the practice that checks it, the node i
 + from_data(data: dict): Violation
 + by_rule(violations: list[Violation]): dict[str, list[Violation]]
 + is_under(prefixes: list[str]): bool
-+ in_file(location: str, file: Path, lines_before: int, lines_after: int): Violation
++ in_file(location: str, file: Path): Violation
 ---<<annotated with>>--> SourceFile
 ---<<keeps>>--> SourceLine
 
@@ -2505,12 +2540,11 @@ The *Catalog* renders CDD's practices, actions, and approach as pages; a *Catalo
 
 The top-level entry point - the only class `generate_cdd_catalog.py` calls. Holds the project it is generated for, and writes every page with the parts it holds: its project, its brand, its approach copy, and its practices.
 
-+ Catalog(repo_url: str = '', ref: str = '', out_root: str = '', brands_root: str | Path | None = None, approach_md_path: str | Path | None = None, project: str | Path | None = None)
++ Catalog(project: CatalogProject | None = None, citation: GitCitation | None = None, brand: Brand | None = None)
 ------
 + << composition >> project: CatalogProject
-+ << composition >> citation: GitCitation
-+ approach_md_path: Path
-+ << composition >> brand: Brand
++ << association >> citation: GitCitation
++ << association >> brand: Brand
 + repo_url: str
 + out_root: Path
 + << composition >> practices: list[CatalogPractice]
@@ -2557,13 +2591,11 @@ One practice as the catalog shows it: the live `PracticeGuidance`, the catalog c
 + on_board: bool
 + examples_folder: Path
 + shared_markdown: str
++ << association >> skills: CatalogSkills
 ----
-+ skill_install(): FileInstallation
 + of_practices(practices: Iterable[PracticeGuidance]): list[CatalogPractice]
 + load_all(): list[CatalogPractice]
 	-> PracticeCatalogue.create_all
-+ giving_stage_examples(practices: list[CatalogPractice]): CatalogPractice | None
-+ skill_of(guidance: PracticeGuidance | FidelityGuidance): str
 + fidelity_in(column: StageColumn): CatalogFidelity | None
 + fidelity_at(stage: str): CatalogFidelity | None
 + fidelity_href(fidelity: FidelityGuidance): str
@@ -2572,12 +2604,22 @@ One practice as the catalog shows it: the live `PracticeGuidance`, the catalog c
 ---<<creates>>--> CatalogFidelity
 ---<<reads fidelities of>>--> PracticeGuidance
 ---<<lists practices from>>--> PracticeCatalogue
----<<creates>>--> FileInstallation
----<<creates>>--> IdeLayout
----<<reads constants of>>--> InstallDestination
+---<<names its skills through>>--> CatalogSkills
 ---<<creates>>--> Name
 ---<<reads a file's format with>>--> Format
 ---<<leaves out what is annotated>>--> NoCatalog
+
+## CatalogSkills
+
+The skill install whose folder names are the slash commands the catalog shows, made once for the practices of one catalog.
+
++ CatalogSkills()
+------
+----
++ skill_of(guidance: PracticeGuidance | FidelityGuidance): str
+---<<creates>>--> FileInstallation
+---<<creates>>--> IdeLayout
+---<<reads constants of>>--> InstallDestination
 
 ## CatalogFidelity
 
@@ -2967,7 +3009,7 @@ One named piece of work in a project, kept in `.sessions/{name}/`. It holds wher
 + read_file(path: str = ''): FileText
 	-> SessionFiles.read
 + mark_loop(call: ToolCall): str
-	-> ChatLog.mark_loop
+	-> ChatLog.next_loop
 + read_loop(number: int | None = None): str
 	-> SessionLog.read_loop
 + append_log(call: ToolCall, note: str = '', loop: int | None = None, paths: list[str] | None = None): str
@@ -3339,7 +3381,7 @@ Show one stage of the board, the tickets at work in it, and how many it takes be
 	-> Board.load
 + requires(fidelity: FidelityGuidance): bool
 + set_wip_limit(limit: int): Stage
-	-> Board.set_wip_limit
+	-> BoardFile.set_wip_limit
 ---<<reads title of>>--> ApproachStage
 ---<<reads steps of>>--> ApproachStage
 ---<<annotated with>>--> LanguageAdapter
@@ -3413,18 +3455,18 @@ Show one work session as a unit of delivery and move it through the stages. Its 
 	-> StageMarks.mark
 	-> StageMarks.enter
 + move_previous(): Ticket | BacklogItem
-	-> Session.reopen
+	-> SessionFolder.reopen
 	-> StageMarks.place
 + move_to(stage: str, done: bool = False): Ticket | BacklogItem
 	-> StageMarks.place
 + close(leaving: list[str] | None = None): Ticket
 	-> TicketCheckout.write_handoff
 	-> TicketCheckout.free_worktree
-	-> Session.move_to_closed
+	-> SessionFolder.move_to_closed
 	-> TicketCheckout.save_work
 	-> TicketCheckout.return_to_default_branch
 + archive(): Ticket
-	-> Session.move_to_archive
+	-> SessionFolder.move_to_archive
 + violations(): Report
 	-> FidelityProgress.report
 	-> Report.from_reports
@@ -3476,7 +3518,7 @@ Where one ticket's work sits in git: its own branch, the worktree that branch is
 + open_choices: OpenChoices
 ----
 + assign_chat(chat: str): None
-	-> Session.save_fields
+	-> SessionRecord.save_fields
 + open(opening: list[str]): None
 	-> Repo.switch_worktree
 	-> Repo.switch_branch
@@ -3555,7 +3597,7 @@ Hold an idea not yet started. Starting it opens a ticket for it.
 + from_ticket(ticket: Ticket): BacklogItem
 + write_if_missing(title: str): None
 + start(scope: str = 'feature', path: str = ''): Ticket
-	-> Session.keep_file
+	-> SessionFolder.keep_file
 + move_next(): Ticket
 + move_previous(): BacklogItem
 ---<<creates>>--> Name
@@ -3660,7 +3702,7 @@ A validation report of one fidelity, saved in a session folder, with the graph t
 + is_judged_failing: bool
 ----
 + from_fidelity(fidelity: FidelityGuidance): ReportFile | None
-	-> FidelitySessionOutput.reports
+	-> ValidationReports.listed
 + report(): Report
 ---<<reads the saved graph through>>--> SavedGraph
 ---<<reads the agent's judgment as>>--> Judgment
@@ -3733,7 +3775,7 @@ Audit what the IDE sends the model — one `@Hook` per event, each writing that 
 ----
 + log_for(payload: HookPayload): HookLog
 	-> HookPayload.session
-	-> Session.hook_log
+	-> SessionFolder.hook_log
 + before_submit_prompt(payload: HookPayload): dict
 + before_read_file(payload: HookPayload): dict
 + pre_tool_use(payload: HookPayload): dict
@@ -4043,7 +4085,7 @@ One class model that every format reads and writes: modules holding classes.
 
 A named module boundary grouping closely related classes.
 
-+ Module(name: str, sequential_order: int, description: str = '', seam: str = '', constraint: str = '', seam_terms: list[str] | None = None, dependencies: list[str] | None = None, graph: Graph | None = None)
++ Module(name: str, sequential_order: int, graph: Graph | None = None)
 ------
 + class_type: type
 + description: str
@@ -4066,9 +4108,7 @@ A named module boundary grouping closely related classes.
 + load_class(source: OoadClass): OoadClass
 + take_lines(text: str): None
 + load_source_facts(file: Path, root: Path): None
-+ import_targets(file: Path, root: Path): list[str]
 + load_folder_facts(folder: Path): None
-+ holds_public_source(file_name: str): bool
 + take_public_sources(sources: list[Module]): None
 + reconcile_children(source: OoadNode): None
 ---<<creates>>--> OoadClass
@@ -4078,7 +4118,7 @@ A named module boundary grouping closely related classes.
 
 A class in the model: what it remembers, what it does, and how it relates.
 
-+ OoadClass(name: str, sequential_order: int, intent: str = '', properties: list[Property] | None = None, operations: list[Operation] | None = None, relationships: list[Relationship] | None = None, collaborators: list[str] | None = None, line: int | None = None, graph: Graph | None = None)
++ OoadClass(name: str, sequential_order: int, intent: str = '')
 ------
 + property_type: type
 + operation_type: type
@@ -4102,7 +4142,6 @@ A class in the model: what it remembers, what it does, and how it relates.
 + update_self(source: OoadNode): None
 + clone(): OoadClass
 + as_record(): dict
-+ load_relationship(source: Relationship): Relationship
 + load_property(source: Property): Property
 + load_operation(source: Operation): Operation
 + reconcile_children(source: OoadNode): None
@@ -4117,7 +4156,7 @@ A class in the model: what it remembers, what it does, and how it relates.
 
 Something a class remembers or derives, with its relationship when its type names a domain class.
 
-+ Property(name: str, sequential_order: int = 0, type_hint: str = '', description: str = '', graph: Graph | None = None)
++ Property(name: str, sequential_order: int = 0, type_hint: str = '')
 ------
 + type_hint: str
 + description: str
@@ -4134,7 +4173,6 @@ Something a class remembers or derives, with its relationship when its type name
 + notes(): list[str]
 + derive_relationship(): None
 + save(): str
-+ render(): str
 + as_record(): dict
 + update_self(source: OoadNode): None
 ---<<keeps>>--> Relationship
@@ -4143,7 +4181,7 @@ Something a class remembers or derives, with its relationship when its type name
 
 Something a class does: its parameters, return, interactions, and invariants.
 
-+ Operation(name: str, sequential_order: int = 0, return_type: str = '', description: str = '', callees: list[str] | None = None, parameters: list[str] | None = None, **fields)
++ Operation(name: str, sequential_order: int = 0, return_type: str = '')
 ------
 + return_type: str
 + callees: list[str]
@@ -4164,7 +4202,6 @@ Something a class does: its parameters, return, interactions, and invariants.
 + take_lines(lines: list[str]): None
 + load_span_facts(): None
 + save(): str
-+ render(): str
 + as_record(): dict
 + update_self(source: OoadNode): None
 + load_parameter(source: Parameter): Parameter
@@ -4271,7 +4308,7 @@ The statements inside one operation, test, or step, kept with the language they 
 
 The source lines around one block of code that no node holds, kept exactly as read, under a `WrittenKey`.
 
-+ WrittenBlock(language: CodeLanguage, key: WrittenKey, lead: list[str], heading: list[str])
++ WrittenBlock(language: CodeLanguage, key: WrittenKey, heading: list[str])
 ------
 + << association >> language: CodeLanguage
 + key: WrittenKey
@@ -4282,14 +4319,21 @@ The source lines around one block of code that no node holds, kept exactly as re
 + inline: str
 ----
 + is_in(language: CodeLanguage, key: WrittenKey): bool
-+ split_inside(lines: list[str], inside: tuple[int, int], children: list[tuple[int, int]]): tuple[list[str], list[list[str]], list[str]]
 + inside_for(body: CodeBody): list[str] | None
+
+## InsideLines
+
+The lines inside one block of a file, which its child blocks divide.
+
++ InsideLines(lines: list[str], inside: tuple[int, int])
+----
++ split(children: list[tuple[int, int]]): tuple[list[str], list[list[str]], list[str]]
 
 ## BraceCall
 
 One call whose last argument is a callback, such as `describe("a cart", () => { ... })` or `story(...)`, and where its parts sit in the text.
 
-+ BraceCall(text: str, start: int, open_paren: int, name: str)
++ BraceCall(text: str, start: int, name: str)
 ------
 + text: str
 + start: int
@@ -4475,27 +4519,29 @@ The story map as the graph holds it: each epic's sub-epics and stories, each sto
 
 ## StoryModel : StoryNode
 
-One story map: its epics and increments, and the texts of the files it was read from.
+One story map: its epics and increments, and the files it was read from (*StorySources*, one *StorySource* each).
 
 + StoryModel(source: StoryModel | Graph | None = None, graph: Graph | None = None)
 ------
 + << composition >> epics: list[Epic]
+	// numbered in the order they stand: an epic appended takes the next number
 + increments: list[Increment]
-+ source_texts: dict[str, str]
++ sources: StorySources
+	// each file the map was read from: its path and text, and the imports, exports, examples and evidence it declares
 + links: StoryMapLinks | None
++ << composition >> descendants: Descendants
+	// every epic and story under the map, the stories a thin slice names, and the node a path names
++ << composition >> test_scenarios: StoryTestScenarios
+	// take(stories, file), add(stories, file), drop(): the scenarios its stories take from the story tests that specify them
++ opened: OpenedStoryMap | UnopenedStoryMap
+	// where it was opened in a session; save() writes it back after every edit
 ----
 + copy_of(source: StoryModel): StoryModel
-+ take_scenarios(stories: list[Story], file: str): None
-+ every_epic(): list[Epic]
-+ every_story(): list[Story]
-+ stories_named(names: list[str]): list[Story]
-+ place_in(file: str): None
-+ append_epic(epic: Epic): None
-+ append_increment(increment: Increment): None
 + record(practice, on_node: Callable[[str], None] | None = None): None
-	// an example's facts are looked up only in source_texts, the files the story map was read from
+	// an example's facts are looked up only in sources, the files the story map was read from
 + clone(): StoryModel
 ---<<keeps>>--> Epic
+---<<reads its files from>>--> StorySources
 ---<<records through>>--> StoryRecording
 
 ## Epic : StoryNode
@@ -4510,22 +4556,14 @@ An epic; a nested epic is an epic whose parent is an epic.
 + is_sub_epic: bool
 + top_epic: Epic
 + depth: int
++ << composition >> descendants: Descendants
+	// every epic and story under it, and place_in(file)
++ << composition >> columns: EpicColumns
+	// leaf_epics(), estimate_label(), has_estimate(), span(), diagram_span(), tree_depth(): how a drawn map lays it out
 ----
-+ estimate_label(): str
-+ leaf_epics(): list[Epic]
 + record(recording: StoryRecording, parent): None
-+ first_story_file(): str
-+ evidence_in(recording: StoryRecording, story_file: str): list[str]
 + clone(): Epic
 + load_map_facts(): None
-+ every_epic(): list[Epic]
-+ every_story(): list[Story]
-+ append_epic(epic: Epic): None
-+ append_story(story: Story): None
-+ place_in(file: str): None
-+ span_columns(): int
-+ diagram_span_columns(): int
-+ tree_depth(): int
 ---<<keeps>>--> Story
 
 ## Story : StoryNode

@@ -3,7 +3,7 @@ from expects import contain, equal, expect
 
 from mamba import description, it
 
-from harness.diagnostics.app import App
+from harness.diagnostics.app import APPS
 from space.kanban.board_app import APP_FOLDER, BOARD_APP_PORTS, BOARD_SERVER, KANBAN_APP, STORY_UI_APP, STORY_UI_FOLDER
 
 
@@ -12,7 +12,7 @@ with description("the session board's apps"):
         expect(list(BOARD_APP_PORTS.of("board"))).to(equal(BOARD_APP_PORTS.file.read()["board"]))
 
     with it("should register the CDD Kanban and the Story UI editor with every app"):
-        expect(App.registered()).to(contain(KANBAN_APP, STORY_UI_APP))
+        expect(APPS.registered).to(contain(KANBAN_APP, STORY_UI_APP))
 
     with it("should give the CDD Kanban the board's app folder and server"):
         expect((KANBAN_APP.folder, KANBAN_APP.server)).to(equal((APP_FOLDER, BOARD_SERVER)))

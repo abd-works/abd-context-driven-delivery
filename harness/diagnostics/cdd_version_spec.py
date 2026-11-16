@@ -1,4 +1,4 @@
-"""The CDD version a chat runs, read against the latest on origin main, as the chat bar's version badge shows it.
+"""The CDD version a chat runs, read against the latest release on origin (its newest v* tag), as the chat bar's version badge shows it.
 
 Git is stubbed at the one boundary *CddVersion* runs it through, so this spec reaches no network."""
 import shutil
@@ -18,20 +18,20 @@ def pyproject(version: str) -> str:
 
 
 class OriginStub:
-    """Git in a checkout whose origin main holds pyproject.toml at one version, or that origin cannot be reached."""
+    """Git in a checkout whose fetched tags hold one latest release, newest first as ``--sort=-v:refname`` lists them,
+    or none; or whose origin cannot be reached."""
 
-    def __init__(self, latest: str | None, is_reachable: bool = True) -> None:
-        self._latest = latest
+    def __init__(self, latest: str | None, is_reachable: bool = True, folder: Path = Path(), tags: list[str] | None = None) -> None:
+        self.folder = folder
+        self._tags = tags if tags is not None else ([f"v{latest}"] if latest else [])
         self._is_reachable = is_reachable
         self.ran: list[tuple[str, ...]] = []
 
     def run(self, *args: str, timeout: float | None = None) -> str:
         self.ran.append(args)
         if args[0] == "fetch" and not self._is_reachable:
-            raise RepoConnectError("Cannot connect git: git fetch origin main failed: could not resolve host.")
-        if args[0] == "show" and self._latest is None:
-            raise RepoConnectError("Cannot connect git: git show origin/main:pyproject.toml failed: unknown revision.")
-        return pyproject(self._latest) if args[0] == "show" else ""
+            raise RepoConnectError("Cannot connect git: git fetch --tags origin failed: could not resolve host.")
+        return "\n".join(self._tags) if args[0] == "tag" else ""
 
 
 with description("the CDD version a chat runs") as self:
@@ -44,12 +44,17 @@ with description("the CDD version a chat runs") as self:
 
     def checked(self, origin: OriginStub) -> CddVersion:
         self.origin = origin
-        return CddVersion(self.checkout, git=origin).check()
+        origin.folder = self.checkout
+        return CddVersion(origin).check()
 
     with context("checked"):
-        with it("should fetch origin main before reading its version"):
+        with it("should fetch origin's tags before reading the latest release"):
             self.checked(OriginStub("0.1.0"))
-            expect(self.origin.ran[0]).to(equal(("fetch", "origin", "main")))
+            expect(self.origin.ran[0]).to(equal(("fetch", "--tags", "origin")))
+
+        with it("should read the latest release from the release tags, newest version first"):
+            _ = self.checked(OriginStub("0.1.0")).latest
+            expect(self.origin.ran).to(contain(("tag", "--list", "v*", "--sort=-v:refname")))
 
         with it("should be answered when it comes back, since its fetch waits on origin"):
             expect(LongCall.annotates(CddVersion.check)).to(be_true)
@@ -60,39 +65,44 @@ with description("the CDD version a chat runs") as self:
     # The chat bar reads it after every turn, so a version changed on disk shows at once without asking origin each time.
     with context("read again without fetching"):
         with before.each:
-            self.origin = OriginStub("0.2.0")
+            self.origin = OriginStub("0.2.0", folder=self.checkout)
             (self.checkout / "pyproject.toml").write_text(pyproject("0.2.0"), encoding="utf-8")
-            self.read = CddVersion(self.checkout, git=self.origin).read()
+            self.read = CddVersion(self.origin).read()
 
-        with it("should not fetch origin main"):
+        with it("should not fetch origin"):
             expect([args[0] for args in self.origin.ran]).not_to(contain("fetch"))
 
         with it("should name the version now on disk"):
             expect(self.read.version).to(equal("v0.2"))
 
-        with it("should read against the version origin main had when last fetched"):
+        with it("should read against the latest release tag as last fetched"):
             expect(self.read.standing).to(equal(VersionStanding.CURRENT))
 
-    with context("that origin main holds the same version"):
+    with context("that the latest release is the same version"):
         with it("should read current"):
             expect(self.checked(OriginStub("0.1.3")).standing).to(equal(VersionStanding.CURRENT))
 
-    with context("that origin main holds a newer minor version"):
+    with context("that the latest release is a newer minor version"):
         with it("should read behind by a minor version"):
             expect(self.checked(OriginStub("0.2.0")).standing).to(equal(VersionStanding.BEHIND_MINOR))
 
         with it("should say which version is latest and that pressing the badge updates"):
             expect(self.checked(OriginStub("0.2.0")).summary).to(contain("v0.2", "update and reinstall"))
 
-    with context("that origin main holds a newer major version"):
+    with context("that the latest release is a newer major version"):
         with it("should read behind by a major version"):
             expect(self.checked(OriginStub("1.0.0")).standing).to(equal(VersionStanding.BEHIND_MAJOR))
 
-    with context("that origin main cannot be reached"):
-        with it("should read the version origin main had when last fetched"):
+    # Only a tag /release pushed is a release; other tags, such as design-system-setup or v-next, are not.
+    with context("that origin also holds tags that are not releases"):
+        with it("should read the newest release tag among them"):
+            expect(self.checked(OriginStub(None, tags=["v-next", "v0.3.0", "v0.2.0"])).latest).to(equal("v0.3"))
+
+    with context("that origin cannot be reached"):
+        with it("should read the latest release tag as last fetched"):
             expect(self.checked(OriginStub("0.2.0", is_reachable=False)).standing).to(equal(VersionStanding.BEHIND_MINOR))
 
-    with context("that origin main has never been fetched and cannot be reached"):
+    with context("that no release tag has been fetched and origin cannot be reached"):
         with it("should read unknown"):
             expect(self.checked(OriginStub(None, is_reachable=False)).standing).to(equal(VersionStanding.UNKNOWN))
 
@@ -104,8 +114,8 @@ with description("the next CDD version") as self:
     with before.each:
         self.project = Path(tempfile.mkdtemp(prefix="cdd-next-version-"))
         (self.project / "pyproject.toml").write_text(pyproject("0.1.0") + '\n[tool.setuptools]\npackages = []\n', encoding="utf-8")
-        self.project_git = OriginStub("0.1.0")
-        self.subject = CddVersion(self.project, git=OriginStub("0.1.0"), project=self.project, project_git=self.project_git)
+        self.project_git = OriginStub("0.1.0", folder=self.project)
+        self.subject = CddVersion(OriginStub("0.1.0", folder=self.project), self.project_git)
 
     with after.each:
         shutil.rmtree(self.project, ignore_errors=True)

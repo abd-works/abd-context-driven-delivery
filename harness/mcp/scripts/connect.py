@@ -41,7 +41,7 @@ PING_SECONDS = 2
 # chat. The framework that starts a server loads only when none answers.
 def main() -> None:
     import_runtime()
-    from harness.mcp.mcp_address import CHAT_HEADER, CHAT_PROCESS_HEADER, PROJECT_HEADER, McpAddress
+    from harness.mcp.mcp_address import McpAddress
     from harness.process.claude_chat_process import ClaudeChatProcess
 
     address = McpAddress()
@@ -49,8 +49,7 @@ def main() -> None:
     if START_FLAG in sys.argv[1:]:
         return
     process = ClaudeChatProcess.from_ancestors()
-    chat_process = {CHAT_PROCESS_HEADER: str(process.pid)} if process is not None else {}
-    print(json.dumps(answer(sys.argv[1:], address.url, PROJECT_HEADER, CHAT_HEADER, chat_process)))
+    print(json.dumps(answer(sys.argv[1:], address, process.pid if process is not None else None)))
 
 
 def ensure_server(address: McpAddress) -> None:
@@ -94,20 +93,22 @@ def _forget_partial_imports() -> None:
         del sys.modules[name]
 
 
-def answer(arguments: list[str], url: str, project_header: str, chat_header: str, chat_process: dict[str, str] | None = None) -> dict:
+def answer(arguments: list[str], address: McpAddress, chat_process: int | None = None) -> dict:
     """What the script prints: the headers alone for an IDE's ``headersHelper``, or, asked with ``--address``, the
     server's address with the headers, for a language adapter that connects on its own. A Claude Code chat's id goes
-    in the chat header, and chat_process, the header naming the Claude Code process that runs this script, goes with
-    it, so the server reads the folder the chat's session works in now on every call. A language adapter is a server
+    in the chat header, and chat_process, the Claude Code process that runs this script, goes with it, so the server reads the folder the chat's session works in now on every call. A language adapter is a server
     of its own, such as the session board, that serves every chat, so it names only its project: carrying the chat
     that happened to start it would make the cdd server follow that chat's folder instead."""
+    from harness.mcp.mcp_address import CHAT_HEADER, CHAT_PROCESS_HEADER, PROJECT_HEADER
+
     is_language_adapter = ADDRESS_FLAG in arguments
+    names_its_process = not is_language_adapter and chat_process is not None
     headers = {
-        project_header: project_folder([word for word in arguments if word != ADDRESS_FLAG]),
-        chat_header: UNNAMED_CHAT if is_language_adapter else os.environ.get(CHAT_ID_VARIABLE, "").strip() or UNNAMED_CHAT,
-        **({} if is_language_adapter else chat_process or {}),
+        PROJECT_HEADER: project_folder([word for word in arguments if word != ADDRESS_FLAG]),
+        CHAT_HEADER: UNNAMED_CHAT if is_language_adapter else os.environ.get(CHAT_ID_VARIABLE, "").strip() or UNNAMED_CHAT,
+        **({CHAT_PROCESS_HEADER: str(chat_process)} if names_its_process else {}),
     }
-    return {"url": url, "headers": headers} if is_language_adapter else headers
+    return {"url": address.url, "headers": headers} if is_language_adapter else headers
 
 
 def project_folder(arguments: list[str]) -> str:

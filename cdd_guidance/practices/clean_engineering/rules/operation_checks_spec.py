@@ -96,10 +96,10 @@ with description("Operation rules over a file's operations"):
             self.private_method.check()
 
         with it("should measure a module function as its own operation"):
-            expect(_hits("keep-operations-small-focused", self.own_operation)).to(equal(["Operation '_parse' is 27 lines (max 20)."]))
+            expect(_hits("keep-operations-small-focused", self.own_operation)).to(equal(["Operation '_parse' is 26 statements (max 20)."]))
 
         with it("should flag a long property getter"):
-            expect(_hits("keep-operations-small-focused", self.getter)).to(equal(["Property 'total' is 28 lines (max 20)."]))
+            expect(_hits("keep-operations-small-focused", self.getter)).to(equal(["Property 'total' is 27 statements (max 20)."]))
 
         with it("should flag a long TypeScript constructor"):
             expect(_hits("keep-operations-small-focused", self.constructor)).to(have_len(1))

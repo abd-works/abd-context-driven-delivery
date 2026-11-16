@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from 'react'
 
 import { useBoard } from '../shared/board-context'
+import type { PracticeClient } from '../board/practice-client'
 import type { RootChoice } from '../shared/board-store'
 import { TICKET_ROOT } from './root-choice-client'
 import type { TicketClient } from './ticket-client'
@@ -39,19 +40,9 @@ function RootsListView({ ticket }: { ticket: TicketClient }) {
     <>
       <RootLineView label="Session" root={ticket.session.workpath} standing="" onChange={() => void page.roots.browse(TICKET_ROOT, ticket.session.workpath)} />
       <div className="dialog-group-heading">PRACTICES</div>
-      {practices.map(practice => {
-        const { root, is_root_chosen: isChosen } = ticket.session.practices[practice.key]!
-        return (
-          <RootLineView
-            key={practice.key}
-            label={practice.name}
-            root={root}
-            standing={isChosen ? 'chosen' : 'default'}
-            onChange={() => void page.roots.browse(practice.key, root)}
-            onDefault={isChosen ? () => void page.roots.useDefault(practice.key) : undefined}
-          />
-        )
-      })}
+      {practices.map(practice => (
+        <PracticeRootView key={practice.key} ticket={ticket} practice={practice} />
+      ))}
       <div className="dialog-actions">
         <button className="action primary" type="button" autoFocus onClick={() => page.roots.close()}>
           Done
@@ -61,9 +52,23 @@ function RootsListView({ ticket }: { ticket: TicketClient }) {
   )
 }
 
+// One practice's root: the folder it writes under, chosen or its default, with a way back to the default once chosen.
+function PracticeRootView({ ticket, practice }: { ticket: TicketClient; practice: PracticeClient }) {
+  const { page } = useBoard()
+  const { root, is_root_chosen: isChosen } = ticket.session.practices[practice.key]!
+  return (
+    <RootLineView
+      label={practice.name}
+      root={root}
+      standing={isChosen ? 'chosen' : 'default'}
+      onChange={() => void page.roots.browse(practice.key, root)}
+      onDefault={isChosen ? () => void page.roots.useDefault(practice.key) : undefined}
+    />
+  )
+}
+
 function FolderBrowserView({ browsing }: { browsing: NonNullable<RootChoice['browsing']> }) {
   const { page } = useBoard()
-  const name = (folder: string) => folder.split('/').at(-1)
   return (
     <>
       <div className="folder-place">
@@ -72,17 +77,7 @@ function FolderBrowserView({ browsing }: { browsing: NonNullable<RootChoice['bro
         </button>
         <span className="root-path">{shownPath(browsing.path)}</span>
       </div>
-      <div className="folder-list" role="list" aria-label="Folders">
-        {browsing.folders.length ? (
-          browsing.folders.map(folder => (
-            <button key={folder} className="folder-entry-button" role="listitem" type="button" onClick={() => void page.roots.browse(browsing.target, folder)}>
-              {name(folder)}/
-            </button>
-          ))
-        ) : (
-          <span className="root-standing">No folders inside.</span>
-        )}
-      </div>
+      <FolderListView browsing={browsing} />
       <div className="dialog-actions">
         <button className="action" type="button" onClick={() => page.roots.stopBrowsing()}>
           Cancel
@@ -92,6 +87,25 @@ function FolderBrowserView({ browsing }: { browsing: NonNullable<RootChoice['bro
         </button>
       </div>
     </>
+  )
+}
+
+// The folders inside the one browsed, each a press that browses into it.
+function FolderListView({ browsing }: { browsing: NonNullable<RootChoice['browsing']> }) {
+  const { page } = useBoard()
+  const name = (folder: string) => folder.split('/').at(-1)
+  return (
+    <div className="folder-list" role="list" aria-label="Folders">
+      {browsing.folders.length ? (
+        browsing.folders.map(folder => (
+          <button key={folder} className="folder-entry-button" role="listitem" type="button" onClick={() => void page.roots.browse(browsing.target, folder)}>
+            {name(folder)}/
+          </button>
+        ))
+      ) : (
+        <span className="root-standing">No folders inside.</span>
+      )}
+    </div>
   )
 }
 

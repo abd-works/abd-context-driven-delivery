@@ -55,33 +55,33 @@ with description("a session's progress cache"):
 
     with context("that has answered a fidelity's question under a key"):
         with before.each:
-            self.cache.answer("stories-story-map", HAS_OUTPUT, "two lines", self.files_found)
+            self.cache.of("stories-story-map").answer(HAS_OUTPUT, "two lines", self.files_found)
 
         with it("should give the kept answer for the same key without working it out again"):
-            self.cache.answer("stories-story-map", HAS_OUTPUT, "two lines", self.files_found)
+            self.cache.of("stories-story-map").answer(HAS_OUTPUT, "two lines", self.files_found)
             expect(self.files_found.times).to(equal(1))
 
         with it("should work the answer out again once the key changes"):
-            self.cache.answer("stories-story-map", HAS_OUTPUT, "three lines", self.files_found)
+            self.cache.of("stories-story-map").answer(HAS_OUTPUT, "three lines", self.files_found)
             expect(self.files_found.times).to(equal(2))
 
         with it("should keep another question's answer apart"):
-            expect(self.cache.answer("stories-story-map", VIOLATION_COUNT, "two lines", lambda: 4)).to(equal(4))
+            expect(self.cache.of("stories-story-map").answer(VIOLATION_COUNT, "two lines", lambda: 4)).to(equal(4))
 
         with it("should give the kept answer to a cache made later for the same folder, once it has written them"):
             _until((self.folder / PROGRESS_CACHE_FILE).is_file)
             later = ProgressCache(self.folder)
-            later.answer("stories-story-map", HAS_OUTPUT, "two lines", self.files_found)
+            later.of("stories-story-map").answer(HAS_OUTPUT, "two lines", self.files_found)
             expect(self.files_found.times).to(equal(1))
 
     with context("that finds its file unreadable"):
         with it("should work the answer out again"):
             (self.folder / PROGRESS_CACHE_FILE).write_text("not json", encoding="utf-8")
-            expect(ProgressCache(self.folder).answer("ddd-model", VIOLATION_COUNT, "one report", lambda: 3)).to(equal(3))
+            expect(ProgressCache(self.folder).of("ddd-model").answer(VIOLATION_COUNT, "one report", lambda: 3)).to(equal(3))
 
     with context("that belongs to a session with no folder yet"):
         with it("should keep its answers while it is held"):
             held = ProgressCache(None)
-            held.answer("ddd-model", HAS_OUTPUT, "one line", self.files_found)
-            held.answer("ddd-model", HAS_OUTPUT, "one line", self.files_found)
+            held.of("ddd-model").answer(HAS_OUTPUT, "one line", self.files_found)
+            held.of("ddd-model").answer(HAS_OUTPUT, "one line", self.files_found)
             expect(self.files_found.times).to(equal(1))

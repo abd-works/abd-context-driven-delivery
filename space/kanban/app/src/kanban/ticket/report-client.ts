@@ -64,7 +64,7 @@ export class ReportClient {
   }
 
   private deliver(prompt: string): Promise<void> {
-    const text = this.ticket.inSession(prompt)
+    const text = this.ticket.prompts.inSession(prompt)
     return this.page.board.sendsFixesDirectly ? this.ticket.chat.command(text) : this.ticket.chat.fill(text)
   }
 

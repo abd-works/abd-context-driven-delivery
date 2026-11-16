@@ -12,6 +12,7 @@ from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
     AgentHarnessError,
     ToolRunDeadline,
     ToolsetInvoke,
+    ToolsetRequest,
     ToolRunTimedOut,
     ToolsRunYaml,
 )
@@ -89,27 +90,27 @@ with description("a toolset run request") as self:
     with context("that names a session the project has"):
         with it("should make the toolset for that session, not the one the project has open"):
             invoke = ToolsetInvoke.create(
-                {"toolset": "cdd_guidance.actions.sketch.sketch:Sketch", "action": "sketch", "session": "checkout-flow"},
+                ToolsetRequest("cdd_guidance.actions.sketch.sketch:Sketch", action="sketch", session="checkout-flow"),
                 self.project.root,
             )
             expect(invoke.toolset.session.name).to(equal("checkout-flow"))
 
     with context("that names neither a tool nor an action"):
         with it("should be refused"):
-            expect(lambda: ToolsetInvoke.for_toolset("pkg:Tool", self.project.root)).to(raise_error(ValueError))
+            expect(lambda: ToolsetRequest("pkg:Tool")).to(raise_error(AgentHarnessError))
 
     with context("that names both a tool and an action"):
         with it("should be refused"):
-            expect(lambda: ToolsetInvoke.for_toolset("pkg:Tool", self.project.root, tool="scan", action="generate")).to(raise_error(ValueError))
+            expect(lambda: ToolsetRequest("pkg:Tool", tool="scan", action="generate")).to(raise_error(AgentHarnessError))
 
     with context("that names an action the toolset does not have"):
         with it("should be refused when the run is made, naming the action"):
-            request = {"toolset": "cdd_guidance.actions.sketch.sketch:Sketch", "action": "draw", "session": "checkout-flow"}
+            request = ToolsetRequest("cdd_guidance.actions.sketch.sketch:Sketch", action="draw", session="checkout-flow")
             expect(lambda: ToolsetInvoke.create(request, self.project.root)).to(raise_error(AgentHarnessError, "unknown action 'draw'"))
 
     with context("that names a session the project does not have"):
         with it("should fail naming that session"):
-            request = {"toolset": "cdd_guidance.actions.sketch.sketch:Sketch", "action": "sketch", "session": "billing"}
+            request = ToolsetRequest("cdd_guidance.actions.sketch.sketch:Sketch", action="sketch", session="billing")
             expect(lambda: ToolsetInvoke.create(request, self.project.root)).to(raise_error(AgentHarnessError, "request names session 'billing', which the project does not have"))
 
     with context("that names no project, while CDD_PROJECT names another"):
@@ -121,7 +122,7 @@ with description("a toolset run request") as self:
 
         with it("should run in the project the spec gives it"):
             invoke = ToolsetInvoke.create(
-                {"toolset": "cdd_guidance.actions.sketch.sketch:Sketch", "action": "sketch", "session": "checkout-flow"},
+                ToolsetRequest("cdd_guidance.actions.sketch.sketch:Sketch", action="sketch", session="checkout-flow"),
                 self.project.root,
             )
             expect(invoke.toolset.session.name).to(equal("checkout-flow"))

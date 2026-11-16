@@ -23,11 +23,28 @@ from harness.installation.repository_toolsets import RepositoryToolsets  # noqa:
 
 RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 
-from harness.catalog_generator.catalog_generator import Catalog
+from harness.catalog_generator.brand import Brand
+from harness.catalog_generator.catalog_generator import Catalog, CatalogProject
 from harness.catalog_generator.git_citation import GitCitation
 
 
 def main(argv: list[str] | None = None) -> None:
+    arguments = _parser().parse_args(argv)
+    # Loading the checkout's toolsets imports the packages that register its practices and actions, as the cdd server
+    # does, so the catalog shows them.
+    RepositoryToolsets(_REPO_ROOT).classes()
+    print(_run(_catalog(arguments), arguments))
+
+
+def _run(catalog: Catalog, arguments: argparse.Namespace) -> str:
+    """Overlay the brand the arguments name on the catalog, or generate the whole catalog, and say what was done."""
+    if arguments.apply_brand:
+        return catalog.apply_brand(arguments.apply_brand)
+    return catalog.generate_catalog(brand=arguments.brand or "")
+
+
+def _parser() -> argparse.ArgumentParser:
+    """The command line: where the catalog goes, the repository and ref its citations name, and its brand."""
     parser = argparse.ArgumentParser(description="Regenerate the CDD HTML catalog.")
     parser.add_argument(
         "--out",
@@ -51,29 +68,16 @@ def main(argv: list[str] | None = None) -> None:
         default=None,
         help="overlay a named brand onto an existing catalog without regenerating",
     )
-    args = parser.parse_args(argv)
-    # Loading the checkout's toolsets imports the packages that register its practices and actions, as the cdd server
-    # does, so the catalog shows them.
-    RepositoryToolsets(_REPO_ROOT).classes()
+    return parser
 
-    citation = GitCitation.from_checkout(_REPO_ROOT)
-    repo_url = args.repo_url or citation.repo_url
-    ref = args.ref or citation.ref
-    out_root = _REPO_ROOT / args.out
 
-    catalog = Catalog(
-        repo_url=repo_url,
-        ref=ref,
-        out_root=str(out_root),
-        brands_root=args.brands,
-        # This command regenerates the checkout it belongs to, whichever folder it is started from.
-        project=_REPO_ROOT,
-    )
-    if args.apply_brand:
-        message = catalog.apply_brand(args.apply_brand)
-    else:
-        message = catalog.generate_catalog(brand=args.brand or "")
-    print(message)
+def _catalog(arguments: argparse.Namespace) -> Catalog:
+    """The catalog of this checkout the arguments name, citing its origin and HEAD unless they name others."""
+    checkout = GitCitation.from_checkout(_REPO_ROOT)
+    citation = GitCitation(arguments.repo_url or checkout.repo_url, arguments.ref or checkout.ref)
+    # This command regenerates the checkout it belongs to, whichever folder it is started from.
+    project = CatalogProject(_REPO_ROOT, _REPO_ROOT / arguments.out)
+    return Catalog(project, citation, Brand(collection=arguments.brands))
 
 
 if __name__ == "__main__":

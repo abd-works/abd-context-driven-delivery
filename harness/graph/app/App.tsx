@@ -1,486 +1,78 @@
-import { useEffect, useRef, useState } from 'react';
-import wordmarkBlack from './brand/abd.works.wordmark.black.svg?url';
-import wordmarkWhite from './brand/abd.works.wordmark.white.svg?url';
-import type { CddProgress } from '@cdd/cdd-shared';
-import type { ExplorerEntryData, FilterData, GraphRuleData, NodeSourceData } from '@cdd/harness/graph/graph';
-import { NO_CHOICES, NO_FILTER, chosen, nodeFilter, type FilterSelection } from './filter/filter-selection';
+import { useState } from 'react';
+import { useExplorerFilter } from './explorer/explorer-filter';
+import { useGraphLoad } from './explorer/graph-load';
+import { useLoadStatus, useServerProgress } from './explorer/load-status';
+import { useOverlays } from './explorer/overlays';
+import { usePageFolder } from './explorer/page-folder';
+import { useSourcePane } from './explorer/source-pane';
 import { FilterView } from './filter/FilterView';
-import { GraphClient } from './graph/GraphClient';
-import { reasonOf } from './graph/graph-failures';
-import { api, failures } from './graph/graph-page';
+import { FolderBar } from './graph/FolderBar';
 import { GraphView } from './graph/GraphView';
-import { childrenOf, isRule, ruleHits, selectionForRule, withBranch, type GraphSelection, type TreeItem } from './graph/graph-selection';
-import { SourceView, type SourceRule } from './source/SourceView';
-import { normalizeInventoryBundle } from './inventory-bundle';
-import { overlayPathLabel } from './labels/overlay-labels';
-import type { ViolationFocus } from './source/violation-prompt';
+import { SiteNav } from './SiteNav';
+import { SourceView } from './source/SourceView';
 
-const LAST_FOLDER = 'cdd-graph-folder';
-const LAST_OVERLAYS = 'cdd-graph-overlays';
-
-// A page opened with ?folder= (the chat bar names the session's workpath) loads that folder; one opened on a project
-// (?project=, from a ticket's graph widget) shows the graph of the session open there, loaded on its practice roots; a
-// page opened with neither shows the folder a person last chose.
-// Every failure goes through failures.fail: shown on the page and sent once to the chat that opened it (?chat=).
-const graphs = new GraphClient(api);
-const FOLDER_QUERY = 'folder';
-
-function openedOnFolder(): string {
-  return new URLSearchParams(window.location.search).get(FOLDER_QUERY)?.trim() ?? '';
-}
-
+// The Graph app's page: the folder its graph is read from, the filter, the tree, and the chosen node's source. Every
+// failure goes through failures.fail: shown on the page and sent once to the chat that opened it (?chat=).
 export function App() {
-  const [theme, setTheme] = useState(() => document.documentElement.dataset.theme ?? '');
-  const [folder, setFolder] = useState(() => openedOnFolder() || api.project || (window.localStorage.getItem(LAST_FOLDER) ?? ''));
-  const [loadedFolder, setLoadedFolder] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(true);
-  const [selection, setSelection] = useState<FilterSelection>(NO_FILTER);
-  // The filter the trees on the page were read with, which a branch opened later is read with too.
-  const shownFilter = useRef<FilterSelection>(NO_FILTER);
-  const [trees, setTrees] = useState<ExplorerEntryData[]>([]);
-  const [practices, setPractices] = useState<string[]>([]);
-  const [nodeTypes, setNodeTypes] = useState<string[]>([]);
-  const [relationships, setRelationships] = useState<string[]>([]);
-  const [rules, setRules] = useState<string[]>([]);
-  const [availableOverlays, setAvailableOverlays] = useState<string[]>([]);
-  const [overlayApplying, setOverlayApplying] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [loadingLabel, setLoadingLabel] = useState('Loading the graph…');
-  const [loadingLog, setLoadingLog] = useState<string[]>([]);
-  const [error, setError] = useState('');
-  const [selectedId, setSelectedId] = useState('');
-  const [activeRule, setActiveRule] = useState('');
-  const [violation, setViolation] = useState<ViolationFocus | null>(null);
-  const [source, setSource] = useState<NodeSourceData | null>(null);
-  // Why the source pane shows no source for the selected node: the graph holds none, or reading it failed.
-  const [sourceNote, setSourceNote] = useState('');
-  const loadGeneration = useRef(0);
-  const loadingRef = useRef(false);
-  loadingRef.current = loading;
-  const engineering = theme === 'engineering';
-
-  function applyTheme(next: '' | 'engineering') {
-    setTheme(next);
-    if (next) {
-      document.documentElement.dataset.theme = next;
-    } else {
-      delete document.documentElement.dataset.theme;
-    }
-    window.localStorage.setItem('kg-theme', next);
-  }
-
-  useEffect(() => {
-    const saved = (openedOnFolder() || api.project || window.localStorage.getItem(LAST_FOLDER))?.trim();
-    if (saved) {
-      void load(saved);
-    }
-  }, []);
-
-  // The session open in the project can change while the page is open, as when the board makes another ticket active, so
-  // a page opened on a project reads it again whenever the person comes back to it; nothing is pushed to it.
-  useEffect(() => {
-    if (!api.project) {
-      return;
-    }
-    const reread = () => {
-      if (!loadingRef.current) {
-        void load(api.project);
-      }
-    };
-    window.addEventListener('focus', reread);
-    return () => window.removeEventListener('focus', reread);
-  }, []);
-
-  useEffect(() => {
-    let stop = false;
-    async function tick() {
-      while (!stop) {
-        try {
-          const steps = (await graphs.api.post<CddProgress[]>('/cdd/progress', {})) ?? [];
-          const newest = steps[steps.length - 1]?.message;
-          if (newest) {
-            setLoadingLog((current) => (current[current.length - 1] === newest ? current : [...current, newest]));
-            if (loadingRef.current) {
-              setLoadingLabel(newest);
-            }
-          }
-        } catch (cause) {
-          const line = `error: Progress check failed: ${reasonOf(cause)}`;
-          setLoadingLog((current) => (current[current.length - 1] === line ? current : [...current, line]));
-          failures.fail(`The Graph app did not read the cdd server's progress: ${reasonOf(cause)}`, 'Reading the progress of the cdd server while the page shows');
-        }
-        await new Promise((resolve) => setTimeout(resolve, 400));
-      }
-    }
-    void tick();
-    return () => {
-      stop = true;
-    };
-  }, []);
-
-  // Every practice the graph can load, each opened on the folder the page loads.
-  async function practiceRoots(root: string): Promise<Record<string, string>> {
-    const names = (await graphs.practiceNames()) ?? [];
-    setPractices(names);
-    return Object.fromEntries(names.map((name) => [name, root]));
-  }
-
-  // The project's open session loads on the roots its practices name, and holds only the practices it works on; a chosen
-  // folder loads every practice from that folder.
-  async function read(root: string, force: boolean) {
-    if (api.project) {
-      setPractices((await graphs.practiceNames()) ?? []);
-      await graphs.loadPracticeRoots();
-      return;
-    }
-    await graphs.loadWorkingCopy(root, await practiceRoots(root), root, readSavedOverlays(), force);
-  }
-
-  async function browse() {
-    try {
-      const chosen = await graphs.chooseFolder();
-      if (!chosen) {
-        return;
-      }
-      setFolder(chosen);
-      await load(chosen);
-    } catch (cause) {
-      failed(cause, 'Choosing the session path in the Graph app');
-    }
-  }
-
-  // A failure of an operation the graph pane shows: kept in the pane, and shown and sent to the opening chat.
-  function failed(cause: unknown, context: string) {
-    setError(reasonOf(cause));
-    failures.fail(reasonOf(cause), context);
-  }
-
-  async function load(root: string, next = selection, force = false) {
-    const trimmed = root.trim();
-    if (!trimmed) {
-      return;
-    }
-    const generation = loadGeneration.current + 1;
-    loadGeneration.current = generation;
-    setLoading(true);
-    setLoadingLabel('Loading the graph…');
-    setLoadingLog([]);
-    setError('');
-    try {
-      await read(trimmed, force);
-      if (generation !== loadGeneration.current) {
-        return;
-      }
-      const bundle = normalizeInventoryBundle(await graphs.inventory());
-      if (generation !== loadGeneration.current) {
-        return;
-      }
-      const synced = { ...next, overlays: bundle.overlays?.length ? bundle.overlays : next.overlays };
-      setAvailableOverlays(bundle.available_overlays ?? []);
-      await offerChoices(synced);
-      await showFilter(synced);
-      setLoadedFolder(trimmed);
-      if (!api.project) {
-        window.localStorage.setItem(LAST_FOLDER, trimmed);
-      }
-      window.localStorage.setItem(LAST_OVERLAYS, JSON.stringify(bundle.overlays));
-      setLoadingLog([]);
-    } catch (cause) {
-      if (generation !== loadGeneration.current) {
-        failures.fail(reasonOf(cause), `Loading the graph of ${trimmed}, a load the page has since started again`);
-        return;
-      }
-      failed(cause, `Loading the graph of ${trimmed}`);
-    } finally {
-      if (generation === loadGeneration.current) {
-        setLoading(false);
-      }
-    }
-  }
-
-  async function choose(selection: GraphSelection) {
-    setSelectedId(selection.nodeId);
-    setActiveRule(selection.rule ?? '');
-    setViolation(selection.violation ?? null);
-    setSourceNote('');
-    try {
-      const opened = await graphs.source(selection.nodeId);
-      const shown = opened?.text != null && opened.file != null ? opened : null;
-      setSource(shown);
-      if (!shown) setSourceNote('The graph holds no source for this node. Load the folder again if it should.');
-    } catch (cause) {
-      setSource(null);
-      setSourceNote(`The source did not open: ${reasonOf(cause)}`);
-      failures.fail(reasonOf(cause), `Opening the source of ${selection.nodeId} in the Graph app`);
-    }
-  }
-
-  async function applyOverlays(overlays: string[]) {
-    const next = { ...selection, overlays };
-    if (!folder.trim()) {
-      setSelection(next);
-      return;
-    }
-    setOverlayApplying(true);
-    setLoading(true);
-    setLoadingLabel('Applying pattern overlays…');
-    setError('');
-    try {
-      const bundle = normalizeInventoryBundle(await graphs.setOverlays(overlays));
-      setAvailableOverlays(bundle.available_overlays ?? []);
-      // The overlays change the node types the practices hold, so the node choice starts again from every one offered.
-      const applied = { ...next, overlays: bundle.overlays?.length ? bundle.overlays : overlays, node_types: [] };
-      await showFilter(chosen(applied, await offerChoices(applied)));
-      window.localStorage.setItem(LAST_OVERLAYS, JSON.stringify(bundle.overlays));
-    } catch (cause) {
-      failed(cause, 'Applying pattern overlays in the Graph app');
-    } finally {
-      setOverlayApplying(false);
-      setLoading(false);
-    }
-  }
-
-  async function addOverlayFolder() {
-    try {
-      const picked = await graphs.chooseOverlayFolder();
-      if (!picked.trim()) {
-        return;
-      }
-      if (selection.overlays.includes(picked)) {
-        return;
-      }
-      await applyOverlays([...selection.overlays, picked]);
-    } catch (cause) {
-      failed(cause, 'Adding a pattern overlay folder in the Graph app');
-    }
-  }
-
-  function removeOverlay(overlay: string) {
-    void applyOverlays(selection.overlays.filter((item) => item !== overlay));
-  }
-
-  function addNamedOverlay(name: string) {
-    if (overlayIsActive(selection.overlays, name)) {
-      return;
-    }
-    void applyOverlays([...selection.overlays, name]);
-  }
-
-
-  // Python's Filter works out what the filter offers: the node types the practices hold, and the relationships and rules
-  // of the node types chosen. practicesBefore names the practices chosen before a change of practice.
-  async function offerChoices(next: FilterSelection, practicesBefore?: string[]): Promise<FilterData> {
-    const choices = (await graphs.filterChoices(next.practices, next.node_types, practicesBefore)) ?? NO_CHOICES;
-    setNodeTypes(choices.offered_node_types);
-    setRelationships(choices.relationships);
-    setRules(choices.rules);
-    return choices;
-  }
-
-  // Python's Filter keeps the nodes the selection matches, with the way to each, in every practice it names.
-  async function showFilter(resolved: FilterSelection) {
-    setSelection(resolved);
-    shownFilter.current = resolved;
-    setTrees((await graphs.explorerTrees(nodeFilter(resolved))) ?? []);
-  }
-
-  // The entries a closed entry left out, read with the filter the trees were read with, put in its place.
-  async function openBranch(nodeId: string) {
-    try {
-      const branch = await graphs.explorerBranch(nodeId, nodeFilter(shownFilter.current));
-      if (branch) setTrees((current) => withBranch(current, branch));
-    } catch (cause) {
-      failures.fail(reasonOf(cause), `Opening ${nodeId} in the Graph app's tree`);
-    }
-  }
-
-  async function applyFilter(next: FilterSelection) {
-    if (!folder.trim()) {
-      setSelection(next);
-      return;
-    }
-    try {
-      if (joined(next.practices) !== joined(selection.practices)) {
-        await showFilter(chosen(next, await offerChoices(next, selection.practices)));
-      } else if (joined(next.node_types) !== joined(selection.node_types)) {
-        await showFilter(chosen(next, await offerChoices(next)));
-      } else {
-        await showFilter(next);
-      }
-    } catch (cause) {
-      failed(cause, 'Changing the filter in the Graph app');
-    }
-  }
-
+  const status = useLoadStatus();
+  useServerProgress(status);
+  const folder = usePageFolder();
+  const filter = useExplorerFilter(folder, status);
+  const overlays = useOverlays(filter, folder, status);
+  const graph = useGraphLoad(filter, overlays, status);
+  const pane = useSourcePane();
   return (
     <main className="explore-knowledge-graph">
       <div className="knowledge-graph-explorer">
-        <header className="site-nav">
-          <div className="nav-brand">
-            <a className="nav-logo" href="/" aria-label="abd.works">
-              <img src={engineering ? wordmarkWhite : wordmarkBlack} alt="abd.works" />
-            </a>
-            <p className="page-hero-label">Knowledge graph</p>
-          </div>
-          <div className="nav-actions">
-            <div className="mode-toggle" role="group" aria-label="Theme">
-              <button type="button" className={engineering ? '' : 'is-active'} onClick={() => applyTheme('')}>
-                <span className="mode-label">Executive</span>
-                <span className="mode-icon" aria-hidden="true">☀</span>
-              </button>
-              <button type="button" className={engineering ? 'is-active' : ''} onClick={() => applyTheme('engineering')}>
-                <span className="mode-label">Engineering</span>
-                <span className="mode-icon" aria-hidden="true">☾</span>
-              </button>
-            </div>
-            <button
-              type="button"
-              className="btn-refresh"
-              data-testid="force-reload"
-              title="Force reload"
-              disabled={loading || !folder.trim()}
-              onClick={() => void load(folder, selection, true)}
-            >
-              Force reload
-            </button>
-          </div>
-        </header>
+        <SiteNav canReload={!status.loading && folder.chosen} onReload={() => void graph.load(folder.value, true)} />
         <div className="toolbar">
-          <div className="folder-scan">
-            <button
-              type="button"
-              className="btn-primary"
-              data-testid="working-folder"
-              title="Select the session path, the folder the session works in, to load the Knowledge Graph"
-              onClick={() => void browse()}
-            >
-              Session path
-            </button>
-            <button
-              type="button"
-              className="filter-toggle"
-              data-testid="toggle-filters"
-              aria-expanded={filtersOpen}
-              aria-label={filtersOpen ? 'Collapse filters' : 'Expand filters'}
-              onClick={() => setFiltersOpen((open) => !open)}
-            >
-              {filtersOpen ? '▼' : '▶'}
-            </button>
-            <input
-              className="chosen-folder"
-              data-testid="chosen-folder"
-              value={folder}
-              placeholder="Session path"
-              spellCheck={false}
-              onChange={(event) => setFolder(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  void load(folder);
-                }
-              }}
-              onBlur={() => {
-                const trimmed = folder.trim();
-                if (trimmed && trimmed !== loadedFolder) {
-                  void load(trimmed);
-                }
-              }}
-            />
-          </div>
+          <FolderBar
+            folder={folder.value}
+            loadedFolder={graph.loadedFolder}
+            filtersOpen={filtersOpen}
+            onFolder={(next) => folder.choose(next)}
+            onLoad={(root) => void graph.load(root)}
+            onBrowse={() => void graph.browse()}
+            onToggleFilters={() => setFiltersOpen((open) => !open)}
+          />
           <FilterView
             open={filtersOpen}
-            selection={selection}
-            practices={practices}
-            nodeTypes={nodeTypes}
-            relationships={relationships}
-            rules={rules}
-            onChange={(next) => {
-              void applyFilter(next);
-            }}
-            availableOverlays={availableOverlays}
-            overlayApplying={overlayApplying}
-            onAddOverlay={() => {
-              void addOverlayFolder();
-            }}
-            onAddNamedOverlay={addNamedOverlay}
-            onRemoveOverlay={removeOverlay}
+            selection={filter.selection}
+            practices={graph.practices}
+            nodeTypes={filter.offered.offered_node_types}
+            relationships={filter.offered.relationships}
+            rules={filter.offered.rules}
+            onChange={(next) => void filter.apply(next)}
+            availableOverlays={overlays.available}
+            overlayApplying={overlays.applying}
+            onAddOverlay={() => void overlays.addFolder()}
+            onAddNamedOverlay={(name) => overlays.addNamed(name)}
+            onRemoveOverlay={(overlay) => overlays.remove(overlay)}
           />
         </div>
         <div className="split">
           <GraphView
-            trees={trees}
-            loading={loading}
-            loadingLabel={loadingLabel}
-            loadingLog={loadingLog}
-            error={error}
-            selectedId={selectedId}
-            activeRule={activeRule}
-            onSelect={(selection) => void choose(selection)}
-            onOpenBranch={openBranch}
+            trees={filter.trees}
+            loading={status.loading}
+            loadingLabel={status.label}
+            loadingLog={status.log}
+            error={status.error}
+            selectedId={pane.selectedId}
+            activeRule={pane.activeRule}
+            onSelect={(selection) => void pane.choose(selection)}
+            onOpenBranch={(nodeId) => filter.openBranch(nodeId)}
           />
           <SourceView
-            source={source}
-            note={sourceNote}
-            violation={violation}
-            rules={rulesOn(findNode(trees, selectedId))}
-            activeRule={activeRule}
-            onSelectRule={(name) => {
-              const node = findNode(trees, selectedId);
-              const rule = rulesUnder(node).find((child) => child.name === name);
-              if (rule) {
-                void choose(selectionForRule(selectedId, rule));
-              }
-            }}
+            source={pane.source}
+            note={pane.note}
+            violation={pane.violation}
+            rules={pane.rulesIn(filter.trees)}
+            activeRule={pane.activeRule}
+            onSelectRule={(name) => pane.chooseRule(filter.trees, name)}
           />
         </div>
       </div>
     </main>
   );
-}
-
-function joined(values: string[]): string {
-  return values.join('\n');
-}
-
-// The overlays a person last applied. Saved text that is not a list of overlays fails the load that reads it, which
-// says so, instead of loading with none.
-function readSavedOverlays(): string[] {
-  const raw = window.localStorage.getItem(LAST_OVERLAYS);
-  if (!raw) {
-    return [];
-  }
-  const parsed = JSON.parse(raw) as unknown;
-  if (!Array.isArray(parsed)) {
-    throw new Error(`The overlays saved in this browser (${LAST_OVERLAYS}) are not a list: ${raw}`);
-  }
-  return parsed.map(String);
-}
-
-function overlayIsActive(overlays: string[], name: string): boolean {
-  return overlays.some((item) => overlayPathLabel(item) === name || item === name);
-}
-
-function findNode(nodes: TreeItem[], id: string): TreeItem | null {
-  for (const node of nodes) {
-    if (node.node_id === id) {
-      return node;
-    }
-    const child = findNode(childrenOf(node), id);
-    if (child) {
-      return child;
-    }
-  }
-  return null;
-}
-
-function rulesUnder(node: TreeItem | null): GraphRuleData[] {
-  const holder = node ? childrenOf(node).find((child) => child.type === 'rules') : undefined;
-  return holder ? childrenOf(holder).filter(isRule) : [];
-}
-
-function rulesOn(node: TreeItem | null): SourceRule[] {
-  return rulesUnder(node).map((rule) => ({
-    name: rule.name,
-    status: rule.status,
-    messages: ruleHits(rule).map((hit) => hit.message).filter(Boolean),
-  }));
 }

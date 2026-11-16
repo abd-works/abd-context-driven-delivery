@@ -31,11 +31,11 @@ class StoryLink:
         self.node = node
 
     @classmethod
-    def from_item(cls, kind: str, item: Union[Node, str]) -> "StoryLink":
-        """A link to a Stories node, or to the key a format read."""
-        if isinstance(item, str):
-            return cls(kind, key=item)
-        return cls(kind, node=item)
+    def from_shown(cls, kind: str, shown: Union[Node, str]) -> "StoryLink":
+        """A link to the Stories node a screen shows, or to the key a format read for it."""
+        if isinstance(shown, str):
+            return cls(kind, key=shown)
+        return cls(kind, node=shown)
 
     @property
     def key(self) -> str:
@@ -93,4 +93,4 @@ def _parent(node: Node) -> Optional[Node]:
     """The node above node: the parent its tree gives it, else the one a direct edge of its graph hangs it under."""
     if node.parent is not None:
         return node.parent
-    return node.graph.direct_parent(node) if node.practice is not None else None
+    return node.graph.edges.direct_parent(node) if node.practice is not None else None

@@ -13,6 +13,7 @@ if str(_REPO) not in sys.path:
 
 from cdd_guidance.practices.ux.model.drawio.nodes import DrawioCliTimedOut, DrawioUxMap, UnreadableDrawio
 from cdd_guidance.practices.ux.model.nodes import Region, Screen, Transition
+from cdd_guidance.practices.ux.model.ux_map_spec_fixture import made
 
 
 class SpecFixture:
@@ -25,18 +26,18 @@ class SpecFixture:
 
         sheet = Screen("Character Sheet", 0)
         sheet.apply_layout("sidebar")
-        sheet.append_region(Region("panel", 0, "panel"))
-        sheet.append_region(Region("body", 1, "body"))
+        sheet.append_region(made(Region, "panel", 0, area="panel"))
+        sheet.append_region(made(Region, "body", 1, area="body"))
         sheet.show_story("Update Ability Rank")
         sheet.attach_domain_term("Character")
 
-        abilities = Screen("Character Sheet - Abilities", 1, chrome_of=sheet)
+        abilities = made(Screen, "Character Sheet - Abilities", 1, chrome_of=sheet)
         abilities.inactive_tabs = ["Identities", "Movements"]
 
         ux_map.append_screen(sheet)
         ux_map.append_screen(abilities)
         ux_map.transitions.append(
-            Transition("selects Abilities tab", 0, sheet, abilities, "selects Abilities tab", "action")
+            made(Transition, "selects Abilities tab", 0, from_screen=sheet, to_screen=abilities, trigger="selects Abilities tab", nav_type="action")
         )
         return ux_map
 
@@ -99,10 +100,10 @@ with description("a UX map drawn as a draw.io information architecture"):
             screens = {}
             for order, name in enumerate(["Board", "Editor", "Explorer"]):
                 screens[name] = Screen(name, order)
-                screens[name].append_region(Region("body", 0, "body"))
+                screens[name].append_region(made(Region, "body", 0, area="body"))
                 ux_map.append_screen(screens[name])
             for order, (source, target) in enumerate([("Board", "Explorer"), ("Explorer", "Board"), ("Editor", "Explorer")]):
-                ux_map.transitions.append(Transition(f"go {order}", order, from_screen=screens[source], to_screen=screens[target], trigger=f"go {order}", nav_type="action"))
+                ux_map.transitions.append(made(Transition, f"go {order}", order, from_screen=screens[source], to_screen=screens[target], trigger=f"go {order}", nav_type="action"))
             page = ET.fromstring(DrawioUxMap.create().render(ux_map)).find(".//diagram[@name='Detailed IA']")
             cells = page.findall(".//mxCell")
             self.screen_top = min(

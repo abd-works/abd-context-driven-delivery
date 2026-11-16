@@ -12,6 +12,7 @@ import os
 import re
 from pathlib import Path
 
+from harness.agent_tools.progress import report_progress
 from harness.graph.graph import Node
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.practice_reading import PracticeReading
@@ -95,14 +96,14 @@ class CallLinks:
         for caller in [*in_graph.nodes("Operation"), *in_graph.nodes("Property")]:
             called = self._called_by(caller)
             for member in called:
-                self._graph.link("invokes", caller, member, "relationship")
+                self._graph.edges.relate("invokes", caller, member)
             if not called and self._calls_nothing_by_design(caller):
                 caller.set_fact(EXEMPT_FACT, ["invokes"])
 
     def _calls_nothing_by_design(self, caller: Node) -> bool:
         """Whether caller is a member that has nothing to call: an abstract one, whose subclasses do the work, or one
         that takes nothing and answers a value, which is a property in all but name."""
-        return self._is_abstract(caller) or not self._graph.edges_from("hasParameter", caller)
+        return self._is_abstract(caller) or not self._graph.edges.from_parent("hasParameter", caller)
 
     def _is_abstract(self, caller: Node) -> bool:
         """An abstract member: marked so (`@abstractmethod`, `abstract`), or with no body but `...`, `pass`, or a raise of
@@ -112,8 +113,7 @@ class CallLinks:
             return True
         return _DOCSTRING.sub("", self._python_body(text)).strip() in _NO_BODY
 
-    @staticmethod
-    def _declared_without_body(text: str) -> bool:
+    def _declared_without_body(self, text: str) -> bool:
         """A C-family member with no body: its signature ends in `;` and no brace opens a body (an interface's method,
         `draw(scale: number): void;`, or `void draw(double scale);`)."""
         code = _CALL_MARKER.sub("", text).strip()
@@ -141,9 +141,9 @@ class CallLinks:
 
     def _named(self, name: str, caller: Node) -> list[Node]:
         """The members called name other than caller, only its own class's when its class has one."""
-        owner = self._graph.direct_parent(caller)
+        owner = self._graph.edges.direct_parent(caller)
         members = [member for member in self._reading.code_index.members_named(name) if member is not caller]
-        return [member for member in members if self._graph.direct_parent(member) is owner] or members
+        return [member for member in members if self._graph.edges.direct_parent(member) is owner] or members
 
 
 class CodeIndex:
@@ -181,8 +181,7 @@ class CodeIndex:
             self._classes = self._indexed(sorted(self._reading.in_graph.nodes("OoadClass"), key=lambda node: node.node_id))
         return self._classes
 
-    @staticmethod
-    def _indexed(nodes: list[Node]) -> dict[str, list[Node]]:
+    def _indexed(self, nodes: list[Node]) -> dict[str, list[Node]]:
         found: dict[str, list[Node]] = {}
         for node in nodes:
             found.setdefault(node.name, []).append(node)
@@ -211,8 +210,12 @@ class ModelDocuments:
         self._read = True
         for file in self._files():
             relative = file.relative_to(self._root).as_posix()
-            graph.report_progress(f"clean_engineering · model · {relative}")
-            self._models[relative] = self._format().parse(file.read_text(encoding="utf-8"))
+            report_progress(f"clean_engineering · model · {relative}")
+            self._models[relative] = self._model_in(file)
+
+    def _model_in(self, file: Path) -> CleanEngineeringModel:
+        """The class model one document describes, read in the practice's model document format."""
+        return self._format().parse(file.read_text(encoding="utf-8"))
 
     def described_member(self, owner: str, name: str) -> Operation | Property | None:
         """The operation or property a document describes as owner.name; none when none does. A graph read back from a
@@ -246,4 +249,4 @@ class ModelDocuments:
 def parameters_of(operation: Node) -> list[Node]:
     """The parameters an operation takes, in the order it declares them: the nodes its hasParameter edges lead to, which
     a graph read back from its saved file keeps too."""
-    return [edge.child for edge in operation.graph.edges_from("hasParameter", operation)]
+    return [edge.child for edge in operation.graph.edges.from_parent("hasParameter", operation)]

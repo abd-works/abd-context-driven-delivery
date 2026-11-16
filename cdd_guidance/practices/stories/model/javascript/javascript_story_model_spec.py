@@ -31,7 +31,7 @@ def _make_scenario(name: str, order: int, given_text: str = "a context") -> Scen
 def _story_map_with_stories() -> StoryModel:
     story_map = StoryModel()
     for i in range(1, 5):
-        story_map.append_epic(Epic(f"Epic {i}", i))
+        story_map.epics.append(Epic(f"Epic {i}", i))
     first = story_map.epics[0]
     for j in range(1, 4):
         sub = Epic(f"Epic 1.{j}", j)
@@ -58,7 +58,7 @@ with description("a JavaScript story-spec Story Map") as self:
         with before.each:
             self.canonical = _story_map_with_stories()
             self.tree = self.js.render(self.canonical)
-            self.leaf_paths = self.js.leaf_files_of(self.tree)
+            self.leaf_paths = sorted(path for path in self.tree if self.js.is_story_file(path))
             self.leaf_contents = [self.tree[p] for p in self.leaf_paths]
 
         with context("every leaf file"):

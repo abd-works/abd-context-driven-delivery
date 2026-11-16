@@ -1,6 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 
-import { reasonOf } from '../error-display/failure-client'
+import { reasonOf } from './reason'
 
 // The Claude desktop app's own browser pane, as /mcp lists it: its tool that opens a tab at a URL, its tabs with their
 // origins, and the calls that move a tab and bring it to the front.

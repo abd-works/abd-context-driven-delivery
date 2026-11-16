@@ -12,18 +12,21 @@ def _shop() -> CleanEngineeringModel:
     lines = Property(name="lines")
     lines.cardinality = "1..*"
     lines.add_invariant("never empty after checkout")
-    add_line = Operation(name="addLine", parameters=["product", "quantity"], callees=["lines.append"])
+    add_line = Operation(name="addLine")
+    add_line.take_parameters(["product", "quantity"])
+    add_line.callees = ["lines.append"]
     add_line.add_invariant("before checkout")
-    order = OoadClass(
-        name="Order",
-        sequential_order=1,
-        properties=[lines],
-        operations=[add_line, Operation(name="total", return_type="Money"), Operation(name="checkout")],
-    )
+    order = OoadClass(name="Order", sequential_order=1)
+    order.properties = [lines]
+    order.operations = [add_line, Operation(name="total", return_type="Money"), Operation(name="checkout")]
     order.bases = ["Entity"]
     order.stereotypes = ["Aggregate Root"]
-    line = OoadClass(name="OrderLine", sequential_order=2, properties=[Property(name="quantity")])
-    invoice = OoadClass(name="Invoice", sequential_order=1, operations=[Operation(name="issue", parameters=["order"])])
+    line = OoadClass(name="OrderLine", sequential_order=2)
+    line.properties = [Property(name="quantity")]
+    issue = Operation(name="issue")
+    issue.take_parameters(["order"])
+    invoice = OoadClass(name="Invoice", sequential_order=1)
+    invoice.operations = [issue]
     sales = Module(name="sales", sequential_order=1)
     sales.classes = [order, line]
     billing = Module(name="billing", sequential_order=2)

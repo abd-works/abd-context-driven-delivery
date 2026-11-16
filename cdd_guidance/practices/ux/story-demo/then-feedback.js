@@ -12,12 +12,11 @@ export class ThenFeedback {
   }
 
   apply(result) {
-    this._explorer.markStep(result.step, result.ok);
     if (result.ok) {
       this._explorer.clearMessage();
     } else {
       this._explorer.showMessage(result.message);
-      this._frame.tintFailed(result);
+      this._frame.emphasis.tintFailed(result);
     }
   }
 }

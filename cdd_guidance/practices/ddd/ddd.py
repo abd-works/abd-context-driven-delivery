@@ -19,14 +19,18 @@ from cdd_guidance.practices.ddd.model.stereotypes import carries_a_stereotype, n
 _DOMAIN_NAMES = ("domain-model", "domain_model", "bounded-context", "bounded_context")
 # The code files whose classes say whether a folder holds a domain.
 _CODE_SUFFIXES = (".py", ".ts", ".tsx", ".js", ".jsx")
-
-
-def _holds_a_domain(folder: Path) -> bool:
-    """Whether folder holds a domain, as DDD's graph reading decides one: a bounded context, the folder holding
-    ``.context/bounded-context.md``, or an aggregate under one; or a folder where a class carries a DDD stereotype."""
-    if any((each / BOUNDED_CONTEXT_MARKER).is_file() for each in (folder, *folder.parents)):
-        return True
-    return any(carries_a_stereotype(file.read_text(encoding="utf-8", errors="replace")) for file in folder.iterdir() if file.suffix in _CODE_SUFFIXES and file.is_file())
+# The model each format reads and writes, by format name: its module and its class.
+_FORMATS = {
+    "sketch": ("cdd_guidance.practices.ddd.model.sketch.sketch_ddd_model", "SketchDddModel"),
+    "drawio": ("cdd_guidance.practices.ddd.model.drawio.drawio_bounded_context_map", "DrawIOBoundedContextMap"),
+    "whiteboard": ("cdd_guidance.practices.ddd.model.whiteboard.whiteboard_bounded_context_map", "WhiteboardBoundedContextMap"),
+    "markdown": ("cdd_guidance.practices.ddd.model.markdown.nodes", "MarkdownBoundedContextMap"),
+    "python": ("cdd_guidance.practices.clean_engineering.model.python.python_class_model", "PythonCleanEngineeringModel"),
+    "typescript": (
+        "cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model",
+        "TypeScriptCleanEngineeringModel",
+    ),
+}
 
 
 @agent_toolset
@@ -63,38 +67,24 @@ class Ddd(PracticeGuidance):
         if not file.is_file():
             return False
         source = file.read_text(encoding="utf-8", errors="replace")
-        return carries_a_stereotype(source) or (names_a_building_block(source) and _holds_a_domain(file.parent))
+        return carries_a_stereotype(source) or (names_a_building_block(source) and self._holds_a_domain(file.parent))
+
+    def _holds_a_domain(self, folder: Path) -> bool:
+        """Whether folder holds a domain, as DDD's graph reading decides one: a bounded context, the folder holding
+        ``.context/bounded-context.md``, or an aggregate under one; or a folder where a class carries a DDD stereotype."""
+        if any((each / BOUNDED_CONTEXT_MARKER).is_file() for each in (folder, *folder.parents)):
+            return True
+        return any(carries_a_stereotype(file.read_text(encoding="utf-8", errors="replace")) for file in folder.iterdir() if file.suffix in _CODE_SUFFIXES and file.is_file())
 
     def __init__(
         self,
         fidelity: str = "bounded_context",
         format: str | None = None,
     ) -> None:
-        super().__init__(
-            format=format,
-            fidelity=fidelity,
-            default_workspace_folder="src",
-            formats={
-                "sketch": ("cdd_guidance.practices.ddd.model.sketch.sketch_ddd_model", "SketchDddModel"),
-                "drawio": (
-                    "cdd_guidance.practices.ddd.model.drawio.drawio_bounded_context_map",
-                    "DrawIOBoundedContextMap",
-                ),
-                "whiteboard": (
-                    "cdd_guidance.practices.ddd.model.whiteboard.whiteboard_bounded_context_map",
-                    "WhiteboardBoundedContextMap",
-                ),
-                "markdown": ("cdd_guidance.practices.ddd.model.markdown.nodes", "MarkdownBoundedContextMap"),
-                "python": (
-                    "cdd_guidance.practices.clean_engineering.model.python.python_class_model",
-                    "PythonCleanEngineeringModel",
-                ),
-                "typescript": (
-                    "cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model",
-                    "TypeScriptCleanEngineeringModel",
-                ),
-            },
-        )
+        super().__init__(format=format, fidelity=fidelity)
+
+    default_workspace_folder = "src"
+    format_adapters = _FORMATS
 
     # Its scoped markdown shows every fidelity, since a bounded context, its model and its tactics read as one.
     shows_every_fidelity = True

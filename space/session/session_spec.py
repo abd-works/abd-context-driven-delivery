@@ -25,7 +25,7 @@ from harness.guidance.guidance import PracticeGuidance
 from harness.installation.data_class import data_of
 from harness.guidance_actions import GuidanceAction
 from harness.hooks.hook_server import HookPayload
-from harness.agent_tools.tool_call import ToolCall
+from harness.agent_tools.tool_call import ToolCall, ToolRequest
 from harness.mcp.mcp_server import McpServer
 from space.repo.mock_repo import MockGit
 from space.repo.repo import Repo
@@ -36,7 +36,7 @@ from space.session.sessions import SessionNameRequiredError
 from space.work_state import WorkState
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
-from space.session.throwaway_project import ExampleHome, SpecRunHome
+from space.session.throwaway_project import ExampleHome, SPEC_RUN_HOME
 from harness.guidance.practice_catalogue import PracticeCatalogue
 
 # The first practices a process makes read and parse their guidance for every later one; made once here, before any
@@ -304,10 +304,10 @@ with description("a session"):
 
                 with context("that is saved"):
                     with before.each:
-                        self.session.save()
+                        self.session.record.save()
 
                     with it("should keep its workpath from the repository's top"):
-                        expect(self.session.fields["workpath"]).to(equal("harness"))
+                        expect(self.session.record.fields["workpath"]).to(equal("harness"))
 
                     with it("should keep working in that folder in the ticket's worktree"):
                         expect(Sessions(self.repo).named("alpha").work_root).to(equal(self.worktree.resolve() / "harness"))
@@ -512,7 +512,7 @@ with description("a session"):
             ).to(equal(True))
 
         with it("should append via append_log with loop number and chat fields"):
-            call = ToolCall(chat=_chat_in(self.session, "append-chat"))
+            call = ToolCall(request=ToolRequest(_chat_in(self.session, "append-chat")))
             result = self.session.append_log(call, "correction recorded", loop=1, paths=[str(self.work / "session.py")])
             log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
             expect(
@@ -921,20 +921,20 @@ with description("a practice"):
                 )
 
             with it("should put each format's file under the practice's root folder"):
-                outputs = self.fidelity.output_paths()
+                outputs = self.fidelity.declared.output_paths()
                 expect(outputs["markdown"]).to(equal([(self.work / ".context" / "story-map.md").resolve().as_posix()]))
 
             with context("whose validation reports its session output keeps"):
                 with it("should save a new report in the session's reports folder"):
-                    expect(self.fidelity.session_output.new_report_path().parent).to(equal(self.session.reports_folder))
+                    expect(self.fidelity.session_output.validation_reports.new_path().parent).to(equal(self.session.reports_folder))
 
                 with it("should name a new report by the fidelity's slug"):
-                    expect(self.fidelity.session_output.new_report_path().name).to(contain("stories-story-map-"))
+                    expect(self.fidelity.session_output.validation_reports.new_path().name).to(contain("stories-story-map-"))
 
                 with it("should list the reports saved there"):
-                    saved = self.fidelity.session_output.new_report_path()
+                    saved = self.fidelity.session_output.validation_reports.new_path()
                     saved.write_text("# report\n", encoding="utf-8")
-                    expect(self.fidelity.session_output.reports()).to(equal([saved]))
+                    expect(self.fidelity.session_output.validation_reports.listed()).to(equal([saved]))
 
             with context("whose file is written"):
                 with it("should be read by the session's file manager, though the practice's own folder is elsewhere"):
@@ -947,7 +947,7 @@ with description("a practice"):
                     self.write_overrides({"stories": {"root": "docs/stories"}})
 
                 with it("should use that root"):
-                    outputs = self.fidelity.output_paths()
+                    outputs = self.fidelity.declared.output_paths()
                     expect(outputs["markdown"]).to(equal([(self.work / "docs/stories/.context/story-map.md").resolve().as_posix()]))
 
             with context("that a person chooses a folder as the practice's root"):
@@ -976,27 +976,27 @@ with description("a practice"):
                     self.stories.keep_root(self.work / ".context" / "stories")
 
                 with it("should write the practice's documents in that folder itself"):
-                    outputs = self.fidelity.output_paths()
+                    outputs = self.fidelity.declared.output_paths()
                     expect(outputs["markdown"]).to(equal([(self.work / ".context" / "stories" / "story-map.md").resolve().as_posix()]))
 
                 with it("should say the practice root is chosen"):
                     expect(self.stories.is_root_chosen).to(equal(True))
 
                 with it("should write the scenarios in the story_tests beside that .context"):
-                    outputs = self.stories.fidelities["scenarios"].output_paths()
+                    outputs = self.stories.fidelities["scenarios"].declared.output_paths()
                     expect(outputs["markdown"]).to(equal([(self.work / "story_tests" / "{epic}/{sub-epic}/{story_snake}_story.test.md").resolve().as_posix()]))
 
                 with context("and the scenarios' own root one epic's folder in story_tests"):
                     with it("should write the scenarios under that epic's folder only"):
                         self.write_overrides({"stories": {"root": ".context/stories", "scenarios": {"root": "story_tests/manage-orders"}}})
-                        outputs = self.stories.fidelities["scenarios"].output_paths()
+                        outputs = self.stories.fidelities["scenarios"].declared.output_paths()
                         expect(outputs["markdown"]).to(equal([(self.work / "story_tests" / "manage-orders" / "{sub-epic}/{story_snake}_story.test.md").resolve().as_posix()]))
 
                 with context("and a person chooses one epic's folder for the scenarios"):
                     with it("should write the scenarios there and keep the story map in the practice's root"):
                         self.stories.of_fidelity(self.stories.fidelities.entries["scenarios"]).choose_root("work/story_tests/manage-orders")
-                        scenarios = self.stories.fidelities["scenarios"].output_paths()["markdown"]
-                        story_map = self.fidelity.output_paths()["markdown"]
+                        scenarios = self.stories.fidelities["scenarios"].declared.output_paths()["markdown"]
+                        story_map = self.fidelity.declared.output_paths()["markdown"]
                         expect((scenarios, story_map)).to(equal((
                             [(self.work / "story_tests" / "manage-orders" / "{sub-epic}/{story_snake}_story.test.md").resolve().as_posix()],
                             [(self.work / ".context" / "stories" / "story-map.md").resolve().as_posix()],
@@ -1013,7 +1013,7 @@ with description("a practice"):
                     self.write_overrides({"stories": {"root": "docs/stories", "story_map": {"root": "docs/map"}}})
 
                 with it("should prefer the fidelity's root"):
-                    outputs = self.fidelity.output_paths()
+                    outputs = self.fidelity.declared.output_paths()
                     expect(outputs["drawio"]).to(equal([(self.work / "docs/map/.context/story-map.drawio").resolve().as_posix()]))
 
             with context("with session.json naming a file for a single-file output"):
@@ -1021,11 +1021,11 @@ with description("a practice"):
                     self.write_overrides({"stories": {"story_map": {"markdown": "our-map.md"}}})
 
                 with it("should use that file name"):
-                    outputs = self.fidelity.output_paths()
+                    outputs = self.fidelity.declared.output_paths()
                     expect(outputs["markdown"]).to(equal([(self.work / ".context" / "our-map.md").resolve().as_posix()]))
 
                 with it("should keep the declared name for the other formats"):
-                    outputs = self.fidelity.output_paths()
+                    outputs = self.fidelity.declared.output_paths()
                     expect(outputs["drawio"]).to(equal([(self.work / ".context" / "story-map.drawio").resolve().as_posix()]))
 
             with context("with session.json naming a file for a patterned output"):
@@ -1034,7 +1034,7 @@ with description("a practice"):
                     self.write_overrides({"stories": {"scenarios": {"python": "one-file.py"}}})
 
                 with it("should keep the declared pattern"):
-                    outputs = self.fidelity.output_paths()
+                    outputs = self.fidelity.declared.output_paths()
                     expect(outputs["python"][0]).to(contain("{story_snake}_story.test.py"))
 
         with context("with config.json practice_folders pointing a practice at the workpath"):
@@ -1146,10 +1146,10 @@ with description("a session working in a folder of its own, holding an aggregate
         self.home.close()
 
     with it("should list the file named for its aggregate's folder"):
-        expect([entry.path for entry in self.model.files()["typescript"]]).to(equal(["work/sales/client/client.ts"]))
+        expect([entry.path for entry in self.model.declared.files()["typescript"]]).to(equal(["work/sales/client/client.ts"]))
 
     with it("should find the declared file there"):
-        expect(self.model.has_declared_output()).to(equal(True))
+        expect(self.model.declared.has_output()).to(equal(True))
 
 
 # Main works on the whole repository, so a practice nobody gave a folder lists its documents from every .context folder,
@@ -1163,7 +1163,7 @@ with description("a session working on the whole repository, whose story map is 
         story_map.parent.mkdir(parents=True)
         story_map.write_text("# (E) Review Work\n", encoding="utf-8")
         session = ToolCall({}, self.repo).session
-        session.session_files.changed = lambda: set()
+        session.session_files.branch_changes.files = lambda: set()
         self.story_map = session.practice("stories").fidelities["story_map"]
 
     with after.each:
@@ -1171,25 +1171,25 @@ with description("a session working on the whole repository, whose story map is 
         self.home.close()
 
     with it("should list that story map as the story map's markdown"):
-        expect([entry.path for entry in self.story_map.files()["markdown"]]).to(equal(["harness/.context/stories/story-map.md"]))
+        expect([entry.path for entry in self.story_map.declared.files()["markdown"]]).to(equal(["harness/.context/stories/story-map.md"]))
 
     with context("with a thin slice beside it"):
         with before.each:
             (self.repo / "harness" / ".context" / "stories" / "thin-slice.md").write_text("# Thin Slice\n", encoding="utf-8")
 
         with it("should list the thin slice as the story map's thin slice"):
-            expect([entry.path for entry in self.story_map.files()["thin_slice"]]).to(contain("harness/.context/stories/thin-slice.md"))
+            expect([entry.path for entry in self.story_map.declared.files()["thin_slice"]]).to(contain("harness/.context/stories/thin-slice.md"))
 
     with context("with the project's config naming the repository's own folder for stories"):
         with before.each:
             (self.repo / ".context" / "config.json").parent.mkdir(exist_ok=True)
             (self.repo / ".context" / "config.json").write_text('{"practice_folders": {"stories": "."}}', encoding="utf-8")
             session = ToolCall({}, self.repo).session
-            session.session_files.changed = lambda: set()
+            session.session_files.branch_changes.files = lambda: set()
             self.story_map = session.practice("stories").fidelities["story_map"]
 
         with it("should still list that story map as the story map's markdown"):
-            expect([entry.path for entry in self.story_map.files()["markdown"]]).to(equal(["harness/.context/stories/story-map.md"]))
+            expect([entry.path for entry in self.story_map.declared.files()["markdown"]]).to(equal(["harness/.context/stories/story-map.md"]))
 
 
 # A fidelity that declares a folder per module, as Clean Engineering's code does with ``{module}/``, lists the code the
@@ -1213,7 +1213,7 @@ with description("a session whose branch changed code in the folder it works in"
             file.write_text("x\n", encoding="utf-8")
         Sessions(self.repo).switch("alpha", self.work)
         session = Sessions(self.repo).current()
-        session.session_files.changed = lambda: {file.resolve() for file in changed}
+        session.session_files.branch_changes.files = lambda: {file.resolve() for file in changed}
         self.code = session.practice("clean_engineering").fidelities["code"]
 
     with after.each:
@@ -1221,14 +1221,14 @@ with description("a session whose branch changed code in the folder it works in"
         self.home.close()
 
     with it("should list the changed Python under its folder as the code's Python"):
-        expect([entry.path for entry in self.code.files()["python"]]).to(equal(["work/orders/order.py"]))
+        expect([entry.path for entry in self.code.declared.files()["python"]]).to(equal(["work/orders/order.py"]))
 
     with it("should list the changed TypeScript, components included, as the code's TypeScript"):
-        expect([entry.path for entry in self.code.files()["typescript"]]).to(equal(["work/orders/order_view.tsx"]))
+        expect([entry.path for entry in self.code.declared.files()["typescript"]]).to(equal(["work/orders/order_view.tsx"]))
 
     # Specs and tests are the acceptance tests' and the development specs' files, not production code.
     with it("should leave the changed specs out of the code"):
-        listed = [entry.path for entries in self.code.files().values() for entry in entries]
+        listed = [entry.path for entries in self.code.declared.files().values() for entry in entries]
         expect(listed).not_to(contain("work/orders/order_spec.py"))
 
 
@@ -1258,15 +1258,15 @@ with description("a session whose UX work has an information architecture, a pub
         self.home.close()
 
     with it("should review the information architecture's diagram"):
-        expect([entry.path for entry in self.front_end_code.files_to_review()["drawio"]]).to(contain("work/checkout/.context/information-architecture.drawio"))
+        expect([entry.path for entry in self.front_end_code.declared.files_to_review()["drawio"]]).to(contain("work/checkout/.context/information-architecture.drawio"))
 
     with it("should review the design canvas at the link it is published at"):
-        expect([(entry.path, entry.link) for entry in self.front_end_code.files_to_review()["claude_design"]]).to(
+        expect([(entry.path, entry.link) for entry in self.front_end_code.declared.files_to_review()["claude_design"]]).to(
             equal([("work/design-canvas/version-1/project/canvas.json", "https://claude.ai/artifact/checkout-canvas")])
         )
 
     with it("should leave its view code to Clean Engineering's review"):
-        reviewed = [entry.path for entries in self.front_end_code.files_to_review().values() for entry in entries]
+        reviewed = [entry.path for entries in self.front_end_code.declared.files_to_review().values() for entry in entries]
         expect(reviewed).not_to(contain("work/checkout/OrderView.tsx"))
 
 
@@ -1379,7 +1379,7 @@ with description("a session on an MCP host whose CDD_REPO is the CDD checkout, n
 
         with it("should append log notes to the project's session log"):
             session = Sessions(self.project).current()
-            session.append_log(ToolCall(chat=_chat_in(session, "project-chat")), "project note", loop=1)
+            session.append_log(ToolCall(request=ToolRequest(_chat_in(session, "project-chat"))), "project note", loop=1)
             log = (self.project / ".sessions" / "beta" / "session.log").read_text(encoding="utf-8")
             cdd_log = self.cdd / ".sessions" / "overlay" / "session.log"
             cdd_text = cdd_log.read_text(encoding="utf-8") if cdd_log.is_file() else ""
@@ -1387,7 +1387,7 @@ with description("a session on an MCP host whose CDD_REPO is the CDD checkout, n
 
         with it("should mark loops on the project's session log"):
             session = Sessions(self.project).current()
-            session.mark_loop(ToolCall(chat=_chat_in(session, "project-loop-chat")))
+            session.mark_loop(ToolCall(request=ToolRequest(_chat_in(session, "project-loop-chat"))))
             log = (self.project / ".sessions" / "beta" / "session.log").read_text(encoding="utf-8")
             expect("--- " in log).to(equal(True))
 
@@ -1487,7 +1487,7 @@ with description("a session read for a board") as self:
 
     with context("that has moved to the closed sessions"):
         with before.each:
-            self.moved = self.beta.move_to_closed()
+            self.moved = self.beta.folder.move_to_closed()
 
         with it("should keep its log and title in the new folder"):
             expect(self.moved.title).to(equal("Beta"))
@@ -1541,7 +1541,7 @@ with description("a session read for a board") as self:
         with before.each:
             self.idea = self.repo / "gift-cards.md"
             self.idea.write_text("# Gift cards\n", encoding="utf-8")
-            self.kept = self.beta.keep_file(self.idea)
+            self.kept = self.beta.folder.keep_file(self.idea)
 
         with it("should hold the file in its session folder"):
             expect(self.kept).to(equal(self.beta.session_path / "gift-cards.md"))
@@ -1554,7 +1554,7 @@ with description("a session read for a board") as self:
 with description("a session whose graph two calls first ask for at once"):
     # The two calls race once, made slow on purpose, and every example reads what that one race left.
     with before.all:
-        SpecRunHome.ensure()
+        SPEC_RUN_HOME.ensure()
         self.repo = Path(tempfile.mkdtemp())
         session = Sessions(self.repo).current()
         self.original = Graph.open_saved

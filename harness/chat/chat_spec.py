@@ -16,7 +16,7 @@ from expects import be_empty, contain, equal, expect, have_keys, raise_error, st
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.chat_pointer import ChatPointer
-from harness.agent_tools.tool_call import ToolCall
+from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall, ToolRequest
 from harness.chat.chat import KEPT_MESSAGES, Chat, ChatNotConnectedError, RecordedChatLinks
 from harness.installation.data_class import data_of
 
@@ -42,7 +42,7 @@ def _prompt_opened_by(chat: str) -> str:
     """The prompt of a new chat that chat asked chat.open for."""
     # Mamba reads every with statement in a spec file as a context, so the call is answered through an ExitStack.
     answering = ExitStack()
-    answering.enter_context(ToolCall(chat=ChatPointer(chat), tool="chat.open").being_answered())
+    answering.enter_context(CALLS_BEING_ANSWERED.answering(ToolCall(request=ToolRequest(ChatPointer(chat), "chat.open"))))
     try:
         return parse_qs(urlsplit(Chat.open(WORKTREE, NEW_CHAT_PROMPT)).query)["q"][0]
     finally:

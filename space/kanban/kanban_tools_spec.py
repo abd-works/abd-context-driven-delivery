@@ -15,7 +15,10 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
-from harness.catalog_generator.catalog_practice import CatalogPractice  # noqa: E402
+from harness.agent_tools.agent_tools import AgentToolSet  # noqa: E402
+from harness.catalog_generator.catalog_practice import CatalogSkills  # noqa: E402
+from harness.installation.files import FileChannel, FileInstallation  # noqa: E402
+from harness.installation.ide_layout import IdeLayout  # noqa: E402
 from harness.installation.data_class import DataClass  # noqa: E402
 from space.kanban.backlog_item import BacklogItem  # noqa: E402
 from space.kanban.board import Stage  # noqa: E402
@@ -30,7 +33,7 @@ from space.session import Sessions  # noqa: E402
 from space.session.session import UnknownPracticeError  # noqa: E402
 
 from space.kanban.board_tools_examples import CHECKED_GRAPH, DISCOVERY_DONE, JUDGED_REPORT, ProjectTools, STORY_MAP_GRAPH, WHOLE_STORIES_GRAPH, column_of, next_action_of, reports_of, session_file_of, ticket_names_in, ticket_of, violation_counts_of  # noqa: E402
-from space.session.throwaway_project import ThrowawayProject
+from space.session.throwaway_project import OPEN_PROJECTS
 
 
 # A context whose examples only look at what its tools answered reads them once, in a ``before.all``, on a project of
@@ -111,7 +114,7 @@ with description("the board tools") as self:
         self.project = ProjectTools()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
         patch.stopall()
 
     # (E) See Work On Session Board
@@ -466,7 +469,7 @@ with description("the board tools") as self:
             with before.all:
                 def helped(project: ProjectTools) -> tuple[list[dict], int]:
                     pet_visits(project)
-                    with patch.object(CatalogPractice, "skill_install", wraps=CatalogPractice.skill_install) as made:
+                    with patch.object(CatalogSkills, "__init__", autospec=True, side_effect=CatalogSkills.__init__) as made:
                         helps = [project.call("board.help", practice="stories"), project.call("board.help", practice="ux")]
                         project.call("board.show")
                         project.call("fidelity-progress.help", ticket="pet-visits", fidelity="stories-story-map")
@@ -678,49 +681,58 @@ with description("the board tools") as self:
                 expect([chip["label"] for chip in self.chips if chip["is_chosen"]]).to(equal(["markdown"]))
 
             with context("that turns the diagram chip on"):
-                with before.each:
-                    self.chips = self.project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="diagram", is_chosen=True)
+                with before.all:
+                    def diagram_on(project: ProjectTools) -> tuple[list, dict]:
+                        sign_up(project)
+                        chips = project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="diagram", is_chosen=True)
+                        output = project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="markdown", is_chosen=True)
+                        return chips, output
+
+                    self.diagram_on, self.markdown_kept = ProjectTools.answer_of(diagram_on)
 
                 with it("should show both chips chosen"):
-                    expect([chip["label"] for chip in self.chips if chip["is_chosen"]]).to(equal(["diagram", "markdown"]))
+                    expect([chip["label"] for chip in self.diagram_on if chip["is_chosen"]]).to(equal(["diagram", "markdown"]))
 
                 with it("should keep both chosen for the story map in the session, in the order chosen"):
-                    output = self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="markdown", is_chosen=True)
-                    expect(output["chosen_formats"]).to(equal(["markdown", "drawio"]))
+                    expect(self.markdown_kept["chosen_formats"]).to(equal(["markdown", "drawio"]))
 
             with context("in a project whose defaults draw every diagram in drawio and whiteboard"):
-                with before.each:
-                    from harness.installation.context_config import ContextConfig
+                with before.all:
+                    def drawn_both_ways(project: ProjectTools) -> tuple[list, list, list]:
+                        from harness.installation.context_config import ContextConfig
 
-                    ContextConfig(self.project.root).update(default_formats={"*": ["default", "drawio", "whiteboard"]})
-                    self.chips = self.project.call("ticket.format_choices", ticket="sign-up", fidelities=["stories-story-map"])
+                        sign_up(project)
+                        ContextConfig(project.root).update(default_formats={"*": ["default", "drawio", "whiteboard"]})
+                        shown = project.call("ticket.format_choices", ticket="sign-up", fidelities=["stories-story-map"])
+                        off = project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="diagram", is_chosen=False)
+                        on = project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="diagram", is_chosen=True)
+                        return shown, off, on
+
+                    self.both_shown, self.both_off, self.both_on = ProjectTools.answer_of(drawn_both_ways)
 
                 with it("should show the diagram chip chosen, standing for both formats"):
-                    diagram = next(chip for chip in self.chips if chip["label"] == "diagram")
+                    diagram = next(chip for chip in self.both_shown if chip["label"] == "diagram")
                     expect((diagram["is_chosen"], diagram["formats"])).to(equal((True, ["drawio", "whiteboard"])))
 
                 with context("that turns the diagram chip off"):
-                    with before.each:
-                        self.chips = self.project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="diagram", is_chosen=False)
-
-                    with it("should leave out both of its formats"):
-                        output = self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="markdown", is_chosen=True)
-                        expect(output["chosen_formats"]).to(equal(["markdown"]))
+                    with it("should leave out both of its formats, keeping only markdown chosen"):
+                        expect([chip["label"] for chip in self.both_off if chip["is_chosen"]]).to(equal(["markdown"]))
 
                     with context("and on again"):
-                        with before.each:
-                            self.chips = self.project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="diagram", is_chosen=True)
-
                         with it("should choose both of its formats again"):
-                            output = self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="markdown", is_chosen=True)
-                            expect(output["chosen_formats"]).to(equal(["markdown", "drawio", "whiteboard"]))
+                            diagram = next(chip for chip in self.both_on if chip["label"] == "diagram")
+                            expect((diagram["is_chosen"], diagram["formats"])).to(equal((True, ["drawio", "whiteboard"])))
 
             with context("that turns the markdown chip off"):
-                with before.each:
-                    self.chips = self.project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="markdown", is_chosen=False)
+                with before.all:
+                    def markdown_off(project: ProjectTools) -> list:
+                        sign_up(project)
+                        return project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="markdown", is_chosen=False)
+
+                    self.markdown_off = ProjectTools.answer_of(markdown_off)
 
                 with it("should show no chip chosen"):
-                    expect([chip["label"] for chip in self.chips if chip["is_chosen"]]).to(equal([]))
+                    expect([chip["label"] for chip in self.markdown_off if chip["is_chosen"]]).to(equal([]))
 
             with it("should refuse a format the story map does not write"):
                 expect(lambda: self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="python", is_chosen=True)).to(raise_error(Exception, contain("does not write python")))
@@ -1006,6 +1018,12 @@ with description("the board tools") as self:
                 "backlog-item.create", "backlog-item.start", "backlog-item.start_under", "backlog-item.edit_text", "backlog-item.move_before",
                 "backlog-item.move_after", "backlog-item.nest_under", "backlog-item.leave_parent", "backlog-item.open_file",
             }))
+
+        # A person adds an idea from the chat with /backlog, as the + on the board's Backlog column does.
+        with it("should install adding a backlog item as the backlog slash command"):
+            installed = tempfile.mkdtemp()
+            FileInstallation(IdeLayout("Claude"), installed, FileChannel("command")).install(AgentToolSet.instantiate(BacklogItem).tools["create"])
+            expect([file.name for file in Path(installed).rglob("*.md")]).to(equal(["backlog.md"]))
 
         # An agent that opens a ticket must work in the ticket's own worktree, not in the chat that opened it.
         with it("should tell an agent opening a ticket to activate it and work in a chat in its worktree"):

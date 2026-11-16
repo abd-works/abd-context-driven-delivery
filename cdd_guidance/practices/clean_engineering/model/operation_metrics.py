@@ -7,6 +7,8 @@ from __future__ import annotations
 import ast
 import builtins
 import re
+import sys
+import textwrap
 
 from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
 
@@ -74,6 +76,8 @@ _THROWN_OR_DEFAULTED = re.compile(r"(?:\bthrow|\?\?|\|\|)\s*$")
 _ARGUMENT_NAME = re.compile(r"(?<![\w.$])([A-Za-z_$][\w$]*)\b(?!\s*\()")
 # A name a brace-language body declares, which it then holds: `const x =`, `let x`, `var x`.
 _DECLARED_LOCAL = re.compile(r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)")
+# An arrow function's parameters: `(scenario, index) =>` or `selected =>`.
+_ARROW_FUNCTION = re.compile(r"(?:\(([^()]*)\)|([A-Za-z_$][\w$]*))\s*=>")
 _SCRIPT_VALUES = frozenset({"true", "false", "null", "undefined", "typeof", "instanceof", "as", "void", "await", "new"})
 _WIRED_PEER_FIELDS = frozenset({"repository", "repo"})
 # The dunders Python calls with another object of the same class as the operand: comparison and arithmetic.
@@ -81,9 +85,17 @@ _PEER_OPERAND_DUNDERS = frozenset(
     {"__eq__", "__ne__", "__lt__", "__le__", "__gt__", "__ge__", "__add__", "__sub__", "__or__", "__and__"}
 )
 _CATCH_ALL_TYPES = frozenset({"Exception", "BaseException"})
+# The top-level modules of Python's standard library, whose documented members include underscore functions such as
+# `os._exit` and `sys._getframe`.
+_STANDARD_MODULES = frozenset(name for name in sys.stdlib_module_names if not name.startswith("_"))
+# A call that reaches outside the program: a file, the network, another process, or standard output. Reading text the
+# program already holds, such as `parse(text)`, `text.splitlines()`, or a reader's `read(lines)`, is calculation.
 _IO_CALL = re.compile(
-    r"\b(?:open|read|write|save|fetch|load|store|send|post|put|delete|upload|download|print)\w*\s*\(",
-    re.IGNORECASE,
+    r"(?<![\w$])(?:open|read_text|read_bytes|write_text|write_bytes|readlines|writelines|readFile\w*|writeFile\w*"
+    r"|appendFile\w*|fetch|urlopen|urlretrieve|print|Popen|check_output|check_call|sendall|recv|upload\w*|download\w*)"
+    r"\s*\("
+    r"|\b(?:subprocess|requests|httpx|socket|shutil)\.\w+\s*\(|\bsys\.std(?:out|err)\.write\s*\(|\bos\.(?:remove|unlink"
+    r"|rename|replace|makedirs|mkdir|rmdir|listdir|scandir|walk|system)\s*\(",
 )
 _DOMAIN_CALL = re.compile(
     r"\b(?:calculate|compute|validate|parse|transform|convert|aggregate|total|sum|apply|build)\w*\s*\(",
@@ -120,7 +132,9 @@ _EMPTY_EXCEPTION = re.compile(r"raise\s+(\w+(?:Error|Exception))\s*\(\s*([\"']?)
 _GENERIC_EXCEPTION = re.compile(r"raise\s+\w+(?:Error|Exception)\s*\(\s*f?[\"'](?:error|failed|invalid)[\"']\s*\)", re.I)
 # Nested property writes (this.token, this.validation.verified) — not helper-local state.
 _COORDINATED_MUTATION = re.compile(r"\b(?:self|this)(?:\.\w+)+\s*=")
-_RETURN = re.compile(r"\breturn\b")
+# A generator, a `@contextmanager` among them, hands its caller what it yields, and the state it changes for the
+# caller's block is put back when the block ends, so `yield` gives the outcome as `return` does.
+_RETURN = re.compile(r"\b(?:return|yield)\b")
 _VOID_RETURN = re.compile(r"->\s*None\b|: void\b")
 _THROWS = re.compile(r"\b(?:throw|raise)\b")
 _PROTOTYPE_SWAP = re.compile(r"\bObject\.setPrototypeOf\s*\(|\.__proto__\s*=(?!=)|\.__class__\s*=(?!=)")
@@ -133,6 +147,12 @@ _META = re.compile(
     r"do\s+\*\*not\*\*\s+invent|do not invent|never invent|parallel symbol|as collaboration markers",
     re.I,
 )
+# What the brace-language statement count reads: a comment, a `{` that opens a block rather than an object literal, and
+# a line that carries on the statement before it, such as `} else {` or `});`.
+_STRING_OR_COMMENT = re.compile(r"/\*[\s\S]*?\*/|//[^\n]*|" + _STRING.pattern)
+_OPENS_BLOCK = re.compile(r"(?:\)|=>|\belse|\btry|\bfinally|\bdo)\s*$")
+_CONTINUES_STATEMENT = re.compile(r"^[)\]}]")
+_BLOCK = "block"
 # Below these sizes a body is too small for the mixed-concerns and unrecorded-mutation measures to mean anything.
 MIN_SIGNAL_BODY = 40
 MIN_MUTATION_BODY = 30
@@ -220,7 +240,7 @@ class SourceText:
         (``this``, its parameters, its locals, constants, or classes it names) are left out."""
         code = _STRING.sub('""', self._text)
         unquoted = BracketStructure(code)
-        owned = parameter_names | _OWN_RECEIVERS | set(_DECLARED_LOCAL.findall(code)) | _SCRIPT_VALUES
+        owned = parameter_names | _OWN_RECEIVERS | set(_DECLARED_LOCAL.findall(code)) | _SCRIPT_VALUES | self._arrow_parameters(code)
         found: list[tuple[str, int]] = []
         for match in _NEW_CLASS.finditer(code):
             if _THROWN_OR_DEFAULTED.search(code[: match.start()]):
@@ -231,6 +251,15 @@ class SourceText:
                 continue
             found.append((match.group(1), start_line + code.count("\n", 0, match.start())))
         return found
+
+    def _arrow_parameters(self, code: str) -> set[str]:
+        """The names the arrow functions in a brace-language body bind: `scenario` and `index` in
+        `(scenario, index) => new ScenarioViewModel(scenario, index)`. A part built from them is built from what the
+        body itself holds."""
+        bound: set[str] = set()
+        for match in _ARROW_FUNCTION.finditer(code):
+            bound.update(_ARGUMENT_NAME.findall(match.group(1) or match.group(2) or ""))
+        return bound
 
     def locals_built_of(self, class_name: str) -> frozenset[str]:
         """Each local a brace-language body declares as a new object of the class: ``const copy = new Money()``."""
@@ -252,7 +281,7 @@ class SourceText:
         ``domain-exception-carries-context``'s question."""
         code = self._code()
         for pattern in (_EDGE_RAISE, _EDGE_RAISE_BRACE):
-            if any(not _names_declared_failure(match.group(1)) for match in pattern.finditer(code)):
+            if any(not self._names_declared_failure(match.group(1)) for match in pattern.finditer(code)):
                 return True
         return self._raises_builtin_with_message()
 
@@ -341,7 +370,13 @@ class SourceText:
         """A builtin failure raised under an empty-value guard whose message says what is empty or missing."""
         code = self._code()
         message = _EDGE_RAISE_MESSAGE.search(code)
-        return bool(message and not _names_declared_failure(message.group(1)) and _EDGE_GUARD.search(code))
+        return bool(message and not self._names_declared_failure(message.group(1)) and _EDGE_GUARD.search(code))
+
+    def _names_declared_failure(self, raised: str) -> bool:
+        """A raise of a failure the program declares rather than one its language gives every program:
+        `UnknownPractice(key, known)`, `CommitPathsRequiredError()`; not `ValueError("missing")`."""
+        named = _RAISED_CLASS.match(raised)
+        return named is not None and named.group(1) not in _BUILTIN_FAILURES
 
     def _returns_fallback(self, catch_body: str) -> bool:
         return _THROW.search(catch_body) is None and _FALLBACK_RETURN.search(catch_body) is not None
@@ -352,6 +387,58 @@ class SourceText:
         return bool(re.search(copy, self._text))
 
 
+class StatementCount:
+    """How many statements an operation's body holds: what `keep-operations-small-focused` measures. A statement that
+    spans several lines, such as a call, a list, or a string written over many lines, counts once, and the signature and
+    the docstring are no statements. A Python body is counted from its syntax tree; a brace-language body counts each
+    line that starts a statement outside any open bracket, so the lines inside a call, an array, an object literal, or
+    a JSX expression belong to the statement that opened them."""
+
+    def __init__(self, body: str, python: bool) -> None:
+        self._body = body
+        self._python = python
+
+    def count(self) -> int | None:
+        """The statements in the body; none for an empty body or Python text that does not parse on its own."""
+        if not self._body.strip():
+            return None
+        return self._python_statements() if self._python else self._brace_statements()
+
+    def _python_statements(self) -> int | None:
+        try:
+            tree = ast.parse(textwrap.dedent(self._body))
+        except SyntaxError:
+            return None
+        return sum(1 for child in ast.walk(tree) if isinstance(child, ast.stmt) and not self._is_docstring(child))
+
+    def _brace_statements(self) -> int:
+        code = _STRING_OR_COMMENT.sub(lambda found: "" if found.group(0)[:1] == "/" else '""', self._body)
+        open_brackets: list[str] = []
+        statements = 0
+        for line in code.splitlines():
+            stripped = line.strip()
+            in_block = not open_brackets or open_brackets[-1] == _BLOCK
+            if in_block and stripped and not _CONTINUES_STATEMENT.match(stripped):
+                statements += 1
+            self._follow_brackets(line, open_brackets)
+        return statements
+
+    def _follow_brackets(self, line: str, open_brackets: list[str]) -> None:
+        """Keep the brackets still open after the line. A `{` after a condition, an arrow, or `else`, `try`, `finally`,
+        or `do` opens a block, whose lines are statements of their own, even inside a call's arguments (a callback); any
+        other `{` opens an object literal, which belongs to its statement as a `(` or a `[` does."""
+        for index, character in enumerate(line):
+            if character in ")]}":
+                del open_brackets[-1:]
+            elif character in "([{":
+                open_brackets.append(_BLOCK if character == "{" and _OPENS_BLOCK.search(line[:index]) else character)
+
+    def _is_docstring(self, statement: ast.stmt) -> bool:
+        """A bare string: the docstring of a function, or text no statement uses."""
+        value = statement.value if isinstance(statement, ast.Expr) else None
+        return isinstance(value, ast.Constant) and isinstance(value.value, str)
+
+
 class PythonFunctionBody:
     """A Python function read from its syntax tree, and what the rules measure in it. A method keeps the class that
     declares it, since what counts as reaching another object's private state depends on that class; a module function
@@ -359,6 +446,7 @@ class PythonFunctionBody:
 
     def __init__(self, node: ast.FunctionDef | ast.AsyncFunctionDef, owner: ast.ClassDef | None) -> None:
         self._node = node
+        self._owner = owner
         self._own = OwnObjects(node, owner)
 
     def control_flow_depth(self) -> int:
@@ -369,13 +457,21 @@ class PythonFunctionBody:
         return any(isinstance(decorator, ast.Name) and decorator.id == name for decorator in self._node.decorator_list)
 
     def parameters(self) -> list[str]:
-        """Each parameter as `name: type`, without the receiver: `self`, and `cls` for a classmethod."""
-        receivers = {"self", "cls"} if self.decorated("classmethod") else {"self"}
+        """Each parameter as `name: type`, without the receiver Python hands a method first: `self`, or the class as
+        `cls` in a classmethod, `__new__`, `__init_subclass__`, or a metaclass's operations. A static method and a
+        module function have none."""
+        arguments = [*self._node.args.posonlyargs, *self._node.args.args]
+        if self._receives_itself() and arguments:
+            arguments = arguments[1:]
         return [
             f"{arg.arg}: {ast.unparse(arg.annotation)}" if arg.annotation is not None else arg.arg
-            for arg in [*self._node.args.args, *self._node.args.kwonlyargs]
-            if arg.arg not in receivers
+            for arg in [*arguments, *self._node.args.kwonlyargs]
+            if arg.arg != "self"
         ]
+
+    def _receives_itself(self) -> bool:
+        """True for a method Python calls with its object or its class as the first argument."""
+        return self._owner is not None and not self.decorated("staticmethod")
 
     def callees(self) -> list[str]:
         """The name of each function or member the function calls, in the order the tree holds them."""
@@ -419,15 +515,24 @@ class PythonFunctionBody:
         peer is wired to, and not a field it copies into the same field of this object."""
         own = _OWN_RECEIVERS | _OWN_CLASS_RECEIVERS | self._own.names()
         members = self._own.members()
+        modules = self._standard_modules()
         for child in ast.walk(self._node):
             if not (isinstance(child, ast.Attribute) and isinstance(child.value, ast.Name)):
                 continue
-            if child.value.id in own or not child.attr.startswith("_") or _is_dunder(child.attr) or child.attr in members:
+            if child.value.id in own | modules or not child.attr.startswith("_") or _is_dunder(child.attr) or child.attr in members:
                 continue
             if child.attr.lstrip("_") in _WIRED_PEER_FIELDS or self._copies_same_field(child.value.id, child.attr):
                 continue
             return True
         return False
+
+    def _standard_modules(self) -> frozenset[str]:
+        """The standard library modules the function reads by name, such as `os` in `os._exit(0)`: an underscore
+        function a standard module documents is a function of that module, not state another object keeps. A parameter
+        or a local of the same name is an object, not the module."""
+        bound = {arg.arg for arg in ast.walk(self._node.args) if isinstance(arg, ast.arg)}
+        bound |= {child.id for child in ast.walk(self._node) if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store)}
+        return frozenset(_STANDARD_MODULES - bound)
 
     def built_collaborators(self) -> list[tuple[str, int]]:
         """The classes this constructor builds that a caller cannot hand it, each with its line."""
@@ -521,8 +626,7 @@ class CatchClause:
                 kept.append(inner)
         return kept
 
-    @staticmethod
-    def _on_self(expression: ast.expr) -> bool:
+    def _on_self(self, expression: ast.expr) -> bool:
         """True for a member reached from ``self``: ``self._error``, ``self.thread_errors.append``."""
         reached = expression
         while isinstance(reached, ast.Attribute):
@@ -638,19 +742,16 @@ class Constructions:
         read = [child for child in nodes if isinstance(child, ast.Name) and id(child) not in called]
         return bool(arguments) and all(self._names_owned_value(name, known, id(name) in receivers) for name in read)
 
-    @staticmethod
-    def _names_owned_value(name: ast.Name, known: set[str], called_on: bool) -> bool:
+    def _names_owned_value(self, name: ast.Name, known: set[str], called_on: bool) -> bool:
         """True for a name the constructor holds, a builtin, or a constant or class it names without calling."""
         return name.id in known or hasattr(builtins, name.id) or (name.id[:1].isupper() and not called_on)
 
-    @staticmethod
-    def _bound_in(nodes: list[ast.AST]) -> set[str]:
+    def _bound_in(self, nodes: list[ast.AST]) -> set[str]:
         """The names a comprehension or a lambda inside the arguments binds itself."""
         bound = {child.id for child in nodes if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store)}
         return bound | {child.arg for child in nodes if isinstance(child, ast.arg)}
 
-    @staticmethod
-    def _absent_parameter(test: ast.expr) -> str:
+    def _absent_parameter(self, test: ast.expr) -> str:
         """The name a test asks is missing, `x is None` or `not x`; empty for any other test."""
         if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
             return _name_of(test.operand)
@@ -659,13 +760,6 @@ class Constructions:
             if isinstance(compared, ast.Constant) and compared.value is None:
                 return _name_of(test.left)
         return ""
-
-
-def _names_declared_failure(raised: str) -> bool:
-    """A raise of a failure the program declares rather than one its language gives every program:
-    `UnknownPractice(key, known)`, `CommitPathsRequiredError()`; not `ValueError("missing")`."""
-    named = _RAISED_CLASS.match(raised)
-    return named is not None and named.group(1) not in _BUILTIN_FAILURES
 
 
 def _name_of(expression: ast.expr) -> str:
@@ -731,12 +825,12 @@ class OwnObjects:
         named = rf"\b{re.escape(self._owner.name)}\b"
         return annotation is not None and re.search(named, ast.unparse(annotation)) is not None
 
-    def _builds_class(self, value: ast.expr) -> bool:
-        """True when a value is an object the class makes: a call of the class, of ``cls``, of ``type(self)``, or of a
-        factory on the class (``Plan.read(...)``, ``cls.read(...)``)."""
-        if not isinstance(value, ast.Call):
+    def _builds_class(self, assigned: ast.expr) -> bool:
+        """True when an assigned value is an object the class makes: a call of the class, of ``cls``, of
+        ``type(self)``, or of a factory on the class (``Plan.read(...)``, ``cls.read(...)``)."""
+        if not isinstance(assigned, ast.Call):
             return False
-        called = value.func
+        called = assigned.func
         if isinstance(called, ast.Attribute):
             called = called.value
         if isinstance(called, ast.Call):
@@ -753,15 +847,13 @@ class OwnObjects:
         fields.discard("")
         return fields
 
-    @staticmethod
-    def _self_field(expression: ast.expr) -> str:
+    def _self_field(self, expression: ast.expr) -> str:
         """The field an expression reads off ``self`` (``self.epics``); empty for anything else."""
         if isinstance(expression, ast.Attribute) and _name_of(expression.value) == "self":
             return expression.attr
         return ""
 
-    @staticmethod
-    def _targets(statement: ast.AST) -> list[ast.expr]:
+    def _targets(self, statement: ast.AST) -> list[ast.expr]:
         """What an assignment statement assigns to; none for any other node."""
         if isinstance(statement, ast.Assign):
             return statement.targets

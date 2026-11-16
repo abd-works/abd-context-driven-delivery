@@ -155,7 +155,7 @@ with description("a saved graph scoping a practice to the work some names cover"
                  _node("f", "organize.story.ui.spec.ts", "PlaywrightSpec")]
         edges = [_edge("e", "s1"), _edge("s1", "c1"), _edge("c1", "t1"), _edge("e", "s2"), _edge("s2", "c2"), _edge("e", "f")]
         document = {"version": SAVED_SHAPE_VERSION, "practices": {"stories": {"nodes": nodes, "edges": edges}}}
-        self.outside = SavedGraph.from_document(document).outside("stories", ["add child ticket"], frozenset({"Epic", "Story", "Scenario", "Then"}))
+        self.outside = SavedGraph.from_document(document).practices["stories"].outside(["add child ticket"], frozenset({"Epic", "Story", "Scenario", "Then"}))
 
     with it("should leave the named story and everything under it inside"):
         expect(self.outside & {"s1", "c1", "t1"}).to(equal(set()))

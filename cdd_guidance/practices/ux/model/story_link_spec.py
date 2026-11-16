@@ -31,8 +31,8 @@ def story_map_on(graph):
     scenario = Scenario("Products are listed", 0)
     scenario.steps.append(Step("the Customer opens the catalog"))
     story.scenarios.append(scenario)
-    epic.append_story(story)
-    story_map.append_epic(epic)
+    epic.stories.append(story)
+    story_map.epics.append(epic)
     return story_map, story, scenario
 
 

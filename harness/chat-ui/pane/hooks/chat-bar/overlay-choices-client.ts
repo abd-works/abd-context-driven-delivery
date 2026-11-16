@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
 import type { OverlayChoiceJson, OverlayChoicesJson } from '../../types'
-import { showFailure } from '../error-display/failure-client'
+import { shownAsFailure } from '../error-display/failure-client'
 import { callTool, type ChatBarClient } from './chat-bar-client'
 
 // The pattern overlays beside the fidelity dots: Python's ticket.overlay_choices answers every pattern with its icon and
@@ -55,6 +55,6 @@ export async function toggleOverlay($: EngineInterface, chips: OverlayChips, pat
     const choices = await callTool<OverlayChoiceJson[]>($, 'ticket.choose_overlays', { ticket: chips.ticket, overlays })
     await update($, overlayChoices, held => ({ ...(held ?? { isOpen: true }), ticket: chips.ticket, choices }))
   } catch (failure) {
-    await showFailure($, `The overlay ${pattern} was not ${chosen.includes(pattern) ? 'removed' : 'added'}`, `Pressing ${pattern} in the overlay list, calling ticket.choose_overlays`, failure)
+    await shownAsFailure($, `The overlay ${pattern} was not ${chosen.includes(pattern) ? 'removed' : 'added'}`, `Pressing ${pattern} in the overlay list, calling ticket.choose_overlays`)(failure)
   }
 }

@@ -24,7 +24,7 @@ from space.session import Sessions  # noqa: E402
 from space.session.progress_cache import PROGRESS_CACHE_FILE  # noqa: E402
 
 from space.kanban.board_tools_examples import ProjectTools  # noqa: E402
-from space.session.throwaway_project import ThrowawayProject
+from space.session.throwaway_project import OPEN_PROJECTS
 
 # The session records with nothing left off origin's main: none uncommitted, none unpushed.
 SAVED = {"uncommitted": "", "unpushed": ""}
@@ -38,7 +38,7 @@ with description("the board tools") as self:
         self.project = ProjectTools()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
         patch.stopall()
 
     # (E) See Work On Session Board

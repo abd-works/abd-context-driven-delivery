@@ -7,7 +7,7 @@ from typing import Any
 
 from expects import be_true, contain, equal, expect
 from mamba import after, before, context, description, it
-from space.session.throwaway_project import ThrowawayProject
+from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
@@ -60,7 +60,7 @@ class CleanEngineeringKit:
         return (self.kit_dir / f"{self.action_name}.md").read_text(encoding="utf-8")
 
     def contexts_section(self) -> str:
-        return self.load().scoped_markdown()
+        return self.load().scoped_markdown
 
     def examples(self) -> str:
         return Markdown.from_label(self.load(), "examples").extract()
@@ -118,7 +118,7 @@ with description("CleanEngineering action expansion"):
         self.project = ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("a CleanEngineering generator constructed with format python"):
         with before.all:
@@ -126,7 +126,7 @@ with description("CleanEngineering action expansion"):
             kit.format_name = "python"
             self.kit = kit
             self.clean_engineering = kit.load()
-            self.contexts = self.clean_engineering.scoped_markdown()
+            self.contexts = self.clean_engineering.scoped_markdown
             self.examples = self.clean_engineering.examples().expand()
             self.template = self.clean_engineering.templates().expand()
 
@@ -184,7 +184,7 @@ with description("CleanEngineering action expansion"):
             kit.format_name = "markdown"
             kit.fidelity = "model"
             self.practice = kit.load()
-            self.contexts = self.practice.scoped_markdown()
+            self.contexts = self.practice.scoped_markdown
             self.examples = self.practice.examples().expand()
 
         with it("should keep Language and model contexts only"):
@@ -207,7 +207,7 @@ with description("clean_engineering content helpers"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("load_concepts_section"):
         with it("should return non-empty text containing the word Contexts"):

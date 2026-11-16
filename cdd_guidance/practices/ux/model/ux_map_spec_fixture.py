@@ -15,6 +15,16 @@ from cdd_guidance.practices.ux.model.nodes import (
     Transition,
 )
 from cdd_guidance.practices.ux.model.ux_map import UxMap
+from cdd_guidance.practices.ux.model.nodes import story_steps_from
+
+
+def made(node_type: type, name: str, sequential_order: int, graph: Any = None, **fields: Any) -> Any:
+    """A UX node of node_type called name at sequential_order, on graph, with each of fields set on it as a format
+    sets them once the node is made."""
+    node = node_type(name, sequential_order, graph)
+    for field, value in fields.items():
+        setattr(node, field, value)
+    return node
 
 
 class OrderingMap:
@@ -29,17 +39,17 @@ class OrderingMap:
         ux_map.context.invariants = ["Tab states are separate screens"]
         catalog, cart, saved = self._screens(ux_map)
         catalog.append_region(self._catalog_region(cart))
-        ux_map.transitions.append(Transition("opens cart", 0, catalog, cart, "opens cart", "action"))
-        content_type = ContentType("Product", 0, "Catalog > Product")
+        ux_map.transitions.append(made(Transition, "opens cart", 0, from_screen=catalog, to_screen=cart, trigger="opens cart", nav_type="action"))
+        content_type = made(ContentType, "Product", 0, hierarchy="Catalog > Product")
         content_type.key_actions = ["add to cart"]
         ux_map.content_types.append(content_type)
-        nav = NavComponent("Top nav", 0, "top nav")
+        nav = made(NavComponent, "Top nav", 0, ux_type="top nav")
         nav.destinations = [catalog, cart]
         ux_map.nav_components.append(nav)
         return ux_map
 
     def _screens(self, ux_map: UxMap) -> tuple[Screen, Screen, Screen]:
-        catalog = Screen("Catalog", 0, "catalog", "stack", "Browse products")
+        catalog = made(Screen, "Catalog", 0, slug="catalog", layout="stack", description="Browse products")
         catalog.show_story("Browse Product Catalog")
         catalog.show_scenario("Browse Product Catalog › Products are listed")
         catalog.show_step("Browse Product Catalog › Products are listed › the Customer opens the catalog")
@@ -47,27 +57,20 @@ class OrderingMap:
         catalog.domain_concepts = ["Catalog"]
         catalog.image = "screens/catalog.png"
         catalog.prototype = "screens/catalog.dc.html"
-        cart = Screen("Cart", 1, "cart", "sidebar")
-        saved = Screen("Cart - Saved", 2, chrome_of=cart)
+        cart = made(Screen, "Cart", 1, slug="cart", layout="sidebar")
+        saved = made(Screen, "Cart - Saved", 2, chrome_of=cart)
         saved.inactive_tabs = ["Current"]
         for screen in (catalog, cart, saved):
             ux_map.append_screen(screen)
         return catalog, cart, saved
 
     def _catalog_region(self, cart: Screen) -> Region:
-        region = Region("product list", 0, "body")
-        browse = Control("Browse", 0, "button", "Browse <all>", "")
+        region = made(Region, "product list", 0, area="body")
+        browse = made(Control, "Browse", 0, control_type="button", label="Browse <all>", bound_field="")
         browse.states = ["primary"]
-        browse.append_interaction(Interaction("open cart", 0, "click", "shows the cart", cart))
+        browse.append_interaction(made(Interaction, "open cart", 0, trigger="click", effect="shows the cart", destination=cart))
         region.append_control(browse)
-        region.append_control(StoryDemoControl(
-            "Products", 1, "bound-list", "Products", "catalog.products",
-            [{"kind": "given", "label": "the catalog lists Products"}],
-            "product",
-            [{"kind": "when", "label": "the Customer selects a Product"}],
-            "name",
-            "{name}",
-        ))
+        region.append_control(made(StoryDemoControl, "Products", 1, control_type="bound-list", label="Products", bound_field="catalog.products", story_steps=story_steps_from([{"kind": "given", "label": "the catalog lists Products"}]), set_input="product", item_story_steps=story_steps_from([{"kind": "when", "label": "the Customer selects a Product"}]), item_value="name", item_label="{name}"))
         return region
 
 

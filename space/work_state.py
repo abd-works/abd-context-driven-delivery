@@ -63,8 +63,8 @@ class WorkState:
     def _value(self, key: str) -> str:
         return self.load().get(key, "").strip()
 
-    def _store(self, key: str, value: str) -> None:
-        cleaned = str(value or "").strip()
+    def _store(self, key: str, stored: str) -> None:
+        cleaned = str(stored or "").strip()
         with _WRITING:
             everything = self._file.read()
             entry = dict(everything.get(self.key) or {})

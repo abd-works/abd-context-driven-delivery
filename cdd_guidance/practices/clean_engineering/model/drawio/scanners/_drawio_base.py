@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree as ET
 
-from harness.graph.violation import Violation
+from harness.graph.location import Location
+from harness.graph.violation import FoundBy, Violation
 from harness.installation.data_class import data_of
 
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import DrawioPage
@@ -40,13 +41,13 @@ class DrawioScanner:
             return False
         return any((part in SKIP_DIR_NAMES for part in p.parts))
 
-    def filter_scan_files(self, files: list[Path]) -> list[Path]:
+    def _filter_scan_files(self, files: list[Path]) -> list[Path]:
         return [path for path in files if not self.is_skipped_path(path)]
 
     def scan(self, root: Path, files: list[Path]) -> list[Violation]:
         root = root.resolve()
         violations: list[Violation] = []
-        for file_path in self.filter_scan_files(files):
+        for file_path in self._filter_scan_files(files):
             path = file_path if file_path.is_absolute() else root / file_path
             if not path.is_file():
                 continue
@@ -62,7 +63,7 @@ class DrawioScanner:
         try:
             mxfile = ET.parse(str(file_path)).getroot()
         except (OSError, ET.ParseError) as exc:
-            return [Violation(self.rule, f'Could not load drawio file: {exc}', practice='clean_engineering', location=str(file_path))]
+            return [Violation(FoundBy(self.rule, 'clean_engineering'), f'Could not load drawio file: {exc}', Location(str(file_path)))]
         violations = []
         for page in DrawioPage.pages_in(mxfile, file_path):
             violations.extend(self.scan_page(page))
@@ -73,10 +74,11 @@ class DrawioScanner:
 
     def violation(self, page: DrawioPage, message: str) -> Violation:
         """A violation on this page, prefixed with the page name and located at the scanned file."""
-        return Violation(self.rule, f'[{page.name or "(unnamed)"}] {message}', practice='clean_engineering', location=str(page.file_path))
+        return Violation(FoundBy(self.rule, 'clean_engineering'), f'[{page.name or "(unnamed)"}] {message}', Location(str(page.file_path)))
 
     @classmethod
-    def discover(cls) -> dict[str, type[DrawioScanner]]:
+    def every(cls) -> dict[str, type[DrawioScanner]]:
+        """Each scanner this folder holds, by the rule it checks: one class per `*_scanner.py` file."""
         discovered: dict[str, type[DrawioScanner]] = {}
         scanners_dir = Path(__file__).resolve().parent
         for script in sorted(scanners_dir.glob('*_scanner.py')):
@@ -100,7 +102,7 @@ class DrawioScanner:
     def run_report(self, paths: list[str]) -> dict[str, Any]:
         files = [Path(path) for path in paths]
         scan_root = self.scan_root or self._shared_folder(files)
-        discovered = self.discover()
+        discovered = self.every()
         violations: list[Violation] = []
         for slug, scanner_class in discovered.items():
             violations.extend(scanner_class(slug, explicit_paths=files).scan(scan_root, files))
@@ -117,14 +119,19 @@ class DrawioScanner:
         return shared
 
     def run_main(self, argv: list[str] | None=None) -> int:
+        workspace = self._workspace_named_in(argv)
+        violations = self.scan(workspace, self.collect_drawio_files(workspace))
+        self._print_violations(violations)
+        return 1 if violations else 0
+
+    def _workspace_named_in(self, argv: list[str] | None) -> Path:
         parser = argparse.ArgumentParser(description='Run one Draw.io scanner')
         parser.add_argument('--workspace', type=Path, default=Path.cwd(), help='Project root (default: cwd).')
-        args = parser.parse_args(argv)
-        workspace = args.workspace.resolve()
-        violations = self.scan(workspace, self.collect_drawio_files(workspace))
+        return parser.parse_args(argv).workspace.resolve()
+
+    def _print_violations(self, violations: list[Violation]) -> None:
         for violation in violations:
             print(data_of(violation), file=sys.stderr)
-        return 1 if violations else 0
 
     def collect_drawio_files(self, root: Path) -> list[Path]:
         files: list[Path] = []

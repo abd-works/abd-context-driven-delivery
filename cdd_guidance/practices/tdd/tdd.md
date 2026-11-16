@@ -55,7 +55,7 @@ A spec file's suffix names its tier, and the tier is about speed:
 |---|---|---|
 | unit | `*_spec`, story tiers | Examples that run in microseconds to milliseconds, with a fake at every architecture boundary |
 | heavy | `*_heavy_spec` | Examples that need a real resource: git, a server, a daemon, an installer, a worker process, a big load |
-| e2e | `*_e2e_spec`, `*_agent_spec` | Examples that drive a real browser or a real agent |
+| e2e | `*_e2e_spec`, `*_agent_spec`, `*.story.ui.spec.ts` and the other Playwright specs | Examples that drive a real browser or a real agent |
 
 ### Make slow tests fast first
 
@@ -85,6 +85,16 @@ Read the runner's slow list after every whole-tier unit run and fix each example
 
 After two failed fixes for the same failure, stop and diagnose before a third: read the failure, reproduce it on its own, and find the cause.
 
+## Shared rules
+
+```yaml
+alwaysApply: true
+```
+
+Whenever you are about to write production code or a test for it. Follow these rules.
+
+- **`flow-chosen-before-code`** — Before writing production code or a test, say which flow each boundary the change touches is in, and work in that flow's order. **Flow A** is a boundary crossed for the first time, such as a new module seam, a new external system, a new process, or a new tier: run it for real end to end, have the person verify it, capture it in a heavy or e2e test, and only then write the stubbed unit tests. **Flow B** is a known area, where a heavy or e2e test already runs every boundary the change touches: write the unit test, see it fail for the right reason, then write the code. Tests written after the code, which pass on their first run, prove nothing they were not shaped to pass, and stubs written before a real run fake the very boundary nobody has seen work.
+
 ## stories-acceptance-tests, bdd-development
 
 The tests Stories acceptance tests and BDD development write share their tiers, their speed, their stubs and heavy coverage, and the cadence they run on.
@@ -99,7 +109,7 @@ globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,*
 Whenever you create, alter, or delete acceptance tests or BDD specs. Follow these rules.
 
 **Tiers**
-- **`suffix-names-the-tier`** — `*_spec` is unit, `*_heavy_spec` is heavy, and `*_e2e_spec` / `*_agent_spec` is e2e; a story test's tier file follows the same suffixes. A suffix that names the wrong tier puts a slow test in the run that must stay fast.
+- **`suffix-names-the-tier`** — `*_spec` is unit, `*_heavy_spec` is heavy, and `*_e2e_spec` / `*_agent_spec` / `*.story.ui.spec.ts` is e2e; a story test's tier file follows the same suffixes. A suffix that names the wrong tier puts a slow test in the run that must stay fast.
 - **`unit-tier-fakes-every-boundary`** — A unit spec reaches no real resource: a fake sits at every architecture boundary.
 - **`heavy-tier-holds-a-real-resource`** — A heavy spec uses a real resource (git, a server, a daemon, an installer, a worker, a big load); without one it belongs in the unit tier.
 - **`e2e-tier-drives-browser-or-agent`** — An e2e spec drives a real browser or a real agent, and no other tier does.

@@ -11,16 +11,20 @@ applies it or reads its schemas, so the patterns depend on the graph and never t
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from harness.annotations.class_folder import class_folder
 from harness.graph.patterns_file import PatternsFile
-from harness.graph.practice_rule import SharedPracticeGraphRule
+from harness.graph.practice_rule import PracticeGraphRule, SharedPracticeGraphRule
 from harness.graph.schema_conformance import FRAMEWORK_RULES
 from harness.guidance.practice_reading import rules_in
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
+    from harness.guidance.guidance import PracticeGuidance
+
+# A practice's graph rules by slug.
+GraphChecks = dict[str, PracticeGraphRule]
 
 
 class GraphOverlay:
@@ -32,10 +36,10 @@ class GraphOverlay:
     """Relationship kinds of the pattern's schema that place a node as a child in the explorer tree; every other kind is
     listed under its kind's name."""
 
-    def __init__(self, pattern: Any) -> None:
+    def __init__(self, pattern: PracticeGuidance) -> None:
         self.pattern = pattern
         """The pattern's guidance, which owns this overlay; its rules give each of the overlay's graph rules its prose."""
-        self._rules: dict[str, dict[str, Any]] = {}
+        self._rules: dict[str, GraphChecks] = {}
 
     @property
     def name(self) -> str:
@@ -80,7 +84,7 @@ class GraphOverlay:
         roles it names already."""
         patterns_file.record([self.name])
 
-    def rules_for(self, practice: Any) -> dict[str, Any]:
+    def rules_for(self, practice: PracticeGuidance) -> GraphChecks:
         """The graph rules this pattern adds to practice, by slug, read once from the pattern's own folder: its package
         is the held pattern's own, the way a practice reads its rules from its own package."""
         if practice.key not in self._rules:
@@ -89,7 +93,7 @@ class GraphOverlay:
             self._rules[practice.key] = {**own, **self._shared_rules_for(practice, package)}
         return self._rules[practice.key]
 
-    def _shared_rules_for(self, practice: Any, package: str) -> dict[str, Any]:
+    def _shared_rules_for(self, practice: PracticeGuidance, package: str) -> GraphChecks:
         """The rules in its own ``rules`` package it shares across practices, each bound to practice's node types; none
         it does not name practice in."""
         bound = {slug: rule.for_practice(practice) for slug, rule in rules_in(f"{package}.rules").items() if isinstance(rule, SharedPracticeGraphRule)}
@@ -109,9 +113,9 @@ class PatternOverlays:
         PatternOverlays._registered = {pattern_class.pattern: pattern_class for pattern_class in pattern_classes}
 
     def __init__(self, overlays: list[str] | tuple[str, ...] = ()) -> None:
-        self._made: dict[str, Any] = {}
+        self._made: dict[str, PracticeGuidance] = {}
         self.paths: list[str] = []
-        self.patterns: list[Any] = []
+        self.patterns: list[PracticeGuidance] = []
         self.apply(overlays)
 
     def apply(self, overlays: list[str] | tuple[str, ...]) -> None:
@@ -130,9 +134,9 @@ class PatternOverlays:
                 paths.append(path)
         return paths
 
-    def _patterns_at(self, paths: list[str]) -> list[Any]:
+    def _patterns_at(self, paths: list[str]) -> list[PracticeGuidance]:
         """The registered pattern each overlay root is, each made once by this object."""
-        patterns: list[Any] = []
+        patterns: list[PracticeGuidance] = []
         for path in paths:
             name = Path(path).name
             if name in self._registered and self._holds_practices(self._folder_of(name)):
@@ -151,7 +155,7 @@ class PatternOverlays:
         """The overlay of every registered pattern that holds a practice, applied or not."""
         return [self._pattern(name).graph_overlay for name in self.available]
 
-    def checks_of(self, practice: Any, overlays: list[str] | None = None) -> dict[str, Any]:
+    def checks_of(self, practice: PracticeGuidance, overlays: list[str] | None = None) -> GraphChecks:
         """The graph rules practice checks with these overlays applied, or with the overlays named, such as those a
         saved graph was saved with, by slug: the framework's own, which every practice checks, its own, then those each
         pattern adds to it, then those each supplement the practice holds adds, whatever overlays were chosen. Each
@@ -164,12 +168,12 @@ class PatternOverlays:
             merged.update(overlay.rules_for(practice))
         return merged
 
-    def overlays_for(self, practice: Any) -> tuple[GraphOverlay, ...]:
+    def overlays_for(self, practice: PracticeGuidance) -> tuple[GraphOverlay, ...]:
         """The overlays practice's schema reads: each applied pattern's, then each of its supplements', which apply
         whatever overlays were chosen."""
         return (*self.graph_overlays, *self.supplement_overlays_of([practice]))
 
-    def supplement_overlays_of(self, practices: list[Any]) -> list[GraphOverlay]:
+    def supplement_overlays_of(self, practices: list[PracticeGuidance]) -> list[GraphOverlay]:
         """The graph overlay of each supplement the practices hold, once each: what a graph reads and checks for its
         supplements, as it does for its applied patterns."""
         found: list[GraphOverlay] = []
@@ -245,12 +249,12 @@ class PatternOverlays:
         """The folder the registered pattern name is defined in."""
         return class_folder(self._registered[name])
 
-    def pattern_named(self, name: str) -> Any:
+    def pattern_named(self, name: str) -> PracticeGuidance:
         """The guidance of the registered pattern name, whether its folder holds practices or not, made the first time
         this object wants it: what an action reads a pattern's own rules from."""
         return self._pattern(name)
 
-    def _pattern(self, name: str) -> Any:
+    def _pattern(self, name: str) -> PracticeGuidance:
         """The guidance of the registered pattern name, made the first time this object wants it."""
         if name not in self._made:
             self._made[name] = self._registered[name]()

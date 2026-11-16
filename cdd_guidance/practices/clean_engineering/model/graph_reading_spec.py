@@ -67,7 +67,7 @@ with description("Clean Engineering reading code into its graph"):
             self.charge = next(node for node in self.fixture.practice.reading.in_graph.nodes("Operation") if node.name == "charge")
 
         with it("should link each parameter through hasParameter, in the order the operation declares them"):
-            expect([edge.child.name for edge in self.fixture.practice.reading.graph.edges_from("hasParameter", self.charge)]).to(
+            expect([edge.child.name for edge in self.fixture.practice.reading.graph.edges.from_parent("hasParameter", self.charge)]).to(
                 equal(["amount", "note"])
             )
 
@@ -215,8 +215,10 @@ with description("Clean Engineering reading code into its graph"):
             )
 
         with it("should hold none of the spec's members to the relationships the schema requires"):
-            check = next(node for node in self.fixture.practice.reading.in_graph.nodes("Operation") if node.name == "check")
-            expect(check.get_fact("exempt_relationships")).to(equal(["invokes"]))
+            in_graph = self.fixture.practice.reading.in_graph
+            check = next(node for node in in_graph.nodes("Operation") if node.name == "check")
+            required = {requirement.field for requirement in in_graph.rule_run.schema.requirements if "Operation" in requirement.owner.node_types}
+            expect(required - set(check.get_fact("exempt_relationships") or [])).to(equal(set()))
 
     with context("with a folder holding only story tests"):
         with before.all:

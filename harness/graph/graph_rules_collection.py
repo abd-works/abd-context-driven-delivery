@@ -3,37 +3,40 @@ explorer tree the collection is the node's rules entry and each rule is a child 
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 from harness.guidance.rule import Rule, RulesCollection
 from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.location import Location
 from harness.graph.violation import NodeViolation, Violation
 from harness.installation.data_class import data_field
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
 
 
 class GraphRule(PracticeGraphRule, Rule):
     """One schema rule on one node: its slug, its prose, whether a check runs it, and the violations it found there."""
 
-    def __init__(
-        self,
-        node: Any,
-        slug: str,
-        body: str = "",
-        node_types: tuple[str, ...] = (),
-        *,
-        check: PracticeGraphRule | None = None,
-        runs: bool = False,
-    ) -> None:
+    def __init__(self, node: Node, slug: str, check: PracticeGraphRule | None = None) -> None:
+        """The rule slug on node, with the prose node's schema gives it, run by check when one exists."""
         PracticeGraphRule.__init__(self)
-        Rule.__init__(self, slug=slug, body=body)
+        Rule.__init__(self, slug=slug, body=node.schema.rule_prose.get(slug, ""))
         self.node = node
-        self.node_types = node_types
+        self.node_types = tuple(check.node_types) if check is not None else (node.type,)
         self.executable = check is not None
-        self.runs = runs and check is not None
+        self.runs = check is not None and any(check.applies_to(type_name) for type_name in self._applying_types())
         """Whether its check runs on this node: the check applies to the node's type, or to the type it is anchored to."""
         if check is not None:
             self.check = check.check  # type: ignore[method-assign]
         self._violations: list[Violation] = []
+
+    def _applying_types(self) -> set[str]:
+        """The node types whose checks apply to this rule's node: its own, and the type of the extended practice it is
+        anchored to, such as a Clean Engineering class for a DDD entity."""
+        node = self.node
+        anchor = node.schema.anchor_type(node.type)
+        return {node.type, anchor} if anchor else {node.type}
 
     @property
     @data_field
@@ -83,14 +86,7 @@ class GraphRule(PracticeGraphRule, Rule):
 
     def restore(self, violation: Violation) -> None:
         """Keep a violation a saved graph recorded, at the place it was saved with, as this rule's own."""
-        restored = NodeViolation(
-            self,
-            violation.message,
-            location=violation.location,
-            line=violation.line,
-            end_line=violation.end_line,
-            severity=violation.severity,
-        )
+        restored = NodeViolation(self, violation.message, Location(violation.location, violation.line, violation.end_line))
         if restored not in self._violations:
             self._violations.append(restored)
 
@@ -105,25 +101,17 @@ class GraphRule(PracticeGraphRule, Rule):
 class GraphRulesCollection(RulesCollection):
     """Schema rules for one node. Violations live on each GraphRule entry."""
 
-    def __init__(self, node: Any, entries: dict[str, GraphRule] | None = None) -> None:
+    def __init__(self, node: Node, entries: dict[str, GraphRule] | None = None) -> None:
         super().__init__(entries)
         self.node = node
 
     @classmethod
-    def from_node(cls, node: Any) -> GraphRulesCollection:
+    def from_node(cls, node: Node) -> GraphRulesCollection:
         """The rules node's schema gives its type, with the overlays that add their rules to node, each with its prose,
-        the check that runs it when one exists, and whether that check applies to node; node says which checks it has and
-        which apply to it."""
-        schema = node.schema.for_node(node)
-        checks = node.rule_checks()
-        applying = node.applying_rule_types()
-        entries: dict[str, GraphRule] = {}
-        for slug in schema.slugs_for(node.type):
-            check = checks.get(slug)
-            node_types = tuple(check.node_types) if check is not None else (node.type,)
-            runs = check is not None and any(check.applies_to(type_name) for type_name in applying)
-            entries[slug] = GraphRule(node, slug, body=schema.rule_prose.get(slug, ""), node_types=node_types, check=check, runs=runs)
-        return cls(node, entries)
+        the check that runs it when one exists, and whether that check applies to node: the checks of node's practice,
+        of the practice it extends, and of each pattern overlay its graph applies."""
+        checks = dict(node.practice.reading.checks())
+        return cls(node, {slug: GraphRule(node, slug, checks.get(slug)) for slug in node.schema.for_node(node).slugs_for(node.type)})
 
     @property
     @data_field

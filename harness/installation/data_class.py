@@ -10,7 +10,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from harness.annotations.annotation import Annotation, NamesAnnotation
+from harness.agent_tools.parameter_schema import is_built_in
+from harness.annotations.annotation import Annotatable, Annotation, NamesAnnotation
 
 
 class LanguageAdapter(Annotation):
@@ -24,14 +25,14 @@ class LanguageAdapter(Annotation):
     file_views_flag = "_language_adapter_file_views"
     copied = False
 
-    def __new__(cls, *, language: str, shares_file_views: bool = False):
+    def __new__(cls: type[LanguageAdapter], *, language: str, shares_file_views: bool = False) -> LanguageAdapter:
         return object.__new__(cls)
 
     def __init__(self, *, language: str, shares_file_views: bool = False) -> None:
         self.language = language
         self.shares_file_views = shares_file_views
 
-    def annotate(self, toolset: Any) -> Any:
+    def annotate(self, toolset: type) -> type:
         setattr(toolset, self.flag, (*getattr(toolset, self.flag, ()), self.language))
         if self.shares_file_views:
             setattr(toolset, self.file_views_flag, True)
@@ -89,7 +90,9 @@ class DataField(Annotation):
     reference_flag = "_data_field_reference"
     copied = False
 
-    def __new__(cls, target: Any = None, *, key: str = "", reference: bool = False):
+    def __new__(
+        cls: type[DataField], target: Annotatable | None = None, *, key: str = "", reference: bool = False
+    ) -> DataField | Annotatable:
         annotation = object.__new__(cls)
         annotation.key = key
         annotation.reference = reference
@@ -97,7 +100,7 @@ class DataField(Annotation):
             return annotation.annotate(target)
         return annotation
 
-    def annotate(self, getter: Any) -> Any:
+    def annotate(self, getter: Annotatable) -> Annotatable:
         setattr(getter, self.flag, self.key or getter.__name__)
         setattr(getter, self.reference_flag, self.reference)
         return getter
@@ -127,10 +130,8 @@ class DataClass:
         held = data_class.__dict__.get(cls._HELD_AS)
         if held is None:
             held = cls(data_class)
-            try:
+            if not is_built_in(data_class):
                 setattr(data_class, cls._HELD_AS, held)
-            except TypeError:  # a built-in type keeps no attributes, so its data is read for this value alone
-                pass
         return held
 
     @functools.cached_property
@@ -159,7 +160,7 @@ class DataClass:
         """Whether the shared file views read files through this class's generated client."""
         return bool(vars(self.data_class).get(LanguageAdapter.file_views_flag, False))
 
-    def edited_by(self, operation: Any) -> tuple[str, ...]:
+    def edited_by(self, operation: Annotatable) -> tuple[str, ...]:
         """The fields of this class's data that operation's `@edits` annotation names, or none."""
         return Edits.names_on(operation)
 
@@ -173,30 +174,30 @@ class DataClass:
         answer sends thousands of objects, so this is read once per class rather than once per object."""
         return tuple((key, field.fget, self.sends_by_identity(field)) for key, field in self.fields.items())
 
-    def data(self, value: Any) -> dict[str, Any]:
-        """value's annotated fields as plain data."""
+    def data(self, instance: object) -> dict[str, Any]:
+        """instance's annotated fields as plain data."""
         sent: dict[str, Any] = {}
         for key, getter, by_identity in self._sent:
-            held = getter(value)
+            held = getter(instance)
             sent[key] = self._referenced(held) if by_identity else data_of(held)
         return sent
 
-    def reference(self, value: Any) -> dict[str, Any]:
-        """value by its identity alone, such as `{"name": "Discovery"}` for a stage, so data can name an object that is
+    def reference(self, instance: object) -> dict[str, Any]:
+        """instance by its identity alone, such as `{"name": "Discovery"}` for a stage, so data can name an object that is
         sent in full elsewhere without sending it again. An identity field that holds an object with an identity of its
         own sends that object by its reference too, so a fidelity's progress is `{ticket: {name}, fidelity: {slug}}`."""
         if not self.identity:
             raise ReferenceWithoutIdentityError(self.data_class)
         fields = self.fields
-        return {key: self._identity_data(fields[key].fget(value)) for key in self.identity}
+        return {key: self._identity_data(fields[key].fget(instance)) for key in self.identity}
 
-    def _identity_data(self, held: Any) -> Any:
+    def _identity_data(self, held: object) -> Any:
         if held is None:
             return data_of(held)
         held_class = DataClass.of(type(held))
         return held_class.reference(held) if held_class.identity else data_of(held)
 
-    def _referenced(self, held: Any) -> Any:
+    def _referenced(self, held: object) -> Any:
         if held is None:
             return None
         if isinstance(held, (list, tuple)):
@@ -208,25 +209,25 @@ class DataClass:
 _PLAIN_TYPES = frozenset({str, int, float, bool, type(None)})
 
 
-def data_of(value: Any) -> Any:
-    """value as plain JSON data: an object with annotated properties as its fields, each object it holds as its own data.
+def data_of(subject: object) -> Any:
+    """subject as plain JSON data: an object with annotated properties as its fields, each object it holds as its own data.
 
     This is the one way a value of any type becomes data, for MCP results and every other JSON answer, so a path reads
     the same wherever it is sent: with forward slashes."""
-    if type(value) in _PLAIN_TYPES:  # most of an answer's values; an Enum built on str is no plain str, so it is sent below
-        return value
-    if isinstance(value, Enum):
-        return value.value
-    if value is None or isinstance(value, (str, int, float, bool)):
-        return value
-    if isinstance(value, Path):
-        return value.as_posix()
-    if isinstance(value, dict):
-        return {key: data_of(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [data_of(item) for item in value]
-    data_class = DataClass.of(type(value))
-    return data_class.data(value) if not isinstance(value, type) and data_class.fields else value
+    if type(subject) in _PLAIN_TYPES:  # most of an answer's values; an Enum built on str is no plain str, so it is sent below
+        return subject
+    if isinstance(subject, Enum):
+        return subject.value
+    if subject is None or isinstance(subject, (str, int, float, bool)):
+        return subject
+    if isinstance(subject, Path):
+        return subject.as_posix()
+    if isinstance(subject, dict):
+        return {key: data_of(item) for key, item in subject.items()}
+    if isinstance(subject, (list, tuple)):
+        return [data_of(item) for item in subject]
+    data_class = DataClass.of(type(subject))
+    return data_class.data(subject) if not isinstance(subject, type) and data_class.fields else subject
 
 
 class SourceFile(Annotation):

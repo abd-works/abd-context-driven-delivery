@@ -122,6 +122,22 @@ with description("a generate action on practice guidance") as self:
             with it("should name the roles a folder can hold of the pattern"):
                 expect(self.prose).to(contain("- lern_domain_driven: Boot, View, Client, Routes, Node, Domain, Store"))
 
+        # The process says what to do first, so it opens the reply: a long reply is read from the top, and an agent that
+        # meets the rules first treats the reply as a rulebook and skips the order of work.
+        with context("that generates two fidelities TDD supplements"):
+            with before.each:
+                listed = {"guidance": ["stories-acceptance-tests", "clean-engineering-code"]}
+                self.prose = _expanded_generate(_made_for(self.project), listed).instructions
+
+            with it("should open with the TDD process, before the first rule"):
+                expect(self.prose.index("### Choose the flow first") < self.prose.index("Evaluate the current context against this rule")).to(equal(True))
+
+            with it("should give the TDD process once"):
+                expect(self.prose.count("### Choose the flow first")).to(equal(1))
+
+            with it("should still give each fidelity the TDD section written for it"):
+                expect(self.prose).to(contain("One scenario at a time, in the flow's order", "Follow the flow. Crossing a boundary for the first time"))
+
         with context("that generates a fidelity in a format its earlier fidelity has no file in, but another format it has"):
             with before.each:
                 (self.project / ".context").mkdir(exist_ok=True)
@@ -163,7 +179,7 @@ with description("a generate action on practice guidance") as self:
             with before.each:
                 server = McpServer(project=self.project)
                 server.start(("cdd_guidance.actions.generate.generate:Generate",))
-                self.reply = server.invoke_prompt("generate.generate", {"guidance": "stories-story-map"})
+                self.reply = server.invoke("generate.generate", {"guidance": "stories-story-map"})
 
             with it("should name the session's session.json"):
                 expect(self.reply).to(contain((self.project / ".sessions" / "alpha" / "session.json").resolve().as_posix()))
@@ -185,7 +201,7 @@ with description("a generate action on practice guidance") as self:
                 (other / "session.json").write_text('{"name": "beta", "workpath": "' + (self.project / "src").as_posix() + '"}', encoding="utf-8")
                 server = McpServer(project=self.project)
                 server.start(("cdd_guidance.actions.generate.generate:Generate",))
-                self.reply = server.invoke_prompt("generate.generate", {"guidance": "stories-story-map session=.sessions/beta/session.json"})
+                self.reply = server.invoke("generate.generate", {"guidance": "stories-story-map session=.sessions/beta/session.json"})
 
             with it("should describe that session, not the one open"):
                 expect(self.reply).to(contain((self.project / ".sessions" / "beta" / "session.json").resolve().as_posix()))
@@ -201,8 +217,8 @@ with description("a generate action on practice guidance") as self:
             with before.each:
                 server = McpServer(project=self.project)
                 server.start(("cdd_guidance.actions.generate.generate:Generate",))
-                server.invoke_prompt("generate.generate", {"guidance": "stories-story-map"})
-                server.invoke_prompt("generate.generate", {"guidance": "stories-scenarios"})
+                server.invoke("generate.generate", {"guidance": "stories-story-map"})
+                server.invoke("generate.generate", {"guidance": "stories-scenarios"})
 
             with it("should log a generate line for each call"):
                 expect(_logged_verbs(self.project).count("generate")).to(equal(2))

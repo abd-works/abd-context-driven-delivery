@@ -66,7 +66,8 @@ Every node of the map. Each child belongs to its owner on the graph: a screen, t
 
 ## Screen : UxNode
 
-+ Screen(name: str, sequential_order: int, slug: str = "", layout: str = "", description: str = "", chrome_of: Screen | None = None, graph: Graph | None = None)
++ Screen(name: str, sequential_order: int, graph: Graph | None = None)
+	// its slug (from its name while it is given none), layout, description and chrome_of are set once it is made
 	// slug defaults to the name's title slug
 ------
 + slug: str
@@ -124,7 +125,8 @@ A story, scenario, or step a screen shows: the Stories node once it is on the sc
 
 ## Region : UxNode
 
-+ Region(name: str, sequential_order: int, area: str = "", graph: Graph | None = None)
++ Region(name: str, sequential_order: int, graph: Graph | None = None)
+	// its area is set once it is made
 ------
 + area: str
 + controls: list[Control]
@@ -134,7 +136,8 @@ A story, scenario, or step a screen shows: the Stories node once it is on the sc
 
 ## Control : UxNode
 
-+ Control(name: str, sequential_order: int, control_type: str = "", label: str = "", bound_field: str = "", graph: Graph | None = None)
++ Control(name: str, sequential_order: int, graph: Graph | None = None)
+	// its control_type, label (its name while it names none) and bound_field are set once it is made
 ------
 + control_type: str
 	// what the control is on the screen: button, field, list
@@ -152,7 +155,8 @@ A story, scenario, or step a screen shows: the Stories node once it is on the sc
 
 A control that runs story steps in the Story Demo's Play and Interactive modes.
 
-+ StoryDemoControl(name, sequential_order, control_type = "", label = "", bound_field = "", story_steps = None, set_input = "", item_story_steps = None, item_value = "", item_label = "", graph = None)
++ StoryDemoControl(name, sequential_order, graph = None)
+	// its story fields are set once it is made, or taken from another (`take_story_fields(source)`)
 ------
 + story_steps: list[StoryStep]
 	// Play emphasizes that step. Interactive runs the When
@@ -176,7 +180,8 @@ A story step a control runs: its kind (given, when, then) and the step text Stor
 
 ## Interaction : UxNode
 
-+ Interaction(name: str, sequential_order: int, trigger: str = "", effect: str = "", destination: Screen | None = None, graph: Graph | None = None)
++ Interaction(name: str, sequential_order: int, graph: Graph | None = None)
+	// its trigger (its name while it names none), effect and destination are set once it is made
 ------
 + trigger: str
 	// the name when none is given
@@ -190,7 +195,8 @@ A structural peer of the screens on the map: a transition, a content type, or a 
 
 ## Transition : UxComponent
 
-+ Transition(name: str, sequential_order: int, from_screen: Screen | None = None, to_screen: Screen | None = None, trigger: str = "", nav_type: str = "action", graph: Graph | None = None)
++ Transition(name: str, sequential_order: int, graph: Graph | None = None)
+	// joining(from_screen, to_screen) sets the screens it joins; its trigger (its name while it names none) and nav_type are set once it is made
 ------
 + from_screen: Screen | None
 + to_screen: Screen | None
@@ -200,14 +206,14 @@ A structural peer of the screens on the map: a transition, a content type, or a 
 
 ## ContentType : UxComponent
 
-+ ContentType(name: str, sequential_order: int, hierarchy: str = "", graph: Graph | None = None)
++ ContentType(name: str, sequential_order: int, graph: Graph | None = None)
 ------
 + hierarchy: str
 + key_actions: list[str]
 
 ## NavComponent : UxComponent
 
-+ NavComponent(name: str, sequential_order: int, ux_type: str = "", graph: Graph | None = None)
++ NavComponent(name: str, sequential_order: int, graph: Graph | None = None)
 ------
 + ux_type: str
 + destinations: list[Screen]

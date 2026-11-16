@@ -423,7 +423,3 @@ class ChatLog:
         number = self._log.last_loop_number + 1
         self._log.record(f"--- {number} {self._chat}")
         return self._log.loop_at(number)
-
-    def mark_loop(self) -> int:
-        """Mark the next loop and answer its number."""
-        return self.next_loop().number

@@ -23,26 +23,16 @@ with description("a story map recorded on a graph"):
         story = Story("Submit Order")
         scenario = Scenario("Happy path")
         scenario.steps = [
-            Step("cart has items", step_type=StepType.GIVEN, sequential_order=1, keyword="Given"),
-            Step(
-                "customer checks out",
-                step_type=StepType.WHEN,
-                sequential_order=2,
-                keyword="When",
-                concepts=["Cart"],
-            ),
-            Step(
-                "order is placed",
-                step_type=StepType.THEN,
-                sequential_order=3,
-                keyword="Then",
-            ),
+            Step("cart has items", step_type=StepType.GIVEN, sequential_order=1),
+            Step("customer checks out", step_type=StepType.WHEN, sequential_order=2),
+            Step("order is placed", step_type=StepType.THEN, sequential_order=3),
         ]
+        scenario.steps[1].concepts = ["Cart"]
         story.scenarios = [scenario]
         model = StoryModel()
         epic = Epic("Place Orders", 1)
-        epic.append_story(story)
-        model.append_epic(epic)
+        epic.stories.append(story)
+        model.epics.append(epic)
         graph = Graph()
         graph.open(Path(str(self.root)))
         practice = graph.practice("stories")
@@ -76,11 +66,11 @@ with description("a merged story map whose two maps each hold a story a story te
             story = Story("Submit Order")
             story.source = Source(file, 1, 1)
             epic = Epic(f"Place Orders {order}", order)
-            epic.append_story(story)
-            model.append_epic(epic)
+            epic.stories.append(story)
+            model.epics.append(epic)
         read = Story("Submit Order")
         read.scenarios = [Scenario("Happy path")]
-        model.take_scenarios([read], "tests/submit_order_story.test.ts")
+        model.test_scenarios.take([read], "tests/submit_order_story.test.ts")
         graph = Graph()
         graph.open(Path(self.tmp.name))
         self.practice = graph.practice("stories")
@@ -100,10 +90,10 @@ def _imports_of(root: Path, file: str, text: str) -> dict:
     story = Story("Onboard Customer")
     story.source = Source(file, 1, 1)
     epic = Epic("Onboard", 1)
-    epic.append_story(story)
+    epic.stories.append(story)
     model = StoryModel()
-    model.append_epic(epic)
-    model.source_texts[file] = text
+    model.epics.append(epic)
+    model.sources.add(file, text)
     graph = Graph()
     graph.open(Path(str(root)))
     practice = graph.practice("stories")

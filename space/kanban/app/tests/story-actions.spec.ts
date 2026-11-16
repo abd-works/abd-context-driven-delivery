@@ -124,9 +124,12 @@ test.describe('Send commands to a chat', () => {
 })
 
 test.describe('Generate Fidelity Output', () => {
+  // Opening a ticket shows its own chat at the top, and none while it has none, so the chat is picked with the card open,
+  // which makes it the ticket's chat.
   test('should send the generate command from Run on an opened card', async ({ page }) => {
+    const opened = await openCardOf(page, 'checkout-flow')
     await waitForChat(page)
-    const bar = await openTileBarOf(await openCardOf(page, 'checkout-flow'))
+    const bar = await openTileBarOf(opened)
     await bar.getByRole('button', { name: /^diagram/ }).click()
     await bar.getByRole('button', { name: 'Run' }).click()
     await expect.poll(() => chat.received.map(command => command.text).join('\n')).toContain('/actions-generate')
@@ -374,7 +377,7 @@ test.describe('Display Connected Status', () => {
     const board = await startBoard(BROKEN_BOARD_PORT, { CDD_PYTHON: join(fixtureRoot, 'no-such-python.exe') })
     try {
       await page.goto(board.url)
-      await expect(page.locator('.band-failure')).toContainText('cdd is not connected', { timeout: 15_000 })
+      await expect(page.locator('.band-failure')).toContainText('The cdd server is not answering', { timeout: 15_000 })
     } finally {
       board.stop()
     }
@@ -415,11 +418,11 @@ test.describe('Choose Session Root', () => {
 
 test.describe('Activate Ticket', () => {
   test('should open the ticket in its own worktree with one press, asking nothing, and start its chat there', async ({ page }) => {
-    const links = await catchClaudeLinks(page)
+    const links = catchClaudeLinks()
     await card(page, 'billing-report').getByRole('button', { name: 'Activate' }).first().click()
     await expect(toast(page, 'Confirm the folder and send in the Claude app to start the chat of billing-report')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('dialog')).toHaveCount(0)
-    expect(links).toHaveLength(1)
+    expect(links.opened).toHaveLength(1)
   })
 })
 

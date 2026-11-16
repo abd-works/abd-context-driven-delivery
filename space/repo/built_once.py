@@ -25,9 +25,9 @@ class BuiltOnce:
         built = self._built_folder()
         top = Path(tempfile.mkdtemp(prefix=self._prefix)).resolve()
         shutil.copytree(built, top, dirs_exist_ok=True)
-        for config in top.rglob("config"):
-            if config.parent.name == ".git" or (config.parent / "HEAD").is_file():
-                self._repoint(config, built, top)
+        for config_file in top.rglob("config"):
+            if config_file.parent.name == ".git" or (config_file.parent / "HEAD").is_file():
+                self._repoint(config_file, built, top)
         return top
 
     def _built_folder(self) -> Path:
@@ -38,10 +38,10 @@ class BuiltOnce:
             atexit.register(shutil.rmtree, built, True)
         return self._built
 
-    def _repoint(self, config: Path, built: Path, top: Path) -> None:
-        """Name the copy in config wherever it names the built folder: as git escapes a Windows path in its config
+    def _repoint(self, config_file: Path, built: Path, top: Path) -> None:
+        """Name the copy in config_file wherever it names the built folder: as git escapes a Windows path in its config
         (``C:\\\\Users``), as the path itself, or with forward slashes."""
-        text = config.read_text(encoding="utf-8")
+        text = config_file.read_text(encoding="utf-8")
         for spelling, copied in (
             (str(built).replace("\\", "\\\\"), str(top).replace("\\", "\\\\")),
             (str(built), str(top)),
@@ -49,5 +49,5 @@ class BuiltOnce:
         ):
             text = text.replace(spelling, copied)
         if built.name in text:
-            raise ValueError(f"{config} still names {built}, so this copy would change the repositories it was copied from")
-        config.write_text(text, encoding="utf-8")
+            raise ValueError(f"{config_file} still names {built}, so this copy would change the repositories it was copied from")
+        config_file.write_text(text, encoding="utf-8")

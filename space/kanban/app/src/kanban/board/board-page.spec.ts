@@ -64,7 +64,7 @@ describe('Board Page', () => {
 
     it("should answer the same progress each time a ticket's fidelity is named", () => {
       const ticket = readPage().board.tickets[0]!
-      expect(ticket.progressNamed('stories-story-map')).toBe(ticket.progressNamed('stories-story-map'))
+      expect(ticket.work.progressNamed('stories-story-map')).toBe(ticket.work.progressNamed('stories-story-map'))
     })
   })
 })

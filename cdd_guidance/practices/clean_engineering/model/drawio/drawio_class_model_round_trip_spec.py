@@ -18,13 +18,11 @@ def _shop() -> CleanEngineeringModel:
     lines = Property(name="lines", type_hint="List[OrderLine]")
     lines.stereotype = "composition"
     lines.derive_relationship()
-    order = OoadClass(
-        name="Order",
-        sequential_order=1,
-        properties=[Property(name="number", type_hint="str"), lines],
-        operations=[Operation(name="add_line", parameters=["product: str", "quantity: int"], return_type="OrderLine")],
-    )
-    line = OoadClass(name="OrderLine", sequential_order=2, properties=[Property(name="quantity", type_hint="int")])
+    order = OoadClass(name="Order", sequential_order=1)
+    order.properties = [Property(name="number", type_hint="str"), lines]
+    order.operations = [Operation.from_signature("add_line(product: str, quantity: int): OrderLine")]
+    line = OoadClass(name="OrderLine", sequential_order=2)
+    line.properties = [Property(name="quantity", type_hint="int")]
     model = CleanEngineeringModel(name="Shop", sequential_order=1)
     module = Module(name="sales", sequential_order=1)
     module.classes = [order, line]
@@ -34,7 +32,8 @@ def _shop() -> CleanEngineeringModel:
 
 def _payments() -> CleanEngineeringModel:
     """One payment base with three kinds of payment that derive from it."""
-    payment = OoadClass(name="Payment", sequential_order=1, properties=[Property(name="amount", type_hint="int")])
+    payment = OoadClass(name="Payment", sequential_order=1)
+    payment.properties = [Property(name="amount", type_hint="int")]
     kinds = [OoadClass(name=name, sequential_order=order) for order, name in enumerate(("CardPayment", "CashPayment", "VoucherPayment"), 2)]
     for kind in kinds:
         kind.bases = ["Payment"]

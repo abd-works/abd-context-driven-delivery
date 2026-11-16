@@ -24,7 +24,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from harness.agent_tools.tool_call import ToolCall
-from harness.diagnostics.app import App
+from harness.diagnostics.app import APPS, App
 from harness.diagnostics.server_health import ServerHealth
 from harness.installation.data_class import data_of
 from harness.mcp.mcp_server import McpServer
@@ -100,7 +100,7 @@ class DomainTier:
         sessions_project = SessionsProject(mocks_git=True)
         project = sessions_project.root
         ports = None if self._starts_servers else ThrowawayPorts()
-        apps = [] if ports is None else [ThrowawayApp(AppExample(app.label, app.page), ports) for app in App.registered()]
+        apps = [] if ports is None else [ThrowawayApp(AppExample(app.label, app.page), ports) for app in APPS.registered]
         chat = ChatLaunch() if self._starts_servers else StubbedLaunch(apps)
         report = lambda: data_of(ServerHealth.load(project=project).report())  # noqa: E731
         return SimpleNamespace(
@@ -145,7 +145,7 @@ class ServerTier:
 
 
 def _answer(server: McpServer, tool: str, **arguments: Any) -> Any:
-    return json.loads(json.dumps(server.invoke_tool(tool, arguments), default=data_of))
+    return json.loads(json.dumps(server.invoke(tool, arguments), default=data_of))
 
 
 def _close(world: SimpleNamespace) -> None:

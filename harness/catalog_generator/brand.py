@@ -45,11 +45,15 @@ class Brand:
             return folders[name]
         raise UnknownBrand(f"Unknown brand {name!r}. Known brands: {', '.join(sorted(folders))}")
 
+    @property
+    def marks(self) -> Path:
+        """The folder of the marks the catalog wears: the brand's, else the bundled one."""
+        return self.folder if self.folder is not None else _BUNDLED_BRAND
+
     def apply(self, commons: Path) -> Path:
         """Copy the brand's marks into the catalog's ``commons/brand``."""
-        destination = Path(commons) / "brand"
-        destination.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(self.folder if self.folder is not None else _BUNDLED_BRAND, destination, dirs_exist_ok=True)
+        destination = self._made_folder(Path(commons) / "brand")
+        shutil.copytree(self.marks, destination, dirs_exist_ok=True)
         return destination
 
     def wear(self, name: str) -> None:
@@ -59,17 +63,20 @@ class Brand:
 
     def apply_named(self, out_root: Path, name: str) -> Path:
         """Wear the brand ``name`` names and copy its marks onto the catalog's commons in ``out_root``."""
-        commons = Path(out_root) / "commons"
-        commons.mkdir(parents=True, exist_ok=True)
+        commons = self._made_folder(Path(out_root) / "commons")
         self.wear(name)
         return self.apply(commons)
 
     def copy_commons(self, out_root: Path) -> Path:
         """Copy the shared styles and scripts into ``out_root/commons``, then the brand's marks over them."""
-        commons = Path(out_root) / "commons"
-        commons.mkdir(parents=True, exist_ok=True)
+        commons = self._made_folder(Path(out_root) / "commons")
         shutil.copytree(_COMMONS, commons, dirs_exist_ok=True)
         for stylesheet in _STYLESHEETS:
             shutil.copy2(_TEMPLATES / stylesheet, commons / stylesheet)
         self.apply(commons)
         return commons
+
+    def _made_folder(self, folder: Path) -> Path:
+        """folder, made with its parents when it is not there yet."""
+        folder.mkdir(parents=True, exist_ok=True)
+        return folder

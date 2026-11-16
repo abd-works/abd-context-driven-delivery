@@ -1,9 +1,13 @@
 """The annotations an author types on a class or member, and where an annotated member is published."""
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from collections.abc import Callable
+from typing import Any, ClassVar, TypeAlias
 
 from harness.annotations.name import Name
+
+# What an annotation decorates and install reads back: a function, a method, a property's getter, or a class.
+Annotatable: TypeAlias = Callable[..., Any] | type
 
 
 class AnnotationKinds:
@@ -30,14 +34,14 @@ class AnnotationKinds:
         flags = [flag for kind in self._kinds if kind.copied for flag in (kind.flag, *kind.companion_flags())]
         return tuple(dict.fromkeys(flags))
 
-    def copy_annotations(self, source: Any, target: Any) -> None:
+    def copy_annotations(self, source: Annotatable, target: Annotatable) -> None:
         """Set on target each copied annotation source carries, so a wrapper installs the way the operation it wraps
         does."""
         for flag in self.copied_flags:
             if hasattr(source, flag):
                 setattr(target, flag, getattr(source, flag))
 
-    def withholds_install(self, target: Any) -> bool:
+    def withholds_install(self, target: Annotatable) -> bool:
         """True when a kind of omission that keeps members out of install annotates target."""
         return any(
             issubclass(kind, OmissionAnnotation) and kind.omits_install and kind.annotates(target)
@@ -48,12 +52,12 @@ class AnnotationKinds:
         """The kind of annotation that publishes to channel; none when its publisher was never imported."""
         return self._channels.get(channel)
 
-    def annotated_for(self, channel: str, operation: Any) -> bool:
+    def annotated_for(self, channel: str, operation: Annotatable) -> bool:
         """True when operation carries the annotation of channel, whether or not install publishes it."""
         kind = self.of_channel(channel)
         return kind is not None and kind.annotates(operation)
 
-    def publishes(self, channel: str, operation: Any) -> bool:
+    def publishes(self, channel: str, operation: Annotatable) -> bool:
         """True when install publishes operation to channel: it carries that channel's annotation, the annotation is
         turned on, and no omission keeps it out of install."""
         kind = self.of_channel(channel)
@@ -61,7 +65,7 @@ class AnnotationKinds:
             return False
         return not self.withholds_install(operation)
 
-    def name_given_for(self, channel: str, operation: Any) -> str:
+    def name_given_for(self, channel: str, operation: Annotatable) -> str:
         """The name channel's annotation gave operation, such as a command's name or a hook's event; empty when none."""
         kind = self.of_channel(channel)
         return kind.name_annotated_on(operation) if kind is not None else ""
@@ -73,7 +77,7 @@ class AnnotationKinds:
         its members. A kind whose publisher this process never imported is not among them."""
         return frozenset(kind.written_as() for kind in self._kinds if kind.installs_member())
 
-    def enlisting(self, member: Any) -> bool:
+    def enlisting(self, member: Annotatable) -> bool:
         """True when a destination that enlists its members, such as a hook, annotates member."""
         return any(kind.enlists_member and kind.annotates(member) for kind in self._channels.values())
 
@@ -97,14 +101,14 @@ class Annotation:
         super().__init_subclass__(**kwargs)
         annotation_kinds.register(cls)
 
-    def __new__(cls, target: Any = None):
+    def __new__(cls, target: Annotatable | None = None):
         annotation = object.__new__(cls)
         if callable(target):
             return annotation.annotate(target)
         return annotation
 
     @classmethod
-    def annotates(cls, target: Any) -> bool:
+    def annotates(cls, target: Annotatable) -> bool:
         """True when this kind of annotation is on target."""
         return bool(getattr(target, cls.flag, False))
 
@@ -124,11 +128,11 @@ class Annotation:
         """The other attributes this kind of annotation sets beside its flag."""
         return ()
 
-    def annotate(self, target: Any) -> Any:
+    def annotate(self, target: Annotatable) -> Annotatable:
         setattr(target, self.flag, True)
         return target
 
-    def __call__(self, target: Any) -> Any:
+    def __call__(self, target: Annotatable) -> Annotatable:
         return self.annotate(target)
 
 
@@ -145,12 +149,12 @@ class NamesAnnotation(Annotation):
     def __init__(self, *names: str) -> None:
         self.names = names
 
-    def annotate(self, target: Any) -> Any:
+    def annotate(self, target: Annotatable) -> Annotatable:
         setattr(target, self.flag, self.names)
         return target
 
     @classmethod
-    def names_on(cls, target: Any) -> tuple[str, ...]:
+    def names_on(cls, target: Annotatable) -> tuple[str, ...]:
         """The names this kind of annotation recorded on target; none when it carries none."""
         return tuple(getattr(target, cls.flag, ()) or ())
 
@@ -164,7 +168,7 @@ class OmissionAnnotation(Annotation):
     omits_install: ClassVar[bool] = False
 
     @classmethod
-    def annotates(cls, target: Any) -> bool:
+    def annotates(cls, target: Annotatable) -> bool:
         """True when target, or the function it wraps, carries this annotation."""
         return super().annotates(target) or super().annotates(getattr(target, "__func__", None))
 
@@ -177,7 +181,7 @@ class HostedOnly(OmissionAnnotation):
     flag = "_hosted_only"
 
     @classmethod
-    def annotates(cls, target: Any) -> bool:
+    def annotates(cls, target: Annotatable) -> bool:
         """True when target, a class or an instance of one, was itself annotated, not a class it derives from."""
         owner = target if isinstance(target, type) else type(target)
         return bool(vars(owner).get(cls.flag, False))
@@ -197,7 +201,7 @@ class Destination(Annotation):
     # it needs no ``@agent_tool``.
     enlists_member: ClassVar[bool] = False
 
-    def annotate(self, target: Any) -> Any:
+    def annotate(self, target: Annotatable) -> Annotatable:
         setattr(target, self.flag, True)
         name = getattr(self, "name", None)
         if name is not None:
@@ -210,7 +214,7 @@ class Destination(Annotation):
         return bool(cls.channel)
 
     @classmethod
-    def name_annotated_on(cls, operation: Any) -> str:
+    def name_annotated_on(cls, operation: Annotatable) -> str:
         """The name this destination's annotation gave the operation, such as the event a hook runs on; empty when the
         operation carries no such annotation."""
         return str(getattr(operation, f"{cls.flag}_name", "") or "")
@@ -220,7 +224,7 @@ class Destination(Annotation):
         return (f"{cls.flag}_name",)
 
     @classmethod
-    def disabled_on(cls, operation: Any) -> bool:
+    def disabled_on(cls, operation: Annotatable) -> bool:
         """True when the annotation on operation is there but turned off, as ``@Hook(..., disabled=True)`` is."""
         return False
 
@@ -236,7 +240,7 @@ class NamedDestination(Destination):
     """A destination whose annotation may name what it installs: ``@skill("name")``, ``@skill(name="name")``, or bare
     ``@skill`` for the operation's own name."""
 
-    def __new__(cls, target: Any = None, name: str | None = None):
+    def __new__(cls, target: Annotatable | None = None, name: str | None = None):
         annotation = object.__new__(cls)
         if isinstance(target, str):
             annotation.name = target

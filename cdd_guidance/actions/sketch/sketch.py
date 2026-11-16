@@ -8,9 +8,10 @@ from pathlib import Path
 
 from cdd_guidance.actions.generate.generate import Generate
 from cdd_guidance.actions.grill_context.grill_context import GrillContext
-from harness.guidance_actions import GuidanceArg, GuidanceAction
+from harness.guidance_actions import ActionSession, GuidanceArg, GuidanceAction, WorkedGuidance
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.agent_tools.agent_tools import agent_tool
+from harness.agent_tools.tool_call import ToolCall
 from harness.installation.files import skill
 from harness.mcp.mcp_annotations import mcp
 
@@ -20,11 +21,11 @@ _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 class Sketch(GuidanceAction):
     """Sketch a solution interactively before generating the formal artifact."""
 
-    def __init__(self, agent_dir: str = "", session=None, call=None) -> None:
+    def __init__(self, agent_dir: str = "", session: ActionSession | None = None, call: ToolCall | None = None) -> None:
         super().__init__(session, call)
         self._agent_dir = agent_dir
 
-    def made_for(self, session, call=None) -> Sketch:
+    def _made_for(self, session: ActionSession | None, call: ToolCall | None = None) -> Sketch:
         """A sketch made for session and call, which finds its template in this sketch's agent_dir."""
         return type(self)(agent_dir=self._agent_dir, session=session, call=call)
 
@@ -46,14 +47,14 @@ class Sketch(GuidanceAction):
         """The generate the agreed sketch becomes the formal artifact through, working on what this sketch lists."""
         return self._inside(Generate)
 
-    def _sketch_text(self, item) -> str:
+    def _sketch_text(self, guidance: WorkedGuidance) -> str:
         """What sketching one listed guidance asks for, read from the fidelity this sketch works at on it: its Scaffold
         section, which is the shell's level of detail, and its practice's sketch template, which is the notation; text
         guidance is itself. The rules the sketch answers are held to arrive once, with the generate the sketch ends with.
         The recipe reads the text returned."""
-        if isinstance(item, str):
-            return item
-        parts = (item.scaffold, item.sketch_template)
+        if isinstance(guidance, str):
+            return guidance
+        parts = (guidance.scaffold, guidance.sketch_template)
         return "\n\n".join(part.strip() for part in parts if part and part.strip())
 
     @mcp
@@ -66,7 +67,7 @@ class Sketch(GuidanceAction):
         Returns the resolved template contents as a string.
         agent_dir: the wrapped agent's folder, from the project's root or absolute. Omit it for the folder this sketch was made with."""
         agent_dir = agent_dir or self._agent_dir
-        templates_dir = self.path_named(agent_dir) / "templates" if agent_dir else None
+        templates_dir = self.files.path_named(agent_dir) / "templates" if agent_dir else None
         found = sorted(templates_dir.glob("*-sketch.*")) if templates_dir is not None and templates_dir.is_dir() else []
         return (found[0] if found else _DEFAULT_TEMPLATE).read_text(encoding="utf-8")
 
@@ -83,10 +84,10 @@ class Sketch(GuidanceAction):
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the sketch body in content.
         content: in-process text. Leave this empty on an MCP call.
         module: a module's folder under the session root, for a sketch of that module alone; it goes in that module's .context folder."""
-        target = self.session.context_folder(module) / self._sketch_name
+        target = self.session.paths.context_folder(module) / self._sketch_name
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(self.document_named(content, paths), encoding="utf-8")
-        self.wrote([target])
+        target.write_text(self.files.read(content, paths), encoding="utf-8")
+        self.files.wrote([target])
         return str(target)
 
     @mcp
@@ -95,7 +96,7 @@ class Sketch(GuidanceAction):
         """List the sketch files in the session root's .context folder, or in a module's under that root.
         Returns newline-separated paths, or ``no sketches`` when the folder is missing or empty.
         module: a module's folder under the session root."""
-        context_dir = self.session.context_folder(module)
+        context_dir = self.session.paths.context_folder(module)
         if not context_dir.is_dir():
             return "no sketches"
         paths = [str(path) for path in sorted(context_dir.glob("*-sketch.md"))]
@@ -125,7 +126,7 @@ class Sketch(GuidanceAction):
         "save_sketch the shell in the same turn it is written. After three or four grill answers, sketch the theme into that same file, save_sketch again, then review_sketch. Do not ask the next theme until that review confirms the sketch."
         "Carry forward every mistake named in review. Correct the sketch. Do not regenerate as if those mistakes never happened."
         "Evaluate the sketch against each listed guidance's rules, which the generate instructions below give, as an AI check — not a graph query."
-        self.each(self._sketch_text)
+        self.work.each(self._sketch_text)
         instructions(self._grill_context().grill_with_context)
         tools(self.find_template)
         tools(self.save_sketch)

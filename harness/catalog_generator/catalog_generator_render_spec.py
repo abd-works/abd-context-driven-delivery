@@ -9,6 +9,7 @@ from mamba import before, context, description, it
 from harness.catalog_generator.catalog_generator import (
     ActionPage,
     Catalog,
+    CatalogProject,
     FidelityPage,
     LifecycleAction,
     PracticePage,
@@ -49,7 +50,7 @@ with description("a fidelity's page"):
         self.actions = LifecycleAction.load_all()
         practice = CatalogPractice(Ddd())
         tactics = next(shown for shown in practice.shown_fidelities if shown.name == "tactics")
-        self.page = FidelityPage(practice, tactics, _CITATION, self.actions).body
+        self.page = FidelityPage(tactics, _CITATION, self.actions).body
 
     with it("should open with the chat command, escaped for a browser"):
         expect("/practices-ddd &lt;action&gt; tactics" in self.page).to(be_true)
@@ -93,12 +94,12 @@ with description("a generated catalog"):
     with context("given the repository's address and commit"):
         with it("should not ask git for them"):
             with patch.object(GitCitation, "from_checkout", side_effect=AssertionError("git was run")):
-                expect(Catalog(repo_url=_REPO_URL, ref=_REF).citation.ref).to(equal(_REF))
+                expect(Catalog(citation=GitCitation(_REPO_URL, _REF)).citation.ref).to(equal(_REF))
 
     with context("that has been rendered"):
         with before.all:
             self.tmp = Path(tempfile.mkdtemp())
-            Catalog(repo_url=_REPO_URL, ref=_REF, out_root=str(self.tmp))._render_catalog()
+            Catalog(CatalogProject(Path.cwd(), self.tmp), GitCitation(_REPO_URL, _REF))._render_catalog()
             self.index_html = (self.tmp / "index.html").read_text(encoding="utf-8")
 
         with it("should put the CDD header above the practices on the hub board"):

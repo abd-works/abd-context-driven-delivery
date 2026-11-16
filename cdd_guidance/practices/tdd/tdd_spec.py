@@ -17,7 +17,7 @@ def slugs_of(fidelity):
 with description("the TDD supplement") as self:
     with before.all:
         self.practices = {practice.key: practice for practice in PracticeCatalogue.create_all(fidelity=None)}
-        self.fidelity = lambda key, name: self.practices[key].fidelity_called(name)
+        self.fidelity = lambda key, name: self.practices[key].fidelities.called(name)
         self.tdd = self.practices["bdd"].supplements[0]
 
     with context("that the catalogue makes with a session's practices"):
@@ -29,6 +29,15 @@ with description("the TDD supplement") as self:
 
         with it("should not be listed among the practices"):
             expect(PracticeCatalogue.keys()).not_to(contain("tdd"))
+
+    # The installer writes the shared rules into the rule file every IDE loads on every turn. Without them the file is
+    # empty, and the flow is read only inside a generate reply, where an agent can skip it.
+    with context("with its shared rules, which every IDE loads on every turn"):
+        with it("should hold the rule that the flow is chosen before code is written"):
+            expect([rule.slug for rule in self.tdd.rules]).to(contain("flow-chosen-before-code"))
+
+        with it("should apply always, to every file"):
+            expect(self.tdd.rules.markdown).to(contain("alwaysApply: true"))
 
     with context("with a fidelity it supplements"):
         with it("should add the tier rules to the acceptance tests and BDD development"):

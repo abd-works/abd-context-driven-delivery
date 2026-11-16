@@ -36,40 +36,70 @@ export class StoryDemoControl extends Control {
     label,
     boundField = null,
     storySteps = [],
+    element = null,
+    fromBoundList = false,
   } = {}) {
     super({ name, controlType, label });
     this.bound_field = boundField;
     this.story_steps = storySteps;
+    /** The mockup element this control was read from or painted as; null for a control with no page. */
+    this.element = element;
+    /** A list line painted from the scenario's exposed list; it is dropped when the next story loads. */
+    this.fromBoundList = fromBoundList;
     this.value = undefined;
     this.emphasized = false;
     this.tinted = false;
   }
 
-  /** Hydrate from UX-emitted HTML (`data-bound-field`, `data-story-steps`). */
-  static fromElement(el) {
-    if (!el) return null;
+  /** Read a control from UX-emitted HTML (`data-bound-field`, `data-story-steps`). */
+  static fromElement(element) {
+    if (!element) return null;
     // The steps are the list the UX map wrote; one that does not read back is a defect to show, not hide.
-    const rawSteps = el.getAttribute("data-story-steps");
+    const rawSteps = element.getAttribute("data-story-steps");
     const storySteps = rawSteps ? JSON.parse(rawSteps) : [];
     const control = new StoryDemoControl({
-      name: el.getAttribute("data-name") || el.textContent?.trim() || "",
-      controlType: el.tagName === "BUTTON" ? "button" : el.getAttribute("data-type") || "",
-      label: el.textContent?.trim() || "",
-      boundField: el.getAttribute("data-bound-field") || null,
+      name: element.getAttribute("data-name") || element.textContent?.trim() || "",
+      controlType: element.tagName === "BUTTON" ? "button" : element.getAttribute("data-type") || "",
+      label: element.textContent?.trim() || "",
+      boundField: element.getAttribute("data-bound-field") || null,
       storySteps,
+      element,
     });
-    const trigger = el.getAttribute("data-trigger");
+    const trigger = element.getAttribute("data-trigger");
     if (trigger) {
       control.appendInteraction({
         trigger: trigger === "create character" ? "click" : trigger,
-        effect: el.getAttribute("data-effect") || "",
+        effect: element.getAttribute("data-effect") || "",
       });
     }
     return control;
   }
 
-  show(value) {
-    this.value = value;
+  /** The scenario input this control sets to its own name when triggered (`data-set-input`), or null. */
+  get inputKey() {
+    return this.element?.getAttribute("data-set-input") ?? null;
+  }
+
+  /** The screen this control goes to after its When runs (`data-goto`), or null. */
+  get destination() {
+    return this.element?.getAttribute("data-goto") ?? null;
+  }
+
+  /** Call `onClick` whenever the person clicks this control's element. */
+  listenForClicks(onClick) {
+    this.element?.addEventListener("click", onClick);
+    return this;
+  }
+
+  /** Show on the element whether the control is emphasized for the current step and tinted by a failed Then. */
+  paintEmphasis() {
+    this.element?.classList.toggle("emphasized", Boolean(this.emphasized));
+    this.element?.classList.toggle("tinted", Boolean(this.tinted));
+    return this;
+  }
+
+  show(boundValue) {
+    this.value = boundValue;
   }
 
   emphasize() {

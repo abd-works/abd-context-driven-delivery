@@ -8,6 +8,7 @@ subclass OoadClass; DomainEvent subclasses Property. Graph rule slugs inherit fr
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from pathlib import Path
 
 from harness.graph.model_node import ModelChildren, ModelNode
@@ -47,15 +48,22 @@ class Integration:
     PARTS = ("context", "aggregate", "entity", "held_by")
     """The parts of the arc's target, each kept as its own detail when a class model keeps the arc as a dependency."""
 
-    def __init__(self, context: str = "", aggregate: str = "", entity: str = "", held_by: str = "") -> None:
-        self.context = context
-        self.aggregate = aggregate
-        self.entity = entity
-        self.held_by = held_by
+    def __init__(self) -> None:
+        self.context = ""
+        self.aggregate = ""
+        self.entity = ""
+        self.held_by = ""
         self.direction = ""
         self.crosses = ""
         self.integration = ""
         self.pattern = ""
+
+    @classmethod
+    def from_aggregate(cls, target: "Aggregate") -> "Integration":
+        """An arc to target, named by its context and its own name."""
+        integration = cls()
+        integration.context, integration.aggregate = target.parent.name, target.name
+        return integration
 
     @property
     def target_name(self) -> str:
@@ -68,10 +76,9 @@ class Integration:
         details = {key: getattr(self, key) for key in (*self.PARTS, *self.FIELDS[1:]) if getattr(self, key)}
         return Relationship(target=self.target_name, kind="dependency", label=self.pattern, details=details)
 
-    @classmethod
-    def keeps_one(cls, dependency: Relationship) -> bool:
+    def keeps_one(self, dependency: Relationship) -> bool:
         """Whether a class model's dependency keeps an arc: it names a part of the arc's target as a detail."""
-        return any(dependency.details.get(key) for key in cls.PARTS)
+        return any(dependency.details.get(key) for key in self.PARTS)
 
     def read_dependency(self, dependency: Relationship) -> None:
         """Take the parts and fields a class model's dependency keeps for this arc: its pattern is the label, the rest
@@ -87,7 +94,8 @@ class InvariantObject(DomainNode, Property):
     _semantic_type_name = "InvariantObject"
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, kwargs.get("type_hint", ""), kwargs.get("description", ""))
+        super().__init__(name, sequential_order, kwargs.get("type_hint", ""))
+        self.description = kwargs.get("description", "")
         self.stereotype = "invariant"
 
 
@@ -113,21 +121,10 @@ class Entity(DomainClass):
         self.is_root = False
         self.aggregate = None
         self.invariant_objects = []
-        self.invariant_object_type = InvariantObject
 
     def load_invariant_objects(self) -> None:
-        while self.has_more_invariant_object():
-            self.invariant_objects.append(self.load_next_invariant_object())
-
-    def has_more_invariant_object(self) -> bool:
-        return False
-
-    def load_next_invariant_object(self) -> InvariantObject:
-        found = self.get_next_invariant_object_from_file()
-        return found
-
-    def get_next_invariant_object_from_file(self) -> InvariantObject:
-        return self.invariant_object_type(sequential_order=len(self.invariant_objects))
+        """Read the invariant objects the entity's source names: none for an entity read from no lines; each format's
+        entity reads its own."""
 
 
 class ValueObject(DomainClass):
@@ -158,10 +155,22 @@ class DomainEvent(DomainNode, Property):
     _semantic_type_name = "DomainEvent"
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, kwargs.get("type_hint", ""), kwargs.get("description", ""))
+        super().__init__(name, sequential_order, kwargs.get("type_hint", ""))
+        self.description = kwargs.get("description", "")
         self.producer = None
         self.consumers = []
-        self.subject = Property("subject", 0, description="the state of the event")
+        self.subject = self._blank_subject()
+
+    def _blank_subject(self) -> Property:
+        """The subject property an event starts with: the state of the event, with no fields read yet."""
+        subject = Property("subject", 0)
+        subject.description = "the state of the event"
+        return subject
+
+    def emitted_by(self, producer: "Aggregate") -> None:
+        """Become the event producer emits, starting again from a blank subject."""
+        self.producer = producer
+        self.subject = self._blank_subject()
 
     def map_entry(self) -> str:
         """The event as a map's event map lists it: `CartCheckedOut: emitted by ShoppingCart; consumed by Inventory`,
@@ -276,12 +285,6 @@ class ContextMapping(DomainNode):
         return {side: TARGET_SEGMENT.split(written)[-1].strip() for side, written in (("local", self.local), ("remote", self.remote))}
 
 
-def _context_mappings_in(text: str) -> list[ContextMapping]:
-    """Each `Local → Remote` line of a bounded context's file, as the mapping it lists."""
-    found = ((index, _CONTEXT_ARROW.match(line.strip())) for index, line in enumerate(text.splitlines(), start=1))
-    return [ContextMapping(match.group(1).strip(), match.group(2).strip(), index) for index, match in found if match is not None]
-
-
 class BoundedContext(DomainNode, Module):
     """A module of aggregates. A nested context is a context whose parent is a context."""
 
@@ -317,8 +320,13 @@ class BoundedContext(DomainNode, Module):
         title = _CONTEXT_TITLE.search(text)
         self.name = title.group(1).strip() if title else folder.name
         self.context_file_lines = max(1, text.count("\n") if text.endswith("\n") else text.count("\n") + 1)
-        self.mappings = _context_mappings_in(text)
+        self.mappings = self._mappings_in(text)
         self.load_folder_facts(folder)
+
+    def _mappings_in(self, text: str) -> list[ContextMapping]:
+        """Each `Local → Remote` line of the context's file, as the mapping it lists."""
+        found = ((index, _CONTEXT_ARROW.match(line.strip())) for index, line in enumerate(text.splitlines(), start=1))
+        return [ContextMapping(match.group(1).strip(), match.group(2).strip(), index) for index, match in found if match is not None]
 
     def append_context(self, context: "BoundedContext") -> None:
         self.contexts.append(context)
@@ -359,38 +367,6 @@ class BoundedContext(DomainNode, Module):
         outer = parent.enclosing_contexts if isinstance(parent, BoundedContext) else []
         return outer + [self]
 
-    def load_bounded_contexts(self) -> None:
-        while self.has_more_bounded_context():
-            self.append_context(self.load_next_bounded_context())
-
-    def has_more_bounded_context(self) -> bool:
-        return False
-
-    def load_next_bounded_context(self) -> "BoundedContext":
-        child = self.get_next_bounded_context_from_file()
-        child.load_bounded_contexts()
-        child.load_aggregates()
-        return child
-
-    def get_next_bounded_context_from_file(self) -> "BoundedContext":
-        """The next context nested in this one, of this context's own format."""
-        return type(self)(sequential_order=len(self.contexts) + 1)
-
-    def load_aggregates(self) -> None:
-        while self.has_more_aggregate():
-            self.append_aggregate(self.load_next_aggregate())
-
-    def has_more_aggregate(self) -> bool:
-        return False
-
-    def load_next_aggregate(self) -> Aggregate:
-        aggregate = self.get_next_aggregate_from_file()
-        aggregate.load_root()
-        return aggregate
-
-    def get_next_aggregate_from_file(self) -> Aggregate:
-        return self.aggregate_type(sequential_order=len(self.aggregates) + 1)
-
 
 class BoundedContextMap:
     """The bounded contexts of a domain, each holding its aggregates and the contexts nested in it. Each format
@@ -402,22 +378,6 @@ class BoundedContextMap:
     def __init__(self) -> None:
         super().__init__()
         self.contexts: list[BoundedContext] = []
-
-    def load_bounded_contexts(self) -> None:
-        while self.has_more_bounded_context():
-            self.contexts.append(self.load_next_bounded_context())
-
-    def has_more_bounded_context(self) -> bool:
-        return False
-
-    def load_next_bounded_context(self) -> BoundedContext:
-        context = self.get_next_bounded_context_from_file()
-        context.load_bounded_contexts()
-        context.load_aggregates()
-        return context
-
-    def get_next_bounded_context_from_file(self) -> BoundedContext:
-        return self.bounded_context_type(sequential_order=len(self.contexts) + 1)
 
     def append_context(self, context: BoundedContext) -> None:
         self.contexts.append(context)
@@ -436,14 +396,14 @@ class BoundedContextMap:
         """The aggregate an integration's target names: in the context it names, its entity or its aggregate; with no
         context the map holds, the aggregate called by the name it gives."""
         context_name, aggregate_name, entity_name = integration.context, integration.aggregate, integration.entity
-        in_context = [item for item in self.every_aggregate if _same_name(item.parent.name, context_name)]
+        in_context = [item for item in self.every_aggregate if self._same_name(item.parent.name, context_name)]
         if not in_context:
-            return next((item for item in self.every_aggregate if _same_name(item.name, aggregate_name or entity_name)), None)
-        for name in (entity_name, aggregate_name):
-            found = next((item for item in in_context if name and _same_name(item.name, name)), None)
-            if found is not None:
-                return found
-        return None
+            return next((item for item in self.every_aggregate if self._same_name(item.name, aggregate_name or entity_name)), None)
+        named = (item for name in (entity_name, aggregate_name) if name for item in in_context if self._same_name(item.name, name))
+        return next(named, None)
+
+    def _same_name(self, left: str, right: str) -> bool:
+        return bool(right) and left.strip().lower() == right.strip().lower()
 
     @property
     def holds_classes_only(self) -> bool:
@@ -476,10 +436,9 @@ class BoundedContextMap:
 
     def wire_events(self, entries: list[str]) -> None:
         """Read each `Event: emitted by Producer; consumed by A, B` entry of an event map onto its producer's root."""
-        aggregates = {item.name: item for item in self.every_aggregate}
-        services: dict[str, DomainService] = {}
+        wiring = _EventWiring(self.every_aggregate)
         for entry in entries:
-            _wire_event(entry, aggregates, services)
+            wiring.wire(entry)
 
     def write_classes(self, model: CleanEngineeringModel) -> None:
         """Write this map into model, a Clean Engineering model of some format, as that format's own modules and
@@ -499,85 +458,113 @@ class BoundedContextMap:
         names its context and aggregate, which takes the class; classes with no place gather around the roots that
         hold them."""
         self.contexts = []
-        unplaced: list[tuple[str, OoadClass]] = []
-        for module in model.modules:
-            for oclass in module.classes:
-                if oclass.name.startswith("_"):
-                    continue
-                place = _place_of(module, oclass)
-                if place:
-                    self.context_at(place[:-1]).aggregate_named(place[-1]).take_class(oclass)
-                else:
-                    unplaced.append((module.name or _DEFAULT_CONTEXT, oclass))
-        for context_name, aggregate_name, oclass in _grouped(unplaced):
+        unplaced = _UnplacedClasses(self._place_classes(model))
+        for context_name, aggregate_name, oclass in unplaced.grouped():
             self.context_at([context_name]).aggregate_named(aggregate_name).take_class(oclass)
         for aggregate in self.every_aggregate:
             aggregate.take_root_from_classes()
         return self
 
+    def _place_classes(self, model: CleanEngineeringModel) -> list[tuple[str, OoadClass]]:
+        """Give each public class of model whose place names an aggregate to that aggregate; answer the rest, each with
+        the name of the context its module gives it."""
+        unplaced: list[tuple[str, OoadClass]] = []
+        public = ((module, oclass) for module in model.modules for oclass in module.classes if not oclass.name.startswith("_"))
+        for module, oclass in public:
+            place = self._place_of(module, oclass)
+            if place:
+                self.context_at(place[:-1]).aggregate_named(place[-1]).take_class(oclass)
+            else:
+                unplaced.append((module.name or _DEFAULT_CONTEXT, oclass))
+        return unplaced
 
-def _same_name(left: str, right: str) -> bool:
-    return bool(right) and left.strip().lower() == right.strip().lower()
+    def _place_of(self, module: Module, oclass: OoadClass) -> list[str]:
+        """Where a class read from a class model lives, its contexts' labels then its aggregate: the module path code
+        names for it, else the module a class drawing keeps it in; none for a class with neither."""
+        return next((list(place) for place in (oclass.module_path, module_path_in(module.name)) if len(place) >= 2), [])
 
 
-def _place_of(module: Module, oclass: OoadClass) -> list[str]:
-    """Where a class read from a class model lives, its contexts' labels then its aggregate: the module path code names
-    for it, else the module a class drawing keeps it in; none for a class with neither."""
-    for place in (oclass.module_path, module_path_in(module.name)):
-        if len(place) >= 2:
-            return list(place)
-    return []
+class _UnplacedClasses:
+    """Classes read from a class model with no place: each root, or each class nobody composes, opens an aggregate; the
+    rest join the aggregate of the class that holds them. A class the business keeps in its own repository is an
+    aggregate root."""
 
+    def __init__(self, classes: list[tuple[str, OoadClass]]) -> None:
+        self._classes = classes
+        # Each class read once as DDD reads it, by the name a property's type or a repository's name gives it.
+        self._tactical = {oclass.name: TacticalClass(oclass) for _context, oclass in classes}
+        # The class that holds each held class, by the held class's name.
+        self._holder: dict[str, str] = {}
 
-def _grouped(unplaced: list[tuple[str, OoadClass]]):
-    """Classes with no place: each root, or each class nobody composes, opens an aggregate; the rest join it. A class
-    the business keeps in its own repository is an aggregate root."""
-    # Each class read once as DDD reads it, by the name a property's type or a repository's name gives it.
-    tactical_by_name = {oclass.name: TacticalClass(oclass) for _context, oclass in unplaced}
-    owner: dict[str, str] = {}
-    for _context, oclass in unplaced:
-        tactical = tactical_by_name[oclass.name]
+    def grouped(self) -> Iterator[tuple[str, str, OoadClass]]:
+        """Each class with its context and the name of the aggregate it joins: the class at the top of its holders."""
+        for _context, oclass in self._classes:
+            self._hold_composed_members(oclass)
+            self._join_kept_root(oclass)
+        for context, oclass in self._classes:
+            yield context, self._top_holder(oclass.name), oclass
+
+    def _hold_composed_members(self, oclass: OoadClass) -> None:
+        """oclass holds each other class its properties' types name, unless that class is a root of its own."""
         for prop in oclass.properties:
             for target in pascal_type_names(prop.type_hint or ""):
-                if target in tactical_by_name and target != oclass.name and tactical_by_name[target].kind() != "EntityRoot":
-                    owner.setdefault(target, oclass.name)
-        root = tactical_by_name.get(tactical.kept_root_name)
-        if root is not None:
-            owner.setdefault(oclass.name, root.oclass.name)
-            if not root.stereotypes:
-                root.oclass.stereotypes = ["Aggregate Root", "Entity", *root.oclass.stereotypes]
-    for context, oclass in unplaced:
-        top = oclass.name
-        seen = set()
-        while top in owner and top not in seen:
+                if self._is_member(target, oclass):
+                    self._holder.setdefault(target, oclass.name)
+
+    def _is_member(self, target: str, oclass: OoadClass) -> bool:
+        found = self._tactical.get(target)
+        return found is not None and target != oclass.name and found.kind() != "EntityRoot"
+
+    def _join_kept_root(self, oclass: OoadClass) -> None:
+        """A repository joins the root it keeps, which becomes an aggregate root when nothing marks it yet."""
+        root = self._tactical.get(self._tactical[oclass.name].kept_root_name)
+        if root is None:
+            return
+        self._holder.setdefault(oclass.name, root.oclass.name)
+        if not root.stereotypes:
+            root.oclass.stereotypes = ["Aggregate Root", "Entity", *root.oclass.stereotypes]
+
+    def _top_holder(self, name: str) -> str:
+        top, seen = name, set()
+        while top in self._holder and top not in seen:
             seen.add(top)
-            top = owner[top]
-        yield context, top, oclass
+            top = self._holder[top]
+        return top
 
 
-def _wire_event(text: str, aggregates: dict[str, Aggregate], services: dict[str, DomainService]) -> None:
-    # CartCheckedOut: emitted by ShoppingCart; consumed by Inventory, Receipt
-    name, _, rest = text.partition(":")
-    emitted, _, consumed = rest.partition("consumed by")
-    producer = aggregates.get(emitted.replace("emitted by", "").strip(" ;"))
-    if producer is None or producer.root is None:
-        return
-    event = next((item for item in producer.events if item.name == name.strip()), None)
-    if event is None:
-        event = DomainEvent(name.strip(), len(producer.root.properties))
-        producer.root.properties.append(event)
-    event.producer = producer
-    event.subject = Property("subject", 0, description="the state of the event")
-    for part in consumed.split(","):
-        consumer_name = part.strip()
-        if consumer_name:
-            event.consumers.append(_consumer(consumer_name, aggregates, services, len(event.consumers) + 1))
+class _EventWiring:
+    """Reads the entries of an event map onto the roots of the aggregates that emit them: it holds the map's aggregates
+    by name, and the domain services consumers name, each made once per map."""
 
+    def __init__(self, aggregates: list[Aggregate]) -> None:
+        self._aggregates = {item.name: item for item in aggregates}
+        self._services: dict[str, DomainService] = {}
 
-def _consumer(name: str, aggregates: dict[str, Aggregate], services: dict[str, DomainService], order: int):
-    """The aggregate a consumer names, else the domain service it names, made once per map."""
-    if name in aggregates:
-        return aggregates[name]
-    if name not in services:
-        services[name] = DomainService(name, order)
-    return services[name]
+    def wire(self, entry: str) -> None:
+        """One `CartCheckedOut: emitted by ShoppingCart; consumed by Inventory, Receipt` entry."""
+        name, _, rest = entry.partition(":")
+        emitted, _, consumed = rest.partition("consumed by")
+        producer = self._aggregates.get(emitted.replace("emitted by", "").strip(" ;"))
+        if producer is None or producer.root is None:
+            return
+        event = self._event_of(producer, name.strip())
+        for consumer_name in (part.strip() for part in consumed.split(",")):
+            if consumer_name:
+                event.consumers.append(self._consumer(consumer_name, len(event.consumers) + 1))
+
+    def _event_of(self, producer: Aggregate, name: str) -> DomainEvent:
+        """The event called name on the producer's root, added the first time, emitted by the producer."""
+        event = next((item for item in producer.events if item.name == name), None)
+        if event is None:
+            event = DomainEvent(name, len(producer.root.properties))
+            producer.root.properties.append(event)
+        event.emitted_by(producer)
+        return event
+
+    def _consumer(self, name: str, order: int) -> Aggregate | DomainService:
+        """The aggregate a consumer names, else the domain service it names, made once per map."""
+        if name in self._aggregates:
+            return self._aggregates[name]
+        if name not in self._services:
+            self._services[name] = DomainService(name, order)
+        return self._services[name]

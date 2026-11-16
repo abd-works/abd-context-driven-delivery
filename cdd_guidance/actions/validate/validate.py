@@ -58,6 +58,11 @@ class Validate(GuidanceAction):
         self._work_on(guidance)
         self._check(NamedToCheck(paths, graph, self.call))
         report = self._report(rule, graph_named=bool(graph))
+        return self._saved(report)
+
+    def _saved(self, report: str) -> str:
+        """Save report into this call's report files, with the graph it checked beside them, and answer the call with
+        the report and where it was saved."""
         self._reports.save(report, self._graph)
         return f"{report}\n\nValidation report for these artifacts: {self._reports.where()}"
 
@@ -153,7 +158,7 @@ class Validate(GuidanceAction):
 
         violations = self._graph.violations()
         self._log_graph_validation(violations)
-        guidance = [self.at_fidelity(item) for item in self.listed() if not isinstance(item, str)]
+        guidance = [self.work.at_fidelity(item) for item in self.listed() if not isinstance(item, str)]
         sources =[str(path.resolve()) for path in self._graph.files]
         return ValidationReport(self.session, guidance).of_graph(violations, sources, self._graph.held_beside)
 

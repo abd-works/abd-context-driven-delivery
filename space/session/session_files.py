@@ -38,6 +38,8 @@ class SessionFiles:
         self._session = session
         self._file_manager: FileManager | None = None
         self._project_files: FileManager | None = None
+        # The files the session's branch changed, which the board's changed-files filter reads.
+        self.branch_changes = BranchChanges(session)
 
     @property
     def file_manager(self) -> FileManager:
@@ -86,7 +88,7 @@ class SessionFiles:
         folders' kind."""
         root = self._session.work_root
         files = self._tracked_under(root) if self._session.repo.is_clone else self._walked_under(root)
-        changed = self.changed()
+        changed = self.branch_changes.files()
         repo = self._session.repo
         return [FileEntry(repo.path_from_top(path), True, path.resolve() in changed) for path in sorted(files) if path.is_file()]
 
@@ -108,9 +110,9 @@ class SessionFiles:
         return self._from_project.write(path, text)
 
     def existing(self, named: str | Path) -> Path:
-        """The path named, read as the session reads every path its agent writes (``Session.path_named``), once
+        """The path named, read as the session reads every path its agent writes (``SessionPaths.path_named``), once
         something is there; refused otherwise."""
-        path = self._session.path_named(named)
+        path = self._session.paths.path_named(named)
         if not path.exists():
             raise NamedPathNotFoundError(str(named), self._session.repo_path)
         return path
@@ -129,7 +131,26 @@ class SessionFiles:
         roots = (self._session.work_root, *self.file_manager.roots)
         return any(path == root or root in path.parents for root in (Path(root).resolve() for root in roots))
 
-    def changed(self) -> set[Path]:
+
+# The folders a root outside a repository never lists files from: version control, dependencies, builds, caches.
+
+# How long the branch's changed files are kept, by checkout and session, before git is asked again.
+CHANGED_KEPT_SECONDS = 3.0
+_CHANGED: dict[tuple[str, str], tuple[float, set[Path]]] = {}
+
+
+# The folders a walk under a root that is not a repository leaves out: tools, caches, and builds hold no one's work.
+UNREAD_FOLDERS = frozenset({".git", "node_modules", "dist", "build", "__pycache__", ".venv", ".pytest_cache"})
+
+
+class BranchChanges:
+    """The files one session's branch changed since it left the default branch, which the board's changed-files filter
+    reads."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def files(self) -> set[Path]:
         """The files the session's branch changed since it left the default branch, with its uncommitted changes when
         it is checked out; none for a project that is no clone, or a session with no branch of its own. Asking git takes
         a moment, and a page lists many fidelities at once, so the answer is kept for CHANGED_KEPT_SECONDS and shared."""
@@ -148,14 +169,3 @@ class SessionFiles:
         changed = {(root / path).resolve() for path in branch.changed_files()}
         _CHANGED[key] = (time.monotonic(), changed)
         return changed
-
-
-# The folders a root outside a repository never lists files from: version control, dependencies, builds, caches.
-
-# How long the branch's changed files are kept, by checkout and session, before git is asked again.
-CHANGED_KEPT_SECONDS = 3.0
-_CHANGED: dict[tuple[str, str], tuple[float, set[Path]]] = {}
-
-
-# The folders a walk under a root that is not a repository leaves out: tools, caches, and builds hold no one's work.
-UNREAD_FOLDERS = frozenset({".git", "node_modules", "dist", "build", "__pycache__", ".venv", ".pytest_cache"})

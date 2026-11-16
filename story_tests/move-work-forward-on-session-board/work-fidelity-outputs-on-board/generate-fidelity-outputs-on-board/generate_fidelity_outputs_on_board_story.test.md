@@ -15,23 +15,23 @@ section: body
 *When* the Person opens the story_map tile
 *Then* the generate action is chosen with the markdown chip picked
 
-#### Scenario: Leave a generated format unpicked
+#### Scenario: Keep a generated format picked
 
 *Given* billing-report's story map is .context/story-map.md, already there
 *When* the Person opens the story_map tile
-*Then* the markdown chip is green and not picked
+*Then* the markdown chip is green and still picked, as the session keeps its formats chosen until the Person changes them
 
 #### Scenario: Stand one chip for a group of formats
 
 *Given* billing-report's story map is generated in markdown and its bounded context is not
 *When* the Person opens the Discovery stage head on story_map and bounded_context
-*Then* the bar shows a diagram chip and a markdown chip
+*Then* the bar shows a diagram chip, a markdown chip and a thin_slice chip
 *And* the markdown chip reads 1 of 2 with the hint markdown: 1 of 2 done, selected
 
 #### Scenario: Keep Run off with no format picked
 
 *Given* billing-report's story map is already in markdown
-*But* no format is picked
+*But* the Person unpicks the markdown chip, so no format is picked
 *When* the session board draws the story_map bar
 *Then* Run is off
 
@@ -100,7 +100,7 @@ section: body
 *And* its story_map bar has generate chosen and the markdown chip picked
 *When* the Person runs generate on story_map
 *Then* the chat runs /actions-generate stories-story-map format=markdown
-*And* the bar's picks are cleared
+*And* the bar keeps the markdown chip picked for the next run
 *And* Claude Code goes on to Resolve Fidelity Output Paths for stories-story-map
 
 #### Scenario: Render the earlier fidelity into a new format first

@@ -28,14 +28,11 @@ class IdeLayout:
         """The layout of each IDE CDD installs into."""
         return [cls(ide) for ide in cls._FOLDERS]
 
-    @classmethod
-    def installed_guidance_kind(cls, path: str) -> str:
-        """skill, rule, or agent for a path inside a folder an install writes that guidance into, such as
-        ``.cursor/rules/`` or ``.claude/skills/``, in any IDE's folder; empty for any other path. A hook that logs or
-        toasts a file asks this, so every IDE's folders are known in one place."""
+    def guidance_kind_of(self, path: str) -> str:
+        """skill, rule, or agent for a path inside a folder an install writes that guidance into in this IDE's folder,
+        such as ``.cursor/rules/``; empty for any other path."""
         posix = str(path).replace("\\", "/").lower()
-        found = (kind for folder in cls._FOLDERS.values() for name, kind in cls._GUIDANCE_FOLDERS.items() if f"/{folder}/{name}/" in posix)
-        return next(found, "")
+        return next((kind for name, kind in self._GUIDANCE_FOLDERS.items() if f"/{self.folder_name}/{name}/" in posix), "")
 
     @property
     def folder_name(self) -> str:
@@ -107,3 +104,10 @@ class IdeLayout:
         else:
             base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
         return base / "Code" / "User"
+
+
+def installed_guidance_kind(path: str) -> str:
+    """skill, rule, or agent for a path inside a folder an install writes that guidance into, such as ``.cursor/rules/``
+    or ``.claude/skills/``, in any IDE's folder; empty for any other path. A hook that logs or toasts a file asks this,
+    so every IDE's folders are known in one place."""
+    return next((kind for kind in (layout.guidance_kind_of(path) for layout in IdeLayout.every()) if kind), "")

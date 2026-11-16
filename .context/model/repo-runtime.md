@@ -1090,15 +1090,15 @@ No class of this module acts on another class of the model at run time.
   - `-> Git.run` runs · space/repo/repo.py:207
 - `Repo.commit`
   - `-> Git.run` runs · space/repo/repo.py:222
-- `Repo.push_upstream`
+- `Origin.push_upstream`
   - `-> Git.run` runs · space/repo/repo.py:229
-- `Repo.needs_push`
+- `Origin.needs_push`
   - `-> Git.run` runs · space/repo/repo.py:237
 - `Repo.fetch`
   - `-> Git.run` runs · space/repo/repo.py:240
 - `Repo.pull`
   - `-> Git.run` runs · space/repo/repo.py:243
-- `Repo.merge_from`
+- `Merges.merge_from`
   - `-> Branch.name` reads name of · space/repo/repo.py:247
   - `-> Git.run` runs · space/repo/repo.py:249
 - `Repo._checkout`
@@ -1153,7 +1153,7 @@ No class of this module acts on another class of the model at run time.
   - `-> Repo()` creates · space/session/sessions.py:41
   - `-> Repo.root` reads root of · space/session/sessions.py:42
 - `Sessions.folder_of`
-  - `-> Repo.primary_root` calls primary_root on · space/session/sessions.py:68
+  - `-> Worktrees.primary_root` calls primary_root on · space/session/sessions.py:68
 - `Sessions.load`
   - `-> Session.load` loads · space/session/sessions.py:98
   - `<- Session`
@@ -1162,7 +1162,7 @@ No class of this module acts on another class of the model at run time.
   - `-> Name()` creates · space/session/sessions.py:116
   - `-> Session.name` reads name of · space/session/sessions.py:118
   - `-> Session.save` saves · space/session/sessions.py:119
-  - `-> Session.save_fields` saves fields · space/session/sessions.py:120
+  - `-> SessionRecord.save_fields` saves fields · space/session/sessions.py:120
   - `-> Session.log` reads log of · space/session/sessions.py:121
   - `<- Session`
 - `Sessions.open`
@@ -1187,9 +1187,9 @@ No class of this module acts on another class of the model at run time.
 - `Session.repo`
   - `-> Repo()` creates · space/session/session.py:113
   - `<- Repo`
-- `Session.from_project`
+- `SessionPaths.from_project`
   - `-> Repo.path_from_top` calls path_from_top on · space/session/session.py:159
-- `Session.move_to_backlog`
+- `SessionFolder.move_to_backlog`
   - `-> Sessions.backlog_folder` reads backlog folder of · space/session/session.py:224
   - `<- Session`
 - `Session._sessions`
@@ -1272,7 +1272,7 @@ No class of this module acts on another class of the model at run time.
   - `-> Session.fields` reads fields of · space/session/practice_session_output.py:125
 - `PracticeSessionOutput._save`
   - `-> Session.fields` reads fields of · space/session/practice_session_output.py:128
-  - `-> Session.save_fields` saves fields · space/session/practice_session_output.py:129
+  - `-> SessionRecord.save_fields` saves fields · space/session/practice_session_output.py:129
 - `PracticeSessionOutput._current_fidelity`
   - `-> PracticeGuidance.fidelities` reads fidelities of · space/session/practice_session_output.py:147
 - `PracticeSessionOutput.working_format`
@@ -1283,7 +1283,7 @@ No class of this module acts on another class of the model at run time.
   - `-> Session.fields` reads fields of · space/session/practice_session_output.py:184
 - `PracticeSessionOutput._save_chosen_outputs`
   - `-> Session.fields` reads fields of · space/session/practice_session_output.py:187
-  - `-> Session.save_fields` saves fields · space/session/practice_session_output.py:188
+  - `-> SessionRecord.save_fields` saves fields · space/session/practice_session_output.py:188
 - `PracticeSessionOutput._chosen_or_configured_root`
   - `-> ContextConfig().practice_folder` creates · space/session/practice_session_output.py:194
   - `-> ContextConfig()` creates · space/session/practice_session_output.py:194
@@ -1294,7 +1294,7 @@ No class of this module acts on another class of the model at run time.
 - `PracticeSessionOutput.output_root`
   - `-> Session.root` reads root of · space/session/practice_session_output.py:208
 - `PracticeSessionOutput.root`
-  - `-> Session.from_project` loads · space/session/practice_session_output.py:215
+  - `-> SessionPaths.from_project` loads · space/session/practice_session_output.py:215
 - `PracticeSessionOutput.choose_root`
   - `-> Session.repo_path` reads repo path of · space/session/practice_session_output.py:228
   - `<- PracticeSessionOutput`
@@ -1313,7 +1313,7 @@ No class of this module acts on another class of the model at run time.
 ## Board
 
 - `Board.load`
-  - `-> Repo().primary_root` creates · space/kanban/board.py:97
+  - `-> Repo().worktrees.primary_root` creates · space/kanban/board.py:97
   - `-> Repo()` creates · space/kanban/board.py:97
   - `-> PracticeCatalogue.practices` lists practices from · space/kanban/board.py:98
   - `<- Board`
@@ -1426,24 +1426,24 @@ No class of this module acts on another class of the model at run time.
   - `-> Board.load` loads · space/kanban/ticket.py:227
   - `<- Ticket`
 - `Ticket.move_to`
-  - `-> Session.reopen` calls reopen on · space/kanban/ticket.py:278
+  - `-> SessionFolder.reopen` calls reopen on · space/kanban/ticket.py:278
   - `<- Ticket | BacklogItem`
 - `Ticket.close`
   - `-> Session.close` closes · space/kanban/ticket.py:288
-  - `-> Session.move_to_closed` moves to closed · space/kanban/ticket.py:289
+  - `-> SessionFolder.move_to_closed` moves to closed · space/kanban/ticket.py:289
   - `<- Ticket`
 - `Ticket.archive`
   - `-> Session.close` closes · space/kanban/ticket.py:296
-  - `-> Session.move_to_archive` moves to archive · space/kanban/ticket.py:297
+  - `-> SessionFolder.move_to_archive` moves to archive · space/kanban/ticket.py:297
   - `<- Ticket`
 - `Ticket.violations`
-  - `-> Session.from_project` loads · space/kanban/ticket.py:306
+  - `-> SessionPaths.from_project` loads · space/kanban/ticket.py:306
   - `-> Session.reports_folder` reads reports folder of · space/kanban/ticket.py:306
 - `Ticket._reopen`
-  - `-> Session.reopen` calls reopen on · space/kanban/ticket.py:310
+  - `-> SessionFolder.reopen` calls reopen on · space/kanban/ticket.py:310
 - `Ticket._return_to_backlog`
   - `-> Session.close` closes · space/kanban/ticket.py:319
-  - `-> Session.move_to_backlog` moves to backlog · space/kanban/ticket.py:320
+  - `-> SessionFolder.move_to_backlog` moves to backlog · space/kanban/ticket.py:320
   - `-> BacklogItem.from_ticket` loads · space/kanban/ticket.py:321
   - `-> BacklogItem.write_if_missing` writes if missing · space/kanban/ticket.py:322
 - `Ticket._moved_into`
@@ -1888,7 +1888,7 @@ No class of this module acts on another class of the model at run time.
 
 - `StoryModel.__init__`
   - `-> ModelChildren()` creates · cdd_guidance/practices/stories/model/story_model.py:913
-- `StoryModel.append_epic`
+- `StoryModel.epics.append`
   - `-> Epic.append` keeps · cdd_guidance/practices/stories/model/story_model.py:1080
 
 ## Epic

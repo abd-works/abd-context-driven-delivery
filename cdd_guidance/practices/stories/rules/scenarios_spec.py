@@ -26,7 +26,9 @@ from harness.graph.rule_fixture import SchemaRuleRun  # noqa: E402
 
 
 def _step(keyword: str, text: str, order: int) -> Step:
-    return Step(text, StepType(keyword.lower()), order, keyword=keyword)
+    step = Step(text, StepType(keyword.lower()), order)
+    step.keyword = keyword
+    return step
 
 
 def _scenario(steps: list[tuple[str, str]], *, examples: int = 0, outline: bool = False, evidence: tuple = ()) -> Scenario:
@@ -55,9 +57,9 @@ def _loaded(scenario: Scenario, graph: Graph | None = None) -> RuleCheckContext:
     story = Story("Submit Order", 1)
     story.scenarios = [scenario]
     epic = Epic("Place Orders", 1)
-    epic.append_story(story)
+    epic.stories.append(story)
     model = StoryModel()
-    model.append_epic(epic)
+    model.epics.append(epic)
     practice = (graph or Graph()).practice("stories")
     model.record(practice)
     return RuleCheckContext(practice, None)
@@ -90,9 +92,9 @@ def _order_aggregate(graph: Graph) -> None:
         return node
 
     aggregate = add("Aggregate", "order")
-    graph.record(EdgeType("root", 1, "direct"), aggregate, add("EntityRoot", "Order"))
+    graph.edges.record(EdgeType("root", 1, "direct"), aggregate, add("EntityRoot", "Order"))
     for kind, name in (("Entity", "LineItem"), ("ValueObject", "ShippingAddress")):
-        graph.record(EdgeType("owns", 2, "direct"), aggregate, add(kind, name))
+        graph.edges.record(EdgeType("owns", 2, "direct"), aggregate, add(kind, name))
 
 
 with description("a scenario on a story graph"):

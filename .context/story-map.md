@@ -56,6 +56,16 @@ The map reads in the order the work happens: authors register and install toolse
 ### (S) Author --> Register Hook Event
 ### (S) Hook Installation --> Publish Hooks Manifest
 
+## (E) Serve CDD Code In Lanes
+
+Intended (requested 2026-11-16; `harness/mcp/.context/cdr/0003-two-lanes-main-stable-features-dev.md`): the stable lane runs main for chats in a main checkout, and every other session is in the dev lane by default, which runs the one served feature pinned straight from its branch.
+
+### (S:system) CDD Server --> [Choose The Lane For A Project](../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/choose-the-lane-for-a-project/choose_the_lane_for_a_project_story.test.py)
+### (S) Person --> [Install Into The Lane Of The Checkout](../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/install-into-the-lane-of-the-checkout/install_into_the_lane_of_the_checkout_story.test.py)
+### (S) Person --> [Serve A Feature Branch On The Dev Lane](../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/serve-a-feature-branch-on-the-dev-lane/serve_a_feature_branch_on_the_dev_lane_story.test.py)
+### (S:system) CDD Server --> [Send A Dev-Lane Chat's Calls To The Dev Lane](../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/send-a-dev-lane-chats-calls-to-the-dev-lane/send_a_dev_lane_chats_calls_to_the_dev_lane_story.test.py)
+### (S) Person --> Switch The Served Feature After Other Chats Agree
+
 # (E) Deliver Work With Context Guidance
 
 A practice is a lens on the work (Stories, DDD, UX, Clean Engineering, BDD), a fidelity is how deep that lens goes, and an action is what you do with it. A person composes the three into one command; the agent loads that practice's guidance at that fidelity and uses it to turn source material into context, shape the solution, produce the formal artifacts, and check them against the same rules. Sources: `catalog/workflow.md`, `cdd_guidance/actions/.context/module-context.md`, `.context/cdd-approach.md`.
@@ -264,7 +274,7 @@ Observed: a press on a card shows its practices, fidelity progress and latest va
 
 ### (S) Person --> [Set Stage WIP Limit](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-set-stage-wip-limit)
 
-Observed: `Board.set_wip_limit`, saved in `.sessions/_board.json`.
+Observed: `BoardFile.set_wip_limit`, saved in `.sessions/_board.json`.
 
 ### (S) Person --> [Arrange Side Panel](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-arrange-side-panel)
 
@@ -940,7 +950,7 @@ Observed (2026-11-14): pressing the session's name opens the Files app on `.sess
 
 ### (S) Story UI --> [Open File From Another Page](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-file-from-another-page)
 
-Built: a page the chat opened, such as the Story UI editor, sends the chat an `open_file`, and the chat opens that file in the Files app on its session folder (`board-chat-client.ts` `shown`, `openFileInViewer`).
+Built: a page the chat opened, such as the Story UI editor, sends the chat an `open_file`, and the chat opens that file in the Files app on its session folder (`harness/chat-ui/pane/hooks/chat-bar/check-in-client.ts` `shown`, `openFileInViewer`).
 
 ### (S) Files App --> [List Files The Link Names](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-list-files-the-link-names)
 
@@ -992,7 +1002,7 @@ Built (2026-11-14): the session's practices sit along the top as toggles, each i
 
 ### (S) Files App --> [Keep Chat Bar Practices In Sync](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-keep-chat-bar-practices-in-sync)
 
-Built (2026-11-14): a practice turned on or off in the Files app sends the chat that opened it a `refresh`, and its chat bar reads the board again, so its fidelity dots show the same practices (`chat.send` kind `refresh`, `board-chat-client.ts` `refreshed`); the page reads the practices again every three seconds while it shows (and when the person comes back to it), so a practice turned off on the chat bar or the board hides its files there with no press: a page in a side pane is never focused again (fixed 2026-11-14, the person: "the file filter needs to respect the practice that is toggled"). Requested (the person, 2026-11-14): "also toggles the command bar so they stay in sync".
+Built (2026-11-14): a practice turned on or off in the Files app sends the chat that opened it a `refresh`, and its chat bar reads the board again, so its fidelity dots show the same practices (`chat.send` kind `refresh`, `harness/chat-ui/pane/hooks/chat-bar/check-in-client.ts` `refreshed`); the page reads the practices again every three seconds while it shows (and when the person comes back to it), so a practice turned off on the chat bar or the board hides its files there with no press: a page in a side pane is never focused again (fixed 2026-11-14, the person: "the file filter needs to respect the practice that is toggled"). Requested (the person, 2026-11-14): "also toggles the command bar so they stay in sync".
 
 ## (E) View Files In Source View
 
@@ -1020,7 +1030,7 @@ Built: the rules the session's saved graph found broken in the file mark their l
 
 ### (S) Person --> Browse Files Without Reading Rules
 
-Built (2026-11-15): Rules and Cross-file toggles at the top of the Files app, both off by default. With Rules on, `Session.file(rules=True)` reads the open file into the session's live graph when it changed (about 1.5 s) and answers its folds and broken rules, with the last validate's saved findings beside them, as the Graph app's source view shows them; Cross-file has the graph hold the whole working copy first (`Graph.hold_whole`). Fixed (2026-11-15): the two toggles are independent; Rules reads the file alone (`Session.file_alone`, about 0.8 s), Cross-file adds only what the whole working copy finds. The person: "when loading files don't use cross file unless cross file is toggled, and vice versa". Requested (the person, 2026-11-15): "I don't see code folding in here I don't see any of the violations", then "toggle at top and have it off by default; for rules; same with cross file that way we don't incur a performance penalty when we just want to browse files".
+Built (2026-11-15): Rules and Cross-file toggles at the top of the Files app, both off by default. With Rules on, `Session.file(rules=True)` reads the open file into the session's live graph when it changed (about 1.5 s) and answers its folds and broken rules, with the last validate's saved findings beside them, as the Graph app's source view shows them; Cross-file has the graph hold the whole working copy first (`Graph.hold_whole`). Fixed (2026-11-15): the two toggles are independent; Rules reads the file alone (`FileGraphs.file_alone`, about 0.8 s), Cross-file adds only what the whole working copy finds. The person: "when loading files don't use cross file unless cross file is toggled, and vice versa". Requested (the person, 2026-11-15): "I don't see code folding in here I don't see any of the violations", then "toggle at top and have it off by default; for rules; same with cross file that way we don't incur a performance penalty when we just want to browse files".
 
 ### (S) Person --> [Save Edited File](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-save-edited-file)
 
@@ -2133,7 +2143,7 @@ Requested (2026-11-06, "validate still exists as independent action"; "validate 
 
 ### (S:system) Claude Code --> Check Graph Rules When An Artifact Changes
 
-Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "Validate on save"): when an artifact in a session changes, the graph rules run on it and the band's violation count updates, with no explicit validate. Built on release-2 (2026-11-15) for one file: with the Files app's Rules toggle on, `Session.file_alone` reads the open file into the session's live graph when it changed, in under a second, and answers its broken rules.
+Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "Validate on save"): when an artifact in a session changes, the graph rules run on it and the band's violation count updates, with no explicit validate. Built on release-2 (2026-11-15) for one file: with the Files app's Rules toggle on, `FileGraphs.file_alone` reads the open file into the session's live graph when it changed, in under a second, and answers its broken rules.
 
 ## (E) Change Stories From Canvas And Story UI
 
@@ -2141,7 +2151,7 @@ Intended ([integrate-stories-with-the-canvas-explorer.md](../.sessions/_backlog/
 
 ### (S:system) Design Canvas --> Give Each Map Card A Stable Node Id
 
-Intended (integrate-stories-with-the-canvas-explorer.md slice 2): each card drawn by `box()` and each explorer entry carries a `data-node` derived from the story path, which every comment and command below names.
+Intended (integrate-stories-with-the-canvas-explorer.md slice 2): each card drawn by `Place.card()` and each explorer entry carries a `data-node` derived from the story path, which every comment and command below names.
 
 ### (S) Person --> Comment On A Story Card
 

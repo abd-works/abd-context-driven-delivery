@@ -41,20 +41,20 @@ class StoryNode:
     @mcp
     @agent_tool
     def rename(self, name: str) -> StoryModel:
-        # -> self.story_map.write_back
+        # -> self.story_map.opened.save
         ...
 
     @mcp
     @agent_tool
     def move_before(self, other: StoryNode) -> StoryModel:
         # raises StoryMapEditRefused when other is not of its own kind
-        # -> self.story_map.write_back
+        # -> self.story_map.opened.save
         ...
 
     @mcp
     @agent_tool
     def remove(self) -> StoryModel:
-        # -> self.story_map.write_back
+        # -> self.story_map.opened.save
         ...
 
 
@@ -83,13 +83,13 @@ class StoryModel(StoryNode):
     @property
     @data_field
     def formats(self) -> FidelitySessionOutput:
-        # -> self._opened.fidelity.session_output (offered_formats, chosen_formats)
+        # -> self.opened.fidelity.session_output (offered_formats, chosen_formats)
         ...
 
     @property
     @data_field
     def refusal(self) -> str:
-        # -> self._opened.refusal
+        # -> self.opened.refusal
         ...
 
     @classmethod
@@ -107,29 +107,27 @@ class StoryModel(StoryNode):
     @mcp
     @agent_tool
     def new_epic(self, name: str) -> StoryModel:
-        # -> self.append_epic
-        # -> self.write_back
+        # -> self.epics.append
+        # -> self.opened.save
         ...
 
-    def write_back(self) -> StoryModel:
-        # its own file first, then each chosen format; refused while self.refusal says why
-        # -> self._opened.write (OpenedStoryMap: Stories.formats.render, session.graph.refresh)
-        ...
+    # opened: OpenedStoryMap | UnopenedStoryMap — save(): its own file first, then each chosen format; refused while
+    # self.refusal says why (OpenedStoryMap: Stories.formats.render, session.graph.refresh)
 
 
 class Epic(StoryNode):
     @mcp
     @agent_tool
     def new_epic(self, name: str) -> StoryModel:
-        # -> self.append_epic
-        # -> self.story_map.write_back
+        # -> self.epics.append
+        # -> self.story_map.opened.save
         ...
 
     @mcp
     @agent_tool
     def new_story(self, name: str) -> StoryModel:
         # -> self.append_story
-        # -> self.story_map.write_back
+        # -> self.story_map.opened.save
         ...
 
 
@@ -137,7 +135,7 @@ class Story(StoryNode):
     @mcp
     @agent_tool
     def new_scenario(self, name: str) -> StoryModel:
-        # -> self.story_map.write_back
+        # -> self.story_map.opened.save
         ...
 
 
@@ -145,7 +143,7 @@ class Scenario(StoryNode):
     @mcp
     @agent_tool
     def new_step(self, step_type: str, text: str) -> StoryModel:
-        # -> self.story_map.write_back
+        # -> self.story_map.opened.save
         ...
 
 
@@ -153,5 +151,5 @@ class Step(StoryNode):
     @mcp
     @agent_tool
     def edit_text(self, text: str) -> StoryModel:
-        # -> self.story_map.write_back
+        # -> self.story_map.opened.save
         ...

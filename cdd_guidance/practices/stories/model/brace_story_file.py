@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from typing import List, Sequence, Tuple
 
-from cdd_guidance.practices.clean_engineering.model.code_body import BraceCall, CodeBody, WrittenBlock
+from cdd_guidance.practices.clean_engineering.model.code_body import BraceCall, CodeBody, InsideLines, WrittenBlock
 from cdd_guidance.practices.stories.model.code_story_model import unescaped
 from cdd_guidance.practices.stories.model.story_file import CodeBlock, StoryFile
 
@@ -25,16 +25,16 @@ class BraceStoryFile(StoryFile):
     """One brace-language story file: its story calls, and the calls inside each."""
 
     def story_blocks(self) -> List[CodeBlock]:
-        return self.calls(_STORY, 0, len(self.text), group=2)
+        return self.calls(_STORY, range(0, len(self.text)), group=2)
 
-    def calls(self, pattern: re.Pattern, begin: int, end: int, group: int = 0) -> List["BraceBlock"]:
-        """The calls matching pattern between begin and end that are not inside another one found first."""
+    def calls(self, pattern: re.Pattern, span: range, group: int = 0) -> List["BraceBlock"]:
+        """The calls matching pattern within span of the text that are not inside another one found first."""
         found: List[BraceBlock] = []
-        for match in pattern.finditer(self.text, begin, end):
+        for match in pattern.finditer(self.text, span.start, span.stop):
             if found and match.start() < found[-1].call.end:
                 continue
             name = unescaped(match.group(group)) if group else ""
-            call = BraceCall(self.text, match.start(), self.text.index("(", match.start()), name)
+            call = BraceCall(self.text, match.start(), name)
             if call.is_whole:
                 found.append(BraceBlock(self, call))
         return found
@@ -64,7 +64,7 @@ class BraceStoryFile(StoryFile):
         return self.text.count("\n", 0, index)
 
     def _call_at(self, start: int, name: str) -> BraceCall:
-        return BraceCall(self.text, start, self.text.index("(", start), unescaped(name))
+        return BraceCall(self.text, start, unescaped(name))
 
 
 class BraceBlock:
@@ -100,19 +100,20 @@ class BraceBlock:
 
     def written(self, lead: List[str]) -> WrittenBlock:
         start, brace, inner_end, end = (self.file.line(index) for index in (self.call.start, self.call.brace, self.call.inner_end, self.call.end - 1))
-        written = WrittenBlock(self.file.language, None, lead, self.file.lines[start : brace + 1])
+        written = WrittenBlock(self.file.language, None, self.file.lines[start : brace + 1])
+        written.lead = lead
         written.close = self.file.lines[inner_end : end + 1]
         return written
 
     def split_inside(self, children: Sequence[CodeBlock]) -> Tuple[List[str], List[List[str]], List[str]]:
-        return WrittenBlock.split_inside(self.file.lines, self._inside, [child.line_span for child in children])
+        return InsideLines(self.file.lines, self._inside).split([child.line_span for child in children])
 
     def scenarios(self) -> List[CodeBlock]:
-        return self.file.calls(_SCENARIO, self.call.brace + 1, self.call.inner_end, group=2)
+        return self.file.calls(_SCENARIO, range(self.call.brace + 1, self.call.inner_end), group=2)
 
     def backgrounds(self, scenarios: Sequence[CodeBlock]) -> List[CodeBlock]:
         first = scenarios[0].call.start if scenarios else self.call.inner_end
-        return self.file.calls(_BACKGROUND, self.call.brace + 1, first)
+        return self.file.calls(_BACKGROUND, range(self.call.brace + 1, first))
 
     def steps(self, skip: Sequence[CodeBlock]) -> List[CodeBlock]:
         return self.file.step_calls(self.call.brace + 1, self.call.inner_end, skip)

@@ -7,7 +7,7 @@ from expects import be, contain, equal, expect, have_len
 from mamba import before, context, description, it
 
 from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownScenario, MarkdownStoryModel
-from cdd_guidance.practices.stories.model.markdown import nodes as markdown_nodes
+from cdd_guidance.practices.stories.model.markdown.scenario_file import ScenarioFiles
 
 
 def _stories(model):
@@ -66,17 +66,17 @@ with description("a markdown story map loaded from a workspace") as self:
 
         with it("should read scenario files once for every story"):
             calls = []
-            original = markdown_nodes.scenario_sections_in
+            original = ScenarioFiles.sections
 
-            def counting(root, *args, **kwargs):
-                calls.append(Path(root))
-                return original(root, *args, **kwargs)
+            def counting(files, *args, **kwargs):
+                calls.append(files.root)
+                return original(files, *args, **kwargs)
 
-            markdown_nodes.scenario_sections_in = counting
+            ScenarioFiles.sections = counting
             try:
                 MarkdownStoryModel.from_workspace(self.root)
             finally:
-                markdown_nodes.scenario_sections_in = original
+                ScenarioFiles.sections = original
             expect(calls).to(have_len(1))
 
         with it("should report each scenario file while reading"):

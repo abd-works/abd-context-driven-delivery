@@ -33,38 +33,29 @@ export class Customer {
   public profile: Profile | null = null;
   _repository?: CustomerRepository;
 
-  constructor(
-    public accountCredentials: AccountCredentials,
-    id?: string,
-    identity?: Identity,
-    address?: Address,
-    public cart: Cart | null = null,
-    public billing: Billing | null = null,
-    public subscriptions: Subscription[] = [],
-  ) {
-    this.id = id ?? accountCredentials.customerId ?? '';
-    this.identity = identity ?? new Identity(accountCredentials.email ?? '');
-    this.address = address ?? new Address();
+  public cart: Cart | null;
+  public billing: Billing | null;
+  public subscriptions: Subscription[];
+
+  constructor(public accountCredentials: AccountCredentials, record: CustomerRecord = {}) {
+    this.id = record.id ?? accountCredentials.customerId ?? '';
+    this.identity = record.identity ?? new Identity({ email: accountCredentials.email ?? '' });
+    this.address = record.address ?? new Address();
+    this.cart = record.cart ?? null;
+    this.billing = record.billing ?? null;
+    this.subscriptions = record.subscriptions ?? [];
   }
 
   confirmIdentity(): Customer {
     if (!this._repository) throw new Error('Customer has no repository. Load through customerRepository.');
-    const missing = profileRequirements.missing(this.identity, this.address);
-    if (missing.length > 0) {
-      throw new CustomerException(
-        CustomerOperation.ConfirmIdentity,
-        this.accountCredentials,
-        'Profile requirements are unmet',
-        new Error('unmet'),
-      );
-    }
+    this.requireProfileRequirementsMet();
     const inquiryVerified = this.profile?.inquiry?.verified;
     const result = this._repository.update(this);
     if (result instanceof Error) {
-      const message = result.message === MavenirProfileError.CustomerAlreadyExists
-        ? 'Customer already exists.'
-        : 'Something went wrong, please contact the support.';
-      throw new CustomerException(CustomerOperation.ConfirmIdentity, this.accountCredentials, message, result);
+      throw new CustomerException(CustomerOperation.ConfirmIdentity, this.accountCredentials, {
+        message: this.updateFailureMessage(result),
+        cause: result,
+      });
     }
     const mapped = this._repository.translateUpdateResponse(result, this.accountCredentials);
     this.identity = mapped.identity;
@@ -72,6 +63,21 @@ export class Customer {
     this.verified = inquiryVerified ?? mapped.verified;
     if (this.profile) this.profile.inquiry = null;
     return this;
+  }
+
+  private requireProfileRequirementsMet(): void {
+    if (profileRequirements.missing(this.identity, this.address).length === 0) return;
+    throw new CustomerException(CustomerOperation.ConfirmIdentity, this.accountCredentials, {
+      message: 'Profile requirements are unmet',
+      cause: new Error('unmet'),
+    });
+  }
+
+  /** What the customer reads when the portal refuses their profile: a duplicate gets its own message. */
+  private updateFailureMessage(error: Error): string {
+    return error.message === MavenirProfileError.CustomerAlreadyExists
+      ? 'Customer already exists.'
+      : 'Something went wrong, please contact the support.';
   }
 
   createBilling(): Billing {
@@ -92,33 +98,47 @@ export class Customer {
   }
 }
 
+/** What a customer is created or loaded with; anything left out starts empty. */
+export interface CustomerRecord {
+  id?: string;
+  identity?: Identity;
+  address?: Address;
+  cart?: Cart | null;
+  billing?: Billing | null;
+  subscriptions?: Subscription[];
+}
+
 //<<Entity>>
 export class Identity {
-  constructor(
-    public email: string,
-    public name = '',
-    public lastName = '',
-    public fullName = '',
-    public preferredName = '',
-    public expiryDate = '',
-    public dateOfBirth = '',
-    public idNationality = '',
-    public idNumber = '',
-    public idType = '',
-    public otherPhoneNumber = '',
-  ) {}
+  email = '';
+  name = '';
+  lastName = '';
+  fullName = '';
+  preferredName = '';
+  expiryDate = '';
+  dateOfBirth = '';
+  idNationality = '';
+  idNumber = '';
+  idType = '';
+  otherPhoneNumber = '';
+
+  constructor(fields: Partial<Identity> & { email: string }) {
+    Object.assign(this, fields);
+  }
 }
 
 //<<Entity>>
 export class Address {
-  constructor(
-    public street = '',
-    public complement = '',
-    public city = '',
-    public parish = '',
-    public postalCode = '',
-    public country = '',
-  ) {}
+  street = '';
+  complement = '';
+  city = '';
+  parish = '';
+  postalCode = '';
+  country = '';
+
+  constructor(fields: Partial<Address> = {}) {
+    Object.assign(this, fields);
+  }
 }
 
 //<<Value Object>>
@@ -134,16 +154,30 @@ export const CustomerOperation = {
 } as const;
 export type CustomerOperation = (typeof CustomerOperation)[keyof typeof CustomerOperation];
 
+/** What went wrong: the message the customer reads and the error underneath it. */
+export interface CustomerFailure {
+  message: string;
+  cause: Error;
+}
+
 export class CustomerException extends Error {
+  public readonly cause: Error;
+
   constructor(
     public readonly operation: CustomerOperation,
     public readonly accountCredentials: AccountCredentials,
-    message: string,
-    public readonly cause: Error,
+    failure: CustomerFailure,
   ) {
-    super(message);
+    super(failure.message);
+    this.cause = failure.cause;
     this.name = 'CustomerException';
   }
+}
+
+/** Why the repository refused: the message the customer reads and the reason underneath it. */
+interface Refusal {
+  message: string;
+  reason: string;
 }
 
 export class CustomerRepository {
@@ -152,27 +186,28 @@ export class CustomerRepository {
   async create(accountCredentials: AccountCredentials): Promise<Customer> {
     const created = await this.persistCustomer(accountCredentials);
     if (!created) {
-      throw this.exception(CustomerOperation.Create, accountCredentials, 'Could not create customer.', 'Customer already exists');
+      throw this.exception(CustomerOperation.Create, accountCredentials, {
+        message: 'Could not create customer.',
+        reason: 'Customer already exists',
+      });
     }
     return created;
   }
 
   async load(accountCredentials: AccountCredentials): Promise<Customer> {
+    const invalidToken = { message: 'Something went wrong when loading your account', reason: 'Invalid token' };
     const customerId = accountCredentials.customerId ?? accountCredentials.token?.customerId;
-    if (!accountCredentials.token || !customerId)
-      throw this.exception(CustomerOperation.Load, accountCredentials, 'Something went wrong when loading your account', 'Invalid token');
+    if (!accountCredentials.token || !customerId) throw this.exception(CustomerOperation.Load, accountCredentials, invalidToken);
     const email = this.validateToken(accountCredentials.token);
     if (email instanceof Error || !accountCredentials.token.customerId)
-      throw this.exception(CustomerOperation.Load, accountCredentials, 'Something went wrong when loading your account', 'Invalid token');
+      throw this.exception(CustomerOperation.Load, accountCredentials, invalidToken);
     const customer = await this.read(accountCredentials.token.customerId, accountCredentials);
     if (customer.billing?.state === BillingState.Terminated) {
       await accountCredentials.signOut();
-      throw this.exception(
-        CustomerOperation.Load,
-        accountCredentials,
-        'Your account has been terminated.',
-        'Billing account is terminated',
-      );
+      throw this.exception(CustomerOperation.Load, accountCredentials, {
+        message: 'Your account has been terminated.',
+        reason: 'Billing account is terminated',
+      });
     }
     return customer;
   }
@@ -185,7 +220,7 @@ export class CustomerRepository {
     return this.portalGateway.patchProfile(mavenirCustomer, party, medium);
   }
 
-  translateUpdateRequest(customer: Customer): { party: EngagedParty; medium: ContactMedium } {
+  private translateUpdateRequest(customer: Customer): { party: EngagedParty; medium: ContactMedium } {
     const givenName = formatName(customer.identity.name);
     const familyName = formatName(customer.identity.lastName);
     const preferredGivenName = customer.identity.preferredName
@@ -224,11 +259,11 @@ export class CustomerRepository {
 
   private async persistCustomer(accountCredentials: AccountCredentials): Promise<Customer | null> {
     if (!accountCredentials.verified || !accountCredentials.token)
-      throw this.exception(CustomerOperation.Create, accountCredentials, 'Could not create customer.', 'Invalid token');
+      throw this.exception(CustomerOperation.Create, accountCredentials, { message: 'Could not create customer.', reason: 'Invalid token' });
     if (accountCredentials.customerId) return null;
     const email = this.validateToken(accountCredentials.token);
     if (email instanceof Error)
-      throw new CustomerException(CustomerOperation.Create, accountCredentials, 'Could not create customer.', email);
+      throw new CustomerException(CustomerOperation.Create, accountCredentials, { message: 'Could not create customer.', cause: email });
     return this.persistNewCustomer(email, accountCredentials);
   }
 
@@ -236,7 +271,7 @@ export class CustomerRepository {
     const request = this.translateCreateRequest(email);
     const result = this.portalGateway.create(request);
     if (result instanceof Error) {
-      throw new CustomerException(CustomerOperation.Create, accountCredentials, 'Could not create customer.', result);
+      throw new CustomerException(CustomerOperation.Create, accountCredentials, { message: 'Could not create customer.', cause: result });
     }
     return this.translateCreateResponse(result, accountCredentials);
   }
@@ -245,17 +280,15 @@ export class CustomerRepository {
     const mavenirCustomer = this.portalGateway.read(customerId);
     if (mavenirCustomer instanceof Error) {
       await accountCredentials.signOut();
-      throw new CustomerException(
-        CustomerOperation.Load,
-        accountCredentials,
-        'Something went wrong when loading your account',
-        mavenirCustomer,
-      );
+      throw new CustomerException(CustomerOperation.Load, accountCredentials, {
+        message: 'Something went wrong when loading your account',
+        cause: mavenirCustomer,
+      });
     }
     return this.translateLoadResponse(mavenirCustomer, accountCredentials);
   }
 
-  translateCreateRequest(email: string): MavenirCreateCustomerRequest {
+  private translateCreateRequest(email: string): MavenirCreateCustomerRequest {
     return new MavenirCreateCustomerRequest(
       email,
       CreditServiceProviderId.Paradise,
@@ -271,42 +304,56 @@ export class CustomerRepository {
     );
   }
 
-  translateCreateResponse(result: MavenirCreateCustomerResponse, accountCredentials: AccountCredentials): Customer {
-    return this.attach(new Customer(accountCredentials, result.id, new Identity(accountCredentials.email), new Address()));
+  private translateCreateResponse(result: MavenirCreateCustomerResponse, accountCredentials: AccountCredentials): Customer {
+    const identity = new Identity({ email: accountCredentials.email });
+    return this.attach(new Customer(accountCredentials, { id: result.id, identity, address: new Address() }));
   }
 
   private translateLoadResponse(mavenirCustomer: MavenirCustomer, accountCredentials: AccountCredentials): Customer {
-    const { contactMedium, engagedParty } = mavenirCustomer;
-    const identity = new Identity(
-      contactMedium.emailAddress,
-      engagedParty.givenName,
-      engagedParty.familyName,
-      `${engagedParty.givenName} ${engagedParty.familyName}`.trim(),
-      engagedParty.preferredGivenName,
-      engagedParty.individualIdentification.endDateTime,
-      engagedParty.birthDate,
-      engagedParty.individualIdentification.issuingAuthority,
-      engagedParty.individualIdentification.identificationId,
-      engagedParty.individualIdentification.identificationType,
-      contactMedium.phoneNumber,
-    );
-    const address = new Address(
-      contactMedium.street1,
-      contactMedium.street2,
-      contactMedium.city,
-      contactMedium.stateOrProvince,
-      contactMedium.postCode,
-      contactMedium.country,
-    );
-    const customer = new Customer(accountCredentials, mavenirCustomer.id, identity, address);
-    if (mavenirCustomer.billingAccount) {
-      customer.billing = new Billing(mavenirCustomer.billingAccount.id, customer, billingRepository);
-      customer.billing.state = (mavenirCustomer.billingAccount.state as BillingState) || BillingState.Active;
-      customer.billing.creditAdjustments = [...mavenirCustomer.billingAccount.creditAdjustments];
-    }
-    customer.verified = engagedParty.individualIdentification.validated;
+    const customer = new Customer(accountCredentials, {
+      id: mavenirCustomer.id,
+      identity: this.translateIdentity(mavenirCustomer),
+      address: this.translateAddress(mavenirCustomer.contactMedium),
+    });
+    if (mavenirCustomer.billingAccount) customer.billing = this.translateBilling(mavenirCustomer.billingAccount, customer);
+    customer.verified = mavenirCustomer.engagedParty.individualIdentification.validated;
     customer.done = mavenirCustomer.done === 'true';
     return this.attach(customer);
+  }
+
+  private translateIdentity({ contactMedium, engagedParty }: MavenirCustomer): Identity {
+    const identification = engagedParty.individualIdentification;
+    return new Identity({
+      email: contactMedium.emailAddress,
+      name: engagedParty.givenName,
+      lastName: engagedParty.familyName,
+      fullName: `${engagedParty.givenName} ${engagedParty.familyName}`.trim(),
+      preferredName: engagedParty.preferredGivenName,
+      expiryDate: identification.endDateTime,
+      dateOfBirth: engagedParty.birthDate,
+      idNationality: identification.issuingAuthority,
+      idNumber: identification.identificationId,
+      idType: identification.identificationType,
+      otherPhoneNumber: contactMedium.phoneNumber,
+    });
+  }
+
+  private translateAddress(contactMedium: MavenirCustomer['contactMedium']): Address {
+    return new Address({
+      street: contactMedium.street1,
+      complement: contactMedium.street2,
+      city: contactMedium.city,
+      parish: contactMedium.stateOrProvince,
+      postalCode: contactMedium.postCode,
+      country: contactMedium.country,
+    });
+  }
+
+  private translateBilling(billingAccount: NonNullable<MavenirCustomer['billingAccount']>, customer: Customer): Billing {
+    const billing = new Billing(billingAccount.id, customer, billingRepository);
+    billing.state = (billingAccount.state as BillingState) || BillingState.Active;
+    billing.creditAdjustments = [...billingAccount.creditAdjustments];
+    return billing;
   }
 
   private attach(customer: Customer): Customer {
@@ -318,23 +365,24 @@ export class CustomerRepository {
     return token.jwt?.startsWith('token:') ? token.email : new Error('Invalid token');
   }
 
-  private exception(
-    operation: CustomerOperation,
-    accountCredentials: AccountCredentials,
-    message: string,
-    cause: string,
-  ): CustomerException {
-    return new CustomerException(operation, accountCredentials, message, new Error(cause));
+  /** An exception whose cause is a reason the repository found, not an error a system raised. */
+  private exception(operation: CustomerOperation, accountCredentials: AccountCredentials, refusal: Refusal): CustomerException {
+    return new CustomerException(operation, accountCredentials, { message: refusal.message, cause: new Error(refusal.reason) });
   }
 }
 export const customerRepository = new CustomerRepository(portalGateway);
 
 // ── AccountCredentials Aggregatee ─────
 
+/** What a person has typed into the account forms so far; anything left out starts empty. */
+export interface EnteredCredentials {
+  password?: string;
+  confirmPassword?: string;
+  validationCode?: string;
+  verified?: boolean;
+}
+
 export class AccountCredentials {
-  errorMessage(errorMessage: any) {
-    throw new Error('Method not implemented.');
-  }
   static readonly RESEND_WAIT_MILLISECONDS = 60_000;
 
   readonly errors: AccountCredentialsErrors = emptyAccountCredentialsErrors();
@@ -361,22 +409,14 @@ export class AccountCredentials {
   /** Set by AccountRepository.newAccount() — gives credentials their behaviour. */
   _repository?: AccountRepository;
 
-  constructor(emailOrCognitoUser: string | CognitoUser, password = '', confirmPassword = '', validationCode = '', verified = false, cognitoUser: CognitoUser | null = null) {
-    if (emailOrCognitoUser instanceof CognitoUser) {
-      this.email = emailOrCognitoUser.email;
-      this.password = password;
-      this.confirmPassword = confirmPassword;
-      this.validationCode = validationCode;
-      this.verified = emailOrCognitoUser.confirmed;
-      this.cognitoUser = emailOrCognitoUser;
-    } else {
-      this.email = emailOrCognitoUser;
-      this.password = password;
-      this.confirmPassword = confirmPassword;
-      this.validationCode = validationCode;
-      this.verified = verified;
-      this.cognitoUser = cognitoUser;
-    }
+  /** Credentials for an email typed in, or for a user Cognito already knows, who brings their email and confirmation. */
+  constructor(emailOrCognitoUser: string | CognitoUser, entered: EnteredCredentials = {}) {
+    this.cognitoUser = emailOrCognitoUser instanceof CognitoUser ? emailOrCognitoUser : null;
+    this.email = this.cognitoUser?.email ?? (emailOrCognitoUser as string);
+    this.password = entered.password ?? '';
+    this.confirmPassword = entered.confirmPassword ?? '';
+    this.validationCode = entered.validationCode ?? '';
+    this.verified = this.cognitoUser?.confirmed ?? entered.verified ?? false;
   }
 
   get token(): AccountToken | null {
@@ -421,48 +461,37 @@ export class AccountCredentials {
   }
 
   async register(): Promise<void> {
-    if (!this._repository) throw new Error('AccountCredentials has no repository. Use accountRepository.newAccount().');
+    const repository = this.repository();
     if (this.missingRequirements().length > 0)
       throw { ...emptyAccountCredentialsErrors(), register: 'Account credential requirements are unmet' };
-    const user = await this._repository.create(this);
-    if (!(user instanceof CognitoUser)) throw user;
-    this.cognitoUser = user;
-    this.verified = user.confirmed;
+    this.becomeUser(await repository.create(this));
   }
 
   async activate(validationCode: ValidationCode): Promise<void> {
-    if (!this._repository) throw new Error('AccountCredentials has no repository. Use accountRepository.newAccount().');
+    const repository = this.repository();
     if (!this.validationCodeWasSent) throw this.validationCodeError('No validation code has been sent.');
     this.validationCode = validationCode.code;
-
-    const confirmedUser = await this._repository.update(this);
-    if (!(confirmedUser instanceof CognitoUser)) throw confirmedUser;
-    this.cognitoUser = confirmedUser;
-    this.verified = confirmedUser.confirmed;
-
-    const signedInUser = await this._repository.read(this);
+    this.becomeUser(await repository.update(this));
+    const signedInUser = await repository.read(this);
     if (signedInUser instanceof CognitoUser) this.cognitoUser = signedInUser;
   }
 
   async authenticateAccount(): Promise<void> {
-    if (!this._repository) throw new Error('AccountCredentials has no repository. Use accountRepository.newAccount().');
+    const repository = this.repository();
     if (this.unmetSignInRequirements().length > 0)
       throw { ...emptyAccountCredentialsErrors(), signIn: 'Account credential requirements are unmet' };
-    const user = await this._repository.read(this);
-    if (!(user instanceof CognitoUser)) throw user;
-    this.cognitoUser = user;
-    this.verified = user.confirmed;
+    this.becomeUser(await repository.read(this));
   }
 
   async resendValidationCode(): Promise<void> {
-    if (!this._repository) throw new Error('AccountCredentials has no repository. Use accountRepository.newAccount().');
+    const repository = this.repository();
     const sentAt = this.cognitoUser?.validationCodeSentAt;
     if (sentAt && Date.now() - sentAt.getTime() < AccountCredentials.RESEND_WAIT_MILLISECONDS) {
       throw new ValidationCodeResendWaitException(
         new Date(sentAt.getTime() + AccountCredentials.RESEND_WAIT_MILLISECONDS),
       );
     }
-    const updatedUser = await this._repository.resendAccountCode(this);
+    const updatedUser = await repository.resendAccountCode(this);
     if (updatedUser instanceof CognitoUser) this.cognitoUser = updatedUser;
     this.resendMessage = 'We sent you a new code. Please check your email.';
   }
@@ -475,15 +504,22 @@ export class AccountCredentials {
   async storeCustomerId(customerId: string): Promise<CognitoUser> {
     const user = await amplifyService.updateUserAttributes({ userAttributes: { 'custom:customerId': customerId } });
     if (user instanceof Error) {
-      throw new CustomerException(
-        'storeCustomerId',
-        this,
-        'Could not store customer id.',
-        user,
-      );
+      throw new CustomerException(CustomerOperation.StoreCustomerId, this, { message: 'Could not store customer id.', cause: user });
     }
     this.cognitoUser = user;
     return user;
+  }
+
+  private repository(): AccountRepository {
+    if (!this._repository) throw new Error('AccountCredentials has no repository. Use accountRepository.newAccount().');
+    return this._repository;
+  }
+
+  /** Take on the user Cognito answered with, or throw the errors it answered with instead. */
+  private becomeUser(answer: CognitoUser | AccountCredentialsErrors): void {
+    if (!(answer instanceof CognitoUser)) throw answer;
+    this.cognitoUser = answer;
+    this.verified = answer.confirmed;
   }
 
   private unmetSignInRequirements(): AccountCredentialRequirement[] {
@@ -548,7 +584,7 @@ export class AccountRepository {
     return this.translateCreateResponse(result);
   }
 
-  translateCreateRequest(accountCredentials: AccountCredentials): {
+  private translateCreateRequest(accountCredentials: AccountCredentials): {
     username: string;
     password: string;
     options: { userAttributes: Record<string, string> };
@@ -567,7 +603,7 @@ export class AccountRepository {
     };
   }
 
-  translateCreateResponse(result: CognitoUser | Error): CognitoUser | AccountCredentialsErrors {
+  private translateCreateResponse(result: CognitoUser | Error): CognitoUser | AccountCredentialsErrors {
     return result instanceof Error
       ? { ...emptyAccountCredentialsErrors(), register: result.name }
       : result;
@@ -581,7 +617,7 @@ export class AccountRepository {
     return this.translateUpdateResponse(result);
   }
 
-  translateUpdateResponse(result: CognitoUser | Error): CognitoUser | AccountCredentialsErrors {
+  private translateUpdateResponse(result: CognitoUser | Error): CognitoUser | AccountCredentialsErrors {
     if (result instanceof Error) {
       const validationCode = result.name.includes('Exceeded')
         ? 'Attempts limit exceeded. Please try again later.'
@@ -599,7 +635,7 @@ export class AccountRepository {
     return this.translateReadResponse(result);
   }
 
-  translateReadResponse(result: CognitoUser | Error): CognitoUser | AccountCredentialsErrors {
+  private translateReadResponse(result: CognitoUser | Error): CognitoUser | AccountCredentialsErrors {
     return result instanceof Error
       ? { ...emptyAccountCredentialsErrors(), signIn: result.name }
       : result;
@@ -610,7 +646,7 @@ export class AccountRepository {
     return this.translateResendResponse(result, accountCredentials);
   }
 
-  translateResendResponse(
+  private translateResendResponse(
     result: { error?: Error },
     accountCredentials: AccountCredentials,
   ): CognitoUser | null {

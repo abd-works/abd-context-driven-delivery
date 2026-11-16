@@ -1,5 +1,5 @@
 """*HookInstallation*, the hook channel of an install: it writes the IDE's ``hooks.json`` and ``hook-handlers.json``,
-then starts and reports the checkout's hook daemon. Importing this module registers it with the Installer; importing the
+then starts and reports the checkout's hook daemon. Importing this module registers it with the Installer's server channels (``SERVER_CHANNELS``); importing the
 ``harness.hooks`` package imports it."""
 from __future__ import annotations
 
@@ -9,10 +9,10 @@ from typing import Any
 from harness.agent_tools.agent_tools import AgentTool
 from harness.hooks.hook_daemon import HookDaemon
 from harness.hooks.hook_server import HookServer
-from harness.hooks.hooks import Hook, HookHandlersFile, Hooks, HooksManifest
+from harness.hooks.hooks import HookHandlersFile, Hooks, HooksManifest, events_served
 from harness.installation.destination import ServerInstallation
 from harness.installation.ide_layout import IdeLayout
-from harness.installation.installer import Installer
+from harness.installation.installer import SERVER_CHANNELS
 from harness.process.process import PythonInterpreter
 
 # How long the IDE waits for the hook command before it carries on without the hooks' answer.
@@ -36,16 +36,10 @@ class HookInstallation(ServerInstallation):
 
     channel = "hook"
 
-    def __init__(
-        self,
-        layout: IdeLayout,
-        path: Path | str,
-        *,
-        python: str | None = None,
-        repo: Path | str | None = None,
-    ) -> None:
+    def __init__(self, layout: IdeLayout, path: Path | str, repo: Path | str | None = None) -> None:
         super().__init__(layout, path, repo=repo)
-        self.interpreter = PythonInterpreter(python)
+        # The Python the hook command runs on: the one running this install.
+        self.interpreter = PythonInterpreter()
         self.handlers_file = HookHandlersFile(self.path / HookHandlersFile.NAME)
         self.manifest = HooksManifest(self.path / HooksManifest.NAME)
         self.daemon = HookDaemon(self.repo or self.path)
@@ -94,7 +88,7 @@ class HookInstallation(ServerInstallation):
     def write(self, tool: AgentTool) -> None:
         if not tool.install_to_hook or not tool.hook_event:
             return
-        if not Hooks.deploys(tool.toolset):
+        if not Hooks.from_toolset_class(type(tool.toolset)).deploy:
             return
         record = {"event": tool.hook_event, "operation": tool.name, "ref": tool.registration_name}
         if record in self._handlers:
@@ -134,7 +128,7 @@ class HookInstallation(ServerInstallation):
             "timeout": _HOOK_COMMAND_TIMEOUT_SECONDS,
             "failClosed": False,
         }
-        events = {served for item in self._handlers for served in Hook.events_served(item["event"])}
+        events = {served for item in self._handlers for served in events_served(item["event"])}
         if "postToolUse" in events:
             # The hook server keeps the rules a postToolUse hook gave each chat and answers its stop events with them.
             events.update({"stop", "subagentStop"})
@@ -156,4 +150,4 @@ class HookInstallation(ServerInstallation):
         return self.diagnosis
 
 
-Installer.installs_through(HookInstallation)
+SERVER_CHANNELS.register(HookInstallation)

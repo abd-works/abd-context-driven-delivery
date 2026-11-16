@@ -23,7 +23,7 @@ def epics_each_with_a_story(count: int) -> StoryModel:
     for order in range(1, count + 1):
         epic = Epic(f"Epic {order}", order)
         epic.stories.append(story_named(f"Story of epic {order}"))
-        story_map.append_epic(epic)
+        story_map.epics.append(epic)
     return story_map
 
 
@@ -76,7 +76,7 @@ with description("a code Story Map") as self:
             with before.each:
                 fifth = Epic("Epic 5", 5)
                 fifth.stories.append(story_named("Story of epic 5"))
-                self.canonical.append_epic(fifth)
+                self.canonical.epics.append(fifth)
                 self.new_tree = self.code_map.render(self.canonical)
 
             with it("should write a new folder for the appended Epic"):
@@ -226,14 +226,14 @@ with description("a code Story Map under a tests root two folders deep") as self
 with description("a code Story Map asked which files are its story files") as self:
     with context("in Java"):
         with it("should leave out a helper beside a story file"):
-            expect(JavaStoryModel.is_story_file("tests/checkout/PaymentHelper.java")).to(be_false)
+            expect(JavaStoryModel().is_story_file("tests/checkout/PaymentHelper.java")).to(be_false)
 
     with context("in TypeScript"):
         with it("should leave out a story file under an examples folder"):
-            expect(TypeScriptStoryModel.is_story_file("tests/checkout/examples/card_story.test.ts")).to(be_false)
+            expect(TypeScriptStoryModel().is_story_file("tests/checkout/examples/card_story.test.ts")).to(be_false)
 
         with it("should take a shared story file"):
-            expect(TypeScriptStoryModel.is_story_file("tests/checkout/pay.story.shared.ts")).to(be_true)
+            expect(TypeScriptStoryModel().is_story_file("tests/checkout/pay.story.shared.ts")).to(be_true)
 
 
 with description("a story read from a TypeScript story file") as self:
@@ -282,7 +282,7 @@ with description("a TypeScript story file whose story comment names the story di
             "});\n"
         )
         self.path = "tests/shop/pay_story.test.ts"
-        self.story = TypeScriptStoryModel().parse({self.path: text}).every_story()[0]
+        self.story = TypeScriptStoryModel().parse({self.path: text}).descendants.stories()[0]
 
     with it("should take the name its comment gives"):
         expect(self.story.name).to(equal("Pay"))

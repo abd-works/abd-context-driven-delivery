@@ -7,52 +7,107 @@
   "worktree": "C:\\dev\\abd-cdd-file-manager",
   "guidance": {
     "stages": [
-      "discovery",
       "implementation"
     ],
-    "version": 41
+    "version": 95
   },
   "practices": {
     "stories": {
       "formats": {
-        "story_map": [],
-        "acceptance_tests": [],
+        "story_map": [
+          "drawio",
+          "whiteboard",
+          "markdown"
+        ],
         "scenarios": [
+          "python",
+          "markdown"
+        ],
+        "acceptance_tests": [
           "python"
         ]
-      }
+      },
+      "enabled": true
     },
     "ux": {
       "formats": {
         "ia": [
-          "drawio"
+          "drawio",
+          "markdown"
+        ],
+        "mockup": [
+          "claude_design",
+          "html"
+        ],
+        "front_end_code": [
+          "html",
+          "typescript"
         ]
       },
       "enabled": false
     },
     "clean_engineering": {
       "formats": {
-        "modules": [],
-        "code": [],
-        "model": [
+        "modules": [
+          "drawio",
+          "whiteboard",
+          "markdown"
+        ],
+        "code": [
           "python"
+        ],
+        "model": [
+          "python",
+          "drawio",
+          "whiteboard",
+          "markdown"
         ]
       },
       "enabled": true
     },
     "bdd": {
       "formats": {
-        "behavior": []
+        "behavior": [
+          "python"
+        ],
+        "realization": [
+          "markdown",
+          "python"
+        ],
+        "development": [
+          "python"
+        ]
       },
       "enabled": false
     },
     "ddd": {
-      "enabled": false
+      "enabled": false,
+      "formats": {
+        "bounded_context": [
+          "markdown",
+          "whiteboard"
+        ],
+        "model": [
+          "markdown",
+          "drawio",
+          "whiteboard",
+          "python"
+        ],
+        "tactics": [
+          "python"
+        ]
+      }
     }
   },
   "outputs": {
     "stories": {
-      "root": "../.context"
+      "root": "../.context",
+      "scenarios": {
+        "root": "../story_tests/review-generated-work-in-file-viewer"
+      },
+      "acceptance_tests": {
+        "root": "../story_tests/review-generated-work-in-file-viewer"
+      }
     }
   }
 }

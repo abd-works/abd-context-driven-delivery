@@ -23,7 +23,9 @@ class Generate(GuidanceAction):
     def generate(self, guidance: GuidanceArg) -> str:
         """Write artifacts for each listed guidance at its current fidelity. The shared rules and that fidelity's rules are part of these instructions. After the artifact is written, call validate with the same guidance and paths set to the files you wrote."""
         self._work_on(guidance)
-        rules = self.rules_to_follow()
+        process = self._process_first()
+        instructions(process)
+        rules = self.work.rules_to_follow
         instructions(rules)
         overlay_rules = self._overlay_rules()
         instructions(overlay_rules)
@@ -39,9 +41,16 @@ class Generate(GuidanceAction):
         tools(self._validate().validate)
         return ""
 
+    def _process_first(self) -> str:
+        """The order of work the listed fidelities' supplements give, each once, ahead of every rule: a long reply is read
+        from the top, and the process says what to do first."""
+        worked = [self.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
+        processes = dict.fromkeys(fidelity.process for fidelity in worked if fidelity is not None and fidelity.process)
+        return "\n\n".join(processes)
+
     def _validate(self) -> Validate:
         """Validate as a tool, so its rules are injected again when it is called."""
-        return self._inside(Validate).as_tool()
+        return self._tool_inside(Validate)
 
     def _render(self) -> Render:
         """Render action, available while generating code from another format."""
@@ -78,7 +87,7 @@ class Generate(GuidanceAction):
 
     def _existing_files(self, fidelity: FidelityGuidance) -> dict[str, list[str]]:
         """The files fidelity has in this session, by the format it declares them in, each a path from the project."""
-        return {label: [entry.path for entry in entries if entry.exists] for label, entries in fidelity.files().items()}
+        return {label: [entry.path for entry in entries if entry.exists] for label, entries in fidelity.declared.files().items()}
 
 
     def _generate_item(self, worked: Guidance | str) -> str:
@@ -87,11 +96,13 @@ class Generate(GuidanceAction):
         returned."""
         if isinstance(worked, str):
             return worked
-        return "\n\n".join(part.strip() for part in (worked.instructions, worked.generate_output()) if part and part.strip())
+        # The supplements' process opens the reply once, so each fidelity gives only its own words here.
+        text = worked.own_instructions if isinstance(worked, FidelityGuidance) else worked.instructions
+        return "\n\n".join(part.strip() for part in (text, worked.generate_output()) if part and part.strip())
 
     def _where_outputs_go(self) -> str:
         worked = [self.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
-        outputs = [fidelity.output_paths() for fidelity in worked if fidelity is not None]
+        outputs = [fidelity.declared.output_paths() for fidelity in worked if fidelity is not None]
         places = [f"{label}: {', '.join(paths)}" for listed in outputs for label, paths in listed.items()]
         if not places:
             return ""
@@ -101,8 +112,8 @@ class Generate(GuidanceAction):
         """The folder of each file a listed fidelity writes, once each; the pattern overlays record their patterns at
         the root of each. A templated path's folder is left to the agent."""
         worked = [self.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
-        paths = [path for fidelity in worked if fidelity is not None for listed in fidelity.output_paths().values() for path in listed]
-        return list(dict.fromkeys(self.session.path_named(path).parent for path in paths if "{" not in path))
+        paths = [path for fidelity in worked if fidelity is not None for listed in fidelity.declared.output_paths().values() for path in listed]
+        return list(dict.fromkeys(self.session.paths.path_named(path).parent for path in paths if "{" not in path))
 
     @agent_instructions
     def generate_fixes_from_validate(self) -> str:

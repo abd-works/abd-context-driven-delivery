@@ -16,20 +16,24 @@ class AnswerReads:
     sessions (*CallSessions*), so a change another process wrote is seen by the next answer, and each write a session
     makes begins one too, so no read in this process ever answers what was there before its own write."""
 
-    _numbers = itertools.count(1)
-    _lock = threading.Lock()
-    _current = 0
+    def __init__(self) -> None:
+        self._numbers = itertools.count(1)
+        self._lock = threading.Lock()
+        self._current = 0
 
-    @classmethod
-    def begin(cls) -> int:
+    def begin(self) -> int:
         """Begin a new answer: every value held for an earlier one is read again when next asked for."""
-        with cls._lock:
-            cls._current = next(cls._numbers)
-            return cls._current
+        with self._lock:
+            self._current = next(self._numbers)
+            return self._current
 
-    @classmethod
-    def current(cls) -> int:
-        return cls._current
+    @property
+    def current(self) -> int:
+        return self._current
+
+
+# The one count of answers in this process: every session it serves reads against it.
+ANSWER_READS = AnswerReads()
 
 
 class HeldForAnswer(Generic[_Value]):

@@ -21,7 +21,7 @@ from harness.installation.data_class import SourceFile, data_field
 from harness.markdown.markdown import MarkdownText
 
 from space.session.file_comments import PROCESSED, FileComment
-from space.session.file_range import Range
+from space.session.file_range import LineSpan, Range
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -165,16 +165,26 @@ class FileViolation:
         return self._range
 
 
+class RuleReads:
+    """Which rules a viewer reads on a file: with rules, those the file breaks read on its own; with cross_file, those
+    only the session's whole working copy finds. Either gives the file's folds; neither reads a graph."""
+
+    def __init__(self, rules: bool = False, cross_file: bool = False) -> None:
+        self.rules = rules
+        self.cross_file = cross_file
+
+
 class SessionFile:
     """A file of the session, named from the project: its text, the comments on it, and, when the viewer asks, its folds
     and the rules it breaks. With rules, the file is read on its own and only its own rules run; with cross_file, the
     session's knowledge graph holds the whole working copy and adds the rules only it finds, linking files and
     practices. Either read gives the folds."""
 
-    def __init__(self, session: Session, path: str, rules: bool = False, cross_file: bool = False) -> None:
+    def __init__(self, session: Session, path: str, reads: RuleReads | None = None) -> None:
+        reads = reads or RuleReads()
         self._session = session
-        self._reads_rules = rules
-        self._cross_file = cross_file
+        self._reads_rules = reads.rules
+        self._cross_file = reads.cross_file
         self._text = session.session_files.read(path)
         self._path = self._text.path
 
@@ -209,12 +219,12 @@ class SessionFile:
             return []
         before, now = sent.splitlines(), self.text.splitlines()
         opcodes = SequenceMatcher(None, before, now, autojunk=False).get_opcodes()
-        return [self._change(_CHANGE_KINDS[tag], before[i1:i2], j1, j2) for tag, i1, i2, j1, j2 in opcodes if tag != "equal"]
+        return [FileChange(_CHANGE_KINDS[tag], self._changed_lines(j1, j2), before[i1:i2]) for tag, i1, i2, j1, j2 in opcodes if tag != "equal"]
 
-    def _change(self, kind: FileChangeKind, removed: list[str], start: int, end: int) -> FileChange:
-        """The change on the lines now from start to end, counted from 0 and end excluded; removed lines hold none, so
-        they sit on the line after them."""
-        return FileChange(kind, self.range(start + 1, end if end > start else start + 1), removed)
+    def _changed_lines(self, start: int, end: int) -> Range:
+        """The lines now from start to end, counted from 0 and end excluded; removed lines hold none, so they sit on the
+        line after them."""
+        return self.range(start + 1, end if end > start else start + 1)
 
     @property
     @data_field
@@ -243,12 +253,12 @@ class SessionFile:
 
     def _sources(self, graph: Graph, kind: str, node: Node) -> list[NodeSource]:
         """What node reaches by kind, each with its source and the class it belongs to; a module's function belongs to none."""
-        owners = ((edge.child, str(edge.child.get_fact("owner", "") or "")) for edge in graph.edges_from(kind, node) if edge.child.source is not None)
+        owners = ((edge.child, str(edge.child.get_fact("owner", "") or "")) for edge in graph.edges.from_parent(kind, node) if edge.child.source is not None)
         return [NodeSource(child, owner="" if owner == MODULE_FUNCTION_HOLDER else owner) for child, owner in owners]
 
     def _holds(self, source: Source) -> bool:
         """Whether source, named from its own root, sits in this file."""
-        return bool(source.file) and Path(source.root or self._session.work_root, source.file).resolve() == self._session.path_named(self._path)
+        return bool(source.file) and Path(source.root or self._session.work_root, source.file).resolve() == self._session.paths.path_named(self._path)
 
     @property
     @data_field
@@ -271,7 +281,7 @@ class SessionFile:
             return None
         linked = self._session.session_files.read(target)
         lines = MarkdownText(linked.text).anchored_lines(anchor) if linked.text else None
-        return Range.of_text(linked.path, linked.text, *lines) if lines is not None else None
+        return Range.of_text(linked.path, linked.text, LineSpan(*lines)) if lines is not None else None
 
     @property
     @data_field
@@ -285,7 +295,7 @@ class SessionFile:
 
     def range(self, start_line: int, end_line: int) -> Range:
         """Lines start_line to end_line of this file, with the text they hold now."""
-        return Range.of_text(self._path, self.text, start_line, end_line)
+        return Range.of_text(self._path, self.text, LineSpan(start_line, end_line))
 
     def _nodes(self) -> list:
         """This file's nodes as its own read found them, else as the session's last validate saved them."""
@@ -319,12 +329,12 @@ class SessionFile:
 
     @cached_property
     def _alone(self) -> SavedGraph:
-        return self._session.file_alone(self._session.path_named(self._path))
+        return self._session.file_graphs.file_alone(self._session.paths.path_named(self._path))
 
     @cached_property
     def _whole(self) -> SavedGraph:
         is_held = bool(self._in_this_file(SavedGraph.from_graph(self._session.graph)))
-        return self._session.file_in_whole(self._session.path_named(self._path), is_held)
+        return self._session.file_graphs.file_in_whole(self._session.paths.path_named(self._path), is_held)
 
     @cached_property
     def _last_validate(self) -> SavedGraph | None:
@@ -344,4 +354,4 @@ class SessionFile:
             return False
         path = Path(named)
         located = path if path.is_absolute() else Path(self._session.work_root) / path
-        return located.resolve() == self._session.path_named(self._path)
+        return located.resolve() == self._session.paths.path_named(self._path)

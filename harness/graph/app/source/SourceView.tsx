@@ -5,12 +5,15 @@ import { CallCatalog, type FoldMember } from './call-expansion';
 import { useCallouts, type CalloutsWithin, type SourceCallout } from './source-callouts';
 import { foldMarkdownHeadings, useOpenAround, type SourceLines } from './source-folding';
 import type { NodeSourceData } from '@cdd/harness/graph/graph';
-import { buildViolationCorrectPrompt, type ViolationFocus } from './violation-prompt';
+import { buildViolationCorrectPrompt } from './violation-prompt';
+import type { ViolationFocus } from '../graph/graph-selection';
 import { reasonOf } from '../graph/graph-failures';
 import { failures } from '../graph/graph-page';
 import './source.css';
 
 const LINE_HEIGHT = 20;
+// The room the editor keeps above and below its lines.
+const SOURCE_PADDING = 16;
 
 type Decoration = monaco.IModelDeltaDecoration;
 
@@ -103,7 +106,7 @@ function SourceEditor({ source, violation, rules, activeRule, onSelectRule, open
       <p className="source-path">{file || source.name}</p>
       <div className="panel-source" data-testid="source-excerpt">
         <Editor
-          height={contentHeight ? contentHeight + 16 : sourceHeight(text)}
+          height={contentHeight ? contentHeight + SOURCE_PADDING : sourceHeight(text)}
           language={shownLanguage}
           theme={document.documentElement.dataset.theme === 'engineering' ? 'vs-dark' : 'vs'}
           value={text}
@@ -230,6 +233,6 @@ function scrollSideways(editor: SourceEditorInstance, event: WheelEvent): void {
 }
 
 function sourceHeight(text: string): number {
-  return Math.max(1, text.split('\n').length) * LINE_HEIGHT + 16;
+  return Math.max(1, text.split('\n').length) * LINE_HEIGHT + SOURCE_PADDING;
 }
 

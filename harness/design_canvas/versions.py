@@ -26,13 +26,37 @@ class PublishedVersion(Exception):
     """A generator tried to write into a version that is already published, where people may have edited it."""
 
 
+class PublishedLinks:
+    """Each published version's canvas link, by version folder name, in the order they were published, as
+    ``versions.json`` keeps them."""
+
+    def __init__(self, record: JsonFile) -> None:
+        self._record = record
+
+    def all(self) -> Dict[str, str]:
+        """Each published version's canvas link, by version folder name."""
+        return self._record.read()
+
+    def of(self, version: str) -> Optional[str]:
+        """The link the version folder named version was published at; None while it is unpublished."""
+        return self.all().get(version)
+
+    def record(self, version: str, url: str) -> None:
+        links = self.all()
+        links[version] = url
+        self._record.write(links)
+
+    def rename(self, version: str, name: str) -> None:
+        """The version's link, kept under the release name its folder now has."""
+        self._record.write({(name if key == version else key): url for key, url in self.all().items()})
+
+
 class CanvasVersions:
     """The versions of the canvas kept under *root* (for example ``<ux root>/design-canvas``)."""
 
     def __init__(self, root: str | Path) -> None:
         self.root = Path(root)
-        # Each published version's canvas link, by version folder name, in the order they were published.
-        self._record = JsonFile(self.root / "versions.json")
+        self.published = PublishedLinks(JsonFile(self.root / "versions.json"))
 
     @classmethod
     def in_practice_root(cls, practice_root: str | Path) -> CanvasVersions:
@@ -60,24 +84,24 @@ class CanvasVersions:
         """Begin the next version as a copy of the latest (screens, images, fixtures), leaving the latest untouched."""
         number = self.latest + 1
         target = self.folder(number)
-        base = self.folder(self.latest) if self.latest else self.latest_release()
+        base = self.folder(self.latest) if self.latest else self._latest_release()
         if base is not None:
             shutil.copytree(base, target)
         else:
             target.mkdir(parents=True)
         return number
 
-    def latest_release(self) -> Optional[Path]:
+    def _latest_release(self) -> Optional[Path]:
         """The folder of the newest release (a published version renamed to its release's name), or None."""
-        released = [self.root / name for name in self.links() if not _VERSION.match(name) and (self.root / name).is_dir()]
+        released = [self.root / name for name in self.published.all() if not _VERSION.match(name) and (self.root / name).is_dir()]
         return released[-1] if released else None
 
     def release(self, number: int, name: str) -> Path:
         """Keep a published version as the release *name*: its folder and its link take the release's name."""
         target = self.root / name
+        version = self.folder(number).name
         self.folder(number).rename(target)
-        links = {(name if key == self.folder(number).name else key): url for key, url in self.links().items()}
-        self._record.write(links)
+        self.published.rename(version, name)
         return target
 
     def working(self) -> int:
@@ -98,14 +122,9 @@ class CanvasVersions:
         """The title the version is published under: the canvas's *name* and the version's folder."""
         return f"{name} — {self.folder(number).name}"
 
-    def links(self) -> Dict[str, str]:
-        """Each published version's canvas link, by version folder name."""
-        return self._record.read()
-
     def link(self, number: int) -> Optional[str]:
-        return self.links().get(self.folder(number).name)
+        """The link the version was published at; None while it is unpublished."""
+        return self.published.of(self.folder(number).name)
 
     def record_link(self, number: int, url: str) -> None:
-        links = self.links()
-        links[self.folder(number).name] = url
-        self._record.write(links)
+        self.published.record(self.folder(number).name, url)

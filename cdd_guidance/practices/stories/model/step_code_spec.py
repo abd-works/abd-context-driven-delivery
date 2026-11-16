@@ -60,7 +60,7 @@ _JAVA_TEST = """\
 
 def _when_code(model, path: str, text: str) -> str:
     """The code the When step of the one scenario read from text at path holds."""
-    story = next(found for epic in model.parse({path: text}).every_epic() for found in epic.stories)
+    story = next(found for epic in model.parse({path: text}).descendants.epics() for found in epic.stories)
     return next(step for step in story.scenarios[0].steps if step.keyword == "When").body_text
 
 

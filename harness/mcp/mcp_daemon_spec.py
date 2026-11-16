@@ -20,7 +20,7 @@ with description("the cdd server stopped") as self:
 
     def daemon_with(self, holder: RecordingProcess | None) -> McpDaemon:
         self.listening = ListeningPortsStub(holder)
-        return McpDaemon(CddHome(), listening=self.listening, address=self.address)
+        return McpDaemon(CddHome(), self.address, self.listening)
 
     with context("that holds its port without answering"):
         with it("should stop the process listening on its port"):

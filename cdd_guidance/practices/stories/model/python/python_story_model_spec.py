@@ -26,7 +26,7 @@ from cdd_guidance.practices.stories.model.python.python_story_model import Pytho
 def _story_map_with_stories() -> StoryModel:
     story_map = StoryModel()
     for i in range(1, 5):
-        story_map.append_epic(Epic(f"Epic {i}", i))
+        story_map.epics.append(Epic(f"Epic {i}", i))
     first = story_map.epics[0]
     for j in range(1, 4):
         sub = Epic(f"Epic 1.{j}", j)
@@ -49,7 +49,7 @@ with description("a Python runnable-story Story Map") as self:
             self.py = PythonStoryModel()
             self.canonical = _story_map_with_stories()
             self.tree = self.py.render(self.canonical)
-            self.leaf_paths = self.py.leaf_files_of(self.tree)
+            self.leaf_paths = sorted(path for path in self.tree if self.py.is_story_file(path))
             self.leaf_contents = [self.tree[p] for p in self.leaf_paths]
 
         with context("every leaf file"):

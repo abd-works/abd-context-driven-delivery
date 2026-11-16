@@ -22,11 +22,6 @@ export type ChatRequest = { chat: string } & (
   | { operation: 'finish'; body: { message: string } }
 )
 
-// Resolves to answer once milliseconds have passed on the engine's clock.
-export function after($: EngineInterface, milliseconds: number, answer: string): Promise<string> {
-  return new Promise(resolve => $.clock.after(milliseconds, () => resolve(answer)))
-}
-
 // The repository's own folder, which a chat in a ticket's worktree reaches through the git folder they share: the
 // project whose board this chat shows, where the board is installed and built, and what a path from the project is named
 // from. Empty outside a repository.

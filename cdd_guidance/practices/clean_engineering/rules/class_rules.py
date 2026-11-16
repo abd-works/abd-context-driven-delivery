@@ -14,28 +14,6 @@ if TYPE_CHECKING:
 _CLASS_BUDGET = 9
 
 
-def _is_accessor(name: str) -> bool:
-    """getX / setX / isX — property access, not behavior."""
-    for prefix in ("get", "set", "is"):
-        if name.startswith(prefix) and len(name) > len(prefix) and name[len(prefix)].isupper():
-            return True
-    return False
-
-
-def _public_operations_for_budget(shapes: list[dict]) -> list[str]:
-    """Public behavior only: property getters and setters do not count, nor an operation declared private, by a leading
-    `_` or by the language's own keyword."""
-    return [
-        str(shape["name"])
-        for shape in shapes
-        if not str(shape["name"]).startswith("_")
-        and not shape.get("is_private")
-        and shape["name"] not in {"constructor", "__init__", "get", "set"}
-        and not shape.get("is_property")
-        and not _is_accessor(str(shape["name"]))
-    ]
-
-
 class KeepClassesSingleResponsibility(ProductionCodeRule):
     slug = "keep-classes-single-responsibility"
     node_types = ("OoadClass",)
@@ -44,10 +22,30 @@ class KeepClassesSingleResponsibility(ProductionCodeRule):
         # A file's module functions are no class, so they share no responsibility to split.
         if node.name == MODULE_FUNCTION_HOLDER or not node.has_fact("operation_shapes"):
             return []
-        public_ops = _public_operations_for_budget(node.get_fact("operation_shapes"))
+        public_ops = self._public_operations_for_budget(node.get_fact("operation_shapes"))
         if len(public_ops) <= _CLASS_BUDGET:
             return []
         return [
             f"Class '{node.name}' exposes {len(public_ops)} public operations "
             f"(budget ~{_CLASS_BUDGET}). Split responsibilities."
+        ]
+
+    def _is_accessor(self, name: str) -> bool:
+        """getX / setX / isX — property access, not behavior."""
+        for prefix in ("get", "set", "is"):
+            if name.startswith(prefix) and len(name) > len(prefix) and name[len(prefix)].isupper():
+                return True
+        return False
+
+    def _public_operations_for_budget(self, shapes: list[dict]) -> list[str]:
+        """Public behavior only: property getters and setters do not count, nor an operation declared private, by a leading
+        `_` or by the language's own keyword."""
+        return [
+            str(shape["name"])
+            for shape in shapes
+            if not str(shape["name"]).startswith("_")
+            and not shape.get("is_private")
+            and shape["name"] not in {"constructor", "__init__", "get", "set"}
+            and not shape.get("is_property")
+            and not self._is_accessor(str(shape["name"]))
         ]

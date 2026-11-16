@@ -18,7 +18,6 @@ from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 
 
 _EXAMPLE_EXTENSION_PREFIXES = ("Fake", "Isolated", "Production")
@@ -57,17 +56,6 @@ def class_names_imported_by(source_text: str) -> set:
         names.update(_IMPORT_ALIAS.sub("", item).strip() for item in (braced or "").split(","))
     names.discard("")
     return names
-
-
-def _without_type_imports(source_text: str) -> str:
-    """The source with every import TypeScript erases blanked: `import type …`, and `import { type A, type B } …`."""
-    text = _TYPE_IMPORT_STATEMENT.sub("", source_text)
-    return _BRACED_IMPORT_STATEMENT.sub(lambda match: "" if _all_marked_type(match.group(1)) else match.group(0), text)
-
-
-def _all_marked_type(braced: str) -> bool:
-    names = [item.strip() for item in braced.split(",") if item.strip()]
-    return bool(names) and all(name.startswith("type ") for name in names)
 
 
 def path_parent(name: str) -> Optional[str]:
@@ -150,44 +138,30 @@ class OoadClass(OoadNode):
         "bold_invariant_lines",
     )
 
-    def __init__(
-        self,
-        name: str,
-        sequential_order: int,
-        intent: str = "",
-        properties: List["Property"] | None = None,
-        operations: List["Operation"] | None = None,
-        relationships: List[Relationship] | None = None,
-        collaborators: List[str] | None = None,
-        line: int | None = None,
-        graph: Optional[Graph] = None,
-    ) -> None:
-        super().__init__(name, sequential_order, graph)
+    def __init__(self, name: str, sequential_order: int, intent: str = "") -> None:
+        super().__init__(name, sequential_order)
         self.intent = intent
-        self.line = line
-        # The stereotypes the class carries, as words: `Aggregate Root`, `Value Object`.
+        # The classes it works with, named on its card; its parser or a translation fills them.
+        self.collaborators: List[str] = []
+        # What this class does to another class at run time, each named by its interaction: `Repo ---<<runs>>--> Git`.
+        self.dependencies: List[Relationship] = []
+        self._start_declaration()
+        self._properties = ModelChildren(self, "participants")
+        self._operations = ModelChildren(self, "participants")
+
+    def _start_declaration(self) -> None:
+        """What the class's declaration says, empty until its parser or a translation fills it."""
+        self.line: int | None = None
+        self.end_line: int | None = None
+        # Each stereotype as its words, such as `Aggregate Root`, whatever decorator or comment spelled it.
         self.stereotypes: List[str] = []
         # The modules the class says it is kept in, outermost first, when its source names them apart from where the
         # class sits, as a code file does in a class's doc comment: `Sales | custom`, `ShoppingCart`.
         self.module_path: List[str] = []
-        # Parser facts for the graph: last source line and declared base classes.
-        self.end_line: int | None = None
         self.bases: List[str] = []
         self.peer_names: List[str] = []
         self.module_helpers: List[list] = []
-        self.collaborators: List[str] = collaborators if collaborators is not None else []
-        # The source this class spans in its file, kept once its parser reads the file.
         self.span = SourceText("")
-        # What this class does to another class at run time, each named by its interaction: `Repo ---<<runs>>--> Git`.
-        self.dependencies: List[Relationship] = []
-        self._properties = ModelChildren(self, "participants")
-        self._operations = ModelChildren(self, "participants")
-        if properties:
-            self._properties.extend(properties)
-        if operations:
-            self._operations.extend(operations)
-        for relationship in relationships or []:
-            self.place_relationship(relationship)
 
     @property
     def properties(self) -> List["Property"]:
@@ -245,7 +219,7 @@ class OoadClass(OoadNode):
         constructor = next((op for op in operations if op.name in {"__init__", "constructor"}), None)
         self.method_count = len(operations)
         self.operation_shapes = [
-            {"name": op.name, "is_property": op.is_property, "is_private": op.is_private, "callees": [callee for callee in op.callees if callee]}
+            {"name": op.name, "is_property": op.is_property or op.is_setter, "is_private": op.is_private, "callees": [callee for callee in op.callees if callee]}
             for op in operations
         ]
         self.property_names = sorted(prop.name for prop in self.properties)
@@ -276,17 +250,9 @@ class OoadClass(OoadNode):
         self.dependencies = [item.clone() for item in getattr(source, "dependencies", [])]
 
     def clone(self) -> "OoadClass":
-        cloned = type(self)(
-            self.name,
-            self.sequential_order,
-            intent=self.intent,
-            collaborators=list(self.collaborators),
-            line=self.line,
-        )
-        cloned.stereotypes = list(self.stereotypes)
-        cloned.module_path = list(self.module_path)
-        cloned.bases = list(self.bases)
-        cloned.dependencies = [item.clone() for item in self.dependencies]
+        cloned = type(self)(self.name, self.sequential_order)
+        cloned.update_self(self)
+        cloned.line = self.line
         cloned.properties = [item.clone() for item in self.properties]
         cloned.operations = [item.clone() for item in self.operations]
         return cloned
@@ -305,11 +271,6 @@ class OoadClass(OoadNode):
             "dependencies": [item.as_record() for item in self.dependencies],
             "collaborators": list(self.collaborators),
         }
-
-    def load_relationship(self, source: Relationship) -> Relationship:
-        loaded = Relationship(target=source.target)
-        loaded.update_self(source)
-        return loaded
 
     def load_property(self, source: Property) -> Property:
         """A new property of this class's own kind, filled from source."""
@@ -401,30 +362,25 @@ class Module(OoadNode):
         "imported_names",
     )
 
-    def __init__(
-        self,
-        name: str,
-        sequential_order: int,
-        description: str = "",
-        seam: str = "",
-        constraint: str = "",
-        seam_terms: List[str] | None = None,
-        dependencies: List[str] | None = None,
-        graph: Optional[Graph] = None,
-    ) -> None:
+    def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
-        self.description = description
-        self.seam = seam
-        self.constraint = constraint
-        self.seam_terms: List[str] = list(seam_terms) if seam_terms is not None else []
-        self.dependencies: List[str] = list(dependencies) if dependencies is not None else []
+        # What its module card says: its purpose, its public seam and the terms it names, its constraint, and the
+        # modules it depends on. Its parser or a translation fills them.
+        self.description = ""
+        self.seam = ""
+        self.constraint = ""
+        self.seam_terms: List[str] = []
+        self.dependencies: List[str] = []
+        self._start_source()
+        self._modules = ModelChildren(self, "participants")
+        self._classes = ModelChildren(self, "participants")
+
+    def _start_source(self) -> None:
+        """The source this module is read from, empty until its parser keeps the file's text."""
         self.preamble = CodeBody()
-        # The text of the file this module was read from, which its parser keeps.
         self.source_text = ""
         # The class names this module's code imports or reaches as `module.Class`.
         self.imported_names: List[str] = []
-        self._modules = ModelChildren(self, "participants")
-        self._classes = ModelChildren(self, "participants")
 
     @property
     def modules(self) -> List["Module"]:
@@ -483,16 +439,8 @@ class Module(OoadNode):
         self.preamble = source.preamble
 
     def clone(self) -> "Module":
-        cloned = type(self)(
-            self.name,
-            self.sequential_order,
-            description=self.description,
-            seam=self.seam,
-            constraint=self.constraint,
-            seam_terms=list(self.seam_terms),
-            dependencies=list(self.dependencies),
-        )
-        cloned.preamble = self.preamble
+        cloned = type(self)(self.name, self.sequential_order)
+        cloned.update_self(self)
         cloned.modules = [module.clone() for module in self.modules]
         cloned.classes = [oclass.clone() for oclass in self.classes]
         return cloned
@@ -516,21 +464,30 @@ class Module(OoadNode):
     def load_source_facts(self, file: Path, root: Path) -> None:
         """Fill the facts the file this module was read from owns: what it imports, the class names it imports, and
         which classes share it. The graph keeps each class apart from its module, so each class keeps its peers' names."""
-        self.dependencies = self.import_targets(file, root)
+        self.dependencies = self._import_targets(file, root)
         self.imported_names = sorted(class_names_imported_by(self.source_text))
         peer_names = [oclass.name for oclass in self.classes]
         for oclass in self.classes:
             oclass.peer_names = peer_names
 
-    def import_targets(self, file: Path, root: Path) -> List[str]:
+    def _import_targets(self, file: Path, root: Path) -> List[str]:
         """Root-relative paths named by relative script imports (`./x`, `../y`) that run. A type-only import is erased
         by TypeScript, so it is no dependency and is left out."""
         targets: List[str] = []
-        for specifier in _SCRIPT_IMPORT.findall(_without_type_imports(self.source_text)):
+        for specifier in _SCRIPT_IMPORT.findall(self._without_type_imports()):
             resolved = (file.parent / specifier).resolve()
             if resolved.is_relative_to(root.resolve()):
                 targets.append(resolved.relative_to(root.resolve()).as_posix())
         return targets
+
+    def _without_type_imports(self) -> str:
+        """The source with every import TypeScript erases blanked: `import type ...`, and `import { type A, type B } ...`."""
+        text = _TYPE_IMPORT_STATEMENT.sub("", self.source_text)
+        return _BRACED_IMPORT_STATEMENT.sub(lambda match: "" if self._all_marked_type(match.group(1)) else match.group(0), text)
+
+    def _all_marked_type(self, braced_names: str) -> bool:
+        names = [item.strip() for item in braced_names.split(",") if item.strip()]
+        return bool(names) and all(name.startswith("type ") for name in names)
 
     def load_folder_facts(self, folder: Path) -> None:
         """Fill the facts a code folder's context files give: what its module card says, read once."""
@@ -543,10 +500,6 @@ class Module(OoadNode):
         self.model_blocks = card.model_blocks()
         self.is_a_in_context = card.says_is_a_type_of()
         self.child_parent_in_context = card.writes_child_parent_headings()
-
-    def holds_public_source(self, file_name: str) -> bool:
-        """True for a file of this folder other modules may read: production code whose name does not start with `_`."""
-        return not file_name.startswith("_") and not is_test_code(file_name)
 
     def take_public_sources(self, sources: List["Module"]) -> None:
         """Fill the facts this folder's public source files give, each read into its module: how many there are, and

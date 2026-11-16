@@ -1,0 +1,93 @@
+"""The examples the Serve CDD Code In Lanes stories share: a throwaway pair of lanes, and the folders whose chats they
+serve, laid out the way git leaves them.
+
+Scenarios: story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/, one folder per story.
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+from harness.mcp.cdd_home import CddHome
+from harness.mcp.mcp_address import LANE_CALL_PATH, McpAddress
+from harness.mcp.mcp_server import McpHost
+from harness.mcp.server_lanes import ServerLanes
+
+# Seed: the port a throwaway stable lane answers on. Real lanes use 47800 and 47801; a spec takes its own pair so specs
+# can run side by side.
+STABLE_PORT = 48600
+DEV_PORT = STABLE_PORT + ServerLanes.DEV_PORT_AFTER_STABLE
+# Seed: the ticket whose worktree the dev lane serves, and the branch it has out.
+CHECKOUT_FLOW = "checkout-flow"
+MAIN_BRANCH = "main"
+# Seed: the toolset both lanes' hosts serve in a spec: a ledger whose tools answer, name the folder they work in, or fail.
+CALL_OUTCOMES = "harness.mcp._examples.call_outcomes.call_outcomes:CallOutcomes"
+CHECKOUT_REPO = Path(__file__).resolve().parents[3]
+# Interaction: the tool a chat calls, the one whose ledger is locked, and the failure the chat sees from it.
+LEDGER_FOLDER_TOOL = "call-outcomes.ledger_folder"
+LOCKED_LEDGER_TOOL = "call-outcomes.post_entry"
+LEDGER_IS_LOCKED = "LedgerIsLocked"
+
+
+def seed_lanes(root: Path) -> ServerLanes:
+    """A stable lane whose home is ``root/.cdd``, and the dev lane beside it."""
+    return ServerLanes(CddHome(root / ".cdd"), McpAddress(STABLE_PORT))
+
+
+def seed_main_checkout(root: Path) -> Path:
+    """A main checkout as git leaves it: its ``.git`` is a folder, with main out."""
+    checkout = root / "abd-context-driven-delivery"
+    (checkout / ".git").mkdir(parents=True)
+    (checkout / ".git" / "HEAD").write_text(f"ref: refs/heads/{MAIN_BRANCH}\n", encoding="utf-8")
+    (checkout / "harness" / "mcp").mkdir(parents=True)
+    return checkout
+
+
+def seed_ticket_worktree(root: Path, main_checkout: Path) -> Path:
+    """checkout-flow's worktree as git leaves it: its ``.git`` is a file naming its folder in the main checkout, whose
+    ``HEAD`` has the branch checkout-flow out."""
+    worktree = root / "worktrees" / CHECKOUT_FLOW
+    worktree.mkdir(parents=True)
+    git_folder = main_checkout / ".git" / "worktrees" / CHECKOUT_FLOW
+    git_folder.mkdir(parents=True)
+    (git_folder / "HEAD").write_text(f"ref: refs/heads/{CHECKOUT_FLOW}\n", encoding="utf-8")
+    (worktree / ".git").write_text(f"gitdir: {git_folder}\n", encoding="utf-8")
+    return worktree
+
+
+def seed_folder_outside_any_checkout(root: Path) -> Path:
+    folder = root / "notes"
+    folder.mkdir(parents=True)
+    return folder
+
+
+def seed_host(project: Path) -> McpHost:
+    """A cdd server's MCP side serving the ledger toolset, its chats working on project."""
+    return McpHost.from_refs((CALL_OUTCOMES,), repo=str(CHECKOUT_REPO), project=str(project))
+
+
+class DevLaneInProcess(McpAddress):
+    """A stub of the HTTP boundary between the lanes: the dev lane's server, reached by handing each tool call to a real
+    host's ``/lane-call`` route in this process instead of over a port. It keeps every call it was handed."""
+
+    def __init__(self, dev_host: McpHost) -> None:
+        super().__init__(DEV_PORT)
+        from starlette.testclient import TestClient
+
+        self._client = TestClient(dev_host._http_app(DEV_PORT))
+        self.handed_over: list[dict] = []
+
+    def ping_answer(self, reply_seconds: float) -> dict:
+        return {"ok": True, "pid": 0, "source": "", "projects": []}
+
+    def send_lane_call(self, lane_call: dict, reply_seconds: float) -> dict:
+        self.handed_over.append(lane_call)
+        return self._client.post(LANE_CALL_PATH, json=lane_call).json()
+
+
+def seed_stable_lane_routing(root: Path, dev_lane: DevLaneInProcess) -> tuple[ServerLanes, McpHost]:
+    """The stable lane's host, answering as the server running from the stable lane's home, with the dev lane reached
+    through dev_lane."""
+    lanes = ServerLanes(CddHome(root / ".cdd"), McpAddress(STABLE_PORT), dev_lane)
+    stable_host = seed_host(seed_main_checkout(root))
+    stable_host.route_between_lanes(lanes, lanes.stable.home)
+    return lanes, stable_host

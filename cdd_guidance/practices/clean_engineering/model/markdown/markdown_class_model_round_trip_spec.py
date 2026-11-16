@@ -27,7 +27,7 @@ def _content(model):
                     loaded.name,
                     loaded.intent,
                     [prop.save() for prop in loaded.properties],
-                    [operation.render() for operation in loaded.operations],
+                    [operation.save() for operation in loaded.operations],
                 )
                 for loaded in module.classes
             ],
@@ -71,7 +71,7 @@ with description("a domain model Markdown document") as self:
         with before.each:
             card = self.parsed.modules[1].classes[2]
             from cdd_guidance.practices.clean_engineering.model.operation import Operation
-            card.operations.append(Operation(name="retire", parameters=["plan: Plan"], return_type="void"))
+            card.operations.append(Operation.from_signature("retire(plan: Plan): void"))
             self.rendered = MarkdownCleanEngineeringModel().render(self.parsed)
 
         with it("should write that card from the model under its own heading"):
@@ -87,7 +87,8 @@ with description("a domain model Markdown document") as self:
             from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import MarkdownModule
 
             self.parsed.modules[0].name = "Customers"
-            added = MarkdownModule("Billing", 3, description="Charges the plans.")
+            added = MarkdownModule("Billing", 3)
+            added.description = "Charges the plans."
             self.parsed.modules.append(added)
             self.rendered = self.parsed.render()
 

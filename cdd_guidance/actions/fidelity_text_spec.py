@@ -356,7 +356,7 @@ def _rules_given_twice() -> list[str]:
     found = []
     for key in PracticeCatalogue.keys():
         for fidelity in PracticeCatalogue.create(key).fidelities:
-            slugs = [rule.slug for collection in fidelity.checked_rule_collections() for rule in collection]
+            slugs = [rule.slug for collection in fidelity.checked_rule_collections for rule in collection]
             found.extend(f"{fidelity.slug}: {slug}" for slug in dict.fromkeys(slugs) if slugs.count(slug) > 1)
     return found
 

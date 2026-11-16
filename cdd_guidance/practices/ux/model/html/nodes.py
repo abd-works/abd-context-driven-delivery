@@ -5,14 +5,20 @@ from __future__ import annotations
 import html
 import json
 from pathlib import Path
+from typing import Optional
+
 from cdd_guidance.practices.ux.model.explorer_tree import ExplorerTree
 from cdd_guidance.practices.ux.model.json.nodes import JsonControl, JsonStoryDemoControl, JsonUxMap
 from cdd_guidance.practices.ux.model.nodes import Region, Screen, StoryStep
+from cdd_guidance.practices.ux.model.reference_paths import ReferencePaths
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 _SHELL_PATH = Path(__file__).resolve().parents[2] / "templates" / "html" / "mockup_shell.html"
 _MODEL_MARKER = "<!-- ux-map-json:"
 _COMMENT_END = "-->"
+
+JsonDocument = dict[str, object]
+"""A JSON object the page carries in a script: the explorer tree, or one transition."""
 
 
 class UxMapNotEmbedded(ValueError):
@@ -34,10 +40,10 @@ class HtmlControl(JsonControl):
         if writer is not None:
             return writer(self, visual)
         if ctype == "error" or "error" in visual:
-            return f'<div class="control error"{self._name_attr()}{_flag(visual, "hidden")}>! {_text(self.label)}</div>'
+            return f'<div class="control error"{self._name_attr()}{self._flag(visual, "hidden")}>! {_text(self.label)}</div>'
         return (
-            f'<div class="control{_flag(visual, "selected")}{_flag(visual, "disabled")}" data-type="{ctype or "unknown"}"'
-            f'{self._name_attr()}{_flag(visual, "hidden")}>{_text(self.label)}</div>'
+            f'<div class="control{self._flag(visual, "selected")}{self._flag(visual, "disabled")}" data-type="{ctype or "unknown"}"'
+            f'{self._name_attr()}{self._flag(visual, "hidden")}>{_text(self.label)}</div>'
         )
 
     def data_attributes(self) -> str:
@@ -47,6 +53,10 @@ class HtmlControl(JsonControl):
     def input_key(self) -> str:
         """The field a number input fills: its bound field, else its name."""
         return self.bound_field or self.name
+
+    def _flag(self, visual: set[str], state: str) -> str:
+        """The class or attribute a visual state adds: ` selected` for a selected control, nothing when it is not."""
+        return f" {state}" if state in visual else ""
 
     def _name_attr(self) -> str:
         return f' data-name="{_text(self.name)}"'
@@ -71,20 +81,20 @@ class HtmlControl(JsonControl):
 
     def _button(self, visual: set) -> str:
         return (
-            f'<button type="button" class="control button{_flag(visual, "primary")}{_flag(visual, "selected")}'
-            f'{_flag(visual, "disabled")}"{self._name_attr()}{self.data_attributes()}{_flag(visual, "hidden")}>'
+            f'<button type="button" class="control button{self._flag(visual, "primary")}{self._flag(visual, "selected")}'
+            f'{self._flag(visual, "disabled")}"{self._name_attr()}{self.data_attributes()}{self._flag(visual, "hidden")}>'
             f"{_text(self.label)}</button>"
         )
 
     def _text_input(self, visual: set) -> str:
         return (
-            f'<label class="control{_flag(visual, "disabled")}"{self._name_attr()}{_flag(visual, "hidden")}>{_text(self.label)} '
+            f'<label class="control{self._flag(visual, "disabled")}"{self._name_attr()}{self._flag(visual, "hidden")}>{_text(self.label)} '
             f'<input type="text" value="" placeholder="________" /></label>'
         )
 
     def _number_input(self, visual: set) -> str:
         return (
-            f'<label class="control{_flag(visual, "disabled")}"{self._name_attr()}{_flag(visual, "hidden")}>{_text(self.label)} '
+            f'<label class="control{self._flag(visual, "disabled")}"{self._name_attr()}{self._flag(visual, "hidden")}>{_text(self.label)} '
             f'<input type="number" min="1" step="1" value="1" '
             f'data-input-field="{_text(self.input_key())}" /></label>'
         )
@@ -94,7 +104,7 @@ class HtmlControl(JsonControl):
         # item_story_steps => clicking an item runs its When; else set_input => clicking an item only selects it.
         return (
             f'<div class="control" data-type="bound-list" data-bound-list'
-            f'{self._name_attr()}{self.data_attributes()}{_flag(visual, "hidden")}>'
+            f'{self._name_attr()}{self.data_attributes()}{self._flag(visual, "hidden")}>'
             f'<div class="field dimmed">(list loads with story)</div></div>'
         )
 
@@ -102,29 +112,29 @@ class HtmlControl(JsonControl):
         options = [state for state in self.states if state.lower() not in visual] or [self.label]
         choices = "".join(f'<option value="{_text(option.lower())}">{_text(option)}</option>' for option in options)
         return (
-            f'<label class="control{_flag(visual, "disabled")}"{self._name_attr()}{_flag(visual, "hidden")}>{_text(self.label)} '
+            f'<label class="control{self._flag(visual, "disabled")}"{self._name_attr()}{self._flag(visual, "hidden")}>{_text(self.label)} '
             f"<select>{choices}</select></label>"
         )
 
     def _checkbox(self, visual: set) -> str:
         checked = " checked" if visual & {"checked", "selected"} else ""
         return (
-            f'<label class="control{_flag(visual, "disabled")}"{self._name_attr()}{_flag(visual, "hidden")}>'
-            f'<input type="checkbox"{checked}{_flag(visual, "disabled")} /> {_text(self.label)}</label>'
+            f'<label class="control{self._flag(visual, "disabled")}"{self._name_attr()}{self._flag(visual, "hidden")}>'
+            f'<input type="checkbox"{checked}{self._flag(visual, "disabled")} /> {_text(self.label)}</label>'
         )
 
     def _tree(self, visual: set) -> str:
         twist = "v" if "expanded" in visual else ">" if "collapsed" in visual else "."
         role = ' data-role="folder"' if visual & {"expanded", "collapsed"} else ""
         return (
-            f'<div class="tree-node{_flag(visual, "selected")}" data-type="tree"{self._name_attr()}{role}'
-            f'{self.data_attributes()}{_flag(visual, "hidden")}><span class="twist">{twist}</span>{_text(self.label)}</div>'
+            f'<div class="tree-node{self._flag(visual, "selected")}" data-type="tree"{self._name_attr()}{role}'
+            f'{self.data_attributes()}{self._flag(visual, "hidden")}><span class="twist">{twist}</span>{_text(self.label)}</div>'
         )
 
     def _list(self, visual: set) -> str:
         return (
-            f'<div class="control{_flag(visual, "selected")}{_flag(visual, "disabled")}" data-type="list"'
-            f'{self._name_attr()}{self.data_attributes()}{_flag(visual, "hidden")}>{_text(self.label)}</div>'
+            f'<div class="control{self._flag(visual, "selected")}{self._flag(visual, "disabled")}" data-type="list"'
+            f'{self._name_attr()}{self.data_attributes()}{self._flag(visual, "hidden")}>{_text(self.label)}</div>'
         )
 
 
@@ -138,12 +148,16 @@ class HtmlStoryDemoControl(JsonStoryDemoControl, HtmlControl):
     def _demo_values(self) -> dict:
         return {
             **super()._demo_values(),
-            "data-story-steps": _steps_json(self.story_steps),
+            "data-story-steps": self._steps_json(self.story_steps),
             "data-set-input": self.set_input,
-            "data-item-story-steps": _steps_json(self.item_story_steps),
+            "data-item-story-steps": self._steps_json(self.item_story_steps),
             "data-item-value": self.item_value,
             "data-item-label": self.item_label,
         }
+
+    def _steps_json(self, steps: list[StoryStep]) -> str:
+        """The steps as the Story Demo runner reads them from a data attribute; nothing when there are none."""
+        return json.dumps([step.as_dict() for step in steps], separators=(",", ":")) if steps else ""
 
 
 _CONTROL_WRITERS = {
@@ -185,17 +199,27 @@ class HtmlUxMap(JsonUxMap):
         return {
             "@@TITLE@@": _text(self.scope or self.name),
             "@@SCREENS@@": screens or "<p>No screens yet.</p>",
-            "@@EXPLORER_TREE@@": _script_json(ExplorerTree(list(self.screens)).as_json()),
+            "@@EXPLORER_TREE@@": self._script_json(ExplorerTree(list(self.screens)).as_json()),
             "@@ENSURE_HINT@@": self._ensure_hint(),
-            "@@STORY_IMPORTS@@": _module_imports(self.story_references, "data-ux-story-ref"),
-            "@@OBJECT_IMPORTS@@": _module_imports(self.object_references, "data-ux-object-ref"),
+            "@@STORY_IMPORTS@@": self._module_imports(self.story_references, "data-ux-story-ref"),
+            "@@OBJECT_IMPORTS@@": self._module_imports(self.object_references, "data-ux-object-ref"),
             "@@TRANSITIONS_JS@@": ",\n".join(
-                "    " + _script_json({"from": _name_of(t.from_screen), "to": _name_of(t.to_screen), "trigger": t.trigger})
+                "    " + self._script_json({"from": self._name_of(t.from_screen), "to": self._name_of(t.to_screen), "trigger": t.trigger})
                 for t in self.transitions
             ),
             # ">" is written as its JSON escape, so no value can close the comment the map is carried in.
             "@@MODEL_JSON@@": super().save().replace(">", "\\u003e"),
         }
+
+    def _script_json(self, document: JsonDocument) -> str:
+        """JSON for a script element; "<" is escaped so no value can close the script."""
+        return json.dumps(document).replace("<", "\\u003c")
+
+    def _module_imports(self, paths: ReferencePaths, marker: str) -> str:
+        return "\n".join(f'  <script type="module" src="{_text(path)}" {marker}></script>' for path in paths)
+
+    def _name_of(self, screen: Optional[Screen]) -> str:
+        return screen.name if screen is not None else ""
 
     def _ensure_hint(self) -> str:
         if self.story_references or self.object_references:
@@ -233,28 +257,6 @@ class HtmlUxMap(JsonUxMap):
         )
 
 
-def _text(value: str) -> str:
+def _text(text: str) -> str:
     """Text and attribute values escaped for HTML."""
-    return html.escape(value or "", quote=True)
-
-
-def _script_json(value) -> str:
-    """JSON for a script element; "<" is escaped so no value can close the script."""
-    return json.dumps(value).replace("<", "\\u003c")
-
-
-def _module_imports(paths, marker: str) -> str:
-    return "\n".join(f'  <script type="module" src="{_text(path)}" {marker}></script>' for path in paths)
-
-
-def _name_of(screen) -> str:
-    return screen.name if screen is not None else ""
-
-
-def _flag(visual: set, state: str) -> str:
-    """The class or attribute a visual state adds: ` selected` for a selected control, nothing when it is not."""
-    return f" {state}" if state in visual else ""
-
-
-def _steps_json(steps: list[StoryStep]) -> str:
-    return json.dumps([step.as_dict() for step in steps], separators=(",", ":")) if steps else ""
+    return html.escape(text or "", quote=True)

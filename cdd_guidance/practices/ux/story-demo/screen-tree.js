@@ -16,20 +16,6 @@ export function readExplorerTree(root) {
   return JSON.parse(el.textContent);
 }
 
-function twistButton(expanded, key, onToggle, onSelect) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "twist";
-  button.setAttribute("aria-expanded", expanded ? "true" : "false");
-  button.setAttribute("aria-label", expanded ? "Collapse" : "Expand");
-  button.addEventListener("click", (event) => {
-    event.stopPropagation();
-    onSelect?.();
-    onToggle(key);
-  });
-  return button;
-}
-
 const SVG = "http://www.w3.org/2000/svg";
 
 function svgEl(name, attrs) {
@@ -68,16 +54,20 @@ const KIND_LABEL = {
   step: "Step",
 };
 
+function nounPattern(terms) {
+  return new RegExp(
+    terms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"),
+    "gi",
+  );
+}
+
 // Underline the domain terms the model gives a step's screen (step.domainTerms); the page decides none itself.
 function appendNouns(fragment, text, terms) {
   if (!terms.length) {
     fragment.appendChild(document.createTextNode(text));
     return;
   }
-  const pattern = new RegExp(
-    terms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"),
-    "gi",
-  );
+  const pattern = nounPattern(terms);
   let cursor = 0;
   let match = pattern.exec(text);
   while (match) {
@@ -110,29 +100,18 @@ function stepLabel(label, terms) {
   return fragment;
 }
 
-function labelButton(text, className, kind, onClick) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = `node-label ${className}`;
-  const kindName = KIND_LABEL[kind] || kind;
-  button.title = kindName;
-  button.setAttribute("aria-label", `${kindName} ${text}`);
-  button.appendChild(glyph(kind));
-  const span = document.createElement("span");
-  span.textContent = text;
-  button.appendChild(span);
-  button.addEventListener("click", (event) => {
-    event.stopPropagation();
-    onClick();
-  });
-  return button;
-}
-
 function childList(expanded, nodes) {
   const list = document.createElement("ul");
   if (!expanded) list.hidden = true;
   for (const node of nodes) list.appendChild(node);
   return list;
+}
+
+function emptyItem(text) {
+  const li = document.createElement("li");
+  li.className = "empty";
+  li.textContent = text;
+  return li;
 }
 
 const EMPTY = {
@@ -141,114 +120,215 @@ const EMPTY = {
   scenario: "No steps recorded",
 };
 
-/** Scroll the explorer panel so the screen row for `screenName` is visible. */
-export function scrollExplorerToScreen(container, screenName) {
-  if (!container || !screenName) return;
-  const scrollRoot = container.closest("#explorer-frame");
-  const node = [...container.querySelectorAll("li.screen-node")].find(
-    (li) => li.dataset.screen === screenName,
-  );
-  if (!node) return;
-  requestAnimationFrame(() => {
-    if (!scrollRoot) {
-      node.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
-    const rootRect = scrollRoot.getBoundingClientRect();
-    const nodeRect = node.getBoundingClientRect();
-    const target =
-      nodeRect.top - rootRect.top + scrollRoot.scrollTop - (rootRect.height - nodeRect.height) / 2;
-    scrollRoot.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
-  });
+/**
+ * Which tree nodes the explorer shows open, the screen it last opened because that screen became current,
+ * and whether the next drawing should scroll that screen into view. One expansion outlives each story the
+ * explorer loads, so what the person opened stays open.
+ */
+export class ScreenTreeExpansion {
+  constructor() {
+    this.openKeys = new Set();
+    this.openScreen = null;
+    this.scrollRequested = false;
+  }
+
+  isOpen(key) {
+    return this.openKeys.has(key);
+  }
+
+  open(key) {
+    this.openKeys.add(key);
+    return this;
+  }
+
+  toggle(key) {
+    if (this.openKeys.has(key)) this.openKeys.delete(key);
+    else this.openKeys.add(key);
+    return this;
+  }
+
+  /** Open the keys of `screenName` the first time it becomes the current screen. */
+  followScreen(screenName, keys) {
+    if (!screenName || this.openScreen === screenName) return this;
+    this.openScreen = screenName;
+    for (const key of keys || []) this.openKeys.add(key);
+    return this;
+  }
+
+  /** Forget the followed screen, so the next current screen opens its keys again. */
+  forgetOpenScreen() {
+    this.openScreen = null;
+    return this;
+  }
+
+  clear() {
+    this.openKeys.clear();
+    this.openScreen = null;
+    return this;
+  }
+
+  requestScroll() {
+    this.scrollRequested = true;
+    return this;
+  }
+
+  /** Whether a scroll was requested since the last drawing; asking clears the request. */
+  takeScrollRequest() {
+    const requested = this.scrollRequested;
+    this.scrollRequested = false;
+    return requested;
+  }
 }
 
 /**
- * @param {HTMLElement} container
- * @param {{ nodes: object[], expanded: Set<string>, currentScreen?: string, currentStory?: string, currentScenario?: string, currentStep?: { kind?: string, label?: string }, scrollToCurrentScreen?: boolean }} model
- * @param {{ onToggle: (key: string) => void, onScreen: (name: string) => void, onStory: (storyName: string) => void, onScenario: (storyName: string, scenarioIndex: number, key: string) => void }} handlers
+ * Draws the explorer tree for one moment of the story demo.
+ * `model`: `{ nodes, expansion: ScreenTreeExpansion, currentScreen?, currentStory?, currentScenario?, currentStep?, scrollToCurrentScreen? }`.
+ * `handlers`: `{ onToggle(key), onScreen(name), onStory(storyName), onScenario(storyName, scenarioIndex, key) }`.
  */
-export function renderScreenTree(container, model, handlers) {
-  container.innerHTML = "";
-  for (const node of model.nodes) container.appendChild(renderBranch(node, model, handlers, false, ""));
-  if (model.scrollToCurrentScreen && model.currentScreen) {
-    scrollExplorerToScreen(container, model.currentScreen);
+export class ScreenTree {
+  constructor(model, handlers) {
+    this.model = model;
+    this.handlers = handlers;
   }
-}
 
-function renderBranch(node, model, handlers, activeScenario, owningScreen) {
-  if (node.kind === "step") return renderStep(node, model, handlers, activeScenario, owningScreen || node.screenName || "");
-  const screenName = node.kind === "screen" ? node.name : (owningScreen || node.screenName || "");
-  const selectScreen = () => {
-    if (screenName) handlers.onScreen?.(screenName);
-  };
-  const open = model.expanded.has(node.key);
-  const li = document.createElement("li");
-  li.className = `${node.kind}-node`;
-  if (screenName) li.dataset.owningScreen = screenName;
-  if (node.kind === "screen") li.dataset.screen = node.name;
-  if (isCurrent(node, model)) li.classList.add("current");
-  li.appendChild(twistButton(open, node.key, handlers.onToggle, selectScreen));
-  li.appendChild(
-    labelButton(node.name, `${node.kind}-label`, node.kind, () => {
-      if (!open) handlers.onToggle(node.key);
-      if (node.kind === "story") handlers.onStory(node.name);
-      if (node.kind === "scenario") handlers.onScenario(node.storyName, node.scenarioIndex, node.key);
+  drawInto(container) {
+    container.innerHTML = "";
+    for (const node of this.model.nodes) container.appendChild(this._branch(node, false, ""));
+    if (this.model.scrollToCurrentScreen && this.model.currentScreen) {
+      this._scrollToScreen(container, this.model.currentScreen);
+    }
+    return container;
+  }
+
+  /** Scroll the explorer panel so the screen node for `screenName` is visible. */
+  _scrollToScreen(container, screenName) {
+    const node = [...container.querySelectorAll("li.screen-node")].find(
+      (li) => li.dataset.screen === screenName,
+    );
+    if (!node) return;
+    const scrollRoot = container.closest("#explorer-frame");
+    requestAnimationFrame(() => {
+      if (!scrollRoot) {
+        node.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      const rootRect = scrollRoot.getBoundingClientRect();
+      const nodeRect = node.getBoundingClientRect();
+      const target =
+        nodeRect.top - rootRect.top + scrollRoot.scrollTop - (rootRect.height - nodeRect.height) / 2;
+      scrollRoot.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
+    });
+  }
+
+  _branch(node, activeScenario, owningScreen) {
+    if (node.kind === "step") return this._step(node, activeScenario, owningScreen || node.screenName || "");
+    const screenName = node.kind === "screen" ? node.name : (owningScreen || node.screenName || "");
+    const selectScreen = () => {
+      if (screenName) this.handlers.onScreen?.(screenName);
+    };
+    const open = this.model.expansion.isOpen(node.key);
+    const li = this._branchItem(node, screenName);
+    li.appendChild(this._twistButton(node, open, selectScreen));
+    li.appendChild(this._labelButton(node, () => this._select(node, open, selectScreen)));
+    const body = this._branchBody(node, screenName);
+    if (body.length) li.appendChild(childList(open, body));
+    return li;
+  }
+
+  _branchItem(node, screenName) {
+    const li = document.createElement("li");
+    li.className = `${node.kind}-node`;
+    if (screenName) li.dataset.owningScreen = screenName;
+    if (node.kind === "screen") li.dataset.screen = node.name;
+    if (this._isCurrent(node)) li.classList.add("current");
+    return li;
+  }
+
+  _select(node, open, selectScreen) {
+    if (!open) this.handlers.onToggle(node.key);
+    if (node.kind === "story") this.handlers.onStory(node.name);
+    if (node.kind === "scenario") this.handlers.onScenario(node.storyName, node.scenarioIndex, node.key);
+    selectScreen();
+  }
+
+  /** A node's drawn children: steps only under a scenario, or a note that the node holds nothing yet. */
+  _branchBody(node, screenName) {
+    const children = (node.children || []).filter((child) => child.kind !== "step" || node.kind === "scenario");
+    const scenarioOpen = node.kind === "scenario" && this._isCurrent(node);
+    if (children.length) return children.map((child) => this._branch(child, scenarioOpen, screenName));
+    return EMPTY[node.kind] ? [emptyItem(EMPTY[node.kind])] : [];
+  }
+
+  _twistButton(node, open, selectScreen) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "twist";
+    button.setAttribute("aria-expanded", open ? "true" : "false");
+    button.setAttribute("aria-label", open ? "Collapse" : "Expand");
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
       selectScreen();
-    }),
-  );
-  const children = (node.children || []).filter((child) => child.kind !== "step" || node.kind === "scenario");
-  const scenarioOpen = node.kind === "scenario" && isCurrent(node, model);
-  const body = children.length
-    ? children.map((child) => renderBranch(child, model, handlers, scenarioOpen, screenName))
-    : EMPTY[node.kind]
-      ? [emptyItem(EMPTY[node.kind])]
-      : [];
-  if (body.length) li.appendChild(childList(open, body));
-  return li;
-}
-
-function isCurrent(node, model) {
-  if (node.kind === "screen") return node.name === model.currentScreen;
-  if (node.kind === "story") return node.name === model.currentStory;
-  if (node.kind === "scenario") {
-    return node.name === model.currentScenario && (!model.currentStory || node.storyName === model.currentStory);
+      this.handlers.onToggle(node.key);
+    });
+    return button;
   }
-  return false;
-}
 
-function renderStep(step, model, handlers, activeScenario, owningScreen) {
-  const screenName = owningScreen || step.screenName || "";
-  const stepLi = document.createElement("li");
-  stepLi.className = "step";
-  stepLi.title = KIND_LABEL.step;
-  if (screenName) stepLi.dataset.owningScreen = screenName;
-  stepLi.tabIndex = 0;
-  stepLi.addEventListener("click", () => {
-    handlers.onScenario?.(step.storyName, step.scenarioIndex, step.scenarioKey);
-    if (screenName) handlers.onScreen?.(screenName);
-  });
-  const kind = document.createElement("span");
-  kind.className = "step-kind";
-  if (step.stepKind === "when" || step.stepKind === "then") kind.classList.add("emph");
-  kind.textContent = step.stepKind;
-  stepLi.appendChild(kind);
-  stepLi.appendChild(document.createTextNode(" "));
-  stepLi.appendChild(stepLabel(step.label, step.domainTerms || []));
-  const current = model.currentStep;
-  if (
-    activeScenario &&
-    current &&
-    current.kind === step.stepKind &&
-    current.label === step.label
-  ) {
-    stepLi.classList.add("current");
+  _labelButton(node, onClick) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `node-label ${node.kind}-label`;
+    const kindName = KIND_LABEL[node.kind] || node.kind;
+    button.title = kindName;
+    button.setAttribute("aria-label", `${kindName} ${node.name}`);
+    button.appendChild(glyph(node.kind));
+    const span = document.createElement("span");
+    span.textContent = node.name;
+    button.appendChild(span);
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      onClick();
+    });
+    return button;
   }
-  return stepLi;
-}
 
-function emptyItem(text) {
-  const li = document.createElement("li");
-  li.className = "empty";
-  li.textContent = text;
-  return li;
+  _isCurrent(node) {
+    if (node.kind === "screen") return node.name === this.model.currentScreen;
+    if (node.kind === "story") return node.name === this.model.currentStory;
+    if (node.kind === "scenario") {
+      return node.name === this.model.currentScenario
+        && (!this.model.currentStory || node.storyName === this.model.currentStory);
+    }
+    return false;
+  }
+
+  _step(step, activeScenario, owningScreen) {
+    const screenName = owningScreen || step.screenName || "";
+    const stepLi = document.createElement("li");
+    stepLi.className = "step";
+    stepLi.title = KIND_LABEL.step;
+    if (screenName) stepLi.dataset.owningScreen = screenName;
+    stepLi.tabIndex = 0;
+    stepLi.addEventListener("click", () => {
+      this.handlers.onScenario?.(step.storyName, step.scenarioIndex, step.scenarioKey);
+      if (screenName) this.handlers.onScreen?.(screenName);
+    });
+    stepLi.appendChild(this._stepKind(step));
+    stepLi.appendChild(document.createTextNode(" "));
+    stepLi.appendChild(stepLabel(step.label, step.domainTerms || []));
+    if (activeScenario && this._isCurrentStep(step)) stepLi.classList.add("current");
+    return stepLi;
+  }
+
+  _stepKind(step) {
+    const kind = document.createElement("span");
+    kind.className = "step-kind";
+    if (step.stepKind === "when" || step.stepKind === "then") kind.classList.add("emph");
+    kind.textContent = step.stepKind;
+    return kind;
+  }
+
+  _isCurrentStep(step) {
+    const current = this.model.currentStep;
+    return Boolean(current && current.kind === step.stepKind && current.label === step.label);
+  }
 }

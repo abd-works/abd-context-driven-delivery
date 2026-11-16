@@ -274,7 +274,7 @@ describe('Display Ticket Details', () => {
   it('should tell a closed session from an open one of the same name', async () => {
     closedTwinOf('billing-report', 'Billing report')
     const { page } = await board.page()
-    page.board.select('Complete/billing-report')
+    page.store.change({ selected: 'Complete/billing-report' })
     expect(page.board.selectedTicket?.column.name).toBe('Complete')
   })
 })

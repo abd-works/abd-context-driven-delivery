@@ -25,7 +25,7 @@ from cdd_guidance.context_setup.context_setup import ContextSetup, ConversionRes
 from cdd_guidance.context_setup.live_app_capture import CaptureResult, PageCapture, ScoutResult, ScreenResult, SmokeTestResult
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
-from space.session.throwaway_project import ThrowawayProject
+from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ class SpecFixture:
             self._servers.pop().shutdown()
         while self._folders:
             self._folders.pop().cleanup()
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     def context_setup_for_a_call(self) -> ContextSetup:
         """A ContextSetup made for a call on a throwaway project, as the cdd server makes one for each call, so it works

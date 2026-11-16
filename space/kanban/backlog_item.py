@@ -11,14 +11,19 @@ from pathlib import Path
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.data_class import data_field, identity, language_adapter
+from harness.installation.files import command
 from harness.annotations.name import Name
 from space.kanban.board import BACKLOG_COLUMN, Board, Card, Column
 # Imported for real, not only for type checking: the backlog-item.start_under tool reads its parent's type to load the
 # ticket the call names.
 from space.kanban.ticket import Ticket
 from space.session.idea_file import IdeaFile
-from space.session.session import SESSION_FILE
+from space.session.session_record import SESSION_FILE
 from harness.mcp.mcp_annotations import mcp
+
+
+# How long the system may take to hand a file to the app it opens that kind of file with.
+OPEN_WITH_SYSTEM_SECONDS = 30
 
 
 def open_with_system(path: Path) -> None:
@@ -26,14 +31,14 @@ def open_with_system(path: Path) -> None:
     if sys.platform == "win32":
         os.startfile(path)  # noqa: S606 - a file of the Backlog, opened as the person's own file browser would
     else:
-        subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", str(path)], check=True, timeout=30)
+        subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", str(path)], check=True, timeout=OPEN_WITH_SYSTEM_SECONDS)
 
 
 class BacklogNestingError(ValueError):
     """Raised when a backlog item cannot be made another's child: the Backlog nests one level, in plain idea folders."""
 
-    def __init__(self, item: str, parent: str, reason: str) -> None:
-        super().__init__(f"{item} cannot be a child of {parent}: {reason}")
+    def __init__(self, child: str, parent: str, reason: str) -> None:
+        super().__init__(f"{child} cannot be a child of {parent}: {reason}")
 
 
 @identity("title")
@@ -56,10 +61,11 @@ class BacklogItem(Card):
 
     @classmethod
     @mcp
+    @command(name="backlog")
     @agent_tool
     @noSessionLog
     def create(cls, title: str, text: str = "", *, project: Path | str) -> BacklogItem:
-        """Add an idea to the Backlog: one markdown file, with title as its heading and text under it, committed on main and pushed."""
+        """Add an idea to the Backlog, as the + on the board's Backlog column does: one markdown file, with title as its heading and text under it, committed on main and pushed. Run as the backlog slash command, the words after the command are the title, and any further lines its text."""
         board = Board.load(project)
         item = cls(board.sessions.backlog_folder / f"{Name(title).title_slug}.md", board)
         item._idea.write(title, text)
@@ -114,7 +120,7 @@ class BacklogItem(Card):
     def parent(self) -> str:
         """The title of the item whose folder keeps this one's file, as its child; empty for an item of its own."""
         parent_file = self._parent_file
-        return self._board.make_backlog_item(parent_file).title if parent_file is not None else ""
+        return self._board.placement.make_backlog_item(parent_file).title if parent_file is not None else ""
 
     @property
     @data_field
@@ -151,7 +157,7 @@ class BacklogItem(Card):
         ticket = self._ticket_brought_back(self._held_ticket_folder) if self._holds_ticket else self._ticket_opened(scope, path)
         # An item kept inside its folder went back with the folder; a file beside it or on its own moves in now.
         if self._path.exists():
-            ticket.session.keep_file(self._path)
+            ticket.session.folder.keep_file(self._path)
         for child in children:
             child.start("story", path).reassign_parent(ticket)
         self._remove_emptied_folder()
@@ -289,9 +295,9 @@ class BacklogItem(Card):
         self._board.reread()
 
     def _ticket_brought_back(self, kept_folder: Path) -> Ticket:
-        return self._board.ticket_of(self._board.sessions.load(kept_folder).reopen())
+        return self._board.placement.ticket_of(self._board.sessions.load(kept_folder).folder.reopen())
 
     def _ticket_opened(self, scope: str, path: str) -> Ticket:
-        ticket = self._board.open_ticket(self.title, scope, "", path)
+        ticket = self._board.open_ticket(self.title, scope, path)
         ticket.work.record(f"backlog {self._path}")
         return ticket

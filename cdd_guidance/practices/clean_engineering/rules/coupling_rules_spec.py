@@ -124,6 +124,18 @@ with description("classes compared across the graph"):
                     "agent/expansion.py": "class ExpansionResult:\n    instructions: list\n    tools: dict\n    result: int\n",
                 },
             )
+            self.sibling_cells = files_rule_pair(
+                "do-not-invent-parallel-object-models",
+                {
+                    "map/board_cell.py": "class BoardCell:\n    role: str\n    depth: int\n    text: str\n",
+                    "map/placed_cell.py": "class PlacedCell:\n    role: str\n    depth: int\n    text: str\n",
+                },
+                {
+                    "map/cell.py": "class StoryCell:\n    role: str\n    depth: int\n    text: str\n",
+                    "map/board_cell.py": "class BoardCell(StoryCell):\n    role: str\n    depth: int\n    text: str\n",
+                    "map/placed_cell.py": "class PlacedCell(StoryCell):\n    role: str\n    depth: int\n    text: str\n",
+                },
+            )
             self.mixin = practice_from_files(
                 {
                     "model/parse.py": "class BraceParse:\n    language: str\n    operation_type: type\n    property_type: type\n\n    def parse(self) -> int:\n        return 1\n",
@@ -188,6 +200,9 @@ with description("classes compared across the graph"):
 
         with it("should flag classes sharing three fields of one type each and accept three names of different types"):
             self.three_fields.check()
+
+        with it("should flag two unrelated classes with one set of fields and accept two subclasses filling their base's"):
+            self.sibling_cells.check()
 
         with it("should accept a mixin's annotations, which declare what the class it is mixed into holds"):
             expect(_hits("do-not-invent-parallel-object-models", self.mixin)).to(equal([]))

@@ -538,7 +538,7 @@ def _user_level_installation(ide: str) -> McpInstallation:
     installation = McpInstallation(IdeLayout(ide), _REPO_ROOT / ".cursor", repo=_REPO_ROOT)
     installation.is_temporary = False
     for tool in SampleMcpOps().tools.values():
-        installation.record_operation(tool)
+        installation.write(tool)
     return installation
 
 
@@ -556,11 +556,11 @@ with description("an MCP install that deploys to the IDE's user-level config") a
             self.config.parent.mkdir(parents=True)
             self.config.write_text(json.dumps({"mcpServers": {"miro-mcp": {"url": "https://example"}}}), encoding="utf-8")
             self.installation = _user_level_installation("Cursor")
-            self.installation.write_mcp_manifest()
+            self.installation.cdd_entry.write()
             self.servers = json.loads(self.config.read_text(encoding="utf-8"))["mcpServers"]
 
         with it("should write the cdd server into ~/.cursor/mcp.json"):
-            expect(self.installation.manifest_path).to(equal(self.config))
+            expect(self.installation.cdd_entry.path).to(equal(self.config))
             expect("cdd" in self.servers).to(equal(True))
 
         with it("should keep the user's other servers"):
@@ -581,7 +581,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
                 encoding="utf-8",
             )
             self.installation = _user_level_installation("Claude")
-            self.installation.write_mcp_manifest()
+            self.installation.cdd_entry.write()
             self.data = json.loads(self.config.read_text(encoding="utf-8"))
             self.plugin = self.root / ".cdd" / "claude-plugins"
             self.server = json.loads((self.plugin / "cdd" / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]["cdd"]
@@ -616,8 +616,8 @@ with description("an MCP install that deploys to the IDE's user-level config") a
                 again = McpInstallation(IdeLayout("Claude"), self.root / "other" / ".claude", repo=self.root / "other")
                 again.is_temporary = False
                 for tool in SampleMcpOps().tools.values():
-                    again.record_operation(tool)
-                again.write_mcp_manifest()
+                    again.write(tool)
+                again.cdd_entry.write()
 
             with it("should leave ~/.claude.json as it was, so open chats keep their connection"):
                 expect(self.config.read_text(encoding="utf-8")).to(equal(self.written))
@@ -630,18 +630,18 @@ with description("an MCP install that deploys to the IDE's user-level config") a
                 self.installation = McpInstallation(IdeLayout("Claude"), self.project / ".claude", repo=_REPO_ROOT)
                 self.installation.is_temporary = False
                 for tool in SampleMcpOps().tools.values():
-                    self.installation.record_operation(tool)
+                    self.installation.write(tool)
 
             with it("should remove the file when cdd was its only server"):
                 self.project_config.write_text(json.dumps({"mcpServers": {"cdd": {}}}), encoding="utf-8")
-                self.installation.write_mcp_manifest()
+                self.installation.cdd_entry.write()
                 expect(self.project_config.exists()).to(equal(False))
 
             with it("should keep the project's other servers"):
                 self.project_config.write_text(
                     json.dumps({"mcpServers": {"cdd": {}, "other": {"command": "other"}}}), encoding="utf-8"
                 )
-                self.installation.write_mcp_manifest()
+                self.installation.cdd_entry.write()
                 saved = json.loads(self.project_config.read_text(encoding="utf-8"))
                 expect(saved).to(equal({"mcpServers": {"other": {"command": "other"}}}))
 
@@ -655,7 +655,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
                 self.settings.write_text(
                     json.dumps({"model": "x", "permissions": {"allow": ["Read", "mcp__plugin_cdd_cdd"]}}), encoding="utf-8"
                 )
-                self.installation.write_mcp_manifest()
+                self.installation.cdd_entry.write()
                 self.saved = json.loads(self.settings.read_text(encoding="utf-8"))
 
             with it("should keep the user's settings and not repeat the entry"):
@@ -664,7 +664,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
     with context("for VS Code"):
         with before.each:
             self.installation = _user_level_installation("VS Code")
-            self.installation.write_mcp_manifest()
+            self.installation.cdd_entry.write()
             self.config = self.root / "AppData" / "Roaming" / "Code" / "User" / "mcp.json"
             if sys.platform == "darwin":
                 self.config = self.root / "Library" / "Application Support" / "Code" / "User" / "mcp.json"
@@ -672,7 +672,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
                 self.config = Path(os.environ.get("XDG_CONFIG_HOME") or self.root / ".config") / "Code" / "User" / "mcp.json"
 
         with it("should write the cdd server under servers in the user mcp.json"):
-            expect(self.installation.manifest_path).to(equal(self.config))
+            expect(self.installation.cdd_entry.path).to(equal(self.config))
             servers = json.loads(self.config.read_text(encoding="utf-8"))["servers"]
             expect(servers["cdd"]["headers"]).to(equal({"X-CDD-Project": "${workspaceFolder}"}))
 
@@ -681,14 +681,14 @@ with description("an MCP install that deploys to the IDE's user-level config") a
             self.tree = Path(tempfile.mkdtemp())
             self.installation = McpInstallation(IdeLayout("Cursor"), self.tree, repo=_REPO_ROOT)
             for tool in SampleMcpOps().tools.values():
-                self.installation.record_operation(tool)
-            self.installation.write_mcp_manifest()
+                self.installation.write(tool)
+            self.installation.cdd_entry.write()
 
         with after.each:
             shutil.rmtree(self.tree, ignore_errors=True)
 
         with it("should keep mcp.json in that tree"):
-            expect(self.installation.manifest_path).to(equal(self.tree / "mcp.json"))
+            expect(self.installation.cdd_entry.path).to(equal(self.tree / "mcp.json"))
 
         with it("should name that tree as the project"):
             entry = json.loads((self.tree / "mcp.json").read_text(encoding="utf-8"))["mcpServers"]["cdd"]

@@ -13,7 +13,9 @@ const SHOWN_BODY_CHARACTERS = 200
 
 export type Send = (path: string, init?: RequestInit) => Promise<Response>
 
-export const sendWithFetch: Send = (path, init) => fetch(path, init)
+export function sendWithFetch(path: string, init?: RequestInit): Promise<Response> {
+  return fetch(path, init)
+}
 
 export const BOARD_SERVER_DOWN = 'The session board server is not answering.'
 

@@ -69,24 +69,40 @@ class _MarkdownReading:
         if line.strip().startswith("```"):
             self._close_list()
             self._read_code(line.strip()[3:].strip())
-        elif _TABLE_LINE.match(line):
+            return
+        if _TABLE_LINE.match(line):
             self._close_list()
             self._read_table()
-        elif _HEADING.match(line):
-            self._close_list()
-            level, text = _HEADING.match(line).groups()
-            self._out.append(f"<h{len(level)}>{self._inline(text.strip())}</h{len(level)}>")
-            self._index += 1
-        elif _BULLET.match(line):
+            return
+        self._read_line_block(line)
+
+    def _read_line_block(self, line: str) -> None:
+        """Read a block that starts on one line: a heading, a list item, or prose."""
+        if _HEADING.match(line):
+            self._read_heading(line)
+            return
+        if _BULLET.match(line):
             self._read_item("ul", _BULLET)
-        elif _MARKED_BULLET.match(line):
-            self._start_list("ul")
-            self._out.append(f"<li>{self._inline(line.strip())}</li>")
-            self._index += 1
-        elif _NUMBERED.match(line):
+            return
+        if _MARKED_BULLET.match(line):
+            self._read_marked_bullet(line)
+            return
+        if _NUMBERED.match(line):
             self._read_item("ol", _NUMBERED)
-        else:
-            self._read_prose(line)
+            return
+        self._read_prose(line)
+
+    def _read_heading(self, line: str) -> None:
+        self._close_list()
+        level, text = _HEADING.match(line).groups()
+        self._out.append(f"<h{len(level)}>{self._inline(text.strip())}</h{len(level)}>")
+        self._index += 1
+
+    def _read_marked_bullet(self, line: str) -> None:
+        """A bullet already marked in its text, kept whole as one list item."""
+        self._start_list("ul")
+        self._out.append(f"<li>{self._inline(line.strip())}</li>")
+        self._index += 1
 
     def _read_prose(self, line: str) -> None:
         self._close_list()

@@ -10,6 +10,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Callable
 
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSetOrigin
 from harness.annotations.annotation import OmissionAnnotation
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -86,7 +87,7 @@ class Installation:
         if self._install_tracker is not None:
             self._install_tracker(dest)
 
-    def folder_for(self, toolset: Any) -> Path:
+    def folder_for(self, toolset: AgentToolSetOrigin) -> Path:
         """Repo-relative package folder the toolset already knows (practice dir, fidelity leaf)."""
         folder = self._guidance_source_folder(Path(toolset.install_folder))
         repo = self.repo
@@ -105,10 +106,10 @@ class Installation:
             return Path(*rest) if rest else Path(".")
         return folder
 
-    def install(self, tool: Any) -> None:
+    def install(self, tool: AgentTool) -> None:
         self.write(tool)
 
-    def write(self, tool: Any) -> None:
+    def write(self, tool: AgentTool) -> None:
         raise NotImplementedError
 
 
@@ -165,14 +166,14 @@ class ServerInstallation(Installation):
     """An installation whose files point the IDE at a server process: the MCP entry at the cdd server, the hook entries
     at the hook server. Beside writing its files it stands that server up over what was installed to check it loads,
     starts it, and reports it. harness/mcp and harness/hooks each define one and register it with
-    ``Installer.installs_through`` when they are imported, so the Installer runs every server channel without
+    ``SERVER_CHANNELS.register`` when they are imported, so the Installer runs every server channel without
     importing them."""
 
     # Toolset classes every install publishes through this channel beside the repository's own, such as the hooks
     # that start the cdd server.
     toolsets: tuple[type, ...] = ()
 
-    def accepts(self, tool: Any) -> bool:
+    def accepts(self, tool: AgentTool) -> bool:
         """Whether tool is written through this installation: it is annotated for this channel."""
         return self.channel in tool.destinations
 

@@ -2,7 +2,7 @@ import type { NodeSourceData } from '@cdd/harness/graph/graph'
 import type { FileViolationData, SessionFileData } from '@cdd/space/session/session'
 import type { SourceRule } from '@source-view/SourceView'
 import type { SourceCallout } from '@source-view/source-callouts'
-import type { ViolationFocus } from '@source-view/violation-prompt'
+import type { ViolationFocus } from '@graph-app/graph/graph-selection'
 
 // The node type the source view is handed for a whole file, which it opens with every fold open.
 const FILE_NODE = 'File'

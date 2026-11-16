@@ -12,6 +12,8 @@ from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geom
 
 # A segment counts as horizontal or vertical when it moves less than this many pixels across.
 STRAIGHT_TOLERANCE = 1
+# How much of a class title a scanner's message quotes, so a long title does not swamp the report.
+QUOTED_TITLE_CHARS = 80
 
 
 
@@ -100,30 +102,59 @@ class DrawioPage:
         end = anchor_point(style, target_box, 'entry')
         if 'orthogonal' not in style.lower():
             return ([(start, end)], False)
+        return self._orthogonal_route(edge, (start, end))
+
+    def _orthogonal_route(self, edge: ET.Element, ends: Segment) -> tuple[list[Segment], bool]:
+        """An orthogonal edge's route through its waypoints, or, with none, the middle-split guess at Draw.io's own."""
+        start, end = ends
         waypoints = [(float(point.get('x', '0')), float(point.get('y', '0'))) for point in edge.findall('mxGeometry/Array/mxPoint')]
         if waypoints:
-            return (_orthogonal_through([start] + waypoints + [end]), False)
+            return (self._orthogonal_through([start] + waypoints + [end]), False)
         if abs(end[0] - start[0]) < STRAIGHT_TOLERANCE or abs(end[1] - start[1]) < STRAIGHT_TOLERANCE:
             return ([(start, end)], False)
         middle_x = (start[0] + end[0]) / 2
         return ([(start, (middle_x, start[1])), ((middle_x, start[1]), (middle_x, end[1])), ((middle_x, end[1]), end)], True)
 
+    def _orthogonal_through(self, points: list[Point]) -> list[Segment]:
+        """Segments through each point in turn, adding a corner wherever two points are not in line."""
+        expanded = [points[0]]
+        previous_direction = None
+        for following in points[1:]:
+            corners, previous_direction = self._orthogonal_step((expanded[-1], following), previous_direction)
+            expanded.extend(corners)
+        return list(zip(expanded, expanded[1:]))
+
+    def _orthogonal_step(self, leg: Segment, previous_direction: str | None) -> tuple[list[Point], str]:
+        """The points after the leg's start that reach its end at right angles, turning away from the previous
+        segment's direction."""
+        start, end = leg
+        if abs(end[0] - start[0]) < STRAIGHT_TOLERANCE or abs(end[1] - start[1]) < STRAIGHT_TOLERANCE:
+            return ([end], 'v' if abs(end[0] - start[0]) < STRAIGHT_TOLERANCE else 'h')
+        if previous_direction == 'v':
+            return ([(start[0], end[1]), end], 'h')
+        return ([(end[0], start[1]), end], 'v')
 
 
-def class_title_in(value: str) -> str | None:
+
+def class_title_in(cell_label: str) -> str | None:
     """The raw HTML inside the class cell's `<b>` title, or None for a cell with no title."""
-    if not value:
+    if not cell_label:
         return None
-    match = re.search('<b[^>]*>(.*?)</b>', html.unescape(html.unescape(value)), re.IGNORECASE | re.DOTALL)
+    match = re.search('<b[^>]*>(.*?)</b>', html.unescape(html.unescape(cell_label)), re.IGNORECASE | re.DOTALL)
     return match.group(1) if match else None
 
 
-def class_name_in(value: str) -> str | None:
+def quoted_title(title: str) -> str:
+    """A class title as a message quotes it: its words without HTML tags, cut to QUOTED_TITLE_CHARS."""
+    return re.sub(r'<[^>]+>', '', title)[:QUOTED_TITLE_CHARS]
+
+
+def class_name_in(cell_label: str) -> str | None:
     """The class name in a class cell's title; a stereotype or ` : Base` beside it is not part of the name."""
-    if not value:
+    if not cell_label:
         return None
     # `<b>` or `<b style=...>`, never the `<br/>` that ends a stereotype line above the name.
-    match = re.search(r'<b(?:\s[^>]*)?>(.*?)</b>', html.unescape(value), re.IGNORECASE | re.DOTALL)
+    match = re.search(r'<b(?:\s[^>]*)?>(.*?)</b>', html.unescape(cell_label), re.IGNORECASE | re.DOTALL)
     if not match:
         return None
     name = re.sub('\\s+', ' ', match.group(1)).strip()
@@ -187,11 +218,10 @@ def style_number(style: str, key: str) -> float | None:
 
 def anchor_point(style: str, box: Geometry, end: str) -> Point:
     """Where one end of an edge meets its box: the exit or entry anchor in the style, else the box centre."""
-    x, y, width, height = box
     fraction_x = style_number(style, f'{end}X')
     fraction_y = style_number(style, f'{end}Y')
     if fraction_x is not None and fraction_y is not None:
-        return (x + width * fraction_x, y + height * fraction_y)
+        return (box.x + box.width * fraction_x, box.y + box.height * fraction_y)
     return box.center
 
 
@@ -204,22 +234,3 @@ def segment_hits_box(segment: Segment, box: Geometry, margin: float) -> bool:
     if any(segments_cross(segment, (corners[index], corners[(index + 1) % 4])) for index in range(4)):
         return True
     return left <= start[0] <= right and top <= start[1] <= bottom
-
-
-def _orthogonal_through(points: list[Point]) -> list[Segment]:
-    """Segments through each point in turn, adding a corner wherever two points are not in line."""
-    expanded = [points[0]]
-    previous_direction = None
-    for following in points[1:]:
-        corners, previous_direction = _orthogonal_step(expanded[-1], following, previous_direction)
-        expanded.extend(corners)
-    return list(zip(expanded, expanded[1:]))
-
-
-def _orthogonal_step(start: Point, end: Point, previous_direction: str | None) -> tuple[list[Point], str]:
-    """The points after start that reach end at right angles, turning away from the previous segment's direction."""
-    if abs(end[0] - start[0]) < STRAIGHT_TOLERANCE or abs(end[1] - start[1]) < STRAIGHT_TOLERANCE:
-        return ([end], 'v' if abs(end[0] - start[0]) < STRAIGHT_TOLERANCE else 'h')
-    if previous_direction == 'v':
-        return ([(start[0], end[1]), end], 'h')
-    return ([(end[0], start[1]), end], 'v')

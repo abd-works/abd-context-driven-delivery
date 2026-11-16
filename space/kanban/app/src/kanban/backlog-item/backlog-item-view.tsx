@@ -7,6 +7,7 @@ import { useBoard } from '../shared/board-context'
 import { useTypedField, withoutSelecting } from '../shared/card-field-view'
 import type { CardField } from '../shared/card-field-view'
 import { SessionActionIcon } from '../shared/icons'
+import type { BoardPage } from '../board/board-page'
 import type { BacklogItemClient, ItemDrop } from './backlog-item-client'
 
 export function ComposerView() {
@@ -37,18 +38,19 @@ const DROP_LOOKS: Record<ItemDrop, string> = { before: 'is-drop-before', after: 
 // Another backlog item dragged onto this one goes above it near its top edge, below it near its bottom edge, and in the
 // middle becomes its child. Read when each event arrives, not from the last drawing: a quick drag reaches the card
 // before the page redraws.
+function dropAt(page: BoardPage, backlogItem: BacklogItemClient, event: DragEvent): { dragged: BacklogItemClient; drop: ItemDrop } | undefined {
+  const dragged = page.board.backlogItems.find(entry => entry.address === page.store.state.dragged)
+  if (!dragged) return undefined
+  const box = event.currentTarget.getBoundingClientRect()
+  const drop = backlogItem.dropOf(dragged, (event.clientY - box.top) / Math.max(box.height, 1))
+  return drop ? { dragged, drop } : undefined
+}
+
 function useItemDrop(backlogItem: BacklogItemClient) {
   const { page } = useBoard()
   const [shownDrop, setShownDrop] = useState<ItemDrop | null>(null)
-  const dropAt = (event: DragEvent) => {
-    const dragged = page.board.backlogItems.find(entry => entry.address === page.store.state.dragged)
-    if (!dragged) return undefined
-    const box = event.currentTarget.getBoundingClientRect()
-    const drop = backlogItem.dropOf(dragged, (event.clientY - box.top) / Math.max(box.height, 1))
-    return drop ? { dragged, drop } : undefined
-  }
   const onDragOver = (event: DragEvent) => {
-    const found = dropAt(event)
+    const found = dropAt(page, backlogItem, event)
     setShownDrop(found?.drop ?? null)
     if (!found) return
     event.preventDefault()
@@ -56,7 +58,7 @@ function useItemDrop(backlogItem: BacklogItemClient) {
   }
   const onDrop = (event: DragEvent) => {
     setShownDrop(null)
-    const found = dropAt(event)
+    const found = dropAt(page, backlogItem, event)
     if (!found) return
     event.preventDefault()
     event.stopPropagation()
@@ -80,22 +82,17 @@ function useItemDrag(backlogItem: BacklogItemClient) {
 
 const EDIT_ITEM_TEXT: CardField = { action: 'text', label: 'Edit text', hint: 'Edit what this idea is about', field: 'Item text', placeholder: 'Text, then Enter' }
 
-// The most lines the text box grows to before it scrolls.
+// The fewest lines the text box shows, and the most it grows to before it scrolls.
+const EDITOR_FEWEST_LINES = 3
 const EDITOR_MOST_LINES = 10
 
 // The item's text, shown only on its selected card and cut to its opening paragraphs, since the details bar shows it
 // whole. Edit text opens a box in the text's place, holding the whole text, which Enter writes back to its file.
 function ItemTextView({ item, isSelected }: { item: BacklogItemClient; isSelected: boolean }) {
-  const { typed, setTyped, pressed } = useTypedField(text => item.editText(text))
+  const typedField = useTypedField(text => item.editText(text))
+  const { typed, setTyped } = typedField
   const { opening, isCut } = openingOf(item.text)
-  if (typed !== null) {
-    const rows = Math.min(Math.max(typed.split('\n').length, 3), EDITOR_MOST_LINES)
-    return (
-      <div className="item-text-line">
-        <textarea className="card-field item-text-editor" aria-label={EDIT_ITEM_TEXT.field} placeholder="Text; Enter saves, Shift+Enter adds a line" rows={rows} value={typed} autoFocus onClick={event => event.stopPropagation()} onChange={event => setTyped(event.target.value)} onKeyDown={pressed} onBlur={() => setTyped(null)} />
-      </div>
-    )
-  }
+  if (typed !== null) return <ItemTextEditorView typedField={typedField} typed={typed} />
   return (
     <div className="item-text-line">
       {isSelected && item.text ? <div className="ticket-text">{opening}</div> : null}
@@ -107,6 +104,17 @@ function ItemTextView({ item, isSelected }: { item: BacklogItemClient; isSelecte
       <button className="file-view" aria-label={EDIT_ITEM_TEXT.label} title={EDIT_ITEM_TEXT.hint} onClick={withoutSelecting(() => setTyped(item.text))}>
         <SessionActionIcon action={EDIT_ITEM_TEXT.action} />
       </button>
+    </div>
+  )
+}
+
+// The box Edit text opens in the text's place, as tall as the text up to its most lines.
+function ItemTextEditorView({ typedField, typed }: { typedField: ReturnType<typeof useTypedField>; typed: string }) {
+  const { setTyped, pressed } = typedField
+  const rows = Math.min(Math.max(typed.split('\n').length, EDITOR_FEWEST_LINES), EDITOR_MOST_LINES)
+  return (
+    <div className="item-text-line">
+      <textarea className="card-field item-text-editor" aria-label={EDIT_ITEM_TEXT.field} placeholder="Text; Enter saves, Shift+Enter adds a line" rows={rows} value={typed} autoFocus onClick={event => event.stopPropagation()} onChange={event => setTyped(event.target.value)} onKeyDown={pressed} onBlur={() => setTyped(null)} />
     </div>
   )
 }

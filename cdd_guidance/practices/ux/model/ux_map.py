@@ -14,6 +14,10 @@ from .reference_paths import ReferencePaths
 from .ux_node import UxNode
 
 
+ScreenCopies = dict[int, Screen]
+"""Each source screen's copy, by the identity of the source screen, while a map is copied."""
+
+
 class ScreenNotOnMap(KeyError):
     """A link names a screen the map does not have; transitions, tabs, and destinations join screens on one map."""
 
@@ -85,7 +89,8 @@ class UxMap(UxNode):
         self.context.invariants = list(source.context.invariants)
 
     def _screen_copy(self, screen: Screen) -> Screen:
-        copy = self.screen_type(screen.name, screen.sequential_order, screen.slug, screen.layout, screen.description)
+        copy = self.screen_type(screen.name, screen.sequential_order)
+        copy.slug, copy.layout, copy.description = screen.slug, screen.layout, screen.description
         copy.inactive_tabs = list(screen.inactive_tabs)
         copy.domain_terms = list(screen.domain_terms)
         copy.domain_concepts = list(screen.domain_concepts)
@@ -94,43 +99,46 @@ class UxMap(UxNode):
         copy.show_what(screen)
         return copy
 
-    def _take_screen_parts(self, screen: Screen, screens: dict) -> None:
+    def _take_screen_parts(self, screen: Screen, screens: ScreenCopies) -> None:
         copy = screens[id(screen)]
         copy.chrome_of = screens.get(id(screen.chrome_of)) if screen.chrome_of is not None else None
         for region in screen.regions:
-            region_copy = self.region_type(region.name, region.sequential_order, region.area)
+            region_copy = self.region_type(region.name, region.sequential_order)
+            region_copy.area = region.area
             for control in region.controls:
                 region_copy.append_control(self._control_copy(control, screens))
             copy.append_region(region_copy)
 
-    def _control_copy(self, control: Control, screens: dict) -> Control:
-        common = (control.name, control.sequential_order, control.control_type, control.label, control.bound_field)
-        if isinstance(control, StoryDemoControl):
-            copy: Control = self.story_demo_control_type(
-                *common, control.story_steps, control.set_input, control.item_story_steps, control.item_value,
-                control.item_label,
-            )
-        else:
-            copy = self.control_type(*common)
+    def _control_copy(self, control: Control, screens: ScreenCopies) -> Control:
+        demo = isinstance(control, StoryDemoControl)
+        copy = (self.story_demo_control_type if demo else self.control_type)(control.name, control.sequential_order)
+        copy.control_type, copy.label, copy.bound_field = control.control_type, control.label, control.bound_field
+        if demo:
+            copy.take_story_fields(control)
         copy.states = list(control.states)
         for interaction in control.interactions:
-            destination = screens.get(id(interaction.destination)) if interaction.destination is not None else None
-            copy.append_interaction(Interaction(interaction.name, interaction.sequential_order, interaction.trigger,
-                                                interaction.effect, destination))
+            copy.append_interaction(self._interaction_copy(interaction, screens))
         return copy
 
-    def _take_components(self, source: "UxMap", screens: dict) -> None:
+    def _interaction_copy(self, interaction: Interaction, screens: ScreenCopies) -> Interaction:
+        copy = Interaction(interaction.name, interaction.sequential_order)
+        copy.trigger, copy.effect = interaction.trigger, interaction.effect
+        copy.destination = screens.get(id(interaction.destination)) if interaction.destination is not None else None
+        return copy
+
+    def _take_components(self, source: "UxMap", screens: ScreenCopies) -> None:
         for transition in source.transitions:
-            self.transitions.append(self.transition_type(
-                transition.name, transition.sequential_order, screens.get(id(transition.from_screen)),
-                screens.get(id(transition.to_screen)), transition.trigger, transition.nav_type,
-            ))
+            copy = self.transition_type(transition.name, transition.sequential_order)
+            copy.trigger, copy.nav_type = transition.trigger, transition.nav_type
+            self.transitions.append(copy.joining(screens.get(id(transition.from_screen)), screens.get(id(transition.to_screen))))
         for content_type in source.content_types:
-            copy = self.content_type_type(content_type.name, content_type.sequential_order, content_type.hierarchy)
+            copy = self.content_type_type(content_type.name, content_type.sequential_order)
+            copy.hierarchy = content_type.hierarchy
             copy.key_actions = list(content_type.key_actions)
             self.content_types.append(copy)
         for nav in source.nav_components:
-            copy = self.nav_component_type(nav.name, nav.sequential_order, nav.ux_type)
+            copy = self.nav_component_type(nav.name, nav.sequential_order)
+            copy.ux_type = nav.ux_type
             copy.destinations = [screens[id(screen)] for screen in nav.destinations if id(screen) in screens]
             self.nav_components.append(copy)
 
@@ -138,8 +146,13 @@ class UxMap(UxNode):
     def from_workspace(cls, root: Path) -> Optional["UxMap"]:
         """The map this format reads from its file in the workspace folder root; none when the folder has no such file."""
         loader = cls.create()
-        found = loader.workspace_file(Path(root))
-        return None if found is None else loader.parse(found.read_text(encoding="utf-8"))
+        text = loader.workspace_text(Path(root))
+        return None if text is None else loader.parse(text)
+
+    def workspace_text(self, root: Path) -> Optional[str]:
+        """The text of this format's map file in the workspace folder root; none when the folder has no such file."""
+        found = self.workspace_file(root)
+        return None if found is None else found.read_text(encoding="utf-8")
 
     def workspace_file(self, root: Path) -> Optional[Path]:
         for pattern in self.workspace_files:

@@ -21,7 +21,7 @@ The *Files app* shows the files a link names and turns a person's reading into w
   - -> Session.guidance_selection, Session.guidance_selection_after, Session.update_guidance_selection
 - `showScope(scope)`: All session files (▤) lists every file under the session's root, read once as the page opens (`Ticket.root_files`), with the files the fidelities listed declare but have not generated yet; This session (Δ with its count), the default, lists those the session's branch changed against main and any design canvas published at a link. The stages, practices and formats selected narrow both: a file shows in a format selected while any is, and when it belongs to a fidelity listed; a file of no fidelity shows only while no practice is selected (`rootFilesShown`). The two buttons sit first along the top, before the stages, orange while selected. Nothing is read again.
   - -> Ticket.root_files (each file's format and the fidelities it belongs to come from Python)
-- `toggleRules()` and `toggleCrossFile()` each turn one read of the open file on or off, both off by default so browsing never reads a graph: Rules reads the file on its own and shows its folds and its own broken rules, under a second (`Session.file_alone`); Cross-file shows only the rules the whole working copy finds beyond those, linking files and practices, which takes far longer (`Session.file_in_whole`).
+- `toggleRules()` and `toggleCrossFile()` each turn one read of the open file on or off, both off by default so browsing never reads a graph: Rules reads the file on its own and shows its folds and its own broken rules, under a second (`FileGraphs.file_alone`); Cross-file shows only the rules the whole working copy finds beyond those, linking files and practices, which takes far longer (`FileGraphs.file_in_whole`).
   - -> Session.file(path, rules, cross_file)
 - `refreshOpen()` (private) reads the open file again, and again every two seconds while a comment on it is sent.
 - `attempt(what, work)` runs a call a person started; its failure is a toast naming what failed, and the open file is read again after it.
@@ -93,4 +93,4 @@ The *Files app* shows the files a link names and turns a person's reading into w
 
 ### Chat (Python, `harness/chat`)
 
-- `send("refresh", text)` queues a refresh; the chat's chat bar takes it at its next check-in and reads the board again, with no toast (`board-chat-client.ts` `refreshed`).
+- `send("refresh", text)` queues a refresh; the chat's chat bar takes it at its next check-in and reads the board again, with no toast (`check-in-client.ts` `refreshed`).

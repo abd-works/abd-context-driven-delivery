@@ -125,15 +125,23 @@ class ClassHead:
         lines = text_before_class.splitlines()
         index = len(lines) - 1
         while index >= 0:
-            line = lines[index].strip()
-            if line.endswith("*/") and "/**" in "\n".join(lines[: index + 1]):
-                index = head._take_doc(lines, index)
-            elif _ANY_DECORATOR.match(line) or line.startswith(("//", "#")):
-                head._take_line(line)
-            elif line not in ("export", "export default", "abstract"):
+            taken_from = head._take_above(lines, index)
+            if taken_from is None:
                 break
-            index -= 1
+            index = taken_from - 1
         return head
+
+    def _take_above(self, lines: List[str], index: int) -> int | None:
+        """Read the head's line at index; the line its part opens on, or None when the line is no part of a head."""
+        line = lines[index].strip()
+        if line.endswith("*/") and "/**" in "\n".join(lines[: index + 1]):
+            return self._take_doc(lines, index)
+        if _ANY_DECORATOR.match(line) or line.startswith(("//", "#")):
+            self._take_line(line)
+            return index
+        if line in ("export", "export default", "abstract"):
+            return index
+        return None
 
     def _take_doc(self, lines: List[str], end: int) -> int:
         """Read the doc comment ending on line end; the line it opens on."""

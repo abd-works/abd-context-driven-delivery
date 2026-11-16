@@ -37,6 +37,14 @@ _ORDER = 'shop--order'
 _INVOICE = 'shop--invoice'
 
 
+def _class_with(name: str, sequential_order: int, properties: list, operations: list | None = None) -> OoadClass:
+    """A class holding the properties and operations given."""
+    made = OoadClass(name=name, sequential_order=sequential_order)
+    made.properties = properties
+    made.operations = operations or []
+    return made
+
+
 def _shop_model(extra_properties=None, extra_class=None, extra_relationship=None) -> CleanEngineeringModel:
     model = CleanEngineeringModel(name='Shop', sequential_order=1)
     module = Module(name='Shop', sequential_order=1)
@@ -52,16 +60,11 @@ def _shop_model(extra_properties=None, extra_class=None, extra_relationship=None
             class_name = f'Cart extends {rel.target}'
             continue
         cart_props.append(Property(name=rel.target[:1].lower() + rel.target[1:], type_hint=rel.target))
-    module.classes.append(
-        OoadClass(
-            name=class_name,
-            sequential_order=1,
-            properties=cart_props,
-            operations=[Operation(name='place_order', return_type='Order')],
-            relationships=cart_rels,
-        )
-    )
-    module.classes.append(OoadClass(name='Order', sequential_order=2, properties=[Property(name='total', type_hint='int')]))
+    cart = _class_with(class_name, 1, cart_props, [Operation(name='place_order', return_type='Order')])
+    for rel in cart_rels:
+        cart.place_relationship(rel)
+    module.classes.append(cart)
+    module.classes.append(_class_with('Order', 2, [Property(name='total', type_hint='int')]))
     if extra_class is not None:
         module.classes.append(extra_class)
     model.modules.append(module)
@@ -150,14 +153,13 @@ with description('a Draw.io modules diagram'):
     with context('that was rendered from canonical modules'):
         with before.all:
             model = CleanEngineeringModel(name='HeroesHandbook', sequential_order=1)
-            checks = Module(name='checks', sequential_order=1, description='Resolve checks.', seam_terms=['Trait', 'Check'])
-            character = Module(
-                name='character',
-                sequential_order=2,
-                description='Sheet ownership.',
-                seam_terms=['Character', 'ISource'],
-                dependencies=['checks'],
-            )
+            checks = Module(name='checks', sequential_order=1)
+            checks.description = 'Resolve checks.'
+            checks.seam_terms = ['Trait', 'Check']
+            character = Module(name='character', sequential_order=2)
+            character.description = 'Sheet ownership.'
+            character.seam_terms = ['Character', 'ISource']
+            character.dependencies = ['checks']
             model.modules.extend([checks, character])
             self.xml = DrawIOCleanEngineeringModel().render(model)
 
@@ -282,12 +284,7 @@ with description('a Draw.io class diagram'):
             model = CleanEngineeringModel(name='Shop', sequential_order=1)
             module = Module(name='Shop', sequential_order=1)
             module.classes.append(
-                OoadClass(
-                    name='Cart',
-                    sequential_order=1,
-                    properties=[Property(name='owner', type_hint='str')],
-                    operations=[Operation(name='place_order', return_type='Order')],
-                )
+                _class_with('Cart', 1, [Property(name='owner', type_hint='str')], [Operation(name='place_order', return_type='Order')])
             )
             model.modules.append(module)
             self.xml = DrawIOCleanEngineeringModel().render(model)
@@ -352,7 +349,7 @@ with description('a Draw.io class diagram'):
             with before.all:
                 first = DrawIOCleanEngineeringModel().render(_shop_model())
                 moved = _set_cell_xy(first, _CART, 500, 300)
-                invoice = OoadClass(name='Invoice', sequential_order=3, properties=[Property(name='number', type_hint='str')])
+                invoice = _class_with('Invoice', 3, [Property(name='number', type_hint='str')])
                 self.xml = _render_kept(_shop_model(extra_class=invoice), moved)
 
             with it('should keep existing class positions'):
@@ -371,7 +368,7 @@ with description('a Draw.io class diagram'):
             with before.all:
                 first = DrawIOCleanEngineeringModel().render(_shop_model())
                 marked = _set_edge_waypoint(first, _CART, _ORDER, 111, 222)
-                invoice = OoadClass(name='Invoice', sequential_order=3, properties=[Property(name='number', type_hint='str')])
+                invoice = _class_with('Invoice', 3, [Property(name='number', type_hint='str')])
                 self.xml = _render_kept(
                     _shop_model(extra_class=invoice, extra_relationship=Relationship(target='Invoice', kind='association')),
                     marked,
@@ -406,7 +403,7 @@ with description('a Draw.io class diagram'):
                     for number, name in enumerate(('Orders', 'Billing'), start=1):
                         module = Module(name=name, sequential_order=number)
                         module.classes.extend(
-                            OoadClass(name=f'{name}Part{index}', sequential_order=index, properties=[Property(name='size', type_hint='int')])
+                            _class_with(f'{name}Part{index}', index, [Property(name='size', type_hint='int')])
                             for index in range(1, CLASSES_ON_ONE_PAGE // 2 + 2)
                         )
                         model.modules.append(module)
@@ -424,7 +421,7 @@ with description('a Draw.io class diagram'):
             with it('should not keep a hand-moved position after full relayout'):
                 first = DrawIOCleanEngineeringModel().render(_shop_model())
                 moved = _set_cell_xy(first, _CART, 500, 300)
-                invoice = OoadClass(name='Invoice', sequential_order=3, properties=[Property(name='number', type_hint='str')])
+                invoice = _class_with('Invoice', 3, [Property(name='number', type_hint='str')])
                 channel = DrawIOCleanEngineeringModel()
                 channel.previous = moved
                 channel.keep_positioning = False

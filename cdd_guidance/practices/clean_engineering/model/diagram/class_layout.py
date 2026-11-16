@@ -13,13 +13,15 @@ from __future__ import annotations
 import heapq
 import math
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Set, Tuple
+from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Tuple
 
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import DiagramNode
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry, segments_cross
 
 Point = Tuple[int, int]
 Heading = Tuple[int, int]
+# One straight stretch of an orthogonal path, from one corner to the next.
+Run = Tuple[Point, Point]
 
 GRID_STEP = 10
 CARD_CLEARANCE = 20
@@ -57,6 +59,9 @@ _VERTICAL_SIDES = ("bottom", "top")
 _HORIZONTAL_SIDES = ("right", "left")
 
 
+# How many decimal places an arrow's anchor fractions keep.
+_ANCHOR_DIGITS = 4
+
 @dataclass
 class DiagramArrow:
     """The line drawn between two cards for every relationship one class has to another.
@@ -81,6 +86,32 @@ class DiagramArrow:
     @property
     def path(self) -> List[Point]:
         return [self.exit_point] + self.corners + [self.entry_point]
+
+    def anchors_on(self, source: Geometry, target: Geometry) -> Tuple[float, float, float, float]:
+        """Where it leaves the card it starts on and reaches the card it ends on, each as fractions of that card's
+        width and height: (exit x, exit y, entry x, entry y)."""
+        return (
+            round((self.exit_point[0] - source.x) / source.width, _ANCHOR_DIGITS),
+            round((self.exit_point[1] - source.y) / source.height, _ANCHOR_DIGITS),
+            round((self.entry_point[0] - target.x) / target.width, _ANCHOR_DIGITS),
+            round((self.entry_point[1] - target.y) / target.height, _ANCHOR_DIGITS),
+        )
+
+    def bends_from_middles(self, source: Geometry, target: Geometry) -> Optional[List[object]]:
+        """Its route as offsets from its cards' middles: the way it leaves (`h` or `v`), then where each middle leg
+        runs, the first half from the middle of the card it leaves, the rest from the middle of the card it reaches.
+        Moving both cards together keeps the offsets; none for a route with no middle leg."""
+        path = self.path
+        if len(path) < 3:
+            return None
+        middles = [(path[index], path[index + 1]) for index in range(1, len(path) - 2)]
+        from_side_count = math.ceil(len(middles) / 2)
+        bends: List[object] = ["h" if path[0][1] == path[1][1] else "v"]
+        for index, (start, end) in enumerate(middles):
+            level = start[1] == end[1]
+            middle = (source if index < from_side_count else target).center
+            bends.append(round(start[1] - middle[1]) if level else round(start[0] - middle[0]))
+        return bends
 
 
 
@@ -168,18 +199,23 @@ class CardPlacement:
         """Swap neighbours in a row while that leaves fewer straight lines between joined cards crossing."""
         crossings = self._crossings(layers)
         for _ in range(ORDERING_SWEEPS):
-            improved = False
-            for layer in layers:
-                for index in range(len(layer) - 1):
-                    layer[index], layer[index + 1] = layer[index + 1], layer[index]
-                    swapped = self._crossings(layers)
-                    if swapped < crossings:
-                        crossings, improved = swapped, True
-                    else:
-                        layer[index], layer[index + 1] = layer[index + 1], layer[index]
-            if not improved:
+            fewer = self._swap_neighbours(layers, crossings)
+            if fewer == crossings:
                 break
+            crossings = fewer
         return layers
+
+    def _swap_neighbours(self, layers: List[List[str]], crossings: int) -> int:
+        """One pass over every row, keeping each swap of two neighbours that leaves fewer crossings; the crossings left."""
+        for layer in layers:
+            for index in range(len(layer) - 1):
+                layer[index], layer[index + 1] = layer[index + 1], layer[index]
+                swapped = self._crossings(layers)
+                if swapped < crossings:
+                    crossings = swapped
+                else:
+                    layer[index], layer[index + 1] = layer[index + 1], layer[index]
+        return crossings
 
     def _crossings(self, layers: List[List[str]]) -> int:
         """Lines between joined cards that cross, plus each card a line passes on a row between its ends, which its
@@ -275,20 +311,29 @@ class CardSpacing:
         before = {card.cell_id: card.geometry for card in self._cards}
         if len(self._cards) < 2:
             return False
-        lefts = self._closed_up(before, across=True)
+        lefts = _GapAxis(self, across=True).closed_up(before, before)
         for card in self._cards:
             card.geometry = card.geometry.moved_to(lefts[card.cell_id], card.geometry.y)
         across = {card.cell_id: card.geometry for card in self._cards}
-        tops = self._closed_up(across, across=False, order=before)
+        tops = _GapAxis(self, across=False).closed_up(across, before)
         for card in self._cards:
             card.geometry = card.geometry.moved_to(card.geometry.x, tops[card.cell_id])
         return any(card.geometry != before[card.cell_id] for card in self._cards)
 
-    def _closed_up(self, boxes: Dict[str, Geometry], across: bool, order: Optional[Dict[str, Geometry]] = None) -> Dict[str, float]:
-        """Each card's new start along one axis: as near the page's start as the cards before it on that axis allow.
+
+class _GapAxis:
+    """One axis CardSpacing closes the gaps along: across the page, or down it."""
+
+    def __init__(self, spacing: CardSpacing, across: bool) -> None:
+        self._spacing = spacing
+        self._across = across
+        self._start, self._size = (0, 2) if across else (1, 3)
+        self._side_start, self._side_size = (1, 3) if across else (0, 2)
+
+    def closed_up(self, boxes: Dict[str, Geometry], order: Dict[str, Geometry]) -> Dict[str, float]:
+        """Each card's new start along this axis: as near the page's start as the cards before it on this axis allow.
         ``order`` is where the cards were before any moved, which decides what comes before what."""
-        order = order or boxes
-        start, size = (0, 2) if across else (1, 3)
+        start, size = self._start, self._size
         page_start = min(box[start] for box in order.values())
         placed: Dict[str, float] = {}
         for cell_id in sorted(boxes, key=lambda name: order[name][start]):
@@ -296,19 +341,19 @@ class CardSpacing:
             new_start = page_start
             for other_id, other_start in placed.items():
                 other_was = order[other_id]
-                if other_was[start] + other_was[size] > was[start] or not self._side_by_side(boxes, cell_id, other_id, across):
+                if other_was[start] + other_was[size] > was[start] or not self._side_by_side(boxes, cell_id, other_id):
                     continue
-                kept_gap = min(self.gap_between(cell_id, other_id, across), was[start] - other_was[start] - other_was[size])
+                kept_gap = min(self._spacing.gap_between(cell_id, other_id, self._across), was[start] - other_was[start] - other_was[size])
                 new_start = max(new_start, other_start + boxes[other_id][size] + kept_gap)
             placed[cell_id] = math.ceil(new_start / GRID_STEP) * GRID_STEP
         return placed
 
-    def _side_by_side(self, boxes: Dict[str, Geometry], cell_id: str, other_id: str, across: bool) -> bool:
+    def _side_by_side(self, boxes: Dict[str, Geometry], cell_id: str, other_id: str) -> bool:
         """Two cards close enough on the other axis that closing the gap on this one would bring them too close."""
         box, other = boxes[cell_id], boxes[other_id]
-        side_start, side_size = (1, 3) if across else (0, 2)
+        side_start, side_size = self._side_start, self._side_size
         apart = max(other[side_start] - box[side_start] - box[side_size], box[side_start] - other[side_start] - other[side_size])
-        return apart < self.gap_between(cell_id, other_id, not across)
+        return apart < self._spacing.gap_between(cell_id, other_id, not self._across)
 
 
 class _RouteGrid:
@@ -348,6 +393,13 @@ class _RouteGrid:
         approach = self._approach_vertical if step[0] == 0 else self._approach_horizontal
         return any(holders and owner not in holders for holders in (self._held_for.get(cell), approach.get(cell)))
 
+    def cells_held_against(self, owner: int) -> Tuple[Set[Point], Set[Point]]:
+        """The cells `is_held_against` closes to owner's arrow, for a vertical step and for a horizontal one."""
+        ports = {cell for cell, holders in self._held_for.items() if owner not in holders}
+        vertical = ports | {cell for cell, holders in self._approach_vertical.items() if owner not in holders}
+        horizontal = ports | {cell for cell, holders in self._approach_horizontal.items() if owner not in holders}
+        return vertical, horizontal
+
     def cells_around(self, box: Geometry, clearance: int = CARD_CLEARANCE) -> Set[Point]:
         left, right = int(box.x - clearance) // GRID_STEP, int(box.x + box.width + clearance) // GRID_STEP
         top, bottom = int(box.y - clearance) // GRID_STEP, int(box.y + box.height + clearance) // GRID_STEP
@@ -381,53 +433,56 @@ class _RouteGrid:
         return cell in self.horizontal or cell in self.vertical
 
 
+class _SearchedArrow(NamedTuple):
+    """The arrow a search finds a way for: whose ports it may use, the cells it runs between, and how it leaves and
+    arrives."""
+
+    owner: int
+    begin: Point
+    end: Point
+    heading_out: Heading
+    heading_in: Heading
+
+
+class _SearchAttempt(NamedTuple):
+    """How freely one try of the search may go: the cells it may use, as left, top, right, bottom (the whole page when
+    None); whether it keeps clear of other arrows' ports; and, as a last resort when cards a person placed close
+    together leave the only gap already taken, whether it may run along or turn on another arrow at the price of a
+    crossing."""
+
+    window: Optional[Tuple[int, int, int, int]]
+    respect_held_ports: bool
+    may_run_along: bool
+
+
 class _ArrowSearch:
     """One arrow's cheapest way across the grid, paying for each corner and far more for each crossing."""
 
-    def __init__(
-        self,
-        grid: _RouteGrid,
-        owner: int,
-        begin: Point,
-        end: Point,
-        heading_out: Heading,
-        heading_in: Heading,
-        respect_held_ports: bool = True,
-        window: Optional[Tuple[int, int, int, int]] = None,
-        may_run_along: bool = False,
-    ) -> None:
+    def __init__(self, grid: _RouteGrid, arrow: _SearchedArrow, attempt: _SearchAttempt) -> None:
         self._grid = grid
-        # A last resort: the arrow may run along or turn on another arrow, at the price of a crossing, when cards a person
-        # placed close together leave the only gap already taken.
-        self._may_run_along = may_run_along
-        # The cells the search may use, as left, top, right, bottom; the whole page when None.
-        self._window = window if window is not None else (0, 0, grid.columns - 1, grid.lines - 1)
-        self._owner = owner
-        self._respect_held_ports = respect_held_ports
-        self._begin = begin
-        self._end = end
-        self._heading_out = heading_out
-        self._heading_in = heading_in
+        self._arrow = arrow
+        self._attempt = attempt
+        self._window = attempt.window if attempt.window is not None else (0, 0, grid.columns - 1, grid.lines - 1)
         self._came_from: Dict[Tuple[Point, Heading], Tuple[Point, Heading]] = {}
 
     def run(self) -> Optional[List[Point]]:
         """The search, written as one loop over local names: it visits hundreds of thousands of cells on a large page,
         so each check is done here once rather than through a method call. It takes the same steps at the same prices
         as `_steps` and `_price`, so it finds the same way they would."""
-        grid, end = self._grid, self._end
+        grid, arrow, end = self._grid, self._arrow, self._arrow.end
         window_left, window_top, window_right, window_bottom = self._window
         near_cards, inside_cards, horizontal, vertical = grid.blocked, grid.inside_cards, grid.horizontal, grid.vertical
         held_vertical, held_horizontal = self._cells_held_against()
         end_x, end_y = end
-        heading_in, came_from = self._heading_in, self._came_from
-        may_run_along = self._may_run_along
+        heading_in, came_from = arrow.heading_in, self._came_from
+        may_run_along = self._attempt.may_run_along
         # A card a person placed right against the port leaves no cell to come straight in from, so the arrow may
         # come in from the side for its last step.
         any_heading_in = (end[0] - heading_in[0], end[1] - heading_in[1]) in inside_cards
         headings = tuple(_HEADINGS.values())
         push, pop, infinity = heapq.heappush, heapq.heappop, float("inf")
-        best = {(self._begin, self._heading_out): 0}
-        frontier = [(0, 0, self._begin, self._heading_out)]
+        best = {(arrow.begin, arrow.heading_out): 0}
+        frontier = [(0, 0, arrow.begin, arrow.heading_out)]
         # The cost each cell and heading was searched from at. The estimate counts the distance left twice over, so a
         # cheaper way to a cell can turn up after it was searched from. It is searched from again only when the new way
         # saves a crossing: saving a turn or a few steps cost far more time than it gained.
@@ -451,19 +506,16 @@ class _ArrowSearch:
                 if not (window_left <= fx <= window_right and window_top <= fy <= window_bottom):
                     continue
                 straight = step == heading
-                running_along = False
                 if following in inside_cards and following != end:
                     continue
                 if following in (held_horizontal if step_x else held_vertical):
                     continue
-                if (following in horizontal or cell_in_horizontal) if step_x else (following in vertical or cell_in_vertical):
-                    if not may_run_along:
-                        continue
-                    running_along = True
-                if not straight and cell_carries_arrow:
-                    if not may_run_along:
-                        continue
-                    running_along = True
+                running_along = (
+                    ((following in horizontal or cell_in_horizontal) if step_x else (following in vertical or cell_in_vertical))
+                    or (not straight and cell_carries_arrow)
+                )
+                if running_along and not may_run_along:
+                    continue
                 crossing = following in (vertical if step_x else horizontal)
                 total = cost + 1 + (0 if straight else TURN_PRICE) + (CROSSING_PRICE if crossing or running_along else 0)
                 if following in near_cards and following != end:
@@ -479,13 +531,9 @@ class _ArrowSearch:
     def _cells_held_against(self) -> Tuple[Set[Point], Set[Point]]:
         """The cells `is_held_against` closes to this arrow, for a vertical step and for a horizontal one; none when
         the arrow may pass other arrows' ports."""
-        if not self._respect_held_ports:
+        if not self._attempt.respect_held_ports:
             return set(), set()
-        grid, owner = self._grid, self._owner
-        ports = {cell for cell, holders in grid._held_for.items() if owner not in holders}
-        vertical = ports | {cell for cell, holders in grid._approach_vertical.items() if owner not in holders}
-        horizontal = ports | {cell for cell, holders in grid._approach_horizontal.items() if owner not in holders}
-        return vertical, horizontal
+        return self._grid.cells_held_against(self._arrow.owner)
 
     def _walk_back(self, last: Tuple[Point, Heading]) -> List[Point]:
         steps = [last]
@@ -537,25 +585,31 @@ class _InheritanceFan:
     def draw(self) -> None:
         """Every arrow takes the stem's point on the base and bends once, at the end of the stem."""
         entry, joint = self.entry_point, self.joint
-        stem = _cells_along([joint, entry])
+        stem = self._cells_along([joint, entry])
         for arrow in self.arrows:
             arrow.entry_point, arrow.corners, arrow.cells = entry, [joint], stem
             arrow.routed = arrow.straight = True
+
+    def _cells_along(self, path: List[Point]) -> List[Point]:
+        """Every grid cell an orthogonal path passes, one step at a time, so the grid can check and claim each of them."""
+        corners = [(x // GRID_STEP, y // GRID_STEP) for x, y in path]
+        cells = corners[:1]
+        for target in corners[1:]:
+            while cells[-1] != target:
+                here = cells[-1]
+                if here[0] != target[0]:
+                    cells.append((here[0] + (1 if target[0] > here[0] else -1), here[1]))
+                else:
+                    cells.append((here[0], here[1] + (1 if target[1] > here[1] else -1)))
+        return cells
 
 
 class ArrowRouter:
     """Routes every arrow, retrying the ones that crossed until a pass finds nothing better."""
 
-    def __init__(
-        self,
-        cards: List[DiagramNode],
-        arrows: List[DiagramArrow],
-        obstacles: Iterable[Geometry] = (),
-        kept_paths: Iterable[List[Point]] = (),
-    ) -> None:
+    def __init__(self, cards: List[DiagramNode], arrows: List[DiagramArrow], kept_paths: Iterable[List[Point]] = ()) -> None:
         self._cards = {card.cell_id: card for card in cards}
         self._arrows = [arrow for arrow in arrows if self._draws(arrow)]
-        self._obstacles = list(obstacles)
         self._kept_paths = list(kept_paths)
         self._fans: List[_InheritanceFan] = []
 
@@ -591,12 +645,22 @@ class ArrowRouter:
         window = self._window_around(grid, [begin, end])
         # In the window round the arrow: clear of other arrows' ports, then past them, then along other arrows; only then
         # over the whole page. A search that finds no way walks its whole area, so the page is searched last.
-        tries = ((window, True, False), (window, False, False), (window, False, True), (None, False, False))
-        for area, respect_held_ports, may_run_along in tries:
-            cells = _ArrowSearch(grid, owner, begin, end, out, heading_in, respect_held_ports, area, may_run_along).run()
+        searched = _SearchedArrow(owner, begin, end, out, heading_in)
+        for attempt in self._attempts_in(window):
+            cells = _ArrowSearch(grid, searched, attempt).run()
             if cells is not None:
                 return cells
-        return _ArrowSearch(grid, owner, begin, end, out, heading_in, False, None, True).run()
+        return None
+
+    def _attempts_in(self, window: Tuple[int, int, int, int]) -> Tuple[_SearchAttempt, ...]:
+        """Each search an arrow tries, in order, until one finds a way."""
+        return (
+            _SearchAttempt(window, respect_held_ports=True, may_run_along=False),
+            _SearchAttempt(window, respect_held_ports=False, may_run_along=False),
+            _SearchAttempt(window, respect_held_ports=False, may_run_along=True),
+            _SearchAttempt(None, respect_held_ports=False, may_run_along=False),
+            _SearchAttempt(None, respect_held_ports=False, may_run_along=True),
+        )
 
     def _window_around(self, grid: _RouteGrid, cells: List[Point]) -> Tuple[int, int, int, int]:
         """The part of the page an arrow is searched in first: the box round its ends, with room to go
@@ -691,7 +755,7 @@ class ArrowRouter:
         )
 
     def _grid_without(self, lifted: Optional[DiagramArrow]) -> _RouteGrid:
-        boxes = [card.geometry for card in self._cards.values()] + self._obstacles
+        boxes = [card.geometry for card in self._cards.values()]
         width = max(box.x + box.width for box in boxes) + ROUTING_MARGIN
         height = max(box.y + box.height for box in boxes) + ROUTING_MARGIN
         grid = _RouteGrid(boxes, width, height)
@@ -728,16 +792,27 @@ class ArrowRouter:
     def _straighten(self, arrow: DiagramArrow) -> None:
         """Two cards that face each other with one arrow between them get a straight line, not a small step."""
         source, target = self._cards[arrow.source].geometry, self._cards[arrow.target].geometry
-        if arrow.exit_side in _VERTICAL_SIDES:
-            shared = _shared_middle(source.x, source.width, target.x, target.width)
-            if shared is not None:
-                arrow.exit_point = (shared, arrow.exit_point[1])
-                arrow.entry_point = (shared, arrow.entry_point[1])
+        across = arrow.exit_side in _VERTICAL_SIDES
+        shared = self._shared_middle(source, target, across)
+        if shared is None:
             return
-        shared = _shared_middle(source.y, source.height, target.y, target.height)
-        if shared is not None:
+        if across:
+            arrow.exit_point = (shared, arrow.exit_point[1])
+            arrow.entry_point = (shared, arrow.entry_point[1])
+        else:
             arrow.exit_point = (arrow.exit_point[0], shared)
             arrow.entry_point = (arrow.entry_point[0], shared)
+
+    def _shared_middle(self, source: Geometry, target: Geometry, across: bool) -> Optional[int]:
+        """The grid line in the middle of where two cards overlap, across the page or down it; None when they overlap
+        too little for a straight line between them."""
+        start, length, other_start, other_length = (
+            (source.x, source.width, target.x, target.width) if across else (source.y, source.height, target.y, target.height)
+        )
+        low, high = max(start, other_start), min(start + length, other_start + other_length)
+        if high - low < 2 * GRID_STEP:
+            return None
+        return int((low + high) / 2 // GRID_STEP * GRID_STEP)
 
     def _far_end_position(self, user: Tuple[DiagramArrow, bool], side: str) -> float:
         """Where the far end sits along this side."""
@@ -799,40 +874,20 @@ class ArrowRouter:
         return trouble
 
 
-def _cells_along(path: List[Point]) -> List[Point]:
-    """Every grid cell an orthogonal path passes, one step at a time, so the grid can check and claim each of them."""
-    corners = [(x // GRID_STEP, y // GRID_STEP) for x, y in path]
-    cells = corners[:1]
-    for target in corners[1:]:
-        while cells[-1] != target:
-            here = cells[-1]
-            if here[0] != target[0]:
-                cells.append((here[0] + (1 if target[0] > here[0] else -1), here[1]))
-            else:
-                cells.append((here[0], here[1] + (1 if target[1] > here[1] else -1)))
-    return cells
-
-
-def _shared_middle(start: float, length: float, other_start: float, other_length: float) -> Optional[int]:
-    low, high = max(start, other_start), min(start + length, other_start + other_length)
-    if high - low < 2 * GRID_STEP:
-        return None
-    return int((low + high) / 2 // GRID_STEP * GRID_STEP)
-
-
 def paths_cross(first: List[Point], second: List[Point]) -> bool:
     """True when a run of one orthogonal path crosses a run of the other at a right angle."""
     return any(
-        _runs_cross(a, b, c, d)
-        for a, b in zip(first, first[1:])
-        for c, d in zip(second, second[1:])
+        _runs_cross(run, other_run)
+        for run in zip(first, first[1:])
+        for other_run in zip(second, second[1:])
     )
 
 
-def _runs_cross(a: Point, b: Point, c: Point, d: Point) -> bool:
-    if (a[1] == b[1]) == (c[1] == d[1]):
+def _runs_cross(run: Run, other_run: Run) -> bool:
+    run_is_level, other_is_level = run[0][1] == run[1][1], other_run[0][1] == other_run[1][1]
+    if run_is_level == other_is_level:
         return False
-    (left, right), (top, bottom) = ((a, b), (c, d)) if a[1] == b[1] else ((c, d), (a, b))
+    (left, right), (top, bottom) = (run, other_run) if run_is_level else (other_run, run)
     return (
         min(left[0], right[0]) <= top[0] <= max(left[0], right[0])
         and min(top[1], bottom[1]) <= left[1] <= max(top[1], bottom[1])

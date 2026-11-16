@@ -6,6 +6,7 @@ the project later, in the same process, so the process id stays right where the 
 
 from __future__ import annotations
 
+import ctypes
 import json
 import os
 import subprocess
@@ -18,6 +19,23 @@ CLAUDE_EXECUTABLE = "claude"
 # How far up the process tree the connect script looks for the Claude Code process it was started by: Claude Code may
 # run it through a shell or two.
 _ANCESTORS_SEARCHED = 8
+# A TCP table row's local port sits in the low 16 bits of its DWORD, in network byte order.
+_PORT_BITS = 0xFFFF
+# Windows' ERROR_INSUFFICIENT_BUFFER: the TCP table grew between asking its size and reading it.
+_ERROR_INSUFFICIENT_BUFFER = 122
+# Windows' MAX_PATH, the length of a process entry's executable name.
+_MAX_PATH = 260
+# CreateToolhelp32Snapshot's TH32CS_SNAPPROCESS: a snapshot of every process.
+_SNAPSHOT_EVERY_PROCESS = 0x00000002
+
+
+class _ProcessEntry(ctypes.Structure):
+    """Windows' PROCESSENTRY32: one process of a toolhelp snapshot, with the name of its executable."""
+
+    _fields_ = [("dwSize", ctypes.c_uint32), ("cntUsage", ctypes.c_uint32), ("th32ProcessID", ctypes.c_uint32),
+                ("th32DefaultHeapID", ctypes.c_size_t), ("th32ModuleID", ctypes.c_uint32),
+                ("cntThreads", ctypes.c_uint32), ("th32ParentProcessID", ctypes.c_uint32),
+                ("pcPriClassBase", ctypes.c_long), ("dwFlags", ctypes.c_uint32), ("szExeFile", ctypes.c_char * _MAX_PATH)]
 
 
 def claude_config_folder() -> Path:
@@ -136,7 +154,6 @@ class _ProcessTree:
         return None
 
     def _windows_owner_of_port(self, port: int) -> int | None:
-        import ctypes
         import socket
         from ctypes import wintypes
 
@@ -150,15 +167,14 @@ class _ProcessTree:
         count = ctypes.cast(table, ctypes.POINTER(wintypes.DWORD))[0]
         rows = ctypes.cast(ctypes.addressof(table) + ctypes.sizeof(wintypes.DWORD), ctypes.POINTER(TcpRow * count)).contents
         wanted = socket.htons(port)
-        return next((row.owning_pid for row in rows if row.local_port & 0xFFFF == wanted), None)
+        return next((row.owning_pid for row in rows if row.local_port & _PORT_BITS == wanted), None)
 
     def _windows_tcp_table(self) -> object | None:
         """Every IPv4 TCP connection with the process that owns it (``TCP_TABLE_OWNER_PID_CONNECTIONS``); none when
         Windows will not give it. The table can grow between asking its size and reading it, so it is asked again."""
-        import ctypes
         from ctypes import wintypes
 
-        ipv4, connections_with_owner, buffer_too_small = 2, 4, 122
+        ipv4, connections_with_owner = 2, 4
         size = wintypes.DWORD(0)
         get_table = ctypes.windll.iphlpapi.GetExtendedTcpTable
         get_table(None, ctypes.byref(size), False, ipv4, connections_with_owner, 0)
@@ -167,7 +183,7 @@ class _ProcessTree:
             status = get_table(table, ctypes.byref(size), False, ipv4, connections_with_owner, 0)
             if status == 0:
                 return table
-            if status != buffer_too_small:
+            if status != _ERROR_INSUFFICIENT_BUFFER:
                 return None
         return None
 
@@ -185,30 +201,27 @@ class _ProcessTree:
         answer = subprocess.run(["ps", "-o", field, "-p", str(pid)], capture_output=True, text=True, check=False)
         return answer.stdout.strip()
 
-    def _windows_entry(self, pid: int) -> Any:
-        import ctypes
-        from ctypes import wintypes
-
-        class ProcessEntry(ctypes.Structure):
-            _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD), ("th32ProcessID", wintypes.DWORD),
-                        ("th32DefaultHeapID", ctypes.c_size_t), ("th32ModuleID", wintypes.DWORD),
-                        ("cntThreads", wintypes.DWORD), ("th32ParentProcessID", wintypes.DWORD),
-                        ("pcPriClassBase", ctypes.c_long), ("dwFlags", wintypes.DWORD), ("szExeFile", ctypes.c_char * 260)]
-
-        every_process = 0x00000002
-        kernel = ctypes.windll.kernel32
-        kernel.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
-        kernel.Process32First.argtypes = kernel.Process32Next.argtypes = [wintypes.HANDLE, ctypes.POINTER(ProcessEntry)]
-        kernel.CloseHandle.argtypes = [wintypes.HANDLE]
-        snapshot = kernel.CreateToolhelp32Snapshot(every_process, 0)
-        entry = ProcessEntry()
-        entry.dwSize = ctypes.sizeof(ProcessEntry)
+    def _windows_entry(self, pid: int) -> _ProcessEntry | None:
+        """The Windows process entry of pid, from a snapshot of every process; none when pid no longer runs."""
+        kernel = self._toolhelp_kernel()
+        snapshot = kernel.CreateToolhelp32Snapshot(_SNAPSHOT_EVERY_PROCESS, 0)
         try:
+            entry = _ProcessEntry()
+            entry.dwSize = ctypes.sizeof(entry)
             found = kernel.Process32First(snapshot, ctypes.byref(entry))
-            while found:
-                if entry.th32ProcessID == pid:
-                    return entry
+            while found and entry.th32ProcessID != pid:
                 found = kernel.Process32Next(snapshot, ctypes.byref(entry))
-            return None
+            return entry if found else None
         finally:
             kernel.CloseHandle(snapshot)
+
+    def _toolhelp_kernel(self) -> Any:
+        """kernel32 with the argument and result types its process snapshot calls need."""
+        from ctypes import wintypes
+
+        kernel = ctypes.windll.kernel32
+        kernel.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        entry_pointer = ctypes.POINTER(_ProcessEntry)
+        kernel.Process32First.argtypes = kernel.Process32Next.argtypes = [wintypes.HANDLE, entry_pointer]
+        kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+        return kernel

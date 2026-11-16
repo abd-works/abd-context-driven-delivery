@@ -492,7 +492,7 @@ it should let go of the tile of a practice turned off
 -> BoardStore.change({ tiles: [{ ticket: ACTIVE, place: 'cell-Discovery-ddd-bounded-context', stage:)
   -> board-store.saveLayout()
   -> BoardStore.dismissToast()
--> TicketClient.enablePractice('ddd', false)
+-> TicketPractices.enable('ddd', false)
   -> cdd practice-session-output.enable
     -> PracticeSessionOutput.enable(is_enabled: bool)
       -> PracticeSessionOutput.enabled
@@ -506,7 +506,7 @@ it should say so and where it was saved
 -> BoardStore.change({ tiles: [{ ticket: ACTIVE, place: 'cell-Discovery-ddd-bounded-context', stage:)
   -> board-store.saveLayout()
   -> BoardStore.dismissToast()
--> TicketClient.enablePractice('ddd', false)
+-> TicketPractices.enable('ddd', false)
   -> cdd practice-session-output.enable
     -> PracticeSessionOutput.enable(is_enabled: bool)
       -> PracticeSessionOutput.enabled
@@ -2035,7 +2035,7 @@ it should bring the ticket back with its work
 ```
 it should list the file with whether it exists
 -> FidelityProgress.files(ticket=TICKET, fidelity=FIDELITY)
-  -> FidelityGuidance.files()
+  -> FidelityGuidance.declared.files()
     -> FidelitySessionOutput.output_paths()
       -> FidelityGuidance.outputs
       <- dict
@@ -2681,7 +2681,7 @@ it should be off the board
 <- Ticket
 -> Ticket.archive()
   -> Session.close()
-  -> Session.move_to_archive()
+  -> SessionFolder.move_to_archive()
   <- Session
 <- Ticket
 -> Board.tickets
@@ -2694,7 +2694,7 @@ it should have its folder in the archive
 <- Ticket
 -> Ticket.archive()
   -> Session.close()
-  -> Session.move_to_archive()
+  -> SessionFolder.move_to_archive()
   <- Session
 <- Ticket
 ```
@@ -2812,7 +2812,7 @@ it should write that practice's files there
   -> PracticeSessionOutput.keep_root(root: Path)
 <- PracticeSessionOutput
 -> FidelityProgress.files(ticket="pet-visits", fidelity="stories-story-map")
-  -> FidelityGuidance.files()
+  -> FidelityGuidance.declared.files()
     -> FidelitySessionOutput.output_paths()
       -> FidelityGuidance.outputs
       <- dict
@@ -3215,7 +3215,7 @@ it should take the item off the Backlog
 it should show the ticket in Complete
 -> Ticket.close(ticket="pet-visits")
   -> Session.close()
-  -> Session.move_to_closed()
+  -> SessionFolder.move_to_closed()
   <- Session
 <- Ticket
 ```
@@ -3226,7 +3226,7 @@ it should show the ticket in Complete
 it should make main the active ticket
 -> Ticket.close(ticket="pet-visits")
   -> Session.close()
-  -> Session.move_to_closed()
+  -> SessionFolder.move_to_closed()
   <- Session
 <- Ticket
 -> Board.show()
@@ -3239,7 +3239,7 @@ it should make main the active ticket
 it should leave the ticket off the board
 -> Ticket.archive(ticket="pet-visits")
   -> Session.close()
-  -> Session.move_to_archive()
+  -> SessionFolder.move_to_archive()
   <- Session
 <- Ticket
 -> Board.show()
@@ -3401,7 +3401,7 @@ it should list the files a pattern finds there
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
 -> FidelityProgress.files(ticket="pet-visits", fidelity="bdd-behavior")
-  -> FidelityGuidance.files()
+  -> FidelityGuidance.declared.files()
     -> FidelitySessionOutput.output_paths()
       -> FidelityGuidance.outputs
       <- dict
@@ -3419,7 +3419,7 @@ it should list the files a named part of the path finds there, in folders at any
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
 -> FidelityProgress.files(ticket="pet-visits", fidelity="clean-engineering-model")
-  -> FidelityGuidance.files()
+  -> FidelityGuidance.declared.files()
     -> FidelitySessionOutput.output_paths()
       -> FidelityGuidance.outputs
       <- dict
@@ -3439,7 +3439,7 @@ it should list the file with whether it exists
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
 -> FidelityProgress.files(ticket="pet-visits", fidelity="stories-story-map")
-  -> FidelityGuidance.files()
+  -> FidelityGuidance.declared.files()
     -> FidelitySessionOutput.output_paths()
       -> FidelityGuidance.outputs
       <- dict
@@ -3457,7 +3457,7 @@ it should list only the fidelities asked for
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
 -> FidelityProgress.files(ticket="pet-visits", fidelity="stories-story-map")
-  -> FidelityGuidance.files()
+  -> FidelityGuidance.declared.files()
     -> FidelitySessionOutput.output_paths()
       -> FidelityGuidance.outputs
       <- dict
@@ -3806,7 +3806,7 @@ it should leave the branch checked out as it was
 <- Ticket
 -> Ticket.close(ticket="pet-visits", leaving=["commit", "merge"])
   -> Session.close()
-  -> Session.move_to_closed()
+  -> SessionFolder.move_to_closed()
   <- Session
 <- Ticket
 ```
@@ -3840,7 +3840,7 @@ it should list only the files the ticket's branch changed
 -> GuidanceAction.run(["git", "add", "src"], cwd=self.project.root, check=True)
   -> SessionLog.guidance_action(action: str)
 -> FidelityProgress.files(ticket="pet-visits", fidelity="bdd-behavior")
-  -> FidelityGuidance.files()
+  -> FidelityGuidance.declared.files()
     -> FidelitySessionOutput.output_paths()
       -> FidelityGuidance.outputs
       <- dict

@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 from cdd_guidance.actions.generate.generate import Generate
-from harness.guidance_actions import GuidanceArg, GuidanceAction
+from harness.guidance_actions import GuidanceArg, GuidanceAction, source_label
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.files import skill
@@ -23,7 +23,7 @@ class GrillContext(GuidanceAction):
     def _grill_answers_path(self) -> Path:
         """The session's grill-answers.md, in the .context folder of the session's root, so the answers outlast the
         session."""
-        return self.session.context_folder() / "grill-answers.md"
+        return self.session.paths.context_folder() / "grill-answers.md"
 
     def _appended_answers_content(self, existing: str | None, heading: str, body: str) -> str:
         """Compose the full grill-answers document after appending one entry (pure).
@@ -44,7 +44,7 @@ class GrillContext(GuidanceAction):
         Returns a JSON array of {path, kind} where kind is 'context-named' or 'context-folder'.
         folder: a folder the plan names, from the project's root or absolute. Omit it to scan the session's root."""
         results: list[dict] = []
-        root_path = self.path_named(folder) if folder else self.session.work_root
+        root_path = self.files.path_named(folder) if folder else self.session.work_root
         if not root_path.exists():
             return json.dumps([])
         for candidate in self._files_under(root_path):
@@ -84,7 +84,7 @@ class GrillContext(GuidanceAction):
         answers_path.parent.mkdir(parents=True, exist_ok=True)
         existing = answers_path.read_text(encoding="utf-8") if answers_path.exists() else None
         answers_path.write_text(self._appended_answers_content(existing, heading, body), encoding="utf-8")
-        self.wrote([answers_path])
+        self.files.wrote([answers_path])
         return str(answers_path)
 
     @mcp
@@ -122,5 +122,5 @@ class GrillContext(GuidanceAction):
         """Step 4 - If a question can be answered by exploring the codebase, explore first instead of asking."""
         """Step 5 - After each resolved insight, call write_grill_answer(heading=..., body=...) immediately. Do not batch writes. Keep entries concise; reference code paths rather than repeating logic."""
         tools(self.write_grill_answer)
-        source = self.source_label(plan, paths)
+        source = source_label(plan, paths)
         return f"Grilling session for: {source}" if source else "Grilling session started; the plan is the one the user describes."

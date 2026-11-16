@@ -15,7 +15,8 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
 from expects import contain, expect
 from mamba import before, context, description, it
 
-from harness.graph.violation import Violation
+from harness.graph.location import Location
+from harness.graph.violation import FoundBy, FoundOn, Violation
 from space.session import Session, Sessions
 from cdd_guidance.actions.validate.validation_report import ValidationReport
 
@@ -32,11 +33,9 @@ with description("a validation report"):
             source.write_text("\n" * 286 + "export function credentialsFailure() {}\n", encoding="utf-8")
             self.violations = [
                 Violation(
-                    "limit-operation-parameters",
+                    FoundBy("limit-operation-parameters", found_on=FoundOn(subject="Operation `credentialsFailure`")),
                     "takes 4 parameters.",
-                    subject="Operation `credentialsFailure`",
-                    location="src/customer/account/account.ts",
-                    line=287,
+                    Location("src/customer/account/account.ts", 287),
                 )
             ]
 

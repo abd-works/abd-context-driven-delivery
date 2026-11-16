@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from cdd_guidance.actions.diagnose.diagnose import Diagnose
-from harness.guidance_actions import GuidanceArg, GuidanceAction
+from harness.guidance_actions import GuidanceArg, GuidanceAction, WorkedGuidance
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.markdown import markdown
 from harness.agent_tools.agent_tools import agent_tool
@@ -27,13 +27,7 @@ class Improvement(GuidanceAction):
         violation: the rule name, or a path to the violation report. Do not paste the asset."""
         self._work_on(guidance)
         self.repair_loop
-
-        def on(item) -> str:
-            if isinstance(item, str):
-                return ""
-            return "\n\n".join(part.strip() for part in (str(item.examples or ""), item.templates or "") if part.strip())
-
-        self.run(on, action="repair")
+        self.run(self._examples_and_templates, action="repair")
         "After the fix is written, call refresh with exactly the files you wrote, so the session's graph holds them as they are now; nothing watches the files."
         if self._session is not None:
             tools(self.graph.refresh)
@@ -46,6 +40,14 @@ class Improvement(GuidanceAction):
             "before any test. Do not list tactical file fixes. Then fail-first "
             "at the seam. See repair.md."
         )
+
+    def _examples_and_templates(self, guidance: WorkedGuidance) -> str:
+        """The examples and templates of the fidelity a repair works at on one listed practice, which show the fix the
+        shape the practice expects; text guidance has none."""
+        if isinstance(guidance, str):
+            return ""
+        parts = (str(guidance.examples or ""), guidance.templates or "")
+        return "\n\n".join(part.strip() for part in parts if part.strip())
 
     def _diagnose(self) -> Diagnose:
         """The diagnosis the repair starts with, whose diagnose tool the agent calls on what this repair lists."""

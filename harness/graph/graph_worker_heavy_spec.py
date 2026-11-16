@@ -12,7 +12,7 @@ from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.graph.graph import Graph
-from harness.agent_tools.tool_call import ToolCall
+from harness.agent_tools.tool_call import ToolCall, ToolRequest
 from harness.graph.graph_build import GraphBuildFailed, WorkerBuild
 from harness.graph.saved_graph import SavedGraph
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
@@ -36,7 +36,7 @@ _READ_BY_EACH_PRACTICE = (
 )
 
 # A call the cdd server answers for a chat, and one a spec or a script makes in process.
-_FROM_A_CHAT = ToolCall(answers_a_chat=True)
+_FROM_A_CHAT = ToolCall(request=ToolRequest(answers_a_chat=True))
 _IN_PROCESS = ToolCall()
 
 
@@ -79,19 +79,25 @@ def _class_names(graph: Graph) -> list[str]:
     return sorted(node.name for node in graph.practice("clean_engineering").reading.in_graph.nodes("OoadClass"))
 
 
-class _CountingTakes(Graph):
-    """A graph that counts the worker answers its practices took as changes, not as a whole graph read back."""
+class _CountedTakes:
+    """Counts the worker answers a build took as changes, not as a whole graph read back, while it is open."""
 
     def __init__(self) -> None:
-        super().__init__()
         self.takes = 0
-        take = self.practices.take
+        self._take = WorkerBuild._take
 
-        def counted(changes) -> None:
+    def __enter__(self) -> "_CountedTakes":
+        take = self._take
+
+        def counted(build: WorkerBuild, changes: object) -> None:
             self.takes += 1
-            take(changes)
+            take(build, changes)
 
-        self.practices.take = counted
+        WorkerBuild._take = counted
+        return self
+
+    def __exit__(self, *_exception: object) -> None:
+        WorkerBuild._take = self._take
 
 
 class _SerialisedHere:
@@ -331,13 +337,14 @@ with description("a graph built for a chat's call"):
         # answer instead of the server writing its graph out, and the server takes back only what the refresh changed.
         with context("that is refreshed in a worker with each practice's file in turn"):
             with before.all:
-                self.chained = _CountingTakes()
+                self.chained = Graph()
                 self.chained.open_saved(self.every)
-                for file in _READ_BY_EACH_PRACTICE:
-                    self.chained.refresh([file], _FROM_A_CHAT)
+                with _CountedTakes() as self.counted:
+                    for file in _READ_BY_EACH_PRACTICE:
+                        self.chained.refresh([file], _FROM_A_CHAT)
 
             with it("should take each refresh after the first as the changes its worker answers"):
-                expect(self.chained.takes).to(equal(len(_READ_BY_EACH_PRACTICE) - 1))
+                expect(self.counted.takes).to(equal(len(_READ_BY_EACH_PRACTICE) - 1))
 
             with it("should hold every practice as a fresh build gives it"):
                 expect({key: _practice_state(self.chained, key) for key in _EVERY_PRACTICE}).to(equal(self.fresh))

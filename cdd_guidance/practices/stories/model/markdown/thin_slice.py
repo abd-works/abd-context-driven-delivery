@@ -54,7 +54,7 @@ class MarkdownIncrement(Increment):
         """This increment as the thin slice writes it, numbered number: as read where it is unchanged."""
         heading = f"### Increment {number}: {self.name}"
         if self.lines is None:
-            return [heading, *(described(self.description_text) or [""]), _STORIES_LABEL, "", *map(_bullet, self.stories), ""]
+            return [heading, *(described(self.description_text) or [""]), _STORIES_LABEL, "", *map(self._bullet, self.stories), ""]
         lines = self.lines
         bullets = self._bullets()
         # The first story of an increment read with none sits apart from the label above it.
@@ -72,28 +72,27 @@ class MarkdownIncrement(Increment):
         """Each bullet as read, its story renamed where the map renamed it, a bullet naming no story of the map kept as
         written; a story added since follows them."""
         delivered = {id(story) for story in self.stories}
-        written = [_bullet_as_read(*bullet) for bullet in self.lines.bullets if bullet[1] is None or id(bullet[1]) in delivered]
+        written = [self._bullet_as_read(*bullet) for bullet in self.lines.bullets if bullet[1] is None or id(bullet[1]) in delivered]
         shown = {id(story) for _, story, _ in self.lines.bullets}
-        return written + [_bullet(story) for story in self.stories if id(story) not in shown]
+        return written + [self._bullet(story) for story in self.stories if id(story) not in shown]
 
+    def _bullet_as_read(self, raw: str, story: Optional[Story], name: str) -> str:
+        """A bullet as it was written, while it names no story of the map or its story keeps the name it was read with."""
+        return raw if story is None or story.name == name else self._bullet(story)
 
-def _bullet_as_read(raw: str, story: Optional[Story], name: str) -> str:
-    """A bullet as it was written, while it names no story of the map or its story keeps the name it was read with."""
-    return raw if story is None or story.name == name else _bullet(story)
-
-
-def _bullet(story: Story) -> str:
-    return f"- *{story.name}*"
+    def _bullet(self, story: Story) -> str:
+        return f"- *{story.name}*"
 
 
 class ThinSlice:
     """The thin slice file one markdown story map keeps its increments in, with the lines it was read with: those above
     its first increment, the number its first increment carries, and its text then."""
 
-    def __init__(self, path: Path, above: List[str], first_number: int = 1, text: str = "") -> None:
+    def __init__(self, path: Path, reading: "_ThinSliceReading", text: str) -> None:
+        """The thin slice at path as reading read text, the file then; text is empty for a thin slice not written yet."""
         self.path = path
-        self.above = above
-        self.first_number = first_number
+        self.above = reading.above
+        self.first_number = reading.first_number
         self.text_as_read = text
 
     def text(self, increments: List[MarkdownIncrement]) -> str:
@@ -121,13 +120,12 @@ def thin_slice_in(folder: Path, story_map: StoryModel, project: Path) -> ThinSli
     """The thin slice in folder (``StoryMapFiles.thin_slicing``), its increments read onto story_map, each delivering
     story_map's own stories and naming its file from project; a new `thin-slice.md` in folder when it holds none."""
     found = StoryMapFiles(folder).thin_slicing()
-    if found is None:
-        return ThinSlice(Path(folder) / "thin-slice.md", list(_NEW_THIN_SLICE))
-    text = found.read_text(encoding="utf-8")
-    reading = _ThinSliceReading(story_map, path_from(Path(project).resolve(), found))
-    for increment in reading.read(text.splitlines()):
-        story_map.append_increment(increment)
-    return ThinSlice(found, reading.above, reading.first_number, text)
+    path = found if found is not None else Path(folder) / "thin-slice.md"
+    text = found.read_text(encoding="utf-8") if found is not None else ""
+    reading = _ThinSliceReading(story_map, path_from(Path(project).resolve(), path))
+    for increment in reading.read(text.splitlines() if found is not None else list(_NEW_THIN_SLICE)):
+        story_map.increments.append(increment)
+    return ThinSlice(path, reading, text)
 
 
 class _ThinSliceReading:
@@ -184,27 +182,25 @@ class _ThinSliceReading:
         elif self.in_stories and not raw.strip():
             lines.above.append(raw)
         else:
-            self.in_stories = _read_field(raw.strip(), increment)
+            self.in_stories = self._read_field(raw.strip(), increment)
             (lines.above if self.in_stories or lines.above else lines.described).append(raw)
 
     def _read_bullet(self, raw: str, named: str, increment: MarkdownIncrement) -> None:
         """A story bullet: the increment delivers the map's story of that name; a name the map lacks is kept as written."""
         if self._stories_by_name is None:
-            self._stories_by_name = self.story_map.stories_by_name()
+            self._stories_by_name = self.story_map.descendants.stories_by_name()
         story = self._stories_by_name.get(strip_markup(named))
         found = [story] if story is not None else []
         increment.lines.bullets.append((raw, found[0] if found else None, found[0].name if found else ""))
         increment.stories.extend(found)
 
-
-
-def _read_field(stripped: str, increment: MarkdownIncrement) -> bool:
-    """Keep the outcome, slicing notes or decision prompt the line gives increment; true when the line is the label its
-    stories follow."""
-    if match := _KV_OUTCOME.match(stripped):
-        increment.outcome = strip_markup(match.group(1))
-    elif match := _KV_SLICING.match(stripped):
-        increment.slicing_notes = strip_markup(match.group(1))
-    elif match := _KV_DECISION.match(stripped):
-        increment.decision_prompt = strip_markup(match.group(1))
-    return bool(_KV_STORIES.match(stripped))
+    def _read_field(self, stripped: str, increment: MarkdownIncrement) -> bool:
+        """Keep the outcome, slicing notes or decision prompt the line gives increment; true when the line is the label
+        its stories follow."""
+        if match := _KV_OUTCOME.match(stripped):
+            increment.outcome = strip_markup(match.group(1))
+        elif match := _KV_SLICING.match(stripped):
+            increment.slicing_notes = strip_markup(match.group(1))
+        elif match := _KV_DECISION.match(stripped):
+            increment.decision_prompt = strip_markup(match.group(1))
+        return bool(_KV_STORIES.match(stripped))

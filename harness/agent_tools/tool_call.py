@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from contextlib import contextmanager
+from dataclasses import dataclass, replace
 from contextvars import ContextVar
 from pathlib import Path
 from typing import Any, ClassVar, Iterator, Protocol
@@ -36,6 +37,17 @@ class SessionOpener(Protocol):
         """The session whose session.json is session_file, a path from the call's project or an absolute one."""
 
 
+class AnsweringMcpHost(Protocol):
+    """The MCP host answering a call the cdd server serves, which a diagnostics tool probes: the server of the checkout
+    it serves from, and each tool it runs by its published name. The host is harness/mcp, which depends on this module,
+    so a call names only what it asks of the host."""
+
+    @property
+    def checkout_server(self) -> Any: ...
+
+    def dispatch(self, name: str, arguments: dict[str, object] | None = None, project: Path | None = None) -> object: ...
+
+
 class SessionsNotLoaded(LookupError):
     """A call named a session, and no module that keeps sessions has registered how to open one in this process."""
 
@@ -44,86 +56,95 @@ class SessionsNotLoaded(LookupError):
         self.session_file = session_file
 
 
+@dataclass(frozen=True)
+class ToolRequest:
+    """The request a call answers: the chat that sent it and, for a call the cdd server answers, the tool it names by its
+    published name, the MCP host answering it, and whether that host answers it for a chat. A call made in process, by
+    a spec or a script, answers an empty request: no tool, no host, and no chat unless it names one.
+
+    Every chat shares the server's one interpreter, so work a call that answers a chat starts that would hold the
+    interpreter for minutes, such as a graph build, runs in a worker process; a call made in process does that work in
+    its own process."""
+
+    chat: ChatPointer | None = None
+    tool: str = ""
+    mcp_host: AnsweringMcpHost | None = None
+    answers_a_chat: bool = False
+
+    def sent_by(self, chat: ChatPointer | None) -> ToolRequest:
+        """This request as chat sent it; the chat it names already when chat is none."""
+        return self if chat is None else replace(self, chat=chat)
+
+
+class CallsBeingAnswered:
+    """The call a tool is answering on each thread, so code deep under it, such as a board switching its session, keeps
+    the open session of the call's own chat without each layer passing the chat on. The process keeps one
+    (``CALLS_BEING_ANSWERED``): the MCP host and an in-process answer mark the call they run, and code under them asks
+    for it."""
+
+    def __init__(self) -> None:
+        self._answering: ContextVar[ToolCall | None] = ContextVar("answering_call", default=None)
+
+    @property
+    def current(self) -> ToolCall | None:
+        """The call a tool is answering now on this thread; none outside a call."""
+        return self._answering.get()
+
+    @contextmanager
+    def answering(self, call: ToolCall) -> Iterator[ToolCall]:
+        """Mark call as the one being answered on this thread while its tool runs."""
+        token = self._answering.set(call)
+        try:
+            yield call
+        finally:
+            self._answering.reset(token)
+
+
+CALLS_BEING_ANSWERED = CallsBeingAnswered()
+
+
 class ToolCall:
     """One call of a tool as its caller made it: the arguments it sent, the folder of the project the calling chat
-    works on, and that chat. One cdd server answers every chat, so a tool reads its project, its chat, and the session
-    open there from its own call; read from whatever the process worked on last, a call from one chat would act on
-    another chat's project. A call that names no project, such as one a spec makes in process, works in no session.
-
-    A call the cdd server answers also names the tool it calls, by its published name, and the MCP host answering it,
-    which a diagnostics tool probes; a call made in process names neither. A call the server answers for a chat says so
-    (``answers_a_chat``): every chat shares the server's one interpreter, so work the call starts that would hold it for
-    minutes, such as a graph build, runs in a worker process. A call made in process, by a spec or a script, does that
-    work in its own process."""
+    works on, and the request it answers (``request``): the chat it came from, and for a call the cdd server answers,
+    the tool it names and the MCP host answering it. One cdd server answers every chat, so a tool reads its project, its
+    chat, and the session open there from its own call; read from whatever the process worked on last, a call from one
+    chat would act on another chat's project. A call that names no project, such as one a spec makes in process, works
+    in no session."""
 
     _sessions: ClassVar[SessionOpener | None] = None
-    # The call a tool is answering on this thread, so code deep under it, such as a board switching its session, keeps
-    # the open session of the call's own chat without each layer passing the chat on.
-    _answering: ClassVar[ContextVar[ToolCall | None]] = ContextVar("answering_call", default=None)
 
     def __init__(
         self,
         arguments: dict[str, Any] | None = None,
         project: Path | str | None = None,
-        chat: ChatPointer | None = None,
-        *,
-        tool: str = "",
-        mcp_host: Any = None,
-        answers_a_chat: bool = False,
+        request: ToolRequest = ToolRequest(),
     ) -> None:
         self.arguments = dict(arguments or {})
         self.project = Path(project).resolve() if project is not None else None
-        self.chat = chat
-        self.tool = tool
-        self.mcp_host = mcp_host
-        self.answers_a_chat = answers_a_chat
+        self.request = request
         self._session: Any = None
 
     @classmethod
-    def sent(
-        cls,
-        arguments: dict[str, Any] | None,
-        project: Path | str | None,
-        *,
-        tool: str = "",
-        mcp_host: Any = None,
-        answers_a_chat: bool = False,
-        sender: ChatPointer | None = None,
-    ) -> ToolCall:
-        """A call as a chat sent it: the chat its arguments name is taken out of them and kept as the call's chat, so
-        the tool is handed only its own arguments; sender, the chat the request itself names, is the call's chat when
-        the arguments name none. A ``chat_folder`` argument names the folder the chat works in now, and is the call's
+    def sent(cls, arguments: dict[str, Any] | None, project: Path | str | None, request: ToolRequest = ToolRequest()) -> ToolCall:
+        """A call as a chat sent it: the chat its arguments name is taken out of them and kept as the request's chat, so
+        the tool is handed only its own arguments; the chat the request itself names is the call's chat when the
+        arguments name none. A ``chat_folder`` argument names the folder the chat works in now, and is the call's
         project in place of project, so its sessions are read from that folder's checkout."""
         chat, remaining = ChatPointer.taken_from(arguments)
         chat_folder = str(remaining.pop(CHAT_FOLDER_ARGUMENT, "") or "").strip()
-        return cls(remaining, chat_folder or project, chat or sender, tool=tool, mcp_host=mcp_host, answers_a_chat=answers_a_chat)
+        return cls(remaining, chat_folder or project, request.sent_by(chat))
 
     @property
     def chat_id(self) -> str:
         """The id of the chat the call came from; empty when it names none."""
-        chat = self.chat.id if self.chat is not None else ""
+        chat = self.request.chat.id if self.request.chat is not None else ""
         return "" if chat == _NO_CHAT else chat
-
-    @classmethod
-    def answering(cls) -> ToolCall | None:
-        """The call a tool is answering now on this thread; none outside a call."""
-        return cls._answering.get()
-
-    @contextmanager
-    def being_answered(self) -> Iterator[ToolCall]:
-        """Mark this call as the one being answered while the tool runs."""
-        token = ToolCall._answering.set(self)
-        try:
-            yield self
-        finally:
-            ToolCall._answering.reset(token)
 
     @property
     def identity(self) -> str:
         """Two calls with the same identity ask for the same work: the same tool, on the same project, with the same
         arguments, from the same chat."""
-        chat = self.chat.id if self.chat is not None else ""
-        return json.dumps([self.tool, str(self.project), self.arguments, chat], sort_keys=True, default=str)
+        return json.dumps([self.request.tool, str(self.project), self.arguments, self.chat_id], sort_keys=True, default=str)
 
     @property
     def named_paths(self) -> list[str]:

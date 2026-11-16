@@ -44,30 +44,29 @@ class CleanEngineering(PracticeGuidance):
     # document describes, which the graph reading keeps.
     model_document_format = MarkdownCleanEngineeringModel
 
+    default_workspace_folder = "src"
+    # The class model each format reads and writes; the whiteboard model is imported only when a whiteboard is drawn.
+    format_adapters = {
+        "markdown": model_document_format,
+        "json": JsonCleanEngineeringModel,
+        "python": PythonCleanEngineeringModel,
+        "typescript": TypeScriptCleanEngineeringModel,
+        "java": JavaCleanEngineeringModel,
+        "javascript": JavaScriptCleanEngineeringModel,
+        "drawio": DrawIOCleanEngineeringModel,
+        "whiteboard": (
+            "cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_model",
+            "WhiteboardCleanEngineeringModel",
+        ),
+        "sketch": SketchCleanEngineeringModel,
+    }
+
     def __init__(
         self,
         fidelity: str = "modules",
         format: str | None = None,
     ) -> None:
-        super().__init__(
-            format=format,
-            fidelity=fidelity,
-            default_workspace_folder="src",
-            formats={
-                "markdown": self.model_document_format,
-                "json": JsonCleanEngineeringModel,
-                "python": PythonCleanEngineeringModel,
-                "typescript": TypeScriptCleanEngineeringModel,
-                "java": JavaCleanEngineeringModel,
-                "javascript": JavaScriptCleanEngineeringModel,
-                "drawio": DrawIOCleanEngineeringModel,
-                "whiteboard": (
-                    "cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_model",
-                    "WhiteboardCleanEngineeringModel",
-                ),
-                "sketch": SketchCleanEngineeringModel,
-            },
-        )
+        super().__init__(format=format, fidelity=fidelity)
         self._drawio: Drawio | None = None
 
     @property

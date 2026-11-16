@@ -22,7 +22,8 @@ from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_
 
 def _shop() -> CleanEngineeringModel:
     """A cart that extends a basket and is auditable, marked as an aggregate root."""
-    cart = OoadClass("Cart", 3, intent="A shopper's cart.", operations=[Operation(name="total", return_type="int")])
+    cart = OoadClass("Cart", 3, intent="A shopper's cart.")
+    cart.operations = [Operation(name="total", return_type="int")]
     cart.stereotypes = ["Aggregate Root", "Entity"]
     cart.bases = ["Basket", "Auditable"]
     shop = Module("shop", 1)

@@ -14,7 +14,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from harness.process.git import RepoConnectError
-from space.repo.mock_repo import MockGit, MockRepo
+from space.repo.mock_repo import MockGit, MockOrigin, MockRepo
 from space.session.session_saves import SessionSaves
 
 _WAIT_SECONDS = 20
@@ -43,9 +43,15 @@ class _OriginThatMayRefuse(MockRepo):
 
     refuses = False
 
+    def __init__(self, root: Path, held: MockGit) -> None:
+        super().__init__(root, held)
+        self.origin = _RefusingOrigin(self)
+
+
+class _RefusingOrigin(MockOrigin):
     def push_upstream(self) -> None:
-        if self.refuses:
-            raise RepoConnectError(f"Cannot connect git: git push -u origin main failed in {self.root}: origin does not answer.")
+        if self._repo.refuses:
+            raise RepoConnectError(f"Cannot connect git: git push -u origin main failed in {self._repo.root}: origin does not answer.")
         super().push_upstream()
 
 
@@ -56,7 +62,7 @@ with description("the saves of a repository's session folders on main"):
         (self.clone / "README.md").write_text("project\n", encoding="utf-8")
         self.held = MockGit(self.clone)
         self.held.make_clone()
-        self.held.add_origin()
+        self.held.origin.add()
         self.folder = _ticket_folder(self.clone)
         self.repository = _OriginThatMayRefuse(self.clone, self.held)
         self.saves = SessionSaves(self.repository, self.folder, settle_seconds=_SETTLE_SECONDS)
@@ -87,7 +93,7 @@ with description("the saves of a repository's session folders on main"):
                 self.saves.retry()
 
             with it("should push the change"):
-                expect(_until(lambda: self.held.origin_logs["main"][-1] == "sessions: checkout-flow move Specification")).to(equal(True))
+                expect(_until(lambda: self.held.origin.logs["main"][-1] == "sessions: checkout-flow move Specification")).to(equal(True))
 
             with it("should clear the failure"):
                 expect(_until(lambda: self.saves.failure is None)).to(equal(True))

@@ -177,15 +177,17 @@ test.describe('with a chat connected', () => {
     }
 
     test.describe('Send the fidelity to validate', () => {
+      // Opening a ticket shows its own chat at the top, and none while it has none, so the chat is picked with
+      // billing-report open, which makes it billing-report's chat.
       test.beforeEach(async ({ page }) => {
         seedActive('billing-report')
-        await openWithChat(page)
-        await (await openBillingStoryMap(page)).getByRole('button', { name: 'validate', exact: true }).click({ timeout: 5_000 }).catch(() => undefined)
+        await openBoard(page)
+        const bar = await openBillingStoryMap(page)
+        await waitForChat(page, chat)
+        await bar.getByRole('button', { name: 'validate', exact: true }).click()
       })
 
-      // Fails today: the fixture's .context/story-map.md is not where the story_map fidelity declares its markdown
-      // (.context/story-map.md), so with nothing recorded the bar has nothing to validate and keeps validate off.
-      // The command also names the ticket's session.json.
+      // The command names the ticket's session.json.
       test('Then the chat receives the command /actions-validate stories-story-map', async () => {
         await expect.poll(() => receivedBy(chat)).toContain('/actions-validate stories-story-map session=.sessions/billing-report/session.json')
       })

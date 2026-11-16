@@ -16,7 +16,10 @@ import logging
 import socket
 import struct
 import sys
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    import uvicorn
 
 logger = logging.getLogger(__name__)
 # Windows' ERROR_NETNAME_DELETED: the caller closed its connection before the server accepted it.
@@ -43,7 +46,7 @@ class _ListeningLoop:
     """Makes the event loop for one uvicorn server. A failed accept that leaves the listening socket closed stops the
     server, so the process exits and frees the port, and the next connect starts a server that accepts again."""
 
-    def __init__(self, server: Any) -> None:
+    def __init__(self, server: uvicorn.Server) -> None:
         self._server = server
 
     def new_event_loop(self) -> asyncio.AbstractEventLoop:

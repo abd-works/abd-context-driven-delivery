@@ -21,7 +21,7 @@ with description("an MCP sketch prompt"):
         repo = Path(__file__).resolve().parents[3]
         host = McpHost.from_repo(repo)
         prose = "Three client perspectives: prospect onboarding and active account."
-        result = str(host.checkout_server.invoke_prompt("sketch.sketch", {"guidance": prose}))
+        result = str(host.checkout_server.invoke("sketch.sketch", {"guidance": prose}))
         expect(result).to(contain("Conduct a relentless grilling interview"))
         expect("ModuleNotFoundError" in result).to(equal(False))
 
@@ -31,7 +31,7 @@ with description("an MCP sketch prompt"):
         repo = Path(__file__).resolve().parents[3]
         host = McpHost.from_repo(repo)
         result = str(
-            host.checkout_server.invoke_prompt(
+            host.checkout_server.invoke(
                 "sketch.sketch",
                 {"guidance": ["cdd_guidance.practices.bdd.bdd:Bdd"]},
             )
@@ -48,7 +48,7 @@ with description("an MCP sketch prompt"):
             host = McpHost.from_repo(_REPO_ROOT)
             host.checkout_server.project = project.root
             result = str(
-                host.checkout_server.invoke_prompt(
+                host.checkout_server.invoke(
                     "sketch.sketch",
                     {"guidance": ["stories", "clean-engineering-model"]},
                 )

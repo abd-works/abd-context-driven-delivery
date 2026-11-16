@@ -15,7 +15,8 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
 from expects import equal, expect
 from mamba import after, before, context, description, it
 
-from harness.catalog_generator.catalog_generator import Catalog
+from harness.catalog_generator.catalog_generator import Catalog, CatalogProject
+from harness.catalog_generator.git_citation import GitCitation
 
 
 with description("a catalog generated for a project") as self:
@@ -31,12 +32,12 @@ with description("a catalog generated for a project") as self:
             self.project.mkdir()
 
         with it("should write its pages under the project's catalog folder"):
-            out_root = Catalog(repo_url="https://example.com/cdd", ref="abc", project=self.project).out_root
+            out_root = Catalog(CatalogProject(self.project), GitCitation("https://example.com/cdd", "abc")).out_root
             expect(out_root).to(equal(self.project / "catalog"))
 
     with context("that is the checkout serving the tools"):
         with it("should write its pages under that checkout's cdd_guidance/catalog folder"):
-            out_root = Catalog(repo_url="https://example.com/cdd", ref="abc", project=_REPO_ROOT).out_root
+            out_root = Catalog(CatalogProject(_REPO_ROOT), GitCitation("https://example.com/cdd", "abc")).out_root
             expect(out_root).to(equal(_REPO_ROOT / "cdd_guidance" / "catalog"))
 
     with context("that a tool call names"):
@@ -49,5 +50,5 @@ with description("a catalog generated for a project") as self:
 
     with context("with an output folder named by the caller"):
         with it("should write its pages into that folder"):
-            out_root = Catalog(repo_url="https://example.com/cdd", ref="abc", out_root=str(self.tmp / "out"), project=self.tmp).out_root
+            out_root = Catalog(CatalogProject(self.tmp, self.tmp / "out"), GitCitation("https://example.com/cdd", "abc")).out_root
             expect(out_root).to(equal(self.tmp / "out"))

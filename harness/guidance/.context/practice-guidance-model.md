@@ -8,7 +8,7 @@ Markdown channel for `harness/guidance`. The module's purpose, seam, and depende
 
 ## Language companion
 
-A *PracticeGuidance* reads its *FidelityGuidance* children from the Fidelities section of `{practice}/{practice}.md`; each fidelity's `stage` (held as its *ApproachStage*), `default_format`, `outputs`, `judged_on`, and optional `clean_engineering` companion come from the YAML fields in its block, which the fidelity applies itself (`apply_settings`). The practice holds its document (`document`, read once), and each fidelity reads its block, its instructions, rules, templates, template file, and declared files from itself, so an action holding a fidelity reads only that fidelity's text whatever fidelity is current. Each guidance hands its *Markdown* a *MarkdownScope*: its folder, slug, fidelity, and format. The practice's current fidelity, `fidelities.current`, is fixed at construction: a session's practices are shared by every call in it, so an action holds the fidelity it works at and never moves the practice's. Each fidelity keeps the format it last used, so the practice's `format` is its current fidelity's. Callers convert artifacts through *Render*, which asks the fidelity the action works at (*FidelityGuidance.render* or *render_files*); that fidelity hands its practice a *RenderRequest* that carries it. A practice that owns an artifact keeps one adapter per format under `{practice}/model/{format}/` and passes them as `formats`; every practice CDD ships passes formats today; a practice with none renders through the Clean Engineering companion of the fidelity the request works at (`RenderRequest.companion`, which is `FidelityGuidance.clean_engineering`).
+A *PracticeGuidance* reads its *FidelityGuidance* children from the Fidelities section of `{practice}/{practice}.md`; each fidelity's `stage` (held as its *ApproachStage*), `default_format`, `outputs`, `judged_on`, and optional `clean_engineering` companion come from the YAML fields in its block, which the fidelity applies itself when its block makes it (`FidelityGuidance.from_block`). The practice holds its document (`document`, read once), and each fidelity reads its block, its instructions, rules, templates, template file, and declared files from itself, so an action holding a fidelity reads only that fidelity's text whatever fidelity is current. Each guidance hands its *Markdown* a *MarkdownScope*: its folder, slug, fidelity, and format. The practice's current fidelity, `fidelities.current`, is fixed at construction: a session's practices are shared by every call in it, so an action holds the fidelity it works at and never moves the practice's. Each fidelity keeps the format it last used, so the practice's `format` is its current fidelity's. Callers convert artifacts through *Render*, which asks the fidelity the action works at (*FidelityGuidance.render* or *render_files*); that fidelity hands its practice a *RenderRequest* that carries it. A practice that owns an artifact keeps one adapter per format under `{practice}/model/{format}/` and passes them as `formats`; every practice CDD ships passes formats today; a practice with none renders through the Clean Engineering companion of the fidelity the request works at (`RenderRequest.companion`, which is `FidelityGuidance.clean_engineering`).
 
 ---
 
@@ -50,15 +50,22 @@ overview, guidance, rules, templates, instructions
 	// gathered from every child
 ----
 child(name: str, body: str): FidelityGuidance
-	-> FidelityGuidance.apply_settings
+	-> FidelityGuidance.from_block
 
 ## PracticeGuidance : Guidance
 
 One practice: its identity, its words, its fidelities, and its set. It holds three parts, each made once at construction:
 its formats, its part in the knowledge graph, and its schema.
 
-PracticeGuidance(format, fidelity, default_workspace_folder, formats)
+PracticeGuidance(format, fidelity)
 ------
+default_workspace_folder: str
+	// a class attribute each practice sets, such as "tests" for Stories
+format_adapters: dict[str, Any]
+	// a class attribute: the parse and render adapter of each format the practice owns
+domain_markdown_path: Path
+scoped_markdown: str
+	// overview, guidance, shared rules, language, and the active fidelity's block (every block when none is active)
 fidelities: GuidanceCollection
 	// the Fidelities section; fidelities.current is the active fidelity
 format: Format
@@ -104,16 +111,11 @@ hold_set(practices: dict[str, PracticeGuidance], supplements: list[PracticeSuppl
 	// holds the practice it extends, its Clean Engineering companion, and each supplement whose supplemented_practices hold it
 answers_to(slug: str): PracticeGuidance | FidelityGuidance | None
 	// itself for its slug, the fidelity whose slug it is, else none
-fidelity_called(name: str): FidelityGuidance | None
-	// the fidelity named by its bare name, snake or kebab case
 work_in(session_output: PracticeSessionOutput): None
 	// the practice works in that output's session; each fidelity is given its FidelitySessionOutput through FidelityGuidance.work_in
-domain_markdown_path(): Path
-scoped_markdown(): str
-	// overview, guidance, shared rules, language, and the active fidelity's block (every block when none is active)
 generate_output(): str
 	// instruction-only by default; a practice that owns generation overrides it
-render(format: str, content: Any, source: str | None, previous: str): dict
+render(format: str, content: RenderContent, source: str | None, previous: str): dict
 	// at the fidelity the practice was made at, which renders it; a practice with no fidelity renders through its formats
 	-> fidelities.current.render
 	-> formats.render
@@ -148,16 +150,16 @@ graph_overlay: GraphOverlay
 ----
 hold_set(practices: dict[str, PracticeGuidance]): None
 	// resolves the front matter's practice and fidelity names into the set's own fidelities, once
-	-> practices[key].fidelity_called(name)
+	-> practices[key].fidelities.called(name)
 text_for(fidelity: FidelityGuidance): str
 	// its Overview and Guidance, then each section whose heading names that fidelity's slug, headed "## Supplement: {name}"; empty for a fidelity it does not supplement
 rules_for(fidelity: FidelityGuidance): list[RulesCollection]
 	// the Rules of each section whose heading names that fidelity's slug; empty for a fidelity it does not supplement
 instructions: str
 	// read on its own (its skill and MCP prompt): its Overview, its Guidance, then every section named for a fidelity
-checked_rule_collections(): list[RulesCollection]
+checked_rule_collections: list[RulesCollection]
 	// the Rules of every section named for a fidelity; it has no Shared rules
-every_rule(): list[Rule]
+every_rule: list[Rule]
 
 ## PracticeFormats
 
@@ -231,7 +233,7 @@ checks(): dict[str, PracticeGraphRule]
 
 One fidelity of a practice, such as Stories' `story_map`.
 
-FidelityGuidance(name, stage, default_format, clean_engineering)
+FidelityGuidance(name, stage)
 ------
 name: str
 stage: str
@@ -247,10 +249,10 @@ clean_engineering: FidelityGuidance | None
 	// the Clean Engineering fidelity its clean_engineering field names: that fidelity itself, of its practice's companion
 	Invariant: Clean Engineering's own fidelities have none; a practice made apart from any set has none
 companion_instructions: str
-	// the companion's instructions_in this fidelity's format while it is code, else the companion's own format
-instructions_in(format: Format): str
-	// its instructions with its template in format; instructions is instructions_in(format)
-templates_in(format: Format): str
+	// the companion's _instructions_in this fidelity's format while it is code, else the companion's own format
+_instructions_in(format: Format): str
+	// its instructions with its template in format; instructions is _instructions_in(format)
+_templates_in(format: Format): str
 session_output: FidelitySessionOutput | None
 	// set when a session works on the practice
 slug: str
@@ -274,42 +276,53 @@ templates: str
 	// its template in the format it works in, else its default format
 examples: str
 	// its practice's examples at this fidelity and format
-----
-checked_rule_collections(): list[RulesCollection]
+checked_rule_collections: list[RulesCollection]
 	// the practice's shared rules, then its own, then each supplement's rules for this fidelity
 	-> PracticeSupplement.rules_for
-every_rule(): list[Rule]
+every_rule: list[Rule]
 	-> practice_guidance.every_rule
+declared: DeclaredOutputs
+	// the files its outputs declare, made again whenever its outputs change
+----
 generate_output(): str
 	// the practice's generate_output recipe, expanded
-render(format: str, content: Any, source: str | None, previous: str): dict
+render(format: str, content: RenderContent, source: str | None): dict
 	// at this fidelity: content is in source, else in this fidelity's format
 	-> practice_guidance.formats.render RenderRequest(fidelity=self)
 render_files(format: str, paths: list[str] | str, source: str | None): dict
 	// a renderer that links to other files finds them in the folder of the first path
 	-> practice_guidance.formats.read
 	-> practice_guidance.formats.render RenderRequest(fidelity=self)
-declares(path: str, format: str = ""): bool
-	// a file one of its outputs names, in format when one is named; DeclaredFile matches the end of the path
 work_in(session_output: FidelitySessionOutput): None
+	// its reports and where a new one goes are its session output's: session_output.validation_reports.listed(), validation_reports.new_path()
+
+## DeclaredOutputs
+
+The files one fidelity declares, made from its outputs. The fidelity holds it (`fidelity.declared`).
+
+DeclaredOutputs(fidelity: FidelityGuidance, outputs: dict[str, str | list[str]])
+------
+outputs: dict[str, str | list[str]]
+----
+includes(path: str, format: str = ""): bool
+	// a file one of its outputs names, in format when one is named; DeclaredFile matches the end of the path
 output_paths(): dict[str, list[str]]
-	-> session_output.output_paths
+	-> fidelity.session_output.output_paths
 files(): dict[str, list]
-	-> session_output.files
-has_declared_output(): bool
-	// its reports and where a new one goes are its session output's: session_output.reports(), new_report_path()
+	-> fidelity.session_output.files
+has_output(): bool
+files_to_review(): dict[str, list]
+	// its fidelity's own files, or those of the fidelities it reviews files of, each file once
 
 ## Rule
 
 One named rule a practice or fidelity holds.
 
-Rule(slug: str, body: str, fidelity: str | None, tag: str = "base")
+Rule(slug: str, body: str, fidelity: str | None)
 ------
 slug: str
 body: str
 fidelity: str | None
-tag: str
-	// "base" or "project"
 practice: str
 pattern: str
 shared: bool
@@ -334,12 +347,10 @@ from_markdown(text: str, fidelity: str | None, parent): RulesCollection
 formatted(): str
 validate(): str
 	// gathered from every rule
-inject_rules(payload: HookPayload): dict
+inject_rules(tool_use: HookPayload): dict
 	// @Hook("postToolUse", disabled=True): the rules that apply to an edited file, as additional_context, with a read-only notice as the toast
 	// notes the rules in the session open in the hook's project, even while the hook is disabled
-	-> ToolCall(payload.tool_input, payload.project).session.log.injected_rules.note
-scan(paths: Any): Any
-	// none here; a practice's rules collection that scans files overrides it
+	-> ToolCall(tool_use.tool_input, tool_use.project).session.log.injected_rules.note
 
 ## AppliesTo
 
@@ -348,7 +359,7 @@ AppliesTo(always_apply, globs)
 always_apply: bool | None
 globs: str
 ----
-from_value(value: Any): AppliesTo
+from_value(fence_fields: AppliesTo | dict[str, object] | None): AppliesTo
 from_markdown(text: str): AppliesTo
 
 ## PracticeCatalogue

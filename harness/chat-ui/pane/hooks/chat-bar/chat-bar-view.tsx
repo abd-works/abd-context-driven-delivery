@@ -50,12 +50,12 @@ const SEPARATOR = '│'
 // underlined on a light tint, so it reads on at a glance, fainter the less is done, their violations counted in red
 // beside it, a press on the count opening the first one's report; while it is off, faint, with no tint or underline. A press on the square turns the practice on or off for the session. Its fidelities show
 // above it on hover, each opening its help in a pane beside the chat; their states are on the session card.
-export function PracticeDotView($: EngineInterface, elements: ElementTable, dot: PracticeDotClient, session: string) {
+export function PracticeDotView($: EngineInterface, elements: ElementTable, dot: PracticeDotClient) {
   const { Box } = elements
   const violating = dot.violating
   return (
     <Box key={`practice-${dot.key}`} flexDirection="row" gap={0} backgroundColor={dot.isOn ? BRAND.selectedTint : undefined}>
-      {GlyphButtonView(elements, `dot-${dot.key}`, '■', dot.shade, () => togglePractice($, session, dot.practice), dot.isOn)}
+      {GlyphButtonView(elements, `dot-${dot.key}`, '■', dot.shade, () => togglePractice($, dot.sessionFile, dot.practice), dot.isOn)}
       {violating ? GlyphButtonView(elements, `violations-${dot.key}`, String(dot.violationCount), BRAND.error, () => openReport($, violating)) : null}
       {PracticeTipView($, elements, dot)}
     </Box>
@@ -107,39 +107,38 @@ function StageButtonsView($: EngineInterface, elements: ElementTable, { chatBar 
 function SessionNameView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
   const { chatBar } = draw
   const { Box, Button, Text } = elements
-  if (chatBar.isPlainFolder) {
-    return (
-      <Box key="session-name" flexDirection="row" gap={1}>
-        <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
-          <Text weight="semibold" color={BRAND.text} wrap="truncate-start">{chatBar.folder}</Text>
-        </Box>
-      </Box>
+  if (chatBar.isMain) return MainChatListsView($, elements, draw)
+  const name = chatBar.isPlainFolder
+    ? <Text weight="semibold" color={BRAND.text} wrap="truncate-start">{chatBar.folder}</Text>
+    : (
+      <Button key="session-name-button" plain onPress={() => openSessionFolder($)}>
+        <Text weight="semibold" color={BRAND.text}>{chatBar.sessionName}</Text>
+      </Button>
     )
-  }
-  if (chatBar.isMain) {
-    return (
-      <Box key="session-name" flexDirection="row" gap={0}>
-        <Box key="repo-anchor">
-          {GlyphButtonView(elements, 'repo-list-button', REPO_GLYPH, BRAND.muted, () => toggleRepoListWithRepos($))}
-          {draw.view.isRepoListOpen ? null : TipView(elements, repoWordOf(chatBar), '', BRAND.muted)}
-          {RepoListView($, elements, draw)}
-        </Box>
-        <Box key="session-anchor" marginLeft={1}>
-          <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
-            {GlyphButtonView(elements, 'session-list-button', SESSION_GLYPH, BRAND.muted, () => toggleSessionList($))}
-          </Box>
-          {draw.view.isSessionListOpen ? null : TipView(elements, sessionWordOf(chatBar), '', BRAND.muted)}
-          {SessionListView($, elements, draw)}
-        </Box>
-      </Box>
-    )
-  }
   return (
     <Box key="session-name" flexDirection="row" gap={1}>
-      <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
-        <Button key="session-name-button" plain onPress={() => openSessionFolder($)}>
-          <Text weight="semibold" color={BRAND.text}>{chatBar.sessionName}</Text>
-        </Button>
+      <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>{name}</Box>
+    </Box>
+  )
+}
+
+// The main chat's two buttons, each with the list it opens and its name above it on hover.
+function MainChatListsView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
+  const { chatBar } = draw
+  const { Box } = elements
+  return (
+    <Box key="session-name" flexDirection="row" gap={0}>
+      <Box key="repo-anchor">
+        {GlyphButtonView(elements, 'repo-list-button', REPO_GLYPH, BRAND.muted, () => toggleRepoListWithRepos($))}
+        {draw.view.isRepoListOpen ? null : TipView(elements, repoWordOf(chatBar), '', BRAND.muted)}
+        {RepoListView($, elements, draw)}
+      </Box>
+      <Box key="session-anchor" marginLeft={1}>
+        <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
+          {GlyphButtonView(elements, 'session-list-button', SESSION_GLYPH, BRAND.muted, () => toggleSessionList($))}
+        </Box>
+        {draw.view.isSessionListOpen ? null : TipView(elements, sessionWordOf(chatBar), '', BRAND.muted)}
+        {SessionListView($, elements, draw)}
       </Box>
     </Box>
   )
@@ -161,13 +160,16 @@ function IconButtonView(elements: ElementTable, key: string, icon: string, words
 const BUG_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="${BRAND.muted}" stroke-width="1.3" stroke-linecap="round">`
   + '<ellipse cx="8" cy="9.5" rx="3.6" ry="4.5"/><path d="M8 5v9M5.6 4.6 4.5 3M10.4 4.6 11.5 3M4.4 8H2M11.6 8H14M4.6 11.5 2.6 13M11.4 11.5 13.4 13"/></svg>'
 
+// The bug's size in the desktop's pixels, about one line of text tall.
+const BUG_ICON_PIXELS = 14
+
 function DebugButtonView($: EngineInterface, elements: ElementTable, chatBar: ChatBarClient) {
   if (!('Svg' in elements)) return IconButtonView(elements, 'debug', '⚑', DEBUG_WORDS, () => runDebug($, chatBar))
   const { Box, Button, Svg } = elements
   return (
     <Box key="debug-box">
       <Box key="debug-mark">
-        <Svg source={BUG_SVG} alt="debug" width={14} height={14} />
+        <Svg source={BUG_SVG} alt="debug" width={BUG_ICON_PIXELS} height={BUG_ICON_PIXELS} />
         <Box position="absolute" top={0} left={0}>
           <Button key="debug" plain label=" " onPress={() => runDebug($, chatBar)} />
         </Box>
@@ -266,20 +268,29 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
     <Box key="line" flexDirection="row" gap={1} alignItems="center">
         {StageButtonsView($, elements, draw)}
         <Text color={BRAND.border}>{SEPARATOR}</Text>
-        <Box key="fidelity-column" flexDirection="row" gap={1} alignItems="center">
-          {chatBar.practiceDots.map(dot => PracticeDotView($, elements, dot, chatBar.sessionFile))}
-          {OverlayChipsView($, elements, draw)}
-          {FormatChipsView($, elements, draw)}
-          {ActionButtonView($, elements, draw)}
-          {FilesButtonView($, elements, draw)}
-          {IconButtonView(elements, 'handoff', '⇥', 'handoff', () => runHandoff($, chatBar))}
-          {DebugButtonView($, elements, chatBar)}
-        </Box>
+        {FidelityColumnView($, elements, draw)}
         <Box flexGrow={1} />
         {SessionNameView($, elements, draw)}
         {SessionButtonsView($, elements, draw)}
         {draw.health.band}
         {draw.version.badge}
+    </Box>
+  )
+}
+
+// The fidelity dots, the overlay and format chips, the action button, and the files, handoff, and debug buttons.
+function FidelityColumnView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
+  const { chatBar } = draw
+  const { Box } = elements
+  return (
+    <Box key="fidelity-column" flexDirection="row" gap={1} alignItems="center">
+      {chatBar.practiceDots.map(dot => PracticeDotView($, elements, dot))}
+      {OverlayChipsView($, elements, draw)}
+      {FormatChipsView($, elements, draw)}
+      {ActionButtonView($, elements, draw)}
+      {FilesButtonView($, elements, draw)}
+      {IconButtonView(elements, 'handoff', '⇥', 'handoff', () => runHandoff($, chatBar))}
+      {DebugButtonView($, elements, chatBar)}
     </Box>
   )
 }

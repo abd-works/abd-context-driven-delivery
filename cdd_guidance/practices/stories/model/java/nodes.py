@@ -4,16 +4,43 @@ from __future__ import annotations
 import re
 from typing import List
 
-from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory
+from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory, StorySyntax
 from cdd_guidance.practices.stories.model.story_model import Background, Step, StepType
 
 
-class JavaScenario(CodeScenario):
-    _SCENARIO = re.compile(r"SCENARIO:\s*(?P<name>.+)")
-    _EXAMPLES_LINE = re.compile(r"EXAMPLES:\s*(.+)")
+_BACKGROUND_HEADING = re.compile(r"\s*\*\s*BACKGROUND:\s*(.+)")
+_BACKGROUND_GIVEN = re.compile(r"\s*\*\s*GIVEN:\s*(.+)")
+_CONTINUATION = re.compile(r"\s*\*\s*(AND|BUT):\s*(.+)", re.IGNORECASE)
 
-    @classmethod
-    def calls_in(cls, body: str) -> List[tuple]:
+
+class JavaSyntax(StorySyntax):
+    """How a Java story test writes stories: the comment lines above its test methods, `SCENARIO:`, `GIVEN:` and the
+    other step words in capitals."""
+
+    scenario_pattern = re.compile(r"SCENARIO:\s*(?P<name>.+)")
+    examples_line = re.compile(r"EXAMPLES:\s*(.+)")
+    story_start = re.compile(r"(?=/\*\* Story:)")
+
+    def backgrounds_in(self, content: str) -> List[Background]:
+        found: List[Background] = []
+        lines = content.splitlines()
+        for line in lines[: next((index for index, line in enumerate(lines) if "SCENARIO:" in line), len(lines))]:
+            self._read_background_line(line, found)
+        return found
+
+    def _read_background_line(self, line: str, found: List[Background]) -> None:
+        """A background heading opens the next background; a GIVEN line adds its step to the last one, and an AND or BUT
+        line chains onto that background's last step."""
+        heading, given, extra = _BACKGROUND_HEADING.match(line), _BACKGROUND_GIVEN.match(line), _CONTINUATION.match(line)
+        if heading:
+            found.append(Background(heading.group(1).strip(), len(found) + 1))
+        elif given and found:
+            steps = found[-1].steps
+            found[-1].steps = [*steps, Step(given.group(1).strip(), StepType.GIVEN, len(steps) + 1)]
+        elif extra and found and found[-1].steps:
+            found[-1].steps[-1].continue_with(extra.group(1).lower(), extra.group(2).strip())
+
+    def _calls_in(self, body: str) -> List[tuple]:
         calls = []
         for line in body.splitlines():
             match = re.match(r"\s*\*\s*(GIVEN|WHEN|THEN|AND|BUT):\s*(.+)", line, re.IGNORECASE)
@@ -21,35 +48,9 @@ class JavaScenario(CodeScenario):
                 calls.append((match.group(1), match.group(2).strip()))
         return calls
 
-    @classmethod
-    def backgrounds_in(cls, content: str) -> List[Background]:
-        found: List[Background] = []
-        for line in content.splitlines():
-            if re.search(r"SCENARIO:", line):
-                break
-            heading = re.match(r"\s*\*\s*BACKGROUND:\s*(.+)", line)
-            if heading:
-                found.append(Background(heading.group(1).strip(), len(found) + 1))
-                continue
-            given = re.match(r"\s*\*\s*GIVEN:\s*(.+)", line)
-            if given and found:
-                step = Step(
-                    text=given.group(1).strip(),
-                    step_type=StepType.GIVEN,
-                    sequential_order=len(found[-1].steps) + 1,
-                    keyword="Given",
-                )
-                found[-1].steps = [*found[-1].steps, step]
-                continue
-            extra = re.match(r"\s*\*\s*(AND|BUT):\s*(.+)", line, re.IGNORECASE)
-            if extra and found and found[-1].steps:
-                previous = found[-1].steps[-1]
-                word = extra.group(1).lower()
-                previous.ands = [
-                    *previous.ands,
-                    Step(extra.group(2).strip(), previous.step_type, len(previous.ands) + 1, keyword=word),
-                ]
-        return found
+
+class JavaScenario(CodeScenario):
+    syntax = JavaSyntax()
 
     def lines(self) -> List[str]:
         """This scenario as the comment lines a Java story test lists it in."""
@@ -71,8 +72,7 @@ class JavaScenario(CodeScenario):
 
 class JavaStory(CodeStory):
     scenario_type = JavaScenario
-
-    _STORY_START = re.compile(r"(?=/\*\* Story:)")
+    syntax = JavaScenario.syntax
 
 
 class JavaEpic(CodeEpic):

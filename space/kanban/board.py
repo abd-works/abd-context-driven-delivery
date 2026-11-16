@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
@@ -19,7 +19,7 @@ from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_annotations import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
 from space.repo.repo import Repo
-from space.session.session import SESSION_FILE
+from space.session.session_record import SESSION_FILE
 from space.session.session_log import LogTimestamp
 from space.session.session_saves import SaveFailure
 from space.session.sessions import BoardPractices, Sessions
@@ -108,11 +108,6 @@ class Board:
     # Every ticket is in exactly one column; the board stores no ticket state.
 
 
-    # The kinds of card a board places: ticket.py and backlog_item.py build on this module, so the kanban package hands
-    # their classes to the board when it is imported (``places_cards``), and this module imports neither back.
-    _ticket_kind: ClassVar[type[Ticket]]
-    _backlog_item_kind: ClassVar[type[BacklogItem]]
-
     def __init__(self, repo: Repo, practices: BoardPractices) -> None:
         self._repo = repo
         # The sessions of the board's repository, as this process holds them: each one a ticket, and which is open.
@@ -123,12 +118,8 @@ class Board:
         self._stages = [Stage(stage, self) for stage in STAGES]
         self._columns: list[Column] = [Backlog(self), *self._stages, Complete(self)]
         self._reads = BoardReads(self)
-
-    @classmethod
-    def places_cards(cls, ticket_kind: type[Ticket], backlog_item_kind: type[BacklogItem]) -> None:
-        """Make every board place its sessions as tickets of ticket_kind and its ideas as items of backlog_item_kind."""
-        cls._ticket_kind = ticket_kind
-        cls._backlog_item_kind = backlog_item_kind
+        self.shared = BoardFile(self)
+        self.placement = CardPlacement(self)
 
     @classmethod
     @tool_subject
@@ -151,33 +142,13 @@ class Board:
         """The file that holds what this repository's sessions share on the board."""
         return self.sessions.folder / _BOARD_FILE
 
-    def wip_limit(self, stage: Stage) -> int:
-        """How many tickets stage holds before its count shows as over its limit: the one a person set, else the default."""
-        return self._shared.get("wip_limits", {}).get(stage.name, DEFAULT_WIP_LIMIT)
-
-    def set_wip_limit(self, stage: Stage, limit: int) -> None:
-        """Keep stage's limit in the board's file beside the other stages' limits and whatever else the sessions share there."""
-        shared = self._shared
-        shared["wip_limits"] = {**shared.get("wip_limits", {}), stage.name: limit}
-        JsonFile(self.file).write(shared)
-
-    def order_in(self, column: Column) -> list[str]:
-        """The keys of column's cards in the order a person last placed them; none before they have placed any."""
-        return list(self._shared.get("order", {}).get(column.name, []))
-
-    def keep_order(self, column: Column, keys: list[str]) -> None:
-        """Keep column's cards in the order keys gives them, in the board's file beside whatever else it holds."""
-        shared = self._shared
-        shared["order"] = {**shared.get("order", {}), column.name: list(keys)}
-        JsonFile(self.file).write(shared)
-
     @property
     @data_field
     def sends_fixes_directly(self) -> bool:
         """Whether a report's Fix sends straight to the ticket's chat as a message, rather than putting it in the chat's
         prompt for a person to edit before sending: set once for the repository, in the board's file, and off until a
         person turns it on."""
-        return bool(self._shared.get("sends_fixes_directly", False))
+        return self.shared.sends_fixes_directly
 
     @property
     @data_field
@@ -187,15 +158,15 @@ class Board:
         works on them, and save_again commits and pushes them."""
         return self.sessions.saves.failure
 
-    @cached_property
-    def _shared(self) -> dict:
-        """Everything the board's file holds, read once per board read; the board is its one reader and writer."""
-        return JsonFile(self.file).read()
-
     @property
     @data_field
     def project(self) -> str:
         return self._repo.root.name
+
+    @property
+    def reads(self) -> BoardReads:
+        """What this read of the board has found so far: a change made through the board starts a new read."""
+        return self._reads
 
     @property
     def worktrees(self) -> dict[Branch, Worktree]:
@@ -244,11 +215,6 @@ class Board:
         """The chats connected now, listed once per board read, so each ticket finds the one working on it."""
         return self._reads.chats
 
-    def chat_named(self, name: str) -> Chat | None:
-        """The first chat connected now that goes by name; each chat's name is read once per board read, rather than
-        once for every ticket that looks for its chat."""
-        return self._reads.chats_by_name.get(name)
-
     @property
     def tickets(self) -> list[Ticket]:
         """Every session's ticket, made once per board read: each column, and each ticket's own reads, ask for them."""
@@ -262,26 +228,6 @@ class Board:
     @property
     def backlog_items(self) -> list[BacklogItem]:
         return self._reads.backlog_items
-
-    def ticket_of(self, session: Session) -> Ticket:
-        """The ticket of session, which was just opened, moved between folders, closed, or reopened: the board forgets
-        the cards it has read, so its next read sees the change."""
-        self.reread()
-        return self.make_ticket(session)
-
-    def make_ticket(self, session: Session) -> Ticket:
-        """The ticket this board places for session, as it reads it now."""
-        return self._ticket_kind(session, self)
-
-    def make_backlog_item(self, path: Path) -> BacklogItem:
-        """The backlog item this board places for the idea kept in path, a file in the Backlog folder."""
-        return self._backlog_item_kind(path, self)
-
-    def backlog_item_of(self, ticket: Ticket) -> BacklogItem:
-        """The item ticket becomes in the Backlog once its session's folder has moved there: the board forgets the cards
-        it has read, so its next read sees the item."""
-        self.reread()
-        return self._backlog_item_kind.from_ticket(ticket)
 
     def reread(self) -> None:
         """Forget the tickets, backlog items, worktrees, and chats read so far, so the next read sees a change made since."""
@@ -315,7 +261,7 @@ class Board:
         """The ticket called name, open before closed, read from its own session folder: a tool names one ticket, so
         the board reads no other session to find it. Main, the default session, is a ticket like any other."""
         session = self.sessions.named(name)
-        return self.make_ticket(session) if session is not None else None
+        return self.placement.make_ticket(session) if session is not None else None
 
     def ticket_called(self, name: str) -> Ticket:
         """The ticket called name, as ``ticket`` reads it; raises ``TicketNotFoundError`` when the board has none."""
@@ -323,10 +269,6 @@ class Board:
         if found is None:
             raise TicketNotFoundError(name)
         return found
-
-    def children_of(self, ticket: Ticket) -> list[Ticket]:
-        """The tickets whose session names ticket's as its parent, found once per board read."""
-        return self._reads.children.get(ticket.name, [])
 
     def backlog_item(self, title: str) -> BacklogItem | None:
         return next((item for item in self.backlog_items if item.title == title), None)
@@ -338,14 +280,14 @@ class Board:
             raise BacklogItemNotFoundError(title)
         return found
 
-    def open_ticket(self, title: str, scope: str, parent: str, path: str) -> Ticket:
+    def open_ticket(self, title: str, scope: str, path: str = "") -> Ticket:
         """A new ticket titled title in Discovery, its session working on path, a folder in the repository given from its
         top or in full (its top when empty). A folder outside the repository raises ``FolderOutsideRepositoryError``."""
         root = self._repo.root.resolve()
         workpath = (root / path).resolve() if path else root
         if not workpath.is_relative_to(root):
             raise FolderOutsideRepositoryError(path, str(root))
-        return self.ticket_of(self.sessions.create(title, workpath, title=title, scope=scope, parent=parent))
+        return self.placement.ticket_of(self.sessions.create(title, workpath, title=title, scope=scope))
 
     @mcp
     @agent_tool
@@ -367,9 +309,7 @@ class Board:
     @noSessionLog
     def set_sends_fixes_directly(self, sends: bool) -> Board:
         """Set whether a report's Fix sends straight to the ticket's chat as a message, or puts it in the chat's prompt to edit before sending; kept for the repository in the board's file."""
-        shared = self._shared
-        shared["sends_fixes_directly"] = sends
-        JsonFile(self.file).write(shared)
+        self.shared.keep(sends_fixes_directly=sends)
         return self
 
     @mcp
@@ -392,7 +332,91 @@ class Board:
     def help(self, practice: str) -> Help:
         """Return the overview, guidance, and shared rules of the board's practice named practice, such as stories or clean_engineering, with its page on the forge. A fidelity's help comes from its progress on a ticket: fidelity-progress.help."""
         found = self.catalogued_practices.keyed(practice)
-        return Help(found.practice, None, None, found)
+        return Help(found.practice, found)
+
+
+class CardKinds:
+    """The kinds of card a board places: ticket.py and backlog_item.py build on this module, so the kanban package hands
+    their classes over when it is imported, and this module imports neither back. One for the process."""
+
+    def __init__(self) -> None:
+        self.ticket_kind: type[Ticket] | None = None
+        self.backlog_item_kind: type[BacklogItem] | None = None
+
+    def place(self, ticket_kind: type[Ticket], backlog_item_kind: type[BacklogItem]) -> None:
+        """Make every board place its sessions as tickets of ticket_kind and its ideas as items of backlog_item_kind."""
+        self.ticket_kind = ticket_kind
+        self.backlog_item_kind = backlog_item_kind
+
+
+CARD_KINDS = CardKinds()
+
+
+class CardPlacement:
+    """The cards one board places: a ticket for each session and an item for each idea in its Backlog, of the kinds
+    the kanban package handed over (``CARD_KINDS``)."""
+
+    def __init__(self, board: Board) -> None:
+        self._board = board
+
+    def make_ticket(self, session: Session) -> Ticket:
+        """The ticket the board places for session, as it reads it now."""
+        return CARD_KINDS.ticket_kind(session, self._board)
+
+    def make_backlog_item(self, path: Path) -> BacklogItem:
+        """The backlog item the board places for the idea kept in path, a file in the Backlog folder."""
+        return CARD_KINDS.backlog_item_kind(path, self._board)
+
+    def ticket_of(self, session: Session) -> Ticket:
+        """The ticket of session, which was just opened, moved between folders, closed, or reopened: the board forgets
+        the cards it has read, so its next read sees the change."""
+        self._board.reread()
+        return self.make_ticket(session)
+
+    def backlog_item_of(self, ticket: Ticket) -> BacklogItem:
+        """The item ticket becomes in the Backlog once its session's folder has moved there: the board forgets the cards
+        it has read, so its next read sees the item."""
+        self._board.reread()
+        return CARD_KINDS.backlog_item_kind.from_ticket(ticket)
+
+
+class BoardFile:
+    """What a repository's sessions share on its board, kept in ``.sessions/_board.json``: each stage's WIP limit, the
+    order a person placed each column's cards in, and whether a report's Fix sends straight to the chat. Read once per
+    board read; the board is its one reader and writer."""
+
+    def __init__(self, board: Board) -> None:
+        self._board = board
+
+    @cached_property
+    def _held(self) -> dict:
+        return JsonFile(self._board.file).read()
+
+    @property
+    def sends_fixes_directly(self) -> bool:
+        return bool(self._held.get("sends_fixes_directly", False))
+
+    def wip_limit(self, stage: Stage) -> int:
+        """How many tickets stage holds before its count shows as over its limit: the one a person set, else the default."""
+        return self._held.get("wip_limits", {}).get(stage.name, DEFAULT_WIP_LIMIT)
+
+    def set_wip_limit(self, stage: Stage, limit: int) -> None:
+        """Keep stage's limit beside the other stages' limits and whatever else the sessions share there."""
+        self.keep(wip_limits={**self._held.get("wip_limits", {}), stage.name: limit})
+
+    def order_in(self, column: Column) -> list[str]:
+        """The keys of column's cards in the order a person last placed them; none before they have placed any."""
+        return list(self._held.get("order", {}).get(column.name, []))
+
+    def keep_order(self, column: Column, keys: list[str]) -> None:
+        """Keep column's cards in the order keys gives them, beside whatever else the file holds."""
+        self.keep(order={**self._held.get("order", {}), column.name: list(keys)})
+
+    def keep(self, **values: object) -> None:
+        """Write values into the file, keeping whatever else it holds."""
+        held = self._held
+        held.update(values)
+        JsonFile(self._board.file).write(held)
 
 
 class BoardReads:
@@ -409,7 +433,7 @@ class BoardReads:
     @cached_property
     def tickets(self) -> list[Ticket]:
         board = self._board
-        return [board.make_ticket(session) for session in self.sessions]
+        return [board.placement.make_ticket(session) for session in self.sessions]
 
     @cached_property
     def ticket_names(self) -> set[str]:
@@ -439,19 +463,28 @@ class BoardReads:
         parents = [path for path in kept if path.is_file()]
         children = [child for parent in parents if not (parent.parent / SESSION_FILE).is_file() for child in parent.parent.glob("*.md") if child != parent]
         found = sorted([*files, *parents, *children], key=lambda path: path.stem)
-        return [board.make_backlog_item(path) for path in found]
+        return [board.placement.make_backlog_item(path) for path in found]
 
     @cached_property
     def chats(self) -> list[Chat]:
         return Chat.list()
 
     @cached_property
-    def chats_by_name(self) -> dict[str, Chat]:
+    def _chats_by_name(self) -> dict[str, Chat]:
         """Each connected chat under the name it goes by, the first in the list where two share one."""
         named: dict[str, Chat] = {}
         for chat in self.chats:
             named.setdefault(chat.name, chat)
         return named
+
+    def chat_named(self, name: str) -> Chat | None:
+        """The first chat connected now that goes by name; each chat's name is read once per board read, rather than
+        once for every ticket that looks for its chat."""
+        return self._chats_by_name.get(name)
+
+    def children_of(self, ticket: Ticket) -> list[Ticket]:
+        """The tickets whose session names ticket's as its parent, found once per board read."""
+        return self.children.get(ticket.name, [])
 
     @cached_property
     def branches(self) -> list[Branch]:
@@ -490,7 +523,7 @@ class Column:
         """The cards of its own in this column, in the order a person placed them; any not placed yet follow, in the
         order the board reads them. A child stacked inside its parent's card is not a card of its own."""
         own = [card for card in self._board.cards if card.column is self and not card.is_stacked]
-        placed = self._board.order_in(self)
+        placed = self._board.shared.order_in(self)
         return sorted(own, key=lambda card: placed.index(card.key) if card.key in placed else len(placed))
 
     def place_before(self, card: Card, other: Card) -> Column:
@@ -510,7 +543,7 @@ class Column:
             return self
         keys.remove(card.key)
         keys.insert(keys.index(other.key) + past_other, card.key)
-        self._board.keep_order(self, keys)
+        self._board.shared.keep_order(self, keys)
         return self
 
 
@@ -613,7 +646,7 @@ class Stage(Column):
     @property
     @data_field
     def wip_limit(self) -> int:
-        return self._board.wip_limit(self)
+        return self._board.shared.wip_limit(self)
 
     @property
     @data_field
@@ -635,7 +668,7 @@ class Stage(Column):
     @noSessionLog
     def set_wip_limit(self, limit: int) -> Stage:
         """Set how many tickets this stage holds before its count shows as over its limit."""
-        self._board.set_wip_limit(self, limit)
+        self._board.shared.set_wip_limit(self, limit)
         return self
 
 
@@ -690,14 +723,22 @@ class Card(ABC):
         return str(LogTimestamp(moment))
 
 
+class RequiredFidelity:
+    """A fidelity one of the board's stages requires, as a ticket's session holds it, with that stage."""
+
+    def __init__(self, stage: Stage, fidelity: FidelityGuidance) -> None:
+        self.stage = stage
+        self.fidelity = fidelity
+
+
 class Help:
     """Help on a practice or one of its fidelities: the guidance itself, which sends its own overview, guidance, and
     rules, with the fidelity's stage and its page on the forge."""
 
-    def __init__(self, practice: PracticeGuidance, fidelity: FidelityGuidance | None, stage: Stage | None, catalogued: CatalogPractice) -> None:
+    def __init__(self, practice: PracticeGuidance, catalogued: CatalogPractice, required: RequiredFidelity | None = None) -> None:
         self._practice = practice
-        self._fidelity = fidelity
-        self._stage = stage
+        self._fidelity = required.fidelity if required is not None else None
+        self._stage = required.stage if required is not None else None
         # The catalog's view of the practice, which names every page on the forge: the one the board holds.
         self._catalogued = catalogued
 
@@ -731,10 +772,10 @@ class Help:
     def _has_page(self) -> bool:
         """Whether the catalog shows the fidelity. The catalog's view is of the board's instance of the practice, and a
         ticket's fidelity is its session's instance, so it is found by its name in the practice, which is the same in
-        both, as ``PracticeGuidance.fidelity_called`` finds a fidelity a person names."""
+        both, as ``practice.fidelities.called`` finds a fidelity a person names."""
         fidelity = self._fidelity
         catalogued = self._catalogued
-        return fidelity is not None and catalogued.practice.fidelity_called(fidelity.name) in catalogued.fidelities
+        return fidelity is not None and catalogued.practice.fidelities.called(fidelity.name) in catalogued.fidelities
 
 
 class BoardFidelity:
@@ -767,7 +808,7 @@ class BoardFidelity:
     @data_field
     def skill(self) -> str:
         """The slash command of its skill, such as /practices-stories-stories-story-map."""
-        return f"/{self._catalogued.skill_of(self._shown.fidelity)}"
+        return f"/{self._catalogued.skills.skill_of(self._shown.fidelity)}"
 
     @property
     @data_field

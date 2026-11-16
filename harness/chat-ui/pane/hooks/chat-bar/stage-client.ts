@@ -15,13 +15,12 @@ const FAINT_INK = '#E5531A66'
 // A shown stage that is not the session's own gets the canvas's orange tint instead of an underline.
 const TINT = '#E5531A2E'
 
-// One column of the board as board.overview sends it, placed against the active session's column: the columns before it
-// are behind the session, the ones after it not yet reached.
+// One column of the board as board.overview sends it, placed against the active session's column: how many columns
+// past the session's it is, below zero for the columns behind the session, above zero for the ones not yet reached.
 export class StageClient {
   constructor(
     readonly column: ColumnOverviewData,
-    private readonly place: number,
-    private readonly sessionPlace: number,
+    private readonly columnsPastSession: number,
     readonly isShown: boolean,
   ) {}
 
@@ -31,7 +30,7 @@ export class StageClient {
 
   // The column the active session is in, which the line underlines.
   get isCurrent(): boolean {
-    return this.place === this.sessionPlace
+    return this.columnsPastSession === 0
   }
 
   // Only a stage requires fidelities, so the Backlog and Complete have none to show.
@@ -45,7 +44,7 @@ export class StageClient {
 
   // Stages not yet reached are faint, so the path still reads left to right.
   get ink(): string {
-    return this.place > this.sessionPlace ? FAINT_INK : INK
+    return this.columnsPastSession > 0 ? FAINT_INK : INK
   }
 
   // What the stage is for, as its column's scope sends it, which the canvas shows on hover beside its name, such as

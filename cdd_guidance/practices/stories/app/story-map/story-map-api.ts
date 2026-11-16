@@ -1,7 +1,7 @@
 import { PROJECT_HEADER, projectOfPage, type CddApi } from '@cdd/cdd-shared'
 
-import { STORY_MAP_API } from '../story-map-page'
-
+// Where the board's server answers the page's calls; the page is served beside it, under STORY_MAP_PAGE.
+const STORY_MAP_API = '/api'
 // The board's server refuses a changing call without this header, so a page on another site cannot post to it.
 const BOARD_HEADER = 'X-CDD-Board'
 const NOT_CONNECTED = 503

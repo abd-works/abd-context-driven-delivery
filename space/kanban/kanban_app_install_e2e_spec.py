@@ -10,7 +10,7 @@ from pathlib import Path
 from expects import be_true, equal, expect
 from mamba import after, before, description, it
 
-from harness.diagnostics.app import App, AppServer, AppStatus, Npm
+from harness.diagnostics.app import App, AppPackage, AppPage, AppServer, AppStatus, NodeScript, Npm
 from space.kanban.board_app import APP_FOLDER
 from space.kanban.editor_apps_examples import free_port
 
@@ -29,8 +29,8 @@ with description("the CDD Kanban installed with real npm") as self:
         self.folder = self.top / APP_FOLDER.relative_to(_CHECKOUT)
         shutil.copytree(APP_FOLDER, self.folder, ignore=_LEFT_OUT)
         shutil.copytree(_CHECKOUT / _ADAPTERS, self.top / _ADAPTERS)
-        server = AppServer(self.folder, "packages/session-board/serve.ts", (free_port(),))
-        self.app = App("Kanban", self.folder, server, npm=Npm(_INSTALL_SECONDS))
+        server = AppServer(NodeScript(self.folder, "packages/session-board/serve.ts"), (free_port(),))
+        self.app = App("Kanban", AppPackage(self.folder, npm=Npm(_INSTALL_SECONDS)), AppPage(server))
         self.was = self.app.status
         self.app.install()
 

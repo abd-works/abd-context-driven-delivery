@@ -18,17 +18,24 @@
       );
     },
   };
+  // An editor root shorter than this is still collapsed or hidden, so Monaco would measure it at no size.
+  var MIN_VISIBLE_HEIGHT_PX = 40;
+  // How many times, a tenth of a second apart, to try folding before Monaco has computed every fold region.
+  var MAX_FOLD_ATTEMPTS = 40;
+  var FOLD_RETRY_MS = 100;
+  var EDITOR_FONT_SIZE_PX = 13;
+  var EDITOR_PADDING_PX = 12;
   var pending = [];
   var monacoReady = false;
   var catalogModelFolds = new Map();
+  // The editor mounted in each .catalog-monaco root, kept here so no other script reaches into the element for it.
+  var editors = new WeakMap();
 
   function visible(root) {
-    return !!root && root.offsetHeight > 40 && !root.closest("[hidden]");
+    return !!root && root.offsetHeight > MIN_VISIBLE_HEIGHT_PX && !root.closest("[hidden]");
   }
 
   function registerCatalogFolding() {
-    if (window.__catalogFoldingRegistered) return;
-    window.__catalogFoldingRegistered = true;
     monaco.languages.registerFoldingRangeProvider(
       ["typescript", "javascript", "python"],
       {
@@ -47,41 +54,39 @@
     );
   }
 
+  /** The index of the region Monaco computed for fold, or -1 while it has not computed it yet. */
+  function regionIndexOf(regions, fold) {
+    for (var index = 0; index < regions.length; index++) {
+      if (regions.getStartLineNumber(index) === fold.start && regions.getEndLineNumber(index) === fold.end) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
+  function foldAt(editor, foldAction, startLine) {
+    editor.setPosition({ lineNumber: startLine, column: 1 });
+    return Promise.resolve(foldAction.run());
+  }
+
+  /** Fold every catalog fold Monaco has a region for; resolves with how many folds it found, folded or already folded. */
   function collapseAllFolds(editor, folds) {
     var folding = editor.getContribution("editor.contrib.folding");
     if (!folding || !folding.getFoldingModel) return Promise.resolve(0);
     return folding.getFoldingModel().then(function (model) {
-      if (!model || !model.regions) return 0;
-      var regions = model.regions;
       var foldAction = editor.getAction("editor.fold");
-      if (!foldAction) return 0;
+      if (!model || !model.regions || !foldAction) return 0;
       var chain = Promise.resolve();
-      var collapsed = 0;
-      for (var f = 0; f < folds.length; f++) {
-        var fold = folds[f];
-        var regionIndex = -1;
-        for (var i = 0; i < regions.length; i++) {
-          if (
-            regions.getStartLineNumber(i) === fold.start &&
-            regions.getEndLineNumber(i) === fold.end
-          ) {
-            regionIndex = i;
-            break;
-          }
-        }
-        if (regionIndex < 0) continue;
-        if (regions.isCollapsed(regionIndex)) {
-          collapsed += 1;
-          continue;
-        }
-        chain = chain.then(function (startLine) {
-          editor.setPosition({ lineNumber: startLine, column: 1 });
-          return Promise.resolve(foldAction.run());
-        }.bind(null, fold.start));
-        collapsed += 1;
-      }
+      var matched = 0;
+      folds.forEach(function (fold) {
+        var regionIndex = regionIndexOf(model.regions, fold);
+        if (regionIndex < 0) return;
+        matched += 1;
+        if (model.regions.isCollapsed(regionIndex)) return;
+        chain = chain.then(foldAt.bind(null, editor, foldAction, fold.start));
+      });
       return chain.then(function () {
-        return collapsed;
+        return matched;
       });
     });
   }
@@ -103,14 +108,10 @@
     }
     var tries = 0;
     function attempt() {
-      if (tries > 40) {
-        finish();
-        return;
-      }
       tries += 1;
       collapseAllFolds(editor, folds).then(function (matched) {
-        if (matched < folds.length && tries < 40) {
-          window.setTimeout(attempt, 100);
+        if (matched < folds.length && tries < MAX_FOLD_ATTEMPTS) {
+          window.setTimeout(attempt, FOLD_RETRY_MS);
         } else {
           finish();
         }
@@ -119,13 +120,48 @@
     attempt();
   }
 
-  function parseFolds(root) {
+  /** JSON the generator wrote into the page; a value that does not parse is shown as if absent rather than break the page. */
+  function parsePageJson(text, absent) {
     try {
-      return JSON.parse(root.getAttribute("data-folds") || "[]");
-    } catch (e) {
-      return [];
+      return JSON.parse(text);
+    } catch (err) {
+      if (err instanceof SyntaxError) return absent;
+      throw err;
     }
   }
+
+  function parseFolds(root) {
+    return parsePageJson(root.getAttribute("data-folds") || "[]", []);
+  }
+
+  function readSource(root) {
+    var sourceElement = document.getElementById(root.getAttribute("data-source-id") || "catalog-monaco-source");
+    return sourceElement ? parsePageJson(sourceElement.textContent || '""', "") : "";
+  }
+
+  /** Lay out an editor already mounted in root again, now that root may have its real size; false when none is. */
+  function relayout(root) {
+    var editor = editors.get(root);
+    if (!editor) return false;
+    editor.layout();
+    bindFolds(root, editor);
+    return true;
+  }
+
+  var EDITOR_OPTIONS = {
+    theme: "catalog-code",
+    readOnly: true,
+    folding: true,
+    automaticLayout: true,
+    minimap: { enabled: false },
+    scrollBeyondLastLine: false,
+    wordWrap: "on",
+    wrappingStrategy: "advanced",
+    scrollbar: { vertical: "auto", horizontal: "hidden", handleMouseWheel: true },
+    fontSize: EDITOR_FONT_SIZE_PX,
+    fontFamily: "JetBrains Mono, ui-monospace, monospace",
+    padding: { top: EDITOR_PADDING_PX, bottom: EDITOR_PADDING_PX },
+  };
 
   function bindFolds(root, editor) {
     var folds = parseFolds(root);
@@ -136,58 +172,19 @@
   }
 
   function mount(root) {
-    if (root._editor) {
-      root._editor.layout();
-      bindFolds(root, root._editor);
-      return;
-    }
-    var sourceEl = document.getElementById(
-      root.getAttribute("data-source-id") || "catalog-monaco-source"
-    );
-    var source = "";
-    if (sourceEl) {
-      try {
-        source = JSON.parse(sourceEl.textContent || '""');
-      } catch (e) {
-        source = "";
-      }
-    }
-    var language = root.getAttribute("data-language") || "typescript";
+    if (relayout(root)) return;
     var folds = parseFolds(root);
-    var model = monaco.editor.createModel(source, language);
+    var model = monaco.editor.createModel(readSource(root), root.getAttribute("data-language") || "typescript");
     catalogModelFolds.set(model.id, folds);
-    var editor = monaco.editor.create(root, {
-      model: model,
-      theme: "catalog-code",
-      readOnly: true,
-      folding: true,
-      automaticLayout: true,
-      minimap: { enabled: false },
-      scrollBeyondLastLine: false,
-      wordWrap: "on",
-      wrappingStrategy: "advanced",
-      scrollbar: {
-        vertical: "auto",
-        horizontal: "hidden",
-        handleMouseWheel: true,
-      },
-      fontSize: 13,
-      fontFamily: "JetBrains Mono, ui-monospace, monospace",
-      padding: { top: 12, bottom: 12 },
-    });
-    root._editor = editor;
+    var editor = monaco.editor.create(root, Object.assign({ model: model }, EDITOR_OPTIONS));
+    editors.set(root, editor);
     scheduleCollapse(root, editor, folds);
   }
 
   function drain() {
     var next = pending.splice(0, pending.length);
     next.forEach(function (root) {
-      if (!root) return;
-      if (root._editor) {
-        root._editor.layout();
-        bindFolds(root, root._editor);
-        return;
-      }
+      if (!root || relayout(root)) return;
       if (!visible(root)) {
         pending.push(root);
         return;

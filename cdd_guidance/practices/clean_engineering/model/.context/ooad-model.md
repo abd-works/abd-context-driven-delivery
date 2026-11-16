@@ -78,7 +78,7 @@ Raised when `translate_from` is given a node of another semantic type.
 
 ## Module : OoadNode
 
-+ Module(name: str, sequential_order: int, description: str = "", seam: str = "", constraint: str = "", seam_terms: list[str] | None = None, dependencies: list[str] | None = None, graph: Graph | None = None)
++ Module(name: str, sequential_order: int, graph: Graph | None = None)
 ------
 + description: str
 + seam: str
@@ -114,12 +114,10 @@ Raised when `translate_from` is given a node of another semantic type.
 + load_source_facts(file: Path, root: Path): None
 	// the graph facts the file it was read from gives: its imports, the class names it imports, and the classes that share it.
 	// The graph keeps each class apart from its module, so the module gives each class its peers' names
-+ import_targets(file: Path, root: Path): list[str]
 	// root-relative paths of the relative script imports
 + load_folder_facts(folder: Path): None
 	// the graph facts a code folder's context files give: what its module card says, read once, and whether it holds .context/bounded-context.md
 	-> ModuleContext.model_blocks
-+ holds_public_source(file_name: str): bool
 	// production code whose name does not start with _
 + take_public_sources(sources: list[Module]): None
 	// how many public source files the folder holds, and whether their documentation carries internal design notes
@@ -131,7 +129,7 @@ Raised when `translate_from` is given a node of another semantic type.
 
 ## OoadClass : OoadNode
 
-+ OoadClass(name: str, sequential_order: int, intent: str = "", properties: list[Property] | None = None, operations: list[Operation] | None = None, relationships: list[Relationship] | None = None, collaborators: list[str] | None = None, line: int | None = None, graph: Graph | None = None)
++ OoadClass(name: str, sequential_order: int, intent: str = "")
 ------
 + intent: str
 + stereotypes: list[str]
@@ -170,13 +168,12 @@ Raised when `translate_from` is given a node of another semantic type.
 	// its bases, then the I{Class} contract it implements when known_names hold one
 + load_property(source: Property): Property
 + load_operation(source: Operation): Operation
-+ load_relationship(source: Relationship): Relationship
 + clone(): OoadClass
 + as_record(): dict
 
 ## Property : InvariantHolder, OoadNode
 
-+ Property(name: str, sequential_order: int = 0, type_hint: str = "", description: str = "", graph: Graph | None = None)
++ Property(name: str, sequential_order: int = 0, type_hint: str = "")
 ------
 + type_hint: str
 + description: str
@@ -212,7 +209,7 @@ Raised when `translate_from` is given a node of another semantic type.
 
 ## Operation : InvariantHolder, OoadNode
 
-+ Operation(name: str, sequential_order: int = 0, return_type: str = "", description: str = "", callees: list[str] | None = None, parameters: list[str] | None = None)
++ Operation(name: str, sequential_order: int = 0, return_type: str = "")
 ------
 + return_type: str
 + description: str
@@ -241,6 +238,10 @@ Raised when `translate_from` is given a node of another semantic type.
 	// its line through its end line, else as many lines as its body counts
 + span: SourceText
 + take_lines(lines: list[str]): None
++ take_parameters(parameters: list): None
+	// each a `name: Type` line or a parameter to copy
++ take_body_fingerprint(body: str): None
+	// the hash another operation with the same whitespace-collapsed body shares; none for a body too short to count as a copy
 + load_span_facts(): None
 	// the facts the operation rules read from its own source lines: private reach, I/O mixed with domain work, swallowed or empty-case exceptions, prose comments
 	-> SourceText
@@ -519,7 +520,6 @@ The `json` format: one array of module records.
 + render(): str
 + load_property(source: Property): JsonProperty
 + load_operation(source: Operation): JsonOperation
-+ load_relationship(source: Relationship): JsonRelationship
 
 ## JsonProperty : Property
 
@@ -615,7 +615,7 @@ The statements inside one operation, test, or step, kept with the language they 
 
 The source lines around one block of code that no node holds, kept exactly as read: a BDD describe, context, or it; a story, scenario, or step chain. The language writes these lines back unchanged while the node still has the key it was read with.
 
-+ WrittenBlock(language: CodeLanguage, key: str | tuple | None, lead: list[str], heading: list[str])
++ WrittenBlock(language: CodeLanguage, key: str | tuple | None, heading: list[str])
 ------
 + language: CodeLanguage
 + key: str | tuple | None
@@ -633,10 +633,21 @@ The source lines around one block of code that no node holds, kept exactly as re
 	// made once when the reader sets inside or inline
 ----
 + is_in(language: CodeLanguage, key: str | tuple | None): bool
-+ split_inside(lines: list[str], inside: tuple[int, int], children: list[tuple[int, int]]): tuple
-	// the lines inside one block as setup, the lines above each child, and the lines after the last child
 + inside_for(body: CodeBody): list[str] | None
 	// the lines exactly as read while the model's body still says the same
+
+## InsideLines
+
+The lines inside one block of a file, from the line after its heading up to its closing line, which its child blocks divide.
+
++ InsideLines(lines: list[str], inside: tuple[int, int])
+------
++ lines: list[str]
++ start: int
++ end: int
+----
++ split(children: list[tuple[int, int]]): tuple
+	// the lines inside the block as setup, the lines above each child, and the lines after the last child
 
 ## CallGraphEntry
 
@@ -776,7 +787,6 @@ Keeps the syntax tree its file was read into.
 ----
 + keep_tree(tree: ast.Module): None
 	// also records the module's private functions only one class calls
-+ import_targets(file: Path, root: Path): list[str]
 	// every import and from-import, absolute or relative, read from the kept tree
 
 ## PythonClass : CodeClass, PythonProperty : CodeProperty, PythonOperation : CodeOperation

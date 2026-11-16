@@ -67,12 +67,12 @@ class Worktree:
         """Bring this checkout up to date with origin. A checkout that cannot reach origin, or whose branch has moved
         apart from origin's, still opens as it is; ``sync_failure`` then says why, so the caller can tell the user the
         work may be behind origin."""
-        self._catch_up(self.repository.catch_up_with_origin)
+        self._catch_up(self.repository.origin.catch_up)
 
     def pull_fetched(self) -> None:
         """Bring this checkout up to date with origin as the repository last fetched it, as ``fetch_pull`` does for a
         checkout opened just after a fetch."""
-        self._catch_up(self.repository.merge_origin_copy)
+        self._catch_up(self.repository.origin.merge_copy)
 
     def _catch_up(self, step: Callable[[], None]) -> None:
         try:
@@ -106,8 +106,37 @@ class Worktrees:
     def __iter__(self) -> Iterator[Worktree]:
         # Every checkout lists the same worktrees; the main clone lists them even after the checkout these were read
         # from is removed.
-        for path, branch in self._repo.main_clone.worktree_listing():
+        for path, branch in self._repo.main_clone.worktrees.listing():
             yield self._listed(path, branch)
+
+    def listing(self) -> list[tuple[Path, str]]:
+        """Every checkout of the repository with the branch it has checked out (empty when none is), the main clone
+        first, as git lists them; read from the .git folder where it can be."""
+        repo = self._repo
+        folder = repo.readable_folder
+        if folder is not None:
+            return folder.worktrees()
+        if not repo.is_clone:
+            return []
+        listed = []
+        for block in repo.git.run("worktree", "list", "--porcelain").split("\n\n"):
+            fields = dict(line.split(" ", 1) for line in block.splitlines() if " " in line)
+            if "worktree" in fields:
+                listed.append((Path(fields["worktree"]), fields.get("branch", "").removeprefix("refs/heads/")))
+        return listed
+
+    def primary_root(self) -> Path:
+        """The repository's main checkout. A linked worktree's ``.git`` is a file naming its git folder, whose
+        ``commondir`` leads back to the main checkout's ``.git``; any other checkout is its own main checkout."""
+        checkout = self._repo.checkout_folder
+        marker = checkout / ".git"
+        if not marker.is_file():
+            return checkout
+        worktree_git = (checkout / marker.read_text(encoding="utf-8").split("gitdir:", 1)[-1].strip()).resolve()
+        common = worktree_git / "commondir"
+        if not common.is_file():
+            return checkout
+        return (worktree_git / common.read_text(encoding="utf-8").strip()).resolve().parent
 
     def at(self, folder: Path | str) -> Worktree | None:
         """The checkout git lists at folder; none when git lists none there."""
@@ -129,9 +158,13 @@ class Worktrees:
             opened = self._listed(self._repo.root, branch.name)
             opened.fetch_pull()
             return opened
+        return self._added_from_origin(branch)
+
+    def _added_from_origin(self, branch: Branch) -> Worktree:
+        """A new sibling worktree for branch, up to date with origin, or from local refs when origin cannot be reached."""
         try:
             # Fetched first so a branch pushed from elsewhere starts from origin's copy.
-            self._repo.fetch()
+            self._repo.origin.fetch()
         except RepoConnectError as exc:
             logger.warning("opening %s from local refs; fetch from origin failed: %s", branch.name, exc)
             opened = self.add(self.sibling_folder(branch), branch)
@@ -144,7 +177,7 @@ class Worktrees:
 
     def sibling_folder(self, branch: Branch) -> Path:
         """The folder beside the main clone that branch's worktree gets: ``{abbreviated clone}-{short branch}``."""
-        primary = self._repo.primary_root()
+        primary = self.primary_root()
         slug = branch.name.replace("/", "-")
         ticket = _TICKET_NUMBER.search(slug)
         short = ticket.group(1) if ticket else slug[:_FOLDER_BRANCH_LENGTH].rstrip("-")

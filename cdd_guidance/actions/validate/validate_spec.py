@@ -20,7 +20,7 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
-from space.session.throwaway_project import ThrowawayProject
+from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
 )
@@ -91,7 +91,7 @@ class _StoryMapFolder:
         self.session = Path(self.action.session.session_path)
         if declared:
             outputs = {"markdown": [str(self.folder / self._MAP)], "drawio": [str(self.folder / "board/.context/story-map.drawio")]}
-            self.action.session.practice("stories").guidance.fidelities.entries["story_map"].output_paths = lambda: outputs
+            self.action.session.practice("stories").guidance.fidelities.entries["story_map"].declared.output_paths = lambda: outputs
 
     def validate(self, guidance: str = "stories-story-map", paths: list[str] | None = None) -> str:
         return self.action.validate(guidance=[guidance], paths=paths or [self._MAP])
@@ -277,6 +277,25 @@ with description("a validate action on practice guidance") as self:
         with it("should tell the agent to give each finding one file and one line"):
             expect(self.map_report).to(contain("a finding at two places is two bullets"))
 
+        # A pattern can reach validate from the folder's patterns file with no overlay on the session, and the agent must
+        # be told which: a report that says the session overlays it when it does not misleads the person reading it.
+        with context("whose folder records a pattern its session does not overlay"):
+            with before.all:
+                import cdd_guidance.patterns  # noqa: F401 - registers the patterns a folder can record
+
+                self.recorded = _StoryMapFolder()
+                _write(self.recorded.folder, "board/.context/patterns.md", "# Patterns\n\n- lern_domain_driven\n")
+                self.recorded_report = self.recorded.validate()
+
+            with after.all:
+                self.recorded.close()
+
+            with it("should say the content was generated with that pattern, as its patterns file records"):
+                expect(self.recorded_report).to(contain("This content was generated with the lern_domain_driven pattern, as `.context/patterns.md` records"))
+
+            with it("should not say the session overlays it"):
+                expect(self.recorded_report).not_to(contain("This session overlays the lern_domain_driven pattern"))
+
         # The session board reads a fidelity's latest validate line, so a second, clean line would hide the violations.
         with context("that has been validated"):
             with before.all:
@@ -419,7 +438,7 @@ with description("a validate action on practice guidance") as self:
                             markdown_call = threading.Thread(target=check_the_markdown)
                             markdown_call.start()
                             markdown_call_waiting.wait(60)
-                            validate.made_for(validate.session).validate(guidance="stories-story-map format=drawio")
+                            validate._made_for(validate.session).validate(guidance="stories-story-map format=drawio")
                             drawio_call_done.set()
                             markdown_call.join()
                         finally:
@@ -606,7 +625,7 @@ with description("a validate action on practice guidance") as self:
 
 with description("two validate calls running at once on one cdd server") as self:
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:

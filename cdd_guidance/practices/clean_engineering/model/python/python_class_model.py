@@ -32,11 +32,13 @@ from cdd_guidance.practices.clean_engineering.model.code_class_model import (
     CodeOperation,
     CodeProperty,
 )
-from cdd_guidance.practices.clean_engineering.model.operation import Operation, operation_body_fingerprint
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import PythonFunctionBody
 
 _FUTURE_IMPORT = "from __future__ import annotations"
 _ABC_IMPORT = "from abc import ABC, abstractmethod"
+# The decorators that publish an operation as an MCP tool, whose parameters are the tool's argument schema.
+_TOOL_DECORATORS = frozenset({"mcp", "agent_tool"})
 # Calls that import a module named by a string: `importlib.import_module("a.b")`, `__import__("a.b")`.
 _IMPORT_CALLS = frozenset({"import_module", "__import__"})
 
@@ -74,30 +76,40 @@ class PythonOperation(CodeOperation):
     def from_function(cls, node: Function, text: str, owner: ast.ClassDef | None) -> "PythonOperation":
         """The operation a function in text declares: its signature, its body as written, and what the rules measure
         in it, read from its own syntax tree. A method names the class that declares it; a module function, None."""
-        end_line = getattr(node, "end_lineno", None) or node.lineno
         function = PythonFunctionBody(node, owner)
-        operation = cls(
-            name=node.name,
-            parameters=function.parameters(),
-            return_type=ast.unparse(node.returns) if node.returns is not None else "",
-            description=(ast.get_docstring(node) or "").strip(),
-            line=node.lineno,
-            end_line=end_line,
-            line_count=end_line - node.lineno + 1,
-            constructed_types=function.built_collaborators() if node.name in {"__init__", "constructor"} else [],
-            callees=function.callees(),
-            is_property=function.decorated("property"),
-            body_fingerprint=operation_body_fingerprint("\n".join(ast.unparse(stmt) for stmt in node.body)),
-        )
+        operation = cls(node.name, return_type=ast.unparse(node.returns) if node.returns is not None else "")
+        operation.take_parameters(function.parameters())
+        operation.description = (ast.get_docstring(node) or "").strip()
+        operation.callees = function.callees()
+        operation.take_place(node)
+        operation.take_body_fingerprint("\n".join(ast.unparse(stmt) for stmt in node.body))
         operation.take_body(function.body_text(text), PYTHON)
-        operation.is_static = function.decorated("staticmethod")
-        operation.is_classmethod = function.decorated("classmethod")
         operation.is_setter = any(isinstance(item, ast.Attribute) and item.attr == "setter" for item in node.decorator_list)
+        operation.published_as_tool = any(operation._decorator_name(item) in _TOOL_DECORATORS for item in node.decorator_list)
         operation.measure(function)
         return operation
 
+    def _decorator_name(self, decorator: ast.expr) -> str:
+        """The name a decorator is written with, with or without arguments: `@mcp`, `@agent_tool(...)`, `@tools.mcp`."""
+        if isinstance(decorator, ast.Call):
+            decorator = decorator.func
+        if isinstance(decorator, ast.Attribute):
+            return decorator.attr
+        return decorator.id if isinstance(decorator, ast.Name) else ""
+
+    def take_place(self, node: Function) -> None:
+        """Keep where its function sits in its file: its first and last line, and how many lines it spans."""
+        self.line = node.lineno
+        self.end_line = getattr(node, "end_lineno", None) or node.lineno
+        self.line_count = self.end_line - node.lineno + 1
+
     def measure(self, function: PythonFunctionBody) -> None:
-        """Keep what the rules measure on its function."""
+        """Keep what the rules measure on its function: its decorators, the collaborators a constructor builds, and
+        what its body does."""
+        self.is_property = function.decorated("property") or function.decorated("cached_property")
+        self.is_static = function.decorated("staticmethod")
+        self.is_classmethod = function.decorated("classmethod")
+        self.constructed_types = function.built_collaborators() if self.is_constructor else []
         self.max_control_flow_depth = function.control_flow_depth()
         self.has_bare_catch, self.swallows_exceptions = function.except_flags()
         self.unnamed_literal_numbers = function.unnamed_numbers()
@@ -195,7 +207,7 @@ class PythonModule(CodeModule):
             tokens = []
         return "\n".join(docstrings + [token.string for token in tokens if token.type == tokenize.COMMENT])
 
-    def import_targets(self, file: Path, root: Path) -> list[str]:
+    def _import_targets(self, file: Path, root: Path) -> list[str]:
         """Root-relative paths each `import` / `from … import` names, absolute or relative, wherever it sits in the
         file, and each module an `importlib.import_module` call names, as far as its text spells it. An import under
         `if TYPE_CHECKING:` names a type for an annotation and never runs, so it is no dependency and is left out."""
@@ -203,15 +215,68 @@ class PythonModule(CodeModule):
             return []
         package = file.parent.relative_to(root).parts
         constants = self._string_constants(".".join(package))
-        targets: list[str] = []
-        for node in self._runtime_nodes():
-            if isinstance(node, ast.Import):
-                targets.extend(alias.name.replace(".", "/") for alias in node.names)
-            elif isinstance(node, ast.ImportFrom):
-                targets.extend(_from_import_targets(node, package))
-            elif isinstance(node, ast.Call) and _call_name(node) in _IMPORT_CALLS and node.args:
-                targets.extend(_dynamic_import_target(node.args[0], constants))
-        return targets
+        return [target for node in self._runtime_nodes() for target in self._targets_of(node, package, constants)]
+
+    def _targets_of(self, node: ast.AST, package: tuple[str, ...], constants: dict[str, str]) -> list[str]:
+        """The module paths one node imports: an `import`, a `from ... import`, or an import call; none for any other."""
+        if isinstance(node, ast.Import):
+            return [alias.name.replace(".", "/") for alias in node.names]
+        if isinstance(node, ast.ImportFrom):
+            return self._from_import_targets(node, package)
+        if isinstance(node, ast.Call) and self._call_name(node) in _IMPORT_CALLS and node.args:
+            return self._dynamic_import_target(node.args[0], constants)
+        return []
+
+    def _from_import_targets(self, node: ast.ImportFrom, package: tuple[str, ...]) -> list[str]:
+        base = list(package[: len(package) - node.level + 1]) if node.level else []
+        module = base + (node.module.split(".") if node.module else [])
+        if not module:
+            return []
+        joined = "/".join(module)
+        return [joined] + [f"{joined}/{alias.name}" for alias in node.names if alias.name != "*"]
+
+    def _is_type_checking(self, test: ast.expr) -> bool:
+        if isinstance(test, ast.Attribute):
+            return test.attr == "TYPE_CHECKING"
+        return isinstance(test, ast.Name) and test.id == "TYPE_CHECKING"
+
+    def _call_name(self, node: ast.Call) -> str:
+        """`import_module` for `importlib.import_module(...)` or `import_module(...)`; empty for a call on anything else."""
+        if isinstance(node.func, ast.Attribute):
+            return node.func.attr
+        return node.func.id if isinstance(node.func, ast.Name) else ""
+
+    def _dynamic_import_target(self, argument: ast.expr, constants: dict[str, str]) -> list[str]:
+        """The module path an import call's argument spells, as far as its text spells it."""
+        spelled = self._spelled_module(argument, constants)
+        # A relative name, `.x`, is resolved against a package argument the text may not spell.
+        if not spelled or spelled.startswith("."):
+            return []
+        return [spelled.rstrip(".").replace(".", "/")]
+
+    def _spelled_module(self, argument: ast.expr, constants: dict[str, str]) -> str:
+        """The dotted module name an argument spells: a string, a constant naming one, or an f-string; empty for any
+        other argument."""
+        if isinstance(argument, ast.Constant) and isinstance(argument.value, str):
+            return argument.value
+        if isinstance(argument, ast.Name):
+            return constants.get(argument.id, "")
+        if isinstance(argument, ast.JoinedStr):
+            return self._spelled_prefix(argument, constants)
+        return ""
+
+    def _spelled_prefix(self, joined: ast.JoinedStr, constants: dict[str, str]) -> str:
+        """The dotted part of an f-string before the first value it cannot read, such as `cdd_guidance.actions` in
+        `f"cdd_guidance.actions.{folder}.{folder}"`."""
+        spelled = ""
+        for part in joined.values:
+            if isinstance(part, ast.Constant):
+                spelled += str(part.value)
+            elif isinstance(part, ast.FormattedValue) and isinstance(part.value, ast.Name) and part.value.id in constants:
+                spelled += constants[part.value.id]
+            else:
+                return spelled.rsplit(".", 1)[0] if "." in spelled else ""
+        return spelled
 
     def _runtime_nodes(self) -> Iterator[ast.AST]:
         """Every node of its tree that runs: the body of an `if TYPE_CHECKING:` (or `if typing.TYPE_CHECKING:`) block is
@@ -220,7 +285,7 @@ class PythonModule(CodeModule):
         while pending:
             node = pending.pop()
             yield node
-            if isinstance(node, ast.If) and _is_type_checking(node.test):
+            if isinstance(node, ast.If) and self._is_type_checking(node.test):
                 pending.extend(node.orelse)
                 continue
             pending.extend(ast.iter_child_nodes(node))
@@ -281,7 +346,8 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
 
     def _class_from_ast(self, node: ast.ClassDef, class_order: int) -> PythonClass:
         documented = DocComment(ast.get_docstring(node) or "")
-        oclass = PythonClass(name=node.name, sequential_order=class_order, line=node.lineno)
+        oclass = PythonClass(name=node.name, sequential_order=class_order)
+        oclass.line = node.lineno
         documented.describe(oclass)
         oclass.stereotypes = list(dict.fromkeys(self._stereotypes_above(node) + documented.stereotypes))
         oclass.end_line = getattr(node, "end_lineno", None) or node.lineno
@@ -304,7 +370,8 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         top_ops = [PythonOperation.from_function(n, self._text, None) for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
         if not top_ops:
             return
-        holder = PythonClass(name=MODULE_FUNCTION_HOLDER, sequential_order=len(module.classes) + 1, line=1)
+        holder = PythonClass(name=MODULE_FUNCTION_HOLDER, sequential_order=len(module.classes) + 1)
+        holder.line = 1
         holder.end_line = 1
         holder.operations = top_ops
         module.classes.append(holder)
@@ -339,50 +406,3 @@ def _bare_decorator_name(decorator: ast.expr) -> str:
     if isinstance(decorator, ast.Call) and not decorator.args and not decorator.keywords:
         decorator = decorator.func
     return decorator.id if isinstance(decorator, ast.Name) else ""
-
-
-def _from_import_targets(node: ast.ImportFrom, package: tuple[str, ...]) -> list[str]:
-    base = list(package[: len(package) - node.level + 1]) if node.level else []
-    module = base + (node.module.split(".") if node.module else [])
-    if not module:
-        return []
-    joined = "/".join(module)
-    return [joined] + [f"{joined}/{alias.name}" for alias in node.names if alias.name != "*"]
-
-
-def _is_type_checking(test: ast.expr) -> bool:
-    if isinstance(test, ast.Attribute):
-        return test.attr == "TYPE_CHECKING"
-    return isinstance(test, ast.Name) and test.id == "TYPE_CHECKING"
-
-
-def _call_name(node: ast.Call) -> str:
-    """`import_module` for `importlib.import_module(…)` or `import_module(…)`; empty for a call on anything else."""
-    if isinstance(node.func, ast.Attribute):
-        return node.func.attr
-    return node.func.id if isinstance(node.func, ast.Name) else ""
-
-
-def _dynamic_import_target(argument: ast.expr, constants: dict[str, str]) -> list[str]:
-    """The module path an import call's argument spells: the whole string, or for an f-string the dotted part before
-    the first value it cannot read, such as `cdd_guidance.actions` in `f"cdd_guidance.actions.{folder}.{folder}"`."""
-    if isinstance(argument, ast.Constant) and isinstance(argument.value, str):
-        spelled = argument.value
-    elif isinstance(argument, ast.Name) and argument.id in constants:
-        spelled = constants[argument.id]
-    elif isinstance(argument, ast.JoinedStr):
-        spelled = ""
-        for part in argument.values:
-            if isinstance(part, ast.Constant):
-                spelled += str(part.value)
-            elif isinstance(part, ast.FormattedValue) and isinstance(part.value, ast.Name) and part.value.id in constants:
-                spelled += constants[part.value.id]
-            else:
-                spelled = spelled.rsplit(".", 1)[0] if "." in spelled else ""
-                break
-    else:
-        return []
-    # A relative name, `.x`, is resolved against a package argument the text may not spell.
-    if not spelled or spelled.startswith("."):
-        return []
-    return [spelled.rstrip(".").replace(".", "/")]

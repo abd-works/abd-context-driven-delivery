@@ -42,20 +42,25 @@ StoryDemoPage                         // one HTML document (mockup+spec channel)
 
   load()
     -> PlayDualRunner.collect(create{Story}Story, mode)
-    -> explorerFrame.bindStoryTree(story)
+    -> explorerFrame.showStory(story)
   selectScenario(scenarioIndex)
     -> PlayDualRunner.start(story, scenarioIndex)
     -> explorerFrame.highlightStep(current)
-    -> storyDemoFrame.clearEmphasis()
+    -> storyDemoFrame.emphasis.clear()
 
   ----
  StoryDemoFrame                       // LEFT pane (was MockupFrame)
   controls[]                          // StoryDemoControl[]
+  emphasis                            // ControlEmphasis — which controls a step emphasizes
   bind(snapshot)
     -> for each StoryDemoControl: StoryDemoControl.show(snapshot via bound_field)
+
+  ----
+ ControlEmphasis                      // part of StoryDemoFrame
   emphasize(step)
     -> StoryDemoControl.emphasize()   // story_steps match step.kind + step.label
     // never shows GWT step prose — steps live only in ExplorerFrame
+  clear() / paint()
   tintFailed(result)
     -> StoryDemoControl.tint()
 
@@ -63,15 +68,13 @@ StoryDemoPage                         // one HTML document (mockup+spec channel)
  ExplorerFrame                        // RIGHT pane
   storyTree
   playNextControl                     // [ Play next ] — chrome only (StoryDemoControl)
-  resetControl
   messageArea
 
-  bindStoryTree(story)
+  showStory(story)
     -> show scenarios and step labels (kind + label)
   highlightStep(step)
     -> mark › current step ‹ in the tree
   showMessage(message) / clearMessage()
-  markStep(step, ok)
 
   playNextControl.interactions[]
        Interaction
@@ -222,7 +225,7 @@ Scenario domain variables
     -> index = index + 1
     -> PaintReflect.apply(scenario.expose())
     -> ExplorerFrame.highlightStep(step)
-    -> StoryDemoFrame.emphasize(step) // story_steps ↔ kind+label
+    -> StoryDemoFrame.emphasis.emphasize(step) // story_steps ↔ kind+label
     -> if step.kind == then: ThenFeedback.apply(result)
   // invoked only by explorer playNextControl Interaction
   // node:test path: same collect; before/it instead of playNext
@@ -236,10 +239,9 @@ Scenario domain variables
   ----
  ThenFeedback
   apply result
-    -> ExplorerFrame.markStep(result.step, result.ok)
     -> if result.ok: ExplorerFrame.clearMessage()
     -> if not result.ok: ExplorerFrame.showMessage(result.message)
-    -> if not result.ok: StoryDemoFrame.tintFailed(result)
+    -> if not result.ok: StoryDemoFrame.emphasis.tintFailed(result)
     // invariant: peer to PaintReflect — Then steps only
 ---
 ## bdd:
@@ -289,14 +291,14 @@ a story demo page
     it should highlight the current step only in the explorer
       -> expect(page.explorerFrame.currentStepHighlighted()).to be true
     it should emphasize matching story demo controls or fields
-      -> expect(page.storyDemoFrame.emphasizedFor(session.currentStep)).to be true
+      -> expect(page.storyDemoFrame.emphasis.emphasizedFor(session.currentStep)).to be true
       -> // story_steps match kind+label; product controls not invoked
   that a then step fails
     -> page.explorerFrame.playNextControl.trigger("click")
     it should show a failure message in the explorer
       -> expect(page.explorerFrame.messageVisible()).to be true
     it should tint failed values on the story demo frame
-      -> expect(page.storyDemoFrame.hasTint()).to be true
+      -> expect(page.storyDemoFrame.emphasis.hasTint()).to be true
 ---
 ## ux:
 story demo shell — Play

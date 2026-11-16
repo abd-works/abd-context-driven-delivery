@@ -41,8 +41,11 @@ export const filesShown = (byFidelity: FidelityFiles[], listed: string[], format
 // The files under the session's root a page shows: in a format selected while any is, and belonging to a fidelity listed.
 // A file no fidelity declares, such as a practice's example, belongs to no practice, so it shows only while no practice
 // is selected, which filters no practice; Stories selected shows Stories' files alone.
-export const rootFilesShown = (rootFiles: FileEntryData[], listed: string[], formats: string[], withUnclaimed: boolean): FileEntryData[] =>
-  rootFiles.filter(entry => (!formats.length || formats.includes(entry.format)) && (entry.fidelities.length ? entry.fidelities.some(slug => listed.includes(slug)) : withUnclaimed))
+export const rootFilesShown = (rootFiles: FileEntryData[], listed: string[], selection: GuidanceSelectionData | null): FileEntryData[] => {
+  const formats = selectedFormatsOf(selection)
+  const withUnclaimed = isNoPracticeSelected(selection)
+  return rootFiles.filter(entry => (!formats.length || formats.includes(entry.format)) && (entry.fidelities.length ? entry.fidelities.some(slug => listed.includes(slug)) : withUnclaimed))
+}
 
 // Whether no practice is selected, so no practice filters the files; with no selection read yet, none is.
 export const isNoPracticeSelected = (selection: GuidanceSelectionData | null): boolean => !(selection?.practices ?? []).some(practice => practice.is_selected)
@@ -77,7 +80,7 @@ export class FilesPage {
     this.menu = new FileMenu(this.store, this.chatContext, new FileBrowser(api, this.notices))
     this.comments = new FileCommentsActions(this)
     this.graph = new FilesGraph(this.store, this.session, this.api, this.fileBar, this.notices, selected => this.showNodes(selected))
-    this.guidance = new GuidanceSelector(this.session, this.store, () => this.showSelected(), (failure, context) => this.notices.fail(failure, context))
+    this.guidance = new GuidanceSelector(this)
   }
 
   get state() {
@@ -162,7 +165,7 @@ export class FilesPage {
     const formats = selectedFormatsOf(state.guidance)
     if (this.link.isSessionFolder) return filesShown(state.byFidelity, [''], formats)
     const listed = listedBy(state.guidance, this.link.fidelities)
-    return eachOnce([...filesShown(state.byFidelity, listed, formats), ...rootFilesShown(state.rootFiles ?? [], listed, formats, isNoPracticeSelected(state.guidance))])
+    return eachOnce([...filesShown(state.byFidelity, listed, formats), ...rootFilesShown(state.rootFiles ?? [], listed, state.guidance)])
   }
 
   // Every file under the session's root, read once as the page opens: what All session files lists, and This session
@@ -191,7 +194,7 @@ export class FilesPage {
 
   // A selection drawn: the list shows its fidelities' files at once, then reads the files of any it shows for the first
   // time, such as a stage just selected, and shows them too.
-  private async showSelected(): Promise<void> {
+  async showSelected(): Promise<void> {
     this.store.change(state => ({ entries: this.shownFrom(state) }))
     const missing = this.listed.filter(slug => !this.state.byFidelity.some(each => each.slug === slug))
     if (this.link.isSessionFolder || this.state.isListing || !missing.length) return

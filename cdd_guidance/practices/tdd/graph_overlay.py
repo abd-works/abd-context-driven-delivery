@@ -7,7 +7,7 @@ from pathlib import Path
 from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.stories.stories import Stories
 from cdd_guidance.practices.tdd.tiers import is_test_code, real_resources_in, tier_of
-from harness.graph.graph import Graph
+from harness.graph.graph import Graph, Node
 from harness.graph.pattern_overlays import GraphOverlay
 
 
@@ -29,7 +29,7 @@ class TddOverlay(GraphOverlay):
                 if is_test_code(node.source.file or ""):
                     self._record(node, root / node.source.file)
 
-    def _record(self, node, path: Path) -> None:
+    def _record(self, node: Node, path: Path) -> None:
         tier = tier_of(node.source.file)
         node.set_fact("tier", tier)
         text = path.read_text(encoding="utf-8", errors="replace") if tier == "unit" and path.is_file() else ""

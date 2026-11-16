@@ -3,10 +3,11 @@ below them, as the hub and every detail page show it."""
 from __future__ import annotations
 
 import html
+from dataclasses import dataclass, field
 
 from harness.catalog_generator.approach_copy import StageCopy
-from harness.catalog_generator.catalog_practice import CatalogPractice
-from harness.catalog_generator.catalog_examples import StageExample
+from harness.catalog_generator.catalog_practice import CatalogPractice, giving_stage_examples
+from harness.catalog_generator.catalog_examples import CatalogFidelity, StageExample
 from harness.catalog_generator.stage_columns import STAGE_COLUMNS, BoardLabel, StageColumn
 
 # The colour families the board cycles through for a stage's chips.
@@ -61,56 +62,109 @@ _POLICY_TOGGLE = (
 )
 
 
+@dataclass(frozen=True)
+class BoardTools:
+    """The lifecycle actions and utilities a board lists below its stage columns, each with its ``name`` and page
+    ``href``."""
+
+    actions: list = field(default_factory=list)
+    utilities: list = field(default_factory=list)
+
+
 class HubBoard:
     """The board for one catalog: its practices in board order, its lifecycle actions and utilities (each with its
     ``name`` and page ``href``), and the approach's copy for each stage column. A practice page highlights its
     practice; a fidelity page highlights the fidelity too."""
 
-    def __init__(self, practices: list, actions: list, utilities: list, stages: dict[str, StageCopy]) -> None:
+    def __init__(self, practices: list, tools: BoardTools, stages: dict[str, StageCopy]) -> None:
         self.practices = practices
-        self.actions = actions
-        self.utilities = utilities
+        self.tools = tools
         self.stages = stages
         # The practice whose artifacts are the stage examples each column title opens (Stories).
-        self.stories = CatalogPractice.giving_stage_examples(practices)
+        self.stories = giving_stage_examples(practices)
 
-    def html(self, *, path_prefix: str = "", practice=None, fidelity=None) -> str:
+    def html(
+        self, *, path_prefix: str = "", practice: CatalogPractice | None = None, fidelity: CatalogFidelity | None = None
+    ) -> str:
         """The board on a page ``path_prefix`` away from the hub, highlighting ``practice`` and its ``fidelity``."""
+        return _BoardOnPage(self, path_prefix, _Highlight(practice, fidelity)).html
+
+    def stage(self, column: StageColumn) -> StageCopy:
+        """The approach's copy for column's stage; only its name when the approach says nothing of it."""
+        return self.stages.get(column.key) or StageCopy(id=column.stage.name)
+
+
+class _Highlight:
+    """What a page highlights on the board: its practice, and on a fidelity page the fidelity too; nothing on the hub."""
+
+    def __init__(self, practice: CatalogPractice | None, fidelity: CatalogFidelity | None) -> None:
+        self.practice = practice
+        self.fidelity = fidelity
+
+    @property
+    def attributes(self) -> str:
+        attributes = ' data-cdd-always-expanded="1" data-cdd-no-stage-filter="1"'
+        if self.practice is None:
+            return attributes
+        attributes += f' data-initial-family="{html.escape(self.practice.key)}"'
+        if self.column is not None:
+            attributes += f' data-initial-stage="{html.escape(self.column.key)}"'
+        return attributes
+
+    @property
+    def column(self) -> StageColumn | None:
+        """The column holding the fidelity in its practice's place on the board; none when no fidelity is highlighted."""
+        if self.practice is None or self.fidelity is None:
+            return None
+        return next((column for column in STAGE_COLUMNS if self.practice.fidelity_in(column) is self.fidelity), None)
+
+
+class _Ticket:
+    """One ticket on the board: a labelled link to a page, with the classes and data attributes its place gives it."""
+
+    def __init__(self, label: str, href: str) -> None:
+        self.label = html.escape(label)
+        self.href = href
+
+    def html(self, classes: str, attributes: str = "") -> str:
+        return (
+            f'<a class="{classes}"{attributes} href="{html.escape(self.href)}">'
+            f'<span class="kb-skill-tooltip-wrap">{self.label}'
+            f'<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip">'
+            f'<span class="kb-col-shape-tooltip__name">{self.label}</span>'
+            f"</span></span></a>"
+        )
+
+
+class _BoardOnPage:
+    """The board as one page shows it: its links start ``path_prefix`` away from the hub, and it highlights what the
+    page is about."""
+
+    def __init__(self, board: HubBoard, path_prefix: str, highlight: _Highlight) -> None:
+        self.board = board
+        self.path_prefix = path_prefix
+        self.highlight = highlight
+
+    @property
+    def html(self) -> str:
+        board, path_prefix = self.board, self.path_prefix
         return _BOARD_SHELL.format(
-            attrs=self._highlight_attributes(practice, fidelity),
-            practice_col=self._practice_rail(path_prefix),
-            cols="".join(self._column(column, path_prefix, practice, fidelity) for column in STAGE_COLUMNS),
-            stage_questions=self._stage_policies(path_prefix),
+            attrs=self.highlight.attributes,
+            practice_col=self._practice_rail(),
+            cols="".join(self._column(column) for column in STAGE_COLUMNS),
+            stage_questions=self._stage_policies(),
             action_tickets="".join(
-                self._ticket(str(BoardLabel(action.name)), path_prefix + action.href, "aad-fam-supporting")
-                for action in self.actions
+                _Ticket(str(BoardLabel(action.name)), path_prefix + action.href).html("kb-ticket aad-skill aad-fam-supporting")
+                for action in board.tools.actions
             ),
             utility_tickets="".join(
-                self._ticket(str(BoardLabel(utility.name)), path_prefix + utility.href, "aad-fam-foundational")
-                for utility in self.utilities
+                _Ticket(str(BoardLabel(utility.name)), path_prefix + utility.href).html("kb-ticket aad-skill aad-fam-foundational")
+                for utility in board.tools.utilities
             ),
         )
 
-    def _stage(self, column: StageColumn) -> StageCopy:
-        return self.stages.get(column.key) or StageCopy(id=column.stage.name)
-
-    def _highlight_attributes(self, practice, fidelity) -> str:
-        attributes = ' data-cdd-always-expanded="1" data-cdd-no-stage-filter="1"'
-        if practice is None:
-            return attributes
-        attributes += f' data-initial-family="{html.escape(practice.key)}"'
-        highlighted = self._highlighted_column(practice, fidelity)
-        if highlighted is not None:
-            attributes += f' data-initial-stage="{html.escape(highlighted.key)}"'
-        return attributes
-
-    def _highlighted_column(self, practice, fidelity) -> StageColumn | None:
-        """The column holding ``fidelity`` in ``practice``'s place on the board; none when no fidelity is highlighted."""
-        if practice is None or fidelity is None:
-            return None
-        return next((column for column in STAGE_COLUMNS if practice.fidelity_in(column) is fidelity), None)
-
-    def _practice_rail(self, path_prefix: str) -> str:
+    def _practice_rail(self) -> str:
+        path_prefix = self.path_prefix
         approach_head = (
             f'<a class="kb-ticket aad-skill aad-fam-delivery foundry-practice-col__card '
             f'foundry-practice-col__card--header foundry-practice-col__cdd-head '
@@ -118,12 +172,13 @@ class HubBoard:
             f'data-perspective="cdd" '
             f'href="{html.escape(path_prefix + "cdd-approach.html")}">{html.escape(str(BoardLabel("cdd")))}</a>'
         )
-        practices = "".join(self._practice_card(practice, path_prefix + practice.href) for practice in self.practices)
+        practices = "".join(self._practice_card(practice) for practice in self.board.practices)
         return f'<div class="foundry-practice-col" aria-label="Context tools">{approach_head}{practices}</div>'
 
-    def _practice_card(self, practice, href: str) -> str:
+    def _practice_card(self, practice: CatalogPractice) -> str:
         """A practice on the rail: it opens the practice page and does not filter the board."""
         perspective = practice.perspective
+        href = self.path_prefix + practice.href
         return (
             f'<a class="kb-ticket aad-skill {practice.family} foundry-practice-col__card '
             f'foundry-perspective-label foundry-family-toggle foundry-perspective-label--{perspective}" '
@@ -131,57 +186,40 @@ class HubBoard:
             f'href="{html.escape(href)}" aria-pressed="false">{html.escape(practice.label)}</a>'
         )
 
-    def _column(self, column: StageColumn, path_prefix: str, practice, fidelity) -> str:
-        cells = "".join(self._cell(column, listed, path_prefix, fidelity) for listed in self.practices)
-        active = " active" if self._highlighted_column(practice, fidelity) is column else ""
-        example_href = StageExample(self._stage(column), self.stories).href(path_prefix)
-        label = html.escape(column.label)
-        title = (
-            f'<a class="kb-col-head-title__link" href="{html.escape(example_href)}">{label}</a>'
-            if example_href
-            else f"<span>{label}</span>"
-        )
+    def _column(self, column: StageColumn) -> str:
+        cells = "".join(self._cell(column, listed) for listed in self.board.practices)
+        active = " active" if self.highlight.column is column else ""
         return (
             f'<div class="kb-col{active}" data-id="col-{column.key}" data-stage="{column.key}">'
             f'<div class="kb-col-head{" kb-col-head--current" if active else ""}">'
             f'<div class="kb-col-head-row">'
             f"{self._scope_shape(column)}"
-            f'<span class="kb-col-head-title">{title}</span>'
+            f'<span class="kb-col-head-title">{self._column_title(column)}</span>'
             f"</div></div>"
             f"{self._stage_detail(column)}"
             f"{cells}"
             f"</div>"
         )
 
-    def _cell(self, column: StageColumn, practice, path_prefix: str, highlighted_fidelity) -> str:
+    def _column_title(self, column: StageColumn) -> str:
+        """The column's label, linked to the stage's example when the catalog has one."""
+        example_href = StageExample(self.board.stage(column), self.board.stories).href(self.path_prefix)
+        label = html.escape(column.label)
+        if example_href:
+            return f'<a class="kb-col-head-title__link" href="{html.escape(example_href)}">{label}</a>'
+        return f"<span>{label}</span>"
+
+    def _cell(self, column: StageColumn, practice: CatalogPractice) -> str:
         fidelity = practice.fidelity_in(column)
         if fidelity is None:
             return f'<div class="aad-skill-row {practice.family} aad-skill-row--empty" data-family="{html.escape(practice.key)}"></div>'
-        ticket = self._ticket(
-            fidelity.label,
-            path_prefix + practice.fidelity_href(fidelity.fidelity),
-            practice.family,
-            stage=column.key,
-            perspective=practice.perspective,
-            current=fidelity is highlighted_fidelity,
+        current = " kb-ticket--current" if fidelity is self.highlight.fidelity else ""
+        data = f' data-stage="{html.escape(column.key)}"' + (
+            f' data-perspective="{html.escape(practice.perspective)}"' if practice.perspective else ""
         )
-        return f'<div class="aad-skill-row {practice.family}" data-family="{html.escape(practice.key)}">{ticket}</div>'
-
-    def _ticket(
-        self, label: str, href: str, family: str, *, stage: str = "", perspective: str = "", current: bool = False
-    ) -> str:
-        classes = f"kb-ticket aad-skill {family}" + (" kb-ticket--current" if current else "")
-        data = (f' data-stage="{html.escape(stage)}"' if stage else "") + (
-            f' data-perspective="{html.escape(perspective)}"' if perspective else ""
-        )
-        label = html.escape(label)
-        return (
-            f'<a class="{classes}"{data} href="{html.escape(href)}">'
-            f'<span class="kb-skill-tooltip-wrap">{label}'
-            f'<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip">'
-            f'<span class="kb-col-shape-tooltip__name">{label}</span>'
-            f"</span></span></a>"
-        )
+        ticket = _Ticket(fidelity.label, self.path_prefix + practice.fidelity_href(fidelity.fidelity))
+        ticket_html = ticket.html(f"kb-ticket aad-skill {practice.family}{current}", data)
+        return f'<div class="aad-skill-row {practice.family}" data-family="{html.escape(practice.key)}">{ticket_html}</div>'
 
     def _scope_shape(self, column: StageColumn) -> str:
         scope = column.scope
@@ -200,7 +238,7 @@ class HubBoard:
 
     def _stage_detail(self, column: StageColumn) -> str:
         """The approach's chips and paragraphs for the stage, shown inside its column."""
-        stage = self._stage(column)
+        stage = self.board.stage(column)
         chips = "".join(
             f'<li class="tour-stage-detail__chip tour-stage-detail__chip--{_CHIP_FAMILIES[index % len(_CHIP_FAMILIES)]}">'
             f"{html.escape(item)}</li>"
@@ -214,13 +252,13 @@ class HubBoard:
             f"</div>"
         )
 
-    def _stage_policies(self, path_prefix: str) -> str:
+    def _stage_policies(self) -> str:
         cells = [_POLICY_TOGGLE]
         for column in STAGE_COLUMNS:
-            stage = self._stage(column)
+            stage = self.board.stage(column)
             items = "".join(f'<li class="kanban-stage-questions__item">{html.escape(item)}</li>' for item in stage.items)
             paragraphs = "".join(f'<p class="kanban-stage-questions__desc">{html.escape(para)}</p>' for para in stage.paras)
-            href = f"{path_prefix}fidelities/cdd-{column.key}.html"
+            href = f"{self.path_prefix}fidelities/cdd-{column.key}.html"
             cells.append(
                 f'<a class="kanban-stage-questions__cell" data-stage="{html.escape(column.key)}" '
                 f'href="{html.escape(href)}">'

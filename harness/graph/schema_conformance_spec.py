@@ -63,7 +63,7 @@ with description("conforms to schema"):
             self.practice = _working_at(self.graph, "clean_engineering", "code")
             self.cart = _node(self.practice, "OoadClass", "Cart")
             self.clear = _node(self.practice, "Operation", "clear")
-            self.graph.link("owns", self.cart, self.clear)
+            self.graph.edges.link("owns", self.cart, self.clear)
             self.lines = _node(self.practice, "Relationship", "lines")
 
         with description("a relationship with no target"):
@@ -81,7 +81,7 @@ with description("conforms to schema"):
 
         with description("a relationship with its target"):
             with it("should pass"):
-                self.graph.link("target", self.lines, _node(self.practice, "OoadClass", "Line"), "relationship")
+                self.graph.edges.relate("target", self.lines, _node(self.practice, "OoadClass", "Line"))
                 expect([gap for gap in _gaps(self.practice) if "'lines'" in gap]).to(be_empty)
 
         with description("an operation with no parameters"):

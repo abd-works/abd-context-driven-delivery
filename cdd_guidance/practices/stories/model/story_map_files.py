@@ -40,7 +40,7 @@ STORY_FILE_SUFFIXES = ("_story.test.md", "_story.spec.md")
 THIN_SLICING_FILES = ("thin-slicing.md", "thin-slice.md", "thin-slices.md", "increments.md")
 
 
-def is_story_map_file(path) -> bool:
+def is_story_map_file(path: Path | str) -> bool:
     """A story map is a markdown or drawio file named story-map (or story_map), alone or after a prefix."""
     path = Path(path)
     stem = Name(path.stem).title_slug
@@ -55,6 +55,15 @@ def preferred_maps(paths: List[Path]) -> List[Path]:
     for path in ranked:
         chosen.setdefault(path.with_suffix(""), path)
     return [path for path in paths if path in chosen.values()]
+
+
+# What marks a folder as a project's own: its git checkout. A folder holding `.sessions` need not be one: a home folder can.
+_PROJECT_MARKS = (".git",)
+# The folders and file names scenarios are written in, in the order a folder's scenario files are read.
+_SCENARIO_FOLDERS = ("scenarios", "md")
+_SCENARIO_FILES = ("scenarios.md",)
+_STORY_SCENARIO_FILES = ("story-scenarios.md",)
+_STORIES_FOLDER = "stories"
 
 
 class StoryMapFiles:
@@ -106,7 +115,7 @@ class StoryMapFiles:
         """Each markdown file scenarios are written in, in this folder and the folders below it: in a `scenarios`, `md`
         or `stories` folder, a `scenarios.md` or `story-scenarios.md`, or a story's own file. Grouped by the kind of
         file in that order, then by path, so a folder's scenarios read in the same order every time."""
-        found = [(kind, path) for walked in self.story_folders() for path in self._markdown_in(walked) for kind in [_scenario_file_kind(PurePosixPath(path.relative_to(walked).as_posix()))] if kind is not None]
+        found = [(kind, path) for walked in self.story_folders() for path in self._markdown_in(walked) for kind in [self._scenario_file_kind(PurePosixPath(path.relative_to(walked).as_posix()))] if kind is not None]
         return [path for _kind, path in sorted(found)]
 
     def story_folders(self) -> List[Path]:
@@ -133,7 +142,7 @@ class StoryMapFiles:
         in (the nearest folder holding a git checkout), and this folder alone when it sits in no
         project: a temporary folder's parent can hold hundreds of thousands of files."""
         folders = [self.folder, *self.folder.parents]
-        top = self.top if self.top is not None else next((folder for folder in folders if _is_project(folder)), self.folder)
+        top = self.top if self.top is not None else next((folder for folder in folders if self._is_project(folder)), self.folder)
         if top not in folders:
             return folders
         return folders[: folders.index(top) + 1]
@@ -143,30 +152,17 @@ class StoryMapFiles:
         beside = list(context.iterdir()) if context.is_dir() else []
         return sorted(path.resolve() for path in [*folder.iterdir(), *beside] if path.is_file() and is_story_map_file(path))
 
+    def _is_project(self, folder: Path) -> bool:
+        return any((folder / mark).exists() for mark in _PROJECT_MARKS)
 
-# What marks a folder as a project's own: its git checkout. A folder holding `.sessions` need not be one: a home folder can.
-_PROJECT_MARKS = (".git",)
-
-
-def _is_project(folder: Path) -> bool:
-    return any((folder / mark).exists() for mark in _PROJECT_MARKS)
-
-
-# The folders and file names scenarios are written in, in the order a folder's scenario files are read.
-_SCENARIO_FOLDERS = ("scenarios", "md")
-_SCENARIO_FILES = ("scenarios.md",)
-_STORY_SCENARIO_FILES = ("story-scenarios.md",)
-_STORIES_FOLDER = "stories"
-
-
-def _scenario_file_kind(relative: PurePosixPath) -> Optional[int]:
-    """Which kind of scenario file a path is, by the order they are read in; none for another markdown file."""
-    folders = relative.parts[:-1]
-    kinds = (
-        any(folder in _SCENARIO_FOLDERS[:1] for folder in folders) or relative.name in _SCENARIO_FILES,
-        any(folder in _SCENARIO_FOLDERS[1:] for folder in folders),
-        relative.name.endswith(STORY_FILE_SUFFIXES),
-        relative.name in _STORY_SCENARIO_FILES,
-        _STORIES_FOLDER in folders,
-    )
-    return next((index for index, matches in enumerate(kinds) if matches), None)
+    def _scenario_file_kind(self, relative: PurePosixPath) -> Optional[int]:
+        """Which kind of scenario file a path is, by the order they are read in; none for another markdown file."""
+        folders = relative.parts[:-1]
+        kinds = (
+            any(folder in _SCENARIO_FOLDERS[:1] for folder in folders) or relative.name in _SCENARIO_FILES,
+            any(folder in _SCENARIO_FOLDERS[1:] for folder in folders),
+            relative.name.endswith(STORY_FILE_SUFFIXES),
+            relative.name in _STORY_SCENARIO_FILES,
+            _STORIES_FOLDER in folders,
+        )
+        return next((index for index, matches in enumerate(kinds) if matches), None)

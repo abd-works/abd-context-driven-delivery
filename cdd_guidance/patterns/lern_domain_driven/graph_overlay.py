@@ -8,9 +8,12 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.location import Location
 from harness.graph.pattern_overlays import GraphOverlay
 from harness.graph.skipped_folders import scanned_files
+from harness.guidance.guidance import PracticeGuidance
 
 from cdd_guidance.patterns.lern_domain_driven.tier_facts import AggregateFolder, TierFile
 from cdd_guidance.practices.clean_engineering.model.code_body import CODE_LANGUAGES, TYPESCRIPT
@@ -57,8 +60,8 @@ class _LernReading:
         self.graph = graph
         self.root = root
 
-    def _link(self, kind: str, parent: Node, child: Node) -> None:
-        self.graph.link(kind, parent, child, self.overlay.display_of(kind))
+    def link(self, kind: str, parent: Node, child: Node) -> None:
+        self.graph.edges.record(EdgeType.from_kind(kind, self.overlay.display_of(kind)), parent, child)
 
     def read(self) -> None:
         from cdd_guidance.practices.ddd.ddd import Ddd
@@ -70,6 +73,7 @@ class _LernReading:
         if ddd is None or self.stories is None:
             return
         self.ddd = ddd
+        self.ddd_files = _PracticeFiles(ddd)
         self.setup_text = self.overlay.pattern.test_setup_text(self.root)
         self._tier_folders()
         aggregates = {node.source.file.replace("\\", "/"): node for node in self.ddd.reading.in_graph.nodes("Aggregate")}
@@ -88,7 +92,7 @@ class _LernReading:
             semantic = _BEHAVIOR_TIERS.get(".".join(file.name.split(".")[1:]))
             if semantic is not None:
                 behavior = TierFile.at(self.root, file)
-                node = self._file_node(bdd, behavior.relative, semantic, file.name)
+                node = _PracticeFiles(bdd).node(behavior.relative, semantic, file.name)
                 for key, value in behavior.behavior_facts().items():
                     node.set_fact(key, value)
 
@@ -98,91 +102,22 @@ class _LernReading:
             folder = file.parent.relative_to(self.root).as_posix()
             is_tier_file = file.name in (f"{file.parent.name}-routes.ts", f"{file.parent.name}-node.ts")
             if is_tier_file and folder.startswith("src/") and not self.ddd.reading.in_graph.holds(f"ddd:Aggregate:{folder}"):
-                self.ddd.reading.in_graph.add_named("Aggregate", f"ddd:Aggregate:{folder}", file.parent.name, Source(folder, 1, 1, self.ddd.reading.in_graph.source_root))
+                self.ddd.reading.in_graph.add_named("Aggregate", f"ddd:Aggregate:{folder}", file.parent.name, Source.from_root(self.ddd.reading.in_graph.source_root, Location(folder, 1, 1)))
 
     def _aggregate(self, folder: str, aggregate: Node) -> None:
-        slug = Path(folder).name
-        tiers = {semantic: self._file_node(self.ddd, f"{folder}/{name.format(slug=slug)}", semantic) for name, semantic in _TIER_FILES if (self.root / folder / name.format(slug=slug)).is_file()}
-        for tier in tiers.values():
-            self._link("owns", aggregate, tier)
-        self._other_node_files(folder, slug, aggregate)
-        roots = [node for node in self.ddd.reading.in_graph.nodes("EntityRoot") if self._folder_of(node.source.file) == folder]
-        repositories = [node for node in self.ddd.reading.in_graph.nodes("Repository") if self._folder_of(node.source.file) == folder]
-        self._tier_facts(folder, aggregate, tiers, repositories)
-        self._link_tiers(tiers, roots, repositories)
-        views = self._views(folder, slug, aggregate, tiers.get("ClientRoot"), repositories[0] if repositories else None)
-        if "NodeRoot" in tiers:
-            for view in views:
-                self._link("views", tiers["NodeRoot"], view)
-
-    def _link_tiers(self, tiers: dict[str, Node], roots: list[Node], repositories: list[Node]) -> None:
-        node_root, client_root, route, store = (tiers.get(name) for name in ("NodeRoot", "ClientRoot", "Route", "JsonStore"))
-        for entity in roots:
-            if node_root is not None:
-                self._link("nodeRoot", entity, node_root)
-                self._link("hosts", entity, node_root)
-            if client_root is not None:
-                self._link("interacts", entity, client_root)
-        if client_root is not None and route is not None:
-            self._link("calls", client_root, route)
-        if route is not None and node_root is not None:
-            self._link("nodeRoot", route, node_root)
-        for repository in repositories:
-            if store is not None:
-                self._link("writes", repository, store)
-            if node_root is not None:
-                self._link("nodeRepository", node_root, repository)
-
-    def _tier_facts(self, folder: str, aggregate: Node, tiers: dict[str, Node], repositories: list[Node]) -> None:
-        """Read each LERN tier file once and record what its rules need on the node it became."""
-
-        aggregate_folder = AggregateFolder(self.root, folder)
-        aggregate.set_fact("web_path_literals", aggregate_folder.web_path_literals())
-        aggregate.set_fact("core_request_reads", aggregate_folder.core_request_reads())
-        readers = (("NodeRoot", lambda file: file.node_root_facts(self.setup_text)), ("Route", TierFile.route_facts))
-        for semantic, facts_of in readers:
-            tier = tiers.get(semantic)
-            if tier is not None:
-                for key, value in facts_of(TierFile.at(self.root, self.root / tier.source.file)).items():
-                    tier.set_fact(key, value)
-        for repository in repositories:
-            file = TierFile.at(self.root, self.root / repository.source.file)
-            repository.set_fact("unreset_instances", file.unreset_instances([repository.name], self.setup_text))
-
-    def _other_node_files(self, folder: str, slug: str, aggregate: Node) -> None:
-        """Every other ``*-node.ts`` in the aggregate folder is node-tier code too (e.g. ``iccid-inventory-node.ts``)."""
-        folder_path = self.root / folder
-        for file in sorted(folder_path.glob("*-node.ts")) if folder_path.is_dir() else []:
-            if file.name != f"{slug}-node.ts":
-                self._link("owns", aggregate, self._file_node(self.ddd, file.relative_to(self.root).as_posix(), "NodeRoot"))
-
-    def _views(self, folder: str, slug: str, aggregate: Node, client_root: Node | None, repository: Node | None) -> list[Node]:
-        views = []
-        folder_path = self.root / folder
-        for file in sorted(folder_path.glob("*.tsx")) if folder_path.is_dir() else []:
-            match = _VIEW_EXPORT.search(file.read_text(encoding="utf-8")) if self._is_view_file(file.name, slug) else None
-            if match is None:
-                continue
-            view = self._file_node(self.ddd, file.relative_to(self.root).as_posix(), "View", match.group(1))
-            views.append(view)
-            self._link("view", aggregate, view)
-            if client_root is not None:
-                self._link("clientRoot", view, client_root)
-            if repository is not None:
-                self._link("nodeRepository", view, repository)
-        return views
+        _AggregateTiers(self, folder, aggregate).read()
 
     def _story_files(self) -> None:
-        stories = self.stories
+        story_files = _PracticeFiles(self.stories)
         for file in scanned_files(self.root):
             semantic = self._story_semantic(file)
             if semantic is None:
                 continue
             story = TierFile.at(self.root, file)
-            node = self._file_node(stories, story.relative, semantic, file.name)
+            node = story_files.node(story.relative, semantic, file.name)
             parent = self._parent_story_scope(story.relative)
             if parent is not None:
-                self._link("owns", parent, node)
+                self.link("owns", parent, node)
             for key, value in story.story_facts().items():
                 node.set_fact(key, value)
 
@@ -191,28 +126,14 @@ class _LernReading:
         rel = relative.replace("\\", "/")
         epics = [node for node in self.stories.reading.in_graph.nodes() if node.type in {"Epic", "SubEpic"}]
         holding = [
-            (len(self._folder_of(node.source.file)), node)
+            (len(self.folder_of(node.source.file)), node)
             for node in epics
-            if node.source.file and (rel == self._folder_of(node.source.file) or rel.startswith(f"{self._folder_of(node.source.file)}/"))
+            if node.source.file and (rel == self.folder_of(node.source.file) or rel.startswith(f"{self.folder_of(node.source.file)}/"))
         ]
         if holding:
             return max(holding, key=lambda item: item[0])[1]
         parent_name = Path(rel).parent.name.replace("_", "-")
         return next((node for node in epics if node.name.replace("_", "-") == parent_name), None)
-
-    def _file_node(self, practice, relative: str, semantic: str, name: str = "") -> Node:
-        """The node for one tier file of practice, made the first time a tier names it."""
-        graph = practice.reading.graph
-        node_id = f"{practice.key}:{semantic}:{relative}"
-        existing = graph.node(node_id)
-        if existing is not None:
-            return existing
-        return practice.reading.in_graph.add_named(semantic, node_id, name or Path(relative).stem, Source.whole_file(relative, practice.reading.in_graph.source_root))
-
-    def _is_view_file(self, filename: str, slug: str) -> bool:
-        if filename == f"{slug}-client.tsx" or not filename.endswith(".tsx"):
-            return False
-        return not any(filename.endswith(f"{suffix}.tsx") for suffix in _VIEW_SKIP_SUFFIXES)
 
     def _story_semantic(self, file: Path) -> str | None:
         if file.name.endswith(".story.shared.ts"):
@@ -225,5 +146,120 @@ class _LernReading:
             return "PlaywrightSpec"
         return None
 
-    def _folder_of(self, file_path: str) -> str:
+    def folder_of(self, file_path: str) -> str:
         return str(Path(file_path).parent).replace("\\", "/")
+
+
+class _PracticeFiles:
+    """The nodes one practice holds for whole files the LERN tiers name, each made the first time a tier names it."""
+
+    def __init__(self, practice: PracticeGuidance) -> None:
+        self.practice = practice
+
+    def node(self, relative: str, semantic: str, name: str = "") -> Node:
+        """The node for the file at relative; name defaults to the file's stem."""
+        reading = self.practice.reading
+        node_id = f"{self.practice.key}:{semantic}:{relative}"
+        existing = reading.graph.node(node_id)
+        if existing is not None:
+            return existing
+        return reading.in_graph.add_named(semantic, node_id, name or Path(relative).stem, Source.whole_file(relative, reading.in_graph.source_root))
+
+
+class _AggregateTiers:
+    """One aggregate folder's tier files, entity roots, and repositories, found once and linked onto the graph by the
+    reading that found the folder."""
+
+    def __init__(self, reading: _LernReading, folder: str, aggregate: Node) -> None:
+        self.reading = reading
+        self.folder = folder
+        self.slug = Path(folder).name
+        self.aggregate = aggregate
+        in_graph = reading.ddd.reading.in_graph
+        self.tiers = {
+            semantic: reading.ddd_files.node(f"{folder}/{name.format(slug=self.slug)}", semantic)
+            for name, semantic in _TIER_FILES
+            if (reading.root / folder / name.format(slug=self.slug)).is_file()
+        }
+        self.roots = [node for node in in_graph.nodes("EntityRoot") if reading.folder_of(node.source.file) == folder]
+        self.repositories = [node for node in in_graph.nodes("Repository") if reading.folder_of(node.source.file) == folder]
+
+    def read(self) -> None:
+        for tier in self.tiers.values():
+            self.reading.link("owns", self.aggregate, tier)
+        self._other_node_files()
+        self._tier_facts()
+        self._link_tiers()
+        views = self._views()
+        node_root = self.tiers.get("NodeRoot")
+        if node_root is not None:
+            for view in views:
+                self.reading.link("views", node_root, view)
+
+    def _link_tiers(self) -> None:
+        link = self.reading.link
+        node_root, client_root, route, store = (self.tiers.get(name) for name in ("NodeRoot", "ClientRoot", "Route", "JsonStore"))
+        for entity in self.roots:
+            if node_root is not None:
+                link("nodeRoot", entity, node_root)
+                link("hosts", entity, node_root)
+            if client_root is not None:
+                link("interacts", entity, client_root)
+        if client_root is not None and route is not None:
+            link("calls", client_root, route)
+        if route is not None and node_root is not None:
+            link("nodeRoot", route, node_root)
+        for repository in self.repositories:
+            if store is not None:
+                link("writes", repository, store)
+            if node_root is not None:
+                link("nodeRepository", node_root, repository)
+
+    def _tier_facts(self) -> None:
+        """Read each LERN tier file once and record what its rules need on the node it became."""
+        root, setup_text = self.reading.root, self.reading.setup_text
+        aggregate_folder = AggregateFolder(root, self.folder)
+        self.aggregate.set_fact("web_path_literals", aggregate_folder.web_path_literals())
+        self.aggregate.set_fact("core_request_reads", aggregate_folder.core_request_reads())
+        readers = (("NodeRoot", lambda file: file.node_root_facts(setup_text)), ("Route", TierFile.route_facts))
+        for semantic, facts_of in readers:
+            tier = self.tiers.get(semantic)
+            if tier is not None:
+                for key, value in facts_of(TierFile.at(root, root / tier.source.file)).items():
+                    tier.set_fact(key, value)
+        for repository in self.repositories:
+            file = TierFile.at(root, root / repository.source.file)
+            repository.set_fact("unreset_instances", file.unreset_instances([repository.name], setup_text))
+
+    def _other_node_files(self) -> None:
+        """Every other ``*-node.ts`` in the aggregate folder is node-tier code too (e.g. ``iccid-inventory-node.ts``)."""
+        folder_path = self.reading.root / self.folder
+        for file in sorted(folder_path.glob("*-node.ts")) if folder_path.is_dir() else []:
+            if file.name != f"{self.slug}-node.ts":
+                node = self.reading.ddd_files.node(file.relative_to(self.reading.root).as_posix(), "NodeRoot")
+                self.reading.link("owns", self.aggregate, node)
+
+    def _views(self) -> list[Node]:
+        """The aggregate's view files, each linked to the aggregate, its client root, and its first repository."""
+        link = self.reading.link
+        client_root = self.tiers.get("ClientRoot")
+        repository = self.repositories[0] if self.repositories else None
+        views = []
+        folder_path = self.reading.root / self.folder
+        for file in sorted(folder_path.glob("*.tsx")) if folder_path.is_dir() else []:
+            match = _VIEW_EXPORT.search(file.read_text(encoding="utf-8")) if self._is_view_file(file.name) else None
+            if match is None:
+                continue
+            view = self.reading.ddd_files.node(file.relative_to(self.reading.root).as_posix(), "View", match.group(1))
+            views.append(view)
+            link("view", self.aggregate, view)
+            if client_root is not None:
+                link("clientRoot", view, client_root)
+            if repository is not None:
+                link("nodeRepository", view, repository)
+        return views
+
+    def _is_view_file(self, filename: str) -> bool:
+        if filename == f"{self.slug}-client.tsx" or not filename.endswith(".tsx"):
+            return False
+        return not any(filename.endswith(f"{suffix}.tsx") for suffix in _VIEW_SKIP_SUFFIXES)

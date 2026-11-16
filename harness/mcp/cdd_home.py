@@ -21,6 +21,8 @@ CLAUDE_PLUGIN = "cdd"
 CLAUDE_PLUGIN_DESCRIPTION = "Connects every Claude Code chat to the one cdd server, starting it when a chat starts"
 # How long the chat-start hook may take to start a server that was not running: a cold start imports every toolset.
 SERVER_START_SECONDS = 90
+# How much of a content hash a plugin version carries: enough that two different contents never share a version.
+VERSION_HASH_CHARS = 12
 # The cdd-board mod is published from the code the server runs, so every chat's mod matches the server it talks to.
 BOARD_PLUGIN = "cdd-board"
 BOARD_MOD_FOLDER = Path("harness") / "chat-ui" / "pane"
@@ -31,6 +33,10 @@ DRAWIO_VIEWER = Path("tools") / "drawio_viewer" / "drawio_viewer.py"
 BOARD_DRAWIO_VIEWER = Path("drawio-viewer") / "drawio_viewer.py"
 # A commit without the server cannot serve chats, so pinning one would leave every chat without cdd.
 SERVER_MODULE = "harness/mcp/mcp_daemon.py"
+# What a linked worktree's ``.git`` file starts with, before the path of its folder in the main checkout's ``.git``.
+GITDIR_PREFIX = "gitdir:"
+# What git's ``HEAD`` file starts with when a branch is out; a detached checkout holds a bare commit instead.
+BRANCH_REF_PREFIX = "ref: refs/heads/"
 # Claude Code, the IDE whose plugins this home publishes.
 _CLAUDE_CODE = IdeLayout("Claude")
 
@@ -118,7 +124,7 @@ class CddHome:
         plugin = self.claude_plugins / CLAUDE_PLUGIN
         declared = {_CLAUDE_CODE.mcp_servers_key: {"cdd": server}}
         hooks = {"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": self._start_command, "timeout": SERVER_START_SECONDS}]}]}}
-        version = f"1.0.0-{hashlib.sha256(json.dumps([declared, hooks], sort_keys=True).encode('utf-8')).hexdigest()[:12]}"
+        version = f"1.0.0-{hashlib.sha256(json.dumps([declared, hooks], sort_keys=True).encode('utf-8')).hexdigest()[:VERSION_HASH_CHARS]}"
         files = {
             plugin / ".claude-plugin" / "plugin.json": {"name": CLAUDE_PLUGIN, "version": version, "description": CLAUDE_PLUGIN_DESCRIPTION},
             plugin / ".mcp.json": declared,
@@ -138,14 +144,7 @@ class CddHome:
         if not (source / ".claude-plugin" / "plugin.json").is_file():
             return
         target = self.claude_plugins / BOARD_PLUGIN
-        # A file the running app holds open can survive the delete on Windows, so the copy writes over what is left.
-        shutil.rmtree(target, ignore_errors=True)
-        for part in BOARD_MOD_PARTS:
-            if (source / part).is_dir():
-                shutil.copytree(source / part, target / part, ignore=shutil.ignore_patterns("*.test.*"), dirs_exist_ok=True)
-        if (self.source / DRAWIO_VIEWER).is_file():
-            (target / BOARD_DRAWIO_VIEWER).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(self.source / DRAWIO_VIEWER, target / BOARD_DRAWIO_VIEWER)
+        self._copy_board_mod(source, target)
         JsonFile(target / self.INSTALL_COMMAND).write({"command": self.install_command})
         if self.mode == self.CHECKOUT:
             JsonFile(source / self.INSTALL_COMMAND).write({"command": self.install_command})
@@ -157,12 +156,23 @@ class CddHome:
         manifest_file.write(manifest)
         self._write_marketplace()
 
+    def _copy_board_mod(self, source: Path, target: Path) -> None:
+        """Copy the mod's parts, without their tests, and the draw.io viewer its chat bar opens diagrams in."""
+        # A file the running app holds open can survive the delete on Windows, so the copy writes over what is left.
+        shutil.rmtree(target, ignore_errors=True)
+        for part in BOARD_MOD_PARTS:
+            if (source / part).is_dir():
+                shutil.copytree(source / part, target / part, ignore=shutil.ignore_patterns("*.test.*"), dirs_exist_ok=True)
+        if (self.source / DRAWIO_VIEWER).is_file():
+            (target / BOARD_DRAWIO_VIEWER).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(self.source / DRAWIO_VIEWER, target / BOARD_DRAWIO_VIEWER)
+
     def _content_hash(self, folder: Path) -> str:
         digest = hashlib.sha256()
         for path in sorted(item for item in folder.rglob("*") if item.is_file()):
             digest.update(path.relative_to(folder).as_posix().encode("utf-8"))
             digest.update(path.read_bytes())
-        return digest.hexdigest()[:12]
+        return digest.hexdigest()[:VERSION_HASH_CHARS]
 
     def _write_marketplace(self) -> Path:
         """List every plugin published here; a marketplace naming a missing folder fails to load."""
@@ -207,6 +217,18 @@ class CddHome:
     @property
     def mode(self) -> str:
         return self._runtime().get("mode", "")
+
+    @property
+    def served_branch(self) -> str:
+        """The branch the served code came from, so a chat can tell which feature it runs against; empty when the
+        served checkout had no branch out."""
+        return self._runtime().get("branch", "")
+
+    @property
+    def served_worktree(self) -> Path | None:
+        """The checkout the served code came from: for a pinned runtime the worktree it was pinned from, not the copy."""
+        named = self._runtime().get("worktree")
+        return Path(named) if named else None
 
     def is_pinned_to(self, checkout: Path | str) -> bool:
         """True when the pinned runtime serves ``checkout``'s current commit."""
@@ -258,7 +280,7 @@ class CddHome:
         if not (target / SERVER_MODULE).is_file():
             raise PinFailed(source, f"commit {commit[:8]} has no {SERVER_MODULE}; commit the one-server code before pinning")
         self._mirror_origin(source, source_git)
-        self._save_runtime(target, self.PINNED, commit=commit)
+        self._save_runtime(source, self.PINNED, commit=commit)
         self.write_board_plugin()
         return commit
 
@@ -283,6 +305,20 @@ class CddHome:
         self._save_runtime(Path(checkout).resolve(), self.CHECKOUT)
         self.write_board_plugin()
 
+    def _branch_of(self, checkout: Path) -> str:
+        """The branch the checkout has out; none for a detached checkout or a folder that is not a git checkout. It reads
+        git's ``HEAD`` file rather than running git, because serving a checkout from disk runs on every install."""
+        git_folder = checkout / ".git"
+        if git_folder.is_file():
+            git_folder = checkout / git_folder.read_text(encoding="utf-8").removeprefix(GITDIR_PREFIX).strip()
+        head = git_folder / "HEAD"
+        if not head.is_file():
+            return ""
+        named = head.read_text(encoding="utf-8").strip()
+        if not named.startswith(BRANCH_REF_PREFIX):
+            return ""
+        return named.removeprefix(BRANCH_REF_PREFIX)
+
     def _git(self, checkout: Path, git: Git, *arguments: str) -> str:
         """Run git while pinning checkout; a failure is the pin's failure."""
         try:
@@ -290,10 +326,16 @@ class CddHome:
         except RepoConnectError as failure:
             raise PinFailed(checkout, str(failure)) from failure
 
-    def _save_runtime(self, source: Path, mode: str, *, commit: str = "") -> None:
-        runtime = {"source": str(source), "mode": mode, "python": str(self.interpreter.executable)}
+    def _save_runtime(self, served_from: Path, mode: str, commit: str = "") -> None:
+        """Record the code the server runs: a pinned commit runs from the copy in ``runtime/``, a checkout from disk runs
+        where it is; either way the record names the worktree it came from and that worktree's branch."""
+        source = self.pinned_checkout if mode == self.PINNED else served_from
+        runtime = {"source": str(source), "mode": mode, "python": str(self.interpreter.executable), "worktree": str(served_from)}
         if commit:
             runtime["commit"] = commit
+        branch = self._branch_of(served_from)
+        if branch:
+            runtime["branch"] = branch
         self._runtime_file.write(runtime)
 
     def _runtime(self) -> dict[str, str]:

@@ -23,7 +23,7 @@ with description("a session's work taken to main") as self:
         (self.clone / "seed.txt").write_text("seed\n", encoding="utf-8")
         self.held = MockGit(self.clone)
         self.held.make_clone()
-        self.held.add_origin()
+        self.held.origin.add()
 
     with after.each:
         shutil.rmtree(self.tmp, ignore_errors=True)
@@ -45,7 +45,7 @@ with description("a session's work taken to main") as self:
                 expect(self.held.trees["main"]).to(have_key("work.txt"))
 
             with it("should leave main on origin without the work"):
-                expect(self.held.origin_trees["main"]).not_to(have_key("work.txt"))
+                expect(self.held.origin.trees["main"]).not_to(have_key("work.txt"))
 
             with it("should leave the worktree on the session's branch"):
                 expect(self.held.branch_of(self.tree.resolve())).to(equal(SESSION_BRANCH))
@@ -66,10 +66,10 @@ with description("a session's work taken to main") as self:
                 self.held.serve(self.tree).push_to_main()
 
             with it("should hold the work on main on origin"):
-                expect(self.held.origin_trees["main"]).to(have_key("work.txt"))
+                expect(self.held.origin.trees["main"]).to(have_key("work.txt"))
 
             with it("should push the session's branch to origin"):
-                expect(self.held.origin_trees[SESSION_BRANCH]).to(have_key("work.txt"))
+                expect(self.held.origin.trees[SESSION_BRANCH]).to(have_key("work.txt"))
 
     with context("from the clone itself, with the session's branch checked out"):
         with before.each:
@@ -95,7 +95,7 @@ with description("a session's work taken to main") as self:
                 self.held.serve(self.clone).push_to_main()
 
             with it("should push the work to main on origin"):
-                expect(self.held.origin_trees["main"]).to(have_key("work.txt"))
+                expect(self.held.origin.trees["main"]).to(have_key("work.txt"))
 
     with context("from a repository whose default branch is master"):
         with before.each:
@@ -103,7 +103,7 @@ with description("a session's work taken to main") as self:
             self.held.trees["master"] = self.held.trees.pop("main")
             self.held.logs["master"] = self.held.logs.pop("main")
             self.held.checked_out[self.clone] = "master"
-            self.held.add_origin()
+            self.held.origin.add()
             self.tree = self.tmp / "clone-demo"
             self.held.add_worktree(SESSION_BRANCH, self.tree)
             (self.tree / "work.txt").write_text("work\n", encoding="utf-8")
@@ -113,7 +113,7 @@ with description("a session's work taken to main") as self:
                 self.held.serve(self.tree).push_to_main()
 
             with it("should push the work to master on origin"):
-                expect(self.held.origin_trees["master"]).to(have_key("work.txt"))
+                expect(self.held.origin.trees["master"]).to(have_key("work.txt"))
 
 # (E) Steer Sessions
 # (S) Person --> Push Work From Chat Bar
@@ -125,7 +125,7 @@ with description("a session's work pushed on its own branch") as self:
         (self.clone / "seed.txt").write_text("seed\n", encoding="utf-8")
         self.held = MockGit(self.clone)
         self.held.make_clone()
-        self.held.add_origin()
+        self.held.origin.add()
         self.tree = self.tmp / "clone-demo"
         self.held.add_worktree(SESSION_BRANCH, self.tree)
         (self.tree / "work.txt").write_text("work\n", encoding="utf-8")
@@ -135,7 +135,7 @@ with description("a session's work pushed on its own branch") as self:
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     with it("should push the work on the session's branch to origin"):
-        expect(self.held.origin_trees[SESSION_BRANCH]).to(have_key("work.txt"))
+        expect(self.held.origin.trees[SESSION_BRANCH]).to(have_key("work.txt"))
 
     with it("should leave main without the work"):
         expect(self.held.trees["main"]).not_to(have_key("work.txt"))

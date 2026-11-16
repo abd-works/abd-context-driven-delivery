@@ -24,7 +24,7 @@ with description("an MCP config that cdd writes its entry into") as self:
         self.project = Path(tempfile.mkdtemp(prefix="cdd-mcp-config-"))
         self.config = self.project / ".mcp.json"
         self.installation = McpInstallation(IdeLayout("Claude"), self.project / ".claude")
-        self.installation.record_operation(SimpleNamespace(install_to_mcp=True))
+        self.installation.write(SimpleNamespace(install_to_mcp=True))
 
     with after.each:
         shutil.rmtree(self.project, ignore_errors=True)
@@ -32,7 +32,7 @@ with description("an MCP config that cdd writes its entry into") as self:
     with context("that names another server"):
         with before.each:
             self.config.write_text(json.dumps({"mcpServers": {"notes": {"command": "notes-server"}}}), encoding="utf-8")
-            self.installation.write_mcp_manifest()
+            self.installation.cdd_entry.write()
             self.servers = json.loads(self.config.read_text(encoding="utf-8"))["mcpServers"]
 
         with it("should add the cdd entry"):
@@ -46,11 +46,11 @@ with description("an MCP config that cdd writes its entry into") as self:
             self.config.write_text(UNREADABLE, encoding="utf-8")
 
         with it("should refuse to write it, naming the file"):
-            expect(self.installation.write_mcp_manifest).to(raise_error(McpConfigUnreadable))
+            expect(self.installation.cdd_entry.write).to(raise_error(McpConfigUnreadable))
 
         with it("should leave what it holds as it was"):
             try:
-                self.installation.write_mcp_manifest()
+                self.installation.cdd_entry.write()
             except McpConfigUnreadable:
                 pass
             expect(self.config.read_text(encoding="utf-8")).to(equal(UNREADABLE))
@@ -60,9 +60,9 @@ with description("a VS Code install tree's MCP config") as self:
     with before.each:
         self.tree = Path(tempfile.mkdtemp(prefix="cdd-vscode-tree-")) / ".vscode"
         self.installation = McpInstallation(IdeLayout("VS Code"), self.tree)
-        self.installation.record_operation(SimpleNamespace(install_to_mcp=True))
-        self.installation.write_mcp_manifest()
-        self.config = json.loads(self.installation.manifest_path.read_text(encoding="utf-8"))
+        self.installation.write(SimpleNamespace(install_to_mcp=True))
+        self.installation.cdd_entry.write()
+        self.config = json.loads(self.installation.cdd_entry.path.read_text(encoding="utf-8"))
 
     with after.each:
         shutil.rmtree(self.tree.parent, ignore_errors=True)

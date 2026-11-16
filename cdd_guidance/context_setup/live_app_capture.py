@@ -8,10 +8,13 @@ import re
 import socket
 import subprocess
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from urllib.parse import urlsplit
 
 from harness.process.process import LOOPBACK_CONNECT_SECONDS
+
+if TYPE_CHECKING:
+    from playwright.sync_api import Page
 
 _log = logging.getLogger(__name__)
 
@@ -183,11 +186,11 @@ class LiveAppCapture:
     def _probe_screens(self) -> list[ScreenResult]:
         if not self._is_browsable():
             return [self._desktop_smoke()]
+        return [self._http_smoke_path(path) for path in self._paths()]
+
+    def _http_smoke_path(self, path: str) -> ScreenResult:
         import requests
 
-        return [self._http_smoke_path(requests, path) for path in self._paths()]
-
-    def _http_smoke_path(self, requests, path: str) -> ScreenResult:
         url = self._app_url() + path
         slug = path.strip("/").replace("/", "-") or "root"
         try:
@@ -241,7 +244,7 @@ class LiveAppCapture:
             browser.close()
         return captured
 
-    def _capture_pages(self, page, pages_root: Path) -> tuple[list[PageCapture], list[FailedPage]]:
+    def _capture_pages(self, page: Page, pages_root: Path) -> tuple[list[PageCapture], list[FailedPage]]:
         from playwright.sync_api import Error as BrowserError
 
         captures: list[PageCapture] = []
@@ -249,7 +252,7 @@ class LiveAppCapture:
         for index, path in enumerate(self._paths()):
             url = self._app_url() + path
             try:
-                captures.append(self._snapshot_page(page, url, path, pages_root / self._slug(index, path)))
+                captures.append(self._snapshot_page(page, path, pages_root / self._slug(index, path)))
             except BrowserError as error:
                 _log.warning("Could not capture %s: %s", url, error)
                 failed.append(FailedPage(url=url, reason=str(error)))
@@ -259,7 +262,8 @@ class LiveAppCapture:
         label = path.strip("/").replace("/", "-") or "home"
         return f"{index + 1:02d}-{label}"
 
-    def _snapshot_page(self, page, url: str, path: str, page_dir: Path) -> PageCapture:
+    def _snapshot_page(self, page: Page, path: str, page_dir: Path) -> PageCapture:
+        url = self._app_url() + path
         page_dir.mkdir(parents=True, exist_ok=True)
         screenshot, aria = page_dir / "screenshot.png", page_dir / "aria.yaml"
         page.goto(url, timeout=_PAGE_LOAD_MILLISECONDS, wait_until="networkidle")
@@ -272,7 +276,7 @@ class LiveAppCapture:
         )
         return PageCapture(slug=page_dir.name, url=url, screenshot_path=str(screenshot), aria_path=str(aria))
 
-    def _wait_for_root(self, page) -> None:
+    def _wait_for_root(self, page: Page) -> None:
         from playwright.sync_api import TimeoutError as RootNeverRendered
 
         try:

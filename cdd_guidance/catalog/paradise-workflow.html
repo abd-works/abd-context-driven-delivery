@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>
-(function(){try{if('scrollRestoration' in history)history.scrollRestoration='manual';var r=new URLSearchParams(location.search).get('kanbanScroll');if(!r)return;var y=parseFloat(r);if(isNaN(y))return;window.__foundryPendingScrollY=y;document.documentElement.classList.add('foundry-scroll-pending');}catch(e){}})();
+(function(){try{if('scrollRestoration' in history)history.scrollRestoration='manual';var r=new URLSearchParams(location.search).get('kanbanScroll');if(!r)return;var y=parseFloat(r);if(isNaN(y))return;window.foundryPendingScrollY=y;document.documentElement.classList.add('foundry-scroll-pending');}catch(e){}})();
 </script>
 <title>CDD Workflow — Paradise Mobile</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,7 +15,8 @@
 <link rel="stylesheet" href="commons/cdd-board.css?v=cdd-13">
 <link rel="stylesheet" href="commons/paradise-brand.css?v=pml-1">
 
-<script src="commons/catalog-paradise-nav.js?v=pml-1"></script>
+<script src="commons/catalog-paradise-nav.js?v=pml-2"></script>
+<script src="commons/catalog-nav.js?v=foundry-14"></script>
 </head>
 <body data-nav-prefix="" data-nav-current="workflow" data-nav-site-base="https://paradisemobile.bm/">
 <main id="main-content">

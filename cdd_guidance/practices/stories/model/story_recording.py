@@ -3,26 +3,28 @@
 Each story object is its own graph node: the epic, story, background, scenario, step, and example the map read are
 added to the graph as they are, each by its own ``record``, so rules read the scenario, its steps, and its story
 straight from them. A node keeps as its own facts only what the object does not know, such as the exports of the file
-its story was read from. Where each node sits is read from the text of the files the map was read from, which the map
-keeps; nothing is read from disk again.
+its story was read from. Where each node sits is read from the files the map was read from (its *StorySources*), which
+the map keeps; nothing is read from disk again.
 """
 
 from __future__ import annotations
 
 import re
 import zlib
-from functools import cached_property, lru_cache
-from typing import TYPE_CHECKING, Callable, Optional
+from functools import cached_property
+from typing import TYPE_CHECKING, Callable, Iterator, Optional
 from pathlib import Path, PurePosixPath
 
 from harness.graph.graph import Node
+from harness.graph.location import Location
 
 from cdd_guidance.practices.stories.model.story_map_files import source_at
 
 if TYPE_CHECKING:
     from harness.graph.graph import Source
+    from harness.guidance.guidance import PracticeGuidance
 
-    from cdd_guidance.practices.stories.model.story_model import StoryModel
+    from cdd_guidance.practices.stories.model.story_model import Step, Story, StoryModel, StoryNode
 
 _EXPORT_CONST = re.compile(r"export const (\w+)")
 _DOMAIN_CLASS = re.compile(r"\bclass\s+([A-Z]\w*)\b")
@@ -31,55 +33,6 @@ _NAMED_IMPORT = re.compile(r"import\s*(?:type\s*)?\{(?P<names>[^}]+)\}\s*from\s*
 _PYTHON_FROM_IMPORT = re.compile(r"^\s*from\s+(?P<module>\.*[\w.]*)\s+import\s+(?P<names>\([^)]*\)|[^#\r\n]+)", re.M)
 # Java `import static shop.onboard.examples.CustomersExamples.validCustomer;` or `import shop.onboard.examples.CustomersExamples;`.
 _JAVA_IMPORT = re.compile(r"^\s*import\s+(?P<static>static\s+)?(?P<path>[\w.]+)\s*;", re.M)
-
-
-def _imported_modules(text: str) -> dict[str, str]:
-    """Each name the story file imports, mapped to the module it comes from, written as a path without its extension
-    the way the story test's language names it: TypeScript and JavaScript as the import says, Python and Java with
-    their dots turned into folders."""
-    return dict(_scanned_imports(text))
-
-
-@lru_cache(maxsize=128)
-def _scanned_imports(text: str) -> tuple[tuple[str, str], ...]:
-    """The imports of text, scanned once per text: every story of a story map is recorded from the same file, so the
-    same text is asked about once per story."""
-    imported: dict[str, str] = {}
-    for name, module in [*_script_imports(text), *_python_imports(text), *_java_imports(text)]:
-        if name and name != "*":
-            imported.setdefault(name, module)
-    return tuple(imported.items())
-
-
-def _script_imports(text: str) -> list[tuple[str, str]]:
-    return [
-        (part.strip().split(" as ")[-1].removeprefix("type ").strip(), match.group("module"))
-        for match in _NAMED_IMPORT.finditer(text)
-        for part in match.group("names").split(",")
-    ]
-
-
-def _python_imports(text: str) -> list[tuple[str, str]]:
-    found = []
-    for match in _PYTHON_FROM_IMPORT.finditer(text):
-        dotted = match.group("module")
-        level = len(dotted) - len(dotted.lstrip("."))
-        folders = dotted.lstrip(".").replace(".", "/")
-        module = folders if level == 0 else ("./" if level == 1 else "../" * (level - 1)) + folders
-        for part in match.group("names").strip("()").split(","):
-            found.append((part.strip().split(" as ")[-1].strip(), module))
-    return found
-
-
-def _java_imports(text: str) -> list[tuple[str, str]]:
-    """A static import names a member of a class file; any other import names the class file itself."""
-    found = []
-    for match in _JAVA_IMPORT.finditer(text):
-        parts = match.group("path").split(".")
-        file_parts = parts[:-1] if match.group("static") else parts
-        found.append((parts[-1], "/".join(file_parts)))
-    return found
-
 
 # What each language declares an example as, by the suffix of the file: a TypeScript or JavaScript function or constant,
 # a Python module-level function or constant, a Java static method or field (of an `*Examples` class).
@@ -98,23 +51,9 @@ _MEMBER_READ = re.compile(r"\.(\w+)")
 
 _EVIDENCE_LINE = re.compile(r"\*\s*Evidence:\s*([A-Za-z][A-Za-z ,-]*)")
 
-
-def _declared_examples(file: str, text: str) -> list[str]:
-    """The names the code of file declares the way its language declares an example; none for a file in no language
-    that declares them."""
-    declaration = _EXAMPLE_DECLARATIONS.get(PurePosixPath(file).suffix)
-    found = declaration.findall(text) if declaration is not None else []
-    return [name for match in found for name in (match if isinstance(match, tuple) else (match,)) if name]
-
-
-def _opening_docblock(lines: list[str]) -> str:
-    """The file's first `/** … */` comment, when it comes before any story."""
-    text = "\n".join(lines)
-    start = text.find("/**")
-    end = text.find("*/", start)
-    if start == -1 or end == -1 or "Story:" in text[start:end]:
-        return ""
-    return text[start:end]
+# A step's graph id ends in a 24-bit checksum of its name: short enough to read in an id, long enough that two steps
+# on one line of one file do not share it.
+_STEP_CHECKSUM_MASK = 0xFFFFFF
 
 
 def example_source_file(story_test: str, imported_modules: dict[str, str], name: str) -> str:
@@ -136,90 +75,177 @@ def example_source_file(story_test: str, imported_modules: dict[str, str], name:
     return "/".join(parts) + suffix
 
 
-def imported_example_files(story_test: str, text: str) -> list[str]:
-    """The files story_test imports names from, named from the project: where its examples can come from. A relative
-    import names one file; a module named from a package root (a Python or Java import) may sit under any folder above
-    story_test, so each of those is a place it can be, and only the ones that are there are read."""
-    imported = _imported_modules(text)
-    relative = {example_source_file(story_test, imported, name) for name, module in imported.items() if module.startswith(".")}
-    suffix = PurePosixPath(story_test).suffix
-    rooted = {
-        (folder / f"{module}{suffix}").as_posix().removeprefix("./")
-        for module in set(imported.values()) if not module.startswith(".")
-        for folder in PurePosixPath(story_test).parents
-    }
-    return sorted(relative | rooted)
+def step_checksum(name: str) -> int:
+    """A checksum of a step's name for its graph id. A checksum, never ``hash``: Python salts ``hash`` per process, and
+    a step must keep its id in the worker that refreshes the graph and in the server."""
+    return zlib.crc32(name.encode("utf-8")) & _STEP_CHECKSUM_MASK
 
 
-def step_node_id(kind: str, file: str, line: int, name: str) -> str:
-    """A step's graph id: its kind, file, line, and a checksum of its name. A checksum, never ``hash``: Python salts
-    ``hash`` per process, and a step must keep its id in the worker that refreshes the graph and in the server."""
-    return f"stories:{kind}:{file}:{line}:{zlib.crc32(name.encode('utf-8')) & 0xFFFFFF}"
+class StorySource:
+    """One file a story map was read from: its path from the project and its text, and what the story nodes recorded
+    from it read there: its lines, the names it imports and exports, the examples it declares, and the evidence a
+    sub-epic file declares. Each is scanned once, since every story of a file asks about the same text."""
+
+    def __init__(self, file: str, text: str) -> None:
+        self.file = file
+        self.text = text
+
+    @cached_property
+    def lines(self) -> list[str]:
+        return self.text.splitlines()
+
+    @cached_property
+    def imported_modules(self) -> dict[str, str]:
+        """Each name the file imports, mapped to the module it comes from, written as a path without its extension the
+        way the story test's language names it: TypeScript and JavaScript as the import says, Python and Java with their
+        dots turned into folders."""
+        imported: dict[str, str] = {}
+        for name, module in [*self._script_imports(), *self._python_imports(), *self._java_imports()]:
+            if name and name != "*":
+                imported.setdefault(name, module)
+        return imported
+
+    @cached_property
+    def exported_names(self) -> list[str]:
+        return _EXPORT_CONST.findall(self.text)
+
+    @property
+    def facts(self) -> dict:
+        """Facts a story file owns: they sit on the Story node, and its scenarios, steps, and examples read them through
+        get_fact."""
+        return {
+            "export_names": list(self.exported_names),
+            "domain_class_names": _DOMAIN_CLASS.findall(self.text),
+            "imported_modules": dict(self.imported_modules),
+        }
+
+    @cached_property
+    def evidence(self) -> list[str]:
+        """The evidence a sub-epic file declares in its opening docblock; none when it declares none."""
+        declared = _EVIDENCE_LINE.search(self._opening_docblock())
+        return [part.strip() for part in declared.group(1).split(",") if part.strip()] if declared else []
+
+    @property
+    def declares_examples(self) -> bool:
+        """True for a file in a language that declares examples, where an example's export is looked for."""
+        return PurePosixPath(self.file).suffix in _EXAMPLE_DECLARATIONS
+
+    @cached_property
+    def declared_examples(self) -> list[str]:
+        """The names the file declares the way its language declares an example; none for a file in no language that
+        declares them."""
+        declaration = _EXAMPLE_DECLARATIONS.get(PurePosixPath(self.file).suffix)
+        found = declaration.findall(self.text) if declaration is not None else []
+        return [name for match in found for name in (match if isinstance(match, tuple) else (match,)) if name]
+
+    def example_source(self, name: str) -> str:
+        """The file the example called name comes from: the module this story file imports it from, else this file."""
+        return example_source_file(self.file, self.imported_modules, name)
+
+    def imported_example_files(self) -> list[str]:
+        """The files this story test imports names from, named from the project: where its examples can come from. A
+        relative import names one file; a module named from a package root (a Python or Java import) may sit under any
+        folder above the story test, so each of those is a place it can be, and only the ones that are there are read."""
+        imported = self.imported_modules
+        relative = {self.example_source(name) for name, module in imported.items() if module.startswith(".")}
+        suffix = PurePosixPath(self.file).suffix
+        rooted = {
+            (folder / f"{module}{suffix}").as_posix().removeprefix("./")
+            for module in set(imported.values()) if not module.startswith(".")
+            for folder in PurePosixPath(self.file).parents
+        }
+        return sorted(relative | rooted)
+
+    def _script_imports(self) -> list[tuple[str, str]]:
+        return [
+            (part.strip().split(" as ")[-1].removeprefix("type ").strip(), match.group("module"))
+            for match in _NAMED_IMPORT.finditer(self.text)
+            for part in match.group("names").split(",")
+        ]
+
+    def _python_imports(self) -> list[tuple[str, str]]:
+        found = []
+        for match in _PYTHON_FROM_IMPORT.finditer(self.text):
+            dotted = match.group("module")
+            level = len(dotted) - len(dotted.lstrip("."))
+            folders = dotted.lstrip(".").replace(".", "/")
+            module = folders if level == 0 else ("./" if level == 1 else "../" * (level - 1)) + folders
+            for part in match.group("names").strip("()").split(","):
+                found.append((part.strip().split(" as ")[-1].strip(), module))
+        return found
+
+    def _java_imports(self) -> list[tuple[str, str]]:
+        """A static import names a member of a class file; any other import names the class file itself."""
+        found = []
+        for match in _JAVA_IMPORT.finditer(self.text):
+            parts = match.group("path").split(".")
+            file_parts = parts[:-1] if match.group("static") else parts
+            found.append((parts[-1], "/".join(file_parts)))
+        return found
+
+    def _opening_docblock(self) -> str:
+        """The file's first `/** … */` comment, when it comes before any story."""
+        start = self.text.find("/**")
+        end = self.text.find("*/", start)
+        if start == -1 or end == -1 or "Story:" in self.text[start:end]:
+            return ""
+        return self.text[start:end]
 
 
-def story_file_facts(text: str) -> dict:
-    """Facts a story file owns, read from its text: they sit on the Story node, and its scenarios, steps, and examples
-    read them through get_fact."""
-    export_names, domain_class_names = _scanned_names(text)
-    return {
-        "export_names": list(export_names),
-        "domain_class_names": list(domain_class_names),
-        "imported_modules": _imported_modules(text),
-    }
+class StorySources:
+    """The files a story map was read from, each once, by its path from the project: recording the map on a graph finds
+    each node's lines in them without reading a file again."""
 
+    def __init__(self) -> None:
+        self._by_file: dict[str, StorySource] = {}
 
-@lru_cache(maxsize=128)
-def _scanned_names(text: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """The exported constants and domain classes text declares, scanned once per text."""
-    return tuple(_EXPORT_CONST.findall(text)), tuple(_DOMAIN_CLASS.findall(text))
+    def add(self, file: str, text: str) -> None:
+        self._by_file[file] = StorySource(file, text)
 
+    def take(self, other: "StorySources") -> None:
+        """Hold every file other holds as well."""
+        for source in other:
+            self._by_file[source.file] = source
 
-def declared_evidence(text: str) -> list[str]:
-    """The evidence a sub-epic file declares in its opening docblock; none when it declares none."""
-    return list(_scanned_evidence(text))
+    def of(self, file: str) -> StorySource:
+        """The file read at file; an empty one for a file the map was not read from."""
+        return self._by_file.get(file) or StorySource(file, "")
 
-
-@lru_cache(maxsize=128)
-def _scanned_evidence(text: str) -> tuple[str, ...]:
-    declared = _EVIDENCE_LINE.search(_opening_docblock(text.splitlines()))
-    return tuple(part.strip() for part in declared.group(1).split(",") if part.strip()) if declared else ()
+    def __iter__(self) -> Iterator[StorySource]:
+        return iter([self._by_file[file] for file in sorted(self._by_file)])
 
 
 class StoryRecording:
     """One writing of a story map onto the practice that holds Stories: the practice and graph it writes to, where in
-    the map's own file texts each node sits, and how many stories it has announced. The map makes one per ``record``
-    and each node records itself through it."""
+    the map's own files each node sits, and how many stories it has announced. The map makes one per ``record`` and
+    each node records itself through it."""
 
-    def __init__(self, story_map: "StoryModel", practice, on_node: Optional[Callable[[str], None]]) -> None:
+    def __init__(self, story_map: "StoryModel", practice: PracticeGuidance, on_node: Optional[Callable[[str], None]]) -> None:
         self.story_map = story_map
         self.practice = practice
         self.graph = practice.reading.graph
         self.on_node = on_node
         self.story_at = 0
-        self.story_total = len(story_map.every_story())
+        self.story_total = len(story_map.descendants.stories())
         self._cursor: dict[str, int] = {}
-        self._lines: dict[str, list[str]] = {}
 
     def write(self) -> None:
         for epic in self.story_map.epics:
             epic.record(self, self.practice.reading.in_graph.root)
 
-    def announce(self, story) -> None:
+    def announce(self, story: "Story") -> None:
         self.story_at += 1
         if self.on_node is not None:
             self.on_node(f"{self.story_at}/{self.story_total} · {story.name}")
 
-    def add(self, story_object, node_id: str, at: "Source", facts=None) -> Node:
-        """story_object added as the graph node node_id, called by its recorded name and of its recorded type, at the
-        lines at names, with the facts it does not hold itself; the node already called node_id when two objects
-        share it."""
+    def add(self, story_object: "StoryNode", node_id: str, lines: "Source") -> Node:
+        """story_object added as the graph node node_id, called by its recorded name and of its recorded type, at
+        lines; the node already called node_id when two objects share it."""
         if not self.practice.reading.in_graph.holds(node_id):
             story_object.name = story_object.recorded_name
             story_object.type = story_object.recorded_type
-        node = self.practice.reading.in_graph.add(story_object, node_id, at.file or ".", at.start_line, at.end_line or at.start_line)
+        node = self.practice.reading.in_graph.add(story_object, node_id, Location(lines.file or ".", lines.start_line, lines.end_line or lines.start_line))
         self._align(node)
-        for key, value in (facts or {}).items():
-            node.set_fact(key, value)
         return node
 
     def _align(self, node: Node) -> None:
@@ -232,9 +258,9 @@ class StoryRecording:
         elif node.type == "Example":
             node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name, self._example_files)
 
-    def text_of(self, file: str) -> str:
-        return self.story_map.source_texts.get(file, "") if file else ""
-
+    def source_of(self, file: str) -> StorySource:
+        """The file the map was read from at file; an empty one when it was read from none there."""
+        return self.story_map.sources.of(file)
 
     @cached_property
     def _example_files(self) -> list[Path]:
@@ -243,20 +269,17 @@ class StoryRecording:
         root = self.practice.reading.in_graph.source_root
         if not root:
             return []
-        return [Path(root) / file for file in sorted(self.story_map.source_texts) if PurePosixPath(file).suffix in _EXAMPLE_DECLARATIONS]
+        return [Path(root) / source.file for source in self.story_map.sources if source.declares_examples]
 
     @cached_property
-    def _function_sources(self) -> dict[str, str]:
+    def _example_declarations(self) -> dict[str, str]:
         """Each example the code the story map was read from declares, in the way its language declares one (a
         function or a constant), mapped to the first file's text that declares it."""
-        sources: dict[str, str] = {}
-        for file, text in sorted(self.story_map.source_texts.items()):
-            for name in _declared_examples(file, text):
-                sources.setdefault(name, text)
-        return sources
-
-    def facts_of(self, file: str) -> dict:
-        return story_file_facts(self.text_of(file))
+        declarations: dict[str, str] = {}
+        for source in self.story_map.sources:
+            for name in source.declared_examples:
+                declarations.setdefault(name, source.text)
+        return declarations
 
     def example_facts(self, file: str, name: str) -> dict:
         """The facts of the example called name that story file declares or imports. They save with the graph, so a
@@ -268,19 +291,19 @@ class StoryRecording:
           is linked to the classes it shows and the properties it reads;
         - ``export_names``: the names exported by the file the example comes from, when that is another file the map
           read (an examples module the story test imports); otherwise the story file's own apply."""
-        text = self._function_sources.get(name, "")
+        text = self._example_declarations.get(name, "")
         facts = {"source_names": sorted(set(_IDENTIFIER.findall(text))), "source_reads": sorted(set(_MEMBER_READ.findall(text)))}
-        source = example_source_file(file, _imported_modules(self.text_of(file)), name)
-        if source != file and self.text_of(source):
-            facts["export_names"] = list(_scanned_names(self.text_of(source))[0])
+        origin = self.source_of(self.source_of(file).example_source(name))
+        if origin.file != file and origin.text:
+            facts["export_names"] = list(origin.exported_names)
         return facts
 
     def name_span(self, file: str, name: str, folder: str) -> "Source":
         """The line of file that names name; the folder alone when no line of file does."""
-        line = next((index for index, text in enumerate(self._lines_of(file), start=1) if name and name in text), None)
+        line = next((index for index, text in enumerate(self.source_of(file).lines, start=1) if name and name in text), None)
         return source_at(file, line) if line is not None else source_at(folder or ".")
 
-    def span_of(self, node, file: str, fallback_text: str = "") -> "Source":
+    def span_of(self, node: "StoryNode", file: str, fallback_text: str = "") -> "Source":
         """The lines of file node was read from, when its reader named them; else the next line of file that holds its
         text."""
         if node.has_source_file and node.source.start_line:
@@ -288,15 +311,8 @@ class StoryRecording:
         line = self._next_line(file, fallback_text or node.name)
         return source_at(file, line)
 
-    def _lines_of(self, file: str) -> list[str]:
-        """The lines of file's text, split once for the whole recording."""
-        lines = self._lines.get(file)
-        if lines is None:
-            lines = self._lines[file] = self.text_of(file).splitlines()
-        return lines
-
     def _next_line(self, file: str, text: str) -> int:
-        lines = self._lines_of(file)
+        lines = self.source_of(file).lines
         start = self._cursor.get(file, 0)
         if not text:
             return 1
@@ -308,28 +324,28 @@ class StoryRecording:
                 return index + 1
         return 1
 
-    def place(self, node, at: "Source") -> None:
-        """Name the file and lines at gives on a node that names no file yet."""
+    def place(self, node: "StoryNode", lines: "Source") -> None:
+        """Name the file and lines on a node that names no file yet."""
         if not file_of(node):
-            node.source = source_at(at.file or ".", at.start_line, at.end_line)
+            node.source = source_at(lines.file or ".", lines.start_line, lines.end_line)
 
 
-def file_of(node) -> str:
+def file_of(node: "StoryNode") -> str:
     """The file the node was read from; empty while it only holds the placeholder a new node starts with."""
     if not node.has_source_file:
         return ""
     return str(node.source.file).replace("\\", "/")
 
 
-def folder_of(file: str, up: int) -> str:
-    """The folder file sits in, up more folders above it."""
+def folder_of(file: str, levels_up: int) -> str:
+    """The folder file sits in, levels_up more folders above it."""
     parts = [part for part in file.split("/") if part][:-1]
-    if up and len(parts) >= up:
-        parts = parts[:-up]
+    if levels_up and len(parts) >= levels_up:
+        parts = parts[:-levels_up]
     return "/".join(parts) or "."
 
 
-def step_semantic(step) -> str:
+def step_semantic(step: "Step") -> str:
     """Given, When, or Then from the step's phase, else from its keyword; a step with neither is a Step."""
     phase = step.phase or (step.keyword or "").casefold()
     return phase.capitalize() if phase in ("given", "when", "then") else "Step"

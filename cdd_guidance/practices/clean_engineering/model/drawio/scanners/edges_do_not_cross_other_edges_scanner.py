@@ -47,37 +47,35 @@ class EdgesDoNotCrossOtherEdgesScanner(DrawioScanner):
         shared = {first[0].get("source"), first[0].get("target")} & {second[0].get("source"), second[0].get("target")}
         for first_segment in first[1]:
             for second_segment in second[1]:
-                point = _right_angle_crossing(first_segment, second_segment)
-                if point is not None and not _beside_shared_card(page, point, shared):
+                point = self._right_angle_crossing(first_segment, second_segment)
+                if point is not None and not self._beside_shared_card(page, point, shared):
                     return point
         return None
 
+    def _beside_shared_card(self, page: DrawioPage, point: Point, shared: set) -> bool:
+        for cell_id in shared:
+            box = page.boxes.get(cell_id)
+            if not box:
+                continue
+            near_across = abs(point[0] - (box[0] + box[2] / 2)) < box[2] / 2 + SHARED_CARD_MARGIN
+            near_down = abs(point[1] - (box[1] + box[3] / 2)) < box[3] / 2 + SHARED_CARD_MARGIN
+            if near_across and near_down:
+                return True
+        return False
 
-def _beside_shared_card(page: DrawioPage, point: Point, shared: set) -> bool:
-    for cell_id in shared:
-        box = page.boxes.get(cell_id)
-        if not box:
-            continue
-        near_across = abs(point[0] - (box[0] + box[2] / 2)) < box[2] / 2 + SHARED_CARD_MARGIN
-        near_down = abs(point[1] - (box[1] + box[3] / 2)) < box[3] / 2 + SHARED_CARD_MARGIN
-        if near_across and near_down:
-            return True
-    return False
-
-
-def _right_angle_crossing(first: Segment, second: Segment) -> Point | None:
-    """Where a horizontal segment crosses a vertical one strictly inside both, or None."""
-    horizontal, vertical = (first, second) if abs(first[1][1] - first[0][1]) < CROSSING_TOLERANCE else (second, first)
-    (ax1, ay1), (ax2, ay2) = horizontal
-    (bx1, by1), (bx2, by2) = vertical
-    if abs(ay2 - ay1) >= CROSSING_TOLERANCE or abs(bx2 - bx1) >= CROSSING_TOLERANCE:
+    def _right_angle_crossing(self, first: Segment, second: Segment) -> Point | None:
+        """Where a horizontal segment crosses a vertical one strictly inside both, or None."""
+        horizontal, vertical = (first, second) if abs(first[1][1] - first[0][1]) < CROSSING_TOLERANCE else (second, first)
+        (ax1, ay1), (ax2, ay2) = horizontal
+        (bx1, by1), (bx2, by2) = vertical
+        if abs(ay2 - ay1) >= CROSSING_TOLERANCE or abs(bx2 - bx1) >= CROSSING_TOLERANCE:
+            return None
+        y, x = (ay1 + ay2) / 2, (bx1 + bx2) / 2
+        low_x, high_x = sorted((ax1, ax2))
+        low_y, high_y = sorted((by1, by2))
+        if low_x + CROSSING_TOLERANCE < x < high_x - CROSSING_TOLERANCE and low_y + CROSSING_TOLERANCE < y < high_y - CROSSING_TOLERANCE:
+            return (x, y)
         return None
-    y, x = (ay1 + ay2) / 2, (bx1 + bx2) / 2
-    low_x, high_x = sorted((ax1, ax2))
-    low_y, high_y = sorted((by1, by2))
-    if low_x + CROSSING_TOLERANCE < x < high_x - CROSSING_TOLERANCE and low_y + CROSSING_TOLERANCE < y < high_y - CROSSING_TOLERANCE:
-        return (x, y)
-    return None
 
 
 if __name__ == "__main__":

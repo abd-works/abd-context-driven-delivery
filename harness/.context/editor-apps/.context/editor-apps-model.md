@@ -270,20 +270,20 @@ Every edit answers the **story map**, not the node it changed (`standard-mutatio
 ----
 + load(node: str, *, call) -> StoryNode  <<classmethod>> <<tool_subject>>
 	-> StoryModel.load (the file the node names)
-	-> StoryModel.node_at
+	-> StoryModel.descendants.node_at
 	// a node of another kind than the toolset's is refused with StoryNodeNotFound
 + holding(part: StoryNode) -> list[StoryNode]
 	// the list of its own that holds part; each kind answers its own
 + rename(name: str) -> StoryModel  <<mcp>> <<agent_tool>>
-	-> self.story_map.write_back
+	-> self.story_map.opened.save
 + move_before(other: StoryNode) -> StoryModel  <<mcp>> <<agent_tool>>
-	-> self.story_map.node_at(other.path)
-	-> self.story_map.write_back
+	-> self.story_map.descendants.node_at(other.path)
+	-> self.story_map.opened.save
 	// refuses with StoryMapEditRefused when other is not a node of its own kind; it then takes other's parent and the place before it
 + remove() -> StoryModel  <<mcp>> <<agent_tool>>
-	-> self.story_map.write_back
+	-> self.story_map.opened.save
 + edit_description(description: str) -> StoryModel  <<mcp>> <<agent_tool>>
-	-> self.story_map.write_back
+	-> self.story_map.opened.save
 
 ### StoryModel (extended)
 
@@ -298,7 +298,7 @@ Every edit answers the **story map**, not the node it changed (`standard-mutatio
 + increments: list[Increment]  <<data_field>>
 	// in order, read from the thin slice beside a markdown story map (its slicing)
 + scope: list[str]  <<data_field>>
-	// the addresses of its stories the session it was opened in names (OpenedStoryMap.session_stories, stories_named): the part of the map the ticket covers, which the Story UI shows; none when the session names none (decided 2026-11-12: the model owns the ticket's scope, not a page query)
+	// the addresses of its stories the session it was opened in names (OpenedStoryMap.session_stories, descendants.stories_named): the part of the map the ticket covers, which the Story UI shows; none when the session names none (decided 2026-11-12: the model owns the ticket's scope, not a page query)
 + slicing: ThinSlice | None
 	// the file that keeps its increments and writes them on a save; none for a map that keeps none, such as a scenario file
 ----
@@ -311,16 +311,14 @@ Every edit answers the **story map**, not the node it changed (`standard-mutatio
 	// the first story map file the open session's Stories practice declares: the page with no file follows the session open in the project, so a ticket activated on the board shows its own map on the next read
 + show() -> StoryModel  <<mcp>> <<agent_tool>>
 + new_epic(name: str) -> StoryModel  <<mcp>> <<agent_tool>>
-	-> self.write_back
-+ node_at(path: str) -> StoryNode
+	-> self.opened.save
++ descendants: Descendants
+	// node_at(path): the node a tool's path names
 + new_increment(name: str) -> StoryModel  <<mcp>> <<agent_tool>>
-	-> self.write_back
+	-> self.opened.save
 	// refuses with StoryMapEditRefused when it keeps no increments (no slicing)
-+ acceptance_tests_of(story: Story) -> list[str]
-	-> OpenedStoryMap.acceptance_tests_of
-+ write_back() -> StoryModel
-	// was save(): a markdown, drawio or code map is itself the opened map now, and those formats' save answers their text
-	-> OpenedStoryMap.write
++ opened: OpenedStoryMap | UnopenedStoryMap
+	// save() writes the map to its file and the chosen formats and answers the map; acceptance_tests_of(story) the story tests that hold a story; a map opened from no file refuses every save
 	// refuses with StoryMapEditRefused, writing nothing, while refusal says why
 
 ### Story (extended)
@@ -349,11 +347,11 @@ Every edit answers the **story map**, not the node it changed (`standard-mutatio
 ----
 + edit_field(field: str, value: str) -> StoryModel  <<mcp>> <<agent_tool>>
 	// the column that names it (`example`, or `name` while it says its name) renames it; a column its row does not have is refused with StoryMapEditRefused
-	-> self.story_map.write_back
+	-> self.story_map.opened.save
 + rename(name: str) -> StoryModel  <<mcp>> <<agent_tool>>
 	// renames the column of its row that names it too, and keeps its place in its scope's Examples
 	-> Examples.rename
-	-> self.story_map.write_back
+	-> self.story_map.opened.save
 + remove() -> StoryModel  <<mcp>> <<agent_tool>>  (from StoryNode; it leaves its scope's Examples, Examples.drop)
 + move_before(other) -> StoryModel  <<mcp>> <<agent_tool>>  (from StoryNode; refused by Scenario.holding)
 + edit_description(description) -> StoryModel
@@ -376,9 +374,9 @@ An example read from a row of a markdown examples table (*ScenarioFileReading* m
 ----
 + add_story(story: Story) -> StoryModel  <<mcp>> <<agent_tool>>
 	// a story is delivered by one increment at most: it leaves the increment that held it
-	-> self.story_map.write_back
+	-> self.story_map.opened.save
 + remove_story(story: Story) -> StoryModel  <<mcp>> <<agent_tool>>
-	-> self.story_map.write_back
+	-> self.story_map.opened.save
 // rename, move_before, remove and edit_description come from StoryNode
 
 ### ThinSlice (new, cdd_guidance/practices/stories/model/markdown/thin_slice.py)
@@ -462,11 +460,11 @@ The Story UI editor, moved from its own repository (`C:/dev/story-ui`) beside th
 | chat bar status row press | `App.open` | harness/installation |
 | chat bar file viewer tile | `StoryModel.load(file)` | stories model |
 | chat bar file viewer link | `PracticeSessionOutput.design_view` | space/session |
-| Story UI edit | `StoryNode.rename` and the other edits, then `StoryModel.write_back` | stories model |
+| Story UI edit | `StoryNode.rename` and the other edits, then `OpenedStoryMap.save` | stories model |
 | Story UI increment view | `StoryModel.new_increment`, `Increment.add_story`, `Increment.remove_story` | stories model |
 | Story UI acceptance-test link | `Chat.send(open_file)`, then the chat bar's files pane shows it at the chat's next check-in (`FileManager.read` through `session.read_file`) | harness/chat, harness/chat-ui |
-| Story UI example cell | `Example.edit_field`, `Example.remove`, then `StoryModel.write_back` | stories model |
-| Story UI epic or sub-epic description | `Epic.edit_description`, then `StoryModel.write_back` | stories model |
+| Story UI example cell | `Example.edit_field`, `Example.remove`, then `OpenedStoryMap.save` | stories model |
+| Story UI epic or sub-epic description | `Epic.edit_description`, then `OpenedStoryMap.save` | stories model |
 | Story UI with no file | `StoryModel.open_in_session`, read every two seconds | stories model |
 | Story UI format toggle, chat bar chip | `FidelitySessionOutput.choose_format`, `Ticket.choose_formats` | space/session, space/kanban |
 | Graph app open | `Graph.load_practice_roots` on the session open in the project (the chat's open session) | harness/graph, space/session |

@@ -6,7 +6,8 @@ import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
 import type { ChatBarJson } from '../../types'
-import { reasonOf, showFailure } from '../error-display/failure-client'
+import { shownAsFailure } from '../error-display/failure-client'
+import { reasonOf } from '../shared/reason'
 import { SERVER } from '../health/server-health-client'
 import { debugCommandOf } from '../shared/debug-command'
 import type { GuidanceSelectionData } from '@cdd/space/session/session'
@@ -102,7 +103,7 @@ export class ChatBarClient {
   get stages(): StageClient[] {
     const columns = this.board?.columns ?? []
     const sessionPlace = columns.findIndex(column => column.name === this.stage)
-    return columns.map((column, place) => new StageClient(column, place, sessionPlace, this.selectedStages.includes(column.name)))
+    return columns.map((column, place) => new StageClient(column, place - sessionPlace, this.selectedStages.includes(column.name)))
   }
 
   // Every action a person can run on a fidelity of the shown stage, its steps first, as the stage sends them.
@@ -160,7 +161,7 @@ export class ChatBarClient {
     if (!ticket) return []
     return ticket.progress
       .filter(progress => this.shownStages.includes(progress.stage.name))
-      .map(progress => new FidelityProgressClient(progress, ticket, this.practiceNamed(progress.practice.key), this.isPracticeOn(progress.practice.key), this.labelOf(progress.fidelity.slug)))
+      .map(progress => new FidelityProgressClient(progress, ticket, this))
   }
 
   // The format chips: each format group the selected fidelities offer, selected or not, as the session holds them.
@@ -240,12 +241,12 @@ export class ChatBarClient {
   }
 
   // A fidelity's label as the board names it, such as story-map; its slug when the board names none.
-  private labelOf(slug: string): string {
+  labelOf(slug: string): string {
     return this.board?.fidelities.find(shown => shown.fidelity.slug === slug)?.label ?? slug
   }
 
   // The practice a fidelity's progress names, as the board sends it with its colour.
-  private practiceNamed(key: string): BoardPracticeData | undefined {
+  practiceNamed(key: string): BoardPracticeData | undefined {
     return this.board?.practices.find(shown => shown.practice.key === key)
   }
 }
@@ -269,7 +270,7 @@ export class MoveRefused {
 // carrying the server's own text. Every call names the folder the chat works in now as chat_folder, so the server reads
 // the sessions of that folder's branch and worktree, not of the folder the chat connected from, and names the chat as
 // conversation_id, so the server answers with the session this chat has open, as it does for the agent's own calls.
-export async function callTool<T>($: EngineInterface, tool: string, args: object): Promise<T> {
+export async function callTool<T>($: EngineInterface, tool: string, args: ToolArguments): Promise<T> {
   const text = await callToolText($, tool, args)
   try {
     return JSON.parse(text) as T
@@ -278,8 +279,11 @@ export async function callTool<T>($: EngineInterface, tool: string, args: object
   }
 }
 
+// The arguments a cdd tool takes, each by the name its Python operation gives it.
+export type ToolArguments = { readonly [argument: string]: unknown }
+
 // A tool that answers in prose, such as repos.open, read as its text; one flagged isError is a CddToolFailed.
-export async function callToolText($: EngineInterface, tool: string, args: object): Promise<string> {
+export async function callToolText($: EngineInterface, tool: string, args: ToolArguments): Promise<string> {
   const result = await $.mcp.call(SERVER, tool, { ...args, chat_folder: await $.session.root(), conversation_id: await $.session.id() })
   const text = result.content[0]?.text ?? ''
   if (result.isError) throw new CddToolFailed(tool, text || `${tool} failed`)
@@ -343,7 +347,7 @@ export async function restartServer($: EngineInterface): Promise<void> {
     const restarted = await callTool<RestartData>($, 'cdd.restart', {})
     $.ui.toast(`cdd server restarted with ${restarted.tools} tools`)
   } catch (failure) {
-    await showFailure($, 'The cdd server did not restart', 'Restart on the health panel, calling cdd.restart', failure)
+    await shownAsFailure($, 'The cdd server did not restart', 'Restart on the health panel, calling cdd.restart')(failure)
     return
   }
   await refreshChatBar($)
@@ -387,7 +391,7 @@ export async function moveNext($: EngineInterface, chatBar: ChatBarClient): Prom
   try {
     await callTool<TicketData>($, 'ticket.move_next', { ticket: chatBar.sessionName })
   } catch (failure) {
-    await showFailure($, `${chatBar.sessionName} did not move to the next stage`, 'The stage button on the chat bar, calling ticket.move_next', failure)
+    await shownAsFailure($, `${chatBar.sessionName} did not move to the next stage`, 'The stage button on the chat bar, calling ticket.move_next')(failure)
     return new MoveRefused(reasonOf(failure))
   }
   await refreshChatBar($)

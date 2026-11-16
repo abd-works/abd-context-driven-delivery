@@ -52,18 +52,7 @@ class ShapeClassesAroundResources(PracticeGraphRule):
         bags = {node.name for node in classes.classes if classes.fields(node) and not classes.has_behavior(node)}
         hits: list[tuple[str, str]] = []
         for service in classes.classes:
-            # An interface declares what a resource does; it holds no state by design, so it is not a service.
-            if classes.fields(service) or not classes.has_behavior(service) or is_interface_name(service.name):
-                continue
-            taken = sorted(
-                {
-                    name
-                    for operation in classes.operations(service)
-                    for parameter in parameters_of(operation)
-                    for name in names_in(parameter.get_fact("type_hint", "")) & bags
-                    if name != service.name
-                }
-            )
+            taken = self._bags_taken(service, classes, bags) if self._is_service(service, classes) else []
             if taken:
                 hits.append(
                     (
@@ -73,6 +62,23 @@ class ShapeClassesAroundResources(PracticeGraphRule):
                     )
                 )
         return hits
+
+    def _is_service(self, node: "Node", classes: ClassGraph) -> bool:
+        """A class with behavior and no state. An interface declares what a resource does; it holds no state by design,
+        so it is not a service."""
+        return not classes.fields(node) and classes.has_behavior(node) and not is_interface_name(node.name)
+
+    def _bags_taken(self, service: "Node", classes: ClassGraph, bags: set[str]) -> list[str]:
+        """The data bags the service's operations take as parameters, other than the service itself."""
+        return sorted(
+            {
+                name
+                for operation in classes.operations(service)
+                for parameter in parameters_of(operation)
+                for name in names_in(parameter.get_fact("type_hint", "")) & bags
+                if name != service.name
+            }
+        )
 
 
 class DoNotInventParallelObjectModels(PracticeGraphRule):
@@ -86,120 +92,127 @@ class DoNotInventParallelObjectModels(PracticeGraphRule):
         classes = context.index(ClassGraph)
         # A mixin's annotations declare what the class it is mixed into holds, so it holds no model of its own.
         fields = {node.node_id: {} if classes.is_mixin(node) else classes.fields(node) for node in classes.classes}
+        # Two subclasses that each fill the fields of a base they share hold one model, the base's, so a copy is looked
+        # for only among the fields a class declares beyond its bases'.
+        declared = {node.node_id: self._beyond_bases(node, fields[node.node_id], classes) for node in classes.classes}
         holders: dict[str, list["Node"]] = {}
         for node in classes.classes:
-            for field in fields[node.node_id]:
+            for field in declared[node.node_id]:
                 holders.setdefault(field, []).append(node)
         hits: list[tuple[str, str]] = []
         for node in classes.classes:
-            hits.extend((node.node_id, message) for message in _copied_fields(node, holders, fields))
-            hits.extend((node.node_id, message) for message in _copied_references(node, classes, fields[node.node_id]))
+            hits.extend((node.node_id, message) for message in self._copied_fields(node, holders, declared))
+            hits.extend((node.node_id, message) for message in self._copied_references(node, classes, fields[node.node_id]))
         return hits
 
+    def _copied_fields(self, node: "Node", holders: dict[str, list["Node"]], fields: dict[str, dict[str, str]]) -> list[str]:
+        """Report the smaller class of each pair once: it is the one holding a subset of the other's fields."""
+        own = set(fields[node.node_id])
+        for other in self._sharing_fields(own, holders):
+            theirs = set(fields[other.node_id])
+            if other is node or self._related(node, other) or (len(own), node.node_id) > (len(theirs), other.node_id):
+                continue
+            # A field copies another only with the same type: three common names, such as `result`, are no copied model.
+            shared = {field for field in own & theirs if fields[node.node_id][field] == fields[other.node_id][field]}
+            if self._copies(shared, own, theirs):
+                return [
+                    f"Class '{node.name}' copies the fields {sorted(shared)} of '{other.name}'. "
+                    "Use one canonical model type."
+                ]
+        return []
 
-def _copied_fields(node: "Node", holders: dict[str, list["Node"]], fields: dict[str, dict[str, str]]) -> list[str]:
-    """Report the smaller class of each pair once: it is the one holding a subset of the other's fields."""
-    own = set(fields[node.node_id])
-    shared_counts: dict[str, int] = {}
-    others: dict[str, "Node"] = {}
-    for field in own:
-        for other in holders.get(field, []):
-            shared_counts[other.node_id] = shared_counts.get(other.node_id, 0) + 1
-            others[other.node_id] = other
-    for other_id in sorted(shared_counts):
-        other = others[other_id]
-        theirs = set(fields[other_id])
-        if other is node or _related(node, other) or (len(own), node.node_id) > (len(theirs), other_id):
-            continue
-        # A field copies another only with the same type: three common names, such as `result`, are no copied model.
-        shared = {field for field in own & theirs if fields[node.node_id][field] == fields[other_id][field]}
-        if _copies(shared, own, theirs):
-            return [
-                f"Class '{node.name}' copies the fields {sorted(shared)} of '{other.name}'. "
-                "Use one canonical model type."
-            ]
-    return []
+    def _sharing_fields(self, own: set[str], holders: dict[str, list["Node"]]) -> list["Node"]:
+        """Every class holding any of the fields, each once, in the order of its node id."""
+        others = {other.node_id: other for field in own for other in holders.get(field, [])}
+        return [others[other_id] for other_id in sorted(others)]
 
+    def _related(self, node: "Node", other: "Node") -> bool:
+        """A subclass repeats its base's fields by design."""
+        return other.name in (node.get_fact("bases", []) or []) or node.name in (other.get_fact("bases", []) or [])
 
-def _related(node: "Node", other: "Node") -> bool:
-    """A subclass repeats its base's fields by design."""
-    return other.name in (node.get_fact("bases", []) or []) or node.name in (other.get_fact("bases", []) or [])
+    def _beyond_bases(self, node: "Node", fields: dict[str, str], classes: ClassGraph) -> dict[str, str]:
+        """The fields it holds that none of the classes it derives from declares, through every base the graph holds."""
+        inherited: set[str] = set()
+        seen: set[str] = set()
+        pending = classes.bases_of(node)
+        while pending:
+            base = pending.pop()
+            if base in seen:
+                continue
+            seen.add(base)
+            for declaring in classes.named(base):
+                inherited |= set(classes.fields(declaring))
+                pending.extend(classes.bases_of(declaring))
+        return {field: hint for field, hint in fields.items() if field not in inherited}
 
+    def _copies(self, shared: set[str], own: set[str], theirs: set[str]) -> bool:
+        smaller = min(len(own), len(theirs))
+        return len(shared) >= _MIN_COPIED_FIELDS and len(shared) >= _COPIED_SHARE * smaller
 
-def _copies(shared: set[str], own: set[str], theirs: set[str]) -> bool:
-    smaller = min(len(own), len(theirs))
-    return len(shared) >= _MIN_COPIED_FIELDS and len(shared) >= _COPIED_SHARE * smaller
+    def _copied_references(self, node: "Node", classes: ClassGraph, fields: dict[str, str]) -> list[str]:
+        """A name copy of a reference, or one value per member keyed by its name. A failure keeps the name of what it
+        failed on for its message, so its names are not copies."""
+        hits: list[str] = []
+        named_copies = not classes.kinds.is_failure(node.name)
+        for field, hint in fields.items():
+            named = _NAME_COPY.match(field) if named_copies else None
+            owner = self._class_named(named.group("owner"), classes) if named else ""
+            if owner and owner != node.name and self._has_name(owner, classes):
+                hits.append(
+                    f"Class '{node.name}' holds '{field}', a name copy of a '{owner}'; hold the {owner} itself."
+                )
+                continue
+            member = self._member_keyed_by_name(field, hint, classes)
+            if member and member != node.name:
+                hits.append(
+                    f"Class '{node.name}' holds '{field}', one value per {member} keyed by its name; "
+                    f"ask each {member} for the value instead."
+                )
+        return hits
 
-
-def _copied_references(node: "Node", classes: ClassGraph, fields: dict[str, str]) -> list[str]:
-    """A name copy of a reference, or one value per member keyed by its name. A failure keeps the name of what it
-    failed on for its message, so its names are not copies."""
-    hits: list[str] = []
-    named_copies = not classes.is_failure(node.name)
-    for field, hint in fields.items():
-        named = _NAME_COPY.match(field) if named_copies else None
-        owner = _class_named(named.group("owner"), classes) if named else ""
-        if owner and owner != node.name and _has_name(owner, classes):
-            hits.append(
-                f"Class '{node.name}' holds '{field}', a name copy of a '{owner}'; hold the {owner} itself."
-            )
-            continue
-        member = _member_keyed_by_name(field, hint, classes)
-        if member and member != node.name:
-            hits.append(
-                f"Class '{node.name}' holds '{field}', one value per {member} keyed by its name; "
-                f"ask each {member} for the value instead."
-            )
-    return hits
-
-
-def _member_keyed_by_name(field: str, hint: str, classes: ClassGraph) -> str:
-    """`fidelity_states: dict[str, str]` names a member class and keys a dict of one value each by name. A dict keyed by
-    anything but a string, such as `dict[int, str]` keyed by `id()`, is keyed by no name."""
-    mentioned = names_in(hint)
-    if not mentioned & _KEYED_COLLECTIONS or _key_type(hint) not in _STRING_KEYS:
+    def _member_keyed_by_name(self, field: str, hint: str, classes: ClassGraph) -> str:
+        """`fidelity_states: dict[str, str]` names a member class and keys a dict of one value each by name. A dict keyed
+        by anything but a string, such as `dict[int, str]` keyed by `id()`, is keyed by no name."""
+        mentioned = names_in(hint)
+        if not mentioned & _KEYED_COLLECTIONS or self._key_type(hint) not in _STRING_KEYS:
+            return ""
+        words = self._words(field)
+        for length in range(len(words) - 1, 0, -1):
+            member = self._class_named("_".join(words[:length]), classes)
+            if member and member not in mentioned and self._holds_value(member, words[length:], classes):
+                return member
         return ""
-    words = _words(field)
-    for length in range(len(words) - 1, 0, -1):
-        member = _class_named("_".join(words[:length]), classes)
-        if member and member not in mentioned and _holds_value(member, words[length:], classes):
-            return member
-    return ""
 
+    def _has_name(self, owner: str, classes: ClassGraph) -> bool:
+        """True when the class is named by a field of its own, such as `name` or `title`, which a copy could repeat."""
+        return any(_NAMING_FIELDS & {field.lstrip("_") for field in classes.fields(node)} for node in classes.named(owner))
 
-def _has_name(owner: str, classes: ClassGraph) -> bool:
-    """True when the class is named by a field of its own, such as `name` or `title`, which a copy could repeat."""
-    return any(_NAMING_FIELDS & {field.lstrip("_") for field in classes.fields(node)} for node in classes.named(owner))
+    def _holds_value(self, member: str, value_words: list[str], classes: ClassGraph) -> bool:
+        """True when the member class holds the value the dict keeps for each one: `fidelity_states` copies a
+        `Fidelity`'s `state`. A dict whose values the member does not hold, such as each file's text by its path, copies
+        nothing of it."""
+        value = "_".join(value_words)
+        wanted = {value, value.removesuffix("s"), f"{value}s"}
+        return any(
+            wanted & {field.lstrip("_") for field in classes.fields(node)} or wanted & {operation.name for operation in classes.operations(node)}
+            for node in classes.named(member)
+        )
 
+    def _key_type(self, hint: str) -> str:
+        """The first type argument of a keyed collection, its key: `str` for `dict[str, int]` or `Record<string, X>`."""
+        opened = re.search(r"[\[<]", hint)
+        if opened is None:
+            return ""
+        arguments = split_top_level(hint[opened.end() :].rstrip("]> "))
+        return arguments[0].strip() if arguments else ""
 
-def _holds_value(member: str, value_words: list[str], classes: ClassGraph) -> bool:
-    """True when the member class holds the value the dict keeps for each one: `fidelity_states` copies a `Fidelity`'s
-    `state`. A dict whose values the member does not hold, such as each file's text by its path, copies nothing of it."""
-    value = "_".join(value_words)
-    wanted = {value, value.removesuffix("s"), f"{value}s"}
-    return any(
-        wanted & {field.lstrip("_") for field in classes.fields(node)} or wanted & {operation.name for operation in classes.operations(node)}
-        for node in classes.named(member)
-    )
+    def _class_named(self, snake: str, classes: ClassGraph) -> str:
+        pascal = "".join(word.capitalize() for word in self._words(snake))
+        return pascal if bool(classes.named(pascal)) else ""
 
-
-def _key_type(hint: str) -> str:
-    """The first type argument of a keyed collection, its key: `str` for `dict[str, int]` or `Record<string, X>`."""
-    opened = re.search(r"[\[<]", hint)
-    if opened is None:
-        return ""
-    arguments = split_top_level(hint[opened.end() :].rstrip("]> "))
-    return arguments[0].strip() if arguments else ""
-
-
-def _class_named(snake: str, classes: ClassGraph) -> str:
-    pascal = "".join(word.capitalize() for word in _words(snake))
-    return pascal if bool(classes.named(pascal)) else ""
-
-
-def _words(name: str) -> list[str]:
-    spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", name.strip("_"))
-    return [word.lower() for word in spaced.split("_") if word]
+    def _words(self, name: str) -> list[str]:
+        spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", name.strip("_"))
+        return [word.lower() for word in spaced.split("_") if word]
 
 
 class LayerSeparation(PracticeGraphRule):
@@ -210,7 +223,7 @@ class LayerSeparation(PracticeGraphRule):
 
     def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
         classes = context.index(ClassGraph)
-        targets = {node.node_id: _forwarding_target(node, classes) for node in classes.classes}
+        targets = {node.node_id: self._forwarding_target(node, classes) for node in classes.classes}
         names = {node.node_id: node.name for node in context.nodes("OoadClass")}
         hits = [
             (
@@ -221,62 +234,61 @@ class LayerSeparation(PracticeGraphRule):
             for node in classes.classes
             if targets[node.node_id]
         ]
-        return hits + _pass_through_folders(context, classes, targets)
+        return hits + self._pass_through_folders(context, classes, targets)
 
-
-def _forwarding_target(node: "Node", classes: ClassGraph) -> str:
-    """The one class every public operation forwards to, or empty when the class does any work of its own."""
-    operations = classes.operations(node)
-    if not operations or len(classes.fields(node)) > 1:
-        return ""
-    candidates: set[str] | None = None
-    for operation in operations:
-        callee = _sole_forward(operation)
-        if not callee or (len(operations) == 1 and callee != operation.name):
+    def _forwarding_target(self, node: "Node", classes: ClassGraph) -> str:
+        """The one class every public operation forwards to, or empty when the class does any work of its own."""
+        operations = classes.operations(node)
+        if not operations or len(classes.fields(node)) > 1:
             return ""
-        defining = classes.classes_defining(callee) - {node.node_id}
-        candidates = defining if candidates is None else candidates & defining
-    return sorted(candidates)[0] if candidates and len(candidates) == 1 else ""
+        candidates: set[str] | None = None
+        for operation in operations:
+            callee = self._sole_forward(operation)
+            if not callee or (len(operations) == 1 and callee != operation.name):
+                return ""
+            defining = classes.classes_defining(callee) - {node.node_id}
+            candidates = defining if candidates is None else candidates & defining
+        return sorted(candidates)[0] if candidates and len(candidates) == 1 else ""
 
+    def _sole_forward(self, operation: "Node") -> str:
+        """The callee of an operation whose body is one statement making one call on a collaborator: a parameter
+        (``cart.subtotal()``) or a field (``self._cart.subtotal()``)."""
+        callees = {callee for callee in operation.get_fact("callees", []) or [] if callee}
+        body = operation.get_fact("body_text") or ""
+        statements = [line for line in body.splitlines() if line.strip() and not line.strip().startswith(("#", "//"))]
+        if len(callees) != 1 or len(statements) != 1:
+            return ""
+        callee = next(iter(callees))
+        parameters = [re.escape(parameter.name) for parameter in parameters_of(operation)]
+        receivers = [r"(?:self|this)\.\w+"] + [rf"\b{name}" for name in parameters]
+        forwards = re.search(rf"(?:{'|'.join(receivers)})\.{re.escape(callee)}\s*\(", statements[0])
+        return callee if forwards else ""
 
-def _sole_forward(operation: "Node") -> str:
-    """The callee of an operation whose body is one statement making one call on a collaborator: a parameter
-    (``cart.subtotal()``) or a field (``self._cart.subtotal()``)."""
-    callees = {callee for callee in operation.get_fact("callees", []) or [] if callee}
-    body = operation.get_fact("body_text") or ""
-    statements = [line for line in body.splitlines() if line.strip() and not line.strip().startswith(("#", "//"))]
-    if len(callees) != 1 or len(statements) != 1:
-        return ""
-    callee = next(iter(callees))
-    parameters = [re.escape(parameter.name) for parameter in parameters_of(operation)]
-    receivers = [r"(?:self|this)\.\w+"] + [rf"\b{name}" for name in parameters]
-    forwards = re.search(rf"(?:{'|'.join(receivers)})\.{re.escape(callee)}\s*\(", statements[0])
-    return callee if forwards else ""
+    def _pass_through_folders(
+        self, context: "RuleCheckContext", classes: ClassGraph, targets: dict[str, str]
+    ) -> list[tuple[str, str]]:
+        """Each module folder whose classes all forward, and all to classes of one other folder."""
+        folder_of = {node.node_id: self._folder_id(node, context) for node in context.nodes("OoadClass")}
+        members: dict[str, list[str]] = {}
+        for node in classes.classes:
+            members.setdefault(folder_of[node.node_id], []).append(node.node_id)
+        hits: list[tuple[str, str]] = []
+        for folder_id, class_ids in members.items():
+            folder = context.node(folder_id)
+            if folder is None or folder.type not in ("Module", "Package") or not all(targets[class_id] for class_id in class_ids):
+                continue
+            reached = {folder_of[targets[class_id]] for class_id in class_ids} - {folder_id}
+            if len(reached) == 1:
+                hits.append((folder_id, self._forwarding_folder_message(folder, next(iter(reached)), context)))
+        return hits
 
+    def _forwarding_folder_message(self, folder: "Node", reached_id: str, context: "RuleCheckContext") -> str:
+        other = context.node(reached_id)
+        return (
+            f"Module '{folder.name}' only forwards to '{other.name if other else reached_id}'; "
+            "collapse the pass-through module."
+        )
 
-def _folder_id(node: "Node", context: "RuleCheckContext") -> str:
-    """The id of the folder the class belongs to, through its belongsTo edge."""
-    return next((folder.node_id for folder in context.targets(node, "belongsTo")), "")
-
-
-def _pass_through_folders(context: "RuleCheckContext", classes: ClassGraph, targets: dict[str, str]) -> list[tuple[str, str]]:
-    folder_of = {node.node_id: _folder_id(node, context) for node in context.nodes("OoadClass")}
-    members: dict[str, list[str]] = {}
-    for node in classes.classes:
-        members.setdefault(folder_of[node.node_id], []).append(node.node_id)
-    hits: list[tuple[str, str]] = []
-    for folder_id, class_ids in members.items():
-        folder = context.node(folder_id)
-        if folder is None or folder.type not in ("Module", "Package") or not all(targets[class_id] for class_id in class_ids):
-            continue
-        reached = {folder_of[targets[class_id]] for class_id in class_ids} - {folder_id}
-        if len(reached) == 1:
-            other = context.node(next(iter(reached)))
-            hits.append(
-                (
-                    folder_id,
-                    f"Module '{folder.name}' only forwards to '{other.name if other else next(iter(reached))}'; "
-                    "collapse the pass-through module.",
-                )
-            )
-    return hits
+    def _folder_id(self, node: "Node", context: "RuleCheckContext") -> str:
+        """The id of the folder the class belongs to, through its belongsTo edge."""
+        return next((folder.node_id for folder in context.targets(node, "belongsTo")), "")

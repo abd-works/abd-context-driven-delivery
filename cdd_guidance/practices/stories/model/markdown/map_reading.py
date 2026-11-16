@@ -18,7 +18,8 @@ from cdd_guidance.practices.stories.model.story_map_files import source_at
 from cdd_guidance.practices.stories.model.story_model import StoryType
 
 if TYPE_CHECKING:
-    from cdd_guidance.practices.stories.model.story_model import StoryNode
+    from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
+    from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryNode
 
 _BULLET_PATTERN = re.compile(r"^(\s*)-\s+(.+)$")
 _NUMBERED_PATTERN = re.compile(r"^(\s*)\d+\.\s+(.+)$")
@@ -29,6 +30,8 @@ _OUTLINE_ESTIMATE_PATTERN = re.compile(r"^(\s*)\*\s+(\S.+)$")
 _EVIDENCE_LABEL = re.compile(r"\b(Observed|Inferred|Intended):|^\s*(Observed|Inferred|Intended)\.", re.IGNORECASE)
 _DOC_TITLE_PREFIXES = ("story map", "thin slic", "acceptance criteria", "specification by example")
 _NON_STORY_SECTIONS = {"context gaps", "validation results"}
+# The spaces an outline line written before `#` marks were used is indented by for each level.
+_OUTLINE_INDENT = 4
 
 
 def is_outline(lines: List[str]) -> bool:
@@ -42,30 +45,23 @@ def has_map_structure(lines: List[str]) -> bool:
     return any(pattern.match(line) for line in lines for pattern in patterns)
 
 
-def read_map(format, lines: List[str], file: str):
+def read_map(format: "MarkdownStoryModel", lines: List[str], file: str) -> "MarkdownStoryModel":
     """The story map lines write, read by the reading made for their notation, each node naming its line of file."""
     reading = OutlineMapReading if is_outline(lines) else HeadingMapReading
     return reading(format, file).read(lines)
 
 
-def read_at(node, file: str, line: int) -> None:
+def read_at(node: "StoryNode", file: str, line: int) -> None:
     """node was read on line of file, which it names as its source; a map read from text alone names no file."""
     if file and line:
         node.source = source_at(file, line)
-
-
-def _outline_depth(match: "re.Match") -> int:
-    """Depth of an (E) or (S) outline line: one less than its ``#`` count, top-level epic 0. A line with no ``#``
-    takes its depth from the old four-space indent."""
-    marks = match.group("marks")
-    return len(marks) - 1 if marks else len(match.group("indent")) // 4
 
 
 class MapReading:
     """One read of a story map's text: the format whose epics and stories it makes (format), the map it fills, the
     file it names on each node, the line being read, and the epic and the sub-epics it is under."""
 
-    def __init__(self, format, file: str) -> None:
+    def __init__(self, format: "MarkdownStoryModel", file: str) -> None:
         self.format = format
         self.file = file
         self.story_map = type(format)()
@@ -100,7 +96,7 @@ class MapReading:
         siblings.append(sub)
         self.sub_epics.append(sub)
 
-    def _story(self, name: str, parent, story_type: StoryType = StoryType.USER):
+    def _story(self, name: str, parent: "Epic", story_type: StoryType = StoryType.USER) -> "Story":
         """A story under parent, read on this line."""
         story = self.format.story_type(name, len(parent.stories) + 1, story_type)
         read_at(story, self.file, self.number)
@@ -112,7 +108,7 @@ class HeadingMapReading(MapReading):
     """A story map written as headings and bullets: `#` epics, deeper headings sub-epics, `-` stories, and their
     scenarios as indented or numbered lines below them."""
 
-    def __init__(self, format, file: str) -> None:
+    def __init__(self, format: "MarkdownStoryModel", file: str) -> None:
         super().__init__(format, file)
         self.story = None
         self.epic_heading_depth: Optional[int] = None
@@ -137,19 +133,28 @@ class HeadingMapReading(MapReading):
         if heading is None:
             return False
         depth, name = len(heading.group(1)), heading.group(2).strip()
-        if any(name.lower().startswith(prefix) for prefix in _DOC_TITLE_PREFIXES):
+        lowered = name.lower()
+        if any(lowered.startswith(prefix) for prefix in _DOC_TITLE_PREFIXES):
             return True
-        if name.lower() in _NON_STORY_SECTIONS:
+        if lowered in _NON_STORY_SECTIONS:
             self.ignored_heading_depth = depth
-        elif name.lower().startswith("story:"):
+            return True
+        if lowered.startswith("story:"):
             self._named_story(name.split(":", 1)[1].strip() or name)
-        elif self._is_epic_heading(depth):
-            self.epic_heading_depth = depth if self.epic_heading_depth is None else self.epic_heading_depth
-            self._open_epic(name)
-            self.story = None
-        elif self.epic is not None:
+            return True
+        if self._is_epic_heading(depth):
+            self._open_heading_epic(name, depth)
+            return True
+        if self.epic is not None:
             self._accept_nested_heading(name, depth)
         return True
+
+    def _open_heading_epic(self, name: str, depth: int) -> None:
+        """An epic heading: the first one sets the depth every later epic heading is written at."""
+        if self.epic_heading_depth is None:
+            self.epic_heading_depth = depth
+        self._open_epic(name)
+        self.story = None
 
     def _is_epic_heading(self, depth: int) -> bool:
         return self.epic is None or depth == 1 or (self.epic_heading_depth is not None and depth <= self.epic_heading_depth)
@@ -241,17 +246,17 @@ class OutlineMapReading(MapReading):
     the epic or story it heads, and the lines before the first epic the story map's own; each node keeps the lines it
     was read with (``outline``)."""
 
-    def __init__(self, format, file: str) -> None:
+    def __init__(self, format: "MarkdownStoryModel", file: str) -> None:
         super().__init__(format, file)
         self.story = None
         self.described = self.story_map
-        self.story_map.outline = OutlineLines()
 
-    def read(self, lines: List[str]):
+    def read(self, lines: List[str]) -> "MarkdownStoryModel":
         """The story map the lines write, every line kept by the node it is under, blank lines too."""
+        self.story_map.outline = OutlineLines()
         for self.number, self.raw in enumerate(lines, start=1):
             self._read_line()
-        for node in [self.story_map, *self.story_map.every_epic(), *self.story_map.every_story()]:
+        for node in [self.story_map, *self.story_map.descendants.epics(), *self.story_map.descendants.stories()]:
             node.outline.read_from(node)
         return self.story_map
 
@@ -279,7 +284,7 @@ class OutlineMapReading(MapReading):
         match = _OUTLINE_EPIC_PATTERN.match(self.raw)
         if match is None:
             return False
-        depth, name = _outline_depth(match), strip_backticks(unlink(match.group("name")))
+        depth, name = self._outline_depth(match), strip_backticks(unlink(match.group("name")))
         self.story = None
         if depth <= 0:
             self._open_epic(name)
@@ -291,7 +296,7 @@ class OutlineMapReading(MapReading):
         match = _OUTLINE_STORY_PATTERN.match(self.raw)
         if match is None or self.epic is None:
             return False
-        parent_depth = _outline_depth(match) - 1
+        parent_depth = self._outline_depth(match) - 1
         if match.group("marks") or parent_depth <= 0:
             while len(self.sub_epics) > max(parent_depth, 0):
                 self.sub_epics.pop()
@@ -300,6 +305,12 @@ class OutlineMapReading(MapReading):
         if actor:
             self.story.actors = [actor]
         return True
+
+    def _outline_depth(self, match: "re.Match") -> int:
+        """Depth of an (E) or (S) outline line: one less than its ``#`` count, top-level epic 0. A line with no ``#``
+        takes its depth from the old four-space indent."""
+        marks = match.group("marks")
+        return len(marks) - 1 if marks else len(match.group("indent")) // _OUTLINE_INDENT
 
     def _accept_evidence(self) -> None:
         """Record the Observed, Inferred, or Intended labels written in the lines under a story heading."""

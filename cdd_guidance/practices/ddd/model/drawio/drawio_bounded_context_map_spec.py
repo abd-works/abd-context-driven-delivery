@@ -31,7 +31,7 @@ def _layout_violations(xml):
         path.write_text(xml, encoding="utf-8")
         return [
             violation.message
-            for slug, scanner_type in DrawioScanner.discover().items()
+            for slug, scanner_type in DrawioScanner.every().items()
             for violation in scanner_type(rule=slug).scan_file(Path(folder), path)
         ]
 

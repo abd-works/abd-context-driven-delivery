@@ -72,11 +72,11 @@ class MissingModuleContext(ProductionCodeRule):
 
     def _enclosing_card(self, folder: "Node", context: "RuleCheckContext") -> bool:
         """True when a folder that owns this one, short of the project's root, holds a module card."""
-        parent = context.graph.direct_parent(folder)
+        parent = context.graph.edges.direct_parent(folder)
         while parent is not None and parent.type in ("Module", "Package"):
             if parent.get_fact("has_module_context"):
                 return True
-            parent = context.graph.direct_parent(parent)
+            parent = context.graph.edges.direct_parent(parent)
         return False
 
 

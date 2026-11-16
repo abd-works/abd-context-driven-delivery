@@ -11,7 +11,7 @@ from mamba import after, before, description, it
 from cdd_guidance.practices.agent_bdd.agent_bdd import AgentBdd
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
-from space.session.throwaway_project import ThrowawayProject
+from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 with description("an agent BDD practice writing its artifact"):
     with before.all:
@@ -21,7 +21,7 @@ with description("an agent BDD practice writing its artifact"):
         self.prose = AgentInstructions.for_callable(AgentBdd.generate_output, self.agent_bdd).expand({}).instructions
 
     with after.all:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with it("should carry vanilla BDD's guidance"):
         expect(self.prose).to(contain("Behavior-driven development turns domain vocabulary into passing tests"))

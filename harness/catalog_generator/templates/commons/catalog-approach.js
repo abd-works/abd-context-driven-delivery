@@ -1,3 +1,306 @@
 // The approach page: the arrow keys walk its stages and then its principles, one principle opens at a time, and the
 // example columns can be dragged sideways. Read by cdd-approach.html, whose stages it reads from data-stages.
-(function(){var root=document.getElementById('approach-page');if(!root)return;var stages=[];try{stages=JSON.parse(root.getAttribute('data-stages')||'[]');}catch(e){return;}var buttons=[].slice.call(root.querySelectorAll('.approach-stage'));var titleEl=document.getElementById('approach-detail-title');var bodyEl=document.getElementById('approach-detail-body');var principlesEl=document.getElementById('approach-principles');var principles=[].slice.call(root.querySelectorAll('.approach-principle'));var principleIndex=-1;var index=0;var ready=false;var started=false;var onPrinciples=false;function scrollRefineToTop(){window.scrollTo({top:0,behavior:'smooth'});}function scrollPrinciple(el){var nav=document.querySelector('.site-nav');var navH=nav?nav.getBoundingClientRect().height:0;var pad=navH+16;var top=el.getBoundingClientRect().top+window.pageYOffset;var height=el.offsetHeight;var room=window.innerHeight-pad;var y=top-pad;if(height<room)y=top-pad-Math.min(24,room-height);window.scrollTo({top:Math.max(0,y),behavior:'smooth'});}function showPrinciple(i,scroll){principleIndex=i;onPrinciples=i>=0;principles.forEach(function(el,n){var open=n===i;el.classList.toggle('is-open',open);var toggle=el.querySelector('.approach-principle__toggle');if(toggle)toggle.setAttribute('aria-expanded',open?'true':'false');});if(scroll&&i>=0&&principles[i]){var target=principles[i];window.setTimeout(function(){scrollPrinciple(target);},440);}}function paint(scroll){buttons.forEach(function(btn,i){var on=!onPrinciples&&i===index;btn.classList.toggle('is-active',on);btn.classList.remove('is-done');btn.setAttribute('aria-pressed',on?'true':'false');if(on){btn.classList.remove('is-flash');void btn.offsetWidth;btn.classList.add('is-flash');}});var stage=stages[index];if(!stage)return;titleEl.textContent=stage.detail_title;showStageExample(stage,scroll&&started);bodyEl.classList.remove('is-enter');void bodyEl.offsetWidth;bodyEl.innerHTML=stage.paras.map(function(para){return '<li>'+para.replace(/</g,'&lt;')+'</li>';}).join('');bodyEl.classList.add('is-enter');if(scroll&&!onPrinciples&&started&&!(stage.example_href))scrollRefineToTop();}function showStageExample(){}function openNextColumn(){var host=document.getElementById('approach-stage-examples');return !!(window.catalogRefineOpenNext&&window.catalogRefineOpenNext(host));}function closeLastColumn(){var host=document.getElementById('approach-stage-examples');return !!(window.catalogRefineCloseLast&&window.catalogRefineCloseLast(host));}function principleSlug(i){return principles[i]?principles[i].getAttribute('data-principle'):'';}var peStep=-1;function peSteps(){var steps=[];document.querySelectorAll('#pe-engineering .approach-refine-row').forEach(function(host){['discovery','specification','implementation'].forEach(function(id){if(host.querySelector('.approach-stage-column[data-stage-id="'+id+'"]')){steps.push({host:host,id:id});}});});return steps;}function walkPe(delta){if(!window.catalogRefineSetStage)return false;var steps=peSteps();if(!steps.length)return false;if(delta>0){if(peStep>=steps.length-1)return false;peStep+=1;return window.catalogRefineSetStage(steps[peStep].host,steps[peStep].id,true);}if(peStep<0)return false;window.catalogRefineSetStage(steps[peStep].host,steps[peStep].id,false);peStep-=1;return true;}function move(delta){started=true;if(phase==='stages'){if(delta>0&&index>=stages.length-1){phase='principles';closePrinciples();if(principlesEl){var nav=document.querySelector('.site-nav');var navH=nav?nav.getBoundingClientRect().height:0;var top=principlesEl.getBoundingClientRect().top+window.pageYOffset-(navH+16);window.scrollTo(0,Math.max(0,top));}return;}if(delta<0&&index<=0)return;index+=delta;closePrinciples();paint(false);return;}if(phase==='travel'||phase==='library')phase='principles';if(delta>0){if(principleIndex<0){showPrinciple(0,false);paint(false);return;}if(principleSlug(principleIndex)==='iterate-and-learn'&&openNextColumn())return;if(principleSlug(principleIndex)==='product-engineering'&&walkPe(1))return;if(principleIndex>=principles.length-1)return;showPrinciple(principleIndex+1,false);if(principleSlug(principleIndex)==='product-engineering')peStep=-1;paint(false);return;}if(principleSlug(principleIndex)==='product-engineering'&&walkPe(-1))return;if(principleSlug(principleIndex)==='iterate-and-learn'&&closeLastColumn())return;if(principleIndex>0){showPrinciple(principleIndex-1,false);paint(false);return;}if(principleIndex===0){closePrinciples();paint(false);return;}phase='stages';index=stages.length-1;paint(false);}buttons.forEach(function(btn,i){btn.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('a'))return;started=true;phase='stages';index=i;if(!stages[i]||!stages[i].example_href)showPrinciple(-1,false);paint(ready);});btn.addEventListener('keydown',function(e){if(e.target!==btn)return;if(e.key==='Enter'||e.key===' '){e.preventDefault();btn.click();}});});principles.forEach(function(el,i){var toggle=el.querySelector('.approach-principle__toggle');if(!toggle)return;toggle.addEventListener('click',function(){started=true;phase='principles';if(principleIndex===i){showPrinciple(-1,false);paint(false);return;}showPrinciple(i,false);if(principleSlug(i)==='product-engineering')peStep=-1;paint(false);});});document.addEventListener('keydown',function(e){if(e.target.closest('input,textarea,select,a'))return;if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();move(1);}else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();move(-1);}});var phase='stages';var dragClip=null,dragX=0,dragLeft=0;document.addEventListener('pointerdown',function(e){var clip=e.target.closest&&e.target.closest('.approach-stage-examples__clip');if(!clip||e.button!==0)return;if(e.target.closest('button,a,input,textarea,select,.catalog-monaco,.mxgraph,.skill-drawio-wrap'))return;dragClip=clip;dragX=e.clientX;dragLeft=clip.scrollLeft;clip.classList.add('is-dragging');try{clip.setPointerCapture(e.pointerId);}catch(err){}});document.addEventListener('pointermove',function(e){if(!dragClip)return;dragClip.scrollLeft=dragLeft-(e.clientX-dragX);});document.addEventListener('pointerup',function(){if(!dragClip)return;dragClip.classList.remove('is-dragging');dragClip=null;});function closePrinciples(){showPrinciple(-1,false);}paint(false);ready=true;})();
+(function () {
+  'use strict';
+
+  // The gap kept between the fixed site navigation and whatever the page scrolls to.
+  var NAV_GAP_PX = 16;
+  var PRODUCT_ENGINEERING = 'product-engineering';
+  var ITERATE_AND_LEARN = 'iterate-and-learn';
+  var REFINE_STAGES = ['discovery', 'specification', 'implementation'];
+
+  function navigationHeight() {
+    var nav = document.querySelector('.site-nav');
+    return nav ? nav.getBoundingClientRect().height : 0;
+  }
+
+  function pageTopOf(element) {
+    return element.getBoundingClientRect().top + window.pageYOffset;
+  }
+
+  function restartAnimation(element, className) {
+    element.classList.remove(className);
+    void element.offsetWidth; // reading the width makes the browser restart the animation when the class returns
+    element.classList.add(className);
+  }
+
+  function escapeHtml(text) {
+    return text.replace(/</g, '&lt;');
+  }
+
+  /** The stage descriptions the page lists, read from its data-stages; none when the attribute is not valid JSON. */
+  function readStages(root) {
+    try {
+      return JSON.parse(root.getAttribute('data-stages') || '[]');
+    } catch (err) {
+      if (err instanceof SyntaxError) return null;
+      throw err;
+    }
+  }
+
+  /** The product-engineering principle's refine rows, walked one stage column at a time. */
+  function ProductEngineeringWalk() {
+    this.step = -1;
+  }
+
+  ProductEngineeringWalk.prototype.restart = function () {
+    this.step = -1;
+  };
+
+  ProductEngineeringWalk.prototype.steps = function () {
+    var steps = [];
+    document.querySelectorAll('#pe-engineering .approach-refine-row').forEach(function (row) {
+      REFINE_STAGES.forEach(function (stageId) {
+        if (row.querySelector('.approach-stage-column[data-stage-id="' + stageId + '"]')) {
+          steps.push({ row: row, stageId: stageId });
+        }
+      });
+    });
+    return steps;
+  };
+
+  /** Open the next stage column, or close the last opened one; false when there is no column left to walk to. */
+  ProductEngineeringWalk.prototype.walk = function (delta) {
+    if (!window.catalogRefineSetStage) return false;
+    var steps = this.steps();
+    if (!steps.length) return false;
+    if (delta > 0) {
+      if (this.step >= steps.length - 1) return false;
+      this.step += 1;
+      return window.catalogRefineSetStage(steps[this.step].row, steps[this.step].stageId, true);
+    }
+    if (this.step < 0) return false;
+    window.catalogRefineSetStage(steps[this.step].row, steps[this.step].stageId, false);
+    this.step -= 1;
+    return true;
+  };
+
+  /** The approach page's stage buttons and principles, and where the arrow keys have walked to in them. */
+  function ApproachPage(root, stages) {
+    this.stages = stages;
+    this.buttons = [].slice.call(root.querySelectorAll('.approach-stage'));
+    this.principles = [].slice.call(root.querySelectorAll('.approach-principle'));
+    this.titleElement = document.getElementById('approach-detail-title');
+    this.bodyElement = document.getElementById('approach-detail-body');
+    this.principlesElement = document.getElementById('approach-principles');
+    this.productEngineering = new ProductEngineeringWalk();
+    this.stageIndex = 0;
+    this.principleIndex = -1;
+    this.phase = 'stages';
+    this.started = false;
+    this.ready = false;
+  }
+
+  ApproachPage.prototype.principleSlug = function (principleIndex) {
+    var principle = this.principles[principleIndex];
+    return principle ? principle.getAttribute('data-principle') : '';
+  };
+
+  ApproachPage.prototype.showPrinciple = function (principleIndex) {
+    this.principleIndex = principleIndex;
+    this.principles.forEach(function (principle, index) {
+      var open = index === principleIndex;
+      principle.classList.toggle('is-open', open);
+      var toggle = principle.querySelector('.approach-principle__toggle');
+      if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  };
+
+  /** Open a principle by choosing it or walking forward onto it; product engineering then starts at its first column. */
+  ApproachPage.prototype.enterPrinciple = function (principleIndex) {
+    this.showPrinciple(principleIndex);
+    if (this.principleSlug(principleIndex) === PRODUCT_ENGINEERING) this.productEngineering.restart();
+  };
+
+  ApproachPage.prototype.closePrinciples = function () {
+    this.showPrinciple(-1);
+  };
+
+  ApproachPage.prototype.onPrinciples = function () {
+    return this.principleIndex >= 0;
+  };
+
+  ApproachPage.prototype.paintButtons = function () {
+    var page = this;
+    this.buttons.forEach(function (button, index) {
+      var active = !page.onPrinciples() && index === page.stageIndex;
+      button.classList.toggle('is-active', active);
+      button.classList.remove('is-done');
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+      if (active) restartAnimation(button, 'is-flash');
+    });
+  };
+
+  ApproachPage.prototype.paintStage = function (stage) {
+    this.titleElement.textContent = stage.detail_title;
+    this.bodyElement.classList.remove('is-enter');
+    void this.bodyElement.offsetWidth; // restart the enter animation for the new stage's text
+    this.bodyElement.innerHTML = stage.paras.map(function (para) {
+      return '<li>' + escapeHtml(para) + '</li>';
+    }).join('');
+    this.bodyElement.classList.add('is-enter');
+  };
+
+  ApproachPage.prototype.paint = function (scroll) {
+    this.paintButtons();
+    var stage = this.stages[this.stageIndex];
+    if (!stage) return;
+    this.paintStage(stage);
+    if (scroll && !this.onPrinciples() && this.started && !stage.example_href) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  ApproachPage.prototype.scrollToPrinciples = function () {
+    if (!this.principlesElement) return;
+    var top = pageTopOf(this.principlesElement) - (navigationHeight() + NAV_GAP_PX);
+    window.scrollTo(0, Math.max(0, top));
+  };
+
+  ApproachPage.prototype.moveThroughStages = function (delta) {
+    if (delta > 0 && this.stageIndex >= this.stages.length - 1) {
+      this.phase = 'principles';
+      this.closePrinciples();
+      this.scrollToPrinciples();
+      return;
+    }
+    if (delta < 0 && this.stageIndex <= 0) return;
+    this.stageIndex += delta;
+    this.closePrinciples();
+    this.paint(false);
+  };
+
+  /** Inside a principle, the arrow keys first walk its own columns: iterate-and-learn's and product engineering's. */
+  ApproachPage.prototype.walkInsidePrinciple = function (delta) {
+    var refineRows = document.getElementById('approach-stage-examples');
+    var slug = this.principleSlug(this.principleIndex);
+    if (slug === PRODUCT_ENGINEERING) return this.productEngineering.walk(delta);
+    if (slug !== ITERATE_AND_LEARN) return false;
+    var step = delta > 0 ? window.catalogRefineOpenNext : window.catalogRefineCloseLast;
+    return !!(step && step(refineRows));
+  };
+
+  ApproachPage.prototype.moveForwardThroughPrinciples = function () {
+    if (this.principleIndex < 0) {
+      this.showPrinciple(0);
+    } else {
+      if (this.walkInsidePrinciple(1)) return;
+      if (this.principleIndex >= this.principles.length - 1) return;
+      this.enterPrinciple(this.principleIndex + 1);
+    }
+    this.paint(false);
+  };
+
+  ApproachPage.prototype.moveBackThroughPrinciples = function () {
+    if (this.walkInsidePrinciple(-1)) return;
+    if (this.principleIndex > 0) {
+      this.showPrinciple(this.principleIndex - 1);
+    } else if (this.principleIndex === 0) {
+      this.closePrinciples();
+    } else {
+      this.phase = 'stages';
+      this.stageIndex = this.stages.length - 1;
+    }
+    this.paint(false);
+  };
+
+  ApproachPage.prototype.move = function (delta) {
+    this.started = true;
+    if (this.phase === 'stages') {
+      this.moveThroughStages(delta);
+    } else if (delta > 0) {
+      this.moveForwardThroughPrinciples();
+    } else {
+      this.moveBackThroughPrinciples();
+    }
+  };
+
+  ApproachPage.prototype.chooseStage = function (stageIndex) {
+    this.started = true;
+    this.phase = 'stages';
+    this.stageIndex = stageIndex;
+    var stage = this.stages[stageIndex];
+    if (!stage || !stage.example_href) this.closePrinciples();
+    this.paint(this.ready);
+  };
+
+  ApproachPage.prototype.togglePrinciple = function (principleIndex) {
+    this.started = true;
+    this.phase = 'principles';
+    if (this.principleIndex === principleIndex) this.closePrinciples();
+    else this.enterPrinciple(principleIndex);
+    this.paint(false);
+  };
+
+  ApproachPage.prototype.listenToStageButtons = function () {
+    var page = this;
+    this.buttons.forEach(function (button, stageIndex) {
+      button.addEventListener('click', function (event) {
+        if (event.target.closest && event.target.closest('a')) return;
+        page.chooseStage(stageIndex);
+      });
+      button.addEventListener('keydown', function (event) {
+        if (event.target !== button) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          button.click();
+        }
+      });
+    });
+  };
+
+  ApproachPage.prototype.listenToPrinciples = function () {
+    var page = this;
+    this.principles.forEach(function (principle, principleIndex) {
+      var toggle = principle.querySelector('.approach-principle__toggle');
+      if (toggle) toggle.addEventListener('click', function () { page.togglePrinciple(principleIndex); });
+    });
+  };
+
+  ApproachPage.prototype.listenToArrowKeys = function () {
+    var page = this;
+    document.addEventListener('keydown', function (event) {
+      if (event.target.closest('input,textarea,select,a')) return;
+      var delta = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+      if (!delta) return;
+      event.preventDefault();
+      page.move(delta);
+    });
+  };
+
+  ApproachPage.prototype.start = function () {
+    this.listenToStageButtons();
+    this.listenToPrinciples();
+    this.listenToArrowKeys();
+    this.paint(false);
+    this.ready = true;
+  };
+
+  /** Dragging an example strip sideways scrolls it, unless the drag starts on something that takes the pointer itself. */
+  function listenToColumnDrags() {
+    var drag = null;
+    document.addEventListener('pointerdown', function (event) {
+      var clip = event.target.closest && event.target.closest('.approach-stage-examples__clip');
+      if (!clip || event.button !== 0) return;
+      if (event.target.closest('button,a,input,textarea,select,.catalog-monaco,.mxgraph,.skill-drawio-wrap')) return;
+      drag = { clip: clip, startX: event.clientX, startScrollLeft: clip.scrollLeft };
+      clip.classList.add('is-dragging');
+      if (clip.setPointerCapture) clip.setPointerCapture(event.pointerId);
+    });
+    document.addEventListener('pointermove', function (event) {
+      if (drag) drag.clip.scrollLeft = drag.startScrollLeft - (event.clientX - drag.startX);
+    });
+    document.addEventListener('pointerup', function () {
+      if (!drag) return;
+      drag.clip.classList.remove('is-dragging');
+      drag = null;
+    });
+  }
+
+  var root = document.getElementById('approach-page');
+  if (!root) return;
+  var stages = readStages(root);
+  if (!stages) return;
+  new ApproachPage(root, stages).start();
+  listenToColumnDrags();
+})();

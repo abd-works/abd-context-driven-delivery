@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import List, Optional
+from typing import List, Optional, TypedDict
 
 from harness.graph.model_node import ModelChildren, ModelNode
 from harness.graph.graph import Graph
@@ -44,7 +44,16 @@ def private_probe_in_text(text: str, start_line: int) -> dict:
     return {}
 
 
-def reach_of(text: str) -> dict:
+class Reach(TypedDict):
+    """What a block's lines reach: every member name it calls or reads, in order; the names it only reads; and each
+    tool it calls by its name, as the call carrying it, the toolset, and the operation."""
+
+    names: list[str]
+    reads: list[str]
+    tools: list[list[str]]
+
+
+def reach_of(text: str) -> Reach:
     """What a block's lines reach, in the order they name it: every member name it calls or reads, which of those it
     only reads, and each tool it calls by its name (``call("ticket.move_next", ...)``) as the call carrying it, the
     toolset, and the operation. A mamba spec keeps its fixtures on `self`, so `self.project` is the spec's own state."""
@@ -131,7 +140,7 @@ class Observation(BehaviorNode):
     _semantic_type_name = "Observation"
     graph_facts = (*BehaviorNode.graph_facts, "reach")
 
-    def __init__(self, name: str, sequential_order: int = 1, graph=None) -> None:
+    def __init__(self, name: str, sequential_order: int = 1, graph: Graph | None = None) -> None:
         super().__init__(name=name, sequential_order=sequential_order, graph=graph)
         self.call_graph = CallGraph()
         self.surface_lines: List[str] = []

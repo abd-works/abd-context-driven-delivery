@@ -4,8 +4,9 @@ import type { EngineInterface } from 'claude-code'
 import type { FailureData } from '@cdd/tools/error_display/failure'
 
 import type { FailureJson } from '../../types'
-import { commandOf } from '../shared/chat-command'
+import { commandOf, filledPrompt } from '../shared/chat-command'
 import { debugCommandOf } from '../shared/debug-command'
+import { reasonOf } from '../shared/reason'
 
 // Every failure in the mod is shown the same way, above the chat bar's line: what failed with the reason it gave, the
 // context it failed in, Fix, which sends both to this chat to find the cause and fix it, and ✕ to dismiss it. It stays
@@ -36,26 +37,21 @@ export class FailureClient {
   }
 }
 
-// The words a failure carries: the server's own text for a failed cdd tool, a thrown error's message otherwise.
-export function reasonOf(failure: unknown): string {
-  return failure instanceof Error ? failure.message : String(failure)
-}
-
 export async function currentFailure($: EngineInterface): Promise<FailureClient | null> {
   const json = await read($, shownFailure)
   return json ? new FailureClient(json as FailureData) : null
 }
 
-// Shows a failure above the line: what failed, with the reason the thrown failure gave when there is one, and the
-// context it failed in, such as the button pressed and the tool it called.
-export async function showFailure($: EngineInterface, failure: string, context: string, thrown?: unknown): Promise<void> {
-  const said = thrown === undefined ? failure : `${failure}: ${reasonOf(thrown)}`
-  await update($, shownFailure, () => ({ failure: said, context }))
+// Shows a failure above the line: what failed and the context it failed in, such as the button pressed and the tool it
+// called. A failure something threw is shown through shownAsFailure, which adds the reason it gave.
+export async function showFailure($: EngineInterface, failure: string, context: string): Promise<void> {
+  await update($, shownFailure, () => ({ failure, context }))
 }
 
-// A catch handler that shows what it caught: `.catch(shownAsFailure($, 'The board did not load', 'Reading the board'))`.
+// A catch handler that shows what it caught, with the reason it gave:
+// `.catch(shownAsFailure($, 'The board did not load', 'Reading the board'))`.
 export function shownAsFailure($: EngineInterface, failure: string, context: string): (thrown: unknown) => Promise<void> {
-  return thrown => showFailure($, failure, context, thrown)
+  return thrown => showFailure($, `${failure}: ${reasonOf(thrown)}`, context)
 }
 
 // A slash command runs as if the person typed it, as the board's commands do: the engine refuses a submitted prompt that
@@ -77,7 +73,15 @@ export async function fixFailure($: EngineInterface, failure: FailureClient): Pr
   try {
     await sentToChat($, failure.fixPrompt)
   } catch (thrown) {
-    return showFailure($, 'The fix did not reach the chat', `Pressing Fix on: ${failure.failure}`, thrown)
+    return shownAsFailure($, 'The fix did not reach the chat', `Pressing Fix on: ${failure.failure}`)(thrown)
   }
   await dismissFailure($)
+}
+
+// Puts a slash command in the prompt box the moment a button is pressed, as the handoff button does, and the person
+// presses Enter to send it. Running it straight away waits until the chat is idle, so a press showed nothing for a
+// long time.
+export async function promptCommand($: EngineInterface, command: string): Promise<void> {
+  const unfilled = await filledPrompt($, command).catch(reasonOf)
+  if (unfilled) await showFailure($, `${command} could not go in the prompt box: ${unfilled}`, `Pressing the button that puts ${command} in the prompt box`)
 }

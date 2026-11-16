@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process'
+import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -54,15 +55,27 @@ export type DragPlaces = { grab?: { x: number; y: number }; onTop?: boolean; onB
 const NEAR_THE_TOP_EDGE = 4
 const BELOW_THE_LAST_CARD = 24
 
-// Keeps the board from handing claude:// links to the system, which would open real chats in the Claude app; returns the
-// links the page asked to open.
-export async function catchClaudeLinks(page: Page): Promise<string[]> {
-  const links: string[] = []
-  await page.route('**/claude/open', async route => {
-    links.push((route.request().postDataJSON() as { link: string }).link)
-    await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
-  })
-  return links
+// The links of the new chats the cdd server opened since the spec started watching. The run's cdd server keeps each one
+// in the file CDD_OPENED_CHATS names (see playwright.config.ts) instead of handing it to the system, which would open a
+// real chat in the Claude app, and leave the chat's folder held open so the next spec cannot remove it.
+// Playwright loads its specs with type stripping alone, which cannot read constructor parameter properties.
+export class ClaudeLinks {
+  private readonly file: string
+
+  constructor(file: string) {
+    this.file = file
+    rmSync(file, { force: true })
+  }
+
+  get opened(): string[] {
+    return existsSync(this.file) ? readFileSync(this.file, 'utf-8').split(/\r?\n/).filter(Boolean) : []
+  }
+}
+
+export function catchClaudeLinks(): ClaudeLinks {
+  const file = process.env.CDD_OPENED_CHATS
+  if (!file) throw new Error('CDD_OPENED_CHATS is not set: playwright.config.ts names the file the cdd server keeps new chat links in')
+  return new ClaudeLinks(file)
 }
 
 // Drags a card by its title onto a list the way a person does, in small moves. Playwright's dragTo jumps to the target

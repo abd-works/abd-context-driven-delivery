@@ -33,8 +33,7 @@ with description("a graph"):
             )
             root = self.practice.reading.in_graph.root
             root.children.extend([self.failure, self.register])
-            self.graph.explorer.filter.rules = ["limit-operation-parameters"]
-            self.graph.explorer.filter.select_violations()
+            self.graph.explorer.filter.select_violations(["limit-operation-parameters"])
 
         with it("should list the failed rule on the failing operation"):
             expect(self.failure.failed_rules).to(equal(["limit-operation-parameters"]))
@@ -62,7 +61,7 @@ with description("a graph"):
             self.class_node.stage = "implementation"
             root = self.practice.reading.in_graph.root
             root.children.extend([self.module, self.class_node, self.other])
-            self.graph.record(EdgeType("owns", 2, "direct"), self.module, self.class_node)
+            self.graph.edges.record(EdgeType("owns", 2, "direct"), self.module, self.class_node)
             self.graph.explorer.filter.select_relationships(["owns"])
 
         with it("should keep the stage from the query on the node"):

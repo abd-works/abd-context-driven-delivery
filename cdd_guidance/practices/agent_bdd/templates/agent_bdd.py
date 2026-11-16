@@ -17,6 +17,7 @@
 from mamba import context, description, it
 
 from cdd_guidance.practices.agent_bdd.agent import agent
+from cdd_guidance.practices.agent_bdd.agent_bdd_common import ToolsetRequest
 from cdd_guidance.practices.agent_bdd.spec_helpers import (
     expect_instructions_contain,
     expect_ok_action,
@@ -33,10 +34,7 @@ with description("{Description}"):
             with agent(_REPO_ROOT, _SESSIONS / "{SessionName}.json") as run:
                 run.read_workspace("{SetupPath}")
 
-                response = run.run_toolset(
-                    toolset="{ToolsetPath}",
-                    action="{ActionName}",
-                )
+                response = run.run_toolset(ToolsetRequest("{ToolsetPath}", action="{ActionName}"))
                 expect_ok_action(response, "{ActionName}")
                 expect_instructions_contain(response, "{ExpectedKeyword}")
 

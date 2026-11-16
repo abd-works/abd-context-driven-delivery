@@ -17,7 +17,7 @@ from __future__ import annotations
 
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional
 
 from cdd_guidance.practices.sketch_document.discovery_document import DiscoveryDocument
 from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType
@@ -26,10 +26,16 @@ from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, 
 from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks, unlink
 from cdd_guidance.practices.stories.model.markdown.map_reading import OutlineLines, described, has_map_structure, is_outline, read_at, read_map
 from cdd_guidance.practices.stories.model.markdown.markup import MarkdownExample, MarkdownStep, step_line, step_lines, strip_backticks
-from cdd_guidance.practices.stories.model.markdown.scenario_file import SCENARIO_HEADING, ScenarioFileReading, scenario_sections_in
-from cdd_guidance.practices.stories.model.markdown.scenario_parts import HEADING_LINE, STEP_LINE, StorySection
+from cdd_guidance.practices.stories.model.markdown.scenario_file import SCENARIO_HEADING, ScenarioFileReading, ScenarioFiles
+from cdd_guidance.practices.stories.model.markdown.scenario_parts import HEADING_LINE, STEP_LINE, DocumentPart, StorySection
 from cdd_guidance.practices.stories.model.story_model import StoryModel
 from cdd_guidance.practices.stories.model.markdown.thin_slice import MarkdownIncrement, thin_slice_in
+
+if TYPE_CHECKING:
+    from cdd_guidance.practices.stories.model.story_model import Examples, Step, StoryNode
+
+# Markdown has six heading levels; an outline nested deeper writes its headings at the sixth.
+_DEEPEST_HEADING = 6
 
 
 class MarkdownScenario(Scenario):
@@ -83,23 +89,23 @@ class MarkdownScenario(Scenario):
         return "".join(out)
 
 
-def example_table_lines(examples) -> List[str]:
+def _example_tables(examples: "Examples") -> List[tuple]:
+    """The examples as tables, in the order each first appears: (group, headers, each example's cells), one per group
+    and set of columns."""
+    tables: Dict[tuple, tuple] = {}
+    for name, example in examples.items():
+        cells = {"example": name, **example.cells()}
+        group = str(cells.get("group") or "")
+        tables.setdefault((group, tuple(cells.keys())), (group, tuple(cells.keys()), []))[2].append(cells)
+    return list(tables.values())
+
+
+def example_table_lines(examples: "Examples") -> List[str]:
     """Examples as markdown tables under an Examples heading: one table per group and set of columns."""
     if not examples:
         return []
-    buckets: List[tuple] = []
-    index: dict = {}
-    for name, example in examples.items():
-        cells = {"example": name, **example.cells()}
-        headers = tuple(cells.keys())
-        group = str(cells.get("group") or "")
-        key = (group, headers)
-        if key not in index:
-            index[key] = len(buckets)
-            buckets.append((group, headers, []))
-        buckets[index[key]][2].append(cells)
     lines = ["### Examples", ""]
-    for group, headers, entries in buckets:
+    for group, headers, entries in _example_tables(examples):
         if group:
             lines.extend([f"#### {group}", ""])
         lines.append("| " + " | ".join(headers) + " |")
@@ -132,21 +138,24 @@ class MarkdownStory(Story):
         parts = self.markdown_parts
         if parts is None:
             return "\n".join([f"# Story: {self.name}", "", *self._scenario_section_lines()]).rstrip() + "\n"
-        name, heading = self.markdown_heading or ("", None)
-        out: List[str] = []
         steps = _SectionLines(parts)
-        for part in parts:
-            if part == HEADING_LINE:
-                out.append(heading if heading is not None and name == self.name else f"# Story: {self.name}\n")
-            elif isinstance(part, Scenario):
-                if any(scenario is part for scenario in self.scenarios):
-                    out.append(_markdown_scenario(part).document_text())
-            else:
-                out.append(steps.write(part))
-        for scenario in self.scenarios:
-            if not any(scenario is part for part in parts):
-                out.append(_markdown_scenario(scenario).document_text())
+        out = [self._document_part(part, steps) for part in parts]
+        out.extend(self._as_markdown(scenario).document_text() for scenario in self.scenarios if not any(scenario is part for part in parts))
         return "".join(out)
+
+    def _document_part(self, part: DocumentPart, steps: "_SectionLines") -> str:
+        """One part of the document it was read from, as it is written now: its heading, a scenario it still holds, or
+        a step or example line."""
+        if part == HEADING_LINE:
+            name, heading = self.markdown_heading or ("", None)
+            return heading if heading is not None and name == self.name else f"# Story: {self.name}\n"
+        if isinstance(part, Scenario):
+            return self._as_markdown(part).document_text() if any(scenario is part for scenario in self.scenarios) else ""
+        return steps.write(part)
+
+    def _as_markdown(self, scenario: Scenario) -> MarkdownScenario:
+        """The scenario as markdown writes it: itself when it is one, else a markdown copy of it."""
+        return scenario if isinstance(scenario, MarkdownScenario) else MarkdownScenario(scenario)
 
     def scenarios_text(self) -> str:
         """This story's own scenarios file: its heading, the examples its scenarios share, its backgrounds, then its
@@ -159,11 +168,11 @@ class MarkdownStory(Story):
         """This story as an outline heading at level, linked to its own file when links name one, with its
         backgrounds and scenarios one heading level below."""
         actor = f"{strip_backticks(self.actors[0])} " if self.actors else ""
-        heading = f"{'#' * min(level, 6)} {self.story_type.outline_mark} {actor}--> {self.label(links)}"
+        heading = f"{'#' * min(level, _DEEPEST_HEADING)} {self.story_type.outline_mark} {actor}--> {self.label(links)}"
         lines = _outlined(self, heading)
         if not self.scenarios and not self.backgrounds:
             return lines
-        marks = "#" * min(level + 1, 6)
+        marks = "#" * min(level + 1, _DEEPEST_HEADING)
         section = "\n".join(self._scenario_section_lines()).rstrip()
         return lines + [""] + [f"{marks} {line[4:]}" if line.startswith("### ") else line for line in section.splitlines()]
 
@@ -200,19 +209,18 @@ class MarkdownStory(Story):
             self._take_story_backgrounds(section.story_backgrounds)
             for scenario in section.scenarios:
                 scenario = scenario.clone()
-                key = (
-                    scenario.name,
-                    tuple(
-                        (step.keyword, step.text, tuple((extra.keyword, extra.text) for extra in step.ands))
-                        for step in scenario.steps
-                    ),
-                )
+                key = self._scenario_key(scenario)
                 if key in seen:
                     continue
                 seen.add(key)
                 self.scenarios.append(scenario)
                 if not took_examples:
                     took_examples = self._take_background_examples(scenario)
+
+    def _scenario_key(self, scenario: Scenario) -> tuple:
+        """What makes a scenario read twice the same one: its name and every step's keyword and text."""
+        steps = tuple((step.keyword, step.text, tuple((extra.keyword, extra.text) for extra in step.ands)) for step in scenario.steps)
+        return (scenario.name, steps)
 
     def _take_story_backgrounds(self, carried: Optional[List[Background]]) -> None:
         """The story's own background a section read, unless this story already has background steps."""
@@ -223,7 +231,7 @@ class MarkdownStory(Story):
         else:
             self.backgrounds[0].steps = list(carried[0].steps)
 
-    def _take_background_examples(self, scenario) -> bool:
+    def _take_background_examples(self, scenario: Scenario) -> bool:
         took = False
         for background in scenario.backgrounds:
             if not background.examples:
@@ -236,7 +244,7 @@ class MarkdownStory(Story):
         return took
 
 
-def _outlined(node, heading: Optional[str]) -> List[str]:
+def _outlined(node: "StoryNode", heading: Optional[str]) -> List[str]:
     """node's heading line and the lines under it, holding its description: as it was read in an outline where nothing
     changed them; heading is none for the story map, whose lines above its first epic have none."""
     if node.outline is not None:
@@ -254,7 +262,7 @@ class MarkdownEpic(Epic):
         """This epic as outline headings at level, every heading at column 0 so it has an anchor to link to: its
         description, its estimate (after its stories for a sub-epic), its stories, then its sub-epics one level
         deeper."""
-        lines = _outlined(self, f"{'#' * min(level, 6)} (E) {strip_backticks(self.name)}")
+        lines = _outlined(self, f"{'#' * min(level, _DEEPEST_HEADING)} (E) {strip_backticks(self.name)}")
         estimate = [f"* {self.estimate}"] if self.estimate else []
         stories = [line for story in self.stories for line in story.outline_lines(level + 1, links)]
         lines.extend([*estimate, *stories] if level == 1 else [*stories, *estimate])
@@ -291,10 +299,22 @@ class _ScenarioDocument:
             return line
         return f"# {level}: {self.holder.name}\n"
 
+    def text(self) -> str:
+        """The document as it reads now: each line as it was read, with each story it still holds written as it now
+        stands, and the stories added since after them."""
+        steps = _SectionLines(self.parts)
+        out = [self._written_part(part, steps) for part in self.parts]
+        for story in self.holder.stories:
+            if not any(story is part for part in self.parts):
+                out.append((story if isinstance(story, MarkdownStory) else MarkdownStory(story)).document_text())
+        return "".join(out)
 
-def _markdown_scenario(scenario: Scenario) -> MarkdownScenario:
-    """The scenario as markdown writes it: itself when it is one, else a markdown copy of it."""
-    return scenario if isinstance(scenario, MarkdownScenario) else MarkdownScenario(scenario)
+    def _written_part(self, part: DocumentPart, steps: "_SectionLines") -> str:
+        if part == HEADING_LINE:
+            return self.heading_line()
+        if isinstance(part, MarkdownStory):
+            return part.document_text() if any(story is part for story in self.holder.stories) else ""
+        return steps.write(part)
 
 
 class _SectionLines:
@@ -309,30 +329,29 @@ class _SectionLines:
             if isinstance(part, tuple) and part[0] == STEP_LINE:
                 self._left[id(part[1])] = self._left.get(id(part[1]), 0) + 1
 
-    @staticmethod
-    def steps_of(owner) -> list:
+    def _steps_of(self, owner: "Scenario | Background") -> list:
+        """Each step of owner and each step chained onto it, marked as a continuation, in the order they are written."""
         pending = []
         for step in owner.steps:
             pending.append((step, False))
             pending.extend((extra, True) for extra in step.ands)
         return pending
 
-    def write(self, part) -> str:
+    def write(self, part: "str | tuple | MarkdownExample") -> str:
         if isinstance(part, MarkdownExample):
             return part.line()
         if not (isinstance(part, tuple) and part[0] == STEP_LINE):
             return part
         owner = part[1]
-        pending = self._pending.setdefault(id(owner), self.steps_of(owner))
+        pending = self._pending.setdefault(id(owner), self._steps_of(owner))
         self._left[id(owner)] -= 1
         if self._left[id(owner)] > 0:
-            return self.line(*pending.pop(0)) if pending else ""
-        written = "".join(self.line(*entry) for entry in pending)
+            return self._line(*pending.pop(0)) if pending else ""
+        written = "".join(self._line(*entry) for entry in pending)
         pending.clear()
         return written
 
-    @staticmethod
-    def line(step, continuation: bool) -> str:
+    def _line(self, step: "Step", continuation: bool) -> str:
         as_read = step.line_as_read() if isinstance(step, MarkdownStep) else None
         if as_read is not None:
             return as_read
@@ -366,17 +385,14 @@ class MarkdownStoryModel(StoryModel):
         story map, the increments of the thin slice beside it: the map an edit writes back to path. A scenarios file
         keeps its own lines and no increments."""
         path = Path(path).resolve()
-        file = path_from(Path(project).resolve(), path)
-        text = path.read_text(encoding="utf-8")
-        story_map = self.parse(text, file)
-        story_map.source_texts[file] = text
+        story_map = self._read_file(path, path_from(Path(project).resolve(), path))
         if story_map.scenario_document is None:
             story_map.slicing = thin_slice_in(path.parent, story_map, project)
         return story_map
 
 
     @classmethod
-    def from_workspace(cls, root: "Path", *, on_file=None, project: Optional["Path"] = None) -> Optional["MarkdownStoryModel"]:
+    def from_workspace(cls, root: "Path", *, on_file: Optional[Callable[[str], None]] = None, project: Optional["Path"] = None) -> Optional["MarkdownStoryModel"]:
         """The story map in the file *root*, or the markdown story maps *root* holds (``StoryMapFiles.markdown_below``),
         merged; None if absent.
 
@@ -384,40 +400,49 @@ class MarkdownStoryModel(StoryModel):
         without *project* the path is from *root*, or from the folder holding *root* when it is a file.
         """
         root = Path(root).resolve()
-        candidates = [root] if root.is_file() else StoryMapFiles(root).markdown_below()
-        if not candidates:
-            return None
         merged = cls()
         base = Path(project).resolve() if project is not None else (root.parent if root.is_file() else root)
         with merged.batch_schema_sync():
-            merged._read_workspace(root, candidates, base, on_file)
+            merged._read_workspace(root, base, on_file)
         if not merged.epics:
             return None
         return merged
 
-    def _read_workspace(self, root, candidates, base, on_file=None) -> None:
-        for md_path in candidates:
+    def _read_workspace(self, root: Path, base: Path, on_file: Optional[Callable[[str], None]]) -> None:
+        """The story map in the file root, or the markdown story maps root holds, each node naming its file from base,
+        then the scenarios and thin slice beside them."""
+        for md_path in [root] if root.is_file() else StoryMapFiles(root).markdown_below():
             rel = path_from(base, md_path)
             if on_file is not None:
                 on_file(rel)
-            text = md_path.read_text(encoding="utf-8")
-            try:
-                parsed = self.parse(text, rel)
-            except MarkdownParseError as err:
-                raise MarkdownParseError(f"{md_path}: {err}") from err
-            self.source_texts[rel] = text
-            for epic in parsed.epics:
-                self.epics.append(epic)
-            if not self.has_source_file:
-                self.source = source_at(rel, 1)
+            self._take_map(self._read_file(md_path, rel), rel)
         if not self.epics:
             return
         workspace = root.parent if root.is_file() else root
         self._attach_markdown(workspace, on_file=on_file, base=base)
 
-    def _attach_markdown(self, root, on_file=None, base=None) -> None:
-        sections = scenario_sections_in(root, MarkdownScenario, on_file=on_file, base=base)
-        for story in self.every_story():
+    def _read_file(self, path: Path, file: str) -> "MarkdownStoryModel":
+        """The map the markdown file at path holds, each node naming file, keeping its text as one of its sources. A file
+        that does not read is a MarkdownParseError naming the file."""
+        text = path.read_text(encoding="utf-8")
+        try:
+            parsed = self.parse(text, file)
+        except MarkdownParseError as err:
+            raise MarkdownParseError(f"{path}: {err}") from err
+        parsed.sources.add(file, text)
+        return parsed
+
+    def _take_map(self, parsed: "MarkdownStoryModel", file: str) -> None:
+        """Take parsed's epics and sources onto this map, which names file as its own when it names none yet."""
+        self.sources.take(parsed.sources)
+        for epic in list(parsed.epics):
+            self.epics.append(epic)
+        if not self.has_source_file:
+            self.source = source_at(file, 1)
+
+    def _attach_markdown(self, root: Path, on_file: Optional[Callable[[str], None]] = None, base: Optional[Path] = None) -> None:
+        sections = ScenarioFiles(root, base).sections(MarkdownScenario, on_file)
+        for story in self.descendants.stories():
             story.load_scenarios(sections)
         if not self.increments and StoryMapFiles(root).thin_slicing() is not None:
             self.slicing = thin_slice_in(root, self, root)
@@ -438,8 +463,8 @@ class MarkdownStoryModel(StoryModel):
         story_map = canonical if isinstance(canonical, MarkdownStoryModel) else self.copy_of(canonical)
         document = story_map.scenario_document
         if document is not None:
-            return self._render_scenario_document(document)
-        links = StoryMapLinks.from_workspace(story_map, workspace) if workspace else None
+            return document.text()
+        links = StoryMapLinks(story_map, workspace) if workspace else None
         return self._map_text(story_map, links, previous)
 
     def _map_text(self, story_map: "MarkdownStoryModel", links: Optional[StoryMapLinks], previous: Optional[str]) -> str:
@@ -481,7 +506,7 @@ class MarkdownStoryModel(StoryModel):
         return False
 
     def _is_discovery_story_map(self, story_map: "MarkdownStoryModel") -> bool:
-        return not any(story.scenarios or story.backgrounds for story in story_map.every_story())
+        return not any(story.scenarios or story.backgrounds for story in story_map.descendants.stories())
 
     def _wrap_story_map_document(self, body: str, previous: Optional[str]) -> str:
         document = DiscoveryDocument("story-map", "Story Map", previous or "")
@@ -506,7 +531,7 @@ class MarkdownStoryModel(StoryModel):
             text = unlink(text)
         lines = text.splitlines()
         if self._looks_like_scenario_document(lines):
-            return scenario_document_map(text, file)
+            return self._scenario_document_map(text, file)
         if not has_map_structure(lines):
             raise MarkdownParseError("Not a valid Markdown story map: no recognised structure found")
         return read_map(self, lines, file)
@@ -518,57 +543,39 @@ class MarkdownStoryModel(StoryModel):
         has_clause = any(line.strip().startswith(("*Given*", "*When*", "*Then*")) for line in lines)
         return has_scenario and has_clause
 
-    def _render_scenario_document(self, document: "_ScenarioDocument") -> str:
-        out: List[str] = []
-        steps = _SectionLines(document.parts)
-        for part in document.parts:
-            if part == HEADING_LINE:
-                out.append(document.heading_line())
-            elif isinstance(part, MarkdownStory):
-                if any(story is part for story in document.holder.stories):
-                    out.append(part.document_text())
-            else:
-                out.append(steps.write(part))
-        for story in document.holder.stories:
-            if not any(story is part for part in document.parts):
-                out.append((story if isinstance(story, MarkdownStory) else MarkdownStory(story)).document_text())
-        return "".join(out)
-
-
-def scenario_document_map(text: str, file: str) -> MarkdownStoryModel:
-    """Stories with their backgrounds and scenarios. The document keeps every line in place,
-    so rendering it writes it back; a heading or step changed on the model is written anew."""
-    reading = ScenarioFileReading(text, file or "story-scenarios.md", MarkdownScenario)
-    reading.read()
-    story_map = MarkdownStoryModel()
-    level, name = (reading.tree_heading or ("sub-epic", "Scenarios"))[:2]
-    epic = MarkdownEpic(name if level.lower() == "epic" else "Stories", 1)
-    holder = epic if level.lower() == "epic" else MarkdownEpic(name, 1)
-    read_at(epic, file, reading.tree_heading_line)
-    read_at(holder, file, reading.tree_heading_line)
-    if reading.document_examples is not None:
-        holder.examples = reading.document_examples.clone(holder)
-    parts = []
-    for part in reading.document_parts:
-        if isinstance(part, StorySection):
-            part = _story_from_section(part, len(holder.stories) + 1, file)
-            holder.stories.append(part)
-        parts.append(part)
-    if not holder.stories:
+    def _scenario_document_map(self, text: str, file: str) -> "MarkdownStoryModel":
+        """Stories with their backgrounds and scenarios. The document keeps every line in place,
+        so rendering it writes it back; a heading or step changed on the model is written anew."""
+        reading = ScenarioFileReading(text, file or "story-scenarios.md", MarkdownScenario)
+        reading.read()
+        story_map = MarkdownStoryModel()
+        level, name = (reading.tree_heading or ("sub-epic", "Scenarios"))[:2]
+        epic = MarkdownEpic(name if level.lower() == "epic" else "Stories", 1)
+        holder = epic if level.lower() == "epic" else MarkdownEpic(name, 1)
+        read_at(epic, file, reading.tree_heading_line)
+        read_at(holder, file, reading.tree_heading_line)
+        if reading.document_examples is not None:
+            holder.examples = reading.document_examples.clone(holder)
+        parts = [self._document_part(part, holder, file) for part in reading.document_parts]
+        if not holder.stories:
+            return story_map
+        if holder is not epic:
+            epic.epics.append(holder)
+        story_map.epics.append(epic)
+        story_map.scenario_document = _ScenarioDocument(parts, holder, reading.tree_heading)
         return story_map
-    if holder is not epic:
-        epic.epics.append(holder)
-    story_map.epics.append(epic)
-    story_map.scenario_document = _ScenarioDocument(parts, holder, reading.tree_heading)
-    return story_map
 
-def _story_from_section(section: StorySection, order: int, file: str) -> MarkdownStory:
-    story = MarkdownStory(section.name, order, StoryType.USER)
-    read_at(story, file, section.line)
-    if section.background.steps:
-        story.backgrounds = [section.background]
-    for scenario in section.scenarios:
-        story.scenarios.append(scenario)
-    story.markdown_heading = (section.name, section.heading)
-    story.markdown_parts = section.parts
-    return story
+    def _document_part(self, part: DocumentPart, holder: MarkdownEpic, file: str) -> DocumentPart:
+        """A part of a scenarios document as its map keeps it: a story section becomes a story on holder."""
+        if not isinstance(part, StorySection):
+            return part
+        story = MarkdownStory(part.name, len(holder.stories) + 1, StoryType.USER)
+        read_at(story, file, part.line)
+        if part.background.steps:
+            story.backgrounds = [part.background]
+        for scenario in part.scenarios:
+            story.scenarios.append(scenario)
+        story.markdown_heading = (part.name, part.heading)
+        story.markdown_parts = part.parts
+        holder.stories.append(story)
+        return story

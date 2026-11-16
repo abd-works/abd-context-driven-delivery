@@ -6,7 +6,7 @@ from typing import Any
 
 from expects import be_true, equal, expect
 from mamba import after, before, context, description, it
-from space.session.throwaway_project import ThrowawayProject
+from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 _AGENT_BDD_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _AGENT_BDD_DIR.parents[2]
@@ -74,7 +74,7 @@ with description("AgentBdd action expansion"):
         self.project = ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("an AgentBdd generator with format python"):
         with before.all:

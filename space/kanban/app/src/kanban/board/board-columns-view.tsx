@@ -63,20 +63,27 @@ function EdgeColumnView({ column }: { column: ColumnClient }) {
     <div className="board-column" data-column={column.name}>
       <EdgeHeadView column={column} />
       {column.isBacklog && state.draft.isOpen ? <ComposerView /> : null}
-      <div className="card-lists is-single">
-        <DropZoneView
-          className="card-list"
-          accepts={ticket => ticket.canDropOn(column.name)}
-          onDrop={ticket => ticket.dropOn(column.name)}
-          acceptsItem={item => column.isBacklog && item.isStacked}
-          onItemDrop={item => item.leaveParent()}
-        >
-          {column.items.map(item => (
-            <BacklogCardView key={item.path} item={item} />
-          ))}
-          <TicketListView tickets={column.tickets} spot="only" />
-        </DropZoneView>
-      </div>
+      <EdgeCardsView column={column} />
+    </div>
+  )
+}
+
+// The Backlog's or Complete's one list: its backlog items, then its tickets, taking a ticket or a stacked item dropped on it.
+function EdgeCardsView({ column }: { column: ColumnClient }) {
+  return (
+    <div className="card-lists is-single">
+      <DropZoneView
+        className="card-list"
+        accepts={ticket => ticket.canDropOn(column.name)}
+        onDrop={ticket => ticket.dropOn(column.name)}
+        acceptsItem={item => column.isBacklog && item.isStacked}
+        onItemDrop={item => item.leaveParent()}
+      >
+        {column.items.map(item => (
+          <BacklogCardView key={item.path} item={item} />
+        ))}
+        <TicketListView tickets={column.tickets} spot="only" />
+      </DropZoneView>
     </div>
   )
 }

@@ -144,19 +144,22 @@ class DrawioUxMap(UxMap):
 
     def parse(self, content: str) -> UxMap:
         """A new map of this format, read from a draw.io file."""
+        ux_map = type(self).create()
+        ux_map.read_pages(self._diagram_of(content))
+        return ux_map
+
+    def _diagram_of(self, content: str) -> ET.Element:
+        """The draw.io file's XML; content that is not XML is refused."""
         try:
-            root_element = ET.fromstring(content.strip())
+            return ET.fromstring(content.strip())
         except ET.ParseError as error:
             raise UnreadableDrawio(f"draw.io content is not valid XML: {error}") from error
-        ux_map = type(self).create()
-        ux_map.read_pages(root_element)
-        return ux_map
 
     def read_pages(self, root_element: ET.Element) -> None:
         """Read the diagram's pages into this map: its screens from the Site Map page, each screen's regions from the
         Detailed IA page, then the transitions drawn between screens."""
-        site_map = _page_named(root_element, "Site Map")
-        detailed = _page_named(root_element, "Detailed IA")
+        site_map = self._page_named(root_element, "Site Map")
+        detailed = self._page_named(root_element, "Detailed IA")
         source = site_map if site_map is not None else root_element
         with self.batch_schema_sync():
             screens = self._read_screens(source)
@@ -164,6 +167,9 @@ class DrawioUxMap(UxMap):
                 for screen in self.screens:
                     screen.read_regions(detailed, self.region_type)
             self._read_transitions(source, screens)
+
+    def _page_named(self, root_element: ET.Element, name: str) -> Optional[ET.Element]:
+        return next((diagram for diagram in root_element.findall("diagram") if diagram.get("name") == name), None)
 
     def _read_screens(self, source: ET.Element) -> dict[str, Screen]:
         """Each screen the page draws, by the id of the cell that draws it."""
@@ -190,7 +196,7 @@ class DrawioUxMap(UxMap):
             self._append_transition(back, target, origin)
 
     def _append_transition(self, trigger: str, origin: Screen, target: Screen) -> None:
-        self.transitions.append(self.transition_type(trigger, len(self.transitions), origin, target, trigger))
+        self.transitions.append(self.transition_type(trigger, len(self.transitions)).joining(origin, target))
 
     def render(self, canonical: UxMap) -> str:
         """canonical as Detailed IA + Site Map: copied into a draw.io map with this map's timeout, which draws itself."""
@@ -242,10 +248,6 @@ def _is_annotation(name: str) -> bool:
     return lower.startswith("stories:") or "domain terms:" in lower
 
 
-def _plain_text(value: str) -> str:
-    plain = re.sub(r"<[^>]+>", " ", value or "")
+def _plain_text(markup: str) -> str:
+    plain = re.sub(r"<[^>]+>", " ", markup or "")
     return html.unescape(re.sub(r"\s+", " ", plain)).strip()
-
-
-def _page_named(root_element: ET.Element, name: str) -> Optional[ET.Element]:
-    return next((diagram for diagram in root_element.findall("diagram") if diagram.get("name") == name), None)

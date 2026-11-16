@@ -26,7 +26,8 @@ import cdd_guidance.actions  # noqa: F401 - registers the actions and the practi
 import cdd_guidance.patterns  # noqa: F401 - registers the patterns with the graph's pattern overlays, as the cdd server does when it loads every toolset
 from harness.process.git import Git
 from harness.graph.saved_graph import SavedGraph, SavedNode, SavedPractice
-from harness.graph.violation import Violation
+from harness.graph.location import Location
+from harness.graph.violation import FoundBy, FoundOn, Violation
 from space.kanban.board import Board
 from space.repo.mock_repo import MockGit
 from space.session.throwaway_project import ThrowawayProject
@@ -41,9 +42,9 @@ STORY_MAP_REPORT = "stories-story-map-20261101T100000"
 def saved_practice(practice: str, node_id: str, file: str, line: int, *hits: tuple[str, str]) -> SavedPractice:
     """Seed: one practice of a graph validate saved, as the saved graph keeps it: one story node at file and line, and
     each hit, a rule and its message, on that node."""
-    node = SavedNode(node_id, "", "Story", practice, file, line, line, "", {})
-    found = [Violation(rule, message, practice=practice, node_id=node_id, location=file, line=line, end_line=line) for rule, message in hits]
-    return SavedPractice(practice, "", {}, [node], [], found)
+    node = SavedNode({"node_id": node_id, "name": "", "type": "Story", "practice": practice, "file": file, "line": line, "end_line": line, "stage": "", "facts": {}})
+    found = [Violation(FoundBy(rule, practice, FoundOn(node_id)), message, Location(file, line)) for rule, message in hits]
+    return SavedPractice.from_fields(practice, "", {}, [node], [], found)
 
 
 def saved_graph(*practices: SavedPractice) -> dict:
@@ -268,10 +269,10 @@ CHECKOUT_CHAT = "checkout-chat"
 # 41 of order.py, its operation place on 12 to 14, and one rule broken on place.
 ORDER_CLASS_LINES = (5, 41)
 ORDER_RULE = ("vocabulary-traces-to-source", "EmptyCartError should say which cart and why")
-ORDER_GRAPH = SavedGraph([], {"clean_engineering": SavedPractice("clean_engineering", "", {}, [
-    SavedNode("order", "Order", "OoadClass", "clean_engineering", "order.py", *ORDER_CLASS_LINES, "", {}),
-    SavedNode("order-place", "place", "Operation", "clean_engineering", "order.py", 12, 14, "", {"owner": "Order"}),
-], [], [Violation(*ORDER_RULE, practice="clean_engineering", node_id="order-place", location="order.py", line=12, end_line=14)])}).document
+ORDER_GRAPH = SavedGraph([], {"clean_engineering": SavedPractice.from_fields("clean_engineering", "", {}, [
+    SavedNode({"node_id": "order", "name": "Order", "type": "OoadClass", "practice": "clean_engineering", "file": "order.py", "line": ORDER_CLASS_LINES[0], "end_line": ORDER_CLASS_LINES[1], "stage": "", "facts": {}}),
+    SavedNode({"node_id": "order-place", "name": "place", "type": "Operation", "practice": "clean_engineering", "file": "order.py", "line": 12, "end_line": 14, "stage": "", "facts": {"owner": "Order"}}),
+], [], [Violation(FoundBy(ORDER_RULE[0], "clean_engineering", FoundOn("order-place")), ORDER_RULE[1], Location("order.py", 12, 14))])}).document
 
 
 @dataclass(frozen=True)
@@ -348,7 +349,7 @@ class SessionsProject(ThrowawayProject):
     def seed_session(self, seed: SessionSeed) -> Path:
         folder = self.sessions / seed.folder / seed.name
         folder.mkdir(parents=True, exist_ok=True)
-        # A chosen workpath counts only when its folder is there (Sessions.root_of), so the seed makes it.
+        # A chosen workpath counts only when its folder is there (SessionRoots.root_of), so the seed makes it.
         workpath = self.root / seed.workpath
         workpath.mkdir(parents=True, exist_ok=True)
         fields = {"name": seed.name, "title": seed.title, "scope": "feature", "workpath": str(workpath), "repo_path": str(self.root), **seed.fields}
@@ -519,14 +520,14 @@ class MockCheckout:
         self.held.make_clone()
 
     def seed_origin(self) -> None:
-        self.held.add_origin()
+        self.held.origin.add()
 
     def seed_branch(self, name: str, checked_out: bool, pushed: bool) -> None:
         self.held.add_branch(name)
         if checked_out:
             self.held.check_out(self.held.root, name)
         if pushed:
-            self.held.push(name)
+            self.held.origin.push(name)
 
     def seed_worktree(self, branch: str, folder: Path) -> None:
         self.held.add_worktree(branch, folder)
@@ -538,16 +539,16 @@ class MockCheckout:
         return self.held.uncommitted(self.held.root, self.held.root / path if path else None)
 
     def origin_log(self, branch: str) -> list[str]:
-        return list(reversed(self.held.origin_logs.get(branch, [])))
+        return list(reversed(self.held.origin.logs.get(branch, [])))
 
     def origin_files(self, branch: str, under: str) -> list[str]:
-        return sorted(path for path in self.held.origin_trees.get(branch, {}) if path == under or path.startswith(f"{under}/"))
+        return sorted(path for path in self.held.origin.trees.get(branch, {}) if path == under or path.startswith(f"{under}/"))
 
     def has_branch(self, name: str) -> bool:
         return self.held.has_branch(name)
 
     def origin_has_branch(self, name: str) -> bool:
-        return self.held.origin_has_branch(name)
+        return self.held.origin.has_branch(name)
 
 
 def seed_surface_fixture(project: SessionsProject) -> None:

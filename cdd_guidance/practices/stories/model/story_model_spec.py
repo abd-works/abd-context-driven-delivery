@@ -48,7 +48,7 @@ class SpecFixture:
     def fresh_story_map_with_4_epics(self) -> StoryModel:
         story_map = StoryModel()
         for i in range(1, 5):
-            story_map.append_epic(Epic(f"Epic {i}", i))
+            story_map.epics.append(Epic(f"Epic {i}", i))
         return story_map
 
     def fresh_epics(self, count: int) -> list:
@@ -132,9 +132,9 @@ with description("an Increment") as self:
             sub = Epic("Route inside window", 1)
             sub.stories.append(Story("Route transfer before cutoff", 1))
             epic.epics.append(sub)
-            self.story_map.append_epic(epic)
+            self.story_map.epics.append(epic)
             orphan = Increment("Orphan increment", 1, [Story("Non-existent story name", 1)])
-            self.story_map.append_increment(orphan)
+            self.story_map.increments.append(orphan)
 
         with context("the model"):
             with it("should not raise"):
@@ -316,7 +316,7 @@ with description("a Story Map") as self:
 
         with context("with a fifth Epic appended"):
             with before.each:
-                self.story_map.append_epic(Epic("Epic 5", 5))
+                self.story_map.epics.append(Epic("Epic 5", 5))
 
             with it("should hold 5 Epics"):
                 expect(self.story_map.epics).to(have_len(5))
@@ -614,7 +614,7 @@ with description("a Story Map") as self:
         with before.each:
             self.story_map = StoryModel()
             for inc in fixture.fresh_increments(2):
-                self.story_map.append_increment(inc)
+                self.story_map.increments.append(inc)
 
         with it("should hold 2 Increments"):
             expect(self.story_map.increments).to(have_len(2))
@@ -625,7 +625,7 @@ with description("a Story Map") as self:
 
         with context("with an Increment appended"):
             with before.each:
-                self.story_map.append_increment(Increment("Increment 3", 3))
+                self.story_map.increments.append(Increment("Increment 3", 3))
 
             with it("should hold 3 Increments"):
                 expect(self.story_map.increments).to(have_len(3))
@@ -742,11 +742,11 @@ with description("a StoryNode") as self:
                 "Epic 1", 1, ["Epic 1", "Epic 2", "Epic 3"]
             )
             source = Epic("Epic 1", 1)
-            source.epics = [
+            source.epics.refill([
                 Epic("Epic 3", 1),
                 Epic("Epic 1", 2),
                 Epic("Epic 2", 3),
-            ]
+            ])
             self.target = source.clone()
 
         with context("the target"):
@@ -785,11 +785,11 @@ with description("a StoryNode") as self:
                 "Epic 1", 1, ["Epic Alpha", "Epic Bravo"]
             )
             source = Epic("Epic 1", 1)
-            source.epics = [
+            source.epics.refill([
                 Epic("Epic Alpha", 1),
                 Epic("Epic Bravo (renamed)", 2),
                 Epic("Epic Charlie", 3),
-            ]
+            ])
             self.target = source.clone()
             self.source = source
 
@@ -828,8 +828,8 @@ with description("a StoryModel being translated from another StoryModel") as sel
     with before.each:
         self.source = StoryModel()
         for i in range(1, 3):
-            self.source.append_epic(Epic(f"Epic {i}", i))
-        self.source.append_increment(Increment("Increment 1", 1))
+            self.source.epics.append(Epic(f"Epic {i}", i))
+        self.source.increments.append(Increment("Increment 1", 1))
 
         self.target = self.source.clone()
 
@@ -868,7 +868,7 @@ with description("a story map on a graph") as self:
         self.story.scenarios.append(self.scenario)
         self.sub_epic.stories.append(self.story)
         self.epic.epics.append(self.sub_epic)
-        self.story_map.append_epic(self.epic)
+        self.story_map.epics.append(self.epic)
 
     with it("should be the graph node for each story object"):
         expect(self.epic.node).to(be(self.epic))
@@ -913,8 +913,7 @@ with description("a story map on a graph") as self:
 
 
     with it("should record ands from the schema"):
-        continued = Step("the email is saved", StepType.WHEN, 1, keyword="and")
-        self.scenario.steps[0].ands = [continued]
+        self.scenario.steps[0].continue_with("and", "the email is saved")
         pairs = [
             (edge.parent.name, edge.child.name)
             for edge in self.graph.practice("stories").reading.in_graph.edges("ands")
@@ -1006,11 +1005,11 @@ def _nested_map() -> StoryModel:
     shop = Epic("Shop", 1)
     checkout = Epic("Checkout", 1)
     pay = Epic("Pay", 1)
-    pay.append_story(Story("Pay By Card", 1))
-    checkout.append_epic(pay)
-    shop.append_epic(checkout)
-    shop.append_story(Story("Browse Catalog", 1))
-    story_map.append_epic(shop)
+    pay.stories.append(Story("Pay By Card", 1))
+    checkout.epics.append(pay)
+    shop.epics.append(checkout)
+    shop.stories.append(Story("Browse Catalog", 1))
+    story_map.epics.append(shop)
     return story_map
 
 
@@ -1027,7 +1026,7 @@ with description("an epic tree") as self:
         expect(self.pay.top_epic).to(be(self.shop))
 
     with it("should give an epic with sub-epics its innermost sub-epics as its leaf epics"):
-        expect(self.shop.leaf_epics()).to(equal([self.pay]))
+        expect(self.shop.columns.leaf_epics()).to(equal([self.pay]))
 
     with it("should give a story under no epic no top epic"):
         expect(Story("Loose").top_epic).to(be(None))
@@ -1038,15 +1037,15 @@ with description("a story map asked for the stories a thin slice names") as self
         self.story_map = _nested_map()
 
     with it("should give its own stories in the order the names give them"):
-        named = self.story_map.stories_named(["Pay By Card", "Browse Catalog"])
+        named = self.story_map.descendants.stories_named(["Pay By Card", "Browse Catalog"])
         expect([story.name for story in named]).to(equal(["Pay By Card", "Browse Catalog"]))
 
     with it("should give its own story objects"):
-        pay_by_card = next(story for story in self.story_map.every_story() if story.name == "Pay By Card")
-        expect(self.story_map.stories_named(["Pay By Card"])[0]).to(be(pay_by_card))
+        pay_by_card = next(story for story in self.story_map.descendants.stories() if story.name == "Pay By Card")
+        expect(self.story_map.descendants.stories_named(["Pay By Card"])[0]).to(be(pay_by_card))
 
     with it("should leave out a name no story has"):
-        expect(self.story_map.stories_named(["Refund Order"])).to(equal([]))
+        expect(self.story_map.descendants.stories_named(["Refund Order"])).to(equal([]))
 
 
 with description("a scenario that belongs to a story") as self:

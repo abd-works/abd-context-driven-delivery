@@ -12,7 +12,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import contain, equal, expect
 from mamba import after, before, description, context, it
 
-from harness.agent_tools.tool_call import ToolCall
+from harness.agent_tools.tool_call import ToolCall, ToolRequest
 from harness.mcp.mcp_server import McpServer
 from space.session.session import Session
 from space.session.session_log import LogTimestamp
@@ -58,7 +58,7 @@ with description("a session loop"):
             transcript = repo / "chat.jsonl"
             transcript.write_text("{}\n", encoding="utf-8")
             call = ToolCall.sent({"conversation_id": "chat-b", "transcript_path": str(transcript)}, repo)
-            call.session.log.by(call.chat).next_loop()
+            call.session.log.by(call.request.chat).next_loop()
             expect(call.session.log.path.read_text(encoding="utf-8")).to(contain(f"--- 1 chat-b {transcript} 1"))
 
     with context("read by two calls from two chats"):
@@ -114,8 +114,8 @@ with description("a session loop"):
             chat = {"conversation_id": "chat-m", "transcript_path": str(self.transcript), "transcript_lines": "3"}
             self.server = McpServer(project=self.repo)
             self.server.start((Session, Sessions))
-            call = ToolCall.sent({"session": ".sessions/alpha/session.json", **chat}, self.repo, tool="session.mark_loop")
-            self.number = self.server.answer_tool("session.mark_loop", call)
+            call = ToolCall.sent({"session": ".sessions/alpha/session.json", **chat}, self.repo, ToolRequest(tool="session.mark_loop"))
+            self.number = self.server.answer("session.mark_loop", call)
             self.log = (self.repo / ".sessions" / "alpha" / "session.log").read_text(encoding="utf-8")
 
         with after.all:
@@ -137,7 +137,7 @@ with description("a session loop"):
             chat = {"conversation_id": "chat-n", "transcript_path": str(transcript), "transcript_lines": "4"}
             server = McpServer(project=repo)
             server.start((Session, Sessions))
-            server.answer_tool("session.append_log", ToolCall.sent({"session": ".sessions/alpha/session.json", "note": "fixed", **chat}, repo, tool="session.append_log"))
+            server.answer("session.append_log", ToolCall.sent({"session": ".sessions/alpha/session.json", "note": "fixed", **chat}, repo, ToolRequest(tool="session.append_log")))
             log = (repo / ".sessions" / "alpha" / "session.log").read_text(encoding="utf-8")
             expect(log).to(contain(f"note loop 1: fixed chat-n {transcript} 4"))
 
@@ -172,8 +172,8 @@ with description("a hook log"):
             (repo / ".git").mkdir()
             Sessions(repo).switch("alpha", repo)
             session = Sessions(repo).current()
-            session.hook_log("prompt-log.txt").append("== entry under its own stamped header")
-            session.hook_log("prompt-log.txt").stamped("dispatch line")
+            session.folder.hook_log("prompt-log.txt").append("== entry under its own stamped header")
+            session.folder.hook_log("prompt-log.txt").stamped("dispatch line")
             self.text = (repo / ".sessions" / "alpha" / "logs" / "prompt-log.txt").read_text(encoding="utf-8")
 
         with it("should keep an entry as it was given"):

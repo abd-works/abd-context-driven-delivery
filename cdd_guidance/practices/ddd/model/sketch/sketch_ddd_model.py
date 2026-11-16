@@ -32,20 +32,6 @@ _PROSE_HEADINGS = (
 _META_PREFIXES = ("fidelity:", "partition:")
 
 
-def _is_context_heading(stripped: str) -> bool:
-    if "|" not in stripped:
-        return False
-    lower = stripped.lower()
-    return not any(lower.startswith(prefix) for prefix in _META_PREFIXES)
-
-
-def _is_prose_heading(stripped: str) -> bool:
-    lower = stripped.rstrip(":").strip().lower()
-    if lower in _PROSE_HEADINGS or lower.startswith("false cognates"):
-        return True
-    return lower.startswith(BUILD_ORDER)
-
-
 class SketchDddModel(BoundedContextMap):
     """The `sketch` format: the map as the DDD section of a sketch. Its contexts and aggregates read and write their
     own sketch lines."""
@@ -59,40 +45,12 @@ class SketchDddModel(BoundedContextMap):
         """Read the ddd section of a sketch, flattened to indentation, into this map, and return it: each context the
         section opens reads the lines under it, and the event map is wired once every aggregate has its root."""
         self.contexts = []
-        sections: list[tuple[MarkdownBoundedContext, list[str]]] = []
-        events: list[str] = []
-        lines: list[str] | None = None
-        in_events = False
-        in_meta = True
+        section = _SectionReading(self)
         for raw in SketchOutline(text, SKETCH_INDENT).body_for(self.lens).splitlines():
-            stripped = raw.strip()
-            lowered = stripped.lower()
-            if not stripped or stripped.startswith(("#", "---")):
-                continue
-            if lowered.startswith(f"{BUILD_ORDER}:"):
-                lines = None
-                continue
-            if lowered in _EVENT_HEADINGS:
-                in_events = True
-                continue
-            if in_events and stripped.startswith("- ") and ":" in stripped:
-                events.append(stripped[2:].split("//", 1)[0].strip())
-                continue
-            in_events = False
-            if in_meta and lowered.startswith(_META_PREFIXES):
-                continue
-            if sketch_level(raw) > 0:
-                if lines is not None:
-                    lines.append(raw)
-            elif _is_context_heading(stripped):
-                in_meta = False
-                lines = []
-                sections.append((self._open_context(stripped), lines))
-            elif _is_prose_heading(stripped):
-                lines = None
-        for context, context_lines in sections:
+            section.read_line(raw)
+        for context, context_lines in section.contexts:
             context.read_sketch_lines(context_lines)
-        self.wire_events(events)
+        self.wire_events(section.events)
         return self
 
     def render(self, canonical: BoundedContextMap | None = None, previous: str | None = None) -> str:
@@ -106,9 +64,62 @@ class SketchDddModel(BoundedContextMap):
             written.extend([f"{SKETCH_CONTEXT}{_EVENT_MAP}", ""] + fenced(entries))
         return "\n".join(written)
 
-    def _open_context(self, stripped: str) -> MarkdownBoundedContext:
+    def open_context(self, stripped: str) -> MarkdownBoundedContext:
+        """The context a `Name | owner` heading opens, added to the map."""
         name, _, owner = stripped.rstrip(":").partition("|")
         context = self.bounded_context_type(name.strip(), len(self.contexts) + 1)
         context.owner = owner.strip()
         self.append_context(context)
         return context
+
+
+class _SectionReading:
+    """One read of the DDD section of a sketch, line by line: the lines under each context heading, which the context
+    reads once every heading is found, and the entries of the event map. Build order, meta lines before the first
+    context, and prose sections are skipped."""
+
+    def __init__(self, sketch: SketchDddModel) -> None:
+        self._sketch = sketch
+        self.contexts: list[tuple[MarkdownBoundedContext, list[str]]] = []
+        self.events: list[str] = []
+        # The lines of the context being read; none while a section is being skipped.
+        self._lines: list[str] | None = None
+        self._in_events = False
+        self._in_meta = True
+
+    def read_line(self, raw: str) -> None:
+        stripped = raw.strip()
+        lowered = stripped.lower()
+        if not stripped or stripped.startswith(("#", "---")):
+            return
+        if lowered.startswith(f"{BUILD_ORDER}:"):
+            self._lines = None
+        elif lowered in _EVENT_HEADINGS:
+            self._in_events = True
+        elif self._in_events and stripped.startswith("- ") and ":" in stripped:
+            self.events.append(stripped[2:].split("//", 1)[0].strip())
+        else:
+            self._in_events = False
+            self._read_outline_line(raw, stripped)
+
+    def _read_outline_line(self, raw: str, stripped: str) -> None:
+        """A line that is neither build order nor the event map: a meta line, a line under a context, a context heading,
+        or a prose heading."""
+        if self._in_meta and stripped.lower().startswith(_META_PREFIXES):
+            return
+        if sketch_level(raw) > 0:
+            if self._lines is not None:
+                self._lines.append(raw)
+        elif self._is_context_heading(stripped):
+            self._in_meta = False
+            self._lines = []
+            self.contexts.append((self._sketch.open_context(stripped), self._lines))
+        elif self._is_prose_heading(stripped):
+            self._lines = None
+
+    def _is_context_heading(self, stripped: str) -> bool:
+        return "|" in stripped and not stripped.lower().startswith(_META_PREFIXES)
+
+    def _is_prose_heading(self, stripped: str) -> bool:
+        lower = stripped.rstrip(":").strip().lower()
+        return lower in _PROSE_HEADINGS or lower.startswith("false cognates") or lower.startswith(BUILD_ORDER)
