@@ -672,7 +672,7 @@ with description("the board tools") as self:
                 self.chips = self.project.call("ticket.format_choices", ticket="sign-up", fidelities=["stories-story-map"])
 
             with it("should offer a chip for each group of formats the story map writes, diagram first"):
-                expect([chip["label"] for chip in self.chips]).to(equal(["diagram", "markdown"]))
+                expect([chip["label"] for chip in self.chips]).to(equal(["diagram", "markdown", "thin_slice"]))
 
             with it("should show the chip of its default format chosen until a person chooses"):
                 expect([chip["label"] for chip in self.chips if chip["is_chosen"]]).to(equal(["markdown"]))

@@ -37,9 +37,7 @@ stage: discovery
 outputs:
   markdown: ".context/story-map.md"
   drawio: ".context/story-map.drawio"
-also_lists:
-  markdown: ".context/thin-slice.md"
-  drawio: ".context/thin-slice.drawio"
+  thin_slice: [".context/thin-slice.md", ".context/thin-slice.drawio"]
 ```
 
 #### Overview

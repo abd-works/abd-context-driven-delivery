@@ -1133,8 +1133,8 @@ with description("a session working on the whole repository, whose story map is 
         with before.each:
             (self.repo / "harness" / ".context" / "stories" / "thin-slice.md").write_text("# Thin Slice\n", encoding="utf-8")
 
-        with it("should list the thin slice as the story map's markdown too"):
-            expect([entry.path for entry in self.story_map.files()["markdown"]]).to(contain("harness/.context/stories/thin-slice.md"))
+        with it("should list the thin slice as the story map's thin slice"):
+            expect([entry.path for entry in self.story_map.files()["thin_slice"]]).to(contain("harness/.context/stories/thin-slice.md"))
 
     with context("with the project's config naming the repository's own folder for stories"):
         with before.each:

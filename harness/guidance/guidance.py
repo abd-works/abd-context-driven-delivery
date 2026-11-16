@@ -592,10 +592,6 @@ class FidelityGuidance(Guidance):
     ``reviews_files_of`` names them: UX's front-end code is reviewed against its information architecture and mockup,
     since its view code is Clean Engineering's code to review. None reviews its own files."""
 
-    also_lists: dict[str, str] = {}
-    """Files a person reviews with this fidelity's own, by format, as its practice document's ``also_lists`` names them,
-    such as the story map's thin slice: a page lists them beside its outputs, and generate never writes them."""
-
     def __init__(
         self,
         name: str = "",
@@ -629,8 +625,6 @@ class FidelityGuidance(Guidance):
             self.judged_on = str(settings["judged_on"] or "artifacts")
         if "reviews_files_of" in settings:
             self.reviews_files_of = tuple(str(name) for name in settings["reviews_files_of"] or ())
-        if "also_lists" in settings:
-            self.also_lists = {str(label): str(path) for label, path in (settings["also_lists"] or {}).items()}
 
     @property
     def stage(self) -> str:

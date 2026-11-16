@@ -368,14 +368,10 @@ class FidelitySessionOutput:
         exists, and whether the session's branch changed it, so a page can show only the changed ones."""
         # Asking git what the branch changed is slow, so it is asked only once a file is there.
         changed = cache(self._session.session_files.changed)
-        listed = {
+        return {
             label: [entry for path in paths for entry in self._declared_files(label, path, changed)]
             for label, paths in self.output_paths().items()
         }
-        for label, path in self._fidelity.also_lists.items():
-            beside = [entry for entry in self._declared_files(label, self._under_root(path, self.root), changed) if entry.exists]
-            listed[label] = listed.get(label, []) + beside
-        return listed
 
     def holds(self, file: Path) -> bool:
         """Whether file, in the session's checkout, is one of this fidelity's, changed by the session or not: a file one
