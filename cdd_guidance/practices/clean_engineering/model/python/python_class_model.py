@@ -106,7 +106,7 @@ class PythonOperation(CodeOperation):
     def measure(self, function: PythonFunctionBody) -> None:
         """Keep what the rules measure on its function: its decorators, the collaborators a constructor builds, and
         what its body does."""
-        self.is_property = function.decorated("property")
+        self.is_property = function.decorated("property") or function.decorated("cached_property")
         self.is_static = function.decorated("staticmethod")
         self.is_classmethod = function.decorated("classmethod")
         self.constructed_types = function.built_collaborators() if self.is_constructor else []

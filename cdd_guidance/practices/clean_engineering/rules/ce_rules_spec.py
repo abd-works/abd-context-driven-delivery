@@ -341,6 +341,18 @@ export function refreshChatBar($: EngineInterface): void {}
 
         with it("should count only the public operations of a TypeScript class, not those it declares private"):
             self.private_operations.check()
+
+        with it("should not count a property's setter or a cached property as public behaviour"):
+            behaviour = "".join(f"    def step{index}(self) -> int:\n        return {index}\n\n" for index in range(11))
+            held = "".join(
+                f"    @cached_property\n    def step{index}(self) -> int:\n        return {index}\n\n"
+                if index % 2
+                else f"    @property\n    def step{index}(self) -> int:\n        return self._step\n\n"
+                f"    @step{index}.setter\n    def step{index}(self, step: int) -> None:\n        self._step = step\n\n"
+                for index in range(11)
+            )
+            header = "from functools import cached_property\n\n\nclass Steps:\n"
+            rule_pair("keep-classes-single-responsibility", header + behaviour, header + held).check()
     with context("use-typed-signatures"):
         with before.all:
             self.pair = python_example_pair("use-typed-signatures")
