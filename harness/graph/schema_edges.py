@@ -291,9 +291,9 @@ class SchemaEdges:
 
     def _record(self, kind: str, parent: ModelNode, child: ModelNode) -> None:
         edge_type = EdgeType.from_kind(kind, _DISPLAY.get(kind, "relationship"))
-        self.graph.record(edge_type, parent, child)
+        self.graph.edges.record(edge_type, parent, child)
         if parent.practice is not child.practice:
-            self.graph.record(edge_type, child, parent)
+            self.graph.edges.record(edge_type, child, parent)
 
     def _matches(self, kind: str, owner: ModelNode, target: ModelNode) -> bool:
         evidence = NodeEvidence(owner)

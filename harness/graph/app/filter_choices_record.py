@@ -66,7 +66,7 @@ class FixtureGraph:
         for kind in held["edge_types"]:
             for node_type, node in nodes.items():
                 if kind in edges_of_type.get(node_type, []):
-                    self.graph.link(kind, part.root, node)
+                    self.graph.edges.link(kind, part.root, node)
 
     def answer(self, request: dict[str, Any]) -> dict[str, Any]:
         """Python's answer to one request the explorer sends ``graph.filter_choices``."""

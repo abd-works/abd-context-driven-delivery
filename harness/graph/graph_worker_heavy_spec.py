@@ -12,7 +12,7 @@ from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.graph.graph import Graph
-from harness.agent_tools.tool_call import ToolCall
+from harness.agent_tools.tool_call import ToolCall, ToolRequest
 from harness.graph.graph_build import GraphBuildFailed, WorkerBuild
 from harness.graph.saved_graph import SavedGraph
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
@@ -36,7 +36,7 @@ _READ_BY_EACH_PRACTICE = (
 )
 
 # A call the cdd server answers for a chat, and one a spec or a script makes in process.
-_FROM_A_CHAT = ToolCall(answers_a_chat=True)
+_FROM_A_CHAT = ToolCall(request=ToolRequest(answers_a_chat=True))
 _IN_PROCESS = ToolCall()
 
 

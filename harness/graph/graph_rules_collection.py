@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from harness.guidance.rule import Rule, RulesCollection
 from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.location import Location
 from harness.graph.violation import NodeViolation, Violation
 from harness.installation.data_class import data_field
 
@@ -24,11 +25,18 @@ class GraphRule(PracticeGraphRule, Rule):
         self.node = node
         self.node_types = tuple(check.node_types) if check is not None else (node.type,)
         self.executable = check is not None
-        self.runs = check is not None and any(check.applies_to(type_name) for type_name in node.applying_rule_types())
+        self.runs = check is not None and any(check.applies_to(type_name) for type_name in self._applying_types())
         """Whether its check runs on this node: the check applies to the node's type, or to the type it is anchored to."""
         if check is not None:
             self.check = check.check  # type: ignore[method-assign]
         self._violations: list[Violation] = []
+
+    def _applying_types(self) -> set[str]:
+        """The node types whose checks apply to this rule's node: its own, and the type of the extended practice it is
+        anchored to, such as a Clean Engineering class for a DDD entity."""
+        node = self.node
+        anchor = node.schema.anchor_type(node.type)
+        return {node.type, anchor} if anchor else {node.type}
 
     @property
     @data_field
@@ -78,14 +86,7 @@ class GraphRule(PracticeGraphRule, Rule):
 
     def restore(self, violation: Violation) -> None:
         """Keep a violation a saved graph recorded, at the place it was saved with, as this rule's own."""
-        restored = NodeViolation(
-            self,
-            violation.message,
-            location=violation.location,
-            line=violation.line,
-            end_line=violation.end_line,
-            severity=violation.severity,
-        )
+        restored = NodeViolation(self, violation.message, Location(violation.location, violation.line, violation.end_line))
         if restored not in self._violations:
             self._violations.append(restored)
 
@@ -107,8 +108,9 @@ class GraphRulesCollection(RulesCollection):
     @classmethod
     def from_node(cls, node: Node) -> GraphRulesCollection:
         """The rules node's schema gives its type, each with its prose, the check that runs it when one exists, and
-        whether that check applies to node; node says which checks it has and which apply to it."""
-        checks = node.rule_checks()
+        whether that check applies to node: the checks of node's practice, of the practice it extends, and of each
+        pattern overlay its graph applies."""
+        checks = dict(node.practice.reading.checks())
         return cls(node, {slug: GraphRule(node, slug, checks.get(slug)) for slug in node.schema.slugs_for(node.type)})
 
     @property

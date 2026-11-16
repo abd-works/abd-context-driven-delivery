@@ -44,7 +44,7 @@ with description("pattern overlays") as self:
             Source("src/account.ts", 1, 10),
         )
         child.practice.reading.in_graph.hold(child)
-        graph.record(EdgeType("owns", 2, "direct"), root, child)
+        graph.edges.record(EdgeType("owns", 2, "direct"), root, child)
         practice.reading.in_graph.rebuild_tree()
         expect(len(root.children)).to(equal(1))
         expect(root.children[0].node_id).to(equal(child.node_id))

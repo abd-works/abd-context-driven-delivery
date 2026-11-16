@@ -141,9 +141,11 @@ class EdgeIndex:
     """The edges one practice holds, by kind, with the EdgeType of each kind, and the indexes a build reads them by:
     the pairs of nodes each kind joins, which keep an edge from being recorded twice, the edges of each kind leaving each
     parent, and the parent a direct edge hangs each child under. Every change to the edges goes through here, so the
-    indexes change with them. A practice's part of the graph makes one and keeps it (``in_graph.edge_index``)."""
+    indexes change with them, and each change is counted through changed, the count of changes to what the graph
+    holds. A practice's part of the graph makes one and keeps it (``in_graph.edge_index``)."""
 
-    def __init__(self) -> None:
+    def __init__(self, changed: Callable[[], None]) -> None:
+        self._changed = changed
         self._edges: dict[str, list[Edge[Node]]] = {}
         self.types: dict[str, EdgeType] = {}
         self._pairs: dict[str, set[tuple[int, int]]] = {}
@@ -174,10 +176,12 @@ class EdgeIndex:
         self._from_parent.setdefault(kind, {}).setdefault(id(parent), []).append(edge)
         if self._direct_parents is not None and edge.display == "direct":
             self._direct_parents.setdefault(id(child), parent)
+        self._changed()
         return True
 
     def drop(self, dropped: Callable[[Edge], bool]) -> list[Edge]:
         """Drop each edge that dropped says to; answer the edges dropped."""
+        self._changed()
         removed: list[Edge] = []
         for kind, edges in self._edges.items():
             gone = [edge for edge in edges if dropped(edge)]

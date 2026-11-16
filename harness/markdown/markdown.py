@@ -733,9 +733,13 @@ class MarkdownCollection:
         entries: dict[str, Any] | list[Any] | None = None,
         parent: MarkdownOwner | None = None,
     ) -> None:
-        self.entries: dict[str, Any] | list[Any] = entries if entries is not None else {}
         self.parent = parent
         self._markdown = ""
+        self._adopt(entries if entries is not None else {})
+
+    def _adopt(self, entries: dict[str, Any] | list[Any]) -> None:
+        """Hold entries, each with this collection as its parent."""
+        self.entries: dict[str, Any] | list[Any] = entries
         for child in self:
             child.parent = self
 
@@ -754,19 +758,16 @@ class MarkdownCollection:
     def __getitem__(self, name: str) -> Any:
         return self.entries[name]
 
-    @classmethod
-    def child(cls, name: str, body: str = "") -> Any:
+    def child(self, name: str, body: str = "") -> Any:
+        """The entry a ``### name`` block of this collection's markdown declares; none for a collection whose blocks
+        make no entries."""
         return None
 
     @classmethod
     def from_markdown(cls, text: str, parent: MarkdownOwner | None = None) -> MarkdownCollection:
-        entries: dict[str, Any] = {}
-        for name, body in MarkdownText(text).section_child_blocks():
-            entry = cls.child(name, body)
-            if entry is None:
-                continue
-            entries[name] = entry
-        collection = cls(entries, parent=parent)
+        collection = cls(parent=parent)
+        made = ((name, collection.child(name, body)) for name, body in MarkdownText(text).section_child_blocks())
+        collection._adopt({name: entry for name, entry in made if entry is not None})
         collection.markdown = text
         return collection
 
@@ -811,19 +812,18 @@ class MarkdownTypeUnresolved(TypeError):
 class Markdown:
     """One labelled section of an owner's markdown, located from the scope the owner hands over and read once."""
 
-    def __init__(self, instance: MarkdownOwner, label: str, *, fidelity: str | None = None, format: str | None = None) -> None:
+    def __init__(self, instance: MarkdownOwner, label: str, scope: MarkdownScope) -> None:
         self._instance = instance
         self._label = label
-        self._fidelity = fidelity
-        self._format = format
+        self._scope = scope
 
     _HELD_AS = "_held_markdown"
 
     @classmethod
-    def from_label(cls, instance: MarkdownOwner, label: str, *, fidelity: str | None = None, format: str | None = None) -> Markdown:
-        """Markdown for ``label`` on ``instance``, at the fidelity and format named here when given, else at the
-        instance's current ones."""
-        return cls(instance, label, fidelity=fidelity, format=format)
+    def from_label(cls, instance: MarkdownOwner, label: str, scope: MarkdownScope | None = None) -> Markdown:
+        """Markdown for ``label`` on ``instance``, in scope when given (``MarkdownScope.of(instance).at(fidelity,
+        format)`` reads another fidelity's or format's assets), else in the scope instance reads in now."""
+        return cls(instance, label, scope if scope is not None else MarkdownScope.of(instance))
 
     @classmethod
     def held_by(cls, owner: MarkdownOwner, label: str) -> Markdown:
@@ -834,15 +834,14 @@ class Markdown:
         held: dict[tuple[str, MarkdownScope], Markdown] = vars(owner).setdefault(cls._HELD_AS, {})
         key = (label, scope)
         if key not in held:
-            held[key] = cls(owner, label, fidelity=scope.fidelity, format=scope.format)
+            held[key] = cls(owner, label, scope)
         return held[key]
 
     @functools.cached_property
     def location(self) -> AssetLocation:
-        """Where this section lives, located once: it depends only on the instance, label, fidelity and format this
-        Markdown was made with."""
-        scope = MarkdownScope.of(self._instance).at(fidelity=self._fidelity, format=self._format)
-        return AssetLocator(scope, self._label).locate()
+        """Where this section lives, located once: it depends only on the label and scope this Markdown was made
+        with."""
+        return AssetLocator(self._scope, self._label).locate()
 
     @functools.cached_property
     def document(self) -> MarkdownText:
@@ -887,9 +886,14 @@ class Markdown:
         HTML or a string. The section's YAML settings stay in its text for the object it becomes, as a rules collection
         reads where it applies from them."""
         return_type = self._return_type_of(operation, default)
-        if build is None and self._reads_plain_text(return_type):
-            return self._coerce(self.document.without_yaml, return_type)
-        return build(self, return_type, self._instance) if build is not None else self._coerce(self.document.text, return_type)
+        if build is not None:
+            return build(self, return_type, self._instance)
+        return self._coerced_as(return_type)
+
+    def _coerced_as(self, return_type: ReturnAnnotation) -> Any:
+        """The section coerced to return_type: its text without its YAML for HTML or a string, else all of it."""
+        document = self.document
+        return self._coerce(document.without_yaml if self._reads_plain_text(return_type) else document.text, return_type)
 
     def _reads_html(self, return_type: ReturnAnnotation) -> bool:
         origin = get_origin(return_type) or return_type

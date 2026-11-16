@@ -3,7 +3,8 @@
 from expects import be_below, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from harness.whiteboard import Arrow, Box, Label, Section, Shape, StoreWrite, UnreadableBoard, Whiteboard, WhiteboardNode
+from harness.whiteboard import Arrow, Box, Label, Section, Shape, UnreadableBoard, Whiteboard, WhiteboardNode
+from harness.whiteboard.whiteboard import StoreWrite
 
 
 class CardNode(WhiteboardNode):

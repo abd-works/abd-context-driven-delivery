@@ -168,14 +168,16 @@ class PythonInterpreter:
 class BackgroundStart:
     """How a background server is started so it keeps running without a console window. On Windows it gets a process
     group of its own and no window, and it breaks away from the starter's job unless it is started inside that job.
-    ``DETACHED_PROCESS`` is never used: Windows then ignores ``CREATE_NO_WINDOW`` and opens a console."""
+    ``DETACHED_PROCESS`` is never used: Windows then ignores ``CREATE_NO_WINDOW`` and opens a console. The process
+    writes its output and errors to the start's log, or nowhere when it has none."""
 
-    def __init__(self, breaks_away: bool = True) -> None:
+    def __init__(self, log: IO[str] | None = None, breaks_away: bool = True) -> None:
+        self.log = log
         self.breaks_away = breaks_away
 
     def inside_starters_job(self) -> BackgroundStart:
         """The same start without breaking away, for a Windows job that refuses to let its children leave."""
-        return BackgroundStart(breaks_away=False)
+        return BackgroundStart(self.log, breaks_away=False)
 
     @property
     def creationflags(self) -> int:
@@ -194,14 +196,14 @@ class BackgroundStart:
         startup.wShowWindow = subprocess.SW_HIDE
         return startup
 
-    def run(self, command: list[str], *, cwd: str | Path, env: dict[str, str], log: IO[str]) -> subprocess.Popen:
-        """Start command in the background in cwd, writing its output and errors to log."""
+    def run(self, command: list[str], cwd: str | Path, env: dict[str, str]) -> subprocess.Popen:
+        """Start command in the background in cwd, with env as its environment."""
         return subprocess.Popen(
             command,
             cwd=str(cwd),
             env=env,
             stdin=subprocess.DEVNULL,
-            stdout=log,
+            stdout=self.log if self.log is not None else subprocess.DEVNULL,
             stderr=subprocess.STDOUT,
             creationflags=self.creationflags,
             startupinfo=self.startupinfo,

@@ -36,7 +36,7 @@ class RuleCheckContext:
 
     def targets(self, node: Node, kind: str) -> list[Node]:
         """The nodes an edge of kind leads to from node."""
-        return [edge.child for edge in self.graph.edges_from(kind, node)]
+        return [edge.child for edge in self.graph.edges.from_parent(kind, node)]
 
     def held_by(self, node: Node) -> list[Node]:
         """The nodes an edge of any kind leads to from node, but the ``belongsTo`` back-edge to the node holding it: what
@@ -62,9 +62,3 @@ class RuleCheckContext:
     def children(self, node: Node, edge_kind: str) -> list[Node]:
         return [edge.child for edge in self.edges(edge_kind) if edge.parent is node]
 
-    def scenario_outline(self, node: Node) -> bool:
-        return bool(node.facts.get("is_outline"))
-
-    def scenario_evidence(self, node: Node) -> list[str]:
-        raw = node.facts.get("evidence")
-        return [str(item) for item in raw] if isinstance(raw, list) else []

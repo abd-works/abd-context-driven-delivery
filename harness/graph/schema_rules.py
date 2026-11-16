@@ -134,7 +134,7 @@ class PracticeSchema:
         """The rule collections guidance gives prose from: a practice's or pattern's shared rules and each fidelity's;
         a supplement's sections, each named for the fidelities it applies to (it has no shared rules)."""
         if getattr(guidance, "supplemented_fidelities", None) is not None:
-            return guidance.checked_rule_collections()
+            return guidance.checked_rule_collections
         fidelities = getattr(getattr(guidance, "fidelities", None), "entries", None) or {}
         return [getattr(guidance, "rules", None), *(getattr(fidelity, "rules", None) for fidelity in fidelities.values())]
 
