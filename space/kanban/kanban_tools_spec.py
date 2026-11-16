@@ -703,17 +703,16 @@ with description("the board tools") as self:
                     with before.each:
                         self.chips = self.project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="diagram", is_chosen=False)
 
-                    with it("should leave out both of its formats"):
-                        output = self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="markdown", is_chosen=True)
-                        expect(output["chosen_formats"]).to(equal(["markdown"]))
+                    with it("should leave out both of its formats, keeping only markdown chosen"):
+                        expect([chip["label"] for chip in self.chips if chip["is_chosen"]]).to(equal(["markdown"]))
 
                     with context("and on again"):
                         with before.each:
                             self.chips = self.project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="diagram", is_chosen=True)
 
                         with it("should choose both of its formats again"):
-                            output = self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="markdown", is_chosen=True)
-                            expect(output["chosen_formats"]).to(equal(["markdown", "drawio", "whiteboard"]))
+                            diagram = next(chip for chip in self.chips if chip["label"] == "diagram")
+                            expect((diagram["is_chosen"], diagram["formats"])).to(equal((True, ["drawio", "whiteboard"])))
 
             with context("that turns the markdown chip off"):
                 with before.each:
