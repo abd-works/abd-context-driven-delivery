@@ -254,7 +254,7 @@ function OpenFileView({ page }: { page: FilesPage }) {
   return (
     <section className="open-file" aria-label={state.file.path}>
       <CommentToolbarView page={page} file={state.file} />
-      <FileSourceView key={state.file.path} file={state.file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(state.file.path)} />
+      <FileSourceView key={state.file.path} file={state.file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(state.file.path)} members={state.graph.members} />
       {state.moreFiles.map(file => (
         <MoreFileView key={file.path} page={page} file={file} />
       ))}
@@ -268,7 +268,7 @@ function MoreFileView({ page, file }: { page: FilesPage; file: SessionFileData }
   return (
     <section className="open-file more-file" aria-label={file.path}>
       <p className="more-file-path">{file.path}</p>
-      <FileSourceView file={file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(file.path)} />
+      <FileSourceView file={file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(file.path)} members={page.state.graph.members} />
     </section>
   )
 }

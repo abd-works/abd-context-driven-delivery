@@ -13,7 +13,7 @@ from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, t
 from harness.agent_tools.agent_tools import noSessionLog, subAgent, tool_subject
 from harness.agent_tools.tool_call import ToolCall
 from harness.chat.chat import Chat
-from harness.graph.explorer import ExplorerEntry
+from harness.graph.explorer import ExplorerEntry, NodeSource
 from harness.graph.graph import Graph
 from harness.graph.saved_graph import GRAPH_FILE_NAME, SavedGraph
 from harness.guidance.stages import STAGES
@@ -723,12 +723,12 @@ class Session:
     @agent_tool
     @noSessionLog
     def graph_trees(self, paths: list[str], call: ToolCall | None = None) -> list[ExplorerEntry]:
-        """Return the practice trees of this session's graph holding only the nodes read from the files at paths, each named from the project as the Files app lists them: each practice's root with the entries below it, closed, as graph.explorer_trees answers them. The graph holds the whole working copy first, so links across files and practices hold. No paths, or none under the session's root, answer no tree."""
+        """Return the practice trees of this session's graph holding only the nodes read from the files at paths, each named from the project as the Files app lists them: each practice's root with the entries below it, closed, as graph.explorer_trees answers them. The graph holds the whole working copy first, each practice read from its own root, so links across files and practices hold and a story map in the Stories root is the one read. No paths, or none under the session's root, answer no tree."""
         under_root = self._under_root(paths)
         if not under_root:
             return []
         graph = self.graph
-        graph.hold_whole(call)
+        graph.hold_practice_roots(call)
         return graph.explorer.explorer_trees({"paths": under_root})
 
     @mcp
@@ -741,14 +741,37 @@ class Session:
     @mcp
     @agent_tool
     @noSessionLog
-    def graph_node_range(self, node_id: str) -> Range | None:
-        """Return the lines the node node_id covers in its file, the file named from the project, so a viewer opens the file there; None for an id the graph no longer holds or a node read from no file's lines."""
+    def graph_node_ranges(self, node_id: str, paths: list[str]) -> list[Range]:
+        """Return the lines the node node_id covers, one range for each file, each named from the project, so a viewer opens every file there. A node read from lines of a file answers that one range; a node read from no file's lines, such as a module that is a folder, answers each file the nodes below it come from, among paths, spanning the lines they cover; none for an id the graph no longer holds."""
+        spans: dict[Path, tuple[int, int]] = {}
+        self._collect_spans(node_id, {"paths": self._under_root(paths)}, spans, set())
+        return [self.file(self.from_project(path)).range(start, end) for path, (start, end) in spans.items()]
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def graph_members(self) -> list[NodeSource]:
+        """Return every class, operation, and property this session's graph holds, each with its text and the class it belongs to, so a viewer opens a call in place even when it reaches another file. Read after graph_trees, which holds the whole working copy."""
+        return self.graph.explorer.source_members()
+
+    def _collect_spans(self, node_id: str, request: dict, spans: dict[Path, tuple[int, int]], seen: set[str]) -> None:
+        """Widen spans with the lines node_id covers in its file, or, read from no file's lines, with those of the nodes below it."""
+        if node_id in seen:
+            return
+        seen.add(node_id)
         node = self.graph.node(node_id)
         source = node.source if node is not None else None
-        if source is None or not source.file or source.start_line < 1:
-            return None
-        path = self.from_project(Path(source.root or self.work_root) / source.file)
-        return self.file(path).range(source.start_line, max(source.end_line, source.start_line))
+        if source is None:
+            return
+        path = Path(source.root or self.work_root) / source.file if source.file else None
+        if path is not None and source.start_line >= 1 and path.is_file():
+            start, end = spans.get(path, (source.start_line, source.end_line))
+            spans[path] = (min(start, source.start_line), max(end, source.end_line, source.start_line))
+            return
+        branch = self.graph.explorer.explorer_branch(node_id, request)
+        for child in branch.children if branch is not None else []:
+            if isinstance(child, ExplorerEntry):
+                self._collect_spans(child.node_id, request, spans, seen)
 
     def _under_root(self, paths: list[str]) -> list[str]:
         """paths, named from the project, as the graph names its files: from the session's root, leaving out any outside it."""

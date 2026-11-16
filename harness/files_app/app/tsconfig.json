@@ -14,6 +14,7 @@
     "paths": {
       "@cdd/*": ["../../../.claude/language-adapters/typescript/*"],
       "@source-view/*": ["../../graph/app/source/*"],
+      "@graph-app/*": ["../../graph/app/*"],
       "react": ["./node_modules/@types/react"],
       "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"],
       "react-dom": ["./node_modules/@types/react-dom"],

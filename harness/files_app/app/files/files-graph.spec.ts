@@ -45,14 +45,28 @@ const CHECKOUT_FLOW_NODES: SeedNode[] = [
 ]
 
 // The Files app's page against a fake of its own server, which answers the session's graph as session.graph_trees,
-// graph_branch and graph_node_range do: only the nodes read from the files a call names, each root opened one level and
-// every entry below it closed, its own entries left out.
+// graph_branch, graph_node_ranges and graph_members do: only the nodes read from the files a call names, each root opened
+// one level and every entry below it closed, its own entries left out; and the cdd server's progress reports while the
+// trees are held back.
 class FakeFilesServer implements CddApi {
   readonly posts: { path: string; body: Record<string, unknown> }[] = []
   version = 0
   stages = ['discovery', 'implementation']
   practices = ['stories', 'clean_engineering']
+  progress: string[] = []
   private readonly waiting: (() => void)[] = []
+  private held: Promise<void> | null = null
+  private release: () => void = () => {}
+
+  // Holds the next graph_trees answer back until released, as a long first load does.
+  holdTrees(): void {
+    this.held = new Promise(resolve => (this.release = resolve))
+  }
+
+  releaseTrees(): void {
+    this.held = null
+    this.release()
+  }
 
   async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
     this.posts.push({ path, body })
@@ -61,9 +75,11 @@ class FakeFilesServer implements CddApi {
     if (path.endsWith('/guidance-selection-after')) return (await this.after(Number(body.version))) as Result
     if (path.endsWith('/fidelity-files')) return {} as Result
     if (path.endsWith('/root-files')) return CHECKOUT_FLOW_FILES as Result
-    if (path.endsWith('/graph-trees')) return this.trees(body.paths as string[]) as Result
+    if (path.endsWith('/graph-trees')) return (await this.heldTrees(body.paths as string[])) as Result
     if (path.endsWith('/graph-branch')) return this.entry(this.node(String(body.node_id)), body.paths as string[], true) as Result
-    if (path.endsWith('/graph-node-range')) return this.range(String(body.node_id)) as Result
+    if (path.endsWith('/graph-node-ranges')) return this.ranges(this.node(String(body.node_id)), body.paths as string[]) as Result
+    if (path.endsWith('/graph-members')) return CHECKOUT_FLOW_NODES.filter(node => node.file).map(node => ({ node_id: node.id, name: node.name, type: node.type, file: node.file })) as Result
+    if (path.endsWith('/cdd/progress')) return this.progress.map(message => ({ tool: 'session.graph_trees', message })) as Result
     if (path.endsWith('/file')) return { path: body.path, text: 'line\n'.repeat(700), language: 'python', comments: [], folds: [], violations: [], changes: [] } as Result
     return null
   }
@@ -112,9 +128,26 @@ class FakeFilesServer implements CddApi {
     return CHECKOUT_FLOW_NODES.filter(node => !node.parent && this.holds(node, paths)).map(root => this.entry(root, paths, true))
   }
 
-  private range(id: string) {
-    const node = this.node(id)
-    return node.file ? { path: node.file, start_line: node.start, end_line: node.end, content: '', anchor: `${node.file}:${node.start}-${node.end}` } : null
+  private async heldTrees(paths: string[]): Promise<ExplorerEntryData[]> {
+    if (this.held) await this.held
+    return this.trees(paths)
+  }
+
+  // A node read from a file's lines answers that range; any other, such as a practice's root or a folder, answers each
+  // listed file below it, spanning the lines its nodes cover there.
+  private ranges(node: SeedNode, paths: string[]) {
+    const spans = new Map<string, [number, number]>()
+    const widen = (each: SeedNode) => {
+      if (each.file) {
+        if (!paths.includes(each.file)) return
+        const [start, end] = spans.get(each.file) ?? [each.start, each.end]
+        spans.set(each.file, [Math.min(start, each.start), Math.max(end, each.end)])
+        return
+      }
+      CHECKOUT_FLOW_NODES.filter(child => child.parent === each.id).forEach(widen)
+    }
+    widen(node)
+    return [...spans].map(([path, [start, end]]) => ({ path, start_line: start, end_line: end, content: '', anchor: `${path}:${start}-${end}` }))
   }
 
   posted(ending: string): { path: string; body: Record<string, unknown> }[] {
@@ -295,6 +328,45 @@ describe('Fold Open Files To Selected Nodes', () => {
         ],
         ['class:107:670', 'block:461:465', 'block:539:555'],
       ])
+    })
+  })
+})
+
+describe('Open Every File Of A Folder Node', () => {
+  describe("with checkout-flow's graph shown", () => {
+    it('should open ticket.py and board.py, the files below it, when the Person selects the Clean Engineering root', async () => {
+      const { page, stop } = await showingGraph()
+      await page.graph.select(entryNamed(page, 'Clean Engineering'))
+      await settled()
+      stop()
+      expect([page.state.openPath, page.state.moreFiles.map(file => file.path), page.selectedLinesIn(BOARD_CODE)]).toEqual([TICKET_CODE, [BOARD_CODE], [{ start: 104, end: 397 }]])
+    })
+  })
+})
+
+describe('Show Graph Load Steps', () => {
+  describe("with the session's graph still loading", () => {
+    it('should show each step the cdd server reports while the trees are read', async () => {
+      const server = new FakeFilesServer()
+      server.holdTrees()
+      server.progress = ['load: 1/2 stories']
+      const { page, stop } = await showingGraph(server)
+      await new Promise(resolve => setTimeout(resolve, 0))
+      const reading = { isReading: page.state.graph.isReading, log: page.state.graph.log }
+      server.releaseTrees()
+      await settled()
+      stop()
+      expect([reading, page.state.graph.isReading]).toEqual([{ isReading: true, log: ['load: 1/2 stories'] }, false])
+    })
+  })
+})
+
+describe('Open Calls Across Files', () => {
+  describe("with checkout-flow's graph read", () => {
+    it('should hold every class and operation the graph holds, so the open file opens a call from board.py in place', async () => {
+      const { page, stop } = await showingGraph()
+      stop()
+      expect(page.state.graph.members.map(member => member.name)).toEqual(['Delete Ticket', 'Ticket', 'activate', 'close', 'Board', 'reread'])
     })
   })
 })

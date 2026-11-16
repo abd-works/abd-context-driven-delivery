@@ -17,7 +17,7 @@ section: body
 
 > In steps: ++example++ names a row of a table below; ${field} is a column of the scenario's Examples.
 
-> Evidence: every scenario here was requested on 2026-11-15 and is Built on the file-manager branch, held by `harness/files_app/app/files/files-graph.spec.ts` (the page) and `space/session/session_graph_view_spec.py` (the session's graph); none is walked in the browser yet.
+> Evidence: every scenario here was requested on 2026-11-15 and is Built on the file-manager branch (the Stories root, folder and scroll scenarios on 2026-11-15, from "why is story graph empty", "module would show multiple files" and "we should scroll to line of member if it's below the fold"), held by `harness/files_app/app/files/files-graph.spec.ts` (the page) and `space/session/session_graph_view_spec.py` (the session's graph); none is walked in the browser yet.
 
 ## Examples
 
@@ -40,6 +40,7 @@ section: body
 | ++Board++ | class | board.py | 104 to 397 |
 | ++Board.reread++ | operation | board.py | 286 to 289 |
 | ++Delete Ticket++ | story | story-map.md | 315 to 319 |
+| ++Clean Engineering++ | practice root | none | none |
 
 ## Story: Switch Files App To Graph View
 
@@ -61,6 +62,14 @@ section: body
 *Given* the Files app shows checkout-flow's graph  
 *When* the Person switches the file bar back to the files  
 *Then* the file bar lists checkout-flow's files as a list or in folders, as it showed them before
+
+#### Scenario: The Stories tree holds the session's own story map
+
+*Given* checkout-flow's Stories root, harness/.context/stories, holds its story map  
+  *And* the repository's own .context holds the project's story map, above the session's root  
+*When* the Person switches the file bar to the graph view  
+*Then* the Stories tree holds Delete Ticket, read from harness/.context/stories/story-map.md  
+  *But* none of the project story map's epics
 
 ## Story: Filter Graph Like The File List
 
@@ -112,6 +121,13 @@ section: body
 *When* the Person also selects Board.reread  
 *Then* ticket.py and board.py are both open in the source view
 
+#### Scenario: Selecting a folder's node opens every listed file below it
+
+*Given* the Files app shows checkout-flow's graph  
+*When* the Person selects the Clean Engineering root, which no file's lines hold  
+*Then* ticket.py opens in the source view  
+  *And* board.py opens below it at lines 104 to 397, the lines Board covers
+
 ## Story: Fold Open Files To Selected Nodes
 
 ### Evidence
@@ -134,3 +150,9 @@ section: body
 *When* the Person also selects Ticket.close  
 *Then* Ticket.activate and Ticket.close are both unfolded  
   *And* Ticket's other operations stay folded
+
+#### Scenario: The page scrolls to a node below the fold
+
+*Given* ticket.py is open at its first line  
+*When* the Person selects Ticket.close, at line 538  
+*Then* the page scrolls so line 538 shows a third of the way down the window

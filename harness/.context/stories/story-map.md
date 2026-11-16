@@ -1052,7 +1052,7 @@ Built (2026-11-15): Add to context on a file's or folder's right-click menu in t
 
 Requested (2026-11-15, "the actual file viewer is going to have a toggle that can switch from folder files and graph"): a toggle at the top of the Files app switches its file bar between the files it lists, as a list or in folders (`file-bar.ts` *FileBar*), and the practice trees of the session's graph, as the Graph app's tree shows them. Switching back shows the files again.
 
-Built (2026-11-15), not walked: the file bar's Graph button beside List and Folders (`files-graph-view.tsx` *FilesGraphView*), reading `session.graph_trees` for the files the bar lists; each practice tree starts collapsed and the open file stays open. Tests: `harness/files_app/app/files/files-graph.spec.ts`, `space/session/session_graph_view_spec.py`.
+Built (2026-11-15), not walked: the file bar's Graph button beside List and Folders (`files-graph-view.tsx` *FilesGraphView*), reading `session.graph_trees` for the files the bar lists; each practice tree starts collapsed and the open file stays open. Fixed (2026-11-15, "why is story graph empty"): the session's graph read every practice from the session's root, where Stories found the repository's own story map above it, so the Stories tree held none of the listed story map's nodes; it now reads each practice from its own root (`Graph.hold_practice_roots`), and the paths filter also names a node's file from the graph's folder. Tests: `harness/files_app/app/files/files-graph.spec.ts`, `space/session/session_graph_view_spec.py`.
 
 ### (S) Files App --> [Filter Graph Like The File List](review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-filter-graph-like-the-file-list)
 
@@ -1064,13 +1064,13 @@ Built (2026-11-15), not walked: the graph is read again whenever the bar lists o
 
 Requested (2026-11-15, "except for you're now selecting file(s), eg more than one file opens"): selecting a node in the graph view opens its file in the source view; selecting nodes in more than one file opens each of those files, where the Files app opens one file today and the Graph app shows one node's source.
 
-Built (2026-11-15), not walked: selecting a node opens its file at its lines (`Session.graph_node_range`); Ctrl, Cmd or Shift with the press selects it beside the others, and each other file opens below the first (`FilesPage.showNodes`).
+Built (2026-11-15), not walked: selecting a node opens its file at its lines (`Session.graph_node_ranges`); a node no file's lines hold, such as a package that is a folder or a practice's root, opens each listed file below it, spanning the lines its nodes cover there ("module would show multiple files"); Ctrl, Cmd or Shift with the press selects it beside the others, and each other file opens below the first (`FilesPage.showNodes`).
 
 ### (S) Files App --> [Fold Open Files To Selected Nodes](review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-fold-open-files-to-selected-nodes)
 
 Requested (2026-11-15, "expand and collapse in file viewer based on the nodes in the graph"): each open file unfolds the blocks of the nodes selected in the graph and folds its other classes and operations, from the folds the session's graph places (`session.file` folds); selecting another node unfolds it and leaves the rest folded. Builds on the Files app's Fold Classes And Operations and the Graph app's Unfold Calls And Classes In Source.
 
-Built (2026-11-15), not walked: an open file reads its folds and opens only those holding a selected node, its class too, scrolling to the first (`SourceView` `openAround`, `foldsAround`).
+Built (2026-11-15), not walked: an open file reads its folds and opens only those holding a selected node, its class too (`SourceView` `openAround`, `foldsAround`), and the page scrolls the first a third of the way down the window: the editor is as tall as its file, so the page scrolls, not the editor ("we should scroll to line of member if it's below the fold").
 
 ## (E) Explore Graph In Files App
 
@@ -1079,6 +1079,8 @@ Built (2026-11-15), not walked: an open file reads its folds and opens only thos
 ### (S) Person --> [Expand Practice Tree In Files App](review-generated-work-in-file-viewer/explore-graph-in-files-app/explore_graph_in_files_app_story.test.md#story-expand-practice-tree-in-files-app)
 
 Brings in the Graph app's Expand Practice Tree: each practice starts collapsed, and the person opens nodes one level at a time (`GraphView.tsx` `TreeNode`).
+
+Built (2026-11-15), not walked ("the viewer graph needs to borrow much more from original graph tree"): the graph view draws each row as the Graph app does, a twist, then the Graph app's mark for the node's kind (`labels/kind-mark.tsx` *KindMark*) and its name.
 
 ### (S) Person --> [Follow Relationships Under Node In Files App](review-generated-work-in-file-viewer/explore-graph-in-files-app/explore_graph_in_files_app_story.test.md#story-follow-relationships-under-node-in-files-app)
 
@@ -1095,6 +1097,14 @@ Brings in the graph's Apply Pattern Overlays: the graph view shows the overlays 
 ### (S) Files App --> [Show Graph Load Steps In Files App](review-generated-work-in-file-viewer/explore-graph-in-files-app/explore_graph_in_files_app_story.test.md#story-show-graph-load-steps-in-files-app)
 
 Brings in the Graph app's Show Load Steps While Loading and Copy Load Failure For Agent: while the session's graph loads, the graph view shows the step it is on and how long it has run (`graph/query-progress.ts`); a failed load shows the server's reason, with a copy for the chat, instead of loading forever.
+
+Built (2026-11-15), not walked, the load steps only: while `session.graph_trees` runs, the page reads the cdd server's progress reports (`/cdd/progress`) into the graph state and shows them with the Graph app's own view, moved out of `GraphView` (`graph/LoadProgressView.tsx`). A failed load shows its reason but not yet the copy for the chat.
+
+### (S) Person --> [Open Calls Across Files In Files App](review-generated-work-in-file-viewer/explore-graph-in-files-app/explore_graph_in_files_app_story.test.md#story-open-calls-across-files-in-files-app)
+
+Requested (2026-11-15, "inner cross file code folding doesn't seem to be working; in original graph explorer folding expansion across files"): brings in the Graph app's Unfold Calls And Classes In Source across files: a call in the open file to an operation in another file opens that operation's lines in place.
+
+Built (2026-11-15), not walked: once the graph view read the trees, the page reads every member the graph holds (`Session.graph_members`, the explorer's `source_members`) and hands them to the source view with each open file (`sourceOf`), which the Graph app's call layout opens calls from.
 
 ## (E) Review Graph Violations In Files App
 

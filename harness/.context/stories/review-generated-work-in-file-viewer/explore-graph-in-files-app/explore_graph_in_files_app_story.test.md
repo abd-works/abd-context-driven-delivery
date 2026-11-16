@@ -14,6 +14,7 @@ section: body
 - ++relationship group++ — the nodes a node relates to by one kind of edge, such as the operations an operation invokes, shown as a child of the node.
 - ++overlay++ — a pattern such as LERN laid over the session's practices, adding its own nodes and rules; the session holds the overlays chosen (`ticket.choose_overlays`).
 - ++load step++ — the step the session's graph is on while it loads, as the Graph app shows it (`graph/query-progress.ts`).
+- ++member++ — a class, operation or property the session's graph holds, with its text, from which the source view opens a call in place, in its own file or another.
 
 > In steps: ++example++ names a row of a table below.
 
@@ -65,6 +66,13 @@ section: body
 *When* the Person opens Ticket  
 *Then* Ticket shows its operations, such as Ticket.activate and Ticket.close  
   *But* their own children stay hidden until they are opened
+
+#### Scenario: Each node shows the mark of its kind
+
+*Given* the Files app shows checkout-flow's graph with Ticket opened  
+*When* the Files app draws the Clean Engineering tree  
+*Then* Ticket shows the Graph app's class mark  
+  *And* Ticket.activate and Ticket.close show its operation mark
 
 ## Story: Follow Relationships Under Node In Files App
 
@@ -151,7 +159,7 @@ section: body
 
 *Given* checkout-flow's graph is not loaded yet  
 *When* the Person switches the file bar to the graph view  
-*Then* the graph view shows the load step it is on and how long it has run  
+*Then* the graph view shows the load step the cdd server reports and how long it has run  
   *And* shows the practice trees once the load ends
 
 #### Scenario: A failed load shows the server's reason, ready to copy for the chat
@@ -160,3 +168,25 @@ section: body
 *When* the Person switches the file bar to the graph view  
 *Then* the graph view shows the server's reason and its traceback instead of loading forever  
   *And* offers a copy of them for the chat
+
+## Story: Open Calls Across Files In Files App
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| user request, 2026-11-15 | "inner cross file code folding doesn't seem to be working; in original graph explorer folding expansion across files" |
+| Graph app, Unfold Calls And Classes In Source (Observed) | `source/call-expansion.ts` `inlineCallLayout`, given every member by `graph.source` |
+
+#### Scenario: A call to an operation in another file opens in place
+
+*Given* the Files app shows checkout-flow's graph and ticket.py is open  
+*When* the Person opens the call to Board.reread in Ticket.delete  
+*Then* the lines of Board.reread, from board.py, show in place below the call  
+  *And* ticket.py stays open where it was
+
+#### Scenario: Calls open in place only once the graph is read
+
+*Given* the Files app lists checkout-flow's files and the graph view was never shown  
+*When* the Person opens ticket.py  
+*Then* its calls show as written, with no fold to open them

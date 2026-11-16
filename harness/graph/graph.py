@@ -418,13 +418,22 @@ class Filter:
             return False
         if self.relationships and not self._on_relationship(node):
             return False
-        return not self.paths or self._under_paths(node.source.file)
+        return not self.paths or self._under_paths(node.source.file) or self._under_paths(self._named_from_folder(node.source))
 
     def _listed(self, request: dict, many: str, one: str) -> list[str] | None:
         """A request key that takes a list or a single value, such as ``types`` or ``type``; none when it names neither."""
         if many not in request and one not in request:
             return None
         return list(request.get(many) or ([request[one]] if request.get(one) else []))
+
+    def _named_from_folder(self, source: Source) -> str | None:
+        """source's file named from the graph's folder, as a viewer listing the folder names it: a practice that reads from
+        a folder below it, such as Stories from .context/stories, names its files from there; none outside the folder."""
+        folder = self.graph.folder
+        if not folder or not source.root or not source.file:
+            return None
+        full, within = Path(source.root, source.file), Path(folder)
+        return full.relative_to(within).as_posix() if full.is_relative_to(within) else None
 
     def _under_paths(self, file: str | None) -> bool:
         """True when ``file`` is one of the chosen paths or sits under one."""
@@ -792,9 +801,9 @@ class GraphExplorer:
         node = self.graph.node(node_id)
         if node is None:
             return None
-        return NodeSource(node, members=self._source_members())
+        return NodeSource(node, members=self.source_members())
 
-    def _source_members(self) -> list[NodeSource]:
+    def source_members(self) -> list[NodeSource]:
         """Every class, operation, and property the open practices hold, each with the class it belongs to."""
         declared = list(self.graph.practices.opened.values())
         classes = {node_type for practice in declared for node_type in practice.reading.class_types}
@@ -1457,6 +1466,21 @@ class Graph:
             if self.scope.over_whole or self.scope.folder is None:
                 return
             self.scope = LoadScope(self.scope.folder)
+            self.build.load(False, call)
+
+    def hold_practice_roots(self, call: ToolCall | None = None) -> None:
+        """Make sure the graph holds the whole working copy with each practice read from the folder its session names
+        for it, or from the graph's folder when that folder is not there yet, loading only when it does not hold them so
+        already: Stories read from the graph's folder would find the story map above it, not the one in its own root."""
+        with self._changing:
+            folder = self.scope.folder
+            if folder is None:
+                return
+            roots = {practice: root if (root := practice.session_root) is not None and root.is_dir() else Path(folder) for practice in self.practices.held.values()}
+            if self.scope.over_whole and self.practices.roots_by_key == {practice.key: root for practice, root in roots.items()}:
+                return
+            self.scope = LoadScope(folder)
+            self.practices.choose(roots)
             self.build.load(False, call)
 
     def refreshed(self, paths: list[str], checked: Path, call: ToolCall | None = None) -> None:
