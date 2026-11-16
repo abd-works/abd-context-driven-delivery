@@ -4,11 +4,11 @@
 
 #### porting SMS code
 
-| porting SMS code | example | code | group |
+| example | porting SMS code | code | group |
 | --- | --- | --- | --- |
-| porting SMS code | valid porting SMS code | 123456 | porting SMS code |
-| porting SMS code | mismatch porting SMS code | Invalid verification code. | porting SMS code |
-| porting SMS code | example | helper | porting SMS code |
+| valid porting SMS code | porting SMS code | 123456 | porting SMS code |
+| mismatch porting SMS code | porting SMS code | Invalid verification code. | porting SMS code |
+| example | porting SMS code | helper | porting SMS code |
 
 ### Scenario: Enter ++porting SMS code++
 

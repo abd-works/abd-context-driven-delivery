@@ -4,27 +4,27 @@
 
 #### Account credential requirements
 
-| account credential requirements | example | field | requirement | group |
+| example | account credential requirements | field | requirement | group |
 | --- | --- | --- | --- | --- |
-| account credential requirements | email required | email | Email is required | Account credential requirements |
-| account credential requirements | email format | email | Please use a valid email format: yourname@domain.com | Account credential requirements |
-| account credential requirements | password letters | password | Password must contain uppercase and lowercase letters | Account credential requirements |
-| account credential requirements | password number | password | Password must have at least one number | Account credential requirements |
-| account credential requirements | password symbol | password | Password must have at least one symbol | Account credential requirements |
-| account credential requirements | password length | password | Length must be greater than 8 characters | Account credential requirements |
-| account credential requirements | confirm required | confirmPassword | Confirm Password is required | Account credential requirements |
-| account credential requirements | confirm mismatch | confirmPassword | Passwords don't match | Account credential requirements |
-| account credentials | example | unmet | Create account | Account credential requirements |
-| account credentials | valid account credentials |  | enabled | Account credential requirements |
-| account credentials | Paradise Mobile account credentials |  | enabled | Account credential requirements |
-| account credentials | invalid password letters | Password must contain uppercase and lowercase letters | disabled | Account credential requirements |
-| account credentials | invalid password number | Password must have at least one number | disabled | Account credential requirements |
-| account credentials | invalid password symbol | Password must have at least one symbol | disabled | Account credential requirements |
-| account credentials | invalid password length | Length must be greater than 8 characters | disabled | Account credential requirements |
-| account credentials | invalid confirm required | Confirm Password is required | disabled | Account credential requirements |
-| account credentials | invalid confirm mismatch | Passwords don't match | disabled | Account credential requirements |
-| account credentials | invalid email required | Email is required | disabled | Account credential requirements |
-| account credentials | invalid email format | Please use a valid email format: yourname@domain.com | disabled | Account credential requirements |
+| email required | account credential requirements | email | Email is required | Account credential requirements |
+| email format | account credential requirements | email | Please use a valid email format: yourname@domain.com | Account credential requirements |
+| password letters | account credential requirements | password | Password must contain uppercase and lowercase letters | Account credential requirements |
+| password number | account credential requirements | password | Password must have at least one number | Account credential requirements |
+| password symbol | account credential requirements | password | Password must have at least one symbol | Account credential requirements |
+| password length | account credential requirements | password | Length must be greater than 8 characters | Account credential requirements |
+| confirm required | account credential requirements | confirmPassword | Confirm Password is required | Account credential requirements |
+| confirm mismatch | account credential requirements | confirmPassword | Passwords don't match | Account credential requirements |
+| example | account credentials | unmet | Create account | Account credential requirements |
+| valid account credentials | account credentials |  | enabled | Account credential requirements |
+| Paradise Mobile account credentials | account credentials |  | enabled | Account credential requirements |
+| invalid password letters | account credentials | Password must contain uppercase and lowercase letters | disabled | Account credential requirements |
+| invalid password number | account credentials | Password must have at least one number | disabled | Account credential requirements |
+| invalid password symbol | account credentials | Password must have at least one symbol | disabled | Account credential requirements |
+| invalid password length | account credentials | Length must be greater than 8 characters | disabled | Account credential requirements |
+| invalid confirm required | account credentials | Confirm Password is required | disabled | Account credential requirements |
+| invalid confirm mismatch | account credentials | Passwords don't match | disabled | Account credential requirements |
+| invalid email required | account credentials | Email is required | disabled | Account credential requirements |
+| invalid email format | account credentials | Please use a valid email format: yourname@domain.com | disabled | Account credential requirements |
 
 ### Scenario Outline: Enter new account credentials
 

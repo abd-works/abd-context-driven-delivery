@@ -62,6 +62,7 @@ class Stories(PracticeGuidance):
                 "json": ("cdd_guidance.practices.stories.model.json.nodes", "JsonStoryModel"),
                 "drawio": ("cdd_guidance.practices.stories.model.drawio.nodes", "DrawIOStoryModel"),
                 "miro": ("cdd_guidance.practices.stories.model.miro.nodes", "MiroStoryModel"),
+                "whiteboard": ("cdd_guidance.practices.stories.model.whiteboard.nodes", "WhiteboardStoryModel"),
                 "python": ("cdd_guidance.practices.stories.model.python.python_story_model", "PythonStoryModel"),
                 "typescript": ("cdd_guidance.practices.stories.model.typescript.typescript_story_model", "TypeScriptStoryModel"),
                 "java": ("cdd_guidance.practices.stories.model.java.java_story_model", "JavaStoryModel"),
