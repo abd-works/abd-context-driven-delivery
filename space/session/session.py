@@ -747,8 +747,7 @@ class Session:
         """Return the node types the graph view's node filter offers and those it chooses, with the connectors and rules of the chosen ones, as graph.filter_choices answers them on this session's graph."""
         return self.graph.explorer.filter_choices(practices, node_types, practices_before)
 
-    @staticmethod
-    def _narrowed_to(listed: list[str], node_filter: dict | None) -> dict:
+    def _narrowed_to(self, listed: list[str], node_filter: dict | None) -> dict:
         """The graph's filter request for a node filter applied with the file list: the node filter's choices, kept to
         the files listed, in place of any paths it names."""
         return {**(node_filter or {}), "paths": listed}

@@ -37,7 +37,7 @@ export class FilesGraph {
   }
 
   // The node filter as the session's graph takes it, for the selection the person made.
-  get nodeFilter(): Record<string, unknown> {
+  private get nodeFilter(): Record<string, unknown> {
     return nodeFilter(this.store.state.graph.filter)
   }
 
