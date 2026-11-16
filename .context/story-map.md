@@ -164,7 +164,7 @@ An overlay is guidance laid on top of the practices rather than a practice of it
 
 ### (S) Person --> [Select Pattern Overlays For Session](../story_tests/deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-select-pattern-overlays-for-session)
 
-Observed: an action run with an `overlays=` word, such as `overlays=lern_domain_driven,mern_domain_driven`, chooses those overlays on the session first, and the session keeps them in its `session.json`; a word with nothing after it clears them (`guidance_actions.py` `overlays_named`, `ticket.choose_overlays`). Requested (2026-11-14, "select pattern overlay(s) for session"): one or more overlays chosen for the session, whatever kind of overlay each is. The chat bar's + button is Choose Graph Overlays in Move Work Forward From Chat Bar.
+Observed: an action run with an `overlays=` word, such as `overlays=lern_domain_driven,mern_domain_driven`, chooses those overlays on the session first, and the session keeps them in its `session.json`; a word with nothing after it clears them (`guidance_actions.py` `GuidanceCommand.from_guidance`, `ticket.choose_overlays`). Requested (2026-11-14, "select pattern overlay(s) for session"): one or more overlays chosen for the session, whatever kind of overlay each is. The chat bar's + button is Choose Graph Overlays in Move Work Forward From Chat Bar.
 
 ### (S:system) CDD Server --> [Decorate Practice Fidelity With Overlay Guidance](../story_tests/deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-decorate-practice-fidelity-with-overlay-guidance)
 
@@ -176,7 +176,7 @@ Requested (2026-11-14, "inject overlay guidance"): loading a fidelity's instruct
 
 ### (S) Agent --> [Generate With Overlay Rules](../story_tests/deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-generate-with-overlay-rules)
 
-Observed: Generate adds each chosen overlay's shared rules on top of the practices' rules, under `## Pattern overlay: {name}` (`cdd_guidance/actions/generate/generate.py`, `GuidanceAction._overlay_rules`). Requested (2026-11-14, "generate with overlay rules"): only the overlays that decorate the fidelity being generated add their rules.
+Observed: Generate adds each chosen overlay's shared rules on top of the practices' rules, under `## Pattern overlay: {name}` (`cdd_guidance/actions/generate/generate.py`, `SessionBrief.overlay_rules`). Requested (2026-11-14, "generate with overlay rules"): only the overlays that decorate the fidelity being generated add their rules.
 
 ### (S) Agent --> [Validate With Overlay Rules](../story_tests/deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-validate-with-overlay-rules)
 
@@ -308,7 +308,7 @@ Observed: with Active session only on, a ticket that is not the active session d
 
 ### (S) Board App --> Open Ticket Chat On Session Open
 
-Observed (checked 2026-11-10): a press on a card points the board at the ticket's own chat (`ticket-client.tsx:184-188`), and the card's chat button opens the worktree, making it first if needed, then a new Claude chat on it through Python's `chat.open` (`Chat.open`, `harness/chat/chat.py`) (`ticket-client.tsx:196-205`, `chat-client.tsx:72-80`, `claude-link.ts`). It opens a new chat rather than the one the ticket ran in, and Activate opens none. Was: Intended (`.sessions/_backlog/suggest-the-next-step.md` "open associated chat on session open / manually"): opening a ticket's session opens the Claude Code chat it ran in. Observed today: a press on a ticket switches to its chat by hand (`chat.open`).
+Observed (checked 2026-11-10): a press on a card points the board at the ticket's own chat (`ticket-client.tsx:184-188`), and the card's chat button opens the worktree, making it first if needed, then a new Claude chat on it through Python's `chats.open` (`Chats.open`, `harness/chat/chat.py`) (`ticket-client.tsx:196-205`, `chat-client.tsx:72-80`, `claude-link.ts`). It opens a new chat rather than the one the ticket ran in, and Activate opens none. Was: Intended (`.sessions/_backlog/suggest-the-next-step.md` "open associated chat on session open / manually"): opening a ticket's session opens the Claude Code chat it ran in. Observed today: a press on a ticket switches to its chat by hand (`chats.open`).
 
 ### (S) Person --> Choose Where A Backlog Item Works
 

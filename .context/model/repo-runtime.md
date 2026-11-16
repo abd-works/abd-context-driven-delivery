@@ -50,7 +50,7 @@ Read `annotation_kinds` as the one private registry of annotation kinds in harne
 - `McpServer.answer_tool` `-> AgentTool.answer(call)` · harness/mcp/mcp_server.py:533
 - `AgentTool.answer` `-> AgentToolSet.for_call(call)` the toolset as the call works on it · harness/agent_tools/agent_tools.py:801
 - `AgentTool.answer` `-> AgentTool.log_session_invocation(call) -> ToolCall.session` logs the call in the session open in its project · harness/agent_tools/agent_tools.py:802
-- `ToolCall.session` `-> ToolCall._sessions.open_in(call)` the opener space/session registered (`ToolCall.open_sessions_with`) · harness/agent_tools/tool_call.py:89
+- `ToolCall.session` `-> SESSION_OPENING.open_in(call)` the opener space/session registered (`SESSION_OPENING.open_with`) · harness/agent_tools/tool_call.py:89
 - `AgentTool.answer` `-> toolset operation(**arguments)` runs the annotated operation with its coerced arguments · harness/agent_tools/agent_tools.py:803
 -   `<- object` the operation's result, sent back to the chat · harness/agent_tools/agent_tools.py:803
 
@@ -1174,7 +1174,7 @@ No class of this module acts on another class of the model at run time.
 - `Sessions.close`
   - `-> Session.name` reads name of · space/session/sessions.py:162
 - `Sessions.<module>`
-  - `-> ToolCall.open_sessions_with` opens sessions with · space/session/sessions.py:184
+  - `-> SESSION_OPENING.open_with` opens sessions with · space/session/sessions.py:184
 - Annotations it carries: `AgentToolAnnotation` · space/session/sessions.py:135
 
 ## Session
@@ -1584,7 +1584,7 @@ No class of this module acts on another class of the model at run time.
 - `PromptNotify._echo_kind_label`
   - `-> Name()` creates · tools/prompt_notify/prompt_notify.py:274
 - `PromptNotify.<module>`
-  - `-> HookServer.show_toasts_with` shows toasts with · tools/prompt_notify/prompt_notify.py:380
+  - `-> HOOK_TOASTS.show_with` shows toasts with · tools/prompt_notify/prompt_notify.py:380
 - Annotations it carries: `Hook` · tools/prompt_notify/prompt_notify.py:81; `NoCatalog` · tools/prompt_notify/prompt_notify.py:40
 
 # tools/sub_agent

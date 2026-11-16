@@ -73,7 +73,7 @@ with story("Send Next Fidelity Action"):
         with but_("no chat is connected"):
             pass
         with when("the session board draws billing-report's Run next"):
-            # Board page -> TicketClient.canRunNext <- false, with ChatClient.canSend false
+            # Board page -> TicketNextStep.canRun <- false, with ChatClient.canSend false
             pass
         with then("Run next is off"):
             pass

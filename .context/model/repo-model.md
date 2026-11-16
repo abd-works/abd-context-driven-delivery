@@ -207,7 +207,7 @@ Raised when git cannot be run, or a git command fails, in a clone.
 *Markdown* is the prose a property loads from a folder, file, or section beside its class, located once from the *MarkdownScope* its owner hands over; *MarkdownText* reads a document's headings and sections; *Format* names the channel an artifact is written in. The whole model of this module, internals included, is `harness/markdown/.context/markdown-collection-model.md`; that document is canonical, and this section shows only the classes other modules use.
 
 - **Purpose:** Let a class keep its words in markdown beside it, read them back typed, and convert them to HTML.
-- **Seam (terms):** Markdown, MarkdownScope, MarkdownCollection, MarkdownText, OperationProperty, FrontMatter, Format; the annotations `@markdown` and `@markdownCollection`
+- **Seam (terms):** Markdown, MarkdownScope, MarkdownCollection, MarkdownText, FrontMatter, Format, `operation_property`; the annotations `@markdown` and `@markdownCollection`
 - **Dependencies (one-way):** harness/annotations
 
 ## Markdown
@@ -286,15 +286,6 @@ A markdown document: headings, slices, and child sections.
 + fidelity_block(fidelity_name: str): str
 + named_subsection(heading: str): str
 
-## OperationProperty
-
-A property made from an operation whose body is empty: its value comes from the reader it is given, and it carries the operation's name, docstring, and annotations, so it installs the way the operation would. `@markdown`, `@markdownCollection`, and `@collect` all build their properties with it.
-
-+ OperationProperty(operation: Callable[..., Any])
-------
-----
-+ reading(read: Callable[[Any], Any]): property
-
 ## FrontMatter
 
 The settings at the top of a file: a YAML block between `---` lines, or, in a code template, the same block written as `# ---` comment lines.
@@ -332,7 +323,7 @@ The settings at the top of a file: a YAML block between `---` lines, or, in a co
 An *AgentToolSet* is an ordinary class an agent can list and run: each `@agent_tool` member is an *AgentOperation* and each `@agent_instructions` member is *AgentInstructions*. A *ToolCall* is one call as a chat made it, with its project and chat. The whole model of this module, internals included, is `harness/agent_tools/.context/agent-tools-model.md`; that document is canonical, and this section shows only the classes other modules use.
 
 - **Purpose:** Let an author publish an ordinary class as operations and instructions an agent can list and use, and let every publisher read those members from one place.
-- **Seam (terms):** AgentToolSet, ToolSetCollection, ToolsetMembers, ToolsetReference, AgentTool, InvokeLine, ToolRequest, CallsBeingAnswered (`CALLS_BEING_ANSWERED`), `names_alike`, `is_built_in`, AgentOperation, AgentInstructions, InstallDestination, AgentToolAnnotation, AgentInstructionsAnnotation, AgentToolSetAnnotation, ToolSetCollectionAnnotation, Collect, ToolSubject, OnSubject, TakesFromCall, NoSessionLog, PublishedWhereHeld, SubAgentAnnotation, ToolSubjectLoader, RecipePlaceholders, ToolCall, ChatPointer; `tools(...)`, `instructions(...)`, `report_progress`, `reporting_to`, `NO_CHAT`, `SUB_AGENT_CALLER_PREAMBLE`
+- **Seam (terms):** AgentToolSet, ToolSetCollection, ToolsetMembers, ToolsetReference, AgentTool, InvokeLine, ToolRequest, CallsBeingAnswered (`CALLS_BEING_ANSWERED`), `names_alike`, `is_built_in`, AgentOperation, AgentInstructions, InstallDestination, AgentToolAnnotation, AgentInstructionsAnnotation, AgentToolSetAnnotation, ToolSetCollectionAnnotation, Collect, ToolSubject, OnSubject, TakesFromCall, NoSessionLog, PublishedWhereHeld, SubAgentAnnotation, ToolSubjectLoader, RecipePlaceholders, ToolCall, SessionOpening (`SESSION_OPENING`), ChatPointer; `tools(...)`, `instructions(...)`, `report_progress`, `reporting_to`, `NO_CHAT`, `SUB_AGENT_CALLER_PREAMBLE`
 - **Dependencies (one-way):** harness/annotations, harness/markdown
 
 ## AgentToolSet : AgentToolSetOrigin
@@ -537,7 +528,7 @@ An `@agent_instructions` operation: its recipe body, expanded for a call, is the
 ------
 ----
 + of(collection: Any): Any
----<<builds its property with>>--> OperationProperty
+	// builds its property with operation_property (harness/markdown)
 
 ## InstallDestination
 
@@ -634,10 +625,21 @@ One call of a tool as its caller made it: the arguments it sent, the folder of t
 	// the session open in this call's own project, never the one the process worked on last; a call that names no project works in no session
 ----
 + sent(arguments: dict[str, Any] | None, project: Path | str | None, request: ToolRequest = ToolRequest()): ToolCall
-+ open_sessions_with(opener: SessionOpener): None
-+ session_in(project: Path | str): Any
 + session_named(session_file: str): Any
 ---<<takes the chat out of the arguments with>>--> ChatPointer
+---<<opens sessions through>>--> SessionOpening
+
+## SessionOpening
+
+How the process's calls open their sessions: the one *SessionOpener* space/session registers when it is imported. The process keeps one, `SESSION_OPENING`.
+
++ SessionOpening()
+------
+----
++ open_with(opener: SessionOpener): None
++ saved_in(project: Path | str): Any
++ open_in(call: ToolCall): Any
++ named_in(session_file: str, call: ToolCall): Any
 ---<<opens sessions through>>--> SessionOpener
 ---<<raises>>--> SessionsNotLoaded
 
@@ -794,6 +796,7 @@ An installation whose files point the IDE at a server process: the MCP entry at 
 + toolsets: tuple[type, ...]
 + published: list[str]
 ----
++ create(layout: IdeLayout, path: Path | str, repo: Path | str | None = None): ServerInstallation
 + accepts(tool: Any): bool
 + standup(): Any
 + diagnose(): dict[str, Any]
@@ -1114,6 +1117,17 @@ The fields a hook answers the IDE with (`permission`, `continue`, the user and a
 + merge(other: HookResult): HookResult
 + as_dict(): dict[str, Any]
 
+## HookToasts
+
+How the process shows the toast a hook gives in its result: the one notifier, which registers itself when it is loaded. The process keeps one, `HOOK_TOASTS`.
+
++ HookToasts()
+------
++ shown_by: Callable[[str, list[Path]], Any] | None
+----
++ show_with(show: Callable[[str, list[Path]], Any] | None): None
++ show(toast: str, workspace_roots: list[Path]): None
+
 ## HookServer
 
 The hooks of one checkout, loaded once: it runs the enabled handlers for each event and merges their answers.
@@ -1122,12 +1136,12 @@ The hooks of one checkout, loaded once: it runs the enabled handlers for each ev
 ------
 + << composition >> skipped: SkippedTools
 ----
-+ show_toasts_with(show: Callable[[str, list[Path]], Any]): None
 + from_repository(toolsets: RepositoryToolsets): HookServer
 + from_handlers(handlers: Path | str, repo: Path | str): HookServer
 + handle_stdin(raw: bytes): HookResult
 + dispatch(payload: HookPayload): HookResult
 + diagnose(): dict[str, Any]
+---<<shows each merged result's toast through>>--> HookToasts
 ---<<loads>>--> HookPayload
 ---<<merges>>--> HookResult
 ---<<runs the members annotated>>--> Hook
@@ -1267,10 +1281,10 @@ The toolsets one project's calls are answered by: every `@mcp` operation of the 
 
 Record `@mcp` operations, write each IDE's `cdd` entry, and start the one cdd server from `~/.cdd`; it names *CddServerHooks*, the hooks that start the server when a chat starts, as a toolset every install publishes.
 
-+ McpInstallation(layout: IdeLayout, path: Path | str, repo: Path | str | None = None, home: CddHome | None = None)
++ McpInstallation(layout: IdeLayout, path: Path | str, served: ServedCheckout)
 ------
-+ << association >> server_home: CddHome
-+ << composition >> daemon: McpDaemon
++ << association >> served: ServedCheckout
++ daemon: McpDaemon
 + << composition >> claude_plugins: ClaudePlugins
 + << association >> host: McpHost | None
 + mcp_operations: list[AgentTool]
@@ -1288,13 +1302,14 @@ Record `@mcp` operations, write each IDE's `cdd` entry, and start the one cdd se
 + diagnose(): dict[str, Any]
 + ensure_running(): dict[str, str]
 + status(): list[str]
++ create(layout: IdeLayout, path: Path | str, repo: Path | str | None = None): McpInstallation
 + ensure_server(): str
 + pin_server(): str
 + keep_pinned_current(): str | None
 + serve_from_checkout(): str
 + serves_this_process(): bool
 ---<<keeps>>--> AgentTool
----<<creates>>--> CddHome
+---<<is handed>>--> ServedCheckout
 ---<<loads>>--> McpHost
 ---<<publishes as a cdd MCP tool>>--> Mcp
 ---<<publishes the server-starting hooks with>>--> Hook
@@ -1969,7 +1984,7 @@ One practice's part of the graph that holds it: the root node its explorer tree 
 + holds(node_id: str): bool
 + offer_node_types(types: Iterable[str]): None
 + add(node: Node, node_id: str, location: Location): Node
-+ add_named(type: str, node_id: str, name: str, source: Source): Node
++ add_file(type: str, relative: str, name: str): Node
 + hold(node: Node): None
 + release(node: Node): None
 + unused_node_id(type: str, name: str): str
@@ -2053,8 +2068,7 @@ Base model object for one practice. An object made without a graph is detached: 
 + node: ModelNode
 + << association >> graph: Graph
 ----
-+ register_practice(practice_class: type): None
-+ practice_kind(): type
++ practice_kind: type
 + semantic_type(): str
 + finish_building(): None
 + keeps_list(listed: ModelChildren | ModelReferences): None
@@ -2467,12 +2481,26 @@ A probe of the guidance one install deployed, made for its Installer and the gui
 *Chat* is a Claude Code chat reached from outside it, so the session board can see which chats are connected and send one a command; *ChatCommand* is a command a chat takes at its check-in, and *ChatMessage* is a command as the board lists it.
 
 - **Purpose:** Let the board drive any connected chat — send it a command and follow that command until the chat has shown and finished it — without the chats and the board sharing a process.
-- **Seam (terms):** Chat, ChatCommand, ChatMessage, ChatNotConnectedError; the MCP operations `chat.list`, `chat.send`, `chat.messages`, `chat.remove`, `chat.resend`, `chat.check_in`, `chat.confirm`, `chat.finish`
+- **Seam (terms):** Chats, Chat, ChatCommand, ChatMessage, ChatNotConnectedError; the MCP operations `chats.list`, `chats.open`, `chat.send`, `chat.messages`, `chat.remove`, `chat.resend`, `chat.check_in`, `chat.confirm`, `chat.finish`
 - **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/mcp
+
+## Chats
+
+The Claude Code chats on this machine: the ones connected now, and a new one opened in the Claude app through the opener the chats hold.
+
++ Chats(folder: Path, opener: ChatLinks)
+------
++ << association >> opener: ChatLinks
+----
++ load(): Chats
++ list(): list[Chat]
++ open(folder: str, prompt: str): str
+---<<lists>>--> Chat
+---<<annotated with>>--> LanguageAdapter
 
 ## Chat
 
-Reach a Claude Code chat from outside it: list the chats that are connected, and send one a command. A chat is a folder every process can read: the chat alone writes its state when it checks in, and a sender adds one file per command to its waiting folder.
+Reach a Claude Code chat from outside it and send it a command. A chat is a folder every process can read: the chat alone writes its state when it checks in, and a sender adds one file per command to its waiting folder.
 
 + Chat(folder: Path)
 ------
@@ -2483,7 +2511,6 @@ Reach a Claude Code chat from outside it: list the chats that are connected, and
 + is_connected: bool
 ----
 + load(chat: str): Chat
-+ list(): list[Chat]
 + send(kind: CommandKind, text: str): Chat
 + messages(): list[ChatMessage]
 + check_in(is_busy: bool = False, name: str = '', folder: str = ''): list[ChatCommand]
@@ -2715,6 +2742,7 @@ Local git clone: its branches and its commits. The checkouts beside it are its `
 + default_branch: str
 + << composition >> git: Git
 + << composition >> worktrees: Worktrees
++ << composition >> publishing: Publishing
 + is_clone: bool
 + checkout_folder: Path
 + branches: list[Branch]
@@ -2758,6 +2786,7 @@ Local git clone: its branches and its commits. The checkouts beside it are its `
 + switch_worktree_command(): str
 + close_worktree_command(): str
 + push_commit(message: str, untracked: bool = True, sync_remote: bool = True): Commit
+	-> Publishing.push_commit
 + push(hint: str = ''): str
 ---<<creates>>--> Branch
 ---<<creates>>--> Commit
@@ -2879,7 +2908,7 @@ A *Session* is one named piece of work in `.sessions/{name}/`; *Sessions* are al
 
 ## Sessions
 
-The work sessions of one checkout: open ones in `.sessions/{name}/`, closed ones in `.sessions/_complete/`. Which one is open is kept per chat by the cdd server under `~/.cdd` (*WorkState*), never in the checkout; `main` works on the whole repository and is open when no other is.
+The work sessions of one checkout: open ones in `.sessions/{name}/`, closed ones in `.sessions/_complete/`. Which one each chat has open is its part *OpenSessions*; `main` works on the whole repository and is open when no other is.
 
 + Sessions(project: Path | str)
 ------
@@ -2887,7 +2916,8 @@ The work sessions of one checkout: open ones in `.sessions/{name}/`, closed ones
 + root: Path
 + folder: Path
 + backlog_folder: Path
-+ open_name: str
++ << composition >> opened: OpenSessions
++ << composition >> answers: ServedAnswers
 + << composition >> board_practices: BoardPractices
 + << composition >> file_manager: FileManager
 ----
@@ -2901,19 +2931,19 @@ The work sessions of one checkout: open ones in `.sessions/{name}/`, closed ones
 	// one Session is held for each session folder, so every call in a session, from any chat, works on the same object
 + root_of(session: Session): Path
 + moved(session: Session, moved_from: Path): None
-+ open_state(chat: str = ''): WorkState
-+ open_name_for(chat: str = ''): str
 + create(name: str, workpath: Path | None = None, title: str = '', scope: str = '', parent: str = ''): Session
-+ open(session: Session, chat: str = ''): Session
 + current(call: ToolCall | None = None): Session
+	-> OpenSessions.current
 + switch(name: str = '', workpath: Path | None = None, call: ToolCall | None = None): str
-	-> SessionLog.instructions
-+ close(session: Session): None
+	-> OpenSessions.switch
++ open_ticket_names(): list[str]
++ is_left_behind(folder: Path): bool
 ---<<creates>>--> Name
 ---<<calls of_project on>>--> Repo
 ---<<creates>>--> Session
 ---<<keeps>>--> Session
----<<creates>>--> WorkState
+---<<holds>>--> OpenSessions
+---<<holds>>--> ServedAnswers
 ---<<raises>>--> SessionNotFoundError
 ---<<reads the answering call from>>--> ToolCall
 ---<<creates all practices from>>--> PracticeCatalogue
@@ -2922,6 +2952,34 @@ The work sessions of one checkout: open ones in `.sessions/{name}/`, closed ones
 ---<<annotated with>>--> AgentToolAnnotation
 ---<<annotated with>>--> Mcp
 ---<<annotated with>>--> Command
+
+## OpenSessions
+
+Which session each chat has open in one checkout, kept by the cdd server under `~/.cdd` (*WorkState*), never in the checkout, and switching a chat to another (`open_sessions.py`).
+
++ OpenSessions(sessions: Sessions)
+------
+----
++ state(chat: str = ''): WorkState
++ name_for(chat: str = ''): str
++ open(session: Session, chat: str = ''): Session
++ current(chat: str = ''): Session
++ close(session: Session): None
++ ticket_of_worktree(): Session | None
++ switch(name: str, workpath: Path | None, call: ToolCall | None): str
+	-> SessionLog.instructions
+---<<creates>>--> WorkState
+---<<raises>>--> SessionNameRequiredError
+
+## ServedAnswers
+
+The answers the process gives from one checkout's sessions (`answer_reads.py`): none until *CallSessions* begins one.
+
++ ServedAnswers()
+------
++ current: int | None
+----
++ begin(): None
 
 ## BoardPractices
 
@@ -2970,6 +3028,9 @@ One named piece of work in a project, kept in `.sessions/{name}/`. It holds wher
 + session_file_from_project: str
 + work_root: Path
 + << composition >> graph: Graph
+	-> PracticeOutputs.graph
++ << composition >> practice_outputs: PracticeOutputs
++ << composition >> explorer: SessionExplorer
 + workpath_from_checkout: str
 + title: str
 + scope: str
@@ -3002,7 +3063,7 @@ One named piece of work in a project, kept in `.sessions/{name}/`. It holds wher
 	-> Sessions.moved
 + practice(name: str): PracticeSessionOutput
 + close(): None
-	-> Sessions.close
+	-> OpenSessions.close
 + choose_workpath(path: str = ''): Session
 + folder_files(): list[FileEntry]
 	-> SessionFiles.in_folder
@@ -3404,7 +3465,7 @@ Show one stage of the board, the tickets at work in it, and how many it takes be
 
 ## Ticket : Card
 
-Show one work session as a unit of delivery and move it through the stages. Its tools and data fields stay on it, so their published names do not change; the work behind them is done by its three parts.
+Show one work session as a unit of delivery and move it through the stages. Its tools and data fields stay on it, so their published names do not change; the work behind them is done by its seven parts.
 
 + Ticket(session: Session, board: Board)
 ------
@@ -3414,6 +3475,10 @@ Show one work session as a unit of delivery and move it through the stages. Its 
 + << composition >> work: TicketWork
 + << composition >> checkout: TicketCheckout
 + << composition >> marks: StageMarks
++ << composition >> tree: TicketTree
++ << composition >> choices: TicketChoices
++ << composition >> moves: TicketMoves
++ << composition >> ending: TicketEnding
 + is_main: bool
 + progress: list[FidelityProgress]
 + column: Column
@@ -3438,8 +3503,7 @@ Show one work session as a unit of delivery and move it through the stages. Its 
 + assign_chat(chat: str = ''): Ticket
 	-> TicketCheckout.assign_chat
 + format_choices(fidelities: list[str]): list[FormatChoice]
-	-> TicketWork.progress_of
-	-> FormatChoice.offered_by
+	-> TicketChoices.format_choices
 + close_choices(): LeaveChoices
 + leave_choices(): LeaveChoices
 + open_choices(): OpenChoices
@@ -3452,21 +3516,15 @@ Show one work session as a unit of delivery and move it through the stages. Its 
 + open_worktree(): Ticket
 	-> TicketCheckout.open_worktree
 + move_next(): Ticket
-	-> StageMarks.mark
-	-> StageMarks.enter
+	-> TicketMoves.move_next
 + move_previous(): Ticket | BacklogItem
-	-> SessionFolder.reopen
-	-> StageMarks.place
+	-> TicketMoves.move_previous
 + move_to(stage: str, done: bool = False): Ticket | BacklogItem
-	-> StageMarks.place
+	-> TicketMoves.move_to
 + close(leaving: list[str] | None = None): Ticket
-	-> TicketCheckout.write_handoff
-	-> TicketCheckout.free_worktree
-	-> SessionFolder.move_to_closed
-	-> TicketCheckout.save_work
-	-> TicketCheckout.return_to_default_branch
+	-> TicketEnding.close
 + archive(): Ticket
-	-> SessionFolder.move_to_archive
+	-> TicketEnding.archive
 + violations(): Report
 	-> FidelityProgress.report
 	-> Report.from_reports
@@ -3804,7 +3862,7 @@ Echo detected action, practice, fidelity, and rule names on preToolUse.
 + detect_echo(payload: HookPayload, toolsets: list | None = None): tuple[str, str] | None
 + detect(payload: HookPayload): tuple[str, str] | None
 + show_toast(toast: str, workspace_roots: list[Path]): list[Path]
-	// registered with HookServer.show_toasts_with when the module is loaded, so the toast a hook gives in its result is shown here
+	// registered with HOOK_TOASTS.show_with when the module is loaded, so the toast a hook gives in its result is shown here
 + show_ide_toast(echo: str, workspace_roots: list[Path | str]): list[Path]
 	-> ToastFile.show
 + install_ide_toast_extension(): Path
@@ -4894,7 +4952,7 @@ Convert a folder of documents to markdown, and capture a live application into i
 
 Embed partitioned segments into a FAISS index and answer questions with source citations.
 
-+ ContextIndex(embedding_provider: EmbeddingProvider | None = None, session: Any = None)
++ ContextIndex(embedding_provider: EmbeddingProvider = LIVE_EMBEDDINGS, session: Any = None)
 ------
 ----
 + for_call(call: ToolCall): ContextIndex

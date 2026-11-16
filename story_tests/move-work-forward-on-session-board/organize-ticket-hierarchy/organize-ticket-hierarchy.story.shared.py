@@ -32,7 +32,7 @@ from space.kanban.session_board_examples import (
     PULLED_OUT_TITLE,
 )
 from space.kanban.story_test import SharedStories, children_in, column_in, expect_placed, expect_refused, refusal_of, ticket_in
-from space.kanban.ticket import ParentLoopError, ParentMovesWithChildrenError
+from space.kanban.ticket_tree import ParentLoopError, ParentMovesWithChildrenError
 
 shared_stories = SharedStories("Organize Ticket Hierarchy")
 
@@ -279,7 +279,7 @@ def _(s):
         # Board.ticket("enter-card-details")
         #   <- enter-card-details
         # checkout-flow.reassign_parent(enter-card-details)
-        #   -> self._can_be_child_of(enter-card-details)
+        #   -> self.tree.can_be_child_of(enter-card-details)
         #   <- refused: ParentLoopError
         world.refusal = refusal_of(lambda: world.Ticket.load(CHECKOUT_FLOW.name).reassign_parent(world.Ticket.load(ENTER_CARD_DETAILS_CHILD.name)))
 
