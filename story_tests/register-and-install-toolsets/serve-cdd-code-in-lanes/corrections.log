@@ -1,0 +1,6 @@
+2026-11-16 Serve CDD Code In Lanes, both slices (lanes, then routing between them)
+Mistake: wrote production code first, then stubbed story tests, then heavy specs, all green on the first run. The TDD
+supplement's "Choose the flow first" called for Flow A (new boundaries: a second server process, lane-to-lane HTTP):
+run it for real end to end, have the person verify it, capture it in a heavy test, then write the stubbed unit tests.
+Correction: the user pointed out the guidance arrived and was not followed. Redo the coordinated-switch story in Flow A,
+and run the lanes for real with the person before trusting the stubbed tests.

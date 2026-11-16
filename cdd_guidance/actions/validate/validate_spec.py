@@ -277,6 +277,25 @@ with description("a validate action on practice guidance") as self:
         with it("should tell the agent to give each finding one file and one line"):
             expect(self.map_report).to(contain("a finding at two places is two bullets"))
 
+        # A pattern can reach validate from the folder's patterns file with no overlay on the session, and the agent must
+        # be told which: a report that says the session overlays it when it does not misleads the person reading it.
+        with context("whose folder records a pattern its session does not overlay"):
+            with before.all:
+                import cdd_guidance.patterns  # noqa: F401 - registers the patterns a folder can record
+
+                self.recorded = _StoryMapFolder()
+                _write(self.recorded.folder, "board/.context/patterns.md", "# Patterns\n\n- lern_domain_driven\n")
+                self.recorded_report = self.recorded.validate()
+
+            with after.all:
+                self.recorded.close()
+
+            with it("should say the content was generated with that pattern, as its patterns file records"):
+                expect(self.recorded_report).to(contain("This content was generated with the lern_domain_driven pattern, as `.context/patterns.md` records"))
+
+            with it("should not say the session overlays it"):
+                expect(self.recorded_report).not_to(contain("This session overlays the lern_domain_driven pattern"))
+
         # The session board reads a fidelity's latest validate line, so a second, clean line would hide the violations.
         with context("that has been validated"):
             with before.all:
