@@ -48,12 +48,15 @@ STORY_TEST_TEXT = (
     '        with given("a ticket"):\n'
     "            pass\n"
 )
+# Seed: Restore Ticket's story test, in code, for a story the markdown map does not have yet.
+RESTORE_TEST = "story_tests/manage-tickets/remove-tickets/restore-ticket/restore_ticket_story.test.py"
+RESTORE_TEST_TEXT = STORY_TEST_TEXT.replace("Delete Ticket", "Restore Ticket").replace("deleted", "restored")
 LISTED = [STORY_MAP, TICKET_CODE, BOARD_CODE]
 
 
 def seed_checkout_flow_with_graph_files(world) -> None:
     world.project.seed_session(CHECKOUT_FLOW)
-    for path, text in ((TICKET_CODE, TICKET_TEXT), (BOARD_CODE, BOARD_TEXT), (STORY_MAP, STORY_MAP_TEXT), (OLD_MAP, OLD_MAP_TEXT), (STORY_TEST, STORY_TEST_TEXT)):
+    for path, text in ((TICKET_CODE, TICKET_TEXT), (BOARD_CODE, BOARD_TEXT), (STORY_MAP, STORY_MAP_TEXT), (OLD_MAP, OLD_MAP_TEXT), (STORY_TEST, STORY_TEST_TEXT), (RESTORE_TEST, RESTORE_TEST_TEXT)):
         world.project.seed_file(path, text)
 
 

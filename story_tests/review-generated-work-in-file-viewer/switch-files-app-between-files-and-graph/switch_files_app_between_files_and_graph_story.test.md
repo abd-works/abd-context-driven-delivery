@@ -73,10 +73,11 @@ section: body
 
 #### Scenario: The Stories tree holds a story listed only by its story test in code
 
-*Given* the Files app lists only the code formats, so of checkout-flow's Stories files only Delete Ticket's story test  
+*Given* the Files app lists only the code formats, so of checkout-flow's Stories files only Delete Ticket's and Restore Ticket's story tests  
 *When* the Person switches the file bar to the graph view  
-*Then* the Stories tree holds Manage Tickets, Remove Tickets and Delete Ticket  
-  *And* Delete Ticket holds the scenario its story test holds
+*Then* the Stories tree holds Manage Tickets, Remove Tickets and Delete Ticket, read from the folders the story test sits in under story_tests  
+  *And* Delete Ticket holds the scenario its story test holds  
+  *And* Restore Ticket, which has a story test but is not on the markdown map yet
 
 #### Scenario: A story map listed in markdown and drawio is read once, from its markdown
 

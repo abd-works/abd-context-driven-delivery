@@ -23,6 +23,7 @@ from space.session.graph_view_examples import (
     BOARD_CODE,
     LISTED,
     STORY_MAP,
+    RESTORE_TEST,
     STORY_TEST,
     TICKET_CODE,
     node_id_of,
@@ -85,17 +86,21 @@ def _(s):
 
 @shared_stories.scenario("Switch Files App To Graph View", "The Stories tree holds a story listed only by its story test in code")
 def _(s):
-    @s.given("the Files app lists only the code formats, so of the Stories files only Delete Ticket's story test")
+    @s.given("the Files app lists only the code formats, so of the Stories files only Delete Ticket's and Restore Ticket's story tests")
     def _(world):
         seed_checkout_flow_with_graph_files(world)
 
     @s.when("the Person switches the file bar to the graph view")
     def _(world):
-        world.names = names_in(world, [STORY_TEST])
+        world.names = names_in(world, [STORY_TEST, RESTORE_TEST])
 
-    @s.then("the Stories tree holds Manage Tickets, Remove Tickets and Delete Ticket, with the scenario its story test holds")
+    @s.then("the Stories tree holds Manage Tickets, Remove Tickets and Delete Ticket from the story test's folders, with its scenario")
     def _(world):
         expect(world.names).to(contain("Manage Tickets", "Remove Tickets", "Delete Ticket", "a ticket is deleted"))
+
+    @s.then("it holds Restore Ticket too, which has a story test but is not on the markdown map yet")
+    def _(world):
+        expect("Restore Ticket" in world.names).to(equal(True))
 
 
 @shared_stories.scenario("Switch Files App To Graph View", "A story map listed in markdown and drawio is read once, from its markdown")
