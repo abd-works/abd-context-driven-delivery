@@ -11,7 +11,7 @@
       "specification",
       "implementation"
     ],
-    "version": 44
+    "version": 45
   },
   "practices": {
     "stories": {
@@ -20,9 +20,9 @@
           "markdown"
         ],
         "scenarios": [
-          "python",
           "markdown"
-        ]
+        ],
+        "acceptance_tests": []
       }
     },
     "ux": {
