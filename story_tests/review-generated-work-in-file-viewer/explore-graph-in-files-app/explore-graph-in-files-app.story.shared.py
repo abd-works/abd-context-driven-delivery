@@ -98,3 +98,18 @@ def _(s):
     def _(world):
         reread = world.members["reread"]
         expect((reread["file"].endswith("board.py"), reread["owner"], "delete" in world.members)).to(equal((True, "Board", True)))
+
+
+@shared_stories.scenario("Open Calls Across Files In Files App", "Calls open in place only once the graph is read")
+def _(s):
+    @s.given("the Files app lists checkout-flow's files and the graph view was never shown")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person opens ticket.py")
+    def _(world):
+        world.members = world.data_of(session_of(world).graph_members())
+
+    @s.then("its calls show as written, with no fold to open them")
+    def _(world):
+        expect(world.members).to(equal([]))
