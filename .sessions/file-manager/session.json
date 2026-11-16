@@ -11,7 +11,7 @@
       "specification",
       "implementation"
     ],
-    "version": 84
+    "version": 85
   },
   "practices": {
     "stories": {
@@ -28,7 +28,8 @@
         "acceptance_tests": [
           "python"
         ]
-      }
+      },
+      "enabled": false
     },
     "ux": {
       "formats": {
