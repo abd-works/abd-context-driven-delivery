@@ -5,7 +5,7 @@ from pathlib import Path
 from expects import equal, expect
 from mamba import before, context, description, it
 
-from harness.process.git import Git
+from harness.git.git import Git
 
 
 class TimedGit(Git):
