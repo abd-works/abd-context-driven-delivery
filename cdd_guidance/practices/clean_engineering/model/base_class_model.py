@@ -548,6 +548,11 @@ class CleanEngineeringModel(OoadNode):
         self._modules.refill(modules)
 
     @property
+    def modules_title(self) -> str:
+        """The title a modules view is drawn under: the system's name, then what the view shows."""
+        return f"{self.name or 'System'} - Modules Context"
+
+    @property
     def is_modules_view(self) -> bool:
         """True when the model shows modules only: no class carries a member or a drawn relationship."""
         if not self.modules:

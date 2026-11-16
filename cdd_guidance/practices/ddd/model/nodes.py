@@ -378,6 +378,8 @@ class BoundedContextMap:
     def __init__(self) -> None:
         super().__init__()
         self.contexts: list[BoundedContext] = []
+        # The map's own name, as its `# ` heading gives it; none for a map that names itself no title.
+        self.title = ""
 
     def append_context(self, context: BoundedContext) -> None:
         self.contexts.append(context)

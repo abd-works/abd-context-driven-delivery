@@ -734,6 +734,11 @@ with description("the board tools") as self:
                 with it("should show no chip chosen"):
                     expect([chip["label"] for chip in self.markdown_off if chip["is_chosen"]]).to(equal([]))
 
+            with it("should refuse a chip label the story map does not offer, naming the labels it offers"):
+                expect(lambda: self.project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="drawio", is_chosen=True)).to(
+                    raise_error(Exception, contain("offers diagram, markdown, thin_slice"))
+                )
+
             with it("should refuse a format the story map does not write"):
                 expect(lambda: self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="python", is_chosen=True)).to(raise_error(Exception, contain("does not write python")))
 

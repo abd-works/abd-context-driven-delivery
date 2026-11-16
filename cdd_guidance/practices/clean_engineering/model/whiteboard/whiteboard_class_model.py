@@ -289,7 +289,7 @@ class _ModulesBoard(ModulesView):
         for name, cell in self._cells.items():
             cell.holds_sections = any(self._cells[child].holds_modules for child in self._forest.children_of.get(name, []))
         layout = _WhiteboardModuleLayout(self._forest, self._cells).lay_out()
-        board = Whiteboard(f"{self._channel.name or 'System'} - Modules Context")
+        board = Whiteboard(self._channel.modules_title)
         board.add(Label("title", x=layout.start_x, y=layout.start_y - TITLE_ROOM - SUBTITLE_ROOM, text=board.title, size="large"))
         board.add(Label("subtitle", x=layout.start_x, y=layout.start_y - TITLE_ROOM, text=MODULES_SUBTITLE, size="small",
                         wrap=SUBTITLE_WRAP))
