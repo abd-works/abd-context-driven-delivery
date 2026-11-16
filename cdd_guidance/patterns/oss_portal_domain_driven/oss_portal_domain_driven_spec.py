@@ -74,7 +74,7 @@ with description("an OssPortalDomainDriven pattern"):
 
     with context("whose instructions are expanded"):
         with before.each:
-            self.rendered = self.tool.scoped_markdown()
+            self.rendered = self.tool.scoped_markdown
 
         with it("should name every rule"):
             missing = [slug for slug in _ALL_RULE_SLUGS if slug not in self.rendered]

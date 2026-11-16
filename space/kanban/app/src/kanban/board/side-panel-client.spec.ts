@@ -79,13 +79,16 @@ describe('List Ticket Files', () => {
     expect(shownTabs(filesPanel(page)).map(tab => [tab.path, tab.exists])).toEqual([
       ['.context/story-map.md', true],
       ['.context/story-map.drawio', false],
+      ['.context/story-map.whiteboard', false],
+      ['.context/thin-slice.md', false],
+      ['.context/thin-slice.drawio', false],
     ])
   })
 
   it('should show the files of no other practice', async () => {
     const { page } = await board.page()
     await page.files.openFiles(ticketOn(page), [storyMapOn(page)])
-    expect(shownTabs(filesPanel(page)).map(tab => tab.practice)).toEqual(['stories', 'stories'])
+    expect(new Set(shownTabs(filesPanel(page)).map(tab => tab.practice))).toEqual(new Set(['stories']))
   })
 
   it('should show only the changed files while the changed filter is on', () => {
