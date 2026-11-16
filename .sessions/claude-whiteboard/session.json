@@ -7,9 +7,10 @@
   "guidance": {
     "stages": [
       "discovery",
-      "specification"
+      "specification",
+      "implementation"
     ],
-    "version": 18
+    "version": 19
   },
   "practices": {
     "ux": {
