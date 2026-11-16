@@ -9,7 +9,7 @@
     "stages": [
       "specification"
     ],
-    "version": 65
+    "version": 66
   },
   "practices": {
     "stories": {
@@ -41,7 +41,7 @@
           "markdown"
         ]
       },
-      "enabled": true
+      "enabled": false
     },
     "bdd": {
       "formats": {
