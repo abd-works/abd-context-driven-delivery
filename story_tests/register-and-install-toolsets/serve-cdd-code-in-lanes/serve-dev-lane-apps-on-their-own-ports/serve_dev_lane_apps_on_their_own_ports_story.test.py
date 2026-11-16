@@ -8,7 +8,7 @@ from expects import equal, expect
 from harness.diagnostics.examples.lane_app_examples import seed_files_server
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.examples.server_lanes_examples import seed_lanes
-from harness.mcp.server_lanes import ServerLanes
+from harness.mcp.server_lanes import ServerLane, ServerLanes
 from story_test import and_, given, scenario, story, then, when
 
 # Epic: Register And Install Toolsets
@@ -46,15 +46,15 @@ with story("Serve Dev Lane Apps On Their Own Ports"):
             self.lanes = seed_lanes(Path(tempfile.mkdtemp()))
             self.home = CddHome(self.lanes.dev.home.folder)
         with when("the server running from that home asks which lane it serves"):
-            # ServerLanes.serving(home) <- ServerLane dev
-            self.lane = ServerLanes.serving(self.home)
+            # ServerLane.from_home(home) -> ServerLanes.from_serving(home) <- ServerLane dev
+            self.lane = ServerLane.from_home(self.home)
         with then("it serves the dev lane"):
             expect(self.lane.name).to(equal(ServerLanes.DEV))
     with scenario("Know the stable lane from the home the server runs from"):
         with given("the stable lane's home"):
             self.home = CddHome(seed_lanes(Path(tempfile.mkdtemp())).stable.home.folder)
         with when("the server running from that home asks which lane it serves"):
-            # ServerLanes.serving(home) <- ServerLane stable
-            self.lane = ServerLanes.serving(self.home)
+            # ServerLane.from_home(home) -> ServerLanes.from_serving(home) <- ServerLane stable
+            self.lane = ServerLane.from_home(self.home)
         with then("it serves the stable lane"):
             expect(self.lane.name).to(equal(ServerLanes.STABLE))

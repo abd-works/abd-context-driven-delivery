@@ -19,10 +19,10 @@ import time
 from ctypes import wintypes
 from pathlib import Path
 
-from expects import be_true, contain, equal, expect
+from expects import be_true, contain, equal, expect, raise_error
 from mamba import before, description, it
 
-from harness.process.process import RunningProcess
+from harness.process.process import OutsideJobStartFailed, RunningProcess, Wmi
 
 # A job whose processes all end when its last handle closes, and which lets none of them break away.
 _KILL_ON_JOB_CLOSE = 0x2000
@@ -118,3 +118,11 @@ with description("a background start from a chat's Windows job that refuses brea
 
     with it("should end when the command ends, leaving nothing running"):
         expect(not self.windows or _wait_for(lambda: not self.started.alive, _WAIT_SECONDS)).to(equal(True))
+
+
+with description("WMI asked to create a process"):
+    with it("should refuse with OutsideJobStartFailed when the folder it would run in is not there"):
+        if sys.platform == "win32":
+            missing = str(Path(tempfile.mkdtemp(prefix="outside-job-")) / "not-there")
+            command_line = subprocess.list2cmdline([sys.executable, "-c", "pass"])
+            expect(lambda: Wmi().create(command_line, missing, dict(os.environ))).to(raise_error(OutsideJobStartFailed))

@@ -57,6 +57,14 @@ class ServerLane:
         self.daemon = McpDaemon(home, address)
         self._app_port_offset = app_port_offset
 
+    @classmethod
+    def from_home(cls, home: CddHome | None = None) -> ServerLane:
+        """The lane the server running from home serves, by default the home this process runs from: the dev lane when
+        home is the dev lane's, else the stable lane."""
+        running_from = home or CddHome()
+        lanes = ServerLanes.from_serving(running_from)
+        return lanes.dev if lanes.dev.home.folder == running_from.folder else lanes.stable
+
     @property
     def home(self) -> CddHome:
         return self.daemon.home
@@ -109,24 +117,13 @@ class ServerLanes:
         )
 
     @classmethod
-    def from_serving(cls, home: CddHome, address: McpAddress) -> ServerLanes:
-        """The lanes as the server running from home on address sees them, whichever of the two it is."""
-        if not cls._is_dev_home(home):
+    def from_serving(cls, home: CddHome, address: McpAddress | None = None) -> ServerLanes:
+        """The lanes as the server running from home on address sees them, whichever of the two it is; with no address,
+        on the lanes' own ports."""
+        if home.folder.name != cls.DEV_FOLDER:
             return cls(home, address)
-        return cls(CddHome(home.folder.parent), McpAddress(address.port - cls.DEV_PORT_AFTER_STABLE))
-
-    @classmethod
-    def serving(cls, home: CddHome | None = None) -> ServerLane:
-        """The lane the server running from home serves, by default the home this process runs from: the dev lane when
-        home is the dev lane's, else the stable lane."""
-        running_from = home or CddHome()
-        if not cls._is_dev_home(running_from):
-            return cls(running_from).stable
-        return cls(CddHome(running_from.folder.parent)).dev
-
-    @classmethod
-    def _is_dev_home(cls, home: CddHome) -> bool:
-        return home.folder.name == cls.DEV_FOLDER
+        stable_address = McpAddress(address.port - cls.DEV_PORT_AFTER_STABLE) if address is not None else None
+        return cls(CddHome(home.folder.parent), stable_address)
 
     def for_project(self, project: Path) -> ServerLane:
         if self._is_in_main_checkout(Path(project).resolve()):
