@@ -202,6 +202,17 @@ class CddHome:
     def pinned_checkout(self) -> Path:
         return self.folder / "runtime"
 
+    def take_language_adapters(self, written: Path, ide_folder: str) -> Path:
+        """Copy the language adapters an install wrote, the folder written, into the pinned runtime under its IDE folder
+        ide_folder, in place of any an earlier pin left. The apps this home's server launches run from the runtime and
+        import the CDD domain through those adapters, which git never copies there. A server started from the runtime
+        keeps its folders open on Windows, so they outlive the removal empty and the copy writes into them. Answers
+        where they went."""
+        target = self.pinned_checkout / ide_folder / "language-adapters"
+        shutil.rmtree(target, ignore_errors=True)
+        shutil.copytree(written, target, dirs_exist_ok=True)
+        return target
+
     @property
     def is_installed(self) -> bool:
         return bool(self._runtime().get("source"))

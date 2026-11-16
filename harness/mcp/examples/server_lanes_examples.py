@@ -28,6 +28,20 @@ LOCKED_LEDGER_TOOL = "call-outcomes.post_entry"
 LEDGER_IS_LOCKED = "LedgerIsLocked"
 
 
+# Seed: the IDE folder an install writes the language adapters under, and one adapter it wrote there.
+IDE_FOLDER = ".claude"
+ADAPTER_FILE = "typescript/cdd-shared.ts"
+ADAPTER_TEXT = "export const shared = true\n"
+
+
+def seed_written_language_adapters(checkout: Path) -> Path:
+    """The language adapters an install from checkout wrote under its IDE folder, as the folder that holds them."""
+    adapters = checkout / IDE_FOLDER / "language-adapters"
+    (adapters / ADAPTER_FILE).parent.mkdir(parents=True, exist_ok=True)
+    (adapters / ADAPTER_FILE).write_text(ADAPTER_TEXT, encoding="utf-8")
+    return adapters
+
+
 def seed_lanes(root: Path) -> ServerLanes:
     """A stable lane whose home is ``root/.cdd``, and the dev lane beside it."""
     return ServerLanes(CddHome(root / ".cdd"), McpAddress(STABLE_PORT))
