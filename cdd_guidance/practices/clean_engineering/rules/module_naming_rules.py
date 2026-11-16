@@ -50,29 +50,27 @@ class NoModulePerClass(ProductionCodeRule):
                 f"Module {node.name!r} module-context uses 'Child : Parent'; "
                 "use model fidelity for generalisation."
             ]
-        if _holds_modules(node, context):
+        if self._holds_modules(node, context):
             return []
-        if _public_classes_in(node, context) == 1 and node.get_fact("public_source_files", 0) <= 1:
+        if self._public_classes_in(node, context) == 1 and node.get_fact("public_source_files", 0) <= 1:
             return [
                 f"Module {node.name!r} exposes a single class in one file; "
                 "group cohesive classes or merge into an existing module."
             ]
         return []
 
+    def _holds_modules(self, folder_node: "Node", context: "RuleCheckContext") -> bool:
+        """A folder above folders of code of its own, modules with a card or packages without one, may hold only the base
+        they share, or the class that names the whole: Bdd in `bdd/` above its `model/` and `rules/` packages. It groups
+        those folders, so it is not a module of one class."""
+        return any(child.type in ("Module", "Package") for child in context.children(folder_node, "owns"))
 
-def _holds_modules(folder_node: "Node", context: "RuleCheckContext") -> bool:
-    """A folder above folders of code of its own, modules with a card or packages without one, may hold only the base
-    they share, or the class that names the whole: Bdd in `bdd/` above its `model/` and `rules/` packages. It groups
-    those folders, so it is not a module of one class."""
-    return any(child.type in ("Module", "Package") for child in context.children(folder_node, "owns"))
-
-
-def _public_classes_in(folder_node: "Node", context: "RuleCheckContext") -> int:
-    """The classes the folder's production files declare whose names are public; a spec's classes are not its seam."""
-    count = 0
-    for class_node in context.nodes("OoadClass"):
-        file = class_node.source.file or ""
-        public_file = not file.rsplit("/", 1)[-1].startswith("_") and not is_test_code(file)
-        if public_file and folder_node in context.targets(class_node, "belongsTo"):
-            count += 1
-    return count
+    def _public_classes_in(self, folder_node: "Node", context: "RuleCheckContext") -> int:
+        """The classes the folder's production files declare whose names are public; a spec's classes are not its seam."""
+        count = 0
+        for class_node in context.nodes("OoadClass"):
+            file = class_node.source.file or ""
+            public_file = not file.rsplit("/", 1)[-1].startswith("_") and not is_test_code(file)
+            if public_file and folder_node in context.targets(class_node, "belongsTo"):
+                count += 1
+        return count

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from typing import Optional
+from typing import List, Optional, TypedDict, Union
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
@@ -15,9 +15,71 @@ from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
 
+class PropertyRecord(TypedDict, total=False):
+    """A property as a JSON model document writes it."""
+
+    name: str
+    typeHint: str
+    description: str
+
+
+class OperationRecord(TypedDict, total=False):
+    """An operation as a JSON model document writes it."""
+
+    name: str
+    parameters: List[str]
+    returnType: str
+    description: str
+
+
+class RelationshipRecord(TypedDict, total=False):
+    """A relationship as a JSON model document writes it."""
+
+    target: str
+    kind: str
+    cardinality: str
+    description: str
+
+
+class ClassRecord(TypedDict, total=False):
+    """A class as a JSON model document writes it, with its members and relationships."""
+
+    name: str
+    sequentialOrder: int
+    intent: str
+    collaborators: List[str]
+    stereotypes: List[str]
+    bases: List[str]
+    properties: List[PropertyRecord]
+    operations: List[OperationRecord]
+    relationships: List[RelationshipRecord]
+
+
+class ModuleRecord(TypedDict, total=False):
+    """A module as a JSON model document writes it; seam terms and dependencies may be one comma-separated string."""
+
+    name: str
+    sequentialOrder: int
+    description: str
+    seam: str
+    constraint: str
+    seamTerms: Union[List[str], str]
+    seam_terms: Union[List[str], str]
+    dependencies: Union[List[str], str]
+    classes: List[ClassRecord]
+
+
+class ModelRecord(TypedDict, total=False):
+    """A JSON model document: its name, then its modules, or its classes when it has no modules."""
+
+    name: str
+    modules: List[ModuleRecord]
+    classes: List[ClassRecord]
+
+
 class JsonProperty(Property):
     @classmethod
-    def from_record(cls, record: dict) -> "JsonProperty":
+    def from_record(cls, record: PropertyRecord) -> "JsonProperty":
         loaded = cls(
             name=record["name"],
             type_hint=record.get("typeHint", ""),
@@ -28,7 +90,7 @@ class JsonProperty(Property):
 
 class JsonOperation(Operation):
     @classmethod
-    def from_record(cls, record: dict) -> "JsonOperation":
+    def from_record(cls, record: OperationRecord) -> "JsonOperation":
         return cls(
             name=record["name"],
             parameters=record.get("parameters", []),
@@ -39,7 +101,7 @@ class JsonOperation(Operation):
 
 class JsonRelationship(Relationship):
     @classmethod
-    def from_record(cls, record: dict) -> "JsonRelationship":
+    def from_record(cls, record: RelationshipRecord) -> "JsonRelationship":
         return cls(
             target=record["target"],
             kind=record.get("kind", ""),
@@ -65,7 +127,7 @@ class JsonOoadClass(OoadClass):
         return loaded
 
     @classmethod
-    def from_record(cls, record: dict, sequential_order: int) -> "JsonOoadClass":
+    def from_record(cls, record: ClassRecord, sequential_order: int) -> "JsonOoadClass":
         loaded = cls(
             name=record["name"],
             sequential_order=record.get("sequentialOrder", sequential_order),
@@ -88,7 +150,7 @@ class JsonModule(Module):
     class_type = JsonOoadClass
 
     @classmethod
-    def from_record(cls, record: dict, sequential_order: int) -> "JsonModule":
+    def from_record(cls, record: ModuleRecord, sequential_order: int) -> "JsonModule":
         seam_terms = record.get("seamTerms") or record.get("seam_terms") or []
         dependencies = record.get("dependencies") or []
         if isinstance(seam_terms, str):
@@ -116,25 +178,28 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
     module_type = JsonModule
 
     def parse(self, text: str) -> "JsonCleanEngineeringModel":
+        """Read a JSON model document into this model's own modules, and return it."""
+        return self.take_record(self._decoded(text))
+
+    def _decoded(self, text: str) -> ModelRecord:
         try:
-            data = json.loads(text)
+            return json.loads(text)
         except json.JSONDecodeError as exc:
             raise UnreadableSource(f"Invalid JSON: {exc}") from exc
-        model = self
-        model.name = data.get("name", "")
-        model.modules = []
-        if "modules" in data:
-            for index, record in enumerate(data["modules"], 1):
-                model.modules.append(JsonModule.from_record(record, index))
-        elif "classes" in data:
+
+    def take_record(self, record: ModelRecord) -> "JsonCleanEngineeringModel":
+        """Become the model a JSON model document holds: its modules, or one unnamed module of its classes."""
+        self.name = record.get("name", "")
+        self.modules = []
+        if "modules" in record:
+            self.modules = [JsonModule.from_record(module, index) for index, module in enumerate(record["modules"], 1)]
+        elif "classes" in record:
             module = JsonModule(name="", sequential_order=1)
-            for index, record in enumerate(data["classes"], 1):
-                module.classes.append(JsonOoadClass.from_record(record, index))
-            if module.classes:
-                model.modules.append(module)
+            module.classes = [JsonOoadClass.from_record(oclass, index) for index, oclass in enumerate(record["classes"], 1)]
+            self.modules = [module] if module.classes else []
         else:
             raise UnreadableSource("JSON must contain a 'modules' or 'classes' key")
-        return model
+        return self
 
     def render(self, canonical: Optional[CleanEngineeringModel] = None) -> str:
         if canonical is not None and canonical is not self:

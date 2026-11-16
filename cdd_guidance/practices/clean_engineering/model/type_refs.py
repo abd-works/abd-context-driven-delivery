@@ -14,11 +14,8 @@ def name_with_type(name: str, type_hint: str) -> str:
     return f"{name}: {type_hint}" if type_hint else name
 
 
-def is_primitive_type(type_name: str) -> bool:
-    if not type_name:
-        return True
-    lowered = type_name.lower().strip()
-    if lowered in {
+_PRIMITIVE_TYPE_NAMES = frozenset(
+    {
         "void",
         "none",
         "null",
@@ -34,7 +31,14 @@ def is_primitive_type(type_name: str) -> bool:
         "any",
         "unknown",
         "object",
-    }:
+    }
+)
+
+
+def is_primitive_type(type_name: str) -> bool:
+    if not type_name:
+        return True
+    if type_name.lower().strip() in _PRIMITIVE_TYPE_NAMES:
         return True
     return type_name[0].islower()
 

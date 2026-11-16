@@ -60,26 +60,6 @@ _LOAD_FACTORY = re.compile(r"^load(?:[A-Z_].*)?$")
 _TYPE_NAME = re.compile(r"[A-Za-z_]\w*")
 
 
-def _allows_static_factory_operation(name: str) -> bool:
-    if name in _STATIC_FACTORY_NAMES or name in _STATIC_FACTORY_EXTRA_NAMES:
-        return True
-    if name.startswith("from_"):
-        return True
-    if _CAMEL_FROM_FACTORY.match(name):
-        return True
-    return _LOAD_FACTORY.match(name) is not None
-
-
-def _makes_its_own_class(operation: "Node") -> bool:
-    """A factory: a class-level operation that makes its own class from what it is given, such as `for_project(root)
-    -> ProjectApproach`, `every(folder) -> list[Practice]`, or `-> Self`; no instance exists yet to call it on. One
-    that takes nothing, such as `current() -> Board`, hands out a global instance, which a caller should hold instead."""
-    if not parameters_of(operation):
-        return False
-    spelled = set(_TYPE_NAME.findall(str(operation.get_fact("return_type") or "")))
-    return bool(spelled & {operation.get_fact("owner", ""), "Self"})
-
-
 _VAGUE_PARAMETER_NAMES = frozenset({"options", "opts", "config", "settings"})
 
 GENERIC_NAMES = {
@@ -104,15 +84,10 @@ def _parameter_names(node: "Node") -> list[str]:
     return [parameter.name for parameter in parameters_of(node)]
 
 
-def _setter_parameter(name: str, property_setter: bool) -> bool:
-    """`value` in a setter, TypeScript's `set email(value)` or Python's `@email.setter`: the property names the intent."""
-    return name == "value" and property_setter
-
-
 class UseExplicitDependencies(ProductionCodeRule):
     """A collaborator a constructor builds that its caller cannot hand it. The parser leaves out what a caller can
     replace or what the class owns: a failure it raises, a parameter's default, a part built from its own state. This
-    rule passes values, failures, and collections (``ClassGraph.is_value``) and the peers an Entity composes."""
+    rule passes values, failures, and collections (``ClassKinds.is_value``) and the peers an Entity composes."""
 
     slug = "use-explicit-dependencies"
     node_types = ("OoadClass",)
@@ -120,7 +95,7 @@ class UseExplicitDependencies(ProductionCodeRule):
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         classes = context.index(ClassGraph)
         for type_name in node.get_fact("constructs", []):
-            if type_name == node.name or classes.is_value(type_name):
+            if type_name == node.name or classes.kinds.is_value(type_name):
                 continue
             # <<Entity>> / <<Aggregate Root>> may compose sibling types from the same file.
             if node.get_fact("composes_peers") and type_name in node.get_fact("peer_names", []):
@@ -243,7 +218,7 @@ class UseIntentionRevealingNames(ProductionCodeRule):
         if not re.match(r"^[\w$]+$", node.name) or node.name in _CONVENTIONAL_PARAMETER_NAMES:
             return []
         operation = node.get_fact("operation_name", "")
-        if _setter_parameter(node.name, bool(node.get_fact("property_setter"))):
+        if self._setter_parameter(node):
             return []
         if operation == "text" and node.name in {"value", "rawField"}:
             return []
@@ -252,6 +227,11 @@ class UseIntentionRevealingNames(ProductionCodeRule):
         if len(node.name) < 3 or node.name.lower() in GENERIC_NAMES:
             return [f"Parameter '{node.name}' does not reveal intent."]
         return []
+
+    def _setter_parameter(self, node: "Node") -> bool:
+        """`value` in a setter, TypeScript's `set email(value)` or Python's `@email.setter`: the property names the
+        intent."""
+        return node.name == "value" and bool(node.get_fact("property_setter"))
 
 
 class UseConsistentNaming(ProductionCodeRule):
@@ -288,10 +268,29 @@ class PreferInstanceOperations(ProductionCodeRule):
         is_classmethod = bool(node.get_fact("is_classmethod"))
         if not is_static and not is_classmethod:
             return []
-        if _allows_static_factory_operation(node.name) or _makes_its_own_class(node):
+        if self._allows_static_factory_operation(node.name) or self._makes_its_own_class(node):
             return []
         kind = "classmethod" if is_classmethod else "staticmethod"
         return [f"Operation '{node.name}' is a {kind}; prefer an instance operation."]
+
+    def _allows_static_factory_operation(self, name: str) -> bool:
+        if name in _STATIC_FACTORY_NAMES or name in _STATIC_FACTORY_EXTRA_NAMES:
+            return True
+        if name.startswith("from_"):
+            return True
+        if _CAMEL_FROM_FACTORY.match(name):
+            return True
+        return _LOAD_FACTORY.match(name) is not None
+
+    def _makes_its_own_class(self, operation: "Node") -> bool:
+        """A factory: a class-level operation that makes its own class from what it is given, such as
+        `for_project(root) -> ProjectApproach`, `every(folder) -> list[Practice]`, or `-> Self`; no instance exists yet
+        to call it on. One that takes nothing, such as `current() -> Board`, hands out a global instance, which a caller
+        should hold instead."""
+        if not parameters_of(operation):
+            return False
+        spelled = set(_TYPE_NAME.findall(str(operation.get_fact("return_type") or "")))
+        return bool(spelled & {operation.get_fact("owner", ""), "Self"})
 
 
 class UsePropertyNotAccessor(ProductionCodeRule):
@@ -320,16 +319,8 @@ class EliminateDuplication(PracticeGraphRule):
 
     def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
         operations = [node for node in context.nodes("Operation") if not is_test_code(node.source.file)]
-        seen: dict[str, str] = {}
-        hits: list[tuple[str, str]] = []
-        copied: set[str] = set()
-        for op_node in [node for node in operations if self._compared(node)]:
-            fingerprint = op_node.get_fact("body_fingerprint", "")
-            if fingerprint in seen:
-                copied.add(op_node.node_id)
-                hits.append((op_node.node_id, f"Operation '{op_node.name}' duplicates the body of '{seen[fingerprint]}'."))
-            else:
-                seen[fingerprint] = op_node.name
+        hits = self._exact_copies(operations)
+        copied = {node_id for node_id, _ in hits}
         near = NearCopies([node for node in operations if node.node_id not in copied])
         for copy, original, shared in near.pairs():
             hits.append(
@@ -339,6 +330,19 @@ class EliminateDuplication(PracticeGraphRule):
                     f"{round(100 * shared)}% of their code is the same. Give the shared logic one function.",
                 )
             )
+        return hits
+
+    def _exact_copies(self, operations: list["Node"]) -> list[tuple[str, str]]:
+        """Each operation whose body has the same fingerprint as one before it; a near copy is only looked for among the
+        rest, so a body is reported once."""
+        seen: dict[str, str] = {}
+        hits: list[tuple[str, str]] = []
+        for operation in [node for node in operations if self._compared(node)]:
+            fingerprint = operation.get_fact("body_fingerprint", "")
+            if fingerprint in seen:
+                hits.append((operation.node_id, f"Operation '{operation.name}' duplicates the body of '{seen[fingerprint]}'."))
+            else:
+                seen[fingerprint] = operation.name
         return hits
 
 
@@ -354,8 +358,7 @@ class EliminateDuplication(PracticeGraphRule):
         call = self._sole_call(operation.get_fact("body_text") or "")
         return call is not None and all(isinstance(value, ast.Constant) for value in [*call.args, *(keyword.value for keyword in call.keywords)])
 
-    @staticmethod
-    def _sole_call(body: str) -> ast.Call | None:
+    def _sole_call(self, body: str) -> ast.Call | None:
         """The call a Python body makes as its one statement, its docstring aside; none for any other body."""
         try:
             statements = ast.parse(textwrap.dedent(body)).body

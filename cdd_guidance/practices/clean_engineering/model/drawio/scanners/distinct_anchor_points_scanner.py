@@ -33,15 +33,14 @@ class DistinctAnchorPointsScanner(DrawioScanner):
                 f"default anchor - {', '.join(page.describe(edge) for edge in edges)}",
             )
             for (cell_id, end, anchor), edges in users.items()
-            if len(edges) > 1 and not _one_trunk(edges)
+            if len(edges) > 1 and not self._one_trunk(edges)
         ]
 
     def _anchor(self, edge: ET.Element, end: str) -> tuple:
         return tuple(round(value, ANCHOR_PRECISION) if value is not None else "def" for value in anchor_fractions(edge, end))
 
-
-def _one_trunk(edges: list[ET.Element]) -> bool:
-    return all(share_inheritance_trunk(edges[0], edge) for edge in edges[1:])
+    def _one_trunk(self, edges: list[ET.Element]) -> bool:
+        return all(share_inheritance_trunk(edges[0], edge) for edge in edges[1:])
 
 
 if __name__ == "__main__":

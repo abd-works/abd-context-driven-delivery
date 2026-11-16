@@ -172,19 +172,19 @@ class CodeClass(OoadClass):
     def constructor_parameters(self, constructor: Optional[Operation]) -> List[tuple]:
         """(name, type hint) for each constructor parameter: the constructor's own, else the class properties.
         A ``(...)`` constructor names no parameters of its own, so it takes the properties too."""
-        if constructor is None or _elides_parameters(constructor):
+        if constructor is None or self._elides_parameters(constructor):
             return [(prop.name, prop.type_hint) for prop in self.properties]
         return [(parameter.name, parameter.type_hint) for parameter in constructor.parameters]
+
+    def _elides_parameters(self, constructor: Operation) -> bool:
+        """True for a ``(...)`` constructor, which leaves its parameters to the class's properties."""
+        return bool(constructor.parameters) and all(parameter.name.strip() == "..." for parameter in constructor.parameters)
 
 
 class CodeModule(Module):
     """A module as one language reads and writes it: its classes and nested modules are that language's."""
 
     class_type: type = CodeClass
-
-
-def _elides_parameters(constructor: Operation) -> bool:
-    return bool(constructor.parameters) and all(parameter.name.strip() == "..." for parameter in constructor.parameters)
 
 
 class CodeCleanEngineeringModel(CleanEngineeringModel):
@@ -238,6 +238,15 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         stand_in = oclass.stand_in_lines()
         if stand_in is not None:
             return stand_in
+        groups = self._member_groups(oclass, kept)
+        lines = oclass.opening(known_names)
+        for index, group in enumerate(groups):
+            lines.extend(([""] if index else []) + group)
+        return lines + oclass.closing(bool(groups))
+
+    def _member_groups(self, oclass: CodeClass, kept: "CodeCleanEngineeringModel") -> List[List[str]]:
+        """The class's members as blocks a blank line separates: its properties, its constructor, then each operation
+        with the body kept from the previous file. A contract writes no constructor and no private operation."""
         contract = oclass.is_contract
         groups: List[List[str]] = []
         properties = [line for prop in oclass.properties for line in prop.note_lines() + prop.lines(contract)]
@@ -251,10 +260,7 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
                 continue
             previous = kept.operation_body(oclass.name, operation.name)
             groups.append(self.render_operation(oclass, operation, previous))
-        lines = oclass.opening(known_names)
-        for index, group in enumerate(groups):
-            lines.extend(([""] if index else []) + group)
-        return lines + oclass.closing(bool(groups))
+        return groups
 
     def render_operation(self, oclass: CodeClass, operation: CodeOperation, previous: CodeBody) -> List[str]:
         signature = operation.signature(oclass.is_contract)

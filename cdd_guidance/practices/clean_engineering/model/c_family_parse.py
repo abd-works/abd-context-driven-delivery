@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from typing import Iterator
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     MODULE_FUNCTION_HOLDER,
@@ -10,6 +11,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 )
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import ClassHead
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
 from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
@@ -53,13 +55,23 @@ _COMMENT_OR_STRING_RE = re.compile(r"//[^\n]*|/\*.*?\*/|" + _STRING_RE.pattern, 
 # A declared field, `name: Type;` or `name: Type = value;`, with its modifiers. Like `_BODILESS_RE`, its start stays on
 # its own line.
 _FIELD_RE = re.compile(
-    r"^[ \t]*((?:(?:public|private|protected|readonly|static|declare|override)\s+)*)(\w+)\s*:\s*([^;=\n]+?)(?:\s*=\s*[^;\n]*)?\s*;",
+    r"^[ \t]*(?P<modifiers>(?:(?:public|private|protected|readonly|static|declare|override)\s+)*)(?P<name>\w+)\s*:\s*(?P<type>[^;=\n]+?)(?:\s*=\s*[^;\n]*)?\s*;",
     re.M,
 )
 _ASSIGN_FIELD_RE = re.compile(
-    r"^[ \t]*(?:(?:public|private|protected|readonly|static|declare|override)\s+)+(\w+)\s*=",
+    r"^[ \t]*(?P<modifiers>(?:(?:public|private|protected|readonly|static|declare|override)\s+)+)(?P<name>\w+)\s*=",
     re.M,
 )
+# Names a method header pattern also matches that declare no method: control statements, and the constructor, which
+# the constructor pattern reads.
+_NOT_METHOD_NAMES = frozenset({"if", "for", "while", "switch", "catch", "class", "constructor"})
+# How far before a method's header its modifiers (`private static`) can sit.
+_MODIFIER_LOOKBACK = 24
+_GETTER_OR_SETTER_RE = re.compile(r"\b[gs]et\s+\w+\s*\(")
+_STATIC_RE = re.compile(r"\bstatic\b")
+_PRIVATE_RE = re.compile(r"\bprivate\b")
+
+
 class CFamilyParse:
     """The reading every brace-language class model shares: TypeScript, JavaScript, and Java. The model it is mixed
     into holds the language it reads and fills its own modules, classes, and members from the text."""
@@ -101,29 +113,31 @@ class CFamilyParse:
         return CodeBody(self._text[:line_start].rstrip(), self.language)
 
     def _append_classes(self, module: Module) -> None:
-        class_order = 1
         for match in self._class_heads:
             body, body_start = self._brace_body(self._text, self._body_open(match.end()))
             if body is None:
                 continue
-            self._body_start = body_start
-            head = ClassHead.above(self._text[: match.start()])
-            oclass = self.class_type(
-                name=match.group(1),
-                sequential_order=class_order,
-                line=self._line_at(self._text, match.start()),
-            )
-            head.documented.describe(oclass)
-            oclass.stereotypes = head.stereotypes
-            oclass.end_line = self._line_at(self._text, body_start + len(body))
-            oclass.bases = self._bases(self._text[match.end() : body_start]) + head.implemented
-            oclass.operations = self._methods_from_body(body, match.group(1)) + self._bodiless_members(body)
-            self._prepend_constructors(oclass, body)
-            oclass.properties = self._fields_from_body(oclass, body)
-            self._derive_member_relationships(oclass)
-            self._load_body_facts(oclass)
-            module.classes.append(oclass)
-            class_order += 1
+            self._class_body, self._body_start = body, body_start
+            module.classes.append(self._read_class(match, len(module.classes) + 1))
+
+    def _read_class(self, match: re.Match, class_order: int) -> OoadClass:
+        """The class declared at match, whose body this parse holds, with its head, heritage, and members."""
+        head = ClassHead.above(self._text[: match.start()])
+        oclass = self.class_type(name=match.group(1), sequential_order=class_order, line=self._line_at(self._text, match.start()))
+        head.documented.describe(oclass)
+        oclass.stereotypes = head.stereotypes
+        oclass.end_line = self._line_at(self._text, self._body_start + len(self._class_body))
+        oclass.bases = self._bases(self._text[match.end() : self._body_start]) + head.implemented
+        self._read_members(oclass)
+        return oclass
+
+    def _read_members(self, oclass: OoadClass) -> None:
+        """The operations and fields the class body declares, measured once the class holds them."""
+        oclass.operations = self._methods_from_body(oclass.name) + self._bodiless_members()
+        self._prepend_constructors(oclass)
+        oclass.properties = self._fields_from_body()
+        self._derive_member_relationships(oclass)
+        self._load_body_facts(oclass)
 
     def _bases(self, heritage: str) -> list[str]:
         """Every class the heritage clause between the name and the body extends or implements."""
@@ -135,15 +149,15 @@ class CFamilyParse:
             if base.strip()
         ]
 
-    def _prepend_constructors(self, oclass: OoadClass, body: str) -> None:
-        for ctor in _CTOR_RE.finditer(body):
-            ctor_body, _rel = self._brace_body(body, ctor.end() - 1)
+    def _prepend_constructors(self, oclass: OoadClass) -> None:
+        for ctor in _CTOR_RE.finditer(self._class_body):
+            ctor_body, _rel = self._brace_body(self._class_body, ctor.end() - 1)
             if ctor_body is None:
                 continue
-            op = self.operation_type(name="constructor", parameters=self._split_params(ctor.group(1)))
-            op.line = self._line_at(self._text, self._body_start + ctor.start())
-            self._apply_method_end_line(op, body, ctor.end() - 1)
-            oclass.operations.insert(0, self._operation_from_body(op, ctor_body))
+            operation = self.operation_type(name="constructor", parameters=self._split_params(ctor.group(1)))
+            operation.line = self._line_at(self._text, self._body_start + ctor.start())
+            self._apply_method_end_line(operation, ctor.end() - 1)
+            oclass.operations.insert(0, self._operation_from_body(operation, ctor_body))
 
     def _attach_top_level(self, module: Module) -> None:
         top_ops = self._top_level_functions()
@@ -156,31 +170,36 @@ class CFamilyParse:
         module.classes.append(holder)
 
     def _top_level_functions(self) -> list[Operation]:
-        ops: list[Operation] = []
         class_spans = self._class_spans()
-        for match in _TOP_FN_RE.finditer(self._text):
-            if any(start <= match.start() <= end for start, end in class_spans):
-                continue
-            body, body_start = self._brace_body(self._text, match.end() - 1)
-            if body is None:
-                continue
-            op = self.operation_type(name=match.group(1), parameters=self._split_params(match.group(2) or ""))
-            op.line = self._line_at(self._text, match.start())
-            op.end_line = self._line_at(self._text, body_start + len(body))
-            ops.append(self._operation_from_body(op, body))
-        for match in _TOP_ARROW_RE.finditer(self._text):
-            if any(start <= match.start() <= end for start, end in class_spans):
-                continue
-            body = self._arrow_body(match.end())
-            op = self.operation_type(
-                name=match.group(1),
-                parameters=self._split_params(match.group(2) or ""),
-                return_type=(match.group(3) or "").strip(),
-            )
-            op.line = self._line_at(self._text, match.start())
-            op.end_line = self._line_at(self._text, self._text.find(body, match.end()) + len(body))
-            ops.append(self._operation_from_body(op, body))
-        return sorted(ops, key=lambda op: op.line)
+        functions = [self._function_operation(match) for match in self._outside(_TOP_FN_RE.finditer(self._text), class_spans)]
+        arrows = [self._arrow_operation(match) for match in self._outside(_TOP_ARROW_RE.finditer(self._text), class_spans)]
+        return sorted([operation for operation in functions if operation is not None] + arrows, key=lambda operation: operation.line)
+
+    def _outside(self, matches: Iterator[re.Match], class_spans: list[tuple[int, int]]) -> list[re.Match]:
+        """The matches that start outside every class body: a class's methods are no top-level functions."""
+        return [match for match in matches if not any(start <= match.start() <= end for start, end in class_spans)]
+
+    def _function_operation(self, match: re.Match) -> Operation | None:
+        """The top-level `function` declared at match; None when its braces never close."""
+        body, body_start = self._brace_body(self._text, match.end() - 1)
+        if body is None:
+            return None
+        operation = self.operation_type(name=match.group(1), parameters=self._split_params(match.group(2) or ""))
+        operation.line = self._line_at(self._text, match.start())
+        operation.end_line = self._line_at(self._text, body_start + len(body))
+        return self._operation_from_body(operation, body)
+
+    def _arrow_operation(self, match: re.Match) -> Operation:
+        """The top-level constant arrow function declared at match."""
+        body = self._arrow_body(match.end())
+        operation = self.operation_type(
+            name=match.group(1),
+            parameters=self._split_params(match.group(2) or ""),
+            return_type=(match.group(3) or "").strip(),
+        )
+        operation.line = self._line_at(self._text, match.start())
+        operation.end_line = self._line_at(self._text, self._text.find(body, match.end()) + len(body))
+        return self._operation_from_body(operation, body)
 
     def _arrow_body(self, start: int) -> str:
         """An arrow function's body: its braces when it has them, else the expression on the rest of its line."""
@@ -199,150 +218,163 @@ class CFamilyParse:
                 spans.append((body_start, body_start + len(body)))
         return spans
 
-    def _methods_from_body(self, class_body: str, class_name: str) -> list[Operation]:
-        ops: list[Operation] = []
+    def _methods_from_body(self, class_name: str) -> list[Operation]:
+        operations: list[Operation] = []
         position = 0
-        while (match := _METHOD_RE.search(class_body, position)) is not None:
-            name = match.group(1)
-            name_start = match.start(1)
-            # A name after a dot is a call on something (`this.store.change(`), not a method this class declares. The
-            # check reads the character before the name, since a match can open on the full stop ending a comment above.
-            if (name_start > 0 and class_body[name_start - 1] == ".") or name in {"if", "for", "while", "switch", "catch", "class", "constructor"}:
-                position = name_start + len(name)
-                continue
-            op_name = "constructor" if class_name and name == class_name else name
-            method_body, body_start = self._brace_body(class_body, match.end() - 1)
+        while (match := _METHOD_RE.search(self._class_body, position)) is not None:
+            method_body, body_start = self._method_body(match)
             if method_body is None:
-                position = name_start + len(name)
+                position = match.end(1)
                 continue
-            # Reading on after the body keeps a statement inside it, such as `for (…) {`, from being taken for the next header.
+            # Reading on after the body keeps a statement inside it, such as `for (...) {`, from being taken for the next header.
             position = body_start + len(method_body) + 1
-            op = self.operation_type(
-                name=op_name,
-                parameters=self._split_params(match.group(2) or ""),
-                return_type=(match.group(3) or "").strip(),
-            )
-            header = match.group(0)
-            header_start = match.start() + len(header) - len(header.lstrip())
-            op.line = self._line_at(self._text, self._body_start + header_start)
-            self._apply_method_end_line(op, class_body, match.end() - 1)
-            filled = self._operation_from_body(op, method_body)
-            prefix = class_body[max(0, match.start() - 24) : match.start()]
-            header = match.group(0)
-            if re.search(r"\bget\s+\w+\s*\(", header) or re.search(r"\bset\s+\w+\s*\(", header):
-                filled.is_property = True
-            filled.is_static = bool(re.search(r"\bstatic\b", prefix) or re.search(r"\bstatic\b", header))
-            # Only the method's own line can declare it private: a `private` further up belongs to another member.
-            own_line = prefix.rsplit("\n", 1)[-1] + header.split("(", 1)[0]
-            filled.is_private = bool(re.search(r"\bprivate\b", own_line))
-            ops.append(filled)
-        return ops
+            operations.append(self._method(match, method_body, class_name))
+        return operations
 
-    def _bodiless_members(self, class_body: str) -> list[Operation]:
+    def _method_body(self, match: re.Match) -> tuple[str | None, int]:
+        """The braces of the method whose header is match; none for a header that declares no method."""
+        name_start = match.start(1)
+        # A name after a dot is a call on something (`this.store.change(`), not a method this class declares. The
+        # check reads the character before the name, since a match can open on the full stop ending a comment above.
+        if (name_start > 0 and self._class_body[name_start - 1] == ".") or match.group(1) in _NOT_METHOD_NAMES:
+            return None, -1
+        return self._brace_body(self._class_body, match.end() - 1)
+
+    def _method(self, match: re.Match, method_body: str, class_name: str) -> Operation:
+        """The method whose header is match, named constructor when it carries its class's name."""
+        name = match.group(1)
+        operation = self.operation_type(
+            name="constructor" if class_name and name == class_name else name,
+            parameters=self._split_params(match.group(2) or ""),
+            return_type=(match.group(3) or "").strip(),
+        )
+        header = match.group(0)
+        header_start = match.start() + len(header) - len(header.lstrip())
+        operation.line = self._line_at(self._text, self._body_start + header_start)
+        self._apply_method_end_line(operation, match.end() - 1)
+        filled = self._operation_from_body(operation, method_body)
+        self._read_modifiers(filled, match)
+        return filled
+
+    def _read_modifiers(self, operation: Operation, match: re.Match) -> None:
+        """Whether the method is an accessor, static, or private, as its header and the words before it say."""
+        prefix = self._class_body[max(0, match.start() - _MODIFIER_LOOKBACK) : match.start()]
+        header = match.group(0)
+        if _GETTER_OR_SETTER_RE.search(header):
+            operation.is_property = True
+        operation.is_static = bool(_STATIC_RE.search(prefix) or _STATIC_RE.search(header))
+        # Only the method's own line can declare it private: a `private` further up belongs to another member.
+        own_line = prefix.rsplit("\n", 1)[-1] + header.split("(", 1)[0]
+        operation.is_private = bool(_PRIVATE_RE.search(own_line))
+
+    def _bodiless_members(self) -> list[Operation]:
         """The members the class declares with no body, on lines of its body's top level: an interface's methods and
         its abstract ones. They call nothing: a class that implements one gives it its code."""
-        ops: list[Operation] = []
-        code = _COMMENT_OR_STRING_RE.sub(lambda found: re.sub(r"[^\n]", " ", found.group(0)), class_body)
-        for match in _BODILESS_RE.finditer(_top_level(code)):
+        operations: list[Operation] = []
+        code = _COMMENT_OR_STRING_RE.sub(lambda found: re.sub(r"[^\n]", " ", found.group(0)), self._class_body)
+        for match in _BODILESS_RE.finditer(self._top_level(code)):
             if match.group(1) in _NOT_MEMBERS:
                 continue
-            op = self.operation_type(name=match.group(1), parameters=self._split_params(match.group(2) or ""), return_type=(match.group(3) or "").strip())
-            op.line = self._line_at(self._text, self._body_start + match.start(1))
-            op.end_line = op.line
-            ops.append(self._operation_from_body(op, ""))
-        return ops
+            operation = self.operation_type(name=match.group(1), parameters=self._split_params(match.group(2) or ""), return_type=(match.group(3) or "").strip())
+            operation.line = self._line_at(self._text, self._body_start + match.start(1))
+            operation.end_line = operation.line
+            operations.append(self._operation_from_body(operation, ""))
+        return operations
 
-    def _operation_from_body(self, op: Operation, body: str) -> Operation:
+    def _operation_from_body(self, operation: Operation, body: str) -> Operation:
         """The operation with the statements inside its braces as its body, the operations they call, and the notes
         its `//` comments give it."""
-        code_only = "\n".join(
-            line for line in body.splitlines() if not line.strip().startswith("//")
-        )
+        for line in body.splitlines():
+            if line.strip().startswith("//"):
+                operation.add_invariant(line.strip()[2:].strip())
+        operation.take_brace_body(body, self._callees(body, operation.name))
+        return operation
+
+    def _callees(self, body: str, caller: str) -> list[str]:
+        """What the body calls, outside comments and strings: qualified calls such as `Ticket.load(`, then bare names
+        that are neither the caller itself, a construction, nor the last part of a qualified call."""
+        code_only = "\n".join(line for line in body.splitlines() if not line.strip().startswith("//"))
         stripped = _STRING_RE.sub('""', code_only)
         qualified = re.findall(r"(?<![\w.])([A-Z]\w*(?:\.[A-Za-z_]\w*)+)\s*\(", stripped)
         bare = [
-            m.group(1) for m in _CALL_RE.finditer(stripped)
-            if m.group(1) != op.name and not _CONSTRUCTION_RE.search(stripped[: m.start()])
+            found.group(1) for found in _CALL_RE.finditer(stripped)
+            if found.group(1) != caller and not _CONSTRUCTION_RE.search(stripped[: found.start()])
         ]
         suffixes = {item.split(".")[-1] for item in qualified}
-        callees = qualified + [name for name in bare if name not in suffixes]
-        notes = [
-            line.strip()[2:].strip()
-            for line in body.splitlines()
-            if line.strip().startswith("//")
-        ]
-        for note in notes:
-            op.add_invariant(note)
-        op.take_brace_body(body, callees)
-        return op
+        return qualified + [name for name in bare if name not in suffixes]
 
     def _load_body_facts(self, oclass: OoadClass) -> None:
         """Measure each operation's body once its class holds it, so the operation reads its owner itself."""
         for operation in oclass.operations:
             operation.load_brace_body_facts()
 
-    def _apply_method_end_line(self, op: Operation, class_body: str, search_from: int) -> None:
-        brace_open = class_body.find("{", search_from)
+    def _apply_method_end_line(self, operation: Operation, search_from: int) -> None:
+        brace_open = self._class_body.find("{", search_from)
         if brace_open < 0:
             return
-        close_idx = BracketStructure(class_body).closing_bracket(brace_open)
-        if close_idx is not None:
-            op.end_line = self._line_at(self._text, self._body_start + close_idx)
+        close_index = BracketStructure(self._class_body).closing_bracket(brace_open)
+        if close_index is not None:
+            operation.end_line = self._line_at(self._text, self._body_start + close_index)
 
     def _split_params(self, raw: str) -> list[str]:
         if not raw.strip():
             return []
-        params: list[str] = []
-        for part in split_top_level(raw):
-            default_at = BracketStructure(part).top_level_index("=")
-            if default_at >= 0:
-                part = part[:default_at].strip()
-            part = re.sub(r"^\s*(public|private|protected|final|readonly)\s+", "", part)
-            hint_at = BracketStructure(part).top_level_index(":")
-            if hint_at >= 0:
-                name_part, type_hint = part[:hint_at], part[hint_at + 1 :]
-                name = name_part.strip().split()[-1]
-                type_hint = type_hint.strip()
-            else:
-                tokens = part.split()
-                name = tokens[-1] if tokens else part
-                type_hint = ""
-            name = name.lstrip("@")
-            if name and name not in {"this", "self"} and re.match(r"^[\w$]+\??$", name):
-                params.append(f"{name}: {type_hint}" if type_hint else name)
-        return params
+        return [parameter for parameter in (self._parameter(part) for part in split_top_level(raw)) if parameter]
 
-    def _fields_from_body(self, oclass: OoadClass, body: str) -> list:
-        """Each field the class body declares, with its line, in the order it declares them."""
-        outside = self._outside_braces(body)
-        props = []
+    def _parameter(self, part: str) -> str | None:
+        """One parameter as a model line writes it, `name: Type`, without its default or access modifier; None for a
+        receiver such as `this` or a part that names no parameter."""
+        default_at = BracketStructure(part).top_level_index("=")
+        if default_at >= 0:
+            part = part[:default_at].strip()
+        part = re.sub(r"^\s*(public|private|protected|final|readonly)\s+", "", part)
+        hint_at = BracketStructure(part).top_level_index(":")
+        if hint_at >= 0:
+            name, type_hint = part[:hint_at].strip().split()[-1], part[hint_at + 1 :].strip()
+        else:
+            tokens = part.split()
+            name, type_hint = (tokens[-1] if tokens else part), ""
+        name = name.lstrip("@")
+        if not name or name in {"this", "self"} or not re.match(r"^[\w$]+\??$", name):
+            return None
+        return f"{name}: {type_hint}" if type_hint else name
+
+    def _fields_from_body(self) -> list[Property]:
+        """Each field the class body declares, with its line, in the order it declares them: typed declarations first,
+        then fields only an assignment with a modifier declares."""
+        outside = self._top_level(self._class_body)
+        fields = self._declared_fields(outside)
+        seen = {field.name for field in fields}
+        for match in _ASSIGN_FIELD_RE.finditer(outside):
+            if match.group("name") not in seen:
+                seen.add(match.group("name"))
+                fields.append(self._field(match, len(fields) + 1))
+        return fields
+
+    def _declared_fields(self, outside: str) -> list[Property]:
+        """The fields declared with a type, `name: Type;`, each with the `//` notes right above it."""
+        fields: list[Property] = []
         seen: set[str] = set()
         cursor = 0
         for match in _FIELD_RE.finditer(outside):
-            name = match.group(2)
-            if name in seen:
+            if match.group("name") in seen:
                 continue
-            seen.add(name)
-            prop = self._field(name, len(props) + 1, match.start(2), match.group(3).strip())
-            prop.is_static = "static" in match.group(1).split()
-            for note in self._comments_above(outside[cursor:match.start()]):
-                prop.take_note(note)
-            props.append(prop)
+            seen.add(match.group("name"))
+            field = self._field(match, len(fields) + 1)
+            for note in self._comments_above(outside[cursor : match.start()]):
+                field.take_note(note)
+            fields.append(field)
             cursor = match.end()
-        for match in _ASSIGN_FIELD_RE.finditer(outside):
-            name = match.group(1)
-            if name in seen:
-                continue
-            seen.add(name)
-            prop = self._field(name, len(props) + 1, match.start(1))
-            prop.is_static = bool(re.search(r"\bstatic\b", match.group(0)))
-            props.append(prop)
-        return props
+        return fields
 
-    def _field(self, name: str, order: int, at: int, type_hint: str = ""):
-        prop = self.property_type(name=name, sequential_order=order, type_hint=type_hint)
-        prop.line = self._line_at(self._text, self._body_start + at)
-        return prop
+    def _field(self, match: re.Match, order: int) -> Property:
+        """The field a declaration match reads: its name, its type when it is written, its line, and whether it is
+        static."""
+        type_hint = (match.groupdict().get("type") or "").strip()
+        field = self.property_type(name=match.group("name"), sequential_order=order, type_hint=type_hint)
+        field.line = self._line_at(self._text, self._body_start + match.start("name"))
+        field.is_static = "static" in match.group("modifiers").split()
+        return field
 
     def _comments_above(self, prefix: str) -> list[str]:
         """// lines that sit immediately above a field. A blank line ends the run."""
@@ -359,22 +391,6 @@ class CFamilyParse:
         notes.reverse()
         return notes
 
-    def _outside_braces(self, body: str) -> str:
-        chars: list[str] = []
-        depth = 0
-        for ch in body:
-            if ch == "{":
-                depth += 1
-                chars.append(" ")
-            elif ch == "}":
-                depth = max(0, depth - 1)
-                chars.append(" ")
-            elif depth == 0:
-                chars.append(ch)
-            else:
-                chars.append(" ")
-        return "".join(chars)
-
     def _derive_member_relationships(self, oclass: OoadClass) -> None:
         """A field relates only when its type names a domain class."""
         for prop in oclass.properties:
@@ -386,12 +402,9 @@ class CFamilyParse:
         depth = 0
         for index in range(after, len(self._text)):
             char = self._text[index]
-            if char == "<":
-                depth += 1
-            elif char == ">" and depth:
-                depth -= 1
-            elif char == "{" and not depth:
+            if char == "{" and not depth:
                 return index
+            depth += (char == "<") - (char == ">" and depth > 0)
         return len(self._text)
 
     def _brace_body(self, text: str, open_index: int) -> tuple[str | None, int]:
@@ -403,12 +416,12 @@ class CFamilyParse:
     def _line_at(self, text: str, index: int) -> int:
         return text.count("\n", 0, index) + 1
 
+    def _top_level(self, body: str) -> str:
+        """body with everything inside its braces blanked, every line kept where it is, so only its top level is read."""
+        depth, kept = 0, []
+        for char in body:
+            depth += char == "{"
+            kept.append(char if depth == 0 or char == "\n" else " ")
+            depth -= char == "}" and depth > 0
+        return "".join(kept)
 
-def _top_level(body: str) -> str:
-    """body with everything inside its braces blanked, every line kept where it is, so only its top level is read."""
-    depth, kept = 0, []
-    for char in body:
-        depth += char == "{"
-        kept.append(char if depth == 0 or char == "\n" else " ")
-        depth -= char == "}" and depth > 0
-    return "".join(kept)

@@ -40,13 +40,13 @@ class DrawioScanner:
             return False
         return any((part in SKIP_DIR_NAMES for part in p.parts))
 
-    def filter_scan_files(self, files: list[Path]) -> list[Path]:
+    def _filter_scan_files(self, files: list[Path]) -> list[Path]:
         return [path for path in files if not self.is_skipped_path(path)]
 
     def scan(self, root: Path, files: list[Path]) -> list[Violation]:
         root = root.resolve()
         violations: list[Violation] = []
-        for file_path in self.filter_scan_files(files):
+        for file_path in self._filter_scan_files(files):
             path = file_path if file_path.is_absolute() else root / file_path
             if not path.is_file():
                 continue
@@ -117,14 +117,19 @@ class DrawioScanner:
         return shared
 
     def run_main(self, argv: list[str] | None=None) -> int:
+        workspace = self._workspace_named_in(argv)
+        violations = self.scan(workspace, self.collect_drawio_files(workspace))
+        self._print_violations(violations)
+        return 1 if violations else 0
+
+    def _workspace_named_in(self, argv: list[str] | None) -> Path:
         parser = argparse.ArgumentParser(description='Run one Draw.io scanner')
         parser.add_argument('--workspace', type=Path, default=Path.cwd(), help='Project root (default: cwd).')
-        args = parser.parse_args(argv)
-        workspace = args.workspace.resolve()
-        violations = self.scan(workspace, self.collect_drawio_files(workspace))
+        return parser.parse_args(argv).workspace.resolve()
+
+    def _print_violations(self, violations: list[Violation]) -> None:
         for violation in violations:
             print(data_of(violation), file=sys.stderr)
-        return 1 if violations else 0
 
     def collect_drawio_files(self, root: Path) -> list[Path]:
         files: list[Path] = []

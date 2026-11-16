@@ -13,6 +13,7 @@ from harness.graph.skipped_folders import scanned_files, skips_folder
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     Module,
+    OoadClass,
     UnreadableSource,
     class_names_imported_by,
 )
@@ -90,16 +91,24 @@ class CodeRead:
     def _parsed(self, file: Path) -> Module | None:
         """The file's module, read by its language's class model from the practice's formats, with its source facts
         loaded. A file that does not parse is kept with the reason, so the source-parses rule reports it."""
-        try:
-            module = self._reading.practice.formats.for_file(file).parse(file.read_text(encoding="utf-8")).file_module()
-        except (OSError, UnicodeDecodeError) as error:
-            self._unreadable[file] = f"cannot be read: {error}"
+        text = self._text_of(file)
+        if text is None:
             return None
+        try:
+            module = self._reading.practice.formats.for_file(file).parse(text).file_module()
         except UnreadableSource as unreadable:
             self._unreadable[file] = str(unreadable)
             return None
         module.load_source_facts(file, self._root)
         return module
+
+    def _text_of(self, file: Path) -> str | None:
+        """The file's text; none for a file the disk cannot give, which is kept with the reason."""
+        try:
+            return file.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as error:
+            self._unreadable[file] = f"cannot be read: {error}"
+            return None
 
     def _record_public_sources(self) -> None:
         """Give each folder the modules of its own public source files: each one this read parsed, and each one an
@@ -178,7 +187,7 @@ class ClassNodes:
         self._index = reading.code_index
         self._class_names = class_names
 
-    def add(self, relative: str, folder: "Node", cls) -> None:
+    def add(self, relative: str, folder: "Node", cls: OoadClass) -> None:
         """Add the class, its properties, and its operations; each is the object the parser built."""
         cls.load_source_facts()
         for member in [*cls.public_properties, *cls.operations]:
@@ -213,7 +222,7 @@ class ClassNodes:
         node = self._in_graph.add(prop, f"clean_engineering:Property:{relative}:{prop.name}:{cls.name}", relative, line, line)
         self._graph.link("properties", cls, node, "grouped")
 
-    def _operation(self, relative: str, cls: "Node", operation) -> None:
+    def _operation(self, relative: str, cls: "Node", operation: "Operation") -> None:
         start, end = operation.source_lines
         operation.load_span_facts()
         node = self._in_graph.add(operation, f"clean_engineering:Operation:{relative}:{operation.name}:{cls.name}", relative, start, end)
@@ -346,8 +355,7 @@ class CodeFolders:
                 found[folder] = held[folder]
         return [found[folder] for folder in sorted(found)]
 
-    @staticmethod
-    def _nearest(path: str, among: dict[str, Module]) -> str:
+    def _nearest(self, path: str, among: dict[str, Module]) -> str:
         """The path of the nearest folder of among at or above path; empty for none."""
         current = path
         while current and current != ".":

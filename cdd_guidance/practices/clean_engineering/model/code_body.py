@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple, Union
 
 from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
@@ -16,45 +17,32 @@ _PROSE_TOKENS = 3
 _PLACEHOLDERS = frozenset({"...", "pass", "{}"})
 
 
+@dataclass(frozen=True)
 class CodeSpelling:
-    """How a language writes the receiver, a constructor call, and the end of a statement."""
+    """<<Value Object>> How a language writes the receiver, a constructor call, the end of a statement, and the base
+    class's constructor and receiver."""
 
-    def __init__(
-        self,
-        receiver: str,
-        construct: str,
-        statement_end: str,
-        camel_case: bool,
-        base_call: tuple = ("super", "super"),
-    ) -> None:
-        self.receiver = receiver
-        self.construct = construct
-        self.statement_end = statement_end
-        self.camel_case = camel_case
-        self.base_constructor, self.base_receiver = base_call
+    receiver: str
+    construct: str
+    statement_end: str
+    camel_case: bool
+    base_constructor: str = "super"
+    base_receiver: str = "super"
 
 
+@dataclass(frozen=True, eq=False)
 class CodeLanguage:
-    """How one programming language spells what every code channel writes the same way."""
+    """How one programming language spells what every code channel writes the same way. Each language is one object,
+    compared by identity."""
 
-    def __init__(
-        self,
-        name: str,
-        line_comment: str,
-        indent: str,
-        unfinished: str,
-        spelling: CodeSpelling,
-        type_names: Dict[str, str],
-        suffixes: tuple[str, ...] = (),
-    ) -> None:
-        self.name = name
-        # The file extensions source in this language is written with; the one table every reader of code asks.
-        self.suffixes = suffixes
-        self.line_comment = line_comment
-        self.indent = indent
-        self.unfinished = unfinished
-        self._spelling = spelling
-        self._type_names = type_names
+    name: str
+    line_comment: str
+    indent: str
+    unfinished: str
+    spelling: CodeSpelling
+    type_names: Dict[str, str] = field(default_factory=dict)
+    # The file extensions source in this language is written with; the one table every reader of code asks.
+    suffixes: tuple[str, ...] = ()
 
     def comment(self, text: str) -> str:
         return f"{self.line_comment} {text}".rstrip()
@@ -65,36 +53,36 @@ class CodeLanguage:
 
     def identifier(self, name: str) -> str:
         raw = name.split(":", 1)[0].strip()
-        if not self._spelling.camel_case:
+        if not self.spelling.camel_case:
             return raw
         parts = re.split(r"_+", raw.lstrip("_"))
         return parts[0] + "".join(part[:1].upper() + part[1:] for part in parts[1:] if part)
 
     def type_name(self, hint: str) -> str:
-        return self._type_names.get(hint.strip(), hint.strip())
+        return self.type_names.get(hint.strip(), hint.strip())
 
     def interaction(self, callee: str) -> str:
         tokens = callee.strip().split()
         if not tokens or (len(tokens) >= _PROSE_TOKENS and _PROSE.search(callee)):
             return ""
         head, arguments = tokens[0], ", ".join(tokens[1:])
-        end = self._spelling.statement_end
+        end = self.spelling.statement_end
         if head == "super" or head.startswith("super."):
             return self._super_call(head[len("super."):], arguments) + end
         if "." not in head and head[0].isupper() and _IDENTIFIER.match(head):
             target = self.identifier(tokens[1] if len(tokens) > 1 else head)
-            created = self._spelling.construct.format(type=head, arguments=arguments)
-            return f"{self._spelling.receiver}.{target} = {created}{end}"
+            created = self.spelling.construct.format(type=head, arguments=arguments)
+            return f"{self.spelling.receiver}.{target} = {created}{end}"
         return f"{head}({arguments}){end}"
 
     def assignment(self, name: str) -> str:
-        field = self.identifier(name)
-        return f"{self._spelling.receiver}.{field} = {field}{self._spelling.statement_end}"
+        field_name = self.identifier(name)
+        return f"{self.spelling.receiver}.{field_name} = {field_name}{self.spelling.statement_end}"
 
     def _super_call(self, member: str, arguments: str) -> str:
         if not member or member[0].isupper():
-            return f"{self._spelling.base_constructor}({arguments})"
-        return f"{self._spelling.base_receiver}.{member}({arguments})"
+            return f"{self.spelling.base_constructor}({arguments})"
+        return f"{self.spelling.base_receiver}.{member}({arguments})"
 
 
 class CodeBody:
@@ -266,7 +254,8 @@ PYTHON_SPELLING = CodeSpelling(
     construct="{type}({arguments})",
     statement_end="",
     camel_case=False,
-    base_call=("super().__init__", "super()"),
+    base_constructor="super().__init__",
+    base_receiver="super()",
 )
 C_FAMILY_SPELLING = CodeSpelling(receiver="this", construct="new {type}({arguments})", statement_end=";", camel_case=True)
 

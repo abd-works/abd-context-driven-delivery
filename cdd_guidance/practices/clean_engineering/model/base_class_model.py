@@ -59,17 +59,6 @@ def class_names_imported_by(source_text: str) -> set:
     return names
 
 
-def _without_type_imports(source_text: str) -> str:
-    """The source with every import TypeScript erases blanked: `import type …`, and `import { type A, type B } …`."""
-    text = _TYPE_IMPORT_STATEMENT.sub("", source_text)
-    return _BRACED_IMPORT_STATEMENT.sub(lambda match: "" if _all_marked_type(match.group(1)) else match.group(0), text)
-
-
-def _all_marked_type(braced: str) -> bool:
-    names = [item.strip() for item in braced.split(",") if item.strip()]
-    return bool(names) and all(name.startswith("type ") for name in names)
-
-
 def path_parent(name: str) -> Optional[str]:
     """The path that holds a nested module path: `powers` for `powers/attack`; None at the top."""
     if "/" not in name:
@@ -164,30 +153,34 @@ class OoadClass(OoadNode):
     ) -> None:
         super().__init__(name, sequential_order, graph)
         self.intent = intent
+        self.collaborators: List[str] = collaborators if collaborators is not None else []
+        # What this class does to another class at run time, each named by its interaction: `Repo ---<<runs>>--> Git`.
+        self.dependencies: List[Relationship] = []
+        self._start_declaration(line)
+        self._hold_members(properties or [], operations or [], relationships or [])
+
+    def _hold_members(self, properties: List["Property"], operations: List["Operation"], relationships: List[Relationship]) -> None:
+        """Hold the members the class is made with, then place each relationship on the properties it describes."""
+        self._properties = ModelChildren(self, "participants")
+        self._properties.extend(properties)
+        self._operations = ModelChildren(self, "participants")
+        self._operations.extend(operations)
+        for relationship in relationships:
+            self.place_relationship(relationship)
+
+    def _start_declaration(self, line: int | None) -> None:
+        """What the class's declaration says, empty until its parser or a translation fills it."""
         self.line = line
-        # The stereotypes the class carries, as words: `Aggregate Root`, `Value Object`.
+        self.end_line: int | None = None
+        # Each stereotype as its words, such as `Aggregate Root`, whatever decorator or comment spelled it.
         self.stereotypes: List[str] = []
         # The modules the class says it is kept in, outermost first, when its source names them apart from where the
         # class sits, as a code file does in a class's doc comment: `Sales | custom`, `ShoppingCart`.
         self.module_path: List[str] = []
-        # Parser facts for the graph: last source line and declared base classes.
-        self.end_line: int | None = None
         self.bases: List[str] = []
         self.peer_names: List[str] = []
         self.module_helpers: List[list] = []
-        self.collaborators: List[str] = collaborators if collaborators is not None else []
-        # The source this class spans in its file, kept once its parser reads the file.
         self.span = SourceText("")
-        # What this class does to another class at run time, each named by its interaction: `Repo ---<<runs>>--> Git`.
-        self.dependencies: List[Relationship] = []
-        self._properties = ModelChildren(self, "participants")
-        self._operations = ModelChildren(self, "participants")
-        if properties:
-            self._properties.extend(properties)
-        if operations:
-            self._operations.extend(operations)
-        for relationship in relationships or []:
-            self.place_relationship(relationship)
 
     @property
     def properties(self) -> List["Property"]:
@@ -418,13 +411,16 @@ class Module(OoadNode):
         self.constraint = constraint
         self.seam_terms: List[str] = list(seam_terms) if seam_terms is not None else []
         self.dependencies: List[str] = list(dependencies) if dependencies is not None else []
+        self._start_source()
+        self._modules = ModelChildren(self, "participants")
+        self._classes = ModelChildren(self, "participants")
+
+    def _start_source(self) -> None:
+        """The source this module is read from, empty until its parser keeps the file's text."""
         self.preamble = CodeBody()
-        # The text of the file this module was read from, which its parser keeps.
         self.source_text = ""
         # The class names this module's code imports or reaches as `module.Class`.
         self.imported_names: List[str] = []
-        self._modules = ModelChildren(self, "participants")
-        self._classes = ModelChildren(self, "participants")
 
     @property
     def modules(self) -> List["Module"]:
@@ -526,11 +522,20 @@ class Module(OoadNode):
         """Root-relative paths named by relative script imports (`./x`, `../y`) that run. A type-only import is erased
         by TypeScript, so it is no dependency and is left out."""
         targets: List[str] = []
-        for specifier in _SCRIPT_IMPORT.findall(_without_type_imports(self.source_text)):
+        for specifier in _SCRIPT_IMPORT.findall(self._without_type_imports()):
             resolved = (file.parent / specifier).resolve()
             if resolved.is_relative_to(root.resolve()):
                 targets.append(resolved.relative_to(root.resolve()).as_posix())
         return targets
+
+    def _without_type_imports(self) -> str:
+        """The source with every import TypeScript erases blanked: `import type ...`, and `import { type A, type B } ...`."""
+        text = _TYPE_IMPORT_STATEMENT.sub("", self.source_text)
+        return _BRACED_IMPORT_STATEMENT.sub(lambda match: "" if self._all_marked_type(match.group(1)) else match.group(0), text)
+
+    def _all_marked_type(self, braced_names: str) -> bool:
+        names = [item.strip() for item in braced_names.split(",") if item.strip()]
+        return bool(names) and all(name.startswith("type ") for name in names)
 
     def load_folder_facts(self, folder: Path) -> None:
         """Fill the facts a code folder's context files give: what its module card says, read once."""

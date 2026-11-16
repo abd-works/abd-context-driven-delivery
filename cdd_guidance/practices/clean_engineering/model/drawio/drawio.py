@@ -59,11 +59,16 @@ class Drawio:
         classes keep their positions, existing relationships keep their routing,
         and only new classes/relationships are laid out. Returns the written path.
         """
-        model = self.source.parse(content)
         out = Path(path)
+        self._keep_previous_from(out)
+        return self._write(out, self.channel.render(self.source.parse(content)))
+
+    def _keep_previous_from(self, out: Path) -> None:
+        """When positions are kept and no previous diagram was given, the diagram already at out is the previous one."""
         if self.channel.keep_positioning and not self.channel.previous and out.exists():
             self.channel.previous = out.read_text(encoding="utf-8")
-        rendered = self.channel.render(model)
+
+    def _write(self, out: Path, rendered: str) -> str:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(rendered, encoding="utf-8")
         return str(out.resolve())

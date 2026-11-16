@@ -25,6 +25,15 @@ from cdd_guidance.practices.clean_engineering.model.diagram.geometry import (
     Geometry,
 )
 
+# The class name band at the top of a card, above its members.
+CLASS_TITLE_HEIGHT = 30
+# An imported class shows only its first few properties, under its name and the module it comes from.
+IMPORTED_KEY_PROPERTIES = 4
+IMPORTED_HEADER_LINES = 2
+IMPORTED_HEIGHT_TRIM = 10
+# Space below a module's seam list, so the last term does not touch the card's edge.
+MODULE_FOOTER_PAD = 24
+
 
 class DiagramNode(ABC):
     """One placed cell. HTML vs Mermaid is the channel; the box is shared.
@@ -55,8 +64,8 @@ class DiagramClass(OoadClass, DiagramNode):
         return CELL_WIDTH
 
     def height(self) -> int:
-        n_content = len(self.properties) + len(self.operations)
-        return max(CELL_MIN_HEIGHT, 30 + n_content * LINE_HEIGHT + 2 * SECTION_PAD)
+        member_count = len(self.properties) + len(self.operations)
+        return max(CELL_MIN_HEIGHT, CLASS_TITLE_HEIGHT + member_count * LINE_HEIGHT + 2 * SECTION_PAD)
 
     def take_arrow(self, target: str, kind: str) -> None:
         """An arrow of kind drawn to target is the property whose type names the target. Inheritance and a dependency
@@ -87,11 +96,11 @@ class ImportedClass(DiagramClass):
         return cloned
 
     def height(self) -> int:
-        n = min(4, len(self.properties)) + 2
-        return max(CELL_MIN_HEIGHT - 10, 30 + n * LINE_HEIGHT + 2 * SECTION_PAD)
+        line_count = min(IMPORTED_KEY_PROPERTIES, len(self.properties)) + IMPORTED_HEADER_LINES
+        return max(CELL_MIN_HEIGHT - IMPORTED_HEIGHT_TRIM, CLASS_TITLE_HEIGHT + line_count * LINE_HEIGHT + 2 * SECTION_PAD)
 
     def key_properties(self):
-        return self.properties[:4]
+        return self.properties[:IMPORTED_KEY_PROPERTIES]
 
 
 class DiagramModule(Module, DiagramNode):
@@ -106,6 +115,8 @@ class DiagramModule(Module, DiagramNode):
     def __init__(self, name: str = '', sequential_order: int = 1, **kwargs) -> None:
         Module.__init__(self, name, sequential_order, **kwargs)
         self.nested = False
+        # The words written on the arrow to each dependency, by the dependency's name; most arrows carry none.
+        self.dependency_labels: Dict[str, str] = {}
         DiagramNode.__init__(self, MODULE_CELL_WIDTH)
 
     def height(self) -> int:
@@ -115,10 +126,10 @@ class DiagramModule(Module, DiagramNode):
         terms = self.public_terms()
         if not terms:
             return MODULE_HEADER_HEIGHT + MODULE_LINE_HEIGHT
-        n = min(self.seam_bullets, len(terms))
+        line_count = min(self.seam_bullets, len(terms))
         if len(terms) > self.seam_bullets:
-            n += 1
-        return max(MODULE_CELL_MIN_HEIGHT, MODULE_HEADER_HEIGHT + n * MODULE_LINE_HEIGHT + 24)
+            line_count += 1
+        return max(MODULE_CELL_MIN_HEIGHT, MODULE_HEADER_HEIGHT + line_count * MODULE_LINE_HEIGHT + MODULE_FOOTER_PAD)
 
     def purpose_line(self) -> str:
         purpose = self.description.strip() or '{one-line purpose}'
@@ -146,55 +157,59 @@ def module_tab_label(module_name: str) -> str:
 class ContainmentForest:
     """Path nesting and dependency depth for module ordering. Shared by both channels."""
 
-    def __init__(
-        self,
-        by_name: Dict[str, Module],
-        children_of: Dict[str, List[str]],
-        roots: List[str],
-        synthetic: set,
-    ) -> None:
+    def __init__(self, by_name: Dict[str, Module]) -> None:
         self.by_name = by_name
-        self.children_of = children_of
-        self.roots = roots
-        self.synthetic = synthetic
+        self.children_of: Dict[str, List[str]] = {}
+        self.roots: List[str] = []
+        self.synthetic: set = set()
         self._depth_cache: Dict[str, int] = {}
         self._visiting: set = set()
 
     @classmethod
     def build(cls, modules: List[Module], synthesize_parents: bool = False) -> 'ContainmentForest':
-        by_name: Dict[str, Module] = {m.name: m for m in modules}
-        synthetic: set = set()
+        forest = cls({module.name: module for module in modules})
         if synthesize_parents:
-            synthetic = cls._synthesize_parents(by_name)
-        children_of: Dict[str, List[str]] = {n: [] for n in by_name}
-        roots: List[str] = []
-        for name in by_name:
-            parent = path_parent(name)
-            if parent and parent in by_name:
-                children_of[parent].append(name)
-            else:
-                roots.append(name)
-        for parent in children_of:
-            children_of[parent].sort(key=lambda n: (by_name[n].sequential_order or 0, n))
-        roots.sort(key=lambda n: (by_name[n].sequential_order or 0, n))
-        return cls(by_name, children_of, roots, synthetic)
+            forest._synthesize_parents()
+        forest._nest_by_path()
+        return forest
 
-    @classmethod
-    def _synthesize_parents(cls, by_name: Dict[str, Module]) -> set:
-        synthetic: set = set()
+    def _synthesize_parents(self) -> None:
         needed: List[str] = []
-        for name in list(by_name):
-            p = path_parent(name)
-            while p:
-                if p not in by_name:
-                    needed.append(p)
-                p = path_parent(p)
-        for prefix in sorted(set(needed), key=lambda s: s.count('/')):
-            by_name[prefix] = Module(
+        for name in list(self.by_name):
+            parent = path_parent(name)
+            while parent:
+                if parent not in self.by_name:
+                    needed.append(parent)
+                parent = path_parent(parent)
+        for prefix in sorted(set(needed), key=lambda path: path.count('/')):
+            self.by_name[prefix] = Module(
                 name=prefix, sequential_order=0, description='nested modules', seam_terms=[]
             )
-            synthetic.add(prefix)
-        return synthetic
+            self.synthetic.add(prefix)
+
+    def _nest_by_path(self) -> None:
+        self.children_of = {name: [] for name in self.by_name}
+        for name in self.by_name:
+            parent = path_parent(name)
+            if parent and parent in self.by_name:
+                self.children_of[parent].append(name)
+            else:
+                self.roots.append(name)
+        for children in self.children_of.values():
+            children.sort(key=self._model_order)
+        self.roots.sort(key=self._model_order)
+
+    def _model_order(self, name: str) -> tuple:
+        return (self.by_name[name].sequential_order or 0, name)
+
+    def in_model_order(self, names: List[str]) -> List[str]:
+        """The modules named and everything nested in them, each parent before its children, in the model's order, so
+        a drawing reads the modules back in the order the model lists them."""
+        ordered: List[str] = []
+        for name in names:
+            ordered.append(name)
+            ordered.extend(self.in_model_order(self.children_of.get(name, [])))
+        return ordered
 
     def module_dep_depth(self, name: str) -> int:
         if name in self._depth_cache:

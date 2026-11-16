@@ -112,8 +112,7 @@ class CallLinks:
             return True
         return _DOCSTRING.sub("", self._python_body(text)).strip() in _NO_BODY
 
-    @staticmethod
-    def _declared_without_body(text: str) -> bool:
+    def _declared_without_body(self, text: str) -> bool:
         """A C-family member with no body: its signature ends in `;` and no brace opens a body (an interface's method,
         `draw(scale: number): void;`, or `void draw(double scale);`)."""
         code = _CALL_MARKER.sub("", text).strip()
@@ -181,8 +180,7 @@ class CodeIndex:
             self._classes = self._indexed(sorted(self._reading.in_graph.nodes("OoadClass"), key=lambda node: node.node_id))
         return self._classes
 
-    @staticmethod
-    def _indexed(nodes: list[Node]) -> dict[str, list[Node]]:
+    def _indexed(self, nodes: list[Node]) -> dict[str, list[Node]]:
         found: dict[str, list[Node]] = {}
         for node in nodes:
             found.setdefault(node.name, []).append(node)
@@ -212,7 +210,11 @@ class ModelDocuments:
         for file in self._files():
             relative = file.relative_to(self._root).as_posix()
             graph.report_progress(f"clean_engineering · model · {relative}")
-            self._models[relative] = self._format().parse(file.read_text(encoding="utf-8"))
+            self._models[relative] = self._model_in(file)
+
+    def _model_in(self, file: Path) -> CleanEngineeringModel:
+        """The class model one document describes, read in the practice's model document format."""
+        return self._format().parse(file.read_text(encoding="utf-8"))
 
     def described_member(self, owner: str, name: str) -> Operation | Property | None:
         """The operation or property a document describes as owner.name; none when none does. A graph read back from a

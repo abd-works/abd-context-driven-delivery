@@ -26,7 +26,7 @@ from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import 
     module_tab_label,
 )
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
-from cdd_guidance.practices.clean_engineering.model.field_types import RELATIONSHIP_STRENGTH
+from cdd_guidance.practices.clean_engineering.model.field_types import RELATIONSHIP_STRENGTH, Relationship
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
 CLASSES_ON_ONE_PAGE = 40
@@ -50,7 +50,8 @@ class ClassView:
         self.arrow_labels: Dict[Tuple[str, str], str] = {}
         # The interactions each pair's dependencies name, in model order: `stops`, `reads sections with`.
         self.dependency_labels: Dict[Tuple[str, str], List[str]] = {}
-        self.relationships = self._collect_relationships()
+        self.relationships: Relationships = []
+        self._collect_relationships()
         self.module_labels = {
             self.cell_ids[id(oclass)]: module_tab_label(module.name) for module in channel.modules for oclass in module.classes
         }
@@ -108,37 +109,37 @@ class ClassView:
             for index, module in enumerate(self.named_modules)
         }
 
-    def _collect_relationships(self) -> Relationships:
-        relationships: Relationships = []
+    def _collect_relationships(self) -> None:
         for oclass in self.classes:
             source = self.cell_ids.get(id(oclass))
             if not source:
                 continue
             for prop in oclass.properties:
-                self._collect_property_relationship(source, oclass, prop, relationships)
+                self._collect_property_relationship(oclass, prop)
             for dependency in oclass.dependencies:
-                self._collect_dependency(source, oclass, dependency, relationships)
+                self._collect_dependency(oclass, dependency)
             for base in self._base_names(oclass):
                 target = self.resolve_target(oclass, base)
-                if target and (source, target, 'inheritance') not in relationships:
-                    relationships.append((source, target, 'inheritance'))
-        return relationships
+                if target and (source, target, 'inheritance') not in self.relationships:
+                    self.relationships.append((source, target, 'inheritance'))
 
-    def _collect_property_relationship(self, source: str, oclass: OoadClass, prop: Property, relationships: Relationships) -> None:
+    def _collect_property_relationship(self, oclass: OoadClass, prop: Property) -> None:
         relationship = getattr(prop, 'relationship', None)
         target = self.resolve_target(oclass, relationship.target) if relationship is not None else None
         if not target:
             return
-        relationships.append((source, target, relationship.kind or 'association'))
+        source = self.cell_ids[id(oclass)]
+        self.relationships.append((source, target, relationship.kind or 'association'))
         named = self.arrow_labels.get((source, target))
         self.arrow_labels[(source, target)] = f'{named}, {prop.name}' if named else prop.name
 
-    def _collect_dependency(self, source: str, oclass: OoadClass, dependency, relationships: Relationships) -> None:
+    def _collect_dependency(self, oclass: OoadClass, dependency: Relationship) -> None:
+        source = self.cell_ids[id(oclass)]
         target = self.resolve_target(oclass, dependency.target)
         if not target or target == source:
             return
-        if (source, target, 'dependency') not in relationships:
-            relationships.append((source, target, 'dependency'))
+        if (source, target, 'dependency') not in self.relationships:
+            self.relationships.append((source, target, 'dependency'))
         labels = self.dependency_labels.setdefault((source, target), [])
         if dependency.label and dependency.label not in labels:
             labels.append(dependency.label)
@@ -157,14 +158,16 @@ class ClassView:
         Imports are the targets of edges that leave a local class, and foreign subtypes that inherit into a local base.
         Inbound association sources stay on the other module's page."""
         imports: set[str] = set()
-        for source, target, kind in self.relationships:
+        for relationship in self.relationships:
+            source, target, _kind = relationship
             if source in local_ids and target not in local_ids and self.module_labels.get(target, '') != local_label:
                 imports.add(target)
-            elif self._is_inbound_inheritance(source, target, kind, local_ids) and self.module_labels.get(source, '') != local_label:
+            elif self._is_inbound_inheritance(relationship, local_ids) and self.module_labels.get(source, '') != local_label:
                 imports.add(source)
         return sorted(imports)
 
-    def _is_inbound_inheritance(self, source: str, target: str, kind: str, local_ids: set[str]) -> bool:
+    def _is_inbound_inheritance(self, relationship: Tuple[str, str, str], local_ids: set[str]) -> bool:
+        source, target, kind = relationship
         return target in local_ids and source not in local_ids and (kind or 'association').lower() == 'inheritance'
 
 
@@ -172,12 +175,18 @@ class ClassView:
 class ClassViewPage:
     """One page of a class diagram: which classes it shows, which of them it owns, and which it imports."""
 
-    def __init__(self, writer: ClassView, page_ids: set[str], local_ids: Optional[set[str]], import_ids: List[str]) -> None:
+    def __init__(self, writer: ClassView, module: Optional[Module] = None) -> None:
+        """The page of module's classes, with the classes of other modules it uses shown dashed; with no module, the
+        single page that shows every class."""
         self._writer = writer
-        self._page_ids = page_ids
         # None on a single page, where every class is local.
-        self._local_ids = local_ids
-        self._import_ids = import_ids
+        self._local_ids: Optional[set[str]] = None
+        self._import_ids: List[str] = []
+        if module is None:
+            self._page_ids = set(writer.classes_by_cell)
+            return
+        self._local_ids, self._import_ids = writer.module_page_ids(module)
+        self._page_ids = self._local_ids | set(self._import_ids)
 
     def is_imported(self, cell_id: str) -> bool:
         """True for the dashed card of a class another module's page owns."""

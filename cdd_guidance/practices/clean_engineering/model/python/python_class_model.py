@@ -84,20 +84,21 @@ class PythonOperation(CodeOperation):
             line=node.lineno,
             end_line=end_line,
             line_count=end_line - node.lineno + 1,
-            constructed_types=function.built_collaborators() if node.name in {"__init__", "constructor"} else [],
             callees=function.callees(),
-            is_property=function.decorated("property"),
             body_fingerprint=operation_body_fingerprint("\n".join(ast.unparse(stmt) for stmt in node.body)),
         )
         operation.take_body(function.body_text(text), PYTHON)
-        operation.is_static = function.decorated("staticmethod")
-        operation.is_classmethod = function.decorated("classmethod")
         operation.is_setter = any(isinstance(item, ast.Attribute) and item.attr == "setter" for item in node.decorator_list)
         operation.measure(function)
         return operation
 
     def measure(self, function: PythonFunctionBody) -> None:
-        """Keep what the rules measure on its function."""
+        """Keep what the rules measure on its function: its decorators, the collaborators a constructor builds, and
+        what its body does."""
+        self.is_property = function.decorated("property")
+        self.is_static = function.decorated("staticmethod")
+        self.is_classmethod = function.decorated("classmethod")
+        self.constructed_types = function.built_collaborators() if self.is_constructor else []
         self.max_control_flow_depth = function.control_flow_depth()
         self.has_bare_catch, self.swallows_exceptions = function.except_flags()
         self.unnamed_literal_numbers = function.unnamed_numbers()
@@ -203,15 +204,68 @@ class PythonModule(CodeModule):
             return []
         package = file.parent.relative_to(root).parts
         constants = self._string_constants(".".join(package))
-        targets: list[str] = []
-        for node in self._runtime_nodes():
-            if isinstance(node, ast.Import):
-                targets.extend(alias.name.replace(".", "/") for alias in node.names)
-            elif isinstance(node, ast.ImportFrom):
-                targets.extend(_from_import_targets(node, package))
-            elif isinstance(node, ast.Call) and _call_name(node) in _IMPORT_CALLS and node.args:
-                targets.extend(_dynamic_import_target(node.args[0], constants))
-        return targets
+        return [target for node in self._runtime_nodes() for target in self._targets_of(node, package, constants)]
+
+    def _targets_of(self, node: ast.AST, package: tuple[str, ...], constants: dict[str, str]) -> list[str]:
+        """The module paths one node imports: an `import`, a `from ... import`, or an import call; none for any other."""
+        if isinstance(node, ast.Import):
+            return [alias.name.replace(".", "/") for alias in node.names]
+        if isinstance(node, ast.ImportFrom):
+            return self._from_import_targets(node, package)
+        if isinstance(node, ast.Call) and self._call_name(node) in _IMPORT_CALLS and node.args:
+            return self._dynamic_import_target(node.args[0], constants)
+        return []
+
+    def _from_import_targets(self, node: ast.ImportFrom, package: tuple[str, ...]) -> list[str]:
+        base = list(package[: len(package) - node.level + 1]) if node.level else []
+        module = base + (node.module.split(".") if node.module else [])
+        if not module:
+            return []
+        joined = "/".join(module)
+        return [joined] + [f"{joined}/{alias.name}" for alias in node.names if alias.name != "*"]
+
+    def _is_type_checking(self, test: ast.expr) -> bool:
+        if isinstance(test, ast.Attribute):
+            return test.attr == "TYPE_CHECKING"
+        return isinstance(test, ast.Name) and test.id == "TYPE_CHECKING"
+
+    def _call_name(self, node: ast.Call) -> str:
+        """`import_module` for `importlib.import_module(...)` or `import_module(...)`; empty for a call on anything else."""
+        if isinstance(node.func, ast.Attribute):
+            return node.func.attr
+        return node.func.id if isinstance(node.func, ast.Name) else ""
+
+    def _dynamic_import_target(self, argument: ast.expr, constants: dict[str, str]) -> list[str]:
+        """The module path an import call's argument spells, as far as its text spells it."""
+        spelled = self._spelled_module(argument, constants)
+        # A relative name, `.x`, is resolved against a package argument the text may not spell.
+        if not spelled or spelled.startswith("."):
+            return []
+        return [spelled.rstrip(".").replace(".", "/")]
+
+    def _spelled_module(self, argument: ast.expr, constants: dict[str, str]) -> str:
+        """The dotted module name an argument spells: a string, a constant naming one, or an f-string; empty for any
+        other argument."""
+        if isinstance(argument, ast.Constant) and isinstance(argument.value, str):
+            return argument.value
+        if isinstance(argument, ast.Name):
+            return constants.get(argument.id, "")
+        if isinstance(argument, ast.JoinedStr):
+            return self._spelled_prefix(argument, constants)
+        return ""
+
+    def _spelled_prefix(self, joined: ast.JoinedStr, constants: dict[str, str]) -> str:
+        """The dotted part of an f-string before the first value it cannot read, such as `cdd_guidance.actions` in
+        `f"cdd_guidance.actions.{folder}.{folder}"`."""
+        spelled = ""
+        for part in joined.values:
+            if isinstance(part, ast.Constant):
+                spelled += str(part.value)
+            elif isinstance(part, ast.FormattedValue) and isinstance(part.value, ast.Name) and part.value.id in constants:
+                spelled += constants[part.value.id]
+            else:
+                return spelled.rsplit(".", 1)[0] if "." in spelled else ""
+        return spelled
 
     def _runtime_nodes(self) -> Iterator[ast.AST]:
         """Every node of its tree that runs: the body of an `if TYPE_CHECKING:` (or `if typing.TYPE_CHECKING:`) block is
@@ -220,7 +274,7 @@ class PythonModule(CodeModule):
         while pending:
             node = pending.pop()
             yield node
-            if isinstance(node, ast.If) and _is_type_checking(node.test):
+            if isinstance(node, ast.If) and self._is_type_checking(node.test):
                 pending.extend(node.orelse)
                 continue
             pending.extend(ast.iter_child_nodes(node))
@@ -339,50 +393,3 @@ def _bare_decorator_name(decorator: ast.expr) -> str:
     if isinstance(decorator, ast.Call) and not decorator.args and not decorator.keywords:
         decorator = decorator.func
     return decorator.id if isinstance(decorator, ast.Name) else ""
-
-
-def _from_import_targets(node: ast.ImportFrom, package: tuple[str, ...]) -> list[str]:
-    base = list(package[: len(package) - node.level + 1]) if node.level else []
-    module = base + (node.module.split(".") if node.module else [])
-    if not module:
-        return []
-    joined = "/".join(module)
-    return [joined] + [f"{joined}/{alias.name}" for alias in node.names if alias.name != "*"]
-
-
-def _is_type_checking(test: ast.expr) -> bool:
-    if isinstance(test, ast.Attribute):
-        return test.attr == "TYPE_CHECKING"
-    return isinstance(test, ast.Name) and test.id == "TYPE_CHECKING"
-
-
-def _call_name(node: ast.Call) -> str:
-    """`import_module` for `importlib.import_module(…)` or `import_module(…)`; empty for a call on anything else."""
-    if isinstance(node.func, ast.Attribute):
-        return node.func.attr
-    return node.func.id if isinstance(node.func, ast.Name) else ""
-
-
-def _dynamic_import_target(argument: ast.expr, constants: dict[str, str]) -> list[str]:
-    """The module path an import call's argument spells: the whole string, or for an f-string the dotted part before
-    the first value it cannot read, such as `cdd_guidance.actions` in `f"cdd_guidance.actions.{folder}.{folder}"`."""
-    if isinstance(argument, ast.Constant) and isinstance(argument.value, str):
-        spelled = argument.value
-    elif isinstance(argument, ast.Name) and argument.id in constants:
-        spelled = constants[argument.id]
-    elif isinstance(argument, ast.JoinedStr):
-        spelled = ""
-        for part in argument.values:
-            if isinstance(part, ast.Constant):
-                spelled += str(part.value)
-            elif isinstance(part, ast.FormattedValue) and isinstance(part.value, ast.Name) and part.value.id in constants:
-                spelled += constants[part.value.id]
-            else:
-                spelled = spelled.rsplit(".", 1)[0] if "." in spelled else ""
-                break
-    else:
-        return []
-    # A relative name, `.x`, is resolved against a package argument the text may not spell.
-    if not spelled or spelled.startswith("."):
-        return []
-    return [spelled.rstrip(".").replace(".", "/")]

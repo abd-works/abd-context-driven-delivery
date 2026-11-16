@@ -64,14 +64,8 @@ class Property(InvariantHolder, OoadNode):
     _semantic_type_name = "Property"
     graph_facts = ("owner", "value_type")
 
-    def __init__(
-        self,
-        name: str,
-        sequential_order: int = 0,
-        type_hint: str = "",
-        description: str = "",
-        graph: Optional["Graph"] = None,
-    ) -> None:
+    def __init__(self, name: str, sequential_order: int = 0, type_hint: str = "", description: str = "",
+                 graph: Optional["Graph"] = None) -> None:
         super().__init__(name, sequential_order, graph)
         self.type_hint = type_hint
         self.description = description

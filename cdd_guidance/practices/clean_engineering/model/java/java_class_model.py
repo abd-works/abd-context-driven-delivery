@@ -19,10 +19,6 @@ from cdd_guidance.practices.clean_engineering.model.code_class_model import (
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 
 
-def _pascal(name: str) -> str:
-    return "".join(part.title() for part in re.split(r"_+", name))
-
-
 def _java_type(hint: str) -> str:
     return JAVA.type_name(hint) if hint else "Object"
 
@@ -33,8 +29,12 @@ class JavaProperty(CodeProperty):
     def lines(self, contract: bool) -> List[str]:
         type_name = _java_type(self.type_hint)
         if contract:
-            return [f"    {type_name} get{_pascal(self.name)}();"]
+            return [f"    {type_name} get{self._pascal_name()}();"]
         return [f"    private {type_name} {self.language.identifier(self.name)};"]
+
+    def _pascal_name(self) -> str:
+        """The property's snake_case name in PascalCase, as its getter spells it."""
+        return "".join(part.title() for part in re.split(r"_+", self.name))
 
 
 class JavaOperation(CodeOperation):

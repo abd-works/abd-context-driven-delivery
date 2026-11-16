@@ -5,7 +5,7 @@ import html
 import math
 import re
 import xml.etree.ElementTree as ET
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import style_value
@@ -151,17 +151,6 @@ class DrawIOModule(DiagramModule, DrawioVertex):
     """The kind of module a cell draws, written in its style as `kind=...;` so the drawing reads back as the cell type
     that drew it; a plain module names none."""
 
-    @classmethod
-    def draws(cls, style: str) -> bool:
-        """True when a cell with this style is one this type draws: its style names this type's kind; a plain module
-        draws any cell, so a reader that knows no kind of its own reads every cell as a plain module."""
-        return not cls.KIND or style_value(style, 'kind') == cls.KIND
-
-    def __init__(self, name: str = '', sequential_order: int = 1, **kwargs) -> None:
-        super().__init__(name, sequential_order, **kwargs)
-        # The words written on the arrow to each dependency, by the dependency's name; most arrows carry none.
-        self.dependency_labels: Dict[str, str] = {}
-
     def html(self) -> str:
         name_html = html.escape(self.name)
         purpose_html = html.escape(self.purpose_line())
@@ -179,49 +168,39 @@ class DrawIOModule(DiagramModule, DrawioVertex):
         return (MODULE_CHILD_STYLE if self.nested else MODULE_STYLE) + kind
 
     @classmethod
-    def from_cell(cls, value: str, sequential_order: int) -> Optional['DrawIOModule']:
-        """The module a modules-view cell shows, read from the cell's HTML label; None when the label names none."""
-        text = html.unescape(value)
-        m = re.search('<b[^>]*>([^<]+)</b>', text, re.IGNORECASE)
-        name = m.group(1).strip() if m else None
+    def from_cell(cls, cell: ET.Element, sequential_order: int) -> Optional['DrawIOModule']:
+        """The module a modules-view cell shows, read from the cell's HTML label; None when the cell's style names
+        another kind than this type's, or the label names no module. A plain module reads a cell of any kind, so a
+        reader that knows no kind of its own reads every cell as a plain module."""
+        if cls.KIND and style_value(cell.get('style', ''), 'kind') != cls.KIND:
+            return None
+        label_html = html.unescape(cell.get('value', ''))
+        bold = re.search('<b[^>]*>([^<]+)</b>', label_html, re.IGNORECASE)
+        name = bold.group(1).strip() if bold else None
         if not name:
             return None
-        return cls(
-            name=name,
-            sequential_order=sequential_order,
-            description=cls._purpose_from_html(text),
-            seam_terms=cls._terms_from_html(text),
-        )
+        return cls(name=name, sequential_order=sequential_order).take_label(label_html)
+
+    def take_label(self, label_html: str) -> 'DrawIOModule':
+        """Become the module a cell's label shows: its purpose and seam terms."""
+        self.description = self._purpose_in(label_html)
+        self.seam_terms = self._terms_in(label_html)
+        return self
 
     def _seam_bullets(self) -> str:
         shown = self.shown_seam_terms()
-        return '<br>'.join((f'\u2022 {html.escape(t)}' for t in shown))
+        return '<br>'.join((f'• {html.escape(t)}' for t in shown))
 
-    @staticmethod
-    def _purpose_from_html(text: str) -> str:
-        im = re.search('<i[^>]*>([^<]*)</i>', text, re.IGNORECASE)
-        if im:
-            return im.group(1).strip()
-        return ''
+    def _purpose_in(self, label_html: str) -> str:
+        italic = re.search('<i[^>]*>([^<]*)</i>', label_html, re.IGNORECASE)
+        return italic.group(1).strip() if italic else ''
 
-    @staticmethod
-    def _terms_from_html(text: str) -> List[str]:
-        terms: List[str] = []
+    def _terms_in(self, label_html: str) -> List[str]:
+        """The seam terms the label bullets, skipping a `{placeholder}`; else its list items that name no stack."""
         # A bullet starts the label or follows a tag, so the dash in a style such as `font-size` is not one.
-        for bullet in re.findall('(?:^|>)\\s*[\u2022\\-]\\s*([^<]+)', text):
-            term = bullet.strip()
-            if term and (not term.startswith('{')):
-                terms.append(term)
-            elif term.startswith('{') and term.endswith('}'):
-                continue
-            elif term:
-                terms.append(term)
+        bullets = (bullet.strip() for bullet in re.findall(r'(?:^|>)\s*[•\-]\s*([^<]+)', label_html))
+        terms = [term for term in bullets if term and not (term.startswith('{') and term.endswith('}'))]
         if terms:
             return terms
-        for li in re.findall('<li[^>]*>(?:<[^>]+>)*([^<]+)', text, re.IGNORECASE):
-            term = li.strip()
-            if term and 'stack' not in term.lower():
-                terms.append(term)
-        return terms
-
-
+        items = (item.strip() for item in re.findall('<li[^>]*>(?:<[^>]+>)*([^<]+)', label_html, re.IGNORECASE))
+        return [item for item in items if item and 'stack' not in item.lower()]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
 from cdd_guidance.practices.clean_engineering.model.graph_reading import parameters_of
 from cdd_guidance.practices.clean_engineering.rules.operation_checks import (
@@ -10,22 +11,15 @@ from cdd_guidance.practices.clean_engineering.rules.operation_checks import (
     operation_label,
 )
 
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
+
 MAX_DOMAIN_PARAMETERS = 3
 _PARAMETER_NAMES_EXCLUDED_FROM_COUNT = frozenset({"self", "cls"})
 # Creation / mapping factories may take a record or full field set (align with prefer-instance-operations).
 _PARAMETER_COUNT_EXEMPT_OPERATION_NAMES = frozenset({"create", "fromFields", "instance", "fromRequest"})
 _CAMEL_FROM_FACTORY = re.compile(r"^from[A-Z]")
 _LOAD_FACTORY = re.compile(r"^load(?:[A-Z].*)?$")
-
-
-def _parameter_count_exempt(operation_name: str) -> bool:
-    if operation_name in _PARAMETER_COUNT_EXEMPT_OPERATION_NAMES:
-        return True
-    if operation_name.startswith("from_"):
-        return True
-    if _CAMEL_FROM_FACTORY.match(operation_name):
-        return True
-    return _LOAD_FACTORY.match(operation_name) is not None
 
 
 def counted_parameters(names: list[str], packed: dict[str, int] | None = None) -> int:
@@ -39,8 +33,8 @@ def counted_parameters(names: list[str], packed: dict[str, int] | None = None) -
 class LimitOperationParameters(OperationMeasureRule):
     slug = "limit-operation-parameters"
 
-    def measure(self, operation) -> list[str]:
-        if _parameter_count_exempt(operation.name):
+    def measure(self, operation: "Node") -> list[str]:
+        if self._parameter_count_exempt(operation.name):
             return []
         names = [parameter.name for parameter in parameters_of(operation)]
         packed = operation.get_fact("packed_parameters", None) or {}
@@ -49,3 +43,12 @@ class LimitOperationParameters(OperationMeasureRule):
             return []
         packing = " A packed tuple or *args counts each value it carries." if packed else ""
         return [f"{operation_label(operation)} takes {count} parameters (maximum {MAX_DOMAIN_PARAMETERS}, excluding self).{packing}"]
+
+    def _parameter_count_exempt(self, operation_name: str) -> bool:
+        if operation_name in _PARAMETER_COUNT_EXEMPT_OPERATION_NAMES:
+            return True
+        if operation_name.startswith("from_"):
+            return True
+        if _CAMEL_FROM_FACTORY.match(operation_name):
+            return True
+        return _LOAD_FACTORY.match(operation_name) is not None

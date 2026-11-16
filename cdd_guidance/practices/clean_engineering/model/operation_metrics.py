@@ -252,7 +252,7 @@ class SourceText:
         ``domain-exception-carries-context``'s question."""
         code = self._code()
         for pattern in (_EDGE_RAISE, _EDGE_RAISE_BRACE):
-            if any(not _names_declared_failure(match.group(1)) for match in pattern.finditer(code)):
+            if any(not self._names_declared_failure(match.group(1)) for match in pattern.finditer(code)):
                 return True
         return self._raises_builtin_with_message()
 
@@ -341,7 +341,13 @@ class SourceText:
         """A builtin failure raised under an empty-value guard whose message says what is empty or missing."""
         code = self._code()
         message = _EDGE_RAISE_MESSAGE.search(code)
-        return bool(message and not _names_declared_failure(message.group(1)) and _EDGE_GUARD.search(code))
+        return bool(message and not self._names_declared_failure(message.group(1)) and _EDGE_GUARD.search(code))
+
+    def _names_declared_failure(self, raised: str) -> bool:
+        """A raise of a failure the program declares rather than one its language gives every program:
+        `UnknownPractice(key, known)`, `CommitPathsRequiredError()`; not `ValueError("missing")`."""
+        named = _RAISED_CLASS.match(raised)
+        return named is not None and named.group(1) not in _BUILTIN_FAILURES
 
     def _returns_fallback(self, catch_body: str) -> bool:
         return _THROW.search(catch_body) is None and _FALLBACK_RETURN.search(catch_body) is not None
@@ -521,8 +527,7 @@ class CatchClause:
                 kept.append(inner)
         return kept
 
-    @staticmethod
-    def _on_self(expression: ast.expr) -> bool:
+    def _on_self(self, expression: ast.expr) -> bool:
         """True for a member reached from ``self``: ``self._error``, ``self.thread_errors.append``."""
         reached = expression
         while isinstance(reached, ast.Attribute):
@@ -638,19 +643,16 @@ class Constructions:
         read = [child for child in nodes if isinstance(child, ast.Name) and id(child) not in called]
         return bool(arguments) and all(self._names_owned_value(name, known, id(name) in receivers) for name in read)
 
-    @staticmethod
-    def _names_owned_value(name: ast.Name, known: set[str], called_on: bool) -> bool:
+    def _names_owned_value(self, name: ast.Name, known: set[str], called_on: bool) -> bool:
         """True for a name the constructor holds, a builtin, or a constant or class it names without calling."""
         return name.id in known or hasattr(builtins, name.id) or (name.id[:1].isupper() and not called_on)
 
-    @staticmethod
-    def _bound_in(nodes: list[ast.AST]) -> set[str]:
+    def _bound_in(self, nodes: list[ast.AST]) -> set[str]:
         """The names a comprehension or a lambda inside the arguments binds itself."""
         bound = {child.id for child in nodes if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store)}
         return bound | {child.arg for child in nodes if isinstance(child, ast.arg)}
 
-    @staticmethod
-    def _absent_parameter(test: ast.expr) -> str:
+    def _absent_parameter(self, test: ast.expr) -> str:
         """The name a test asks is missing, `x is None` or `not x`; empty for any other test."""
         if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
             return _name_of(test.operand)
@@ -659,13 +661,6 @@ class Constructions:
             if isinstance(compared, ast.Constant) and compared.value is None:
                 return _name_of(test.left)
         return ""
-
-
-def _names_declared_failure(raised: str) -> bool:
-    """A raise of a failure the program declares rather than one its language gives every program:
-    `UnknownPractice(key, known)`, `CommitPathsRequiredError()`; not `ValueError("missing")`."""
-    named = _RAISED_CLASS.match(raised)
-    return named is not None and named.group(1) not in _BUILTIN_FAILURES
 
 
 def _name_of(expression: ast.expr) -> str:
@@ -731,12 +726,12 @@ class OwnObjects:
         named = rf"\b{re.escape(self._owner.name)}\b"
         return annotation is not None and re.search(named, ast.unparse(annotation)) is not None
 
-    def _builds_class(self, value: ast.expr) -> bool:
-        """True when a value is an object the class makes: a call of the class, of ``cls``, of ``type(self)``, or of a
-        factory on the class (``Plan.read(...)``, ``cls.read(...)``)."""
-        if not isinstance(value, ast.Call):
+    def _builds_class(self, assigned: ast.expr) -> bool:
+        """True when an assigned value is an object the class makes: a call of the class, of ``cls``, of
+        ``type(self)``, or of a factory on the class (``Plan.read(...)``, ``cls.read(...)``)."""
+        if not isinstance(assigned, ast.Call):
             return False
-        called = value.func
+        called = assigned.func
         if isinstance(called, ast.Attribute):
             called = called.value
         if isinstance(called, ast.Call):
@@ -753,15 +748,13 @@ class OwnObjects:
         fields.discard("")
         return fields
 
-    @staticmethod
-    def _self_field(expression: ast.expr) -> str:
+    def _self_field(self, expression: ast.expr) -> str:
         """The field an expression reads off ``self`` (``self.epics``); empty for anything else."""
         if isinstance(expression, ast.Attribute) and _name_of(expression.value) == "self":
             return expression.attr
         return ""
 
-    @staticmethod
-    def _targets(statement: ast.AST) -> list[ast.expr]:
+    def _targets(self, statement: ast.AST) -> list[ast.expr]:
         """What an assignment statement assigns to; none for any other node."""
         if isinstance(statement, ast.Assign):
             return statement.targets
