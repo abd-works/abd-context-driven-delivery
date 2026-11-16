@@ -9,7 +9,7 @@ section: body
 
 ### Domain terms
 
-- ++Files app++ — the page beside the chat that lists the files a link names and shows the open ones in the source view (`space/session/files_app/`).
+- ++Files app++ — the page beside the chat that lists the files a link names and shows the open ones in the source view (`harness/files_app/`).
 - ++file bar++ — the Files app's side bar: the listed files as a list or in their folders today, and the session's graph in the graph view.
 - ++graph view++ — the file bar showing the practice trees of the session's graph, holding only the nodes of the files the file list would show.
 - ++guidance selection++ — the stages, practices and format groups the session has selected, which the Files app's buttons and the chat bar's dots and chips show (`Session.guidance_selection`).

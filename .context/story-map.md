@@ -584,7 +584,7 @@ Intended (`.sessions/_backlog/review-work-in-board-files.md` "session informatio
 
 ### (E) Review Files In Viewer
 
-Moved (2026-11-14) to the Files app's map, [Review Files In Files App](../../../space/session/files_app/.context/story-map.md): the Files app is now the one place a session's files are viewed and commented on, and its stories, scenarios (`space/session/files_app/.context/review-files-in-files-app/`) and acceptance tests (`space/session/files_app/review-files-in-files-app.story.*.py`) live there. The board's own files panel (`space/kanban/app/src/kanban/ticket/file-viewer-view.tsx`) still draws the same behaviour; its UI spec stays in `space/kanban/review-files-in-viewer.story.ui.spec.ts`.
+Moved (2026-11-14) to the Files app's map, [Review Files In Files App](../../../harness/files_app/.context/story-map.md): the Files app is now the one place a session's files are viewed and commented on, and its stories, scenarios (`harness/files_app/.context/review-files-in-files-app/`) and acceptance tests (`space/session/review-files-in-files-app.story.*.py`) live there. The board's own files panel (`space/kanban/app/src/kanban/ticket/file-viewer-view.tsx`) still draws the same behaviour; its UI spec stays in `space/kanban/review-files-in-viewer.story.ui.spec.ts`.
 
 ### (E) Integrate Practice Content Editor Apps On Board
 
@@ -800,7 +800,7 @@ Requested (2026-11-11, "doesnt result in LERN being passed in as a param? should
 
 #### (S) Person --> List Session Files, View Session Files
 
-Moved (2026-11-14) to the Files app's map as Open Stage Files From Chat Bar, Open Session Folder From Chat Bar and List Files The Link Names ([Review Files In Files App](../../../space/session/files_app/.context/story-map.md)): the chat bar's files button and session name open the Files app beside the chat, no longer a tab per file in the chat bar.
+Moved (2026-11-14) to the Files app's map as Open Stage Files From Chat Bar, Open Session Folder From Chat Bar and List Files The Link Names ([Review Files In Files App](../../../harness/files_app/.context/story-map.md)): the chat bar's files button and session name open the Files app beside the chat, no longer a tab per file in the chat bar.
 
 #### (S) Person --> Open Validation Report From Violation Count
 
@@ -1741,7 +1741,7 @@ Observed: selecting a violating rule opens the node's source with a banner namin
 
 ### (S) Person --> Display Drawio File As Diagram
 
-Requested on 2026-11-06: a `.drawio` file opens as its diagram, with a Source tab for the XML; a violation marks the shape it names in red, and pressing a shape opens its lines in the source. Opening a diagram moved (2026-11-14) to the Files app's Open Diagram In Files App ([Review Files In Files App](../../../space/session/files_app/.context/story-map.md)), which shows the draw.io editor beside the file list. Missing still: a Source tab, marking the shape a violation names, and opening a pressed shape's lines.
+Requested on 2026-11-06: a `.drawio` file opens as its diagram, with a Source tab for the XML; a violation marks the shape it names in red, and pressing a shape opens its lines in the source. Opening a diagram moved (2026-11-14) to the Files app's Open Diagram In Files App ([Review Files In Files App](../../../harness/files_app/.context/story-map.md)), which shows the draw.io editor beside the file list. Missing still: a Source tab, marking the shape a violation names, and opening a pressed shape's lines.
 
 ### (S) Person --> Copy Correct Prompt
 
