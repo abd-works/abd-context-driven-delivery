@@ -95,14 +95,18 @@ class Stories(PracticeGuidance):
         from project. A story test holds one Story's scenarios in its own language, and the story map says which epic
         that Story sits under, so a story test's scenarios go on the map's Story of the same name, and a story test
         with no map listed reads the map in its own folder or the nearest one above it. Where one thing is written in
-        several formats, one is read: a story test in code before the map's markdown scenarios, which it replaces, and a
-        map's markdown before its drawio (``preferred_maps``)."""
+        several formats, one is read, code before markdown before a diagram: story tests in code under a project's
+        story_tests are the map themselves, their folders its epics and sub-epics (``_story_map_of_code``), and no map
+        file is read beside them; otherwise a map's markdown is read before its drawio (``preferred_maps``)."""
         from cdd_guidance.practices.stories.model.story_map_files import path_from
         from cdd_guidance.practices.stories.model.story_model import StoryModel
 
         project = Path(project).resolve()
         paths = [Path(item).resolve() for item in files]
         tests = [path for path in paths if self._story_test_reader(path) is not None]
+        from_code = self._story_map_of_code(tests, project, on_file)
+        if from_code.epics:
+            return from_code
         maps = [path for path in paths if is_story_map_file(path)]
         maps = preferred_maps(maps + [found for found in self._maps_beside(tests, project) if found not in maps])
         merged = StoryModel()
@@ -133,6 +137,26 @@ class Stories(PracticeGuidance):
         if isinstance(adapter, MarkdownStoryModel):
             return adapter.opened_from(Path(path), project)
         return adapter.from_workspace(Path(path), project=project) or adapter
+
+    def _story_map_of_code(self, tests: list[Path], project: Path, on_file=None):
+        """The story map the story tests in code among tests hold under the project's story_tests, each language read
+        by its own format: their folders are its epics and sub-epics, and their stories and scenarios its own, each
+        naming its test as its file. An epic another language already gave is kept from the first. Empty when none sits
+        under story_tests."""
+        from cdd_guidance.practices.stories.model.story_map_files import STORY_TESTS_FOLDER, path_from
+        from cdd_guidance.practices.stories.model.story_model import StoryModel
+
+        merged = StoryModel()
+        by_reader: dict[type, dict[str, str]] = {}
+        for path in tests:
+            by_reader.setdefault(self._story_test_reader(path), {})[path_from(project, path)] = path.read_text(encoding="utf-8")
+        for reader, texts in by_reader.items():
+            read = reader(tests_root=STORY_TESTS_FOLDER).parse(texts, on_file=on_file)
+            merged.source_texts.update(read.source_texts)
+            held = {epic.name for epic in merged.epics}
+            for epic in [epic for epic in read.epics if epic.name not in held]:
+                merged.append_epic(epic)
+        return merged
 
     def story_tests(self, project: Path) -> dict[str, list[str]]:
         """Each story test its fidelities declare in the session it works in, by its path from project, with the names
