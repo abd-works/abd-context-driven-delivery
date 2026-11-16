@@ -18,7 +18,7 @@ section: body
 
 > In steps: ++example++ names a row of a table below.
 
-> Evidence: every scenario here is Intended (requested 2026-11-15). Each brings in a Graph app story that is Observed in the Graph app (`harness/.context/stories/story-map.md`, Explore Graph In Graph App and Filter Graph In Graph App); the Files app has no graph view yet.
+> Evidence: every scenario here is Intended (requested 2026-11-15), except Expand Practice Tree In Files App, Show Graph Load Steps In Files App's load step scenario and Open Calls Across Files In Files App, Built on the file-manager branch on 2026-11-15, not walked, and held by `harness/files_app/app/files/files-graph.spec.ts` (the page) and `space/session/explore-graph-in-files-app.story.shared.py` replayed by its `.story.domain.spec.py` and `.story.server.spec.py` (the session's answers). Each brings in a Graph app story that is Observed in the Graph app (`harness/.context/stories/story-map.md`, Explore Graph In Graph App and Filter Graph In Graph App); the Files app has no graph view yet.
 
 ## Examples
 

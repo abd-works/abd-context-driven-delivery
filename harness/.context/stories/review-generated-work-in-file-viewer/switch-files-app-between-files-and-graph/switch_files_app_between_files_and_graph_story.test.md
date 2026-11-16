@@ -17,7 +17,7 @@ section: body
 
 > In steps: ++example++ names a row of a table below; ${field} is a column of the scenario's Examples.
 
-> Evidence: every scenario here was requested on 2026-11-15 and is Built on the file-manager branch (the Stories root, folder and scroll scenarios on 2026-11-15, from "why is story graph empty", "module would show multiple files" and "we should scroll to line of member if it's below the fold"), held by `harness/files_app/app/files/files-graph.spec.ts` (the page) and `space/session/session_graph_view_spec.py` (the session's graph); none is walked in the browser yet.
+> Evidence: every scenario here was requested on 2026-11-15 and is Built on the file-manager branch (the Stories root, folder and scroll scenarios on 2026-11-15, from "why is story graph empty", "module would show multiple files" and "we should scroll to line of member if it's below the fold"), held by `harness/files_app/app/files/files-graph.spec.ts` (the page), `space/session/switch-files-app-between-files-and-graph.story.shared.py` replayed by its `.story.domain.spec.py` and `.story.server.spec.py` (the session's answers), and `space/session/session_graph_view_spec.py` (the session's graph operations); none is walked in the browser yet.
 
 ## Examples
 
