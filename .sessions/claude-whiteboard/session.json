@@ -8,7 +8,7 @@
     "stages": [
       "discovery"
     ],
-    "version": 16
+    "version": 17
   },
   "practices": {
     "ux": {
@@ -25,7 +25,6 @@
     "stories": {
       "formats": {
         "story_map": [
-          "markdown",
           "drawio"
         ]
       }
