@@ -308,6 +308,7 @@ Changed by the person on 2026-11-16 ("only shade once; on expand, hide the callo
 | user request, 2026-11-16 | "when the Person opens ..." shows observes and invokes "but they do not reach the Python code; this has been tested for TypeScript but not Python before" |
 | user request, 2026-11-16 | "it's not clear what class callouts are for in the tests. Are they story to code relationships? They should be placed next to steps if they are step relationships." |
 | probe of the file-manager worktree, 2026-11-16 | a Python step invoked the operations it called on an object (`session_of(world).graph_branch(...)` reached Session.graph_branch) but none of the functions it called by name (`session_of`, `node_id_of`), which the graph holds as operations of their module |
+| main session's validation report, 2026-11-16 (`stories-acceptance-tests-20261116T173912.md`) | 11 When steps of the serve-cdd-code-in-lanes story tests, written as `with when("..."):` blocks calling `self.lanes.for_project(...)`, were reported with no invokes relationship to Operation or Property; the main session has Clean Engineering off, so its graph holds no operation for any step to invoke |
 
 #### Scenario: A step in a Python story test invokes the functions and operations it calls
 
@@ -323,3 +324,15 @@ Changed by the person on 2026-11-16 ("only shade once; on expand, hide the callo
 *Then* the When's line carries a callout to Ticket.delete, the operation it invokes  
   *And* the Given's line a callout to ticket_on_board  
   *But* the docstring's line carries none
+
+#### Scenario: A step in a with-block Python story test invokes the operation its block calls
+
+*Given* the Files app shows the Stories tree of Archive Ticket's Python story test, whose `with when` block calls Ticket.delete on an object it holds  
+*When* the Person opens the When  
+*Then* the When shows an invokes group holding delete
+
+#### Scenario: A step's invokes are not judged while the session reads no Clean Engineering
+
+*Given* checkout-flow works with Clean Engineering off, and Archive Ticket's Python story test's `with when` block calls Ticket.delete  
+*When* the Person views the story test with the rules the whole working copy breaks  
+*Then* the When carries no conforms-to-schema finding, since no operation is read for it to invoke

@@ -50,6 +50,12 @@ class RequiredRelationship:
             return self.target_stage == self.owner_stage
         return self.target_stage <= current_stage
 
+    def judged_in(self, context: RuleCheckContext) -> bool:
+        """Whether the graph can judge it: some practice open in the graph names one of its target types. A link into a
+        practice the graph does not read, such as a step's invokes while the session has Clean Engineering off, has no
+        node to lead to, so it is left to the AI judge, as on a load of named files."""
+        return not context.read_node_types.isdisjoint(self.targets)
+
     def owners(self, context: RuleCheckContext) -> list[Node]:
         """The checked practice's nodes of the owner type, read as either of its node types; a step's phase key
         (``when``) holds a ``Step`` only when the step is of that phase."""
@@ -83,7 +89,8 @@ class ConformsToSchema(PracticeGraphRule):
             "only for the fidelities worked so far: a relationship whose target a later fidelity creates is not "
             "required yet. Validate keeps only the findings inside the work's scope: the session's stories and "
             "everything under them, and the files the call names. It runs only on a graph that holds the session's whole "
-            "working copy across its practices, so links across practices are judged; on a load of named files alone "
+            "working copy across its practices, so links across practices are judged; on a load of named files alone, "
+            "or for a link into a practice the graph does not read (a step's invokes while Clean Engineering is off), "
             "the AI judge weighs them."
         ),
     )
@@ -98,7 +105,7 @@ class ConformsToSchema(PracticeGraphRule):
             return []
         schema = context.practice.reading.in_graph.rule_run.schema
         stage = schema.current_stage
-        due = [requirement for requirement in schema.requirements if requirement.required_at(stage)]
+        due = [requirement for requirement in schema.requirements if requirement.required_at(stage) and requirement.judged_in(context)]
         found = ((node, requirement.gap_on(node, context)) for requirement in due for node in requirement.owners(context))
         return [(node.node_id, gap) for node, gap in found if gap]
 

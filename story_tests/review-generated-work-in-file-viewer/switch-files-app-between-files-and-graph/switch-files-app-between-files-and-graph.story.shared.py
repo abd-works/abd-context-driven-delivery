@@ -21,6 +21,7 @@ from expects import contain, equal, expect
 from space.kanban.story_test import SharedStories
 from space.session.graph_view_examples import (
     BOARD_CODE,
+    CHECKOUT_FLOW_READING_NO_CODE,
     LISTED,
     STORY_MAP,
     RESTORE_TEST,
@@ -40,6 +41,8 @@ from space.session.graph_view_examples import (
     STORY_MAP_DELETE_LINE,
     STORY_TEST,
     TICKET_CODE,
+    WITH_LISTED,
+    WITH_STORY,
     node_id_of,
     seed_checkout_flow_with_graph_files,
     session_of,
@@ -387,14 +390,15 @@ def _(s):
 # --- Follow Story Steps To Code -----------------------------------------------------------------------------------
 
 
-def related_under(world, step: str, group: str) -> list[str]:
-    """The names in step's relationship group, each branch opened as the page opens it."""
+def related_under(world, step: str, group: str, paths: list[str] = STEP_LISTED) -> list[str]:
+    """The names in step's relationship group, in the trees of the files at paths, each branch opened as the page opens
+    it."""
     session = session_of(world)
-    opened = world.data_of(session.graph_branch(node_id=node_id_of(world, step, STEP_LISTED), paths=STEP_LISTED))
+    opened = world.data_of(session.graph_branch(node_id=node_id_of(world, step, paths), paths=paths))
     held = next((child for child in opened["children"] if child["name"] == group), None)
     if held is None:
         return []
-    branch = world.data_of(session.graph_branch(node_id=held["node_id"], paths=STEP_LISTED))
+    branch = world.data_of(session.graph_branch(node_id=held["node_id"], paths=paths))
     return [child["name"] for child in branch["children"] if "children_left_out" in child]
 
 
@@ -433,6 +437,37 @@ def _(s):
     def _(world):
         found = [(step["line"], [target["name"] for target in step["invokes"]], [target["file"] for target in step["invokes"]]) for step in world.steps]
         expect(found).to(equal([(STEP_STORY_GIVEN_LINE, ["ticket_on_board"], [TICKET_EXAMPLES]), (STEP_STORY_WHEN_LINE, ["delete"], [TICKET_CODE])]))
+
+
+@shared_stories.scenario("Follow Story Steps To Code", "A step in a with-block Python story test invokes the operation its block calls")
+def _(s):
+    @s.given("the Files app shows the Stories tree of Archive Ticket's Python story test, whose `with when` block calls Ticket.delete on an object it holds")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person opens the When")
+    def _(world):
+        world.when = related_under(world, "when the Person archives it", "invokes", WITH_LISTED)
+
+    @s.then("the When shows an invokes group holding delete")
+    def _(world):
+        expect(world.when).to(equal(["delete"]))
+
+
+@shared_stories.scenario("Follow Story Steps To Code", "A step's invokes are not judged while the session reads no Clean Engineering")
+def _(s):
+    @s.given("checkout-flow works with Clean Engineering off, and Archive Ticket's Python story test's `with when` block calls Ticket.delete")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world, CHECKOUT_FLOW_READING_NO_CODE)
+
+    @s.when("the Person views the story test with the rules the whole working copy breaks")
+    def _(world):
+        world.violations = world.data_of(session_of(world).file(path=WITH_STORY, cross_file=True))["violations"]
+
+    @s.then("the When carries no conforms-to-schema finding, since no operation is read for it to invoke")
+    def _(world):
+        found = [found["violation"]["message"] for found in world.violations if found["violation"]["rule"] == "conforms-to-schema"]
+        expect([message for message in found if "'when the Person archives it'" in message]).to(equal([]))
 
 
 @shared_stories.scenario("Open Story Scenarios Across Files", "Selecting a markdown step spans its own line, whatever its prose holds")

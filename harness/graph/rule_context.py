@@ -6,6 +6,7 @@ which is all a node read back from graph.json holds.
 
 from __future__ import annotations
 
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar
 
@@ -33,6 +34,14 @@ class RuleCheckContext:
         if kind not in self._indexes:
             self._indexes[kind] = kind(self)
         return self._indexes[kind]
+
+    @cached_property
+    def read_node_types(self) -> frozenset[str]:
+        """Every node type the schemas of the practices open in the graph name: the types a node this load read can be.
+        A relationship to a type no open practice names, such as a step's invokes of an operation while Clean
+        Engineering is off, leads to nothing the graph can hold."""
+        practices = self.graph.practices.opened.values()
+        return frozenset(node_type for practice in practices for node_type in practice.reading.in_graph.rule_run.schema.types)
 
     def targets(self, node: Node, kind: str) -> list[Node]:
         """The nodes an edge of kind leads to from node."""

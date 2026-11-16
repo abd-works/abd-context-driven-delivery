@@ -112,6 +112,23 @@ with description("conforms to schema"):
                     "Scenario 'Pay later' has no steps relationship to Step | Given | When | Then | Background, which the stories practice schema requires."
                 ))
 
+    with description("a when step invoking nothing"):
+        with before.each:
+            self.graph = Graph()
+            self.practice = _working_at(self.graph, "stories", "acceptance_tests")
+            _node(self.practice, "When", "the Shopper pays")
+
+        with description("on a graph that reads no Clean Engineering"):
+            with it("should not judge the invokes it has no operation to lead to"):
+                expect([gap for gap in _gaps(self.practice) if "invokes" in gap]).to(be_empty)
+
+        with description("on a graph that reads Clean Engineering beside it"):
+            with it("should fail for the invokes it lacks"):
+                self.graph.practice("clean_engineering")
+                expect(_gaps(self.practice)).to(contain(
+                    "When 'the Shopper pays' has no invokes relationship to Operation | Property, which the stories practice schema requires."
+                ))
+
     with description("a story with no scenarios"):
         with before.each:
             self.graph = Graph()

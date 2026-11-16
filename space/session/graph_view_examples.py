@@ -16,6 +16,13 @@ CHECKOUT_FLOW = SessionSeed(
         "outputs": {"stories": {"root": ".context"}},
     },
 )
+# Seed: checkout-flow as above with Clean Engineering off as well, so its graph reads Stories alone and holds no
+# operation a step can invoke, as the main session reads it.
+CHECKOUT_FLOW_READING_NO_CODE = SessionSeed(
+    CHECKOUT_FLOW.name,
+    CHECKOUT_FLOW.title,
+    fields={**CHECKOUT_FLOW.fields, "practices": {key: {"enabled": False} for key in ("ux", "ddd", "bdd", "clean_engineering")}},
+)
 # Seed: the ticket code the branch changed, Ticket with its operations, delete invoking Board.reread.
 TICKET_CODE = "space/kanban/ticket.py"
 TICKET_TEXT = (
@@ -134,11 +141,26 @@ STEP_STORY_DOCSTRING_LINE = 1
 STEP_STORY_GIVEN_LINE = 9
 STEP_STORY_WHEN_LINE = 13
 STEP_LISTED = [STEP_STORY, TICKET_CODE, BOARD_CODE, TICKET_EXAMPLES]
+# Seed: Archive Ticket's Python story test, its steps `with` blocks, its When calling Ticket.delete on the ticket its
+# Given holds, as the serve-cdd-code-in-lanes story tests call `self.lanes.for_project(...)`.
+WITH_STORY = "story_tests/manage-tickets/remove-tickets/archive-ticket/archive_ticket_story.test.py"
+WITH_STORY_TEXT = (
+    "from story_test import given, scenario, story, when\n"
+    "\n"
+    'with story("Archive Ticket"):\n'
+    '    with scenario("a ticket on the board is archived"):\n'
+    '        with given("a ticket on the board"):\n'
+    '            self.ticket = "checkout"\n'
+    '        with when("the Person archives it"):\n'
+    "            # Person -> Ticket.delete(board)\n"
+    "            self.ticket.delete(self.board)\n"
+)
+WITH_LISTED = [WITH_STORY, TICKET_CODE, BOARD_CODE]
 
 
-def seed_checkout_flow_with_graph_files(world) -> None:
-    world.project.seed_session(CHECKOUT_FLOW)
-    for path, text in ((TICKET_CODE, TICKET_TEXT), (BOARD_CODE, BOARD_TEXT), (STORY_MAP, STORY_MAP_TEXT), (OLD_MAP, OLD_MAP_TEXT), (STORY_TEST, STORY_TEST_TEXT), (RESTORE_TEST, RESTORE_TEST_TEXT), (SCENARIOS, SCENARIOS_TEXT), (SHARED_STORY, SHARED_STORY_TEXT), (KANBAN_MODEL, KANBAN_MODEL_TEXT), (TICKET_EXAMPLES, TICKET_EXAMPLES_TEXT), (STEP_STORY, STEP_STORY_TEXT)):
+def seed_checkout_flow_with_graph_files(world, seed: SessionSeed = CHECKOUT_FLOW) -> None:
+    world.project.seed_session(seed)
+    for path, text in ((TICKET_CODE, TICKET_TEXT), (BOARD_CODE, BOARD_TEXT), (STORY_MAP, STORY_MAP_TEXT), (OLD_MAP, OLD_MAP_TEXT), (STORY_TEST, STORY_TEST_TEXT), (RESTORE_TEST, RESTORE_TEST_TEXT), (SCENARIOS, SCENARIOS_TEXT), (SHARED_STORY, SHARED_STORY_TEXT), (KANBAN_MODEL, KANBAN_MODEL_TEXT), (TICKET_EXAMPLES, TICKET_EXAMPLES_TEXT), (STEP_STORY, STEP_STORY_TEXT), (WITH_STORY, WITH_STORY_TEXT)):
         world.project.seed_file(path, text)
 
 
