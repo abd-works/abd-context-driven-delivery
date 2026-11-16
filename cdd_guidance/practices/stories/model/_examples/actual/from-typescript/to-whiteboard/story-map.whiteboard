@@ -62,7 +62,7 @@
    "size": "body",
    "x": 20,
    "y": 120,
-   "w": 5696,
+   "w": 5448,
    "h": 60
   },
   "subepic.0.046cec75cf": {
@@ -73,7 +73,7 @@
    "size": "body",
    "x": 20,
    "y": 195,
-   "w": 912,
+   "w": 872,
    "h": 60
   },
   "story.user.0b37d30d9d": {
@@ -84,8 +84,8 @@
    "size": "small",
    "x": 32,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "subepic.1.e8f71783e0": {
    "type": "shape",
@@ -93,9 +93,9 @@
    "text": "Create Empty Cart",
    "kind": "rounded",
    "size": "body",
-   "x": 204,
+   "x": 196,
    "y": 263,
-   "w": 176,
+   "w": 168,
    "h": 60
   },
   "story.user.25ce2d0641": {
@@ -104,10 +104,10 @@
    "text": "Ensure Cart on Customer",
    "kind": "rounded",
    "size": "small",
-   "x": 216,
+   "x": 208,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "subepic.1.c08db70e58": {
    "type": "shape",
@@ -115,9 +115,9 @@
    "text": "Create Unconfirmed User",
    "kind": "rounded",
    "size": "body",
-   "x": 388,
+   "x": 372,
    "y": 263,
-   "w": 176,
+   "w": 168,
    "h": 60
   },
   "story.user.11c76b4cc5": {
@@ -126,10 +126,10 @@
    "text": "Create Unconfirmed Cognito User",
    "kind": "rounded",
    "size": "small",
-   "x": 400,
+   "x": 384,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "subepic.1.bcdbacfebb": {
    "type": "shape",
@@ -137,9 +137,9 @@
    "text": "Load Customer",
    "kind": "rounded",
    "size": "body",
-   "x": 572,
+   "x": 548,
    "y": 263,
-   "w": 176,
+   "w": 168,
    "h": 60
   },
   "story.user.e6954eff57": {
@@ -148,10 +148,10 @@
    "text": "Load My Paradise Customer From Midtier And Store In Session",
    "kind": "rounded",
    "size": "small",
-   "x": 584,
+   "x": 560,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "subepic.1.9cd2c7b475": {
    "type": "shape",
@@ -159,9 +159,9 @@
    "text": "Verify Account",
    "kind": "rounded",
    "size": "body",
-   "x": 756,
+   "x": 724,
    "y": 263,
-   "w": 176,
+   "w": 168,
    "h": 60
   },
   "story.user.7d205bcd0c": {
@@ -170,10 +170,10 @@
    "text": "Enter Validation Code",
    "kind": "rounded",
    "size": "small",
-   "x": 768,
+   "x": 736,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "subepic.0.07201d6d18": {
    "type": "shape",
@@ -181,9 +181,9 @@
    "text": "Get Number",
    "kind": "rounded",
    "size": "body",
-   "x": 940,
+   "x": 900,
    "y": 195,
-   "w": 728,
+   "w": 696,
    "h": 60
   },
   "subepic.1.32888c0e5d": {
@@ -192,9 +192,9 @@
    "text": "Enter Porting Number",
    "kind": "rounded",
    "size": "body",
-   "x": 940,
+   "x": 900,
    "y": 263,
-   "w": 176,
+   "w": 168,
    "h": 60
   },
   "story.user.b87c4643af": {
@@ -203,10 +203,10 @@
    "text": "Submit Portability Request",
    "kind": "rounded",
    "size": "small",
-   "x": 952,
+   "x": 912,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "subepic.1.b2c78d0933": {
    "type": "shape",
@@ -214,9 +214,9 @@
    "text": "Get New Number",
    "kind": "rounded",
    "size": "body",
-   "x": 1124,
+   "x": 1076,
    "y": 263,
-   "w": 360,
+   "w": 344,
    "h": 60
   },
   "story.user.511bbc011b": {
@@ -225,10 +225,10 @@
    "text": "Determine Number",
    "kind": "rounded",
    "size": "small",
-   "x": 1136,
+   "x": 1088,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "story.user.a3898682af": {
    "type": "shape",
@@ -236,10 +236,10 @@
    "text": "Choose a Number",
    "kind": "rounded",
    "size": "small",
-   "x": 1320,
+   "x": 1264,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "subepic.1.c93562b891": {
    "type": "shape",
@@ -247,9 +247,9 @@
    "text": "Verify Ported Number",
    "kind": "rounded",
    "size": "body",
-   "x": 1492,
+   "x": 1428,
    "y": 263,
-   "w": 176,
+   "w": 168,
    "h": 60
   },
   "story.user.08468eb815": {
@@ -258,10 +258,10 @@
    "text": "Check Port Verification",
    "kind": "rounded",
    "size": "small",
-   "x": 1504,
+   "x": 1440,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "subepic.0.3743f31af7": {
    "type": "shape",
@@ -269,9 +269,9 @@
    "text": "Get Onboarding Plan",
    "kind": "rounded",
    "size": "body",
-   "x": 1676,
+   "x": 1604,
    "y": 195,
-   "w": 360,
+   "w": 344,
    "h": 60
   },
   "story.user.fc31af3a1a": {
@@ -280,10 +280,10 @@
    "text": "Load Plan Catalog",
    "kind": "rounded",
    "size": "small",
-   "x": 1688,
+   "x": 1616,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "story.user.90f968270a": {
    "type": "shape",
@@ -291,10 +291,10 @@
    "text": "Choose Onboarding Plan",
    "kind": "rounded",
    "size": "small",
-   "x": 1872,
+   "x": 1792,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "subepic.0.b70edfd9df": {
    "type": "shape",
@@ -302,9 +302,9 @@
    "text": "Get Order Review",
    "kind": "rounded",
    "size": "body",
-   "x": 2044,
+   "x": 1956,
    "y": 195,
-   "w": 544,
+   "w": 520,
    "h": 60
   },
   "story.user.24428674e3": {
@@ -313,10 +313,10 @@
    "text": "Check The Order",
    "kind": "rounded",
    "size": "small",
-   "x": 2056,
+   "x": 1968,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "story.user.ecbd55becb": {
    "type": "shape",
@@ -324,10 +324,10 @@
    "text": "Upgrade To Data Freedom",
    "kind": "rounded",
    "size": "small",
-   "x": 2240,
+   "x": 2144,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "story.user.0f3c9cc58a": {
    "type": "shape",
@@ -335,10 +335,10 @@
    "text": "Change Plan From Review",
    "kind": "rounded",
    "size": "small",
-   "x": 2424,
+   "x": 2320,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "subepic.0.fb237e28da": {
    "type": "shape",
@@ -346,9 +346,9 @@
    "text": "Get Payment",
    "kind": "rounded",
    "size": "body",
-   "x": 2596,
+   "x": 2484,
    "y": 195,
-   "w": 544,
+   "w": 520,
    "h": 60
   },
   "story.user.b322564c3b": {
@@ -357,10 +357,10 @@
    "text": "Enter Payment",
    "kind": "rounded",
    "size": "small",
-   "x": 2608,
+   "x": 2496,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "story.user.cacd6b6441": {
    "type": "shape",
@@ -368,10 +368,10 @@
    "text": "Authorize Card",
    "kind": "rounded",
    "size": "small",
-   "x": 2792,
+   "x": 2672,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "story.user.ee9337a446": {
    "type": "shape",
@@ -379,10 +379,10 @@
    "text": "Provide Apple Pay Certificate",
    "kind": "rounded",
    "size": "small",
-   "x": 2976,
+   "x": 2848,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "subepic.0.3e9eccb0db": {
    "type": "shape",
@@ -390,9 +390,9 @@
    "text": "Get Sign Up Plan",
    "kind": "rounded",
    "size": "body",
-   "x": 3148,
+   "x": 3012,
    "y": 195,
-   "w": 360,
+   "w": 344,
    "h": 60
   },
   "story.user.4c6a9c0934": {
@@ -401,10 +401,10 @@
    "text": "Open Plan Deep Link",
    "kind": "rounded",
    "size": "small",
-   "x": 3160,
+   "x": 3024,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "story.user.ccd791b1d2": {
    "type": "shape",
@@ -412,10 +412,10 @@
    "text": "Apply Catalog Voucher",
    "kind": "rounded",
    "size": "small",
-   "x": 3344,
+   "x": 3200,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "subepic.0.11faed9e3e": {
    "type": "shape",
@@ -423,9 +423,9 @@
    "text": "Get Sim",
    "kind": "rounded",
    "size": "body",
-   "x": 3516,
+   "x": 3364,
    "y": 195,
-   "w": 728,
+   "w": 696,
    "h": 60
   },
   "story.user.b4858ae868": {
@@ -434,10 +434,10 @@
    "text": "Choose Esim",
    "kind": "rounded",
    "size": "small",
-   "x": 3528,
+   "x": 3376,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "story.user.c3fa664365": {
    "type": "shape",
@@ -445,10 +445,10 @@
    "text": "Request a Paradise Sim Card",
    "kind": "rounded",
    "size": "small",
-   "x": 3712,
+   "x": 3552,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "story.user.6da822153b": {
    "type": "shape",
@@ -456,10 +456,10 @@
    "text": "Enter Existing Sim",
    "kind": "rounded",
    "size": "small",
-   "x": 3896,
+   "x": 3728,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "story.user.2df265dfce": {
    "type": "shape",
@@ -467,10 +467,10 @@
    "text": "Activate Sim",
    "kind": "rounded",
    "size": "small",
-   "x": 4080,
+   "x": 3904,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "subepic.0.f73b70fde5": {
    "type": "shape",
@@ -478,9 +478,9 @@
    "text": "Get Verified Profile",
    "kind": "rounded",
    "size": "body",
-   "x": 4252,
+   "x": 4068,
    "y": 195,
-   "w": 360,
+   "w": 344,
    "h": 60
   },
   "story.user.95131782d9": {
@@ -489,10 +489,10 @@
    "text": "Customer Complete Persona Kyc",
    "kind": "rounded",
    "size": "small",
-   "x": 4264,
+   "x": 4080,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "story.user.637c2816b4": {
    "type": "shape",
@@ -500,10 +500,10 @@
    "text": "Collect Identity With Brand Amassador",
    "kind": "rounded",
    "size": "small",
-   "x": 4448,
+   "x": 4256,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "subepic.0.2bdbda7481": {
    "type": "shape",
@@ -511,9 +511,9 @@
    "text": "Get Voucher Credit",
    "kind": "rounded",
    "size": "body",
-   "x": 4620,
+   "x": 4420,
    "y": 195,
-   "w": 176,
+   "w": 168,
    "h": 60
   },
   "story.user.70be5d4230": {
@@ -522,10 +522,10 @@
    "text": "Redeem Voucher and Apply Credit",
    "kind": "rounded",
    "size": "small",
-   "x": 4632,
+   "x": 4432,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "subepic.0.3d171f1178": {
    "type": "shape",
@@ -533,9 +533,9 @@
    "text": "Place Order",
    "kind": "rounded",
    "size": "body",
-   "x": 4804,
+   "x": 4596,
    "y": 195,
-   "w": 728,
+   "w": 696,
    "h": 60
   },
   "story.user.cac4e07e19": {
@@ -544,10 +544,10 @@
    "text": "Create Billing Account",
    "kind": "rounded",
    "size": "small",
-   "x": 4816,
+   "x": 4608,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "story.user.0cba92aee4": {
    "type": "shape",
@@ -555,10 +555,10 @@
    "text": "Create Product Order",
    "kind": "rounded",
    "size": "small",
-   "x": 5000,
+   "x": 4784,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "story.user.42d6f3df02": {
    "type": "shape",
@@ -566,10 +566,10 @@
    "text": "View Order Result",
    "kind": "rounded",
    "size": "small",
-   "x": 5184,
+   "x": 4960,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "story.user.9133e1cddc": {
    "type": "shape",
@@ -577,10 +577,10 @@
    "text": "Create Order Ticket",
    "kind": "rounded",
    "size": "small",
-   "x": 5368,
+   "x": 5136,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   },
   "subepic.0.73dba0bed2": {
    "type": "shape",
@@ -588,9 +588,9 @@
    "text": "Sign In With Existing Account",
    "kind": "rounded",
    "size": "body",
-   "x": 5540,
+   "x": 5300,
    "y": 195,
-   "w": 176,
+   "w": 168,
    "h": 60
   },
   "story.user.7cb61929c7": {
@@ -599,10 +599,10 @@
    "text": "Sign In With Existing Account",
    "kind": "rounded",
    "size": "small",
-   "x": 5552,
+   "x": 5312,
    "y": 339,
-   "w": 160,
-   "h": 112
+   "w": 152,
+   "h": 152
   }
  }
 }

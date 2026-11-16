@@ -206,6 +206,11 @@ class Arrow(BoardElement):
     label: str = ""
     dash: bool = False
     head: str = ""
+    heads: Optional[List[str]] = None
+    """What each end draws, from end first: ``none``, ``arrow`` or ``circle``."""
+    bends: Optional[List[object]] = None
+    """The route the arrow takes: the way it leaves its first element (``h`` or ``v``), then where each middle leg runs,
+    the first half from the middle of the element it leaves, the rest from the middle of the one it reaches."""
 
 
 @dataclass

@@ -1,12 +1,14 @@
 """Claude Whiteboard channel for Clean Engineering: the modules view and the class view drawn on a board, and read back.
 
-A modules view draws each module as a box with its purpose and seam terms, and each dependency as an arrow. A class view
-draws each module as a section holding its class cards, each base as an arrow labelled ``extends``, each relationship a
-property stands for as an arrow labelled with its kind, and each dependency as a dashed arrow labelled ``<<label>>``.
-Like the drawio channel, it extends the channel-agnostic diagram nodes; only the elements it writes are its own.
+The board is drawn as the drawio channel draws its diagram, through the same diagram layer: the modules view stands its
+modules where ``ModuleLayout`` puts them, and the class view decides its pages, cards, arrows and their routes through
+``ClassView`` and the shared card placement and arrow router. Only what a board draws differently is its own: a module
+that holds others is a section with its purpose and seam terms written under its title, each card is sized for the
+board's words, an arrow's route is written as the board's ``bends``, and a class view too big for one page puts each
+module's page in a section of its own, side by side.
 
-Element ids name what an element draws (``module.``, ``section.``, ``class.``, ``extends.``, ``has.``, ``uses.``,
-``needs.``) and a key of the node's name, so the same module or class keeps its id from one render to the next.
+Element ids name what an element draws (``module.``, ``class.``, ``imported.``, ``about.``, an arrow's kind) and a key of
+the node's name, so the same module or class keeps its id from one render to the next.
 """
 
 from __future__ import annotations
@@ -14,25 +16,26 @@ from __future__ import annotations
 import hashlib
 import math
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
-from harness.whiteboard import Arrow, BoardElement, Box, Section, Shape, UnreadableBoard, Whiteboard, WhiteboardNode
+from harness.whiteboard import Arrow, BoardElement, Box, Label, Section, Shape, UnreadableBoard, Whiteboard, WhiteboardNode
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass
+from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import PAGE_MARGIN, ArrowRouter, DiagramArrow
+from cdd_guidance.practices.clean_engineering.model.diagram.class_view import ClassView, ClassViewPage
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
+    ContainmentForest,
     DiagramClass,
     DiagramCleanEngineeringModel,
     DiagramModule,
+    ImportedClass,
 )
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import MODULE_CELL_WIDTH, Geometry
+from cdd_guidance.practices.clean_engineering.model.diagram.module_layout import ModuleLayout
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
 RULE = "---"
-COLUMNS = 3
-GAP = 64
-SECTION_INSET = 24
-SECTION_TITLE_ROOM = 52
 LINE_ROOM = 21
 """The height one line of small text takes on a board, with room to spare: a board grows a block too small for its
 words over its neighbours."""
@@ -42,18 +45,47 @@ MIN_WIDTH = 200
 WIDTH_STEP = 20
 KEY_LENGTH = 12
 """Hex digits of a name's hash in an element id: enough that two modules or classes of one model never share one."""
+TITLE_ROOM = 80
+"""How far above the first card or module the board's title stands."""
+SUBTITLE_ROOM = 40
+SUBTITLE_WRAP = 600
+"""How wide the line under a modules view's title runs before it wraps."""
+"""How far a modules view's title stands above the line under it that says how to read the view."""
+MODULES_SUBTITLE = (
+    "Independent modules with one-way dependencies. Arrows point toward the depended-on module (build before). "
+    "Path nesting = containment; shared base terms live on the parent."
+)
+PAGE_GAP = 200
+"""The room between two module pages of a class view, each drawn as a section side by side."""
+PAGE_ROW_WIDTH = 12000
+"""The widest a row of module pages runs before the next page starts a row under it."""
+PAGE_INSET = 48
+"""The room between a module page's section and the cards in it."""
+NESTED_TITLE_ROOM = 44
+"""The room above a section nested in another for its title, which a board writes over the section's top edge."""
+INHERITANCE = "inheritance"
+KINDS = ("inheritance", "composition", "aggregation", "association", "dependency")
+_DEPENDENCY_LABEL = re.compile("«([^»]+)»")
 
 
 def _key(*names: str) -> str:
     return hashlib.sha1("/".join(names).encode("utf-8")).hexdigest()[:KEY_LENGTH]
 
 
+def _text_box(text: str) -> Tuple[float, float]:
+    """The width and height a block needs for text in the board's small words."""
+    lines = text.splitlines() or [""]
+    width = max(MIN_WIDTH, max(len(line) for line in lines) * LETTER_ROOM + TEXT_PAD)
+    return (math.ceil(width / WIDTH_STEP) * WIDTH_STEP, len(lines) * LINE_ROOM + TEXT_PAD)
+
+
 class _BoardText:
-    """The words on a module box or a class card, read back line by line: the italic line above or below the bold
-    name, the bulleted seam terms, and the member lines under each rule."""
+    """The words on a module box or a class card, read back line by line: the module tag, the italic line above or
+    below the bold name, the bulleted seam terms, and the member lines under each rule."""
 
     BOLD = re.compile(r"^\*\*(.+)\*\*$")
     ITALIC = re.compile(r"^\*([^*].*)\*$")
+    TAG = re.compile(r"^`(.+)`$")
     MARK = re.compile(r"«([^»]+)»")
 
     def __init__(self, text: str) -> None:
@@ -65,12 +97,19 @@ class _BoardText:
         return self.BOLD.match(self.lines[self.at]).group(1).strip() if self.at >= 0 else ""
 
     @property
+    def module(self) -> str:
+        """The module a class card's tag names, on its first line."""
+        found = self.TAG.match(self.lines[0]) if self.lines else None
+        return found.group(1).strip() if found else ""
+
+    @property
     def stereotypes(self) -> List[str]:
         above = self.lines[:self.at] if self.at > 0 else []
         return [mark for line in above if self.ITALIC.match(line) for mark in self.MARK.findall(line)]
 
     @property
     def purpose(self) -> str:
+        """The italic line under the bold name, or the first italic line of words with no name, as under a section."""
         below = self.lines[self.at + 1:self.at + 2]
         found = self.ITALIC.match(below[0]) if below else None
         return found.group(1).strip() if found else ""
@@ -88,36 +127,18 @@ class _BoardText:
         return [line[2:] for line in self.lines[rules[part] + 1:end] if line[:2] in ("+ ", "- ")]
 
 
-class _SizedByText(WhiteboardNode):
-    """A node whose box is as big as the words it shows, sized from them before the diagram places it."""
+class WhiteboardClass(DiagramClass, WhiteboardNode):
+    """A class card: its module's tag, its stereotypes, its name in bold, then its properties and its operations, each
+    part under a rule; as wide and tall as its words."""
 
-    @property
-    def shown_text(self) -> str:
-        raise NotImplementedError
-
-    @property
-    def board_size(self) -> Box:
-        lines = self.shown_text.splitlines() or [""]
-        width = max(MIN_WIDTH, max(len(line) for line in lines) * LETTER_ROOM + TEXT_PAD)
-        return Box(0, 0, math.ceil(width / WIDTH_STEP) * WIDTH_STEP, len(lines) * LINE_ROOM + TEXT_PAD)
-
-    def board_box(self) -> Box:
-        geometry = self.geometry
-        return Box(geometry.x, geometry.y, geometry.width, geometry.height)
-
-
-class WhiteboardClass(DiagramClass, _SizedByText):
-    """A class card: its stereotypes, its name in bold, then its properties and its operations, each part under a rule."""
-
+    fill_color = ""
     owning_module = ""
 
     @property
-    def element_id(self) -> str:
-        return f"class.{_key(self.owning_module, self.name)}"
-
-    @property
     def shown_text(self) -> str:
-        lines = [f"*{' '.join(f'«{item}»' for item in self.stereotypes)}*"] if self.stereotypes else []
+        lines = [f"`{self.owning_module}`"] if self.owning_module else []
+        if self.stereotypes:
+            lines.append(f"*{' '.join(f'«{item}»' for item in self.stereotypes)}*")
         lines.extend([f"**{self.name}**", RULE])
         lines.extend(f"+ {item.name}{(': ' + item.type_hint) if item.type_hint else ''}" for item in self.properties)
         lines.append(RULE)
@@ -128,8 +149,19 @@ class WhiteboardClass(DiagramClass, _SizedByText):
         )
         return "\n".join(lines)
 
-    def board_elements(self) -> List[BoardElement]:
-        return [self.board_shape(self.element_id, kind="rect", color="white", size="small", text=self.shown_text, text_align="left")]
+    def width(self) -> int:
+        return int(_text_box(self.shown_text)[0])
+
+    def height(self) -> int:
+        return int(_text_box(self.shown_text)[1])
+
+    def board_box(self) -> Box:
+        geometry = self.geometry
+        return Box(geometry.x, geometry.y, geometry.width, geometry.height)
+
+    def card(self, element_id: str) -> Shape:
+        return self.board_shape(element_id, kind="rect", color=self.fill_color or "white", size="small",
+                                text=self.shown_text, text_align="left")
 
     def take_text(self, text: _BoardText) -> "WhiteboardClass":
         """Become the class a card's words show: its stereotypes, properties and operations."""
@@ -138,64 +170,102 @@ class WhiteboardClass(DiagramClass, _SizedByText):
         self.operations = [found for found in (Operation.from_signature(line) for line in text.members(1)) if found is not None]
         return self
 
-    def board_arrows(self, cards: Dict[str, "WhiteboardClass"]) -> List[Arrow]:
-        """The arrows this card starts: one to each base, each class a property's relationship names, and each class it
-        depends on, each only to a class on the board."""
-        arrows = [
-            Arrow(f"extends.{_key(self.element_id, base)}", from_id=self.element_id, to_id=cards[base].element_id, label="extends")
-            for base in self.declared_bases(cards) if base in cards
-        ]
-        arrows.extend(
-            Arrow(f"has.{_key(self.element_id, prop.name)}", from_id=self.element_id,
-                  to_id=cards[prop.relationship.target].element_id, label=prop.relationship.kind)
-            for prop in self.properties if prop.relationship is not None and prop.relationship.target in cards
-        )
-        arrows.extend(
-            Arrow(f"uses.{_key(self.element_id, item.target, item.label)}", from_id=self.element_id,
-                  to_id=cards[item.target].element_id, label=f"<<{item.label}>>", dash=True)
-            for item in self.dependencies if item.target in cards
-        )
-        return arrows
 
-    def take_board_arrow(self, arrow: Arrow, target: str) -> None:
-        """Take what an arrow this card starts says about target: a base, a dependency, or the kind of the property
-        whose type names it."""
-        kind = arrow.role
-        if kind == "extends" and target not in self.bases:
-            self.bases.append(target)
-        elif kind == "uses":
-            self.depend_on(target, arrow.label.removeprefix("<<").removesuffix(">>"))
-        elif kind == "has":
-            self.take_arrow(target, arrow.label)
+class WhiteboardImportedClass(ImportedClass, WhiteboardClass):
+    """The card of a class another module's page owns: the module it is from, its name and its first properties."""
 
+    from_module = ""
 
-class WhiteboardModule(DiagramModule, _SizedByText):
-    """A module: in the modules view a box with its name, purpose and seam terms; in the class view the section that
-    holds its classes."""
+    def width(self) -> int:
+        return int(_text_box(self.shown_text)[0])
 
-    class_type = WhiteboardClass
-
-    @property
-    def element_id(self) -> str:
-        return f"module.{_key(self.name)}"
-
-    @property
-    def section_id(self) -> str:
-        return f"section.{_key(self.name)}"
+    def height(self) -> int:
+        return int(_text_box(self.shown_text)[1])
 
     @property
     def shown_text(self) -> str:
-        lines = [f"**{self.name}**", f"*{self.purpose_line()}*"]
-        lines.extend(f"- {term}" for term in self.shown_seam_terms())
+        lines = [f"*«from: {self.from_module}»*", f"**{self.name}**", RULE]
+        lines.extend(f"+ {item.name}{(': ' + item.type_hint) if item.type_hint else ''}" for item in self.key_properties())
+        lines.append(RULE)
         return "\n".join(lines)
 
+    def card(self, element_id: str) -> Shape:
+        return self.board_shape(element_id, kind="rect", color="white", stroke="#666666", size="small",
+                                text=self.shown_text, text_align="left")
+
+
+class WhiteboardModule(DiagramModule, WhiteboardNode):
+    """A module: in the modules view a box with its name, purpose and seam terms, or, when it holds other modules, a
+    section titled with its name and its purpose and seam terms written under the title; in the class view the
+    classes it holds."""
+
+    class_type = WhiteboardClass
+    ROLE = "module"
+    """What the module's element id starts with, so a board reads it back as the module type that drew it."""
+    TOP_COLOR = "blue"
+    NESTED_COLOR = "#dae8fc"
+    holds_modules = False
+    """Whether the module holds others on the board, so it is drawn as a section; the modules view says."""
+    holds_sections = False
+    """Whether a module it holds is a section too, whose title needs room above it in this module's header."""
+
+    def __init__(self, name: str = "", sequential_order: int = 1, **kwargs) -> None:
+        super().__init__(name, sequential_order, **kwargs)
+        # The words written on the arrow to each dependency, by the dependency's name; most arrows carry none.
+        self.dependency_labels: Dict[str, str] = {}
+
+    @property
+    def element_id(self) -> str:
+        return f"{self.ROLE}.{_key(self.name)}"
+
+    @property
+    def about_id(self) -> str:
+        return f"about.{_key(self.name)}"
+
+    @property
+    def about_text(self) -> str:
+        """The purpose and seam terms, as a section writes them under its title."""
+        return "\n".join([f"*{self.purpose_line()}*", *(f"- {term}" for term in self.shown_seam_terms())])
+
+    @property
+    def shown_text(self) -> str:
+        return f"**{self.name}**\n{self.about_text}"
+
+    @property
+    def cell_width(self) -> float:
+        return max(MODULE_CELL_WIDTH, _text_box(self.shown_text)[0])
+
+    @property
+    def cell_min_height(self) -> float:
+        return _text_box(self.shown_text)[1]
+
+    def header_height(self) -> int:
+        """The words at the top of the module: under a section's title, its purpose and seam terms, with room for the
+        title of a section nested under them."""
+        if not self.holds_modules:
+            return int(_text_box(self.shown_text)[1])
+        return int(_text_box(self.about_text)[1] + (NESTED_TITLE_ROOM if self.holds_sections else 0))
+
+    def board_box(self) -> Box:
+        geometry = self.geometry
+        return Box(geometry.x, geometry.y, geometry.width, geometry.height)
+
     def board_elements(self) -> List[BoardElement]:
-        return [self.board_shape(self.element_id, kind="rounded", color="blue", size="small", text=self.shown_text, text_align="left")]
+        color = self.NESTED_COLOR if self.nested else self.TOP_COLOR
+        if not self.holds_modules:
+            return [self.board_shape(self.element_id, kind="rounded", color=color, size="small", text=self.shown_text, text_align="left")]
+        box = self.board_box()
+        return [
+            Section(self.element_id, box=box, color=color, text=self.name),
+            Label(self.about_id, x=box.x + 16, y=box.y + 12, text=self.about_text, size="small", wrap=box.w - 32),
+        ]
 
     def dependency_arrows(self, modules: Dict[str, "WhiteboardModule"]) -> List[Arrow]:
+        """An arrow to each module this one depends on, but the one it sits in, named by the words on the dependency."""
         return [
-            Arrow(f"needs.{_key(self.name, dependency)}", from_id=self.element_id, to_id=modules[dependency].element_id)
-            for dependency in self.external_deps() if dependency in modules
+            Arrow(f"needs.{_key(self.name, dependency)}", from_id=self.element_id, to_id=modules[dependency].element_id,
+                  label=self.dependency_labels.get(dependency, ""))
+            for dependency in self.dependencies if dependency in modules and dependency != self.path_parent
         ]
 
     def take_text(self, text: _BoardText) -> "WhiteboardModule":
@@ -205,22 +275,150 @@ class WhiteboardModule(DiagramModule, _SizedByText):
         return self
 
 
-class _Grid:
-    """Nodes laid out in rows of COLUMNS, each box as big as its words and each row as tall as its tallest box."""
+class _WhiteboardModuleLayout(ModuleLayout):
+    """The modules layout, with room between modules stacked in a column for the title a section writes above its box."""
 
-    def __init__(self, nodes: List[_SizedByText]) -> None:
-        self.nodes = nodes
-        self.sizes = [node.board_size for node in nodes]
-        self.widths = [max((size.w for size in self.sizes[column::COLUMNS]), default=0) for column in range(COLUMNS)]
-        self.heights = [max(size.h for size in self.sizes[row:row + COLUMNS]) for row in range(0, len(self.sizes), COLUMNS)]
+    row_gap = ModuleLayout.row_gap + NESTED_TITLE_ROOM
 
-    def place_from(self, left: float, top: float) -> Box:
-        """Give each node its place from the corner at left, top and answer the box the grid fills."""
-        for index, (node, size) in enumerate(zip(self.nodes, self.sizes)):
-            column, row = index % COLUMNS, index // COLUMNS
-            node.geometry = Geometry(left + sum(self.widths[:column]) + GAP * column, top + sum(self.heights[:row]) + GAP * row, size.w, size.h)
-        used = [width for width in self.widths if width]
-        return Box(left, top, sum(used) + GAP * max(len(used) - 1, 0), sum(self.heights) + GAP * max(len(self.heights) - 1, 0))
+
+class _ModulesBoard:
+    """Draws one modules view: the modules where the shared modules layout stands them, and their dependencies."""
+
+    def __init__(self, channel: "WhiteboardCleanEngineeringModel") -> None:
+        self._channel = channel
+        self._forest = ContainmentForest.build(list(channel.modules), synthesize_parents=True)
+        self._cells: Dict[str, WhiteboardModule] = {
+            name: module if isinstance(module, WhiteboardModule) else channel.load_module_cell(module)
+            for name, module in self._forest.by_name.items()
+        }
+
+    def draw(self) -> Whiteboard:
+        for name, cell in self._cells.items():
+            cell.holds_modules = bool(self._forest.children_of.get(name))
+        for name, cell in self._cells.items():
+            cell.holds_sections = any(self._cells[child].holds_modules for child in self._forest.children_of.get(name, []))
+        layout = _WhiteboardModuleLayout(self._forest, self._cells).lay_out()
+        board = Whiteboard(f"{self._channel.name or 'System'} - Modules Context")
+        board.add(Label("title", x=layout.start_x, y=layout.start_y - TITLE_ROOM - SUBTITLE_ROOM, text=board.title, size="large"))
+        board.add(Label("subtitle", x=layout.start_x, y=layout.start_y - TITLE_ROOM, text=MODULES_SUBTITLE, size="small",
+                        wrap=SUBTITLE_WRAP))
+        for name in self._in_model_order(self._forest.roots):
+            cell = self._cells[name]
+            cell.nested = layout.parent_of.get(name) is not None
+            cell.geometry = layout.page_box(name)
+            for element in cell.board_elements():
+                board.add(element)
+        for cell in self._cells.values():
+            for arrow in cell.dependency_arrows(self._cells):
+                board.add(arrow)
+        return board
+
+    def _in_model_order(self, names: List[str]) -> List[str]:
+        """The modules named and everything nested in them, each parent before its children."""
+        ordered: List[str] = []
+        for name in names:
+            ordered.append(name)
+            ordered.extend(self._in_model_order(self._forest.children_of.get(name, [])))
+        return ordered
+
+
+class _ClassBoard(ClassView):
+    """Draws one class view as the drawio channel decides it: one page, or one page per module. A drawio diagram
+    keeps each module's page on a tab of its own; a board has one canvas, so each page is a section, the sections
+    side by side in rows no wider than PAGE_ROW_WIDTH, each row under the last."""
+
+    def draw(self) -> Whiteboard:
+        board = Whiteboard("Classes")
+        board.add(Label("title", x=PAGE_MARGIN, y=PAGE_MARGIN - TITLE_ROOM, text=f"{self.channel.name or 'Model'} - Classes", size="large"))
+        if self.on_one_page:
+            _ClassBoardPage(self, set(self.classes_by_cell), None, []).draw_on(board, "", Box(0.0, PAGE_MARGIN, 0, 0))
+            return board
+        left, top, row_bottom = 0.0, float(PAGE_MARGIN), float(PAGE_MARGIN)
+        for module in self.named_modules:
+            local_ids, import_ids = self.module_page_ids(module)
+            page = _ClassBoardPage(self, local_ids | set(import_ids), local_ids, import_ids)
+            if left > 0 and left + page.width_hint() > PAGE_ROW_WIDTH:
+                left, top = 0.0, row_bottom + PAGE_GAP
+            drawn = page.draw_on(board, module.name.strip(), Box(left, top, 0, 0))
+            left = drawn.x + drawn.w + PAGE_GAP
+            row_bottom = max(row_bottom, drawn.y + drawn.h)
+        return board
+
+
+class _ClassBoardPage(ClassViewPage):
+    """One page of a class view on a board: its cards where the shared placement puts them and its arrows routed by
+    the shared router, the whole page in a section when it is one module's page."""
+
+    def width_hint(self) -> float:
+        """How wide the page's cards are laid out, so the board knows whether the page fits in the row."""
+        if not hasattr(self, "_laid"):
+            self._laid = self.laid_out({})
+        cards = self._laid[0].values()
+        if not cards:
+            return 0.0
+        return max(card.geometry.x + card.geometry.width for card in cards) - min(card.geometry.x for card in cards) + 2 * PAGE_INSET
+
+    def draw_on(self, board: Whiteboard, page_name: str, corner: Box) -> Box:
+        """Draw the page with its top-left corner at corner, and answer the box it fills."""
+        cards, arrows = self._laid if hasattr(self, "_laid") else self.laid_out({})
+        routed = ArrowRouter(list(cards.values()), arrows).route()
+        if not cards:
+            return Box(corner.x, corner.y, 0, 0)
+        ids = {cell_id: self._element_id(cell_id, page_name) for cell_id in cards}
+        # The routes are written from the cards' middles, so they are worked out before the page moves.
+        lines = [_board_arrow(arrow, ids, cards, page_name) for arrow in routed]
+        inset = PAGE_INSET if page_name else 0
+        shift_x = corner.x - min(card.geometry.x for card in cards.values()) + inset
+        shift_y = corner.y - min(card.geometry.y for card in cards.values()) + inset
+        for card in cards.values():
+            card.geometry = card.geometry.shifted(shift_x, shift_y)
+        right = max(card.geometry.x + card.geometry.width for card in cards.values()) + inset
+        bottom = max(card.geometry.y + card.geometry.height for card in cards.values()) + inset
+        filled = Box(corner.x, corner.y, right - corner.x, bottom - corner.y)
+        if page_name:
+            board.add(Section(f"page.{_key(page_name)}", box=filled, text=page_name))
+        for cell_id, card in cards.items():
+            board.add(card.card(ids[cell_id]))
+        for line in lines:
+            board.add(line)
+        return filled
+
+    def _element_id(self, cell_id: str, page_name: str) -> str:
+        if self.is_imported(cell_id):
+            return f"imported.{_key(page_name, cell_id)}"
+        return f"class.{_key(cell_id)}"
+
+
+def _board_arrow(arrow: DiagramArrow, ids: Dict[str, str], cards: Dict[str, DiagramClass], page_name: str) -> Arrow:
+    """The board's arrow for a routed arrow: its kind in its id, the ends it leaves and reaches by, and its route."""
+    kind = arrow.kind if arrow.kind in KINDS else "association"
+    label = "extends" if kind == INHERITANCE and not arrow.label else arrow.label
+    heads = ["circle", "arrow"] if kind in ("composition", "aggregation") else None
+    return Arrow(
+        f"{kind}.{_key(page_name, arrow.source, arrow.target)}",
+        from_id=ids[arrow.source], to_id=ids[arrow.target],
+        from_side=arrow.exit_side, to_side=arrow.entry_side,
+        label=label, dash=kind == "dependency", heads=heads,
+        bends=None if arrow.straight else _bends(arrow, cards[arrow.source].geometry, cards[arrow.target].geometry),
+    )
+
+
+def _bends(arrow: DiagramArrow, source: Geometry, target: Geometry) -> Optional[List[object]]:
+    """The route the router found, as a board writes it: the way the arrow leaves, then where each middle leg runs,
+    the first half from the middle of the card it leaves, the rest from the middle of the card it reaches. The route
+    is written with the cards where the router placed them; moving a page moves both ends, so the offsets hold."""
+    path = arrow.path
+    if len(path) < 3:
+        return None
+    middles = [(path[index], path[index + 1]) for index in range(1, len(path) - 2)]
+    from_side_count = math.ceil(len(middles) / 2)
+    bends: List[object] = ["h" if path[0][1] == path[1][1] else "v"]
+    for index, (start, end) in enumerate(middles):
+        level = start[1] == end[1]
+        card = source if index < from_side_count else target
+        middle = card.center
+        bends.append(round(start[1] - middle[1]) if level else round(start[0] - middle[0]))
+    return bends
 
 
 class WhiteboardCleanEngineeringModel(DiagramCleanEngineeringModel):
@@ -229,18 +427,37 @@ class WhiteboardCleanEngineeringModel(DiagramCleanEngineeringModel):
     module_type = WhiteboardModule
     suffixes = (Whiteboard.SUFFIX,)
 
+    module_cell_types: Tuple[type, ...] = (WhiteboardModule,)
+    """The module types a modules view reads its elements back as, each picked by the role its id starts with; a model
+    that draws modules of its own kinds names their types first."""
+
     def save(self) -> str:
         return self.render(self)
+
+    def load_module_cell(self, source: Module) -> WhiteboardModule:
+        """A board module for a container module the containment forest made, filled from it."""
+        loaded = self.load_module(source)
+        loaded.translate_from(source)
+        return loaded
+
+    def imported_class(self, source: OoadClass, from_module: str = "") -> WhiteboardImportedClass:
+        loaded = WhiteboardImportedClass(name=source.name, sequential_order=source.sequential_order, from_module=from_module)
+        loaded.translate_from(source)
+        return loaded
 
     def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
         """Become the canonical model once, as whiteboard modules and classes, then draw it; the elements a previous
         board held stay where people put them."""
         if canonical is not self:
             self.translate_from(canonical)
-        board = self._modules_board() if self.is_modules_view else self._class_board()
+        board = self.board()
         if previous:
             board.keep_places(Whiteboard.from_text(previous))
         return board.save()
+
+    def board(self) -> Whiteboard:
+        """The model drawn: its modules view, or its class view."""
+        return _ModulesBoard(self).draw() if self.is_modules_view else _ClassBoard(self).draw()
 
     def parse(self, text: str) -> "WhiteboardCleanEngineeringModel":
         """The modules view or class view a saved board's text holds, read into this model's own modules."""
@@ -249,87 +466,117 @@ class WhiteboardCleanEngineeringModel(DiagramCleanEngineeringModel):
     def take_board(self, board: Whiteboard) -> "WhiteboardCleanEngineeringModel":
         """Read a modules view or a class view drawn on board into this model's own modules, and return it."""
         self.modules = []
-        if any(element.role == "module" for element in board.whole_elements):
-            self._read_modules(board)
-        elif any(isinstance(element, Section) for element in board.whole_elements):
-            self._read_classes(board)
+        roles = {element.role for element in board.whole_elements}
+        if roles & {kind.ROLE for kind in self.module_cell_types}:
+            _ModulesReader(self, board).read()
+        elif "class" in roles:
+            _ClassReader(self, board).read()
         else:
             raise UnreadableBoard("The board holds no module and no class")
         return self
 
-    def _modules_board(self) -> Whiteboard:
-        board = Whiteboard("Modules")
-        modules = self._all_modules()
-        _Grid(modules).place_from(0, 0)
-        for module in modules:
-            board.draw(module)
-        by_name = {module.name: module for module in modules}
-        for module in modules:
-            for arrow in module.dependency_arrows(by_name):
-                board.add(arrow)
-        return board
 
-    def _class_board(self) -> Whiteboard:
-        board = Whiteboard("Classes")
-        cards: Dict[str, WhiteboardClass] = {}
-        top = 0.0
-        for module in (found for found in self._all_modules() if found.classes):
-            for oclass in module.classes:
-                oclass.owning_module = module.name
-                cards.setdefault(oclass.name, oclass)
-            filled = _Grid(module.classes).place_from(SECTION_INSET, top + SECTION_TITLE_ROOM + SECTION_INSET)
-            board.add(Section(module.section_id, box=Box(0, top + SECTION_TITLE_ROOM, filled.w + 2 * SECTION_INSET,
-                                                         filled.h + 2 * SECTION_INSET), text=module.name))
-            for oclass in module.classes:
-                board.draw(oclass)
-            top += SECTION_TITLE_ROOM + filled.h + 2 * SECTION_INSET + GAP
-        for oclass in cards.values():
-            for arrow in oclass.board_arrows(cards):
-                board.add(arrow)
-        return board
+class _ModulesReader:
+    """Reads a modules view back: each box or section of a module role is a module of the type that drew it; a module
+    depends on the module it sits in and on each module its arrows reach, keeping the words on each arrow."""
 
-    def _all_modules(self) -> List[WhiteboardModule]:
-        found: List[WhiteboardModule] = []
-        pending = list(self.modules)
-        while pending:
-            module = pending.pop(0)
-            found.append(module)
-            pending[:0] = module.modules
-        return found
+    def __init__(self, model: WhiteboardCleanEngineeringModel, board: Whiteboard) -> None:
+        self._model = model
+        self._elements = board.whole_elements
+        self._types = {kind.ROLE: kind for kind in model.module_cell_types}
 
-    def _read_modules(self, board: Whiteboard) -> None:
+    def read(self) -> None:
         by_id: Dict[str, WhiteboardModule] = {}
-        for box in (element for element in board.whole_elements if isinstance(element, Shape) and element.role == "module"):
-            text = _BoardText(box.text)
-            if text.name:
-                by_id[box.id] = WhiteboardModule(name=text.name, sequential_order=len(self.modules) + 1).take_text(text)
-                self.modules.append(by_id[box.id])
-        for arrow in (element for element in board.whole_elements if isinstance(element, Arrow)):
-            source, target = by_id.get(arrow.from_id), by_id.get(arrow.to_id)
-            if source is not None and target is not None and target.name not in source.dependencies:
-                source.dependencies.append(target.name)
+        abouts = {element.id.split(".", 1)[1]: element for element in self._elements if isinstance(element, Label) and element.role == "about"}
+        for element in self._elements:
+            kind = self._types.get(element.role)
+            if kind is None or not isinstance(element, (Shape, Section)):
+                continue
+            module = self._module(kind, element, abouts)
+            if module is not None:
+                by_id[element.id] = module
+                self._model.modules.append(module)
+        self._take_nesting(by_id)
+        self._take_arrows(by_id)
 
-    def _read_classes(self, board: Whiteboard) -> None:
-        by_id: Dict[str, WhiteboardClass] = {}
-        for section in (element for element in board.whole_elements if isinstance(element, Section)):
-            by_id.update(self._read_section(board, section))
-        for arrow in (element for element in board.whole_elements if isinstance(element, Arrow)):
+    def _module(self, kind: type, element: BoardElement, abouts: Dict[str, Label]) -> Optional[WhiteboardModule]:
+        if isinstance(element, Section):
+            about = abouts.get(element.id.split(".", 1)[1])
+            text = _BoardText(f"**{element.text.strip()}**\n{about.text if about is not None else ''}")
+        else:
+            text = _BoardText(element.text)
+        if not text.name:
+            return None
+        return kind(name=text.name, sequential_order=len(self._model.modules) + 1).take_text(text)
+
+    def _take_nesting(self, by_id: Dict[str, WhiteboardModule]) -> None:
+        """A module depends on the smallest section it sits in, as the drawio channel reads a nested cell."""
+        sections = [element for element in self._elements if isinstance(element, Section) and element.id in by_id]
+        for element in self._elements:
+            if element.id not in by_id or not isinstance(element, (Shape, Section)):
+                continue
+            around = [section for section in sections if section is not element and section.holds(element)]
+            if around:
+                parent = by_id[min(around, key=lambda section: section.box.w * section.box.h).id]
+                self._depend(by_id[element.id], parent.name, "")
+
+    def _take_arrows(self, by_id: Dict[str, WhiteboardModule]) -> None:
+        for arrow in (element for element in self._elements if isinstance(element, Arrow)):
             source, target = by_id.get(arrow.from_id), by_id.get(arrow.to_id)
             if source is not None and target is not None:
-                source.take_board_arrow(arrow, target.name)
-        for oclass in by_id.values():
+                self._depend(source, target.name, arrow.label)
+
+    def _depend(self, module: WhiteboardModule, name: str, label: str) -> None:
+        if name not in module.dependencies:
+            module.dependencies.append(name)
+        if label:
+            module.dependency_labels[name] = label
+
+
+class _ClassReader:
+    """Reads a class view back: each class card is a class of the module its tag names, or of the page section it
+    sits in; a card imported from another module's page only names the class its arrows reach."""
+
+    def __init__(self, model: WhiteboardCleanEngineeringModel, board: Whiteboard) -> None:
+        self._model = model
+        self._elements = board.whole_elements
+        self._modules: Dict[str, WhiteboardModule] = {}
+        self._classes: Dict[str, WhiteboardClass] = {}
+        self._names: Dict[str, str] = {}
+
+    def read(self) -> None:
+        pages = [element for element in self._elements if isinstance(element, Section) and element.role == "page"]
+        for card in (element for element in self._elements if isinstance(element, Shape) and element.role in ("class", "imported")):
+            text = _BoardText(card.text)
+            if not text.name:
+                continue
+            self._names[card.id] = text.name
+            if card.role == "class":
+                page = next((section.text.strip() for section in pages if section.holds(card)), "")
+                self._take_class(card.id, text, text.module or page)
+        self._take_arrows()
+
+    def _take_class(self, card_id: str, text: _BoardText, module_name: str) -> None:
+        module = self._modules.get(module_name)
+        if module is None:
+            module = self._modules[module_name] = WhiteboardModule(name=module_name, sequential_order=len(self._modules) + 1)
+            self._model.modules.append(module)
+        oclass = WhiteboardClass(name=text.name, sequential_order=len(self._classes) + 1).take_text(text)
+        module.classes.append(oclass)
+        self._classes[card_id] = oclass
+
+    def _take_arrows(self) -> None:
+        """Each arrow marks the property it stands for with its kind, as the drawio channel reads its edges."""
+        for arrow in (element for element in self._elements if isinstance(element, Arrow)):
+            source = self._classes.get(arrow.from_id)
+            target_name = self._names.get(arrow.to_id)
+            if source is None or target_name is None or arrow.role not in KINDS:
+                continue
+            if arrow.role == INHERITANCE and target_name not in source.bases:
+                source.bases.append(target_name)
+            for label in _DEPENDENCY_LABEL.findall(arrow.label):
+                source.depend_on(target_name, label.strip())
+            source.take_arrow(target_name, arrow.role)
+        for oclass in self._classes.values():
             for prop in oclass.properties:
                 prop.derive_relationship()
-
-    def _read_section(self, board: Whiteboard, section: Section) -> Dict[str, WhiteboardClass]:
-        """The module a section draws, added to this model, with the classes on the cards inside it by their ids."""
-        module = WhiteboardModule(name=section.text.strip(), sequential_order=len(self.modules) + 1)
-        self.modules.append(module)
-        read: Dict[str, WhiteboardClass] = {}
-        cards = [element for element in board.whole_elements if isinstance(element, Shape) and element.role == "class"]
-        for card in (found for found in cards if section.holds(found)):
-            text = _BoardText(card.text)
-            if text.name:
-                read[card.id] = WhiteboardClass(name=text.name, sequential_order=len(module.classes) + 1).take_text(text)
-                module.classes.append(read[card.id])
-        return read

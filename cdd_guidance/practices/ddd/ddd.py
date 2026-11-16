@@ -80,6 +80,10 @@ class Ddd(PracticeGuidance):
                     "cdd_guidance.practices.ddd.model.drawio.drawio_bounded_context_map",
                     "DrawIOBoundedContextMap",
                 ),
+                "whiteboard": (
+                    "cdd_guidance.practices.ddd.model.whiteboard.whiteboard_bounded_context_map",
+                    "WhiteboardBoundedContextMap",
+                ),
                 "markdown": ("cdd_guidance.practices.ddd.model.markdown.nodes", "MarkdownBoundedContextMap"),
                 "python": (
                     "cdd_guidance.practices.clean_engineering.model.python.python_class_model",

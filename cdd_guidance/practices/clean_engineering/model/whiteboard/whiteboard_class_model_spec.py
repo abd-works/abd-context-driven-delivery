@@ -1,10 +1,12 @@
-"""Mamba spec: a Clean Engineering model drawn on a Claude Whiteboard reads back as the same model, as its drawio does."""
+"""Mamba spec: a Clean Engineering model drawn on a Claude Whiteboard as its drawio is drawn, and read back as the same
+model."""
 
-from expects import contain, equal, expect, raise_error
+from expects import be_above, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from harness.whiteboard import Arrow, Section, Shape, UnreadableBoard, Whiteboard
+from harness.whiteboard import Arrow, Label, Section, Shape, UnreadableBoard, Whiteboard
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass
+from cdd_guidance.practices.clean_engineering.model.diagram.class_view import CLASSES_ON_ONE_PAGE
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_model import WhiteboardCleanEngineeringModel
@@ -26,10 +28,27 @@ def orders_class_model() -> CleanEngineeringModel:
     return model
 
 
+def two_module_model(classes_each: int) -> CleanEngineeringModel:
+    """Two modules of classes_each classes, the first module's first class holding the second module's first."""
+    model = CleanEngineeringModel("big")
+    for module_number, name in enumerate(("billing", "catalog"), start=1):
+        module = Module(name, module_number)
+        module.classes.extend(
+            OoadClass(f"{name.title()}{index}", index, properties=[Property(name="id", type_hint="str")])
+            for index in range(1, classes_each + 1)
+        )
+        model.modules.append(module)
+    product = Property(name="product", type_hint="Catalog1")
+    model.modules[0].classes[0].properties.append(product)
+    product.take_drawn_kind("association")
+    return model
+
+
 def shop_modules_view() -> CleanEngineeringModel:
     model = CleanEngineeringModel("shop")
     model.modules.append(Module("orders", 1, description="Take and pay orders.", seam_terms=["Cart", "Order"], dependencies=["catalog"]))
-    model.modules.append(Module("catalog", 2, description="Keep what is for sale.", seam_terms=["Product"]))
+    model.modules.append(Module("orders/returns", 2, description="Take goods back.", seam_terms=["Return"], dependencies=["orders"]))
+    model.modules.append(Module("catalog", 3, description="Keep what is for sale.", seam_terms=["Product"]))
     return model
 
 
@@ -44,30 +63,51 @@ def summary(model: CleanEngineeringModel) -> list:
     ]
 
 
+def cards_of(board: Whiteboard, role: str = "class") -> dict:
+    return {element.text.split("**")[1]: element for element in board.elements if isinstance(element, Shape) and element.role == role}
+
+
 with description("a class model drawn on a Claude whiteboard") as self:
     with before.each:
         self.source = orders_class_model()
         self.text = WhiteboardCleanEngineeringModel().render(self.source)
         self.board = Whiteboard.from_text(self.text)
-        self.cards = {element.text.split("**")[1]: element for element in self.board.elements
-                      if isinstance(element, Shape) and element.role == "class"}
+        self.cards = cards_of(self.board)
 
-    with it("should draw each module as a section holding its classes"):
-        section = next(element for element in self.board.elements if isinstance(element, Section))
-        inside = all(section.holds(card) for card in self.cards.values())
-        expect((section.text, inside)).to(equal(("orders", True)))
-
-    with it("should draw each class with its stereotypes, properties and operations"):
+    with it("should draw each class with its module, stereotypes, properties and operations"):
         expect(self.cards["Cart"].text.splitlines()).to(equal([
-            "*«Aggregate Root»*", "**Cart**", "---", "+ lines: List[Line]", "---", "+ checkout(payment: Payment): Order",
+            "`orders`", "*«Aggregate Root»*", "**Cart**", "---", "+ lines: List[Line]", "---", "+ checkout(payment: Payment): Order",
         ]))
 
-    with it("should draw each class's base as an arrow to the base"):
-        arrows = [(element.from_id, element.to_id, element.label) for element in self.board.elements if isinstance(element, Arrow)]
-        expect(arrows).to(contain((self.cards["PricedLine"].id, self.cards["Line"].id, "extends")))
+    with it("should place a base above the classes that derive from it, as the drawio class view does"):
+        expect(self.cards["PricedLine"].box.y).to(be_above(self.cards["Line"].box.y))
+
+    with it("should draw each relationship as an arrow named by its kind"):
+        arrows = {(element.role, element.from_id, element.to_id) for element in self.board.elements if isinstance(element, Arrow)}
+        expect(arrows).to(contain(("inheritance", self.cards["PricedLine"].id, self.cards["Line"].id)))
+
+    with it("should give each arrow the sides it leaves and reaches its cards by"):
+        sides = [(element.from_side, element.to_side) for element in self.board.elements if isinstance(element, Arrow)]
+        expect(all(start and end for start, end in sides)).to(be_true)
 
     with it("should read back every module, class, property, operation and base"):
         expect(summary(WhiteboardCleanEngineeringModel().parse(self.text))).to(equal(summary(self.source)))
+
+    with context("that is too big for one page"):
+        with before.each:
+            self.source = two_module_model(CLASSES_ON_ONE_PAGE // 2 + 1)
+            self.text = WhiteboardCleanEngineeringModel().render(self.source)
+            self.board = Whiteboard.from_text(self.text)
+
+        with it("should draw each module's page as a section of its own, side by side"):
+            pages = [element for element in self.board.elements if isinstance(element, Section)]
+            expect([(page.text, page.box.x < pages[-1].box.x) for page in pages]).to(equal([("billing", True), ("catalog", False)]))
+
+        with it("should show the class of another module a page reaches on a card of its own"):
+            expect(list(cards_of(self.board, "imported"))).to(equal(["Catalog1"]))
+
+        with it("should read back each module with only its own classes"):
+            expect(summary(WhiteboardCleanEngineeringModel().parse(self.text))).to(equal(summary(self.source)))
 
 
 with description("a modules view drawn on a Claude whiteboard") as self:
@@ -76,18 +116,30 @@ with description("a modules view drawn on a Claude whiteboard") as self:
         self.text = WhiteboardCleanEngineeringModel().render(self.source)
         self.board = Whiteboard.from_text(self.text)
         self.boxes = {element.text.split("**")[1]: element for element in self.board.elements if isinstance(element, Shape)}
+        self.sections = {element.text: element for element in self.board.elements if isinstance(element, Section)}
 
     with it("should draw each module with its purpose and seam terms"):
-        expect(self.boxes["orders"].text.splitlines()).to(equal(["**orders**", "*Take and pay orders.*", "- Cart", "- Order"]))
+        expect(self.boxes["catalog"].text.splitlines()).to(equal(["**catalog**", "*Keep what is for sale.*", "- Product"]))
 
-    with it("should draw each dependency as an arrow to the module it depends on"):
+    with it("should draw a module that holds others as a section around them"):
+        expect(self.sections["orders"].holds(self.boxes["orders/returns"])).to(be_true)
+
+    with it("should write the purpose and seam terms of a section under its title"):
+        about = next(element for element in self.board.elements if isinstance(element, Label) and element.role == "about")
+        expect(about.text.splitlines()).to(equal(["*Take and pay orders.*", "- Cart", "- Order"]))
+
+    with it("should stand a module left of the modules that depend on it, as the drawio modules view does"):
+        expect(self.boxes["catalog"].box.x < self.sections["orders"].box.x).to(be_true)
+
+    with it("should draw each dependency but the one on the module it sits in as an arrow"):
         arrows = [(element.from_id, element.to_id) for element in self.board.elements if isinstance(element, Arrow)]
-        expect(arrows).to(equal([(self.boxes["orders"].id, self.boxes["catalog"].id)]))
+        expect(arrows).to(equal([(self.sections["orders"].id, self.boxes["catalog"].id)]))
 
     with it("should read back every module with its purpose, seam terms and dependencies"):
         read = WhiteboardCleanEngineeringModel().parse(self.text)
         expect([(module.name, module.description, module.seam_terms, module.dependencies) for module in read.modules]).to(equal([
             ("orders", "Take and pay orders.", ["Cart", "Order"], ["catalog"]),
+            ("orders/returns", "Take goods back.", ["Return"], ["orders"]),
             ("catalog", "Keep what is for sale.", ["Product"], []),
         ]))
 
