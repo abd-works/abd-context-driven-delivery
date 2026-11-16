@@ -66,7 +66,7 @@ def _(s):
 
     @s.but_("no file of another fidelity shows")
     def _(world):
-        expect(sorted(world.files)).to(equal(["drawio", "markdown"]))
+        expect(sorted(world.files)).to(equal(["drawio", "markdown", "whiteboard"]))
 
 
 @shared_stories.scenario("List Ticket Files", "List every file of the fidelity, changed or not")
