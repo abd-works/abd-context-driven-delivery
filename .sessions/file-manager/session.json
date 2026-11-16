@@ -11,12 +11,15 @@
       "specification",
       "implementation"
     ],
-    "version": 37
+    "version": 38
   },
   "practices": {
     "stories": {
       "formats": {
-        "story_map": []
+        "story_map": [
+          "drawio",
+          "whiteboard"
+        ]
       }
     },
     "ux": {
