@@ -48,14 +48,13 @@ with description("a class model drawn on a Claude whiteboard") as self:
     with before.each:
         self.source = orders_class_model()
         self.text = WhiteboardCleanEngineeringModel().render(self.source)
-        self.board = Whiteboard.load(self.text)
+        self.board = Whiteboard.from_text(self.text)
         self.cards = {element.text.split("**")[1]: element for element in self.board.elements
-                      if isinstance(element, Shape) and element.id.startswith("class.")}
+                      if isinstance(element, Shape) and element.role == "class"}
 
     with it("should draw each module as a section holding its classes"):
         section = next(element for element in self.board.elements if isinstance(element, Section))
-        inside = all(section.x <= card.x and card.x + card.w <= section.x + section.w
-                     and section.y <= card.y and card.y + card.h <= section.y + section.h for card in self.cards.values())
+        inside = all(section.holds(card) for card in self.cards.values())
         expect((section.text, inside)).to(equal(("orders", True)))
 
     with it("should draw each class with its stereotypes, properties and operations"):
@@ -75,7 +74,7 @@ with description("a modules view drawn on a Claude whiteboard") as self:
     with before.each:
         self.source = shop_modules_view()
         self.text = WhiteboardCleanEngineeringModel().render(self.source)
-        self.board = Whiteboard.load(self.text)
+        self.board = Whiteboard.from_text(self.text)
         self.boxes = {element.text.split("**")[1]: element for element in self.board.elements if isinstance(element, Shape)}
 
     with it("should draw each module with its purpose and seam terms"):

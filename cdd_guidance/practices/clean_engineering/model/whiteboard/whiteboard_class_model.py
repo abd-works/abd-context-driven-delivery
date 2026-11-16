@@ -160,7 +160,7 @@ class WhiteboardClass(DiagramClass, _SizedByText):
     def take_board_arrow(self, arrow: Arrow, target: str) -> None:
         """Take what an arrow this card starts says about target: a base, a dependency, or the kind of the property
         whose type names it."""
-        kind = arrow.id.split(".")[0]
+        kind = arrow.role
         if kind == "extends" and target not in self.bases:
             self.bases.append(target)
         elif kind == "uses":
@@ -214,13 +214,13 @@ class _Grid:
         self.widths = [max((size.w for size in self.sizes[column::COLUMNS]), default=0) for column in range(COLUMNS)]
         self.heights = [max(size.h for size in self.sizes[row:row + COLUMNS]) for row in range(0, len(self.sizes), COLUMNS)]
 
-    def place_from(self, x: float, y: float) -> Box:
-        """Give each node its place from (x, y) and answer the box the grid fills."""
+    def place_from(self, left: float, top: float) -> Box:
+        """Give each node its place from the corner at left, top and answer the box the grid fills."""
         for index, (node, size) in enumerate(zip(self.nodes, self.sizes)):
             column, row = index % COLUMNS, index // COLUMNS
-            node.geometry = Geometry(x + sum(self.widths[:column]) + GAP * column, y + sum(self.heights[:row]) + GAP * row, size.w, size.h)
+            node.geometry = Geometry(left + sum(self.widths[:column]) + GAP * column, top + sum(self.heights[:row]) + GAP * row, size.w, size.h)
         used = [width for width in self.widths if width]
-        return Box(x, y, sum(used) + GAP * max(len(used) - 1, 0), sum(self.heights) + GAP * max(len(self.heights) - 1, 0))
+        return Box(left, top, sum(used) + GAP * max(len(used) - 1, 0), sum(self.heights) + GAP * max(len(self.heights) - 1, 0))
 
 
 class WhiteboardCleanEngineeringModel(DiagramCleanEngineeringModel):
@@ -239,17 +239,17 @@ class WhiteboardCleanEngineeringModel(DiagramCleanEngineeringModel):
             self.translate_from(canonical)
         board = self._modules_board() if self.is_modules_view else self._class_board()
         if previous:
-            board.keep_places(Whiteboard.load(previous))
+            board.keep_places(Whiteboard.from_text(previous))
         return board.save()
 
     def parse(self, text: str) -> "WhiteboardCleanEngineeringModel":
         """The modules view or class view a saved board's text holds, read into this model's own modules."""
-        return self.read_board(Whiteboard.load(text))
+        return self.take_board(Whiteboard.from_text(text))
 
-    def read_board(self, board: Whiteboard) -> "WhiteboardCleanEngineeringModel":
+    def take_board(self, board: Whiteboard) -> "WhiteboardCleanEngineeringModel":
         """Read a modules view or a class view drawn on board into this model's own modules, and return it."""
         self.modules = []
-        if any(element.id.startswith("module.") for element in board.elements):
+        if any(element.role == "module" for element in board.elements):
             self._read_modules(board)
         elif any(isinstance(element, Section) for element in board.elements):
             self._read_classes(board)
@@ -278,8 +278,8 @@ class WhiteboardCleanEngineeringModel(DiagramCleanEngineeringModel):
                 oclass.owning_module = module.name
                 cards.setdefault(oclass.name, oclass)
             filled = _Grid(module.classes).place_from(SECTION_INSET, top + SECTION_TITLE_ROOM + SECTION_INSET)
-            board.add(Section(module.section_id, x=0, y=top + SECTION_TITLE_ROOM, w=filled.w + 2 * SECTION_INSET,
-                              h=filled.h + 2 * SECTION_INSET, text=module.name))
+            board.add(Section(module.section_id, box=Box(0, top + SECTION_TITLE_ROOM, filled.w + 2 * SECTION_INSET,
+                                                         filled.h + 2 * SECTION_INSET), text=module.name))
             for oclass in module.classes:
                 board.draw(oclass)
             top += SECTION_TITLE_ROOM + filled.h + 2 * SECTION_INSET + GAP
@@ -299,7 +299,7 @@ class WhiteboardCleanEngineeringModel(DiagramCleanEngineeringModel):
 
     def _read_modules(self, board: Whiteboard) -> None:
         by_id: Dict[str, WhiteboardModule] = {}
-        for box in (element for element in board.elements if isinstance(element, Shape) and element.id.startswith("module.")):
+        for box in (element for element in board.elements if isinstance(element, Shape) and element.role == "module"):
             text = _BoardText(box.text)
             if text.name:
                 by_id[box.id] = WhiteboardModule(name=text.name, sequential_order=len(self.modules) + 1).take_text(text)
@@ -326,8 +326,8 @@ class WhiteboardCleanEngineeringModel(DiagramCleanEngineeringModel):
         module = WhiteboardModule(name=section.text.strip(), sequential_order=len(self.modules) + 1)
         self.modules.append(module)
         read: Dict[str, WhiteboardClass] = {}
-        cards = [element for element in board.elements if isinstance(element, Shape) and element.id.startswith("class.")]
-        for card in (found for found in cards if section.place.holds(found.place)):
+        cards = [element for element in board.elements if isinstance(element, Shape) and element.role == "class"]
+        for card in (found for found in cards if section.holds(found)):
             text = _BoardText(card.text)
             if text.name:
                 read[card.id] = WhiteboardClass(name=text.name, sequential_order=len(module.classes) + 1).take_text(text)

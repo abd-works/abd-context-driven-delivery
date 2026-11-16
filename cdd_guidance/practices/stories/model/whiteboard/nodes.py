@@ -69,8 +69,8 @@ class WhiteboardStory(DiagramStory, _BoardStoryNode):
         actor = self.actors[0].strip() if self.actors else ""
         if actor:
             drawn.append(Shape(
-                f"actor.{self.board_key}", x=self.x, y=self.y - self.actor_height - self.actor_gap, w=self.size,
-                h=self.actor_height, kind="rect", color="blue", size="small", text=actor,
+                f"actor.{self.board_key}", box=Box(self.x, self.y - self.actor_height - self.actor_gap, self.size, self.actor_height),
+                kind="rect", color="blue", size="small", text=actor,
             ))
         drawn.append(self.board_shape(f"story.{self.story_type.value}.{self.board_key}", kind="rect", color="yellow", size="small", text=self.name))
         return drawn
@@ -128,7 +128,7 @@ class WhiteboardStoryModel(DiagramStoryModel):
         """Draw canonical, or this map, as a board; the elements a previous board held stay where people put them."""
         board = self.copy_of(canonical if canonical is not None else self).board()
         if previous:
-            board.keep_places(Whiteboard.load(previous))
+            board.keep_places(Whiteboard.from_text(previous))
         return board.save()
 
     def board(self) -> Whiteboard:
@@ -142,11 +142,15 @@ class WhiteboardStoryModel(DiagramStoryModel):
 
     def parse(self, text: str) -> "WhiteboardStoryModel":
         """The format-adapter entry point Stories renders through: the story map a board's text holds."""
-        return self.load(text)
+        return self.take_board(Whiteboard.from_text(text))
 
     def load(self, text: str) -> "WhiteboardStoryModel":
-        """The story map a saved board holds, read by where its elements sit."""
-        cells = [cell for cell in (_BoardCell(element) for element in Whiteboard.load(text).elements) if cell.role]
+        """The story map a saved board holds, as every story-map format loads its file."""
+        return self.take_board(Whiteboard.from_text(text))
+
+    def take_board(self, board: Whiteboard) -> "WhiteboardStoryModel":
+        """The story map board draws, read by where its elements sit."""
+        cells = [cell for cell in (_BoardCell(element) for element in board.elements) if cell.role]
         if not any(cell.role == "epic" for cell in cells):
             raise UnreadableBoard("The board holds no story-map epic")
         story_map = WhiteboardStoryModel()
@@ -163,10 +167,10 @@ class _BoardCell(DiagramStoryCell):
     def __init__(self, element: BoardElement) -> None:
         super().__init__()
         parts = element.id.split(".")
-        if not isinstance(element, Shape) or parts[0] not in self.ROLES:
+        if not isinstance(element, Shape) or element.role not in self.ROLES:
             return
-        self.role = parts[0]
+        self.role = element.role
         self.depth = int(parts[1]) if self.role == "subepic" else -1
         self.kind = parts[1] if self.role == "story" else ""
         self.text = element.text.strip()
-        self.x, self.y, self.width, self.height = element.x, element.y, element.w, element.h
+        self.x, self.y, self.width, self.height = element.box.x, element.box.y, element.box.w, element.box.h

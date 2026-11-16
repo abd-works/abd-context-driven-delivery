@@ -34,11 +34,11 @@ with description("a story map drawn on a Claude whiteboard") as self:
             self.bar = self.story_map.board().element(self.sub_epic.board_elements()[0].id)
 
         with it("should draw the story as a card below its sub-epic's bar"):
-            expect(self.bar.y + self.bar.h).to(be_below(self.card.y))
+            expect(self.bar.box.y + self.bar.box.h).to(be_below(self.card.box.y))
 
         with it("should draw the story's actor above the card"):
             actor = self.story.board_elements()[0]
-            expect((actor.text, actor.y + actor.h)).to(equal((self.story.actors[0], self.card.y - self.story.actor_gap)))
+            expect((actor.text, actor.box.y + actor.box.h)).to(equal((self.story.actors[0], self.card.box.y - self.story.actor_gap)))
 
     with context("that is drawn twice"):
         with it("should give each epic and story the same element id both times"):
