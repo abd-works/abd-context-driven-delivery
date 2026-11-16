@@ -10,14 +10,17 @@
       "discovery",
       "specification"
     ],
-    "version": 69
+    "version": 70
   },
   "practices": {
     "stories": {
       "formats": {
-        "story_map": [],
+        "story_map": [
+          "markdown"
+        ],
         "scenarios": [
-          "python"
+          "python",
+          "markdown"
         ],
         "acceptance_tests": []
       }
