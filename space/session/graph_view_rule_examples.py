@@ -6,7 +6,7 @@ the story tests of Explore Graph In Files App and Review Graph Violations In Fil
 from __future__ import annotations
 
 from space.kanban.session_board_examples import SessionSeed
-from space.session.graph_view_examples import STORY_MAP, STORY_MAP_TEXT, TICKET_CODE, TICKET_TEXT, session_of
+from space.session.graph_view_examples import CHECKOUT_FLOW, STORY_MAP, STORY_MAP_TEXT, TICKET_CODE, TICKET_TEXT, session_of
 
 # Seed: checkout-flow working in the whole project with Stories, DDD and Clean Engineering on, so a class stereotyped as
 # an aggregate root is a DDD entity root, the node LERN's Domain tier rules sit on.
@@ -46,12 +46,27 @@ LISTED_WITH_DOMAIN_TIER = [STORY_MAP, TICKET_CODE, TICKET_DOMAIN_TIER]
 OPERATIONS = {"types": ["Operation"]}
 OPERATIONS_ON_INVOKES = {"types": ["Operation"], "relationships": ["invokes"]}
 NO_NODE_FILTER: dict = {}
+VIOLATIONS = {"violations": True}
+VERB_NOUN_FORMAT = "verb-noun-format"
+# Seed: checkout-flow's story map holding two stories whose names open with a generic verb, which verb-noun-format
+# breaks, beside Delete Ticket, a verb and a noun, which it passes; its epics open with verbs.
+VIOLATING_MAP_TEXT = (
+    "# Story Map\n\n(E) Remove Tickets\n    (E) Retire Tickets\n"
+    "        (S) Person --> Process Ticket Archive\n"
+    "        (S) Person --> Handle Ticket Deletion\n"
+    "        (S) Person --> Delete Ticket\n"
+)
 
 
 def seed_checkout_flow_with_both_tickets(world) -> None:
     world.project.seed_session(CHECKOUT_FLOW_WITH_DDD)
     for path, text in ((TICKET_CODE, TICKET_ROOT_TEXT), (TICKET_DOMAIN_TIER, TICKET_DOMAIN_TIER_TEXT), (STORY_MAP, STORY_MAP_TEXT)):
         world.project.seed_file(path, text)
+
+
+def seed_checkout_flow_with_violating_stories(world) -> None:
+    world.project.seed_session(CHECKOUT_FLOW)
+    world.project.seed_file(STORY_MAP, VIOLATING_MAP_TEXT)
 
 
 def entries_in(world, paths: list[str], node_filter: dict | None = None) -> list[dict]:
