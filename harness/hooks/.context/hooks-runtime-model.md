@@ -46,7 +46,7 @@ Class annotation. Turns off, or keeps out of the install, every hook on that too
 	// false keeps the toolset's hooks out of hook-handlers.json
 ----
 + annotate(toolset): toolset
-	// keeps itself on the class as `_hooks`; read through disabled_on(toolset) and deploys(toolset)
+	// keeps itself on the class as `_hooks`; read through Hooks.from_toolset_class(type(toolset)).disabled and .deploy
 	// write `@Hooks(disabled=True)` above `@agent_toolset` so the annotation stays on the registered type
 
 ## HookInstallation : ServerInstallation                                <!-- Md -->
@@ -221,7 +221,7 @@ The toolsets whose hooks the server runs.
 ----
 + ref_label(item): str
 + for_event(event_name: str): list[HookHandler]
-	// tools_for(InstallDestination.HOOK) serving the event: Hook.events_served(hook_event), so a postToolUse hook also serves afterFileEdit
+	// tools_for(InstallDestination.HOOK) serving the event: events_served(hook_event), so a postToolUse hook also serves afterFileEdit
 
 ## HookServer                                                     <!-- Md -->
 
@@ -261,7 +261,7 @@ The hooks of one checkout, loaded once in its hook daemon. It runs the enabled h
 - _append_debug(payload: HookPayload, message: str): None
 	// dispatch.debug in the logs folder of the session the event works in
 	-> HookPayload.session
-	-> Session.hook_log("dispatch.debug").stamped
+	-> SessionFolder.hook_log("dispatch.debug").stamped
 
 ## HookDaemon                                                     <!-- Md -->
 

@@ -124,6 +124,32 @@ class ScenarioSource:
     path: str
 
 
+# A fixture screen's page: its head, the bar at the top of its root element, its body, and its script.
+_SCREEN_PAGE = '''<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{title}</title>
+<script src="./support.js"></script>
+{head}
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{{margin:0}}
+a.button-primary{{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}}
+</style>
+</helmet>
+<div class="{root_class}">
+{bar}{body}
+</div>
+</x-dc>
+{component}</body>
+</html>
+'''
+
+
 @dataclass(frozen=True)
 class FixtureScreen:
     """A whole fixture-driven screen artboard: *head* (stylesheets, the fixtures script), the bar at the top of the
@@ -144,32 +170,15 @@ class FixtureScreen:
 
     @property
     def html(self) -> str:
-        title, head, root_class, body, own_methods, vals = (
-            self.title, self.head, self.root_class, self.body, self.own_methods, self.vals
-        )
-        width, height, artboard, source = self.width, self.height, self.artboard, self.source
-        story, scenario, path = source.story, source.scenario, source.path
-        return f'''<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>{title}</title>
-<script src="./support.js"></script>
-{head}
-</head>
-<body>
-<x-dc>
-<helmet>
-<style>
-body{{margin:0}}
-a.button-primary{{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}}
-</style>
-</helmet>
-<div class="{root_class}">
-{bar(artboard)}{body}
-</div>
-</x-dc>
-<script type="text/x-dc" data-dc-script data-props='{{"story":{{"editor":null}},"scenario":{{"editor":null}},"go":{{"editor":null}},"$preview":{{"width":{width},"height":{height}}}}}'>
+        return _SCREEN_PAGE.format(title=self.title, head=self.head, root_class=self.root_class, body=self.body, bar=bar(self.artboard),
+                                   component=self._component)
+
+    @property
+    def _component(self) -> str:
+        """The screen's script: the bar's shared methods, the screen's own, and the values it renders."""
+        own_methods, vals, width, height = self.own_methods, self.vals, self.width, self.height
+        story, scenario, path = self.source.story, self.source.scenario, self.source.path
+        return f'''<script type="text/x-dc" data-dc-script data-props='{{"story":{{"editor":null}},"scenario":{{"editor":null}},"go":{{"editor":null}},"$preview":{{"width":{width},"height":{height}}}}}'>
 class Component extends DCLogic {{
 {methods(story, scenario, path)}{own_methods}renderVals() {{
 const st = this.state || {{}};
@@ -179,6 +188,4 @@ return Object.assign(this.barVals(), {{
 }}
 }}
 </script>
-</body>
-</html>
 '''

@@ -8,7 +8,8 @@ import type { ChatData, ChatMessageData } from '@cdd/harness/chat/chat'
 import type { FidelityProgressClient } from '../ticket/fidelity-progress-client'
 import type { ReportClient } from '../ticket/report-client'
 import type { ColumnClient } from '../board/column-client'
-import type { FilesByFidelity, TicketClient } from '../ticket/ticket-client'
+import type { TicketClient } from '../ticket/ticket-client'
+import type { FilesByFidelity } from '../ticket/ticket-work'
 
 export type Toast = { id: number; text: string; isFailure: boolean }
 export type Region = 'board' | 'details'
@@ -134,20 +135,34 @@ const initialState = (): BoardState => ({
   isUpdating: false,
 })
 
-// Only conveniences are saved. Browser storage can be blocked or empty, and the page works the same without it.
+// Only conveniences are saved. Browser storage can be blocked or empty, and the page works the same without it: a
+// browser that keeps nothing refuses with a DOMException, and a saved layout that no longer reads as JSON is left out.
+// Anything else is a fault and is raised.
 function savedLayout(): Partial<SavedLayout> {
   try {
-    return JSON.parse(globalThis.localStorage?.getItem(SAVED_KEY) ?? '{}') as Partial<SavedLayout>
-  } catch {
+    return JSON.parse(storedLayout()) as Partial<SavedLayout>
+  } catch (refusal) {
+    if (!(refusal instanceof SyntaxError)) throw refusal
     return {}
+  }
+}
+
+// The layout this browser keeps, as it was written; none when it keeps nothing.
+function storedLayout(): string {
+  try {
+    return globalThis.localStorage?.getItem(SAVED_KEY) ?? '{}'
+  } catch (refusal) {
+    if (!(refusal instanceof DOMException)) throw refusal
+    return '{}'
   }
 }
 
 function saveLayout({ boardHeight, panelWidths, hidesDisabled, pickedChat }: BoardState): void {
   try {
     globalThis.localStorage?.setItem(SAVED_KEY, JSON.stringify({ boardHeight, panelWidths, hidesDisabled, pickedChat }))
-  } catch {
+  } catch (refusal) {
     // The layout simply is not remembered in this browser.
+    if (!(refusal instanceof DOMException)) throw refusal
   }
 }
 

@@ -88,7 +88,7 @@ The realizations name the operations these scenarios need. Built (2026-11-11): t
 Board.ticket("checkout-flow")
   <- checkout-flow
 checkout-flow.add_child("Enter card details")
-  -> self.session.open_child("Enter card details", scope="story")
+  -> self.session.hierarchy.open_child("Enter card details", scope="story")
   <- enter-card-details In progress in Discovery, its parent checkout-flow
 ```
 
@@ -107,7 +107,7 @@ Board.ticket("pet-visits")
 Board.ticket("checkout-flow")
   <- checkout-flow
 pet-visits.reassign_parent(checkout-flow)
-  -> self.session.set_parent(checkout-flow.session)
+  -> self.session.hierarchy.set_parent(checkout-flow.session)
   <- pet-visits inside checkout-flow
 ```
 
@@ -194,7 +194,7 @@ The realizations name the operations these scenarios need. `Ticket.pull_out` is 
 Board.ticket("enter-card-details")
   <- enter-card-details
 enter-card-details.pull_out()
-  -> self.session.mark_pulled_out()
+  -> self.session.hierarchy.mark_pulled_out()
   <- enter-card-details pulled out, its parent still checkout-flow
 ```
 
@@ -242,7 +242,7 @@ Board.ticket("enter-card-details")
 Board.ticket("billing-report")
   <- billing-report
 enter-card-details.reassign_parent(billing-report)
-  -> self.session.set_parent(billing-report.session)
+  -> self.session.hierarchy.set_parent(billing-report.session)
   <- enter-card-details, its parent billing-report
 ```
 
@@ -259,7 +259,7 @@ enter-card-details.reassign_parent(billing-report)
 Board.ticket("enter-card-details")
   <- enter-card-details
 enter-card-details.reassign_parent(None)
-  -> self.session.set_parent(None)
+  -> self.session.hierarchy.set_parent(None)
   <- enter-card-details with no parent
 ```
 
@@ -385,7 +385,7 @@ ticket.create("Enter card details", scope="story", parent="checkout-flow")
   -> Board.ticket("checkout-flow")
   <- checkout-flow
   -> checkout-flow.add_child("Enter card details")
-     -> self.session.open_child("Enter card details", scope="story")
+     -> self.session.hierarchy.open_child("Enter card details", scope="story")
      <- the session .sessions/checkout-flow/enter-card-details
      -> enter-card-details.branch
         -> self.parent.branch

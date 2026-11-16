@@ -53,7 +53,7 @@ describe('Activate Ticket', () => {
 
     it("should show the ticket's chat as opening", async () => {
       const { page } = await activated()
-      expect(page.chat.isOpeningFor(CHOSEN)).toBe(true)
+      expect(page.chat.opening.isOpeningFor(CHOSEN)).toBe(true)
     })
 
     it('should ask the person to confirm the new chat in the Claude app', async () => {
@@ -121,7 +121,7 @@ describe('Close Active Session', () => {
     async function pressed() {
       board.openWorktree(CHOSEN)
       const { page } = await board.page()
-      await ticketOn(page, CHOSEN).startClose()
+      await ticketOn(page, CHOSEN).prompts.startClose()
       return page
     }
 

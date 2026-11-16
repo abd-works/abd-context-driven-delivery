@@ -53,11 +53,11 @@ class JsonFile:
             raise self._unreadable(self.path, TypeError(f"expected an object, found {type(data).__name__}"))
         return data
 
-    def write(self, data: Mapping[str, Any]) -> Path:
-        """Write data as the whole file, making its folder when there is none. The text is written beside the file and
+    def write(self, json_object: Mapping[str, Any]) -> Path:
+        """Write json_object as the whole file, making its folder when there is none. The text is written beside the file and
         renamed over it, so a reader, or another chat's call writing the same file at once, never meets half of it. A
         file that already holds the same text is left as it is, so nothing watching it is woken to read it again."""
-        text = (json.dumps(dict(data), separators=(",", ":")) if self._compact else json.dumps(dict(data), indent=2)) + "\n"
+        text = (json.dumps(dict(json_object), separators=(",", ":")) if self._compact else json.dumps(dict(json_object), indent=2)) + "\n"
         if self._holds(text):
             return self.path
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -115,9 +115,9 @@ class HeldJsonFile:
             self._held = held
         return dict(held[1])
 
-    def write(self, data: Mapping[str, Any]) -> Path:
+    def write(self, json_object: Mapping[str, Any]) -> Path:
         self._held = None
-        return self._file.write(data)
+        return self._file.write(json_object)
 
     def _version(self) -> tuple[int, int] | None:
         try:

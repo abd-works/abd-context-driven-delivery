@@ -20,7 +20,7 @@ function isOwnedBy(owned: RegExp, element: string): boolean {
 
 // Close every open list box but the one element belongs to; with no element, such as a keystroke in the prompt, all.
 // Each list is read and closed by a direct call: the engine refuses $ handed to a function kept in a table.
-export async function closeOptionListsOutside($: EngineInterface, element = ''): Promise<void> {
+export async function closeOptionListsOutside($: EngineInterface, element: string = ''): Promise<void> {
   const view = await currentChatBarView($)
   if (!isOwnedBy(SESSION_LIST_KEYS, element) && view.isSessionListOpen) await closeSessionList($)
   if (!isOwnedBy(REPO_LIST_KEYS, element) && view.isRepoListOpen) await closeRepoList($)

@@ -4,6 +4,7 @@ markdown headings."""
 from __future__ import annotations
 
 import re
+from typing import Iterator
 
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.guidance import SketchLens
@@ -122,21 +123,12 @@ class SketchOutline:
         base = self._base_depth(section)
         written: list[str] = []
         indent = 0
-        fenced = False
-        for raw in self._lines[section.first : section.last]:
+        for raw, fenced in self._unfenced_lines(section):
             stripped = raw.strip()
-            if stripped.startswith("```"):
-                fenced = not fenced
-                continue
             if not stripped:
                 written.append("")
                 continue
-            if fenced:
-                written.append(" " * indent + raw)
-                continue
-            if stripped in _HORIZONTAL_RULES:
-                continue
-            depth = len(stripped) - len(stripped.lstrip("#"))
+            depth = 0 if fenced else len(stripped) - len(stripped.lstrip("#"))
             if not depth:
                 written.append(" " * indent + raw)
                 continue
@@ -144,6 +136,19 @@ class SketchOutline:
             written.append(" " * (level * self._nesting_indent) + stripped[depth:].strip())
             indent = (level + 1) * self._nesting_indent
         return self._without_margin(written)
+
+    def _unfenced_lines(self, section: _Section) -> Iterator[tuple[str, bool]]:
+        """Each line of the section with whether it sits inside a code fence; the fence markers and horizontal rules
+        outside a fence are dropped, since the flattened sketch has neither."""
+        fenced = False
+        for raw in self._lines[section.first : section.last]:
+            stripped = raw.strip()
+            if stripped.startswith("```"):
+                fenced = not fenced
+                continue
+            if not fenced and stripped in _HORIZONTAL_RULES:
+                continue
+            yield raw, fenced
 
     def _without_margin(self, written: list[str]) -> str:
         """The section's shallowest line is its top level, however far it was written in."""

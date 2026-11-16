@@ -32,6 +32,7 @@ from cdd_guidance.practices.clean_engineering.rules.fixtures.multi_language_exam
     _USE_EXCEPTIONS_PROPERLY_FAULT,
 )
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
+    assert_rule_pair,
     ce_rule_by_slug,
     files_rule_pair,
     module_example_pair,
@@ -43,6 +44,14 @@ from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
 )
 
 _LANGS = ("python", "typescript", "javascript")
+# A toolset whose operation takes four arguments, published as an MCP tool when its decorator is filled in.
+_TICKETS = """from harness.mcp.mcp_annotations import mcp
+
+
+class Tickets:
+{decorator}    def create_ticket(self, title: str, stage: str, parent: str, tags: str) -> str:
+        return f"{{title}} {{stage}} {{parent}} {{tags}}"
+"""
 
 
 def _multilang_pairs(slug: str, fault: dict, clean: dict) -> list:
@@ -139,6 +148,12 @@ export class NumberInventorySearch {
             expect(self.create_factory.hits(ce_rule_by_slug("limit-operation-parameters"))).to(equal([]))
         with it("should not flag fromFields mapping factories"):
             expect(self.from_fields.hits(ce_rule_by_slug("limit-operation-parameters"))).to(equal([]))
+        with it("should not flag an operation published as an MCP tool, whose parameters are the tool's argument schema"):
+            assert_rule_pair(
+                "limit-operation-parameters",
+                _TICKETS.format(decorator=""),
+                _TICKETS.format(decorator="    @mcp\n"),
+            )
     with context("use-property-not-accessor"):
         with before.all:
             self.pair = python_example_pair("use-property-not-accessor")
@@ -326,6 +341,18 @@ export function refreshChatBar($: EngineInterface): void {}
 
         with it("should count only the public operations of a TypeScript class, not those it declares private"):
             self.private_operations.check()
+
+        with it("should not count a property's setter or a cached property as public behaviour"):
+            behaviour = "".join(f"    def step{index}(self) -> int:\n        return {index}\n\n" for index in range(11))
+            held = "".join(
+                f"    @cached_property\n    def step{index}(self) -> int:\n        return {index}\n\n"
+                if index % 2
+                else f"    @property\n    def step{index}(self) -> int:\n        return self._step\n\n"
+                f"    @step{index}.setter\n    def step{index}(self, step: int) -> None:\n        self._step = step\n\n"
+                for index in range(11)
+            )
+            header = "from functools import cached_property\n\n\nclass Steps:\n"
+            rule_pair("keep-classes-single-responsibility", header + behaviour, header + held).check()
     with context("use-typed-signatures"):
         with before.all:
             self.pair = python_example_pair("use-typed-signatures")
@@ -997,6 +1024,164 @@ with description("Clean Engineering graph rules (inline fault and clean fixtures
                 _module("orders", {"order.py": "class Order:\n    pass\n"}),
                 _module("orders", {"order.py": "class Order:\n    pass\n\n\nclass OrderLine:\n    pass\n"}),
             )
+            self.toolset = files_rule_pair(
+                "no-module-per-class",
+                _module("render", {"render.py": "class Render:\n    pass\n"}),
+                _module("render", {"render.py": "@agent_toolset\nclass Render:\n    pass\n"}),
+            )
 
         with it("should flag a module holding one class in one file and accept a cohesive group"):
             self.pair.check()
+
+        with it("should accept an agent toolset alone in its folder, a subsystem installed as its own unit"):
+            self.toolset.check()
+
+    with context("use-typed-signatures on what Python fixes"):
+        with before.all:
+            self.pair = rule_pair(
+                "use-typed-signatures",
+                "class Money:\n    def add(self, other):\n        return other\n",
+                (
+                    "class Money:\n"
+                    "    def __new__(cls, amount: int) -> 'Money':\n        return object.__new__(cls)\n\n"
+                    "    def __eq__(self, other: object) -> bool:\n        return isinstance(other, Money)\n\n"
+                    "    def __contains__(self, item) -> bool:\n        return False\n\n"
+                    "    def __setattr__(self, name, value) -> None:\n        object.__setattr__(self, name, value)\n\n\n"
+                    "class Building(type):\n"
+                    "    def __call__(cls, plan: str) -> object:\n        return super().__call__(plan)\n"
+                ),
+            )
+
+        with it("should flag an untyped parameter and accept a receiver and the parameters of a protocol operation"):
+            self.pair.check()
+
+    with context("avoid-vague-parameter-names when the type names it"):
+        with before.all:
+            self.pair = rule_pair(
+                "avoid-vague-parameter-names",
+                "class Hooks:\n    def keep(self, payload: dict) -> None:\n        return None\n",
+                (
+                    "class Hooks:\n    def keep(self, payload: HookPayload) -> None:\n        return None\n\n"
+                    "    def draw(self, options: RenderOptions) -> None:\n        return None\n"
+                ),
+            )
+
+        with it("should flag a placeholder name and accept one its type names"):
+            self.pair.check()
+
+    with context("keep-operations-small-focused counts statements"):
+        with before.all:
+            docstring = "\n".join(f"        Line {line} of what the operation is for." for line in range(25))
+            listed = "\n".join(f"            '{line}'," for line in range(25))
+            self.pair = rule_pair(
+                "keep-operations-small-focused",
+                _KEEP_OPERATIONS_SMALL_FOCUSED_FAULT["python"],
+                f'class Work:\n    def describe(\n        self,\n        name: str,\n    ) -> list:\n        """\n{docstring}\n        """\n'
+                f"        names = [\n{listed}\n        ]\n        return names\n",
+            )
+            jsx = "\n".join(f'      <li key="{line}">{{items[{line}]}}</li>' for line in range(25))
+            self.typescript_pair = rule_pair(
+                "keep-operations-small-focused",
+                _KEEP_OPERATIONS_SMALL_FOCUSED_FAULT["typescript"],
+                "export class Work {\n  render(items: string[]): JSX.Element {\n    const title = items[0];\n    return (\n"
+                f"    <ul title={{title}}>\n{jsx}\n    </ul>\n    );\n  }}\n}}\n",
+                lang="typescript",
+            )
+
+        with it("should flag twenty-one statements and accept a long docstring, signature, and list"):
+            self.pair.check()
+
+        with it("should flag twenty-one TypeScript statements and accept a long JSX return as one"):
+            self.typescript_pair.check()
+
+    with context("keep-operations-single-responsibility on text in memory"):
+        with before.all:
+            self.pair = rule_pair(
+                "keep-operations-single-responsibility",
+                "class Report:\n    def publish(self, path):\n        rows = open(path).readlines()\n        return calculate_totals(rows)\n",
+                (
+                    "class Report:\n    def parse(self, text: str) -> 'Report':\n        lines = text.splitlines()\n"
+                    "        rows = self._reader.read(lines)\n        return calculate_totals(rows)\n"
+                ),
+            )
+
+        with it("should flag reading a file and calculating, and accept parsing text the program holds"):
+            self.pair.check()
+
+    with context("state-change-returns-record-or-named-failure on a context manager"):
+        with before.all:
+            self.pair = rule_pair(
+                "state-change-returns-record-or-named-failure",
+                "class Gate:\n    def restart(self):\n        self._is_restarting = True\n        self._running_calls = 0\n",
+                (
+                    "from contextlib import contextmanager\n\n\nclass Gate:\n    @contextmanager\n    def restarting(self):\n"
+                    "        self._is_restarting = True\n        self._running_calls = 0\n        try:\n            yield\n"
+                    "        finally:\n            self._is_restarting = False\n"
+                ),
+            )
+
+        with it("should flag a state change with no outcome and accept a context manager that yields"):
+            self.pair.check()
+
+    with context("hide-inner-details on a standard module"):
+        with before.all:
+            self.pair = rule_pair(
+                "hide-inner-details",
+                "class Invoice:\n    def total(self, order):\n        return sum(item.price for item in order._items)\n",
+                "import os\nimport sys\n\n\nclass Daemon:\n    def end(self) -> None:\n        sys._getframe()\n        os._exit(0)\n",
+            )
+
+        with it("should flag another object's private field and accept a standard module's underscore function"):
+            self.pair.check()
+
+    with context("prefer-instance-operations on what React requires"):
+        with before.all:
+            self.pair = rule_pair(
+                "prefer-instance-operations",
+                "export class Board {\n  static current(): Board {\n    return new Board();\n  }\n}\n",
+                (
+                    "export class Boundary {\n  static getDerivedStateFromError(error: Error): BoundaryState {\n"
+                    "    return { failed: true };\n  }\n}\n"
+                ),
+                lang="typescript",
+            )
+
+        with it("should flag a global accessor and accept the static operation React calls"):
+            self.pair.check()
+
+    with context("use-explicit-dependencies on a part the owner keeps"):
+        with before.all:
+            self.pair = rule_pair(
+                "use-explicit-dependencies",
+                (
+                    "class CartRepository:\n    def save(self) -> None:\n        return None\n\n\n"
+                    "class Cart:\n    def __init__(self) -> None:\n        self._repository = CartRepository()\n"
+                ),
+                (
+                    "class EdgeIndex:\n    def add(self, edge: str) -> None:\n        return None\n\n\n"
+                    "class PracticeNodes:\n    def __init__(self) -> None:\n        self._edges = EdgeIndex()\n"
+                ),
+            )
+            self.callback_part = rule_pair(
+                "use-explicit-dependencies",
+                "export class StoryMapFailures {\n  constructor() {\n    this.api = new StoryMapApi();\n  }\n}\n",
+                (
+                    "export class StoryViewModel {\n  constructor(story: Story) {\n"
+                    "    this.scenarios = story.scenarios.map((scenario, index) => new ScenarioViewModel(scenario, index));\n  }\n}\n"
+                ),
+                lang="typescript",
+            )
+            self.library_client = practice_from_source(
+                "class Embedder:\n    def __init__(self) -> None:\n        self._client = OpenAI()\n"
+            )
+
+        with it("should flag a repository built inside and accept a part of its own built once"):
+            self.pair.check()
+
+        with it("should flag a TypeScript api client built inside and accept parts built from a callback's own parameters"):
+            self.callback_part.check()
+
+        with it("should still flag a library's client the program does not declare"):
+            expect(self.library_client.hits(ce_rule_by_slug("use-explicit-dependencies"))).to(
+                equal(["Class 'Embedder' constructs 'OpenAI' inside its constructor."])
+            )

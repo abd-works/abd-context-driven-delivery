@@ -75,7 +75,7 @@ class _RunningCall:
         self.told_still_running = False
         self._ended = anyio.Event()
         self._value: object = None
-        self._failure: BaseException | None = ToolCallStopped(call.tool)
+        self._failure: BaseException | None = ToolCallStopped(call.request.tool)
         self._ended_at = 0.0
         self._reporter = reporter
         self._task: asyncio.Task | None = None
@@ -90,9 +90,9 @@ class _RunningCall:
         # The run is its own task, so a caller that stops waiting does not cancel it.
         self._task = asyncio.get_running_loop().create_task(run(self))
 
-    def finish(self, value: object) -> None:
-        """The run returned value."""
-        self._value = value
+    def finish(self, answer: object) -> None:
+        """The run returned answer."""
+        self._value = answer
         self._failure = None
 
     def fail(self, failure: BaseException) -> None:
@@ -107,7 +107,7 @@ class _RunningCall:
     def log_unheard_failure(self) -> None:
         """Log the run's failure when no caller is left to hear it, so it is never lost."""
         if self._failure is not None:
-            logger.error("MCP tool %s failed after its caller stopped waiting", self.call.tool, exc_info=self._failure)
+            logger.error("MCP tool %s failed after its caller stopped waiting", self.call.request.tool, exc_info=self._failure)
 
     async def answer(self, seconds: float) -> object:
         """The outcome, when the run ends within seconds; otherwise ``_StillRunning``."""
@@ -120,7 +120,7 @@ class _RunningCall:
         if not self._ended.is_set():
             self._reporter = None
             self.told_still_running = True
-            return _StillRunning(self.call.tool, seconds)
+            return _StillRunning(self.call.request.tool, seconds)
         if self._failure is not None:
             raise self._failure
         return self._value
@@ -134,26 +134,28 @@ class _ToolCalls:
     """Every tool call this server is running on a worker thread, by call identity, and the results kept for callers
     who were told their call was still running."""
 
-    def __init__(self) -> None:
+    def __init__(self, work: Callable[[ToolCall, Reporter], object]) -> None:
+        # What answers a call on its worker thread, with a reporter for its progress.
+        self._work = work
         self._running: dict[str, _RunningCall] = {}
         self._uncollected: dict[str, _RunningCall] = {}
 
-    async def run(self, call: ToolCall, seconds: float, work: Callable[[Reporter], object], reporter: Reporter | None) -> object:
-        """``work``'s value for call, run on a worker thread with a reporter for its progress, waiting up to seconds. An
-        identical call already running is joined, and a kept result is collected, instead of starting ``work`` again."""
+    async def run(self, call: ToolCall, seconds: float, reporter: Reporter | None) -> object:
+        """The work's value for call, run on a worker thread with reporter for its progress, waiting up to seconds. An
+        identical call already running is joined, and a kept result is collected, instead of starting the work again."""
         self._forget_stale_results()
         running = self._uncollected.pop(call.identity, None) or self._running.get(call.identity)
         if running is None:
-            running = self._start(call, work, reporter)
+            running = self._start(call, reporter)
         return await running.answer(seconds)
 
-    def _start(self, call: ToolCall, work: Callable[[Reporter], object], reporter: Reporter | None) -> _RunningCall:
+    def _start(self, call: ToolCall, reporter: Reporter | None) -> _RunningCall:
         running = _RunningCall(call, reporter)
         self._running[call.identity] = running
 
         async def run(started: _RunningCall) -> None:
             try:
-                started.finish(await anyio.to_thread.run_sync(work, started.report))
+                started.finish(await anyio.to_thread.run_sync(self._work, started.call, started.report))
             except Exception as failure:
                 started.fail(failure)
             finally:

@@ -3,6 +3,7 @@
 // that client, which saves it through the node's own tool; nothing here holds a story map of its own.
 
 import React, { Component, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ErrorInfo, type ReactNode } from 'react';
+import { ChatClientGenerated } from '@cdd/harness/chat/chat';
 import { useStoryModel } from '@cdd/practices/stories/model/story-model-views';
 
 import { StoryMapApi } from './story-map-api';
@@ -26,15 +27,10 @@ const READ_EVERY_MILLISECONDS = 2_000;
 
 type EditStatus = 'synced' | 'saving' | 'error';
 
-// The story map a page shows: the file its link names, else the story map of the session open in the project. Every
-// failure, from a call, a read or an edit, goes through failures.fail: shown on the page and sent to the opening chat.
-export function useStoryMapPage(file: string | null, failures: StoryMapFailures) {
-  const failure = useSyncExternalStore(failures.subscribe, () => failures.shown);
-  const api = useMemo(() => new StoryMapApi(failures.fail), [failures]);
+// The map the page shows, read when the page opens and again every READ_EVERY_MILLISECONDS, except while an edit is
+// under way. A read of the file already shown is taken on by the client the views hold.
+function useStoryMapReading(file: string | null, api: StoryMapApi, failures: StoryMapFailures, editing: React.RefObject<boolean>) {
   const [client, setClient] = useState<StoryMapClient | null>(null);
-  const [status, setStatus] = useState<EditStatus>('synced');
-  const editing = useRef(false);
-
   useEffect(() => {
     let stopped = false;
     let held: StoryMapClient | null = null;
@@ -42,23 +38,21 @@ export function useStoryMapPage(file: string | null, failures: StoryMapFailures)
       if (editing.current) return;
       const next = file ? await (held ?? new StoryMapClient(api, null, file)).show() : await StoryMapClient.inOpenSession(api);
       if (stopped || !next) return;
-      if (held && held.file === next.file) {
-        if (next !== held) held.takeOn(next);
-        return;
-      }
+      if (held && held.file === next.file) return void (next !== held && held.takeOn(next));
       held = next;
       setClient(next);
     };
     const readReporting = (context: string) => read().catch((thrown: unknown) => failures.failWith(thrown, context));
     void readReporting('Opening the story map in the Story UI');
     const timer = setInterval(() => void readReporting('Reading the story map again every two seconds'), READ_EVERY_MILLISECONDS);
-    return () => {
-      stopped = true;
-      clearInterval(timer);
-    };
-  }, [api, file, failures]);
+    return () => { stopped = true; clearInterval(timer); };
+  }, [api, file, failures, editing]);
+  return client;
+}
 
-  // An edit answers the map as its file now holds it; one that fails leaves the map as it was and says why.
+// An edit answers the map as its file now holds it; one that fails leaves the map as it was and says why.
+function useStoryMapEdit(client: StoryMapClient | null, failures: StoryMapFailures, editing: React.MutableRefObject<boolean>) {
+  const [status, setStatus] = useState<EditStatus>('synced');
   const edit = useCallback(async (change: (held: StoryMapClient) => Promise<StoryMapClient | null>) => {
     if (!client) return;
     editing.current = true;
@@ -72,60 +66,59 @@ export function useStoryMapPage(file: string | null, failures: StoryMapFailures)
     } finally {
       editing.current = false;
     }
-  }, [client, failures]);
+  }, [client, failures, editing]);
+  return { status, edit };
+}
 
-  // A story's acceptance-test file, sent to the chat the page was opened beside, whose file viewer shows it.
+// The story map a page shows: the file its link names, else the story map of the session open in the project. Every
+// failure, from a call, a read or an edit, goes through failures.fail: shown on the page and sent to the opening chat.
+export function useStoryMapPage(file: string | null, failures: StoryMapFailures) {
+  const failure = useSyncExternalStore(failures.subscribe, () => failures.shown);
+  const api = useMemo(() => new StoryMapApi(failures.fail), [failures]);
+  const editing = useRef(false);
+  const client = useStoryMapReading(file, api, failures, editing);
+  const { status, edit } = useStoryMapEdit(client, failures, editing);
+
+  // A story's acceptance-test file is read in the chat bar's file viewer of the chat this page was opened beside, never
+  // here: the chat takes it at its next check-in.
   const showInChat = useCallback((path: string) => {
-    if (!client) return;
-    client.showInChat(failures.chat, path).catch((thrown: unknown) => failures.failWith(thrown, `Showing ${path} in the chat from the Story UI`));
-  }, [client, failures]);
+    ChatClientGenerated.named(api, failures.chat).send('open_file', path)
+      .catch((thrown: unknown) => failures.failWith(thrown, `Showing ${path} in the chat from the Story UI`));
+  }, [api, failures]);
 
   return { client, failure, status, edit, showInChat, dismissFailure: () => failures.dismiss() };
 }
 
-// ---------------------------------------------------------------------------
-// useStoryMapViewState — toggles and expansion state
-// ---------------------------------------------------------------------------
+// Which nodes the person has opened, by id.
+function useExpandedNodes() {
+  const [expandedNodeIds, setExpandedNodeIds] = useState<ReadonlySet<string>>(new Set());
+  const expandNode = useCallback((nodeId: string) => setExpandedNodeIds((shown) => new Set([...shown, nodeId])), []);
+  const collapseNode = useCallback((nodeId: string) => {
+    setExpandedNodeIds((shown) => new Set([...shown].filter((each) => each !== nodeId)));
+  }, []);
+  const expandDescendants = useCallback((nodeId: string, descendantIds: string[]) => {
+    setExpandedNodeIds((shown) => new Set([...shown, nodeId, ...descendantIds]));
+  }, []);
+  const collapseAll = useCallback(() => setExpandedNodeIds(new Set()), []);
+  return { expandedNodeIds, expandNode, collapseNode, expandDescendants, collapseAll };
+}
 
+// How the person is looking at the map: the map or its increments, with or without scenarios, scoped to the ticket or
+// whole, and which nodes are open.
 export function useStoryMapViewState() {
   const [viewMode, setViewMode] = useState<'map' | 'increment'>('map');
   const [showScenarios, setShowScenarios] = useState(false);
   // A map opened on a ticket shows the part its session covers until the person asks for the whole map.
   const [scoped, setScoped] = useState(true);
-  const [expandedNodeIds, setExpandedNodeIds] = useState<ReadonlySet<string>>(new Set());
-
-  const toggleViewMode = useCallback(() => setViewMode((m) => (m === 'map' ? 'increment' : 'map')), []);
-
-  const expandNode = useCallback((id: string) => {
-    setExpandedNodeIds((prev) => new Set([...prev, id]));
-  }, []);
-
-  const collapseNode = useCallback((id: string) => {
-    setExpandedNodeIds((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-  }, []);
-
-  const expandDescendants = useCallback((nodeId: string, descendantIds: string[]) => {
-    setExpandedNodeIds((prev) => new Set([...prev, nodeId, ...descendantIds]));
-  }, []);
-
-  const collapseAll = useCallback(() => setExpandedNodeIds(new Set()), []);
-
+  const toggleViewMode = useCallback(() => setViewMode((mode) => (mode === 'map' ? 'increment' : 'map')), []);
   return {
     viewMode,
     showScenarios,
     scoped,
-    expandedNodeIds,
     toggleViewMode,
-    toggleShowScenarios: () => setShowScenarios((v) => !v),
-    toggleScoped: () => setScoped((v) => !v),
-    expandNode,
-    collapseNode,
-    expandDescendants,
-    collapseAll,
+    toggleShowScenarios: () => setShowScenarios((shown) => !shown),
+    toggleScoped: () => setScoped((isScoped) => !isScoped),
+    ...useExpandedNodes(),
   };
 }
 
@@ -134,21 +127,6 @@ export function useStoryMapViewState() {
 // A single ref per rendering scope tracks the dragged node id; makeDragHandlers
 // is a plain function (not a hook) so it is safe to call from inside .map().
 // ---------------------------------------------------------------------------
-
-let titleMeasureCtx: CanvasRenderingContext2D | null = null;
-function measureStoryTitleWidthPx(text: string): number {
-  if (typeof document === 'undefined') return Math.max(8, text.length * 7);
-  if (typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent)) {
-    return Math.max(8, Math.ceil((text || ' ').length * 7));
-  }
-  if (!titleMeasureCtx) {
-    const canvas = document.createElement('canvas');
-    titleMeasureCtx = canvas.getContext('2d');
-  }
-  if (!titleMeasureCtx) return Math.max(8, text.length * 7);
-  titleMeasureCtx.font = '500 13px Inter, system-ui, sans-serif';
-  return Math.max(8, Math.ceil(titleMeasureCtx.measureText(text || ' ').width));
-}
 
 function reorderIds(ids: string[], draggedId: string, dropTargetId: string): string[] {
   if (draggedId === dropTargetId || !ids.includes(draggedId) || !ids.includes(dropTargetId)) return ids;
@@ -207,6 +185,12 @@ type DragKind = 'epic' | 'sub-epic' | 'story';
  *  a SubEpic id for a Story, an Epic id for a SubEpic, or EPIC_LIST_KEY for an Epic). */
 interface DragState { kind: DragKind; id: string; originListKey: string; }
 
+/** One list a drag can reorder or land in: its key, and the kind of node it holds. */
+interface DragList { listKey: string; kind: DragKind; }
+
+/** What a drag under way shows: the node dragged and the edge it would land on. */
+type DragPreview = { dragState: DragState | null; dropEdge: DropEdge | null };
+
 /** Shared top-level "list key" for Epics — Epics have only one list (there's no parent
  *  to move between), so every Epic-kind drag/drop always targets this same key. */
 const EPIC_LIST_KEY = '__epics__';
@@ -232,14 +216,32 @@ interface DragVisualControls {
  *  since the in-place placeholder card already gives full drop-position feedback,
  *  suppress the native one with a blank image so the two don't visibly stack. */
 let emptyDragImage: HTMLImageElement | null = null;
-function suppressNativeDragImage(e: React.DragEvent<Element>) {
+function suppressNativeDragImage(dragStart: React.DragEvent<Element>) {
   try {
     if (!emptyDragImage) {
       emptyDragImage = new Image();
       emptyDragImage.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBTAA7';
     }
-    e.dataTransfer?.setDragImage(emptyDragImage, 0, 0);
+    dragStart.dataTransfer?.setDragImage(emptyDragImage, 0, 0);
   } catch { /* jsdom / unsupported browsers just keep the native ghost */ }
+}
+
+// The drag starts on the next task on purpose: restyling the drag SOURCE from inside its
+// own dragstart handler (here `.being-dragged`, which also sets pointer-events:none)
+// makes Chrome abort the native drag outright — no dragover, no drop, nothing moves.
+// Synthetic dispatchEvent-driven tests never hit this, only a real mouse does.
+function startDragOnNextTask(
+  setDragState: (state: DragState) => void,
+  dropEdgeRef: { current: DropEdge | null },
+  writeEdge: (next: DropEdge | null) => void,
+): DragVisualControls['start'] {
+  return (kind, id, originListKey) => {
+    setTimeout(() => {
+      setDragState({ kind, id, originListKey });
+      // Only seeds the "in place" edge — a dragover that already landed keeps its edge.
+      if (dropEdgeRef.current === null) writeEdge({ listKey: originListKey, beforeId: id });
+    }, 0);
+  };
 }
 
 function useDragVisuals(): DragVisualControls {
@@ -248,21 +250,11 @@ function useDragVisuals(): DragVisualControls {
   const dropEdgeRef = useRef<DropEdge | null>(null);
   const writeEdge = (next: DropEdge | null) => { dropEdgeRef.current = next; setDropEdge(next); };
   return {
-    start: (kind, id, originListKey) => {
-      // Deferred to the next task on purpose: restyling the drag SOURCE from inside its
-      // own dragstart handler (here `.being-dragged`, which also sets pointer-events:none)
-      // makes Chrome abort the native drag outright — no dragover, no drop, nothing moves.
-      // Synthetic dispatchEvent-driven tests never hit this, only a real mouse does.
-      setTimeout(() => {
-        setDragState({ kind, id, originListKey });
-        // Only seeds the "in place" edge — a dragover that already landed keeps its edge.
-        if (dropEdgeRef.current === null) writeEdge({ listKey: originListKey, beforeId: id });
-      }, 0);
-    },
+    start: startDragOnNextTask(setDragState, dropEdgeRef, writeEdge),
     end: () => { setDragState(null); writeEdge(null); },
     setEdge: (listKey, beforeId) => {
-      const prev = dropEdgeRef.current;
-      if (prev?.listKey === listKey && prev?.beforeId === beforeId) return;
+      const shown = dropEdgeRef.current;
+      if (shown?.listKey === listKey && shown?.beforeId === beforeId) return;
       writeEdge({ listKey, beforeId });
     },
     clearEdge: () => { if (dropEdgeRef.current !== null) writeEdge(null); },
@@ -274,8 +266,9 @@ function useDragVisuals(): DragVisualControls {
 
 /** Real midpoint check in browsers; falls back to "insert before" under jsdom
  *  (zero-size rect), preserving existing same-parent reorder test behavior. */
-function computeBeforeId(rect: { left: number; width: number }, clientX: number, ids: string[], targetId: string): string | null {
-  const before = rect.width === 0 || clientX < rect.left + rect.width / 2;
+function computeBeforeId(dragOver: React.DragEvent<Element>, ids: string[], targetId: string): string | null {
+  const rect = (dragOver.currentTarget as Element).getBoundingClientRect();
+  const before = rect.width === 0 || dragOver.clientX < rect.left + rect.width / 2;
   return before ? targetId : (ids[ids.indexOf(targetId) + 1] ?? null);
 }
 
@@ -293,28 +286,22 @@ function insertBeforeId(ids: string[], draggedId: string, beforeId: string | nul
  *  this dragged node used to belong to loses it from its preview order (isOrigin),
  *  and whichever list is the current drop target gains it, inserted at the precise
  *  edge (isTarget) — so exactly one list ever shows the dragged id at a time. */
-function computeDisplayIds(
-  realIds: string[],
-  listKey: string,
-  dragState: DragState | null,
-  dropEdge: DropEdge | null,
-  kind: DragKind,
-): string[] {
-  if (!dragState || dragState.kind !== kind) return realIds;
-  const isTarget = dropEdge?.listKey === listKey;
-  if (isTarget) {
-    return insertBeforeId(realIds.filter((id) => id !== dragState.id), dragState.id, dropEdge!.beforeId);
+function computeDisplayIds(realIds: string[], list: DragList, preview: DragPreview): string[] {
+  const { dragState, dropEdge } = preview;
+  if (!dragState || dragState.kind !== list.kind) return realIds;
+  if (dropEdge?.listKey === list.listKey) {
+    return insertBeforeId(realIds.filter((id) => id !== dragState.id), dragState.id, dropEdge.beforeId);
   }
-  if (dragState.originListKey === listKey && dropEdge) {
+  if (dragState.originListKey === list.listKey && dropEdge) {
     return realIds.filter((id) => id !== dragState.id);
   }
   return realIds;
 }
 
-/** True while `id` is the node currently being dragged — the dashed/grayed "landing
+/** True while `nodeId` is the node currently being dragged — the dashed/grayed "landing
  *  here" styling hook (see .being-dragged in workspace.css). */
-function isBeingDragged(dragState: DragState | null, kind: DragKind, id: string): boolean {
-  return dragState?.kind === kind && dragState.id === id;
+function isBeingDragged(dragState: DragState | null, kind: DragKind, nodeId: string): boolean {
+  return dragState?.kind === kind && dragState.id === nodeId;
 }
 
 function dragStartedOnInteractiveControl(target: EventTarget | null): boolean {
@@ -331,8 +318,8 @@ function dragStartedOnInteractiveControl(target: EventTarget | null): boolean {
  *  therefore pointer-transparent until focused (see .node-label / .story-name-input /
  *  .increment-name-input in workspace.css); this hands the pointer back on double-click
  *  so the whole card stays a drag source while the name is still editable in place. */
-function focusNameFieldOnDoubleClick(e: React.MouseEvent<Element>) {
-  const field = e.currentTarget.querySelector<HTMLInputElement>('.node-label, .story-name-input, .increment-name-input');
+function focusNameFieldOnDoubleClick(doubleClick: React.MouseEvent<Element>) {
+  const field = doubleClick.currentTarget.querySelector<HTMLInputElement>('.node-label, .story-name-input, .increment-name-input');
   if (!field) return;
   field.focus();
   field.select();
@@ -376,8 +363,7 @@ function makeStoryDragHandlers(
       // the previous edge put it, so recomputing here would flip-flop before/after itself
       // every frame (the ghost preview flickering as the edge value bounces) — keep the edge.
       if (dragRef.current === storyId) return;
-      const rect = (e.currentTarget as Element).getBoundingClientRect();
-      visuals.setEdge(subEpicId, computeBeforeId(rect, e.clientX, getTargetIds(), storyId));
+      visuals.setEdge(subEpicId, computeBeforeId(e, getTargetIds(), storyId));
     },
     // Commit + cleanup handled once at the container level (see containerDragHandlers)
     // via onDrop / onDragEnd. dragEnd bubbles to the container from the drag source, so
@@ -421,8 +407,7 @@ function makeSubEpicDragHandlers(
       // Hovering the dragged lane's own (now-relocated) placeholder — see the matching
       // guard in makeStoryDragHandlers for why recomputing here would flicker the ghost.
       if (dragRef.current === subEpicId) return;
-      const rect = (e.currentTarget as Element).getBoundingClientRect();
-      visuals.setEdge(epicId, computeBeforeId(rect, e.clientX, getTargetIds(), subEpicId));
+      visuals.setEdge(epicId, computeBeforeId(e, getTargetIds(), subEpicId));
     },
     // Commit + cleanup handled at the container level; do not clear refs/edge here.
     onDragEnd: () => {},
@@ -465,8 +450,7 @@ function makeEpicDragHandlers(
       // Hovering the dragged lane's own (now-relocated) placeholder \u2014 see the matching
       // guard in makeStoryDragHandlers for why recomputing here would flicker the ghost.
       if (dragRef.current === epicId) return;
-      const rect = (e.currentTarget as Element).getBoundingClientRect();
-      visuals.setEdge(EPIC_LIST_KEY, computeBeforeId(rect, e.clientX, getIds(), epicId));
+      visuals.setEdge(EPIC_LIST_KEY, computeBeforeId(e, getIds(), epicId));
     },
     // Commit + cleanup handled at the container level; do not clear refs/edge here.
     onDragEnd: () => {},
@@ -505,8 +489,8 @@ function isDropScopeActive(dropEdge: DropEdge | null, listKey: string): boolean 
 }
 
 /** Classnames for the specific card that is the current "insert before" target. */
-function dropIndicatorClass(dropEdge: DropEdge | null, listKey: string, id: string): string {
-  return dropEdge?.listKey === listKey && dropEdge.beforeId === id ? ' drop-indicator' : '';
+function dropIndicatorClass(dropEdge: DropEdge | null, listKey: string, nodeId: string): string {
+  return dropEdge?.listKey === listKey && dropEdge.beforeId === nodeId ? ' drop-indicator' : '';
 }
 
 // ---------------------------------------------------------------------------
@@ -527,41 +511,45 @@ interface ColumnLayout {
   leadCols: Set<number>;
 }
 
-function computeColumnLayout(
-  storyMap: StoryMapViewModel,
-  dragState: DragState | null,
-  dropEdge: DropEdge | null,
-): ColumnLayout {
-  const epicCols = new Map<string, { start: number; span: number }>();
-  const subEpicCols = new Map<string, { start: number; span: number }>();
-  const storyCol = new Map<string, number>();
-  const leadCols = new Set<number>(); // no dedicated lead columns — all columns are card-width
-  const subEpicsById = new Map(storyMap.epics.flatMap((e) => e.sub_epics.map((s) => [s.id, s] as const)));
-  let col = 1;
-  const displayEpicIds = computeDisplayIds(storyMap.epics.map((e) => e.id), EPIC_LIST_KEY, dragState, dropEdge, 'epic');
-  for (const epicId of displayEpicIds) {
-    const epic = storyMap.epics.find((e) => e.id === epicId)!;
-    const epicStart = col;
-    const displaySubIds = computeDisplayIds(epic.sub_epics.map((s) => s.id), epic.id, dragState, dropEdge, 'sub-epic');
-    for (const subId of displaySubIds) {
-      const sub = subEpicsById.get(subId)!;
-      const subStart = col;
-      const displayStoryIds = computeDisplayIds(sub.stories.map((s) => s.id), sub.id, dragState, dropEdge, 'story');
-      if (displayStoryIds.length === 0) {
-        // Reserve 2 card-width columns (not 1) — a single column is too narrow to
-        // read the SubEpic's name alongside its drag handle + icon buttons.
-        col += 2;
-      } else {
-        displayStoryIds.forEach((sid) => { storyCol.set(sid, col); col += 1; });
-      }
-      subEpicCols.set(sub.id, { start: subStart, span: col - subStart });
-    }
-    if (displaySubIds.length === 0) {
-      col += 2; // same reasoning as above, one level up — empty Epics need room too
-    }
-    epicCols.set(epic.id, { start: epicStart, span: col - epicStart });
+// Card-width columns an empty SubEpic or Epic reserves: a single column is too narrow to
+// read its name alongside its drag handle + icon buttons.
+const EMPTY_PARENT_COLUMNS = 2;
+
+/** Lays out the map's columns left to right as the drag under way would leave them: each Story one column, each
+ *  SubEpic and Epic spanning the columns of its Stories. */
+class ColumnLayoutBuilder {
+  // no dedicated lead columns — all columns are card-width
+  private readonly layout: ColumnLayout = { epicCols: new Map(), subEpicCols: new Map(), storyCol: new Map(), totalCols: 1, leadCols: new Set<number>() };
+  private col = 1;
+
+  constructor(private readonly storyMap: StoryMapViewModel, private readonly preview: DragPreview) {}
+
+  laidOut(): ColumnLayout {
+    const epicIds = computeDisplayIds(this.storyMap.epics.map((e) => e.id), { listKey: EPIC_LIST_KEY, kind: 'epic' }, this.preview);
+    for (const epicId of epicIds) this.layOutEpic(this.storyMap.epics.find((e) => e.id === epicId)!);
+    return { ...this.layout, totalCols: Math.max(1, this.col - 1) };
   }
-  return { epicCols, subEpicCols, storyCol, totalCols: Math.max(1, col - 1), leadCols };
+
+  private layOutEpic(epic: EpicViewModel): void {
+    const epicStart = this.col;
+    const subEpicsById = new Map(this.storyMap.epics.flatMap((e) => e.sub_epics.map((s) => [s.id, s] as const)));
+    const displaySubIds = computeDisplayIds(epic.sub_epics.map((s) => s.id), { listKey: epic.id, kind: 'sub-epic' }, this.preview);
+    for (const subId of displaySubIds) this.layOutSubEpic(subEpicsById.get(subId)!);
+    if (displaySubIds.length === 0) this.col += EMPTY_PARENT_COLUMNS;
+    this.layout.epicCols.set(epic.id, { start: epicStart, span: this.col - epicStart });
+  }
+
+  private layOutSubEpic(sub: SubEpicViewModel): void {
+    const subStart = this.col;
+    const displayStoryIds = computeDisplayIds(sub.stories.map((s) => s.id), { listKey: sub.id, kind: 'story' }, this.preview);
+    if (displayStoryIds.length === 0) this.col += EMPTY_PARENT_COLUMNS;
+    displayStoryIds.forEach((sid) => { this.layout.storyCol.set(sid, this.col); this.col += 1; });
+    this.layout.subEpicCols.set(sub.id, { start: subStart, span: this.col - subStart });
+  }
+}
+
+function computeColumnLayout(storyMap: StoryMapViewModel, preview: DragPreview): ColumnLayout {
+  return new ColumnLayoutBuilder(storyMap, preview).laidOut();
 }
 
 function colTemplate(totalCols: number, _leadCols: Set<number>): string {
@@ -677,7 +665,7 @@ export function StoryHierarchyView({
 
   const dragVisuals = useDragVisuals();
   const { dragState, dropEdge } = dragVisuals;
-  const { epicCols, subEpicCols, storyCol, totalCols, leadCols } = computeColumnLayout(storyMap, dragState, dropEdge);
+  const { epicCols, subEpicCols, storyCol, totalCols, leadCols } = computeColumnLayout(storyMap, dragVisuals);
   const gridCols = colTemplate(totalCols, leadCols);
 
   // Grid row constants — keep in sync with test assertions
@@ -913,7 +901,7 @@ export function StoryHierarchyView({
       {/* ── Row 2: SubEpic lanes ──────────────────────────────────────── */}
       {storyMap.epics.flatMap((epic) => {
         const epicAt = epicCols.get(epic.id)!;
-        const displaySubEpicIds = computeDisplayIds(epic.sub_epics.map((s) => s.id), epic.id, dragState, dropEdge, 'sub-epic');
+        const displaySubEpicIds = computeDisplayIds(epic.sub_epics.map((s) => s.id), { listKey: epic.id, kind: 'sub-epic' }, dragVisuals);
         if (displaySubEpicIds.length === 0) {
           return [
             // The "+" button stays small/visible, but the drop target spans the whole
@@ -1012,7 +1000,7 @@ export function StoryHierarchyView({
       {storyMap.epics.flatMap((epic) =>
         epic.sub_epics.flatMap((sub) => {
           const subAt = subEpicCols.get(sub.id)!;
-          const displayStoryIds = computeDisplayIds(sub.stories.map((s) => s.id), sub.id, dragState, dropEdge, 'story');
+          const displayStoryIds = computeDisplayIds(sub.stories.map((s) => s.id), { listKey: sub.id, kind: 'story' }, dragVisuals);
           if (displayStoryIds.length === 0) {
             return [
               // Same reasoning as the empty-Epic dropzone above — the "+" button stays
@@ -1266,133 +1254,98 @@ interface StoryCardProps {
   onOpenFile?: (path: string) => void;
 }
 
-function StoryCard({
-  story,
-  increments,
-  isExpanded,
-  showScenarios: _showScenarios,
-  showIncrements,
-  onNodeClick,
-  onExpand,
-  onSaveInline,
-  onAssignToIncrement,
-  onUnassignFromIncrement,
-  onReorderScenarios,
-  onReorderSteps,
-  onRemoveStory,
-  onAppendStory,
-  onPrepend,
-  dragHandlers,
-  dropIndicatorClass = '',
-  onAppendScenario,
-  onRemoveScenario,
-  onAddStep,
-  onUpdateStep,
-  onRemoveStep,
-  onEditExample,
-  onRemoveExample,
-  onEditDescription,
-  onOpenFile,
-}: StoryCardProps) {
-  const [editName, setEditName] = useState(story.name);
-  const scenarioDragRef = useRef<string | null>(null);
-  const {
-    draggable: storyDraggable,
-    onDragStart: storyOnDragStart,
-    onDragEnd: storyOnDragEnd,
-  } = dragHandlers;
-
-  const saveName = () => { if (editName !== story.name) onSaveInline(story.id, { name: editName }); };
-
+function StoryCard(props: StoryCardProps) {
+  const { story, isExpanded, dragHandlers, dropIndicatorClass = '' } = props;
   return (
     <div className={`story-card${isExpanded ? ' expanded' : ''}${dropIndicatorClass}`} {...dragHandlers}>
-      <div className="story-card-header" onClick={() => onNodeClick(story.id, 'story')} onDoubleClick={focusNameFieldOnDoubleClick}>
-        <div className="type-label-row">
-          <div className="type-label-left">
-            {onPrepend && (
-              <AddNodePopoverButton
-                className="node-btn plus-btn row-lead-plus"
-                title="Add Story at beginning"
-                buttonLabel="+"
-                placeholder="Story title (optional)"
-                onAdd={onPrepend}
-              />
-            )}
-            <span
-              className="drag-handle"
-              aria-hidden="true"
-              draggable={storyDraggable}
-              onDragStart={(e) => { e.stopPropagation(); storyOnDragStart(e); }}
-              onDragEnd={() => { storyOnDragEnd(); }}
-            >
-              ⠿
-            </span>
-          </div>
-          <div className="type-label-center">
-            <span className="type-label">STORY</span>
-          </div>
-          <div className="type-label-right">
-            <span className="node-actions">
-              <button className="expand-btn" title="Expand story" onClick={(e) => { e.stopPropagation(); onExpand(story.id, 'story', []); }}>
-                {isExpanded ? '▲' : '▼'}
-              </button>
-              <AddNodePopoverButton
-                className="node-btn plus-btn"
-                title="Add Story"
-                buttonLabel="+"
-                placeholder="Story title (optional)"
-                onAdd={onAppendStory}
-              />
-              <button className="node-btn minus-btn" title="Delete Story" onClick={(e) => { e.stopPropagation(); onRemoveStory(story.id); }}>−</button>
-            </span>
-          </div>
-        </div>
-        <div
-          className="story-name-input"
-          contentEditable={true}
-          suppressContentEditableWarning={true}
-          onInput={(e) => setEditName(e.currentTarget.textContent || '')}
-          onDoubleClick={(e) => { e.stopPropagation(); e.currentTarget.focus(); document.execCommand('selectAll', false, undefined); }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); saveName(); }
-            if (e.key === 'Escape') { setEditName(story.name); e.currentTarget.blur(); }
-          }}
-          onBlur={saveName}
-          onClick={(e) => e.stopPropagation()}
-        >{editName}</div>
-      </div>
-
+      <StoryCardHeader {...props} />
       {/* Expansion panel — always visible when expanded, regardless of Show Scenarios toggle */}
-      {isExpanded && (
-        <div className="story-expansion-panel">
-          <DescriptionEditor key={story.description} node={story} onSave={(description) => onEditDescription(story.id, description)} />
-          <AcceptanceTestsView files={story.acceptance_tests} onOpen={onOpenFile} />
-          <div className="section-heading">
-            <span>Scenarios</span>
-            <button className="node-btn plus-btn" title="Add Scenario" onClick={() => onAppendScenario(story.id)}>+</button>
-          </div>
-          {story.scenarios.map((sc) => (
-            <div
-              key={sc.id}
-              className="scenario-row-drag"
-              {...makeDragHandlers(scenarioDragRef, sc.id, () => story.scenarios.map((s) => s.id), (ids) => onReorderScenarios(story.id, ids))}
-            >
-              <ScenarioPanel
-                scenario={sc}
-                storyId={story.id}
-                onSaveInline={onSaveInline}
-                onReorderSteps={onReorderSteps}
-                onRemoveScenario={() => onRemoveScenario(story.id, sc.id)}
-                onAddStep={() => onAddStep(story.id, sc.id)}
-                onUpdateStep={(stepId, values) => onUpdateStep(story.id, sc.id, stepId, values)}
-                onRemoveStep={(stepId) => onRemoveStep(story.id, sc.id, stepId)}
-                onEditExample={onEditExample}
-                onRemoveExample={onRemoveExample}
-              />
-            </div>
-          ))}
+      {isExpanded && <StoryExpansionPanel {...props} />}
+    </div>
+  );
+}
+
+// The card's header: its drag handle, the buttons that add, expand and remove stories, and its name, edited in place.
+function StoryCardHeader({ story, isExpanded, onNodeClick, onExpand, onSaveInline, onRemoveStory, onAppendStory, onPrepend, dragHandlers }: StoryCardProps) {
+  const { draggable: storyDraggable, onDragStart: storyOnDragStart, onDragEnd: storyOnDragEnd } = dragHandlers;
+  return (
+    <div className="story-card-header" onClick={() => onNodeClick(story.id, 'story')} onDoubleClick={focusNameFieldOnDoubleClick}>
+      <div className="type-label-row">
+        <div className="type-label-left">
+          {onPrepend && (
+            <AddNodePopoverButton className="node-btn plus-btn row-lead-plus" title="Add Story at beginning" buttonLabel="+" placeholder="Story title (optional)" onAdd={onPrepend} />
+          )}
+          <span className="drag-handle" aria-hidden="true" draggable={storyDraggable} onDragStart={(e) => { e.stopPropagation(); storyOnDragStart(e); }} onDragEnd={() => { storyOnDragEnd(); }}>
+            ⠿
+          </span>
         </div>
-      )}
+        <div className="type-label-center">
+          <span className="type-label">STORY</span>
+        </div>
+        <div className="type-label-right">
+          <span className="node-actions">
+            <button className="expand-btn" title="Expand story" onClick={(e) => { e.stopPropagation(); onExpand(story.id, 'story', []); }}>
+              {isExpanded ? '▲' : '▼'}
+            </button>
+            <AddNodePopoverButton className="node-btn plus-btn" title="Add Story" buttonLabel="+" placeholder="Story title (optional)" onAdd={onAppendStory} />
+            <button className="node-btn minus-btn" title="Delete Story" onClick={(e) => { e.stopPropagation(); onRemoveStory(story.id); }}>−</button>
+          </span>
+        </div>
+      </div>
+      <StoryNameEditor story={story} onSaveInline={onSaveInline} />
+    </div>
+  );
+}
+
+// A story's name, edited in place and saved on Enter or when the person leaves it.
+function StoryNameEditor({ story, onSaveInline }: Pick<StoryCardProps, 'story' | 'onSaveInline'>) {
+  const [editName, setEditName] = useState(story.name);
+  const saveName = () => { if (editName !== story.name) onSaveInline(story.id, { name: editName }); };
+  return (
+    <div
+      className="story-name-input"
+      contentEditable={true}
+      suppressContentEditableWarning={true}
+      onInput={(e) => setEditName(e.currentTarget.textContent || '')}
+      onDoubleClick={(e) => { e.stopPropagation(); e.currentTarget.focus(); document.execCommand('selectAll', false, undefined); }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); saveName(); }
+        if (e.key === 'Escape') { setEditName(story.name); e.currentTarget.blur(); }
+      }}
+      onBlur={saveName}
+      onClick={(e) => e.stopPropagation()}
+    >{editName}</div>
+  );
+}
+
+// An expanded story: its description, its acceptance tests and its scenarios, each scenario dragged to reorder.
+function StoryExpansionPanel(props: StoryCardProps) {
+  const { story, onSaveInline, onReorderScenarios, onReorderSteps, onAppendScenario, onRemoveScenario, onAddStep, onUpdateStep, onRemoveStep, onEditExample, onRemoveExample, onEditDescription, onOpenFile } = props;
+  const scenarioDragRef = useRef<string | null>(null);
+  return (
+    <div className="story-expansion-panel">
+      <DescriptionEditor key={story.description} node={story} onSave={(description) => onEditDescription(story.id, description)} />
+      <AcceptanceTestsView files={story.acceptance_tests} onOpen={onOpenFile} />
+      <div className="section-heading">
+        <span>Scenarios</span>
+        <button className="node-btn plus-btn" title="Add Scenario" onClick={() => onAppendScenario(story.id)}>+</button>
+      </div>
+      {story.scenarios.map((sc) => (
+        <div key={sc.id} className="scenario-row-drag" {...makeDragHandlers(scenarioDragRef, sc.id, () => story.scenarios.map((s) => s.id), (ids) => onReorderScenarios(story.id, ids))}>
+          <ScenarioPanel
+            scenario={sc}
+            storyId={story.id}
+            onSaveInline={onSaveInline}
+            onReorderSteps={onReorderSteps}
+            onRemoveScenario={() => onRemoveScenario(story.id, sc.id)}
+            onAddStep={() => onAddStep(story.id, sc.id)}
+            onUpdateStep={(stepId, values) => onUpdateStep(story.id, sc.id, stepId, values)}
+            onRemoveStep={(stepId) => onRemoveStep(story.id, sc.id, stepId)}
+            onEditExample={onEditExample}
+            onRemoveExample={onRemoveExample}
+          />
+        </div>
+      ))}
     </div>
   );
 }
@@ -1692,8 +1645,8 @@ export class StoryMapFailureView extends Component<{ failures: StoryMapFailures;
     return { failure: error instanceof Error ? error.message : String(error) };
   }
 
-  componentDidCatch(error: unknown, info: ErrorInfo) {
-    this.props.failures.failWith(error, `A Story UI view failed to draw:${info.componentStack ?? ''}`);
+  componentDidCatch(error: unknown, failedComponents: ErrorInfo) {
+    this.props.failures.failWith(error, `A Story UI view failed to draw:${failedComponents.componentStack ?? ''}`);
   }
 
   render() {
@@ -1731,33 +1684,40 @@ function themeOnOpen(): ColorMode {
   return window.localStorage.getItem(THEME_STORAGE_KEY) === 'engineering' ? 'engineering' : 'executive';
 }
 
+const RIGHT_MOUSE_BUTTON = 2;
+type PanStart = { x: number; y: number; left: number; top: number };
+
+// While a pan is under way the canvas follows the pointer, even when the pointer leaves it, until the button is let go.
+function usePanFollowingPointer(canvasRef: React.RefObject<HTMLDivElement>, panStart: PanStart | null, stopPanning: () => void) {
+  useEffect(() => {
+    if (!panStart) return undefined;
+    const move = (pointer: MouseEvent) => {
+      if (!canvasRef.current) return;
+      canvasRef.current.scrollLeft = panStart.left - (pointer.clientX - panStart.x);
+      canvasRef.current.scrollTop = panStart.top - (pointer.clientY - panStart.y);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', stopPanning);
+    return () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', stopPanning);
+    };
+  }, [canvasRef, panStart, stopPanning]);
+}
+
 // Right-drag pans the canvas, even when the pointer leaves it.
 function useCanvasPanning() {
   const canvasRef = useRef<HTMLDivElement>(null);
-  const [panStart, setPanStart] = useState<{ x: number; y: number; left: number; top: number } | null>(null);
+  const [panStart, setPanStart] = useState<PanStart | null>(null);
+  const stopPanning = useCallback(() => setPanStart(null), []);
+  usePanFollowingPointer(canvasRef, panStart, stopPanning);
 
-  useEffect(() => {
-    if (!panStart) return undefined;
-    const move = (e: MouseEvent) => {
-      if (!canvasRef.current) return;
-      canvasRef.current.scrollLeft = panStart.left - (e.clientX - panStart.x);
-      canvasRef.current.scrollTop = panStart.top - (e.clientY - panStart.y);
-    };
-    const up = () => setPanStart(null);
-    window.addEventListener('mousemove', move);
-    window.addEventListener('mouseup', up);
-    return () => {
-      window.removeEventListener('mousemove', move);
-      window.removeEventListener('mouseup', up);
-    };
-  }, [panStart]);
-
-  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.button !== 2) return;
-    e.preventDefault();
-    setPanStart({ x: e.clientX, y: e.clientY, left: canvasRef.current?.scrollLeft ?? 0, top: canvasRef.current?.scrollTop ?? 0 });
+  const onMouseDown = (press: React.MouseEvent<HTMLDivElement>) => {
+    if (press.button !== RIGHT_MOUSE_BUTTON) return;
+    press.preventDefault();
+    setPanStart({ x: press.clientX, y: press.clientY, left: canvasRef.current?.scrollLeft ?? 0, top: canvasRef.current?.scrollTop ?? 0 });
   };
-  return { canvasRef, isPanning: panStart !== null, onMouseDown, onContextMenu: (e: React.MouseEvent) => e.preventDefault() };
+  return { canvasRef, isPanning: panStart !== null, onMouseDown, onContextMenu: (press: React.MouseEvent) => press.preventDefault() };
 }
 
 export function StoryMapWorkspaceView({ file, failures }: StoryMapWorkspaceViewProps) {
@@ -1788,51 +1748,153 @@ type StoryMapCanvasProps = Omit<ReturnType<typeof useStoryMapPage>, 'client'> & 
   panning: ReturnType<typeof useCanvasPanning>;
 };
 
-function StoryMapCanvasView({ client, chat, failure, status, edit, showInChat, dismissFailure, viewMode, toggleViewMode, scoped, toggleScoped, showScenarios, toggleShowScenarios, expandedNodeIds, expandNode, collapseNode, expandDescendants, collapseAll, theme, setTheme, panning }: StoryMapCanvasProps) {
-  const map = useStoryModel(client);
-  const storyMap = useMemo(() => StoryMapViewModel.of(map.toJSON(), scoped), [map, map.toJSON(), scoped]);
-  const kindOf = (node: string): NodeKind => (storyMap.kinds.get(node) ?? 'epic') as NodeKind;
-  const lastOf = <T extends { id: string }>(nodes: T[]): string | undefined => nodes[nodes.length - 1]?.id;
-  const subEpicsOf = (epic: string) => storyMap.epics.find((each) => each.id === epic)?.sub_epics ?? [];
-  const storiesOf = (sub: string) => storyMap.epics.flatMap((each) => each.sub_epics).find((each) => each.id === sub)?.stories ?? [];
+type Change = (held: StoryMapClient) => Promise<StoryMapClient | null>;
+type HierarchyEdits = Partial<Omit<StoryHierarchyViewProps, 'storyMap' | 'expandedNodeIds' | 'showScenarios' | 'showIncrements' | 'onNodeClick' | 'onExpand'>>;
+
+// What every edit the hierarchy hands back needs: the map as drawn, the page's edit, and the kind of node an id names.
+class MapEditing {
+  constructor(
+    readonly storyMap: StoryMapViewModel,
+    readonly edit: (change: Change) => Promise<void>,
+  ) {}
+
+  kindOf(node: string): NodeKind {
+    return (this.storyMap.kinds.get(node) ?? 'epic') as NodeKind;
+  }
+
+  subEpicsOf(epic: string): SubEpicViewModel[] {
+    return this.storyMap.epics.find((each) => each.id === epic)?.sub_epics ?? [];
+  }
+
+  storiesOf(sub: string): StoryViewModel[] {
+    return this.storyMap.epics.flatMap((each) => each.sub_epics).find((each) => each.id === sub)?.stories ?? [];
+  }
 
   // A node added after another is added last, then moved before the one that followed the other.
-  const addThenPlace = (add: (held: StoryMapClient) => Promise<StoryMapClient | null>, siblings: (read: StoryMapViewModel) => { id: string }[], after: string | null) => edit(async (held) => {
-    const added = await add(held);
-    if (!added) return null;
-    const placed = siblings(StoryMapViewModel.of(added.toJSON()));
-    const created = lastOf(placed);
-    const next = after === null ? placed[0]?.id : placed[placed.findIndex((each) => each.id === after) + 1]?.id;
-    return created && next && next !== created ? held.moveBeforeNode(created, kindOf(next) === 'story' ? 'story' : 'epic', next) : added;
-  });
+  addThenPlace(add: Change, siblings: (read: StoryMapViewModel) => { id: string }[], after: string | null): Promise<void> {
+    return this.edit(async (held) => {
+      const added = await add(held);
+      if (!added) return null;
+      const placed = siblings(StoryMapViewModel.of(added.toJSON()));
+      const created = placed[placed.length - 1]?.id;
+      const next = after === null ? placed[0]?.id : placed[placed.findIndex((each) => each.id === after) + 1]?.id;
+      return created && next && next !== created ? held.nodeAt(created, this.kindOf(next) === 'story' ? 'story' : 'epic').moveBefore(next) : added;
+    });
+  }
+}
 
-  const handleExpand = (id: string, _type: SemanticType, descendants: string[]) => {
-    if (expandedNodeIds.has(id)) collapseNode(id);
-    else expandDescendants(id, descendants);
+// The edits of epics and sub-epics: adding, placing, moving and removing them.
+function epicEditsOf(editing: MapEditing): HierarchyEdits {
+  const { storyMap, edit } = editing;
+  const subEpicsUnder = (epic: string) => (read: StoryMapViewModel) => read.epics.find((each) => each.id === epic)?.sub_epics ?? [];
+  return {
+    onReorderEpics: (order) => void edit((held) => held.reorder(storyMap.epics.map((each) => each.id), order, 'epic')),
+    onReorderSubEpics: (epic, order) => void edit((held) => held.reorder(editing.subEpicsOf(epic).map((each) => each.id), order, 'sub-epic')),
+    onMoveSubEpic: (sub, _epic, order) => { const next = order[order.indexOf(sub) + 1]; if (next) void edit((held) => held.nodeAt(sub, 'sub-epic').moveBefore(next)); },
+    onAppendEpic: (name) => void edit((held) => held.newEpic(name?.trim() || NEW_NAMES.epic)),
+    onRemoveEpic: (epic) => void edit((held) => held.nodeAt(epic, 'epic').remove()),
+    onAppendSubEpic: (epic, name) => void edit((held) => held.nodeAt(epic, 'epic').newSubEpic(name?.trim() || NEW_NAMES.subEpic)),
+    onRemoveSubEpic: (_epic, sub) => void edit((held) => held.nodeAt(sub, 'sub-epic').remove()),
+    onInsertEpicAfter: (after, name) => void editing.addThenPlace((held) => held.newEpic(name?.trim() || NEW_NAMES.epic), (read) => read.epics, after),
+    onPrependSubEpic: (epic, name) => void editing.addThenPlace((held) => held.nodeAt(epic, 'epic').newSubEpic(name?.trim() || NEW_NAMES.subEpic), subEpicsUnder(epic), null),
+    onInsertSubEpicAfter: (epic, after, name) => void editing.addThenPlace((held) => held.nodeAt(epic, 'epic').newSubEpic(name?.trim() || NEW_NAMES.subEpic), subEpicsUnder(epic), after),
   };
+}
+
+// The edits of stories: adding, placing, moving and removing them, and what the map says about any node.
+function storyEditsOf(editing: MapEditing): HierarchyEdits {
+  const { edit } = editing;
+  const storiesUnder = (sub: string) => (read: StoryMapViewModel) => read.epics.flatMap((each) => each.sub_epics).find((each) => each.id === sub)?.stories ?? [];
+  return {
+    onReorderStories: (sub, order) => void edit((held) => held.reorder(editing.storiesOf(sub).map((each) => each.id), order, 'story')),
+    onMoveStory: (story, _sub, order) => { const next = order[order.indexOf(story) + 1]; if (next) void edit((held) => held.nodeAt(story, 'story').moveBefore(next)); },
+    onAppendStory: (sub, name) => void edit((held) => held.nodeAt(sub, 'epic').newStory(name?.trim() || NEW_NAMES.story)),
+    onRemoveStory: (_sub, story) => void edit((held) => held.nodeAt(story, 'story').remove()),
+    onPrependStory: (sub, name) => void editing.addThenPlace((held) => held.nodeAt(sub, 'epic').newStory(name?.trim() || NEW_NAMES.story), storiesUnder(sub), null),
+    onInsertStoryAfter: (sub, after, name) => void editing.addThenPlace((held) => held.nodeAt(sub, 'epic').newStory(name?.trim() || NEW_NAMES.story), storiesUnder(sub), after),
+    onEditDescription: (node, description) => void edit((held) => held.nodeAt(node, editing.kindOf(node)).describe(description)),
+  };
+}
+
+// The edits of a story's scenarios, their steps and their examples.
+function scenarioEditsOf(editing: MapEditing): HierarchyEdits {
+  const { storyMap, edit } = editing;
+  const scenariosOf = (story: string) => storyMap.epics.flatMap((each) => each.sub_epics.flatMap((sub) => sub.stories)).find((each) => each.id === story)?.scenarios ?? [];
+  return {
+    onReorderScenarios: (story, order) => void edit((held) => held.reorder(scenariosOf(story).map((each) => each.id), order, 'scenario')),
+    onAppendScenario: (story) => void edit((held) => held.nodeAt(story, 'story').newScenario(NEW_NAMES.scenario)),
+    onRemoveScenario: (_story, scenario) => void edit((held) => held.nodeAt(scenario, 'scenario').remove()),
+    onAddStep: (_story, scenario) => void edit((held) => held.nodeAt(scenario, 'scenario').newStep('given', NEW_NAMES.step)),
+    onUpdateStep: (_story, _scenario, step, values) => { if (values.text !== undefined) void edit((held) => held.nodeAt(step, 'step').editText(values.text!)); },
+    onRemoveStep: (_story, _scenario, step) => void edit((held) => held.nodeAt(step, 'step').remove()),
+    onEditExample: (example, field, cellText) => void edit((held) => held.exampleAt(example).editField(field, cellText)),
+    onRemoveExample: (example) => void edit((held) => held.exampleAt(example).remove()),
+  };
+}
+
+// The edits of increments and the stories each delivers.
+function incrementEditsOf(editing: MapEditing): HierarchyEdits {
+  const { storyMap, edit } = editing;
+  return {
+    onAppendIncrement: () => void edit((held) => held.newIncrement(NEW_NAMES.increment)),
+    onRemoveIncrement: (increment) => void edit((held) => held.nodeAt(increment, 'increment').remove()),
+    onReorderIncrements: (order) => void edit((held) => held.reorder(storyMap.increments.map((each) => each.id), order, 'increment')),
+    onAssignToIncrement: (story, increment) => void edit((held) => held.incrementAt(increment).deliver(story)),
+    onUnassignFromIncrement: (story) => { const increment = storyMap.incrementOf(story); if (increment) void edit((held) => held.incrementAt(increment.id).stopDelivering(story)); },
+  };
+}
+
+type StoryMapToolbarProps = Pick<StoryMapCanvasProps, 'edit' | 'viewMode' | 'toggleViewMode' | 'scoped' | 'toggleScoped' | 'showScenarios' | 'toggleShowScenarios' | 'expandDescendants' | 'collapseAll' | 'theme' | 'setTheme'> & {
+  map: StoryMapClient;
+  storyMap: StoryMapViewModel;
+};
+
+function StoryMapToolbar({ map, storyMap, edit, viewMode, toggleViewMode, scoped, toggleScoped, showScenarios, toggleShowScenarios, expandDescendants, collapseAll, theme, setTheme }: StoryMapToolbarProps) {
+  const everyNode = () => storyMap.epics.flatMap((epic) => [epic.id, ...epic.sub_epics.flatMap((sub) => [sub.id, ...sub.stories.map((story) => story.id)])]);
+  return (
+    <div className="workspace-toolbar">
+      <img className="brand-logo" src={`${import.meta.env.BASE_URL}${theme === 'engineering' ? 'logo-wordmark-white.svg' : 'logo-wordmark-black.svg'}`} alt="abd.works" />
+      <span className="toolbar-file" title={map.file}>{map.file}</span>
+      <span className="toolbar-sep" />
+      <button className={`toolbar-btn${showScenarios ? ' active' : ''}`} onClick={toggleShowScenarios}>Show Scenarios</button>
+      <button className={`toolbar-btn${viewMode === 'increment' ? ' active' : ''}`} aria-pressed={viewMode === 'increment'} onClick={toggleViewMode}>Increments</button>
+      {map.scope.length > 0 && (
+        <button className={`toolbar-btn${scoped ? ' active' : ''}`} aria-pressed={scoped} onClick={toggleScoped} title="The stories the ticket's session names">Ticket scope</button>
+      )}
+      <span className="toolbar-sep" />
+      <button className="toolbar-btn" onClick={() => expandDescendants('all-epics', everyNode())}>Expand All</button>
+      <button className="toolbar-btn" onClick={collapseAll}>Collapse All</button>
+      <span className="toolbar-sep" />
+      <FormatTogglesView map={map} onToggle={(format, isChosen) => void edit((held) => held.chooseFormat(format, isChosen))} />
+      <div className="mode-switch" role="group" aria-label="Color mode">
+        <button type="button" className={theme === 'executive' ? 'active' : ''} aria-pressed={theme === 'executive'} onClick={() => setTheme('executive')}>Executive</button>
+        <button type="button" className={theme === 'engineering' ? 'active' : ''} aria-pressed={theme === 'engineering'} onClick={() => setTheme('engineering')}>Engineering</button>
+      </div>
+    </div>
+  );
+}
+
+function SaveStatusView({ status, map }: { status: EditStatus; map: StoryMapClient }) {
+  return (
+    <div className="status-rail">
+      {status === 'synced' && <span><span className="status-dot" />saved in {map.formats.chosen_formats.join(' and ')}</span>}
+      {status === 'saving' && <span><span className="status-dot pending" />saving…</span>}
+      {status === 'error' && <span><span className="status-dot error" />not saved</span>}
+    </div>
+  );
+}
+
+function StoryMapCanvasView(props: StoryMapCanvasProps) {
+  const { client, chat, failure, status, edit, showInChat, dismissFailure, viewMode, showScenarios, expandedNodeIds, expandNode, collapseNode, expandDescendants, panning } = props;
+  const map = useStoryModel(client);
+  const storyMap = useMemo(() => StoryMapViewModel.of(map.toJSON(), props.scoped), [map, map.toJSON(), props.scoped]);
+  const editing = new MapEditing(storyMap, edit);
+  const handleExpand = (id: string, _type: SemanticType, descendants: string[]) => (expandedNodeIds.has(id) ? collapseNode(id) : expandDescendants(id, descendants));
+  const onSaveInline = (nodeId: string, patch: { name?: string }) => { if (patch.name) void edit((held) => held.nodeAt(nodeId, editing.kindOf(nodeId)).rename(patch.name!)); };
 
   return (
     <main className="story-map-workspace">
-      <div className="workspace-toolbar">
-        <img className="brand-logo" src={`${import.meta.env.BASE_URL}${theme === 'engineering' ? 'logo-wordmark-white.svg' : 'logo-wordmark-black.svg'}`} alt="abd.works" />
-        <span className="toolbar-file" title={map.file}>{map.file}</span>
-        <span className="toolbar-sep" />
-        <button className={`toolbar-btn${showScenarios ? ' active' : ''}`} onClick={toggleShowScenarios}>Show Scenarios</button>
-        <button className={`toolbar-btn${viewMode === 'increment' ? ' active' : ''}`} aria-pressed={viewMode === 'increment'} onClick={toggleViewMode}>Increments</button>
-        {map.scope.length > 0 && (
-          <button className={`toolbar-btn${scoped ? ' active' : ''}`} aria-pressed={scoped} onClick={toggleScoped} title="The stories the ticket's session names">Ticket scope</button>
-        )}
-        <span className="toolbar-sep" />
-        <button className="toolbar-btn" onClick={() => expandDescendants('all-epics', storyMap.epics.flatMap((e) => [e.id, ...e.sub_epics.flatMap((s) => [s.id, ...s.stories.map((st) => st.id)])]))}>Expand All</button>
-        <button className="toolbar-btn" onClick={collapseAll}>Collapse All</button>
-        <span className="toolbar-sep" />
-        <FormatTogglesView map={map} onToggle={(format, isChosen) => void edit((held) => held.chooseFormat(format, isChosen))} />
-        <div className="mode-switch" role="group" aria-label="Color mode">
-          <button type="button" className={theme === 'executive' ? 'active' : ''} aria-pressed={theme === 'executive'} onClick={() => setTheme('executive')}>Executive</button>
-          <button type="button" className={theme === 'engineering' ? 'active' : ''} aria-pressed={theme === 'engineering'} onClick={() => setTheme('engineering')}>Engineering</button>
-        </div>
-      </div>
-
+      <StoryMapToolbar {...props} map={map} storyMap={storyMap} />
       {failure && (
         <div className="edit-failure" role="alert">
           <span className="status-dot error" />{failure}
@@ -1840,55 +1902,10 @@ function StoryMapCanvasView({ client, chat, failure, status, edit, showInChat, d
         </div>
       )}
       {map.refusal && <div className="edit-refusal" role="note">Read only: {map.refusal}</div>}
-
       <div ref={panning.canvasRef} className="story-map-canvas" style={{ cursor: panning.isPanning ? 'grabbing' : 'grab' }} onMouseDown={panning.onMouseDown} onContextMenu={panning.onContextMenu}>
-        <StoryHierarchyView
-          storyMap={storyMap}
-          expandedNodeIds={expandedNodeIds}
-          showScenarios={showScenarios}
-          showIncrements={viewMode === 'increment'}
-          onNodeClick={expandNode}
-          onExpand={handleExpand}
-          onSaveInline={(nodeId, patch) => { if (patch.name) void edit((held) => held.renameNode(nodeId, kindOf(nodeId), patch.name!)); }}
-          onReorderEpics={(order) => void edit((held) => held.reorder(storyMap.epics.map((e) => e.id), order, 'epic'))}
-          onReorderSubEpics={(epic, order) => void edit((held) => held.reorder(subEpicsOf(epic).map((s) => s.id), order, 'sub-epic'))}
-          onReorderStories={(sub, order) => void edit((held) => held.reorder(storiesOf(sub).map((s) => s.id), order, 'story'))}
-          onMoveStory={(story, _sub, order) => { const next = order[order.indexOf(story) + 1]; if (next) void edit((held) => held.moveBeforeNode(story, 'story', next)); }}
-          onMoveSubEpic={(sub, _epic, order) => { const next = order[order.indexOf(sub) + 1]; if (next) void edit((held) => held.moveBeforeNode(sub, 'sub-epic', next)); }}
-          onReorderScenarios={(story, order) => void edit((held) => held.reorder(storyMap.epics.flatMap((e) => e.sub_epics.flatMap((s) => s.stories)).find((s) => s.id === story)?.scenarios.map((sc) => sc.id) ?? [], order, 'scenario'))}
-          onAppendEpic={(name) => void edit((held) => held.newEpic(name?.trim() || NEW_NAMES.epic))}
-          onRemoveEpic={(epic) => void edit((held) => held.removeNode(epic, 'epic'))}
-          onAppendSubEpic={(epic, name) => void edit((held) => held.newSubEpic(epic, name?.trim() || NEW_NAMES.subEpic))}
-          onRemoveSubEpic={(_epic, sub) => void edit((held) => held.removeNode(sub, 'sub-epic'))}
-          onAppendStory={(sub, name) => void edit((held) => held.newStory(sub, name?.trim() || NEW_NAMES.story))}
-          onRemoveStory={(_sub, story) => void edit((held) => held.removeNode(story, 'story'))}
-          onInsertEpicAfter={(after, name) => void addThenPlace((held) => held.newEpic(name?.trim() || NEW_NAMES.epic), (read) => read.epics, after)}
-          onPrependSubEpic={(epic, name) => void addThenPlace((held) => held.newSubEpic(epic, name?.trim() || NEW_NAMES.subEpic), (read) => read.epics.find((e) => e.id === epic)?.sub_epics ?? [], null)}
-          onInsertSubEpicAfter={(epic, after, name) => void addThenPlace((held) => held.newSubEpic(epic, name?.trim() || NEW_NAMES.subEpic), (read) => read.epics.find((e) => e.id === epic)?.sub_epics ?? [], after)}
-          onPrependStory={(sub, name) => void addThenPlace((held) => held.newStory(sub, name?.trim() || NEW_NAMES.story), (read) => read.epics.flatMap((e) => e.sub_epics).find((s) => s.id === sub)?.stories ?? [], null)}
-          onInsertStoryAfter={(sub, after, name) => void addThenPlace((held) => held.newStory(sub, name?.trim() || NEW_NAMES.story), (read) => read.epics.flatMap((e) => e.sub_epics).find((s) => s.id === sub)?.stories ?? [], after)}
-          onAppendScenario={(story) => void edit((held) => held.newScenario(story, NEW_NAMES.scenario))}
-          onRemoveScenario={(_story, scenario) => void edit((held) => held.removeNode(scenario, 'scenario'))}
-          onAddStep={(_story, scenario) => void edit((held) => held.newStep(scenario, 'given', NEW_NAMES.step))}
-          onUpdateStep={(_story, _scenario, step, values) => { if (values.text !== undefined) void edit((held) => held.editStep(step, values.text!)); }}
-          onRemoveStep={(_story, _scenario, step) => void edit((held) => held.removeNode(step, 'step'))}
-          onEditExample={(example, field, value) => void edit((held) => held.editExample(example, field, value))}
-          onRemoveExample={(example) => void edit((held) => held.removeExample(example))}
-          onEditDescription={(node, description) => void edit((held) => held.describeNode(node, kindOf(node), description))}
-          onOpenFile={chat ? showInChat : undefined}
-          onAppendIncrement={() => void edit((held) => held.newIncrement(NEW_NAMES.increment))}
-          onRemoveIncrement={(increment) => void edit((held) => held.removeNode(increment, 'increment'))}
-          onReorderIncrements={(order) => void edit((held) => held.reorder(storyMap.increments.map((each) => each.id), order, 'increment'))}
-          onAssignToIncrement={(story, increment) => void edit((held) => held.deliverIn(increment, story))}
-          onUnassignFromIncrement={(story) => { const increment = storyMap.incrementOf(story); if (increment) void edit((held) => held.stopDelivering(increment.id, story)); }}
-        />
+        <StoryHierarchyView storyMap={storyMap} expandedNodeIds={expandedNodeIds} showScenarios={showScenarios} showIncrements={viewMode === 'increment'} onNodeClick={expandNode} onExpand={handleExpand} onSaveInline={onSaveInline} onOpenFile={chat ? showInChat : undefined} {...epicEditsOf(editing)} {...storyEditsOf(editing)} {...scenarioEditsOf(editing)} {...incrementEditsOf(editing)} />
       </div>
-
-      <div className="status-rail">
-        {status === 'synced' && <span><span className="status-dot" />saved in {map.formats.chosen_formats.join(' and ')}</span>}
-        {status === 'saving' && <span><span className="status-dot pending" />saving…</span>}
-        {status === 'error' && <span><span className="status-dot error" />not saved</span>}
-      </div>
+      <SaveStatusView status={status} map={map} />
     </main>
   );
 }

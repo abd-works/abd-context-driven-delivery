@@ -4,19 +4,22 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, ClassVar, Iterable, TypeVar
+from typing import Any, Iterable, TypeVar
 
 from harness.agent_tools.agent_tools import (
     AgentTool,
+    InvokeLine,
     AgentToolSet,
     InstallDestination,
+    ToolsetConfiguration,
+    ToolsetReference,
     agent_instructions,
     agent_tool,
     agent_toolset,
     tool_subject,
 )
 from harness.installation.destination import Installation, ServerInstallation, is_temporary, noCatalog
-from harness.installation.files import FileInstallation, command
+from harness.installation.files import FileChannel, FileInstallation, command
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.install_diagnostics import InstallDiagnostics
 from harness.installation.install_record import InstallRecord
@@ -35,7 +38,7 @@ _Server = TypeVar("_Server", bound=ServerInstallation)
 class ToolsetInstallFailed(Exception):
     """Publishing one toolset failed; the install stops so no IDE folder is left with part of a toolset."""
 
-    def __init__(self, toolset: Any, cause: Exception) -> None:
+    def __init__(self, toolset: ToolsetConfiguration | ToolsetReference, cause: Exception) -> None:
         super().__init__(f"install failed for {toolset}: {type(cause).__name__}: {cause}")
         self.toolset = toolset
         self.cause = cause
@@ -67,13 +70,13 @@ class InstallChannels:
         self.servers = [kind(layout, path, repo=repo) for kind in servers]
         self.language_adapters = LanguageAdapterInstallation(layout, path, repo=repo)
         self._files = {
-            (destination, mcp_mode): FileInstallation(layout, path, destination, mcp_mode=mcp_mode, repo=repo)
+            (destination, mcp_mode): FileInstallation(layout, path, FileChannel(destination, mcp_mode), repo=repo)
             for destination in FileInstallation.CHANNELS
             for mcp_mode in (False, True)
         }
-        self.standing_rules = FileInstallation(layout, path, InstallDestination.RULE, repo=repo)
+        self.standing_rules = FileInstallation(layout, path, FileChannel(InstallDestination.RULE), repo=repo)
         for installation in (*self.servers, self.language_adapters, *self._files.values(), self.standing_rules):
-            installer.track(installation)
+            installation.track_writes_with(lambda written: installer.record.track(written, installer.path))
         # The toolsets the server channels publish into every install, such as the hooks that start the cdd server.
         self.toolsets: list[Any] = [AgentToolSet.instantiate(toolset) for server in self.servers for toolset in server.toolsets]
 
@@ -98,23 +101,235 @@ class InstallChannels:
         return {server.channel: server.published for server in self.servers}
 
 
+class ServerChannels:
+    """The kinds of server installation every install publishes through, beside its file channels: harness/mcp and
+    harness/hooks each register theirs when they are imported (``SERVER_CHANNELS.register(kind)``), so this module
+    never imports them and a new server channel is one more registration. The process keeps one."""
+
+    def __init__(self) -> None:
+        self._kinds: list[type[ServerInstallation]] = []
+
+    def register(self, kind: type[ServerInstallation]) -> None:
+        """Have every install publish through an installation of kind too, and start the server it points at."""
+        if kind not in self._kinds:
+            self._kinds.append(kind)
+
+    @property
+    def kinds(self) -> list[type[ServerInstallation]]:
+        """Each kind registered, in the order it registered; an install with none stops with *ServersNotRegistered*."""
+        if not self._kinds:
+            raise ServersNotRegistered()
+        return list(self._kinds)
+
+
+SERVER_CHANNELS = ServerChannels()
+
+
+class Deployment:
+    """One installer's publishing of the repository's toolsets into its IDE folder: a run writes every channel's files,
+    tidies the folder and saves the install record, stands each server up and starts it, then diagnoses what it wrote.
+    The installer holds one (``installer.deployment``), made with it, and its published tools run through it."""
+
+    def __init__(self, installer: Installer) -> None:
+        self._installer = installer
+        self._channels: InstallChannels | None = None
+        self.diagnosis: list[str] = []
+
+    @property
+    def channels(self) -> InstallChannels:
+        """The installations of the last run, or of a run not yet made, to read a folder an earlier install wrote."""
+        if self._channels is None:
+            self._channels = InstallChannels(self._installer, SERVER_CHANNELS.kinds)
+        return self._channels
+
+    def run(self, toolsets: Iterable[ToolsetConfiguration] | None, replace: bool) -> InstallChannels:
+        """Publish toolsets, every toolset the repository defines when none are named; replace wipes the previous
+        install first."""
+        installer = self._installer
+        if replace:
+            installer.clean()
+        else:
+            installer.record.keep_existing(installer.path)
+        installer.toolsets.ensure_import_path()
+        items = self._repository_toolsets() if toolsets is None else list(toolsets)
+        channels = self._channels = InstallChannels(installer, SERVER_CHANNELS.kinds, installing=True)
+        self._publish_every_toolset(items, channels)
+        self._save_installed_files(replace)
+        self._standup_channels()
+        self._report_diagnosis()
+        return channels
+
+    def install_self(self, *, replace: bool = False) -> InstallChannels:
+        """Deploy only the Installer toolset — ``/install``, ``/clean`` — and the toolsets the server channels publish
+        into every install, such as the hooks that start the cdd server."""
+        return self.run([], replace=replace)
+
+    def _publish_every_toolset(self, items: list[ToolsetConfiguration], channels: InstallChannels) -> None:
+        """Write every channel's files for items, the Installer, and the toolsets the server channels publish, then the
+        language adapters, the agents, and the standing rules."""
+        self._install_all(items)
+        for toolset in (self._installer, *channels.toolsets):
+            self._install_toolset(toolset)
+        channels.language_adapters.write_all()
+        self._install_agents()
+        self._install_standing_rules()
+
+    def _save_installed_files(self, replace: bool) -> None:
+        """Tidy the folder this run wrote into and save its record."""
+        installer = self._installer
+        if replace:
+            # Only after a full wipe and republish do the enrolled MCP names hold the whole catalog; a partial install
+            # must not delete skills for toolsets not in this run.
+            self._remove_skills_naming_missing_mcp()
+        installer.record.prune_empty_skill_folders(installer.path)
+        installer.record.save(installer.ide, installer.path)
+
+    def _report_diagnosis(self) -> None:
+        """Diagnose the finished install, printing each red report."""
+        self.diagnosis = self.diagnose_after_install()
+        for report in self.diagnosis:
+            if report.startswith("!"):
+                print(report, file=sys.stderr)
+
+    def write_language_adapters(self) -> list[Path]:
+        """Write the TypeScript language adapters from the repository's toolsets as they are now, and nothing else. A
+        page built against adapters an earlier install wrote reads the data the server sent then, so a field added since,
+        such as a backlog item's children, is missing from it and the page fails; switching the server's code writes
+        them first, then rebuilds its pages."""
+        installer = self._installer
+        installer.toolsets.ensure_import_path()
+        adapters = LanguageAdapterInstallation(installer.layout, installer.path, repo=installer.repo)
+        server_toolsets = [toolset for server in SERVER_CHANNELS.kinds for toolset in server.toolsets]
+        for item in [*self._repository_toolsets(), *server_toolsets]:
+            toolset = AgentToolSet.instantiate(item)
+            for each in (toolset, *toolset.child_toolsets()):
+                adapters.record(each)
+        return adapters.write_all()
+
+    def _repository_toolsets(self) -> list[type]:
+        """The class of every toolset the repository defines; one whose module cannot be imported stops the install,
+        named after the toolset, with its cause."""
+        toolsets = self._installer.toolsets
+        classes = toolsets.classes()
+        for unloadable in toolsets.unloadable:
+            raise ToolsetInstallFailed(unloadable.reference, unloadable.cause) from unloadable.cause
+        return classes
+
+    def _install_all(self, toolsets: Iterable[ToolsetConfiguration]) -> None:
+        for item in toolsets:
+            try:
+                toolset = AgentToolSet.instantiate(item)
+                self._install_toolset(toolset)
+                for child in toolset.child_toolsets():
+                    self._install_toolset(child)
+            except ToolsetInstallFailed:
+                raise
+            # Any failure while publishing a toolset stops the install, named after the toolset, with its cause.
+            except Exception as error:  # noqa: BLE001
+                raise ToolsetInstallFailed(item, error) from error
+
+    def _install_toolset(self, toolset: AgentToolSet) -> None:
+        channels = self.channels
+        if toolset.registration_name not in channels.deployed:
+            channels.deployed.append(toolset.registration_name)
+        for tool in toolset.tools.values():
+            for installation in channels.for_tool(tool):
+                installation.install(tool)
+        channels.language_adapters.record(toolset)
+
+    def _install_agents(self) -> None:
+        """Copy cdd_guidance/agents into the IDE agents folder, each named as its front matter names it. The source
+        stays on cdd_guidance."""
+        installer = self._installer
+        source = installer.toolsets.agents_folder
+        if not source.is_dir():
+            return
+        for path in sorted(source.glob("*.md")):
+            front_matter = FrontMatter.of_file(path)
+            dest = installer.path / "agents" / f"{front_matter.fields.get('name') or path.stem}.md"
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(front_matter.text, encoding="utf-8")
+            installer.record.track(dest, installer.path)
+
+    def _install_standing_rules(self) -> None:
+        """Install cdd_guidance/rules as always-on rules in the IDE rules folder."""
+        source = self._installer.toolsets.standing_rules_folder
+        if not source.is_dir():
+            return
+        rules = self.channels.standing_rules
+        for path in sorted([*source.glob("*.md"), *source.glob("*.mdc")]):
+            rules.write_standing_rule(path)
+
+    def _remove_skills_naming_missing_mcp(self) -> list[str]:
+        """Drop skill files that name an MCP tool this install did not enroll.
+
+        Orphan skills from a prior API (for example ``branch.create`` after the
+        tool became ``repo.new_branch``) survive ``clean`` when they were never
+        tracked. Agents then thrash searching for a tool that cannot exist.
+        Skills without an MCP invoke line are left alone (hand-authored orphans).
+        """
+        skills = self._installer.path / "skills"
+        if not skills.is_dir():
+            return []
+        enrolled = set(self.channels.published.get(InstallDestination.MCP, []))
+        return [self._remove_skill(path) for path in skills.rglob("SKILL.md") if self._names_missing_mcp(path, enrolled)]
+
+    def _names_missing_mcp(self, skill: Path, enrolled: set[str]) -> bool:
+        """Whether the skill file names an MCP tool, and one of them is not among the enrolled names."""
+        names = InvokeLine(skill.read_text(encoding="utf-8")).names
+        return bool(names) and not all(name in enrolled for name in names)
+
+    def _remove_skill(self, skill: Path) -> str:
+        """Delete the skill file and forget it in the record; answer its path from the IDE folder."""
+        installer = self._installer
+        relative = skill.resolve().relative_to(installer.path.resolve()).as_posix()
+        skill.unlink()
+        installer.record.prune_empty_parents(skill, installer.path)
+        installer.record.forget(relative)
+        return relative
+
+    def _standup_channels(self) -> None:
+        """Stand up each server over what was installed, to check it loads, then start the servers. An install that
+        runs inside one of those servers, as an install through MCP runs inside the cdd server, starts none: they are
+        already running, and starting them again would reload every toolset in the middle of a request."""
+        for server in self.channels.servers:
+            server.standup()
+            self._print_channel_notice(server.diagnose())
+        if not is_temporary(self._installer.path) and not self._runs_inside_a_server():
+            self.ensure_runtimes()
+
+    def ensure_runtimes(self) -> dict[str, str]:
+        """Start the server behind every channel the install wrote; fail if one stays down."""
+        status: dict[str, str] = {}
+        for server in self.channels.servers:
+            status.update(server.ensure_running())
+        print(", ".join(f"{name}: {value}" for name, value in status.items()), file=sys.stderr)
+        return status
+
+    def _runs_inside_a_server(self) -> bool:
+        return any(server.serves_this_process() for server in self.channels.servers)
+
+    def _print_channel_notice(self, diagnosis: dict[str, Any]) -> None:
+        notice = diagnosis.get("notice") or ""
+        if notice:
+            print(notice, file=sys.stderr)
+
+    def diagnose_after_install(self) -> list[str]:
+        """Record install-channel diagnostics only; guidance probes use ``/guidance-diagnostics``."""
+        report = self._installer.diagnose_install()
+        self._installer.diagnostics.record_run(self.channels, report)
+        return [report]
+
+
 @noCatalog
 @agent_toolset
 class Installer:
     """Publish every annotated member of the toolsets a repository defines into one IDE folder, through the installation
     of each channel its annotations name, then start the servers the installed files point at.
 
-    The files of skills, commands, rules, and language adapters are written here. The MCP and hook channels each point
-    the IDE at a server, and harness/mcp and harness/hooks register their installation with ``installs_through`` when
-    they are imported, so this module never imports them."""
-
-    _servers: ClassVar[list[type[ServerInstallation]]] = []
-
-    @classmethod
-    def installs_through(cls, kind: type[ServerInstallation]) -> None:
-        """Have every install publish through an installation of kind too, and start the server it points at."""
-        if kind not in Installer._servers:
-            Installer._servers.append(kind)
+    The files of skills, commands, rules, and language adapters are written by its *Deployment* (``deployment``). The
+    MCP and hook channels each point the IDE at a server, and harness/mcp and harness/hooks register their installation
+    with ``SERVER_CHANNELS`` when they are imported, so this module never imports them."""
 
     def __init__(self, ide: str | None = None, path: str | Path | None = None, *, repo: str | Path) -> None:
         self.repo = Path(repo).resolve()
@@ -125,18 +340,13 @@ class Installer:
         self.record = InstallRecord(self.path / InstallRecord.NAME if is_temporary(self.path) else _SHARED_RECORD)
         self.diagnostics = InstallDiagnostics(self.path, self.layout)
         self.toolsets = RepositoryToolsets(self.repo)
-        self._channels: InstallChannels | None = None
-        self.diagnosis: list[str] = []
+        self.deployment = Deployment(self)
 
     @classmethod
     @tool_subject
     def load(cls, *, project: Path | str) -> Installer:
         """The installer of project, the folder the call names, into the IDE folder it last installed into."""
         return cls(repo=project)
-
-    def track(self, installation: Installation) -> None:
-        """Have installation add each file it writes to the install record."""
-        installation.track_writes_with(lambda written: self.record.track(written, self.path))
 
     @command(name="clean")
     @agent_tool
@@ -164,7 +374,7 @@ class Installer:
         3. Read ``diagnostics.json`` in the install folder (latest ``diagnose_install`` report) and paste the full summary: color, channel deltas, cdd server, hook server, hooks registered.
 
         When a step fails, write ``✗`` and the step with its error, stop, and follow "When install fails" in ``harness/installation/installer.md``."""
-        return self._install_run(toolsets, replace)
+        return self.deployment.run(toolsets, replace)
 
     @command(name="install-latest")
     @agent_tool
@@ -188,172 +398,10 @@ class Installer:
         script = self.repo / "scripts" / "install-latest.py"
         return subprocess.run([sys.executable, str(script)], cwd=self.repo, check=False).returncode
 
-    def install_self(self, *, replace: bool = False) -> InstallChannels:
-        """Deploy only this Installer toolset — ``/install``, ``/clean`` — and the toolsets the server channels publish
-        into every install, such as the hooks that start the cdd server."""
-        return self._install_run([], replace=replace)
-
-    def _install_run(self, toolsets: Iterable[Any] | None, replace: bool) -> InstallChannels:
-        if replace:
-            self.clean()
-        else:
-            self.record.keep_existing(self.path)
-        self.toolsets.ensure_import_path()
-        items = self._repository_toolsets() if toolsets is None else list(toolsets)
-        if not Installer._servers:
-            raise ServersNotRegistered()
-        channels = self._channels = InstallChannels(self, Installer._servers, installing=True)
-        self._install_all(items)
-        for toolset in (self, *channels.toolsets):
-            self._install_toolset(toolset)
-        channels.language_adapters.write_all()
-        self._install_agents()
-        self._install_standing_rules()
-        if replace:
-            # Only after a full wipe and republish do the enrolled MCP names hold the whole catalog; a partial install
-            # must not delete skills for toolsets not in this run.
-            self._remove_skills_naming_missing_mcp()
-        self.record.prune_empty_skill_folders(self.path)
-        self.record.save(self.ide, self.path)
-        self._standup_channels()
-        self.diagnosis = self.diagnose_after_install()
-        for report in self.diagnosis:
-            if report.startswith("!"):
-                print(report, file=sys.stderr)
-        return channels
-
-    def write_language_adapters(self) -> list[Path]:
-        """Write the TypeScript language adapters from the repository's toolsets as they are now, and nothing else. A
-        page built against adapters an earlier install wrote reads the data the server sent then, so a field added since,
-        such as a backlog item's children, is missing from it and the page fails; switching the server's code writes
-        them first, then rebuilds its pages."""
-        self.toolsets.ensure_import_path()
-        adapters = LanguageAdapterInstallation(self.layout, self.path, repo=self.repo)
-        server_toolsets = [toolset for server in Installer._servers for toolset in server.toolsets]
-        for item in [*self._repository_toolsets(), *server_toolsets]:
-            toolset = AgentToolSet.instantiate(item)
-            for each in (toolset, *toolset.child_toolsets()):
-                adapters.record(each)
-        return adapters.write_all()
-
-    def _repository_toolsets(self) -> list[type]:
-        """The class of every toolset the repository defines; one whose module cannot be imported stops the install,
-        named after the toolset, with its cause."""
-        classes = self.toolsets.classes()
-        for unloadable in self.toolsets.unloadable:
-            raise ToolsetInstallFailed(unloadable.reference, unloadable.cause) from unloadable.cause
-        return classes
-
-    def _install_all(self, toolsets: Iterable[Any]) -> None:
-        for item in toolsets:
-            try:
-                toolset = AgentToolSet.instantiate(item)
-                self._install_toolset(toolset)
-                for child in toolset.child_toolsets():
-                    self._install_toolset(child)
-            except ToolsetInstallFailed:
-                raise
-            # Any failure while publishing a toolset stops the install, named after the toolset, with its cause.
-            except Exception as error:  # noqa: BLE001
-                raise ToolsetInstallFailed(item, error) from error
-
-    def _install_toolset(self, toolset: Any) -> None:
-        channels = self._channels_of_run()
-        if toolset.registration_name not in channels.deployed:
-            channels.deployed.append(toolset.registration_name)
-        for tool in toolset.tools.values():
-            for installation in channels.for_tool(tool):
-                installation.install(tool)
-        channels.language_adapters.record(toolset)
-
-    def _channels_of_run(self) -> InstallChannels:
-        if self._channels is None:
-            self._channels = InstallChannels(self, Installer._servers)
-        return self._channels
-
-    def _install_agents(self) -> None:
-        """Copy cdd_guidance/agents into the IDE agents folder, each named as its front matter names it. The source
-        stays on cdd_guidance."""
-        source = self.toolsets.agents_folder
-        if not source.is_dir():
-            return
-        for path in sorted(source.glob("*.md")):
-            front_matter = FrontMatter.of_file(path)
-            dest = self.path / "agents" / f"{front_matter.fields.get('name') or path.stem}.md"
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_text(front_matter.text, encoding="utf-8")
-            self.record.track(dest, self.path)
-
-    def _install_standing_rules(self) -> None:
-        """Install cdd_guidance/rules as always-on rules in the IDE rules folder."""
-        source = self.toolsets.standing_rules_folder
-        if not source.is_dir():
-            return
-        rules = self._channels_of_run().standing_rules
-        for path in sorted([*source.glob("*.md"), *source.glob("*.mdc")]):
-            rules.write_standing_rule(path)
-
-    def _remove_skills_naming_missing_mcp(self) -> list[str]:
-        """Drop skill files that name an MCP tool this install did not enroll.
-
-        Orphan skills from a prior API (for example ``branch.create`` after the
-        tool became ``repo.new_branch``) survive ``clean`` when they were never
-        tracked. Agents then thrash searching for a tool that cannot exist.
-        Skills without an MCP invoke line are left alone (hand-authored orphans).
-        """
-        skills = self.path / "skills"
-        if not skills.is_dir():
-            return []
-        enrolled = set(self._channels_of_run().published.get(InstallDestination.MCP, []))
-        removed: list[str] = []
-        for path in skills.rglob("SKILL.md"):
-            names = AgentTool.invoked_names(path.read_text(encoding="utf-8"))
-            if not names or all(name in enrolled for name in names):
-                continue
-            relative = path.resolve().relative_to(self.path.resolve()).as_posix()
-            path.unlink()
-            removed.append(relative)
-            self.record.prune_empty_parents(path, self.path)
-            self.record.forget(relative)
-        return removed
-
-    def _standup_channels(self) -> None:
-        """Stand up each server over what was installed, to check it loads, then start the servers. An install that
-        runs inside one of those servers, as an install through MCP runs inside the cdd server, starts none: they are
-        already running, and starting them again would reload every toolset in the middle of a request."""
-        channels = self._channels_of_run()
-        for server in channels.servers:
-            server.standup()
-            self._print_channel_notice(server.diagnose())
-        if not is_temporary(self.path) and not self._runs_inside_a_server():
-            self.ensure_runtimes()
-
-    def ensure_runtimes(self) -> dict[str, str]:
-        """Start the server behind every channel the install wrote; fail if one stays down."""
-        status: dict[str, str] = {}
-        for server in self._channels_of_run().servers:
-            status.update(server.ensure_running())
-        print(", ".join(f"{name}: {value}" for name, value in status.items()), file=sys.stderr)
-        return status
-
-    def _runs_inside_a_server(self) -> bool:
-        return any(server.serves_this_process() for server in self._channels_of_run().servers)
-
-    def _print_channel_notice(self, diagnosis: dict[str, Any]) -> None:
-        notice = diagnosis.get("notice") or ""
-        if notice:
-            print(notice, file=sys.stderr)
-
-    def diagnose_after_install(self) -> list[str]:
-        """Record install-channel diagnostics only; guidance probes use ``/guidance-diagnostics``."""
-        report = self.diagnose_install()
-        self.diagnostics.record_run(self._channels_of_run(), report)
-        return [report]
-
     @agent_instructions
     def diagnose_install(self) -> str:
         """Compare this install with the last diagnostics.json entry and report counts, or what changed."""
-        color, body = self.diagnostics.diagnosed(self._channels_of_run())
+        color, body = self.diagnostics.diagnosed(self.deployment.channels)
         return f"{color}\n{body}" if color != "red" else f"!\n{color}\n{body}\n{self.diagnose_instructions()}"
 
     def _last_or_default_folder(self, last: str | None) -> Path:
@@ -361,26 +409,14 @@ class Installer:
             return Path(last)
         return self.repo / self.layout.folder_name
 
-    @markdown("install")
-    def install_instructions(self) -> str:
-        """Install instructions."""
-
-    @markdown("clean")
-    def clean_instructions(self) -> str:
-        """Clean instructions."""
-
     @markdown("diagnose_install")
-    def diagnose_install_instructions(self) -> str:
-        """Diagnose-install instructions."""
-
-    @markdown("ensure_runtimes")
-    def runtime_instructions(self) -> str:
-        """Runtime instructions."""
+    def _diagnose_install_section(self) -> str:
+        """The Diagnose Install section of installer.md."""
 
     @agent_instructions
     def diagnose_instructions(self) -> str:
         """How to diagnose an install whose deployed counts do not match."""
-        return str(self.diagnose_install_instructions).strip()
+        return str(self._diagnose_install_section).strip()
 
 
 __all__ = ["Installer"]

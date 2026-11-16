@@ -19,6 +19,8 @@ VIOLATION_COUNT = "violation_count"
 SAVE_SECONDS = 1.0
 
 Kept = TypeVar("Kept", bool, int)
+KeptAnswers = dict[str, dict[str, dict[str, object]]]
+"""The answers kept, by fidelity, then by question: each the key it was worked out under and its value."""
 
 
 class ProgressCache:
@@ -49,18 +51,20 @@ class ProgressCache:
         # How long the write waits for the read that works the answers out; a spec that reads once waits less.
         self._save_seconds = save_seconds
 
-    def answer(self, fidelity: str, question: str, key: str, work_out: Callable[[], Kept]) -> Kept:
-        """The answer to question on fidelity, worked out with work_out only when it was last kept under another key,
-        and then kept under key for the next read."""
+    def of(self, fidelity: str) -> FidelityAnswers:
+        """The answers kept about fidelity, by its slug, such as stories-story-map."""
+        return FidelityAnswers(self, fidelity)
+
+    def kept(self, fidelity: str) -> dict[str, dict[str, object]]:
+        """Each answer kept about fidelity, by question, with the key it was worked out under."""
         with self._lock:
-            kept = self._read().get(fidelity, {}).get(question)
-        if kept is not None and kept.get("key") == key:
-            return kept["value"]
-        value = work_out()
+            return dict(self._read().get(fidelity, {}))
+
+    def keep(self, fidelity: str, question: str, answer: dict[str, object]) -> None:
+        """Keep answer, its key and value, to question on fidelity, written to the file soon after."""
         with self._lock:
-            self._read().setdefault(fidelity, {})[question] = {"key": key, "value": value}
+            self._read().setdefault(fidelity, {})[question] = answer
             self._save_soon()
-        return value
 
     def _save_soon(self) -> None:
         if self._file is None or self._saving is not None:
@@ -74,12 +78,12 @@ class ProgressCache:
             self._saving = None
             self._write(dict(self._read()))
 
-    def _read(self) -> dict:
+    def _read(self) -> KeptAnswers:
         if self._held is None:
             self._held = self._from_file()
         return self._held
 
-    def _from_file(self) -> dict:
+    def _from_file(self) -> KeptAnswers:
         if self._file is None:
             return {}
         try:
@@ -88,7 +92,7 @@ class ProgressCache:
             logger.warning("%s; its answers are worked out again", unreadable)
             return {}
 
-    def _write(self, held: dict) -> None:
+    def _write(self, held: KeptAnswers) -> None:
         if self._file is None or not self._file.path.parent.is_dir():
             return
         try:
@@ -96,3 +100,21 @@ class ProgressCache:
         except PermissionError as held_open:
             # Windows refuses to replace a file another process, such as a virus scanner, still has open.
             logger.warning("%s was not saved (%s); it is saved after the next answer worked out", self._file.path, held_open)
+
+
+class FidelityAnswers:
+    """The answers a session's progress cache keeps about one fidelity, each worked out again only under a new key."""
+
+    def __init__(self, cache: ProgressCache, fidelity: str) -> None:
+        self._cache = cache
+        self._fidelity = fidelity
+
+    def answer(self, question: str, key: str, work_out: Callable[[], Kept]) -> Kept:
+        """The answer to question, worked out with work_out only when it was last kept under another key, and then kept
+        under key for the next read."""
+        kept = self._cache.kept(self._fidelity).get(question)
+        if kept is not None and kept.get("key") == key:
+            return kept["value"]
+        value = work_out()
+        self._cache.keep(self._fidelity, question, {"key": key, "value": value})
+        return value

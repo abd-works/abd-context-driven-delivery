@@ -141,20 +141,28 @@ const FOLDER_ONLY_TIP = "Choose a path if you don't want to work with a reposito
 const repoLabelOf = (repo: { name: string; has_cdd: boolean; branch: string }): string =>
   `${repo.has_cdd ? '◆' : '◇'} ${repo.name}${repo.branch ? ` · ${repo.branch}` : ''}`
 
+// Folder Only (No Repo): the system's folder picker, or a typed path, opens a folder as it is.
+function FolderOnlyView($: EngineInterface, elements: ElementTable) {
+  const { Box, Button, Input, Text } = elements
+  return [
+    <Box key="folder-heading-box">
+      <Text key="folder-heading" color={BRAND.muted}>Folder Only (No Repo)</Text>
+      {TipView(elements, FOLDER_ONLY_TIP, '', BRAND.muted)}
+    </Box>,
+    <Box key="repo-folder-row" flexDirection="row" gap={1}>
+      <Button key="repo-folder-choose" plain label="▸ Choose a folder…" onPress={() => chooseFolder($)} />
+      <Input key="repo-folder-path" placeholder="Folder path" value="" onSubmit={value => (value.trim() ? openFolder($, value.trim()) : undefined)} />
+    </Box>,
+  ]
+}
+
 export function RepoListView($: EngineInterface, elements: ElementTable, { chatBar, view, version }: ChatBarDraw) {
   const { Box, Button, Input, Text } = elements
   if (!view.isRepoListOpen || !chatBar.isMain) return null
   const widest = Math.max(REPO_FIELD_CELLS, FOLDER_ROW_CELLS, ...(view.repos ?? []).map(repo => repoLabelOf(repo).length))
   return (
     <Box key="repo-list" flexDirection="column" position="absolute" bottom={1} left={repoListShiftOf(chatBar, version.label, widest)} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
-      <Box key="folder-heading-box">
-        <Text key="folder-heading" color={BRAND.muted}>Folder Only (No Repo)</Text>
-        {TipView(elements, FOLDER_ONLY_TIP, '', BRAND.muted)}
-      </Box>
-      <Box key="repo-folder-row" flexDirection="row" gap={1}>
-        <Button key="repo-folder-choose" plain label="▸ Choose a folder…" onPress={() => chooseFolder($)} />
-        <Input key="repo-folder-path" placeholder="Folder path" value="" onSubmit={value => (value.trim() ? openFolder($, value.trim()) : undefined)} />
-      </Box>
+      {FolderOnlyView($, elements)}
       <Text key="repos-heading" color={BRAND.muted}>REPOS</Text>
       {/* A chat bar whose view was saved before repos existed has none. Each repository is a whole button: a
           see-through one laid over its name took no press. */}

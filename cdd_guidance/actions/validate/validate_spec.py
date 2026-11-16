@@ -20,7 +20,7 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
-from space.session.throwaway_project import ThrowawayProject
+from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
 )
@@ -91,7 +91,7 @@ class _StoryMapFolder:
         self.session = Path(self.action.session.session_path)
         if declared:
             outputs = {"markdown": [str(self.folder / self._MAP)], "drawio": [str(self.folder / "board/.context/story-map.drawio")]}
-            self.action.session.practice("stories").guidance.fidelities.entries["story_map"].output_paths = lambda: outputs
+            self.action.session.practice("stories").guidance.fidelities.entries["story_map"].declared.output_paths = lambda: outputs
 
     def validate(self, guidance: str = "stories-story-map", paths: list[str] | None = None) -> str:
         return self.action.validate(guidance=[guidance], paths=paths or [self._MAP])
@@ -419,7 +419,7 @@ with description("a validate action on practice guidance") as self:
                             markdown_call = threading.Thread(target=check_the_markdown)
                             markdown_call.start()
                             markdown_call_waiting.wait(60)
-                            validate.made_for(validate.session).validate(guidance="stories-story-map format=drawio")
+                            validate._made_for(validate.session).validate(guidance="stories-story-map format=drawio")
                             drawio_call_done.set()
                             markdown_call.join()
                         finally:
@@ -606,7 +606,7 @@ with description("a validate action on practice guidance") as self:
 
 with description("two validate calls running at once on one cdd server") as self:
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:

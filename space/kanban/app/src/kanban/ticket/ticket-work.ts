@@ -1,0 +1,87 @@
+import type { RequiredFidelity } from '../board/column-client'
+import type { FidelityProgressClientGenerated, FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
+import type { ActionStatesData } from '@cdd/space/kanban/ticket'
+
+import type { BoardPage } from '../board/board-page'
+import type { ColumnClient } from '../board/column-client'
+import { FidelityProgressClient } from './fidelity-progress-client'
+import { ReportClient } from './report-client'
+import type { TicketClient } from './ticket-client'
+
+// Each fidelity's files by format, as its own files tool answers, by the fidelity's slug: a tile or panel over several
+// fidelities reads them side by side.
+export type FilesByFidelity = Record<string, NonNullable<Awaited<ReturnType<FidelityProgressClientGenerated['files']>>>>
+
+// How far some of a ticket's work has got, as Python answers it for one fidelity's progress or for a stage's work taken
+// together: what an action bar shows and allows.
+export type WorkStanding = { actions: ActionStatesData; hasViolations: boolean; violationCount: number; allowedActions: string[]; commands: Record<string, string> }
+
+// A ticket's progress on each fidelity the board requires, as the page knows it: each fidelity's progress answers its own
+// tools, and the files and reports a tile or panel over several of them reads side by side.
+export class TicketWork {
+  constructor(
+    private readonly ticket: TicketClient,
+    private readonly page: BoardPage,
+  ) {}
+
+  get violatedSlugs(): string[] {
+    return this.ticket.progress.filter(progress => progress.state === 'violations').map(progress => progress.fidelity.slug)
+  }
+
+  // Its progress on every fidelity the board requires, in stage order, each answering its own tools: made once for the
+  // progress it was read with, and again only when one of its own tools has brought the ticket a new reading.
+  get fidelityProgress(): FidelityProgressClient[] {
+    const read = this.ticket.progress
+    if (this.heldProgress?.read !== read) this.heldProgress = { read, clients: read.map(progress => new FidelityProgressClient(progress, this.ticket)) }
+    return this.heldProgress.clients
+  }
+
+  private heldProgress: { read: FidelityProgressData[]; clients: FidelityProgressClient[] } | null = null
+
+  // Its progress on the fidelities of a stage whose practices its session works on, in the order the stage requires them.
+  progressIn(stage: ColumnClient): FidelityProgressClient[] {
+    return this.fidelityProgress.filter(progress => progress.stage.name === stage.name && progress.isEnabled)
+  }
+
+  // Its progress on every fidelity of the stage it stands in, which the files panel offers as its practice filters.
+  get stageProgress(): FidelityProgressClient[] {
+    const stage = this.page.board.stageOf(this.ticket)
+    return stage ? this.progressIn(stage) : []
+  }
+
+  // Its progress on the fidelities a tile or a panel was opened over, read from this ticket as it is now.
+  progressOn(fidelities: RequiredFidelity[]): FidelityProgressClient[] {
+    return fidelities.flatMap(fidelity => this.progressNamed(fidelity.slug) ?? [])
+  }
+
+  // The data names a fidelity's progress by its slug, such as the ticket's next or a report rule's fidelity; this is
+  // the one place such a name is turned into the progress.
+  progressNamed(slug: string): FidelityProgressClient | undefined {
+    return this.fidelityProgress.find(progress => progress.fidelity.slug === slug)
+  }
+
+  // The progress Run next works on: the one the ticket names as its next, none when it is done in its stage.
+  get nextProgress(): FidelityProgressClient | undefined {
+    return this.ticket.next ? this.progressNamed(this.ticket.next.fidelity.slug) : undefined
+  }
+
+  // Its work in a stage taken together, which a stage head's action bar shows and acts on.
+  workIn(stage: ColumnClient): WorkStanding | undefined {
+    const work = this.ticket.stageWork.find(entry => entry.stage.name === stage.name)
+    return work && { actions: work.actions, hasViolations: work.has_violations, violationCount: work.violation_count, allowedActions: work.allowed_actions, commands: work.commands }
+  }
+
+  // Each fidelity answers for its own files, so a tile or panel over several fidelities reads them side by side; none
+  // when any read failed, because the page has already shown that failure.
+  async filesOf(progress: FidelityProgressClient[]): Promise<FilesByFidelity | null> {
+    const read = await Promise.all(progress.map(entry => entry.files()))
+    if (read.some(files => !files)) return null
+    return Object.fromEntries(progress.map((entry, index) => [entry.fidelity.slug, read[index]!]))
+  }
+
+  // One fidelity's latest report, or with none the violations of every fidelity of the ticket's stage.
+  async reportOf(progress: FidelityProgressClient | null): Promise<ReportClient | null> {
+    const report = await (progress ? progress.report() : this.ticket.violations())
+    return report ? new ReportClient(report, this.ticket, this.page) : null
+  }
+}

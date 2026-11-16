@@ -11,7 +11,7 @@ from expects import be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.diagnostics.cdd_version import CddVersion
-from harness.diagnostics.release import ReleaseAlreadyTagged, ReleaseOnRed
+from harness.diagnostics.release import CddRelease, ReleaseAlreadyTagged, ReleaseOnRed
 from harness.diagnostics.test_runs import RunOutcome, TestRun, TestRunRecord, TestTier
 from harness.process.git import RepoConnectError
 
@@ -22,7 +22,8 @@ STARTED = datetime(2026, 11, 15, 9, 0, tzinfo=timezone.utc)
 class GitStub:
     """A checkout at HEAD whose previous release is tagged v1.0.0, or untagged, with commits and completed stories since."""
 
-    def __init__(self, tag: str = "v1.0.0") -> None:
+    def __init__(self, folder: Path, tag: str = "v1.0.0") -> None:
+        self.folder = folder
         self.tag = tag
         self.ran: list[tuple[str, ...]] = []
 
@@ -64,7 +65,7 @@ with description("a release") as self:
         self.project = Path(tempfile.mkdtemp(prefix="release-"))
         (self.project / "pyproject.toml").write_text('[project]\nname = "cdd"\nversion = "1.5.0"\n', encoding="utf-8")
         self.record = TestRunRecord(self.project / "home")
-        self.git = GitStub()
+        self.git = GitStub(self.project)
         self.gh = GhStub()
 
     with after.each:
@@ -78,7 +79,7 @@ with description("a release") as self:
         self.ran(TestTier.HEAVY)
 
     def version(self) -> CddVersion:
-        return CddVersion(self.project, git=self.git, project=self.project, project_git=self.git, gh=self.gh, test_runs=self.record)
+        return CddVersion(self.git, self.git, CddRelease(self.git, self.gh, self.record))
 
     with context("previewed with e2e and heavy green on HEAD"):
         with before.each:

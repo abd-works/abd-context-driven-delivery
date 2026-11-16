@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from harness.graph.practice_rule import PracticeGraphRule
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
+    from harness.graph.rule_context import RuleCheckContext
 
 
 class ScreenStoryBudget(PracticeGraphRule):
@@ -13,7 +19,7 @@ class ScreenStoryBudget(PracticeGraphRule):
     node_types = ("Screen",)
     soft_max = 4
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         count = context.child_count(node, ("shows",))
         if count <= self.soft_max:
             return []
@@ -26,7 +32,7 @@ class ScreenNamesUseDomainTerms(PracticeGraphRule):
     slug = "screen-names-use-domain-terms"
     node_types = ("Screen",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         name = node.name.strip()
         if not name:
             return ["Screen name is empty."]

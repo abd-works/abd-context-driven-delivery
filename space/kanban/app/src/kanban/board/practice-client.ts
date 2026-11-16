@@ -4,24 +4,24 @@ import type { BoardFidelityData, PracticeGuidanceData } from '@cdd/space/kanban/
 // so the page finds a fidelity's practice without taking the slug apart.
 export class PracticeClient {
   constructor(
-    private readonly data: PracticeGuidanceData,
+    private readonly guidance: PracticeGuidanceData,
     private readonly fidelities: BoardFidelityData[],
   ) {}
 
   get key(): string {
-    return this.data.key
+    return this.guidance.key
   }
 
   get slug(): string {
-    return this.data.slug
+    return this.guidance.slug
   }
 
   get name(): string {
-    return this.data.short_name
+    return this.guidance.short_name
   }
 
   get color(): string {
-    return this.data.colour
+    return this.guidance.colour
   }
 
   has(slug: string): boolean {

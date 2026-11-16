@@ -34,13 +34,16 @@ function LoadMeter({ progress, headline }: { progress: QueryProgress; headline: 
 
 // The steps done so far, kept scrolled to the newest; the server's own lines while it names no step, and the step it is
 // on last.
+// How many of the server's own lines the log shows while it names no step.
+const SERVER_LINES_SHOWN = 12;
+
 function LoadLog({ progress, loadingLog, shown, elapsed }: { progress: QueryProgress; loadingLog: string[]; shown: string; elapsed: number }) {
   const log = useRef<HTMLOListElement>(null);
   useEffect(() => {
     if (log.current) log.current.scrollTop = log.current.scrollHeight;
   }, [progress.headline, progress.steps.length, loadingLog.length, elapsed]);
   const isOnStep = progress.steps.length === 0 || progress.steps[progress.steps.length - 1]?.name !== progress.headline.split(' ').at(-1);
-  const lines = progress.steps.length === 0 ? (loadingLog.length > 0 ? loadingLog.slice(-12) : [shown]) : [];
+  const lines = progress.steps.length === 0 ? (loadingLog.length > 0 ? loadingLog.slice(-SERVER_LINES_SHOWN) : [shown]) : [];
   return (
     <ol className="loading-log" data-testid="loading-log" ref={log}>
       {progress.steps.map((step) => <li key={`${step.index}-${step.name}`}>{step.index}/{step.total} {step.name}</li>)}

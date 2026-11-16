@@ -41,7 +41,7 @@ class NearCopies:
     def __init__(self, operations: list["Node"]) -> None:
         self._runs: list[tuple["Node", frozenset[int]]] = []
         for operation in operations:
-            runs = _runs_of(operation)
+            runs = self._runs_of(operation)
             if runs:
                 self._runs.append((operation, runs))
 
@@ -71,15 +71,14 @@ class NearCopies:
             pairs.update((later, earlier) for position, later in enumerate(members) for earlier in members[:position])
         return sorted(pairs)
 
-
-def _runs_of(operation: "Node") -> frozenset[int]:
-    """The checksums of the body's three-token runs, comments left out; none for a body under the token or line floor.
-    The body is the text the operation saves with the graph, and a checksum, never ``hash``, which Python salts per
-    process, places each body in the same buckets in every process that checks the graph."""
-    code = _COMMENT_LINE.sub("", _DOCSTRING.sub("", str(operation.get_fact("body_text") or "")))
-    tokens = _TOKEN.findall(code)
-    statements = sum(1 for line in code.splitlines() if line.strip())
-    if len(tokens) < MIN_TOKENS or statements + 1 < MIN_LINES or statements < MIN_STATEMENTS:
-        return frozenset()
-    runs = (" ".join(tokens[start : start + _RUN]) for start in range(len(tokens) - _RUN + 1))
-    return frozenset(zlib.crc32(run.encode("utf-8")) for run in runs)
+    def _runs_of(self, operation: "Node") -> frozenset[int]:
+        """The checksums of the body's three-token runs, comments left out; none for a body under the token or line floor.
+        The body is the text the operation saves with the graph, and a checksum, never ``hash``, which Python salts per
+        process, places each body in the same buckets in every process that checks the graph."""
+        code = _COMMENT_LINE.sub("", _DOCSTRING.sub("", str(operation.get_fact("body_text") or "")))
+        tokens = _TOKEN.findall(code)
+        statements = sum(1 for line in code.splitlines() if line.strip())
+        if len(tokens) < MIN_TOKENS or statements + 1 < MIN_LINES or statements < MIN_STATEMENTS:
+            return frozenset()
+        runs = (" ".join(tokens[start : start + _RUN]) for start in range(len(tokens) - _RUN + 1))
+        return frozenset(zlib.crc32(run.encode("utf-8")) for run in runs)

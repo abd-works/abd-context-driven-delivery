@@ -35,7 +35,7 @@ from mamba import after, before, context, description, it
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 from harness.guidance_actions import GuidanceAction  # noqa: F401 - loaded with the module, not by its first example
-from space.session.throwaway_project import ThrowawayProject  # noqa: F401 - likewise
+from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject  # noqa: F401 - likewise
 
 
 def _project() -> Path:
@@ -49,9 +49,7 @@ def _project() -> Path:
 
 def _close_projects() -> None:
     """Remove every example's project, and the cdd home it kept its open sessions in."""
-    from space.session.throwaway_project import ThrowawayProject
-
-    ThrowawayProject.close_all()
+    OPEN_PROJECTS.close_all()
 
 
 def _open_session(project: Path, name: str) -> None:
@@ -63,7 +61,7 @@ def _open_session(project: Path, name: str) -> None:
 
 
 def _call(guidance, project: Path | None = None):
-    from harness.agent_tools.tool_call import ToolCall
+    from harness.agent_tools.tool_call import ToolCall, ToolRequest
 
     return ToolCall({"guidance": guidance}, project)
 
@@ -133,7 +131,7 @@ with description("a guidance action"):
 
         action = GuidanceAction()
         action._work_on("write the story map")
-        expect(action.each(lambda text: text)).to(equal(["write the story map"]))
+        expect(action.work.each(lambda text: text)).to(equal(["write the story map"]))
 
     with it("should keep prose that contains a colon as guidance text"):
         from harness.guidance_actions import GuidanceAction
@@ -141,7 +139,7 @@ with description("a guidance action"):
         action = GuidanceAction()
         prose = "Three client perspectives: prospect onboarding, subscription, and active account."
         action._work_on(prose)
-        expect(action.each(lambda text: text)).to(equal([prose]))
+        expect(action.work.each(lambda text: text)).to(equal([prose]))
         expect(action.listed()).to(equal([]))
 
     with it("should treat a module class ref as a listed Guidance"):
@@ -303,7 +301,7 @@ with description("a guidance action"):
             from harness.guidance_actions import GuidanceAction
 
             action = GuidanceAction().for_call(_call(f"stories-story-map format=drawio,whiteboard {self.session_word}", self.project))
-            worked = action.each(lambda fidelity: fidelity.format)
+            worked = action.work.each(lambda fidelity: fidelity.format)
             expect([str(format) for format in worked]).to(equal(["drawio", "whiteboard"]))
 
         with it("should leave the format of the practice's other fidelities as it was"):
@@ -373,7 +371,7 @@ with description("a guidance action"):
 
             generate = Generate().for_call(_call(f"stories-story-map {self.session_word}", self.project))
             listed = generate.listed()[0]
-            generate.rules_to_follow()
+            generate.work.rules_to_follow
             expect(generate.session.practices["stories"].guidance).to(be(listed))
 
         with it("should make an action started inside another work in that action's session"):
@@ -514,7 +512,7 @@ with description("a guidance action that wrote files"):
         self.session = Sessions(self.project).current()
         self.written = self.project / "order.py"
         self.written.write_text("class Order:\n    pass\n", encoding="utf-8")
-        GuidanceAction(session=self.session).wrote([self.written])
+        GuidanceAction(session=self.session).files.wrote([self.written])
 
     with it("should refresh its session's graph with those files"):
         graph = self.session.graph
@@ -547,14 +545,14 @@ class _SessionWithGraph:
 
 with description("an action started inside another that wrote files"):
     with before.each:
-        from harness.agent_tools.tool_call import ToolCall
+        from harness.agent_tools.tool_call import ToolCall, ToolRequest
         from cdd_guidance.actions.generate.generate import Generate
 
         self.session = _SessionWithGraph()
-        self.call = ToolCall(answers_a_chat=True)
+        self.call = ToolCall(request=ToolRequest(answers_a_chat=True))
         outer = Generate(session=self.session, call=self.call)
         outer._work_on("a plan in prose")
-        outer._validate().wrote(["order.py"])
+        outer._validate().files.wrote(["order.py"])
 
     # A call the server answers for a chat builds the graph in a worker; the inner action must hand on that same call.
     with it("should refresh the graph for the call the outer action was made for"):
@@ -606,7 +604,7 @@ with description("two calls in one session on two fidelities of the same practic
         expect(self.scenarios.instructions).not_to(contain(self.story_map.rules.markdown.strip()))
 
     with it("should check the first call's fidelity's rules and not the second's"):
-        checked = self.story_map.checked_rule_collections()
+        checked = self.story_map.checked_rule_collections
         expect([self.story_map.rules in checked, self.scenarios.rules in checked]).to(equal([True, False]))
 
     with it("should give each call its own fidelity's template"):

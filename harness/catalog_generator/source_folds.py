@@ -185,13 +185,17 @@ class _BraceScanner:
     def _after_string(self, start: int) -> int:
         quote, index, length = self._text[start], start + 1, len(self._text)
         while index < length:
-            if self._text[index] == "\\":
-                index += 2
-            elif self._text[index] == quote:
+            if self._text[index] == quote:
                 return index + 1
-            elif quote == "`" and self._text.startswith("${", index):
-                closed = self.matching_brace(index + 1)
-                index = length if closed is None else closed + 1
-            else:
-                index += 1
+            index = self._next_in_string(index, quote)
         return length
+
+    def _next_in_string(self, index: int, quote: str) -> int:
+        """Where reading a string quoted by quote goes on after the character at index: past an escaped character, past
+        a template literal's ``${...}`` expression, else to the next character."""
+        if self._text[index] == "\\":
+            return index + 2
+        if quote == "`" and self._text.startswith("${", index):
+            closed = self.matching_brace(index + 1)
+            return len(self._text) if closed is None else closed + 1
+        return index + 1

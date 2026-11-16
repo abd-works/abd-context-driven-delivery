@@ -3,14 +3,11 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, List, Optional
+from typing import List
 
 from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
 from cdd_guidance.practices.clean_engineering.model.field_types import RELATIONSHIP_STRENGTH, Relationship
 from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names, name_with_type
-
-if TYPE_CHECKING:
-    from harness.graph.graph import Graph
 
 
 class Invariant(OoadNode):
@@ -64,17 +61,11 @@ class Property(InvariantHolder, OoadNode):
     _semantic_type_name = "Property"
     graph_facts = ("owner", "value_type")
 
-    def __init__(
-        self,
-        name: str,
-        sequential_order: int = 0,
-        type_hint: str = "",
-        description: str = "",
-        graph: Optional["Graph"] = None,
-    ) -> None:
-        super().__init__(name, sequential_order, graph)
+    def __init__(self, name: str, sequential_order: int = 0, type_hint: str = "") -> None:
+        super().__init__(name, sequential_order)
         self.type_hint = type_hint
-        self.description = description
+        # What it says about itself: its invariant lines joined, or a note a format reads.
+        self.description = ""
         self.access = "both"
         # The class that declares it, once kept (keep_owner).
         self._declared_by = ""
@@ -113,7 +104,8 @@ class Property(InvariantHolder, OoadNode):
         self._declared_by = self.owner
 
     def clone(self) -> "Property":
-        cloned = type(self)(self.name, self.sequential_order, self.type_hint, self.description)
+        cloned = type(self)(self.name, self.sequential_order, self.type_hint)
+        cloned.description = self.description
         cloned.access = self.access
         cloned.stereotype = self.stereotype
         cloned.cardinality = self.cardinality
@@ -190,9 +182,6 @@ class Property(InvariantHolder, OoadNode):
 
     def save(self) -> str:
         return name_with_type(self.name, self.type_hint)
-
-    def render(self) -> str:
-        return self.save()
 
     def as_record(self) -> dict:
         return {

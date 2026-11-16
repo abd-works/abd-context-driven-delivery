@@ -13,14 +13,13 @@ from harness.installation.files import command
 from harness.mcp.mcp_annotations import long_call, mcp
 from harness.process.git import Git, RepoConnectError
 from space.repo.git_folder import GitFolder
+from space.repo.origin import Merges, Origin
 from space.repo.worktree import Worktree, Worktrees
 
 # A file git reports as changed that is the hook server's running log, not work: it never blocks a switch or a close.
 _RUNTIME_LOG = "events.log"
 # The names a default branch goes by, the newer first: a repository made before git named its first branch main has master.
 _DEFAULT_BRANCH_NAMES = ("main", "master")
-# The session files every branch only appends to, which a merge keeps both sides of.
-_UNION_MERGED_LOGS = (".sessions/**/session.log merge=union", ".sessions/**/session.err merge=union")
 
 
 
@@ -84,6 +83,9 @@ class Repo:
         self.git = Git(self.root)
         # The checkouts of this repository: the main clone and the linked worktrees beside it.
         self.worktrees = Worktrees(self)
+        # What it exchanges with origin, and how it merges a branch in.
+        self.origin = Origin(self)
+        self.merges = Merges(self)
         # Each path already written from the top. The board names every session file this way thousands of times a
         # refresh, and the answer depends only on the path and this repository's root, which never changes.
         self._from_top: dict[Path, str] = {}
@@ -100,16 +102,10 @@ class Repo:
         earlier call; every call and every session of that checkout works on the one Repo held for it, which holds the
         one WorkState of its the chat's open state under ``~/.cdd``."""
         folder = Path(project).resolve()
-        return SERVED_CHECKOUTS.at(cls._marked_checkout(folder) or folder)
-
-    @staticmethod
-    def _marked_checkout(folder: Path) -> Path | None:
-        """The nearest folder at or above folder that git marks as a checkout's top; none when no folder is marked."""
-        current = folder.parent if folder.is_file() else folder
-        return next((candidate for candidate in (current, *current.parents) if (candidate / ".git").exists()), None)
+        return SERVED_CHECKOUTS.at(SERVED_CHECKOUTS.marked_checkout(folder) or folder)
 
     def find_root(self) -> Path | None:
-        return self._marked_checkout(self.root)
+        return SERVED_CHECKOUTS.marked_checkout(self.root)
 
     def checkout_at(self, folder: Path | str) -> Repo:
         """The repository as checked out at folder, another checkout of this one, such as a linked worktree beside it,
@@ -134,19 +130,6 @@ class Repo:
     def is_linked_worktree(self) -> bool:
         return (self.root / ".git").is_file()
 
-    def primary_root(self) -> Path:
-        """The repository's main checkout. A linked worktree's ``.git`` is a file naming its git folder, whose
-        ``commondir`` leads back to the main checkout's ``.git``; any other checkout is its own main checkout."""
-        checkout = self.checkout_folder
-        marker = checkout / ".git"
-        if not marker.is_file():
-            return checkout
-        worktree_git = (checkout / marker.read_text(encoding="utf-8").split("gitdir:", 1)[-1].strip()).resolve()
-        common = worktree_git / "commondir"
-        if not common.is_file():
-            return checkout
-        return (worktree_git / common.read_text(encoding="utf-8").strip()).resolve().parent
-
     def path_from_top(self, path: Path | str) -> str:
         """path as written from the repository's top, empty for the top itself, or as it is when it lies outside the
         repository, where a session may work."""
@@ -169,25 +152,25 @@ class Repo:
         """Every local branch of this repository; none for a project that is no clone."""
         if not self.is_clone:
             return []
-        folder = self._readable_folder
+        folder = self.readable_folder
         names = folder.branch_names() if folder is not None else self.git.run("for-each-ref", "--format=%(refname:short)", "refs/heads").splitlines()
         return [self.branch_named(name) for name in names if name.strip()]
 
     @property
     def current_branch(self) -> Branch:
         """The branch this checkout has checked out."""
-        folder = self._readable_folder
+        folder = self.readable_folder
         return self.branch_named(folder.head_branch() if folder is not None else self.git.run("rev-parse", "--abbrev-ref", "HEAD"))
 
     @property
     def is_on_branch(self) -> bool:
         """Whether HEAD names a branch rather than being detached at a commit."""
-        folder = self._readable_folder
+        folder = self.readable_folder
         return folder.is_on_branch() if folder is not None else self.git.succeeds("symbolic-ref", "-q", "HEAD")
 
     @property
     def current_commit(self) -> str:
-        folder = self._readable_folder
+        folder = self.readable_folder
         read = folder.head_commit() if folder is not None else ""
         return read or self.git.run("rev-parse", "HEAD")
 
@@ -213,29 +196,14 @@ class Repo:
         return next((candidate for candidate in candidates if self.has_ref(f"refs/remotes/{candidate}")), self.default_branch)
 
     def has_ref(self, ref: str) -> bool:
-        folder = self._readable_folder
+        folder = self.readable_folder
         if folder is not None:
             return folder.has_ref(ref)
         # A folder git does not know has no refs; asking git would only fail.
         return self.is_clone and self.git.succeeds("show-ref", "--verify", "--quiet", ref)
 
-    def worktree_listing(self) -> list[tuple[Path, str]]:
-        """Every checkout of the repository with the branch it has checked out (empty when none is), the main clone
-        first, as git lists them; read from the .git folder where it can be."""
-        folder = self._readable_folder
-        if folder is not None:
-            return folder.worktrees()
-        if not self.is_clone:
-            return []
-        listed = []
-        for block in self.git.run("worktree", "list", "--porcelain").split("\n\n"):
-            fields = dict(line.split(" ", 1) for line in block.splitlines() if " " in line)
-            if "worktree" in fields:
-                listed.append((Path(fields["worktree"]), fields.get("branch", "").removeprefix("refs/heads/")))
-        return listed
-
     @property
-    def _readable_folder(self) -> GitFolder | None:
+    def readable_folder(self) -> GitFolder | None:
         """The checkout's .git, read from its files, so a lookup asked many times in one board read starts no git;
         none where only git reads it, such as a project that is no clone or one whose refs are kept in a reftable."""
         folder = GitFolder(self.checkout_folder)
@@ -275,81 +243,13 @@ class Repo:
     @property
     def has_origin(self) -> bool:
         """Whether this clone has a remote called origin to push to."""
-        folder = self._readable_folder
+        folder = self.readable_folder
         return folder.has_remote("origin") if folder is not None else self.git.succeeds("remote", "get-url", "origin")
-
-    def push_upstream(self) -> None:
-        """Push the current branch to origin; when origin refuses because it has commits this branch lacks, merge them
-        in and push again, so a push never fails because work was pushed to the branch from elsewhere. Most pushes go
-        through at once, so origin is fetched only when it refuses."""
-        branch = self.current_branch.name
-        try:
-            self.git.run("push", "-u", "origin", branch)
-        except RepoConnectError:
-            self.catch_up_with_origin()
-            self.git.run("push", "-u", "origin", branch)
-
-    def catch_up_with_origin(self) -> None:
-        """Fetch origin, then merge its copy of the current branch in as ``merge_origin_copy`` does."""
-        self.fetch()
-        self.merge_origin_copy()
-
-    def merge_origin_copy(self) -> None:
-        """Merge origin's copy of the current branch, as last fetched, into it when origin has commits this branch lacks;
-        nothing when origin has no copy yet or this branch already holds every commit of it."""
-        branch = self.current_branch.name
-        tracked = f"origin/{branch}"
-        if not self.has_ref(f"refs/remotes/{tracked}") or self.git.succeeds("merge-base", "--is-ancestor", tracked, "HEAD"):
-            return
-        self._merge(tracked, "")
 
     @property
     def head_message(self) -> str:
         """The message of the commit the checked-out branch is on."""
         return self.git.run("log", "-1", "--format=%B")
-
-    def needs_push(self) -> bool:
-        """True when origin has no copy of the current branch yet or the branch is ahead of it. A git failure is raised,
-        not read as nothing to push, so a close never reports a branch pushed that was not."""
-        branch = self.current_branch.name
-        if not self.has_ref(f"refs/remotes/origin/{branch}"):
-            return True
-        return int(self.git.run("rev-list", f"origin/{branch}..HEAD", "--count") or "0") > 0
-
-    def fetch(self) -> None:
-        self.git.run("fetch", "origin")
-
-    def merge_from(self, other: Branch, message: str = "") -> str:
-        """Merge other into the current branch without checking other out."""
-        if other == self.current_branch:
-            return self.current_commit
-        self._merge(other.name, message)
-        return self.current_commit
-
-    def _merge(self, ref: str, message: str) -> None:
-        """Merge ref into the current branch. Every branch appends to the same session logs, so those merge by keeping
-        the lines of both sides instead of stopping the merge on a conflict."""
-        self.prepare_merges()
-        with self.writing_index:
-            try:
-                self.git.run("merge", ref, *(["-m", message] if message else ["--no-edit"]))
-            except RepoConnectError:
-                # A merge left half done blocks every later checkout and commit, so the checkout goes back as it was.
-                self.git.succeeds("merge", "--abort")
-                raise
-
-    def prepare_merges(self) -> None:
-        """Tell git, in this repository's own attributes file, which no checkout commits, to merge session logs by
-        union: each line either side wrote is kept."""
-        common = Path(self.git.run("rev-parse", "--git-common-dir"))
-        attributes = (common if common.is_absolute() else self.root / common) / "info" / "attributes"
-        written = attributes.read_text(encoding="utf-8") if attributes.is_file() else ""
-        missing = [line for line in _UNION_MERGED_LOGS if line not in written.splitlines()]
-        if not missing:
-            return
-        attributes.parent.mkdir(parents=True, exist_ok=True)
-        lead = "" if not written or written.endswith("\n") else "\n"
-        attributes.write_text(written + lead + "".join(f"{line}\n" for line in missing), encoding="utf-8")
 
     def _relative(self, path: str | Path) -> str:
         resolved = Path(path).resolve()
@@ -360,7 +260,7 @@ class Repo:
         """The repository's main checkout, found once: this clone unless it is a linked worktree. Branch commands act
         there, never inside a linked worktree. A folder in no repository is its own main clone, which keeps the sessions
         of a project that is no clone; a branch command there fails the way git does."""
-        primary = self.primary_root()
+        primary = self.worktrees.primary_root()
         return self if primary == self.root else self.checkout_at(primary)
 
     @long_call
@@ -381,7 +281,7 @@ class Repo:
             raise CommitMessageRequiredError()
         sha = self.commit([str(self.root)], text, untracked=untracked)
         if sync_remote:
-            self.push_upstream()
+            self.origin.push_upstream()
         return Commit(sha, text)
 
     @long_call
@@ -394,7 +294,7 @@ class Repo:
         branch = self.current_branch
         self.commit([str(self.root)], f"{branch.name}: work pushed", untracked=True)
         if self.has_origin:
-            self.push_upstream()
+            self.origin.push_upstream()
         return Commit(self.current_commit, self.head_message)
 
     @long_call
@@ -419,7 +319,7 @@ class Repo:
         branch = self.current_branch
         self.commit([str(self.root)], f"{branch.name}: work taken to main", untracked=True)
         if push and not branch.is_default and self.has_origin:
-            self.push_upstream()
+            self.origin.push_upstream()
         clone = self.main_clone
         returning_to = clone.current_branch
         # The clone's own changes are its work too, such as the session's log, which this call has just written there; a
@@ -427,7 +327,7 @@ class Repo:
         clone.commit([str(clone.root)], f"{returning_to.name}: work kept before merging {branch.name}", untracked=True)
         branch.merge_into_default()
         if push and clone.has_origin:
-            clone.push_upstream()
+            clone.origin.push_upstream()
         landed = Commit(clone.current_commit, clone.head_message)
         returning_to.switch_to()
         return landed
@@ -537,7 +437,7 @@ class Branch:
         """Check this branch out in its clone; a branch the clone does not have starts from ``start_point``. Changes
         not committed go along and are merged into the branch checked out, so a session log every tool call appends to
         never stops a switch; its lines merge by union."""
-        self._repo.prepare_merges()
+        self._repo.merges.prepare()
         with self._repo.writing_index:
             if self.exists:
                 self._repo.git.run("checkout", "-m", self.name)
@@ -564,12 +464,12 @@ class Branch:
         repository = self._repo
         if repository.is_dirty():
             repository.commit([str(repository.root)], commit_message, untracked=True)
-        if not self.is_default and repository.needs_push():
-            repository.push_upstream()
+        if not self.is_default and repository.origin.needs_push():
+            repository.origin.push_upstream()
 
     def land_on_default(self) -> None:
         """Merge this branch into the default branch in the main clone and push the default branch."""
-        self.merge_into_default().push_upstream()
+        self.merge_into_default().origin.push_upstream()
 
     def merge_into_default(self) -> Repo:
         """Merge this branch into the default branch in the main clone, after origin's copy of it, and answer the main
@@ -578,8 +478,8 @@ class Branch:
         repository = self._repo.main_clone
         default = repository.default_branch
         repository.branch_named(default).check_out()
-        repository.catch_up_with_origin()
-        repository.merge_from(self, message=f"merge {self.name} into {default}")
+        repository.origin.catch_up()
+        repository.merges.merge_from(self, message=f"merge {self.name} into {default}")
         return repository
 
     def delete(self, unmerged: bool = False) -> None:
@@ -601,6 +501,11 @@ class ServedCheckouts:
     def __init__(self) -> None:
         self._at: dict[Path, Repo] = {}
         self._lock = threading.Lock()
+
+    def marked_checkout(self, folder: Path) -> Path | None:
+        """The nearest folder at or above folder that git marks as a checkout's top; none when no folder is marked."""
+        current = folder.parent if folder.is_file() else folder
+        return next((candidate for candidate in (current, *current.parents) if (candidate / ".git").exists()), None)
 
     def at(self, root: Path) -> Repo:
         """The repository checked out at root, made the first time this process works in it."""

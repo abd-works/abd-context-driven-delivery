@@ -33,10 +33,10 @@ with description("the practice catalogue"):
             expect(self.stories.answers_to("stories-story-map")).to(be(self.stories.fidelities["story_map"]))
 
         with it("should answer its own fidelity for the fidelity's bare name in kebab case"):
-            expect(self.stories.fidelity_called("story-map")).to(be(self.stories.fidelities["story_map"]))
+            expect(self.stories.fidelities.called("story-map")).to(be(self.stories.fidelities["story_map"]))
 
         with it("should answer its own fidelity for the fidelity's bare name in snake case"):
-            expect(self.stories.fidelity_called("story_map")).to(be(self.stories.fidelities["story_map"]))
+            expect(self.stories.fidelities.called("story_map")).to(be(self.stories.fidelities["story_map"]))
 
         with it("should answer nothing for a slug it does not go by"):
             expect(self.stories.answers_to("astrology")).to(be_none)

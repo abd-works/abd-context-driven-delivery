@@ -14,15 +14,15 @@ def _nested_four_levels() -> StoryModel:
     """A top-level epic with sub-epics nested three deep, each epic holding one story with its own actor."""
     story_map = StoryModel()
     holder = Epic("Top", 1)
-    story_map.append_epic(holder)
+    story_map.epics.append(holder)
     for level, name in enumerate(["Top", "Level One", "Level Two", "Level Three"]):
         if level:
             child = Epic(name, 1)
-            holder.append_epic(child)
+            holder.epics.append(child)
             holder = child
         story = Story(f"{name} Story", 1, StoryType.USER)
         story.actors = [f"Actor {level}"]
-        holder.append_story(story)
+        holder.stories.append(story)
     return story_map
 
 

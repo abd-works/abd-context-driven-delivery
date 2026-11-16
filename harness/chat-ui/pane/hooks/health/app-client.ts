@@ -4,9 +4,10 @@ import type { EngineInterface } from 'claude-code'
 import type { AppData, AppServerData } from '@cdd/harness/diagnostics/app'
 
 import type { AppOpeningJson } from '../../types'
-import { after } from '../board-chat/board'
+import { after } from '../shared/clock'
 import { openInBrowserPane } from '../shared/browser-pane'
-import { reasonOf, showFailure, shownAsFailure } from '../error-display/failure-client'
+import { shownAsFailure } from '../error-display/failure-client'
+import { reasonOf } from '../shared/reason'
 import { refreshHealth, SERVER } from './server-health-client'
 
 // A press on an app in the status row: Python's App.open installs it while it is not installed and answers it with its
@@ -122,7 +123,7 @@ export async function openAppBesideChat($: EngineInterface, label: string, pageU
     await update($, appOpening, () => ({ label, state: 'idle', error: null, url }))
   } catch (failure) {
     await update($, appOpening, () => ({ label, state: 'failed', error: reasonOf(failure), url }))
-    await showFailure($, `The ${label} did not open`, `Pressing the ${label} on the health panel, calling ${OPEN_TOOL}${url ? ` and opening ${url} in Claude's Browser pane` : ''}`, failure)
+    await shownAsFailure($, `The ${label} did not open`, `Pressing the ${label} on the health panel, calling ${OPEN_TOOL}${url ? ` and opening ${url} in Claude's Browser pane` : ''}`)(failure)
   }
   await refreshHealth($)
 }

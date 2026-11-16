@@ -24,13 +24,13 @@ describe('Linked Files', () => {
   with_link('naming a ticket and its fidelity', () => {
     it("should open the files panel with that fidelity's practice turned on", async () => {
       const { page } = board.unreadPage()
-      await page.openLinkedFiles(`?files=${TICKET}&fidelity=${SLUG}`)
+      await page.links.openFiles(`?files=${TICKET}&fidelity=${SLUG}`)
       expect(filesPanelOf(page.store.state.panels)?.practicesOn).toEqual(['stories'])
     })
 
     it('should show the details alone, so the files panel fills the page', async () => {
       const { page } = board.unreadPage()
-      await page.openLinkedFiles(`?files=${TICKET}&fidelity=${SLUG}`)
+      await page.links.openFiles(`?files=${TICKET}&fidelity=${SLUG}`)
       expect(page.store.state.expandedRegion).toBe('details')
     })
   })
@@ -38,7 +38,7 @@ describe('Linked Files', () => {
   with_link('naming a fidelity the ticket does not have', () => {
     it('should open no panel', async () => {
       const { page } = await board.page()
-      await page.openLinkedFiles(`?files=${TICKET}&fidelity=no-such-fidelity`)
+      await page.links.openFiles(`?files=${TICKET}&fidelity=no-such-fidelity`)
       expect(filesPanelOf(page.store.state.panels)).toBeUndefined()
     })
   })
@@ -46,7 +46,7 @@ describe('Linked Files', () => {
   with_link('naming nothing', () => {
     it('should open no panel', async () => {
       const { page } = await board.page()
-      await page.openLinkedFiles('')
+      await page.links.openFiles('')
       expect(page.store.state.panels).toEqual([])
     })
   })
@@ -54,13 +54,13 @@ describe('Linked Files', () => {
   with_link("naming a ticket's session folder", () => {
     it("should open the files panel on that session's folder", async () => {
       const { page } = board.unreadPage()
-      await page.openLinkedSessionFolder(`?session-folder=${TICKET}`)
+      await page.links.openSessionFolder(`?session-folder=${TICKET}`)
       expect(filesPanelOf(page.store.state.panels)?.source).toBe('session')
     })
 
     it('should show the details alone, so the files panel fills the page', async () => {
       const { page } = board.unreadPage()
-      await page.openLinkedSessionFolder(`?session-folder=${TICKET}`)
+      await page.links.openSessionFolder(`?session-folder=${TICKET}`)
       expect(page.store.state.expandedRegion).toBe('details')
     })
   })
@@ -68,7 +68,7 @@ describe('Linked Files', () => {
   with_link('naming a session folder of no ticket', () => {
     it('should open no panel', async () => {
       const { page } = await board.page()
-      await page.openLinkedSessionFolder('?session-folder=no-such-ticket')
+      await page.links.openSessionFolder('?session-folder=no-such-ticket')
       expect(filesPanelOf(page.store.state.panels)).toBeUndefined()
     })
   })

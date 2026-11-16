@@ -65,7 +65,7 @@ instruction(name: str): AgentInstructions
 tools_for(destination: str): list[AgentTool]
 	-> AgentTool.install_to
 child_toolsets(): Iterator[AgentToolSet]
-instantiate(toolset: Any = None): AgentToolSet
+instantiate(toolset: ToolsetConfiguration = None): AgentToolSet
 	// toolset is None, a "{module}:{Class}" ref, a {toolset, context} dict, a class, or an instance
 	-> ToolsetReference.toolset_class
 from_items(items: list, context: dict | None = None): list[AgentToolSet]
@@ -121,11 +121,11 @@ invoke(arguments: dict | None = None, *, project: Path | None = None): Any
 	-> answer(ToolCall(arguments, project))
 answer(call: ToolCall): Any
 	// runs on the toolset made for the call; a callable annotated as taking the project is handed call.project
-	-> on(toolset.for_call(call)).log_session_invocation(call)
+	-> _on(toolset.for_call(call)).log_session_invocation(call)
 	-> parameter_schema.coerced
 	// then call the callable
 	// raises CallNamesNoProject when the callable takes the project and the call names none
-on(toolset: AgentToolSet): AgentTool
+_on(toolset: AgentToolSet): AgentTool
 	// this tool on a toolset of the same class made for one call
 log_session_invocation(call: ToolCall): None
 	// skipped for ping calls and @noSessionLog members, and for a call that works in no session
@@ -179,7 +179,7 @@ named_in(session_file: str, call: ToolCall): Session
 
 The chat a tool call came from: its id, its transcript file, and the transcript lines the call covers. Every session.log line a call writes ends with it, so `read_loop` can put the chat's words back under the line.
 
-ChatPointer(id: str, transcript: Path | None = None, lines: str = "")
+ChatPointer(chat_id: str, transcript: Path | None = None, lines: str | None = "")
 ------
 id: str
 transcript: Path | None
@@ -198,9 +198,11 @@ transcript_text(): list[str]
 
 ## AgentInstructions : AgentTool                                  <!-- Md -->
 
-AgentInstructions(name: str, callable: Callable, toolset: AgentToolSet)
+AgentInstructions(name: str, callable: Callable, toolset: AgentToolSet, defining_class: type | None = None)
 ------
 	Invariant: kind == "instructions" unless the callable is also annotated @agent_tool
+defining_class: type | None
+	// the class defining a parent class's recipe another defers to; none for the toolset's own
 prompt: tuple[str, ...]
 tools: list[str]
 	// deferred operation names from tools(...), merged with those of every nested instructions(...); read-only
@@ -213,20 +215,21 @@ expand(arguments: dict): ExpansionResult
 	// raises RecipeLineFailed when a recipe line raises
 answer(call: ToolCall): str
 	// the instructions an agent follows for this call, expanded by the toolset made for it, with the session context of a guidance action appended
-	-> on(toolset.for_call(call)).log_session_invocation(call)
+	-> _on(toolset.for_call(call)).log_session_invocation(call)
 	-> expand
-members_of(target: AgentToolSet): ToolsetMembers
+members_of(target: RecipeTarget): ToolsetMembers
 member_of(target: AgentToolSet, member: str): AgentInstructions
 	-> target.instruction(member)
-provider_of(owner: Any, provider_name: str): Any
-parent_recipe(after_class: type | None = None): tuple[AgentInstructions, type] | None
-	// the same-named recipe on the nearest class above, for a recipe that defers to its parent
+provider_of(owner: RecipeTarget, provider_name: str): Any
+parent_recipe(): AgentInstructions | None
+	// the same-named recipe on the nearest class above defining_class, holding the class that defines it, for a recipe
+	// that defers to its parent
 
 ## RecipeExpansion                                                <!-- Md -->
 
 One expansion of one recipe for one call's arguments; made per expansion, so two calls never share what it collects.
 
-RecipeExpansion(instructions: AgentInstructions, arguments: dict | None, expanding: frozenset, defining_class: type | None)
+RecipeExpansion(instructions: AgentInstructions, arguments: dict | None, expanding: frozenset)
 ------
 prompt: tuple[str, ...]
 tools: list[str]
@@ -253,7 +256,7 @@ loop_providers(): set[str]
 
 ## RecipePlaceholders                                             <!-- Md -->
 
-RecipePlaceholders(arguments: dict, parameter_names: set[str], toolset: Any = None)
+RecipePlaceholders(arguments: dict, parameter_names: set[str], toolset: RecipeTarget | None = None)
 ------
 ----
 filled(template: str): str
@@ -273,15 +276,27 @@ The members of one toolset class and which of them its annotations make tools. T
 
 ToolsetMembers(owner: type)
 ------
-every: list[tuple[str, Any]]
-annotated: list[tuple[str, Any]]
+annotated: list[tuple[str, ClassMember]]
 tool_names: set[str]
 instruction_names: frozenset[str]
+<< composition >> declared: DeclaredMembers
+	// every member the class declares, walked once
 << composition >> subject_loader: ToolSubjectLoader
 	// the class's @tool_subject loader, read once
 ----
 of(owner: type): ToolsetMembers
 	// the members owner holds, made and kept on owner the first time they are asked for
+
+## DeclaredMembers                                                <!-- Md -->
+
+Every function, class or static method, and property getter one class declares, walked once.
+
+DeclaredMembers(owner: type)
+------
+every: list[tuple[str, ClassMember]]
+----
+as_declared(name: str): object
+	// the attribute as the nearest class in the class order defines it
 callable_on(instance, name, member): Callable
 
 ## ToolsetReference                                               <!-- Md -->
@@ -307,7 +322,10 @@ ToolSubjectLoader(toolset_class: type)
 loader: Callable | None
 	// the @tool_subject classmethod, found once, given the call's project or the call itself when it takes them
 ----
-on_subject(load, operation): Callable
+on_subject(operation): Callable
+	// the operation as the tool that first loads its subject with the class loader (an _OperationOnSubject)
+made(context: dict): AgentToolSet
+	// a toolset of the class; a class with a loader is made without its constructor
 given_the_call(operation: Callable): Callable
 	// project and call left out of the signature; the tool hands them over from the ToolCall it serves (TakesFromCall)
 
@@ -380,7 +398,7 @@ coerced(arguments: Mapping): dict
 
 ## AgentToolValidationError : Exception                           <!-- Md -->
 
-AgentToolValidationError(message: str, class_name: str = "", action_name: str = "", lineno: int | None = None)
+AgentToolValidationError(message: str, recipe: Callable, lineno: int | None = None)
 ------
 class_name: str
 action_name: str

@@ -37,15 +37,15 @@ def ordering_story_map(graph):
     story_map = StoryModel(graph=graph)
     epic = Epic("Place New Order", 0)
     browse = Epic("Browse", 0)
-    browse.append_story(Story("Browse Product Catalog", 0))
-    epic.append_epic(browse)
+    browse.stories.append(Story("Browse Product Catalog", 0))
+    epic.epics.append(browse)
     check_out = Story("Check Out", 1)
     pay = Scenario("pay with a saved card", 0)
     pay.steps.append(Step("a saved card", StepType.GIVEN, 0))
     pay.steps.append(Step("the customer pays", StepType.WHEN, 1))
     check_out.scenarios.append(pay)
-    epic.append_story(check_out)
-    story_map.append_epic(epic)
+    epic.stories.append(check_out)
+    story_map.epics.append(epic)
     return story_map
 
 

@@ -9,11 +9,17 @@ export class StoryDemoFrame {
   constructor(controls = []) {
     this.controls = controls;
     this._lastSnapshot = null;
-    this._hasTint = false;
+    this.emphasis = new ControlEmphasis(this);
   }
 
   appendControl(control) {
     this.controls.push(control);
+    return this;
+  }
+
+  /** Drop the list-line controls painted for the last story; the page's own controls stay. */
+  dropBoundListControls() {
+    this.controls = this.controls.filter((control) => !control.fromBoundList);
     return this;
   }
 
@@ -36,9 +42,23 @@ export class StoryDemoFrame {
     if (!this._lastSnapshot) return false;
     return JSON.stringify(this._lastSnapshot) === JSON.stringify(snapshot);
   }
+}
+
+/** Which controls of a story demo frame a step emphasizes, and the tint a failed Then leaves on them. */
+export class ControlEmphasis {
+  constructor(frame) {
+    this._frame = frame;
+    this._hasTint = false;
+  }
+
+  /** Show each control's emphasis and tint on its page element. */
+  paint() {
+    for (const control of this._frame.controls) control.paintEmphasis?.();
+    return this;
+  }
 
   emphasize(step) {
-    for (const control of this.controls) {
+    for (const control of this._frame.controls) {
       control.clearEmphasis?.();
       if (control.matchesStep?.(step)) {
         control.emphasize();
@@ -46,26 +66,26 @@ export class StoryDemoFrame {
     }
   }
 
-  clearEmphasis() {
-    for (const control of this.controls) {
+  clear() {
+    for (const control of this._frame.controls) {
       control.clearEmphasis?.();
     }
   }
 
   emphasizedFor(step) {
-    return this.controls.some(
+    return this._frame.controls.some(
       (c) => c.emphasized && c.matchesStep?.(step),
     );
   }
 
   tintFailed(_result) {
     this._hasTint = true;
-    for (const control of this.controls) {
+    for (const control of this._frame.controls) {
       if (control.emphasized) control.tint?.();
     }
   }
 
   hasTint() {
-    return this._hasTint || this.controls.some((c) => c.tinted);
+    return this._hasTint || this._frame.controls.some((c) => c.tinted);
   }
 }

@@ -25,25 +25,30 @@ class MarkdownUxMap(UxMap):
     def parse(self, content: str) -> UxMap:
         """A new map of this format, read from a markdown context file."""
         ux_map = type(self).create()
-        ux_map.read_text(content)
+        ux_map.read_context(content)
         return ux_map
 
-    def read_text(self, content: str) -> None:
+    def read_context(self, content: str) -> None:
         """Read the file line by line into this map's scope and context: a bullet goes in the list of the heading it
         is under, and any other line is a note."""
         under: Optional[List[str]] = None
         for line in content.splitlines():
-            text = line.strip()
-            if not text or text == _TITLE:
-                continue
-            if text.startswith(_SCOPE) and not self.scope:
-                self.scope = text[len(_SCOPE):]
-            elif text.startswith(_SECTION):
-                under = self._list_under(text[len(_SECTION):].strip())
-            elif text.startswith(_ITEM) and under is not None:
-                under.append(text[len(_ITEM):])
-            else:
-                self.context.notes.append(text)
+            under = self._read_line(line.strip(), under)
+
+    def _read_line(self, text: str, under: Optional[List[str]]) -> Optional[List[str]]:
+        """Read one line into the scope or the context; returns the list a bullet after it goes in, which a heading
+        changes."""
+        if not text or text == _TITLE:
+            return under
+        if text.startswith(_SCOPE) and not self.scope:
+            self.scope = text[len(_SCOPE):]
+        elif text.startswith(_SECTION):
+            return self._list_under(text[len(_SECTION):].strip())
+        elif text.startswith(_ITEM) and under is not None:
+            under.append(text[len(_ITEM):])
+        else:
+            self.context.notes.append(text)
+        return under
 
     def _list_under(self, heading: str) -> List[str]:
         return self.context.invariants if heading == _INVARIANTS else self.context.notes

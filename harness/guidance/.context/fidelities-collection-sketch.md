@@ -28,7 +28,7 @@ PracticeGuidance : Guidance
   from_markdown text
        -> Markdown.fidelity_blocks
        -> FidelityGuidance
-       -> FidelityGuidance.apply_settings
+       -> FidelityGuidance.from_block
        // EXTEND coerce: return type GuidanceCollection, not key-value map
   ----
  FidelityGuidance : Guidance

@@ -31,7 +31,7 @@ class ScreenExample:
         epic = Epic("Shop Online", 1)
         for order, name in enumerate(_STORIES, start=1):
             epic.stories.append(Story(name, order))
-        story_map.append_epic(epic)
+        story_map.epics.append(epic)
         ux_map = UxMap.create(self.graph)
         self.screen = Screen(screen_name, 0)
         ux_map.append_screen(self.screen)

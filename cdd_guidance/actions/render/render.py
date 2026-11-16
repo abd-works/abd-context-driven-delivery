@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from harness.guidance_actions import GuidanceArg, GuidanceAction
+from harness.guidance_actions import GuidanceArg, GuidanceAction, WorkedGuidance
 from harness.agent_tools.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.installation.files import skill
 from harness.mcp.mcp_annotations import mcp
@@ -15,12 +15,7 @@ class Render(GuidanceAction):
     @skill
     @agent_tool
     def render(
-        self,
-        guidance: GuidanceArg,
-        format: str,
-        paths: list[str] | str,
-        content: str = "",
-        source: str | None = None,
+        self, guidance: GuidanceArg, format: str, paths: list[str] | str, content: str = "", source: str | None = None,
     ) -> list:
         """Convert already-generated content into format. Returns one result per guidance. After the conversion returns, follow place_rendered.
         format: the target channel, such as python, markdown, or drawio.
@@ -29,15 +24,12 @@ class Render(GuidanceAction):
         source: the format content is already in. Use sketch for a sketch file. Otherwise markdown, python, typescript, java, javascript, json, or drawio. md is markdown. Omit source when content is already the current format."""
         self._work_on(guidance)
 
-        # each hands over the fidelity this action works at on each listed practice, and that fidelity renders.
-        def on(item):
-            if isinstance(item, str):
-                return item
-            if paths:
-                return item.render_files(format, paths, source)
-            return item.render(format, content, source)
+        def on(worked: WorkedGuidance) -> object:
+            if isinstance(worked, str):
+                return worked
+            return worked.render_files(format, paths, source) if paths else worked.render(format, content, source)
 
-        converted = self.each(on)
+        converted = self.work.each(on)
         tools(self.act_quickly)
         tools(self.place_rendered)
         if self._session is not None:

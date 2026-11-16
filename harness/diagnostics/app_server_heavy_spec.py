@@ -11,7 +11,7 @@ from pathlib import Path
 from expects import be_false, be_true, equal, expect
 from mamba import after, before, context, description, it
 
-from harness.diagnostics.app import AppServer
+from harness.diagnostics.app import AppServer, NodeScript
 from harness.process.process import ListeningPorts
 
 STARTED_WITHIN_SECONDS = 15
@@ -45,7 +45,7 @@ with description("an app's server") as self:
             encoding="utf-8",
         )
         (self.folder / "version.txt").write_text("old", encoding="utf-8")
-        self.server = AppServer(self.folder, "serve.js", (self.port,))
+        self.server = AppServer(NodeScript(self.folder, "serve.js"), (self.port,))
 
     with after.each:
         listening = ListeningPorts().holder(self.port)

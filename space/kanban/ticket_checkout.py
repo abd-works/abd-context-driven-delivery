@@ -57,7 +57,7 @@ class TicketCheckout:
 
     @property
     def _recorded(self) -> dict:
-        return self._ticket.session.fields
+        return self._ticket.session.record.fields
 
     def _found_branch(self) -> Branch:
         """The recorded branch while the repository has it, else the ticket's branch found in git and recorded."""
@@ -106,18 +106,18 @@ class TicketCheckout:
         assigned = self.assigned_chat
         if assigned:
             return next((chat for chat in chats if chat.id == assigned), None)
-        named = self._ticket.board.chat_named(self._ticket.name)
+        named = self._ticket.board.reads.chat_named(self._ticket.name)
         return named or self._chat_in_worktree(chats)
 
     @property
     def assigned_chat(self) -> str:
         """The id of the chat a person assigned to the ticket; empty while none is."""
-        return str(self._ticket.session.fields.get(ASSIGNED_CHAT, "") or "")
+        return str(self._ticket.session.record.fields.get(ASSIGNED_CHAT, "") or "")
 
     def assign_chat(self, chat: str) -> None:
         """Make chat, a chat's id, the ticket's chat from now on; an empty chat gives it back to the chat named after
         it. The record is committed on main and pushed."""
-        self._ticket.session.save_fields(**{ASSIGNED_CHAT: chat})
+        self._ticket.session.record.save_fields(**{ASSIGNED_CHAT: chat})
 
     def _chat_in_worktree(self, chats: list[Chat]) -> Chat | None:
         worktree = self.worktree
@@ -155,7 +155,7 @@ class TicketCheckout:
             board.sessions.saves.now(f"sessions: save before opening {self._ticket.name}")
             self.branch.open_in_worktree()
             board.reread()
-        self._ticket.session.save_fields(branch=self.branch.name, worktree=self.worktree)
+        self._ticket.session.record.save_fields(branch=self.branch.name, worktree=self.worktree)
         board.sessions.saves.now(f"sessions: open {self._ticket.name}")
 
     def _refuse_unclear_branch(self) -> None:
@@ -203,7 +203,7 @@ class TicketCheckout:
         if LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving:
             checkout.commit([str(checkout.root)], f"{self._ticket.name}: leave session", untracked=True)
         if LEAVE_PUSH in leaving:
-            checkout.push_upstream()
+            checkout.origin.push_upstream()
 
     def _delete_worktree(self, branch: Branch, leaving: list[str]) -> None:
         """Remove the branch's own worktree folder, its work committed and pushed there, when leaving names

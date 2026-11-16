@@ -29,7 +29,7 @@ def git(folder: Path, *args: str) -> str:
 
 def throwaway_repository(root: Path) -> Path:
     """A checkout on main of a bare origin, its first release tagged v1.0.0, two commits and one completed story since,
-    the last of them raising the version to 1.4.0 as /version does."""
+    then the version raised to 1.4.0 as /version does."""
     origin, checkout = root / "origin.git", root / "checkout"
     subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True)
     subprocess.run(["git", "clone", "-q", str(origin), str(checkout)], check=True, capture_output=True)
@@ -76,7 +76,7 @@ with description("a release of a throwaway repository") as self:
         for tier in (TestTier.E2E, TestTier.HEAVY):
             self.record.save(TestRun(tier, head, datetime.now(timezone.utc), RunOutcome.PASSED))
         self.gh = RecordingGh()
-        self.release = CddRelease(self.checkout, Git(self.checkout), self.gh, self.record)
+        self.release = CddRelease(Git(self.checkout), self.gh, self.record)
 
     with after.each:
         shutil.rmtree(self.root, ignore_errors=True)

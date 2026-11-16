@@ -199,7 +199,7 @@ describe('Send Next Fidelity Action', () => {
 
     it('should mark its tile as the next one', async () => {
       const { page } = await ran()
-      expect(ticketOn(page, OTHER).progressNamed('stories-story-map')!.isNext).toBe(true)
+      expect(ticketOn(page, OTHER).work.progressNamed('stories-story-map')!.isNext).toBe(true)
     })
   })
 
@@ -237,7 +237,7 @@ describe('Choose Ticket Practices', () => {
     const discovery = page.board.stageNamed('Discovery')!
     const boundedContext = discovery.workRequired.find(fidelity => fidelity.slug === 'ddd-bounded-context')!
     page.store.change({ tiles: [{ ticket: ticketOn(page, ACTIVE), place: 'cell-Discovery-ddd-bounded-context', stage: discovery, fidelities: [boundedContext], action: 'generate', isPinned: true, choices: [] }] })
-    await ticketOn(page, ACTIVE).enablePractice('ddd', false)
+    await ticketOn(page, ACTIVE).practices.enable('ddd', false)
     return page
   }
 
@@ -254,7 +254,7 @@ describe('Write Ticket Handoff', () => {
   it('should fill the prompt with the handoff command', async () => {
     const { page } = await board.page()
     const chat = await board.connectChat(page)
-    await ticketOn(page, ACTIVE).fillHandoff()
+    await ticketOn(page, ACTIVE).prompts.fillHandoff()
     expect(await chat.checkIn()).toEqual([{ kind: 'fill', text: 'Write a handoff for ticket checkout-flow with /space-session-handoff-session session=.sessions/checkout-flow/session.json' }])
   })
 })
@@ -263,7 +263,7 @@ describe('Close Active Session', () => {
   async function closed() {
     const { page } = await board.page()
     const chat = await board.connectChat(page)
-    await ticketOn(page, ACTIVE).closeSession()
+    await ticketOn(page, ACTIVE).prompts.closeSession()
     return { page, chat }
   }
 
@@ -325,7 +325,7 @@ describe('Open Ticket Chat', () => {
     it("should send the ticket's commands to the picked chat", async () => {
       const page = await pickedThenClicked()
       const other = board.chat('other-chat', '', '')
-      await ticketOn(page, ACTIVE).closeSession()
+      await ticketOn(page, ACTIVE).prompts.closeSession()
       expect(await other.checkIn()).toEqual([{ kind: 'command', text: '/space:session:close-session session=.sessions/checkout-flow/session.json' }])
     })
   })
@@ -341,7 +341,7 @@ describe('Open Ticket Chat', () => {
       await page.chat.refresh()
       await page.reader.refresh()
       page.chat.choose('other-chat')
-      await ticketOn(page, ACTIVE).closeSession()
+      await ticketOn(page, ACTIVE).prompts.closeSession()
       return ticketChat
     }
 
@@ -398,7 +398,7 @@ describe('Open Ticket Chat', () => {
       const { page, asked } = await board.page()
       await board.chat('chat-1').checkIn()
       await page.chat.refresh()
-      await ticketOn(page, ACTIVE).fillHandoff()
+      await ticketOn(page, ACTIVE).prompts.fillHandoff()
       expect([asked.filter(request => request.path.endsWith('/send')), page.store.state.toasts.at(-1)?.text]).toEqual([[], 'No chat works on checkout-flow yet: open its chat from its card, or pick one in the chat list.'])
     })
   })
@@ -435,7 +435,7 @@ describe('Open Ticket Chat', () => {
       board.openWorktree(ACTIVE)
       await page.reader.refresh()
       await ticketOn(page, ACTIVE).openChat()
-      expect(page.chat.isOpeningFor(ACTIVE)).toBe(true)
+      expect(page.chat.opening.isOpeningFor(ACTIVE)).toBe(true)
     })
 
     it('should open it only once while that chat starts', async () => {

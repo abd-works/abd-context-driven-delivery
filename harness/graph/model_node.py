@@ -6,11 +6,16 @@ Pass a graph the same way you pass another model.
 
 from __future__ import annotations
 
+from abc import ABCMeta
 from contextlib import contextmanager
-from typing import Callable, Iterable, Iterator, Optional
+from typing import TYPE_CHECKING, Callable, Iterable, Iterator, Optional
 
 from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.location import Location
+
+if TYPE_CHECKING:
+    from harness.guidance.guidance import PracticeGuidance
 
 # The file a new model object names until a loader tells it which file it came from.
 NO_SOURCE_FILE = "."
@@ -23,57 +28,60 @@ class _RecordedList(list):
         super().__init__()
         self.owner = owner
         self.kind = kind
+        owner.keeps_list(self)
 
-    def append(self, item) -> None:
-        list.append(self, item)
-        self._record(item)
+    def append(self, held: ModelNode) -> None:
+        list.append(self, held)
+        self._record(held)
 
-    def extend(self, items: Iterable) -> None:
-        for item in items:
-            self.append(item)
+    def extend(self, incoming: Iterable[ModelNode]) -> None:
+        for held in incoming:
+            self.append(held)
 
-    def insert(self, index: int, item) -> None:
-        list.insert(self, index, item)
-        self._record(item)
+    def insert(self, index: int, held: ModelNode) -> None:
+        list.insert(self, index, held)
+        self._record(held)
 
-    def pop(self, index: int = -1):
-        item = list.pop(self, index)
-        self._drop(item)
-        return item
+    def pop(self, index: int = -1) -> ModelNode:
+        held = list.pop(self, index)
+        self._drop(held)
+        return held
 
-    def __setitem__(self, index, item) -> None:
+    def __setitem__(self, index: int | slice, held: ModelNode | Iterable[ModelNode]) -> None:
         if isinstance(index, slice):
-            self.refill(list(item))
+            self.refill(list(held))
             return
-        list.__setitem__(self, index, item)
-        self._record(item)
+        list.__setitem__(self, index, held)
+        self._record(held)
 
-    def refill(self, incoming: Iterable) -> None:
-        """Hold exactly incoming from now on, dropping the edge to each item held before."""
-        for item in list(self):
-            self._drop(item)
+    def refill(self, incoming: Iterable[ModelNode]) -> None:
+        """Hold exactly incoming from now on, dropping the edge to each object held before."""
+        for held in list(self):
+            self._drop(held)
         self.clear()
-        for item in incoming:
-            self.append(item)
+        for held in incoming:
+            self.append(held)
 
-    def _record(self, item) -> None:
+    def _record(self, held: ModelNode) -> None:
         raise NotImplementedError
 
-    def _drop(self, item) -> None:
-        raise NotImplementedError
+    def _drop(self, held: ModelNode) -> None:
+        """Drop the owner's edge of this list's kind to held, and the belongsTo edge back from held."""
+        owner = self.owner
+        if not isinstance(held, ModelNode) or owner.practice is None:
+            return
+        kind = self.kind
+        owner.practice.reading.in_graph.edge_index.drop(lambda edge: (edge.parent is owner and edge.child is held and edge.kind == kind)
+            or (edge.parent is held and edge.child is owner and edge.kind == "belongsTo"))
 
 
 class ModelChildren(_RecordedList):
     """The list of the parts an owner is made of. Appending a part makes the owner its parent and records the edge."""
 
-    def __init__(self, owner: "ModelNode", kind: str) -> None:
-        super().__init__(owner, kind)
-        owner.holds_parts(self)
-
-    def _record(self, child) -> None:
+    def _record(self, child: ModelNode) -> None:
         self.owner.attach(child, self.kind)
 
-    def reconcile(self, sources: Iterable, load: Callable) -> None:
+    def reconcile(self, sources: Iterable[ModelNode], load: Callable[[ModelNode], ModelNode]) -> None:
         """Become sources, in their order, keeping the children already held: each source is translated into the child
         of the same name, else the one at the same place, and a source no child matches is loaded as a new child. A
         child no source matches is dropped. Keeping the matched child keeps what only this format knows about it, such
@@ -90,29 +98,25 @@ class ModelChildren(_RecordedList):
             reconciled.append(match)
         self.refill(reconciled)
 
-    def _match(self, source, consumed: set[int]):
+    def _match(self, source: ModelNode, consumed: set[int]) -> ModelNode | None:
         free = [child for child in self if id(child) not in consumed]
         return next((child for child in free if child.name == source.name), None) or next(
             (child for child in free if child.sequential_order == source.sequential_order), None
         )
-
-    def _drop(self, child) -> None:
-        self.owner.detach(child, self.kind)
 
 
 class ModelReferences(_RecordedList):
     """The list of model objects an owner refers to without owning them, such as the stories an increment delivers,
     which stay under their own epic. Appending records a relationship edge; the object keeps its parent."""
 
-    def __init__(self, owner: "ModelNode", kind: str) -> None:
-        super().__init__(owner, kind)
-        owner.holds_references(self)
-
-    def _record(self, target) -> None:
-        self.owner.refer(target, self.kind)
-
-    def _drop(self, target) -> None:
-        self.owner.detach(target, self.kind)
+    def _record(self, target: ModelNode) -> None:
+        """Record a relationship edge of this list's kind to target when the owner and target are on one graph; an
+        owner that joins another graph records it there."""
+        owner = self.owner
+        if not isinstance(target, ModelNode) or target is owner or owner.practice is None or target.practice is None:
+            return
+        if target.graph is owner.graph:
+            owner.graph.edges.record(EdgeType.from_kind(self.kind, "relationship"), owner, target)
 
     def record_all(self) -> None:
         """Record the edge to every object held, as on a graph the owner has just moved to."""
@@ -137,7 +141,18 @@ class ModelDetached(LookupError):
         self.model = model
 
 
-class ModelNode(Node):
+class _SyncedOnceBuilt(ABCMeta):
+    """Makes a model object ready once its whole constructor has run, the subclass's included, and then records the
+    schema edges its fields name: an assignment made while it is still being built rebuilds none of them. It derives
+    from *ABCMeta* so a model class may also be abstract."""
+
+    def __call__(cls, *args: object, **kwargs: object) -> ModelNode:
+        model = super().__call__(*args, **kwargs)
+        model.finish_building()
+        return model
+
+
+class ModelNode(Node, metaclass=_SyncedOnceBuilt):
     """Base model object for one practice. Its practice registers it (``register_practice``), and subclasses name the
     belongsTo pairs.
 
@@ -150,20 +165,6 @@ class ModelNode(Node):
     _belongs: set[tuple[str, str]] = set()
     _schema_edge_fields: frozenset[str] = frozenset({"source", "collaborators", "dependencies", "type_hint", "return_type", "callees"})
     """Attributes whose new value can add or remove a schema edge; assigning one rebuilds the graph's schema edges."""
-
-    def __init_subclass__(cls, **kwargs) -> None:
-        super().__init_subclass__(**kwargs)
-        init = cls.__dict__.get("__init__")
-        if init is None or getattr(init, "_schema_wrapped", False):
-            return
-
-        def wrapped(self, *args, **kw):
-            init(self, *args, **kw)
-            self._ready = True
-            self._sync_schema_edges()
-
-        wrapped._schema_wrapped = True
-        cls.__init__ = wrapped
 
     _practice_class: type | None = None
     """The practice class registered for this model class and its subclasses; see ``register_practice``."""
@@ -200,6 +201,12 @@ class ModelNode(Node):
             self.join(graph.practices.of(type(self).practice_kind()))
 
 
+    def finish_building(self) -> None:
+        """Mark this object built, so an assignment to a field that names a schema edge rebuilds the schema edges, and
+        record the ones its constructor gave it."""
+        self._ready = True
+        self._sync_schema_edges()
+
     @property
     def graph(self) -> Graph:
         """The graph that holds this object: its practice's. ``ModelDetached`` for an object no practice holds yet,
@@ -221,17 +228,12 @@ class ModelNode(Node):
     def semantic_type(self) -> str:
         return self._semantic_type_name
 
-    def holds_parts(self, parts: ModelChildren) -> None:
-        """Keep parts, one of this object's lists of the parts it is made of, so the object records the edge to each
-        part when it joins a graph."""
-        self._child_lists.append(parts)
+    def keeps_list(self, listed: ModelChildren | ModelReferences) -> None:
+        """Keep listed, one of this object's lists of the parts it is made of or of the objects it refers to, so the
+        object records the edge to each when it joins a graph."""
+        (self._child_lists if isinstance(listed, ModelChildren) else self._reference_lists).append(listed)
 
-    def holds_references(self, references: ModelReferences) -> None:
-        """Keep references, one of this object's lists of objects it refers to, so the object records the edge to each
-        when it joins a graph."""
-        self._reference_lists.append(references)
-
-    def attach(self, child, kind: str) -> None:
+    def attach(self, child: ModelNode, kind: str) -> None:
         """Make child one of this object's parts, under an edge of kind: this object becomes its parent, and on a graph
         the edge is recorded, with child joining this object's practice."""
         if not isinstance(child, ModelNode) or child is self:
@@ -246,26 +248,11 @@ class ModelNode(Node):
         self._sync_schema_edges()
 
     def _record_child_edge(self, child: "ModelNode", kind: str) -> None:
-        self.graph.record(EdgeType.from_kind(kind), self, child)
+        self.graph.edges.record(EdgeType.from_kind(kind), self, child)
         if (child.semantic_type(), self.semantic_type()) in type(self)._belongs:
-            self.graph.record(EdgeType.from_kind("belongsTo", "relationship"), child, self)
+            self.graph.edges.record(EdgeType.from_kind("belongsTo", "relationship"), child, self)
 
-    def detach(self, child, kind: str) -> None:
-        """Drop the edge of kind from this object to child, and the belongsTo edge back from child."""
-        if not isinstance(child, ModelNode) or self.practice is None:
-            return
-        self.practice.reading.in_graph.drop_edges(lambda edge: (edge.parent is self and edge.child is child and edge.kind == kind)
-            or (edge.parent is child and edge.child is self and edge.kind == "belongsTo"),)
-
-    def refer(self, target, kind: str) -> None:
-        """Record a relationship edge of kind to target when both are on one graph; an owner that joins another graph
-        records it there (``_join``)."""
-        if not isinstance(target, ModelNode) or target is self or self.practice is None or target.practice is None:
-            return
-        if target.graph is self.graph:
-            self.graph.record(EdgeType.from_kind(kind, "relationship"), self, target)
-
-    def join(self, practice) -> None:
+    def join(self, practice: PracticeGuidance) -> None:
         """Make this object and its whole tree practice's nodes, as a practice does with the objects its parser made:
         each leaves the graph it was in, carrying the edges between them, and the edges its own lists hold are recorded
         in practice's graph."""
@@ -273,13 +260,13 @@ class ModelNode(Node):
         members = {id(node) for node in subtree}
         carried = []
         for held in {id(node.practice): node.practice for node in subtree if node.practice is not None}.values():
-            carried.extend(held.reading.in_graph.drop_edges(lambda edge: id(edge.parent) in members and id(edge.child) in members))
+            carried.extend(held.reading.in_graph.edge_index.drop(lambda edge: id(edge.parent) in members and id(edge.child) in members))
         with schema_sync_paused():
             for node in subtree:
                 node._move_to(practice)
         graph = practice.reading.graph
         for edge in carried:
-            graph.record(edge.type, edge.parent, edge.child)
+            graph.edges.record(edge.type, edge.parent, edge.child)
         for node in subtree:
             node._record_held_edges()
 
@@ -292,14 +279,14 @@ class ModelNode(Node):
         for references in self._reference_lists:
             references.record_all()
 
-    def _move_to(self, practice) -> None:
+    def _move_to(self, practice: PracticeGuidance) -> None:
         if self.practice is practice:
             return
         unnamed = not self.node_id or practice.reading.in_graph.holds(self.node_id)
         node_id = practice.reading.in_graph.unused_node_id(self.type, self.name) if unnamed else self.node_id
         # add places a parsed node at its lines; a bound object keeps the source it already has, whatever its kind.
         source = self.source
-        practice.reading.in_graph.add(self, node_id, NO_SOURCE_FILE, 1, 1)
+        practice.reading.in_graph.add(self, node_id, Location(NO_SOURCE_FILE, 1, 1))
         self.source = source
 
     def subtree(self) -> list["ModelNode"]:
@@ -315,8 +302,8 @@ class ModelNode(Node):
                     found.extend(example.subtree())
         return found
 
-    def __setattr__(self, name: str, value) -> None:
-        object.__setattr__(self, name, value)
+    def __setattr__(self, name: str, assigned: object) -> None:
+        object.__setattr__(self, name, assigned)
         if name in type(self)._schema_edge_fields and getattr(self, "_ready", False):
             self._sync_schema_edges()
 

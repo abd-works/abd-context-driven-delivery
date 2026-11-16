@@ -50,7 +50,7 @@ class OpenedStoryMap:
     @property
     def file(self) -> str:
         """The file, as a path from the project."""
-        return self._session.from_project(self._path)
+        return self._session.paths.from_project(self._path)
 
     @property
     def fidelity(self) -> FidelityGuidance:
@@ -58,11 +58,11 @@ class OpenedStoryMap:
         scenarios for a scenario file, acceptance tests for a story test. A session that moved the practice's root
         (outputs.<practice>.root) puts the file under that root, so a fidelity whose files the session lists there
         declares it too."""
-        return next(fidelity for fidelity in self._stories.fidelities if fidelity.declares(self.file) or self._lists(fidelity))
+        return next(fidelity for fidelity in self._stories.fidelities if fidelity.declared.includes(self.file) or self._lists(fidelity))
 
     def _lists(self, fidelity: FidelityGuidance) -> bool:
         """Whether the session lists the file among the fidelity's files, which are paths from the project."""
-        return any(Path(entry.path).as_posix() == Path(self.file).as_posix() for entries in fidelity.files().values() for entry in entries)
+        return any(Path(entry.path).as_posix() == Path(self.file).as_posix() for entries in fidelity.declared.files().values() for entry in entries)
 
     @property
     def own_format(self) -> Format:
@@ -77,7 +77,15 @@ class OpenedStoryMap:
             return ""
         return f"saving would rewrite {self.file}, a {self.fidelity.name} file, beyond the edit: its text is not laid out as {self.own_format} writes a story map"
 
-    def write(self) -> list[Path]:
+    def save(self) -> StoryModel:
+        """Write the map to its file and the formats chosen beside it, then answer the map. An edit its file cannot take
+        is refused with StoryMapEditRefused, and nothing is written."""
+        if self.refusal:
+            raise StoryMapEditRefused(self._story_map, "save", self.refusal)
+        self._write_formats()
+        return self._story_map
+
+    def _write_formats(self) -> list[Path]:
         """Write the map to its own file, then to each other format chosen for its fidelity, beside it with that format's
         extension; refresh the session's graph with the files written. An edit its own format would not read back, such
         as a scenario on a story map, is refused before anything is written."""
@@ -117,7 +125,7 @@ class OpenedStoryMap:
         """Whether text, as its own format reads it, holds the map's nodes and is written as text again."""
         model = self._stories.formats.parse(self.own_format, text)
         again = self._stories.formats.render(RenderRequest(self.own_format, model, previous=text))["content"]
-        return _nodes_held(model) == _nodes_held(self._story_map) and again.strip() == text.strip()
+        return self._nodes_held(model) == self._nodes_held(self._story_map) and again.strip() == text.strip()
 
     def _rendered(self, format: Format, path: Path | None = None) -> str:
         """The map as format writes it, over the file at path as it is now; a format that writes several files, as code
@@ -127,14 +135,34 @@ class OpenedStoryMap:
         content = self._stories.formats.render(RenderRequest(format, self._story_map, previous=previous))["content"]
         return content if isinstance(content, str) else ""
 
+    def _nodes_held(self, story_map: StoryModel) -> list[tuple]:
+        """Every epic, story, scenario and step under story_map's epics, as its kind and name, in map order: what a
+        file must read back as for an edit to be kept."""
+        held: list[tuple] = []
+        pending = list(reversed(story_map.epics))
+        while pending:
+            node = pending.pop()
+            held.append((node.semantic_type(), node.name))
+            pending.extend(reversed(node.parts))
+        return held
 
-def _nodes_held(story_map: StoryModel) -> list[tuple]:
-    """Every epic, story, scenario and step under story_map's epics, as its kind and name, in map order: what a file must
-    read back as for an edit to be kept."""
-    held: list[tuple] = []
-    pending = list(reversed(story_map.epics))
-    while pending:
-        node = pending.pop()
-        held.append((node.semantic_type(), node.name))
-        pending.extend(reversed(node.parts))
-    return held
+
+class UnopenedStoryMap:
+    """Where a story map read any other way than through its tools was opened: nowhere. It names no file, covers no
+    session's stories, finds no acceptance tests, and refuses every save."""
+
+    file = ""
+    refusal = "it was opened from no file"
+
+    def __init__(self, story_map: StoryModel) -> None:
+        self._story_map = story_map
+
+    @property
+    def session_stories(self) -> list[str]:
+        return []
+
+    def acceptance_tests_of(self, story: "Story") -> list[str]:
+        return []
+
+    def save(self) -> StoryModel:
+        raise StoryMapEditRefused(self._story_map, "save", self.refusal)

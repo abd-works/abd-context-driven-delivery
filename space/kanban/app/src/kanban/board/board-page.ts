@@ -22,16 +22,10 @@ import { BoardStore } from '../shared/board-store'
 import { BuildClient } from './build-client'
 import { EditorAppClient } from './editor-app-client'
 import { PageFailures } from './page-failures'
+import { PageLinks } from './page-links'
 import { SidePanelClient } from './side-panel-client'
 
 const CHAT_POLL_MILLISECONDS = 2000
-const REPORT_QUERY = 'report'
-const HELP_QUERY = 'help'
-const FILES_QUERY = 'files'
-const SESSION_FOLDER_QUERY = 'session-folder'
-const FILE_QUERY = 'file'
-const TICKET_QUERY = 'ticket'
-const FIDELITY_QUERY = 'fidelity'
 const NOT_READ_YET: BoardData = { project: '', practices: [], open_tickets: [], active: null, columns: [], fidelities: [], sends_fixes_directly: false, unsaved: null }
 
 // Everything the page's views act through, wired once.
@@ -58,6 +52,7 @@ export class BoardPage {
   readonly activation = new ActivationClient(this)
   readonly roots = new RootChoiceClient(this)
   readonly draft = new BacklogDraftClient(this)
+  readonly links = new PageLinks(this)
 
   // chat is the chat that opened the page, from its ?chat= link, which is told every failure the page meets.
   constructor(send: Send = sendWithFetch, chat: string = chatOfPage()) {
@@ -100,7 +95,7 @@ export class BoardPage {
     this.chat.choose(chat)
     const selected = this.board.tickets.find(ticket => ticket.address === this.store.state.selected)
     if (!selected) return
-    this.chat.assign(selected.name, chat)
+    this.chat.assignments.assign(selected.name, chat)
     await selected.assignChat(chat)
     await this.reader.refresh()
   }
@@ -128,97 +123,22 @@ export class BoardPage {
     return this.chat.fill(`Open a new ticket with ticket.create${session ? ` session=${session}` : ''}, titled: `)
   }
 
-  // A link such as ?report=<ticket>&fidelity=<slug>, which the chat bar opens from a fidelity's violation count, opens
-  // that ticket's report panel for that fidelity once the board has been read. A link naming nothing the board shows
-  // opens nothing.
-  async openLinkedReport(search: string): Promise<void> {
-    const query = new URLSearchParams(search)
-    const name = query.get(REPORT_QUERY)
-    const slug = query.get(FIDELITY_QUERY)
-    if (!name || !slug) return
-    if (!this.store.state.board) await this.reader.refresh()
-    const ticket = this.board.tickets.find(shown => shown.name === name)
-    const progress = ticket?.progressNamed(slug)
-    if (!ticket || !progress) return this.failures.fail(`The board has no ${slug} report for ${name}.`, 'Opening the Kanban board from a chat bar link')
-    this.store.change({ selected: ticket.address })
-    await this.panels.openReport(ticket, progress)
-  }
-
-  // A link such as ?help=<ticket>&fidelity=<slug>, which the chat bar opens from a fidelity's hover tip, opens that
-  // fidelity's help panel, as its ? on the ticket's tile does. A link naming nothing the board shows opens nothing.
-  async openLinkedHelp(search: string): Promise<void> {
-    const query = new URLSearchParams(search)
-    const name = query.get(HELP_QUERY)
-    const slug = query.get(FIDELITY_QUERY)
-    if (!name || !slug) return
-    if (!this.store.state.board) await this.reader.refresh()
-    const ticket = this.board.tickets.find(shown => shown.name === name)
-    const progress = ticket?.progressNamed(slug)
-    if (!ticket || !progress) return this.failures.fail(`The board has no ${slug} help for ${name}.`, 'Opening the Kanban board from a chat bar link')
-    this.store.change({ selected: ticket.address })
-    await this.panels.openFidelityHelp(progress)
-  }
-
-  // A link such as ?files=<ticket>&fidelity=<slug>,<slug>, which the chat bar's files button opens, opens the files panel
-  // on that ticket's stage with those fidelities' practices turned on, as their files button on the tile does. A link
-  // naming no fidelity the ticket has opens nothing.
-  async openLinkedFiles(search: string): Promise<void> {
-    const query = new URLSearchParams(search)
-    const name = query.get(FILES_QUERY)
-    const slugs = (query.get(FIDELITY_QUERY) ?? '').split(',').filter(Boolean)
-    if (!name || !slugs.length) return
-    if (!this.store.state.board) await this.reader.refresh()
-    const ticket = this.board.tickets.find(shown => shown.name === name)
-    const progress = slugs.flatMap(slug => ticket?.progressNamed(slug) ?? [])
-    if (!ticket || !progress.length) return this.failures.fail(`The board has no ${slugs.join(', ')} files for ${name}.`, 'Opening the Kanban board from a chat bar link')
-    this.store.change({ selected: ticket.address })
-    this.layout.expandRegion('details')
-    await this.files.openFiles(ticket, progress)
-  }
-
-  // A link such as ?session-folder=<ticket>, which the chat bar's session name opens, opens the files panel on that
-  // ticket's session folder, as the details' session link does; with &file=<path>, as a file the Story UI editor asks
-  // the chat to show, that file's tab is open. A link naming a ticket the board does not show says so.
-  async openLinkedSessionFolder(search: string): Promise<void> {
-    const query = new URLSearchParams(search)
-    const name = query.get(SESSION_FOLDER_QUERY)
-    if (!name) return
-    if (!this.store.state.board) await this.reader.refresh()
-    const ticket = this.board.tickets.find(shown => shown.name === name)
-    if (!ticket) return this.failures.fail(`The board has no ticket ${name}.`, 'Opening the Kanban board from a chat bar link')
-    this.store.change({ selected: ticket.address })
-    this.layout.expandRegion('details')
-    const file = query.get(FILE_QUERY)
-    await (file ? this.files.openSessionFile(ticket, file) : this.files.openSessionFolder(ticket))
-  }
-
-  // A link such as ?ticket=<ticket>, which the chat bar opens from its health panel, opens the chat's ticket once the
-  // board has been read, as a click on its card does. A link naming a ticket the board does not show says so.
-  async openLinkedTicket(search: string): Promise<void> {
-    const name = new URLSearchParams(search).get(TICKET_QUERY)
-    if (!name) return
-    if (!this.store.state.board) await this.reader.refresh()
-    const ticket = this.board.tickets.find(shown => shown.name === name)
-    if (!ticket) return this.failures.fail(`The board has no ticket ${name}.`, 'Opening the Kanban board from a chat bar link')
-    this.cards.open(ticket)
-  }
-
   // The Files app's page: only the file viewer, opened on the files or the session folder its link names, with the board
   // read again every two seconds so an open file shows what is on disk now.
   startFiles(): () => void {
     const search = typeof location === 'undefined' ? '' : location.search
-    void this.openLinkedFiles(search)
-    void this.openLinkedSessionFolder(search)
+    void this.links.openFiles(search)
+    void this.links.openSessionFolder(search)
     return this.reader.startPolling()
   }
 
   start(): () => void {
     const search = typeof location === 'undefined' ? '' : location.search
-    void this.openLinkedTicket(search)
-    void this.openLinkedReport(search)
-    void this.openLinkedHelp(search)
-    void this.openLinkedFiles(search)
-    void this.openLinkedSessionFolder(search)
+    void this.links.openTicket(search)
+    void this.links.openReport(search)
+    void this.links.openHelp(search)
+    void this.links.openFiles(search)
+    void this.links.openSessionFolder(search)
     const stopBoard = this.reader.startPolling()
     const chatTimer = setInterval(() => void this.pollChats(), CHAT_POLL_MILLISECONDS)
     void this.pollChats()

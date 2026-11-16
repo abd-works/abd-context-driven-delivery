@@ -4,7 +4,7 @@ from __future__ import annotations
 import dataclasses
 import json
 from pathlib import Path
-from typing import Any, Optional, Protocol
+from typing import TYPE_CHECKING, Optional, Protocol
 
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import agent_tool
@@ -12,6 +12,11 @@ from harness.agent_tools.tool_call import ToolCall
 from harness.installation.files import skill
 from harness.markdown.front_matter import FrontMatter
 from harness.mcp.mcp_annotations import mcp
+
+if TYPE_CHECKING:
+    import faiss
+
+    from space.session.session import Session
 
 # ── Index entries and results ────────────────────────────────────────────────
 
@@ -64,7 +69,7 @@ class SegmentIndex:
     _VECTORS = "index.faiss"
     _ENTRIES = "meta.json"
 
-    def __init__(self, folder: Path, vectors: Any, segments: list[IndexedSegment]) -> None:
+    def __init__(self, folder: Path, vectors: faiss.Index, segments: list[IndexedSegment]) -> None:
         self.folder = folder
         self._vectors = vectors
         self.segments = segments
@@ -149,7 +154,7 @@ class ContextIndex:
     The cdd server makes one for each call, for the session that call works in, so every path a call names is read from
     that session's project rather than the server's own folder."""
 
-    def __init__(self, embedding_provider: Optional[EmbeddingProvider] = None, session: Any = None) -> None:
+    def __init__(self, embedding_provider: Optional[EmbeddingProvider] = None, session: Session | None = None) -> None:
         self._provider = embedding_provider  # None → lazy-init OpenAIEmbeddingProvider on first use
         self._session = session
 
@@ -158,14 +163,14 @@ class ContextIndex:
         and embeds with this index's provider."""
         return self.in_session(call.session)
 
-    def in_session(self, session: Any) -> ContextIndex:
+    def in_session(self, session: Session | None) -> ContextIndex:
         """A ContextIndex reading the paths it is given from session's project, embedding with this index's provider."""
         return type(self)(self._provider, session)
 
     def _path_named(self, named: str) -> Path:
         """named as a path in this index's session's project; read as given when it works in no session, as an index
         run in process does."""
-        return self._session.path_named(named) if self._session is not None else Path(named)
+        return self._session.paths.path_named(named) if self._session is not None else Path(named)
 
     def _segment_named(self, named: str) -> Path:
         """The segment file named, which the session's files refuse when it is not there: embedding it as empty text

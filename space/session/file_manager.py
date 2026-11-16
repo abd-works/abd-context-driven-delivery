@@ -42,8 +42,7 @@ class PathOutsideRootsError(ValueError):
 class FolderEntry:
     """One entry of a listed folder: a folder or a file, with its path from the workpath and, for a file, its size."""
 
-    def __init__(self, name: str, path: str, is_folder: bool, size: int) -> None:
-        self._name = name
+    def __init__(self, path: str, is_folder: bool, size: int) -> None:
         self._path = path
         self._is_folder = is_folder
         self._size = size
@@ -51,7 +50,7 @@ class FolderEntry:
     @property
     @data_field
     def name(self) -> str:
-        return self._name
+        return Path(self._path).name
 
     @property
     @data_field
@@ -98,12 +97,12 @@ class FileEntry:
     whether the session's branch changed it, the format its extension names, and the fidelities it belongs to, which a
     page filters on, and the link it is published at, such as a design canvas's, which a page opens instead of the file."""
 
-    def __init__(self, path: str, exists: bool, is_changed: bool = False, link: str = "", fidelities: tuple[str, ...] = ()) -> None:
+    def __init__(self, path: str, exists: bool, is_changed: bool = False) -> None:
         self._path = path
         self._exists = exists
         self._is_changed = is_changed
-        self._link = link
-        self._fidelities = tuple(fidelities)
+        self._link = ""
+        self._fidelities: tuple[str, ...] = ()
 
     @property
     @data_field
@@ -139,7 +138,17 @@ class FileEntry:
 
     def belonging_to(self, fidelities: list[str]) -> FileEntry:
         """This file, saying it is a file of fidelities."""
-        return FileEntry(self._path, self._exists, self._is_changed, self._link, tuple(fidelities))
+        return self._copied(self._link, tuple(fidelities))
+
+    def linked(self, link: str) -> FileEntry:
+        """This file, published at link, such as a design canvas's, which a page opens instead of the file."""
+        return self._copied(link, self._fidelities)
+
+    def _copied(self, link: str, fidelities: tuple[str, ...]) -> FileEntry:
+        copy = FileEntry(self._path, self._exists, self._is_changed)
+        copy._link = link
+        copy._fidelities = fidelities
+        return copy
 
 
 # The language a viewer shows a file in, by its suffix; a file of any other suffix is plain text.
@@ -256,7 +265,7 @@ class FileManager:
         base = start.joinpath(*parts[:fixed])
         searched = parts[fixed:]
         matching = self._glob_expression("/".join(searched))
-        return sorted(Path(base, inside) for inside in _files_under(str(base)) if matching.fullmatch(inside))
+        return sorted(Path(base, inside) for inside in self._files_under(str(base)) if matching.fullmatch(inside))
 
     def _inside(self, path: str) -> Path:
         """The path resolved from the workpath; a page names paths, so one outside every root is refused."""
@@ -271,7 +280,7 @@ class FileManager:
 
     def _entry(self, entry: Path) -> FolderEntry:
         is_folder = entry.is_dir()
-        return FolderEntry(entry.name, self._relative(entry), is_folder, 0 if is_folder else entry.stat().st_size)
+        return FolderEntry(self._relative(entry), is_folder, 0 if is_folder else entry.stat().st_size)
 
     def _glob_expression(self, pattern: str) -> re.Pattern[str]:
         """A glob pattern as a regular expression over a path written with `/`: `**/` is any number of folders, `*` and
@@ -280,24 +289,24 @@ class FileManager:
         wildcards = {"**/": "(?:.*/)?", "**": ".*", "*": "[^/]*", "?": "[^/]"}
         return re.compile("".join(wildcards.get(part, re.escape(part)) for part in parts))
 
+    def _files_under(self, base: str) -> list[str]:
+        """Every file under base that holds someone's work, as a path from base with forward slashes, walked once and kept
+        for FILES_KEPT_SECONDS. Installed packages and hidden folders hold no one's work, so the walk skips them."""
+        held = _FILES_UNDER.get(base)
+        if held is not None and time.monotonic() - held[0] < FILES_KEPT_SECONDS:
+            return held[1]
+        files = []
+        for folder, folders, names in os.walk(base):
+            # Plain strings here: building a Path for every file in the repository made the search take a second.
+            inside = folder[len(base):].strip("\\/").replace("\\", "/")
+            folders[:] = [name for name in folders if holds_work(name)]
+            files += [f"{inside}/{name}" if inside else name for name in names]
+        _FILES_UNDER[base] = (time.monotonic(), files)
+        return files
+
 
 # How long the files under a folder are kept before it is walked again: a page lists many fidelities at once, each
 # searching its patterns, and walking the checkout once for each pattern made fifteen fidelities take five seconds.
 FILES_KEPT_SECONDS = 3.0
 _FILES_UNDER: dict[str, tuple[float, list[str]]] = {}
 
-
-def _files_under(base: str) -> list[str]:
-    """Every file under base that holds someone's work, as a path from base with forward slashes, walked once and kept
-    for FILES_KEPT_SECONDS. Installed packages and hidden folders hold no one's work, so the walk skips them."""
-    held = _FILES_UNDER.get(base)
-    if held is not None and time.monotonic() - held[0] < FILES_KEPT_SECONDS:
-        return held[1]
-    files = []
-    for folder, folders, names in os.walk(base):
-        # Plain strings here: building a Path for every file in the repository made the search take a second.
-        inside = folder[len(base):].strip("\\/").replace("\\", "/")
-        folders[:] = [name for name in folders if holds_work(name)]
-        files += [f"{inside}/{name}" if inside else name for name in names]
-    _FILES_UNDER[base] = (time.monotonic(), files)
-    return files

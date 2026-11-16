@@ -13,7 +13,7 @@ from expects import equal, expect
 from mamba import after, before, context, description, it
 
 from space.session import Sessions
-from space.session.throwaway_project import SpecRunHome
+from space.session.throwaway_project import SPEC_RUN_HOME
 
 
 def _written_by_another_process(session, **fields) -> None:
@@ -24,7 +24,7 @@ def _written_by_another_process(session, **fields) -> None:
 
 with description("a session's reads"):
     with before.each:
-        SpecRunHome.ensure()
+        SPEC_RUN_HOME.ensure()
         self.repo = Path(tempfile.mkdtemp())
         Sessions(self.repo).create("alpha", title="First title")
 
@@ -45,12 +45,12 @@ with description("a session's reads"):
             expect(Sessions.of_project(self.repo).named("alpha").title).to(equal("A much longer second title"))
 
         with it("should read its own write at once"):
-            self.session.save_fields(title="Its own title")
+            self.session.record.save_fields(title="Its own title")
             expect(self.session.title).to(equal("Its own title"))
 
         with it("should keep what another process wrote when it writes"):
             _written_by_another_process(self.session, scope="story")
-            self.session.save_fields(title="Its own title")
+            self.session.record.save_fields(title="Its own title")
             expect(self.session.scope).to(equal("story"))
 
     with context("that the process serves no calls from"):

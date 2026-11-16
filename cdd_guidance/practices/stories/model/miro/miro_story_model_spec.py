@@ -42,14 +42,14 @@ class SpecFixture:
     def story_map_with_4_epics_and_3_epics_and_1_story(self) -> StoryModel:
         story_map = MiroStoryModel()
         for i in range(1, 5):
-            story_map.append_epic(MiroEpic(f"Epic {i}", i))
+            story_map.epics.append(MiroEpic(f"Epic {i}", i))
         first_epic = story_map.epics[0]
         for j in range(1, 4):
             sub = MiroEpic(f"Epic 1.{j}", j)
             story = MiroStory(f"Story 1.{j}.1", 1, StoryType.USER)
             story.scenarios.append(Scenario(name="scenario step", sequential_order=1))
-            sub.append_story(story)
-            first_epic.append_epic(sub)
+            sub.stories.append(story)
+            first_epic.epics.append(sub)
         return story_map
 
     def svg_rects_with_role(self, text: str) -> list:
@@ -103,7 +103,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
 
         with context("with an Epic appended and the SVG re-rendered"):
             with before.each:
-                self.source.append_epic(MiroEpic("Epic 5", 5))
+                self.source.epics.append(MiroEpic("Epic 5", 5))
                 self.new_text = self.source.save()
 
             with context("the document"):
@@ -157,16 +157,16 @@ with description("a Miro Story Map (story-map fidelity)") as self:
             epic = MiroEpic("Create Hero", 1)
             compose = MiroEpic("Compose Powers", 1)
             attack = MiroEpic("Compose Attack Power", 1)
-            attack.append_story(MiroStory("Compose Damage Effect", 1, StoryType.USER))
+            attack.stories.append(MiroStory("Compose Damage Effect", 1, StoryType.USER))
             extras = MiroEpic("Apply Power Extra", 2)
-            extras.append_story(MiroStory("Apply Area Extra", 1, StoryType.USER))
+            extras.stories.append(MiroStory("Apply Area Extra", 1, StoryType.USER))
             delivery = MiroEpic("Apply Delivery Extra", 1)
-            delivery.append_story(MiroStory("Apply Accurate Extra", 1, StoryType.USER))
-            extras.append_epic(delivery)
-            compose.append_epic(attack)
-            compose.append_epic(extras)
-            epic.append_epic(compose)
-            self.source.append_epic(epic)
+            delivery.stories.append(MiroStory("Apply Accurate Extra", 1, StoryType.USER))
+            extras.epics.append(delivery)
+            compose.epics.append(attack)
+            compose.epics.append(extras)
+            epic.epics.append(compose)
+            self.source.epics.append(epic)
             self.text = self.source.save()
             self.root = ET.fromstring(
                 self.text.split("\n", 1)[1] if self.text.startswith("<?") else self.text
@@ -208,11 +208,11 @@ with description("a Miro Story Map (story-map fidelity)") as self:
             second.actors = ["System"]
             third = MiroStory("List Product Offerings", 3, StoryType.SYSTEM)
             third.actors = ["System"]
-            capability.append_story(first)
-            capability.append_story(second)
-            capability.append_story(third)
-            epic.append_epic(capability)
-            self.source.append_epic(epic)
+            capability.stories.append(first)
+            capability.stories.append(second)
+            capability.stories.append(third)
+            epic.epics.append(capability)
+            self.source.epics.append(epic)
             self.text = self.source.save()
             self.rects = fixture.svg_rects_with_role(self.text)
 
@@ -267,15 +267,15 @@ with description("a Miro Story Map (thin-slice fidelity)") as self:
     with context("rendering the thin-slice view for a StoryModel with 2 increments"):
         with before.each:
             self.source = fixture.story_map_with_4_epics_and_3_epics_and_1_story()
-            stories = {story.name: story for story in self.source.every_story()}
+            stories = {story.name: story for story in self.source.descendants.stories()}
             inc_a = MiroIncrement(
                 "Increment A - first outcome",
                 1,
                 [stories["Story 1.1.1"], stories["Story 1.2.1"]],
             )
             inc_b = MiroIncrement("Increment B - second outcome", 2, [stories["Story 1.3.1"]])
-            self.source.append_increment(inc_a)
-            self.source.append_increment(inc_b)
+            self.source.increments.append(inc_a)
+            self.source.increments.append(inc_b)
             self.text = self.source.save_thin_slice()
             self.root = ET.fromstring(
                 self.text.split("\n", 1)[1] if self.text.startswith("<?") else self.text
@@ -307,15 +307,15 @@ with description("a Miro Story Map (thin-slice fidelity)") as self:
     with context("parsing the thin-slice SVG back into increment nodes"):
         with before.each:
             self.source = fixture.story_map_with_4_epics_and_3_epics_and_1_story()
-            stories = {story.name: story for story in self.source.every_story()}
+            stories = {story.name: story for story in self.source.descendants.stories()}
             inc_a = MiroIncrement("Increment A", 1, [stories["Story 1.1.1"]])
             inc_b = MiroIncrement(
                 "Increment B",
                 2,
                 [stories["Story 1.2.1"], stories["Story 1.3.1"]],
             )
-            self.source.append_increment(inc_a)
-            self.source.append_increment(inc_b)
+            self.source.increments.append(inc_a)
+            self.source.increments.append(inc_b)
             self.text = self.source.save_thin_slice()
             self.read = fixture.story_map_with_4_epics_and_3_epics_and_1_story().load_thin_slice(self.text)
             self.increments = self.read.increments

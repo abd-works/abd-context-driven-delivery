@@ -58,7 +58,7 @@ export class TileClient {
 
   // Changes the one open bar on that ticket at that place, and leaves every other bar as it is.
   change(ticket: string, place: string, changed: (tile: Tile) => Tile): void {
-    this.store.change(state => ({ tiles: state.tiles.map(tile => (isAt(tile, ticket, place) ? changed(tile) : tile)) }))
+    this.store.change(state => ({ tiles: state.tiles.map((tile: Tile) => (isAt(tile, ticket, place) ? changed(tile) : tile)) }))
   }
 
   openOn(ticket: string, place: string): Tile | undefined {

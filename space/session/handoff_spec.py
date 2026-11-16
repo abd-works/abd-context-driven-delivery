@@ -19,7 +19,7 @@ from mamba import after, before, context, description, it
 from harness.agent_tools.agent_tools import AgentToolSet, SubAgentAnnotation
 from space.session.session import Session, SessionNotFoundError
 from space.session.sessions import Sessions
-from space.session.throwaway_project import ThrowawayProject
+from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 from space.work_state import WorkState
 
 
@@ -138,7 +138,7 @@ with description("a handoff asked for a board ticket's session"):
         self.tool = AgentToolSet.instantiate(Session).tools["write_handoff"]
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("that names a ticket other than the open session"):
         with it("should write into the named ticket's session folder"):

@@ -68,7 +68,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../harne
 |--------|------|
 | `.context/story-map.md:575-577` | Requested (2026-11-06): the board opens the Story UI editor on the part of the story map the ticket covers; Requested (2026-11-12): a small editor widget on the ticket's Stories story-map row opens it |
 | `space/kanban/app/src/kanban/ticket/practice-grid-view.tsx` | Observed: the ticket's practice grid, one row per fidelity |
-| `cdd_guidance/practices/stories/model/story_model.py:1110` | Observed: *StoryModel.stories_named*, which the ticket's scope reads |
+| `cdd_guidance/practices/stories/model/story_model.py:1110` | Observed: *Descendants.stories_named* (`StoryModel.descendants`), which the ticket's scope reads |
 
 #### Scenario: The story-map row's editor widget opens the Story UI editor on the ticket's stories
 

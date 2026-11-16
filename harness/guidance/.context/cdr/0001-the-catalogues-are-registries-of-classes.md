@@ -12,7 +12,7 @@ The catalogues stay registries held by their classes. What they hold is a fact o
 
 ## What round 6 changed
 
-- The slug lookup no longer makes a round trip through `module:Class` text: `toolset_ref`, `key_of` and their helpers are deleted. A guidance action reads a slug once into the practice and fidelity objects of its own set (`PracticeGuidance.answers_to`, `fidelity_called`).
+- The slug lookup no longer makes a round trip through `module:Class` text: `toolset_ref`, `key_of` and their helpers are deleted. A guidance action reads a slug once into the practice and fidelity objects of its own set (`PracticeGuidance.answers_to`, `practice.fidelities.called`).
 - `PracticeCatalogue.holds` is deleted, and `guidance.py` no longer calls the catalogue at all, so the catalogue alone knows the practice type and the file cycle between them is gone.
 
 ## What round 7 changed

@@ -22,17 +22,18 @@ import weakref
 from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import IO, TYPE_CHECKING, TypedDict
 
 from harness.agent_tools.progress import report_progress
 from harness.graph.explorer import GraphLoaded
-from harness.graph.file_lines import FileLines
+from harness.graph.file_lines import BuildReads
 from harness.graph.load_scope import LoadScope
-from harness.graph.saved_graph import GraphChanges, SavedGraph
+from harness.graph.saved_graph import GraphChanges, GraphDocument, SavedGraph
 
 if TYPE_CHECKING:
     from harness.agent_tools.tool_call import ToolCall
     from harness.graph.graph import Graph
+    from harness.guidance.guidance import PracticeGuidance
 
 # The module a worker process runs, which carries out one order.
 WORKER_MODULE = "harness.graph.graph_worker"
@@ -65,6 +66,13 @@ class GraphBuildFailed(RuntimeError):
         self.errors = errors
 
 
+class CheckedFilesDocument(TypedDict):
+    """The checked files as an order writes them for the worker."""
+
+    paths: list[str]
+    file: str
+
+
 class CheckedFiles:
     """The files a validate checks after a refresh, each a file or folder from a practice's source root, and the file
     the nodes read from them are written to, as they save: the build that refreshes the graph writes it, in the worker
@@ -74,8 +82,13 @@ class CheckedFiles:
         self.paths = list(paths)
         self.file = Path(file)
 
+    @classmethod
+    def from_document(cls, document: CheckedFilesDocument | None) -> CheckedFiles | None:
+        """The checked files an order names; none when it names none."""
+        return None if document is None else cls(list(document["paths"]), Path(document["file"]))
+
     @property
-    def document(self) -> dict:
+    def document(self) -> CheckedFilesDocument:
         return {"paths": self.paths, "file": str(self.file)}
 
     def write(self, graph: Graph) -> None:
@@ -84,71 +97,121 @@ class CheckedFiles:
         self.file.write_text(SavedGraph.from_graph(graph, self.paths).text, encoding="utf-8")
 
 
+class BuildTaskDocument(TypedDict):
+    """A build's task as an order writes it for the worker."""
+
+    step: str
+    saves: bool
+    checked: CheckedFilesDocument | None
+
+
+class BuildTask:
+    """What one build does: its step, then whether it saves the graph it built in its folder's ``graph.json`` (saves)
+    and the files a validate checks, whose nodes it writes for it (checked)."""
+
+    def __init__(self, step: BuildStep, saves: bool = False, checked: CheckedFiles | None = None) -> None:
+        self.step = BuildStep(step)
+        self.saves = saves
+        self.checked = checked
+
+    @classmethod
+    def from_document(cls, document: BuildTaskDocument) -> BuildTask:
+        return cls(BuildStep(document["step"]), bool(document.get("saves")), CheckedFiles.from_document(document.get("checked")))
+
+    @property
+    def document(self) -> BuildTaskDocument:
+        return {"step": self.step.value, "saves": self.saves, "checked": None if self.checked is None else self.checked.document}
+
+
+class BuildOrderDocument(TypedDict):
+    """A build order as the server writes it for the worker: the task, the scope the worker reads (its folder, the files
+    it is limited to, and whether it stands on the whole working copy), each chosen practice's source root, the pattern
+    overlays, the graph before the step (written in, or named by the file of the worker's last answer), and the
+    modules that register the practices and patterns the graph holds."""
+
+    task: BuildTaskDocument
+    folder: str
+    named: list[str] | None
+    over_whole: bool
+    roots: dict[str, str]
+    overlays: list[str]
+    state: GraphDocument | None
+    state_file: str
+    modules: list[str]
+
+
 class BuildOrder:
-    """One build as a worker process carries it out: the step, the scope it reads (the folder the graph loads, and the
-    edited files a load is limited to), each chosen practice's source root, the pattern overlays, the graph as it is
-    before the step, the modules that register the practices and patterns the graph holds, which the worker imports so
-    its catalogues hold the same classes, whether the worker saves the graph it built in the folder's ``graph.json``,
-    and the files a validate checks, whose nodes the worker writes for it.
+    """One build as a worker process carries it out, read from the document the server writes for it: the task, the
+    scope it reads (the folder the graph loads, and the edited files a load is limited to), each chosen practice's
+    source root, the pattern overlays, the graph as it is before the step, and the modules that register the practices
+    and patterns the graph holds, which the worker imports so its catalogues hold the same classes.
 
     The graph before the step is written into the order (a *SavedGraph*), or named by the file of the worker's last
     answer when the graph holds exactly what that answer says (its path): the server then writes no graph of its own,
     and the worker answers a refresh with what it changed (``GraphChanges``), which is all the server reads back."""
 
-    def __init__(
-        self,
-        step: BuildStep,
-        scope: LoadScope,
-        roots: dict[str, Path],
-        overlays: list[str],
-        before: SavedGraph | Path,
-        modules: list[str],
-        saves: bool = False,
-        checked: CheckedFiles | None = None,
-    ) -> None:
-        self.step = BuildStep(step)
-        self.scope = scope
-        self.roots = dict(roots)
-        self.overlays = list(overlays)
-        self._before = before
-        self.modules = list(modules)
-        self.saves = saves
-        self.checked = checked
+    def __init__(self, document: BuildOrderDocument) -> None:
+        self._document = document
+
+    @classmethod
+    def from_graph(cls, graph: Graph, task: BuildTask, before: SavedGraph | Path) -> BuildOrder:
+        """task as a worker carries it out on what graph is set to now, from before: the graph written in, or the file
+        that holds it."""
+        scope = graph.scope
+        return cls({
+            "task": task.document,
+            "folder": "" if scope.folder is None else str(scope.folder),
+            "named": None if scope.named is None else [str(path) for path in scope.named],
+            "over_whole": scope.over_whole,
+            "roots": {key: str(root) for key, root in graph.practices.roots_by_key.items()},
+            "overlays": list(graph.overlays),
+            "state": before.document if isinstance(before, SavedGraph) else None,
+            "state_file": str(before) if isinstance(before, Path) else "",
+            "modules": sorted({type(item).__module__ for item in [*graph.practices.held.values(), *graph.applied_patterns.patterns]}),
+        })
 
     @classmethod
     def from_text(cls, text: str) -> BuildOrder:
-        document = json.loads(text)
-        named = document.get("scope")
-        scope = LoadScope(
-            Path(document["folder"]) if document.get("folder") else None,
-            None if named is None else [Path(path) for path in named],
-            over_whole=bool(document.get("over_whole")),
-        )
-        embedded = document.get("state")
-        before = SavedGraph.from_document(embedded) if embedded is not None else Path(document["state_file"])
-        roots = {key: Path(root) for key, root in (document.get("roots") or {}).items()}
-        return cls(
-            BuildStep(document["step"]), scope, roots, list(document.get("overlays") or []), before, list(document.get("modules") or []),
-            bool(document.get("saves")), cls._checked_in(document.get("checked")),
-        )
+        return cls(json.loads(text))
 
-    @staticmethod
-    def _checked_in(document: dict | None) -> CheckedFiles | None:
-        return None if document is None else CheckedFiles(list(document["paths"]), Path(document["file"]))
+    @property
+    def task(self) -> BuildTask:
+        return BuildTask.from_document(self._document["task"])
+
+    @property
+    def scope(self) -> LoadScope:
+        document = self._document
+        named = document.get("named")
+        folder = Path(document["folder"]) if document.get("folder") else None
+        return LoadScope(folder, None if named is None else [Path(path) for path in named], over_whole=bool(document.get("over_whole")))
+
+    @property
+    def roots(self) -> dict[str, Path]:
+        """Each chosen practice's source root, by the practice's key."""
+        return {key: Path(root) for key, root in (self._document.get("roots") or {}).items()}
+
+    @property
+    def overlays(self) -> list[str]:
+        return list(self._document.get("overlays") or [])
+
+    @property
+    def modules(self) -> list[str]:
+        return list(self._document.get("modules") or [])
 
     @property
     def state(self) -> SavedGraph:
         """The graph before the step: the one written into the order, else the one its state file holds, read anew
         each time it is asked for, so a build that changes the graph it read leaves this one as it was."""
-        if isinstance(self._before, SavedGraph):
-            return self._before
-        return SavedGraph.from_file(self._before)
+        embedded = self._document.get("state")
+        if embedded is not None:
+            return SavedGraph.from_document(embedded)
+        return SavedGraph.from_file(Path(self._document["state_file"]))
 
     @property
     def answers_changes(self) -> bool:
         """Whether the worker answers what the step changed: for a refresh of a graph the server holds as the worker's
         last answer said, whose nodes are all plain nodes the changes can be made to."""
-        return self.step is BuildStep.REFRESH and isinstance(self._before, Path)
+        return self.task.step is BuildStep.REFRESH and self._document.get("state") is None
 
     def changes(self, built: SavedGraph) -> GraphChanges | None:
         """What the step changed in the graph it was given, when the order asks for it and the step kept the graph's
@@ -157,23 +220,7 @@ class BuildOrder:
 
     @property
     def text(self) -> str:
-        before = self._before
-        return json.dumps(
-            {
-                "step": self.step.value,
-                "folder": "" if self.scope.folder is None else str(self.scope.folder),
-                "roots": {key: str(root) for key, root in self.roots.items()},
-                "overlays": self.overlays,
-                "scope": None if self.scope.named is None else [str(path) for path in self.scope.named],
-                "over_whole": self.scope.over_whole,
-                "state": before.document if isinstance(before, SavedGraph) else None,
-                "state_file": str(before) if isinstance(before, Path) else "",
-                "modules": self.modules,
-                "saves": self.saves,
-                "checked": None if self.checked is None else self.checked.document,
-            },
-            separators=(",", ":"),
-        )
+        return json.dumps(self._document, separators=(",", ":"))
 
 
 class HeldAnswer:
@@ -218,26 +265,19 @@ class HeldAnswer:
 class WorkerBuild:
     """One order carried out by a worker process: started with this interpreter and this import path, it reports its
     progress one line at a time, which goes on to report_progress, writes the graph it built to the answer file it is
-    given, and, for a refresh the order asks it of, what it changed to a file of its own."""
+    given, and, for a refresh the order asks it of, what it changed to a file of its own. The graph the order was made
+    for holds what the worker answers."""
 
-    def __init__(self, report_progress: Callable[[str], None]) -> None:
-        self._report_progress = report_progress
+    def __init__(self, graph: Graph) -> None:
+        self._graph = graph
 
-    def carry_out(
-        self,
-        ordered: Callable[[], BuildOrder],
-        answer: Path,
-        hold: Callable[[SavedGraph], None],
-        take: Callable[[GraphChanges], None],
-    ) -> None:
-        """Make the order and write it, run the worker on it, which writes the graph it built to answer, then hold that
-        graph, or take only the changes the worker answers when it answers them; ``GraphBuildFailed`` when the worker
-        exits with an error, and then nothing is held and answer is gone. Making the order and holding the answer each
-        take the server's turn; the worker runs while other builds take theirs."""
+    def carry_out(self, ordered: Callable[[], BuildOrder], answer: Path) -> None:
+        """Make the order and write it, run the worker on it, which writes the graph it built to answer, then have the
+        graph hold that graph, or take only the changes the worker answers when it answers them; ``GraphBuildFailed``
+        when the worker exits with an error, and then nothing is held and answer is gone. Making the order and holding
+        the answer each take the server's turn; the worker runs while other builds take theirs."""
         with tempfile.TemporaryDirectory(prefix="cdd-graph-build-") as folder:
-            order_file = Path(folder) / "order.json"
-            changes_file = Path(folder) / "changes.json"
-            errors_file = Path(folder) / "errors.txt"
+            order_file, changes_file, errors_file = (Path(folder) / name for name in ("order.json", "changes.json", "errors.txt"))
             with _SERVER_TURN:
                 order_file.write_text(ordered().text, encoding="utf-8")
             with open(errors_file, "w", encoding="utf-8") as errors:
@@ -246,12 +286,30 @@ class WorkerBuild:
                 answer.unlink(missing_ok=True)
                 raise GraphBuildFailed(exit_code, errors_file.read_text(encoding="utf-8", errors="replace"))
             with _SERVER_TURN:
-                if changes_file.is_file():
-                    take(GraphChanges.from_text(changes_file.read_text(encoding="utf-8")))
-                else:
-                    hold(SavedGraph.from_file(answer))
+                self._take_answer(answer, changes_file)
 
-    def _run(self, arguments: list[str], errors) -> int:
+    def _take_answer(self, answer: Path, changes_file: Path) -> None:
+        """Have the graph take the changes the worker answered, when it answered them, else hold the graph it built."""
+        if changes_file.is_file():
+            self._take(GraphChanges.from_text(changes_file.read_text(encoding="utf-8")))
+        else:
+            self._graph.practices.hold(SavedGraph.from_file(answer), self._graph.scope.folder)
+
+    def _take(self, changes: GraphChanges) -> None:
+        """Change what the open practices hold as a worker's changes say: every practice's nodes first, then the edges,
+        which may cross practices, and the violations; then each changed practice's tree. The graph then holds what the
+        worker's whole answer says, without reading it back."""
+        held = self._graph.practices.held
+        changed = {held[key]: record for key, record in changes.practices.items() if key in held and not record.is_empty}
+        for practice, record in changed.items():
+            practice.reading.in_graph.restore.changes(record)
+        for practice, record in changed.items():
+            practice.reading.in_graph.restore.links(record)
+        for practice in changed:
+            practice.reading.in_graph.put_in_source_order()
+            practice.reading.in_graph.rebuild_tree()
+
+    def _run(self, arguments: list[str], errors: IO[str]) -> int:
         process = subprocess.Popen(
             [sys.executable, "-m", WORKER_MODULE, *arguments],
             cwd=os.getcwd(),
@@ -267,14 +325,14 @@ class WorkerBuild:
         for line in process.stdout:
             message = line.rstrip("\n")
             if message:
-                self._report_progress(message)
+                report_progress(message)
         return process.wait()
 
 
 class GraphBuild:
     """The build of one graph, which the graph makes once and keeps (``graph.build``): a load of a working copy, or of
     the saved graph that holds it, a load of the files being edited, a refresh of the files an action wrote, or a run of
-    the rules on what the graph holds. For a call the cdd server answers for a chat (``call.answers_a_chat``) a worker
+    the rules on what the graph holds. For a call the cdd server answers for a chat (``call.request.answers_a_chat``) a worker
     process carries the build out, and the graph then holds what the worker built: a build is minutes of CPU-bound
     Python, and in the server's interpreter it would keep the server from answering every other chat. The graph changes
     only once the worker answers, so a build that fails leaves it holding what it held. Any other call, or none, builds
@@ -298,11 +356,11 @@ class GraphBuild:
         saved = None if force else graph.saved_file.holding(graph.practices.roots_by_key, graph.overlays)
         if saved is not None:
             report_progress("Loading the saved graph")
-            self.run(BuildStep.CHECK, call, state=saved.of_practices(list(graph.practices.roots_by_key)))
+            self.run(BuildTask(BuildStep.CHECK), call, state=saved.of_practices(list(graph.practices.roots_by_key)))
             return GraphLoaded("Loaded the saved graph.")
         report_progress("Scanning the folder")
         graph.practices.open_chosen()
-        self.run(BuildStep.READ, call, saves=True)
+        self.run(BuildTask(BuildStep.READ, saves=True), call)
         return GraphLoaded("Loaded the working copies.")
 
     def refresh(self, paths: list[str], call: ToolCall | None, checked: CheckedFiles | None = None) -> GraphLoaded:
@@ -313,7 +371,7 @@ class GraphBuild:
         if scope.named and graph.practices.chosen:
             report_progress(f"Refreshing {len(scope.named)} files")
             graph.scope = scope
-            self.run(BuildStep.REFRESH, call, checked=checked)
+            self.run(BuildTask(BuildStep.REFRESH, checked=checked), call)
             return GraphLoaded(f"Refreshed {len(scope.named)} files.")
         if checked is not None:
             checked.write(graph)
@@ -321,20 +379,19 @@ class GraphBuild:
             return GraphLoaded("No graph is open, so nothing was refreshed.")
         return GraphLoaded("None of those files is in the graph's folder, so nothing was refreshed.")
 
-    def run(self, step: BuildStep, call: ToolCall | None, state: SavedGraph | None = None, saves: bool = False, checked: CheckedFiles | None = None) -> None:
-        """Carry step out on the graph's scope, from state when one is given, else from what the graph holds now; save
-        the graph after when saves is set, and write the checked files' nodes when checked names them. A call that
-        answers a chat has a worker process carry it out."""
-        if call is not None and call.answers_a_chat:
+    def run(self, task: BuildTask, call: ToolCall | None, state: SavedGraph | None = None) -> None:
+        """Carry task out on the graph's scope, from state when one is given, else from what the graph holds now. A call
+        that answers a chat has a worker process carry it out."""
+        if call is not None and call.request.answers_a_chat:
             answer = self._answer.next_file()
-            WorkerBuild(report_progress).carry_out(lambda: self._order(step, state, saves, checked), answer, self._hold, self.graph.practices.take)
+            WorkerBuild(self.graph).carry_out(lambda: self._order(task, state), answer)
             self._answer.keep(answer)
             return
-        with FileLines.during_build():
+        with BuildReads():
             if state is not None:
                 self._hold(state)
-            self._carry_out(step)
-            self._finish(saves, checked)
+            self._carry_out(task.step)
+            self._finish(task)
 
     def carry_out(self, order: BuildOrder) -> SavedGraph:
         """Carry order out on the graph, as a worker process does for a graph the cdd server holds, save it and write
@@ -346,29 +403,29 @@ class GraphBuild:
         graph.practices.choose({held[key]: root for key, root in order.roots.items()})
         graph.overlays = order.overlays
         graph.schema_edges.syncs = False
-        with FileLines.during_build():
+        task = order.task
+        with BuildReads():
             self._hold(order.state)
-            self._carry_out(order.step)
-            self._finish(order.saves, order.checked)
+            self._carry_out(task.step)
+            self._finish(task)
             return SavedGraph.from_graph(graph)
 
     def _hold(self, saved: SavedGraph) -> None:
         self.graph.practices.hold(saved, self.graph.scope.folder)
 
-    def _finish(self, saves: bool, checked: CheckedFiles | None) -> None:
-        if saves:
+    def _finish(self, task: BuildTask) -> None:
+        if task.saves:
             report_progress("Saving the graph")
             self.graph.save_json()
-        if checked is not None:
-            checked.write(self.graph)
+        if task.checked is not None:
+            task.checked.write(self.graph)
 
-    def _order(self, step: BuildStep, state: SavedGraph | None, saves: bool, checked: CheckedFiles | None) -> BuildOrder:
-        """step as a worker carries it out: from state when one is given, else from what the graph holds now, which
+    def _order(self, task: BuildTask, state: SavedGraph | None) -> BuildOrder:
+        """task as a worker carries it out: from state when one is given, else from what the graph holds now, which
         is the file of the worker's last answer while the graph has not changed since it took it, so the server writes
         no graph of its own."""
         graph = self.graph
-        before = state if state is not None else self._answer.file or SavedGraph.from_graph(graph)
-        return BuildOrder(step, graph.scope, graph.practices.roots_by_key, graph.overlays, before, self._registering_modules(), saves, checked)
+        return BuildOrder.from_graph(graph, task, state if state is not None else self._answer.file or SavedGraph.from_graph(graph))
 
     def _carry_out(self, step: BuildStep) -> None:
         """Run step on what the graph holds, in this process. A read fills the open practices from the working copy;
@@ -377,15 +434,51 @@ class GraphBuild:
         practice's tree. A working copy's edges are the ones its practices read; its parsed objects never add schema
         edges of their own. A check only runs the rules on what the graph holds."""
         self.changed()
-        practices = self.graph.practices
         if step is BuildStep.CHECK:
-            practices.check()
+            self._check()
             return
         self.graph.schema_edges.syncs = False
         if step is BuildStep.REFRESH:
-            practices.forget(self.graph.scope.named or [])
+            self._forget(self.graph.scope.named or [])
         self._read_working_copy()
-        practices.rebuild_trees()
+        self.graph.practices.rebuild_trees()
+
+    def _forget(self, files: list[Path]) -> None:
+        """Drop the nodes read from files in every open practice, every edge that joins one of them, and every rule's
+        findings, so a refresh reads those files again from nothing."""
+        opened = self.graph.practices.opened.values()
+        dropped: set[int] = set()
+        for practice in opened:
+            dropped |= practice.reading.in_graph.forget_files(files)
+        for practice in opened:
+            practice.reading.in_graph.edge_index.drop(lambda edge: id(edge.parent) in dropped or id(edge.child) in dropped)
+            practice.reading.in_graph.renew_rules()
+
+    def _in_reading_order(self) -> list[PracticeGuidance]:
+        """The open practices, each after the practices it reads while it reads its own."""
+        opened = self.graph.practices.opened
+        ordered: list[PracticeGuidance] = []
+
+        def place(practice: PracticeGuidance) -> None:
+            if practice in ordered:
+                return
+            for earlier in practice.reading.reads_after:
+                if earlier in opened:
+                    place(opened[earlier])
+            ordered.append(practice)
+
+        for practice in list(opened.values()):
+            place(practice)
+        return ordered
+
+    def _check(self) -> None:
+        """Put every open practice's nodes in source order, as a fresh build reads them, and run its graph rules: a rule
+        that reports the first of two nodes then reports the same node whichever build read them."""
+        opened = self.graph.practices.opened.values()
+        for practice in opened:
+            practice.reading.in_graph.put_in_source_order()
+        for practice in opened:
+            practice.reading.in_graph.rule_run.check()
 
     def _read_working_copy(self) -> None:
         """Read every open practice from the loaded folder, each after the practices it reads while it reads its own;
@@ -393,13 +486,13 @@ class GraphBuild:
         graph = self.graph
         if graph.scope.folder is None:
             return
-        practices = graph.practices.in_reading_order()
+        practices = self._in_reading_order()
         for practice in practices:
             practice.reading.read()
         for overlay in [*graph.applied_patterns.graph_overlays, *graph.applied_patterns.supplement_overlays_of(practices)]:
             overlay.read(graph)
         self._offer_overlay_types()
-        graph.practices.check()
+        self._check()
 
     def _offer_overlay_types(self) -> None:
         """Offer the overlay schemas' node and relationship types in the filter lists before rules run."""
@@ -407,9 +500,3 @@ class GraphBuild:
             overlays = list(self.graph.applied_patterns.overlays_for(practice))
             if overlays:
                 practice.reading.in_graph.rule_run.offer_overlay_types(overlays)
-
-    def _registering_modules(self) -> list[str]:
-        """The modules that define the practices the graph holds and the patterns it applies; importing them registers
-        them with their catalogues, so a worker process holds the same classes."""
-        held = [*self.graph.practices.held.values(), *self.graph.applied_patterns.patterns]
-        return sorted({type(item).__module__ for item in held})

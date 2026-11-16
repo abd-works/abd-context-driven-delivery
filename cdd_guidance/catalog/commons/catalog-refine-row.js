@@ -7,280 +7,276 @@
   'use strict';
 
   var STAGE_IDS = ['discovery', 'specification', 'implementation'];
+  // How long a column takes to collapse or expand (its CSS transition), and a little after it for the layout to settle.
   var ANIM_MS = 380;
+  var ANIM_SETTLE_MS = 40;
+  // By then an example's late content (fonts, diagrams, editors) has loaded and its height is final.
+  var CONTENT_SETTLED_MS = 1000;
+  // Monaco measures an editor only once it is visible, so show it again as the column finishes opening.
+  var EDITOR_RESHOW_MS = [460, 1000, 1600];
+  // An example is at least this tall, and at most this share of the window or this many pixels, whichever is less.
+  var EXAMPLE_MIN_HEIGHT_PX = 240;
+  var EXAMPLE_MAX_WINDOW_SHARE = 0.88;
+  var EXAMPLE_MAX_HEIGHT_PX = 1200;
+  // Room around what an example shows: a story map's scrollbar, an editor's or preview's padding, an iframe's border.
+  var STORY_MAP_ROOM_PX = 20;
+  var CONTENT_ROOM_PX = 12;
+  var IFRAME_ROOM_PX = 24;
+  // A story map shown before its zoom fits may be drawn up to this much larger than its page.
+  var STORY_MAP_MAX_FIT = 1.2;
 
-  function expandableIds(host) {
-    return STAGE_IDS.filter(function (id) {
-      return !!host.querySelector('.approach-stage-column[data-stage-id="' + id + '"]');
-    });
+  function heightCap() {
+    return Math.min(window.innerHeight * EXAMPLE_MAX_WINDOW_SHARE, EXAMPLE_MAX_HEIGHT_PX);
   }
 
-  function stageButton(host, id) {
+  /** The height a story map or framed diagram needs: its zoomed spacer once drawn, else its page fitted to the width. */
+  function storyMapHeight(storyMap) {
+    var spacer = storyMap.querySelector('.approach-stage-drawio__spacer');
+    if (spacer && spacer.offsetHeight) return spacer.offsetHeight + STORY_MAP_ROOM_PX;
+    var pageHeight = parseFloat(storyMap.dataset.pageH || '0');
+    if (!pageHeight) return 0;
+    var fit = storyMap.clientWidth > 0 ? storyMap.clientWidth / parseFloat(storyMap.dataset.pageW || pageHeight) : 1;
+    return Math.ceil(pageHeight * Math.min(fit, STORY_MAP_MAX_FIT)) + STORY_MAP_ROOM_PX;
+  }
+
+  function iframeHeight(iframe) {
+    var height = iframe.offsetHeight || parseFloat(iframe.getAttribute('height') || '0');
+    return height ? Math.min(height + IFRAME_ROOM_PX, heightCap()) : 0;
+  }
+
+  function scrolledHeight(element) {
+    return Math.min(element.scrollHeight + CONTENT_ROOM_PX, heightCap());
+  }
+
+  /** The height an example column's body needs for what it shows: a diagram, an editor, a preview, or an iframe. */
+  function exampleContentHeight(body) {
+    var heights = [EXAMPLE_MIN_HEIGHT_PX];
+    var storyMap = body.querySelector('.approach-stage-drawio--story-map, .approach-stage-drawio--framed');
+    var monaco = body.querySelector('.catalog-monaco');
+    var preview = body.querySelector('.skill-md-preview');
+    var iframe = body.querySelector('.catalog-example__frame, .catalog-example iframe');
+    if (storyMap) {
+      heights.push(storyMapHeight(storyMap));
+      if (window.catalogDrawioRefitStoryMap) window.catalogDrawioRefitStoryMap(storyMap);
+    }
+    if (monaco) heights.push(scrolledHeight(monaco));
+    if (preview) heights.push(scrolledHeight(preview));
+    if (iframe) heights.push(iframeHeight(iframe));
+    if (!storyMap && !monaco && !preview && !iframe) heights.push(scrolledHeight(body));
+    return Math.min(Math.max(Math.ceil(Math.max.apply(null, heights)), EXAMPLE_MIN_HEIGHT_PX), heightCap());
+  }
+
+  /** One refine row: its stage buttons, the example column each opens, and its rewind and play buttons. */
+  function RefineRow(host) {
+    this.host = host;
+  }
+
+  RefineRow.prototype.column = function (stageId) {
+    return this.host.querySelector('.approach-stage-column[data-stage-id="' + stageId + '"]');
+  };
+
+  RefineRow.prototype.openColumn = function () {
+    return this.host.querySelector('.approach-stage-column.is-open');
+  };
+
+  RefineRow.prototype.isOpen = function (stageId) {
+    var column = this.column(stageId);
+    return !!column && column.classList.contains('is-open');
+  };
+
+  RefineRow.prototype.button = function (stageId) {
     var found = null;
-    host.querySelectorAll('.approach-window__stage').forEach(function (btn) {
-      if (btn.getAttribute('data-stage-id') === id) found = btn;
+    this.host.querySelectorAll('.approach-window__stage').forEach(function (button) {
+      if (button.getAttribute('data-stage-id') === stageId) found = button;
     });
     return found;
-  }
+  };
 
-  function paint(host) {
-    var ids = expandableIds(host);
-    var open = 0;
-    ids.forEach(function (id) {
-      var col = host.querySelector('.approach-stage-column[data-stage-id="' + id + '"]');
-      if (col && col.classList.contains('is-open')) open += 1;
+  /** The stages this row has an example column for, in stage order. */
+  RefineRow.prototype.expandableIds = function () {
+    var row = this;
+    return STAGE_IDS.filter(function (stageId) {
+      return !!row.column(stageId);
     });
-    var back = host.querySelector('[data-refine-nav="-1"]');
-    var next = host.querySelector('[data-refine-nav="1"]');
-    if (back) back.disabled = open === 0;
-    if (next) next.disabled = ids.length === 0 || open === ids.length;
-  }
+  };
 
-  function scrollExampleColumn(col) {
-    if (window.catalogApproachStageScroll) {
-      window.catalogApproachStageScroll(col);
-    }
-  }
+  RefineRow.prototype.paint = function () {
+    var ids = this.expandableIds();
+    var openCount = ids.filter(this.isOpen, this).length;
+    var back = this.host.querySelector('[data-refine-nav="-1"]');
+    var next = this.host.querySelector('[data-refine-nav="1"]');
+    if (back) back.disabled = openCount === 0;
+    if (next) next.disabled = ids.length === 0 || openCount === ids.length;
+  };
 
-  function refreshExampleColumn(col) {
-    if (window.catalogDrawioRefreshColumn) {
-      window.catalogDrawioRefreshColumn(col);
-    }
-  }
+  RefineRow.prototype.measure = function (column) {
+    var body = column && column.querySelector('.approach-stage-column__body');
+    if (!body) return;
+    var height = exampleContentHeight(body) + 'px';
+    this.host.style.setProperty('--approach-example-h', height);
+    column.style.setProperty('--approach-example-h', height);
+  };
 
-  function showExampleEditors(col) {
-    if (!col) return;
-    col.querySelectorAll('.catalog-monaco').forEach(function (editor) {
-      if (!window.catalogMonacoShow) return;
+  RefineRow.prototype.showEditors = function (column) {
+    if (!window.catalogMonacoShow) return;
+    column.querySelectorAll('.catalog-monaco').forEach(function (editor) {
       window.catalogMonacoShow(editor);
-      [460, 1000, 1600].forEach(function (ms) {
+      EDITOR_RESHOW_MS.forEach(function (delay) {
         window.setTimeout(function () {
           window.catalogMonacoShow(editor);
-        }, ms);
+        }, delay);
       });
     });
-  }
+  };
 
-  function measureExampleHeight(host, col) {
-    if (!host || !col) return;
-    var body = col.querySelector('.approach-stage-column__body');
-    if (!body) return;
-
-    var cap = Math.min(window.innerHeight * 0.88, 1200);
-    var floor = 240;
-    var height = floor;
-
-    var storyMap = body.querySelector('.approach-stage-drawio--story-map, .approach-stage-drawio--framed');
-    if (storyMap) {
-      var spacer = storyMap.querySelector('.approach-stage-drawio__spacer');
-      var pageH = parseFloat(storyMap.dataset.pageH || '0');
-      if (spacer && spacer.offsetHeight) {
-        height = Math.max(height, spacer.offsetHeight + 20);
-      } else if (pageH) {
-        var fit = storyMap.clientWidth > 0 ? storyMap.clientWidth / parseFloat(storyMap.dataset.pageW || pageH) : 1;
-        height = Math.max(height, Math.ceil(pageH * Math.min(fit, 1.2)) + 20);
-      }
-      if (storyMap._storyMapRefit) storyMap._storyMapRefit();
-    }
-
-    var monaco = body.querySelector('.catalog-monaco');
-    if (monaco) {
-      height = Math.max(height, Math.min(monaco.scrollHeight + 12, cap));
-    }
-
-    var preview = body.querySelector('.skill-md-preview');
-    if (preview) {
-      height = Math.max(height, Math.min(preview.scrollHeight + 12, cap));
-    }
-
-    var iframeExample = body.querySelector('.catalog-example__frame, .catalog-example iframe');
-    if (iframeExample) {
-      var iframeH = iframeExample.offsetHeight || parseFloat(iframeExample.getAttribute('height') || '0');
-      if (iframeH) height = Math.max(height, Math.min(iframeH + 24, cap));
-    }
-
-    if (!storyMap && !monaco && !preview && !iframeExample) {
-      height = Math.max(height, Math.min(body.scrollHeight + 12, cap));
-    }
-
-    height = Math.min(Math.max(Math.ceil(height), floor), cap);
-    var px = height + 'px';
-    host.style.setProperty('--approach-example-h', px);
-    col.style.setProperty('--approach-example-h', px);
-  }
-
-  function afterOpen(host, col) {
-    measureExampleHeight(host, col);
-    scrollExampleColumn(col);
-    refreshExampleColumn(col);
-    showExampleEditors(col);
+  RefineRow.prototype.afterOpen = function (column) {
+    var row = this;
+    this.measure(column);
+    if (window.catalogApproachStageScroll) window.catalogApproachStageScroll(column);
+    if (window.catalogDrawioRefreshColumn) window.catalogDrawioRefreshColumn(column);
+    this.showEditors(column);
     window.requestAnimationFrame(function () {
-      measureExampleHeight(host, col);
+      row.measure(column);
     });
     window.setTimeout(function () {
-      measureExampleHeight(host, col);
-      scrollExampleColumn(col);
-    }, ANIM_MS + 40);
+      row.measure(column);
+      if (window.catalogApproachStageScroll) window.catalogApproachStageScroll(column);
+    }, ANIM_MS + ANIM_SETTLE_MS);
     window.setTimeout(function () {
-      measureExampleHeight(host, col);
-    }, 1000);
-  }
+      row.measure(column);
+    }, CONTENT_SETTLED_MS);
+  };
 
-  function setStageOpen(host, col, button, on) {
-    col.classList.toggle('is-open', on);
-    var stageId = col.getAttribute('data-stage-id');
-    var opening = host.querySelector('.approach-refine__opening[data-stage-id="' + stageId + '"]');
-    if (opening) opening.classList.toggle('is-open', on);
-    button.classList.toggle('is-active', on);
-    button.setAttribute('aria-pressed', on ? 'true' : 'false');
-    button.setAttribute('aria-expanded', on ? 'true' : 'false');
-    paint(host);
-  }
+  RefineRow.prototype.setColumnOpen = function (stageId, open) {
+    var column = this.column(stageId);
+    var button = this.button(stageId);
+    if (!column || !button) return;
+    column.classList.toggle('is-open', open);
+    var opening = this.host.querySelector('.approach-refine__opening[data-stage-id="' + stageId + '"]');
+    if (opening) opening.classList.toggle('is-open', open);
+    button.classList.toggle('is-active', open);
+    button.setAttribute('aria-pressed', open ? 'true' : 'false');
+    button.setAttribute('aria-expanded', open ? 'true' : 'false');
+    this.paint();
+  };
 
-  function closeOtherColumns(host, exceptId) {
-    expandableIds(host).forEach(function (id) {
-      if (id === exceptId) return;
-      var other = host.querySelector('.approach-stage-column[data-stage-id="' + id + '"]');
-      if (!other || !other.classList.contains('is-open')) return;
-      var otherBtn = stageButton(host, id);
-      if (otherBtn) setStageOpen(host, other, otherBtn, false);
+  RefineRow.prototype.open = function (stageId) {
+    var row = this;
+    var column = this.column(stageId);
+    if (!column) return;
+    this.expandableIds().forEach(function (otherId) {
+      if (otherId !== stageId && row.isOpen(otherId)) row.setColumnOpen(otherId, false);
     });
-  }
+    this.setColumnOpen(stageId, true);
+    this.host.classList.add('is-open');
+    this.afterOpen(column);
+  };
 
-  function openStageColumn(host, id, button) {
-    var col = host.querySelector('.approach-stage-column[data-stage-id="' + id + '"]');
-    if (!col) return;
-    closeOtherColumns(host, id);
-    setStageOpen(host, col, button, true);
-    host.classList.add('is-open');
-    afterOpen(host, col);
-  }
+  RefineRow.prototype.close = function (stageId) {
+    this.setColumnOpen(stageId, false);
+    this.host.classList.toggle('is-open', !!this.openColumn());
+    if (window.catalogApproachStageScrollAfterClose) window.catalogApproachStageScrollAfterClose(this.host);
+  };
 
-  function toggleStageColumn(host, id, button) {
-    var col = host.querySelector('.approach-stage-column[data-stage-id="' + id + '"]');
-    if (!col) return;
-
-    if (col.classList.contains('is-open')) {
-      setStageOpen(host, col, button, false);
-      host.classList.toggle('is-open', !!host.querySelector('.approach-stage-column.is-open'));
-      if (window.catalogApproachStageScrollAfterClose) {
-        window.catalogApproachStageScrollAfterClose(host);
-      }
+  /** Collapse the column that is open, then open stageId once it has collapsed; right away when none is open. */
+  RefineRow.prototype.switchTo = function (stageId) {
+    var row = this;
+    var open = this.openColumn();
+    if (!open) {
+      this.open(stageId);
       return;
     }
+    this.setColumnOpen(open.getAttribute('data-stage-id'), false);
+    this.host.classList.remove('is-open');
+    window.setTimeout(function () {
+      row.open(stageId);
+    }, ANIM_MS);
+  };
 
-    var open = host.querySelector('.approach-stage-column.is-open');
-    if (open && open !== col) {
-      var openId = open.getAttribute('data-stage-id');
-      var openBtn = stageButton(host, openId);
-      if (openBtn) setStageOpen(host, open, openBtn, false);
-      host.classList.remove('is-open');
-      window.setTimeout(function () {
-        openStageColumn(host, id, button);
-      }, ANIM_MS);
-      return;
-    }
+  RefineRow.prototype.toggle = function (stageId) {
+    if (!this.column(stageId)) return;
+    if (this.isOpen(stageId)) this.close(stageId);
+    else this.switchTo(stageId);
+  };
 
-    openStageColumn(host, id, button);
-  }
-
-  function openNext(host) {
-    if (!host) return false;
-    var ids = expandableIds(host);
-    var targetId = null;
-    for (var i = 0; i < ids.length; i += 1) {
-      var col = host.querySelector('.approach-stage-column[data-stage-id="' + ids[i] + '"]');
-      if (col && !col.classList.contains('is-open')) {
-        targetId = ids[i];
-        break;
-      }
-    }
-    if (!targetId) return false;
-
-    var open = host.querySelector('.approach-stage-column.is-open');
-    if (open) {
-      var openId = open.getAttribute('data-stage-id');
-      var openBtn = stageButton(host, openId);
-      if (openBtn) setStageOpen(host, open, openBtn, false);
-      host.classList.remove('is-open');
-      window.setTimeout(function () {
-        var button = stageButton(host, targetId);
-        if (button) openStageColumn(host, targetId, button);
-      }, ANIM_MS);
-      return true;
-    }
-
-    var button = stageButton(host, targetId);
-    if (button) openStageColumn(host, targetId, button);
+  RefineRow.prototype.openNext = function () {
+    var next = this.expandableIds().filter(function (stageId) { return !this.isOpen(stageId); }, this)[0];
+    if (!next) return false;
+    if (this.button(next)) this.switchTo(next);
     return true;
-  }
+  };
 
-  function closeLast(host) {
-    if (!host) return false;
-    var ids = expandableIds(host);
-    for (var i = ids.length - 1; i >= 0; i -= 1) {
-      var col = host.querySelector('.approach-stage-column[data-stage-id="' + ids[i] + '"]');
-      if (col && col.classList.contains('is-open')) {
-        var button = stageButton(host, ids[i]);
-        if (button) toggleStageColumn(host, ids[i], button);
-        return true;
-      }
-    }
-    return false;
-  }
+  RefineRow.prototype.closeLast = function () {
+    var last = this.expandableIds().filter(this.isOpen, this).pop();
+    if (!last) return false;
+    if (this.button(last)) this.toggle(last);
+    return true;
+  };
 
-  function setStage(host, id, on) {
-    if (!host) return false;
-    var col = host.querySelector('.approach-stage-column[data-stage-id="' + id + '"]');
-    var button = stageButton(host, id);
-    if (!col || !button) return false;
-    if (col.classList.contains('is-open') === on) {
-      if (on) afterOpen(host, col);
-      return true;
-    }
-    if (on) {
-      openStageColumn(host, id, button);
-      return true;
-    }
-    setStageOpen(host, col, button, false);
-    host.classList.toggle('is-open', !!host.querySelector('.approach-stage-column.is-open'));
-    if (window.catalogApproachStageScrollAfterClose) {
-      window.catalogApproachStageScrollAfterClose(host);
+  RefineRow.prototype.setStage = function (stageId, open) {
+    var column = this.column(stageId);
+    if (!column || !this.button(stageId)) return false;
+    if (this.isOpen(stageId) === open) {
+      if (open) this.afterOpen(column);
+    } else if (open) {
+      this.open(stageId);
+    } else {
+      this.close(stageId);
     }
     return true;
-  }
+  };
 
-  window.catalogRefineOpenNext = openNext;
-  window.catalogRefineCloseLast = closeLast;
-  window.catalogRefineSetStage = setStage;
-  window.catalogRefinePaint = paint;
-
-  function bindHost(host) {
-    host.querySelectorAll('.approach-window__stage').forEach(function (stageBtn) {
-      stageBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        if (stageBtn.classList.contains('approach-window__stage--context')) return;
-        toggleStageColumn(host, stageBtn.getAttribute('data-stage-id'), stageBtn);
+  RefineRow.prototype.listen = function () {
+    var row = this;
+    this.host.querySelectorAll('.approach-window__stage').forEach(function (stageButton) {
+      stageButton.addEventListener('click', function (event) {
+        event.preventDefault();
+        if (stageButton.classList.contains('approach-window__stage--context')) return;
+        row.toggle(stageButton.getAttribute('data-stage-id'));
       });
     });
-    host.querySelectorAll('[data-refine-nav]').forEach(function (navBtn) {
-      navBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        if (navBtn.getAttribute('data-refine-nav') === '1') openNext(host);
-        else closeLast(host);
+    this.host.querySelectorAll('[data-refine-nav]').forEach(function (navButton) {
+      navButton.addEventListener('click', function (event) {
+        event.preventDefault();
+        if (navButton.getAttribute('data-refine-nav') === '1') row.openNext();
+        else row.closeLast();
       });
     });
     if (typeof ResizeObserver !== 'undefined') {
       new ResizeObserver(function () {
-        var openCol = host.querySelector('.approach-stage-column.is-open');
-        if (openCol) measureExampleHeight(host, openCol);
-      }).observe(host);
+        var open = row.openColumn();
+        if (open) row.measure(open);
+      }).observe(this.host);
     }
-    paint(host);
+  };
+
+  // The row of each refine host, made once, so the approach page's arrow keys and its buttons act on the same row.
+  var rows = new WeakMap();
+
+  function rowOf(host) {
+    if (!rows.has(host)) rows.set(host, new RefineRow(host));
+    return rows.get(host);
   }
 
+  window.catalogRefineOpenNext = function (host) {
+    return !!host && rowOf(host).openNext();
+  };
+  window.catalogRefineCloseLast = function (host) {
+    return !!host && rowOf(host).closeLast();
+  };
+  window.catalogRefineSetStage = function (host, stageId, open) {
+    return !!host && rowOf(host).setStage(stageId, open);
+  };
+  window.catalogRefinePaint = function (host) {
+    rowOf(host).paint();
+  };
+
   function init() {
-    document.querySelectorAll('.approach-refine-row').forEach(bindHost);
+    document.querySelectorAll('.approach-refine-row').forEach(function (host) {
+      var row = rowOf(host);
+      row.listen();
+      row.paint();
+    });
   }
 
   if (document.readyState === 'loading') {

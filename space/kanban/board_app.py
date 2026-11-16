@@ -6,7 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from cdd_guidance.practices.stories.stories import Stories
-from harness.diagnostics.app import LANGUAGE_ADAPTER_FOLDER, App, AppServer
+from harness.diagnostics.app import LANGUAGE_ADAPTER_FOLDER, App, AppPackage, AppPage, AppServer, NodeScript
 from harness.installation.app_ports import AppPorts
 
 APP_FOLDER = Path(__file__).resolve().parent / "app"
@@ -19,8 +19,8 @@ STORY_UI_FOLDER = Path(__file__).resolve().parents[2] / "cdd_guidance" / "practi
 BOARD_APP_PORTS = AppPorts(APP_FOLDER / "packages" / "session-board" / "ports.json")
 
 # The board's server, which serves the CDD Kanban and the Story UI editor alike, so a chat starts it once for both.
-BOARD_SERVER = AppServer(APP_FOLDER, "packages/session-board/serve.ts", BOARD_APP_PORTS.of("board"))
-KANBAN_APP = App("Kanban", APP_FOLDER, BOARD_SERVER, imports=(LANGUAGE_ADAPTER_FOLDER,)).register()
-STORY_UI_APP = App("Story UI", STORY_UI_FOLDER, BOARD_SERVER, page="/story-map", imports=(LANGUAGE_ADAPTER_FOLDER,)).register()
+BOARD_SERVER = AppServer(NodeScript(APP_FOLDER, "packages/session-board/serve.ts"), BOARD_APP_PORTS.of("board"))
+KANBAN_APP = App("Kanban", AppPackage(APP_FOLDER, (LANGUAGE_ADAPTER_FOLDER,)), AppPage(BOARD_SERVER)).register()
+STORY_UI_APP = App("Story UI", AppPackage(STORY_UI_FOLDER, (LANGUAGE_ADAPTER_FOLDER,)), AppPage(BOARD_SERVER, "/story-map")).register()
 # The Story UI editor edits the Stories practice's files, so every Stories file the chat bar and the board show opens in it.
 Stories.editor = STORY_UI_APP

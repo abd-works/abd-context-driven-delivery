@@ -1,5 +1,20 @@
 """The abd.works engineering look canvases wear: dark surfaces, thin borders, mono uppercase labels, one orange accent."""
 
+from typing import TypedDict
+
+
+class CardLook(TypedDict):
+    """How a card is drawn: its fill, border, and text colours, its font, size, and weight, and any further css."""
+
+    fill: str
+    stroke: str
+    color: str
+    size: int
+    weight: int
+    font: str
+    extra: str
+
+
 MONO = "'JetBrains Mono', ui-monospace, monospace"
 SANS = "'Inter', system-ui, sans-serif"
 FONTS = ('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700'
@@ -8,7 +23,7 @@ FONTS = ('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=
 BACKGROUND = "#0B0B0B"
 ACCENT = "#E5531A"
 
-LOOK = {
+LOOK: dict[str, CardLook] = {
     "epic": {"fill": "#111113", "stroke": "#2A2A2A", "color": ACCENT, "size": 16, "weight": 600, "font": MONO,
              "extra": "text-transform: uppercase; letter-spacing: 0.1em; justify-content: flex-start; padding-left: 16px; "},
     "sub_epic": {"fill": ACCENT, "stroke": ACCENT, "color": BACKGROUND, "size": 13, "weight": 700, "font": MONO,

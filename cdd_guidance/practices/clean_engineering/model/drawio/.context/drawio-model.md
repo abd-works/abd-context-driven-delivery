@@ -155,7 +155,7 @@ Layout audit for an existing mxfile. It reads cells; it does not render them. Ea
 + scan_page(page: DrawioPage): list[Violation]
 	// each subclass checks its one rule here
 + violation(page: DrawioPage, message: str): Violation
-+ discover(): dict[str, type[DrawioScanner]]
++ every(): dict[str, type[DrawioScanner]]
 	// class operation
 	// every *_scanner.py beside this file, by its RULE
 + run_report(paths: list[str]): dict

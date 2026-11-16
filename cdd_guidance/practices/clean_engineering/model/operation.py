@@ -7,15 +7,13 @@ import re
 from typing import List
 
 
-def operation_body_fingerprint(body: str) -> str:
-    """Stable hash of normalized method body text (shared by Python AST and C-family parse)."""
-    normalized = re.sub(r"\s+", " ", body.strip())
-    if len(normalized) < 40:
-        return ""
-    return hashlib.sha256(normalized.encode()).hexdigest()[:24]
+# A body shorter than this, once its whitespace is collapsed, is too small for two copies of it to be a duplication.
+_MIN_FINGERPRINTED_CHARACTERS = 40
+# How many hex digits of the hash a fingerprint keeps: enough that two different bodies never share one in practice.
+_FINGERPRINT_DIGITS = 24
 
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from harness.graph.model_node import ModelChildren
 
 from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
@@ -114,6 +112,7 @@ class Operation(InvariantHolder, OoadNode):
         "is_classmethod",
         "is_property",
         "is_setter",
+        "published_as_tool",
         "body_fingerprint",
         "callees",
         "peer_private_access",
@@ -133,34 +132,24 @@ class Operation(InvariantHolder, OoadNode):
         "body_text",
     )
 
-    def __init__(
-        self,
-        name: str,
-        sequential_order: int = 0,
-        return_type: str = "",
-        description: str = "",
-        callees: List[str] | None = None,
-        parameters: List[str] | None = None,
-        **fields: object,
-    ) -> None:
-        graph = fields.pop("graph", None)
-        super().__init__(name, sequential_order, graph)
+    def __init__(self, name: str, sequential_order: int = 0, return_type: str = "") -> None:
+        super().__init__(name, sequential_order)
         self.return_type = return_type
-        self.description = description
-        self.callees: List[str] = list(callees) if callees is not None else []
+        # What it says about itself: its doc comment, or its invariant lines joined.
+        self.description = ""
+        # The operations its body calls, as written.
+        self.callees: List[str] = []
         self._parameters = ModelChildren(self, "parameters")
         self.invariants: List = []
-        self.line: int | None = None
-        self.end_line: int | None = None
-        self.line_count: int | None = None
-        self.body_fingerprint: str = ""
-        self.body = CodeBody()
-        # The source this operation spans in its file, kept once its parser reads the file.
-        self.span = SourceText("")
-        self.constructed_types: list[tuple[str, int]] = []
-        self._is_property = False
         # The class that declares it, once kept (keep_owner).
         self._declared_by = ""
+        self._start_modifiers()
+        self._start_source()
+        self._start_measures()
+
+    def _start_modifiers(self) -> None:
+        """The kind of operation it is, a plain instance operation until its parser reads otherwise."""
+        self._is_property = False
         # A property's setter, such as Python's `@total.setter`; a getter is `is_property`.
         self.is_setter = False
         self.is_static = False
@@ -168,6 +157,22 @@ class Operation(InvariantHolder, OoadNode):
         # says the same in every language.
         self.is_private = False
         self.is_classmethod = False
+        # Published as an MCP tool, such as Python's `@mcp` or `@agent_tool`: its parameters are the tool's published
+        # argument schema, which the tool's callers fill by name.
+        self.published_as_tool = False
+
+    def _start_source(self) -> None:
+        """Where it sits in its file and what its body says, empty until its parser reads the file."""
+        self.line: int | None = None
+        self.end_line: int | None = None
+        self.line_count: int | None = None
+        self.body_fingerprint: str = ""
+        self.body = CodeBody()
+        self.span = SourceText("")
+        self.constructed_types: list[tuple[str, int]] = []
+
+    def _start_measures(self) -> None:
+        """The measures the rules read from its body, each at its clean value until the body is measured."""
         self.max_control_flow_depth: int = 0
         self.has_bare_catch: bool = False
         self.swallows_exceptions: bool = False
@@ -185,10 +190,6 @@ class Operation(InvariantHolder, OoadNode):
         self.prose_comment = False
         self.bold_interaction_lines: list[int] = []
         self.bold_invariant_lines: list[int] = []
-        for key, value in fields.items():
-            setattr(self, key, value)
-        if parameters:
-            self._take_parameters(parameters)
 
     @classmethod
     def from_signature(cls, text: str) -> "Operation | None":
@@ -220,7 +221,7 @@ class Operation(InvariantHolder, OoadNode):
         """The type a reader of this operation gets back: its return type, which is a getter's property type."""
         return self.return_type
 
-    def attach(self, child, kind: str) -> None:
+    def attach(self, child: OoadNode, kind: str) -> None:
         """A parameter it takes keeps it as the operation that declares it."""
         super().attach(child, kind)
         if isinstance(child, Parameter):
@@ -245,7 +246,8 @@ class Operation(InvariantHolder, OoadNode):
     def parameters(self, parameters: List[Parameter]) -> None:
         self._parameters.refill(parameters)
 
-    def _take_parameters(self, parameters: list) -> None:
+    def take_parameters(self, parameters: list) -> None:
+        """Take its parameters as written, each a `name: Type` line or a parameter to copy."""
         from cdd_guidance.practices.clean_engineering.model.type_refs import parse_parameter
 
         taken: List[Parameter] = []
@@ -258,33 +260,45 @@ class Operation(InvariantHolder, OoadNode):
         self.parameters = taken
 
     def clone(self) -> "Operation":
-        cloned = type(self)(
-            self.name,
-            self.sequential_order,
-            return_type=self.return_type,
-            description=self.description,
-            callees=list(self.callees),
-        )
-        cloned.parameters = [parameter.clone() for parameter in self.parameters]
-        cloned.invariants = [item.clone() for item in self.invariants]
-        cloned.line = self.line
-        cloned.end_line = self.end_line
-        cloned.line_count = self.line_count
-        cloned.body_fingerprint = self.body_fingerprint
-        cloned.body = self.body
-        cloned.constructed_types = list(self.constructed_types)
-        cloned.is_property = self.is_property
-        cloned.is_setter = self.is_setter
-        cloned.is_static = self.is_static
-        cloned.is_private = self.is_private
-        cloned.is_classmethod = self.is_classmethod
-        cloned.max_control_flow_depth = self.max_control_flow_depth
-        cloned.has_bare_catch = self.has_bare_catch
-        cloned.swallows_exceptions = self.swallows_exceptions
-        cloned.unnamed_literal_numbers = list(self.unnamed_literal_numbers)
-        cloned.narrative_comment_lines = self.narrative_comment_lines
-        cloned.peer_private_access = self.peer_private_access
+        cloned = type(self)(self.name, self.sequential_order)
+        cloned._copy_from(self)
         return cloned
+
+    def _copy_from(self, source: "Operation") -> None:
+        """Become a copy of source that shares none of its lists or members."""
+        self.name = source.name
+        self.sequential_order = source.sequential_order
+        self.return_type = source.return_type
+        self.description = source.description
+        self.callees = list(source.callees)
+        self.parameters = [parameter.clone() for parameter in source.parameters]
+        self.invariants = [item.clone() for item in source.invariants]
+        self._copy_source_from(source)
+        self._copy_measures_from(source)
+
+    def _copy_source_from(self, source: "Operation") -> None:
+        """Copy where source sits in its file, its body, and its kind."""
+        self.line = source.line
+        self.end_line = source.end_line
+        self.line_count = source.line_count
+        self.body_fingerprint = source.body_fingerprint
+        self.body = source.body
+        self.constructed_types = list(source.constructed_types)
+        self.is_property = source.is_property
+        self.is_setter = source.is_setter
+        self.is_static = source.is_static
+        self.is_private = source.is_private
+        self.is_classmethod = source.is_classmethod
+        self.published_as_tool = source.published_as_tool
+
+    def _copy_measures_from(self, source: "Operation") -> None:
+        """Copy the measures the parser took of source's body."""
+        self.max_control_flow_depth = source.max_control_flow_depth
+        self.has_bare_catch = source.has_bare_catch
+        self.swallows_exceptions = source.swallows_exceptions
+        self.unnamed_literal_numbers = list(source.unnamed_literal_numbers)
+        self.narrative_comment_lines = source.narrative_comment_lines
+        self.peer_private_access = source.peer_private_access
 
     @property
     def source_lines(self) -> tuple[int, int]:
@@ -297,7 +311,7 @@ class Operation(InvariantHolder, OoadNode):
             return start, start + self.line_count - 1
         return start, start
 
-    def take_body(self, text: str, language) -> None:
+    def take_body(self, text: str, language: CodeLanguage) -> None:
         """Keep the statements its parser read, in the language they are written in, as its body."""
         self.body = CodeBody(text, language)
 
@@ -310,7 +324,7 @@ class Operation(InvariantHolder, OoadNode):
         """Fill the facts this operation's own source span carries, beyond what the parser measured."""
         span = self.span
         if not self.body_fingerprint:
-            self.body_fingerprint = _span_fingerprint(span.text)
+            self.body_fingerprint = self._span_fingerprint()
         self.io_and_domain_callees = self._delegates_io_and_domain()
         self.io_and_domain = span.mixes_io_and_domain()
         self.raises_on_empty = self.name not in _BUILDING_NAMES and span.raises_on_empty()
@@ -322,6 +336,21 @@ class Operation(InvariantHolder, OoadNode):
         bullets = span.markdown_bullet_lines()
         self.bold_interaction_lines = bullets.get("bold_interaction_lines", [])
         self.bold_invariant_lines = bullets.get("bold_invariant_lines", [])
+
+    def _span_fingerprint(self) -> str:
+        """The fingerprint of the whole source it spans, for a parser that took none of its body."""
+        normalized = re.sub(r"\s+", " ", self.span.text.strip())
+        return self._fingerprint(normalized) if normalized else ""
+
+    def take_body_fingerprint(self, body: str) -> None:
+        """Keep the fingerprint of its body text, which another operation with the same whitespace-collapsed body
+        shares; none for a body too short for two copies of it to be a duplication."""
+        normalized = re.sub(r"\s+", " ", body.strip())
+        self.body_fingerprint = self._fingerprint(normalized) if len(normalized) >= _MIN_FINGERPRINTED_CHARACTERS else ""
+
+    def _fingerprint(self, normalized: str) -> str:
+        """The hash two operations share when their whitespace-collapsed text is the same."""
+        return hashlib.sha256(normalized.encode()).hexdigest()[:_FINGERPRINT_DIGITS]
 
     def _delegates_io_and_domain(self) -> bool:
         """A long operation that calls both I/O and domain calculations does two jobs, even when it only delegates."""
@@ -335,9 +364,6 @@ class Operation(InvariantHolder, OoadNode):
         prefix = "- " if self.name.startswith("_") else ""
         return f"{prefix}{self.name}({params}){suffix}"
 
-    def render(self) -> str:
-        return self.save()
-
     def as_record(self) -> dict:
         return {
             "name": self.name,
@@ -348,31 +374,7 @@ class Operation(InvariantHolder, OoadNode):
 
     def update_self(self, source: OoadNode) -> None:
         assert isinstance(source, Operation)
-        copied = source.clone()
-        self.name = copied.name
-        self.sequential_order = copied.sequential_order
-        self.return_type = copied.return_type
-        self.description = copied.description
-        self.callees = list(copied.callees)
-        self.parameters = copied.parameters
-        self.invariants = copied.invariants
-        self.line = copied.line
-        self.end_line = copied.end_line
-        self.line_count = copied.line_count
-        self.body_fingerprint = copied.body_fingerprint
-        self.body = copied.body
-        self.constructed_types = list(copied.constructed_types)
-        self.is_property = copied.is_property
-        self.is_setter = copied.is_setter
-        self.is_static = copied.is_static
-        self.is_private = copied.is_private
-        self.is_classmethod = copied.is_classmethod
-        self.max_control_flow_depth = copied.max_control_flow_depth
-        self.has_bare_catch = copied.has_bare_catch
-        self.swallows_exceptions = copied.swallows_exceptions
-        self.unnamed_literal_numbers = list(copied.unnamed_literal_numbers)
-        self.narrative_comment_lines = copied.narrative_comment_lines
-        self.peer_private_access = copied.peer_private_access
+        self._copy_from(source)
 
     def load_parameter(self, source: Parameter) -> Parameter:
         return type(self.parameters[0])(source.name, source.sequential_order, source.type_hint) if self.parameters else Parameter(
@@ -384,7 +386,3 @@ class Operation(InvariantHolder, OoadNode):
         if source.parameters:
             self._parameters.reconcile(source.parameters, self.load_parameter)
 
-
-def _span_fingerprint(source_span: str) -> str:
-    normalized = re.sub(r"\s+", " ", source_span.strip())
-    return hashlib.sha256(normalized.encode()).hexdigest()[:24] if normalized else ""

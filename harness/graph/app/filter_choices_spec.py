@@ -2,6 +2,7 @@
 from expects import equal, expect
 from mamba import before, description, it
 
+import cdd_guidance.practices  # noqa: F401 - registers the practices the fixture names with the practice catalogue
 from harness.graph.app.filter_choices_record import read, recorded
 
 with description("the filter answers the explorer is tested against"):

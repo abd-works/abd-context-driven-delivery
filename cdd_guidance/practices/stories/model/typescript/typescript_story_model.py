@@ -10,7 +10,7 @@ from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT,
 from cdd_guidance.practices.stories.model.brace_story import BraceStoryModel, BraceStoryWriting
 from cdd_guidance.practices.stories.model.brace_story_file import BraceStoryFile
 from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel
-from cdd_guidance.practices.stories.model.typescript.screen_spec_file import SCREEN_SPEC_SUFFIX, ScreenSpecFile
+from cdd_guidance.practices.stories.model.typescript.screen_spec_file import SCREEN_SPEC_SUFFIX, is_screen_spec
 from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptEpic, TypeScriptStory, _story_test_text
 
 
@@ -72,13 +72,13 @@ class TypeScriptStoryModel(BraceStoryModel):
     def story_file(self, content: str) -> BraceStoryFile | None:
         """The story file content is, read block by block; none for a screen spec, whose stories its story type reads
         from its describes and tests."""
-        return None if ScreenSpecFile.holds(content) else super().story_file(content)
+        return None if is_screen_spec(content) else super().story_file(content)
 
     def save(self) -> Dict[str, str]:
         # WHY: a tree read from TypeScript already brings its own story-test helper; only a new tree needs the seed.
         seed_path = self.story_test_file_path
-        seed = {} if self.read_from_code() else {seed_path: _story_test_text(self.tests_root)}
-        return self.write_epics(seed)
+        seed = {} if self.read_from_code else {seed_path: _story_test_text(self.tests_root)}
+        return self._write_epics(seed)
 
     def copy_of(self, source: Optional[StoryModel]) -> "TypeScriptStoryModel":
         return type(self)(source, tests_root=self.tests_root, story_test_folder=self._story_test_folder)
@@ -88,9 +88,9 @@ class TypeScriptStoryModel(BraceStoryModel):
         """How TypeScript writes this model's story files, importing the helpers from its step library folder."""
         return TypeScriptStoryWriting(self.language, self.story_test_import_path)
 
-    def folder_files(self, epic: Epic, folder: str, files: Dict[str, str]) -> None:
+    def _folder_files(self, epic: Epic, folder: str, files: Dict[str, str]) -> None:
         """A new epic folder starts with example aggregates; a folder read from code already has its own."""
-        if self.read_from_code():
+        if self.read_from_code:
             return
         name, text = epic.examples_file()
         files.setdefault(f"{folder}/examples/{name}", text)

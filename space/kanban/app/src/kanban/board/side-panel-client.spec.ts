@@ -4,7 +4,8 @@ import type { ReportRuleData } from '@cdd/space/kanban/ticket'
 import { practicesOf, shownTabs } from '@src/kanban/ticket/files-panel-client'
 import { BoardOnProject, ticketOn as shownTicket } from 'test-utils/board-page-support'
 import type { FidelityProgressClient } from '@src/kanban/ticket/fidelity-progress-client'
-import type { FilesByFidelity, TicketClient } from '@src/kanban/ticket/ticket-client'
+import type { TicketClient } from '@src/kanban/ticket/ticket-client'
+import type { FilesByFidelity } from '@src/kanban/ticket/ticket-work'
 
 import type { BoardPage } from './board-page'
 import type { FilesPanel, ReportPanel } from '../shared/board-store'
@@ -35,7 +36,7 @@ const reportPanel = (page: BoardPage) => page.store.state.panels.find(panel => p
 const ticketOn = (page: BoardPage): TicketClient => shownTicket(page, TICKET)
 
 // The ticket's progress on its story map, whose report and files the panels show.
-const storyMapOn = (page: BoardPage): FidelityProgressClient => ticketOn(page).progressNamed(SLUG)!
+const storyMapOn = (page: BoardPage): FidelityProgressClient => ticketOn(page).work.progressNamed(SLUG)!
 
 // A ticket the page still holds after the board stopped showing it: its tools name a ticket the board does not have.
 const goneTicket = (page: BoardPage, name: string): TicketClient => {
@@ -78,13 +79,16 @@ describe('List Ticket Files', () => {
     expect(shownTabs(filesPanel(page)).map(tab => [tab.path, tab.exists])).toEqual([
       ['.context/story-map.md', true],
       ['.context/story-map.drawio', false],
+      ['.context/story-map.whiteboard', false],
+      ['.context/thin-slice.md', false],
+      ['.context/thin-slice.drawio', false],
     ])
   })
 
   it('should show the files of no other practice', async () => {
     const { page } = await board.page()
     await page.files.openFiles(ticketOn(page), [storyMapOn(page)])
-    expect(shownTabs(filesPanel(page)).map(tab => tab.practice)).toEqual(['stories', 'stories'])
+    expect(new Set(shownTabs(filesPanel(page)).map(tab => tab.practice))).toEqual(new Set(['stories']))
   })
 
   it('should show only the changed files while the changed filter is on', () => {
@@ -99,7 +103,7 @@ describe('List Ticket Files', () => {
     async function refused() {
       const { page } = await board.page()
       const gone = goneTicket(page, 'no-such-ticket')
-      await page.files.openFiles(gone, [gone.progressNamed(SLUG)!])
+      await page.files.openFiles(gone, [gone.work.progressNamed(SLUG)!])
       return page
     }
 
@@ -138,7 +142,7 @@ describe('Browse Ticket Files By Practice', () => {
 describe("Browse Ticket's Session Folder", () => {
   it('should show every file in the session folder as a tab', async () => {
     const { page } = await board.page()
-    await page.files.openSessionFolder(ticketOn(page))
+    await page.files.openFolder(ticketOn(page), 'session')
     expect(pathsOf(filesPanel(page))).toContain(REPORT_PATH)
   })
 
@@ -148,7 +152,7 @@ describe("Browse Ticket's Session Folder", () => {
     async function opened() {
       board.write(HANDOFF, '# Handoff\n')
       const { page } = await board.page()
-      await page.files.openSessionFile(ticketOn(page), HANDOFF)
+      await page.files.openFolder(ticketOn(page), 'session', HANDOFF)
       return page
     }
 
@@ -185,7 +189,7 @@ describe('View Fidelity Files', () => {
     async function opened() {
       board.write('src/other.py', 'x\n')
       const { page } = await board.page()
-      await page.files.openFileAtLine(ticketOn(page), storyMapOn(page), 'src/other.py', FAILING_LINE)
+      await page.files.openFileAtLine(ticketOn(page), storyMapOn(page), { path: 'src/other.py', line: FAILING_LINE })
       return page
     }
 
@@ -203,7 +207,7 @@ describe('Add Comment To File Selection', () => {
   async function commented() {
     const { page } = await board.page()
     await page.files.openFiles(ticketOn(page), [storyMapOn(page)])
-    await page.files.addComment(3, 3, 'name the payment step after what the person does')
+    await page.files.comments.add(3, 3, 'name the payment step after what the person does')
     return page
   }
 
@@ -213,7 +217,7 @@ describe('Add Comment To File Selection', () => {
 
   it('should take the comment away once deleted', async () => {
     const page = await commented()
-    await page.files.removeComment('.context/story-map.md:L3-L3')
+    await page.files.comments.remove('.context/story-map.md:L3-L3')
     expect(filesPanel(page).shown?.comments).toEqual([])
   })
 })
@@ -222,7 +226,7 @@ describe('Save Edited File', () => {
   it('should show the file as saved', async () => {
     board.write('src/other.py', 'x\n')
     const { page } = await board.page()
-    await page.files.openFileAtLine(ticketOn(page), storyMapOn(page), 'src/other.py', 1)
+    await page.files.openFileAtLine(ticketOn(page), storyMapOn(page), { path: 'src/other.py', line: 1 })
     await page.files.save('y\n')
     expect(filesPanel(page).shown?.text).toBe('y\n')
   })
@@ -254,7 +258,7 @@ describe('Open Validation Report', () => {
     it('should send its fidelity to validate again', async () => {
       const { page } = await board.page()
       const chat = await board.connectChat(page)
-      await ticketOn(page).validateAgain(storyMapOn(page))
+      await ticketOn(page).prompts.validateAgain(storyMapOn(page))
       expect(await chat.checkIn()).toEqual([{ kind: 'command', text: `/actions-validate ${SLUG} ${SESSION}` }])
     })
   })

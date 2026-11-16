@@ -14,5 +14,5 @@ class ServerHealth:
     @property
     @data_field
     def apps(self) -> list[App]:
-        # -> App.registered
+        # -> APPS.registered
         ...

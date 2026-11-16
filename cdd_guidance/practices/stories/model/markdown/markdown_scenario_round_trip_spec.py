@@ -124,10 +124,10 @@ def _unread_story():
 
     story = MarkdownStory("Submit Order", 1)
     background = Background("a filled cart", 1)
-    background.steps = [Step("a cart with a lamp", StepType.GIVEN, 1, keyword="Given")]
+    background.steps = [Step("a cart with a lamp", StepType.GIVEN, 1)]
     story.backgrounds.append(background)
     scenario = MarkdownScenario("Pay for the order", 1)
-    scenario.steps = [Step("the customer pays", StepType.WHEN, 1, keyword="When"), Step("the order is placed", StepType.THEN, 2, keyword="Then")]
+    scenario.steps = [Step("the customer pays", StepType.WHEN, 1), Step("the order is placed", StepType.THEN, 2)]
     scenario.examples["lamp order"] = {"total": "20"}
     story.scenarios.append(scenario)
     return story

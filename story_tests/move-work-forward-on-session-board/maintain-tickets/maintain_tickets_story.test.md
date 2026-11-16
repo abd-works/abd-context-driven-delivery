@@ -259,7 +259,7 @@ Evidence gap: the source does not say what becomes of a deleted ticket's branch 
 Board.ticket("pet-visits")
   <- pet-visits
 pet-visits.delete()
-  -> self.session.remove()
+  -> self.session.folder.remove()
   <- the board without pet-visits
 ```
 

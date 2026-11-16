@@ -5,6 +5,7 @@
 # session: practices/agent_bdd/.agent_bdd_sessions/generate-action-example.json
 """Example — helpers: read → run_toolset → follow → ai_judge."""
 from cdd_guidance.practices.agent_bdd.agent import agent
+from cdd_guidance.practices.agent_bdd.agent_bdd_common import ToolsetRequest
 from cdd_guidance.practices.agent_bdd.spec_helpers import (
     expect_instructions_contain,
     expect_ok_action,
@@ -25,11 +26,10 @@ with description("a CarChronicle generator"):
                 )
 
                 response = run.run_toolset(
-                    toolset=(
-                        "cdd_guidance.builders.create_practice_guidance._examples."
-                        "car_chronicle.car_chronicle:CarChronicle"
+                    ToolsetRequest(
+                        "cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle",
+                        action="generate",
                     ),
-                    action="generate",
                     timeout_seconds=120,
                 )
                 expect_ok_action(response, "generate")

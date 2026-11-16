@@ -2,7 +2,13 @@ const fs = require("fs");
 const path = require("path");
 
 const NOTICE = ".cursor/prompt-notify-toast.json";
+// How often the notice files are read again: often enough that a toast shows while the call it names is still running.
+const POLL_INTERVAL_MS = 300;
 
+/**
+ * The message a notice file holds; empty while the file holds no notice. The notifier writes the file whole, but a
+ * read can land on it half written, which is no notice yet: the next poll reads it again.
+ */
 function messageFromNotice(raw) {
   let body;
   try {
@@ -17,85 +23,89 @@ function noticePath(folder) {
   return path.join(folder, NOTICE);
 }
 
-function remember(io, file, seen) {
-  try {
-    seen.set(file, io.readFileSync(file, "utf8"));
-  } catch {
-    seen.delete(file);
-  }
-}
-
 /**
- * Poll notice file contents. fs.watchFile is process-global per path: the
- * first caller keeps its interval, and VS Code's suspended watcher uses
- * 5007ms, so a later watchFile misses a rewrite until that poll. Reading
- * the file on our own timer does not join that StatWatcher.
+ * Polls the notice file of each workspace folder and hands each new message to onMessage. fs.watchFile is
+ * process-global per path: the first caller keeps its interval, and VS Code's suspended watcher uses 5007ms, so a
+ * later watchFile misses a rewrite until that poll. Reading the file on our own timer does not join that StatWatcher.
  */
-function createNoticeWatcher(options) {
-  const seen = options.seen || new Map();
-  const io = options.fs || fs;
-  const intervalMs = options.intervalMs || 300;
-  const files = new Set();
-  let pending = false;
+class NoticeWatcher {
+  constructor(watching) {
+    this.folders = watching.folders;
+    this.onMessage = watching.onMessage;
+    this.seen = watching.seen || new Map();
+    this.fileSystem = watching.fs || fs;
+    this.intervalMs = watching.intervalMs || POLL_INTERVAL_MS;
+    this.files = new Set();
+    this.pending = false;
+  }
 
-  function sync() {
-    files.clear();
-    for (const folder of options.folders() || []) {
-      files.add(noticePath(folder));
+  start() {
+    this.sync();
+    for (const file of this.files) {
+      this.remember(file);
+    }
+    this.timer = setInterval(() => this.poll(), this.intervalMs);
+    return { sync: () => this.sync(), dispose: () => clearInterval(this.timer) };
+  }
+
+  sync() {
+    this.files.clear();
+    for (const folder of this.folders() || []) {
+      this.files.add(noticePath(folder));
     }
   }
 
-  function deliver(file, raw) {
-    if (seen.get(file) === raw) {
+  /** What each file holds when watching starts, so a notice already there is not shown again. */
+  remember(file) {
+    try {
+      this.seen.set(file, this.fileSystem.readFileSync(file, "utf8"));
+    } catch {
+      this.seen.delete(file);
+    }
+  }
+
+  poll() {
+    this.sync();
+    const current = [...this.files];
+    if (this.pending || current.length === 0) {
+      return;
+    }
+    this.pending = true;
+    let left = current.length;
+    for (const file of current) {
+      this.fileSystem.readFile(file, "utf8", (err, raw) => {
+        left -= 1;
+        this.pending = left !== 0;
+        this.read(file, err, raw);
+      });
+    }
+  }
+
+  read(file, err, raw) {
+    if (!err) {
+      this.deliver(file, raw);
+      return;
+    }
+    if (err.code === "ENOENT") {
+      this.seen.delete(file);
+    }
+  }
+
+  deliver(file, raw) {
+    if (this.seen.get(file) === raw) {
       return;
     }
     const message = messageFromNotice(raw);
     if (!message) {
       return;
     }
-    seen.set(file, raw);
-    options.onMessage(message, file);
+    this.seen.set(file, raw);
+    this.onMessage(message, file);
   }
+}
 
-  sync();
-  for (const file of files) {
-    remember(io, file, seen);
-  }
-
-  const timer = setInterval(() => {
-    sync();
-    if (pending) {
-      return;
-    }
-    const current = [...files];
-    if (current.length === 0) {
-      return;
-    }
-    pending = true;
-    let left = current.length;
-    for (const file of current) {
-      io.readFile(file, "utf8", (err, raw) => {
-        left -= 1;
-        if (left === 0) {
-          pending = false;
-        }
-        if (err) {
-          if (err.code === "ENOENT") {
-            seen.delete(file);
-          }
-          return;
-        }
-        deliver(file, raw);
-      });
-    }
-  }, intervalMs);
-
-  return {
-    sync,
-    dispose() {
-      clearInterval(timer);
-    },
-  };
+function createNoticeWatcher(watching) {
+  return new NoticeWatcher(watching).start();
 }
 
 module.exports = {

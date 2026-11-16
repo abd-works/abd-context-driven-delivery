@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from harness.graph.practice_rule import PracticeGraphRule
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
+    from harness.graph.rule_context import RuleCheckContext
 
 
 class NodeRepositoryParsesOnRead(PracticeGraphRule):
@@ -14,7 +20,7 @@ class NodeRepositoryParsesOnRead(PracticeGraphRule):
     slug = "node-repository-parses-on-read"
     node_types = ("NodeRoot",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         messages: list[str] = []
         for repository in node.get_fact("node_repositories", []):
             name = repository["name"]
@@ -37,7 +43,7 @@ class PostedBodyParsedInNode(PracticeGraphRule):
     slug = "posted-body-parsed-in-node"
     node_types = ("Route", "NodeRoot", "Aggregate")
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         if node.type == "Aggregate":
             return [
                 f"{relative}:{line}: `{code}` in the framework-free core; the node reads the request and hands the core plain values."
@@ -60,7 +66,7 @@ class ThrowHttpExceptions(PracticeGraphRule):
     slug = "throw-http-exceptions"
     node_types = ("Route", "NodeRoot")
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         return [
             f"{node.source.file}:{line}: `{found}` throws an ad hoc value; throw an `HttpException`."
             for line, found in node.get_fact("ad_hoc_throws", [])
@@ -76,7 +82,7 @@ class OneHomeForWebPaths(PracticeGraphRule):
     slug = "one-home-for-web-paths"
     node_types = ("Aggregate",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         return [
             f"{relative}:{line}: web path {path!r} is a literal; import it from the aggregate's `*-paths.ts` module."
             for relative, line, path in node.get_fact("web_path_literals", [])
@@ -92,7 +98,7 @@ class ResetEveryRepository(PracticeGraphRule):
     slug = "reset-every-repository"
     node_types = ("Repository", "NodeRoot")
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         return [
             f"`{instance}` ({class_name}) is never reset by the test setup; add it to the repositories every story resets."
             for instance, class_name in node.get_fact("unreset_instances", [])

@@ -8,6 +8,7 @@ from harness.graph.violation import Violation
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import (
     DrawioPage,
     class_title_in,
+    quoted_title,
 )
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
@@ -25,7 +26,7 @@ class StereotypeAboveClassNameScanner(DrawioScanner):
                 violations.append(self.violation(
                     page,
                     "Stereotype sits on the same line as the class name inside <b>: "
-                    f"{re.sub(r'<[^>]+>', '', title)[:80]!r}",
+                    f"{quoted_title(title)!r}",
                 ))
         return violations
 

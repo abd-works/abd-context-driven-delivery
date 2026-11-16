@@ -8,7 +8,7 @@ import os
 import re
 from pathlib import Path
 
-from harness.process.claude_chat_process import is_desktop_spare
+from harness.process.claude_chat_process import claude_config_folder, is_desktop_spare
 
 
 # A chat id becomes part of a file pattern, so only the letters, digits, and dashes of an id may reach it.
@@ -28,6 +28,8 @@ _FOLDER_SEARCH_BYTES = 256 * 1024
 _ID_ARGUMENTS = ("conversation_id", "_conversation_id")
 _TRANSCRIPT_ARGUMENTS = ("transcript_path", "agent_transcript_path", "_transcript_path")
 _LINES_ARGUMENTS = ("transcript_lines", "_transcript_lines")
+# A value a JSON transcript event holds.
+type JsonValue = str | int | float | bool | None | list[JsonValue] | dict[str, JsonValue]
 
 
 # Each chat's transcript as found under a Claude projects folder: a chat's transcript stays where it was made, so it is
@@ -43,19 +45,20 @@ class ChatPointer:
     of transcript lines, such as ``1-40``, that the line covers. A chat the server cannot name is written ``no-chat``.
     """
 
-    def __init__(self, id: str, transcript: Path | None = None, lines: str = "", counts_lines: bool = False) -> None:
-        self.id = id
+    def __init__(self, chat_id: str, transcript: Path | None = None, lines: str | None = "") -> None:
+        """lines is the range of transcript lines the pointer covers; ``None`` for every line of the transcript so far,
+        counted the first time they are asked for."""
+        self.id = chat_id
         self.transcript = Path(transcript) if transcript is not None else None
-        self._lines = lines
         # A pointer to every line so far counts them only when asked: a transcript can be tens of megabytes, and the
         # server names the chat of every call, a chat's check-in every second among them, but writes few log lines.
-        self._counts_lines = counts_lines
+        self._lines = lines
 
     @property
     def lines(self) -> str:
         """The range of transcript lines this pointer covers, such as ``1-40``."""
-        if not self._lines and self._counts_lines and self.transcript is not None:
-            self._lines = self._all_lines_of(self.transcript)
+        if self._lines is None:
+            self._lines = self._all_lines() if self.transcript is not None else ""
         return self._lines
 
     @classmethod
@@ -67,29 +70,29 @@ class ChatPointer:
         if not chat_id or not transcript:
             return None
         given = (lines or "").strip()
-        return cls(chat_id, Path(transcript), given, counts_lines=not given)
+        return cls(chat_id, Path(transcript), given or None)
 
     @classmethod
     def taken_from(cls, arguments: dict[str, object] | None) -> tuple[ChatPointer | None, dict[str, object]]:
         """The chat a tool call names in its arguments, and the arguments left for the tool itself. A Claude Code chat
         sends only its id, so its transcript is found by that id; a chat whose transcript cannot be found points at
         ``unknown``."""
-        remaining = dict(arguments or {})
-        chat_id = cls._taken(remaining, _ID_ARGUMENTS)
-        transcript = cls._taken(remaining, _TRANSCRIPT_ARGUMENTS)
-        lines = cls._taken(remaining, _LINES_ARGUMENTS)
+        sent = _SentArguments(arguments)
+        chat_id = sent.taken(_ID_ARGUMENTS)
+        transcript = sent.taken(_TRANSCRIPT_ARGUMENTS)
+        lines = sent.taken(_LINES_ARGUMENTS)
         if not chat_id and not transcript:
-            return None, remaining
+            return None, sent.remaining
         if not transcript:
             found = cls.from_claude_chat(chat_id)
             transcript = str(found.transcript) if found is not None else "unknown"
-        return cls.of(chat_id or "unknown", transcript, lines), remaining
+        return cls.of(chat_id or "unknown", transcript, lines), sent.remaining
 
     @classmethod
     def from_claude_chat(cls, chat_id: str) -> ChatPointer | None:
         """A Claude Code chat's pointer, found by its id alone: its transcript is the file named for that id under the
         Claude projects folder, in the folder of the project the chat started in. None when no such transcript is there."""
-        found = cls._claude_transcript(chat_id)
+        found = _ClaudeProjects().transcript_of(chat_id)
         return cls.of(chat_id, found) if found is not None else None
 
     @classmethod
@@ -105,7 +108,7 @@ class ChatPointer:
     def from_claude_session(cls, chat_id: str) -> ChatPointer | None:
         """A Claude Code chat's pointer with its transcript found but not counted: enough to read the folder the chat
         works in, on every call, without reading a long transcript whole. None when no such transcript is there."""
-        found = cls._claude_transcript(chat_id)
+        found = _ClaudeProjects().transcript_of(chat_id)
         return cls(chat_id, found) if found is not None else None
 
     @property
@@ -130,23 +133,10 @@ class ChatPointer:
             transcript.seek(max(0, transcript.tell() - _FOLDER_SEARCH_BYTES))
             return transcript.read().decode("utf-8", errors="replace")
 
-    @staticmethod
-    def _checkout_holding(folder: Path) -> Path:
+    def _checkout_holding(self, folder: Path) -> Path:
+        """The checkout holding folder, the folder the chat recorded last: the folder itself when no checkout holds it."""
         resolved = folder.resolve()
         return next((above for above in (resolved, *resolved.parents) if (above / ".git").exists()), resolved)
-
-    @staticmethod
-    def _claude_transcript(chat_id: str) -> Path | None:
-        if not _CHAT_ID.fullmatch(chat_id or ""):
-            return None
-        projects = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude") / "projects"
-        held = _FOUND_TRANSCRIPTS.get((projects, chat_id))
-        if held is not None and held.is_file():
-            return held
-        found = next(projects.glob(f"*/{chat_id}.jsonl"), None) if projects.is_dir() else None
-        if found is not None:
-            _FOUND_TRANSCRIPTS[(projects, chat_id)] = found
-        return found
 
     @classmethod
     def in_log_line(cls, line: str) -> ChatPointer | None:
@@ -188,7 +178,7 @@ class ChatPointer:
             formatted = [
                 piece
                 for index in range(start - 1, min(end, len(raw)))
-                if (piece := self._event_text(raw[index], index + 1))
+                if (piece := _TranscriptEvent(raw[index], index + 1).text)
             ]
             return formatted or [f"(empty transcript slice {self.lines} in {path})"]
         return raw[start - 1 : end] or [f"(empty transcript slice {self.lines} in {path})"]
@@ -207,48 +197,82 @@ class ChatPointer:
     def __hash__(self) -> int:
         return hash(str(self))
 
-    @staticmethod
-    def _taken(arguments: dict[str, object], names: tuple[str, ...]) -> str:
-        found = ""
-        for name in names:
-            value = str(arguments.pop(name, "") or "").strip()
-            found = found or value
-        return found
-
-    @staticmethod
-    def _all_lines_of(path: Path) -> str:
-        """The range of every line of the file so far, counted as bytes, so a long transcript is never decoded for it."""
-        if not path.is_file():
+    def _all_lines(self) -> str:
+        """The range of every line of the transcript so far, counted as bytes, so a long transcript is never decoded
+        for it."""
+        if not self.transcript.is_file():
             return "1"
-        body = path.read_bytes()
+        body = self.transcript.read_bytes()
         count = body.count(b"\n") + (1 if body and not body.endswith(b"\n") else 0)
         return f"1-{count}" if count > 1 else "1"
 
-    @staticmethod
-    def _event_text(line: str, line_no: int) -> str:
-        stripped = line.strip()
-        if not stripped:
+
+class _SentArguments:
+    """The arguments a tool call sent, from which the names of its chat are taken, leaving the tool's own."""
+
+    def __init__(self, arguments: dict[str, object] | None) -> None:
+        self.remaining = dict(arguments or {})
+
+    def taken(self, names: tuple[str, ...]) -> str:
+        """The first of names the arguments give a value, each of names taken out of them."""
+        found = ""
+        for name in names:
+            value = str(self.remaining.pop(name, "") or "").strip()
+            found = found or value
+        return found
+
+
+class _ClaudeProjects:
+    """The Claude projects folder, where Claude Code keeps each chat's transcript, named for the chat's id, in the
+    folder of the project the chat started in."""
+
+    def __init__(self) -> None:
+        self._folder = claude_config_folder() / "projects"
+
+    def transcript_of(self, chat_id: str) -> Path | None:
+        """The transcript of the chat chat_id names; none when the id is not a chat id or no such transcript is there."""
+        if not _CHAT_ID.fullmatch(chat_id or ""):
+            return None
+        held = _FOUND_TRANSCRIPTS.get((self._folder, chat_id))
+        if held is not None and held.is_file():
+            return held
+        found = next(self._folder.glob(f"*/{chat_id}.jsonl"), None) if self._folder.is_dir() else None
+        if found is not None:
+            _FOUND_TRANSCRIPTS[(self._folder, chat_id)] = found
+        return found
+
+
+class _TranscriptEvent:
+    """One line of a JSONL transcript, as a reader of the log reads it: the role of the event and the text it says."""
+
+    def __init__(self, line: str, line_number: int) -> None:
+        self._line = line.strip()
+        self._line_number = line_number
+
+    @property
+    def text(self) -> str:
+        """The event's role and text, headed by its line number; the line as it is when it is not JSON, and empty for
+        a blank line."""
+        if not self._line:
             return ""
         try:
-            event = json.loads(stripped)
+            event = json.loads(self._line)
         except json.JSONDecodeError:
-            return f"L{line_no}: {stripped}"
+            return f"L{self._line_number}: {self._line}"
         role = str(event.get("role") or "event")
-        message = event.get("message")
-        texts: list[str] = []
-        if isinstance(message, dict):
-            content = message.get("content")
-            if isinstance(content, list):
-                texts.extend(
-                    str(part.get("text") or "")
-                    for part in content
-                    if isinstance(part, dict) and part.get("type") == "text"
-                )
-            elif isinstance(content, str):
-                texts.append(content)
-        body = "\n".join(texts).strip() or stripped
-        return f"L{line_no} [{role}]\n{body}"
+        body = "\n".join(self._texts_of(event.get("message"))).strip() or self._line
+        return f"L{self._line_number} [{role}]\n{body}"
 
+    def _texts_of(self, message: JsonValue) -> list[str]:
+        """The text parts of an event's message: its text content parts, or its content when that is text alone."""
+        if not isinstance(message, dict):
+            return []
+        content = message.get("content")
+        if isinstance(content, str):
+            return [content]
+        if not isinstance(content, list):
+            return []
+        return [str(part.get("text") or "") for part in content if isinstance(part, dict) and part.get("type") == "text"]
 
 # A log line from a chat the server cannot name ends with "no-chat" in place of the chat's id, transcript, and lines.
 NO_CHAT = ChatPointer("no-chat")

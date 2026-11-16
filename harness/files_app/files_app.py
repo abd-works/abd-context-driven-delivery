@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from harness.diagnostics.app import LANGUAGE_ADAPTER_FOLDER, App, AppServer
+from harness.diagnostics.app import LANGUAGE_ADAPTER_FOLDER, App, AppPackage, AppPage, AppServer, NodeScript
 from harness.installation.app_ports import AppPorts
 
 FILES_APP_FOLDER = Path(__file__).resolve().parent / "app"
@@ -16,5 +16,5 @@ SOURCE_VIEW_FOLDER = Path(__file__).resolve().parents[1] / "graph" / "app" / "so
 # the same file, so the port is written once.
 FILES_APP_PORTS = AppPorts(FILES_APP_FOLDER / "ports.json")
 
-FILES_SERVER = AppServer(FILES_APP_FOLDER, "serve.ts", FILES_APP_PORTS.of("files"))
-FILES_APP = App("Files", FILES_APP_FOLDER, FILES_SERVER, imports=(LANGUAGE_ADAPTER_FOLDER, SOURCE_VIEW_FOLDER)).register()
+FILES_SERVER = AppServer(NodeScript(FILES_APP_FOLDER, "serve.ts"), FILES_APP_PORTS.of("files"))
+FILES_APP = App("Files", AppPackage(FILES_APP_FOLDER, (LANGUAGE_ADAPTER_FOLDER, SOURCE_VIEW_FOLDER)), AppPage(FILES_SERVER)).register()

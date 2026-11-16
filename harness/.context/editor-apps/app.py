@@ -68,7 +68,7 @@ class App:
 
     def register(self) -> App:
         # registering a label again replaces the earlier app rather than listing it twice
-        # -> App.registered
+        # -> APPS.registered
         ...
 
     @classmethod
@@ -79,7 +79,7 @@ class App:
     @tool_subject
     def load(cls, app: str, *, project: Path) -> App:
         # a label no module registered is refused with AppNotRegistered
-        # -> App.registered
+        # -> APPS.registered
         ...
 
     @property

@@ -14,6 +14,7 @@ from harness.graph.graph import Graph
 
 from cdd_guidance.practices.ux.model.nodes import Control, Interaction, Region, Screen, Transition
 from cdd_guidance.practices.ux.model.ux_map import ScreenNotOnMap, UxMap
+from cdd_guidance.practices.ux.model.ux_map_spec_fixture import made
 
 
 def edge_pairs(graph, kind):
@@ -69,9 +70,9 @@ with description("a ux map on a graph"):
 
     with context("with a screen that holds regions, controls, and interactions"):
         with before.each:
-            self.list_region = Region("product list", 0, "body")
-            self.browse = Control("Browse", 0, "button")
-            self.open_cart = Interaction("open cart", 0, "click")
+            self.list_region = made(Region, "product list", 0, area="body")
+            self.browse = made(Control, "Browse", 0, control_type="button")
+            self.open_cart = made(Interaction, "open cart", 0, trigger="click")
             self.browse.append_interaction(self.open_cart)
             self.list_region.append_control(self.browse)
             self.catalog.append_region(self.list_region)
@@ -100,7 +101,7 @@ with description("a ux map on a graph"):
         with before.each:
             self.cart = Screen("Cart", 1)
             self.ux_map.append_screen(self.cart)
-            self.opens_cart = Transition("opens cart", 0, self.catalog, self.cart)
+            self.opens_cart = made(Transition, "opens cart", 0, from_screen=self.catalog, to_screen=self.cart)
             self.ux_map.transitions.append(self.opens_cart)
 
         with it("should keep the transition on the map graph"):

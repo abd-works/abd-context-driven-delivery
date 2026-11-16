@@ -299,7 +299,7 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
   4. `branch.open_in_worktree` opens the session's own worktree on its branch.
   5. A chat working in that worktree works on the session, which it finds from the worktree's branch. A chat in the main folder keeps its open session in *WorkState* under `~/.cdd`, never in the checkout.
   6. Every later `session.*` call and log line goes to the session's folder, stamped with the chat that made it.
-  7. A push first merges in origin's copy of the branch (`catch_up_with_origin`). A merge that conflicts is aborted, never left half done.
+  7. A push first merges in origin's copy of the branch (`origin.catch_up`). A merge that conflicts is aborted, never left half done.
 
 **Lesson 10. Hand off and record decisions**
 - *What you do:* run the `space-session-handoff-session` skill when you stop, and `space-session-record-decisions-session` while you decide.

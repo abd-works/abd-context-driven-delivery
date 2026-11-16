@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+from harness.annotations.class_folder import class_folder
+
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import PracticeGuidance
@@ -43,7 +45,7 @@ class PracticeCatalogue:
     @classmethod
     def register(cls, *practice_classes: type[PracticeGuidance]) -> None:
         """Hold practice_classes as the practices CDD ships, in the order the approach walks them, each by its key."""
-        PracticeCatalogue._classes = {practice_class.class_key(): practice_class for practice_class in practice_classes}
+        PracticeCatalogue._classes = {class_folder(practice_class).name: practice_class for practice_class in practice_classes}
 
     @classmethod
     def register_supplements(cls, *supplement_classes: type[PracticeGuidance]) -> None:

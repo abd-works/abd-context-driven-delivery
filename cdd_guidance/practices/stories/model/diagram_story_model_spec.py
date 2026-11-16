@@ -35,14 +35,14 @@ class SpecFixture:
     def four_epics_diagram(self) -> DiagramStoryModel:
         diagram = DiagramStoryModel()
         for i in range(1, 5):
-            diagram.append_epic(DiagramEpic(f"Epic {i}", i))
+            diagram.epics.append(DiagramEpic(f"Epic {i}", i))
         return diagram
 
     def first_epic_with_3_epics_diagram(self) -> DiagramStoryModel:
         diagram = self.four_epics_diagram()
         first = diagram.epics[0]
         for j in range(1, 4):
-            first.append_epic(DiagramEpic(f"Epic 1.{j}", j))
+            first.epics.append(DiagramEpic(f"Epic 1.{j}", j))
         return diagram
 
 
@@ -95,7 +95,7 @@ with description("a diagram Story Map") as self:
                 self.prior_positions = [
                     e.x for e in self.diagram.epics
                 ]
-                self.diagram.append_epic(DiagramEpic("Epic 5", 5))
+                self.diagram.epics.append(DiagramEpic("Epic 5", 5))
 
             with it("should hold 5 Epics"):
                 expect(self.diagram.epics).to(have_len(5))
@@ -159,7 +159,7 @@ with description("a diagram Story Map") as self:
 
             with context("with a Epic appended to the first Epic"):
                 with before.each:
-                    self.first_epic.append_epic(DiagramEpic("Epic 1.4", 4))
+                    self.first_epic.epics.append(DiagramEpic("Epic 1.4", 4))
 
                 with context("the first Epic"):
                     with it("should hold 4 Epics"):
@@ -228,7 +228,7 @@ with description("a diagram Story Map") as self:
 
             with context("with a nested Epic added under the first Epic"):
                 with before.each:
-                    self.first_epic.epics[0].append_epic(
+                    self.first_epic.epics[0].epics.append(
                         DiagramEpic("Nested", 1)
                     )
                     self.nested = self.first_epic.epics[0].epics[0]
@@ -276,7 +276,7 @@ with description("a diagram Story Map") as self:
                     )
                     self.moved = self.first_epic.epics.pop(0)
                     self.second_epic = self.diagram.epics[1]
-                    self.second_epic.append_epic(self.moved)
+                    self.second_epic.epics.append(self.moved)
 
                 with context("the first Epic"):
                     with it("should hold 2 Epics"):
@@ -313,7 +313,7 @@ with description("a diagram Story Map") as self:
                 with before.each:
                     first_sub_epic = self.first_epic.epics[0]
                     for k in range(1, 3):
-                        first_sub_epic.append_story(
+                        first_sub_epic.stories.append(
                             DiagramStory(f"Story {k}", k, StoryType.USER)
                         )
                     self.first_sub_epic = first_sub_epic
@@ -332,7 +332,7 @@ with description("a diagram Story Map") as self:
 
                 with context("with a Story appended to the first Epic"):
                     with before.each:
-                        self.first_sub_epic.append_story(
+                        self.first_sub_epic.stories.append(
                             DiagramStory("Story 3", 3, StoryType.USER)
                         )
 
@@ -381,7 +381,7 @@ with description("a diagram Story Map") as self:
                         )
                         second_sub_epic = self.first_epic.epics[1]
                         self.moved_story = self.first_sub_epic.stories.pop(0)
-                        second_sub_epic.append_story(self.moved_story)
+                        second_sub_epic.stories.append(self.moved_story)
                         self.second_sub_epic = second_sub_epic
 
                     with context("the moved Story"):

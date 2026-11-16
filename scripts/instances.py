@@ -10,7 +10,7 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Any, Callable, NamedTuple
+from typing import Any, Callable, NamedTuple, TypedDict
 
 _REPO = Path(__file__).resolve().parents[1]
 if str(_REPO) not in sys.path:
@@ -19,12 +19,111 @@ if str(_REPO) not in sys.path:
 from harness.graph.graph_app import GRAPH_APP_PORTS  # noqa: E402
 from harness.process.process import ListeningPorts, RunningProcess  # noqa: E402
 
+PingAnswer = dict[str, Any]
+"""The JSON a service's ``/ping`` answered, or the report a ping script prints."""
+
+PING_TIMEOUT_SECONDS = 2
+"""How long one ping or connection attempt waits; a local service that is up answers in milliseconds."""
+
+PROCESS_LIST_TIMEOUT_SECONDS = {"win32": 60, "posix": 30}
+"""How long listing processes may take: PowerShell's CIM query starts slowly on Windows, ``ps`` is quick."""
+
+
+class ProcessEntry(TypedDict, total=False):
+    """One process as the system's process listing reports it in JSON."""
+
+    CommandLine: str
+    ProcessId: int
+    ParentProcessId: int
 
 
 class Process(NamedTuple):
     pid: int
     ppid: int
     command: str
+
+
+class HttpService(NamedTuple):
+    """An HTTP service a script pings: which command lines run it, the ports it listens on, and the service name its
+    ``/ping`` answers with."""
+
+    include: Callable[[str], bool]
+    preferred_ports: tuple[int, ...] = ()
+    expect_service: str | None = None
+
+    def answered_by(self, origin: str, body: PingAnswer) -> bool:
+        """Whether the pong at ``origin`` came from this service: by the name it gives, or, for a graph server that
+        gives none, by the port it answers on."""
+        if self.expect_service is None:
+            return True
+        tagged = body.get("service")
+        if tagged is not None:
+            return tagged == self.expect_service
+        port_text = origin.rsplit(":", 1)[-1]
+        untagged_ports = {"graph_web": GRAPH_APP_PORTS.of("web"), "graph_app": GRAPH_APP_PORTS.of("app")}
+        ports = untagged_ports.get(self.expect_service, ())
+        return port_text in {str(item) for item in ports}
+
+
+class PingAnswers:
+    """Ask local ports for a ``/ping`` pong, or at least an open connection."""
+
+    def first_pong(self, service: HttpService, ports: list[int]) -> PingAnswer | None:
+        candidates = list(service.preferred_ports) if service.preferred_ports else sorted(ports)
+        for port in candidates:
+            body = self.ping(port, service)
+            if body is not None:
+                return body
+        return None
+
+    def ping(self, port: int, service: HttpService) -> PingAnswer | None:
+        heard = self._read_ping(port, service)
+        if heard is not None:
+            return heard
+        if service.expect_service is not None:
+            return None
+        origin = self._open_origin(port)
+        if origin is None:
+            return None
+        return {"ok": True, "ping": "pong", "url": origin, "port": port}
+
+    def _read_ping(self, port: int, service: HttpService) -> PingAnswer | None:
+        for origin in self._origins(port):
+            body = self._fetch_ping(origin)
+            if body is not None and service.answered_by(origin, body):
+                return self._located(body, origin)
+        return None
+
+    def _fetch_ping(self, origin: str) -> PingAnswer | None:
+        try:
+            with urllib.request.urlopen(origin + "/ping", timeout=PING_TIMEOUT_SECONDS) as response:
+                body = json.loads(response.read().decode("utf-8"))
+        except (OSError, urllib.error.URLError, json.JSONDecodeError, ValueError, TimeoutError):
+            return None
+        if not isinstance(body, dict) or body.get("ping") != "pong":
+            return None
+        return body
+
+    def _located(self, body: PingAnswer, origin: str) -> PingAnswer:
+        """The pong with the origin it was heard on, which a server behind a proxy may report differently."""
+        reported = str(body.get("url") or "").rstrip("/")
+        body["url"] = reported if reported == origin else origin
+        port_text = origin.rsplit(":", 1)[-1]
+        if port_text.isdigit():
+            body.setdefault("port", int(port_text))
+        return body
+
+    def _open_origin(self, port: int) -> str | None:
+        for host, origin in (("127.0.0.1", f"http://127.0.0.1:{port}"), ("::1", f"http://localhost:{port}")):
+            try:
+                with socket.create_connection((host, port), timeout=PING_TIMEOUT_SECONDS):
+                    return origin
+            except OSError:
+                continue
+        return None
+
+    def _origins(self, port: int) -> tuple[str, ...]:
+        return (f"http://127.0.0.1:{port}", f"http://localhost:{port}")
 
 
 class RepoProcesses:
@@ -34,6 +133,11 @@ class RepoProcesses:
         self.repo = Path(repo or Path(__file__).resolve().parents[1]).resolve()
         self._process_cache: list[Process] | None = None
         self._port_cache: dict[int, list[int]] | None = None
+
+    def refresh(self) -> None:
+        """Forget the processes and ports read so far, so the next question reads them again."""
+        self._process_cache = None
+        self._port_cache = None
 
     def matching(self, include: Callable[[str], bool]) -> list[Process]:
         return [item for item in self.processes() if include(item.command)]
@@ -51,28 +155,10 @@ class RepoProcesses:
                 self._process_cache = self._posix_processes()
         return self._process_cache
 
-    def listening_ports(self) -> dict[int, list[int]]:
-        if self._port_cache is None:
-            self._port_cache = ListeningPorts().by_process()
-        return self._port_cache
-
-    def descendants(self, pid: int) -> list[int]:
-        by_parent: dict[int, list[int]] = {}
-        for item in self.processes():
-            by_parent.setdefault(item.ppid, []).append(item.pid)
-        found = [pid]
-        pending = [pid]
-        while pending:
-            current = pending.pop()
-            for child in by_parent.get(current, []):
-                found.append(child)
-                pending.append(child)
-        return found
-
     def tree_ports(self, pid: int) -> list[int]:
-        ports = self.listening_ports()
+        ports = self._listening_ports()
         heard: set[int] = set()
-        for item in self.descendants(pid):
+        for item in self._descendants(pid):
             heard.update(ports.get(item, []))
         return sorted(heard)
 
@@ -89,70 +175,6 @@ class RepoProcesses:
             return
         os.kill(pid, signal.SIGTERM)
 
-    def http_ping(self, port: int, expect_service: str | None = None) -> dict[str, Any] | None:
-        heard = self._read_ping(port, expect_service)
-        if heard is not None:
-            return heard
-        if expect_service is not None:
-            return None
-        origin = self._open_origin(port)
-        if origin is None:
-            return None
-        return {
-            "ok": True,
-            "ping": "pong",
-            "url": origin,
-            "port": port,
-        }
-
-    def _read_ping(self, port: int, expect_service: str | None = None) -> dict[str, Any] | None:
-        for origin in self._origins(port):
-            body = self._fetch_ping(origin, expect_service)
-            if body is not None:
-                return body
-        return None
-
-    def _fetch_ping(self, origin: str, expect_service: str | None = None) -> dict[str, Any] | None:
-        try:
-            with urllib.request.urlopen(origin + "/ping", timeout=2) as response:
-                body = json.loads(response.read().decode("utf-8"))
-        except (OSError, urllib.error.URLError, json.JSONDecodeError, ValueError, TimeoutError):
-            return None
-        if not isinstance(body, dict) or body.get("ping") != "pong":
-            return None
-        if expect_service is not None:
-            tagged = body.get("service")
-            port_text = origin.rsplit(":", 1)[-1]
-            if tagged is not None:
-                if tagged != expect_service:
-                    return None
-            elif expect_service == "graph_web":
-                if port_text not in {str(item) for item in GRAPH_APP_PORTS.of("web")}:
-                    return None
-            elif expect_service == "graph_app":
-                if port_text not in {str(item) for item in GRAPH_APP_PORTS.of("app")}:
-                    return None
-            else:
-                return None
-        reported = str(body.get("url") or "").rstrip("/")
-        body["url"] = reported if reported == origin else origin
-        port_text = origin.rsplit(":", 1)[-1]
-        if port_text.isdigit():
-            body.setdefault("port", int(port_text))
-        return body
-
-    def _open_origin(self, port: int) -> str | None:
-        for host, origin in (("127.0.0.1", f"http://127.0.0.1:{port}"), ("::1", f"http://localhost:{port}")):
-            try:
-                with socket.create_connection((host, port), timeout=2):
-                    return origin
-            except OSError:
-                continue
-        return None
-
-    def _origins(self, port: int) -> tuple[str, ...]:
-        return (f"http://127.0.0.1:{port}", f"http://localhost:{port}")
-
     def collapse(self, pids: list[int], prefer: int | None = None) -> tuple[int | None, list[int]]:
         unique = sorted({pid for pid in pids if pid > 0})
         if not unique:
@@ -168,6 +190,32 @@ class RepoProcesses:
         root = str(self.repo).casefold().replace("\\", "/")
         return root in folded
 
+    def root_pids(self, include: Callable[[str], bool]) -> list[int]:
+        """The top process of each copy of a service started from this checkout."""
+
+        def scoped(command: str) -> bool:
+            return self.in_repo(command) and include(command)
+
+        return [item.pid for item in self.roots(self.matching(scoped))]
+
+    def _listening_ports(self) -> dict[int, list[int]]:
+        if self._port_cache is None:
+            self._port_cache = ListeningPorts().by_process()
+        return self._port_cache
+
+    def _descendants(self, pid: int) -> list[int]:
+        by_parent: dict[int, list[int]] = {}
+        for item in self.processes():
+            by_parent.setdefault(item.ppid, []).append(item.pid)
+        found = [pid]
+        pending = [pid]
+        while pending:
+            current = pending.pop()
+            for child in by_parent.get(current, []):
+                found.append(child)
+                pending.append(child)
+        return found
+
     def _windows_processes(self) -> list[Process]:
         script = (
             "Get-CimInstance Win32_Process | "
@@ -178,7 +226,7 @@ class RepoProcesses:
             ["powershell", "-NoProfile", "-Command", script],
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=PROCESS_LIST_TIMEOUT_SECONDS["win32"],
             check=False,
         )
         return self._processes_from_json(completed.stdout)
@@ -188,7 +236,7 @@ class RepoProcesses:
             ["ps", "-ax", "-o", "pid=,ppid=,command="],
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=PROCESS_LIST_TIMEOUT_SECONDS["posix"],
             check=False,
         )
         found: list[Process] = []
@@ -204,7 +252,7 @@ class RepoProcesses:
         return found
 
     def _processes_from_json(self, raw: str) -> list[Process]:
-        text = (raw or "").lstrip("\ufeff").strip()
+        text = (raw or "").lstrip("﻿").strip()
         if not text:
             return []
         try:
@@ -212,24 +260,23 @@ class RepoProcesses:
         except json.JSONDecodeError:
             return []
         entries = data if isinstance(data, list) else [data]
-        found: list[Process] = []
-        for entry in entries:
-            if not isinstance(entry, dict):
-                continue
-            command = str(entry.get("CommandLine") or "").strip()
-            pid = entry.get("ProcessId")
-            ppid = entry.get("ParentProcessId")
-            if not command or not isinstance(pid, int):
-                continue
-            parent = ppid if isinstance(ppid, int) and ppid > 0 else 0
-            found.append(Process(pid, parent, command))
-        return found
+        return [process for process in map(self._process_from_entry, entries) if process is not None]
+
+    def _process_from_entry(self, entry: ProcessEntry) -> Process | None:
+        if not isinstance(entry, dict):
+            return None
+        command = str(entry.get("CommandLine") or "").strip()
+        pid = entry.get("ProcessId")
+        ppid = entry.get("ParentProcessId")
+        if not command or not isinstance(pid, int):
+            return None
+        return Process(pid, ppid if isinstance(ppid, int) and ppid > 0 else 0, command)
 
 
 class PingReport:
     """Print one JSON ping result and return a process exit code."""
 
-    def emit(self, report: dict[str, Any]) -> int:
+    def emit(self, report: PingAnswer) -> int:
         json.dump(report, sys.stdout, indent=2)
         sys.stdout.write("\n")
         return 0 if report.get("ok") else 1
@@ -247,18 +294,16 @@ class HookPing:
         found = self._daemons()
         daemon = HookDaemon(self.processes.repo)
         published = daemon.address_file.read()
-        recorded = published.pid if published is not None else None
-        keeper, stopped = self.processes.collapse(found, recorded)
+        keeper, stopped = self.processes.collapse(found, published.pid if published is not None else None)
         address = daemon.live_address()
         ok = address is not None
-        host, port, pid = (address.host, address.port, address.pid) if address is not None else (None, None, keeper)
         return PingReport().emit(
             {
                 "ok": ok,
                 "ping": "pong" if ok else "down",
-                "host": host,
-                "port": port,
-                "pid": pid if pid is not None else keeper,
+                "host": address.host if ok else None,
+                "port": address.port if ok else None,
+                "pid": address.pid if ok and address.pid is not None else keeper,
                 "instances": len(found),
                 "stopped": stopped,
             }
@@ -277,43 +322,20 @@ class HttpPing:
 
     def __init__(self, repo: Path | str | None = None) -> None:
         self.processes = RepoProcesses(repo)
+        self.answers = PingAnswers()
 
-    def run(
-        self,
-        include: Callable[[str], bool],
-        preferred_ports: tuple[int, ...] = (),
-        expect_service: str | None = None,
-    ) -> int:
-        def scoped(command: str) -> bool:
-            return self.processes.in_repo(command) and include(command)
-
-        found = [item.pid for item in self.processes.roots(self.processes.matching(scoped))]
+    def run(self, service: HttpService) -> int:
+        found = self.processes.root_pids(service.include)
         ports = {pid: self.processes.tree_ports(pid) for pid in found}
-        answered = {
-            pid: self._first_pong(ports.get(pid, []), preferred_ports, expect_service) for pid in found
-        }
-        healthy = [pid for pid, body in answered.items() if body is not None]
-        prefer = min(healthy) if healthy else None
-        keeper, stopped = self.processes.collapse(found, prefer)
-        body = answered.get(keeper) if keeper is not None else None
-        if keeper is not None and body is None:
-            body = self._first_pong(self.processes.tree_ports(keeper), preferred_ports, expect_service)
-        port = None if body is None else body.get("port")
-        if port is None and keeper is not None:
-            if preferred_ports:
-                port = preferred_ports[0]
-            else:
-                heard = ports.get(keeper) or []
-                port = heard[0] if heard else None
-        url = None if body is None else body.get("url")
-        if url is None and port is not None:
-            url = f"http://127.0.0.1:{port}"
+        keeper, stopped, body = self._collapse_to_keeper(service, found, ports)
+        port = self._port(service, body, (ports.get(keeper) or []) if keeper is not None else None)
+        url = body.get("url") if body is not None else None
         ok = body is not None and body.get("ping") == "pong"
         return PingReport().emit(
             {
                 "ok": ok,
                 "ping": "pong" if ok else "down",
-                "url": url,
+                "url": url if url is not None or port is None else f"http://127.0.0.1:{port}",
                 "port": port,
                 "pid": keeper,
                 "instances": len(found),
@@ -321,18 +343,34 @@ class HttpPing:
             }
         )
 
-    def _first_pong(
-        self,
-        ports: list[int],
-        preferred_ports: tuple[int, ...] = (),
-        expect_service: str | None = None,
-    ) -> dict[str, Any] | None:
-        candidates = list(preferred_ports) if preferred_ports else sorted(ports)
-        for port in candidates:
-            body = self.processes.http_ping(port, expect_service)
-            if body is not None:
-                return body
-        return None
+    def _collapse_to_keeper(
+        self, service: HttpService, found: list[int], ports: dict[int, list[int]]
+    ) -> tuple[int | None, list[int], PingAnswer | None]:
+        """Keep the lowest process that answers a ping, stop the rest, and answer the keeper, what was stopped, and what
+        the keeper answered."""
+        answered = {pid: self.answers.first_pong(service, ports.get(pid, [])) for pid in found}
+        healthy = [pid for pid, body in answered.items() if body is not None]
+        keeper, stopped = self.processes.collapse(found, min(healthy) if healthy else None)
+        return keeper, stopped, self._keeper_answer(service, keeper, answered)
+
+    def _keeper_answer(
+        self, service: HttpService, keeper: int | None, answered: dict[int, PingAnswer | None]
+    ) -> PingAnswer | None:
+        if keeper is None:
+            return None
+        body = answered.get(keeper)
+        return body if body is not None else self.answers.first_pong(service, self.processes.tree_ports(keeper))
+
+    def _port(self, service: HttpService, body: PingAnswer | None, heard: list[int] | None) -> int | None:
+        """The port the keeper answered on, else the one it should listen on, else the first it was heard on; heard
+        is none when no process was kept."""
+        if body is not None and body.get("port") is not None:
+            return body["port"]
+        if heard is None:
+            return None
+        if service.preferred_ports:
+            return service.preferred_ports[0]
+        return heard[0] if heard else None
 
 
 _GRAPH_APP = "harness/graph/app/"
@@ -350,3 +388,7 @@ def graph_app(command: str) -> bool:
     if _GRAPH_APP not in folded or "vitest" in folded or "preflight.cjs" in folded:
         return False
     return "/vite/bin/vite.js" in folded or folded.rstrip().endswith(" vite")
+
+
+GRAPH_WEB = HttpService(graph_web, GRAPH_APP_PORTS.of("web"), "graph_web")
+GRAPH_APP = HttpService(graph_app, GRAPH_APP_PORTS.of("app"), "graph_app")

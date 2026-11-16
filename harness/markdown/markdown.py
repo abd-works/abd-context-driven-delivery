@@ -12,7 +12,7 @@ import stat
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Callable, ClassVar, Literal, TypeVar, get_args, get_origin, get_type_hints
+from typing import Any, Callable, ClassVar, Literal, TypeAlias, TypeVar, get_args, get_origin, get_type_hints
 
 from harness.annotations.class_folder import class_folder
 from harness.annotations.name import Name
@@ -35,6 +35,11 @@ __all__ = [
 ]
 
 _F = TypeVar("_F", bound=Callable[..., Any])
+# The object a markdown section belongs to, such as a practice, a fidelity, or an action: its class's folder holds the
+# markdown, and it may hand over the scope it reads it in (``markdown_scope``).
+MarkdownOwner: TypeAlias = object
+# What a markdown property's operation says it returns: a class, a generic such as ``list[Rule]``, or nothing written.
+ReturnAnnotation: TypeAlias = Any
 
 
 class ExtractedMarkdown(str):
@@ -47,46 +52,41 @@ class ExtractedMarkdown(str):
         return self
 
 
+# A markdown bullet: a dash or star after any indent.
+_BULLET = re.compile(r"^\s*[-*]\s+")
+
+
 class HTML:
     def __init__(self, text: str) -> None:
         self.text = text
 
     @classmethod
     def from_markdown(cls, text: str) -> HTML:
-        return cls(_markdown_to_html(text))
+        """The HTML of text without its headings: a bulleted block becomes a list, any other block a paragraph."""
+        body = re.sub(r"^#{1,6}\s+.*$", "", text, flags=re.MULTILINE).strip()
+        if not body:
+            return cls("")
+        chunks: list[str] = []
+        for block in (block.strip() for block in re.split(r"\n\s*\n", body)):
+            lines = block.splitlines()
+            if not block:
+                continue
+            if all(_BULLET.match(line) for line in lines):
+                chunks.append("<ul>" + "".join(f"<li>{html.escape(_BULLET.sub('', line))}</li>" for line in lines) + "</ul>")
+            else:
+                chunks.append(f"<p>{html.escape(block)}</p>")
+        return cls("\n".join(chunks))
 
     def __str__(self) -> str:
         return self.text
 
-    def __contains__(self, item: object) -> bool:
-        return str(item) in self.text
+    def __contains__(self, fragment: str) -> bool:
+        return str(fragment) in self.text
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: HTML | str) -> bool:
         if isinstance(other, HTML):
             return self.text == other.text
         return self.text == other
-
-
-def _markdown_to_html(text: str) -> str:
-    body = re.sub(r"^#{1,6}\s+.*$", "", text, flags=re.MULTILINE).strip()
-    if not body:
-        return ""
-    chunks: list[str] = []
-    for block in re.split(r"\n\s*\n", body):
-        block = block.strip()
-        if not block:
-            continue
-        lines = block.splitlines()
-        if all(re.match(r"^\s*[-*]\s+", line) for line in lines):
-            bullet = re.compile(r"^\s*[-*]\s+")
-            items = "".join(
-                f"<li>{html.escape(bullet.sub('', line))}</li>"
-                for line in lines
-            )
-            chunks.append(f"<ul>{items}</ul>")
-        else:
-            chunks.append(f"<p>{html.escape(block)}</p>")
-    return "\n".join(chunks)
 
 
 LocationKind = Literal["file", "folder", "section"]
@@ -218,17 +218,17 @@ class MarkdownText:
                 break
             if next_level != child_level:
                 continue
-            end = next(
-                (
-                    headings[later][0]
-                    for later in range(child_index + 1, len(headings))
-                    if headings[later][2] <= child_level
-                ),
-                len(self._text),
-            )
-            body = self._text[heading_end:end].lstrip("\r\n").strip()
+            body = self._text[heading_end:self._end_of_child(child_index, child_level)].lstrip("\r\n").strip()
             blocks.append((name, body))
         return blocks
+
+    def _end_of_child(self, child_index: int, child_level: int) -> int:
+        """Where the child at child_index ends: at the next heading as high as it, else at the end of the text."""
+        headings = self._parent_headings
+        return next(
+            (headings[later][0] for later in range(child_index + 1, len(headings)) if headings[later][2] <= child_level),
+            len(self._text),
+        )
 
     def section_child_blocks(self) -> list[tuple[str, str]]:
         headings = self.headings()
@@ -505,7 +505,7 @@ class MarkdownScope:
         return cls(folder, declared if isinstance(declared, str) and declared else folder.name)
 
     @classmethod
-    def of(cls, owner: Any) -> MarkdownScope:
+    def of(cls, owner: MarkdownOwner) -> MarkdownScope:
         """The scope owner hands its markdown; the markdown beside its class when it hands none."""
         handed = getattr(type(owner), "markdown_scope", None)
         if isinstance(handed, property):
@@ -593,16 +593,12 @@ class AssetLocator:
     def _locate_under(self) -> AssetLocation:
         fidelity_name = self.fidelity if self._scope.in_fidelity_block else None
         if fidelity_name:
-            return AssetLocation(
-                "section",
-                self._module_dir,
-                self._domain_slug,
-                section_file=self._canonical_domain_md().resolve(),
-                section_heading=_section_heading(self._label),
-                fidelity=str(fidelity_name),
-            )
-        folder_name = "_examples" if self._label == "examples" else self._label
-        folder = self._search_root_path / folder_name
+            return self._section_of_domain_markdown(fidelity=str(fidelity_name))
+        return self._located_beside() or self._section_of_domain_markdown()
+
+    def _located_beside(self) -> AssetLocation | None:
+        """The label's own folder or file beside the owner; none when the label lives only as a section."""
+        folder = self._search_root_path / ("_examples" if self._label == "examples" else self._label)
         if folder.is_dir():
             return AssetLocation("folder", self._module_dir, self._domain_slug, folder=folder.resolve())
         for name in (self._label, f"{self._label}.md"):
@@ -610,14 +606,16 @@ class AssetLocator:
             if candidate.is_file():
                 return AssetLocation("file", self._module_dir, self._domain_slug, path=candidate.resolve())
         first = self._first_extension_match(self._search_root_path)
-        if first:
-            return AssetLocation("file", self._module_dir, self._domain_slug, path=first.resolve())
+        return AssetLocation("file", self._module_dir, self._domain_slug, path=first.resolve()) if first else None
+
+    def _section_of_domain_markdown(self, fidelity: str | None = None) -> AssetLocation:
         return AssetLocation(
             "section",
             self._module_dir,
             self._domain_slug,
             section_file=self._canonical_domain_md().resolve(),
             section_heading=_section_heading(self._label),
+            fidelity=fidelity,
         )
 
     def _first_extension_match(self, search_root: Path) -> Path | None:
@@ -733,11 +731,15 @@ class MarkdownCollection:
     def __init__(
         self,
         entries: dict[str, Any] | list[Any] | None = None,
-        parent: Any = None,
+        parent: MarkdownOwner | None = None,
     ) -> None:
-        self.entries: dict[str, Any] | list[Any] = entries if entries is not None else {}
         self.parent = parent
         self._markdown = ""
+        self._adopt(entries if entries is not None else {})
+
+    def _adopt(self, entries: dict[str, Any] | list[Any]) -> None:
+        """Hold entries, each with this collection as its parent."""
+        self.entries: dict[str, Any] | list[Any] = entries
         for child in self:
             child.parent = self
 
@@ -756,24 +758,21 @@ class MarkdownCollection:
     def __getitem__(self, name: str) -> Any:
         return self.entries[name]
 
-    @classmethod
-    def child(cls, name: str, body: str = "") -> Any:
+    def child(self, name: str, body: str = "") -> Any:
+        """The entry a ``### name`` block of this collection's markdown declares; none for a collection whose blocks
+        make no entries."""
         return None
 
     @classmethod
-    def from_markdown(cls, text: str, parent: Any = None) -> MarkdownCollection:
-        entries: dict[str, Any] = {}
-        for name, body in MarkdownText(text).section_child_blocks():
-            entry = cls.child(name, body)
-            if entry is None:
-                continue
-            entries[name] = entry
-        collection = cls(entries, parent=parent)
+    def from_markdown(cls, text: str, parent: MarkdownOwner | None = None) -> MarkdownCollection:
+        collection = cls(parent=parent)
+        made = ((name, collection.child(name, body)) for name, body in MarkdownText(text).section_child_blocks())
+        collection._adopt({name: entry for name, entry in made if entry is not None})
         collection.markdown = text
         return collection
 
     @classmethod
-    def from_section(cls, markdown: Markdown, return_type: Any, parent: Any = None) -> Any:
+    def from_section(cls, markdown: Markdown, return_type: ReturnAnnotation, parent: MarkdownOwner | None = None) -> Any:
         """The collection a property's section holds, as return_type reads it: a list type as this collection's
         entries, a type with its own ``from_markdown`` through that, keeping the section's text."""
         text = markdown.document.text
@@ -787,7 +786,7 @@ class MarkdownCollection:
             result.markdown = text
         return result
 
-    def attach(self, instance: Any, name: str | None = None) -> None:
+    def attach(self, instance: MarkdownOwner, name: str | None = None) -> None:
         self.parent = instance
         previous = vars(instance).get(name) if name else None
         if name is not None:
@@ -804,31 +803,30 @@ class MarkdownTypeUnresolved(TypeError):
     """A markdown property's annotations name a type its module cannot resolve, so the property cannot tell what to
     turn its section's text into. Reading the annotation as a bare string would coerce the text into the wrong shape."""
 
-    def __init__(self, fn: Callable[..., Any], cause: BaseException) -> None:
-        self.property_name = fn.__qualname__
-        self.annotations = dict(getattr(fn, "__annotations__", {}) or {})
+    def __init__(self, operation: Callable[..., Any], cause: BaseException) -> None:
+        self.property_name = operation.__qualname__
+        self.annotations = dict(getattr(operation, "__annotations__", {}) or {})
         super().__init__(f"{self.property_name}: annotations {self.annotations!r} do not resolve: {cause}")
 
 
 class Markdown:
     """One labelled section of an owner's markdown, located from the scope the owner hands over and read once."""
 
-    def __init__(self, instance: Any, label: str, *, fidelity: str | None = None, format: str | None = None) -> None:
+    def __init__(self, instance: MarkdownOwner, label: str, scope: MarkdownScope) -> None:
         self._instance = instance
         self._label = label
-        self._fidelity = fidelity
-        self._format = format
+        self._scope = scope
 
     _HELD_AS = "_held_markdown"
 
     @classmethod
-    def from_label(cls, instance: Any, label: str, *, fidelity: str | None = None, format: str | None = None) -> Markdown:
-        """Markdown for ``label`` on ``instance``, at the fidelity and format named here when given, else at the
-        instance's current ones."""
-        return cls(instance, label, fidelity=fidelity, format=format)
+    def from_label(cls, instance: MarkdownOwner, label: str, scope: MarkdownScope | None = None) -> Markdown:
+        """Markdown for ``label`` on ``instance``, in scope when given (``MarkdownScope.of(instance).at(fidelity,
+        format)`` reads another fidelity's or format's assets), else in the scope instance reads in now."""
+        return cls(instance, label, scope if scope is not None else MarkdownScope.of(instance))
 
     @classmethod
-    def held_by(cls, owner: Any, label: str) -> Markdown:
+    def held_by(cls, owner: MarkdownOwner, label: str) -> Markdown:
         """The Markdown of label on owner at the scope owner reads it in now, made the first time and kept on owner, so
         a second read answers from the text the first found. A scope owner moves to, such as another fidelity or
         format, has a Markdown of its own, made when it is first read."""
@@ -836,15 +834,14 @@ class Markdown:
         held: dict[tuple[str, MarkdownScope], Markdown] = vars(owner).setdefault(cls._HELD_AS, {})
         key = (label, scope)
         if key not in held:
-            held[key] = cls(owner, label, fidelity=scope.fidelity, format=scope.format)
+            held[key] = cls(owner, label, scope)
         return held[key]
 
     @functools.cached_property
     def location(self) -> AssetLocation:
-        """Where this section lives, located once: it depends only on the instance, label, fidelity and format this
-        Markdown was made with."""
-        scope = MarkdownScope.of(self._instance).at(fidelity=self._fidelity, format=self._format)
-        return AssetLocator(scope, self._label).locate()
+        """Where this section lives, located once: it depends only on the label and scope this Markdown was made
+        with."""
+        return AssetLocator(self._scope, self._label).locate()
 
     @functools.cached_property
     def document(self) -> MarkdownText:
@@ -866,7 +863,7 @@ class Markdown:
     def html(self) -> HTML:
         return HTML.from_markdown(self.extract())
 
-    def coerce(self, text: str, return_type: Any) -> Any:
+    def _coerce(self, text: str, return_type: ReturnAnnotation) -> Any:
         """text as return_type reads it: HTML, extracted markdown for a string, or the type's own ``from_markdown``;
         the text as it is for a type that reads no markdown."""
         if self._reads_html(return_type):
@@ -876,38 +873,44 @@ class Markdown:
         from_markdown = getattr(return_type, "from_markdown", None)
         return self.built_by(from_markdown, text, self._instance) if callable(from_markdown) else text
 
-    def built_by(self, from_markdown: Callable[..., Any], text: str, parent: Any) -> Any:
+    def built_by(self, from_markdown: Callable[..., Any], text: str, parent: MarkdownOwner) -> Any:
         """What from_markdown makes of text. A type read with the object it belongs to, such as a practice's rules,
         takes that object as its parent."""
         if "parent" in inspect.signature(from_markdown).parameters:
             return from_markdown(text, parent=parent)
         return from_markdown(text)
 
-    def read_into(self, return_type: Any, build: Callable[..., Any] | None = None) -> Any:
-        """This section read as return_type. ``build(markdown, return_type, parent)`` makes that object when given;
-        else ``coerce`` does, from the text without its YAML for HTML or a string. The section's YAML settings
-        stay in its text for the object it becomes, as a rules collection reads where it applies from them."""
-        raw = self.document.text
-        if build is None and self._reads_plain_text(return_type):
-            return self.coerce(self.document.without_yaml, return_type)
-        return build(self, return_type, self._instance) if build is not None else self.coerce(raw, return_type)
+    def read_for(self, operation: Callable[..., Any], default: ReturnAnnotation, build: Callable[..., Any] | None = None) -> Any:
+        """This section read as the type operation says it returns, default when it names none. ``build(markdown,
+        return_type, parent)`` makes that object when given; else ``_coerce`` does, from the text without its YAML for
+        HTML or a string. The section's YAML settings stay in its text for the object it becomes, as a rules collection
+        reads where it applies from them."""
+        return_type = self._return_type_of(operation, default)
+        if build is not None:
+            return build(self, return_type, self._instance)
+        return self._coerced_as(return_type)
 
-    def _reads_html(self, return_type: Any) -> bool:
+    def _coerced_as(self, return_type: ReturnAnnotation) -> Any:
+        """The section coerced to return_type: its text without its YAML for HTML or a string, else all of it."""
+        document = self.document
+        return self._coerce(document.without_yaml if self._reads_plain_text(return_type) else document.text, return_type)
+
+    def _reads_html(self, return_type: ReturnAnnotation) -> bool:
         origin = get_origin(return_type) or return_type
         return return_type is HTML or origin is HTML or get_args(return_type)[:1] == (HTML,)
 
-    def _reads_text(self, return_type: Any) -> bool:
+    def _reads_text(self, return_type: ReturnAnnotation) -> bool:
         return return_type is str or return_type is inspect.Signature.empty or return_type is None
 
-    def _reads_plain_text(self, return_type: Any) -> bool:
+    def _reads_plain_text(self, return_type: ReturnAnnotation) -> bool:
         return self._reads_html(return_type) or self._reads_text(return_type)
 
-    def return_type_of(self, fn: Callable[..., Any], default: Any) -> Any:
-        """The type fn's annotations say it returns; default when they name none."""
+    def _return_type_of(self, operation: Callable[..., Any], default: ReturnAnnotation) -> ReturnAnnotation:
+        """The type operation's annotations say it returns; default when they name none."""
         try:
-            hints = get_type_hints(fn, globalns=getattr(fn, "__globals__", None))
+            hints = get_type_hints(operation, globalns=getattr(operation, "__globals__", None))
         except Exception as exc:  # noqa: BLE001 - every annotation that fails to resolve is raised as one named failure
-            raise MarkdownTypeUnresolved(fn, exc) from exc
+            raise MarkdownTypeUnresolved(operation, exc) from exc
         return hints.get("return", default)
 
 
@@ -937,7 +940,7 @@ def _section_text(operation: _F, label: str) -> property:
 
     def read(owner: Any) -> Any:
         section = Markdown.held_by(owner, label)
-        return section.read_into(section.return_type_of(operation, str))
+        return section.read_for(operation, str)
 
     return OperationProperty(operation).reading(read)
 
@@ -951,7 +954,7 @@ def _section_collection(operation: _F, label: str) -> property:
         if kept is not None:
             return kept
         section = Markdown.held_by(owner, label)
-        result = section.read_into(section.return_type_of(operation, MarkdownCollection), MarkdownCollection.from_section)
+        result = section.read_for(operation, MarkdownCollection, MarkdownCollection.from_section)
         attach = getattr(result, "attach", None)
         if callable(attach):
             attach(owner, operation.__name__)
@@ -962,19 +965,19 @@ def _section_collection(operation: _F, label: str) -> property:
     return OperationProperty(operation).reading(read)
 
 
-def _labelled(build: Callable[[_F, str], property], fn: _F | str | None, label: str | None) -> property | Callable[[_F], property]:
+def _labelled(build: Callable[[_F, str], property], operation_or_label: _F | str | None, label: str | None) -> property | Callable[[_F], property]:
     """The property build makes for an operation, under the label named, or the operation's own name."""
-    if callable(fn):
-        return build(fn, fn.__name__)
-    return lambda inner: build(inner, str(label or fn or inner.__name__))
+    if callable(operation_or_label):
+        return build(operation_or_label, operation_or_label.__name__)
+    return lambda inner: build(inner, str(label or operation_or_label or inner.__name__))
 
 
-def markdown(fn: _F | str | None = None, *, label: str | None = None) -> property | Callable[[_F], property]:
+def markdown(operation_or_label: _F | str | None = None, *, label: str | None = None) -> property | Callable[[_F], property]:
     """``@markdown`` or ``@markdown("label")``: the operation's value is its owner's section under that label."""
-    return _labelled(_section_text, fn, label)
+    return _labelled(_section_text, operation_or_label, label)
 
 
-def markdownCollection(fn: _F | str | None = None, *, label: str | None = None) -> property | Callable[[_F], property]:
+def markdownCollection(operation_or_label: _F | str | None = None, *, label: str | None = None) -> property | Callable[[_F], property]:
     """``@markdownCollection`` or ``@markdownCollection("label")``: the operation's value is its owner's section under
     that label, read as a collection and kept on the owner."""
-    return _labelled(_section_collection, fn, label)
+    return _labelled(_section_collection, operation_or_label, label)

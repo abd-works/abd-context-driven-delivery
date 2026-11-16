@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+
+from harness.guidance.worked_session import NamedPaths, WorkedSession
 
 # Folders a document read from a folder never includes: version control, environments, and caches.
 _SKIP_PARTS = {".git", ".venv", "node_modules", "__pycache__"}
@@ -10,13 +11,13 @@ _SKIP_PARTS = {".git", ".venv", "node_modules", "__pycache__"}
 _BINARY_MARK = b"\x00"
 
 
-def document_in(session: Any, content: str = "", paths: list[str] | str | None = None) -> str:
+def document_in(session: WorkedSession | None, content: str = "", paths: NamedPaths = None) -> str:
     """The document a call names, read from the project of session, space/session's *Session*, when it works in one,
     since a path a call names is written from that project's root; read as given when it works in none."""
-    return session.document_named(content, paths) if session is not None else load_document(content, paths)
+    return session.paths.document_named(content, paths) if session is not None else load_document(content, paths)
 
 
-def load_document(content: str = "", paths: list[str] | str | None = None) -> str:
+def load_document(content: str = "", paths: NamedPaths = None) -> str:
     """The in-process text, or the files at paths. Paths win."""
     if paths in ("", None, []):
         return content or ""

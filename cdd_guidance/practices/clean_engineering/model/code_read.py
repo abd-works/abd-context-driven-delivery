@@ -9,10 +9,13 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from harness.agent_tools.progress import report_progress
 from harness.graph.skipped_folders import scanned_files, skips_folder
+from harness.graph.location import Location
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     Module,
+    OoadClass,
     UnreadableSource,
     class_names_imported_by,
 )
@@ -43,7 +46,7 @@ class CodeRead:
     def __init__(self, reading: "GraphReading") -> None:
         self._reading = reading
         self._root = Path(reading.in_graph.source_root)
-        reading.graph.report_progress("clean_engineering · folders")
+        report_progress("clean_engineering · folders")
         self._folders = CodeFolders(reading)
         self._files = reading.graph.scope.source_files(self._root, reading.practice.formats.suffixes)
         # The module of each file this read tried, by its resolved path; none for a file that does not parse.
@@ -75,7 +78,7 @@ class CodeRead:
     def _parse(self) -> None:
         for index, file in enumerate(self._files, start=1):
             relative = file.relative_to(self._root).as_posix()
-            self._reading.graph.report_progress(f"clean_engineering · classes · {index}/{len(self._files)} · {relative}")
+            report_progress(f"clean_engineering · classes · {index}/{len(self._files)} · {relative}")
             module = self._module_of(file)
             if module is not None:
                 self._modules[file] = module
@@ -90,16 +93,24 @@ class CodeRead:
     def _parsed(self, file: Path) -> Module | None:
         """The file's module, read by its language's class model from the practice's formats, with its source facts
         loaded. A file that does not parse is kept with the reason, so the source-parses rule reports it."""
-        try:
-            module = self._reading.practice.formats.for_file(file).parse(file.read_text(encoding="utf-8")).file_module()
-        except (OSError, UnicodeDecodeError) as error:
-            self._unreadable[file] = f"cannot be read: {error}"
+        text = self._text_of(file)
+        if text is None:
             return None
+        try:
+            module = self._reading.practice.formats.for_file(file).parse(text).file_module()
         except UnreadableSource as unreadable:
             self._unreadable[file] = str(unreadable)
             return None
         module.load_source_facts(file, self._root)
         return module
+
+    def _text_of(self, file: Path) -> str | None:
+        """The file's text; none for a file the disk cannot give, which is kept with the reason."""
+        try:
+            return file.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as error:
+            self._unreadable[file] = f"cannot be read: {error}"
+            return None
 
     def _record_public_sources(self) -> None:
         """Give each folder the modules of its own public source files: each one this read parsed, and each one an
@@ -135,7 +146,7 @@ class OutsideScope:
         names: set[str] = set()
         importers: dict[str, set[str]] = {}
         for index, file in enumerate(files, start=1):
-            self._graph.report_progress(f"clean_engineering · class names · {index}/{len(files)} · {file.name}")
+            report_progress(f"clean_engineering · class names · {index}/{len(files)} · {file.name}")
             try:
                 text = file.read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError):
@@ -178,14 +189,14 @@ class ClassNodes:
         self._index = reading.code_index
         self._class_names = class_names
 
-    def add(self, relative: str, folder: "Node", cls) -> None:
+    def add(self, relative: str, folder: "Node", cls: OoadClass) -> None:
         """Add the class, its properties, and its operations; each is the object the parser built."""
         cls.load_source_facts()
         for member in [*cls.public_properties, *cls.operations]:
             member.keep_owner()
-        node = self._in_graph.add(cls, f"clean_engineering:OoadClass:{relative}:{cls.name}", relative, cls.line, cls.end_line)
-        self._graph.link("owns", folder, node)
-        self._graph.link("belongsTo", node, folder, "relationship")
+        node = self._in_graph.add(cls, f"clean_engineering:OoadClass:{relative}:{cls.name}", Location(relative, cls.line, cls.end_line))
+        self._graph.edges.link("owns", folder, node)
+        self._graph.edges.relate("belongsTo", node, folder)
         for prop in cls.public_properties:
             self._property(relative, node, prop)
         for operation in cls.operations:
@@ -203,35 +214,35 @@ class ClassNodes:
             self._link_property(edge.parent, edge.child)
         for operation in self._in_graph.nodes("Operation"):
             for other in self._classes_named_in(operation.get_fact("return_type")):
-                self._graph.link("returns", operation, other, "relationship")
+                self._graph.edges.relate("returns", operation, other)
 
     def _property(self, relative: str, cls: "Node", prop: "Operation | Property") -> None:
         """A field the class declares, or a getter: the operation that reads it, which is the property's node. Its type
         is the field's declared type, or the type the getter returns, which ``link_types`` links once every class is
         added."""
         line = prop.line or 1
-        node = self._in_graph.add(prop, f"clean_engineering:Property:{relative}:{prop.name}:{cls.name}", relative, line, line)
-        self._graph.link("properties", cls, node, "grouped")
+        node = self._in_graph.add(prop, f"clean_engineering:Property:{relative}:{prop.name}:{cls.name}", Location(relative, line, line))
+        self._graph.edges.group("properties", cls, node)
 
-    def _operation(self, relative: str, cls: "Node", operation) -> None:
+    def _operation(self, relative: str, cls: "Node", operation: "Operation") -> None:
         start, end = operation.source_lines
         operation.load_span_facts()
-        node = self._in_graph.add(operation, f"clean_engineering:Operation:{relative}:{operation.name}:{cls.name}", relative, start, end)
-        self._graph.link("owns", cls, node)
+        node = self._in_graph.add(operation, f"clean_engineering:Operation:{relative}:{operation.name}:{cls.name}", Location(relative, start, end))
+        self._graph.edges.link("owns", cls, node)
         for parameter in operation.parameters:
             param_id = f"clean_engineering:Parameter:{relative}:{parameter.name}:{cls.name}.{operation.name}"
-            self._graph.link("hasParameter", node, self._in_graph.add(parameter, param_id, relative, start, start), "relationship")
+            self._graph.edges.relate("hasParameter", node, self._in_graph.add(parameter, param_id, Location(relative, start, start)))
 
     def _link_property(self, cls: "Node", prop: "Node") -> None:
         """The class depends on each other class its property's type names, which the property has as its type."""
         hint = prop.get_fact("value_type")
         if not self._names_in(hint):
             return
-        self._graph.link("relative", cls, prop)
+        self._graph.edges.link("relative", cls, prop)
         for other in self._classes_named_in(hint):
             if other.name != cls.name:
-                self._graph.link("hasType", prop, other, "relationship")
-                self._graph.link("dependsOn", cls, other, "relationship")
+                self._graph.edges.relate("hasType", prop, other)
+                self._graph.edges.relate("dependsOn", cls, other)
 
     def _classes_named_in(self, hint: str | None) -> "list[Node]":
         """The first class the graph holds under each name the hint names."""
@@ -271,13 +282,17 @@ class CodeFolders:
         for relative, folder in self._modules.items():
             directory = self._root / relative
             paths = (path for path in directory.iterdir() if path.is_file() and path.suffix.lower() in self._suffixes)
-            found.append((folder, sorted(path for path in paths if folder.holds_public_source(path.name))))
+            found.append((folder, sorted(path for path in paths if self._is_public_source(path.name))))
         return found
+
+    def _is_public_source(self, file_name: str) -> bool:
+        """True for a file of a folder other modules may read: production code whose name does not start with `_`."""
+        return not file_name.startswith("_") and not is_test_code(file_name)
 
     def add(self) -> None:
         """Add each folder to the graph as its Module's node."""
         for relative, module in self._modules.items():
-            self._nodes[relative] = self._in_graph.add(module, f"clean_engineering:{module.type}:{relative}", relative, 1, 1)
+            self._nodes[relative] = self._in_graph.add(module, f"clean_engineering:{module.type}:{relative}", Location(relative, 1, 1))
 
     def take(self, relative: str, module: Module) -> "Node":
         """The folder node that holds the file at relative, which keeps what the file imports when it is production
@@ -308,10 +323,10 @@ class CodeFolders:
             folder = self._nodes[relative]
             parent = self._enclosing(relative) or self._in_graph.root
             for imported in self._imported(relative, held):
-                self._graph.link("dependsOn", folder, imported, "relationship")
-            self._graph.link("owns", parent, folder)
+                self._graph.edges.relate("dependsOn", folder, imported)
+            self._graph.edges.link("owns", parent, folder)
             if self._modules[relative].type == "Package":
-                self._graph.link("belongsTo", folder, parent, "relationship")
+                self._graph.edges.relate("belongsTo", folder, parent)
 
     def _record_sibling_imports(self, folder: "Node", relative: str, targets: list[str]) -> None:
         """The files of its own folder a production file imports, kept on the folder by file name, so the one-way-deps
@@ -346,8 +361,7 @@ class CodeFolders:
                 found[folder] = held[folder]
         return [found[folder] for folder in sorted(found)]
 
-    @staticmethod
-    def _nearest(path: str, among: dict[str, Module]) -> str:
+    def _nearest(self, path: str, among: dict[str, Module]) -> str:
         """The path of the nearest folder of among at or above path; empty for none."""
         current = path
         while current and current != ".":

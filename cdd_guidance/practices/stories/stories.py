@@ -4,18 +4,42 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Callable, Optional
 
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 
 from cdd_guidance.practices.stories.model.graph_reading import StoriesReading
 from cdd_guidance.practices.stories.model.sketch.sketch_story_model import SketchStoryModel
-from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, StoryMapFiles, is_story_map_file, preferred_maps
-from cdd_guidance.practices.stories.model.story_model import StoryNode
+from cdd_guidance.practices.stories.model.story_map_files import (
+    STORY_FILE_SUFFIXES,
+    STORY_TESTS_FOLDER,
+    StoryMapFiles,
+    is_story_map_file,
+    path_from,
+    preferred_maps,
+)
+from cdd_guidance.practices.stories.model.story_model import StoryModel, StoryNode
+from cdd_guidance.practices.stories.model.story_recording import StorySource, StorySources
 from cdd_guidance.practices.stories.stories_formats import StoriesFormats
 
 # A story test names its story map: `# Map: ../../.context/story-map.md#story` or `Map: .context/story-map.md.`
 _MAP_LINE = re.compile(r"Map:\s*(\S+?\.md)\b")
+# Hears each file a read takes, by its path from the project, as it is read.
+OnFile = Optional[Callable[[str], None]]
+# Each format Stories writes, and the module and class of the story model that reads and writes it.
+_FORMAT_ADAPTERS = {
+    "sketch": ("cdd_guidance.practices.stories.model.sketch.sketch_story_model", "SketchStoryModel"),
+    "markdown": ("cdd_guidance.practices.stories.model.markdown.nodes", "MarkdownStoryModel"),
+    "json": ("cdd_guidance.practices.stories.model.json.nodes", "JsonStoryModel"),
+    "drawio": ("cdd_guidance.practices.stories.model.drawio.nodes", "DrawIOStoryModel"),
+    "miro": ("cdd_guidance.practices.stories.model.miro.nodes", "MiroStoryModel"),
+    "whiteboard": ("cdd_guidance.practices.stories.model.whiteboard.nodes", "WhiteboardStoryModel"),
+    "python": ("cdd_guidance.practices.stories.model.python.python_story_model", "PythonStoryModel"),
+    "typescript": ("cdd_guidance.practices.stories.model.typescript.typescript_story_model", "TypeScriptStoryModel"),
+    "java": ("cdd_guidance.practices.stories.model.java.java_story_model", "JavaStoryModel"),
+    "javascript": ("cdd_guidance.practices.stories.model.javascript.javascript_story_model", "JavaScriptStoryModel"),
+}
 
 
 @agent_toolset
@@ -52,33 +76,18 @@ class Stories(PracticeGuidance):
     ) -> None:
         # Step library folder for the TypeScript render; a pattern names it. None keeps story-test.ts at the tests root.
         self.story_test_folder = story_test_folder
-        super().__init__(
-            format=format,
-            fidelity=fidelity,
-            default_workspace_folder="tests",
-            formats={
-                "sketch": ("cdd_guidance.practices.stories.model.sketch.sketch_story_model", "SketchStoryModel"),
-                "markdown": ("cdd_guidance.practices.stories.model.markdown.nodes", "MarkdownStoryModel"),
-                "json": ("cdd_guidance.practices.stories.model.json.nodes", "JsonStoryModel"),
-                "drawio": ("cdd_guidance.practices.stories.model.drawio.nodes", "DrawIOStoryModel"),
-                "miro": ("cdd_guidance.practices.stories.model.miro.nodes", "MiroStoryModel"),
-                "whiteboard": ("cdd_guidance.practices.stories.model.whiteboard.nodes", "WhiteboardStoryModel"),
-                "python": ("cdd_guidance.practices.stories.model.python.python_story_model", "PythonStoryModel"),
-                "typescript": ("cdd_guidance.practices.stories.model.typescript.typescript_story_model", "TypeScriptStoryModel"),
-                "java": ("cdd_guidance.practices.stories.model.java.java_story_model", "JavaStoryModel"),
-                "javascript": ("cdd_guidance.practices.stories.model.javascript.javascript_story_model", "JavaScriptStoryModel"),
-            },
-        )
+        super().__init__(format=format, fidelity=fidelity)
+
+    default_workspace_folder = "tests"
+    format_adapters = _FORMAT_ADAPTERS
 
     ## reading story maps and story tests from files
 
-    def read_folder(self, root: Path, *, on_file=None):
+    def read_folder(self, root: Path, *, on_file: OnFile = None) -> StoryModel:
         """The story map in the folder root: the nearest story map at or above it, else its story-graph.json, else the
         markdown story maps under it, with their scenarios and increments. A map under root names its files from root,
         as a read of the files being edited names them, so the two reads place each node in the same file; a map above
         root names them from its own folder."""
-        from cdd_guidance.practices.stories.model.story_model import StoryModel
-
         files = StoryMapFiles(root)
         nearest = files.nearest()
         if nearest is not None:
@@ -90,41 +99,48 @@ class Stories(PracticeGuidance):
             or StoryModel()
         )
 
-    def read_files(self, files: list[Path], project: Path, *, on_file=None):
+    def read_files(self, files: list[Path], project: Path, *, on_file: OnFile = None) -> StoryModel:
         """The story maps and story tests among files, merged into one story map whose nodes name their files as paths
-        from project. A story test holds one Story's scenarios in its own language, and the story map says which epic
-        that Story sits under, so a story test's scenarios go on the map's Story of the same name, and a story test
-        or a scenarios markdown file with no map listed reads the map in its own folder or the nearest one above it,
-        which reads that file's scenarios as they are now. Where one thing is written in
-        several formats, one is read, code before markdown before a diagram: story tests in code under a project's
-        story_tests are the map themselves, their folders its epics and sub-epics (``_story_map_of_code``), and no map
-        file is read beside them; otherwise a map's markdown is read before its drawio (``preferred_maps``)."""
-        from cdd_guidance.practices.stories.model.story_map_files import path_from
-        from cdd_guidance.practices.stories.model.story_model import StoryModel
-
+        from project. Story tests in code under a project's story_tests are the map themselves (``_story_map_of_code``);
+        otherwise the maps among files and beside them are read (``_maps_to_read``), and a story test's scenarios go on
+        the map's Story of the same name, which it specifies."""
         project = Path(project).resolve()
         paths = [Path(item).resolve() for item in files]
         tests = [path for path in paths if self._story_test_reader(path) is not None]
         from_code = self._story_map_of_code(tests, project, on_file)
         if from_code.epics:
             return from_code
+        merged = StoryModel()
+        for path in self._maps_to_read(paths, tests, project):
+            self._take_map(merged, self._story_map_file(path, project, on_file))
+        for path in tests:
+            self._take_story_test(merged, self._read_story_test(path, project, on_file), project)
+        return merged
+
+    def _maps_to_read(self, paths: list[Path], tests: list[Path], project: Path) -> list[Path]:
+        """The story maps among paths, and the map beside each story test and scenarios markdown file among them, which
+        reads that file's scenarios as they are now: one file per map, its markdown before its drawio
+        (``preferred_maps``)."""
         maps = [path for path in paths if is_story_map_file(path)]
         scenario_files = [path for path in paths if path.suffix.lower() == ".md" and path.name.endswith(STORY_FILE_SUFFIXES)]
-        maps = preferred_maps(maps + [found for found in self._maps_beside(tests + scenario_files, project) if found not in maps])
-        merged = StoryModel()
-        for path in maps:
-            read = self._story_map_file(path, project, on_file)
-            merged.source_texts.update(read.source_texts)
-            for epic in list(read.epics):
-                merged.append_epic(epic)
-        for path in tests:
-            file = path_from(project, path)
-            if on_file is not None:
-                on_file(file)
-            text = path.read_text(encoding="utf-8")
-            merged.source_texts.update(_texts_of_story_test(file, text, project))
-            merged.take_scenarios(self._story_test_reader(path).story_type.stories_in(text, project), file)
-        return merged
+        return preferred_maps(maps + [found for found in self._maps_beside(tests + scenario_files, project) if found not in maps])
+
+    def _take_map(self, merged: StoryModel, read: StoryModel) -> None:
+        merged.sources.take(read.sources)
+        for epic in list(read.epics):
+            merged.epics.append(epic)
+
+    def _read_story_test(self, path: Path, project: Path, on_file: OnFile) -> StorySource:
+        file = path_from(project, path)
+        if on_file is not None:
+            on_file(file)
+        return StorySource(file, path.read_text(encoding="utf-8"))
+
+    def _take_story_test(self, merged: StoryModel, test: StorySource, project: Path) -> None:
+        """The story test's scenarios onto merged's Story of the same name, and its text and its examples modules'."""
+        merged.sources.take(self._story_test_sources(test, project))
+        reader = self._story_test_reader(project / test.file)
+        merged.test_scenarios.take(reader.story_type.load_file(test.text, project), test.file)
 
     def open_file(self, path: Path, project: Path):
         """The story map an edit to the Stories file at path writes back: a markdown story map or scenarios file read
@@ -140,81 +156,75 @@ class Stories(PracticeGuidance):
             return adapter.opened_from(Path(path), project)
         return adapter.from_workspace(Path(path), project=project) or adapter
 
-    def _story_map_of_code(self, tests: list[Path], project: Path, on_file=None):
+    def _story_map_of_code(self, tests: list[Path], project: Path, on_file: OnFile = None) -> StoryModel:
         """The story map the story tests in code among tests hold under the project's story_tests, each language read
         by its own format: their folders are its epics and sub-epics, and their stories and scenarios its own, each
         naming its test as its file. An epic another language already gave is kept from the first. Empty when none sits
         under story_tests."""
-        from cdd_guidance.practices.stories.model.story_map_files import STORY_TESTS_FOLDER, path_from
-        from cdd_guidance.practices.stories.model.story_model import StoryModel
-
         merged = StoryModel()
+        for reader, texts in self._texts_by_reader(tests, project).items():
+            read = type(reader)(tests_root=STORY_TESTS_FOLDER).parse(texts, on_file=on_file)
+            merged.sources.take(read.sources)
+            held = {epic.name for epic in merged.epics}
+            for epic in [epic for epic in read.epics if epic.name not in held]:
+                merged.epics.append(epic)
+        return merged
+
+    def _texts_by_reader(self, tests: list[Path], project: Path) -> dict[type, dict[str, str]]:
+        """Each story test's text by its path from project, grouped by the code format that reads it."""
         by_reader: dict[type, dict[str, str]] = {}
         for path in tests:
             by_reader.setdefault(self._story_test_reader(path), {})[path_from(project, path)] = path.read_text(encoding="utf-8")
-        for reader, texts in by_reader.items():
-            read = reader(tests_root=STORY_TESTS_FOLDER).parse(texts, on_file=on_file)
-            merged.source_texts.update(read.source_texts)
-            held = {epic.name for epic in merged.epics}
-            for epic in [epic for epic in read.epics if epic.name not in held]:
-                merged.append_epic(epic)
-        return merged
+        return by_reader
 
     def story_tests(self, project: Path) -> dict[str, list[str]]:
         """Each story test its fidelities declare in the session it works in, by its path from project, with the names
         of the stories it holds: the acceptance tests a story map links each story to."""
-        from cdd_guidance.practices.stories.model.story_map_files import path_from
-
         project = Path(project).resolve()
         outputs = [fidelity.session_output for fidelity in self.fidelities if fidelity.session_output is not None]
         held = {}
         for path in sorted({file.resolve() for output in outputs for file in output.every_file()}):
             reader = self._story_test_reader(path)
             if reader is not None:
-                held[path_from(project, path)] = [story.name for story in reader.story_type.stories_in(path.read_text(encoding="utf-8"), project)]
+                held[path_from(project, path)] = [story.name for story in reader.story_type.load_file(path.read_text(encoding="utf-8"), project)]
         return held
 
     def _story_test_reader(self, path: Path):
         """The code format whose story type reads the story test at path; none for any other file."""
         from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
 
-        adapters = (self.formats.adapter_class(name) for name in self.formats)
-        return next((adapter for adapter in adapters if issubclass(adapter, CodeStoryModel) and adapter.is_story_file(path)), None)
+        adapters = (self.formats.adapter(name) for name in self.formats)
+        return next((adapter for adapter in adapters if isinstance(adapter, CodeStoryModel) and adapter.is_story_file(path)), None)
 
-    def _story_map_file(self, path: Path, project: Path, on_file=None):
+    def _story_map_file(self, path: Path, project: Path, on_file: OnFile = None) -> StoryModel:
         """The story map in the file at path, read by the format that reads its extension."""
-        from cdd_guidance.practices.stories.model.story_model import StoryModel
-
         return self.formats.for_file(path).from_workspace(path, on_file=on_file, project=project) or StoryModel()
 
     def _maps_beside(self, tests: list[Path], project: Path) -> list[Path]:
         """The story map each story test belongs to: in its own folder, or the nearest folder above it inside project,
         since story tests sit in epic folders below their map; else the map its text names on a ``Map:`` line, from its
         own folder or from project, for a story test that sits beside the code rather than under its map."""
-        found = [StoryMapFiles(path.parent, top=project).nearest() or _named_map(path, project) for path in tests]
+        found = [StoryMapFiles(path.parent, top=project).nearest() or self._named_map(path, project) for path in tests]
         return list(dict.fromkeys(path for path in found if path))
 
+    def _named_map(self, test: Path, project: Path) -> Path | None:
+        """The story map the story test at test names on a ``Map:`` line, from its own folder or from project; none when
+        it names none that is there."""
+        named = _MAP_LINE.search(test.read_text(encoding="utf-8"))
+        if named is None:
+            return None
+        relative = named.group(1).split("#", 1)[0]
+        return next((path for path in (test.parent / relative, project / relative) if path.is_file()), None)
 
-def _named_map(test: Path, project: Path) -> Path | None:
-    """The story map the story test at test names on a ``Map:`` line, from its own folder or from project; none when it
-    names none that is there."""
-    named = _MAP_LINE.search(test.read_text(encoding="utf-8"))
-    if named is None:
-        return None
-    relative = named.group(1).split("#", 1)[0]
-    return next((path for path in (test.parent / relative, project / relative) if path.is_file()), None)
-
-
-def _texts_of_story_test(file: str, text: str, project: Path) -> dict[str, str]:
-    """The story test's own text under its path from project, and the text of each examples module it imports by a
-    relative import, which an example's facts read its exported names from."""
-    from cdd_guidance.practices.stories.model.story_recording import imported_example_files
-
-    texts = {file: text}
-    for source in imported_example_files(file, text):
-        if (project / source).is_file():
-            texts[source] = (project / source).read_text(encoding="utf-8")
-    return texts
+    def _story_test_sources(self, test: StorySource, project: Path) -> StorySources:
+        """The story test, and each examples module it imports that is there under project, which an example's facts
+        read its exported names from."""
+        sources = StorySources()
+        sources.add(test.file, test.text)
+        for module in test.imported_example_files():
+            if (project / module).is_file():
+                sources.add(module, (project / module).read_text(encoding="utf-8"))
+        return sources
 
 
 StoryNode.register_practice(Stories)

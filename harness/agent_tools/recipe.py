@@ -24,6 +24,9 @@ _ATTRIBUTE_PLACEHOLDER = re.compile(r"\{\{self\.(\w+)\}\}")
 _NOT_A_LOCAL = object()
 # The names a recipe body reads that the expansion supplies, which a statement's own assignments never overwrite.
 _RESERVED_NAMES = frozenset({"__builtins__", "self", "tools", "instructions"})
+# An object whose members a recipe line names: the toolset the recipe runs on, a toolset or collection one of its
+# providers gives, or a loop's item. A recipe reads it only through its class's members, so it may be of any class.
+type RecipeTarget = object
 
 
 class RecipeMembers(Protocol):
@@ -37,8 +40,11 @@ class ExpandedRecipe(Protocol):
     """What an expansion asks of the ``@agent_instructions`` operation it expands. The toolset module's
     *AgentInstructions* answers it; the expansion names only this, so the recipe module depends on no toolset class."""
 
-    toolset: Any
+    toolset: RecipeTarget
     callable: Callable[..., Any]
+    # The class that defines this recipe when it is a parent class's recipe another defers to; none for the toolset's
+    # own.
+    defining_class: type | None
 
     @property
     def recipe_source(self) -> RecipeSource: ...
@@ -46,13 +52,13 @@ class ExpandedRecipe(Protocol):
     @property
     def parameter_schema(self) -> ParameterSchema: ...
 
-    def parent_recipe(self, after_class: type | None = None) -> tuple[ExpandedRecipe, type] | None: ...
+    def parent_recipe(self) -> ExpandedRecipe | None: ...
 
-    def members_of(self, target: Any) -> RecipeMembers: ...
+    def members_of(self, target: RecipeTarget) -> RecipeMembers: ...
 
-    def member_of(self, target: Any, member: str) -> ExpandedRecipe: ...
+    def member_of(self, target: RecipeTarget, member: str) -> ExpandedRecipe: ...
 
-    def provider_of(self, owner: Any, provider_name: str) -> Any: ...
+    def provider_of(self, owner: RecipeTarget, provider_name: str) -> Any: ...
 
 
 class RecipeLineFailed(Exception):
@@ -124,7 +130,7 @@ class RecipePlaceholders:
     """One call's values for a recipe's placeholders: ``{{name}}`` takes the argument of a parameter the recipe
     declares, and ``{{self.attribute}}`` takes the attribute of the toolset the call runs on."""
 
-    def __init__(self, arguments: dict[str, Any], parameter_names: set[str], toolset: Any = None) -> None:
+    def __init__(self, arguments: dict[str, Any], parameter_names: set[str], toolset: RecipeTarget | None = None) -> None:
         self._arguments = arguments
         self._parameter_names = parameter_names
         self._toolset = toolset
@@ -258,13 +264,11 @@ class RecipeExpansion:
         arguments: dict[str, Any] | None = None,
         *,
         expanding: frozenset[tuple[str, str]] = frozenset(),
-        defining_class: type | None = None,
     ) -> None:
         self._instructions = instructions
         self._toolset = instructions.toolset
         self._recipe = instructions.callable
         self._source = instructions.recipe_source
-        self._defining_class = defining_class
         self._expanding = self._expanding_with_this(expanding)
         self._mode = self._declared_mode(self._toolset)
         self._prompt: list[str] = []
@@ -272,9 +276,13 @@ class RecipeExpansion:
         # What the recipe's return gives for this call: the result line the call is answered with.
         self._result = ""
         self._loop_item_modes: dict[int, str] = {}
-        # Every parameter is a name the body can read: one the call left out holds its default, or none when it has none.
-        schema = instructions.parameter_schema
-        self._locals = {**dict.fromkeys(schema.names), **schema.with_defaults(arguments or {})}
+        self._locals = self._parameter_locals(arguments or {})
+
+    def _parameter_locals(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Every parameter as a name the body can read: one the call left out holds its default, or none when it has
+        none."""
+        schema = self._instructions.parameter_schema
+        return {**dict.fromkeys(schema.names), **schema.with_defaults(arguments)}
 
     @property
     def prompt(self) -> tuple[str, ...]:
@@ -307,7 +315,8 @@ class RecipeExpansion:
         return self
 
     def _expanding_with_this(self, expanding: frozenset[tuple[str, str]]) -> frozenset[tuple[str, str]]:
-        owner = self._defining_class if self._defining_class is not None else type(self._toolset)
+        defining_class = self._instructions.defining_class
+        owner = defining_class if defining_class is not None else type(self._toolset)
         key = (owner.__qualname__, self._recipe.__name__)
         if key in expanding:
             raise RecipeCallsItself(type(self._toolset).__name__, self._recipe.__name__)
@@ -338,31 +347,31 @@ class RecipeExpansion:
         for part in other._prompt:
             self._add_prompt(part)
 
-    def _expand_nested(self, nested: ExpandedRecipe, defining_class: type | None = None) -> RecipeExpansion:
-        expansion = RecipeExpansion(nested, expanding=self._expanding, defining_class=defining_class).run()
+    def _expand_nested(self, nested: ExpandedRecipe) -> RecipeExpansion:
+        expansion = RecipeExpansion(nested, expanding=self._expanding).run()
         self._merge(expansion)
         return expansion
 
     def _expand_parent(self) -> RecipeExpansion | None:
-        parent = self._instructions.parent_recipe(self._defining_class)
-        return self._expand_nested(*parent) if parent is not None else None
+        parent = self._instructions.parent_recipe()
+        return self._expand_nested(parent) if parent is not None else None
 
-    def _mode_of(self, target: Any) -> str:
+    def _mode_of(self, target: RecipeTarget) -> str:
         if target is self._toolset:
             return self._mode
         return self._loop_item_modes.get(id(target)) or self._declared_mode(target)
 
-    def _declared_mode(self, target: Any) -> str:
+    def _declared_mode(self, target: RecipeTarget) -> str:
         """The mode target's recipes expand in; ``instructions`` for an object that names none."""
         return str(getattr(target, "mode", "instructions"))
 
-    def _expand_member(self, member: str, target: Any) -> None:
+    def _expand_member(self, member: str, target: RecipeTarget) -> None:
         if self._mode_of(target) == "tool":
             self._tools.append(member)
             return
         self._expand_nested(self._instructions.member_of(target, member))
 
-    def _expand_target_member(self, member: str, target: Any) -> None:
+    def _expand_target_member(self, member: str, target: RecipeTarget | None) -> None:
         if target is None:
             self._tools.append(member)
             return
@@ -373,7 +382,7 @@ class RecipeExpansion:
         if member in members.tool_names:
             self._tools.append(member)
 
-    def _provider(self, owner: Any, provider_name: str, line: ast.AST) -> Any:
+    def _provider(self, owner: RecipeTarget, provider_name: str, line: ast.AST) -> Any:
         """The object owner's provider gives, as the recipe line names it; a provider that raises fails the line."""
         try:
             return self._instructions.provider_of(owner, provider_name)
@@ -544,18 +553,29 @@ class RecipeExpansion:
         mode = self._assigned_mode(statement, "self")
         if mode is not None:
             self._mode = mode
-        elif isinstance(statement, ast.If):
-            for branch_statement in statement.body if self._evaluated(statement.test) else statement.orelse:
-                self._walk(branch_statement)
-        elif isinstance(statement, ast.Try):
-            for body_statement in statement.body:
-                self._walk(body_statement)
-        elif isinstance(statement, ast.For):
+            return
+        if isinstance(statement, ast.Pass):
+            return
+        if isinstance(statement, (ast.If, ast.Try)):
+            self._walk_all(self._taken_branch(statement))
+            return
+        if isinstance(statement, ast.For):
             self._walk_loop(statement)
-        elif isinstance(statement, ast.Expr):
+            return
+        if isinstance(statement, ast.Expr):
             self._walk_expression(statement.value)
-        elif not isinstance(statement, ast.Pass):
-            self._execute(statement)
+            return
+        self._execute(statement)
+
+    def _walk_all(self, statements: list[ast.stmt]) -> None:
+        for statement in statements:
+            self._walk(statement)
+
+    def _taken_branch(self, statement: ast.If | ast.Try) -> list[ast.stmt]:
+        """The statements of an ``if`` that this call's arguments take, or the body of a ``try``."""
+        if isinstance(statement, ast.Try):
+            return statement.body
+        return statement.body if self._evaluated(statement.test) else statement.orelse
 
     def _assigned_mode(self, statement: ast.stmt, receiver: str) -> str | None:
         """The mode a ``receiver.mode = "tool"`` line sets; none for any other line."""
@@ -569,45 +589,45 @@ class RecipeExpansion:
             return None
         return value.value
 
-    def _walk_expression(self, value: ast.expr) -> None:
-        if isinstance(value, ast.Constant) and isinstance(value.value, str):
-            self._add_prompt(value.value.strip())
+    def _walk_expression(self, expression: ast.expr) -> None:
+        if isinstance(expression, ast.Constant) and isinstance(expression.value, str):
+            self._add_prompt(expression.value.strip())
             return
-        if self._calls_super(value):
+        if self._calls_super(expression):
             self._expand_parent()
             return
-        if isinstance(value, ast.Call) and isinstance(value.func, ast.Name):
-            arg = value.args[0] if value.args else None
-            if value.func.id == "tools" and self._expand_tools_arg(arg):
+        if isinstance(expression, ast.Call) and isinstance(expression.func, ast.Name):
+            arg = expression.args[0] if expression.args else None
+            if expression.func.id == "tools" and self._expand_tools_arg(arg):
                 return
-            if value.func.id == "instructions" and self._expand_instructions_arg(arg):
+            if expression.func.id == "instructions" and self._expand_instructions_arg(arg):
                 return
-        if isinstance(value, ast.Call):
-            self._walk_member_call(value)
+        if isinstance(expression, ast.Call):
+            self._walk_member_call(expression)
             return
-        self._add_evaluated(value)
+        self._add_evaluated(expression)
 
     def _calls_super(self, node: ast.AST) -> bool:
         """True for ``super().member(...)``."""
         receiver = node.func.value if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) else None
         return isinstance(receiver, ast.Call) and isinstance(receiver.func, ast.Name) and receiver.func.id == "super"
 
-    def _walk_member_call(self, value: ast.Call) -> None:
-        member = self._wrapped_member_name(value)
+    def _walk_member_call(self, call: ast.Call) -> None:
+        member = self._wrapped_member_name(call)
         if not member:
-            self._add_evaluated(value)
+            self._add_evaluated(call)
             return
         target = self._toolset
-        provider = self._source.member_on_self(value.func.value) if isinstance(value.func, ast.Attribute) and isinstance(value.func.value, ast.Call) else None
+        provider = self._source.member_on_self(call.func.value) if isinstance(call.func, ast.Attribute) and isinstance(call.func.value, ast.Call) else None
         if provider:
-            target = self._provider(self._toolset, provider, value)
+            target = self._provider(self._toolset, provider, call)
         members = self._instructions.members_of(target) if target is not None else None
         if members is None or member in members.instruction_names:
             self._expand_target_member(member, target)
             return
         if member in members.tool_names:
             self._expand_target_member(member, target)
-        self._add_evaluated(value)
+        self._add_evaluated(call)
 
     def _walk_loop(self, statement: ast.For) -> None:
         if not isinstance(statement.target, ast.Name):

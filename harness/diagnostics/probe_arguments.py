@@ -8,7 +8,7 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable, NamedTuple
 
 from harness.agent_tools.tool_call import ToolCall
 from harness.diagnostics.cdd_diagnostic_bridge import CddDiagnosticFixtures
@@ -16,6 +16,13 @@ from harness.guidance.practice_catalogue import PracticeCatalogue
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import PracticeGuidance
+
+
+class OperationArguments(NamedTuple):
+    """The arguments a probe calls one operation with, and the names of the required ones it could not make."""
+
+    values: dict[str, Any]
+    missing: list[str]
 
 
 class ProbeArguments:
@@ -56,19 +63,19 @@ class ProbeArguments:
         """The folder that holds the practices' folders, as the first practice in the catalogue answers it."""
         return self.practices[0].module_dir.parent
 
-    def for_operation(self, mcp_name: str, member: Any) -> tuple[dict[str, Any], list[str]]:
+    def for_operation(self, mcp_name: str, member: Callable[..., object]) -> OperationArguments:
         """The arguments to call the operation published as mcp_name with, and the names of the required ones the probe
         cannot make. The ``cdd-diagnostic`` fixtures fill in what the probe cannot make itself."""
         parameters = _OperationParameters(member)
         if not parameters.readable:
-            return {}, ["callable"]
+            return OperationArguments({}, ["callable"])
         arguments = self._made_arguments(mcp_name, parameters.names)
         missing = parameters.missing_from(arguments)
         fixture = self.fixtures.probe_arguments(mcp_name) if missing else None
         if fixture is None:
-            return arguments, missing
-        fixture_arguments, still_missing = fixture
-        return {**arguments, **fixture_arguments}, still_missing
+            return OperationArguments(arguments, missing)
+        fixture_values, still_missing = fixture
+        return OperationArguments({**arguments, **fixture_values}, still_missing)
 
     def work_session(self) -> Any:
         """The main session of a new temp project, for probing operations that write under the session's root, so a
@@ -106,18 +113,24 @@ class ProbeArguments:
             return {"segment_path": self._temp_file("-segment.md", "### diagnostic-probe\n\nprobe body for completeness check.\n")}
         if mcp_name in {"partition.index", "partition.partition"}:
             return {name: value for name, value in (("context", ""), ("mode", "index_only")) if name in names}
-        if mcp_name == "grill-context.explore_context_files":
-            return {"folder": str(self.repo)}
-        if mcp_name == "grill-context.read_context_file":
-            return {"path": self._sample_guidance_file()}
-        if mcp_name == "grill-context.write_grill_answer":
-            return {"heading": "diagnostic-probe", "body": "probe"}
+        if mcp_name.startswith("grill-context."):
+            return self._grill_context_arguments(mcp_name)
         if mcp_name == "sketch.save_sketch" and "content" in names:
             return {"content": ""}
         if mcp_name == "sessions.switch":
             return {"name": "_cdd_mcp_probe"}
         if mcp_name.startswith("echo.") and "body" in names:
             return {"body": "agent-tools-diagnostics probe"}
+        return {}
+
+    def _grill_context_arguments(self, mcp_name: str) -> dict[str, Any]:
+        """The grill-context operations read this checkout's context and the practice documents, and write one answer."""
+        if mcp_name == "grill-context.explore_context_files":
+            return {"folder": str(self.repo)}
+        if mcp_name == "grill-context.read_context_file":
+            return {"path": self._sample_guidance_file()}
+        if mcp_name == "grill-context.write_grill_answer":
+            return {"heading": "diagnostic-probe", "body": "probe"}
         return {}
 
     def _temp_dir(self) -> str:
@@ -136,13 +149,13 @@ class ProbeArguments:
 
     def _sample_guidance_file(self) -> str:
         """A practice's own document for a read probe: the first practice in the catalogue's, as it answers its path."""
-        return str(self.practices[0].domain_markdown_path())
+        return str(self.practices[0].domain_markdown_path)
 
 
 class _OperationParameters:
     """The parameters a caller passes an operation: every named one, and the ones without a default."""
 
-    def __init__(self, member: Any) -> None:
+    def __init__(self, member: Callable[..., object]) -> None:
         try:
             parameters = inspect.signature(member).parameters.values()
         except (TypeError, ValueError):

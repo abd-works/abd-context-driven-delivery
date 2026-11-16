@@ -3,7 +3,8 @@ import type { EngineInterface } from 'claude-code'
 import type { ChatData } from '@cdd/harness/chat/chat'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
-import { reasonOf, showFailure } from '../error-display/failure-client'
+import { showFailure } from '../error-display/failure-client'
+import { reasonOf } from '../shared/reason'
 import { linkNotOpened } from '../shared/system-link'
 import { callTool } from './chat-bar-client'
 
@@ -12,9 +13,9 @@ import { callTool } from './chat-bar-client'
 // or starts a new one in the worktree.
 
 // The name a person reads for the chat working on a ticket, as chat.list names it; its id when the list names none.
-async function nameOfChat($: EngineInterface, id: string): Promise<string> {
+async function nameOfChat($: EngineInterface, chatId: string): Promise<string> {
   const chats = await callTool<ChatData[]>($, 'chat.list', {})
-  return chats.find(chat => chat.id === id)?.name || id
+  return chats.find(chat => chat.id === chatId)?.name || chatId
 }
 
 // Where a ticket that ticket.activate opened is worked on: its chat when one is open, else a new chat in its worktree.

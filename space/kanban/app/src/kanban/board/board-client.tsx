@@ -11,7 +11,7 @@ const standingOf = ({ column, isClosed, isDone }: TicketClient): string => (isCl
 export function changesOf(was: TicketClient, ticket: TicketClient): string[] {
   const moved = standingOf(was) === standingOf(ticket) ? [] : [`${ticket.title} moved to ${standingOf(ticket)}`]
   const done = ticket.progress
-    .filter(progress => progress.state === 'done' && was.progressNamed(progress.fidelity.slug)?.state !== 'done')
+    .filter(progress => progress.state === 'done' && was.work.progressNamed(progress.fidelity.slug)?.state !== 'done')
     .map(progress => `${progress.fidelity.slug} done on ${ticket.name}`)
   return [...moved, ...done]
 }
@@ -122,10 +122,6 @@ export class BoardClient extends BoardClientGenerated {
 
   stageNamed(name: string): ColumnClient | undefined {
     return this.stages.find(stage => stage.name === name)
-  }
-
-  select(address: string): void {
-    this.page.store.change({ selected: address })
   }
 
   // A ticket moved back into the Backlog leaves the columns and comes back as the backlog item that, Python says, holds it.

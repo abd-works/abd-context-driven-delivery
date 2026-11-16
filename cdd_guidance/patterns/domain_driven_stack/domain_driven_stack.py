@@ -10,5 +10,7 @@ class DomainDrivenStack(PracticeGuidance):
     acceptance tests are written first, with Stories at acceptance_tests in TypeScript, and then the production code
     those tests drive."""
 
+    default_workspace_folder = "packages"
+
     def __init__(self) -> None:
-        super().__init__(format="typescript", default_workspace_folder="packages")
+        super().__init__(format="typescript")

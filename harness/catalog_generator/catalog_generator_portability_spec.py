@@ -16,7 +16,7 @@ for _cat in ("cdd_guidance/practices", "tools"):
 from expects import be_true, contain, equal, expect
 from mamba import before, description, it
 
-from harness.catalog_generator.catalog_generator import Catalog
+from harness.catalog_generator.catalog_generator import Catalog, CatalogProject
 from harness.catalog_generator.git_citation import GitCitation
 
 
@@ -51,7 +51,7 @@ with description("Embed Local Assets And Content Into Generated HTML"):
             self.tmp = Path(tempfile.mkdtemp())
 
         with it("writes the literal content into the generated HTML with no runtime fetch"):
-            catalog = Catalog(repo_url="https://github.com/org/repo", ref="abc123", out_root=str(self.tmp), project=self.tmp)
+            catalog = Catalog(CatalogProject(self.tmp, self.tmp), GitCitation("https://github.com/org/repo", "abc123"))
             target = catalog.write_page(
                 "cdd_guidance/actions/repair.html", "<article>literal content here</article>"
             )

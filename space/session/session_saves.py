@@ -131,7 +131,7 @@ class SessionSaves:
             repository.commit([str(self._folder)], "\n".join(changes), untracked=True)
             self._is_unpushed = True
         if self._is_unpushed and repository.has_origin:
-            repository.push_upstream()
+            repository.origin.push_upstream()
         self._is_unpushed = False
         self._failure = None
 

@@ -155,15 +155,27 @@ class RepositoryToolsets:
                 found.setdefault(str(reference), reference)
         return list(found.values())
 
-    def _toolset_refs_in_file(self, py_file: Path) -> list[ToolsetReference]:
+    def _installing_source(self, py_file: Path) -> ast.Module | None:
+        """py_file parsed, when it names a decorator that can make a class installable; none for a file that names none
+        or cannot be read or parsed."""
+        text = self._text_of(py_file)
+        if not self._may_install(text):
+            return None
         try:
-            text = py_file.read_text(encoding="utf-8")
-            if not self._may_install(text):
-                return []
-            tree = ast.parse(text)
-        except (OSError, SyntaxError, UnicodeDecodeError):
-            return []
-        module = self._module_name(py_file)
+            return ast.parse(text)
+        except SyntaxError:
+            return None
+
+    def _text_of(self, py_file: Path) -> str:
+        """py_file's text; empty for a file that cannot be read."""
+        try:
+            return py_file.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            return ""
+
+    def _toolset_refs_in_file(self, py_file: Path) -> list[ToolsetReference]:
+        tree = self._installing_source(py_file)
+        module = self._module_name(py_file) if tree is not None else ""
         if not module:
             return []
         return [

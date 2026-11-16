@@ -5,7 +5,7 @@ from pathlib import Path
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
-from harness.diagnostics.app import App
+from harness.diagnostics.app import APPS, App
 from harness.diagnostics.test_runs import TestCadence, TestRun, TestRunRecord, default_record_folder, main_checkout
 from harness.hooks.hook_daemon import HookDaemon
 from harness.installation.data_class import data_field, language_adapter
@@ -44,7 +44,7 @@ class ServerHealth:
     @data_field
     def apps(self) -> list[App]:
         """Every app a module registered, each read as it is now."""
-        return App.registered()
+        return APPS.registered
 
     @property
     @data_field

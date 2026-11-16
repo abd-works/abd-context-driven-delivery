@@ -434,8 +434,7 @@ with description("a fidelity read from its practice's document"):
         with it("should leave a setting it does not know to its reader"):
             from harness.guidance.guidance import FidelityGuidance
 
-            fidelity = FidelityGuidance(name="sample")
-            fidelity.apply_settings({"globs": "**/*.md", "stage": "discovery"})
+            fidelity = FidelityGuidance.from_block("sample", '```yaml\nglobs: "**/*.md"\nstage: discovery\n```')
             expect(hasattr(fidelity, "globs")).to(equal(False))
 
     with context("with a template in the format it works in"):
@@ -447,16 +446,16 @@ with description("a fidelity read from its practice's document"):
 
     with context("with a path its outputs name"):
         with it("should declare a file at the end of that path"):
-            expect(self.story_map.declares("app/.context/story-map.md")).to(equal(True))
+            expect(self.story_map.declared.includes("app/.context/story-map.md")).to(equal(True))
 
         with it("should not declare a file its outputs do not name"):
-            expect(self.story_map.declares("app/.context/ux-context.md")).to(equal(False))
+            expect(self.story_map.declared.includes("app/.context/ux-context.md")).to(equal(False))
 
         with it("should declare it in the format whose output names it"):
-            expect(self.story_map.declares("app/.context/story-map.md", "markdown")).to(equal(True))
+            expect(self.story_map.declared.includes("app/.context/story-map.md", "markdown")).to(equal(True))
 
         with it("should not declare it in another format"):
-            expect(self.story_map.declares("app/.context/story-map.md", "drawio")).to(equal(False))
+            expect(self.story_map.declared.includes("app/.context/story-map.md", "drawio")).to(equal(False))
 
     with context("with its practice's document read twice"):
         with it("should read it once"):

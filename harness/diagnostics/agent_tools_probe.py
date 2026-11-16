@@ -8,10 +8,14 @@ import concurrent.futures
 import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
-from harness.diagnostics.probe_arguments import ProbeArguments
-from harness.diagnostics.probe_outcome import ProbeOutcome, ProbeSection
+from harness.diagnostics.probe_arguments import OperationArguments, ProbeArguments
+from harness.diagnostics.probe_outcome import ProbeOutcome, ProbeSection, raised_by_a_bug
+
+if TYPE_CHECKING:
+    from harness.installation.installer import Installer
+    from harness.mcp.mcp_server import McpHost
 
 AGENT_TOOLS_PROBE_SECTION = "agent_tools"
 AGENT_TOOLS_TOOLSET_PREFIXES = ("space.", "harness.", "tools.")
@@ -52,21 +56,22 @@ def agent_tools_toolset_ref(ref: str) -> bool:
 class AgentToolsProbe:
     """A probe of the workspace MCP tools one install deployed (space, harness, and tools): ping each, call the light
     ones with probe arguments, and call session and graph tools with ``cdd-diagnostic`` fixtures. Made for its
-    Installer, the guidance slugs a tool needs as its ``guidance`` argument, the MCP host it calls through, and the
-    project the calls work on; results go under ``agent_tools`` in diagnostics.json. Without a host it stands up a
-    one-off host over every toolset of the Installer's checkout; without a project a call works on the folder
-    ``CDD_PROJECT`` names."""
+    Installer, the guidance slugs a tool needs as its ``guidance`` argument, and the MCP host it calls through; every
+    call works on the Installer's project, and results go under ``agent_tools`` in diagnostics.json. Without a host it
+    stands up a one-off host over every toolset of the Installer's checkout."""
 
-    def __init__(
-        self, installer: Any, guidance: list[str] | None = None, mcp_host: Any = None, project: Path | None = None
-    ) -> None:
+    def __init__(self, installer: Installer, guidance: list[str] | None = None, mcp_host: McpHost | None = None) -> None:
         self.installer = installer
         self.slugs = list(guidance or [])
-        self.project = project
         self._mcp_host = mcp_host
 
     @property
-    def host(self) -> Any:
+    def project(self) -> Path:
+        """The project every probed call works on: the one whose install is probed."""
+        return self.installer.repo
+
+    @property
+    def host(self) -> McpHost:
         """The host this probe calls through."""
         if self._mcp_host is None:
             from harness.mcp.mcp_server import McpHost
@@ -138,7 +143,8 @@ class AgentToolsProbe:
         try:
             answer = self._answer(mcp_name, {"ping": True}, "ping")
         except Exception as failure:
-            # A probe reports what failed: the failure is its red outcome.
+            if raised_by_a_bug(failure):
+                raise
             return ProbeOutcome.from_failure(mcp_name, failure)
         if answer == {"ping": "pong", "tool": mcp_name}:
             return ProbeOutcome(mcp_name, ProbeOutcome.GREEN, preview="pong")
@@ -162,24 +168,26 @@ class AgentToolsProbe:
         if fixture is None:
             self._progress("heavy_invoke", mcp_name, "skip (no fixture)")
             return ProbeOutcome.from_skip(mcp_name, "no cdd-diagnostic fixture")
-        return self._called_with(mcp_name, *fixture, "heavy_invoke")
+        return self._called_with(mcp_name, OperationArguments(*fixture), "heavy_invoke")
 
     def _invoked_with(self, mcp_name: str, arguments: ProbeArguments, phase: str) -> ProbeOutcome:
         tool = self.host.checkout_server.enrolled(mcp_name)
         if tool is None:
             return ProbeOutcome.from_refusal(mcp_name, "not enrolled on host")
-        return self._called_with(mcp_name, *arguments.for_operation(mcp_name, tool.callable), phase)
+        return self._called_with(mcp_name, arguments.for_operation(mcp_name, tool.callable), phase)
 
-    def _called_with(self, mcp_name: str, values: dict[str, Any], missing: list[str], phase: str) -> ProbeOutcome:
-        if missing:
-            return ProbeOutcome.from_refusal(mcp_name, "needs " + ", ".join(missing))
+    def _called_with(self, mcp_name: str, arguments: OperationArguments, phase: str) -> ProbeOutcome:
+        if arguments.missing:
+            return ProbeOutcome.from_refusal(mcp_name, "needs " + ", ".join(arguments.missing))
         try:
-            answer = self._answer(mcp_name, values or None, phase)
+            answer = self._answer(mcp_name, arguments.values or None, phase)
         except Exception as failure:
+            if raised_by_a_bug(failure):
+                raise
             return ProbeOutcome.from_failure(mcp_name, failure)
-        return ProbeOutcome.from_answer(mcp_name, answer).called_on(values.get("paths") or [])
+        return ProbeOutcome.from_answer(mcp_name, answer).called_on(arguments.values.get("paths") or [])
 
-    def _answer(self, mcp_name: str, values: dict[str, Any] | None, phase: str) -> object:
+    def _answer(self, mcp_name: str, values: dict[str, object] | None, phase: str) -> object:
         """The tool's answer through the host, waiting at most ``_DISPATCH_SECONDS``. The call runs on a thread of its
         own that the probe never waits for past the limit, so a tool that hangs cannot hang the diagnostics."""
         self._progress(phase, mcp_name, f"call {values!r}"[:200])

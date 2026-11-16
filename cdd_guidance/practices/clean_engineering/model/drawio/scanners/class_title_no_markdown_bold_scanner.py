@@ -1,13 +1,12 @@
 """Scanner: class-title-no-markdown-bold — class titles must not contain `**`."""
 from __future__ import annotations
 
-import re
-
 from harness.graph.violation import Violation
 
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import (
     DrawioPage,
     class_title_in,
+    quoted_title,
 )
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
@@ -22,7 +21,7 @@ class ClassTitleNoMarkdownBoldScanner(DrawioScanner):
             if title and "**" in title:
                 violations.append(self.violation(
                     page,
-                    f"Class title still contains markdown bold markers: {re.sub(r'<[^>]+>', '', title)[:80]!r}",
+                    f"Class title still contains markdown bold markers: {quoted_title(title)!r}",
                 ))
         return violations
 

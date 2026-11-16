@@ -9,6 +9,21 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any, NotRequired, Required, Union, get_args, get_origin, get_type_hints, is_typeddict
 
+# What a type hint is at run time. Python gives a type hint no one class: it is a class such as ``str``, a union such as
+# ``str | None``, an alias such as ``list[str]``, a ``TypedDict``, or a typing form such as ``Any`` or
+# ``NotRequired[int]``, so it is read through ``get_origin`` and ``get_args`` rather than by its class.
+type TypeHint = object
+
+# Python sets this flag on a built-in type, which keeps no attributes of its own (Py_TPFLAGS_IMMUTABLETYPE).
+_IMMUTABLE_TYPE_FLAG = 1 << 8
+
+
+def is_built_in(hint_class: type) -> bool:
+    """Whether hint_class is a type Python builds in, such as ``str`` or ``datetime``, rather than a class of the
+    program's: it names no object a tool acts on, and it keeps no attributes of its own."""
+    return bool(hint_class.__flags__ & _IMMUTABLE_TYPE_FLAG)
+
+
 _UNION_ORIGINS = {Union, py_types.UnionType}
 _ARRAY_ORIGINS = {list, tuple, Sequence}
 _OBJECT_ORIGINS = {dict, Mapping}
@@ -82,7 +97,7 @@ class ParameterSchema:
             return False
         return param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
 
-    def _uses_path(self, annotation: object) -> bool:
+    def _uses_path(self, annotation: TypeHint) -> bool:
         if annotation is Path:
             return True
         if get_origin(annotation) in _UNION_ORIGINS:
@@ -115,7 +130,7 @@ class ParameterSchema:
             return {"type": "string"}
         return self._annotation_schema(annotation)
 
-    def _annotation_schema(self, annotation: object) -> dict[str, Any]:
+    def _annotation_schema(self, annotation: TypeHint) -> dict[str, Any]:
         annotation = self._unwrap_required(annotation)
         if annotation is Any:
             return {}
@@ -130,14 +145,14 @@ class ParameterSchema:
             return self._object_schema(annotation)
         return self._scalar_schema(annotation)
 
-    def _unwrap_required(self, annotation: object) -> object:
+    def _unwrap_required(self, annotation: TypeHint) -> TypeHint:
         if get_origin(annotation) in {NotRequired, Required}:
             args = get_args(annotation)
             if args:
                 return args[0]
         return annotation
 
-    def _typed_dict_schema(self, annotation: object) -> dict[str, Any]:
+    def _typed_dict_schema(self, annotation: TypeHint) -> dict[str, Any]:
         hints = get_type_hints(annotation, include_extras=True)
         properties: dict[str, Any] = {}
         required: list[str] = []
@@ -152,25 +167,25 @@ class ParameterSchema:
             schema["required"] = required
         return schema
 
-    def _union_schema(self, annotation: object) -> dict[str, Any]:
+    def _union_schema(self, annotation: TypeHint) -> dict[str, Any]:
         variants = [self._annotation_schema(arg) for arg in get_args(annotation)]
         if len(variants) == 1:
             return variants[0]
         return {"anyOf": variants}
 
-    def _array_schema(self, annotation: object) -> dict[str, Any]:
+    def _array_schema(self, annotation: TypeHint) -> dict[str, Any]:
         args = get_args(annotation)
         item_schema = self._annotation_schema(args[0]) if args else {"type": "string"}
         return {"type": "array", "items": item_schema}
 
-    def _object_schema(self, annotation: object) -> dict[str, Any]:
+    def _object_schema(self, annotation: TypeHint) -> dict[str, Any]:
         args = get_args(annotation)
         schema: dict[str, Any] = {"type": "object"}
         if len(args) >= 2:
             schema["additionalProperties"] = self._annotation_schema(args[1])
         return schema
 
-    def _scalar_schema(self, annotation: object) -> dict[str, Any]:
+    def _scalar_schema(self, annotation: TypeHint) -> dict[str, Any]:
         """A class the schema has no word for is an object; anything else it cannot name is sent as text."""
         if annotation in _SCALAR_SCHEMAS:
             return dict(_SCALAR_SCHEMAS[annotation])

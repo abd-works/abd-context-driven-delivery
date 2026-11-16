@@ -12,7 +12,7 @@ from pathlib import Path
 from expects import be_a, be_none, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.diagnostics.app import App, AppNotRegistered, AppNotStarted, AppServer, AppStatus, Npm, NpmRun, PortProbe
+from harness.diagnostics.app import APPS, App, AppNotRegistered, AppNotStarted, AppPackage, AppPage, AppServer, AppStatus, NodeScript, Npm, NpmRun, PortProbe
 from harness.installation.data_class import data_of
 
 
@@ -30,7 +30,7 @@ with description("an app") as self:
     with before.each:
         self.folder = Path(tempfile.mkdtemp(prefix="app-"))
         self.port = free_port()
-        self.app = App("Throwaway", self.folder, AppServer(self.folder, "serve.js", (self.port,)), "/story-map")
+        self.app = App("Throwaway", AppPackage(self.folder), AppPage(AppServer(NodeScript(self.folder, "serve.js"), (self.port,)), "/story-map"))
 
     with after.each:
         shutil.rmtree(self.folder, ignore_errors=True)
@@ -118,8 +118,8 @@ with description("an app installed again") as self:
         package_in(self.folder, {"build": "vite build"})
         (self.folder / "main.tsx").write_text("export {}", encoding="utf-8")
         (self.imported / "adapter.ts").write_text("export {}", encoding="utf-8")
-        server = AppServer(self.folder, "serve.js", (free_port(),), probe=NothingListening())
-        self.app = App("Throwaway", self.folder, server, imports=(self.imported,), npm=self.npm)
+        server = AppServer(NodeScript(self.folder, "serve.js"), (free_port(),), NothingListening())
+        self.app = App("Throwaway", AppPackage(self.folder, (self.imported,), self.npm), AppPage(server))
         self.app.install()
         self.npm.calls.clear()
 
@@ -185,19 +185,19 @@ with description("an app installed again") as self:
 
 with description("an app's server"):
     with it("should start a TypeScript script with node through tsx"):
-        expect(AppServer(Path("app"), "packages/session-board/serve.ts", (8778,)).command).to(equal(["node", "--import", "tsx", "packages/session-board/serve.ts"]))
+        expect(AppServer(NodeScript(Path("app"), "packages/session-board/serve.ts"), (8778,)).command).to(equal(["node", "--import", "tsx", "packages/session-board/serve.ts"]))
 
     with it("should start a JavaScript script with node alone"):
-        expect(AppServer(Path("app"), "serve.js", (8778,)).command).to(equal(["node", "serve.js"]))
+        expect(AppServer(NodeScript(Path("app"), "serve.js"), (8778,)).command).to(equal(["node", "serve.js"]))
 
     with context("that is not running"):
         with it("should stop nothing when stopped"):
-            expect(AppServer(Path("app"), "serve.js", (8778,), probe=NothingListening()).stop()).to(equal(False))
+            expect(AppServer(NodeScript(Path("app"), "serve.js"), (8778,), NothingListening()).stop()).to(equal(False))
 
 
 with description("the registry of apps") as self:
     with before.each:
-        self.held = App.registered()
+        self.held = APPS.registered
         self.folder = Path(tempfile.mkdtemp(prefix="app-"))
 
     with after.each:
@@ -206,16 +206,16 @@ with description("the registry of apps") as self:
         shutil.rmtree(self.folder, ignore_errors=True)
 
     with it("should hold the Graph app, which harness registers from its own ports file"):
-        expect([app.label for app in App.registered()]).to(contain("Graph"))
+        expect([app.label for app in APPS.registered]).to(contain("Graph"))
 
     # Each spec registers its app under the Graph app's label, so putting the apps held before back leaves none behind.
     with it("should load a registered app by its label"):
-        registered = App("Graph", self.folder, AppServer(self.folder, "serve.js", (free_port(),))).register()
+        registered = App("Graph", AppPackage(self.folder), AppPage(AppServer(NodeScript(self.folder, "serve.js"), (free_port(),)))).register()
         expect(App.load("Graph", project=self.folder)).to(equal(registered))
 
     with it("should replace an app registered again under its label rather than list it twice"):
-        again = App("Graph", self.folder, AppServer(self.folder, "serve.js", (free_port(),))).register()
-        expect([app for app in App.registered() if app.label == "Graph"]).to(equal([again]))
+        again = App("Graph", AppPackage(self.folder), AppPage(AppServer(NodeScript(self.folder, "serve.js"), (free_port(),)))).register()
+        expect([app for app in APPS.registered if app.label == "Graph"]).to(equal([again]))
 
     with it("should refuse a label no module registered"):
         expect(lambda: App.load("Nowhere", project=self.folder)).to(raise_error(AppNotRegistered))

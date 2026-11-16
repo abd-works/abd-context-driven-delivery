@@ -7,21 +7,29 @@ from typing import Annotated
 from harness.installation.data_class import SourceFile, data_field
 
 
+class LineSpan:
+    """Lines start_line to end_line of a file, counted from 1, both included."""
+
+    def __init__(self, start_line: int, end_line: int) -> None:
+        self.start_line = start_line
+        self.end_line = end_line
+
+
 class Range:
     """Lines start_line to end_line of one file, named from the project, and the text those lines held when the range
     was taken."""
 
-    def __init__(self, path: str, start_line: int, end_line: int, content: str) -> None:
+    def __init__(self, path: str, span: LineSpan, content: str) -> None:
         self._path = path
-        self._start_line = start_line
-        self._end_line = end_line
+        self._start_line = span.start_line
+        self._end_line = span.end_line
         self._content = content
 
     @classmethod
-    def of_text(cls, path: str, text: str, start_line: int, end_line: int) -> Range:
-        """Lines start_line to end_line of text, the whole of path; lines past its end hold nothing."""
+    def of_text(cls, path: str, text: str, span: LineSpan) -> Range:
+        """The lines span names of text, the whole of path; lines past its end hold nothing."""
         lines = text.splitlines()
-        return cls(path, start_line, end_line, "\n".join(lines[start_line - 1 : end_line]))
+        return cls(path, span, "\n".join(lines[span.start_line - 1 : span.end_line]))
 
     @property
     @data_field

@@ -50,8 +50,11 @@ function ShapeIcon({ shape, size }: { shape: string; size: number }) {
   )
 }
 
+// A button's icon, drawn a little smaller than the text beside it.
+const BUTTON_ICON_PIXELS = 14
+
 export function FileViewIcon({ mode }: { mode: string }) {
-  return <ShapeIcon shape={FILE_VIEW_SHAPES[mode] ?? ''} size={14} />
+  return <ShapeIcon shape={FILE_VIEW_SHAPES[mode] ?? ''} size={BUTTON_ICON_PIXELS} />
 }
 
 // What a card does for its session: run the next step, hand off, split into child tickets, open its chat, activate or
@@ -70,7 +73,7 @@ const SESSION_ACTION_SHAPES: Record<string, string> = {
 }
 
 export function SessionActionIcon({ action }: { action: string }) {
-  return <ShapeIcon shape={SESSION_ACTION_SHAPES[action] ?? ''} size={14} />
+  return <ShapeIcon shape={SESSION_ACTION_SHAPES[action] ?? ''} size={BUTTON_ICON_PIXELS} />
 }
 
 const FORMAT_SHAPES: Record<string, string> = {

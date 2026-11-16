@@ -17,11 +17,14 @@ OPEN, CLOSE = chr(0xAB), chr(0xBB)
 
 def _processes() -> CleanEngineeringModel:
     """A stoppable process that stops and reads a running process, and a launcher that owns one stoppable process."""
-    running = OoadClass("RunningProcess", 1, intent="One process by its id.", operations=[Operation(name="alive", return_type="bool")])
-    stoppable = OoadClass("StoppableProcess", 2, intent="Ends a process by its id.", operations=[Operation(name="stop", return_type="None")])
+    running = OoadClass("RunningProcess", 1, intent="One process by its id.")
+    running.operations = [Operation(name="alive", return_type="bool")]
+    stoppable = OoadClass("StoppableProcess", 2, intent="Ends a process by its id.")
+    stoppable.operations = [Operation(name="stop", return_type="None")]
     stoppable.depend_on("RunningProcess", "stops")
     stoppable.depend_on("RunningProcess", "reads pid of")
-    launcher = OoadClass("Launcher", 3, intent="Starts and ends one server.", properties=[Property("process", type_hint="StoppableProcess")])
+    launcher = OoadClass("Launcher", 3, intent="Starts and ends one server.")
+    launcher.properties = [Property("process", type_hint="StoppableProcess")]
     launcher.properties[0].stereotype = "composition"
     launcher.properties[0].derive_relationship()
     launcher.depend_on("StoppableProcess", "asks to stop")

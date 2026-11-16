@@ -21,6 +21,6 @@ with description("a story map drawn for a Miro board") as self:
         expect(self.read.clone()).to(be_a(MiroStoryModel))
 
     with it("should head a nested epic's thin-slice column with a plain ellipsis"):
-        self.story_map.epics[0].epics[0].append_epic(type(self.story_map.epics[0])("Confirm Payment", 1))
-        self.story_map.append_increment(MiroIncrement("First slice", 1))
+        self.story_map.epics[0].epics[0].epics.append(type(self.story_map.epics[0])("Confirm Payment", 1))
+        self.story_map.increments.append(MiroIncrement("First slice", 1))
         expect(self.story_map.save_thin_slice()).to(contain("Pay Bills / … / Confirm Payment"))

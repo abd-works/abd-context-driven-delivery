@@ -24,11 +24,11 @@ from harness.guidance.guidance import FidelityGuidance  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
 import space.kanban.backlog_item as backlog_item_module  # noqa: E402
 from space.kanban.backlog_item import BacklogNestingError  # noqa: E402
-from space.kanban.board import Board, Card, ColumnNotFoundError, Help  # noqa: E402
+from space.kanban.board import Board, Card, ColumnNotFoundError, Help, RequiredFidelity  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
 from space.kanban.ticket_checkout import TicketCheckout  # noqa: E402
 from space.repo.repo import Repo  # noqa: E402
-from space.session.throwaway_project import ThrowawayProject  # noqa: E402
+from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject  # noqa: E402
 
 
 class SessionsFolder:
@@ -71,7 +71,7 @@ def names(items) -> list:
 
 with description("a board") as self:
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
         patch.stopall()
 
     with context("loaded for a tool call"):
@@ -187,7 +187,7 @@ with description("a board") as self:
             board = every_kind()
             self.sent = data_of(board)
             self.cards_sent = [data_of(card) for card in board.cards]
-            ThrowawayProject.close_all()
+            OPEN_PROJECTS.close_all()
             patch.stopall()
             self.every_kind = every_kind
 
@@ -240,7 +240,7 @@ with description("a board") as self:
         with context("that has opened a ticket since it read them"):
             with before.each:
                 self.board.tickets
-                self.board.open_ticket("Gift cards", "feature", "", "")
+                self.board.open_ticket("Gift cards", "feature")
 
             with it("should read the tickets again"):
                 expect(names(self.board.tickets)).to(contain("gift-cards"))
@@ -253,7 +253,8 @@ with description("a board") as self:
         with before.each:
             stories = Stories()
             board = Board(Repo(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([stories])))
-            self.help = Help(stories, FidelityGuidance("unpublished", "discovery"), None, board.catalogued_practices.of(Stories))
+            required = RequiredFidelity(board.stage("Discovery"), FidelityGuidance("unpublished", "discovery"))
+            self.help = Help(stories, board.catalogued_practices.of(Stories), required)
 
         with it("should link to its practice's page on the forge"):
             expect(self.help.href).to(equal("https://forge.abdworks.net/abd-context-driven-delivery/context-tools/stories.html"))
@@ -304,7 +305,7 @@ with description("a board") as self:
 
 with description("a backlog item") as self:
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
         patch.stopall()
 
     # (S) Person --> Add Backlog Item, Start Backlog Item
@@ -428,7 +429,7 @@ with description("a backlog item") as self:
 
             # What the board sends is read once, on a folder of its own, for the example that only looks at it.
             self.backlog_sent = data_of(nested()[1])["columns"][0]
-            ThrowawayProject.close_all()
+            OPEN_PROJECTS.close_all()
             patch.stopall()
             self.nested = nested
 
@@ -550,7 +551,7 @@ def story_map(ticket):
 
 with description("a ticket") as self:
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
         patch.stopall()
 
     # (S) Person --> Open Ticket Session
@@ -709,7 +710,7 @@ with description("a ticket") as self:
                 expect((self.ticket.column.name, self.ticket.is_done)).to(equal(("Discovery", True)))
 
             with it("should keep its done mark in its session.json"):
-                expect((self.ticket.session.fields["stage"], self.ticket.session.fields["stage_mark"])).to(equal(("Discovery", "done")))
+                expect((self.ticket.session.record.fields["stage"], self.ticket.session.record.fields["stage_mark"])).to(equal(("Discovery", "done")))
 
             with it("should have no next"):
                 expect(self.ticket.next_fidelity).to(be_none)

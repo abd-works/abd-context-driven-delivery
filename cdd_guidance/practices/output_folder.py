@@ -7,6 +7,7 @@ import shutil
 import stat
 import time
 from pathlib import Path
+from typing import Callable
 
 
 class OutputFolder:
@@ -22,7 +23,7 @@ class OutputFolder:
         if self.path.exists():
             shutil.rmtree(self.path, onexc=self._remove_when_released)
 
-    def _remove_when_released(self, remove, target: str, _error: BaseException) -> None:
+    def _remove_when_released(self, remove: Callable[[str], None], target: str, _error: BaseException) -> None:
         for _ in range(self.ATTEMPTS):
             try:
                 os.chmod(target, stat.S_IWRITE)

@@ -72,7 +72,9 @@ class InstallDiagnostics:
         baseline = last if last is not None else {name: [] for name in self.CHANNELS}
         added = {name: sorted(set(actual.get(name, [])) - set(baseline.get(name, []))) for name in self.CHANNELS}
         removed = {name: sorted(set(baseline.get(name, [])) - set(actual.get(name, []))) for name in self.CHANNELS}
-        color = "green" if last is None else self._surface_color(added, removed, actual, baseline)
+        changed = sum(len(added[name]) + len(removed[name]) for name in self.CHANNELS)
+        compared_items = sum(len(actual.get(name, [])) + len(baseline.get(name, [])) for name in self.CHANNELS)
+        color = "green" if last is None else self._surface_color(changed, compared_items)
         lines = ["installed"]
         for name in self.CHANNELS:
             previous, current = len(baseline.get(name, [])), len(actual.get(name, []))
@@ -123,16 +125,9 @@ class InstallDiagnostics:
             channels[name] = [str(item) for item in items or []]
         return channels
 
-    def _surface_color(
-        self,
-        added: dict[str, list[str]],
-        removed: dict[str, list[str]],
-        actual: dict[str, list[str]],
-        baseline: dict[str, list[str]],
-    ) -> str:
-        changed = sum(len(items) for items in added.values()) + sum(len(items) for items in removed.values())
-        total = sum(len(actual.get(name, [])) + len(baseline.get(name, [])) for name in self.CHANNELS)
-        ratio = changed / total if total else 0.0
+    def _surface_color(self, changed: int, compared_items: int) -> str:
+        """Green, yellow, or red by the share of the compared items, this install's and the last's, that changed."""
+        ratio = changed / compared_items if compared_items else 0.0
         if ratio <= _GREEN_SURFACE_CHANGE:
             return "green"
         return "yellow" if ratio <= _YELLOW_SURFACE_CHANGE else "red"

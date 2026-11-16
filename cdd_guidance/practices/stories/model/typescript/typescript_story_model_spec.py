@@ -30,7 +30,7 @@ def _make_scenario(name: str, order: int) -> Scenario:
 def _story_map_with_stories() -> StoryModel:
     story_map = StoryModel()
     for i in range(1, 5):
-        story_map.append_epic(Epic(f"Epic {i}", i))
+        story_map.epics.append(Epic(f"Epic {i}", i))
     first = story_map.epics[0]
     for j in range(1, 4):
         sub = Epic(f"Epic 1.{j}", j)
@@ -49,7 +49,7 @@ with description("a TypeScript runnable-story Story Map") as self:
     with context("that holds rendered stories"):
         with before.each:
             self.tree = self.ts.render(_story_map_with_stories())
-            self.leaf_paths = self.ts.leaf_files_of(self.tree)
+            self.leaf_paths = sorted(path for path in self.tree if self.ts.is_story_file(path))
 
         with it("should emit one `{sub_epic_snake}_story.test.ts` in the parent epic folder"):
             for path in self.leaf_paths:
@@ -121,7 +121,7 @@ with description("a TypeScript runnable-story Story Map") as self:
             parsed = TypeScriptStoryModel("tests").parse(self.tree)
             expect(parsed.epics[0].epics[0].stories[0].name).to(equal("Redeem a voucher"))
             expect(
-                TypeScriptStoryModel("tests").leaf_files_of(self.tree)
+                sorted(path for path in self.tree if TypeScriptStoryModel("tests").is_story_file(path))
             ).not_to(contain("test-utils/story-test/story-test.ts"))
 
     with context("a scenario with two Then outcomes"):

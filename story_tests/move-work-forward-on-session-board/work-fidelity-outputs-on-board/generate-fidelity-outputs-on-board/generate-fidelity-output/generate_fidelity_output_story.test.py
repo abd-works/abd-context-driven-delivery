@@ -38,7 +38,7 @@ with story("Generate Fidelity Output"):
             pass
         with when("the Person generates scenarios in drawio"):
             # Board page -> TicketClient.actionCommand('/actions-generate stories-scenarios format=drawio')
-            # Generate -> FidelityGuidance(Stories story_map).output_paths() <- markdown docs/story-map.md there, drawio not
+            # Generate -> FidelityGuidance(Stories story_map).declared.output_paths() <- markdown docs/story-map.md there, drawio not
             pass
         with then("the first command is /actions-render stories-story-map format=drawio source=markdown"):
             pass

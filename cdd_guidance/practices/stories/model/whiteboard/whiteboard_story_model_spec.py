@@ -49,7 +49,7 @@ with description("a story map drawn on a Claude whiteboard") as self:
         with it("should size each card for its actor and a name of three lines of small text"):
             letters_per_line = (WhiteboardStory.card_width - 24) // 7.5
             lines_room = (WhiteboardStory.size - 24) // 21
-            expect(all(len(story.name) <= 3 * letters_per_line and lines_room >= 4 for story in self.story_map.every_story())).to(equal(True))
+            expect(all(len(story.name) <= 3 * letters_per_line and lines_room >= 4 for story in self.story_map.descendants.stories())).to(equal(True))
 
     with context("that is drawn twice"):
         with it("should give each epic and story the same element id both times"):
@@ -64,9 +64,9 @@ with description("a story map drawn on a Claude whiteboard") as self:
 with description("a story map's thin slice drawn on a Claude whiteboard") as self:
     with before.each:
         self.story_map = WhiteboardStoryModel(round_trip_story_map())
-        stories = self.story_map.every_story()
-        self.story_map.append_increment(DiagramIncrement("Walking Skeleton", 1, [stories[0], stories[-1]]))
-        self.story_map.append_increment(DiagramIncrement("Next Slice", 2, stories[1:3]))
+        stories = self.story_map.descendants.stories()
+        self.story_map.increments.append(DiagramIncrement("Walking Skeleton", 1, [stories[0], stories[-1]]))
+        self.story_map.increments.append(DiagramIncrement("Next Slice", 2, stories[1:3]))
         self.board = Whiteboard.from_text(self.story_map.save_thin_slice())
         self.lanes = [element for element in self.board.elements if element.role == "lane"]
 

@@ -8,6 +8,7 @@ from expects import be_true, expect
 from mamba import context, description, it
 
 from cdd_guidance.practices.agent_bdd.agent import agent
+from cdd_guidance.practices.agent_bdd.agent_bdd_common import ToolsetRequest
 from cdd_guidance.practices.agent_bdd.spec_helpers import (
     expect_instructions_contain,
     expect_ok_action,
@@ -25,18 +26,20 @@ with description("a Car toolset"):
                 run.read_workspace("harness/agent_tools/_examples/car/car.py")
 
                 response = run.run_toolset(
-                    toolset="agent_tools._examples.car:Car",
-                    action="travelTo",
-                    context={
-                        "make": "Dodge",
-                        "model": "Charger",
-                        "year": 1969,
-                        "personality": "General Lee",
-                    },
-                    arguments={
-                        "destination": "Hazzard County courthouse",
-                        "conditions": "muddy back roads, Sheriff Rosco in pursuit",
-                    },
+                    ToolsetRequest(
+                        "agent_tools._examples.car:Car",
+                        action="travelTo",
+                        context={
+                            "make": "Dodge",
+                            "model": "Charger",
+                            "year": 1969,
+                            "personality": "General Lee",
+                        },
+                        arguments={
+                            "destination": "Hazzard County courthouse",
+                            "conditions": "muddy back roads, Sheriff Rosco in pursuit",
+                        },
+                    ),
                     timeout_seconds=90,
                 )
                 expect_ok_action(response, "travelTo")

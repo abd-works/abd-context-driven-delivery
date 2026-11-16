@@ -1,127 +1,173 @@
 <mxfile host="CleanEngineering.diagram.drawio">
   <diagram name="Cart" id="page-cart">
-    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="6040" pageHeight="1920" math="0" shadow="0">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="5960" pageHeight="1562" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
         <mxCell id="customer--customer" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: Customer»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Customer&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;+ verified: boolean&lt;br/&gt;+ identity: Identity&lt;br/&gt;+ address: Address&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
-          <mxGeometry x="2720" y="170" width="1320" height="142" as="geometry" />
+          <mxGeometry x="2380" y="890" width="1320" height="142" as="geometry" />
         </mxCell>
         <mxCell id="customer--customerrepository" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: Customer»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;CustomerRepository&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ customers: Collection&amp;lt;Customer&amp;gt;&lt;br/&gt;+ midtierCustomerService: MidtierCustomerService&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
-          <mxGeometry x="4290" y="1340" width="540" height="110" as="geometry" />
+          <mxGeometry x="1820" y="380" width="540" height="110" as="geometry" />
         </mxCell>
         <mxCell id="cart--cart" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Cart&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ customer: Customer&lt;br/&gt;+ id: string&lt;br/&gt;+ line: Line&lt;br/&gt;+ bundle: Bundle | null&lt;br/&gt;+ portability: Portability | null&lt;br/&gt;+ voucher: Voucher | null&lt;br/&gt;+ growthBook: GrowthBook&lt;br/&gt;+ defaultPayment: boolean&lt;br/&gt;+ orderSuccess: boolean | null&lt;br/&gt;+ payUpFront: boolean | null&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ constructor(customer: Customer, id: string, line: Line, bundle: Bundle | null, portability: Portability | null, voucher: Voucher | null, growthBook: GrowthBook, defaultPayment: boolean, orderSuccess: boolean | null, payUpFront: boolean | null)&lt;br/&gt;+ setupAccount(): Customer | null&lt;br/&gt;+ pickPlan(plan: Plan): Cart | CartErrors    //applyPlan&lt;br/&gt;+ pickNumber(availableNumber: AvailableNumber): Cart | CartErrors&lt;br/&gt;+ bringNumber(portability: Portability): Cart | CartErrors&lt;br/&gt;+ applyVoucher(code: string): Cart | VoucherErrors&lt;br/&gt;+ removeVoucher(): Cart | VoucherErrors&lt;br/&gt;+ checkout(payment: Payment): Cart | PaymentErrors&lt;br/&gt;+ createOrder(customer: Customer): Cart&lt;br/&gt;+ storeOrderResult(customer: Customer, success: boolean, payUpFront: boolean | null, verified: boolean): Cart&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=Cart;" vertex="1" parent="1">
-          <mxGeometry x="1210" y="60" width="1380" height="366" as="geometry" />
+          <mxGeometry x="2580" y="380" width="1380" height="366" as="geometry" />
         </mxCell>
         <mxCell id="cart--onboardingstep" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;OnboardingStep&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=Cart;" vertex="1" parent="1">
-          <mxGeometry x="1800" y="1620" width="200" height="80" as="geometry" />
+          <mxGeometry x="1250" y="60" width="200" height="80" as="geometry" />
         </mxCell>
         <mxCell id="cart--bundle" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Bundle&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;+ name: string&lt;br/&gt;+ description: string&lt;br/&gt;+ price: number&lt;br/&gt;+ fees: number&lt;br/&gt;+ totalPrice: number&lt;br/&gt;+ features: any&lt;br/&gt;+ plan: Plan&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ constructor(id: string, name: string, description: string, price: number, fees: number, totalPrice: number, features: any, plan: Plan)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=Cart;" vertex="1" parent="1">
-          <mxGeometry x="4170" y="590" width="780" height="190" as="geometry" />
+          <mxGeometry x="60" y="890" width="780" height="190" as="geometry" />
         </mxCell>
         <mxCell id="cart--growthbook" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;GrowthBook&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ DISABLEEsim: string&lt;br/&gt;+ DISABLEPsim: string&lt;br/&gt;+ PAYUpFront: string&lt;br/&gt;+ PAYMENTAttempts: string&lt;br/&gt;+ ROAMINGPlanTicket: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ constructor(DISABLEEsim: string, DISABLEPsim: string, PAYUpFront: string, PAYMENTAttempts: string, ROAMINGPlanTicket: string)&lt;br/&gt;+ evaluate(key: string): boolean&lt;br/&gt;+ value(key: string): number&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=Cart;" vertex="1" parent="1">
-          <mxGeometry x="3020" y="960" width="720" height="174" as="geometry" />
+          <mxGeometry x="960" y="890" width="720" height="174" as="geometry" />
         </mxCell>
         <mxCell id="cart--cartrepository" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CartRepository&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ carts: Collection&amp;lt;Cart&amp;gt;&lt;br/&gt;+ portalGateway: PortalGateway&lt;br/&gt;+ customerRepository: CustomerRepository&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ constructor(carts: Collection&amp;lt;Cart&amp;gt;, portalGateway: PortalGateway, customerRepository: CustomerRepository)&lt;br/&gt;+ load(customer: Customer): Cart | null&lt;br/&gt;+ create(customer: Customer): Cart&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=Cart;" vertex="1" parent="1">
-          <mxGeometry x="4250" y="980" width="620" height="142" as="geometry" />
+          <mxGeometry x="1570" y="60" width="620" height="142" as="geometry" />
         </mxCell>
         <mxCell id="cart--cartexception" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CartException&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ operation: CartOperation&lt;br/&gt;+ customer: Customer&lt;br/&gt;+ message: string&lt;br/&gt;+ cause: Error&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ constructor(operation: CartOperation, customer: Customer, message: string, cause: Error)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=Cart;" vertex="1" parent="1">
-          <mxGeometry x="4300" y="180" width="520" height="126" as="geometry" />
+          <mxGeometry x="2330" y="60" width="520" height="126" as="geometry" />
         </mxCell>
         <mxCell id="cart--voucher" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Voucher&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ code: string&lt;br/&gt;+ campaign: string&lt;br/&gt;+ expired: boolean&lt;br/&gt;+ redeemed: boolean&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ constructor(code: string, campaign: string, expired: boolean, redeemed: boolean)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=Cart;" vertex="1" parent="1">
-          <mxGeometry x="1660" y="630" width="480" height="126" as="geometry" />
+          <mxGeometry x="1780" y="890" width="480" height="126" as="geometry" />
         </mxCell>
         <mxCell id="cart--vouchera" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Vouchera&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ constructor()&lt;br/&gt;+ read(code: string): Voucher | Error&lt;br/&gt;+ redeem(code: string, redeemerIdentifier: string, orderAmount: number): VoucherRedemption&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=Cart;" vertex="1" parent="1">
-          <mxGeometry x="1640" y="1000" width="520" height="94" as="geometry" />
+          <mxGeometry x="4050" y="60" width="520" height="94" as="geometry" />
         </mxCell>
         <mxCell id="cart--mavenirshoppingcart" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MavenirShoppingCart&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;+ customerId: string&lt;br/&gt;+ lineCount: number&lt;br/&gt;+ serviceProviderId: string&lt;br/&gt;+ cartItem: bundle&lt;br/&gt;+ productCharacteristic: ProductCharacteristic&lt;br/&gt;+ channel: Channel&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ constructor(id: string, customerId: string, lineCount: number, serviceProviderId: string, cartItem: bundle, productCharacteristic: ProductCharacteristic, channel: Channel)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=Cart;" vertex="1" parent="1">
-          <mxGeometry x="2890" y="1310" width="980" height="174" as="geometry" />
+          <mxGeometry x="2970" y="60" width="980" height="174" as="geometry" />
         </mxCell>
         <mxCell id="cart--portalgateway" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PortalGateway&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ constructor()&lt;br/&gt;+ read(mavenirCustomerId: string): MavenirShoppingCart | Error&lt;br/&gt;+ create(mavenirCustomerId: string): MavenirShoppingCart | Error&lt;br/&gt;+ patchBundle(mavenirCustomerId: string, bundleId: string): MavenirShoppingCart | Error&lt;br/&gt;+ patchMsisdn(mavenirCustomerId: string, msisdn: string): MavenirShoppingCart | Error&lt;br/&gt;+ patchPortability(mavenirCustomerId: string, msisdn: string, characteristics: ProductCharacteristic[]): MavenirShoppingCart | Error&lt;br/&gt;+ patchSimType(mavenirCustomerId: string, simType: string): MavenirShoppingCart | Error&lt;br/&gt;+ patchIccid(mavenirCustomerId: string, iccid: string): MavenirShoppingCart | Error&lt;br/&gt;+ createProductOrder(mavenirCustomerId: string): MavenirProductOrder | Error&lt;br/&gt;+ patchSubmitOrder(mavenirCustomerId: string): MavenirShoppingCart | Error&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=Cart;" vertex="1" parent="1">
-          <mxGeometry x="5080" y="950" width="760" height="206" as="geometry" />
+          <mxGeometry x="960" y="380" width="760" height="206" as="geometry" />
         </mxCell>
         <mxCell id="cart--productcharacteristic" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ProductCharacteristic&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: string&lt;br/&gt;+ value: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ constructor(name: string, value: string)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=Cart;" vertex="1" parent="1">
-          <mxGeometry x="1770" y="1350" width="260" height="94" as="geometry" />
+          <mxGeometry x="4180" y="380" width="260" height="94" as="geometry" />
         </mxCell>
         <mxCell id="cart--channel" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Channel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;+ name: string&lt;br/&gt;+ role: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ constructor(id: string, name: string, role: string)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=Cart;" vertex="1" parent="1">
-          <mxGeometry x="3220" y="1610" width="320" height="110" as="geometry" />
+          <mxGeometry x="4540" y="380" width="320" height="110" as="geometry" />
         </mxCell>
         <mxCell id="plans--plan" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: Plans»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;i style=&quot;font-size:9px;color:#888;&quot;&gt;&amp;lt;&amp;lt;represents&amp;gt;&amp;gt;&lt;/i&gt;&lt;br/&gt;&lt;b&gt;Plan&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;+ name: string&lt;br/&gt;+ price: number&lt;br/&gt;+ isSellable: boolean&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
-          <mxGeometry x="5170" y="620" width="580" height="142" as="geometry" />
+          <mxGeometry x="2620" y="1220" width="580" height="142" as="geometry" />
         </mxCell>
         <mxCell id="porting--portability" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: Porting»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;i style=&quot;font-size:9px;color:#888;&quot;&gt;&amp;lt;&amp;lt;association&amp;gt;&amp;gt;&lt;/i&gt;&lt;br/&gt;&lt;b&gt;Portability&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ donorOperator: string&lt;br/&gt;+ portNumber: string&lt;br/&gt;+ accountNumber: string | null&lt;br/&gt;+ userType: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
-          <mxGeometry x="60" y="980" width="1020" height="142" as="geometry" />
+          <mxGeometry x="3820" y="890" width="1020" height="142" as="geometry" />
         </mxCell>
         <mxCell id="subscription--line" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: Subscription»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Line&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ msisdn: string | null&lt;br/&gt;+ simType: SimType | null&lt;br/&gt;+ iccid: string | null&lt;br/&gt;+ availableNumbers: string[]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
-          <mxGeometry x="160" y="170" width="820" height="142" as="geometry" />
+          <mxGeometry x="4940" y="890" width="820" height="142" as="geometry" />
         </mxCell>
-        <mxCell id="2" value="customer" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=1.0;exitY=0.4918;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.493;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cart" target="customer--customer" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="3" value="line" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.0;exitY=0.4918;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0;entryY=0.493;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cart" target="subscription--line" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="4" value="bundle" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.6667;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cart" target="cart--bundle" parent="1">
+        <mxCell id="2" value="customer" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5725;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6667;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cart" target="customer--customer" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="2130" y="510" />
-              <mxPoint x="4560" y="510" />
+              <mxPoint x="3370" y="850" />
+              <mxPoint x="3260" y="850" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="5" value="portability" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.1667;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cart" target="porting--portability" parent="1">
+        <mxCell id="3" value="line" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.8551;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cart" target="subscription--line" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1440" y="940" />
-              <mxPoint x="570" y="940" />
+              <mxPoint x="3760" y="830" />
+              <mxPoint x="5350" y="830" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="6" value="voucher" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.3333;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cart" target="cart--voucher" parent="1">
+        <mxCell id="4" value="bundle" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.1449;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cart" target="cart--bundle" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1670" y="590" />
-              <mxPoint x="1900" y="590" />
+              <mxPoint x="2780" y="790" />
+              <mxPoint x="450" y="790" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="7" value="growthBook" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cart" target="cart--growthbook" parent="1">
+        <mxCell id="5" value="portability" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.7174;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cart" target="porting--portability" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1900" y="530" />
-              <mxPoint x="3380" y="530" />
+              <mxPoint x="3570" y="850" />
+              <mxPoint x="4330" y="850" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="8" value="plan" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=1.0;exitY=0.5263;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.493;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--bundle" target="plans--plan" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="9" value="carts" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.8333;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cartrepository" target="cart--cart" parent="1">
+        <mxCell id="6" value="voucher" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.4275;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cart" target="cart--voucher" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="4560" y="810" />
-              <mxPoint x="5780" y="810" />
-              <mxPoint x="5780" y="450" />
-              <mxPoint x="2370" y="450" />
-              <mxPoint x="2370" y="460" />
-              <mxPoint x="2360" y="460" />
+              <mxPoint x="3170" y="830" />
+              <mxPoint x="2020" y="830" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="10" value="portalGateway" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=1.0;exitY=0.493;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.4854;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cartrepository" target="cart--portalgateway" parent="1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="7" value="growthBook" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.2826;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cart" target="cart--growthbook" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2970" y="810" />
+              <mxPoint x="1320" y="810" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8" value="plan" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--bundle" target="plans--plan" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="450" y="1190" />
+              <mxPoint x="2900" y="1190" />
+              <mxPoint x="2900" y="1180" />
+              <mxPoint x="2910" y="1180" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="9" value="carts" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;exitX=0.7581;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cartrepository" target="cart--cart" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2040" y="230" />
+              <mxPoint x="2300" y="230" />
+              <mxPoint x="2300" y="30" />
+              <mxPoint x="2940" y="30" />
+              <mxPoint x="2940" y="340" />
+              <mxPoint x="3270" y="340" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="10" value="portalGateway" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.2419;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cartrepository" target="cart--portalgateway" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1720" y="340" />
+              <mxPoint x="1340" y="340" />
+            </Array>
+          </mxGeometry>
         </mxCell>
         <mxCell id="11" value="customerRepository" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cartrepository" target="customer--customerrepository" parent="1">
-          <mxGeometry relative="1" as="geometry" />
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1880" y="340" />
+              <mxPoint x="2090" y="340" />
+            </Array>
+          </mxGeometry>
         </mxCell>
-        <mxCell id="12" value="customer" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.0;exitY=0.4762;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0;entryY=0.493;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cartexception" target="customer--customer" parent="1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="12" value="customer" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3333;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cartexception" target="customer--customer" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2590" y="350" />
+              <mxPoint x="2550" y="350" />
+              <mxPoint x="2550" y="850" />
+              <mxPoint x="2820" y="850" />
+            </Array>
+          </mxGeometry>
         </mxCell>
-        <mxCell id="13" value="productCharacteristic" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.0;exitY=0.4598;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0;entryY=0.4255;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--mavenirshoppingcart" target="cart--productcharacteristic" parent="1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="13" value="productCharacteristic" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.3367;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--mavenirshoppingcart" target="cart--productcharacteristic" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3300" y="350" />
+              <mxPoint x="4300" y="350" />
+              <mxPoint x="4300" y="340" />
+              <mxPoint x="4310" y="340" />
+            </Array>
+          </mxGeometry>
         </mxCell>
-        <mxCell id="14" value="channel" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--mavenirshoppingcart" target="cart--channel" parent="1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="14" value="channel" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.6633;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--mavenirshoppingcart" target="cart--channel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3620" y="320" />
+              <mxPoint x="4700" y="320" />
+            </Array>
+          </mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>

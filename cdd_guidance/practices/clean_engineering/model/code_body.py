@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple, Union
 
 from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
@@ -16,45 +17,32 @@ _PROSE_TOKENS = 3
 _PLACEHOLDERS = frozenset({"...", "pass", "{}"})
 
 
+@dataclass(frozen=True)
 class CodeSpelling:
-    """How a language writes the receiver, a constructor call, and the end of a statement."""
+    """<<Value Object>> How a language writes the receiver, a constructor call, the end of a statement, and the base
+    class's constructor and receiver."""
 
-    def __init__(
-        self,
-        receiver: str,
-        construct: str,
-        statement_end: str,
-        camel_case: bool,
-        base_call: tuple = ("super", "super"),
-    ) -> None:
-        self.receiver = receiver
-        self.construct = construct
-        self.statement_end = statement_end
-        self.camel_case = camel_case
-        self.base_constructor, self.base_receiver = base_call
+    receiver: str
+    construct: str
+    statement_end: str
+    camel_case: bool
+    base_constructor: str = "super"
+    base_receiver: str = "super"
 
 
+@dataclass(frozen=True, eq=False)
 class CodeLanguage:
-    """How one programming language spells what every code channel writes the same way."""
+    """How one programming language spells what every code channel writes the same way. Each language is one object,
+    compared by identity."""
 
-    def __init__(
-        self,
-        name: str,
-        line_comment: str,
-        indent: str,
-        unfinished: str,
-        spelling: CodeSpelling,
-        type_names: Dict[str, str],
-        suffixes: tuple[str, ...] = (),
-    ) -> None:
-        self.name = name
-        # The file extensions source in this language is written with; the one table every reader of code asks.
-        self.suffixes = suffixes
-        self.line_comment = line_comment
-        self.indent = indent
-        self.unfinished = unfinished
-        self._spelling = spelling
-        self._type_names = type_names
+    name: str
+    line_comment: str
+    indent: str
+    unfinished: str
+    spelling: CodeSpelling
+    type_names: Dict[str, str] = field(default_factory=dict)
+    # The file extensions source in this language is written with; the one table every reader of code asks.
+    suffixes: tuple[str, ...] = ()
 
     def comment(self, text: str) -> str:
         return f"{self.line_comment} {text}".rstrip()
@@ -65,36 +53,36 @@ class CodeLanguage:
 
     def identifier(self, name: str) -> str:
         raw = name.split(":", 1)[0].strip()
-        if not self._spelling.camel_case:
+        if not self.spelling.camel_case:
             return raw
         parts = re.split(r"_+", raw.lstrip("_"))
         return parts[0] + "".join(part[:1].upper() + part[1:] for part in parts[1:] if part)
 
     def type_name(self, hint: str) -> str:
-        return self._type_names.get(hint.strip(), hint.strip())
+        return self.type_names.get(hint.strip(), hint.strip())
 
     def interaction(self, callee: str) -> str:
         tokens = callee.strip().split()
         if not tokens or (len(tokens) >= _PROSE_TOKENS and _PROSE.search(callee)):
             return ""
         head, arguments = tokens[0], ", ".join(tokens[1:])
-        end = self._spelling.statement_end
+        end = self.spelling.statement_end
         if head == "super" or head.startswith("super."):
             return self._super_call(head[len("super."):], arguments) + end
         if "." not in head and head[0].isupper() and _IDENTIFIER.match(head):
             target = self.identifier(tokens[1] if len(tokens) > 1 else head)
-            created = self._spelling.construct.format(type=head, arguments=arguments)
-            return f"{self._spelling.receiver}.{target} = {created}{end}"
+            created = self.spelling.construct.format(type=head, arguments=arguments)
+            return f"{self.spelling.receiver}.{target} = {created}{end}"
         return f"{head}({arguments}){end}"
 
     def assignment(self, name: str) -> str:
-        field = self.identifier(name)
-        return f"{self._spelling.receiver}.{field} = {field}{self._spelling.statement_end}"
+        field_name = self.identifier(name)
+        return f"{self.spelling.receiver}.{field_name} = {field_name}{self.spelling.statement_end}"
 
     def _super_call(self, member: str, arguments: str) -> str:
         if not member or member[0].isupper():
-            return f"{self._spelling.base_constructor}({arguments})"
-        return f"{self._spelling.base_receiver}.{member}({arguments})"
+            return f"{self.spelling.base_constructor}({arguments})"
+        return f"{self.spelling.base_receiver}.{member}({arguments})"
 
 
 class CodeBody:
@@ -153,12 +141,13 @@ class BraceCall:
     starts, its parentheses, its callback's braces, and where it ends. A quoted first argument, the block's name, is
     skipped, so a brace or an arrow inside the name is not taken for the callback's."""
 
-    def __init__(self, text: str, start: int, open_paren: int, name: str) -> None:
+    def __init__(self, text: str, start: int, name: str) -> None:
         source = BracketStructure(text)
         # The text of the file the call was read from, which its body is part of.
         self.text = text
         self.start = start
         self.name = name
+        open_paren = text.index("(", start)
         self.close = source.closing_bracket(open_paren, "(", ")")
         limit = self.close if self.close is not None else len(text)
         quoted = _QUOTED_START.match(text, open_paren + 1)
@@ -185,7 +174,7 @@ class WrittenBlock:
     A BDD describe, context, or it, a story, scenario, or step chain: the language writes these lines back
     unchanged while the node still has the key it was read with."""
 
-    def __init__(self, language: CodeLanguage, key: WrittenKey, lead: List[str], heading: List[str]) -> None:
+    def __init__(self, language: CodeLanguage, key: WrittenKey, heading: List[str]) -> None:
         self.language = language
         self.key = key
         self.path = ""
@@ -193,7 +182,8 @@ class WrittenBlock:
         self.close: List[str] = []
         self._inline = ""
         self._inside: List[str] = []
-        self.lead = lead
+        # The lines above the block that lead into it, which its reader sets once it has read them.
+        self.lead = []
         self.closing = []
         self.inside = []
 
@@ -241,24 +231,34 @@ class WrittenBlock:
     def is_in(self, language: CodeLanguage, key: WrittenKey) -> bool:
         return self.language is language and self.key == key
 
-    @staticmethod
-    def split_inside(lines: List[str], inside: Tuple[int, int], children: List[Tuple[int, int]]) -> Tuple[List[str], List[List[str]], List[str]]:
-        """The lines inside one block as (setup, the lines above each child, the lines after the last child).
-        Blank lines right above the first child belong to it; with no child they close the block."""
-        start, end = inside
-        region = lines[start : children[0][0]] if children else lines[start:end]
+    def inside_for(self, body: CodeBody) -> List[str] | None:
+        """The setup or test body lines exactly as read, while the model's body still says the same.
+        A block written on one line keeps its body in the heading, so it has no inside lines."""
+        return self.inside if self.inside_body.text == body.text else None
+
+
+class InsideLines:
+    """The lines inside one block of a file, from the line after its heading up to its closing line, which its child
+    blocks divide."""
+
+    def __init__(self, lines: List[str], inside: Tuple[int, int]) -> None:
+        # Every line of the file, and the first and last-plus-one index of the block's inside.
+        self.lines = lines
+        self.start, self.end = inside
+
+    def split(self, children: List[Tuple[int, int]]) -> Tuple[List[str], List[List[str]], List[str]]:
+        """The lines inside the block as (setup, the lines above each child, the lines after the last child), each
+        child given by its first and last line. Blank lines right above the first child belong to it; with no child
+        they close the block."""
+        lines = self.lines
+        region = lines[self.start : children[0][0]] if children else lines[self.start : self.end]
         kept = len(region)
         while kept and not region[kept - 1].strip():
             kept -= 1
         if not children:
             return region[:kept], [], region[kept:]
         leads = [region[kept:]] + [lines[previous[1] + 1 : child[0]] for previous, child in zip(children, children[1:])]
-        return region[:kept], leads, lines[children[-1][1] + 1 : end]
-
-    def inside_for(self, body: CodeBody) -> List[str] | None:
-        """The setup or test body lines exactly as read, while the model's body still says the same.
-        A block written on one line keeps its body in the heading, so it has no inside lines."""
-        return self.inside if self.inside_body.text == body.text else None
+        return region[:kept], leads, lines[children[-1][1] + 1 : self.end]
 
 
 PYTHON_SPELLING = CodeSpelling(
@@ -266,7 +266,8 @@ PYTHON_SPELLING = CodeSpelling(
     construct="{type}({arguments})",
     statement_end="",
     camel_case=False,
-    base_call=("super().__init__", "super()"),
+    base_constructor="super().__init__",
+    base_receiver="super()",
 )
 C_FAMILY_SPELLING = CodeSpelling(receiver="this", construct="new {type}({arguments})", statement_end=";", camel_case=True)
 

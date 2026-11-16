@@ -69,7 +69,7 @@ class PracticeSupplement(PracticeGuidance):
 
     def _fidelity_in(self, practices: dict[str, PracticeGuidance], key: str, name: str) -> FidelityGuidance:
         practice = practices.get(key)
-        fidelity = practice.fidelity_called(name) if practice is not None else None
+        fidelity = practice.fidelities.called(name) if practice is not None else None
         if fidelity is None:
             raise UnknownSupplementedFidelity(self.key, key, name)
         return fidelity
@@ -111,14 +111,16 @@ class PracticeSupplement(PracticeGuidance):
         parts = ((self.overview or "").strip(), (self.guidance or "").strip(), *self._fidelity_sections)
         return "\n\n".join(part for part in parts if part)
 
+    @property
     def checked_rule_collections(self) -> list[RulesCollection]:
         """The rules of every section, each named for the fidelities it applies to: what a validate of the supplement
         itself checks."""
         return [RulesCollection.from_markdown(MarkdownText(section).slice_heading("Rules"), None, self) for section in self._fidelity_sections]
 
+    @property
     def every_rule(self) -> list[Rule]:
         """Every rule of every section it holds."""
-        return [rule for collection in self.checked_rule_collections() for rule in collection]
+        return [rule for collection in self.checked_rule_collections for rule in collection]
 
     @property
     def _fidelity_sections(self) -> list[str]:

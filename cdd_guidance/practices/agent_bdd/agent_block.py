@@ -9,7 +9,7 @@ from __future__ import annotations
 import sys
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator, Mapping
+from typing import Iterator
 
 from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
     INSTRUCT_TIMEOUT_SECONDS,
@@ -26,6 +26,7 @@ from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
     RunResponse,
     ToolsRunYaml,
     ToolsetInvoke,
+    ToolsetRequest,
     _ShellCapture,
 )
 
@@ -34,6 +35,8 @@ class AgentBlock:
     """One agent session a spec drives. A subclass says how the agent answers a prompt and a judge task."""
 
     log_name = "agent_bdd"
+    # How much of a prompt the progress log shows before it cuts the rest.
+    LOGGED_PROMPT_CHARS = 120
 
     def __init__(self, workspace: Path, session_file: Path) -> None:
         self._workspace = workspace.resolve()
@@ -62,7 +65,8 @@ class AgentBlock:
     def instruct(self, prompt: str, *, timeout_seconds: int = INSTRUCT_TIMEOUT_SECONDS) -> AgentResult:
         """Give the agent a natural-language step, such as reading a file or following an action's instructions."""
         prefix = self._next_instruct_prefix("setup")
-        self._log.write(f"{prefix} prompt: {prompt[:120]}{'...' if len(prompt) > 120 else ''}")
+        shown = self.LOGGED_PROMPT_CHARS
+        self._log.write(f"{prefix} prompt: {prompt[:shown]}{'...' if len(prompt) > shown else ''}")
         self._write_artifact(f"{prefix}-prompt.txt", prompt)
         result = self._answer(prefix, prompt, timeout_seconds)
         self._write_artifact(f"{prefix}-response.txt", result.text)
@@ -83,25 +87,13 @@ class AgentBlock:
         prefix = self._next_instruct_prefix("run")
         self._write_artifact(f"{prefix}-prompt.txt", prompt)
         self._write_artifact(f"{prefix}-stdin.yaml", request_yaml)
-        cli_output = self._tools_run_yaml.run_request(request_yaml, timeout_seconds, prefix)
+        cli_output = self._tools_run_yaml.run_request(request_yaml, timeout_seconds)
         return self._recorded_response(prefix, cli_output)
 
-    def run_toolset(
-        self,
-        *,
-        toolset: str,
-        tool: str | None = None,
-        action: str | None = None,
-        context: Mapping[str, Any] | None = None,
-        arguments: Mapping[str, Any] | None = None,
-        timeout_seconds: int = TOOL_RUN_TIMEOUT_SECONDS,
-    ) -> RunResponse:
-        """Invoke one toolset member in-process, in this block's workspace; fails with ToolRunTimedOut when it outlives
-        timeout_seconds."""
-        invoke = ToolsetInvoke.for_toolset(
-            toolset, self._workspace, tool=tool, action=action, context=context, arguments=arguments
-        )
-        return invoke.run(timeout_seconds)
+    def run_toolset(self, request: ToolsetRequest, *, timeout_seconds: int = TOOL_RUN_TIMEOUT_SECONDS) -> RunResponse:
+        """Invoke the toolset member the request names in-process, in this block's workspace; fails with
+        ToolRunTimedOut when it outlives timeout_seconds."""
+        return ToolsetInvoke.create(request, self._workspace).run(timeout_seconds)
 
     def ai_judge(self, output: str, rubric: str, *, timeout_seconds: int = JUDGE_TIMEOUT_SECONDS) -> JudgeResult:
         """Judge output against rubric; raises AssertionError(reason) on FAIL, so it reads like ``expect``."""
@@ -142,13 +134,12 @@ class AgentBlock:
         if answer.stderr.strip():
             self._write_artifact("judge-stderr.txt", answer.stderr)
         if answer.exit_code != 0:
-            raise AgentHarnessError(f"judge agent exited {answer.exit_code}", prefix="judge", exit_code=answer.exit_code,
-                                    stdout=answer.text, stderr=answer.stderr, log_dir=self._log_dir)
+            raise AgentHarnessError(f"judge agent exited {answer.exit_code}", output=answer, log_dir=self._log_dir)
         verdict = JudgeResult.from_stdout(answer.text, answer.elapsed_seconds)
         self._write_artifact("judge-verdict.txt", f"{verdict.verdict}\n\n{verdict.reason}\n")
         if verdict.verdict == "ERROR":
-            raise AgentJudgeError(f"judge returned no parseable JSON verdict: {verdict.reason}", prefix="judge",
-                                  stdout=answer.text, stderr=answer.stderr, log_dir=self._log_dir)
+            raise AgentJudgeError(f"judge returned no parseable JSON verdict: {verdict.reason}", output=answer,
+                                  log_dir=self._log_dir)
         self._log.write(f"judge verdict: {verdict.verdict} - {verdict.reason}")
         return verdict
 

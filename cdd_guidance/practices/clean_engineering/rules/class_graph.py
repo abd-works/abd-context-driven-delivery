@@ -17,6 +17,7 @@ from cdd_guidance.practices.clean_engineering.model.production_code import is_te
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
+    from harness.guidance.guidance import PracticeGuidance
     from harness.graph.rule_context import RuleCheckContext
 
 _IDENTIFIER = re.compile(r"[A-Za-z_]\w*")
@@ -70,9 +71,9 @@ class ClassGraph:
     """Every production class in the practice, its public operations, and the fields it holds."""
 
     def __init__(self, context: "RuleCheckContext") -> None:
-        self.classes = [node for node in context.nodes("OoadClass") if _is_production_class(node)]
+        self.classes = [node for node in context.nodes("OoadClass") if self._is_production(node)]
         # The index of the classes Clean Engineering read by name, which its type linking asks too.
-        self._index = _code_index_of(context.practice)
+        self._index = self._code_index_of(context.practice)
         self._operations: dict[str, list["Node"]] = {}
         for edge in context.edges("owns"):
             if edge.child.type == "Operation" and edge.parent.type == "OoadClass":
@@ -83,24 +84,15 @@ class ClassGraph:
         for node in context.nodes("OoadClass"):
             for operation in self.operations(node):
                 self._defining.setdefault(operation.name, set()).add(node.node_id)
+        self.kinds = ClassKinds(self)
 
     def named(self, type_name: str) -> list["Node"]:
         """The production classes the graph holds called type_name."""
-        return [node for node in self._index.classes_named(type_name) if _is_production_class(node)]
+        return [node for node in self._index.classes_named(type_name) if self._is_production(node)]
 
     def is_mixin(self, node: "Node") -> bool:
         """True for a class another class mixes in before the base it derives from, such as a reading mixed into a model."""
         return node.name in self._mixins
-
-    def gives_own_message(self, failure: str) -> bool:
-        """True when a failure the graph declares writes its own message: its constructor hands its base one, such
-        as ``super().__init__(f"paths are required to commit")``."""
-        return any(
-            _HANDS_MESSAGE.search(operation.get_fact("body_text") or "")
-            for node in self.named(failure)
-            for operation in self.operations(node)
-            if operation.name in CONSTRUCTOR_NAMES
-        )
 
     def operations(self, node: "Node") -> list["Node"]:
         """The public operations the graph records for this class."""
@@ -115,35 +107,6 @@ class ClassGraph:
         them (``held_fields``), so a class read back from a saved graph answers what the class it was read from does."""
         return dict(node.get_fact("held_fields") or {})
 
-    def is_value(self, type_name: str) -> bool:
-        """True for a value type: a standard one such as a path, a date, or a number; a failure, named as one or
-        derived from one, such as ``ToolCallStopped(Exception)``; a collection, such as ``CallGraph(list)``; or a class
-        of the graph its stereotype or base marks as a value object, directly or through the classes it derives from.
-        A class makes values from what it holds; only a collaborator it builds is a dependency the caller cannot see."""
-        return self._derives(type_name, self._is_value_itself, frozenset())
-
-    def is_failure(self, type_name: str) -> bool:
-        """True for a failure: a class named as one, such as ``AgentToolValidationError``, or derived from one. A
-        failure keeps the name of what it failed on for its message, not as a copy of that object."""
-        return self._derives(type_name, _named_failure, frozenset())
-
-    def _derives(self, type_name: str, is_kind: Callable[[str], bool], seen: frozenset[str]) -> bool:
-        """True when the class named type_name is of a kind, or derives from a class that is, through any of the
-        classes the graph declares under that name; the one walk up the bases every kind test shares."""
-        if is_kind(type_name):
-            return True
-        if type_name in seen:
-            return False
-        return any(
-            self._derives(base, is_kind, seen | {type_name}) for node in self.named(type_name) for base in self.bases_of(node)
-        )
-
-    def _is_value_itself(self, type_name: str) -> bool:
-        """A standard value, a collection base, a failure, or a class of the graph its stereotype marks as a value."""
-        if type_name in _STANDARD_VALUES or type_name in _VALUE_BASES or _named_failure(type_name):
-            return True
-        return any(_declares_value(node) for node in self.named(type_name))
-
     def bases_of(self, node: "Node") -> list[str]:
         """The names of the classes it derives from, each by its own name: ``Epic`` for ``pkg.Epic``, ``list`` for
         ``list[Entry]``."""
@@ -156,25 +119,70 @@ class ClassGraph:
             for shape in node.get_fact("operation_shapes", []) or []
         )
 
+    def _code_index_of(self, practice: "PracticeGuidance") -> CodeIndex:
+        """The code index of the Clean Engineering practice whose rules run: the practice itself, or the one a practice
+        that holds its rules, such as DDD, extends."""
+        reading = practice.reading
+        return reading.code_index if isinstance(reading, GraphReading) else practice.extended.reading.code_index
 
-def _code_index_of(practice) -> CodeIndex:
-    """The code index of the Clean Engineering practice whose rules run: the practice itself, or the one a practice
-    that holds its rules, such as DDD, extends."""
-    reading = practice.reading
-    return reading.code_index if isinstance(reading, GraphReading) else practice.extended.reading.code_index
-
-
-def _is_production_class(node: "Node") -> bool:
-    return node.name != MODULE_FUNCTION_HOLDER and not is_test_code(node.source.file)
+    def _is_production(self, node: "Node") -> bool:
+        return node.name != MODULE_FUNCTION_HOLDER and not is_test_code(node.source.file)
 
 
-def _named_failure(type_name: str) -> bool:
-    return type_name.endswith(_FAILURE_SUFFIXES)
+class ClassKinds:
+    """What kind of class a name stands for in the graph: a value, a failure, or a failure that writes its own
+    message. Each answer walks the bases the graph records, so the kinds are a part the class graph holds."""
 
+    def __init__(self, classes: ClassGraph) -> None:
+        self._classes = classes
 
-def _declares_value(node: "Node") -> bool:
-    stereotypes = {str(item).lower() for item in node.get_fact("stereotypes", []) or []}
-    return "value object" in stereotypes
+    def is_value(self, type_name: str) -> bool:
+        """True for a value type: a standard one such as a path, a date, or a number; a failure, named as one or
+        derived from one, such as ``ToolCallStopped(Exception)``; a collection, such as ``CallGraph(list)``; or a class
+        of the graph its stereotype or base marks as a value object, directly or through the classes it derives from.
+        A class makes values from what it holds; only a collaborator it builds is a dependency the caller cannot see."""
+        return self._derives(type_name, self._is_value_itself, frozenset())
+
+    def is_failure(self, type_name: str) -> bool:
+        """True for a failure: a class named as one, such as ``AgentToolValidationError``, or derived from one. A
+        failure keeps the name of what it failed on for its message, not as a copy of that object."""
+        return self._derives(type_name, self._named_failure, frozenset())
+
+    def gives_own_message(self, failure: str) -> bool:
+        """True when a failure the graph declares writes its own message: its constructor hands its base one, such
+        as ``super().__init__(f"paths are required to commit")``."""
+        return any(
+            _HANDS_MESSAGE.search(operation.get_fact("body_text") or "")
+            for node in self._classes.named(failure)
+            for operation in self._classes.operations(node)
+            if operation.name in CONSTRUCTOR_NAMES
+        )
+
+    def _derives(self, type_name: str, is_kind: Callable[[str], bool], seen: frozenset[str]) -> bool:
+        """True when the class named type_name is of a kind, or derives from a class that is, through any of the
+        classes the graph declares under that name; the one walk up the bases every kind test shares."""
+        if is_kind(type_name):
+            return True
+        if type_name in seen:
+            return False
+        return any(
+            self._derives(base, is_kind, seen | {type_name})
+            for node in self._classes.named(type_name)
+            for base in self._classes.bases_of(node)
+        )
+
+    def _is_value_itself(self, type_name: str) -> bool:
+        """A standard value, a collection base, a failure, or a class of the graph its stereotype marks as a value."""
+        if type_name in _STANDARD_VALUES or type_name in _VALUE_BASES or self._named_failure(type_name):
+            return True
+        return any(self._declares_value(node) for node in self._classes.named(type_name))
+
+    def _named_failure(self, type_name: str) -> bool:
+        return type_name.endswith(_FAILURE_SUFFIXES)
+
+    def _declares_value(self, node: "Node") -> bool:
+        stereotypes = {str(item).lower() for item in node.get_fact("stereotypes", []) or []}
+        return "value object" in stereotypes
 
 
 def names_in(type_hint: str) -> set[str]:

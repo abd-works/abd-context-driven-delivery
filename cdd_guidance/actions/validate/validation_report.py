@@ -4,11 +4,18 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
 from harness.graph.violation import Violation
 from harness.graph.schema_conformance import FRAMEWORK_RULES
+from harness.guidance.guidance import Guidance
 from harness.guidance.rule import Rule
+
+if TYPE_CHECKING:
+    from space.session.session import Session
+
+# A Windows path's separator, which a location may carry; the report names files with forward slashes.
+_BACKSLASH = "\\"
 
 
 class ValidationReport:
@@ -18,7 +25,7 @@ class ValidationReport:
     path from the session's root and links each hit to its file by absolute path and line, so a link opens the file from
     wherever the report is read."""
 
-    def __init__(self, session: Any, guidance: list[Any]) -> None:
+    def __init__(self, session: Session, guidance: list[Guidance]) -> None:
         self._session = session
         self._guidance = guidance
         self._root = session.work_root.resolve()
@@ -29,6 +36,13 @@ class ValidationReport:
         with them, so another validate of the same files can find other hits when the session's graph holds others."""
         grouped = Violation.by_rule(violations)
         rules = [rule for item in self._guidance for rule in item.checked_rules()]
+        lines = self._header_lines(graph_sources, held_beside)
+        lines.extend(self._summary_lines(violations, len(grouped), len(rules)))
+        lines.extend(self._rule_sections(grouped, rules))
+        return "\n".join(lines)
+
+    def _header_lines(self, graph_sources: list[str] | None, held_beside: list[str] | None) -> list[str]:
+        """When and for which project the report was written, and the graph files and folders it was built from."""
         lines = [
             "# Graph rule validation",
             "",
@@ -41,15 +55,18 @@ class ValidationReport:
             lines.extend(["**Graph sources:**", *(f"- `{source}`" for source in graph_sources), ""])
         if held_beside:
             lines.extend(["**The session's graph also held, and practice-wide rules compared against:**", *(f"- `{folder}`" for folder in held_beside), ""])
-        lines.extend(["## Summary", ""])
+        return lines
+
+    def _summary_lines(self, violations: list[Violation], rules_hit: int, rules_in_scope: int) -> list[str]:
+        """How many graph violations the report holds, across how many rules, and how many rules the AI judges."""
+        lines = ["## Summary", ""]
         if not violations:
             lines.append("**No graph rule violations.** All scanned graph rules passed.")
         else:
             lines.append(f"**Total graph violations:** {len(violations)}")
-            lines.append(f"**Rules with graph hits:** {len(grouped)}")
-        lines.extend([f"**AI rules in scope:** {len(rules)}", ""])
-        lines.extend(self._rule_sections(grouped, rules))
-        return "\n".join(lines)
+            lines.append(f"**Rules with graph hits:** {rules_hit}")
+        lines.extend([f"**AI rules in scope:** {rules_in_scope}", ""])
+        return lines
 
     def _rule_sections(self, grouped: dict[str, list[Violation]], rules: list[Rule]) -> list[str]:
         lines = [
@@ -62,7 +79,7 @@ class ValidationReport:
             lines.extend(self._rule_section(rule.slug, rule, grouped.get(rule.slug)))
         checked = {rule.slug for rule in rules}
         every = {slug: check.rule for slug, check in FRAMEWORK_RULES.items()}
-        every.update((rule.slug, rule) for item in self._guidance for rule in item.every_rule())
+        every.update((rule.slug, rule) for item in self._guidance for rule in item.every_rule)
         for slug in sorted(grouped.keys() - checked):
             lines.extend(self._rule_section(slug, every.get(slug), grouped[slug]))
         return lines
@@ -107,7 +124,7 @@ class ValidationReport:
             line = f"#L{violation.line}" if violation.line is not None else ""
             return f"[{self._shown(resolved)}]({resolved}{line})"
         except (OSError, ValueError):
-            return f"`{Path(location.replace(chr(92), '/')).name}`"
+            return f"`{Path(location.replace(_BACKSLASH, '/')).name}`"
 
     def _shown(self, path: Path) -> str:
         try:

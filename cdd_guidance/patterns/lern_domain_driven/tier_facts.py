@@ -198,17 +198,15 @@ class TierFile:
         return self._braced_body(open_brace)
 
     def _braced_body(self, open_brace: int) -> str | None:
+        """The text between the brace at open_brace and the brace that closes it; none when it never closes."""
         text = self.text
         if open_brace < 0:
             return None
         depth = 0
         for index in range(open_brace, len(text)):
-            if text[index] == "{":
-                depth += 1
-            elif text[index] == "}":
-                depth -= 1
-                if depth == 0:
-                    return text[open_brace + 1:index]
+            depth += {"{": 1, "}": -1}.get(text[index], 0)
+            if depth == 0:
+                return text[open_brace + 1:index]
         return None
 
     def _in_import(self, index: int) -> bool:

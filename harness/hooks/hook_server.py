@@ -7,13 +7,14 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Iterator, Mapping
+from dataclasses import dataclass, fields as dataclass_fields, replace
 from pathlib import Path
-from typing import Any, Callable, ClassVar
+from typing import Any, Callable, ClassVar, Protocol
 
-from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetReference
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetConfiguration, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
 from harness.annotations.annotation import HostedOnly
-from harness.hooks.hooks import Hook, HookHandlersFile, Hooks, InstalledHookHandlers
+from harness.hooks.hooks import HookHandlersFile, Hooks, InstalledHookHandlers, events_served
 from harness.installation.destination import SkippedTools
 from harness.installation.context_config import ContextConfig
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -172,48 +173,58 @@ def rules_toast(source: str, labels: list[str]) -> str:
     return f"{source}{TOAST_ARROW}rules : {', '.join(labels)}"
 
 
+class ChatRuleInjections(Protocol):
+    """The rules a session keeps for each of its chats, so a rule a hook injected once is given to that chat again when
+    it submits a prompt. A session of space/session keeps them; the framework names only what it calls."""
+
+    def keep(self, result: HookResult, payload: HookPayload) -> None: ...
+
+    def replay(self, payload: HookPayload, result: HookResult) -> HookResult: ...
+
+    def is_rules_dump(self, body: str) -> bool: ...
+
+
+@dataclass(frozen=True)
+class HookMessages:
+    """What a hook says back, each part none when it says nothing there: a line for the person, a note for the agent,
+    a prompt Cursor sends next, context added to the agent's model, and a toast the person sees beside the chat."""
+
+    user_message: str | None = None
+    agent_message: str | None = None
+    followup_message: str | None = None
+    additional_context: str | None = None
+    toast: str | None = None
+
+    @classmethod
+    def from_handler(cls, raw: Mapping[str, Any]) -> HookMessages:
+        """The messages a handler's answer names, each read as text; an empty one is none."""
+        return cls(*(str(raw[field.name]) if raw.get(field.name) else None for field in dataclass_fields(cls)))
+
+
 class HookResult:
     """Fields Cursor reads back from the hook process, and the toast the person sees beside the chat. The toast is not
     sent to Cursor: the hook server hands it to the notifier that shows toasts."""
 
-    def __init__(
-        self,
-        permission: str = "allow",
-        continue_flag: bool | None = None,
-        user_message: Any = None,
-        agent_message: Any = None,
-        followup_message: Any = None,
-        additional_context: Any = None,
-        toast: Any = None,
-    ) -> None:
+    def __init__(self, permission: str = "allow", continue_flag: bool | None = None, messages: HookMessages = HookMessages()) -> None:
         self.permission = permission
         self.continue_flag = continue_flag
-        self.user_message = self._optional_text(user_message)
-        self.agent_message = self._optional_text(agent_message)
-        self.followup_message = self._optional_text(followup_message)
-        self.additional_context = self._optional_text(additional_context)
-        self.toast = self._optional_text(toast)
+        self.user_message = messages.user_message
+        self.agent_message = messages.agent_message
+        self.followup_message = messages.followup_message
+        self.additional_context = messages.additional_context
+        self.toast = messages.toast
         self.followup_only = False
 
-    def _optional_text(self, value: Any) -> str | None:
-        if not value:
-            return None
-        return str(value)
+    @property
+    def messages(self) -> HookMessages:
+        return HookMessages(self.user_message, self.agent_message, self.followup_message, self.additional_context, self.toast)
 
     @classmethod
     def from_handler(cls, raw: Mapping[str, Any] | None) -> HookResult:
         if not raw:
             return cls()
         continue_flag = False if raw.get("continue") is False else None
-        result = cls(
-            permission=str(raw.get("permission") or "allow"),
-            continue_flag=continue_flag,
-            user_message=raw.get("user_message"),
-            agent_message=raw.get("agent_message"),
-            followup_message=raw.get("followup_message"),
-            additional_context=raw.get("additional_context"),
-            toast=raw.get("toast"),
-        )
+        result = cls(str(raw.get("permission") or "allow"), continue_flag, HookMessages.from_handler(raw))
         if "permission" not in raw and result.followup_message:
             result.followup_only = True
         return result
@@ -227,28 +238,19 @@ class HookResult:
             return self
         if existing:
             text = f"{text}\n{existing}"
-        return HookResult(
-            self.permission,
-            self.continue_flag,
-            self.user_message,
-            text,
-            self.followup_message,
-            self.additional_context,
-            self.toast,
-        )
+        return HookResult(self.permission, self.continue_flag, replace(self.messages, agent_message=text))
 
     def merge(self, other: HookResult) -> HookResult:
         permission = "deny" if "deny" in (self.permission, other.permission) else "allow"
         continue_flag = False if False in (self.continue_flag, other.continue_flag) else None
-        return HookResult(
-            permission,
-            continue_flag,
+        merged = HookMessages(
             self._join_lines(self.user_message, other.user_message),
             self._join_lines(self.agent_message, other.agent_message),
             other.followup_message or self.followup_message,
             self._join_unique_context(other),
             self._join_lines(self.toast, other.toast),
         )
+        return HookResult(permission, continue_flag, merged)
 
     def _join_lines(self, first: str | None, second: str | None) -> str | None:
         parts = [part for part in (first, second) if part]
@@ -297,7 +299,7 @@ class HookHandler:
         return f"{type(self.tool.toolset).__name__}.{self.tool.name}"
 
     def is_enabled(self, payload: HookPayload | None = None) -> bool:
-        if Hooks.disabled_on(self.tool.toolset):
+        if Hooks.from_toolset_class(type(self.tool.toolset)).disabled:
             return False
         pattern = self._pattern_name()
         if not pattern:
@@ -377,26 +379,26 @@ class HandlerCatalog:
         self._load_items(toolsets)
         self._handlers = self._handlers_by_event()
 
-    def _load_items(self, items: list[Any]) -> None:
-        for item in items:
+    def _load_items(self, items: list[ToolsetConfiguration]) -> None:
+        for configured in items:
             try:
-                loaded = AgentToolSet.from_items([item])
+                loaded = AgentToolSet.from_items([configured])
             except AgentToolSet.LOAD_FAILURES as error:
-                self.failures.append((self.ref_label(item), error))
+                self.failures.append((self.ref_label(configured), error))
                 continue
             self.toolsets.extend(
-                instance for instance in loaded if not HostedOnly.annotates(instance) and Hooks.deploys(instance)
+                instance for instance in loaded if not HostedOnly.annotates(instance) and Hooks.from_toolset_class(type(instance)).deploy
             )
 
-    def ref_label(self, item: Any) -> str:
-        if isinstance(item, str):
-            return item
-        if isinstance(item, dict):
-            return str(item.get("toolset") or item)
-        registration = getattr(item, "registration_name", None)
+    def ref_label(self, configured: ToolsetConfiguration) -> str:
+        if isinstance(configured, str):
+            return configured
+        if isinstance(configured, dict):
+            return str(configured.get("toolset") or configured)
+        registration = getattr(configured, "registration_name", None)
         if isinstance(registration, str) and registration:
             return registration
-        return str(ToolsetReference.of(item if isinstance(item, type) else type(item)))
+        return str(ToolsetReference.of(configured if isinstance(configured, type) else type(configured)))
 
     @property
     def event_names(self) -> list[str]:
@@ -410,7 +412,7 @@ class HandlerCatalog:
     def _handlers_by_event(self) -> dict[str, list[HookHandler]]:
         by_event: dict[str, dict[tuple[str, str], HookHandler]] = {}
         for tool in self._hook_tools():
-            for event in Hook.events_served(tool.hook_event):
+            for event in events_served(tool.hook_event):
                 handlers = by_event.setdefault(event, {})
                 key = (type(tool.toolset).__name__, tool.name)
                 if key not in handlers:
@@ -477,7 +479,7 @@ class HookServer:
             result.followup_only = result.followup_message is not None
         return result
 
-    def _with_chat_injections(self, injections: Any, payload: HookPayload, result: HookResult) -> HookResult:
+    def _with_chat_injections(self, injections: ChatRuleInjections, payload: HookPayload, result: HookResult) -> HookResult:
         """result with the rules kept for the event's chat, through the chat injections its session keeps."""
         if injections.is_rules_dump(result.additional_context or ""):
             result.additional_context = None
@@ -549,5 +551,5 @@ class HookServer:
         """Append message to the dispatch log of the session payload's event works in."""
         session = payload.session
         if session is not None:
-            session.hook_log("dispatch.debug").stamped(message)
+            session.folder.hook_log("dispatch.debug").stamped(message)
 

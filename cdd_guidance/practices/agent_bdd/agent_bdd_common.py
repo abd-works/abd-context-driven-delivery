@@ -8,9 +8,11 @@ import subprocess
 import sys
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Generic, Mapping, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic, Mapping, TypeVar
+
+import yaml
 
 from cdd_guidance.practices.agent_bdd.cursor_cli import CursorCli
 from harness.agent_tools.tool_call import ToolCall
@@ -20,10 +22,8 @@ from cdd_guidance.practices.agent_bdd.yaml_fence import YamlFence
 # Reads and writes the fenced YAML a run answers with; it holds nothing but the fence's language.
 _YAML = YamlFence()
 
-try:
-    import yaml
-except ImportError:  # pragma: no cover
-    yaml = None  # type: ignore
+if TYPE_CHECKING:
+    from harness.agent_tools.agent_tools import AgentTool, AgentToolSet
 
 JUDGE_TASK = """\
 You are an AI judge.
@@ -55,23 +55,11 @@ READ_TIMEOUT_SECONDS = 120
 
 
 class AgentHarnessError(RuntimeError):
-    """Agent or CLI step failed - carries artifacts for debugging."""
+    """Agent or CLI step failed - carries what the agent answered and names the folder its artifacts are in."""
 
-    def __init__(
-        self,
-        message: str,
-        *,
-        prefix: str = "",
-        exit_code: int | None = None,
-        stdout: str = "",
-        stderr: str = "",
-        log_dir: Path | None = None,
-    ) -> None:
-        super().__init__(message)
-        self.prefix = prefix
-        self.exit_code = exit_code
-        self.stdout = stdout
-        self.stderr = stderr
+    def __init__(self, message: str, *, output: AgentResult | None = None, log_dir: Path | None = None) -> None:
+        super().__init__(message if log_dir is None else f"{message} (artifacts in {log_dir})")
+        self.output = output
         self.log_dir = log_dir
 
 
@@ -100,8 +88,21 @@ class AgentResult:
     stderr: str
     elapsed_seconds: float
 
+    # The exit code of an agent stopped at its timeout, before it exited by itself.
+    STOPPED_BEFORE_EXIT = -1
+
     def ok(self) -> bool:
         return self.exit_code == 0
+
+    @classmethod
+    def from_stopped(cls, stopped: subprocess.TimeoutExpired) -> AgentResult:
+        """What an agent stopped at its timeout had written by then."""
+        return cls(
+            exit_code=cls.STOPPED_BEFORE_EXIT,
+            text=str(stopped.stdout or ""),
+            stderr=str(stopped.stderr or ""),
+            elapsed_seconds=float(stopped.timeout),
+        )
 
 
 @dataclass(frozen=True)
@@ -323,7 +324,7 @@ class AgentSession:
         log.write(f"creating new session for {session_file.name} in {workspace} ...")
         chat_id = cli.create_chat(str(workspace.resolve()))
         session = cls(chat_id=chat_id, session_file=session_file)
-        session.save()
+        session.record.save()
         log.write(f"session created: {session.chat_id}")
         return session
 
@@ -334,21 +335,23 @@ class AgentSession:
         args = self.cli.command(prompt, str(workspace.resolve()))
         started = time.perf_counter()
         completed = self._run_cursor_cli(args, workspace, timeout_seconds)
-        elapsed = time.perf_counter() - started
-        if completed.stderr:
-            sys.__stderr__.write(completed.stderr)
-            sys.__stderr__.flush()
-        narrative = self._narrative_from_cli_stdout(completed.stdout or "")
-        text = narrative or (completed.stdout or "")
-        if text:
-            sys.__stdout__.write(text if text.endswith("\n") else text + "\n")
-            sys.__stdout__.flush()
-        return AgentResult(
+        result = AgentResult(
             exit_code=completed.returncode,
-            text=text,
+            text=self._narrative_from_cli_stdout(completed.stdout or "") or (completed.stdout or ""),
             stderr=completed.stderr or "",
-            elapsed_seconds=elapsed,
+            elapsed_seconds=time.perf_counter() - started,
         )
+        self._echo(result)
+        return result
+
+    def _echo(self, result: AgentResult) -> None:
+        """Show what the agent wrote on the spec run's own streams, as it would appear in a terminal."""
+        if result.stderr:
+            sys.__stderr__.write(result.stderr)
+            sys.__stderr__.flush()
+        if result.text:
+            sys.__stdout__.write(result.text if result.text.endswith("\n") else result.text + "\n")
+            sys.__stdout__.flush()
 
     def _run_cursor_cli(
         self, args: list[str], workspace: Path, timeout_seconds: int
@@ -366,9 +369,7 @@ class AgentSession:
             )
         except subprocess.TimeoutExpired as exc:
             raise AgentHarnessError(
-                f"cursor-agent timed out after {timeout_seconds}s",
-                stdout=str(exc.stdout or ""),
-                stderr=str(exc.stderr or ""),
+                f"cursor-agent timed out after {timeout_seconds}s", output=AgentResult.from_stopped(exc)
             ) from exc
 
     def _narrative_from_cli_stdout(self, stdout: str) -> str:
@@ -474,17 +475,14 @@ class ToolsRunYaml:
             lines.append(line)
         return "\n".join(lines).strip()
 
-    def run_request(self, yaml_body: str, timeout_seconds: float | None = None, prefix: str = "") -> str:
-        """Run the request the YAML body names in this reader's workspace and fence the response; prefix names the
-        step in any failure."""
-        if yaml is None:
-            raise AgentHarnessError("PyYAML required to parse run request", prefix=prefix)
+    def run_request(self, yaml_body: str, timeout_seconds: float | None = None) -> str:
+        """Run the request the YAML body names in this reader's workspace and fence the response."""
         parsed = yaml.safe_load(yaml_body)
         if not isinstance(parsed, dict):
-            raise AgentHarnessError("run request must be a mapping", prefix=prefix)
+            raise AgentHarnessError("run request must be a mapping")
         if self._workspace is None:
-            raise AgentHarnessError("a run request runs in a workspace; this reader was made with none", prefix=prefix)
-        response = invoke_run_request(parsed, self._workspace, timeout_seconds)
+            raise AgentHarnessError("a run request runs in a workspace; this reader was made with none")
+        response = ToolsetInvoke.create(ToolsetRequest.from_mapping(parsed), self._workspace).run(timeout_seconds)
         return _YAML.fenced(self.manifest(response))
 
     def manifest(self, response: RunResponse) -> str:
@@ -492,90 +490,96 @@ class ToolsRunYaml:
         return _YAML.dump_manifest(response.as_record())
 
 
-class ToolsetInvoke:
-    """Expand an action or invoke a tool on a live toolset instance. The request names the action or the tool, which is
-    right at the YAML boundary only: the run resolves the name once, on the instance it makes, and holds the member."""
+@dataclass(frozen=True)
+class ToolsetRequest:
+    """One run a spec asks for: the published reference of the toolset, exactly one of the tool to invoke or the action
+    to expand, the toolset's constructor context, and the member's arguments. A request may also name the session the
+    toolset is made for and the project it runs on."""
 
-    def __init__(self, toolset_path: str, project: Path, member: Any, arguments: Mapping[str, Any]) -> None:
-        self._toolset_path = toolset_path
-        self._project = project
-        # The action (an AgentInstructions) or the tool (an AgentTool) the run expands or invokes.
-        self._member = member
-        self._arguments = dict(arguments)
+    toolset: str
+    tool: str | None = None
+    action: str | None = None
+    context: Mapping[str, Any] = field(default_factory=dict)
+    arguments: Mapping[str, Any] = field(default_factory=dict)
+    session: str | None = None
+    project: Path | None = None
+
+    def __post_init__(self) -> None:
+        if not self.toolset:
+            raise AgentHarnessError("request missing toolset")
+        if self.tool is None and self.action is None:
+            raise AgentHarnessError("request missing tool or action")
+        if self.tool is not None and self.action is not None:
+            raise AgentHarnessError("a request names a tool or an action, not both")
 
     @classmethod
-    def create(cls, request: dict[str, Any], project: Path) -> ToolsetInvoke:
-        """The run a request read from a YAML prompt or a fixture names, on the project it names; a request that
-        names none runs on project, the one the spec works in. A request that names an action runs the action."""
-        toolset_path = request.get("toolset")
-        if not toolset_path:
-            raise AgentHarnessError("request missing toolset")
-        if not request.get("action") and not request.get("tool"):
-            raise AgentHarnessError("request missing tool or action")
-        project = Path(request.get("project") or project)
-        context = dict(request.get("context") or {})
-        if request.get("session"):
-            context["session"] = cls._session_named(str(request["session"]), project)
-        return cls.for_toolset(
-            str(toolset_path),
-            project,
-            tool=None if request.get("action") else str(request["tool"]),
-            action=str(request["action"]) if request.get("action") else None,
-            context=context,
-            arguments=request.get("arguments"),
+    def from_mapping(cls, request: Mapping[str, Any]) -> ToolsetRequest:
+        """The request a YAML prompt or a fixture holds; when it names both, the action is run."""
+        action = str(request["action"]) if request.get("action") else None
+        return cls(
+            toolset=str(request.get("toolset") or ""),
+            tool=str(request["tool"]) if request.get("tool") and action is None else None,
+            action=action,
+            context=dict(request.get("context") or {}),
+            arguments=dict(request.get("arguments") or {}),
+            session=str(request["session"]) if request.get("session") else None,
+            project=Path(request["project"]) if request.get("project") else None,
         )
 
-    @classmethod
-    def for_toolset(
-        cls,
-        toolset: str,
-        project: Path,
-        *,
-        tool: str | None = None,
-        action: str | None = None,
-        context: Mapping[str, Any] | None = None,
-        arguments: Mapping[str, Any] | None = None,
-    ) -> ToolsetInvoke:
-        """The run of one tool or one action of the toolset its published reference names, on project."""
+    def toolset_on(self, project: Path) -> AgentToolSet:
+        """The toolset made from this request's context, for the session it names in project."""
         from harness.agent_tools.agent_tools import AgentToolSet
 
-        if (tool is None) == (action is None):
-            raise ValueError("Provide exactly one of tool= or action=")
         try:
-            instance = AgentToolSet.instantiate({"toolset": toolset, "context": dict(context or {})})
+            return AgentToolSet.instantiate({"toolset": self.toolset, "context": self._context_on(project)})
         except TypeError as exc:
             raise AgentHarnessError(str(exc)) from exc
-        if action is not None:
-            return ActionExpansion(toolset, project, cls._action_of(instance, action), arguments or {})
-        return cls(toolset, project, cls._tool_of(instance, tool), arguments or {})
 
-    @staticmethod
-    def _action_of(instance: Any, action: str) -> Any:
-        """The action the toolset instance holds under the name the request gives."""
-        try:
-            return instance.instructions[action]
-        except KeyError as exc:
-            raise AgentHarnessError(f"unknown action {action!r}") from exc
-
-    @staticmethod
-    def _tool_of(instance: Any, tool: str) -> Any:
-        """The tool the toolset instance publishes under the name the request gives."""
-        member = instance.tools.get(tool)
+    def member_of(self, toolset: AgentToolSet) -> AgentTool:
+        """The action or the tool the toolset holds under the name this request gives."""
+        member = toolset.instructions.get(self.action) if self.action is not None else toolset.tools.get(self.tool)
         if member is None:
-            raise AgentHarnessError(f"unknown tool {tool!r}")
+            kind, name = ("action", self.action) if self.action is not None else ("tool", self.tool)
+            raise AgentHarnessError(f"unknown {kind} {name!r}")
         return member
 
-    @classmethod
-    def _session_named(cls, name: str, project: Path) -> Any:
-        """The project's session a run request names, which the toolset is made for, so the run works in that session
+    def _context_on(self, project: Path) -> dict[str, Any]:
+        context = dict(self.context)
+        if self.session is not None:
+            context["session"] = self._session_in(project)
+        return context
+
+    def _session_in(self, project: Path) -> Any:
+        """The project's session the request names, which the toolset is made for, so the run works in that session
         and not in whichever session the project has open."""
         # The sessions are reached through the opener space/session registers with ToolCall, so agent BDD never imports
         # space, which imports the guidance back.
         opened = ToolCall.session_in(project)
-        session = opened.sessions.named(name) if opened is not None else None
+        session = opened.sessions.named(self.session) if opened is not None else None
         if session is None:
-            raise AgentHarnessError(f"request names session {name!r}, which the project does not have")
+            raise AgentHarnessError(f"request names session {self.session!r}, which the project does not have")
         return session
+
+
+class ToolsetInvoke:
+    """Expand an action or invoke a tool on a live toolset instance. The request names the action or the tool, which is
+    right at the YAML boundary only: the run resolves the name once, on the instance it makes, and holds the member."""
+
+    def __init__(self, request: ToolsetRequest, project: Path, member: AgentTool) -> None:
+        self._request = request
+        self._project = project
+        # The action (an AgentInstructions) or the tool (an AgentTool) the run expands or invokes.
+        self._member = member
+        self._arguments = dict(request.arguments)
+
+    @classmethod
+    def create(cls, request: ToolsetRequest, project: Path) -> ToolsetInvoke:
+        """The run the request names, on the project it names; a request that names none runs on project, the one the
+        spec works in. A request that names an action runs the action."""
+        project = request.project or project
+        member = request.member_of(request.toolset_on(project))
+        made = ActionExpansion if request.action is not None else cls
+        return made(request, project, member)
 
     @property
     def toolset(self) -> Any:
@@ -590,7 +594,7 @@ class ToolsetInvoke:
         """The response; with a timeout, fail the spec when the run outlives it."""
         if timeout_seconds is None:
             return self.response()
-        return ToolRunDeadline(timeout_seconds).run(self.response, self._toolset_path)
+        return ToolRunDeadline(timeout_seconds).run(self.response, self._request.toolset)
 
     def invoked_tool(self) -> RunResponse:
         try:
@@ -599,7 +603,7 @@ class ToolsetInvoke:
             raise AgentHarnessError(str(exc)) from exc
         return RunResponse(
             ok=True,
-            toolset=self._toolset_path,
+            toolset=self._request.toolset,
             tool=self._member.name,
             result=result,
             resources={},
@@ -624,7 +628,7 @@ class ActionExpansion(ToolsetInvoke):
         expanded = self._member.expand(self._arguments)
         return RunResponse(
             ok=True,
-            toolset=self._toolset_path,
+            toolset=self._request.toolset,
             action=self._member.name,
             result=expanded.result,
             instructions=expanded.instructions,
@@ -632,15 +636,6 @@ class ActionExpansion(ToolsetInvoke):
             arguments=self._arguments,
             resources={},
         )
-
-
-def invoke_run_request(request: dict[str, Any], project: Path, timeout_seconds: float | None = None) -> RunResponse:
-    """Load a toolset and expand or invoke the named member the same way production does, on project unless the
-    request names its own; with a timeout, fail the spec when the run outlives it."""
-    if timeout_seconds is None:
-        return ToolsetInvoke.create(request, project).response()
-    label = str(request.get("toolset") or "toolset run")
-    return ToolRunDeadline(timeout_seconds).run(lambda: ToolsetInvoke.create(request, project).response(), label)
 
 
 _Outcome = TypeVar("_Outcome")

@@ -19,13 +19,14 @@ from cdd_guidance.practices.stories.model.story_model import Epic, Increment, St
 from cdd_guidance.practices.stories.stories import Stories
 from cdd_guidance.practices.ux.model.nodes import Region, Screen
 from cdd_guidance.practices.ux.ux import Ux
+from cdd_guidance.practices.ux.model.ux_map_spec_fixture import made
 
 
 
 
 with description("a model object built without a graph"):
     with before.each:
-        self.region = Region("product list", 0, "body")
+        self.region = made(Region, "product list", 0, area="body")
 
     with it("should belong to no practice yet"):
         expect(self.region.practice).to(be_none)
@@ -65,13 +66,13 @@ with description("a model object built without a graph"):
             expect(self.region.graph).to(be(self.graph))
 
         with it("should record the edge to each part there"):
-            expect([edge.child for edge in self.graph.edges_from("regions", self.screen)]).to(equal([self.region]))
+            expect([edge.child for edge in self.graph.edges.from_parent("regions", self.screen)]).to(equal([self.region]))
 
 
 with description("a model object built on a graph and moved to another"):
     with before.each:
         self.first = Graph()
-        self.region = Region("product list", 0, "body", graph=self.first)
+        self.region = made(Region, "product list", 0, area="body", graph=self.first)
         self.own_practice = self.region.practice
         self.graph = Graph()
         self.screen = Screen("Catalog", 0, graph=self.graph)
@@ -85,7 +86,7 @@ with description("a model object built on a graph and moved to another"):
 
     with context("that has the same name as a node already on the owner's graph"):
         with before.each:
-            self.second = Region("product list", 1, "aside")
+            self.second = made(Region, "product list", 1, area="aside")
             self.screen.append_region(self.second)
 
         with it("should take a node id of its own"):
@@ -106,11 +107,11 @@ with description("an owner that refers to objects it does not own"):
         self.story_map = StoryModel()
         self.epic = Epic("Shop")
         self.story = Story("Place order")
-        self.epic.append_story(self.story)
-        self.story_map.append_epic(self.epic)
+        self.epic.stories.append(self.story)
+        self.story_map.epics.append(self.epic)
         self.increment = Increment("First release")
         self.increment.stories.append(self.story)
-        self.story_map.append_increment(self.increment)
+        self.story_map.increments.append(self.increment)
         self.graph = Graph()
         self.story_map.join(self.graph.practices.of(Stories))
 
@@ -121,7 +122,7 @@ with description("an owner that refers to objects it does not own"):
         expect(self.story.parent).to(be(self.epic))
 
     with it("should record a relationship edge to each object on the owner's graph"):
-        edges = self.graph.edges_from("stories", self.increment)
+        edges = self.graph.edges.from_parent("stories", self.increment)
         expect([(edge.child, edge.display) for edge in edges]).to(equal([(self.story, "relationship")]))
 
     with context("that drops an object"):
@@ -129,7 +130,7 @@ with description("an owner that refers to objects it does not own"):
             self.increment.stories = []
 
         with it("should drop the edge to it"):
-            expect(self.graph.edges_from("stories", self.increment)).to(equal([]))
+            expect(self.graph.edges.from_parent("stories", self.increment)).to(equal([]))
 
 
 with description("schema edges paused while models are parsed"):

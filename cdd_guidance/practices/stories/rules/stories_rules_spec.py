@@ -12,6 +12,7 @@ from mamba import before, context, description, it
 
 from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.location import Location
 from harness.graph.rule_context import RuleCheckContext
 from harness.graph.rule_fixture import SchemaRuleRun
 from cdd_guidance.practices.stories.model.story_model import Step, StepType
@@ -28,16 +29,17 @@ def _scenario(practice, name: str = "Display Create Account") -> Node:
 def _step(practice, semantic: str, text: str, line: int) -> Node:
     """The Step its story model read, as its own node: ``When`` with ``the User proceeds``."""
     label = f"{semantic.lower()} {text}"
-    step = Step(text, StepType(semantic.lower()), line, keyword=semantic)
+    step = Step(text, StepType(semantic.lower()), line)
+    step.keyword = semantic
     step.name = label
     step.type = semantic
-    return practice.reading.in_graph.add(step, f"stories:{semantic}:story.ts:{line}:{hash(label) & 0xFFFFFF}", "story.ts", line, line)
+    return practice.reading.in_graph.add(step, f"stories:{semantic}:story.ts:{line}:{hash(label) & 0xFFFFFF}", Location("story.ts", line, line))
 
 
 def _record_steps(practice, scenario: Node, steps: list[Node]) -> None:
     edge_type = EdgeType("steps", 4, "direct")
     for step in steps:
-        practice.reading.graph.record(edge_type, scenario, step)
+        practice.reading.graph.edges.record(edge_type, scenario, step)
 
 
 with description("ScenariosShape"):
@@ -92,9 +94,9 @@ with description("ExamplesTraceDomainModel concepts"):
         from cdd_guidance.practices.stories.rules.scenarios import scenario_domain_concepts
 
         steps = [
-            Step("**My Paradise** provides the device wallet merchant certificate", StepType.WHEN, 1,
-                 concepts=["My Paradise"], actor="My Paradise"),
-            Step("**Customer** sees the **certificate** My Paradise returned", StepType.THEN, 2,
-                 concepts=["Customer", "certificate"], actor="Customer"),
+            Step("**My Paradise** provides the device wallet merchant certificate", StepType.WHEN, 1),
+            Step("**Customer** sees the **certificate** My Paradise returned", StepType.THEN, 2),
         ]
+        steps[0].concepts, steps[0].actor = ["My Paradise"], "My Paradise"
+        steps[1].concepts, steps[1].actor = ["Customer", "certificate"], "Customer"
         expect(scenario_domain_concepts(steps)).to(equal({"certificate"}))

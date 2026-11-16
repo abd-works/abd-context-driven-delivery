@@ -19,13 +19,13 @@ describe('Linked Ticket', () => {
   with_link('naming a ticket the board shows', () => {
     it('should select that ticket', async () => {
       const { page } = board.unreadPage()
-      await page.openLinkedTicket(`?ticket=${OTHER}`)
+      await page.links.openTicket(`?ticket=${OTHER}`)
       expect(page.board.selectedTicket?.name).toBe(OTHER)
     })
 
     it('should open that ticket’s card, as a click on it does', async () => {
       const { page } = board.unreadPage()
-      await page.openLinkedTicket(`?ticket=${OTHER}`)
+      await page.links.openTicket(`?ticket=${OTHER}`)
       expect(page.store.state.openCard).toBe(OTHER)
     })
   })
@@ -33,7 +33,7 @@ describe('Linked Ticket', () => {
   with_link('naming a ticket the board does not show', () => {
     it('should select nothing', async () => {
       const { page } = await board.page()
-      await page.openLinkedTicket('?ticket=no-such-ticket')
+      await page.links.openTicket('?ticket=no-such-ticket')
       expect(page.store.state.selected).toBeNull()
     })
   })
@@ -41,7 +41,7 @@ describe('Linked Ticket', () => {
   with_link('naming nothing', () => {
     it('should select nothing', async () => {
       const { page } = await board.page()
-      await page.openLinkedTicket('')
+      await page.links.openTicket('')
       expect(page.store.state.selected).toBeNull()
     })
   })

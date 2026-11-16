@@ -11,7 +11,7 @@ from harness.guidance.practice_catalogue import UnknownPractice
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph, PracticeNodes
-    from harness.graph.saved_graph import GraphChanges, SavedGraph
+    from harness.graph.saved_graph import SavedGraph
     from harness.guidance.guidance import PracticeGuidance
 
 
@@ -21,8 +21,8 @@ class GraphPractices:
     ones open in it now, which hold its nodes (``opened``). It is always the same practice objects, the ones the graph
     was given, so code that holds a practice keeps it: a practice is looked up by its key only for a call that names it
     by the key it sent (``named``), and code that knows the practice's class asks for it by that class (``of``,
-    ``loaded``). The build asks it to take each step on every open practice: a saved graph's practices held, a worker's
-    changes taken, a refresh's files forgotten, the rules run, and each practice's tree rebuilt."""
+    ``loaded``). It holds a saved graph's practices and rebuilds each open practice's tree; the build takes every other
+    step on the open practices itself."""
 
     def __init__(self, graph: Graph, held: Iterable[PracticeGuidance]) -> None:
         self._graph = graph
@@ -97,53 +97,6 @@ class GraphPractices:
         for practice, record in kept.items():
             practice.reading.in_graph.restore.links(record)
         self.rebuild_trees()
-
-    def take(self, changes: GraphChanges) -> None:
-        """Change what the open practices hold as a worker's changes say: every practice's nodes first, then the edges,
-        which may cross practices, and the violations; then each changed practice's tree. The graph then holds what the
-        worker's whole answer says, without reading it back."""
-        changed = {self.held[key]: record for key, record in changes.practices.items() if key in self.held and not record.is_empty}
-        for practice, record in changed.items():
-            practice.reading.in_graph.restore.changes(record)
-        for practice, record in changed.items():
-            practice.reading.in_graph.restore.links(record)
-        for practice in changed:
-            practice.reading.in_graph.put_in_source_order()
-            practice.reading.in_graph.rebuild_tree()
-
-    def forget(self, files: list[Path]) -> None:
-        """Drop the nodes read from files in every open practice, every edge that joins one of them, and every rule's
-        findings, so a refresh reads those files again from nothing."""
-        dropped: set[int] = set()
-        for practice in self.opened.values():
-            dropped |= practice.reading.in_graph.forget_files(files)
-        for practice in self.opened.values():
-            practice.reading.in_graph.drop_edges(lambda edge: id(edge.parent) in dropped or id(edge.child) in dropped)
-            practice.reading.in_graph.renew_rules()
-
-    def in_reading_order(self) -> list[PracticeGuidance]:
-        """The open practices, each after the practices it reads while it reads its own."""
-        ordered: list[PracticeGuidance] = []
-
-        def place(practice: PracticeGuidance) -> None:
-            if practice in ordered:
-                return
-            for earlier in practice.reading.reads_after:
-                if earlier in self.opened:
-                    place(self.opened[earlier])
-            ordered.append(practice)
-
-        for practice in list(self.opened.values()):
-            place(practice)
-        return ordered
-
-    def check(self) -> None:
-        """Put every open practice's nodes in source order, as a fresh build reads them, and run its graph rules: a rule
-        that reports the first of two nodes then reports the same node whichever build read them."""
-        for practice in self.opened.values():
-            practice.reading.in_graph.put_in_source_order()
-        for practice in self.opened.values():
-            practice.reading.in_graph.rule_run.check()
 
     def rebuild_trees(self) -> None:
         for practice in self.opened.values():

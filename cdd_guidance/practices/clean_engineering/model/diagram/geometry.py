@@ -24,11 +24,20 @@ class Geometry(NamedTuple):
             or other.y + other.height <= self.y
         )
 
-    def shifted(self, dx: float, dy: float) -> 'Geometry':
-        return Geometry(self.x + dx, self.y + dy, self.width, self.height)
+    def shifted(self, rightward: float, downward: float) -> 'Geometry':
+        return Geometry(self.x + rightward, self.y + downward, self.width, self.height)
 
-    def moved_to(self, x: float, y: float) -> 'Geometry':
-        return Geometry(x, y, self.width, self.height)
+    def moved_to(self, left: float, top: float) -> 'Geometry':
+        return Geometry(left, top, self.width, self.height)
+
+    def clear_gap_to(self, other: 'Geometry') -> float:
+        """The empty space between this box and other, corner to corner when they are apart both ways; 0 when they
+        touch or overlap."""
+        across = max(0.0, self.x - (other.x + other.width), other.x - (self.x + self.width))
+        down = max(0.0, self.y - (other.y + other.height), other.y - (self.y + self.height))
+        if across == 0.0 or down == 0.0:
+            return across + down
+        return (across ** 2 + down ** 2) ** 0.5
 
     @property
     def center(self) -> Point:
@@ -38,12 +47,17 @@ class Geometry(NamedTuple):
 def segments_cross(first: Segment, second: Segment) -> bool:
     """True when two straight segments cross each other; an end that lies on the other segment's line touches it, and
     touching counts."""
-    (a, b), (c, d) = first, second
-    return _turns_left(a, c, d) != _turns_left(b, c, d) and _turns_left(a, b, c) != _turns_left(a, b, d)
+    (first_start, first_end), (second_start, second_end) = first, second
+    return (
+        _turns_left(first_start, second) != _turns_left(first_end, second)
+        and _turns_left(second_start, first) != _turns_left(second_end, first)
+    )
 
 
-def _turns_left(a: Point, b: Point, c: Point) -> bool:
-    return (c[1] - a[1]) * (b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0])
+def _turns_left(point: Point, line: Segment) -> bool:
+    """True when walking from the line's start towards ``point`` turns left of the line's direction."""
+    (start, end) = line
+    return (point[1] - start[1]) * (end[0] - start[0]) > (end[1] - start[1]) * (point[0] - start[0])
 
 
 CELL_WIDTH = 260

@@ -8,7 +8,7 @@ export class GraphClient extends GraphClientGenerated {
     super(api);
   }
 
-  async chooseFolder(title = 'Select a repo folder'): Promise<string> {
+  async chooseFolder(title: string = 'Select a repo folder'): Promise<string> {
     return (await this.api.post<{ folder: string }>('/explorer/choose-folder', { title }))?.folder ?? '';
   }
 

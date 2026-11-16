@@ -67,7 +67,7 @@ with description("a MernDomainDriven generator"):
 
     with context("whose contexts section is expanded"):
         with before.each:
-            self.rendered = self.tool.scoped_markdown()
+            self.rendered = self.tool.scoped_markdown
 
         with it("should return non-empty prose"):
             expect(len(self.rendered) > 0).to(be_true)

@@ -3,12 +3,21 @@ import type { editor as monaco } from 'monaco-editor';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { initialOpenFolds, inlineCallLayout, type FoldMember, type InlineFold } from './call-expansion';
 import type { NodeSourceData } from '@cdd/harness/graph/graph';
-import { buildViolationCorrectPrompt, type ViolationFocus } from './violation-prompt';
+import { buildViolationCorrectPrompt } from './violation-prompt';
+import type { ViolationFocus } from '../graph/graph-selection';
 import { reasonOf } from '../graph/graph-failures';
 import { failures } from '../graph/graph-page';
 import './source.css';
 
 const LINE_HEIGHT = 20;
+// The room the editor keeps above and below its lines.
+const SOURCE_PADDING = 16;
+// A column past the end of any source line, so a hidden range covers each line whole.
+const PAST_LINE_END = 1000;
+// The deepest nesting the source marks apart; deeper calls share its mark.
+const DEEPEST_NEST_MARKED = 5;
+// How many frames the editor's folds are drawn again while its view catches up with them.
+const FRAMES_TO_CATCH_UP = 8;
 
 type Decoration = monaco.IModelDeltaDecoration;
 type Decorations = { current: monaco.IEditorDecorationsCollection | null };
@@ -97,7 +106,8 @@ function SourceEditor({
   const prepared = useMemo(
     () =>
       withNamedFolds(
-        inlineCallLayout(text, members, owner, {
+        inlineCallLayout(text, members, {
+          owner,
           openedClass: source.type === 'OoadClass' ? source.name : '',
           origin: source.start_line || 1,
         }),
@@ -135,30 +145,24 @@ function SourceEditor({
     if (editor.getValue() !== prepared.text) {
       editor.setValue(prepared.text);
     }
-    applyCallFolds(
-      editor,
-      prepared.folds,
+    new EditorFolds(editor, decorations, hideSource.current).apply({
+      folds: prepared.folds,
       openFolds,
-      hideSource.current,
-      decorations,
-      prepared.depths,
-      violationLineDecorations(prepared.lineNumbers, markStart, markEnd, Boolean(violation)),
-      glyphs.current,
-    );
+      depths: prepared.depths,
+      violationMarks: violationLineDecorations(prepared.lineNumbers, violation ? { start: markStart, end: markEnd } : null),
+      keepGlyphMargin: glyphs.current,
+    });
   }, [prepared.text, prepared.folds, prepared.depths, openFolds, prepared.lineNumbers, markStart, markEnd, violation]);
 
   const onMount: OnMount = (editor) => {
     editorRef.current = editor;
-    applyCallFolds(
-      editor,
-      foldsRef.current,
-      openFoldsRef.current,
-      hideSource.current,
-      decorations,
-      depthsRef.current,
-      violationLineDecorations(prepared.lineNumbers, markStart, markEnd, Boolean(violation)),
-      glyphs.current,
-    );
+    new EditorFolds(editor, decorations, hideSource.current).apply({
+      folds: foldsRef.current,
+      openFolds: openFoldsRef.current,
+      depths: depthsRef.current,
+      violationMarks: violationLineDecorations(prepared.lineNumbers, violation ? { start: markStart, end: markEnd } : null),
+      keepGlyphMargin: glyphs.current,
+    });
     const nodeEl = editor.getDomNode();
     nodeEl?.addEventListener(
       'mousedown',
@@ -184,22 +188,26 @@ function SourceEditor({
     onEditor?.(editor);
   };
 
+  // The prompt that asks a chat to correct the violation shown, with the source it was found in.
+  function correctPrompt(shown: ViolationFocus): string {
+    return buildViolationCorrectPrompt({
+      rule: shown.rule,
+      message: shown.message,
+      nodeName: source.name,
+      nodeType: source.type,
+      file: file,
+      startLine: shown.startLine ?? source.start_line,
+      endLine: shown.endLine ?? source.end_line,
+      excerpt: text,
+    });
+  }
+
   async function copyCorrectPrompt() {
     if (!violation) {
       return;
     }
-    const prompt = buildViolationCorrectPrompt({
-      rule: violation.rule,
-      message: violation.message,
-      nodeName: source.name,
-      nodeType: source.type,
-      file: file,
-      startLine: violation?.startLine ?? source.start_line,
-      endLine: violation?.endLine ?? source.end_line,
-      excerpt: text,
-    });
     try {
-      await navigator.clipboard.writeText(prompt);
+      await navigator.clipboard.writeText(correctPrompt(violation));
     } catch (cause) {
       failures.fail(`The prompt was not copied: ${reasonOf(cause)}`, `Copy the correction prompt for ${violation.rule} in the Graph app`);
     }
@@ -340,7 +348,7 @@ function editorHasViewModel(editor: Parameters<OnMount>[0]): boolean {
 
 function sourceHeight(text: string): number {
   const lines = Math.max(1, text.split('\n').length);
-  return lines * LINE_HEIGHT + 16;
+  return lines * LINE_HEIGHT + SOURCE_PADDING;
 }
 
 function shownLineCount(text: string, folds: InlineFold[], openFolds: string[]): number {
@@ -353,16 +361,13 @@ function shownLineCount(text: string, folds: InlineFold[], openFolds: string[]):
   return Math.max(1, text.split('\n').length - hidden.size);
 }
 
-function violationLineDecorations(
-  lineNumbers: string[],
-  startLine: number,
-  endLine: number,
-  active: boolean,
-): Decoration[] {
-  if (!active || startLine < 1) {
+// The editor lines whose file lines the violation was found on, marked; none when no violation is shown.
+function violationLineDecorations(lineNumbers: string[], marked: SourceLines | null): Decoration[] {
+  if (!marked || marked.start < 1) {
     return [];
   }
-  const last = endLine >= startLine ? endLine : startLine;
+  const startLine = marked.start;
+  const last = marked.end >= startLine ? marked.end : startLine;
   const rows: Decoration[] = [];
   for (let index = 0; index < lineNumbers.length; index += 1) {
     const fileLine = Number.parseInt(lineNumbers[index] ?? '', 10);
@@ -378,71 +383,90 @@ function violationLineDecorations(
   return rows;
 }
 
-function applyCallFolds(
-  editor: Parameters<OnMount>[0],
-  folds: InlineFold[],
-  openFolds: string[],
-  source: object,
-  decorations: Decorations,
-  depths: number[] = [],
-  violationMarks: Decoration[] = [],
-  keepGlyphMargin = false,
-) {
-  const open = new Set(openFolds);
-  const ranges = hiddenRanges(folds, openFolds).map((fold) => ({
-    startLineNumber: fold.start,
-    startColumn: 1,
-    endLineNumber: fold.end,
-    endColumn: 1000,
-  }));
-  const next = [
-    ...folds.map((fold) => ({
-      range: { startLineNumber: fold.glyph, startColumn: 1, endLineNumber: fold.glyph, endColumn: 1 },
-      options: { glyphMarginClassName: glyphClass(fold.kind, open.has(foldKey(fold))) },
-    })),
-    ...depths.flatMap((depth, index) => {
-      if (depth <= 0) {
-        return [];
+// What one source editor shows of its layout: the folds and which are open, how deep each line is listed, the lines a
+// violation was found on, and whether the glyph margin stays when there is no fold to mark in it.
+type FoldsShown = {
+  folds: InlineFold[];
+  openFolds: string[];
+  depths: number[];
+  violationMarks: Decoration[];
+  keepGlyphMargin: boolean;
+};
+
+// The token the editor's hidden areas are set under, counting each time they are set, so a frame still catching up
+// with an earlier set stops.
+type HideToken = { id: string; generation?: number };
+
+// The folds, nesting, and violation marks drawn on one source editor, and the lines its closed folds hide.
+class EditorFolds {
+  constructor(
+    private readonly editor: SourceEditorInstance,
+    private readonly decorations: Decorations,
+    private readonly token: HideToken,
+  ) {}
+
+  apply(shown: FoldsShown): void {
+    const marks = this.marks(shown);
+    const ranges = hiddenRanges(shown.folds, shown.openFolds).map((fold) => ({
+      startLineNumber: fold.start,
+      startColumn: 1,
+      endLineNumber: fold.end,
+      endColumn: PAST_LINE_END,
+    }));
+    const withOptions = this.editor as SourceEditorInstance & { updateOptions?(options: { glyphMargin: boolean }): void };
+    withOptions.updateOptions?.({ glyphMargin: shown.keepGlyphMargin || shown.folds.length > 0 });
+    if (this.decorations.current) {
+      this.decorations.current.set(marks);
+    } else {
+      this.decorations.current = this.editor.createDecorationsCollection(marks);
+    }
+    this.hide(ranges);
+    if (editorHasViewModel(this.editor)) this.drawAgainUntilShown(marks, ranges);
+  }
+
+  private marks(shown: FoldsShown): Decoration[] {
+    const open = new Set(shown.openFolds);
+    return [
+      ...shown.folds.map((fold) => ({
+        range: { startLineNumber: fold.glyph, startColumn: 1, endLineNumber: fold.glyph, endColumn: 1 },
+        options: { glyphMarginClassName: glyphClass(fold.kind, open.has(foldKey(fold))) },
+      })),
+      ...shown.depths.flatMap((depth, index) =>
+        depth <= 0
+          ? []
+          : [{
+              range: { startLineNumber: index + 1, startColumn: 1, endLineNumber: index + 1, endColumn: 1 },
+              options: { isWholeLine: true, className: `call-nest call-nest-${Math.min(depth, DEEPEST_NEST_MARKED)}` },
+            }],
+      ),
+      ...shown.violationMarks,
+    ];
+  }
+
+  private hide(ranges: object[]): void {
+    (this.editor as SourceEditorInstance & { setHiddenAreas(ranges: object[], source?: object): void }).setHiddenAreas(ranges, this.token);
+  }
+
+  // A view that has not caught up with the folds yet shows every line; draw them again on the next frames until it
+  // hides them, unless they are set again first.
+  private drawAgainUntilShown(marks: Decoration[], ranges: object[]): void {
+    this.token.generation = (this.token.generation ?? 0) + 1;
+    const generation = this.token.generation;
+    let frames = 0;
+    const restore = () => {
+      if (this.token.generation !== generation || frames >= FRAMES_TO_CATCH_UP) {
+        return;
       }
-      const level = Math.min(depth, 5);
-      return [
-        {
-          range: { startLineNumber: index + 1, startColumn: 1, endLineNumber: index + 1, endColumn: 1 },
-          options: { isWholeLine: true, className: `call-nest call-nest-${level}` },
-        },
-      ];
-    }),
-    ...violationMarks,
-  ];
-  const withOptions = editor as Parameters<OnMount>[0] & { updateOptions?(options: { glyphMargin: boolean }): void };
-  withOptions.updateOptions?.({ glyphMargin: keepGlyphMargin || folds.length > 0 });
-  if (decorations.current) {
-    decorations.current.set(next);
-  } else {
-    decorations.current = editor.createDecorationsCollection(next);
+      frames += 1;
+      if (viewIsStillFullyExpanded(this.editor)) {
+        this.decorations.current?.set(marks);
+        this.hide([]);
+        this.hide(ranges);
+        requestAnimationFrame(restore);
+      }
+    };
+    requestAnimationFrame(restore);
   }
-  const hidden = editor as Parameters<OnMount>[0] & { setHiddenAreas(ranges: object[], source?: object): void };
-  hidden.setHiddenAreas(ranges, source);
-  if (!editorHasViewModel(editor)) {
-    return;
-  }
-  const token = source as { generation?: number };
-  token.generation = (token.generation ?? 0) + 1;
-  const generation = token.generation;
-  let frames = 0;
-  const restore = () => {
-    if (token.generation !== generation || frames >= 8) {
-      return;
-    }
-    frames += 1;
-    if (viewIsStillFullyExpanded(editor)) {
-      decorations.current?.set(next);
-      hidden.setHiddenAreas([], source);
-      hidden.setHiddenAreas(ranges, source);
-      requestAnimationFrame(restore);
-    }
-  };
-  requestAnimationFrame(restore);
 }
 
 function viewIsStillFullyExpanded(editor: Parameters<OnMount>[0]): boolean {

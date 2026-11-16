@@ -5,7 +5,7 @@ import type { AppData } from '@cdd/harness/diagnostics/app'
 import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
 import type { HealthViewJson, InstallJson, ServerHealthJson, TestRunJson, ToastedRunsJson } from '../../types'
-import { showFailure } from '../error-display/failure-client'
+import { showFailure, shownAsFailure } from '../error-display/failure-client'
 
 // The cdd plugin declares the server, and Claude Code names a plugin's server plugin:{plugin}:{server}.
 export const SERVER = 'plugin:cdd:cdd'
@@ -117,7 +117,7 @@ export async function runInstall($: EngineInterface): Promise<void> {
     if (run.exitCode !== 0) await showFailure($, `The install failed: ${lastLines(run.stderr)}`, `Install on the health panel, running ${(await installCommand($)).join(' ')} in ${folder}`)
   } catch (failure) {
     await update($, install, () => ({ state: 'failed', error: String(failure) }))
-    await showFailure($, 'The install did not run', 'Install on the health panel', failure)
+    await shownAsFailure($, 'The install did not run', 'Install on the health panel')(failure)
   }
 }
 
@@ -165,7 +165,12 @@ async function toastNewFailures($: EngineInterface, health: ServerHealthClient):
 async function installCommand($: EngineInterface): Promise<string[]> {
   const published = `${$.plugin.root}/install.json`
   if (!(await $.fs.exists(published))) throw new Error(`this board mod was not published by a cdd home, so it has no install command; run python scripts/install.py --ide Claude in a CDD checkout`)
-  return (JSON.parse(await $.fs.read(published)) as { command: string[] }).command
+  return commandIn(await $.fs.read(published))
+}
+
+// The install command install.json holds, as the cdd home writes it.
+function commandIn(installJson: string): string[] {
+  return (JSON.parse(installJson) as { command: string[] }).command
 }
 
 const lastLines = (text: string): string => text.trim().split('\n').slice(-ERROR_LINES_SHOWN).join('\n')

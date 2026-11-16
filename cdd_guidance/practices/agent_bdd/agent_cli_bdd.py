@@ -34,6 +34,9 @@ class AgentRunsOff(AgentHarnessError):
     def __init__(self) -> None:
         super().__init__(f"agent runs are off in this suite ({AGENT_RUNS_OFF} is set); run agent specs with -Suite e2e")
 
+# A value in the JSON event stream the agent writes: a tool call's output is somewhere inside one.
+type StreamValue = str | int | float | bool | None | list[StreamValue] | dict[str, StreamValue]
+
 _TOOLS_RUN = re.compile(
     r"(?:python\s+-m\s+tools\s+run|tools\.ps1\s+run|tools\s+run\b)",
     re.IGNORECASE,
@@ -69,25 +72,20 @@ class _StreamBuckets:
         self.exit_code = exit_code
         return self.stdout, self.stderr, self.exit_code
 
+    @property
+    def result(self) -> AgentResult:
+        """What the drained agent answered."""
+        return AgentResult(exit_code=self.exit_code, text=self.stdout, stderr=self.stderr, elapsed_seconds=0.0)
+
     def raise_if_failed(self, prefix: str, log_dir: Path) -> None:
         if self.thread_errors:
             raise AgentHarnessError(
-                f"cursor-agent stream read failed: {'; '.join(self.thread_errors)}",
-                prefix=prefix,
-                exit_code=self.exit_code,
-                stdout=self.stdout,
-                stderr=self.stderr,
+                f"{prefix} cursor-agent stream read failed: {'; '.join(self.thread_errors)}",
+                output=self.result,
                 log_dir=log_dir,
             )
         if self.exit_code != 0:
-            raise AgentHarnessError(
-                f"cursor-agent exited {self.exit_code}",
-                prefix=prefix,
-                exit_code=self.exit_code,
-                stdout=self.stdout,
-                stderr=self.stderr,
-                log_dir=log_dir,
-            )
+            raise AgentHarnessError(f"{prefix} cursor-agent exited {self.exit_code}", output=self.result, log_dir=log_dir)
 
     def _wait_for_process(self, proc: subprocess.Popen, timeout_seconds: int) -> int:
         try:
@@ -237,7 +235,7 @@ class _StreamBuckets:
                 return found
         return None
 
-    def _shell_output_in(self, node: object) -> str | None:
+    def _shell_output_in(self, node: StreamValue) -> str | None:
         if isinstance(node, str):
             return self._shell_output_from_text(node)
         if not isinstance(node, dict):
@@ -305,7 +303,7 @@ class CliAgentBlock(AgentBlock):
             self._write_artifact(f"{prefix}-shell-{index:02d}-cmd.txt", shell.command)
             self._write_artifact(f"{prefix}-shell-{index:02d}-out.txt", shell.output)
         self._log.write(f"{prefix} response: {len(buckets.stdout)} chars -> {self._log_dir / f'{prefix}-response.txt'}")
-        return AgentResult(exit_code=buckets.exit_code, text=buckets.stdout, stderr=buckets.stderr, elapsed_seconds=0.0)
+        return buckets.result
 
     def _judge_answer(self, launch_prompt: str, timeout_seconds: int) -> AgentResult:
         judge_file = self._session_file.with_name(f"{self._session_file.stem}-judge.json")

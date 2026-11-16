@@ -83,17 +83,16 @@ class CddVersion:
     """Say which CDD version a chat runs and how it stands against the latest release on origin, so the chat bar's
     version badge can show it green, yellow, or red and offer the update."""
 
-    def __init__(self, checkout: Path | str, git: Git | None = None, project: Path | str | None = None, project_git: Git | None = None,
-                 gh: GitHubCli | None = None, test_runs: TestRunRecord | None = None) -> None:
-        """checkout is the CDD checkout whose version the chat runs; project is the repository /version and /release
-        write the next version in, commit it in, and push from, the one the chat works in. gh publishes a release, and
-        test_runs is where the tiers /release runs record their results."""
-        self._checkout = Path(checkout)
-        self._project = Path(project) if project is not None else self._checkout
-        self._git = git or Git(self._checkout)
-        self._project_git = project_git or Git(self._project)
-        self._gh = gh
-        self._test_runs = test_runs
+    def __init__(self, git: Git, project_git: Git | None = None, release: CddRelease | None = None) -> None:
+        """git runs in the CDD checkout whose version the chat runs; project_git runs in the repository /version and
+        /release write the next version in, commit it in, and push from, the one the chat works in, the checkout itself
+        when none is named. release is that repository's release of the version /version set, which gh publishes and which reads the
+        results the tiers /release runs record."""
+        self._checkout = Path(git.folder)
+        self._git = git
+        self._project_git = project_git or git
+        self._project = Path(self._project_git.folder)
+        self._release = release
         self._fetch_problem = ""
 
     @classmethod
@@ -101,7 +100,7 @@ class CddVersion:
     def load(cls, *, project: Path | str) -> CddVersion:
         """The version of the code the cdd server runs, whichever project the call names: every chat it answers runs it.
         The next version is set in the project the call names."""
-        return cls(SERVED_CHECKOUT, project=project)
+        return cls(Git(SERVED_CHECKOUT), Git(project))
 
     # Its fetch waits on origin, which can pass the server's ten-second wait on a busy machine.
     @long_call
@@ -163,8 +162,7 @@ class CddVersion:
         4. On their yes, call this with publish true. It pushes HEAD, tags it v<version> and pushes the tag, and runs
            gh release create with the notes.
         5. Hand the person release_url, the release's page on the repository."""
-        release = CddRelease(self._project, self._project_git, self._gh or GitHubCli(self._project),
-                               self._test_runs or TestRunRecord(default_record_folder()))
+        release = self._release or CddRelease(self._project_git, GitHubCli(self._project), TestRunRecord(default_record_folder()))
         return release.publish() if publish else release.check_green()
 
     def _next_version_from(self, version: str, current: Release) -> str:

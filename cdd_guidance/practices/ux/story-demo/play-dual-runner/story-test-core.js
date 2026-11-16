@@ -5,7 +5,7 @@
  * # invoke-check: action validate | toolset: practices.clean_engineering.clean_engineering:CleanEngineering
  *
  * Browser-safe Given/When/Then — no node:test import.
- * PlayDualRunner.collect uses the collector path.
+ * PlayDualRunner#collect uses the collector path.
  * Node tests: import story-test-node first (registers testBackend).
  */
 
@@ -56,89 +56,93 @@ export function story(name, build) {
     return testBackend.story(name, build);
   }
   throw new Error(
-    "story() requires PlayDualRunner.collect (browser) or import story-test-node first (node tests)",
+    "story() requires PlayDualRunner#collect (browser) or import story-test-node first (node tests)",
   );
+}
+
+/**
+ * A scenario the runner collected: its Given/When/Then steps, which step plays next, and the inputs and
+ * seeded domain values Interactive gives it.
+ */
+class CollectedScenario {
+  constructor(name, build) {
+    this.name = name;
+    this.steps = [];
+    this.index = 0;
+    /** @type {Record<string, unknown>} Interactive / Play overrides (e.g. quantity). */
+    this.inputs = {};
+    /** @type {Record<string, unknown>} Interactive domain carried across stories (cart, …). */
+    this.seed = {};
+    this._exposeGetter = () => ({});
+    this.input = this.input.bind(this);
+    this.session = this.session.bind(this);
+    build(this._steps());
+  }
+
+  /** What the story function's `scenario(name, build)` callback receives to declare its steps. */
+  _steps() {
+    const declare = (kind) => (label, fn) => this.steps.push({ kind, label, fn });
+    return {
+      given: declare("given"),
+      when: declare("when"),
+      then: declare("then"),
+      expose: (getter) => {
+        this._exposeGetter = getter;
+      },
+      input: this.input,
+      session: this.session,
+    };
+  }
+
+  input(key, defaultValue) {
+    if (key in this.inputs && this.inputs[key] !== undefined && this.inputs[key] !== "") {
+      return this.inputs[key];
+    }
+    return defaultValue;
+  }
+
+  /** Prefer live Interactive domain; otherwise factory default (Play / first visit). */
+  session(key, defaultValue) {
+    if (key in this.seed && this.seed[key] != null) return this.seed[key];
+    return typeof defaultValue === "function" ? defaultValue() : defaultValue;
+  }
+
+  setInputs(values = {}) {
+    Object.assign(this.inputs, values);
+  }
+
+  setSeed(values = {}) {
+    Object.assign(this.seed, values);
+  }
+
+  expose() {
+    return this._exposeGetter();
+  }
+
+  stepMatching(storySteps, { kind } = {}) {
+    const wanted = (storySteps || []).filter((s) => !kind || s.kind === kind);
+    for (const wantedStep of wanted) {
+      const hit = this.steps.find((s) => s.kind === wantedStep.kind && s.label === wantedStep.label);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  get currentStep() {
+    if (this.index === 0) return this.steps[0] ?? null;
+    return this.steps[this.index - 1] ?? null;
+  }
 }
 
 export function scenario(name, build) {
   if (activeCollector) {
-    const steps = [];
-    let exposeGetter = () => ({});
-    /** @type {Record<string, unknown>} Interactive / Play overrides (e.g. quantity). */
-    const inputs = {};
-    /** @type {Record<string, unknown>} Interactive domain carried across stories (cart, …). */
-    const seed = {};
-
-    function input(key, defaultValue) {
-      if (key in inputs && inputs[key] !== undefined && inputs[key] !== "") {
-        return inputs[key];
-      }
-      return defaultValue;
-    }
-
-    /** Prefer live Interactive domain; otherwise factory default (Play / first visit). */
-    function session(key, defaultValue) {
-      if (key in seed && seed[key] != null) return seed[key];
-      return typeof defaultValue === "function" ? defaultValue() : defaultValue;
-    }
-
-    build({
-      given(label, fn) {
-        steps.push({ kind: "given", label, fn });
-      },
-      when(label, fn) {
-        steps.push({ kind: "when", label, fn });
-      },
-      then(label, fn) {
-        steps.push({ kind: "then", label, fn });
-      },
-      expose(getter) {
-        exposeGetter = getter;
-      },
-      input,
-      session,
-    });
-
-    activeCollector.addScenario({
-      name,
-      steps,
-      index: 0,
-      inputs,
-      seed,
-      input,
-      session,
-      setInputs(values = {}) {
-        Object.assign(inputs, values);
-      },
-      setSeed(values = {}) {
-        Object.assign(seed, values);
-      },
-      expose() {
-        return exposeGetter();
-      },
-      stepMatching(storySteps, { kind } = {}) {
-        const wanted = (storySteps || []).filter(
-          (s) => !kind || s.kind === kind,
-        );
-        for (const bind of wanted) {
-          const hit = steps.find(
-            (s) => s.kind === bind.kind && s.label === bind.label,
-          );
-          if (hit) return hit;
-        }
-        return null;
-      },
-      get currentStep() {
-        if (this.index === 0) return steps[0] ?? null;
-        return steps[this.index - 1] ?? null;
-      },
-    });
+    activeCollector.addScenario(new CollectedScenario(name, build));
     return;
   }
   if (testBackend) {
     return testBackend.scenario(name, build);
   }
   throw new Error(
-    "scenario() requires PlayDualRunner.collect (browser) or import story-test-node first (node tests)",
+    "scenario() requires PlayDualRunner#collect (browser) or import story-test-node first (node tests)",
   );
 }

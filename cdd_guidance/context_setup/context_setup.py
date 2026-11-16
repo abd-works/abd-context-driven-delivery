@@ -2,10 +2,9 @@
 from __future__ import annotations
 
 import dataclasses
-import functools
 import re
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, tools
@@ -21,6 +20,9 @@ from cdd_guidance.context_setup.live_app_capture import (
     SmokeTestResult,
 )
 
+if TYPE_CHECKING:
+    from space.session.session import Session
+
 # ── Result types ─────────────────────────────────────────────────────────────
 
 @dataclasses.dataclass
@@ -31,6 +33,17 @@ class StructureNote:
     heading_depth: int     # maximum heading level found (1–6); 0 if no headings
     heading_count: int     # total number of heading lines
     word_count: int        # approximate word count of the full document
+
+    @classmethod
+    def from_markdown(cls, file: str, content: str) -> StructureNote:
+        """The structure of the markdown document content, written to file."""
+        headings = re.findall(r"^(#{1,6})\s", content, re.MULTILINE)
+        return cls(
+            file=file,
+            heading_depth=max((len(heading) for heading in headings), default=0),
+            heading_count=len(headings),
+            word_count=len(content.split()),
+        )
 
 @dataclasses.dataclass
 class ConversionResult:
@@ -44,15 +57,6 @@ class ConversionResult:
 _SUPPORTED = frozenset({".docx", ".doc", ".pdf", ".pptx", ".ppt", ".txt", ".md", ".html", ".htm"})
 
 
-@functools.cache
-def _document_converter() -> Any:
-    """The one MarkItDown of the process: making one registers every converter it has, which takes longer than most
-    conversions."""
-    from markitdown import MarkItDown
-
-    return MarkItDown()
-
-
 @agent_toolset
 class ContextSetup:
     """Convert a folder of documents to markdown, and capture a live application into indexed context. Partition runs
@@ -61,7 +65,11 @@ class ContextSetup:
     The cdd server makes one for each call, for the session that call works in, so the folders a call names are read
     from that session's project."""
 
-    def __init__(self, context_index: Optional[ContextIndex] = None, session: Any = None) -> None:
+    # The one MarkItDown of the process: making one registers every converter it has, which takes longer than most
+    # conversions, and the cdd server makes a ContextSetup for each call.
+    _converter: ClassVar[Any] = None
+
+    def __init__(self, context_index: Optional[ContextIndex] = None, session: Session | None = None) -> None:
         """A ContextIndex left out is made here, so the toolset the cdd server builds with no arguments can run every
         step of its recipes."""
         self.context_index = context_index if context_index is not None else ContextIndex()
@@ -71,24 +79,33 @@ class ContextSetup:
         """A ContextSetup made for call, working in the session call works in, holding a ContextIndex made for it."""
         return self.in_session(call.session)
 
-    def in_session(self, session: Any) -> ContextSetup:
+    def in_session(self, session: Session | None) -> ContextSetup:
         """A ContextSetup working in session, as an action that holds one, such as Partition, makes it for its own
         session, holding a ContextIndex made for that session with this one's embedding provider."""
         return type(self)(self.context_index.in_session(session), session)
 
     @property
-    def session(self) -> Any:
+    def session(self) -> Session:
         """The session this toolset works in, whose project the folders a call names are read from. Raises
         ActionWorksInNoSession for a toolset made for no session."""
         if self._session is None:
             raise ActionWorksInNoSession(type(self).__name__)
         return self._session
 
-    def _capture(self, repo_path: str, capture_repo: str, surface: str, base_url: str, entry_paths: Optional[list[str]]) -> LiveAppCapture:
-        """The application this call captures, with its folders read from the session's project."""
-        repository = str(self.session.path_named(repo_path))
-        written_to = str(self.session.path_named(capture_repo)) if capture_repo else ""
-        return LiveAppCapture(repository, written_to, surface, base_url, entry_paths)
+    def _in_project(self, capture: LiveAppCapture) -> LiveAppCapture:
+        """The application a call captures, with the folders it names read from the session's project."""
+        repository = str(self.session.paths.path_named(capture.repo_path))
+        written_to = str(self.session.paths.path_named(capture.capture_repo)) if capture.capture_repo else ""
+        return dataclasses.replace(capture, repo_path=repository, capture_repo=written_to)
+
+    @property
+    def _document_converter(self) -> Any:
+        """The process's MarkItDown, made the first time a document that is not markdown is converted."""
+        if ContextSetup._converter is None:
+            from markitdown import MarkItDown
+
+            ContextSetup._converter = MarkItDown()
+        return ContextSetup._converter
 
     # ── @tools — deterministic Python ────────────────────────────────────────
 
@@ -102,7 +119,7 @@ class ContextSetup:
         Returns a ConversionResult containing markdown_files (absolute paths) and
         structure_notes (one StructureNote per file with heading_depth, heading_count,
         word_count)."""
-        root = self.session.path_named(folder_path)
+        root = self.session.paths.path_named(folder_path)
         out_dir = root / "markdown"
         out_dir.mkdir(parents=True, exist_ok=True)
         notes = [self._convert_source(src, out_dir) for src in sorted(root.iterdir()) if self._is_convertible(src)]
@@ -112,13 +129,17 @@ class ContextSetup:
         return src.is_file() and src.suffix.lower() in _SUPPORTED
 
     def _convert_source(self, src: Path, out_dir: Path) -> StructureNote:
-        # A markdown document is copied as it is, so a folder of markdown never makes the converter.
-        content = src.read_text(encoding="utf-8") if src.suffix.lower() == ".md" else (
-            _document_converter().convert(str(src)).text_content or ""
-        )
+        """Write src into out_dir as markdown, and note the structure of what was written."""
+        content = self._markdown_of(src)
         out_file = out_dir / (src.stem + ".md")
         out_file.write_text(content, encoding="utf-8")
-        return self._analyse(str(out_file), content)
+        return StructureNote.from_markdown(str(out_file), content)
+
+    def _markdown_of(self, src: Path) -> str:
+        """src as markdown. A markdown document is read as it is, so a folder of markdown never makes the converter."""
+        if src.suffix.lower() == ".md":
+            return src.read_text(encoding="utf-8")
+        return self._document_converter.convert(str(src)).text_content or ""
 
     @mcp
     @skill
@@ -137,7 +158,7 @@ class ContextSetup:
         local ports; blank entry_paths probes ['/'].
         Appends smoke-test results to tests/stubs/stub-inventory.md under capture_repo.
         Returns SmokeTestResult. passed=True when every probed path returns HTTP 2xx/3xx."""
-        return self._capture(repo_path, capture_repo, surface, base_url, entry_paths).smoke_test()
+        return self._in_project(LiveAppCapture(repo_path, capture_repo, surface, base_url, entry_paths)).smoke_test()
 
     @mcp
     @skill
@@ -159,7 +180,7 @@ class ContextSetup:
             sandbox/extracted-context/app-extraction/extraction-overview.md.
         Returns ScoutResult with overview_path, pages_dir, page_captures, and failed_pages (each page the browser
         could not load, with its reason)."""
-        return self._capture(repo_path, capture_repo, surface, base_url, entry_paths).scout()
+        return self._in_project(LiveAppCapture(repo_path, capture_repo, surface, base_url, entry_paths)).scout()
 
     @mcp
     @skill
@@ -179,7 +200,7 @@ class ContextSetup:
             sandbox/extracted-context/app-extraction/pages/<slug>/.
         Updates extraction-overview.md with the new page sections.
         Returns CaptureResult with added_captures, failed_pages, and the updated overview path."""
-        return self._capture(repo_path, capture_repo, surface, base_url, missing_pages).complete()
+        return self._in_project(LiveAppCapture(repo_path, capture_repo, surface, base_url, missing_pages)).complete()
 
     # ── @agent_instructions — AI reads recipe; owns judgment; calls @tools + collaborators ─
 
@@ -261,15 +282,3 @@ class ContextSetup:
         tools(self.complete_capture)
         tools(self.context_index.embed())
         return "Live app captured and indexed."
-
-    def _analyse(self, file_path: str, content: str) -> StructureNote:
-        headings = re.findall(r"^(#{1,6})\s", content, re.MULTILINE)
-        heading_count = len(headings)
-        heading_depth = max((len(h) for h in headings), default=0)
-        word_count = len(content.split())
-        return StructureNote(
-            file=file_path,
-            heading_depth=heading_depth,
-            heading_count=heading_count,
-            word_count=word_count,
-        )

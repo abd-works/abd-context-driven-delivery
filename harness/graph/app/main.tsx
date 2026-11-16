@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import { GraphPage } from './graph/GraphPage';
+import { GraphPage } from './GraphPage';
 import './explorer.css';
 
 // main.tsx imports only components, so Vite swaps a changed module in below them and never runs this file twice: a

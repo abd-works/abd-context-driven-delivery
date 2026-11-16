@@ -17,7 +17,7 @@ def slugs_of(fidelity):
 with description("the TDD supplement") as self:
     with before.all:
         self.practices = {practice.key: practice for practice in PracticeCatalogue.create_all(fidelity=None)}
-        self.fidelity = lambda key, name: self.practices[key].fidelity_called(name)
+        self.fidelity = lambda key, name: self.practices[key].fidelities.called(name)
         self.tdd = self.practices["bdd"].supplements[0]
 
     with context("that the catalogue makes with a session's practices"):

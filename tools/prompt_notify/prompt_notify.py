@@ -15,17 +15,17 @@ import sys
 from datetime import datetime, timezone
 from functools import cached_property
 from pathlib import Path
-from typing import ClassVar
+from typing import Callable, ClassVar
 
 
-from harness.agent_tools.agent_tools import agent_toolset
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, agent_toolset
 from harness.annotations.name import Name
 from harness.installation.destination import noCatalog
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.annotations.annotation import Toast
 from harness.hooks.hook_server import TOAST_ARROW, HookPayload, HookServer, rules_toast
 from harness.hooks.hooks import hook
-from harness.installation.ide_layout import IdeLayout
+from harness.installation.ide_layout import installed_guidance_kind
 from space.session.session_log import LogTimestamp
 
 TOAST_NOTICE = ".cursor/prompt-notify-toast.json"
@@ -163,7 +163,7 @@ class PromptNotify:
         self, haystacks: list[str], action_names: set[str]
     ) -> tuple[str, str] | None:
         for hay in haystacks:
-            installed = IdeLayout.installed_guidance_kind(hay)
+            installed = installed_guidance_kind(hay)
             for token, kind in self.catalog:
                 if not self._token_in(hay, token):
                     continue
@@ -176,7 +176,7 @@ class PromptNotify:
                 return ("rule" if installed == "rule" else kind), token
         return None
 
-    def _echo_on_toolset(self, invoked: str, toolset) -> tuple[str, str] | None:
+    def _echo_on_toolset(self, invoked: str, toolset: AgentToolSet) -> tuple[str, str] | None:
         tools = getattr(toolset, "tools", None) or {}
         if not isinstance(tools, dict):
             return None
@@ -192,7 +192,7 @@ class PromptNotify:
             return self._echo_kind_label(match)
         return self._begin_toast(match, tools, toolset)
 
-    def _begin_toast(self, match, tools: dict, toolset) -> tuple[str, str] | None:
+    def _begin_toast(self, match: AgentTool, tools: dict[str, AgentTool], toolset: AgentToolSet) -> tuple[str, str] | None:
         """The action toast of a toolset whose begin step is annotated, for a tool of that toolset that is not annotated."""
         begin = tools.get("begin")
         if begin is None or match.name in _SKIP_BEGIN_FALLBACK:
@@ -206,7 +206,7 @@ class PromptNotify:
         folders = [self._workspace_root(root) for root in workspace_roots]
         return list({folder.resolve(): folder for folder in folders}.values())
 
-    def _workspace_root(self, root: object) -> Path:
+    def _workspace_root(self, root: Path | str) -> Path:
         text = str(root).strip().replace("\\", "/")
         slash_drive = re.match(r"^/+([A-Za-z]):/(.*)$", text)
         if slash_drive is not None and sys.platform == "win32":
@@ -221,7 +221,7 @@ class PromptNotify:
         (``ToolCall.named_paths``), or a shell command that reads one."""
         command = payload.tool_input.get("command")
         named = [*payload.call.named_paths, *([command] if isinstance(command, str) else [])]
-        installed = [path for path in named if IdeLayout.installed_guidance_kind(path) in _TOASTED_KINDS]
+        installed = [path for path in named if installed_guidance_kind(path) in _TOASTED_KINDS]
         return [item for item in (payload.invoked_tool, payload.tool_name, *installed) if item]
 
     def _token_in(self, hay: str, token: str) -> bool:
@@ -229,12 +229,12 @@ class PromptNotify:
         compacted_token = f"-{self._compact(token)}-"
         return compacted_token in compacted_hay
 
-    def _has_toast(self, operation) -> bool:
+    def _has_toast(self, operation: Callable[..., object] | property) -> bool:
         target = operation.fget if isinstance(operation, property) else operation
         inner = getattr(target, "__func__", target)
         return Toast.annotates(inner) or Toast.annotates(target)
 
-    def _echo_kind_label(self, tool) -> tuple[str, str]:
+    def _echo_kind_label(self, tool: AgentTool) -> tuple[str, str]:
         toolset = tool.toolset
         if tool.name == "instructions":
             if toolset.is_part_of_practice:
@@ -244,7 +244,7 @@ class PromptNotify:
             return "action", getattr(toolset, "slug", tool.name)
         return "action", Name(tool.name).kebab
 
-    def _inherited_toast(self, toolset, name: str) -> bool:
+    def _inherited_toast(self, toolset: AgentToolSet, name: str) -> bool:
         for cls in type(toolset).mro():
             member = cls.__dict__.get(name)
             if member is None:
@@ -254,7 +254,7 @@ class PromptNotify:
                 return True
         return False
 
-    def _mcp_aliases(self, tool) -> set[str]:
+    def _mcp_aliases(self, tool: AgentTool) -> set[str]:
         toolset = tool.toolset
         slug = str(getattr(toolset, "slug", "") or "")
         names = {f"{slug}.{tool.name}", f"{slug}_{tool.name}", tool.name}
@@ -265,7 +265,7 @@ class PromptNotify:
             names.add(f"{slug}.instructions")
         return {item for item in names if item}
 
-    def _name_matches(self, invoked: str, tool) -> bool:
+    def _name_matches(self, invoked: str, tool: AgentTool) -> bool:
         compact_invoked = self._compact(invoked)
         return any(self._compact(name) == compact_invoked for name in self._mcp_aliases(tool))
 

@@ -4,8 +4,10 @@ import type { EngineInterface } from 'claude-code'
 import type { GuidanceSelectionData } from '@cdd/space/session/session'
 
 import { SERVER } from '../health/server-health-client'
-import { reasonOf, showFailure } from '../error-display/failure-client'
+import { shownAsFailure } from '../error-display/failure-client'
+import { reasonOf } from '../shared/reason'
 import { clearChosenAction } from './action-picker-client'
+import type { ToolArguments } from './chat-bar-client'
 
 // The session's guidance selection as the bar last drew it: the stages, practices, and format groups selected, the
 // fidelities they cover, and the version every change raises. The session holds it (Session.guidance_selection); the bar
@@ -36,11 +38,11 @@ export async function followGuidance($: EngineInterface, sessionFileOf: () => Pr
       const drawn = await currentGuidance($)
       const answer = drawn ? await call($, 'session.guidance_selection_after', { session, version: drawn.version }) : await call($, 'session.guidance_selection', { session })
       await accept($, answer)
-      await startStages($, session, answer, await stageOf())
+      if (!answer.is_stage_chosen) await startStage($, session, await stageOf())
       failed = 0
     } catch (failure) {
       failed += 1
-      if (failed === FAILED_READS_SHOWN) await showFailure($, 'The chat bar has not read the stages, practices and formats selected for ten tries', 'Following the session, calling session.guidance_selection_after', failure)
+      if (failed === FAILED_READS_SHOWN) await shownAsFailure($, 'The chat bar has not read the stages, practices and formats selected for ten tries', 'Following the session, calling session.guidance_selection_after')(failure)
       await pause($)
     }
   }
@@ -48,8 +50,8 @@ export async function followGuidance($: EngineInterface, sessionFileOf: () => Pr
 
 // Before any stage was selected for the session, the bar selects the stage its ticket is in, so turning every stage
 // off later shows none.
-async function startStages($: EngineInterface, session: string, selection: GuidanceSelectionData, stage: string): Promise<void> {
-  if (selection.is_stage_chosen || !stage) return
+async function startStage($: EngineInterface, session: string, stage: string): Promise<void> {
+  if (!stage) return
   await accept($, await call($, 'session.update_guidance_selection', { session, stages: [stage.toLowerCase()] }))
 }
 
@@ -82,7 +84,7 @@ async function toggle($: EngineInterface, session: string, part: Part, name: str
   try {
     await accept($, await call($, 'session.update_guidance_selection', { session, [part]: selected }))
   } catch (failure) {
-    await showFailure($, `The ${name} ${part.slice(0, -1)} was not ${selected.includes(name) ? 'selected' : 'cleared'}`, `Pressing ${name} on the chat bar, calling session.update_guidance_selection`, failure)
+    await shownAsFailure($, `The ${name} ${part.slice(0, -1)} was not ${selected.includes(name) ? 'selected' : 'cleared'}`, `Pressing ${name} on the chat bar, calling session.update_guidance_selection`)(failure)
   }
 }
 
@@ -100,7 +102,7 @@ async function accept($: EngineInterface, answer: GuidanceSelectionData): Promis
 }
 
 // The one cdd call of this file: a failure is the server's own text.
-async function call($: EngineInterface, tool: string, args: object): Promise<GuidanceSelectionData> {
+async function call($: EngineInterface, tool: string, args: ToolArguments): Promise<GuidanceSelectionData> {
   const result = await $.mcp.call(SERVER, tool, args)
   const text = result.content[0]?.text ?? ''
   if (result.isError) throw new GuidanceNotRead(`${tool} failed: ${text || 'cdd sent back no reason'}`)

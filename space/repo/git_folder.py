@@ -75,14 +75,18 @@ class GitFolder:
             return False
         section = ""
         for line in config.read_text(encoding="utf-8").splitlines():
-            remote = _REMOTE_SECTION.match(line)
-            if remote:
-                section = remote.group(1)
-            elif _SECTION.match(line):
-                section = ""
-            elif section == name and _URL.match(line):
+            section = self._remote_section_after(line, section)
+            if section == name and _URL.match(line):
                 return True
         return False
+
+    def _remote_section_after(self, line: str, section: str) -> str:
+        """The remote whose config section line is in: the one a remote header names, none after any other header,
+        else the section it was already in."""
+        remote = _REMOTE_SECTION.match(line)
+        if remote:
+            return remote.group(1)
+        return "" if _SECTION.match(line) else section
 
     def worktrees(self) -> list[tuple[Path, str]]:
         """Every checkout of the repository with the branch it has checked out (empty when detached), the main clone

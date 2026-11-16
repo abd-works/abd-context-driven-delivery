@@ -17,10 +17,11 @@ from harness.agent_tools.agent_tools import (
 from harness.annotations.annotation import hosted_only
 from harness.annotations.name import Name
 from harness.installation.data_class import data_field
-from harness.markdown.markdown import MarkdownCollection, MarkdownText
+from harness.markdown.markdown import MarkdownCollection, MarkdownOwner, MarkdownText
 from harness.hooks.hooks import Hook, hook
 
 if TYPE_CHECKING:
+    from harness.guidance.guidance import PracticeGuidance
     from harness.hooks.hook_server import HookPayload
 
 class AppliesTo:
@@ -55,13 +56,14 @@ class AppliesTo:
         return fnmatch.fnmatch(name, pattern)
 
     @classmethod
-    def from_value(cls, value: Any) -> AppliesTo:
-        if isinstance(value, cls):
-            return value
-        if not isinstance(value, dict):
+    def from_value(cls, fence_fields: AppliesTo | dict[str, object] | None) -> AppliesTo:
+        """Where rules apply as the fields of their ```yaml fence say it: ``alwaysApply`` and ``globs``."""
+        if isinstance(fence_fields, cls):
+            return fence_fields
+        if not isinstance(fence_fields, dict):
             return cls()
-        always = value.get("alwaysApply", value.get("always_apply"))
-        globs: Any = value.get("globs", "")
+        always = fence_fields.get("alwaysApply", fence_fields.get("always_apply"))
+        globs: object = fence_fields.get("globs", "")
         if not isinstance(globs, str):
             globs = "" if globs is None else str(globs)
         always_apply = None
@@ -77,17 +79,10 @@ class AppliesTo:
 
 
 class Rule:
-    def __init__(
-        self,
-        slug: str,
-        body: str,
-        fidelity: str | None = None,
-        tag: str = "base",
-    ) -> None:
+    def __init__(self, slug: str, body: str, fidelity: str | None = None) -> None:
         self._slug = slug
         self._body = body
         self.fidelity = fidelity
-        self.tag = tag or "base"
         self.practice = ""
         self.pattern = ""
         self.shared = False
@@ -137,7 +132,7 @@ class RulesCollection(MarkdownCollection):
         self,
         entries: dict[str, Rule | RulesCollection] | None = None,
         applies_to: AppliesTo | None = None,
-        parent: Any = None,
+        parent: MarkdownOwner | None = None,
     ) -> None:
         super().__init__(dict(entries or {}), parent=parent)
         self._applies_to = applies_to if applies_to is not None else AppliesTo()
@@ -160,10 +155,10 @@ class RulesCollection(MarkdownCollection):
 
     @published_where_held
     @hook("postToolUse", disabled=True)
-    def inject_rules(self, payload: HookPayload) -> dict[str, Any]:
+    def inject_rules(self, tool_use: HookPayload) -> dict[str, Any]:
         """The rules that apply to the file the agent just edited, as context for its next step. The session notes
         them even while the hook is turned off, so its log still names the rules each edit was checked against."""
-        return self.injection.after_edit(payload)
+        return self.injection.after_edit(tool_use)
 
     @property
     def practice_key(self) -> str:
@@ -183,7 +178,7 @@ class RulesCollection(MarkdownCollection):
         return str(getattr(parent, "name", "") or "")
 
     @property
-    def owner_practice(self) -> Any:
+    def owner_practice(self) -> PracticeGuidance | None:
         """The practice these rules belong to: the one that holds them or the fidelity that holds them; none for rules
         no practice holds."""
         node = self.parent
@@ -191,7 +186,7 @@ class RulesCollection(MarkdownCollection):
             return None
         return self._practice_on(node) or self._practice_on(getattr(node, "parent", None))
 
-    def _practice_on(self, node: Any) -> Any:
+    def _practice_on(self, node: MarkdownOwner | None) -> PracticeGuidance | None:
         if node is None:
             return None
         practice = getattr(node, "practice_guidance", None)
@@ -206,7 +201,7 @@ class RulesCollection(MarkdownCollection):
         cls,
         text: str,
         fidelity: str | None = None,
-        parent: Any = None,
+        parent: MarkdownOwner | None = None,
     ) -> RulesCollection:
         applies_to = AppliesTo.from_markdown(text)
         entries: dict[str, Rule | RulesCollection] = {}
@@ -239,44 +234,41 @@ class RulesCollection(MarkdownCollection):
     @collect
     def validate(self) -> str: ...
 
-    def scan(self, paths: Any) -> Any:
-        return None
-
 
 class RuleInjection:
     """How one collection of rules is handed to the agent after it edits a file: the rules of its practice that apply
     to the edited file, with the shared rules and those of every fidelity before the ones that matched, noted in the
     session's log, and the toast that says whose rules were injected. The collection holds one, made once."""
 
-    def __init__(self, rules: RulesCollection, practice: Any) -> None:
+    def __init__(self, rules: RulesCollection, practice: PracticeGuidance | None) -> None:
         self._rules = rules
         # The practice the rules belong to, whose shared rules and fidelities' rules an edit is checked against; none
         # for rules no practice holds.
         self._practice = practice
 
-    def after_edit(self, payload: HookPayload) -> dict[str, Any]:
-        """The rules that apply to the file payload's edit names, as context for the agent's next step; nothing while
-        the hook is disabled, though the session still notes which rules applied."""
-        path = payload.edited_path() if payload.is_edit else ""
+    def after_edit(self, tool_use: HookPayload) -> dict[str, Any]:
+        """The rules that apply to the file tool_use edits, as context for the agent's next step; nothing while the
+        hook is disabled, though the session still notes which rules applied."""
+        path = tool_use.edited_path() if tool_use.is_edit else ""
         bags = self._bags_for_path(path) if path else []
         if bags:
-            self._note_session_injected_rules(payload, path, bags)
+            self._note_session_injected_rules(tool_use, path, bags)
         parts = self._bodies(bags)
         if Hook.disabled_on(type(self._rules).inject_rules) or not parts:
             return {}
-        body = self._inject_context(path, bags, parts, payload)
+        body = self._inject_context(path, bags, parts)
         notice = self._read_only_notice(bags)
-        if notice and (payload.get("conversation_id") or payload.get("workspace_roots")):
+        if notice and (tool_use.get("conversation_id") or tool_use.get("workspace_roots")):
             return {"additional_context": body, "toast": notice}
         return {"additional_context": body}
 
-    def _note_session_injected_rules(self, payload: HookPayload, path: str, bags: list[RulesCollection]) -> None:
+    def _note_session_injected_rules(self, tool_use: HookPayload, path: str, bags: list[RulesCollection]) -> None:
         """Note bags in the log of the session open in the project the hook fired in, so that session's next log line
         names the rules the agent was given; nothing for a hook that names no project."""
         practice = self._practice
         if practice is None:
             return
-        session = practice.session if practice.session is not None else payload.session
+        session = practice.session if practice.session is not None else tool_use.session
         if session is None:
             return
         for bag in bags:
@@ -344,9 +336,9 @@ class RuleInjection:
     def _matched_globs(self, bags: list[RulesCollection]) -> list[str]:
         return list(dict.fromkeys(pattern for bag in bags for pattern in bag.applies_to.patterns))
 
-    def _inject_echo_instruction(self, path: str, bags: list[RulesCollection], hook_payload: HookPayload | None = None) -> str:
-        if hook_payload is None or not hook_payload.is_edit:
-            return ""
+    def _inject_echo_instruction(self, path: str, bags: list[RulesCollection]) -> str:
+        """What tells the agent it just edited path and is to fix what the rules after it find; rules reach it only
+        after an edit, so there is always one to name."""
         lines = [
             f"You just edited {self._edited_label(path)}.",
             "The full rule text follows.",
@@ -387,10 +379,8 @@ class RuleInjection:
         sep = "\\" if "\\" in path else "/"
         return f"{parent}{sep}{file.name}"
 
-    def _inject_context(
-        self, path: str, bags: list[RulesCollection], parts: list[str], hook_payload: HookPayload | None = None
-    ) -> str:
-        preamble = self._inject_echo_instruction(path, bags, hook_payload).strip()
+    def _inject_context(self, path: str, bags: list[RulesCollection], parts: list[str]) -> str:
+        preamble = self._inject_echo_instruction(path, bags).strip()
         rules = "\n\n".join(parts).strip()
         if preamble and rules:
             return f"{preamble}\n\n{rules}"

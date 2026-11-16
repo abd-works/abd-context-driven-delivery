@@ -19,13 +19,6 @@ _LONG_COMMANDS = frozenset({"push", "fetch", "pull", "checkout", "merge", "workt
 _WINDOWS_GIT_INSTALLS = (Path(r"C:\Program Files\Git\cmd\git.exe"), Path(r"C:\Program Files\Git\bin\git.exe"))
 
 
-@functools.cache
-def _installed_git() -> str | None:
-    """Where git is installed, looked up once for the process: searching the PATH costs as much as a small git command,
-    and every git command asks."""
-    return shutil.which("git") or next((str(path) for path in _WINDOWS_GIT_INSTALLS if path.is_file()), None)
-
-
 class RepoConnectError(RuntimeError):
     """Raised when git cannot be run, or a git command fails, in a clone."""
 
@@ -60,9 +53,14 @@ class Git:
             return False
         return True
 
-    @staticmethod
-    def _executable() -> str:
-        found = _installed_git()
+    @functools.cached_property
+    def _installed(self) -> str | None:
+        """Where git is installed, looked up once for this folder's git: searching the PATH costs as much as a small git
+        command, and every git command asks."""
+        return shutil.which("git") or next((str(path) for path in _WINDOWS_GIT_INSTALLS if path.is_file()), None)
+
+    def _executable(self) -> str:
+        found = self._installed
         if not found:
             raise RepoConnectError("Cannot connect git: `git` is not available.")
         return found
@@ -88,8 +86,7 @@ class Git:
             raise
         return process.returncode, stdout, stderr
 
-    @staticmethod
-    def _kill_process_tree(process: subprocess.Popen) -> None:
+    def _kill_process_tree(self, process: subprocess.Popen) -> None:
         # Git for Windows' cmd\git.exe is a launcher; killing only the launcher leaves the real
         # git holding the output pipes, so communicate() would block long past the timeout.
         if os.name == "nt":

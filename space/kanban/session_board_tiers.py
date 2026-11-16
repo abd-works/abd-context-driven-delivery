@@ -4,7 +4,7 @@ The domain tier hands a scenario's steps the domain classes themselves: `Board`,
 `Sessions` as this process holds them, and the `Validate` and `Generate` actions, on a throwaway project.
 
 The server tier hands them the same operations reached through the cdd server, the way an agent or the board app
-reaches them: every call goes to `McpServer.invoke_tool` or `invoke_prompt` by its published name, with JSON in and
+reaches them: every call goes to `McpServer.invoke` by its published name, with JSON in and
 JSON out, on a server started with the board's toolsets on the throwaway project. `BoardTools`, `TicketTools`, and
 `BacklogItemTools` are the Python form of the language adapter the board app reaches the same tools through
 (`@language_adapter` on Board, Ticket, and BacklogItem): one method per tool, named as the tool is.
@@ -155,11 +155,11 @@ class CddTools:
         self._server.start(TOOLSETS)
 
     def call(self, tool: str, **arguments: Any) -> Any:
-        answered = self._server.invoke_tool(tool, arguments)
+        answered = self._server.invoke(tool, arguments)
         return json.loads(json.dumps(answered, default=data_of))
 
     def prompt(self, name: str, **arguments: Any) -> Any:
-        return self._server.invoke_prompt(name, arguments)
+        return self._server.invoke(name, arguments)
 
 
 class BoardTools:

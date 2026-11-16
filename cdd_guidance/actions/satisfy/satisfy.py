@@ -27,7 +27,7 @@ class Satisfy(GuidanceAction):
         self.log_running("satisfy")
         steps = _SATISFY_MARKDOWN.strip()
         instructions(steps)
-        rules = self.rules_to_follow()
+        rules = self.work.rules_to_follow
         instructions(rules)
         tools(self._validate().validate)
         instructions(self._generate().generate_fixes_from_validate)
@@ -39,7 +39,7 @@ class Satisfy(GuidanceAction):
     def _validate(self) -> Validate:
         """Validate as a tool the agent calls, first and again after its fixes: checking is the agent's step, so
         expanding these instructions saves no report and logs no validate line."""
-        return self._inside(Validate).as_tool()
+        return self._tool_inside(Validate)
 
     def _generate(self) -> Generate:
         """The generate whose fixes step follows each validate, working on what this satisfy lists."""

@@ -2,9 +2,13 @@
 from __future__ import annotations
 
 import inspect
+from collections.abc import Callable
 from pathlib import Path
 
 from harness.process.git import Git
+
+# A function, method, or class whose definition a citation points at, by its source file and lines.
+type CitedDefinition = Callable[..., object] | type
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -34,7 +38,7 @@ class GitCitation:
             url += f"#L{start}-L{end}" if end != start else f"#L{start}"
         return url
 
-    def blob_url_for_callable(self, func: object) -> str:
+    def blob_url_for_callable(self, func: CitedDefinition) -> str:
         source_file = Path(inspect.getsourcefile(func))  # type: ignore[arg-type]
         _, start_line = inspect.getsourcelines(func)  # type: ignore[arg-type]
         end_line = start_line + len(inspect.getsource(func).splitlines()) - 1  # type: ignore[arg-type]

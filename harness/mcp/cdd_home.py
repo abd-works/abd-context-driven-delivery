@@ -21,6 +21,8 @@ CLAUDE_PLUGIN = "cdd"
 CLAUDE_PLUGIN_DESCRIPTION = "Connects every Claude Code chat to the one cdd server, starting it when a chat starts"
 # How long the chat-start hook may take to start a server that was not running: a cold start imports every toolset.
 SERVER_START_SECONDS = 90
+# How much of a content hash a plugin version carries: enough that two different contents never share a version.
+VERSION_HASH_CHARS = 12
 # The cdd-board mod is published from the code the server runs, so every chat's mod matches the server it talks to.
 BOARD_PLUGIN = "cdd-board"
 BOARD_MOD_FOLDER = Path("harness") / "chat-ui" / "pane"
@@ -118,7 +120,7 @@ class CddHome:
         plugin = self.claude_plugins / CLAUDE_PLUGIN
         declared = {_CLAUDE_CODE.mcp_servers_key: {"cdd": server}}
         hooks = {"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": self._start_command, "timeout": SERVER_START_SECONDS}]}]}}
-        version = f"1.0.0-{hashlib.sha256(json.dumps([declared, hooks], sort_keys=True).encode('utf-8')).hexdigest()[:12]}"
+        version = f"1.0.0-{hashlib.sha256(json.dumps([declared, hooks], sort_keys=True).encode('utf-8')).hexdigest()[:VERSION_HASH_CHARS]}"
         files = {
             plugin / ".claude-plugin" / "plugin.json": {"name": CLAUDE_PLUGIN, "version": version, "description": CLAUDE_PLUGIN_DESCRIPTION},
             plugin / ".mcp.json": declared,
@@ -138,14 +140,7 @@ class CddHome:
         if not (source / ".claude-plugin" / "plugin.json").is_file():
             return
         target = self.claude_plugins / BOARD_PLUGIN
-        # A file the running app holds open can survive the delete on Windows, so the copy writes over what is left.
-        shutil.rmtree(target, ignore_errors=True)
-        for part in BOARD_MOD_PARTS:
-            if (source / part).is_dir():
-                shutil.copytree(source / part, target / part, ignore=shutil.ignore_patterns("*.test.*"), dirs_exist_ok=True)
-        if (self.source / DRAWIO_VIEWER).is_file():
-            (target / BOARD_DRAWIO_VIEWER).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(self.source / DRAWIO_VIEWER, target / BOARD_DRAWIO_VIEWER)
+        self._copy_board_mod(source, target)
         JsonFile(target / self.INSTALL_COMMAND).write({"command": self.install_command})
         if self.mode == self.CHECKOUT:
             JsonFile(source / self.INSTALL_COMMAND).write({"command": self.install_command})
@@ -157,12 +152,23 @@ class CddHome:
         manifest_file.write(manifest)
         self._write_marketplace()
 
+    def _copy_board_mod(self, source: Path, target: Path) -> None:
+        """Copy the mod's parts, without their tests, and the draw.io viewer its chat bar opens diagrams in."""
+        # A file the running app holds open can survive the delete on Windows, so the copy writes over what is left.
+        shutil.rmtree(target, ignore_errors=True)
+        for part in BOARD_MOD_PARTS:
+            if (source / part).is_dir():
+                shutil.copytree(source / part, target / part, ignore=shutil.ignore_patterns("*.test.*"), dirs_exist_ok=True)
+        if (self.source / DRAWIO_VIEWER).is_file():
+            (target / BOARD_DRAWIO_VIEWER).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(self.source / DRAWIO_VIEWER, target / BOARD_DRAWIO_VIEWER)
+
     def _content_hash(self, folder: Path) -> str:
         digest = hashlib.sha256()
         for path in sorted(item for item in folder.rglob("*") if item.is_file()):
             digest.update(path.relative_to(folder).as_posix().encode("utf-8"))
             digest.update(path.read_bytes())
-        return digest.hexdigest()[:12]
+        return digest.hexdigest()[:VERSION_HASH_CHARS]
 
     def _write_marketplace(self) -> Path:
         """List every plugin published here; a marketplace naming a missing folder fails to load."""

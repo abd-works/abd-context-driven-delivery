@@ -244,7 +244,7 @@ def _(s):
         # Board.ticket("pet-visits")
         #   <- pet-visits
         # pet-visits.delete()
-        #   -> self.session.remove()
+        #   -> self.session.folder.remove()
         #   <- the board without pet-visits
         world.Ticket.load(PET_VISITS.name).delete()
 

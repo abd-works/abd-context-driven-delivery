@@ -5,8 +5,7 @@ import type { CddVersionData } from '@cdd/harness/diagnostics/cdd-version'
 
 import type { CddVersionJson } from '../../types'
 import { BRAND } from '../shared/brand'
-import { showFailure } from '../error-display/failure-client'
-import { promptCommand } from '../shared/chat-command'
+import { promptCommand, showFailure } from '../error-display/failure-client'
 
 const SERVER = 'plugin:cdd:cdd'
 const CHECK_TOOL = 'cdd-version.check'
@@ -79,7 +78,7 @@ export async function currentCddVersion($: EngineInterface): Promise<CddVersionC
 
 // The first check, a moment after the chat opens, then again every few seconds while cdd is still connecting, up to a
 // limit; a chat whose cdd stays down tries again after its next turn.
-export function checkVersionSoon($: EngineInterface, attempt = 1): void {
+export function checkVersionSoon($: EngineInterface, attempt: number = 1): void {
   $.clock.after(FIRST_CHECK_WAIT_MS, () => void checkUntilReadOrTriesRunOut($, attempt))
 }
 

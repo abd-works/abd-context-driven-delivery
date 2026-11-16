@@ -13,6 +13,7 @@ from mamba import after, before, context, description, it
 
 from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.location import Location
 from harness.guidance.guidance import PracticeGuidance
 from harness.graph.explorer import PracticeInventory
 from harness.graph.pattern_overlays import PatternOverlays
@@ -376,8 +377,7 @@ with description("a graph"):
 
                 with context("with violations of the parameter rule"):
                     with before.all:
-                        self.graph.explorer.filter.rules = ["limit-operation-parameters"]
-                        self.graph.explorer.filter.select_violations()
+                        self.graph.explorer.filter.select_violations(["limit-operation-parameters"])
                         self.violation_tree = data_of(self.graph.practice("clean_engineering").reading.in_graph.root.serialize())
 
                     with it("should return the operation that fails the rule"):
@@ -1066,9 +1066,9 @@ with description("a scenario"):
             self.when = _node(self.practice, "Step", "when the User creates their account", 20)
             self.then = _node(self.practice, "Step", "then the account is unconfirmed", 30)
             owns = EdgeType("owns", 1, "direct")
-            self.practice.reading.graph.record(owns, self.scenario, self.then)
-            self.practice.reading.graph.record(owns, self.scenario, self.when)
-            self.practice.reading.graph.record(owns, self.scenario, self.given)
+            self.practice.reading.graph.edges.record(owns, self.scenario, self.then)
+            self.practice.reading.graph.edges.record(owns, self.scenario, self.when)
+            self.practice.reading.graph.edges.record(owns, self.scenario, self.given)
             self.scenario.populate()
 
         with it("should list the steps in source order"):
@@ -1082,8 +1082,8 @@ with description("a scenario"):
             self.later = _node(self.practice, "Operation", "register", 80)
             self.earlier = _node(self.practice, "Operation", "save", 5)
             invokes = EdgeType("invokes", 2, "grouped")
-            self.practice.reading.graph.record(invokes, self.step, self.later)
-            self.practice.reading.graph.record(invokes, self.step, self.earlier)
+            self.practice.reading.graph.edges.record(invokes, self.step, self.later)
+            self.practice.reading.graph.edges.record(invokes, self.step, self.earlier)
             self.step.populate()
 
         with it("should keep that call order under the step"):
@@ -1095,7 +1095,7 @@ with description("a step"):
     with context("with a stored line on the following statement"):
         with before.each:
             relative = "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts"
-            self.source = Source(relative, 146, 160, str(_SAMPLE))
+            self.source = Source.from_root(str(_SAMPLE), Location(relative, 146, 160))
             self.source.align_to_label("when the User creates their account")
 
         with it("should open on that call in the file"):
@@ -1125,7 +1125,7 @@ with description("a scenario row with only a start line"):
         path = Path(self.temp.name) / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(body, encoding="utf-8")
-        self.source = Source(relative, 2, 2, self.temp.name)
+        self.source = Source.from_root(self.temp.name, Location(relative, 2, 2))
         self.source.widen_to_call_close()
 
     with it("should include the full scenario through its closing brace"):
@@ -1178,7 +1178,7 @@ with description("an example a story test imports"):
         self.temp.cleanup()
 
     def _aligned(self, name: str, files: list[Path] | None = None) -> Source:
-        source = Source(self.story_test, 4, 4, self.temp.name)
+        source = Source.from_root(self.temp.name, Location(self.story_test, 4, 4))
         source.align_to_example_export(self.temp.name, name, self.files if files is None else files)
         return source
 

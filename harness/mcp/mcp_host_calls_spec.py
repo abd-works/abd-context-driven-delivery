@@ -18,7 +18,7 @@ from mcp.server.lowlevel.server import request_ctx
 from mcp.shared.context import RequestContext
 from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
-from space.session.throwaway_project import ThrowawayProject
+from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 from harness.mcp.mcp_address import CHAT_HEADER, CHAT_PROCESS_HEADER, PROJECT_HEADER
 from harness.mcp.mcp_server import CALL_SECONDS, LONG_CALL_SECONDS, McpHost, ToolNotEnrolled
@@ -59,7 +59,7 @@ with description("a cdd server answering a chat's tool calls") as self:
         self.host = McpHost.from_refs((_CALL_OUTCOMES,), repo=str(_REPO), project=str(self.project))
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("with a tool that answers"):
         with it("should answer with what the tool returned"):

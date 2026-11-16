@@ -148,7 +148,7 @@ describe("a story demo page", () => {
       page.explorerFrame.playNextControl.trigger("click"); // given
       page.explorerFrame.playNextControl.trigger("click"); // when
       const step = page.runner.scenario.currentStep;
-      assert.equal(page.storyDemoFrame.emphasizedFor(step), true);
+      assert.equal(page.storyDemoFrame.emphasis.emphasizedFor(step), true);
     });
   });
 
@@ -171,7 +171,7 @@ describe("a story demo page", () => {
     });
 
     it("should tint failed values on the story demo frame", () => {
-      assert.equal(page.storyDemoFrame.hasTint(), true);
+      assert.equal(page.storyDemoFrame.emphasis.hasTint(), true);
     });
   });
 });
@@ -344,12 +344,12 @@ describe("scenario input values", () => {
       name: "Gadget",
       controlType: "list",
       storySteps: [{ kind: "when", label: "the Customer selects a Product from the list" }],
-    });
-    row._el = {
-      getAttribute(name) {
-        return name === "data-set-input" ? "product" : null;
+      element: {
+        getAttribute(name) {
+          return name === "data-set-input" ? "product" : null;
+        },
       },
-    };
+    });
     const page = StoryDemoPage.load(createParameterizedStory, "fake", {
       mode: "Interactive",
       storyDemoFrame: new StoryDemoFrame([row]),

@@ -2,12 +2,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
-try:
-    import yaml
-except ImportError:  # pragma: no cover
-    yaml = None  # type: ignore
+import yaml
+
+# A value a run's response holds: what YAML writes, plus the paths a toolset answers with, written as text.
+type ManifestValue = str | int | float | bool | None | Path | list[ManifestValue] | dict[str, ManifestValue]
 
 
 class YamlFence:
@@ -27,12 +26,10 @@ class YamlFence:
     def fenced(self, body: str) -> str:
         return f"```{self._lang}\n{body.rstrip()}\n```"
 
-    def load_fenced(self, text: str) -> Any:
-        if yaml is None:
-            raise RuntimeError("PyYAML required to parse YAML")
+    def load_fenced(self, text: str) -> ManifestValue:
         return yaml.safe_load(self.unfence(text))
 
-    def serialize_value(self, raw_value: Any) -> Any:
+    def serialize_value(self, raw_value: ManifestValue) -> ManifestValue:
         if isinstance(raw_value, Path):
             return str(raw_value)
         if isinstance(raw_value, dict):
@@ -41,9 +38,7 @@ class YamlFence:
             return [self.serialize_value(element) for element in raw_value]
         return raw_value
 
-    def dump_manifest(self, manifest_data: dict[str, Any]) -> str:
-        if yaml is None:
-            raise RuntimeError("PyYAML required to render YAML")
+    def dump_manifest(self, manifest_data: dict[str, ManifestValue]) -> str:
         return yaml.safe_dump(
             self.serialize_value(manifest_data),
             sort_keys=False,

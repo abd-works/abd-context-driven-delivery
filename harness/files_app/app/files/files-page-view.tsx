@@ -163,6 +163,13 @@ function FileBarDividerView({ page }: { page: FilesPage }) {
   )
 }
 
+// The ways the file bar shows its files, each with its button's label and what the button says on hover.
+const FILE_BAR_VIEWS = [
+  { view: 'list', label: 'List', title: 'Show the files as a list' },
+  { view: 'folders', label: 'Folders', title: 'Show the files in their folders' },
+  { view: 'graph', label: 'Graph', title: "Show the session's graph of these files" },
+] as const
+
 // The file bar's buttons: collapse or expand it, and show its files as a list, in their folders, or as the graph.
 function FileBarButtonsView({ page }: { page: FilesPage }) {
   const { fileBar } = useFilesState(page)
@@ -171,19 +178,13 @@ function FileBarButtonsView({ page }: { page: FilesPage }) {
       <button aria-label={fileBar.isOpen ? 'Collapse the file bar' : 'Expand the file bar'} title={fileBar.isOpen ? 'Collapse the file bar' : 'Expand the file bar'} onClick={() => page.fileBar.toggle()}>
         {fileBar.isOpen ? '«' : '»'}
       </button>
-      {fileBar.isOpen ? (
-        <>
-          <button className="file-bar-view" aria-pressed={fileBar.view === 'list'} title="Show the files as a list" onClick={() => page.fileBar.show('list')}>
-            List
+      {fileBar.isOpen
+        ? FILE_BAR_VIEWS.map(({ view, label, title }) => (
+          <button key={view} className="file-bar-view" aria-pressed={fileBar.view === view} title={title} onClick={() => page.fileBar.show(view)}>
+            {label}
           </button>
-          <button className="file-bar-view" aria-pressed={fileBar.view === 'folders'} title="Show the files in their folders" onClick={() => page.fileBar.show('folders')}>
-            Folders
-          </button>
-          <button className="file-bar-view" aria-pressed={fileBar.view === 'graph'} title="Show the session's graph of these files" onClick={() => page.fileBar.show('graph')}>
-            Graph
-          </button>
-        </>
-      ) : null}
+        ))
+        : null}
     </div>
   )
 }
@@ -370,8 +371,9 @@ function ReadsTogglesView({ page }: { page: FilesPage }) {
   )
 }
 
-// Dark engineering by default; a press turns the light look on or off.
-function ThemeToggleView({ page }: { page: FilesPage }) {
+// The look this browser keeps, and the press that switches it and stores the switch; a look that cannot be read or
+// kept is told as a notice.
+function useTheme(page: FilesPage): [FilesTheme, () => void] {
   const failed = (failure: string) => page.notices.fail(failure, "Changing the Files app's look")
   const [theme, setTheme] = useState<FilesTheme>(() => storedTheme(failed))
   const toggle = () => {
@@ -379,10 +381,32 @@ function ThemeToggleView({ page }: { page: FilesPage }) {
     applyTheme(next, failed)
     setTheme(next)
   }
+  return [theme, toggle]
+}
+
+// Dark engineering by default; a press turns the light look on or off.
+function ThemeToggleView({ page }: { page: FilesPage }) {
+  const [theme, toggle] = useTheme(page)
   return (
     <button type="button" className="theme-toggle" aria-pressed={theme === 'light'} title={theme === 'engineering' ? 'Light look' : 'Dark engineering look'} onClick={toggle}>
       {theme === 'engineering' ? '☀' : '◐'}
     </button>
+  )
+}
+
+// The page's head: what it shows, then the toggles that choose which files show and how the page looks.
+function FilesHeadView({ page }: { page: FilesPage }) {
+  return (
+    <header className="files-head">
+      <span className="files-kind">FILES</span>
+      <span className="files-subject">{page.heading}</span>
+      <ScopeTogglesView page={page} />
+      <StageTogglesView page={page} />
+      <PracticeTogglesView page={page} />
+      <FormatTogglesView page={page} />
+      <ReadsTogglesView page={page} />
+      <ThemeToggleView page={page} />
+    </header>
   )
 }
 
@@ -392,16 +416,7 @@ export function FilesPageView({ page }: { page: FilesPage }) {
   useEffect(() => page.start(), [page])
   return (
     <main className="files-page">
-      <header className="files-head">
-        <span className="files-kind">FILES</span>
-        <span className="files-subject">{page.heading}</span>
-        <ScopeTogglesView page={page} />
-        <StageTogglesView page={page} />
-        <PracticeTogglesView page={page} />
-        <FormatTogglesView page={page} />
-        <ReadsTogglesView page={page} />
-        <ThemeToggleView page={page} />
-      </header>
+      <FilesHeadView page={page} />
       {problem ? <div className="files-problem" role="alert">{problem}</div> : null}
       <div className={`files-body ${fileBar.isOpen ? '' : 'is-bar-collapsed'}`} style={fileBar.isOpen ? { gridTemplateColumns: `${fileBar.width}px auto 1fr` } : undefined}>
         <nav className="files-side">

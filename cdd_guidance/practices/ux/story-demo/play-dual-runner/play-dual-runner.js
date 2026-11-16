@@ -11,7 +11,7 @@ import { collect as collectStory } from "./story-test-core.js";
 
 export class PlayDualRunner {
   /**
-   * @param {{ paintReflect?: { apply(snapshot: object): void }, thenFeedback?: { apply(result: object): void }, storyDemoFrame?: { emphasize(step: object): void, bind?(snapshot: object): void }, explorerFrame?: { highlightStep(step: object): void } }} [collaborators]
+   * @param {{ paintReflect?: { apply(snapshot: object): void }, thenFeedback?: { apply(result: object): void }, storyDemoFrame?: { emphasis: { emphasize(step: object): void }, bind?(snapshot: object): void }, explorerFrame?: { highlightStep(step: object): void } }} [collaborators]
    */
   constructor(collaborators = {}) {
     this._paintReflect = collaborators.paintReflect ?? null;
@@ -23,10 +23,6 @@ export class PlayDualRunner {
   }
 
   /** @returns {{ name: string, scenarios: object[] }} */
-  static collect(createStory, mode) {
-    return collectStory(createStory, mode);
-  }
-
   collect(createStory, mode) {
     this._story = collectStory(createStory, mode);
     return this._story;
@@ -36,6 +32,7 @@ export class PlayDualRunner {
     this._story = story;
     this._scenario = story.scenarios[scenarioIndex];
     this._scenario.index = 0;
+    return this._scenario;
   }
 
   get scenario() {
@@ -55,28 +52,30 @@ export class PlayDualRunner {
     if (!step) {
       throw new Error("No more steps in scenario");
     }
+    const result = this._run(step);
+    scenario.index += 1;
+    this._reflect(scenario.expose(), step, result);
+    return result;
+  }
 
-    let result = { step, ok: true, message: null };
+  /** Run one step; a step that throws is a failed result, not a stopped runner. */
+  _run(step) {
     try {
       step.fn();
+      return { step, ok: true, message: null };
     } catch (err) {
-      result = {
-        step,
-        ok: false,
-        message: err && err.message ? err.message : String(err),
-      };
+      return { step, ok: false, message: err && err.message ? err.message : String(err) };
     }
+  }
 
-    scenario.index += 1;
-
-    const snapshot = scenario.expose();
+  /** Show what the step left behind on both frames, and a Then's result in the explorer. */
+  _reflect(snapshot, step, result) {
     this._paintReflect?.apply(snapshot);
     this._storyDemoFrame?.bind?.(snapshot);
     this._explorerFrame?.highlightStep(step);
-    this._storyDemoFrame?.emphasize(step);
+    this._storyDemoFrame?.emphasis.emphasize(step);
     if (step.kind === "then") {
       this._thenFeedback?.apply(result);
     }
-    return result;
   }
 }

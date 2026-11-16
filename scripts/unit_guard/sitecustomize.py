@@ -10,17 +10,22 @@ fake (``MockGit``) or a shared fixture."""
 from __future__ import annotations
 
 import os
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from mamba.example import Example
+
+MILLISECONDS_PER_SECOND = 1000
 _LOG = os.environ.get("CDD_UNIT_GUARD_LOG", "")
-_BUDGET_SECONDS = float(os.environ.get("CDD_UNIT_EXAMPLE_BUDGET_MS", "100")) / 1000
+_BUDGET_SECONDS = float(os.environ.get("CDD_UNIT_EXAMPLE_BUDGET_MS", "100")) / MILLISECONDS_PER_SECOND
 
 
-def _spec_file(example) -> str:
+def _spec_file(example: Example) -> str:
     code = getattr(getattr(example, "test", None), "__code__", None)
     return code.co_filename if code is not None else "<unknown spec>"
 
 
-def _example_path(example) -> str:
+def _example_path(example: Example) -> str:
     names = []
     node = example
     while node is not None:
@@ -31,6 +36,24 @@ def _example_path(example) -> str:
     return " / ".join(reversed(names))
 
 
+def _over_budget_line(example: Example) -> str:
+    """The guard's log line for an example that ran past the budget: its spec file, its time, and its path; empty for
+    an example within the budget."""
+    seconds = example.elapsed_time.total_seconds()
+    if seconds <= _BUDGET_SECONDS:
+        return ""
+    return f"{_spec_file(example)}\t{round(seconds * MILLISECONDS_PER_SECOND)}\t{_example_path(example)}\n"
+
+
+def _record_if_over_budget(example: Example) -> None:
+    """Write an example that ran past the budget to the guard's log."""
+    line = _over_budget_line(example)
+    if not line:
+        return
+    with open(_LOG, "a", encoding="utf-8") as log:
+        log.write(line)
+
+
 def _time_examples() -> None:
     try:
         from mamba import example as mamba_example
@@ -38,12 +61,9 @@ def _time_examples() -> None:
         return
     finish = mamba_example.Example._finish
 
-    def timed_finish(self, reporter):
+    def timed_finish(self: Example, reporter: object) -> None:
         finish(self, reporter)
-        seconds = self.elapsed_time.total_seconds()
-        if seconds > _BUDGET_SECONDS and _LOG:
-            with open(_LOG, "a", encoding="utf-8") as log:
-                log.write(f"{_spec_file(self)}\t{round(seconds * 1000)}\t{_example_path(self)}\n")
+        _record_if_over_budget(self)
 
     mamba_example.Example._finish = timed_finish
 

@@ -281,7 +281,7 @@ with description("an agent toolset") as self:
 
                 with it("should return that operation's instructions when the installed tool is invoked"):
                     server = _server_publishing(self.mcp)
-                    result = server.invoke_prompt("sample-mcp.generate")
+                    result = server.invoke("sample-mcp.generate")
                     expect(result).to(equal("full generate instructions that must not appear in the slash file"))
 
                 # (S) Installer --> Configure and Start MCP Host Session
@@ -390,7 +390,7 @@ with description("an agent toolset") as self:
 
             with it("should return the instructions the property assembles when the installed tool is invoked"):
                 server = _server_publishing(self.mcp)
-                result = server.invoke_prompt("sample-tool.instructions")
+                result = server.invoke("sample-tool.instructions")
                 expect(result).to(equal(self.tool.instructions))
 
 
@@ -592,7 +592,7 @@ with description("an agent toolset") as self:
                 with it("should install only itself via install_self"):
                     tree = Path(tempfile.mkdtemp())
                     try:
-                        Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install_self()
+                        Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).deployment.install_self()
                         path = InstalledTree(tree).command_path("install")
                         expect(path is not None).to(equal(True))
                         expect(path.read_text(encoding="utf-8")).to(contain("scripts/install.py"))
@@ -650,19 +650,19 @@ with description("an agent toolset") as self:
                         expect(self.installer.diagnose_install()).to(contain("green"))
 
                     with it("should record install channels via diagnose_after_install"):
-                        reports = self.installer.diagnose_after_install()
+                        reports = self.installer.deployment.diagnose_after_install()
                         expect(any("skill 1 -> 1 (delta 0)" in report for report in reports)).to(
                             equal(True)
                         )
 
                     with it("should append this install to the diagnostics log"):
-                        self.installer.diagnose_after_install()
+                        self.installer.deployment.diagnose_after_install()
                         expect(len(json.loads(self.log.read_text(encoding="utf-8"))["installs"])).to(
                             equal(2)
                         )
 
                     with it("should record the latest skill count on that install"):
-                        self.installer.diagnose_after_install()
+                        self.installer.deployment.diagnose_after_install()
                         expect(_last_logged_install(self.log)["skill"]["count"]).to(equal(1))
 
                 with context("that has a yellow surface change"):
@@ -701,7 +701,7 @@ with description("an agent toolset") as self:
                         expect(self.installer.diagnose_install()).to(contain("red"))
 
                     with it("should log diagnose_install on the install"):
-                        self.installer.diagnose_after_install()
+                        self.installer.deployment.diagnose_after_install()
                         names = [item["name"] for item in _last_logged_install(self.log)["diagnostics"]]
                         expect(names).to(contain("diagnose_install"))
 
@@ -715,7 +715,7 @@ with description("an agent toolset") as self:
 
                 with it("should leave the hook server and the cdd server answering"):
                     installer = Installer(ide="Cursor", path=_REPO_ROOT / ".cursor", repo=_REPO_ROOT)
-                    status = installer.ensure_runtimes()
+                    status = installer.deployment.ensure_runtimes()
                     expect(status["hook"]).to(equal("running"))
                     expect(status["mcp"]).to(start_with("running"))
 
@@ -801,10 +801,10 @@ with description("a practice guidance class") as self:
             expect(front).to(contain("sample preamble"))
 
         with it("should keep the MCP invoke tail out of the skill description"):
-            from harness.installation.files import FileInstallation
+            from harness.installation.files import FileChannel, FileInstallation
 
             overview = "sample preamble"
-            writer = FileInstallation(IdeLayout("Cursor"), self.tree, "skill")
+            writer = FileInstallation(IdeLayout("Cursor"), self.tree, FileChannel("skill"))
             text = writer._skill_front_matter(
                 "sample-tool",
                 writer._skill_overview(
@@ -817,10 +817,10 @@ with description("a practice guidance class") as self:
 
         with context("with an overview that opens with its heading and closes with a rule"):
             with before.each:
-                from harness.installation.files import FileInstallation
+                from harness.installation.files import FileChannel, FileInstallation
 
                 overview = "## Overview\n\nsample preamble\n\nsecond paragraph\n\n---"
-                writer = FileInstallation(IdeLayout("Cursor"), self.tree, "skill")
+                writer = FileInstallation(IdeLayout("Cursor"), self.tree, FileChannel("skill"))
                 self.description = writer._skill_overview(type("Host", (), {"overview": overview})(), [overview])
 
             with it("should describe the skill with the opening paragraph alone"):
@@ -828,11 +828,11 @@ with description("a practice guidance class") as self:
 
         with context("with guidance that links a shared reference file and names a rule file"):
             with before.each:
-                from harness.installation.files import FileInstallation
+                from harness.installation.files import FileChannel, FileInstallation
 
                 self.text = "See [tools](../../references/language-tools.md); follow `practices/ddd/ddd-model.mdc`."
                 self.dest = self.tree / "rules" / "practices" / "ddd" / "ddd-model.md"
-                self.writer = FileInstallation(IdeLayout("Claude"), self.tree, "rules", repo=_REPO_ROOT)
+                self.writer = FileInstallation(IdeLayout("Claude"), self.tree, FileChannel("rules"), repo=_REPO_ROOT)
 
             with it("should copy the shared file into the IDE references folder"):
                 self.writer._with_installed_references(self.text, self.dest)
@@ -857,9 +857,9 @@ with description("a practice guidance class") as self:
 
             with context("installed for Claude Code"):
                 with before.each:
-                    from harness.installation.files import FileInstallation
+                    from harness.installation.files import FileChannel, FileInstallation
 
-                    FileInstallation(IdeLayout("Claude"), self.tree, "rules", repo=_REPO_ROOT).write_standing_rule(self.source)
+                    FileInstallation(IdeLayout("Claude"), self.tree, FileChannel("rules"), repo=_REPO_ROOT).write_standing_rule(self.source)
                     self.text = (self.tree / "rules" / "coding.md").read_text(encoding="utf-8")
 
                 with it("should load in every session, with no paths"):
@@ -870,17 +870,17 @@ with description("a practice guidance class") as self:
 
             with context("installed for Cursor"):
                 with it("should keep the source front matter as an .mdc rule"):
-                    from harness.installation.files import FileInstallation
+                    from harness.installation.files import FileChannel, FileInstallation
 
-                    FileInstallation(IdeLayout("Cursor"), self.tree, "rules", repo=_REPO_ROOT).write_standing_rule(self.source)
+                    FileInstallation(IdeLayout("Cursor"), self.tree, FileChannel("rules"), repo=_REPO_ROOT).write_standing_rule(self.source)
                     text = (self.tree / "rules" / "coding.mdc").read_text(encoding="utf-8")
                     expect(text).to(equal(self.source.read_text(encoding="utf-8")))
 
         with context("with an MCP tool whose docstring only names the overview section"):
             with it("should leave that section name out of the skill body"):
-                from harness.installation.files import FileInstallation
+                from harness.installation.files import FileChannel, FileInstallation
 
-                writer = FileInstallation(IdeLayout("Cursor"), self.tree, "skill", mcp_mode=True)
+                writer = FileInstallation(IdeLayout("Cursor"), self.tree, FileChannel("skill", True))
                 tool = type("Tool", (), {"docstring": "overview"})()
                 expect(writer._body_for(tool)).to(equal(""))
 
@@ -891,14 +891,14 @@ with description("a practice guidance class") as self:
 
         with it("should return the instructions the property assembles when the installed tool is invoked"):
             server = _server_publishing(self.mcp)
-            result = server.invoke_prompt("sample-tool.instructions")
+            result = server.invoke("sample-tool.instructions")
             expect(result).to(equal(self.tool.instructions))
 
         with context("with an underscored practice module path"):
             with it("should kebab-case the practice folder to match fidelity skill names"):
-                from harness.installation.files import FileInstallation
+                from harness.installation.files import FileChannel, FileInstallation
 
-                writer = FileInstallation(IdeLayout("Cursor"), Path("."), "skill")
+                writer = FileInstallation(IdeLayout("Cursor"), Path("."), FileChannel("skill"))
                 tools = {"instructions": _skill_tool("instructions")}
                 toolset = type(
                     "Practice",
@@ -1035,9 +1035,9 @@ with description("a practice guidance class") as self:
 
         with context("with an underscored module path and fidelity folders under it"):
             with it("should keep the practice folder and name the leaf practice-fidelity"):
-                from harness.installation.files import FileInstallation
+                from harness.installation.files import FileChannel, FileInstallation
 
-                writer = FileInstallation(IdeLayout("Cursor"), Path("."), "skill")
+                writer = FileInstallation(IdeLayout("Cursor"), Path("."), FileChannel("skill"))
                 tools = {"instructions": _skill_tool("instructions")}
                 practice = type("Practice", (), {"slug": "sample-tool"})()
                 toolset = type(
@@ -1056,9 +1056,9 @@ with description("a practice guidance class") as self:
                 ).to(equal("skills/practices/sample-tool/sample-tool-sketch/SKILL.md"))
 
             with it("should kebab-case the practice parent so it matches the fidelity leaf"):
-                from harness.installation.files import FileInstallation
+                from harness.installation.files import FileChannel, FileInstallation
 
-                writer = FileInstallation(IdeLayout("Cursor"), Path("."), "skill")
+                writer = FileInstallation(IdeLayout("Cursor"), Path("."), FileChannel("skill"))
                 tools = {"instructions": _skill_tool("instructions")}
                 practice = type("Practice", (), {"slug": "sample-tool"})()
                 toolset = type(
@@ -1097,7 +1097,7 @@ with description("a practice guidance class") as self:
             with it("should return that fidelity's instructions when the installed tool is invoked"):
                 server = _server_publishing(self.mcp)
                 sketch = self.tool.fidelities.entries["sketch"]
-                result = server.invoke_prompt("sample-tool-sketch")
+                result = server.invoke("sample-tool-sketch")
                 expect(result).to(equal(sketch.instructions))
 
             with context("from stories"):
@@ -1120,7 +1120,7 @@ with description("a practice guidance class") as self:
 
                 with it("should return that fidelity's instructions when the installed tool is invoked"):
                     scenarios = self.tool.fidelities.entries["scenarios"]
-                    result = self.server.invoke_prompt("stories-scenarios")
+                    result = self.server.invoke("stories-scenarios")
                     expect(result).to(equal(scenarios.instructions))
 
             with context("that has been installed for VS Code"):
@@ -1266,7 +1266,7 @@ with description("lifecycle actions annotated for installation") as self:
 
                 with it("should return that operation's instructions when the installed tool is invoked"):
                     server = _server_publishing(self.mcp)
-                    result = server.invoke_prompt("generate.generate")
+                    result = server.invoke("generate.generate")
                     expect(str(result)).to(contain("Write artifacts for each listed guidance"))
 
             # (S) Installer --> Install Lifecycle actions as several tools
@@ -1312,7 +1312,7 @@ with description("guidance agents"):
     with it("should install the agents from cdd_guidance/agents"):
         tree = Path(tempfile.mkdtemp())
         try:
-            Installer(ide="Cursor", path=tree, repo=_REPO_ROOT)._install_agents()
+            Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).deployment._install_agents()
             installed = sorted(path.name for path in (tree / "agents").glob("*.md"))
             expect(installed).to(equal(["context.md", "discoverer.md", "implementation.md", "specification.md"]))
             expect((tree / "agents" / "discoverer.md").read_text(encoding="utf-8")).to(contain("name: discoverer"))
@@ -1515,9 +1515,9 @@ with description("toolsets installed for Claude Code") as self:
 
     with context("with rules scoped by globs"):
         with it("should list each glob under paths"):
-            from harness.installation.files import FileInstallation
+            from harness.installation.files import FileChannel, FileInstallation
 
-            text = FileInstallation(IdeLayout("Claude"), Path("."), "rules")._claude_rules_front_matter(
+            text = FileInstallation(IdeLayout("Claude"), Path("."), FileChannel("rules"))._claude_rules_front_matter(
                 "d", "**/*.py, **/*.ts"
             )
             expect(text).to(equal('---\ndescription: "d"\npaths:\n  - "**/*.py"\n  - "**/*.ts"\n---\n\n'))

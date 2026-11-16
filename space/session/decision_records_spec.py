@@ -18,8 +18,9 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions, AgentToolSet
 from space.session.session import Session, SessionNotFoundError
-from space.session.sessions import Sessions
-from space.session.throwaway_project import ThrowawayProject
+from space.session.sessions import Sessions
+
+from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 
 def _open_session(root: Path) -> Path:
@@ -121,7 +122,7 @@ with description("decision records of the main session"):
         self.project = ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("that has no workpath of its own"):
         with it("should write the record under the project's .context/cdr"):
@@ -144,7 +145,7 @@ with description("decision records asked for a board ticket's session"):
         self.tool = AgentToolSet.instantiate(Session).tools["write_cdr"]
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("that names a ticket other than the open session"):
         with it("should write the record under the named session's workpath"):

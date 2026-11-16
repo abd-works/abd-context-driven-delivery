@@ -8,6 +8,7 @@ from cdd_guidance.practices.sketch_document.discovery_document import DiscoveryD
 from cdd_guidance.practices.clean_engineering.model.base_class_model import Module, OoadClass
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.type_refs import pascal_type_names
 from cdd_guidance.practices.ddd.model.markdown.class_cards import (
     CARD,
@@ -64,31 +65,9 @@ def looks_like_operation(line: str) -> bool:
     return line[0].islower()
 
 
-def _indent(raw: str) -> int:
-    return len(raw) - len(raw.lstrip())
-
-
-def _ends_aggregate(line: str) -> bool:
-    """An aggregate's section ends at the next aggregate heading or group heading."""
-    return line.startswith(_AGGREGATE) or _GROUP.match(line) is not None
-
-
 def sketch_level(raw: str) -> int:
     """How deep a flattened sketch line sits: 0 for a context heading, 1 for a holder, 2 for an entity."""
     return (len(raw) - len(raw.lstrip(" "))) // SKETCH_INDENT
-
-
-def _is_entity_heading(stripped: str) -> bool:
-    name = stripped.split("//", 1)[0].strip().rstrip(":")
-    if not name or name.startswith("- "):
-        return False
-    if name.lower().startswith(_NOT_ENTITIES):
-        return False
-    return ":" not in name
-
-
-def _is_module_heading(stripped: str) -> bool:
-    return stripped.rstrip(":").strip().endswith("/")
 
 
 def fenced(lines: list[str]) -> list[str]:
@@ -129,9 +108,9 @@ class MarkdownIntegration(Integration, MarkdownDomainNode):
     @staticmethod
     def kept_by(dependency: Relationship) -> "MarkdownIntegration | None":
         """The arc a class model's dependency keeps, when it keeps one."""
-        if not Integration.keeps_one(dependency):
-            return None
         integration = MarkdownIntegration()
+        if not integration.keeps_one(dependency):
+            return None
         integration.read_dependency(dependency)
         return integration
 
@@ -186,10 +165,10 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
         """The aggregate in a sketch: its entity and fence, or each card's heading and fence, its arcs on the root."""
         if not self.classes:
             members = [item.name for item in self.root.operations] + [item.name for item in self.root.invariant_objects] if self.root is not None else []
-            return [f"{_SKETCH_ENTITY}{self.name}", ""] + fenced(members + self.integration_lines())
+            return [f"{_SKETCH_ENTITY}{self.name}", ""] + fenced(members + self._integration_lines())
         written: list[str] = []
         for card in self.ordered_cards:
-            arcs = self.integration_lines() if card is self.root_card else []
+            arcs = self._integration_lines() if card is self.root_card else []
             written.extend([f"{_SKETCH_ENTITY}{card.heading}", ""] + fenced(card.sketch_lines() + arcs))
         return written
 
@@ -197,7 +176,7 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
         sections, map_lines = self._split_cards()
         self.classes.extend(ClassCard.read(section) for section in sections)
         self._read_map_lines(map_lines)
-        self.take_root_card()
+        self._take_root_card()
         super().load_root()
 
     @property
@@ -235,17 +214,24 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
         seen = {self.root.name.split(" - ", 1)[0].strip().lower(), self.name.lower()}
         drawn: list[str] = []
         for name in names:
-            if name and name.lower() not in seen and not _looks_like_prose(name) and not looks_like_operation(name):
+            if name and name.lower() not in seen and not self._looks_like_prose(name) and not looks_like_operation(name):
                 seen.add(name.lower())
                 drawn.append(name)
         return drawn
+
+    def _looks_like_prose(self, line: str) -> bool:
+        """A note or a sentence, not a member's name."""
+        text = line.strip()
+        if not text or text.lower().startswith("note:"):
+            return True
+        return ". " in text or text.endswith(".") or text[0].islower()
 
     def take_drawn_root(self, members: list[str]) -> None:
         """The root a map drawing shows: the aggregate's own entity, holding the members listed under it."""
         self._open_root(self.name, members, [])
         super().load_root()
 
-    def take_root_card(self) -> None:
+    def _take_root_card(self) -> None:
         """At model fidelity the root is the <<Aggregate Root>> card; each repository card collects that root."""
         root = self.root_card
         if root is None:
@@ -267,8 +253,8 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
     def take_root_from_classes(self) -> None:
         """Once its cards are read from a class model: the relationships their types name, and the root card, else a
         root named after the aggregate."""
-        self.infer_relationships()
-        self.take_root_card()
+        self._infer_relationships()
+        self._take_root_card()
         if self.root is None:
             self.root = MarkdownEntity(self.name, 1)
 
@@ -287,27 +273,34 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
         local = {card.name for card in self.classes} | {self.name}
         for oclass in module.classes:
             for operation in oclass.operations:
-                for callee in operation.callees:
-                    target, dot, _called = callee.strip().partition(".")
-                    if dot and target[:1].isupper() and target not in local:
-                        oclass.depend_on(target, operation.name)
+                self._depend_on_callees(oclass, operation, local)
         if module.classes:
             module.classes[0].dependencies.extend(item.as_dependency() for item in self.integrations if item.target_name)
 
-    def infer_relationships(self) -> None:
+    def _depend_on_callees(self, oclass: OoadClass, operation: Operation, local: set[str]) -> None:
+        """oclass depends on the class of another aggregate each of the operation's calls names, by the operation."""
+        for callee in operation.callees:
+            target, dot, _called = callee.strip().partition(".")
+            if dot and target[:1].isupper() and target not in local:
+                oclass.depend_on(target, operation.name)
+
+    def _infer_relationships(self) -> None:
         """Code holds `identity: Identity`, not `<< composition >>`: a member the aggregate holds is composed, and a
         repository's collection of the root is an aggregation."""
-        members = {card.name for card in self.member_cards}
-        roots = {card.name for card in self.classes if card.is_root}
         for card in self.classes:
             for prop in card.plain_properties:
-                if prop.stereotype:
-                    continue
-                named = pascal_type_names(prop.type_hint or "")
-                if card.is_repository and any(part in roots for part in named) and prop.type_hint.strip() not in roots:
-                    prop.stereotype = "aggregation"
-                elif named and named[0] in members:
-                    prop.stereotype = "composition"
+                prop.stereotype = prop.stereotype or self._relationship_named_by(card, prop)
+
+    def _relationship_named_by(self, card: ClassCard, prop: Property) -> str:
+        """The relationship a property's type names: an aggregation for a repository's collection of the root, a
+        composition for a member the aggregate holds; none otherwise."""
+        named = pascal_type_names(prop.type_hint or "")
+        roots = {item.name for item in self.classes if item.is_root}
+        if card.is_repository and any(part in roots for part in named) and prop.type_hint.strip() not in roots:
+            return "aggregation"
+        if named and named[0] in {item.name for item in self.member_cards}:
+            return "composition"
+        return prop.stereotype
 
     def _split_cards(self) -> tuple[list[list[str]], list[str]]:
         """Separate this aggregate's `####` card sections from its own lines: its root line, integrations, events."""
@@ -340,8 +333,7 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
                 index = self._read_integrations(lines, index)
                 continue
             if line.startswith(("emits events:", "consumes events:")):
-                names, index = self._read_event_names(lines, index + 1)
-                emitted.extend(names if line.startswith("emits") else [])
+                index = self._read_events(lines, index, emitted)
                 continue
             if " - " in line and not raw.startswith(" "):
                 root_name = self.plain_name(raw.split(" - ", 1)[0])
@@ -350,12 +342,16 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
             index += 1
         self._open_root(root_name, members, emitted)
 
-    def _read_event_names(self, lines: list[str], index: int) -> tuple[list[str], int]:
-        names: list[str] = []
+    def _read_events(self, lines: list[str], index: int, emitted: list[str]) -> int:
+        """The `- Event` lines under an `emits events:` or `consumes events:` line; those it emits go to emitted.
+        Returns the line after them."""
+        emits = lines[index].strip().lower().startswith("emits")
+        index += 1
         while index < len(lines) and lines[index].strip().startswith("-"):
-            names.append(self.plain_name(lines[index].strip()[1:]))
+            if emits:
+                emitted.append(self.plain_name(lines[index].strip()[1:]))
             index += 1
-        return names, index
+        return index
 
     def _open_root(self, name: str, members: list[str], emitted: list[str]) -> None:
         operations = [member for member in members if looks_like_operation(member)]
@@ -369,12 +365,15 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
 
     def _read_integrations(self, lines: list[str], index: int) -> int:
         # The arcs are the lines indented under `Integrations:`; the first line back at its indent ends them.
-        heading_indent = _indent(lines[index])
+        heading_indent = self._indent(lines[index])
         end = index + 1
-        while end < len(lines) and (not lines[end].strip() or _indent(lines[end]) > heading_indent):
+        while end < len(lines) and (not lines[end].strip() or self._indent(lines[end]) > heading_indent):
             end += 1
         self.integrations.extend(MarkdownIntegration.read_arcs(lines[index + 1:end]))
         return end
+
+    def _indent(self, raw: str) -> int:
+        return len(raw) - len(raw.lstrip())
 
     def lines(self) -> list[str]:
         written = [f"{_AGGREGATE}{self.name}", ""]
@@ -386,10 +385,10 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
             written.extend(f"  {item.name}" for item in self.root.operations)
             written.extend(f"  {item.name}" for item in self.root.invariant_objects)
             written.append("")
-        written.extend(self.integration_lines())
+        written.extend(self._integration_lines())
         return written
 
-    def integration_lines(self, indent: str = "") -> list[str]:
+    def _integration_lines(self, indent: str = "") -> list[str]:
         """The aggregate's arcs and the events its root emits, under `Integrations:` and `emits events:`."""
         written: list[str] = []
         if self.integrations:
@@ -415,6 +414,8 @@ class MarkdownBoundedContext(BoundedContext, MarkdownDomainNode):
         self.module_notes: list[str] = []
         # The notes under each heading that groups aggregates, by that heading.
         self.group_notes: dict[str, list[str]] = {}
+        # The sketch headings an aggregate is already named after, so the next entity under one is named after itself.
+        self._used_holders: set[str] = set()
 
     def read_lines(self, lines: list[str]) -> None:
         """Read this context's own lines: its notes, its module, the headings that group its aggregates, and each
@@ -441,14 +442,20 @@ class MarkdownBoundedContext(BoundedContext, MarkdownDomainNode):
         return group
 
     def _read_aggregate(self, lines: list[str], start: int, group: str | None) -> int:
+        """The aggregate whose heading is at start, reading its own section; returns the line after the section."""
         aggregate = self.aggregate_type(self.plain_name(lines[start].strip()[len(_AGGREGATE):]), len(self.aggregates) + 1)
         aggregate.group = group
-        after = start + 1
-        while after < len(lines) and not _ends_aggregate(lines[after].strip()):
-            after += 1
+        after = self._aggregate_end(lines, start)
         aggregate.source_lines = lines[start + 1:after]
         self.append_aggregate(aggregate)
         aggregate.load_root()
+        return after
+
+    def _aggregate_end(self, lines: list[str], start: int) -> int:
+        """An aggregate's section ends at the next aggregate heading or group heading."""
+        after = start + 1
+        while after < len(lines) and not (lines[after].strip().startswith(_AGGREGATE) or _GROUP.match(lines[after].strip())):
+            after += 1
         return after
 
     def read_sketch_lines(self, lines: list[str]) -> None:
@@ -456,24 +463,28 @@ class MarkdownBoundedContext(BoundedContext, MarkdownDomainNode):
         entity that opens an aggregate or joins the one its root opened, and the notes and fences under them."""
         aggregate: MarkdownAggregate | None = None
         group: str | None = None
-        used_holders: set[str] = set()
         for raw in lines:
             stripped = raw.strip()
             level = sketch_level(raw)
             if level == 1:
                 aggregate, group = None, self._read_sketch_holder(stripped)
-            elif level == 2 and _is_entity_heading(stripped):
-                aggregate = self._open_sketch_entity(stripped.split("//", 1)[0].strip().rstrip(":"), aggregate, group, used_holders)
-            elif aggregate is not None:
+                continue
+            if level == 2 and self._is_entity_heading(stripped):
+                aggregate = self._open_sketch_entity(stripped.split("//", 1)[0].strip().rstrip(":"), aggregate, group)
+                continue
+            if aggregate is not None:
                 aggregate.take_sketch_line(raw)
-            elif group:
-                self.group_notes[group].append(stripped)
-            elif self.module_name:
-                self.module_notes.append(stripped)
-            else:
-                self.notes.append(stripped)
+                continue
+            self._keep_note(stripped, group)
         for item in self.aggregates:
             item.load_sketch()
+
+    def _is_entity_heading(self, stripped: str) -> bool:
+        """A sketch line at entity depth names an entity, unless it is an aggregate note."""
+        name = stripped.split("//", 1)[0].strip().rstrip(":")
+        if not name or name.startswith("- ") or name.lower().startswith(_NOT_ENTITIES):
+            return False
+        return ":" not in name
 
     def sketch_lines(self) -> list[str]:
         """The context in a sketch: its heading, its notes, its module, then each aggregate under its holder."""
@@ -496,7 +507,7 @@ class MarkdownBoundedContext(BoundedContext, MarkdownDomainNode):
         if stripped.lower().startswith(_SKETCH_NOTE):
             self.notes.append(stripped)
             return None
-        if _is_module_heading(stripped):
+        if stripped.rstrip(":").strip().endswith("/"):
             self.module_name = stripped.rstrip(":").strip().rstrip("/").strip()
             self.module_notes = []
             return None
@@ -504,7 +515,7 @@ class MarkdownBoundedContext(BoundedContext, MarkdownDomainNode):
         self.group_notes.setdefault(group, [])
         return group
 
-    def _open_sketch_entity(self, name: str, current: MarkdownAggregate | None, group: str | None, used_holders: set[str]) -> MarkdownAggregate:
+    def _open_sketch_entity(self, name: str, current: MarkdownAggregate | None, group: str | None) -> MarkdownAggregate:
         """The aggregate an entity heading belongs to: a member card joins the aggregate its root opened; any other
         entity opens one, named after the heading it sits under the first time, else after itself."""
         marks = marks_in(name)
@@ -514,8 +525,8 @@ class MarkdownBoundedContext(BoundedContext, MarkdownDomainNode):
         aggregate_name = name
         if marks:
             holder = group or self.module_name
-            aggregate_name = holder if holder and holder not in used_holders else plain_class_name(name)
-            used_holders.add(holder)
+            aggregate_name = holder if holder and holder not in self._used_holders else plain_class_name(name)
+            self._used_holders.add(holder)
         aggregate = self.aggregate_type(aggregate_name, len(self.aggregates) + 1)
         aggregate.sketch_fences = [(name, [])] if marks else []
         aggregate.group = group
@@ -524,10 +535,10 @@ class MarkdownBoundedContext(BoundedContext, MarkdownDomainNode):
 
     def lines(self) -> list[str]:
         written = [f"{_CONTEXT}{self.name} | {self.owner or ''}", ""]
-        written.extend(_quoted(self.notes))
+        written.extend(self._quoted(self.notes))
         if self.module_name:
             written.append(f"{_MODULE} `{self.module_name}`")
-            written.extend(_quoted(self.module_notes))
+            written.extend(self._quoted(self.module_notes))
             written.append("")
         for context in self.contexts:
             if isinstance(context, MarkdownBoundedContext):
@@ -544,24 +555,26 @@ class MarkdownBoundedContext(BoundedContext, MarkdownDomainNode):
 
     def read_note(self, line: str, group: str | None) -> None:
         """A `> note` line goes to the group it sits under, else the module, else the context."""
-        text = line[len(_NOTE):].strip()
-        if group is not None:
+        self._keep_note(line[len(_NOTE):].strip(), group)
+
+    def _keep_note(self, text: str, group: str | None) -> None:
+        """A note goes to the group it sits under, else the module, else the context."""
+        if group:
             self.group_notes.setdefault(group, []).append(text)
         elif self.module_name:
             self.module_notes.append(text)
         else:
             self.notes.append(text)
 
+    def _quoted(self, notes: list[str]) -> list[str]:
+        written = [f"{_NOTE}{text.strip()}" for text in notes if text.strip()]
+        return written + [""] if written else []
+
     def _group_lines(self, group: str) -> list[str]:
         notes = self.group_notes.get(group, [])
         if not notes:
             return []
-        return [f"*{group}*"] + _quoted(notes) + [""]
-
-
-def _quoted(notes: list[str]) -> list[str]:
-    written = [f"{_NOTE}{text.strip()}" for text in notes if text.strip()]
-    return written + [""] if written else []
+        return [f"*{group}*"] + self._quoted(notes) + [""]
 
 
 class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
@@ -575,12 +588,8 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
         self._lines: list[str] = []
         self._index = 0
 
-    def has_more_bounded_context(self) -> bool:
-        return self._next_context_at() is not None
-
-    def get_next_bounded_context_from_file(self) -> BoundedContext:
-        start = self._next_context_at()
-        assert start is not None
+    def _read_context_at(self, start: int) -> MarkdownBoundedContext:
+        """The context whose `## Context | owner` heading is at start, holding the lines up to the next heading."""
         heading = self._lines[start].strip()[len(_CONTEXT):]
         context = MarkdownBoundedContext(self.plain_name(heading), len(self.contexts) + 1)
         context.owner = self.owner_from(heading)
@@ -594,7 +603,7 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
         self.contexts = []
         self._lines = text.splitlines()
         self._index = 0
-        self.load_bounded_contexts()
+        self._read_contexts()
         return self
 
     @property
@@ -651,8 +660,12 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
             index += 1
         return len(self._lines)
 
-    def load_bounded_contexts(self) -> None:
-        super().load_bounded_contexts()
+    def _read_contexts(self) -> None:
+        """Read each context heading after the last one read, then wire the event map onto the aggregates."""
+        start = self._next_context_at()
+        while start is not None:
+            self.contexts.append(self._read_context_at(start))
+            start = self._next_context_at()
         self.wire_events(self._event_map_entries())
 
     def _event_map_entries(self) -> list[str]:
@@ -665,11 +678,3 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
             elif in_event_map and line.startswith("- ") and ":" in line:
                 entries.append(line[2:])
         return entries
-
-
-def _looks_like_prose(line: str) -> bool:
-    """A note or a sentence, not a member's name."""
-    text = line.strip()
-    if not text or text.lower().startswith("note:"):
-        return True
-    return ". " in text or text.endswith(".") or text[0].islower()

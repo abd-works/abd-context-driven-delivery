@@ -16,7 +16,8 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
 from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
-from harness.catalog_generator.catalog_generator import Catalog
+from harness.catalog_generator.catalog_generator import Catalog, CatalogProject
+from harness.catalog_generator.git_citation import GitCitation
 
 # A CDD checkout's own catalog generator, cut down to what the spec observes: it shows the guidance found in its own
 # checkout, so a page naming the project's guidance proves the catalog was read from the project.
@@ -69,7 +70,7 @@ with description("a catalog generated for a project") as self:
         with before.each:
             self.project = _cdd_checkout(self.tmp / "branch-worktree")
             self.serving_before = _serving_catalog_files()
-            self.message = Catalog(repo_url="https://example.com/cdd", ref="abc", project=self.project).generate_catalog()
+            self.message = Catalog(CatalogProject(self.project), GitCitation("https://example.com/cdd", "abc")).generate_catalog()
 
         with it("should write its pages under the project's cdd_guidance/catalog folder"):
             expect((self.project / "cdd_guidance" / "catalog" / "index.html").is_file()).to(equal(True))

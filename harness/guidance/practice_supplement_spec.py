@@ -21,9 +21,9 @@ with description("a practice supplement") as self:
             self.registered = PracticeCatalogue.supplement_classes()
             PracticeCatalogue.register_supplements(SampleSupplement)
             self.practices = practices_by_key(PracticeCatalogue.create_all(fidelity=None))
-            self.bdd_development = self.practices["bdd"].fidelity_called("development")
-            self.code = self.practices["clean_engineering"].fidelity_called("code")
-            self.story_map = self.practices["stories"].fidelity_called("story_map")
+            self.bdd_development = self.practices["bdd"].fidelities.called("development")
+            self.code = self.practices["clean_engineering"].fidelities.called("code")
+            self.story_map = self.practices["stories"].fidelities.called("story_map")
             self.supplement = self.practices["bdd"].supplements[0]
 
         with after.all:
@@ -47,7 +47,7 @@ with description("a practice supplement") as self:
                     "Sample supplement guidance", "Sample guidance both fidelities share", "fill one signature at a time", "write code only to turn a test green"))
 
             with it("should hold the rules of every section named for a fidelity"):
-                expect([rule.slug for rule in self.supplement.every_rule()]).to(equal(["sample-shared-rule", "sample-bdd-rule", "sample-code-rule"]))
+                expect([rule.slug for rule in self.supplement.every_rule]).to(equal(["sample-shared-rule", "sample-bdd-rule", "sample-code-rule"]))
 
         with context("with a fidelity it supplements"):
             with it("should end the fidelity's instructions with its text for that fidelity"):

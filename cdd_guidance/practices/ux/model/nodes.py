@@ -25,11 +25,11 @@ class StoryStep:
     label: str = ""
 
     @classmethod
-    def from_value(cls, value: "StoryStep | Mapping[str, Any]") -> "StoryStep":
+    def from_value(cls, step: "StoryStep | Mapping[str, Any]") -> "StoryStep":
         """A step from a file's ``{kind, label}`` object, or the step itself."""
-        if isinstance(value, StoryStep):
-            return value
-        return cls(str(value.get("kind", "") or ""), str(value.get("label", "") or ""))
+        if isinstance(step, StoryStep):
+            return step
+        return cls(str(step.get("kind", "") or ""), str(step.get("label", "") or ""))
 
     def as_dict(self) -> dict:
         return {"kind": self.kind, "label": self.label}
@@ -40,41 +40,49 @@ def story_steps_from(values: Iterable["StoryStep | Mapping[str, Any]"] | None) -
 
 
 class Interaction(UxNode):
+    """What a control does when it is triggered: the trigger, its effect, and the screen it goes to. Each is set on
+    the interaction once it is made."""
+
     _semantic_type_name = "Interaction"
 
-    def __init__(
-        self,
-        name: str,
-        sequential_order: int,
-        trigger: str = "",
-        effect: str = "",
-        destination: Optional["Screen"] = None,
-        graph: Optional[Graph] = None,
-    ) -> None:
+    def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
-        self.trigger = trigger or name
-        self.effect = effect
-        self.destination = destination
+        self._trigger = ""
+        self.effect = ""
+        self.destination: Optional["Screen"] = None
+
+    @property
+    def trigger(self) -> str:
+        """What sets it off, such as a click; its name while it names none."""
+        return self._trigger or self.name
+
+    @trigger.setter
+    def trigger(self, trigger: str) -> None:
+        self._trigger = trigger
 
 
 class Control(UxNode):
+    """A control on a region: its type, the label it shows, and the field it shows the value of. Each is set on the
+    control once it is made."""
+
     _semantic_type_name = "Control"
 
-    def __init__(
-        self,
-        name: str,
-        sequential_order: int,
-        control_type: str = "",
-        label: str = "",
-        bound_field: str = "",
-        graph: Optional[Graph] = None,
-    ) -> None:
+    def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
-        self.control_type = control_type
-        self.label = label or name
-        self.bound_field = bound_field
+        self.control_type = ""
+        self._label = ""
+        self.bound_field = ""
         self.states: List[str] = []
         self.interactions = ModelChildren(self, "interactions")
+
+    @property
+    def label(self) -> str:
+        """What the control shows; its name while it names no label."""
+        return self._label or self.name
+
+    @label.setter
+    def label(self, label: str) -> None:
+        self._label = label
 
     def append_interaction(self, interaction: Interaction) -> None:
         self.interactions.append(interaction)
@@ -92,34 +100,29 @@ class StoryDemoControl(Control):
 
     _semantic_type_name = "StoryDemoControl"
 
-    def __init__(
-        self,
-        name: str,
-        sequential_order: int,
-        control_type: str = "",
-        label: str = "",
-        bound_field: str = "",
-        story_steps: Iterable["StoryStep | Mapping[str, Any]"] | None = None,
-        set_input: str = "",
-        item_story_steps: Iterable["StoryStep | Mapping[str, Any]"] | None = None,
-        item_value: str = "",
-        item_label: str = "",
-        graph: Optional[Graph] = None,
-    ) -> None:
-        super().__init__(name, sequential_order, control_type, label, bound_field, graph)
-        self.story_steps: List[StoryStep] = story_steps_from(story_steps)
-        self.set_input = set_input or ""
-        self.item_story_steps: List[StoryStep] = story_steps_from(item_story_steps)
-        self.item_value = item_value or ""
-        self.item_label = item_label or ""
+    def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
+        super().__init__(name, sequential_order, graph)
+        self.story_steps: List[StoryStep] = []
+        self.set_input = ""
+        self.item_story_steps: List[StoryStep] = []
+        self.item_value = ""
+        self.item_label = ""
+
+    def take_story_fields(self, source: "StoryDemoControl") -> None:
+        """Run the steps source runs, fill the input it fills, and show its items the way it does."""
+        self.story_steps = list(source.story_steps)
+        self.set_input = source.set_input
+        self.item_story_steps = list(source.item_story_steps)
+        self.item_value = source.item_value
+        self.item_label = source.item_label
 
 
 class Region(UxNode):
     _semantic_type_name = "Region"
 
-    def __init__(self, name: str, sequential_order: int, area: str = "", graph: Optional[Graph] = None) -> None:
+    def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
-        self.area = area
+        self.area = ""
         self.controls = ModelChildren(self, "controls")
 
     def append_control(self, control: Control) -> None:
@@ -137,21 +140,14 @@ class Screen(UxNode):
 
     _semantic_type_name = "Screen"
 
-    def __init__(
-        self,
-        name: str,
-        sequential_order: int,
-        slug: str = "",
-        layout: str = "",
-        description: str = "",
-        chrome_of: Optional["Screen"] = None,
-        graph: Optional[Graph] = None,
-    ) -> None:
+    def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
+        """A screen called name; its slug, layout, description, and the screen it is the chrome of are set on it once
+        it is made."""
         super().__init__(name, sequential_order, graph)
-        self.slug = slug or Name(name).title_slug
-        self.layout = layout
-        self.description = description
-        self.chrome_of = chrome_of
+        self._slug = ""
+        self.layout = ""
+        self.description = ""
+        self.chrome_of: Optional["Screen"] = None
         self.inactive_tabs: List[str] = []
         self._story_links: List[StoryLink] = []
         self.domain_terms: List[str] = []
@@ -159,6 +155,15 @@ class Screen(UxNode):
         self.image = ""
         self.prototype = ""
         self.regions = ModelChildren(self, "regions")
+
+    @property
+    def slug(self) -> str:
+        """The screen's name as a file or a link spells it; from its name while it is given none."""
+        return self._slug or Name(self.name).title_slug
+
+    @slug.setter
+    def slug(self, slug: str) -> None:
+        self._slug = slug
 
     def append_region(self, region: Region) -> None:
         self.regions.append(region)
@@ -227,8 +232,8 @@ class Screen(UxNode):
         if term and term not in self.domain_terms:
             self.domain_terms.append(term)
 
-    def _show(self, kind: str, item: Node | str) -> None:
-        link = StoryLink.from_item(kind, item)
+    def _show(self, kind: str, shown: Node | str) -> None:
+        link = StoryLink.from_shown(kind, shown)
         if not link.key or link.key in self._keys(kind):
             return
         self._story_links.append(link)
@@ -266,42 +271,46 @@ class UxComponent(UxNode):
 class Transition(UxComponent):
     _semantic_type_name = "Transition"
 
-    def __init__(
-        self,
-        name: str,
-        sequential_order: int,
-        from_screen: Optional[Screen] = None,
-        to_screen: Optional[Screen] = None,
-        trigger: str = "",
-        nav_type: str = "action",
-        graph: Optional[Graph] = None,
-    ) -> None:
+    def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
+        """A transition called name; the screens it joins, its trigger, and its kind of navigation are set on it once
+        it is made (``joining``)."""
         super().__init__(name, sequential_order, graph)
+        self.from_screen: Optional[Screen] = None
+        self.to_screen: Optional[Screen] = None
+        self._trigger = ""
+        self.nav_type = "action"
+
+    def joining(self, from_screen: Optional[Screen], to_screen: Optional[Screen]) -> "Transition":
+        """This transition going from from_screen to to_screen; answers itself."""
         self.from_screen = from_screen
         self.to_screen = to_screen
-        self.trigger = trigger or name
-        self.nav_type = nav_type
+        return self
+
+    @property
+    def trigger(self) -> str:
+        """What sets it off; its name while it names none."""
+        return self._trigger or self.name
+
+    @trigger.setter
+    def trigger(self, trigger: str) -> None:
+        self._trigger = trigger
 
 
 class ContentType(UxComponent):
     _semantic_type_name = "ContentType"
 
-    def __init__(
-        self, name: str, sequential_order: int, hierarchy: str = "", graph: Optional[Graph] = None
-    ) -> None:
+    def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
-        self.hierarchy = hierarchy
+        self.hierarchy = ""
         self.key_actions: List[str] = []
 
 
 class NavComponent(UxComponent):
     _semantic_type_name = "NavComponent"
 
-    def __init__(
-        self, name: str, sequential_order: int, ux_type: str = "", graph: Optional[Graph] = None
-    ) -> None:
+    def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
-        self.ux_type = ux_type
+        self.ux_type = ""
         self.destinations: List[Screen] = []
 
 

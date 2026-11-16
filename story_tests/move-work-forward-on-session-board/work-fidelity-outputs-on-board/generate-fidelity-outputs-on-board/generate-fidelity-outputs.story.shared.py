@@ -76,7 +76,7 @@ def _(s):
 
     @s.when("Claude Code asks where story_map's files go")
     def _(world):
-        world.outputs = world.sessions.load(world.project.sessions / ALPHA.name).practices["stories"].fidelities["story_map"].output_paths()
+        world.outputs = world.sessions.load(world.project.sessions / ALPHA.name).practices["stories"].fidelities["story_map"].declared.output_paths()
 
     @s.then("the markdown file is /work/.context/story-map.md")
     def _(world):
@@ -92,7 +92,7 @@ def _(s):
 
     @s.when("Claude Code asks where story_map's files go")
     def _(world):
-        world.outputs = world.sessions.load(world.project.sessions / ALPHA.name).practices["stories"].fidelities["story_map"].output_paths()
+        world.outputs = world.sessions.load(world.project.sessions / ALPHA.name).practices["stories"].fidelities["story_map"].declared.output_paths()
 
     @s.then("the markdown file is /work/docs/stories/.context/story-map.md")
     def _(world):
@@ -108,7 +108,7 @@ def _(s):
 
     @s.when("Claude Code asks where story_map's files go")
     def _(world):
-        world.outputs = world.sessions.load(world.project.sessions / ALPHA.name).practices["stories"].fidelities["story_map"].output_paths()
+        world.outputs = world.sessions.load(world.project.sessions / ALPHA.name).practices["stories"].fidelities["story_map"].declared.output_paths()
 
     @s.then("the drawio file is /work/docs/map/.context/story-map.drawio")
     def _(world):
@@ -124,8 +124,8 @@ def _(s):
 
     @s.when("Claude Code asks where story_map's and scenarios' files go")
     def _(world):
-        world.outputs = world.sessions.load(world.project.sessions / ALPHA.name).practices["stories"].fidelities["story_map"].output_paths()
-        world.scenario_outputs = world.sessions.load(world.project.sessions / ALPHA.name).practices["stories"].fidelities["scenarios"].output_paths()
+        world.outputs = world.sessions.load(world.project.sessions / ALPHA.name).practices["stories"].fidelities["story_map"].declared.output_paths()
+        world.scenario_outputs = world.sessions.load(world.project.sessions / ALPHA.name).practices["stories"].fidelities["scenarios"].declared.output_paths()
 
     @s.then("story_map's markdown is /work/.context/our-map.md and its drawio stays /work/.context/story-map.drawio")
     def _(world):

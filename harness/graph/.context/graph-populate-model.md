@@ -2,7 +2,7 @@
 
 `Graph` reads a working copy into the practices it holds: the `PracticeGuidance` objects it is given, which a session gives from its own practices and a graph no session holds makes with `PracticeCatalogue.create_all`. Each practice holds the graph (`practice.graph`), and the graph keeps every practice's nodes and edges itself, indexed by the practice. The graph names no practice: each practice's `PracticeGuidance` class says what the graph reads from it, and each pattern is a *PracticeGuidance* that makes its `GraphOverlay` once and keeps it as `graph_overlay`; the graph holds one *PatternOverlays* (`graph.applied_patterns`), which makes each pattern its overlays name once, when its overlays are set, so the practices depend on the graph and never the other way round.
 
-A practice reader parses its files with the practice's own model and adds each parsed object (a class, an operation, a story, a spec's observation) to its practice in the graph as the node itself (`practice.reading.in_graph.add(node, ...)`), so a rule reads its measurements from the same object the explorer shows. A node with no parsed object behind it, such as a story's example or a LERN tier file, is a plain `Node` made with `practice.reading.in_graph.add_named`. Edges are recorded with `Graph.link`, on the parent's practice; an edge's place under its parent in the explorer tree comes from `EDGE_ORDER`.
+A practice reader parses its files with the practice's own model and adds each parsed object (a class, an operation, a story, a spec's observation) to its practice in the graph as the node itself (`practice.reading.in_graph.add(node, ...)`), so a rule reads its measurements from the same object the explorer shows. A node with no parsed object behind it, such as a story's example or a LERN tier file, is a plain `Node` made with `practice.reading.in_graph.add_named`. Edges are recorded through the graph's *GraphEdges* (`graph.edges.link`, `.relate`, `.group`), on the parent's practice; an edge's place under its parent in the explorer tree comes from `EDGE_ORDER`.
 
 A load runs in this order (`GraphBuild._read_working_copy` in `graph_build.py`): each practice's reading part `read`s, in the order its `reads_after` needs, and links its nodes to the nodes of the practices it read after; then each applied overlay `read`s; then each practice's `reading.in_graph.rule_run.check()` runs its checks and records each finding as a `Violation` on its node; then each practice `rebuild_tree`s. `save_json` writes the result to `{folder}/.context/graph.json`, and a later `load_working_copy` reads that file back instead of parsing when it is still current.
 
@@ -84,7 +84,7 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 + named(key), of(kind), loaded(kind), part_of(practice)
 	// of opens the practice of that class; loaded answers it only when open; part_of refuses a practice another graph holds
 + choose(roots), roots_by_key, open_chosen(), reopen(saved, folder), hold(saved, folder), take(changes)
-+ forget(files), in_reading_order(), check(), rebuild_trees()
++ rebuild_trees()
 
 ## LoadScope (load_scope.py)
 
@@ -103,11 +103,11 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 ## GraphBuild (graph_build.py)
 
 + load(force, call), refresh(paths, call, checked=None), run(step, call, state=None, saves=False, checked=None), carry_out(order), changed()
-	// a chat's call builds in a worker (WorkerBuild); the worker's answer is taken whole (practices.hold) or as changes (practices.take). HeldAnswer counts each change, so an order names the last answer while the graph still holds it
+	// a chat's call builds in a worker (WorkerBuild); the worker's answer is taken whole (practices.hold) or as changes (WorkerBuild, each practice's restore). HeldAnswer counts each change, so an order names the last answer while the graph still holds it
 
 ## PracticeNodes
 
-+ root, source_root, nodes(type=None), nodes_read_now(type=None), node(node_id), holds(node_id), node_types, add(...), add_named(...), hold(node), take_saved(kept)
++ root, source_root, nodes(type=None), nodes_read_now(type=None), node(node_id), holds(node_id), node_types, add(...), add_named(...), hold(node)
 + edges(kind=None), record(edge_type, parent, child), drop_edges(dropped), rebuild_tree()
 + edge_index: EdgeIndex
 	// the edges by kind, with the kinds' EdgeTypes and the indexes by pair, by parent, and by direct child
@@ -185,7 +185,6 @@ A parsed object a practice reader added, or a plain node read back from `graph.j
 	// the types a practice lists in source_ordered_types follow their source lines
 + serialize(seen, via, stack): ExplorerEntry
 	// the full child list only at the node's home parent; a relationship copy is empty; a node already on the path is a stub
-+ rule_category(): GraphRulesCollection | None
 + release(): None
 
 ## ModelNode
@@ -385,8 +384,6 @@ One rule an overlay checks on several practices' nodes, such as TDD's `one-outco
 + child_count(node, edge_kinds): int
 + children(node, edge_kind): list[Node]
 + node_data(node): dict
-+ scenario_outline(node): bool
-+ scenario_evidence(node): list[str]
 
 ## GraphRulesCollection
 
@@ -451,7 +448,7 @@ practice, node id, and subject are that rule's, its node's, and its practice's. 
 + found_by: GraphRule
 	// the data return_nodes sends and the saved graph keeps
 + is_under(prefixes): bool
-+ in_file(location, file, lines_before, lines_after): Violation
++ in_file(location, file): Violation
 
 ## Explorer answers
 
