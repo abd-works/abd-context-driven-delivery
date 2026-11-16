@@ -10,7 +10,7 @@ from harness.guidance.guidance import PracticeGuidance
 
 from cdd_guidance.practices.stories.model.graph_reading import StoriesReading
 from cdd_guidance.practices.stories.model.sketch.sketch_story_model import SketchStoryModel
-from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, is_story_map_file, preferred_maps
+from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, StoryMapFiles, is_story_map_file, preferred_maps
 from cdd_guidance.practices.stories.model.story_model import StoryNode
 from cdd_guidance.practices.stories.stories_formats import StoriesFormats
 
@@ -94,7 +94,8 @@ class Stories(PracticeGuidance):
         """The story maps and story tests among files, merged into one story map whose nodes name their files as paths
         from project. A story test holds one Story's scenarios in its own language, and the story map says which epic
         that Story sits under, so a story test's scenarios go on the map's Story of the same name, and a story test
-        with no map listed reads the map in its own folder or the nearest one above it. Where one thing is written in
+        or a scenarios markdown file with no map listed reads the map in its own folder or the nearest one above it,
+        which reads that file's scenarios as they are now. Where one thing is written in
         several formats, one is read, code before markdown before a diagram: story tests in code under a project's
         story_tests are the map themselves, their folders its epics and sub-epics (``_story_map_of_code``), and no map
         file is read beside them; otherwise a map's markdown is read before its drawio (``preferred_maps``)."""
@@ -108,7 +109,8 @@ class Stories(PracticeGuidance):
         if from_code.epics:
             return from_code
         maps = [path for path in paths if is_story_map_file(path)]
-        maps = preferred_maps(maps + [found for found in self._maps_beside(tests, project) if found not in maps])
+        scenario_files = [path for path in paths if path.suffix.lower() == ".md" and path.name.endswith(STORY_FILE_SUFFIXES)]
+        maps = preferred_maps(maps + [found for found in self._maps_beside(tests + scenario_files, project) if found not in maps])
         merged = StoryModel()
         for path in maps:
             read = self._story_map_file(path, project, on_file)

@@ -97,6 +97,23 @@ section: body
 *When* the session board reads billing-report
 *Then* the story_map bar shows no report link
 
+#### Scenario: Say a report's saved graph is out of date
+
+> From `story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate-fidelity-outputs.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* checkout-flow's latest story_map report has a graph saved in a shape the graph no longer writes  
+*When* the Person opens the story_map report  
+*Then* the report panel shows the report's text  
+  *And* it says the report's saved graph is out of date in place of its graph's rules
+
+#### Scenario: Read the board with an out-of-date report
+
+> From `story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate-fidelity-outputs.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* checkout-flow's latest story_map report has a graph saved in a shape the graph no longer writes  
+*When* the session board reads checkout-flow  
+*Then* the story_map bar links that report
+
 ## Story: Fix Report Violations
 
 #### Scenario: Fix one violation at its line

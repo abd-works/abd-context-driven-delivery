@@ -1,0 +1,195 @@
+---
+fidelity: [specification]
+artifact: [story-scenarios]
+format: md
+section: body
+---
+
+# Sub-epic: Check CDD Server Health In Chat Bar
+
+> Evidence: recovered on 2026-11-16 from the chat bar's TypeScript story tests, removed with the chat bar's stubbed
+> tests in 8c56ab052 and 5a851e2e5, each scenario's steps as those tests wrote them. Display CDD Version Badge, Set Next
+> CDD Version, Update CDD From Chat Bar and Restart Parts From Chat Bar never had a story test, so they have no
+> scenarios here yet.
+
+## Story: Display Server Health Mark
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| `harness/chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/display-server-health-mark/display_server_health_mark_story.test.ts` (removed) | the story test these scenarios were recovered from |
+| Show the connected mark | observed: pane/hooks/health/server-health-view.tsx draws ✓ for connected; register.test.ts |
+| Show the disconnected mark | observed: server-health-view.tsx draws ✕ in the error colour for disconnected |
+| Show the tools missing mark | observed: server-health-view.tsx draws ! in the warning colour for tools-missing |
+
+#### Scenario: Show the connected mark
+
+*Given* cdd answers server-health.report with 116 tools loaded  
+*When* the Chat Bar draws the active session checkout-flow  
+*Then* a green ✓ sits left of checkout-flow
+
+#### Scenario: Show the disconnected mark
+
+*Given* checkout-flow is the active session  
+*When* plugin:cdd:cdd stops answering and the Chat Bar draws again  
+*Then* a red ✕ sits left of checkout-flow
+
+#### Scenario: Show the tools missing mark
+
+*Given* cdd is connected with 40 tools loaded  
+  *But* server-health.report is not one of them  
+*When* the Chat Bar draws  
+*Then* an amber ! sits left of checkout-flow
+
+## Story: Open Server Health Panel
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| `harness/chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/open-server-health-panel/open_server_health_panel_story.test.ts` (removed) | the story test these scenarios were recovered from |
+| Show every part running on one line | observed: server-health-view.tsx lists MCP host, Tools, Kanban app, Graph app, Hook server; register.test.ts |
+| Pin the panel open | requested: the health mark opens only with the session card |
+| Say what is wrong when cdd is down | observed: server-health-view.tsx headlineOf and the Details, Run install, Reconnect buttons |
+
+#### Scenario: Show every part running on one line
+
+*Given* cdd is connected with 116 tools loaded, the Kanban app on port 8778 and the Graph app on port 5173  
+  *And* the hook server is not running  
+*When* the Person opens the server health panel  
+*Then* the session card opens with the panel on top, MCP host, Tools, Kanban app and Graph app green  
+  *And* Tools reads 116 loaded, Kanban app 8778 and Graph app 5173  
+  *And* Hook server is grey  
+  *And* each part's name shows on hover
+
+#### Scenario: Pin the panel open
+
+*Given* cdd is connected and checkout-flow is the active session  
+*When* the Person presses the server health mark  
+*Then* the session card and its panel stay open after the pointer leaves the mark
+
+#### Scenario: Say what is wrong when cdd is down
+
+*Given* plugin:cdd:cdd does not answer  
+*When* the Person opens the server health panel  
+*Then* the headline reads Disconnected, plugin:cdd:cdd stopped.  
+  *And* Details, Run install and Reconnect are offered
+
+## Story: Reconnect CDD Server
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| `harness/chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/reconnect-cdd-server/reconnect_cdd_server_story.test.ts` (removed) | the story test these scenarios were recovered from |
+| Reconnect and read the session again | observed: server-health-client.ts reconnect; onRestored reads the active session again |
+| Stop after three tries | observed: server-health-client.ts RECONNECT_TRIES is 3 |
+
+#### Scenario: Reconnect and read the session again
+
+*Given* the server health panel says Disconnected  
+*When* the Person reconnects cdd  
+*Then* the mark shows ⟳ and the headline reads Reconnecting, Try 1 of 3.  
+  *And* once cdd answers, the mark shows ✓ and the Chat Bar shows checkout-flow again, as in Display Stage Strip
+
+#### Scenario: Stop after three tries
+
+*Given* the server health panel says Disconnected  
+*When* the Person reconnects cdd and it does not answer three times  
+*Then* after Try 3 of 3 the headline reads Disconnected again  
+  *And* Reconnect and Run install are still offered
+
+## Story: Reinstall CDD Tools
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| `harness/chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/reinstall-cdd-tools/reinstall_cdd_tools_story.test.ts` (removed) | the story test these scenarios were recovered from |
+| Install the missing tools | observed: server-health-client.ts runInstall runs the installer from the mod, because the MCP host may be what is broken |
+| Show why the install failed | observed: server-health-client.ts keeps the installer's last lines when the install fails; server-health-view.tsx detailsOf |
+
+#### Scenario: Install the missing tools
+
+*Given* cdd is connected with 40 tools loaded, server-health.report not one of them  
+  *And* the server health panel is open  
+*When* the Person runs the install  
+*Then* the panel says Installed. Open a new session to pick it up.  
+  *And* the installer that ran is scripts/install.py --ide Claude
+
+#### Scenario: Show why the install failed
+
+*Given* the server health panel says Disconnected  
+*When* the Person runs the install and the installer exits with an error  
+*Then* the panel says Install failed. See the error in Details.  
+*When* the Person opens Details  
+*Then* Details shows the tool server-health.report, the installer's error, the server plugin:cdd:cdd and the fix Press Reconnect. If that fails, press Run install.
+
+## Story: Open App From Health Panel
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| `harness/chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/open-app-from-health-panel/open_app_from_health_panel_story.test.ts` (removed) | the story test these scenarios were recovered from |
+
+#### Scenario: Open the Kanban app while it runs
+
+*Given* the Kanban app is running on port 8778  
+*When* the Person presses the Kanban app on the server health panel  
+*Then* the board page for this repository opens in the browser pane  
+  *And* nothing was started
+
+#### Scenario: Start the Kanban app, then open it, when it is not running
+
+*Given* the Kanban app is not running, and cdd says where it answers  
+*When* the Person presses the Kanban app on the server health panel  
+*Then* the board server starts from the repository's own folder  
+  *And* once it answers, the board page opens in the browser pane
+
+#### Scenario: Open the Graph app while it runs
+
+*Given* the Graph app is running on port 5173  
+*When* the Person presses the Graph app on the server health panel  
+*Then* the Graph app opens in the browser pane, and no start script runs  
+  *And* the browser pane is shown beside the chat
+
+#### Scenario: Start the Graph app, then open it, when it is not running
+
+*Given* the Graph app is not running  
+*When* the Person presses the Graph app on the server health panel  
+*Then* its web server and its app start, with the repository's Python, in that order  
+  *And* the Graph app opens where its start script says it answers  
+  *And* the Person is told it is starting
+
+#### Scenario: Say why the Graph app did not start
+
+*Given* the Graph app is not running, and its app server does not come up  
+*When* the Person presses the Graph app on the server health panel  
+*Then* nothing opens, and the Person is told which script failed and where its log is
+
+#### Scenario: Say why the app did not open when the chat has no browser pane
+
+*Given* the Graph app is running, and the chat has no browser pane, as in a terminal  
+*When* the Person presses the Graph app on the server health panel  
+*Then* nothing opens anywhere else  
+  *And* the Person is told where the app is and why it did not open
+
+#### Scenario: Say why the app did not open when its page does not load in the pane
+
+*Given* the Graph app is running, but its page does not load in the browser pane  
+*When* the Person presses the Graph app on the server health panel  
+*Then* the Person is told the page did not load, in the pane's own words
+
+#### Scenario: Open the Kanban app on the chat’s ticket
+
+*Given* the Kanban app is running, and the chat works on ticket pet-visits  
+*When* the Person presses the Kanban app on the server health panel  
+*Then* the board page opens with the chat's ticket selected
+
+#### Scenario: Open the Graph app on the chat’s session path
+
+*Given* the Graph app is running, and the chat works on ticket pet-visits, whose session works in harness/graph  
+*When* the Person presses the Graph app on the server health panel  
+*Then* the Graph app opens on the session's path

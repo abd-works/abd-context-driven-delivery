@@ -622,19 +622,19 @@ The Chat Bar is the line above the chat prompt for the one session the chat work
 
 ## (E) Check CDD Server Health In Chat Bar
 
-### (S) Chat Bar --> Display Server Health Mark
+### (S) Chat Bar --> [Display Server Health Mark](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check_cdd_server_health_in_chat_bar_story.test.md#story-display-server-health-mark)
 
 Observed: `ServerHealthBandView` draws ✓ connected, ⟳ reconnecting, ✕ disconnected or ! tools missing, left of the session name.
 
-### (S) Person --> Open Server Health Panel
+### (S) Person --> [Open Server Health Panel](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check_cdd_server_health_in_chat_bar_story.test.md#story-open-server-health-panel)
 
 Observed: the panel shows MCP host, Tools with the loaded count, Kanban app, Graph app and Hook server, or a headline saying what is wrong; pressing the mark pins it open.
 
-### (S) Person --> Reconnect CDD Server
+### (S) Person --> [Reconnect CDD Server](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check_cdd_server_health_in_chat_bar_story.test.md#story-reconnect-cdd-server)
 
 Observed: Reconnect retries `cdd` up to three times (`RECONNECT_TRIES`), then reads the active session again.
 
-### (S) Person --> Reinstall CDD Tools
+### (S) Person --> [Reinstall CDD Tools](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check_cdd_server_health_in_chat_bar_story.test.md#story-reinstall-cdd-tools)
 
 Observed: Run install runs the installer and says installing, installed (open a new session) or failed; Details shows the tool, error, server and fix.
 
@@ -650,7 +650,7 @@ Observed (requested 2026-11-14, "/version --> enters the next version to repo co
 
 Observed (requested 2026-11-14, "click opens dialog update and reinstall? use above script if yes"): pressing the version badge asks to update and reinstall; Update and reinstall runs `/harness:installation:install-latest` in the chat (`updateToLatest`, `health/cdd-version-client.ts`), so the chat lists its seven steps and ticks each off as it finishes: pull origin main, stop every app and the hook server, restart the cdd server, install every toolset, ping the server; once the command's turn ends the badge reads the version again; hovering the badge says updating…, up to date, or update failed, and a failure shows why on the failure line. The agent does the same with `/install-latest` (`Installer.install_latest`), which ticks off each step as `scripts/install.py` reports it.
 
-### (S) Person --> Open App From Health Panel
+### (S) Person --> [Open App From Health Panel](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check_cdd_server_health_in_chat_bar_story.test.md#story-open-app-from-health-panel)
 
 Observed: pressing the Kanban app or the Graph app on the server health panel opens it in the browser, and starts it first when it reads not running (requested 2026-11-10, "clicking on app in chat ui starts it if down, opens it if up"). The Kanban app starts as `/board` starts it (`startedBoard` in `board-server.ts`) and opens on this repository's board page; the Graph app starts with the repository's own `scripts/start_graph_web.py` and `scripts/start_graph_app.py` and opens where the second says it answers. A start that fails says why in a toast (`health/open-app-client.ts`).
 

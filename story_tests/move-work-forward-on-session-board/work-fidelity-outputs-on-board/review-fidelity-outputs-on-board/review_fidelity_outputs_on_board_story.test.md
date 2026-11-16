@@ -39,6 +39,25 @@ Intended (the person, 2026-11-12: "this is a filter eg a checkbox on the file vi
 *When* the Person clears the changed-files filter
 *Then* the tabs show src/theirs_spec.py and src/mine_spec.py again
 
+#### Scenario: List only what the ticket's branch changed
+
+> From `story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/list-ticket-files/list_ticket_files_story.test.py`, generated 2026-11-16 from the story test's code.
+
+*Given* the [ticket](../../../.context/kanban-model.md#ticket--card) pet-visits works on the whole [repository](../../../.context/kanban-model.md#repo) on its own branch pet-visits  
+  *And* the repository holds src/theirs_spec.py and its branch added src/mine_spec.py  
+*When* the Person lists pet-visits' bdd behavior files  
+*Then* the files panel lists src/mine_spec.py  
+  *But* src/theirs_spec.py is not listed
+
+#### Scenario: Say in a toast when the list cannot be read
+
+> From `story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/list-ticket-files/list_ticket_files_story.test.py`, generated 2026-11-16 from the story test's code.
+
+*Given* the board shows no ticket named no-such-ticket  
+*When* the Person lists no-such-ticket's story_map files  
+*Then* a toast says cdd fidelity-progress.files failed: TicketNotFoundError: no ticket named 'no-such-ticket' on the board  
+  *But* no panel opens
+
 ## Story: Browse Ticket Files By Practice
 
 Evidence:
@@ -88,6 +107,32 @@ The files panel shows the practice filters and then every file as a tab, both al
 *And* the .context/story-map.md tab shows # Check Out Order
 *And* the drawio tab says it is not generated yet
 
+#### Scenario: Open one tab per format, generated or not
+
+> From `story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/view-fidelity-files/view_fidelity_files_story.test.py`, generated 2026-11-16 from the story test's code.
+
+*Given* checkout-flow's story map is .context/story-map.md and .context/story-map.drawio is not there  
+*When* the Person views checkout-flow's story_map files  
+*Then* the files panel shows the tabs .context/story-map.md and .context/story-map.drawio  
+  *And* the .context/story-map.md tab shows # Check Out Order  
+  *And* the drawio tab says it is not generated yet
+
+#### Scenario: Go back to the list when the last tab closes
+
+> From `story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/view-fidelity-files/view_fidelity_files_story.test.py`, generated 2026-11-16 from the story test's code.
+
+*Given* the tabs .context/story-map.md and .context/story-map.drawio are open  
+*When* the Person closes both tabs  
+*Then* the files panel shows the list
+
+#### Scenario: Refuse a file outside the repository
+
+> From `story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/view-fidelity-files/view_fidelity_files_story.test.py`, generated 2026-11-16 from the story test's code.
+
+*Given* checkout-flow's repository is the project folder  
+*When* a file outside the repository is asked for  
+*Then* the board says ../secrets.txt is not a file in this repository
+
 ## Story: Open Session Files From Details
 
 The latest handoff opening from the details is Display Latest Handoff's (`steer_ticket_sessions_story.test.md`), so it is not repeated here.
@@ -109,3 +154,21 @@ Requested (the person, 2026-11-12: "make this super simple - clicking on a sessi
 *When* the Person opens checkout-flow's workpath from its details
 *Then* the files panel lists the entries of harness/.context
 *But* the root chooser does not open
+
+## Story: Browse Ticket Folder
+
+#### Scenario: Group a stage's files under their folders
+
+> From `story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/browse-ticket-folder/browse_ticket_folder_story.test.py`, generated 2026-11-16 from the story test's code.
+
+*Given* checkout-flow's Discovery files are tests/a.md, tests/deep/b.md, and src/c.ts  
+*When* the Person browses checkout-flow's Discovery files  
+*Then* the files panel groups a.md and deep/b.md under tests/ and c.ts under src/
+
+#### Scenario: Browse the ticket's session folder
+
+> From `story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/browse-ticket-folder/browse_ticket_folder_story.test.py`, generated 2026-11-16 from the story test's code.
+
+*Given* checkout-flow's [session](../../../.context/kanban-model.md#session) folder holds its log and validation-reports/stories-story-map-20261101T100000.md  
+*When* the Person browses checkout-flow's session folder  
+*Then* the files panel lists .sessions/checkout-flow/validation-reports/stories-story-map-20261101T100000.md under its folder
