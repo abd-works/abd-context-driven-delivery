@@ -688,6 +688,33 @@ with description("the board tools") as self:
                     output = self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="markdown", is_chosen=True)
                     expect(output["chosen_formats"]).to(equal(["markdown", "drawio"]))
 
+            with context("in a project whose defaults draw every diagram in drawio and whiteboard"):
+                with before.each:
+                    from harness.installation.context_config import ContextConfig
+
+                    ContextConfig(self.project.root).update(default_formats={"*": ["default", "drawio", "whiteboard"]})
+                    self.chips = self.project.call("ticket.format_choices", ticket="sign-up", fidelities=["stories-story-map"])
+
+                with it("should show the diagram chip chosen, standing for both formats"):
+                    diagram = next(chip for chip in self.chips if chip["label"] == "diagram")
+                    expect((diagram["is_chosen"], diagram["formats"])).to(equal((True, ["drawio", "whiteboard"])))
+
+                with context("that turns the diagram chip off"):
+                    with before.each:
+                        self.chips = self.project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="diagram", is_chosen=False)
+
+                    with it("should leave out both of its formats"):
+                        output = self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="markdown", is_chosen=True)
+                        expect(output["chosen_formats"]).to(equal(["markdown"]))
+
+                    with context("and on again"):
+                        with before.each:
+                            self.chips = self.project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="diagram", is_chosen=True)
+
+                        with it("should choose both of its formats again"):
+                            output = self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="markdown", is_chosen=True)
+                            expect(output["chosen_formats"]).to(equal(["markdown", "drawio", "whiteboard"]))
+
             with context("that turns the markdown chip off"):
                 with before.each:
                     self.chips = self.project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="markdown", is_chosen=False)

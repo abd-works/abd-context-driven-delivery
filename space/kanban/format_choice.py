@@ -17,9 +17,10 @@ class FormatChoice:
     from it, how many of those fidelities offer it and have output in it already, and whether it is chosen for them in
     the session."""
 
-    # A fidelity uses its default format from a group that holds it, else the first format it offers there. A chip shows
-    # what the session keeps chosen (FidelitySessionOutput.chosen_formats), so the chat bar, the board and the Story UI
-    # show one choice.
+    # A fidelity uses from a group the formats the session chose there; with none chosen, the project's default formats
+    # in the group (drawio and whiteboard for a diagram), else its default format when the group holds it, else the
+    # first format it offers there. A chip shows what the session keeps chosen (FidelitySessionOutput.chosen_formats),
+    # so the chat bar, the board and the Story UI show one choice, and a chip standing for several formats does them all.
 
     def __init__(self, label: str, offering: list[tuple[FidelityGuidance, list[str], dict[str, list[FileEntry]]]]) -> None:
         self._label = label
@@ -42,8 +43,9 @@ class FormatChoice:
     @property
     @data_field
     def formats(self) -> list[str]:
-        """The format each fidelity uses from the group, each once: what a command sends when the chip is picked."""
-        return list(dict.fromkeys(self._used(fidelity, in_group) for fidelity, in_group, _ in self._offering))
+        """The formats each fidelity uses from the group, each once: what a command sends when the chip is picked, so
+        the action runs once for each."""
+        return list(dict.fromkeys(name for fidelity, in_group, _ in self._offering for name in self._used(fidelity, in_group)))
 
     @property
     @data_field
@@ -60,14 +62,15 @@ class FormatChoice:
     @property
     @data_field
     def is_chosen(self) -> bool:
-        """Whether every fidelity the chip covers has the format it uses from the group chosen in the session: what the
-        chip shows, the same choice the Story UI's toggles show."""
-        return all(self._used(fidelity, in_group) in fidelity.session_output.chosen_formats for fidelity, in_group, _ in self._offering)
+        """Whether every fidelity the chip covers has a format of the group chosen in the session: what the chip shows,
+        the same choice the Story UI's toggles show."""
+        return all(fidelity.session_output.chosen_from(in_group) for fidelity, in_group, _ in self._offering)
 
     def choose(self, is_chosen: bool) -> None:
-        """Choose, or leave out, the format each fidelity the chip covers uses from the group."""
+        """Choose every format each fidelity the chip covers would use from the group, or leave out every format of the
+        group chosen for it."""
         for fidelity, in_group, _ in self._offering:
-            fidelity.session_output.choose_format(self._used(fidelity, in_group), is_chosen)
+            fidelity.session_output.choose_from(in_group, is_chosen)
 
-    def _used(self, fidelity: FidelityGuidance, in_group: list[str]) -> str:
-        return fidelity.default_format if fidelity.default_format in in_group else in_group[0]
+    def _used(self, fidelity: FidelityGuidance, in_group: list[str]) -> list[str]:
+        return fidelity.session_output.used_from(in_group)
