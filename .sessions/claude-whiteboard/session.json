@@ -10,7 +10,7 @@
       "specification",
       "implementation"
     ],
-    "version": 22
+    "version": 23
   },
   "practices": {
     "ux": {
@@ -37,6 +37,12 @@
         "modules": [
           "markdown",
           "drawio"
+        ],
+        "model": [
+          "python"
+        ],
+        "code": [
+          "python"
         ]
       },
       "enabled": true
@@ -45,7 +51,19 @@
       "enabled": false
     },
     "bdd": {
-      "enabled": true
+      "enabled": true,
+      "formats": {
+        "behavior": [
+          "python"
+        ],
+        "realization": [
+          "markdown",
+          "python"
+        ],
+        "development": [
+          "python"
+        ]
+      }
     }
   }
 }
