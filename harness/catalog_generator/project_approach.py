@@ -17,7 +17,7 @@ from harness.catalog_generator.catalog_examples import CatalogFidelity, ProjectE
 from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.catalog_generator.git_citation import GitCitation
 from harness.installation.json_file import JsonFile
-from harness.process.git import RepoConnectError
+from harness.git.git import RepoConnectError
 
 # Where a project keeps the examples it chose for its approach page.
 _EXAMPLES_MANIFEST = Path(".context") / "project-approach-examples.json"

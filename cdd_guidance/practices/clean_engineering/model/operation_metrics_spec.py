@@ -49,3 +49,12 @@ with description("peer private access in operation bodies"):
     with it("should read an object a parsed operation builds of its own class as its own"):
         body = "copy() { const made = new Account(); made._email = this._email; return made; }"
         expect(_parsed_operation(body).peer_private_access).to(equal(False))
+
+
+with description("descriptive comments in a span"):
+    with it("should read a // comment that carries narrative as a descriptive comment"):
+        expect(SourceText("total = 1  // see also the cart's implementation").has_prose_comment()).to(equal(True))
+
+    with it("should not read a // inside a string literal as a comment"):
+        line = '"  // A view carries the state an operation returned; the implementation unsubscribes.",'
+        expect(SourceText(line).has_prose_comment()).to(equal(False))

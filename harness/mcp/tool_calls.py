@@ -14,16 +14,16 @@ from dataclasses import dataclass
 import anyio
 
 from harness.agent_tools.tool_call import ToolCall
+from harness.installation.data_class import SentValue
 
 logger = logging.getLogger(__name__)
 # How long a result is kept for the caller who was told its call was still running; after that it is stale.
 _UNCOLLECTED_RESULT_SECONDS = 600
 
 Reporter = Callable[[str], None]
-# What a tool hands back: whatever its operation returns. The server sends a string as it is and anything else as JSON.
-ToolAnswer = object
-# What answers a call on its worker thread, with a reporter for its progress.
-ToolWork = Callable[[ToolCall, Reporter], ToolAnswer]
+# What answers a call on its worker thread, with a reporter for its progress: the value its operation returns, which the
+# server sends as data (a string as it is, anything else as JSON).
+ToolWork = Callable[[ToolCall, Reporter], SentValue]
 # The fewest seconds between two progress reports a caller hears; the reports in between are dropped.
 _REPORT_SECONDS = 0.25
 
@@ -114,7 +114,7 @@ class _RunningCall:
         if self._failure is not None:
             logger.error("MCP tool %s failed after its caller stopped waiting", self.call.request.tool, exc_info=self._failure)
 
-    async def answer(self, seconds: float) -> ToolAnswer:
+    async def answer(self, seconds: float) -> SentValue | _StillRunning:
         """The outcome, when the run ends within seconds; otherwise ``_StillRunning``."""
         self.callers_waiting += 1
         try:
@@ -146,7 +146,7 @@ class _ToolCalls:
         self._running: dict[str, _RunningCall] = {}
         self._uncollected: dict[str, _RunningCall] = {}
 
-    async def run(self, call: ToolCall, seconds: float, reporter: Reporter | None) -> ToolAnswer:
+    async def run(self, call: ToolCall, seconds: float, reporter: Reporter | None) -> SentValue | _StillRunning:
         """The work's value for call, run on a worker thread with reporter for its progress, waiting up to seconds. An
         identical call already running is joined, and a kept result is collected, instead of starting the work again."""
         self._forget_stale_results()

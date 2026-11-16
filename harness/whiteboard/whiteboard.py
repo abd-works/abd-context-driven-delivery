@@ -22,7 +22,7 @@ CLEARED = {"__delete__": True}
 """What an update writes for a field the element no longer has, so the store drops it."""
 PIECE_MARK = "~"
 """What joins a block's id to the number of each further piece of it."""
-DrawnField = str | float | bool | list | None
+DrawnField = str | float | bool | list[str | float] | None
 """What one drawn field of an element holds: its words, colour or size, a measure, a flag such as an arrow's dash, or
 the list of an arrow's heads or bends."""
 
@@ -236,7 +236,7 @@ class Arrow(BoardElement):
     head: str = ""
     heads: Optional[List[str]] = None
     """What each end draws, from end first: ``none``, ``arrow`` or ``circle``."""
-    bends: Optional[List[object]] = None
+    bends: Optional[List[str | float]] = None
     """The route the arrow takes: the way it leaves its first element (``h`` or ``v``), then where each middle leg runs,
     the first half from the middle of the element it leaves, the rest from the middle of the one it reaches."""
 
@@ -371,13 +371,6 @@ class Whiteboard:
         sections = {key: held for key, held in self._elements.items() if held.HOLDS_OTHERS}
         rest = {key: held for key, held in self._elements.items() if key not in sections}
         self._elements = {**sections, element.id: element, **rest}
-
-    def put(self, element: BoardElement) -> BoardElement:
-        """Put element in place of the element with its id, where that one lay; a new id is added as ``add`` adds."""
-        if element.id not in self._elements:
-            return self.add(element)
-        self._elements[element.id] = element
-        return element
 
     def draw(self, node: WhiteboardNode) -> None:
         """Add every element node draws."""

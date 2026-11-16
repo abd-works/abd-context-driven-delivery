@@ -264,6 +264,36 @@ class Client:
 """,
                 filename="client.py",
             )
+            self.constructor_function = practice_from_source(
+                """
+(function () {
+  function NavDrawer(root) {
+    this.root = root;
+    this.open = false;
+    this.focused = null;
+  }
+
+  new NavDrawer(document.body);
+})();
+""",
+                lang="javascript",
+                filename="catalog-nav.js",
+            )
+            self.capitalised_function = practice_from_source(
+                """
+(function () {
+  function ResetDrawer() {
+    this.root = null;
+    this.open = false;
+    this.focused = null;
+  }
+
+  ResetDrawer.call(window.drawer);
+})();
+""",
+                lang="javascript",
+                filename="catalog-nav.js",
+            )
 
         with it("should not flag signOut with one property assignment after a post helper"):
             hits = self.sign_out.hits(ce_rule_by_slug("state-change-returns-record-or-named-failure"))
@@ -278,6 +308,13 @@ class Client:
 
         with it("should not flag a Python __init__ that sets several nested fields"):
             expect(self.python_init.hits(ce_rule_by_slug("state-change-returns-record-or-named-failure"))).to(equal([]))
+
+        with it("should not flag a JavaScript constructor function its file builds with new"):
+            expect(self.constructor_function.hits(ce_rule_by_slug("state-change-returns-record-or-named-failure"))).to(equal([]))
+
+        with it("should flag a capitalised JavaScript function its file never builds with new"):
+            hits = self.capitalised_function.hits(ce_rule_by_slug("state-change-returns-record-or-named-failure"))
+            expect(len(hits)).to(equal(1))
 
     with context("use-intention-revealing-names"):
         with before.all:
@@ -352,6 +389,12 @@ export function refreshChatBar($: EngineInterface): void {}
                 for index in range(11)
             )
             header = "from functools import cached_property\n\n\nclass Steps:\n"
+            rule_pair("keep-classes-single-responsibility", header + behaviour, header + held).check()
+
+        with it("should not count a cached property read from functools as public behaviour"):
+            behaviour = "".join(f"    def step{index}(self) -> int:\n        return {index}\n\n" for index in range(11))
+            held = "".join(f"    @functools.cached_property\n    def step{index}(self) -> int:\n        return {index}\n\n" for index in range(11))
+            header = "import functools\n\n\nclass Steps:\n"
             rule_pair("keep-classes-single-responsibility", header + behaviour, header + held).check()
     with context("use-typed-signatures"):
         with before.all:

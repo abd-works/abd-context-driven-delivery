@@ -100,10 +100,10 @@ The base of an annotation that says where install publishes a member, by its `ch
 
 # harness/process
 
-*BackgroundStart* and *PythonInterpreter* start a server without a console window, *RunningProcess* asks about and ends one by its id, *ExclusivePort* is the one port a server may hold, and *Git* runs every git command in one folder with the same time limits and errors.
+*BackgroundStart* and *PythonInterpreter* start a server without a console window, *RunningProcess* asks about and ends one by its id, and *ExclusivePort* is the one port a server may hold.
 
-- **Purpose:** Start, name, and stop the processes the framework keeps, and run git, the same way on Windows and elsewhere.
-- **Seam (terms):** BackgroundStart, PythonInterpreter, ExclusivePort, RunningProcess, ProcessNotStopped, Git, RepoConnectError
+- **Purpose:** Start, name, and stop the processes the framework keeps, the same way on Windows and elsewhere.
+- **Seam (terms):** BackgroundStart, PythonInterpreter, ExclusivePort, RunningProcess, ProcessNotStopped
 - **Dependencies (one-way):** *(none)*
 
 ## BackgroundStart
@@ -166,6 +166,14 @@ One Python on this computer.
 + windowless: str
 + console: str
 ----
+
+# harness/git
+
+*Git* runs every git command in one folder with the same time limits and errors.
+
+- **Purpose:** Run git the same way everywhere, with one set of time limits and one error.
+- **Seam (terms):** Git, RepoConnectError
+- **Dependencies (one-way):** *(none)*
 
 ## Git
 
@@ -1197,7 +1205,7 @@ The *McpHost* is the one cdd server every chat talks to; it keeps one *McpServer
 
 - **Purpose:** Let any chat, in any project, call the operations authors annotate `@mcp`, through one long-running server that keeps each project's toolsets apart.
 - **Seam (terms):** Mcp, LongCall, McpHost, McpServer, McpInstallation, CddHome, ThrottledReporter
-- **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/hooks, harness/process
+- **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/hooks, harness/process, harness/git
 
 ## McpHost
 
@@ -2376,7 +2384,7 @@ This module reports whether CDD is running and answering: *ServerHealth* says wh
 
 - **Purpose:** Show whether CDD is running: which of its servers and apps are up, for the chat's server health band, and whether what an install published answers through the live MCP host, so a broken publication shows up in a report rather than in a failing chat.
 - **Seam (terms):** ServerHealth, CallDiagnostics, DiagnosticsNeedACall, AgentToolsDiagnostics, GuidanceDiagnostics, AgentToolsProbe, GuidanceProbe; the MCP operations `server-health.report`, `agent-tools-diagnostics.agent_tools_diagnostics`, `guidance-diagnostics.guidance_diagnostics`
-- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/hooks, harness/mcp, harness/guidance, harness/graph
+- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/process, harness/git, harness/hooks, harness/mcp, harness/guidance, harness/graph
 
 ## ServerHealth
 
@@ -2581,7 +2589,7 @@ The *Catalog* renders CDD's practices, actions, and approach as pages; a *Catalo
 
 - **Purpose:** Show people what CDD offers, as pages generated from the same guidance the agent follows, for CDD itself or for one project's approach.
 - **Seam (terms):** Catalog, CatalogPractice, CatalogFidelity; the MCP operations `catalog.generate_catalog`, `catalog.apply_brand`, `catalog.generate_project_approach`, `catalog.configure_project_approach`; `python -m harness.catalog_generator.generate_cdd_catalog`
-- **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/markdown, harness/guidance, harness/installation, harness/process, harness/mcp
+- **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/markdown, harness/guidance, harness/installation, harness/git, harness/mcp
 
 ## Catalog
 
@@ -2750,7 +2758,7 @@ A *Repo* is the local clone; a *Branch* is a named branch on it, its *Worktrees*
 
 - **Purpose:** Give every caller one object graph for the clone, its branches and worktrees, and its commits, so version control is never reimplemented with raw git output.
 - **Seam (terms):** Repo, ServedCheckouts, Branch, Worktrees, Worktree, Commit, WorktreeNotRemovedError
-- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/process, harness/hooks, harness/mcp, space/work_state
+- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/git, harness/hooks, harness/mcp, space/work_state
 
 ## Repo
 
@@ -2919,7 +2927,7 @@ A *Session* is one named piece of work in `.sessions/{name}/`; *Sessions* are al
 
 - **Purpose:** Keep the state of one piece of work — where it works, which practices it uses and where they write, the files it works with, the log of what was done, the handoff the next agent resumes from, and the reasons behind hard-to-reverse choices — so any chat or tool can pick the work up from its folder.
 - **Seam (terms):** Sessions, Session, BoardPractices, CallSessions, SessionLog, ChatLog, LogEntry, LogTimestamp, HookLog, PracticeSessionOutput, FidelitySessionOutput, FileManager, FileEntry, FileText, PathOutsideRootsError, ThrowawayProject, SessionDiagnostics
-- **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/hooks, harness/mcp, harness/guidance, harness/graph, harness/diagnostics, harness/catalog_generator, space/work_state, space/repo, cdd_guidance/actions (the session diagnostics probe runs Generate and Validate)
+- **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/hooks, harness/mcp, harness/guidance, harness/graph, harness/diagnostics, harness/catalog_generator, harness/git, space/work_state, space/repo, cdd_guidance/actions (the session diagnostics probe runs Generate and Validate)
 
 ## Sessions
 
@@ -3072,7 +3080,6 @@ One named piece of work in a project, kept in `.sessions/{name}/`. It holds wher
 + << composition >> graph: Graph
 	-> PracticeOutputs.graph
 + << composition >> practice_outputs: PracticeOutputs
-+ << composition >> explorer: SessionExplorer
 + workpath_from_checkout: str
 + title: str
 + scope: str
@@ -3112,7 +3119,7 @@ One named piece of work in a project, kept in `.sessions/{name}/`. It holds wher
 + keep_text(text: str): None
 + choose_overlays(overlays: list[str]): None
 ---<<mixes in>>--> SessionFileTools
----<<mixes in>>--> SessionGraphTools
+---<<mixes in>>--> SessionExplorer
 ---<<mixes in>>--> SessionGuidanceTools
 ---<<mixes in>>--> SessionLogTools
 ---<<mixes in>>--> SessionDecisionTools
@@ -3148,19 +3155,21 @@ Mixed into *Session*: the published tools that list, read, and write a session's
 + file(path: str, rules: bool = False, cross_file: bool = False): SessionFile
 + add_to_chat_context(chat: str, path: str, start_line: int = 0, end_line: int = 0): Chat
 
-## SessionGraphTools
+## SessionExplorer
 
-Mixed into *Session*: the published graph tools a page browsing the session's files calls, each asking its *SessionExplorer*.
+Mixed into *Session*: the published graph tools a page browsing the session's files calls, each reading the session's graph itself.
 
 ----
 + graph_trees(paths: list[str], call: ToolCall | None = None): list[ExplorerEntry]
-	-> SessionExplorer.trees
+	-> SessionPaths.in_project
+	-> Graph.load_files
+	-> GraphExplorer.explorer_trees
 + graph_branch(node_id: str, paths: list[str]): ExplorerEntry | None
-	-> SessionExplorer.branch
+	-> GraphExplorer.explorer_branch
 + graph_node_ranges(node_id: str, paths: list[str]): list[Range]
-	-> SessionExplorer.node_ranges
+	-> NodeSpans.collect
 + graph_members(): list[NodeSource]
-	-> SessionExplorer.members
+	-> GraphExplorer.source_members
 
 ## SessionGuidanceTools
 
@@ -3355,7 +3364,7 @@ Where one fidelity writes in one session: its output paths by format, the files 
 
 The files one fidelity writes in a session (`session_output.written`): where it writes each format under its root, the files it declares there, whether any is there yet, and which the session's branch changed.
 
-+ WrittenFiles(output: FidelitySessionOutput, fidelity: FidelityGuidance)
++ WrittenFiles(output: FidelitySessionOutput)
 ------
 ----
 + output_paths(): dict[str, list[str]]
@@ -3596,9 +3605,7 @@ Show one work session as a unit of delivery and move it through the stages. Its 
 + << composition >> checkout: TicketCheckout
 + << composition >> marks: StageMarks
 + << composition >> tree: TicketTree
-+ << composition >> choices: TicketChoices
 + << composition >> moves: TicketMoves
-+ << composition >> ending: TicketEnding
 + is_main: bool
 + progress: list[FidelityProgress]
 + column: Column
@@ -3623,7 +3630,7 @@ Show one work session as a unit of delivery and move it through the stages. Its 
 + assign_chat(chat: str = ''): Ticket
 	-> TicketCheckout.assign_chat
 + format_choices(fidelities: list[str]): list[FormatChoice]
-	-> TicketChoices.format_choices
+	-> FormatChoice.offered_by
 + close_choices(): LeaveChoices
 + leave_choices(): LeaveChoices
 + open_choices(): OpenChoices
@@ -3642,9 +3649,9 @@ Show one work session as a unit of delivery and move it through the stages. Its 
 + move_to(stage: str, done: bool = False): Ticket | BacklogItem
 	-> TicketMoves.move_to
 + close(leaving: list[str] | None = None): Ticket
-	-> TicketEnding.close
+	-> TicketCheckout.save_work
 + archive(): Ticket
-	-> TicketEnding.archive
+	-> SessionFolder.move_to_archive
 + violations(): Report
 	-> FidelityProgress.report
 	-> Report.from_reports
@@ -3869,7 +3876,7 @@ The rules a validation found broken. With no report it is empty, and it says whe
 
 ## ReportFile
 
-A validation report of one fidelity, saved in a session folder, with the graph the validation checked saved beside it. It knows which of its practice's rules it answers for.
+A validation report of one fidelity, saved in a session folder, with the violations of the graph the validation checked, and the nodes they were found on, saved beside it. It knows which of its practice's rules it answers for.
 
 + ReportFile(file: Path, fidelity: FidelityGuidance)
 ------

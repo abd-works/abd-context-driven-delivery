@@ -42,3 +42,14 @@ The operations that were not tools moved into parts instead:
 - `Board` keeps its six tools, its loader, `column`, and `stage`. Finding and opening tickets (`ticket`, `ticket_called`, `open_ticket`) and starting a new read (`reread`) are its *CardPlacement* (`board.placement`), which now holds the current read; finding a backlog item (`backlog_item`, `backlog_item_called`) is that read, its *BoardReads* (`board.reads`).
 - `Repo` keeps its five published tools, its `of_project` loader, `path_from_top`, and `branch_named`; its refs are its *Refs* (`repo.refs.has`), its uncommitted work and committing it are its *WorkingTree* (`repo.working_tree`: `is_dirty`, `is_merging`, `commit`), and the repository of another checkout is `repo.worktrees.repository_at(folder)`; `MockGit` keeps its branches in its *HeldBranches* (`held.branches`).
 - `Sessions` lists its sessions through its *SessionListing* (`sessions.listing`) and keeps the sessions this process holds in its *HeldSessions* (`sessions.held`); a fidelity's *FidelitySessionOutput* answers for the files it wrote through its *WrittenFiles* (`session_output.written`).
+
+## Version 1 refactoring, round 3: no tool base that only forwards
+
+The third Clean Engineering review found four of the round 2 bases only forwarding: *TicketChoiceTools* to *TicketChoices*, *TicketTreeTools* to *TicketTree*, *TicketEndingTools* to *TicketEnding*, and *SessionGraphTools* to *SessionExplorer*. Moving the declarations onto bases had only moved the forwarding layer; it had not removed it. The harness still publishes a tool only under the name of the class whose bases declare it, so a held part cannot publish under its owner's name, and the forwarding is folded into the part instead:
+
+- *TicketChoices* (`ticket_choices.py`) is the base mixed into `Ticket`, and its tools read the ticket's work and session themselves; `ticket.choices` is gone.
+- *TicketEnding* is the base mixed into `Ticket`, with `close`, `archive`, `delete`, and `to_backlog`; `ticket.ending` is gone, and *TicketMoves* asks the ticket (`ticket.close`, `ticket.to_backlog`).
+- *TicketTreeTools* makes the tree changes itself (`add_child`, `pull_out`, `reassign_parent`); *TicketTree* (`ticket.tree`) keeps where the ticket sits: its ancestors, the parents it may take, whether it is stacked, and its child furthest back.
+- *SessionExplorer* (`session_explorer.py`) is the base mixed into `Session`, whose graph tools read the session's graph themselves; `session.explorer` is gone.
+
+Every published name, argument, description, and data field is unchanged, checked by comparing the toolset's members and data fields before and after.

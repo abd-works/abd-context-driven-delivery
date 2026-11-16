@@ -90,7 +90,7 @@ Read `annotation_kinds` as the one private registry of annotation kinds in harne
 - `Validate.validate` `-> GuidanceAction.run(on, action="validate")` runs once per listed guidance and logs the action · cdd_guidance/actions/validate/validate.py:80
 - `Validate.listed_rules -> _rules_text` `-> PracticeGuidance.checked_rule_collections` the shared rules, then the current fidelity's · cdd_guidance/actions/validate/validate.py:218
 - `PracticeGuidance.checked_rule_collections` `-> FidelityGuidance.rules` <- list[RulesCollection] · harness/guidance/guidance.py:118
-- `Validate.validate` `-> ReportFiles(session, fidelities).save(report, graph_paths)` writes the report in the session · cdd_guidance/actions/validate/validate.py:83
+- `Validate.validate` `-> ReportFiles(session, fidelities).save(ValidationReport.for_saving(), graph)` writes the report in the session, the graph's violations and their nodes beside it (`SavedGraph.violated`), and records the run in `session.folder.violation_history` · cdd_guidance/actions/validate/report_files.py:48
 
 # harness/name
 
@@ -102,7 +102,7 @@ No class of this module acts on another class of the model at run time.
 
 # harness/process
 
-Starting, watching, stopping and talking to other processes. Every class here is a leaf: it calls nothing else in the model, and the daemons, the repository and the catalog rely on it.
+Starting, watching, and stopping other processes. Every class here is a leaf: it calls nothing else in the model, and the daemons and the scripts rely on it.
 
 ## RunningProcess
 
@@ -135,14 +135,18 @@ Starting, watching, stopping and talking to other processes. Every class here is
   - `HookDaemon` `-> BackgroundStart().run` starts the hook server · harness/hooks/hook_daemon.py:229
   - `scripts/start.py` `-> BackgroundStart().creationflags / .startupinfo` · scripts/start.py:184
 
+# harness/git
+
+Running git. Its class is a leaf: it calls nothing else in the model, and the repository, the catalog, the pinned runtime, and the release rely on it.
+
 ## Git
 
 The one way the code runs git, with a timeout and no stdin.
 
 - `Git.run`
-  - `-> raise RepoConnectError` when git fails or times out · harness/process/git.py:39
+  - `-> raise RepoConnectError` when git fails or times out · harness/git/git.py:41
 - `Git._executable`
-  - `-> raise RepoConnectError` when git is not installed · harness/process/git.py:58
+  - `-> raise RepoConnectError` when git is not installed · harness/git/git.py:65
 - **Used by**
   - `Repo.git` `-> Git(root)` every branch, commit and worktree operation of a repository · space/repo/repo.py:122
   - `CddHome` `-> Git(folder).run / .succeeds` checks the remote and copies the pinned runtime · harness/mcp/cdd_home.py:213, :216, :227

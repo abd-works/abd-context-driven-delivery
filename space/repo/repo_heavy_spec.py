@@ -22,7 +22,7 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet
 from harness.mcp.mcp_server import McpHost
-from harness.process.git import Git, RepoConnectError
+from harness.git.git import Git, RepoConnectError
 from space.repo.latest_release import LatestRelease
 from space.repo.repo import Repo
 

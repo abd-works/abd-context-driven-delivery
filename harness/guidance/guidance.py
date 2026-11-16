@@ -39,7 +39,6 @@ from harness.markdown import (
     markdown_collection,
 )
 from harness.markdown.format import Format
-from harness.markdown.markdown import MarkdownOwner
 
 if TYPE_CHECKING:
     from harness.hooks.hook_server import HookPayload
@@ -197,7 +196,7 @@ class Guidance:
 @hosted_only
 @toolset_collection
 class GuidanceCollection(MarkdownCollection, Guidance):
-    def __init__(self, entries: dict[str, Guidance] | None = None, parent: MarkdownOwner | None = None) -> None:
+    def __init__(self, entries: dict[str, Guidance] | None = None, parent: Guidance | None = None) -> None:
         MarkdownCollection.__init__(self, entries, parent=parent)
         Guidance.__init__(self)
         self.current: Guidance | None = None

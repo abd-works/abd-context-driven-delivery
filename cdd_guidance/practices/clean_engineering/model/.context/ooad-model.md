@@ -262,6 +262,8 @@ The relationship arrow a property stands for (`property.py`), which the property
 	// the type a reader gets back: its return type
 + is_static: bool
 + is_classmethod: bool
++ is_constructor_function: bool
+	// a JavaScript constructor function: a capitalised `function` that assigns `this.` fields and its file calls with `new`; like a constructor, it reports no unrecorded state change
 + line: int | None
 + end_line: int | None
 + line_count: int | None
@@ -312,6 +314,7 @@ A span of source in any language, an operation body or a class, and what the rul
 + calls_io_and_domain(): bool
 + mutates_without_record(): bool
 + has_prose_comment(hash_only: bool = False): bool
+	// a `#` line, or a `//` comment outside every string literal, that narrates
 + prototype_swap(start_line: int): dict
 + line_of(index: int): int
 	// the line, counted from 1, holding the character at index
@@ -374,6 +377,7 @@ A Python function read from its syntax tree, and what the rules measure in it.
 ----
 + control_flow_depth(): int
 + decorated(name: str): bool
+	// by its bare name or read from its module: `@cached_property` and `@functools.cached_property` alike
 + parameters(): list[str]
 + callees(): list[str]
 + body(source: str): CodeBody
@@ -900,6 +904,8 @@ The brace-language reading mixed into BraceCleanEngineeringModel: reads TypeScri
 + parse(text: str): CFamilyParse
 	// fills the model's modules with the language's own parts and returns the model
 	// the preamble, each class with its doc comment, stereotypes, and the bases its heritage clause names, each field with its line, then the top-level functions
+	// a TypeScript constructor parameter with an access modifier (`private readonly page: BoardPage`) is a field as well
+	// a capitalised top-level function that assigns `this.` fields and the file calls with `new` is a constructor function
 	// every operation records its line and its end line
 	-> ClassHead.above
 	-> ModuleSourceFacts.take_lines

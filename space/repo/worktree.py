@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.hooks.hook_daemon import HookDaemon
-from harness.process.git import RepoConnectError
+from harness.git.git import RepoConnectError
 
 if TYPE_CHECKING:
     from space.repo.repo import Branch, Repo, ServedCheckouts

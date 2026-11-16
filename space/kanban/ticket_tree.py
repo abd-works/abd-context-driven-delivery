@@ -1,4 +1,4 @@
-"""Where a ticket sits among its parent and its children, and the changes a person makes to that tree."""
+"""Where a ticket sits among its parent and its children, and the failures a change to that tree refuses with."""
 
 from __future__ import annotations
 
@@ -33,8 +33,8 @@ class ParentLoopError(ValueError):
 
 class TicketTree:
     """*TicketTree* is where one ticket sits among the tickets its session names as parent and child: its ancestors,
-    the tickets it may become a child of, whether it shows stacked inside its parent's card, and the changes a person
-    makes to the tree, each kept in its session and committed on main and pushed."""
+    the tickets it may become a child of, whether it shows stacked inside its parent's card, and the stage of its child
+    furthest back. The changes a person makes to the tree are the ticket's own tools (*TicketTreeTools*)."""
 
     def __init__(self, ticket: Ticket) -> None:
         self._ticket = ticket
@@ -80,26 +80,3 @@ class TicketTree:
         """A parent moves only with its children, so a person cannot move it on its own."""
         if self._ticket.children:
             raise ParentMovesWithChildrenError(self._ticket.name)
-
-    def add_child(self, title: str) -> Ticket:
-        """A child ticket titled title, a story In progress in Discovery, working where the ticket works."""
-        ticket = self._ticket
-        return ticket.board.placement.ticket_of(ticket.session.hierarchy.open_child(title, scope="story"))
-
-    def pull_out(self) -> Ticket:
-        """The ticket moving on the board as a card of its own, still keeping its parent."""
-        ticket = self._ticket
-        if ticket.parent is None:
-            raise NotAChildError(ticket.name)
-        ticket.session.hierarchy.mark_pulled_out()
-        ticket.forget_reads()
-        return ticket
-
-    def reassign_parent(self, parent: Ticket | None) -> Ticket:
-        """The ticket with parent as its parent, or none; either way no longer pulled out."""
-        ticket = self._ticket
-        if parent is not None and not self.can_be_child_of(parent):
-            raise ParentLoopError(ticket.name, parent.name)
-        ticket.session.hierarchy.set_parent(parent.session if parent is not None else None)
-        ticket.forget_reads()
-        return ticket

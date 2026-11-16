@@ -163,10 +163,16 @@ def violations_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[st
     return {(slug, node.node_id) for node in _practice_nodes(graph, practice, scope) for slug in node.rules.failed_slugs}
 
 
+# The rules a load of named files alone cannot judge: conforms-to-schema runs only on a graph of the whole working copy,
+# because links across practices cannot be judged on part of it, and a class copying another's fields is found only
+# when the file holding the other class is read too, such as the sample's CustomerException beside
+# AccountCredentialsException.
+_JUDGED_ON_THE_WHOLE = frozenset({"conforms-to-schema", "do-not-invent-parallel-object-models"})
+
+
 def judged_alone(hits: set[tuple[str, str]]) -> set[tuple[str, str]]:
-    """The hits a load of named files alone can find too: conforms-to-schema runs only on a graph of the whole working
-    copy, because links across practices cannot be judged on part of it."""
-    return {hit for hit in hits if hit[0] != "conforms-to-schema"}
+    """The hits a load of named files alone can find too."""
+    return {hit for hit in hits if hit[0] not in _JUDGED_ON_THE_WHOLE}
 
 
 def edges_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[str, str, str]]:
@@ -950,7 +956,7 @@ with description("a graph"):
                 )
 
             with it("should find the same clean engineering rule violations"):
-                expect(violations_in(self.edited, "clean_engineering", self.scope)).to(
+                expect(judged_alone(violations_in(self.edited, "clean_engineering", self.scope))).to(
                     equal(judged_alone(violations_in(self.full, "clean_engineering", self.scope)))
                 )
 

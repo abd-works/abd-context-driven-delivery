@@ -153,11 +153,12 @@ with description("Clean Engineering reading code into its graph"):
                 }
             )
 
+        # `private board: Board` in the constructor is a field the client holds, so each operation also reads it.
         with it("should record that an operation invokes the member of its name it calls on another object"):
-            expect(_targets(self.fixture, "invokes", "select")).to(equal(["select"]))
+            expect(_targets(self.fixture, "invokes", "select")).to(equal(["board", "select"]))
 
         with it("should record that an operation invokes the property it reads"):
-            expect(_targets(self.fixture, "invokes", "opensLeft")).to(equal(["shown"]))
+            expect(_targets(self.fixture, "invokes", "opensLeft")).to(equal(["board", "shown"]))
 
     with context("with a class whose heritage clause holds braced type arguments"):
         with before.all:

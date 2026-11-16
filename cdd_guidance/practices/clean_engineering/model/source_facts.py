@@ -146,7 +146,8 @@ class OperationSourceFacts:
         """Each fact by the name the operation keeps it under."""
         operation = self._operation
         span = self.span
-        # A constructor sets up the object it builds and cannot return a record, so it is not a state change to report.
+        # A constructor, or a JavaScript constructor function, sets up the object it builds and cannot return a record,
+        # so it is not a state change to report.
         return {
             "body_fingerprint": operation.body_fingerprint or BodyFingerprint(span.text).of_span(),
             "io_and_domain_callees": self._delegates_io_and_domain(),
@@ -154,7 +155,8 @@ class OperationSourceFacts:
             "raises_on_empty": operation.name not in _BUILDING_NAMES and span.failures.raises_on_empty(),
             "exception_without_message": span.failures.exception_without_message(),
             "generic_exception_message": span.failures.generic_exception_message(),
-            "mutates_without_record": not operation.is_constructor and span.mutates_without_record(),
+            "mutates_without_record": not (operation.is_constructor or operation.is_constructor_function)
+            and span.mutates_without_record(),
             "prose_comment": span.has_prose_comment(),
             **CardBullets(span.text).lines(),
         }

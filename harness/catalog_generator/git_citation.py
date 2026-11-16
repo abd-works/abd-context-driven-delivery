@@ -5,7 +5,7 @@ import inspect
 from collections.abc import Callable
 from pathlib import Path
 
-from harness.process.git import Git
+from harness.git.git import Git
 
 # A function, method, or class whose definition a citation points at, by its source file and lines.
 type CitedDefinition = Callable[..., object] | type

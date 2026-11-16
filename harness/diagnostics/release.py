@@ -9,8 +9,8 @@ from pathlib import Path
 
 from harness.diagnostics.test_runs import RunOutcome, TestRunRecord, TestTier
 from harness.installation.data_class import data_field
-from harness.process.git import Git, RepoConnectError
-from harness.process.github_cli import GitHubCli
+from harness.git.git import Git, RepoConnectError
+from harness.diagnostics.github_cli import GitHubCli
 
 PYPROJECT = "pyproject.toml"
 TAG_PATTERN = "v*"

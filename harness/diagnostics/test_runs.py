@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Callable, Iterator
 
 from harness.installation.data_class import data_field
-from harness.process.git import Git, RepoConnectError
+from harness.git.git import Git, RepoConnectError
 from harness.process.process import BackgroundStart, PythonInterpreter, RunningProcess
 
 TEST_SCRIPT = Path("scripts") / "test.ps1"

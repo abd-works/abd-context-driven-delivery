@@ -13,7 +13,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from harness.process.git import RepoConnectError
+from harness.git.git import RepoConnectError
 from space.repo.mock_repo import MockGit, MockOrigin, MockRepo
 from space.session.session_saves import SessionSaves
 

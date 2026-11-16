@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 
 from harness.installation.data_class import data_field
-from harness.process.git import RepoConnectError
+from harness.git.git import RepoConnectError
 from space.repo.repo import Repo
 from space.session.progress_cache import PROGRESS_CACHE_FILE
 

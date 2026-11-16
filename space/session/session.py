@@ -10,7 +10,6 @@ from harness.agent_tools.agent_tools import noSessionLog, subAgent, tool_subject
 from harness.agent_tools.tool_call import ToolCall
 from harness.annotations.annotation import hosted_only
 from harness.chat.chat import Chat
-from harness.graph.explorer import ExplorerEntry, NodeSource
 from harness.graph.graph import Graph
 from harness.graph.pattern_overlays import PatternOverlays
 from harness.installation.data_class import data_field, identity, language_adapter
@@ -21,7 +20,6 @@ from space.repo.repo import Repo
 from space.session.chat_injections import ChatInjections
 from space.session.decision_records import FORMAT_FILE, DecisionRecords
 from space.session.file_manager import FileEntry, FileText
-from space.session.file_range import Range
 from space.session.handoffs import HANDOFF_FORMAT_FILE, Handoffs
 from space.session.idea_file import IdeaFile
 from space.session.practice_session_output import PracticeSessionOutput
@@ -127,42 +125,6 @@ class SessionFileTools:
         added_to = Chat.load(chat)
         added_to.mailbox.queue("fill", text)
         return added_to
-
-
-@hosted_only
-class SessionGraphTools:
-    """The tools a page browsing a session's files calls to read its graph: each asks the session's *SessionExplorer*."""
-
-    explorer: SessionExplorer
-
-    @long_call
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def graph_trees(self, paths: list[str], call: ToolCall | None = None) -> list[ExplorerEntry]:
-        """Return the practice trees of this session's graph read from exactly the files at paths, each named from the project as the Files app lists them, and holding only the nodes read from them: each practice's root with the entries below it, closed, as graph.explorer_trees answers them. The files the page lists are the one filter: the graph reads them, its story tests in code and in markdown alike, and keeps what they hold. No paths, or none in the project, answer no tree."""
-        return self.explorer.trees(paths, call)
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def graph_branch(self, node_id: str, paths: list[str]) -> ExplorerEntry | None:
-        """Return the node node_id's entry in this session's graph, kept to the nodes read from the files at paths as graph_trees keeps them, with the entries below it, closed; None for an id the graph no longer holds."""
-        return self.explorer.branch(node_id, paths)
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def graph_node_ranges(self, node_id: str, paths: list[str]) -> list[Range]:
-        """Return the lines the node node_id covers, one range for each file, each named from the project, so a viewer opens every file there. A node read from lines of a file answers that one range; a node read from no file's lines, such as a module that is a folder, answers each file the nodes below it come from, among paths, spanning the lines they cover; none for an id the graph no longer holds."""
-        return self.explorer.node_ranges(node_id, paths)
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def graph_members(self) -> list[NodeSource]:
-        """Return every class, operation, and property this session's graph holds, each with its text and the class it belongs to, so a viewer opens a call in place even when it reaches another file. Read after graph_trees, which reads the files the page lists."""
-        return self.explorer.members()
 
 
 @hosted_only
@@ -354,7 +316,7 @@ class SessionDecisionTools:
 @identity("session_file")
 @language_adapter(language="typescript")
 @agent_toolset
-class Session(SessionFileTools, SessionGraphTools, SessionGuidanceTools, SessionLogTools, SessionDecisionTools):
+class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionLogTools, SessionDecisionTools):
     """One named piece of work in a project, kept in ``.sessions/{name}/``. It holds where it works, the practices it
     uses, and its title; its log, files, handoffs, decision records, and chat injections are objects of their own, made
     with it. It holds the *Sessions* that loaded it and their repository, which keep one Session for each session
@@ -391,7 +353,6 @@ class Session(SessionFileTools, SessionGraphTools, SessionGuidanceTools, Session
         self.chat_injections = ChatInjections(self)
         # The practices and graph this session keeps between calls, made when first asked for.
         self.practice_outputs = PracticeOutputs(self)
-        self.explorer = SessionExplorer(self)
 
     @classmethod
     @tool_subject

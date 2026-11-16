@@ -141,6 +141,9 @@ class Operation(InvariantHolder, OoadNode):
         # Published as an MCP tool, such as Python's `@mcp` or `@agent_tool`: its parameters are the tool's published
         # argument schema, which the tool's callers fill by name.
         self.published_as_tool = False
+        # A JavaScript constructor function: a capitalised `function` that assigns `this.` fields and its file calls
+        # with `new`. Like a constructor, it builds its object and has no record to return.
+        self.is_constructor_function = False
 
     def _start_source(self) -> None:
         """Where it sits in its file and what its body says, empty until its parser reads the file."""
@@ -272,6 +275,7 @@ class Operation(InvariantHolder, OoadNode):
         self.is_private = source.is_private
         self.is_classmethod = source.is_classmethod
         self.published_as_tool = source.published_as_tool
+        self.is_constructor_function = source.is_constructor_function
 
     def _copy_measures_from(self, source: "Operation") -> None:
         """Copy the measures the parser took of source's body."""

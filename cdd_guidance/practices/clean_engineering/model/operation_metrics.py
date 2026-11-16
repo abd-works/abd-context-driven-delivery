@@ -221,9 +221,16 @@ class SourceText:
             stripped = line.strip()
             if stripped.startswith("#") and _NARRATIVE_COMMENT.search(stripped):
                 return True
-            if not hash_only and "//" in stripped and _NARRATIVE_COMMENT.search(stripped):
+            if not hash_only and _NARRATIVE_COMMENT.search(self._slash_comment(stripped)):
                 return True
         return False
+
+    def _slash_comment(self, line: str) -> str:
+        """The `//` comment that ends a line; none when the line's only `//` sits inside a string, such as a line of
+        generated code a Python string holds."""
+        code = _STRING.sub(lambda found: " " * len(found.group(0)), line)
+        start = code.find("//")
+        return line[start:] if start >= 0 else ""
 
     def prototype_swap(self, start_line: int) -> dict:
         """The code that swaps an object's class and the line it is on, when the text does; empty when it does not."""
@@ -482,8 +489,14 @@ class PythonFunctionBody:
         return self._deepest_block(self._node.body, 0)
 
     def decorated(self, name: str) -> bool:
-        """True when a decorator with no arguments of that name marks the function: `@property`, `@classmethod`."""
-        return any(isinstance(decorator, ast.Name) and decorator.id == name for decorator in self._node.decorator_list)
+        """True when a decorator with no arguments of that name marks the function: `@property`, `@classmethod`, or one
+        read from its module, such as `@functools.cached_property`."""
+        return any(self._names(decorator, name) for decorator in self._node.decorator_list)
+
+    def _names(self, decorator: ast.expr, name: str) -> bool:
+        if isinstance(decorator, ast.Attribute):
+            return isinstance(decorator.value, ast.Name) and decorator.attr == name
+        return isinstance(decorator, ast.Name) and decorator.id == name
 
     def parameters(self) -> list[str]:
         """Each parameter as `name: type`, without the receiver Python hands a method first: `self`, or the class as

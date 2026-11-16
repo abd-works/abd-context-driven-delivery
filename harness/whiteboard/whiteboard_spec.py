@@ -10,21 +10,23 @@ from harness.whiteboard.whiteboard import StoreWrite, UnreadableBoard
 class CardNode(WhiteboardNode):
     """A node a diagram placed at a box, drawn as one card."""
 
-    def __init__(self, element_id: str, box) -> None:
+    def __init__(self, element_id: str, box, text: str = "Submit Order") -> None:
         self.element_id = element_id
         self.box = Box(*box)
+        self.text = text
 
     def board_box(self):
         return self.box
 
     def board_elements(self):
-        return [self.board_shape(self.element_id, kind="rounded", color="yellow", size="small", text="Submit Order")]
+        return [self.board_shape(self.element_id, kind="rounded", color="yellow", size="small", text=self.text)]
 
 
-def board_of_two_cards() -> Whiteboard:
+def board_of_two_cards(first_box: tuple[float, float, float, float] = (20, 40, 60, 50), second_text: str = "Submit Order") -> Whiteboard:
+    """Two cards joined by an arrow; the first drawn at first_box, the second with second_text."""
     board = Whiteboard("Orders")
-    board.draw(CardNode("story.a1", (20, 40, 60, 50)))
-    board.draw(CardNode("story.b2", (100, 40, 60, 50)))
+    board.draw(CardNode("story.a1", first_box))
+    board.draw(CardNode("story.b2", (100, 40, 60, 50), second_text))
     board.add(BoardElement.arrow("arrow.ab", from_id="story.a1", to_id="story.b2", from_side="right", to_side="left", label="then"))
     return board
 
@@ -109,8 +111,7 @@ with description("a whiteboard") as self:
 
     with context("with a previous board on which a person moved a shape"):
         with before.each:
-            previous = board_of_two_cards()
-            previous.put(previous.element("story.a1").placed_at(Box(500, 300, 60, 50)))
+            previous = board_of_two_cards(first_box=(500, 300, 60, 50))
             board = board_of_two_cards()
             board.draw(CardNode("story.c3", (180, 40, 60, 50)))
             self.board = board.keep_places(previous)
@@ -126,12 +127,7 @@ with description("a whiteboard") as self:
             previous = board_of_two_cards()
             previous.draw(CardNode("story.gone", (260, 40, 60, 50)))
             previous.versions = {"meta": 3, "story.b2": 7, "story.gone": 9}
-            board = board_of_two_cards()
-            moved = board.element("story.b2")
-            board.put(BoardElement.shape(
-                moved.id, moved.box, kind=moved.kind, color=moved.color,
-                size=moved.size, text="Pay Order",
-            ))
+            board = board_of_two_cards(second_text="Pay Order")
             board.draw(CardNode("story.new", (180, 40, 60, 50)))
             self.board = board
             self.writes = board.writes(previous)

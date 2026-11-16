@@ -12,7 +12,7 @@ from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.mcp.cdd_home import CddHome
-from harness.process.git import Git
+from harness.git.git import Git
 from space.repo.repos import CddConfig, FolderIsAWorktreeError, PathIsAFileError, NotAReposFolderError, Repos, RepoNameRequiredError
 
 

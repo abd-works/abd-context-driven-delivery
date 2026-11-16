@@ -31,14 +31,36 @@ class _NoGit:
         raise MockGitUsed(args)
 
 
-class HeldOrigin:
-    """The origin a *MockGit* keeps: each branch pushed to it, with its files and commit messages as they were pushed."""
+class HeldTrees:
+    """Branches a *MockGit* keeps, each with the content of every file it committed and its commit messages: the
+    branches themselves (*HeldBranches*) and their copies on origin (*HeldOrigin*)."""
 
     def __init__(self, held: MockGit) -> None:
         self._held = held
-        self.is_present = False
+        # Each branch's committed files, path from the top to the hash of its content, and its commit messages, newest last.
         self.trees: dict[str, dict[str, str]] = {}
         self.logs: dict[str, list[str]] = {}
+
+    def has(self, name: str) -> bool:
+        return name in self.trees
+
+    def _take(self, name: str, source: HeldTrees, source_name: str) -> None:
+        """name holds, from now on, a copy of the files and commit messages source holds for source_name."""
+        self.trees[name] = dict(source.trees.get(source_name, {}))
+        self.logs[name] = list(source.logs.get(source_name, []))
+
+    def _drop(self, name: str) -> bool:
+        """Forget the branch called name; whether it was held."""
+        self.logs.pop(name, None)
+        return self.trees.pop(name, None) is not None
+
+
+class HeldOrigin(HeldTrees):
+    """The origin a *MockGit* keeps: each branch pushed to it, with its files and commit messages as they were pushed."""
+
+    def __init__(self, held: MockGit) -> None:
+        super().__init__(held)
+        self.is_present = False
 
     def add(self) -> None:
         """An origin holding main as it is."""
@@ -49,32 +71,24 @@ class HeldOrigin:
     def push(self, branch: str) -> None:
         held = self._held
         with held.lock:
-            self.trees[branch] = dict(held.branches.trees.get(branch, {}))
-            self.logs[branch] = list(held.branches.logs.get(branch, []))
+            self._take(branch, held.branches, branch)
             held.calls.append(("push", branch))
 
     def needs_push(self, branch: str) -> bool:
         return self.logs.get(branch) != self._held.branches.logs.get(branch, [])
 
-    def has_branch(self, name: str) -> bool:
-        return name in self.trees
-
     def delete_branch(self, name: str) -> None:
         with self._held.lock:
-            if self.trees.pop(name, None) is not None:
-                self.logs.pop(name, None)
+            if self._drop(name):
                 self._held.calls.append(("delete_origin_branch", name))
 
 
-class HeldBranches:
-    """The branches a *MockGit* keeps: for each, the content of every file it committed and its commit messages, and
-    what it held when it was made; and the commands that change them, each recorded in the *MockGit*'s ``calls``."""
+class HeldBranches(HeldTrees):
+    """The branches a *MockGit* keeps, and what each held when it was made; and the commands that change them, each
+    recorded in the *MockGit*'s ``calls``."""
 
     def __init__(self, held: MockGit) -> None:
-        self._held = held
-        # Each branch's committed files, path from the top to the hash of its content, and its commit messages, newest last.
-        self.trees: dict[str, dict[str, str]] = {}
-        self.logs: dict[str, list[str]] = {}
+        super().__init__(held)
         # The files a branch held when it was made, which tell what it changed since.
         self.forks: dict[str, dict[str, str]] = {}
 
@@ -82,13 +96,8 @@ class HeldBranches:
         """A branch made from start_point, the main clone's checked-out branch when none is named."""
         held = self._held
         with held.lock:
-            start = start_point or held.branch_of(held.root)
-            self.trees[name] = dict(self.trees.get(start, {}))
-            self.logs[name] = list(self.logs.get(start, []))
+            self._take(name, self, start_point or held.branch_of(held.root))
             self.forks[name] = dict(self.trees[name])
-
-    def has(self, name: str) -> bool:
-        return name in self.trees
 
     def changed_since_fork(self, branch: str) -> list[str]:
         """The files branch committed since it was made from the default branch."""
@@ -111,8 +120,7 @@ class HeldBranches:
 
     def delete(self, name: str) -> None:
         with self._held.lock:
-            self.trees.pop(name, None)
-            self.logs.pop(name, None)
+            self._drop(name)
             self._held.calls.append(("delete_branch", name))
             self._held.origin.delete_branch(name)
 
@@ -193,17 +201,17 @@ class MockRepo(Repo):
     """Our Repo for one checkout of a *MockGit*: every question and command answered from memory, none by git."""
 
     def __init__(self, root: Path, held: MockGit) -> None:
+        self._held = held
         self.root = Path(root).resolve()
         self.git = _NoGit()
-        self.worktrees = MockWorktrees(self, held)
-        self.refs = MockRefs(self, held)
-        self.working_tree = MockWorkingTree(self, held)
+        self.worktrees = MockWorktrees(self, SERVED_CHECKOUTS)
+        self.refs = MockRefs(self)
+        self.working_tree = MockWorkingTree(self)
         self.origin = MockOrigin(self)
         self.merges = MockMerges(self)
         self.publishing = Publishing(self)
         self._from_top: dict[Path, str] = {}
         self.writing_index = held.lock
-        self._held = held
 
     @property
     def held(self) -> MockGit:
@@ -227,7 +235,7 @@ class MockRepo(Repo):
         return self if self.root == self._held.root else SERVED_CHECKOUTS.at(self._held.root)
 
     def branch_named(self, name: str) -> Branch:
-        return MockBranch(self, name, self._held)
+        return MockBranch(self, name)
 
     @property
     def branches(self) -> list[Branch]:
@@ -263,15 +271,14 @@ class MockRepo(Repo):
 class MockRefs(Refs):
     """Our Refs on a *MockRepo*: a branch's ref is there when the *MockGit* or its origin holds the branch."""
 
-    def __init__(self, repo: MockRepo, held: MockGit) -> None:
-        super().__init__(repo)
-        self._held = held
+    _repo: MockRepo
 
     def has(self, ref: str) -> bool:
+        held = self._repo.held
         if ref.startswith("refs/heads/"):
-            return self._held.branches.has(ref.removeprefix("refs/heads/"))
+            return held.branches.has(ref.removeprefix("refs/heads/"))
         if ref.startswith("refs/remotes/origin/"):
-            return self._held.origin.has_branch(ref.removeprefix("refs/remotes/origin/"))
+            return held.origin.has(ref.removeprefix("refs/remotes/origin/"))
         return False
 
 
@@ -279,9 +286,7 @@ class MockWorkingTree(WorkingTree):
     """Our WorkingTree on a *MockRepo*: the files in the checkout compared with what its branch committed in the
     *MockGit*."""
 
-    def __init__(self, repo: MockRepo, held: MockGit) -> None:
-        super().__init__(repo)
-        self._held = held
+    _repo: MockRepo
 
     def is_dirty(self, path: str | Path | None = None, *, untracked: bool = True) -> bool:
         return bool(self.uncommitted(Path(path) if path is not None else None))
@@ -293,17 +298,19 @@ class MockWorkingTree(WorkingTree):
     def commit(self, paths: list[str], message: str, *, untracked: bool = False) -> str:
         """Commit the changes under paths on the branch this checkout has checked out. Without untracked, only files the
         branch already holds are committed."""
-        with self._held.lock:
-            tree = self._held.branches.trees.get(self._held.branch_of(self._repo.root), {})
+        held = self._repo.held
+        with held.lock:
+            tree = held.branches.trees.get(held.branch_of(self._repo.root), {})
             changed = {path: digest for folder in paths for path, digest in self._files(Path(folder)).items() if tree.get(path) != digest and (untracked or path in tree)}
             if changed:
-                self._held.branches.record_commit(self._held.branch_of(self._repo.root), changed, message)
+                held.branches.record_commit(held.branch_of(self._repo.root), changed, message)
         return self._repo.current_commit
 
     def uncommitted(self, under: Path | None = None) -> list[str]:
         """The files in this checkout, or under a folder of it, whose content its branch has not committed, as paths
         from the checkout's top; the files .gitignore names are not counted."""
-        committed = self._held.branches.trees.get(self._held.branch_of(self._repo.root), {})
+        held = self._repo.held
+        committed = held.branches.trees.get(held.branch_of(self._repo.root), {})
         return sorted(path for path, digest in self._files(under or self._repo.root).items() if committed.get(path) != digest)
 
     def _files(self, under: Path) -> dict[str, str]:
@@ -375,11 +382,9 @@ class MockMerges(Merges):
 class MockBranch(Branch):
     """Our Branch on a *MockRepo*: what git would hold for it, read and changed in the *MockGit*."""
 
-    __slots__ = ("_held",)
+    __slots__ = ()
 
-    def __init__(self, repo: MockRepo, name: str, held: MockGit) -> None:
-        super().__init__(repo, name)
-        self._held = held
+    _repo: MockRepo
 
     @property
     def start_point(self) -> str:
@@ -388,26 +393,28 @@ class MockBranch(Branch):
     def changed_files(self) -> list[str]:
         if not self.exists:
             return []
-        committed = self._held.branches.changed_since_fork(self.name)
+        committed = self._repo.held.branches.changed_since_fork(self.name)
         if self._repo.current_branch != self:
             return committed
         return sorted({*committed, *self._repo.working_tree.uncommitted()})
 
     def check_out(self) -> Branch:
-        self._held.check_out(self._repo.root, self.name)
+        self._repo.held.check_out(self._repo.root, self.name)
         return self
 
     def delete(self, unmerged: bool = False) -> None:
-        self._held.branches.delete(self.name)
+        self._repo.held.branches.delete(self.name)
 
 
 class MockWorktrees(Worktrees):
     """Our Worktrees on a *MockRepo*: each worktree a real folder beside the main clone, so a chat can work in it, and
     the branch it has checked out kept in the *MockGit*."""
 
-    def __init__(self, repo: MockRepo, held: MockGit) -> None:
-        super().__init__(repo, SERVED_CHECKOUTS)
-        self._held = held
+    _repo: MockRepo
+
+    @property
+    def _held(self) -> MockGit:
+        return self._repo.held
 
     def __iter__(self) -> Iterator[Worktree]:
         for path, branch in self._held.worktrees():

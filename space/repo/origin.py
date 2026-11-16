@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from harness.process.git import RepoConnectError
+from harness.git.git import RepoConnectError
 
 if TYPE_CHECKING:
     from space.repo.repo import Branch, Repo

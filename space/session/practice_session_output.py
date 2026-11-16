@@ -264,10 +264,10 @@ class FidelitySessionOutput:
         self._practice = practice
         self._fidelity = fidelity
         # The formats it uses from each group of the formats it writes, and its validation reports in the session.
-        self.formats = FidelityFormats(self, fidelity)
+        self.formats = FidelityFormats(self)
         self.validation_reports = ValidationReports(self)
         # The files it writes in the session: where each format goes, which are there, and which the branch changed.
-        self.written = WrittenFiles(self, fidelity)
+        self.written = WrittenFiles(self)
 
     @classmethod
     @tool_subject
@@ -378,9 +378,12 @@ class WrittenFiles:
     """The files one fidelity writes in a session: where it writes each format under its root, the files it declares
     there, whether any is there yet, and which the session's branch changed, so a page can show only those."""
 
-    def __init__(self, output: FidelitySessionOutput, fidelity: FidelityGuidance) -> None:
+    def __init__(self, output: FidelitySessionOutput) -> None:
         self._output = output
-        self._fidelity = fidelity
+
+    @property
+    def _fidelity(self) -> FidelityGuidance:
+        return self._output.fidelity
 
     @property
     def _session(self) -> Session:
@@ -556,9 +559,12 @@ class FidelityFormats:
     """The formats one fidelity uses from each group of the formats it writes in a session, such as its diagram formats:
     those chosen there, else those choosing the group would choose."""
 
-    def __init__(self, output: FidelitySessionOutput, fidelity: FidelityGuidance) -> None:
+    def __init__(self, output: FidelitySessionOutput) -> None:
         self._output = output
-        self._fidelity = fidelity
+
+    @property
+    def _fidelity(self) -> FidelityGuidance:
+        return self._output.fidelity
 
     def used_from(self, group: list[str]) -> list[str]:
         """The formats this fidelity uses from a group of the formats it writes, such as its diagram formats: those

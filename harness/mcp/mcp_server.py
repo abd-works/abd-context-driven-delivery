@@ -29,7 +29,7 @@ from harness.agent_tools.chat_pointer import ChatPointer
 from harness.process.claude_chat_process import ClaudeChatProcess, is_desktop_spare
 from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall, ToolRequest
 from harness.installation.destination import ServerInstallation, SkippedTool, SkippedTools
-from harness.installation.data_class import data_of
+from harness.installation.data_class import SentValue, data_of
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.installer import SERVER_CHANNELS
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
@@ -41,7 +41,7 @@ from harness.mcp.mcp_address import CHAT_HEADER, CHAT_PROCESS_HEADER, MCP_PATH, 
 from harness.mcp.mcp_daemon import McpDaemon, ServedCheckout
 from harness.mcp.server_hooks import CddServerHooks
 from harness.mcp.restart_gate import _RestartGate
-from harness.mcp.tool_calls import ThrottledReporter, ToolAnswer, _StillRunning, _ToolCalls
+from harness.mcp.tool_calls import ThrottledReporter, _StillRunning, _ToolCalls
 
 logger = logging.getLogger(__name__)
 BUILTIN_PING_TOOL = "cdd.ping"
@@ -652,7 +652,7 @@ class McpHost:
         running = process.session_id if process is not None else ""
         return ChatPointer.from_request(running or headers.get(CHAT_HEADER) or "")
 
-    async def _answer_off_loop(self, call: ToolCall) -> object:
+    async def _answer_off_loop(self, call: ToolCall) -> SentValue:
         """Run the call on a worker thread, because a synchronous call on the event loop holds every other chat's
         requests. A call still running at its time limit keeps running and is reported as still running, not failed.
         ``cdd.ping`` answers on the event loop itself, so it says whether the loop answers, whatever the worker threads
@@ -807,7 +807,7 @@ class McpHost:
         if session is not None:
             session.log.by(call.request.chat).failure(failure, tool=call.request.tool)
 
-    def _content_blocks(self, answer: ToolAnswer) -> list[types.TextContent]:
+    def _content_blocks(self, answer: SentValue) -> list[types.TextContent]:
         types = self._mcp_types()
         text = answer if isinstance(answer, str) else json.dumps(data_of(answer))
         return [types.TextContent(type="text", text=text)]

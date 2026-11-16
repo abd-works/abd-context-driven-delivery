@@ -18,7 +18,7 @@ from harness.installation.files import command
 from harness.installation.json_file import JsonFile
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_annotations import long_call, mcp
-from harness.process.git import Git
+from harness.git.git import Git
 from space.repo.repo import Repo
 
 # The checkout serving these tools: its .gitignore is what a new repository ignores, and its install script installs CDD.
