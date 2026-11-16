@@ -5,8 +5,10 @@ import type { ChatBarClient } from './chat-bar-client'
 // button to the line's end is moved left by the difference, counted in cells, rather than cut off at the edge.
 
 // The canvas's glyph for each format group; a group with none shows its name.
-export const FORMAT_GLYPHS: Record<string, string> = { markdown: 'M↓', diagram: '◇', code: '</>', canvas: '▦' }
-export const formatGlyphOf = (label: string): string => FORMAT_GLYPHS[label] ?? label
+// A format that is a group of its own, such as BDD's call graphs in realization, gets a glyph here; one not listed shows
+// its first and last letter, as an overlay does, so a long name never widens the chat bar.
+export const FORMAT_GLYPHS: Record<string, string> = { markdown: 'M↓', diagram: '◇', code: '</>', canvas: '▦', realization: '⇢' }
+export const formatGlyphOf = (label: string): string => FORMAT_GLYPHS[label] ?? `${label.charAt(0).toUpperCase()}${label.slice(-1)}`
 
 const GAP = 1
 const HEALTH_MARK = 1
