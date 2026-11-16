@@ -101,21 +101,28 @@ A destination whose annotation may name what it installs: `@skill("name")`, `@co
 *BackgroundStart* and *PythonInterpreter* start a server without a console window, *StoppableProcess* ends one by its id, *ExclusivePort* is the one port a server may hold, and *Git* runs every git command in one folder with the same time limits and errors.
 
 - **Purpose:** Start, name, and stop the processes the framework keeps, and run git, the same way on Windows and elsewhere.
-- **Seam (terms):** BackgroundStart, PythonInterpreter, ExclusivePort, ListeningPorts, RunningProcess, StoppableProcess, ProcessNotStopped, Git, RepoConnectError
+- **Seam (terms):** BackgroundStart, Wmi, OutsideJobStartFailed, PythonInterpreter, ExclusivePort, ListeningPorts, RunningProcess, StoppableProcess, ProcessNotStopped, Git, RepoConnectError
 - **Dependencies (one-way):** *(none)*
 
 ## BackgroundStart
 
-How a background server is started so it keeps running without a console window.
+How a background server is started so it keeps running without a console window, past the chat that started it: it breaks away from the starter's job, or, where the job refuses, WMI creates it outside every job.
 
-+ BackgroundStart(breaks_away: bool = True)
++ BackgroundStart(log: IO[str] | None = None, wmi: Wmi | None = None)
 ------
-+ breaks_away: bool
++ log: IO[str] | None
 + creationflags: int
 + startupinfo: subprocess.STARTUPINFO | None
 ----
-+ inside_starters_job(): BackgroundStart
-+ run(command: list[str], cwd: str | Path, env: dict[str, str], log: IO[str]): subprocess.Popen
++ run(command: list[str], cwd: str | Path, env: dict[str, str]): RunningProcess
+
+## Wmi
+
+Windows Management Instrumentation through PowerShell: Win32_Process.Create makes a process outside every job of the caller's.
+
++ Wmi()
+----
++ create(command_line: str, folder: str, env: dict[str, str]): int
 
 ## RunningProcess
 

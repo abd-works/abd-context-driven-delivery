@@ -214,11 +214,7 @@ class TestRunner:
         command = [PythonInterpreter().windowless, "-m", "harness.diagnostics.test_runs", tier.value, str(checkout), str(record.folder)]
         with record.log_path(tier).open("w", encoding="utf-8") as log:
             env = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[2]), "PYTHONIOENCODING": "utf-8"}
-            try:
-                return BackgroundStart(log).run(command, checkout, env).pid
-            except PermissionError:
-                # A Windows job that refuses to let its children leave, such as the one a chat's tools run in.
-                return BackgroundStart(log).inside_starters_job().run(command, checkout, env).pid
+            return BackgroundStart(log).run(command, checkout, env).pid
 
     def run(self, tier: TestTier, checkout: Path) -> tuple[int, str]:
         """Run the tier in checkout to its end, its output going to this process's output as well."""
