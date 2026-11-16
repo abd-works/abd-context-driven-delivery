@@ -4,8 +4,8 @@ Scenarios: story_tests/review-generated-work-in-file-viewer/explore-graph-in-fil
 explore_graph_in_files_app_story.test.md. Map: .context/story-map.md, (E) Explore Graph In Files App.
 
 Steps reach the session only through the namespace a tier hands them (`world.Ticket`), so the domain spec and the cdd
-tools spec replay the same steps. Only the scenarios built so far are here: Expand Practice Tree In Files App and Open
-Calls Across Files In Files App. Covered by the Files app's own specs (`harness/files_app/app/files/files-graph.spec.ts`),
+tools spec replay the same steps. Only the scenarios built so far are here: Expand Practice Tree In Files App, Follow
+Relationships Under Node In Files App, Apply Pattern Overlays In Files App and Open Calls Across Files In Files App. Covered by the Files app's own specs (`harness/files_app/app/files/files-graph.spec.ts`),
 not here, because only the page shows them: each node's kind mark, the load steps while the graph reads, and a call
 opened in place in the source view. The Thens below check what the session answers the page for each.
 """
@@ -15,7 +15,16 @@ from __future__ import annotations
 from expects import equal, expect
 
 from space.kanban.story_test import SharedStories
-from space.session.graph_view_examples import BOARD_CODE, LISTED, node_id_of, seed_checkout_flow_with_graph_files, session_of
+from space.session.graph_view_examples import BOARD_CODE, LISTED, TICKET_CODE, node_id_of, seed_checkout_flow_with_graph_files, session_of
+from space.session.graph_view_rule_examples import (
+    CHECKOUT_FLOW_WITH_DDD,
+    LERN,
+    LERN_DOMAIN_TIER_RULES,
+    LISTED_WITH_DOMAIN_TIER,
+    TICKET_DOMAIN_TIER,
+    rule_slugs_on,
+    seed_checkout_flow_with_both_tickets,
+)
 
 shared_stories = SharedStories("Explore Graph In Files App")
 
@@ -78,6 +87,48 @@ def _(s):
     @s.then("board.py opens beside ticket.py, at Board.reread")
     def _(world):
         expect(world.lines).to(equal([(BOARD_CODE, 2, 3)]))
+
+
+# --- Apply Pattern Overlays In Files App -------------------------------------------------------------------------
+
+
+@shared_stories.scenario("Apply Pattern Overlays In Files App", "The graph view shows the overlays the session chose")
+def _(s):
+    @s.given("checkout-flow's session has the LERN overlay chosen on the chat bar")
+    def _(world):
+        seed_checkout_flow_with_both_tickets(world)
+        world.Ticket.load(CHECKOUT_FLOW_WITH_DDD.name).choose_overlays(overlays=[LERN])
+
+    @s.when("the Person switches the file bar to the graph view")
+    def _(world):
+        world.on_typescript = rule_slugs_on(world, "Ticket", TICKET_DOMAIN_TIER, LISTED_WITH_DOMAIN_TIER)
+        world.on_python = rule_slugs_on(world, "Ticket", TICKET_CODE, LISTED_WITH_DOMAIN_TIER)
+
+    @s.then("Ticket in ticket.ts carries LERN's Domain tier rules among its rules, but Ticket in ticket.py carries none")
+    def _(world):
+        expect((world.on_typescript.issuperset(LERN_DOMAIN_TIER_RULES), world.on_python & set(LERN_DOMAIN_TIER_RULES))).to(equal((True, set())))
+
+
+@shared_stories.scenario("Apply Pattern Overlays In Files App", "An overlay taken off leaves the graph view")
+def _(s):
+    @s.given("the Files app shows checkout-flow's graph with LERN applied")
+    def _(world):
+        seed_checkout_flow_with_both_tickets(world)
+        world.Ticket.load(CHECKOUT_FLOW_WITH_DDD.name).choose_overlays(overlays=[LERN])
+        world.before = rule_slugs_on(world, "Ticket", TICKET_DOMAIN_TIER, LISTED_WITH_DOMAIN_TIER)
+
+    @s.when("the Person takes LERN off the session")
+    def _(world):
+        world.chips = world.data_of(world.Ticket.load(CHECKOUT_FLOW_WITH_DDD.name).choose_overlays(overlays=[]))
+
+    @s.then("the LERN rules on Ticket in ticket.ts leave the graph view")
+    def _(world):
+        after = rule_slugs_on(world, "Ticket", TICKET_DOMAIN_TIER, LISTED_WITH_DOMAIN_TIER)
+        expect((world.before.issuperset(LERN_DOMAIN_TIER_RULES), after & set(LERN_DOMAIN_TIER_RULES))).to(equal((True, set())))
+
+    @s.then("the chat bar's LERN chip shows off")
+    def _(world):
+        expect({chip["pattern"]: chip["is_chosen"] for chip in world.chips}[LERN]).to(equal(False))
 
 
 # --- Open Calls Across Files In Files App -------------------------------------------------------------------------

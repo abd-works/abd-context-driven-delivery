@@ -111,9 +111,10 @@ class GraphRulesCollection(RulesCollection):
 
     @classmethod
     def from_node(cls, node: Any) -> GraphRulesCollection:
-        """The rules node's schema gives its type, each with its prose, the check that runs it when one exists, and
-        whether that check applies to node; node says which checks it has and which apply to it."""
-        schema = node.schema
+        """The rules node's schema gives its type, with the overlays that add their rules to node, each with its prose,
+        the check that runs it when one exists, and whether that check applies to node; node says which checks it has and
+        which apply to it."""
+        schema = node.schema.for_node(node)
         checks = node.rule_checks()
         applying = node.applying_rule_types()
         entries: dict[str, GraphRule] = {}
