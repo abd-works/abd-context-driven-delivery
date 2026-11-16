@@ -11,17 +11,19 @@
       "specification",
       "implementation"
     ],
-    "version": 78
+    "version": 79
   },
   "practices": {
     "stories": {
       "formats": {
         "story_map": [
           "drawio",
-          "whiteboard"
+          "whiteboard",
+          "markdown"
         ],
         "scenarios": [
-          "python"
+          "python",
+          "markdown"
         ],
         "acceptance_tests": [
           "python"
@@ -40,7 +42,8 @@
       "formats": {
         "modules": [
           "drawio",
-          "whiteboard"
+          "whiteboard",
+          "markdown"
         ],
         "code": [
           "python"
@@ -48,7 +51,8 @@
         "model": [
           "python",
           "drawio",
-          "whiteboard"
+          "whiteboard",
+          "markdown"
         ]
       },
       "enabled": true
