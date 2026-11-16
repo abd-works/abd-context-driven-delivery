@@ -1,7 +1,8 @@
 """Which class definition each class reference names: the class of that name in the file its module is, or, when that
 file re-exports the name, the class the re-export names in turn. A module named from the source root (`a.b`, `'a/b'`)
 is looked for there first, then under each folder above the file that names it, as an import root such as a fixture's
-folder or a package folder on the import path would make it."""
+folder or a package folder on the import path would make it. A script's import of a generated language adapter
+(`@cdd/...`) names the Python class the adapter is generated from."""
 
 from __future__ import annotations
 
@@ -27,7 +28,11 @@ class ImportedClasses:
         """The class definition reference, made by the file at importer, names; none when it names no class of ours."""
         if reference.name == STAR:
             return None
-        return self._resolved(reference, importer, set())
+        for name in reference.names():
+            found = self._resolved(reference._replace(name=name), importer, set())
+            if found is not None:
+                return found
+        return None
 
     def _resolved(self, reference: ClassReference, importer: str, seen: set[str]) -> Optional["Node"]:
         for file in self._files_of(reference, importer):

@@ -13,9 +13,10 @@ if TYPE_CHECKING:
     from harness.graph.rule_context import RuleCheckContext
 
 _MAX_SIBLING_IMPORTS = 8
-_MAX_PUBLIC_SHARE = 0.4
-# A module of one or two classes cannot keep 60% private while exposing anything, so it is not measured.
-_MIN_MEASURED_CLASSES = 3
+# The share of a module's methods its seam may hold: the public methods of the classes that leave it.
+_MAX_SEAM_SHARE = 0.35
+# A module of fewer methods than this cannot hide much behind any interface, so it is not measured.
+_MIN_MEASURED_METHODS = 10
 _FOLDER_TYPES = ("Module", "Package")
 
 
@@ -79,17 +80,16 @@ class LowCoupling(ProductionCodeRule):
 
 
 class DeepModule(PracticeGraphRule):
-    """At most 40% of a module's classes are public: classes that leave the module.
+    """At most 35% of a module's methods are its seam: the public methods of the classes that leave the module.
 
-    A module is a folder with a module card, measured over its whole subtree: its own files, the packages under it, and
-    the modules nested in it, each of which is measured again over its own subtree. A class definition is public when
-    it leaves the subtree: production code outside the subtree imports it or reaches it as ``module.Class``, each
-    import resolved to the one definition it names; a package registers it with a framework registry; or the installer
-    publishes it as a toolset. Use inside the subtree, package to package or nested module to parent, keeps it private,
-    and a name starting with ``_`` keeps it private. Tests, test support, examples, and test doubles neither count as
-    classes nor make a class public. The build keeps the counts and the public classes, by ``file:Name`` with the
-    routes that reach each, on each module (``subtree_class_count``, ``public_classes``), counting the callers outside a
-    validated scope too; the operation counts beside them are for reading, not judged.
+    A module's interface is the methods callers can call; a deep module hides much behind a small interface. A module
+    is a folder with a module card, measured over its whole subtree: its own files, the packages under it, and the
+    modules nested in it, each of which is measured again over its own subtree. The build records, on each module, its
+    methods (``operations_total``: every operation of its classes and every module function of its production files)
+    and its seam methods (``seam_operations``: the public methods, constructors aside, of the classes that leave the
+    subtree, named from outside it, registered with a framework registry, or published as a toolset). The rule compares
+    the two with its limit; a module of fewer than 10 methods is not measured. The class counts beside them
+    (``public_class_count``, ``subtree_class_count``) are context in the message, never a verdict.
     """
 
     slug = "deep-module"
@@ -98,17 +98,19 @@ class DeepModule(PracticeGraphRule):
     def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
         hits: list[tuple[str, str]] = []
         for module in context.nodes("Module"):
-            count = module.get_fact("subtree_class_count") or 0
-            public = list(module.get_fact("public_classes") or {})
-            if count >= _MIN_MEASURED_CLASSES and len(public) > self._allowed_public(count):
-                hits.append((module.node_id, self._exposure_message(module, public, count)))
+            methods = module.get_fact("operations_total") or 0
+            seam = module.get_fact("seam_operations") or 0
+            if methods >= _MIN_MEASURED_METHODS and seam > self._allowed_seam(methods):
+                hits.append((module.node_id, self._exposure_message(module, seam, methods)))
         return hits
 
-    def _exposure_message(self, module: "Node", public: list[str], class_count: int) -> str:
+    def _exposure_message(self, module: "Node", seam: int, methods: int) -> str:
+        public = list(module.get_fact("public_classes") or {})
         return (
-            f"Module '{module.name}' exposes {len(public)} of {class_count} classes to other modules, more "
-            f"than the {self._allowed_public(class_count)} that {round(100 * _MAX_PUBLIC_SHARE)}% allows: "
-            f"{', '.join(self._named(public))}. Keep most classes behind a few public ones."
+            f"Module '{module.name}' exposes {seam} of its {methods} methods to other modules, more than the "
+            f"{self._allowed_seam(methods)} that {round(100 * _MAX_SEAM_SHARE)}% allows; they are the public methods of "
+            f"its {len(public)} public classes of {module.get_fact('subtree_class_count') or 0}: "
+            f"{', '.join(self._named(public))}. Hide more behind fewer public methods."
         )
 
     def _named(self, public: list[str]) -> list[str]:
@@ -116,9 +118,9 @@ class DeepModule(PracticeGraphRule):
         names = [key.rsplit(":", 1)[-1] for key in public]
         return [name if names.count(name) == 1 else key for name, key in zip(names, public)]
 
-    def _allowed_public(self, classes: int) -> int:
-        """How many of a module's classes may be public: 40% of them, rounded down, since a count over it fails."""
-        return int(round(_MAX_PUBLIC_SHARE * classes, 9))
+    def _allowed_seam(self, methods: int) -> int:
+        """How many of a module's methods its seam may hold: 35% of them, rounded down, since a count over it fails."""
+        return int(round(_MAX_SEAM_SHARE * methods, 9))
 
 
 class ExtensionsLiveWithTheDomain(ProductionCodeRule):

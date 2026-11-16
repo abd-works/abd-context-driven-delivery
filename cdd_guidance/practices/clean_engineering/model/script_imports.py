@@ -25,6 +25,11 @@ _ALIAS = re.compile(r"\s+as\s+")
 _NAME = re.compile(r"[\w$]+")
 # What every name a star import brings in is recorded as.
 STAR = "*"
+# The path alias a script imports the generated language adapters by. Each adapter module mirrors the Python module it is
+# generated from (`@cdd/space/kanban/fidelity-progress` for `space/kanban/fidelity_progress.py`), and sends a class's
+# data as `{Class}Data`.
+LANGUAGE_ADAPTER_ALIAS = "@cdd/"
+_ADAPTER_DATA_SUFFIX = "Data"
 # The file an import names, after the path its import reads as: a Python module or package, or a script file.
 _IMPORTED_FILE_ENDINGS = (".py", "/__init__.py", "", ".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.tsx", "/index.js")
 
@@ -39,15 +44,27 @@ def imported_files(target: str) -> List[str]:
 class ClassReference(NamedTuple):
     """<<Value Object>> A class name a file imports, re-exports, or reaches as `module.Class`, with the module it names
     it from: a path from the source root without its extension (`harness/graph/graph`), or a package's name as the
-    import spells it when the import leaves the source root (`typing`, `react`, `@cdd/x`). A star import's name is
+    import spells it when the import leaves the source root (`typing`, `react`, a language adapter's `@cdd/x`). A star import's name is
     ``STAR``. Saved with the graph as ``[source, name]``."""
 
     source: str
     name: str
 
     def files(self) -> List[str]:
-        """The files the module it names it from may be, from the source root."""
+        """The files the module it names it from may be, from the source root; for a language adapter, the Python
+        module the adapter is generated from."""
+        if self._through_adapter():
+            return imported_files(self.source.removeprefix(LANGUAGE_ADAPTER_ALIAS).replace("-", "_"))
         return imported_files(self.source)
+
+    def names(self) -> List[str]:
+        """The class names it may name: its own, and for a language adapter's `{Class}Data`, the class it sends."""
+        if self._through_adapter() and self.name.endswith(_ADAPTER_DATA_SUFFIX) and self.name != _ADAPTER_DATA_SUFFIX:
+            return [self.name, self.name.removesuffix(_ADAPTER_DATA_SUFFIX)]
+        return [self.name]
+
+    def _through_adapter(self) -> bool:
+        return self.source.startswith(LANGUAGE_ADAPTER_ALIAS)
 
 
 class ScriptImports:

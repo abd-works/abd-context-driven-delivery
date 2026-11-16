@@ -183,7 +183,23 @@ class CFamilyParse:
         class_spans = self._class_spans()
         functions = [self._function_operation(match) for match in self._outside(_TOP_FN_RE.finditer(self._text), class_spans)]
         arrows = [self._arrow_operation(match) for match in self._outside(_TOP_ARROW_RE.finditer(self._text), class_spans)]
-        return sorted([operation for operation in functions if operation is not None] + arrows, key=lambda operation: operation.line)
+        found = sorted([operation for operation in functions if operation is not None] + arrows, key=lambda operation: operation.line)
+        for operation in found:
+            operation.is_private = not self._is_exported(operation.name)
+        return found
+
+    def _is_exported(self, name: str) -> bool:
+        """True for a top-level function its file exports: `export function name`, `export const name =`, `export
+        default function name`, a name in an `export { ... }` list, or a CommonJS `module.exports` naming it. Any other
+        is private to its file."""
+        word = re.escape(name)
+        exported = (
+            rf"\bexport\s+(?:default\s+)?(?:async\s+)?(?:function|const)\s+{word}\b",
+            rf"\bexport\s*\{{[^}}]*\b{word}\b[^}}]*\}}",
+            rf"\bmodule\.exports\b[^;]*\b{word}\b",
+            rf"\bexports\.{word}\s*=",
+        )
+        return any(re.search(pattern, self._text) for pattern in exported)
 
     def _outside(self, matches: Iterator[re.Match], class_spans: list[tuple[int, int]]) -> list[re.Match]:
         """The matches that start outside every class body: a class's methods are no top-level functions."""

@@ -1,82 +1,88 @@
 # Deep-module ratios
 
-How many of each module's classes leave it (public) and how many stay inside it (private), against the Clean Engineering rule `deep-module`, with the module's methods beside them.
+How much of each module's interface other modules can call, against the Clean Engineering rule `deep-module`, with the module's class exposure beside it as context.
+
+**Why methods:** a module's interface is the methods its callers can call. A deep module hides much behind a small interface (John Ousterhout, *A Philosophy of Software Design*): many methods inside, few of them reachable from outside. So `deep-module` judges the share of a module's methods that sit on its seam. How many of its classes are public is a secondary signal: it shows how much of the module's design is exposed, but one public class with forty methods is a wider interface than four public classes with two each, so the class share never fails a module on its own.
 
 **The rule:**
 - A **module** is a folder that owns `.context/module-context.md`. A folder without one is a package and rolls up into the module above it. In `cdd_guidance` that is one module per direct child and one per practice.
 - A module is measured over its **whole subtree**: its own files, its nested packages and its nested modules. A nested module also gets a row of its own, over its own subtree.
-- Classes are counted as **definitions**: two classes of the same name in different files are two classes. Total, public and private all count definitions, and private is total minus public.
+- **Methods:** every operation of the module's counted classes, getters, setters and constructors included, and every module-level function of its production files. Methods are counted where they are declared: a class that inherits its interface, such as a practice or builder deriving from `PracticeGuidance`, adds those methods to the module that declares them.
+- **Public methods:** public by visibility. In Python, a name without a leading `_` (so `__init__` and other dunders are not public); in TypeScript, JavaScript and Java, one not marked `private` and not starting with `#`, and for a module-level function, one its file exports. A constructor is never public. **Private methods** are the rest.
+- **Seam methods:** the public methods on the module's public classes. These are the methods the module exposes to other modules. Module functions are on no class, so they are never seam methods.
+- **Threshold:** at most **35%** of a module's methods may be seam methods. "Allowed seam methods" is 35% of the methods, rounded down. A module with more seam methods than that fails. A module with fewer than 10 methods is not measured.
+
+**The classes (context only):**
+- Classes are counted as **definitions**: two classes of the same name in different files are two classes. Private classes are the total minus the public ones.
 - A class is **public** when it leaves the module's subtree by one of three routes:
-  - **named**: production code outside the subtree imports it, re-exports it, or reaches it as `module.Class`. Each import is resolved to the one definition it names, through the module it is imported from, following a package's `__init__.py` or a script's `index.ts` that re-exports it. An import of a standard or third-party module, a path alias such as `@cdd/*`, a function, constant or type alias, or a star import names no class.
+  - **named**: production code outside the subtree imports it, re-exports it, or reaches it as `module.Class`. Each import is resolved to the one definition it names, through the module it is imported from, following a package's `__init__.py` or a script's `index.ts` that re-exports it. A script's import of a generated language adapter (`@cdd/...`) names the Python module the adapter is generated from, and `{Class}Data` names the class it sends. An import of a standard or third-party module, a function, constant or type alias, or a star import names no class.
   - **registered**: a package registers it with a framework registry (`PRACTICE_CATALOGUE`, `ACTION_CATALOGUE`, `REGISTERED_PATTERNS`).
   - **published**: the installer publishes it as a toolset (`@agent_toolset`, or a member published as a tool), unless it is `@hosted_only` (its host is the toolset) or `@noDeploy`.
 - Use inside the subtree does not count. A name starting with `_` is never public. Tests, fixtures, examples (`examples` and `_examples` folders) and test doubles (`mock_*`, `fake_*`) don't count either way, and neither do private records with no behaviour.
-- **Threshold:** at most **40%** of a module's classes may be public. "Allowed" is 40% of the total, rounded down. A module with more public classes than that fails.
-- Modules with fewer than 3 classes are not measured.
+- "How public classes are reached" counts each public class once, by its first route in the order named, registered, published.
 
-**The methods (for reading only; the limit stays on classes):**
-- **Methods**: every operation of the module's counted classes, getters, setters and constructors included, and every module-level function of its production files.
-- **Public methods**: those public by visibility. In Python, a name without a leading `_` (so `__init__` and other dunders are not public); in TypeScript, JavaScript and Java, one not marked `private` and not starting with `#`. A constructor is never public. **Private methods** are the rest.
-- **Seam methods**: the public methods on the module's public classes, whatever route makes the class public. This is how many methods the module exposes to other modules. Module functions are on no class, so they are never seam methods.
-- **% public methods** is public methods over methods; **% seam** is seam methods over methods.
+Counted on branch `version-1-refactoring` at `725163e74`, with this change applied, from the facts the graph records on each module node (`operations_total`, `operations_public`, `operations_private`, `seam_operations`, `subtree_class_count`, `public_class_count`, `private_class_count`, `public_classes`). Ordered by module, alphabetically.
 
-Counted on branch `version-1-refactoring` at `438c9dfbd`, with the exact counting of this change applied, from the facts the graph records on each module node (`subtree_class_count`, `public_class_count`, `private_class_count`, `public_classes`, `operations_total`, `operations_public`, `operations_private`, `seam_operations`). "How public classes are reached" counts each public class once, by its first route in the order named, registered, published. Ordered by module, alphabetically.
+| Module | Methods | Public methods | Private methods | Seam methods | % seam | Allowed seam methods (35%) | Status | Public classes | Private classes | Total classes | % public classes | How public classes are reached (named / registered / published) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `cdd_guidance/actions` | 153 | 62 | 91 | 33 | 22% | 53 | OK | 11 | 10 | 21 | 52% | 2 / 9 / 0 |
+| `cdd_guidance/agents` | 0 | 0 | 0 | 0 | n/a | 0 | Not measured (fewer than 10 methods) | 0 | 0 | 0 | n/a | 0 / 0 / 0 |
+| `cdd_guidance/builders` | 0 | 0 | 0 | 0 | n/a | 0 | Not measured (fewer than 10 methods) | 2 | 1 | 3 | 67% | 0 / 0 / 2 |
+| `cdd_guidance/catalog` | 185 | 0 | 185 | 0 | 0% | 64 | OK | 0 | 0 | 0 | n/a | 0 / 0 / 0 |
+| `cdd_guidance/context_setup` | 66 | 31 | 35 | 13 | 20% | 23 | OK | 2 | 17 | 19 | 11% | 1 / 0 / 1 |
+| `cdd_guidance/patterns` | 137 | 77 | 60 | 5 | 4% | 47 | OK | 5 | 49 | 54 | 9% | 0 / 5 / 0 |
+| `cdd_guidance/practices` | 3194 | 1768 | 1426 | 129 | 4% | 1117 | OK | 17 | 586 | 603 | 3% | 5 / 3 / 9 |
+| `cdd_guidance/practices/agent_bdd` | 135 | 59 | 76 | 2 | 1% | 47 | OK | 1 | 26 | 27 | 4% | 0 / 0 / 1 |
+| `cdd_guidance/practices/bdd` | 138 | 71 | 67 | 0 | 0% | 48 | OK | 1 | 28 | 29 | 3% | 1 / 0 / 0 |
+| `cdd_guidance/practices/clean_engineering` | 1190 | 602 | 588 | 162 | 14% | 416 | OK | 21 | 195 | 216 | 10% | 20 / 0 / 1 |
+| `cdd_guidance/practices/ddd` | 267 | 161 | 106 | 1 | 0% | 93 | OK | 1 | 61 | 62 | 2% | 1 / 0 / 0 |
+| `cdd_guidance/practices/sketch_document` | 17 | 5 | 12 | 5 | 29% | 5 | At the limit | 2 | 0 | 2 | 100% | 2 / 0 / 0 |
+| `cdd_guidance/practices/stories` | 995 | 584 | 411 | 138 | 14% | 348 | OK | 14 | 174 | 188 | 7% | 10 / 0 / 4 |
+| `cdd_guidance/practices/tdd` | 4 | 3 | 1 | 1 | 25% | 1 | Not measured (fewer than 10 methods) | 1 | 2 | 3 | 33% | 1 / 0 / 0 |
+| `cdd_guidance/practices/ux` | 445 | 282 | 163 | 2 | 0% | 155 | OK | 1 | 74 | 75 | 1% | 1 / 0 / 0 |
+| `cdd_guidance/references` | 0 | 0 | 0 | 0 | n/a | 0 | Not measured (fewer than 10 methods) | 0 | 0 | 0 | n/a | 0 / 0 / 0 |
+| `cdd_guidance/rules` | 0 | 0 | 0 | 0 | n/a | 0 | Not measured (fewer than 10 methods) | 0 | 0 | 0 | n/a | 0 / 0 / 0 |
+| `harness` | 3579 | 2108 | 1471 | 711 | 20% | 1252 | OK | 107 | 411 | 518 | 21% | 101 / 0 / 6 |
+| `harness/agent_tools` | 316 | 157 | 159 | 78 | 25% | 110 | OK | 13 | 39 | 52 | 25% | 13 / 0 / 0 |
+| `harness/annotations` | 51 | 41 | 10 | 18 | 35% | 17 | **Fails** | 5 | 10 | 15 | 33% | 5 / 0 / 0 |
+| `harness/catalog_generator` | 293 | 151 | 142 | 39 | 13% | 102 | OK | 2 | 39 | 41 | 5% | 1 / 0 / 1 |
+| `harness/chat` | 65 | 44 | 21 | 24 | 37% | 22 | **Fails** | 4 | 9 | 13 | 31% | 4 / 0 / 0 |
+| `harness/chat-ui/pane` | 357 | 234 | 123 | 0 | 0% | 124 | OK | 0 | 13 | 13 | 0% | 0 / 0 / 0 |
+| `harness/design_canvas` | 38 | 32 | 6 | 24 | 63% | 13 | **Fails** | 4 | 6 | 10 | 40% | 4 / 0 / 0 |
+| `harness/diagnostics` | 164 | 95 | 69 | 49 | 30% | 57 | OK | 12 | 28 | 40 | 30% | 10 / 0 / 2 |
+| `harness/files_app` | 186 | 86 | 100 | 0 | 0% | 65 | OK | 0 | 18 | 18 | 0% | 0 / 0 / 0 |
+| `harness/git` | 7 | 2 | 5 | 2 | 29% | 2 | Not measured (fewer than 10 methods) | 2 | 0 | 2 | 100% | 2 / 0 / 0 |
+| `harness/graph` | 809 | 515 | 294 | 153 | 19% | 283 | OK | 25 | 88 | 113 | 22% | 25 / 0 / 0 |
+| `harness/guidance` | 338 | 233 | 105 | 165 | 49% | 118 | **Fails** | 18 | 28 | 46 | 39% | 18 / 0 / 0 |
+| `harness/guidance_actions` | 78 | 44 | 34 | 19 | 24% | 27 | OK | 3 | 10 | 13 | 23% | 3 / 0 / 0 |
+| `harness/hooks` | 145 | 91 | 54 | 51 | 35% | 50 | **Fails** | 9 | 18 | 27 | 33% | 9 / 0 / 0 |
+| `harness/installation` | 308 | 149 | 159 | 77 | 25% | 107 | OK | 17 | 29 | 46 | 37% | 17 / 0 / 0 |
+| `harness/markdown` | 126 | 62 | 64 | 44 | 35% | 44 | At the limit | 6 | 10 | 16 | 38% | 6 / 0 / 0 |
+| `harness/mcp` | 204 | 105 | 99 | 41 | 20% | 71 | OK | 9 | 24 | 33 | 27% | 8 / 0 / 1 |
+| `harness/process` | 46 | 25 | 21 | 18 | 39% | 16 | **Fails** | 6 | 2 | 8 | 75% | 6 / 0 / 0 |
+| `harness/whiteboard` | 48 | 42 | 6 | 32 | 67% | 16 | **Fails** | 4 | 8 | 12 | 33% | 4 / 0 / 0 |
+| `scripts` | 126 | 38 | 88 | 0 | 0% | 44 | OK | 0 | 17 | 17 | 0% | 0 / 0 / 0 |
+| `scripts/unit_guard` | 9 | 5 | 4 | 0 | 0% | 3 | Not measured (fewer than 10 methods) | 0 | 4 | 4 | 0% | 0 / 0 / 0 |
+| `space` | 1780 | 1159 | 621 | 334 | 19% | 623 | OK | 27 | 200 | 227 | 12% | 18 / 0 / 9 |
+| `space/kanban` | 1000 | 632 | 368 | 149 | 15% | 350 | OK | 10 | 93 | 103 | 10% | 6 / 0 / 4 |
+| `space/repo` | 168 | 101 | 67 | 47 | 28% | 58 | OK | 5 | 23 | 28 | 18% | 4 / 0 / 1 |
+| `space/session` | 603 | 420 | 183 | 189 | 31% | 211 | OK | 21 | 74 | 95 | 22% | 17 / 0 / 4 |
+| `tools` | 100 | 56 | 44 | 28 | 28% | 35 | OK | 6 | 10 | 16 | 38% | 1 / 0 / 5 |
 
-| Module | Public classes | Private classes | Total classes | % public | Allowed (40%) | How public classes are reached (named / registered / published) | Methods | Public methods | Private methods | % public methods | Seam methods | % seam | Status |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `cdd_guidance/actions` | 11 | 10 | 21 | 52% | 8 | 2 / 9 / 0 | 153 | 62 | 91 | 41% | 33 | 22% | **Fails** |
-| `cdd_guidance/agents` | 0 | 0 | 0 | n/a | 0 | 0 / 0 / 0 | 0 | 0 | 0 | n/a | 0 | n/a | Not measured (fewer than 3 classes) |
-| `cdd_guidance/builders` | 2 | 1 | 3 | 67% | 1 | 0 / 0 / 2 | 0 | 0 | 0 | n/a | 0 | n/a | **Fails** |
-| `cdd_guidance/catalog` | 0 | 0 | 0 | n/a | 0 | 0 / 0 / 0 | 185 | 185 | 0 | 100% | 0 | 0% | Not measured (fewer than 3 classes) |
-| `cdd_guidance/context_setup` | 2 | 17 | 19 | 11% | 7 | 1 / 0 / 1 | 66 | 31 | 35 | 47% | 13 | 20% | OK |
-| `cdd_guidance/patterns` | 5 | 49 | 54 | 9% | 21 | 0 / 5 / 0 | 137 | 77 | 60 | 56% | 5 | 4% | OK |
-| `cdd_guidance/practices` | 17 | 586 | 603 | 3% | 241 | 5 / 3 / 9 | 3191 | 1833 | 1358 | 57% | 129 | 4% | OK |
-| `cdd_guidance/practices/agent_bdd` | 1 | 26 | 27 | 4% | 10 | 0 / 0 / 1 | 135 | 59 | 76 | 44% | 2 | 1% | OK |
-| `cdd_guidance/practices/bdd` | 1 | 28 | 29 | 3% | 11 | 1 / 0 / 0 | 138 | 71 | 67 | 51% | 0 | 0% | OK |
-| `cdd_guidance/practices/clean_engineering` | 21 | 195 | 216 | 10% | 86 | 20 / 0 / 1 | 1187 | 601 | 586 | 51% | 162 | 14% | OK |
-| `cdd_guidance/practices/ddd` | 1 | 61 | 62 | 2% | 24 | 1 / 0 / 0 | 267 | 161 | 106 | 60% | 1 | 0% | OK |
-| `cdd_guidance/practices/sketch_document` | 2 | 0 | 2 | 100% | 0 | 2 / 0 / 0 | 17 | 5 | 12 | 29% | 5 | 29% | Not measured (fewer than 3 classes) |
-| `cdd_guidance/practices/stories` | 14 | 174 | 188 | 7% | 75 | 10 / 0 / 4 | 995 | 621 | 374 | 62% | 138 | 14% | OK |
-| `cdd_guidance/practices/tdd` | 1 | 2 | 3 | 33% | 1 | 1 / 0 / 0 | 4 | 3 | 1 | 75% | 1 | 25% | At the limit |
-| `cdd_guidance/practices/ux` | 1 | 74 | 75 | 1% | 30 | 1 / 0 / 0 | 445 | 311 | 134 | 70% | 2 | 0% | OK |
-| `cdd_guidance/references` | 0 | 0 | 0 | n/a | 0 | 0 / 0 / 0 | 0 | 0 | 0 | n/a | 0 | n/a | Not measured (fewer than 3 classes) |
-| `cdd_guidance/rules` | 0 | 0 | 0 | n/a | 0 | 0 / 0 / 0 | 0 | 0 | 0 | n/a | 0 | n/a | Not measured (fewer than 3 classes) |
-| `harness` | 106 | 412 | 518 | 20% | 207 | 100 / 0 / 6 | 3579 | 2336 | 1243 | 65% | 708 | 20% | OK |
-| `harness/agent_tools` | 13 | 39 | 52 | 25% | 20 | 13 / 0 / 0 | 316 | 157 | 159 | 50% | 78 | 25% | OK |
-| `harness/annotations` | 5 | 10 | 15 | 33% | 6 | 5 / 0 / 0 | 51 | 41 | 10 | 80% | 18 | 35% | OK |
-| `harness/catalog_generator` | 2 | 39 | 41 | 5% | 16 | 1 / 0 / 1 | 293 | 151 | 142 | 52% | 39 | 13% | OK |
-| `harness/chat` | 2 | 11 | 13 | 15% | 5 | 2 / 0 / 0 | 65 | 44 | 21 | 68% | 18 | 28% | OK |
-| `harness/chat-ui/pane` | 0 | 13 | 13 | 0% | 5 | 0 / 0 / 0 | 357 | 340 | 17 | 95% | 0 | 0% | OK |
-| `harness/design_canvas` | 4 | 6 | 10 | 40% | 4 | 4 / 0 / 0 | 38 | 32 | 6 | 84% | 24 | 63% | At the limit |
-| `harness/diagnostics` | 12 | 28 | 40 | 30% | 16 | 8 / 0 / 4 | 164 | 95 | 69 | 58% | 49 | 30% | OK |
-| `harness/files_app` | 0 | 18 | 18 | 0% | 7 | 0 / 0 / 0 | 186 | 150 | 36 | 81% | 0 | 0% | OK |
-| `harness/git` | 2 | 0 | 2 | 100% | 0 | 2 / 0 / 0 | 7 | 2 | 5 | 29% | 2 | 29% | Not measured (fewer than 3 classes) |
-| `harness/graph` | 25 | 88 | 113 | 22% | 45 | 25 / 0 / 0 | 809 | 573 | 236 | 71% | 153 | 19% | OK |
-| `harness/guidance` | 18 | 28 | 46 | 39% | 18 | 18 / 0 / 0 | 338 | 233 | 105 | 69% | 165 | 49% | At the limit |
-| `harness/guidance_actions` | 3 | 10 | 13 | 23% | 5 | 3 / 0 / 0 | 78 | 44 | 34 | 56% | 19 | 24% | OK |
-| `harness/hooks` | 9 | 18 | 27 | 33% | 10 | 9 / 0 / 0 | 145 | 91 | 54 | 63% | 51 | 35% | OK |
-| `harness/installation` | 17 | 29 | 46 | 37% | 18 | 17 / 0 / 0 | 308 | 149 | 159 | 48% | 77 | 25% | OK |
-| `harness/markdown` | 6 | 10 | 16 | 38% | 6 | 6 / 0 / 0 | 126 | 62 | 64 | 49% | 44 | 35% | At the limit |
-| `harness/mcp` | 9 | 24 | 33 | 27% | 13 | 8 / 0 / 1 | 204 | 105 | 99 | 51% | 41 | 20% | OK |
-| `harness/process` | 6 | 2 | 8 | 75% | 3 | 6 / 0 / 0 | 46 | 25 | 21 | 54% | 18 | 39% | **Fails** |
-| `harness/whiteboard` | 4 | 8 | 12 | 33% | 4 | 4 / 0 / 0 | 48 | 42 | 6 | 88% | 32 | 67% | At the limit |
-| `scripts` | 0 | 17 | 17 | 0% | 6 | 0 / 0 / 0 | 126 | 38 | 88 | 30% | 0 | 0% | OK |
-| `scripts/unit_guard` | 0 | 4 | 4 | 0% | 1 | 0 / 0 / 0 | 9 | 5 | 4 | 56% | 0 | 0% | OK |
-| `space` | 18 | 209 | 227 | 8% | 90 | 8 / 0 / 10 | 1780 | 1321 | 459 | 74% | 273 | 15% | OK |
-| `space/kanban` | 5 | 98 | 103 | 5% | 41 | 0 / 0 / 5 | 1000 | 794 | 206 | 79% | 123 | 12% | OK |
-| `space/repo` | 5 | 23 | 28 | 18% | 11 | 4 / 0 / 1 | 168 | 101 | 67 | 60% | 47 | 28% | OK |
-| `space/session` | 18 | 77 | 95 | 19% | 38 | 14 / 0 / 4 | 603 | 420 | 183 | 70% | 162 | 27% | OK |
-| `tools` | 6 | 10 | 16 | 38% | 6 | 0 / 0 / 6 | 100 | 56 | 44 | 56% | 28 | 28% | At the limit |
+**Over the limit:** `harness/annotations`, `harness/chat`, `harness/design_canvas`, `harness/guidance`, `harness/hooks`, `harness/process` and `harness/whiteboard`. These are real findings under the method measure, not tuned away.
 
-**Over the limit:** `cdd_guidance/actions` (its 9 action toolsets are registered with `ACTION_CATALOGUE`, and `Generate` and `Validate` are also imported), `cdd_guidance/builders` (2 published toolsets of 3 classes) and `harness/process` (6 classes imported from outside). The first two are new under this definition; they are real findings, not tuned away.
+**Reading some rows:**
+- `cdd_guidance/builders` and `cdd_guidance/practices/bdd` show public classes but no seam methods: `CreateAgentToolset`, `CreatePracticeGuidance` and `Bdd` declare no methods of their own. Their tools are the methods of `PracticeGuidance`, counted once in `harness/guidance`.
+- `harness/chat-ui/pane` has many public methods but no seam: its public methods are the functions its files export to the Claude Code mod host that loads them, and no module of the repository imports its classes. Its `@cdd/...` imports point the other way; they make the Python classes they reach public in their own modules.
+- `cdd_guidance/catalog` holds no counted classes; its methods are the functions of the catalog's page scripts, none of them exported.
 
-**Left out as examples and doubles:** `cdd_guidance/catalog/examples/ddd/tactics.ts` (9 classes) and `space/repo/mock_repo.py` (13 classes, the `MockGit` test double), besides every `_examples` folder, which was already left out.
+**Left out as examples and doubles:** `cdd_guidance/catalog/examples/ddd/tactics.ts` (9 classes) and `space/repo/mock_repo.py` (13 classes, the `MockGit` test double), besides every `_examples` folder.
 
 ## How to read it again
 
 In the session's saved graph (`.sessions/<session>/.context/graph.json`), each node under `practices.clean_engineering.nodes` with `type` `Module` carries the counts in its `facts`. In Python, with the graph loaded:
 
 ```python
-[(m.source.file, m.get_fact("public_class_count"), m.get_fact("subtree_class_count"), m.get_fact("seam_operations"))
+[(m.source.file, m.get_fact("seam_operations"), m.get_fact("operations_total"), m.get_fact("public_class_count"))
  for m in practice.reading.in_graph.nodes("Module")]
 ```

@@ -1,4 +1,4 @@
-# deep-module counts class definitions, resolves each import, and counts every route out of a module
+# deep-module counts class definitions, resolves each import, counts every route out of a module, and judges a module by its seam methods
 
 CDR 0004 of `harness/graph` moved `deep-module`'s counting into facts the build records. Those facts matched classes by name: each folder kept the bare names its files imported (`imported_names_by_file`), and a class was public when any folder outside the module named a class of that name. Two defects followed. A class was public when only its namesake in another module was imported (`Parameter` in the model was public because `inspect.Parameter` is imported; `Segment` in `actions` because the draw.io scanners import geometry's `Segment` alias). And the total counted definitions while the public count counted distinct names, so a duplicated name made the two disagree. The name match also kept a trailing `# noqa` on the last name of an import line, so some real imports named nothing. Then the user rejected `cdd_guidance/actions` reading 3 of 21 classes public: its toolsets leave it by registration with `ACTION_CATALOGUE` and by the installer publishing them, not by being imported.
 
@@ -23,3 +23,14 @@ CDR 0004 of `harness/graph` moved `deep-module`'s counting into facts the build 
 - On this repository: 6,099 references, 2,212 resolved to a class definition; 1,798 name a module outside the repository, 1,490 a name that is no class there (mostly functions, constants and type aliases), 355 a script package or alias, 241 the `@cdd/*` alias, 3 star imports.
 - `deep-module` now fails `cdd_guidance/actions` (11 of 21 public: 9 registered toolsets and 2 named) and `cdd_guidance/builders` (2 of 3, published toolsets), besides `harness/process`.
 - The registered route depends on the process having imported the practices, actions and patterns, which every CDD process that builds a graph does.
+
+## Decision 2: judge a module by its seam methods
+
+At the user's direction `deep-module` judges a module by its methods, not its classes. A module's interface is the methods callers can call, and a deep module hides much behind a small interface (Ousterhout, *A Philosophy of Software Design*); a count of public classes says how much design is exposed, but one public class with forty methods is a wider interface than four with two each.
+
+- The rule compares `seam_operations` (the public methods, constructors aside, of the module's public classes) with `operations_total` (every method and module function of its subtree): at most 35%, rounded down. A module of fewer than 10 methods is not measured. The rule reads the two facts and computes nothing else.
+- The class facts stay, as context in the message and in `.context/deep-module-ratios.md`; no verdict comes from them.
+- Two counts were wrong and are fixed. A TypeScript or JavaScript module function its file does not export was counted public; it is private to its file now (`c_family_parse.py`, `export`, `export { … }`, `module.exports`). And a script's import of a generated language adapter (`@cdd/space/kanban/board`) named nothing; it now names the Python module the adapter is generated from, and `{Class}Data` names the class it sends, so a Python class a script client reaches through its adapter is public.
+- Methods are counted where they are declared. A practice or builder class (`Bdd`, `CreateAgentToolset`) whose tools it inherits from *PracticeGuidance* adds no seam methods to its module; those methods are counted once, in `harness/guidance`, which declares them.
+
+Consequences on this repository: `harness/annotations`, `harness/chat`, `harness/design_canvas`, `harness/guidance`, `harness/hooks` and `harness/whiteboard` now fail and `harness/process` still does; `cdd_guidance/actions` (33 of 153 methods) now passes, and `cdd_guidance/builders` (no methods of its own) is not measured.

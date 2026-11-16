@@ -70,6 +70,30 @@ with description("module exposure"):
         with it("should keep its namesake private"):
             expect(_public(self.fixture, "right")).to(equal({}))
 
+    with context("with a package without a card, a nested module, a test fixture, and a spec inside a module"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    **_module_of("cart", "cart.py", ("Cart", "Line")),
+                    "cart/lines/line_item.py": _classes("LineItem"),
+                    "cart/fixtures.py": _classes("FakeCart"),
+                    **_module_of("cart/pricing", "pricing.py", ("Levy", "Rate", "Fee")),
+                    "cart/cart_extra.py": "from cart.pricing.pricing import Levy\n",
+                    **_SHOP_CARD,
+                    "shop/checkout.py": "from cart.pricing.pricing import Rate\nfrom cart.lines.line_item import LineItem\n",
+                    "shop/checkout_spec.py": "from cart.cart import Cart, Line\n",
+                }
+            )
+
+        with it("should count the package's classes and the nested module's in the parent, not the fixture's"):
+            expect(_counts(_module(self.fixture, "cart"))).to(equal((6, 2, 4)))
+
+        with it("should make public in the parent only what code outside the parent names, not what a spec names"):
+            expect(sorted(_public(self.fixture, "cart"))).to(equal(["cart/lines/line_item.py:LineItem", "cart/pricing/pricing.py:Rate"]))
+
+        with it("should measure the nested module on its own, a class its parent names public there"):
+            expect(sorted(_public(self.fixture, "pricing"))).to(equal(["cart/pricing/pricing.py:Levy", "cart/pricing/pricing.py:Rate"]))
+
     with context("with a load of the imported module's files alone, its importer left outside the scope"):
         with before.all:
             self.fixture = practice_from_files(
@@ -137,6 +161,27 @@ with description("module exposure"):
 
         with it("should keep the namesake in the other file private"):
             expect(_public(self.fixture, "till")).to(equal({}))
+
+    with context("with a script that imports a Python class's data through its generated language adapter"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    **_module_of("board", "ticket_card.py", ("Ticket", "Lane", "Column")),
+                    **_SHOP_CARD,
+                    "shop/view.ts": "import type { TicketData } from '@cdd/board/ticket-card';\n\nexport const shown: TicketData[] = [];\n",
+                }
+            )
+
+        with it("should make public the Python class the adapter sends"):
+            expect(_public(self.fixture, "board")).to(equal({"board/ticket_card.py:Ticket": {"named": ["shop"]}}))
+
+    with context("with a script module's exported and unexported functions"):
+        with before.all:
+            script = "export function shown(): number {\n  return 1;\n}\n\nfunction hidden(): number {\n  return 2;\n}\n"
+            self.fixture = practice_from_files({"cart/.context/module-context.md": _CARD, "cart/cart.ts": script})
+
+        with it("should count an unexported function as private"):
+            expect(_operations(_module(self.fixture, "cart"))[:3]).to(equal((2, 1, 1)))
 
     with context("with a toolset the installer publishes and one only its host publishes"):
         with before.all:
