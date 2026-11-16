@@ -55,7 +55,7 @@ A spec file's suffix names its tier, and the tier is about speed:
 |---|---|---|
 | unit | `*_spec`, story tiers | Examples that run in microseconds to milliseconds, with a fake at every architecture boundary |
 | heavy | `*_heavy_spec` | Examples that need a real resource: git, a server, a daemon, an installer, a worker process, a big load |
-| e2e | `*_e2e_spec`, `*_agent_spec` | Examples that drive a real browser or a real agent |
+| e2e | `*_e2e_spec`, `*_agent_spec`, `*.story.ui.spec.ts` and the other Playwright specs | Examples that drive a real browser or a real agent |
 
 ### Make slow tests fast first
 
@@ -99,7 +99,7 @@ globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,*
 Whenever you create, alter, or delete acceptance tests or BDD specs. Follow these rules.
 
 **Tiers**
-- **`suffix-names-the-tier`** — `*_spec` is unit, `*_heavy_spec` is heavy, and `*_e2e_spec` / `*_agent_spec` is e2e; a story test's tier file follows the same suffixes. A suffix that names the wrong tier puts a slow test in the run that must stay fast.
+- **`suffix-names-the-tier`** — `*_spec` is unit, `*_heavy_spec` is heavy, and `*_e2e_spec` / `*_agent_spec` / `*.story.ui.spec.ts` is e2e; a story test's tier file follows the same suffixes. A suffix that names the wrong tier puts a slow test in the run that must stay fast.
 - **`unit-tier-fakes-every-boundary`** — A unit spec reaches no real resource: a fake sits at every architecture boundary.
 - **`heavy-tier-holds-a-real-resource`** — A heavy spec uses a real resource (git, a server, a daemon, an installer, a worker, a big load); without one it belongs in the unit tier.
 - **`e2e-tier-drives-browser-or-agent`** — An e2e spec drives a real browser or a real agent, and no other tier does.
