@@ -8,7 +8,7 @@
     "stages": [
       "discovery"
     ],
-    "version": 10
+    "version": 12
   },
   "practices": {
     "ux": {
@@ -36,6 +36,9 @@
           "drawio"
         ]
       }
+    },
+    "ddd": {
+      "enabled": true
     }
   }
 }
