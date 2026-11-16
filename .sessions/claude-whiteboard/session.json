@@ -8,13 +8,32 @@
     "stages": [
       "discovery"
     ],
-    "version": 9
+    "version": 10
   },
   "practices": {
     "ux": {
       "formats": {
         "mockup": [
           "html"
+        ],
+        "ia": [
+          "drawio"
+        ]
+      }
+    },
+    "stories": {
+      "formats": {
+        "story_map": [
+          "markdown",
+          "drawio"
+        ]
+      }
+    },
+    "clean_engineering": {
+      "formats": {
+        "modules": [
+          "markdown",
+          "drawio"
         ]
       }
     }
