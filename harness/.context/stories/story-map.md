@@ -2043,23 +2043,23 @@ Requested (as drawio's `keep_positioning` and `previous` keep a diagram's layout
 
 Requested (2026-11-15, "practice specific rendering goes in practices/{practice}/model/whiteboard"; "whiteboard should extend diagram just like drawio and hopefully miro"): each practice that draws a diagram today draws the same model on a whiteboard.
 
-### (S) Agent --> Render Story Map To Whiteboard
+### (S) Agent --> Lay Out Story Map On Whiteboard
 
 Requested: `WhiteboardStoryModel`, `WhiteboardEpic`, `WhiteboardStory` and `WhiteboardIncrement` extend the `Diagram*` story types as the miro types do, drawing epics and sub-epics as bars, stories as cards with their actor above, and increments as lanes.
 
-### (S) Agent --> Render Module Diagram To Whiteboard
+### (S) Agent --> Draw Module Dependencies On Whiteboard
 
 Requested: a whiteboard module extends `DiagramModule` as `DrawIOModule` does, drawing each module with its purpose and seam terms, and its dependencies as arrows.
 
-### (S) Agent --> Render Class Model To Whiteboard
+### (S) Agent --> Show Class Members And Relationships On Whiteboard
 
 Requested: a whiteboard class extends `DiagramClass` as `DrawIOClass` does, drawing each class with its stereotypes, properties and operations, an imported class dashed, and its relationships as arrows.
 
-### (S) Agent --> Render Bounded Context Map To Whiteboard
+### (S) Agent --> Group Aggregates In Bounded Context Sections
 
 Requested (DDD draws its bounded context map in drawio today, `ddd/model/drawio/drawio_bounded_context_map.py`): the same map drawn on a whiteboard, each context a section holding its aggregates.
 
-### (S) Agent --> Render Information Architecture To Whiteboard
+### (S) Agent --> Connect Screens By Navigation Moves
 
 Requested (UX draws its information architecture in drawio today, `ux/model/drawio/nodes.py` `DrawioUxMap`): the same screens and the moves between them drawn on a whiteboard.
 
