@@ -71,6 +71,19 @@ section: body
 *Then* the Stories tree holds Delete Ticket, read from .context/story-map.md  
   *But* none of the old story map's epics
 
+#### Scenario: The Stories tree holds a story listed only by its story test in code
+
+*Given* the Files app lists only the code formats, so of checkout-flow's Stories files only Delete Ticket's story test  
+*When* the Person switches the file bar to the graph view  
+*Then* the Stories tree holds Manage Tickets, Remove Tickets and Delete Ticket  
+  *And* Delete Ticket holds the scenario its story test holds
+
+#### Scenario: A story map listed in markdown and drawio is read once, from its markdown
+
+*Given* the Files app lists checkout-flow's story map in markdown and in drawio  
+*When* the Person switches the file bar to the graph view  
+*Then* the Stories tree holds each story once, read from the markdown: when one thing is written in several formats, code is read before markdown and markdown before a diagram
+
 ## Story: Filter Graph Like The File List
 
 ### Evidence

@@ -724,20 +724,21 @@ class Session:
     @agent_tool
     @noSessionLog
     def graph_trees(self, paths: list[str], call: ToolCall | None = None) -> list[ExplorerEntry]:
-        """Return the practice trees of this session's graph holding only the nodes read from the files at paths, each named from the project as the Files app lists them: each practice's root with the entries below it, closed, as graph.explorer_trees answers them. The graph holds the whole working copy first, each practice read from its own root, so links across files and practices hold and a story map in the Stories root is the one read. No paths, or none in the project, answer no tree."""
-        under_root = self._under_root(paths)
-        if not under_root:
+        """Return the practice trees of this session's graph read from exactly the files at paths, each named from the project as the Files app lists them, and holding only the nodes read from them: each practice's root with the entries below it, closed, as graph.explorer_trees answers them. The files the page lists are the one filter: the graph reads them, its story tests in code and in markdown alike, and keeps what they hold. No paths, or none in the project, answer no tree."""
+        listed = self._in_project(paths)
+        if not listed:
             return []
         graph = self.graph
-        graph.hold_practice_roots(call)
-        return graph.explorer.explorer_trees({"paths": under_root})
+        working = [key for key, output in self._own_outputs.items() if output.enabled]
+        graph.load_files(str(self.repo_path.resolve()), working, listed, graph.overlays, call)
+        return graph.explorer.explorer_trees({"paths": listed})
 
     @mcp
     @agent_tool
     @noSessionLog
     def graph_branch(self, node_id: str, paths: list[str]) -> ExplorerEntry | None:
         """Return the node node_id's entry in this session's graph, kept to the nodes read from the files at paths as graph_trees keeps them, with the entries below it, closed; None for an id the graph no longer holds."""
-        return self.graph.explorer.explorer_branch(node_id, {"paths": self._under_root(paths)})
+        return self.graph.explorer.explorer_branch(node_id, {"paths": self._in_project(paths)})
 
     @mcp
     @agent_tool
@@ -745,14 +746,14 @@ class Session:
     def graph_node_ranges(self, node_id: str, paths: list[str]) -> list[Range]:
         """Return the lines the node node_id covers, one range for each file, each named from the project, so a viewer opens every file there. A node read from lines of a file answers that one range; a node read from no file's lines, such as a module that is a folder, answers each file the nodes below it come from, among paths, spanning the lines they cover; none for an id the graph no longer holds."""
         spans: dict[Path, tuple[int, int]] = {}
-        self._collect_spans(node_id, {"paths": self._under_root(paths)}, spans, set())
+        self._collect_spans(node_id, {"paths": self._in_project(paths)}, spans, set())
         return [self.file(self.from_project(path)).range(start, end) for path, (start, end) in spans.items()]
 
     @mcp
     @agent_tool
     @noSessionLog
     def graph_members(self) -> list[NodeSource]:
-        """Return every class, operation, and property this session's graph holds, each with its text and the class it belongs to, so a viewer opens a call in place even when it reaches another file. Read after graph_trees, which holds the whole working copy."""
+        """Return every class, operation, and property this session's graph holds, each with its text and the class it belongs to, so a viewer opens a call in place even when it reaches another file. Read after graph_trees, which reads the files the page lists."""
         return self.graph.explorer.source_members()
 
     def _collect_spans(self, node_id: str, request: dict, spans: dict[Path, tuple[int, int]], seen: set[str]) -> None:
@@ -774,11 +775,11 @@ class Session:
             if isinstance(child, ExplorerEntry):
                 self._collect_spans(child.node_id, request, spans, seen)
 
-    def _under_root(self, paths: list[str]) -> list[str]:
-        """paths, named from the project, as the graph names its files: from the session's root, a file above it, such as
-        the project's story map in .context, with `..`; any outside the project left out."""
-        root, project = self.work_root, self.repo_path.resolve()
-        return [os.path.relpath(found, root).replace("\\", "/") for found in map(self.path_named, paths) if found.is_relative_to(project)]
+    def _in_project(self, paths: list[str]) -> list[str]:
+        """paths, named from the project, as the graph view's graph names its files, which it reads from the project's
+        top; any outside the project left out."""
+        project = self.repo_path.resolve()
+        return [found.relative_to(project).as_posix() for found in map(self.path_named, paths) if found.is_relative_to(project)]
 
     @mcp
     @agent_tool

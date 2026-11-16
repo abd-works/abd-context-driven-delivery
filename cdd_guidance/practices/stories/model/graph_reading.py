@@ -4,6 +4,7 @@ the classes and properties it shows."""
 
 from __future__ import annotations
 
+import os
 import re
 from functools import cached_property
 from pathlib import Path
@@ -12,6 +13,7 @@ from harness.graph.skipped_folders import scanned_files
 from harness.guidance.practice_reading import PracticeReading
 
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
+from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles
 
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 _STEP_TYPES = frozenset({"Step", "Given", "When", "Then"})
@@ -117,12 +119,12 @@ class StoriesReading(PracticeReading):
         suffixes = {Path(suffix).suffix for reader in readers for suffix in reader.story_file_suffixes}
         edited = self.graph.scope.edited_files
         project = Path(self.graph.scope.folder) if self.graph.scope.folder is not None else self.root
-        for path in scanned_files(self.root, suffixes):
+        for path in self._scanned(suffixes):
             reader = next((reader for reader in readers if reader.is_story_file(path.as_posix())), None)
             if reader is None or (edited is not None and path not in edited):
                 continue
             text = path.read_text(encoding="utf-8")
-            file = path.relative_to(self.root).as_posix()
+            file = os.path.relpath(path, self.root).replace("\\", "/")
             model.source_texts[file] = text
             model.add_scenarios(reader.stories_of(text, file, project)[0], file)
 
@@ -130,7 +132,7 @@ class StoriesReading(PracticeReading):
         sources = self._typescript_files()
         files: dict[str, str] = {}
         for index, path in enumerate(sources, start=1):
-            relative = path.relative_to(self.root).as_posix()
+            relative = os.path.relpath(path, self.root).replace("\\", "/")
             self.graph.report_progress(f"stories · {index}/{len(sources)} · {relative}")
             files[relative] = path.read_text(encoding="utf-8")
         self.graph.report_progress("stories · parse")
@@ -144,13 +146,18 @@ class StoriesReading(PracticeReading):
             return self.practice.read_folder(self.root, on_file=on_file)
         return self.practice.read_files(edited, self.root, on_file=on_file)
 
+    def _scanned(self, suffixes: set[str]) -> list[Path]:
+        """The files with suffixes in the folders the practice's story files sit in: its root and, for a root that is a
+        project's .context, the story_tests beside it."""
+        return [path for folder in StoryMapFiles(self.root).story_folders() for path in scanned_files(folder, suffixes)]
+
     def _typescript_files(self) -> list[Path]:
         """TypeScript under the root; with edited files, each whole story folder that holds one. A story reads its
         examples and steps from sibling files, so one edited file needs its story's other files."""
         edited = self.graph.scope.edited_files
         if edited is not None and not any(path.suffix.lower() in {".ts", ".tsx"} for path in edited):
             return []
-        found = scanned_files(self.root, {".ts", ".tsx"})
+        found = self._scanned({".ts", ".tsx"})
         if edited is None:
             return found
         reader = self.practice.formats.adapter("typescript")

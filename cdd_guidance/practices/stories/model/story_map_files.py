@@ -26,6 +26,7 @@ def path_from(base: Path, path: Path) -> str:
         return resolved.name
     return resolved.relative_to(base).as_posix()
 
+# The formats a story map is read from, in the order one is chosen when a map is in several: markdown, then the drawio.
 STORY_MAP_SUFFIXES = (".md", ".drawio")
 # Documents go in a folder's `.context` while code sits straight in the folder, so a story map may sit in either.
 CONTEXT_FOLDER = ".context"
@@ -44,6 +45,16 @@ def is_story_map_file(path) -> bool:
     path = Path(path)
     stem = Name(path.stem).title_slug
     return path.suffix.lower() in STORY_MAP_SUFFIXES and (stem == "story-map" or stem.endswith("-story-map"))
+
+
+def preferred_maps(paths: List[Path]) -> List[Path]:
+    """One file for each story map among paths: its markdown before its drawio, in the order STORY_MAP_SUFFIXES lists
+    them, since each holds the whole map and reading both would put every Epic and Story in twice."""
+    ranked = sorted(paths, key=lambda path: STORY_MAP_SUFFIXES.index(path.suffix.lower()))
+    chosen: dict[Path, Path] = {}
+    for path in ranked:
+        chosen.setdefault(path.with_suffix(""), path)
+    return [path for path in paths if path in chosen.values()]
 
 
 class StoryMapFiles:
@@ -95,10 +106,10 @@ class StoryMapFiles:
         """Each markdown file scenarios are written in, in this folder and the folders below it: in a `scenarios`, `md`
         or `stories` folder, a `scenarios.md` or `story-scenarios.md`, or a story's own file. Grouped by the kind of
         file in that order, then by path, so a folder's scenarios read in the same order every time."""
-        found = [(kind, path) for walked in self._walked() for path in self._markdown_in(walked) for kind in [_scenario_file_kind(PurePosixPath(path.relative_to(walked).as_posix()))] if kind is not None]
+        found = [(kind, path) for walked in self.story_folders() for path in self._markdown_in(walked) for kind in [_scenario_file_kind(PurePosixPath(path.relative_to(walked).as_posix()))] if kind is not None]
         return [path for _kind, path in sorted(found)]
 
-    def _walked(self) -> List[Path]:
+    def story_folders(self) -> List[Path]:
         """The folders this folder's story files sit in: this folder and, for a project's `.context`, the project's
         `story_tests` beside it, where the map kept in that `.context` has its scenarios and story tests."""
         story_tests = self.folder.parent / STORY_TESTS_FOLDER
@@ -107,7 +118,7 @@ class StoryMapFiles:
     def _markdown_below(self) -> Iterator[Path]:
         """Every markdown file in this folder and the folders below it, and in the `story_tests` beside a project's
         `.context`."""
-        for walked in self._walked():
+        for walked in self.story_folders():
             yield from self._markdown_in(walked)
 
     def _markdown_in(self, top: Path) -> Iterator[Path]:

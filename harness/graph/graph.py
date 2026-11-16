@@ -1469,21 +1469,6 @@ class Graph:
             self.scope = LoadScope(self.scope.folder)
             self.build.load(False, call)
 
-    def hold_practice_roots(self, call: ToolCall | None = None) -> None:
-        """Make sure the graph holds the whole working copy with each practice read from the folder its session names
-        for it, or from the graph's folder when that folder is not there yet, loading only when it does not hold them so
-        already: Stories read from the graph's folder would find the story map above it, not the one in its own root."""
-        with self._changing:
-            folder = self.scope.folder
-            if folder is None:
-                return
-            roots = {practice: root if (root := practice.session_root) is not None and root.is_dir() else Path(folder) for practice in self.practices.held.values()}
-            if self.scope.over_whole and self.practices.roots_by_key == {practice.key: root for practice, root in roots.items()}:
-                return
-            self.scope = LoadScope(folder)
-            self.practices.choose(roots)
-            self.build.load(False, call)
-
     def refreshed(self, paths: list[str], checked: Path, call: ToolCall | None = None) -> None:
         """Refresh the graph with exactly the files at paths and write the nodes read from them, as they save, at
         checked, as one change: no other call's load or refresh comes between the two, so a call that checks the files

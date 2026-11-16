@@ -38,12 +38,22 @@ STORY_MAP_TEXT = "# Story Map\n\n(E) Manage Tickets\n    (E) Remove Tickets\n   
 # Seed: a story map left in a folder's .context from before maps moved to the project's .context.
 OLD_MAP = "harness/.context/stories/story-map.md"
 OLD_MAP_TEXT = "# Story Map\n\n(E) Run Old Layout\n    (S) Person --> Open Old Map\n"
+# Seed: Delete Ticket's story test, in code, in story_tests under its epic and sub-epic.
+STORY_TEST = "story_tests/manage-tickets/remove-tickets/delete-ticket/delete_ticket_story.test.py"
+STORY_TEST_TEXT = (
+    "from story_test import given, scenario, story\n"
+    "\n"
+    'with story("Delete Ticket"):\n'
+    '    with scenario("a ticket is deleted"):\n'
+    '        with given("a ticket"):\n'
+    "            pass\n"
+)
 LISTED = [STORY_MAP, TICKET_CODE, BOARD_CODE]
 
 
 def seed_checkout_flow_with_graph_files(world) -> None:
     world.project.seed_session(CHECKOUT_FLOW)
-    for path, text in ((TICKET_CODE, TICKET_TEXT), (BOARD_CODE, BOARD_TEXT), (STORY_MAP, STORY_MAP_TEXT), (OLD_MAP, OLD_MAP_TEXT)):
+    for path, text in ((TICKET_CODE, TICKET_TEXT), (BOARD_CODE, BOARD_TEXT), (STORY_MAP, STORY_MAP_TEXT), (OLD_MAP, OLD_MAP_TEXT), (STORY_TEST, STORY_TEST_TEXT)):
         world.project.seed_file(path, text)
 
 
