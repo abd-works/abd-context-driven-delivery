@@ -11,10 +11,14 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
 from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT, CodeBody
 from cdd_guidance.practices.stories.model.story_model import StepType
+
+if TYPE_CHECKING:
+    from cdd_guidance.practices.stories.model.story_model import Scenario, Story
 
 SCREEN_SPEC_SUFFIX = ".story.ui.spec.ts"
 # The call and its callback up to the `{` opening the callback's body: `test('Name', async ({ page }) => {`.
@@ -40,11 +44,6 @@ class ScreenSpecFile:
         self.text = text
         self._brackets = BracketStructure(text)
 
-    @staticmethod
-    def holds(text: str) -> bool:
-        """True for the text of a screen spec: it describes its stories with ``test.describe(...)``."""
-        return bool(_DESCRIBE.search(text))
-
     def stories(self, story_type: type) -> list:
         """The stories the file describes, each with a scenario for each of its tests."""
         stories: dict[str, object] = {}
@@ -54,29 +53,33 @@ class ScreenSpecFile:
                 story.scenarios.append(self._scenario(story, test))
         return list(stories.values())
 
-    def _scenario(self, story, test: re.Match):
+    def _scenario(self, story: "Story", test: re.Match) -> "Scenario":
         scenario = story.scenario_type(name=test.group("name"), sequential_order=len(story.scenarios) + 1)
         body = BracketStructure(test.string).braced(test.end() - 1) or ""
-        for order, step in enumerate(_steps_in(body), start=1):
+        for order, step in enumerate(self._steps_in(body), start=1):
             made = scenario.step_type(step.lines[0].strip(), step.phase, order, keyword=_KEYWORDS[step.phase])
             made.body = CodeBody("\n".join(step.lines), TYPESCRIPT)
             scenario.steps.append(made)
         return scenario
 
+    def _steps_in(self, body: str) -> list[StepLines]:
+        """The test's statements grouped into steps: each run of statements of one phase is one step. A statement starts
+        on a line at the body's own indentation; deeper lines continue it."""
+        lines = [line for line in body.splitlines() if line.strip() and not line.strip().startswith("//")]
+        base = min((len(line) - len(line.lstrip()) for line in lines), default=0)
+        steps: list[StepLines] = []
+        for line in lines:
+            starts = len(line) - len(line.lstrip()) == base
+            phase = _phase_of(line, acted=any(step.phase is not StepType.GIVEN for step in steps)) if starts else steps[-1].phase
+            if not steps or (starts and phase is not steps[-1].phase):
+                steps.append(StepLines(phase))
+            steps[-1].lines.append(line)
+        return steps
 
-def _steps_in(body: str) -> list[StepLines]:
-    """The test's statements grouped into steps: each run of statements of one phase is one step. A statement starts on
-    a line at the body's own indentation; deeper lines continue it."""
-    lines = [line for line in body.splitlines() if line.strip() and not line.strip().startswith("//")]
-    base = min((len(line) - len(line.lstrip()) for line in lines), default=0)
-    steps: list[StepLines] = []
-    for line in lines:
-        starts = len(line) - len(line.lstrip()) == base
-        phase = _phase_of(line, acted=any(step.phase is not StepType.GIVEN for step in steps)) if starts else steps[-1].phase
-        if not steps or (starts and phase is not steps[-1].phase):
-            steps.append(StepLines(phase))
-        steps[-1].lines.append(line)
-    return steps
+
+def is_screen_spec(text: str) -> bool:
+    """True for the text of a screen spec: it describes its stories with ``test.describe(...)``."""
+    return bool(_DESCRIBE.search(text))
 
 
 def _phase_of(statement: str, acted: bool) -> StepType:

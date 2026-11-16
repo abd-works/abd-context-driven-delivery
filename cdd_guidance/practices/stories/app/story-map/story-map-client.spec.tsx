@@ -129,21 +129,21 @@ describe('an edit through the story map tools', () => {
   it("should change a story's description through its own tool", async () => {
     const posted: Posted[] = []
     const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/edit-description': CHECKOUT_FLOW }, posted)), CHECKOUT_FLOW)
-    await client.describeNode(TRACE_STORY, 'story', 'Requested: one trace view.')
+    await client.nodeAt(TRACE_STORY, 'story').describe('Requested: one trace view.')
     expect(posted).toEqual([{ path: `/api/story/${encodeURIComponent(TRACE_STORY)}/edit-description`, body: { description: 'Requested: one trace view.' } }])
   })
 
   it("should give a story to an increment through the increment's own tool", async () => {
     const posted: Posted[] = []
     const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/add-story': CHECKOUT_FLOW }, posted)), CHECKOUT_FLOW)
-    await client.deliverIn(INCREMENT, TRACE_STORY)
+    await client.incrementAt(INCREMENT).deliver(TRACE_STORY)
     expect(posted).toEqual([{ path: `/api/increment/${encodeURIComponent(INCREMENT)}/add-story`, body: { story: TRACE_STORY } }])
   })
 
   it('should rename the story through its own tool', async () => {
     const posted: Posted[] = []
     const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/rename': CHECKOUT_FLOW }, posted)), CHECKOUT_FLOW)
-    await client.renameNode(`${SUB_EPIC}.trace-story-through-artifacts`, 'story', 'Trace Story Across Artifacts')
+    await client.nodeAt(`${SUB_EPIC}.trace-story-through-artifacts`, 'story').rename('Trace Story Across Artifacts')
     expect(posted).toEqual([{ path: `/api/story/${encodeURIComponent(`${SUB_EPIC}.trace-story-through-artifacts`)}/rename`, body: { name: 'Trace Story Across Artifacts' } }])
   })
 
@@ -158,21 +158,21 @@ describe('an edit through the story map tools', () => {
   it("should change a cell of an example's row through that example's own tool", async () => {
     const posted: Posted[] = []
     const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/edit-field': WITH_EXAMPLES }, posted)), WITH_EXAMPLES)
-    await client.editExample(EXAMPLE, 'status', 'not running')
+    await client.exampleAt(EXAMPLE).editField('status', 'not running')
     expect(posted).toEqual([{ path: `/api/example/${encodeURIComponent(EXAMPLE)}/edit-field`, body: { field: 'status', text: 'not running' } }])
   })
 
   it("should remove an example through its own tool", async () => {
     const posted: Posted[] = []
     const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/remove': WITH_EXAMPLES }, posted)), WITH_EXAMPLES)
-    await client.removeExample(EXAMPLE)
+    await client.exampleAt(EXAMPLE).remove()
     expect(posted).toEqual([{ path: `/api/example/${encodeURIComponent(EXAMPLE)}/remove`, body: {} }])
   })
 
   it("should change an epic's description through its own tool", async () => {
     const posted: Posted[] = []
     const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/edit-description': CHECKOUT_FLOW }, posted)), CHECKOUT_FLOW)
-    await client.describeNode(SUB_EPIC, 'sub-epic', 'Requested: the editor apps open from the chat bar.')
+    await client.nodeAt(SUB_EPIC, 'sub-epic').describe('Requested: the editor apps open from the chat bar.')
     expect(posted).toEqual([{ path: `/api/epic/${encodeURIComponent(SUB_EPIC)}/edit-description`, body: { description: 'Requested: the editor apps open from the chat bar.' } }])
   })
 
@@ -265,7 +265,7 @@ describe('with the cdd server not answering', () => {
 
   it('should keep the story map as Python last sent it', async () => {
     const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({})), CHECKOUT_FLOW)
-    await client.renameNode(`${SUB_EPIC}.trace-story-through-artifacts`, 'story', 'Trace Story Across Artifacts')
+    await client.nodeAt(`${SUB_EPIC}.trace-story-through-artifacts`, 'story').rename('Trace Story Across Artifacts')
     expect(StoryMapViewModel.of(client.toJSON()).epics[0]!.sub_epics[0]!.stories[1]!.name).toBe('Trace Story Through Artifacts')
   })
 

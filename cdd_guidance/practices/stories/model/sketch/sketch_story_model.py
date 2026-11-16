@@ -9,7 +9,7 @@ carries its kind in front: ``(S:system) {actor} --> {story}``.
 from __future__ import annotations
 
 import re
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 from cdd_guidance.practices.sketch_document.sketch_outline import SketchOutline
 from harness.guidance.guidance import SketchLens
@@ -115,7 +115,7 @@ class SketchStep(Step):
         return True
 
 
-def _read_steps(lines: SketchLines, take) -> None:
+def _read_steps(lines: SketchLines, take: Callable[["SketchStep"], None]) -> None:
     """Each step the lines write, with the `and` and `but` lines chained onto the step before them, handed to take."""
     last: Optional[SketchStep] = None
     for entry in lines.under():

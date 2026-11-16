@@ -58,8 +58,8 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 + story_type: type
 + increment_type: type
 ----
-+ source_texts: dict[str, str]
-	// the text of each file the map was read from, by the path its nodes name
++ sources: StorySources
+	// each file the map was read from (a StorySource: its path and text, and the imports, exports, examples and evidence it declares)
 + links: StoryMapLinks | None
 	// where each node links in the folder a render placed the map in
 + take_scenarios(stories: list[Story], file: str): None
@@ -216,7 +216,8 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 
 ## Example : StoryNode
 
-+ Example(name: str, value: Any = None, sequential_order: int = 0, scope: StoryNode | None = None)
++ Example(name: str, value: Any = None)
+	// its scope is set by the Examples that holds it
 ------
 + value: Any
 	// a field map by default
@@ -266,7 +267,7 @@ The `sketch` format: the stories section of an integrated sketch. Nodes: SketchE
 
 ## MarkdownStoryModel : StoryModel
 
-The `markdown` format: `story-map.md`, the scenario files beside it, and the increments file. Nodes: MarkdownEpic, MarkdownStory, MarkdownIncrement, MarkdownScenario, MarkdownStep. The text is read by a reading made for each read, which keeps where the read is so no node or format holds it: *HeadingMapReading* or *OutlineMapReading* (`map_reading.py`, chosen by `read_map`, sharing *MapReading*'s epic and sub-epic placement) for a story map, and *ScenarioFileReading* (`scenario_file.py`, holding the parts in `scenario_parts.py`: a *BackgroundReading*, an *ExamplesTable*, and a *RealizationFence*, with `take_step` for a step line) for a scenarios file; a scenarios document becomes a map through `scenario_document_map`. `markup.py` holds MarkdownStep, `step_marks` and `step_prose`, and how a name loses its links and emphasis.
+The `markdown` format: `story-map.md`, the scenario files beside it, and the increments file. Nodes: MarkdownEpic, MarkdownStory, MarkdownIncrement, MarkdownScenario, MarkdownStep. The text is read by a reading made for each read, which keeps where the read is so no node or format holds it: *HeadingMapReading* or *OutlineMapReading* (`map_reading.py`, chosen by `read_map`, sharing *MapReading*'s epic and sub-epic placement) for a story map, and *ScenarioFileReading* (`scenario_file.py`, holding the parts in `scenario_parts.py`: a *BackgroundReading*, an *ExamplesTable*, and a *RealizationFence*, taking each step line onto its scenario or background) for a scenarios file; a scenarios document becomes a map through *MarkdownStoryModel*'s parse, and writes itself back through its *_ScenarioDocument*. `markup.py` holds MarkdownStep, `step_marks` and `step_prose`, and how a name loses its links and emphasis.
 
 ------
 + epic_type: MarkdownEpic
@@ -349,7 +350,7 @@ The `miro` format: a canvas-composer SVG, with increments as a thin-slice table.
 
 ## CodeStoryModel : StoryModel
 
-A story map written as test code: one file per sub-epic holding its stories, under epic folders. Nodes: CodeEpic, CodeStory, CodeScenario, CodeIncrement, each also a *CodeStoryNode* (`slug`, `snake`, `pascal`, `camel`, `name_from_slug`). The model keeps the layout of the story files and the code a render adopts; how its language writes a story file is the *StoryWriting* it holds (`writing`), beside the reader of its story files (`story_file`).
+A story map written as test code: one file per sub-epic holding its stories, under epic folders. Nodes: CodeEpic, CodeStory, CodeScenario, CodeIncrement, each also a *CodeStoryNode* (`slug`, `snake`, `pascal`, `camel`). The model keeps the layout of the story files and the code a render adopts; how its language writes a story file is the *StoryWriting* it holds (`writing`), beside the reader of its story files (`story_file`).
 
 ------
 + language: CodeLanguage | None
@@ -482,13 +483,16 @@ One block of a story file: a story, background, scenario, or step call. It is a 
 ## StoryRecording
 
 One writing of a story map onto the practice that holds Stories: the practice and graph it writes to, where each node
-sits in the map's own file texts, and how many stories it has announced. Each node's `record` adds itself through it.
+sits in the files the map was read from (its *StorySources*), and how many stories it has announced. Each node's
+`record` adds itself through it, and sets on its node the facts it does not hold itself.
 
-+ StoryRecording(story_map: StoryModel, practice, on_node: Callable | None)
++ StoryRecording(story_map: StoryModel, practice: PracticeGuidance, on_node: Callable | None)
 ----
 + write(): None
-+ add(story_object, node_id, at: Source, facts=None): Node
-	// named by the object's recorded_name and typed by its recorded_type, at the lines at names
++ add(story_object, node_id, lines: Source): Node
+	// named by the object's recorded_name and typed by its recorded_type, at lines
++ source_of(file): StorySource
+	// the file the map was read from at file; an empty one when it was read from none there
 + name_span(file, name, folder): Source
 + span_of(node, file, fallback_text=""): Source
 	// the lines its reader named on the node (its source's start and end line), else the next line of file holding its text
@@ -499,7 +503,7 @@ Each node's `record` is handed the node its parent was added as (and the file a 
 
 The `story-map.md` entry and story file each epic, sub-epic, and story links to.
 
-+ StoryMapLinks.from_workspace(story_map: StoryModel, root: Path): StoryMapLinks
++ StoryMapLinks(story_map: StoryModel, root: Path)
 	// made once for the map placed in the folder root
 ----
 + story_file(story: Story): str

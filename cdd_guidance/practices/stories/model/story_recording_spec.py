@@ -103,7 +103,7 @@ def _imports_of(root: Path, file: str, text: str) -> dict:
     epic.append_story(story)
     model = StoryModel()
     model.append_epic(epic)
-    model.source_texts[file] = text
+    model.sources.add(file, text)
     graph = Graph()
     graph.open(Path(str(root)))
     practice = graph.practice("stories")

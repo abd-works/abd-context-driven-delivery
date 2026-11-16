@@ -12,11 +12,11 @@ import os
 
 import re
 from pathlib import Path
-from typing import List, Optional
+from typing import Callable, Dict, List, Optional
 
 
 from cdd_guidance.practices.stories.model.markdown.links import unlink
-from cdd_guidance.practices.stories.model.markdown.markup import ExampleRowLine, MarkdownExample, strip_markup
+from cdd_guidance.practices.stories.model.markdown.markup import ExampleRowLine, MarkdownExample, MarkdownStep, step_marks, strip_markup
 from cdd_guidance.practices.stories.model.markdown.scenario_parts import (
     HEADING_LINE,
     STEP_LINE,
@@ -24,9 +24,9 @@ from cdd_guidance.practices.stories.model.markdown.scenario_parts import (
     ExamplesTable,
     RealizationFence,
     StorySection,
-    take_step,
 )
 from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, source_at
+from cdd_guidance.practices.stories.model.story_model import Background, Scenario, StepType
 
 HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+)$")
 SCENARIO_HEADING = re.compile(r"^#+\s+Scenario(?:\s+Outline)?(?:\s+\d+)?\s*[:\-]?\s*(.+?)\s*$", re.IGNORECASE)
@@ -34,6 +34,10 @@ _STORY_HEADING = re.compile(r"^#+\s+Story(?!\s+Background\b)\s*[:\-]?\s*(.+?)\s*
 _ITALIC_STEP = re.compile(r"^\s*\*(Given|When|Then|And|But)\*\s+(.+?)\s*$", re.IGNORECASE)
 _BULLET_STEP = re.compile(r"^\s*[-*]\s+(Given|When|Then|And|But)\b\s*(.+?)\s*$", re.IGNORECASE)
 _H1 = re.compile(r"^#\s+(.+)$")
+_PHASES = {"given": StepType.GIVEN, "when": StepType.WHEN, "then": StepType.THEN}
+# A Story heading names a file's story only near its top, and its title only on its first lines.
+_STORY_HEADING_LINES = 20
+_TITLE_LINES = 5
 # Each kind of heading a scenarios file has, in the order a line is tested for them.
 _HEADINGS = (
     ("story", _STORY_HEADING),
@@ -54,11 +58,11 @@ def heading_of(raw: str) -> tuple:
 def inferred_story_name(lines: List[str], path: Path) -> str:
     """The story a file's scenarios belong to before any story heading: a Story heading near the top, else its title,
     else the folder or file it is in."""
-    found = _first_match(_STORY_HEADING, lines[:20]) or _first_match(_H1, lines[:5])
+    found = _first_match(_STORY_HEADING, lines[:_STORY_HEADING_LINES]) or _first_match(_H1, lines[:_TITLE_LINES])
     return strip_markup(found.group(1)) if found else _named_by_place(path)
 
 
-def _first_match(pattern: re.Pattern, lines: List[str]):
+def _first_match(pattern: re.Pattern, lines: List[str]) -> Optional[re.Match]:
     return next((match for line in lines for match in [pattern.match(line)] if match), None)
 
 
@@ -71,7 +75,7 @@ def _named_by_place(path: Path) -> str:
     return path.stem.replace("-", " ")
 
 
-def scenario_sections_in(root: Path, scenario_type: type, *, on_file=None, base: Path | None = None) -> List[StorySection]:
+def scenario_sections_in(root: Path, scenario_type: type, *, on_file: Optional[Callable[[str], None]] = None, base: Path | None = None) -> List[StorySection]:
     """The story sections of every scenarios markdown file under root, or of root when it is one, each file read once
     by a reading made for it, and named from base, the folder its story map's own file is named from, so every node of
     one map names its file the same way; from root when no base is given."""
@@ -131,7 +135,7 @@ class ScenarioFileReading:
             kind, match = heading_of(self.raw)
             self._read_heading(kind, match) if kind else self._read_text()
 
-    def _read_heading(self, kind: str, match) -> None:
+    def _read_heading(self, kind: str, match: re.Match) -> None:
         """A story, scenario, or epic heading opens what it heads; any other heading is a section heading."""
         if kind == "story":
             self._story_heading(match)
@@ -144,13 +148,13 @@ class ScenarioFileReading:
         else:
             self._section_heading("heading" if kind == "tree" else kind, match)
 
-    def _story_heading(self, match) -> None:
+    def _story_heading(self, match: re.Match) -> None:
         self._close_scenario()
         self.story_name = strip_markup(match.group(1))
         self.backgrounds.restart(self._open_section(self.story_name, self.kept).background)
         self.examples.heading("story", 0, "")
 
-    def _scenario_heading(self, match) -> None:
+    def _scenario_heading(self, match: re.Match) -> None:
         self._close_scenario()
         scenario = self.scenario_type(strip_markup(match.group(1)))
         scenario.is_outline = "outline" in self.raw.lower()
@@ -177,7 +181,7 @@ class ScenarioFileReading:
         self.container = section.parts
         return section
 
-    def _section_heading(self, kind: str, match) -> None:
+    def _section_heading(self, kind: str, match: re.Match) -> None:
         """A heading above the scenario's own level ends the scenario; then a Story Background, Background, or
         Examples heading opens what it heads, a heading under an Examples heading names a group of its examples, and
         any other heading ends the background and examples being read. The line is kept as written."""
@@ -211,12 +215,30 @@ class ScenarioFileReading:
         if owner is None:
             self.container.append(self.kept)
             return
-        take_step(owner, keyword, text, source_at(self.rel, self.number), self.kept)
+        self._take_step(owner, keyword, text)
         self.container.append((STEP_LINE, owner))
         if owner is self.scenario and keyword.lower() in ("when", "then") and owner.steps:
             self.fence.target = owner.steps[-1]
 
-    def _record_example(self, fields: dict) -> MarkdownExample:
+    def _take_step(self, owner: "Scenario | Background", keyword: str, text: str) -> None:
+        """The step this line declares onto owner's steps, read at this line as written: an And or But line continues
+        the step before it."""
+        steps = list(owner.steps)
+        word = keyword.lower()
+        previous = steps[-1] if word in ("and", "but") and steps else None
+        phase = previous.step_type if previous is not None else _PHASES.get(word, StepType.THEN)
+        order = len(previous.ands if previous is not None else steps) + 1
+        step = MarkdownStep(
+            text=text, step_type=phase, sequential_order=order, keyword=word.capitalize(),
+            source=source_at(self.rel, self.number), read_line=self.kept, **step_marks(text),
+        )
+        if previous is not None:
+            previous.ands = [*previous.ands, step]
+        else:
+            steps.append(step)
+        owner.steps = steps
+
+    def _record_example(self, fields: Dict[str, str]) -> MarkdownExample:
         """An example row: the scenario's, else the story background's while it is read, else the shared one's. The
         example keeps the row's line and its table's headers, and stands where the line did."""
         value = fields["example"] if set(fields) <= {"example"} else fields

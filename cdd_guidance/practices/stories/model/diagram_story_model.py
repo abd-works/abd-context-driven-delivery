@@ -30,14 +30,14 @@ class DiagramStoryNode:
         story_map = self._owning_map()
         if isinstance(story_map, DiagramStoryModel):
             return story_map.story_y
-        return DiagramStoryModel.line_y(DiagramStory.row_y, DiagramEpic.nested_row_y, 0)
+        return DiagramStoryModel().story_y
 
     def _sub_epic_bar_y(self, depth: int) -> int:
         """Top of this node's sub-epic bar at *depth* on the map it is drawn on."""
         story_map = self._owning_map()
         if isinstance(story_map, DiagramStoryModel):
             return story_map.sub_epic_y(depth)
-        return DiagramStoryModel.bar_y(DiagramEpic.nested_row_y, depth)
+        return DiagramStoryModel().sub_epic_y(depth)
 
     @property
     def width(self) -> int:
@@ -301,10 +301,11 @@ class DiagramStoryModel(StoryModel):
             lanes.append((increment, by_column))
         return lanes
 
-    def thin_slice_widths(self, columns: List[tuple], lanes: List[tuple], pitch: int, gap: int) -> List[int]:
-        """Each column widened to hold, side by side on one row, the most stories any one increment puts in it, so a
-        lane is a single row of cards and a sub-epic is as wide as its fullest lane."""
-        return [max([1] + [len(held.get(index, [])) for _, held in lanes]) * pitch + gap for index in range(len(columns))]
+    def thin_slice_widths(self, lanes: List[tuple], pitch: int, gap: int) -> List[int]:
+        """Each column widened to hold, side by side on one row, the most stories any one increment of lanes puts in it,
+        so a lane is a single row of cards and a sub-epic is as wide as its fullest lane."""
+        columns = range(len(self.thin_slice_columns()))
+        return [max([1] + [len(held.get(index, [])) for _, held in lanes]) * pitch + gap for index in columns]
 
     @property
     def max_sub_epic_depth(self) -> int:
@@ -329,20 +330,12 @@ class DiagramStoryModel(StoryModel):
 
     def sub_epic_y(self, depth: int) -> int:
         """Top of a sub-epic bar at *depth*: each nested level stacks one bar lower."""
-        return self.bar_y(self.sub_epic_top, depth)
+        return self.sub_epic_top + depth * (DiagramEpic.bar_height + DiagramEpic.depth_gap)
 
     @property
     def story_y(self) -> int:
-        return self.line_y(self.story_floor, self.sub_epic_top, self.max_sub_epic_depth)
-
-    @staticmethod
-    def bar_y(top: int, depth: int) -> int:
-        return top + depth * (DiagramEpic.bar_height + DiagramEpic.depth_gap)
-
-    @classmethod
-    def line_y(cls, floor: int, top: int, max_sub_epic_depth: int) -> int:
         """Top of the story line: below the deepest sub-epic bar, leaving room for the actor drawn above each story,
         so a story at any depth keeps its actor and never sits on a bar."""
-        story = cls.story_type
-        deepest_bottom = cls.bar_y(top, max_sub_epic_depth) + DiagramEpic.bar_height
-        return max(floor, deepest_bottom + story.actor_height + story.actor_gap + story.pad_below_sub_epic)
+        story = self.story_type
+        deepest_bottom = self.sub_epic_y(self.max_sub_epic_depth) + DiagramEpic.bar_height
+        return max(self.story_floor, deepest_bottom + story.actor_height + story.actor_gap + story.pad_below_sub_epic)

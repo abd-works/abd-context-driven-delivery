@@ -7,7 +7,41 @@ from harness.annotations.name import Name
 
 from cdd_guidance.practices.stories.model.brace_story import BraceScenario, BraceStory
 from cdd_guidance.practices.stories.model.code_story_model import CodeEpic
-from cdd_guidance.practices.stories.model.typescript.screen_spec_file import ScreenSpecFile
+from cdd_guidance.practices.stories.model.typescript.screen_spec_file import ScreenSpecFile, is_screen_spec
+
+
+# The example aggregates a new TypeScript epic folder starts with, for the aggregate its name names.
+_EXAMPLES_TEMPLATE = """\
+/**
+ * Example domain aggregates for {name}.
+ */
+
+export interface {noun} {{
+  id: string;
+  status: 'active' | 'pending' | 'suspended';
+  email: string;
+  planName?: string;
+}}
+
+export const active{noun}Example: {noun} = {{
+  id: 'agg-123',
+  status: 'active',
+  email: 'active-user@example.com',
+  planName: 'Premium Plan',
+}};
+
+export const pending{noun}Example: {noun} = {{
+  id: 'agg-456',
+  status: 'pending',
+  email: 'pending-user@example.com',
+}};
+
+export const suspended{noun}Example: {noun} = {{
+  id: 'agg-789',
+  status: 'suspended',
+  email: 'suspended-user@example.com',
+}};
+"""
 
 
 class TypeScriptScenario(BraceScenario):
@@ -21,7 +55,7 @@ class TypeScriptStory(BraceStory):
     def load_all(cls, content: str) -> list:
         """Every story in one story file: a screen spec's, one for each `test.describe`; any other's, from its `story`
         blocks."""
-        if ScreenSpecFile.holds(content):
+        if is_screen_spec(content):
             return ScreenSpecFile(content).stories(cls)
         return super().load_all(content)
 
@@ -40,37 +74,7 @@ class TypeScriptEpic(CodeEpic):
         return self.pascal()
 
     def _examples_file(self, noun: str) -> str:
-        return (
-            f"/**\n"
-            f" * Example domain aggregates for {self.name}.\n"
-            f" */\n"
-            f"\n"
-            f"export interface {noun} {{\n"
-            f"  id: string;\n"
-            f"  status: 'active' | 'pending' | 'suspended';\n"
-            f"  email: string;\n"
-            f"  planName?: string;\n"
-            f"}}\n"
-            f"\n"
-            f"export const active{noun}Example: {noun} = {{\n"
-            f"  id: 'agg-123',\n"
-            f"  status: 'active',\n"
-            f"  email: 'active-user@example.com',\n"
-            f"  planName: 'Premium Plan',\n"
-            f"}};\n"
-            f"\n"
-            f"export const pending{noun}Example: {noun} = {{\n"
-            f"  id: 'agg-456',\n"
-            f"  status: 'pending',\n"
-            f"  email: 'pending-user@example.com',\n"
-            f"}};\n"
-            f"\n"
-            f"export const suspended{noun}Example: {noun} = {{\n"
-            f"  id: 'agg-789',\n"
-            f"  status: 'suspended',\n"
-            f"  email: 'suspended-user@example.com',\n"
-            f"}};\n"
-        )
+        return _EXAMPLES_TEMPLATE.format(noun=noun, name=self.name)
 
 
 def _story_test_text(tests_root: str) -> str:

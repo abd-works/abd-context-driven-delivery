@@ -25,12 +25,12 @@ class BraceStoryFile(StoryFile):
     """One brace-language story file: its story calls, and the calls inside each."""
 
     def story_blocks(self) -> List[CodeBlock]:
-        return self.calls(_STORY, 0, len(self.text), group=2)
+        return self.calls(_STORY, range(0, len(self.text)), group=2)
 
-    def calls(self, pattern: re.Pattern, begin: int, end: int, group: int = 0) -> List["BraceBlock"]:
-        """The calls matching pattern between begin and end that are not inside another one found first."""
+    def calls(self, pattern: re.Pattern, span: range, group: int = 0) -> List["BraceBlock"]:
+        """The calls matching pattern within span of the text that are not inside another one found first."""
         found: List[BraceBlock] = []
-        for match in pattern.finditer(self.text, begin, end):
+        for match in pattern.finditer(self.text, span.start, span.stop):
             if found and match.start() < found[-1].call.end:
                 continue
             name = unescaped(match.group(group)) if group else ""
@@ -108,11 +108,11 @@ class BraceBlock:
         return WrittenBlock.split_inside(self.file.lines, self._inside, [child.line_span for child in children])
 
     def scenarios(self) -> List[CodeBlock]:
-        return self.file.calls(_SCENARIO, self.call.brace + 1, self.call.inner_end, group=2)
+        return self.file.calls(_SCENARIO, range(self.call.brace + 1, self.call.inner_end), group=2)
 
     def backgrounds(self, scenarios: Sequence[CodeBlock]) -> List[CodeBlock]:
         first = scenarios[0].call.start if scenarios else self.call.inner_end
-        return self.file.calls(_BACKGROUND, self.call.brace + 1, first)
+        return self.file.calls(_BACKGROUND, range(self.call.brace + 1, first))
 
     def steps(self, skip: Sequence[CodeBlock]) -> List[CodeBlock]:
         return self.file.step_calls(self.call.brace + 1, self.call.inner_end, skip)

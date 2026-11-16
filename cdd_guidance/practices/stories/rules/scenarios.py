@@ -45,7 +45,7 @@ class AndChaining(PracticeGraphRule):
         """Flag a second When before the previous When has its Then, and a When the scenario never answers."""
         pending_when = False
         for step in context.children(node, "steps"):
-            keyword = _step_keyword(step)
+            keyword = self._step_keyword(step)
             if keyword == "when" and pending_when:
                 return [
                     f"Scenario {node.name!r} starts a new When before the previous interaction has a Then; chain with And."
@@ -55,6 +55,9 @@ class AndChaining(PracticeGraphRule):
         if pending_when:
             return [f"Scenario {node.name!r} ends after When without a Then; add Then or chain with And."]
         return []
+
+    def _step_keyword(self, step: Node) -> str:
+        return _keyword(step).casefold() or _phase(step)
 
 class ButMarksMissingState(PracticeGraphRule):
     slug = "but-marks-missing-state"
@@ -97,7 +100,7 @@ class OutlineRequiresManyPermutations(PracticeGraphRule):
             ]
         return []
 
-def scenario_domain_concepts(steps) -> set[str]:
+def scenario_domain_concepts(steps: list[Node]) -> set[str]:
     """The bold terms the steps name, less their actors: who acts (Customer, My Paradise) is not a concept to give an
     example of."""
     concepts: set[str] = set()
@@ -109,16 +112,6 @@ def scenario_domain_concepts(steps) -> set[str]:
     return concepts - actors
 
 
-def _named_concepts(scenario: Node, context: RuleCheckContext) -> set[str]:
-    """The domain concepts a scenario's steps and their And continuations name."""
-    steps = [
-        each
-        for step in context.children(scenario, "steps")
-        for each in (step, *context.children(step, "ands"))
-    ]
-    return scenario_domain_concepts(steps)
-
-
 class ExamplesTraceDomainModel(PracticeGraphRule):
     """A scenario's examples edges hold its own examples and those its own and its story's Backgrounds hold, so the
     rule reads only the graph."""
@@ -127,10 +120,19 @@ class ExamplesTraceDomainModel(PracticeGraphRule):
     node_types = ("Scenario",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        concepts = _named_concepts(node, context)
+        concepts = self._named_concepts(node, context)
         if not concepts or context.child_count(node, ("examples",)):
             return []
         return [f"Scenario {node.name!r} names domain concepts {sorted(concepts)} but has no examples table."]
+
+    def _named_concepts(self, scenario: Node, context: RuleCheckContext) -> set[str]:
+        """The domain concepts a scenario's steps and their And continuations name."""
+        steps = [
+            each
+            for step in context.children(scenario, "steps")
+            for each in (step, *context.children(step, "ands"))
+        ]
+        return scenario_domain_concepts(steps)
 
 class WhenNamesIntentNotInterfaceGesture(PracticeGraphRule):
     slug = "when-names-intent-not-interface-gesture"
@@ -180,39 +182,38 @@ class GivenNamesComplexStateRootFirst(PracticeGraphRule):
         if _keyword(node).casefold() not in {"given", ""} and node.type != "Given":
             return []
         text = _text(node)
-        for part, root in _owned_parts(context).items():
-            part_at = _first_mention(part, text)
+        for part, root in self._owned_parts(context).items():
+            part_at = self._first_mention(part, text)
             if part_at is None:
                 continue
-            root_at = _first_mention(root, text)
+            root_at = self._first_mention(root, text)
             if root_at is None or root_at > part_at:
                 return [f"Given {text!r} names {part} before its aggregate root {root}; open with {root}, then its owned parts."]
         return []
 
+    def _owned_parts(self, context: RuleCheckContext) -> dict[str, str]:
+        """Each entity and value object an aggregate in the DDD model owns, mapped to the name of that aggregate's root."""
+        graph = context.graph
+        ddd = context.practice.reading.domain_model
+        if ddd is None:
+            return {}
+        owned: dict[str, str] = {}
+        for aggregate in ddd.in_graph.nodes("Aggregate"):
+            roots = [edge.child.name for edge in graph.edges_from("root", aggregate)]
+            if not roots:
+                continue
+            for edge in graph.edges_from("owns", aggregate):
+                if edge.child.type in _OWNED_PART_TYPES:
+                    owned[edge.child.name] = roots[0]
+        return owned
 
-def _owned_parts(context: RuleCheckContext) -> dict[str, str]:
-    """Each entity and value object an aggregate in the DDD model owns, mapped to the name of that aggregate's root."""
-    graph = context.graph
-    ddd = context.practice.reading.domain_model
-    if ddd is None:
-        return {}
-    owned: dict[str, str] = {}
-    for aggregate in ddd.in_graph.nodes("Aggregate"):
-        roots = [edge.child.name for edge in graph.edges_from("root", aggregate)]
-        if not roots:
-            continue
-        for edge in graph.edges_from("owns", aggregate):
-            if edge.child.type in _OWNED_PART_TYPES:
-                owned[edge.child.name] = roots[0]
-    return owned
+    def _first_mention(self, concept: str, text: str) -> int | None:
+        """Where text first names a model concept, written as the class (LineItem) or as words (line items)."""
+        words = re.findall(r"[A-Z]?[a-z0-9]+|[A-Z]+(?![a-z])", concept) or [concept]
+        pattern = r"\b" + r"[\s_-]*".join(re.escape(word) for word in words) + r"s?\b"
+        found = re.search(pattern, text, re.I)
+        return found.start() if found else None
 
-
-def _first_mention(concept: str, text: str) -> int | None:
-    """Where text first names a model concept, written as the class (LineItem) or as words (line items)."""
-    words = re.findall(r"[A-Z]?[a-z0-9]+|[A-Z]+(?![a-z])", concept) or [concept]
-    pattern = r"\b" + r"[\s_-]*".join(re.escape(word) for word in words) + r"s?\b"
-    found = re.search(pattern, text, re.I)
-    return found.start() if found else None
 
 class ScenarioNamesContinuation(PracticeGraphRule):
     slug = "scenario-names-continuation"
@@ -238,7 +239,7 @@ class ScenariosShape(PracticeGraphRule):
         steps = context.children(node, "steps")
         if not steps:
             return [f"Scenario {node.name!r} has no steps."]
-        phases = _scenario_phases(node, context, steps)
+        phases = self._scenario_phases(node, context, steps)
         missing = []
         if "when" not in phases:
             missing.append("When")
@@ -248,37 +249,36 @@ class ScenariosShape(PracticeGraphRule):
             return [f"Scenario {node.name!r} is missing required phase(s): {', '.join(missing)}."]
         return []
 
-
-def _scenario_phases(scenario_node: Node, context: RuleCheckContext, steps: list[Node]) -> set[str]:
-    phases = {_phase(step) for step in steps if _phase(step)}
-    if "given" in phases:
+    def _scenario_phases(self, scenario_node: Node, context: RuleCheckContext, steps: list[Node]) -> set[str]:
+        phases = {_phase(step) for step in steps if _phase(step)}
+        if "given" in phases:
+            return phases
+        if self._background_provides_given(scenario_node, context):
+            phases.add("given")
         return phases
-    if _background_provides_given(scenario_node, context):
-        phases.add("given")
-    return phases
 
 
-def _background_provides_given(scenario_node: Node, context: RuleCheckContext) -> bool:
-    story = _parent_story(scenario_node, context)
-    if story is None:
+    def _background_provides_given(self, scenario_node: Node, context: RuleCheckContext) -> bool:
+        story = self._parent_story(scenario_node, context)
+        if story is None:
+            return False
+        for background in context.children(story, "background"):
+            for step in context.children(background, "steps"):
+                if _phase(step) == "given":
+                    return True
         return False
-    for background in context.children(story, "background"):
-        for step in context.children(background, "steps"):
-            if _phase(step) == "given":
-                return True
-    return False
 
 
-def _parent_story(node: Node, context: RuleCheckContext) -> Node | None:
-    parent = getattr(node, "parent", None)
-    while parent is not None:
-        if parent.type == "Story":
-            return parent
-        parent = getattr(parent, "parent", None)
-    for edge in context.edges("scenarios"):
-        if edge.child is node:
-            return edge.parent
-    return None
+    def _parent_story(self, node: Node, context: RuleCheckContext) -> Node | None:
+        parent = getattr(node, "parent", None)
+        while parent is not None:
+            if parent.type == "Story":
+                return parent
+            parent = getattr(parent, "parent", None)
+        for edge in context.edges("scenarios"):
+            if edge.child is node:
+                return edge.parent
+        return None
 
 
 def _keyword(step: Node) -> str:
@@ -295,9 +295,6 @@ def _phase(step: Node) -> str:
     """given, when, or then from the step's type; an And or But line carries the phase of the line it continues."""
     return str(step.get_fact("phase", "") or "")
 
-
-def _step_keyword(step: Node) -> str:
-    return _keyword(step).casefold() or _phase(step)
 
 class PlainEnglishGwtSteps(PracticeGraphRule):
     slug = "plain-english-gwt-steps"

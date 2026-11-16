@@ -8,6 +8,11 @@ from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, Code
 from cdd_guidance.practices.stories.model.story_model import Background, Step, StepType
 
 
+_BACKGROUND_HEADING = re.compile(r"\s*\*\s*BACKGROUND:\s*(.+)")
+_BACKGROUND_GIVEN = re.compile(r"\s*\*\s*GIVEN:\s*(.+)")
+_CONTINUATION = re.compile(r"\s*\*\s*(AND|BUT):\s*(.+)", re.IGNORECASE)
+
+
 class JavaScenario(CodeScenario):
     _SCENARIO = re.compile(r"SCENARIO:\s*(?P<name>.+)")
     _EXAMPLES_LINE = re.compile(r"EXAMPLES:\s*(.+)")
@@ -24,31 +29,18 @@ class JavaScenario(CodeScenario):
     @classmethod
     def backgrounds_in(cls, content: str) -> List[Background]:
         found: List[Background] = []
-        for line in content.splitlines():
-            if re.search(r"SCENARIO:", line):
-                break
-            heading = re.match(r"\s*\*\s*BACKGROUND:\s*(.+)", line)
+        lines = content.splitlines()
+        for line in lines[: next((index for index, line in enumerate(lines) if "SCENARIO:" in line), len(lines))]:
+            heading, given, extra = _BACKGROUND_HEADING.match(line), _BACKGROUND_GIVEN.match(line), _CONTINUATION.match(line)
             if heading:
                 found.append(Background(heading.group(1).strip(), len(found) + 1))
-                continue
-            given = re.match(r"\s*\*\s*GIVEN:\s*(.+)", line)
-            if given and found:
-                step = Step(
-                    text=given.group(1).strip(),
-                    step_type=StepType.GIVEN,
-                    sequential_order=len(found[-1].steps) + 1,
-                    keyword="Given",
-                )
-                found[-1].steps = [*found[-1].steps, step]
-                continue
-            extra = re.match(r"\s*\*\s*(AND|BUT):\s*(.+)", line, re.IGNORECASE)
-            if extra and found and found[-1].steps:
+            elif given and found:
+                steps = found[-1].steps
+                found[-1].steps = [*steps, Step(given.group(1).strip(), StepType.GIVEN, len(steps) + 1, keyword="Given")]
+            elif extra and found and found[-1].steps:
                 previous = found[-1].steps[-1]
-                word = extra.group(1).lower()
-                previous.ands = [
-                    *previous.ands,
-                    Step(extra.group(2).strip(), previous.step_type, len(previous.ands) + 1, keyword=word),
-                ]
+                continued = Step(extra.group(2).strip(), previous.step_type, len(previous.ands) + 1, keyword=extra.group(1).lower())
+                previous.ands = [*previous.ands, continued]
         return found
 
     def lines(self) -> List[str]:

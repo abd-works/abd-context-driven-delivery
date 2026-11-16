@@ -4,35 +4,15 @@ examples table being read, and the realization fence under a step; and the step 
 from __future__ import annotations
 
 import re
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
-from cdd_guidance.practices.stories.model.markdown.markup import TABLE_LINE, MarkdownStep, step_marks, strip_markup
-from cdd_guidance.practices.stories.model.story_model import Background, Step, StepType, Story
-
-_PHASES = {"given": StepType.GIVEN, "when": StepType.WHEN, "then": StepType.THEN}
+from cdd_guidance.practices.stories.model.markdown.markup import TABLE_LINE, strip_markup
+from cdd_guidance.practices.stories.model.story_model import Background, Scenario, Step, Story
 
 # Where a read scenarios document had a heading or a step line. Every other line is kept as written.
 HEADING_LINE = "heading"
 STEP_LINE = "step"
-
-
-def take_step(owner, keyword: str, text: str, source, read_line: str) -> None:
-    """The step a markdown line declares, read at source from read_line, onto owner's steps: an And or But line
-    continues the step before it."""
-    steps = list(owner.steps)
-    word = keyword.lower()
-    previous = steps[-1] if word in ("and", "but") and steps else None
-    phase = previous.step_type if previous is not None else _PHASES.get(word, StepType.THEN)
-    order = len(previous.ands if previous is not None else steps) + 1
-    step = MarkdownStep(
-        text=text, step_type=phase, sequential_order=order, keyword=word.capitalize(), source=source, read_line=read_line, **step_marks(text)
-    )
-    if previous is not None:
-        previous.ands = [*previous.ands, step]
-    else:
-        steps.append(step)
-    owner.steps = steps
 
 
 class StorySection:
@@ -135,7 +115,7 @@ class ExamplesTable:
             fields.setdefault("group", self.group)
         return fields
 
-    def label(self, fields: dict, index: int, shared: bool) -> str:
+    def label(self, fields: Dict[str, str], index: int, shared: bool) -> str:
         """The name an example row is kept under: its example or name column, else, for an example the story's
         scenarios share, its first column or its group, else its place."""
         first = str(fields.get(self.headers[0], "")).strip("+ ") if shared and self.headers else ""
@@ -195,7 +175,7 @@ class BackgroundReading:
         """The background an example row outside any scenario belongs to: the story's own while it is being read."""
         return self.story if self.story_open and self.story is not None else self.shared
 
-    def give(self, scenario, section: StorySection) -> None:
+    def give(self, scenario: Scenario, section: StorySection) -> None:
         """The scenario's background (its own, else a copy of the shared one), and the story's own to its section."""
         backgrounds = self._scenario_backgrounds()
         if backgrounds:

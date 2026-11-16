@@ -117,7 +117,7 @@ class OpenedStoryMap:
         """Whether text, as its own format reads it, holds the map's nodes and is written as text again."""
         model = self._stories.formats.parse(self.own_format, text)
         again = self._stories.formats.render(RenderRequest(self.own_format, model, previous=text))["content"]
-        return _nodes_held(model) == _nodes_held(self._story_map) and again.strip() == text.strip()
+        return self._nodes_held(model) == self._nodes_held(self._story_map) and again.strip() == text.strip()
 
     def _rendered(self, format: Format, path: Path | None = None) -> str:
         """The map as format writes it, over the file at path as it is now; a format that writes several files, as code
@@ -127,14 +127,13 @@ class OpenedStoryMap:
         content = self._stories.formats.render(RenderRequest(format, self._story_map, previous=previous))["content"]
         return content if isinstance(content, str) else ""
 
-
-def _nodes_held(story_map: StoryModel) -> list[tuple]:
-    """Every epic, story, scenario and step under story_map's epics, as its kind and name, in map order: what a file must
-    read back as for an edit to be kept."""
-    held: list[tuple] = []
-    pending = list(reversed(story_map.epics))
-    while pending:
-        node = pending.pop()
-        held.append((node.semantic_type(), node.name))
-        pending.extend(reversed(node.parts))
-    return held
+    def _nodes_held(self, story_map: StoryModel) -> list[tuple]:
+        """Every epic, story, scenario and step under story_map's epics, as its kind and name, in map order: what a
+        file must read back as for an edit to be kept."""
+        held: list[tuple] = []
+        pending = list(reversed(story_map.epics))
+        while pending:
+            node = pending.pop()
+            held.append((node.semantic_type(), node.name))
+            pending.extend(reversed(node.parts))
+        return held

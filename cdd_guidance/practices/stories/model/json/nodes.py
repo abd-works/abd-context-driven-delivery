@@ -313,15 +313,15 @@ class JsonStoryModel(StoryModel):
             story_map = cls().parse(text)
         except JsonParseError as err:
             raise JsonParseError(f"{json_path}: {err}") from err
-        story_map.source_texts[json_path.name] = text
+        story_map.sources.add(json_path.name, text)
         story_map.place_in(json_path.name)
         story_map.source = source_at(json_path.name, 1)
         return story_map
 
-    def _guard_schema(self, payload: Any) -> None:
-        if not isinstance(payload, dict):
+    def _guard_schema(self, document: object) -> None:
+        if not isinstance(document, dict):
             raise JsonParseError("Root must be an object")
-        if "epics" not in payload:
+        if "epics" not in document:
             raise JsonParseError("Missing required 'epics' key")
-        if not isinstance(payload["epics"], list):
+        if not isinstance(document["epics"], list):
             raise JsonParseError("'epics' must be a list")

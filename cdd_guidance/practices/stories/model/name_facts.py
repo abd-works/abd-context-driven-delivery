@@ -5,6 +5,11 @@ is named in camel case."""
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Source
+
 _GENERIC_VERBS = frozenset({"handle", "process", "manage", "perform", "do", "execute", "run"})
 _ACTOR_NOUNS = frozenset({
     "customer", "user", "system", "admin", "operator", "treasurer", "approver",
@@ -83,7 +88,7 @@ def names_one_time_task(name: str) -> bool:
     return bool(_ONE_OFF.search(name or ""))
 
 
-def file_name_facts(source: object) -> tuple[str, bool]:
+def file_name_facts(source: Optional["Source"]) -> tuple[str, bool]:
     """The name of the file source names, and whether it is named in camel case."""
     relative = str(getattr(source, "file", "") or "") if source is not None else ""
     name = relative.replace("\\", "/").rsplit("/", 1)[-1]

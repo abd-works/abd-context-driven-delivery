@@ -8,12 +8,18 @@ import os
 import re
 from functools import cached_property
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from harness.graph.skipped_folders import scanned_files
 from harness.guidance.practice_reading import PracticeReading
 
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
 from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
+
+    from cdd_guidance.practices.stories.model.story_model import StoryModel
 
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 _STEP_TYPES = frozenset({"Step", "Given", "When", "Then"})
@@ -30,8 +36,6 @@ class StoriesReading(PracticeReading):
 
     reads_after = ("clean_engineering",)
     source_ordered_types = frozenset({"Background", "Scenario", "Step", "Story"})
-    # A step is recorded as the Given, When, or Then it is, while the schema keeps every step's rules on Step (its
-    # given, when, and then types are each a Step), so each carries Step's rules; its check says which kind it judges.
     rule_types = {
         "SubEpic": ("Epic", "StoryNode"),
         "Epic": ("StoryNode",),
@@ -40,6 +44,8 @@ class StoriesReading(PracticeReading):
         "When": ("Step",),
         "Then": ("Step",),
     }
+    """A step is recorded as the Given, When, or Then it is, while the schema keeps every step's rules on Step (its
+    given, when, and then types are each a Step), so each carries Step's rules; its check says which kind it judges."""
 
     recorded_map = None
     """The story map this practice last wrote onto its graph, whose nodes its links start from."""
@@ -111,7 +117,7 @@ class StoriesReading(PracticeReading):
         current = self.practice.fidelities.current
         return current is None or "markdown" in current.outputs
 
-    def _take_code_scenarios(self, model) -> None:
+    def _take_code_scenarios(self, model: "StoryModel") -> None:
         """Give each story of model the scenarios its story files in code under the root hold, in each code format the
         practice reads: its story tests, its shared stories, and its screen specs, by the files each format names its
         story files; with edited files, only those among them."""
@@ -125,18 +131,23 @@ class StoriesReading(PracticeReading):
                 continue
             text = path.read_text(encoding="utf-8")
             file = os.path.relpath(path, self.root).replace("\\", "/")
-            model.source_texts[file] = text
+            model.sources.add(file, text)
             model.add_scenarios(reader.stories_of(text, file, project)[0], file)
 
-    def _story_tests(self):
+    def _story_tests(self) -> "StoryModel":
+        files = self._typescript_texts()
+        self.graph.report_progress("stories · parse")
+        return self.practice.formats.adapter("typescript").parse(files, on_file=lambda detail: self.graph.report_progress(f"stories · parse · {detail}"))
+
+    def _typescript_texts(self) -> dict[str, str]:
+        """The text of each TypeScript file the story tests are read from, by its path from the root."""
         sources = self._typescript_files()
         files: dict[str, str] = {}
         for index, path in enumerate(sources, start=1):
             relative = os.path.relpath(path, self.root).replace("\\", "/")
             self.graph.report_progress(f"stories · {index}/{len(sources)} · {relative}")
             files[relative] = path.read_text(encoding="utf-8")
-        self.graph.report_progress("stories · parse")
-        return self.practice.formats.adapter("typescript").parse(files, on_file=lambda detail: self.graph.report_progress(f"stories · parse · {detail}"))
+        return files
 
     def _story_maps(self):
         """The story maps under the practice's root; with edited files, only the story maps among them."""
@@ -175,7 +186,7 @@ class StoryTree:
     def __init__(self, stories: PracticeReading) -> None:
         self.stories = stories
 
-    def epic_of(self, node):
+    def epic_of(self, node: "Node") -> "Node | None":
         """The epic of the story map whose tree holds node, the outermost found up the graph's own edges; none for a
         node under no epic."""
         epic = None
@@ -185,23 +196,23 @@ class StoryTree:
             above = self.stories.graph.direct_parent(above)
         return epic
 
-    def sub_epics(self, epic) -> list:
+    def sub_epics(self, epic: "Node") -> list["Node"]:
         """The sub-epics directly under epic, in the order the map lists them."""
         return self._below(epic, "decomposedInto", _EPIC_TYPES)
 
-    def stories_under(self, epic) -> list:
+    def stories_under(self, epic: "Node") -> list["Node"]:
         """The stories directly under epic or a sub-epic, in the order the map lists them."""
         return self._below(epic, "decomposedInto", {"Story"})
 
-    def scenarios(self, story) -> list:
+    def scenarios(self, story: "Node") -> list["Node"]:
         """The story's scenarios, in the order its story test or map lists them."""
         return self._below(story, "scenarios", {"Scenario"})
 
-    def steps(self, scenario) -> list:
+    def steps(self, scenario: "Node") -> list["Node"]:
         """The scenario's own steps, without the steps chained onto them, in order."""
         return [edge.child for edge in self.stories.graph.edges_from("steps", scenario)]
 
-    def _below(self, parent, kind: str, node_types) -> list:
+    def _below(self, parent: "Node", kind: str, node_types: frozenset[str] | set[str]) -> list["Node"]:
         return [edge.child for edge in self.stories.graph.edges_from(kind, parent) if edge.child.type in node_types]
 
 
@@ -237,7 +248,7 @@ class StoryLinks:
             self.graph.report_progress(f"stories · examples · {index}/{len(self.examples)} · {example.name}")
             self._link_example(example)
 
-    def _link_step(self, step) -> None:
+    def _link_step(self, step: "Node") -> None:
         body = self._step_body(step)
         called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
         matched = [member for name in sorted(called) for member in self.clean.code_index.members_named(name)]
@@ -253,7 +264,7 @@ class StoryLinks:
             for example in self._observed_by(step, body):
                 self.graph.link("observes", step, example, "relationship")
 
-    def _link_example(self, example) -> None:
+    def _link_example(self, example: "Node") -> None:
         names = set(example.get_fact("source_names") or [])
         reads = set(example.get_fact("source_reads") or [])
         for class_node in self.clean.in_graph.nodes("OoadClass"):
@@ -266,7 +277,7 @@ class StoryLinks:
                 self.graph.link("retrievedUsing", example, prop, "relationship")
                 self.graph.link("retrievedUsing", prop, example, "relationship")
 
-    def _observed_by(self, step, body: str) -> list:
+    def _observed_by(self, step: "Node", body: str) -> list["Node"]:
         """The examples step observes: those its own text and body name, and for a Then, those its scenario's Givens
         name, the state whose outcome it observes."""
         texts = [body]
@@ -274,7 +285,7 @@ class StoryLinks:
             texts.extend(self._step_body(given) for given in self._givens_of(step))
         return [example for example in self.examples if any(re.search(rf"\b{re.escape(example.name)}\b", text) for text in texts)]
 
-    def _givens_of(self, step) -> list:
+    def _givens_of(self, step: "Node") -> list["Node"]:
         """The Given steps of the scenario step sits in, with the steps chained onto them."""
         scenario = self.graph.direct_parent(step)
         while scenario is not None and scenario.type != "Scenario":
@@ -284,11 +295,11 @@ class StoryLinks:
         givens = [found for found in self.tree.steps(scenario) if found.get_fact("phase") == "given"]
         return [*givens, *(edge.child for given in givens for edge in self.graph.edges_from("ands", given))]
 
-    def _step_body(self, step) -> str:
+    def _step_body(self, step: "Node") -> str:
         """The step's own text and the body its story test gives it."""
         return f"{step.name}\n{step.get_fact('body_text') or ''}"
 
-    def _module_of(self, operation):
+    def _module_of(self, operation: "Node") -> "Node | None":
         """The Clean Engineering module that holds the operation: the nearest module above it in the graph."""
         owner = self.graph.direct_parent(operation)
         while owner is not None and owner not in self.modules:

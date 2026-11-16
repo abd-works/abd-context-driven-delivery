@@ -6,7 +6,7 @@ matched to a block by its name.
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple
 
 
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage, WrittenBlock
@@ -21,13 +21,16 @@ from cdd_guidance.practices.stories.model.story_map_files import source_at
 # no child holds), so a node reads its own code from it whichever language it was written in.
 CodeBlock = Any
 
+if TYPE_CHECKING:
+    from cdd_guidance.practices.stories.model.story_model import Background, Scenario
+
 
 def flat_steps(steps: Sequence) -> List:
     """Every step with its ands after it, in the order the file has them."""
     return [line for step in steps for line in (step, *step.ands)]
 
 
-def read_step_code(owner, blocks: Sequence[CodeBlock]) -> None:
+def read_step_code(owner: "Scenario | Background", blocks: Sequence[CodeBlock]) -> None:
     """Each of owner's steps, ands included, reads the step block in the same place in the file."""
     for step, block in zip(flat_steps(owner.steps), blocks):
         step.read_code(block)
@@ -53,11 +56,7 @@ class StoryFile:
         blocks = self.story_blocks()
         if blocks is None:
             return None
-        written = WrittenBlock(self.language, None, [], [])
-        written.path = path
-        written.inside, leads, written.closing = WrittenBlock.split_inside(
-            self.lines, (0, len(self.lines)), [block.line_span for block in blocks]
-        )
+        written, leads = self._written_around(blocks, path)
         if not blocks:
             return story_type.load_all(self.text), written
         imports = story_type.example_imports(self.text)
@@ -68,14 +67,23 @@ class StoryFile:
             stories.append(story)
         return stories, written
 
+    def _written_around(self, blocks: List[CodeBlock], path: str) -> Tuple[WrittenBlock, List[List[str]]]:
+        """The file's own code above, between, and below blocks, kept to write back to path, and the lines that lead
+        each block."""
+        written = WrittenBlock(self.language, None, [], [])
+        written.path = path
+        written.inside, leads, written.closing = WrittenBlock.split_inside(
+            self.lines, (0, len(self.lines)), [block.line_span for block in blocks]
+        )
+        return written, leads
+
     def comment_above(self, block: CodeBlock) -> str:
         """The comment lines right above block, which describe the story it holds, up to the code before them."""
         start = index = block.line_span[0]
-        while index > 0 and _describes(self.lines[index - 1]):
+        while index > 0 and self._describes(self.lines[index - 1]):
             index -= 1
         return "\n".join(self.lines[index:start])
 
-
-def _describes(line: str) -> bool:
-    """Whether a line can be part of the comment above a block: a blank line or a comment line in any language."""
-    return not line.strip() or line.strip().startswith(("/*", "*", "//", "#"))
+    def _describes(self, line: str) -> bool:
+        """Whether a line can be part of the comment above a block: a blank line or a comment line in any language."""
+        return not line.strip() or line.strip().startswith(("/*", "*", "//", "#"))

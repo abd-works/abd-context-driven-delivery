@@ -30,11 +30,11 @@ class PythonStoryFile(StoryFile):
         return [PythonBlock(self, item) for item in self._tree.body if call_of(item) == "story"]
 
 
-def call_of(item: ast.AST) -> str:
+def call_of(statement: ast.AST) -> str:
     """The block's call: story, scenario, given, ... ; background for `with background.<scope>`."""
-    if not isinstance(item, ast.With) or not item.items:
+    if not isinstance(statement, ast.With) or not statement.items:
         return ""
-    expression = item.items[0].context_expr
+    expression = statement.items[0].context_expr
     if isinstance(expression, ast.Attribute) and isinstance(expression.value, ast.Name):
         return "background" if expression.value.id == "background" else ""
     if isinstance(expression, ast.Call) and isinstance(expression.func, ast.Name):

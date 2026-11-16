@@ -70,24 +70,27 @@ function exampleTableOf(examples: ExampleData[]): ExampleTable {
 }
 
 export class ScenarioViewModel extends StoryNodeViewModel {
-  constructor(scenario: SentNode, place: NodePlace, readonly steps: StepRowDto[], readonly examples: ExampleTable) {
-    super(scenario, 'scenario', place)
-  }
+  readonly steps: StepRowDto[]
+  readonly examples: ExampleTable
 
-  static of(scenario: ScenarioData, place: NodePlace): ScenarioViewModel {
-    return new ScenarioViewModel(scenario, place, stepRowsOf(scenario.steps, scenario.node), exampleTableOf(scenario.examples))
+  constructor(scenario: ScenarioData, place: NodePlace) {
+    super(scenario, 'scenario', place)
+    this.steps = stepRowsOf(scenario.steps, scenario.node)
+    this.examples = exampleTableOf(scenario.examples)
   }
 }
 
 export class StoryViewModel extends StoryNodeViewModel {
-  constructor(story: SentNode, place: NodePlace, readonly story_type: string, readonly scenarios: ScenarioViewModel[], readonly acceptance_tests: string[]) {
-    super(story, 'story', place)
-  }
+  readonly story_type: string
+  readonly scenarios: ScenarioViewModel[]
+  readonly acceptance_tests: string[]
 
-  static of(story: StoryData, place: NodePlace): StoryViewModel {
+  constructor(story: StoryData, place: NodePlace) {
+    super(story, 'story', place)
     const under = placesUnder(story.node)
-    const scenarios = story.scenarios.map((scenario, index) => ScenarioViewModel.of(scenario, under(index)))
-    return new StoryViewModel(story, place, story.story_type, scenarios, story.acceptance_tests)
+    this.story_type = story.story_type
+    this.scenarios = story.scenarios.map((scenario, index) => new ScenarioViewModel(scenario, under(index)))
+    this.acceptance_tests = story.acceptance_tests
   }
 }
 
@@ -103,7 +106,7 @@ export class SubEpicViewModel extends StoryNodeViewModel {
 
   static of(subEpic: EpicData, place: NodePlace, stories: StoryData[] = storiesUnder(subEpic)): SubEpicViewModel {
     const under = placesUnder(subEpic.node)
-    return new SubEpicViewModel(subEpic, place, stories.map((story, index) => StoryViewModel.of(story, under(index))))
+    return new SubEpicViewModel(subEpic, place, stories.map((story, index) => new StoryViewModel(story, under(index))))
   }
 }
 

@@ -42,6 +42,7 @@ from cdd_guidance.practices.stories.model.story_model import (
     StoryType,
 )
 from cdd_guidance.practices.stories.model.story_map_files import source_at
+from cdd_guidance.practices.stories.model.story_recording import StorySources
 from cdd_guidance.practices.stories.model.story_file import CodeBlock, flat_steps, read_step_code
 from cdd_guidance.practices.stories.model.story_writing import StoryWriting, as_read
 
@@ -53,44 +54,16 @@ class CodeStoryModelError(Exception):
     """Raised when a folder tree is not a valid code story map."""
 
 
-def _quoted_name_line(content: str, name: str) -> int:
-    """The line that quotes name, counted from 1; the first line when none does."""
-    for index, line in enumerate(content.splitlines(), start=1):
-        if f"'{name}'" in line or f'"{name}"' in line:
-            return index
-    return 1
+# A story file whose header gives no order sorts after every one that does.
+_UNORDERED = (10**6,)
+_EPIC_HEADER = re.compile(r"Epic:\s*(.+)")
+_BACKGROUND_HEADING = re.compile(r"\s*(?:#|//|\*)\s*background:\s*(.+)")
+_BACKGROUND_STEP = re.compile(r"\s*(?:#|//|\*)\s*background-step:\s*(\w+)\s*\|\s*(.*)")
 
 
-def _file_stem_slug(filename: str, suffixes: Tuple[str, ...]) -> str:
-    """The kebab slug of a story file's name without the story-file suffix it ends with; empty for any other file."""
-    suffix = next((item for item in suffixes if filename.endswith(item)), None)
-    return Name(filename[: -len(suffix)]).kebab if suffix else ""
-
-
-def _epic_slugs(folders: List[str], stem_slug: str, leaf_slug: str) -> List[str]:
-    """The epic, then each sub-epic, a story file sits in, from the folders above it under the tests root. A last
-    folder with the file's or its epic's slug is that sub-epic, not a second level; a file in its own top folder is the
-    epic itself."""
-    folders = folders[:-1] if folders and folders[-1] in (stem_slug, leaf_slug) else list(folders)
-    if not folders:
-        return [leaf_slug]
-    nested = folders[1:]
-    return [folders[0], *(nested if nested and nested[-1] == leaf_slug else [*nested, leaf_slug])]
-
-
-def _names_listed(lines: List[str]) -> List[str]:
-    """Each name the comma-separated lines list, once, in order: an import's alias when it gives one."""
-    names: List[str] = []
-    for part in (part for line in lines for part in line.split(",")):
-        name = part.strip().split(" as ")[-1].strip()
-        if name and name != "(" and name not in names:
-            names.append(name)
-    return names
-
-
-def unescaped(value: str) -> str:
+def unescaped(quoted: str) -> str:
     """A quoted name or step text as it reads once its escapes are taken out: the one unescape every language uses."""
-    return value.replace("\\'", "'").replace('\\"', '"').replace("\\\\", "\\")
+    return quoted.replace("\\'", "'").replace('\\"', '"').replace("\\\\", "\\")
 
 
 class CodeStoryNode:
@@ -104,10 +77,6 @@ class CodeStoryNode:
 
     def camel(self) -> str:
         return Name(self.name).title_camel or "unnamed"
-
-    @classmethod
-    def name_from_slug(cls, slug: str) -> str:
-        return slug.replace("-", " ").title()
 
 
 class CodeScenario(Scenario, CodeStoryNode):
@@ -127,26 +96,27 @@ class CodeScenario(Scenario, CodeStoryNode):
                 self.examples[name] = name
 
     def _take_background_comments(self, body: str) -> str:
+        """The body without its background comments, which become this scenario's background."""
         kept: List[str] = []
         calls: List[tuple] = []
-        name = "background"
-        seen = False
+        names: List[str] = []
         for line in body.splitlines(keepends=True):
-            heading = re.match(r"\s*(?:#|//|\*)\s*background:\s*(.+)", line)
-            step = re.match(r"\s*(?:#|//|\*)\s*background-step:\s*(\w+)\s*\|\s*(.*)", line)
+            heading = _BACKGROUND_HEADING.match(line)
+            step = _BACKGROUND_STEP.match(line)
             if heading:
-                name = heading.group(1).strip()
-                seen = True
-                continue
-            if step:
+                names.append(heading.group(1).strip())
+            elif step:
                 calls.append((step.group(1), step.group(2).strip()))
-                continue
-            kept.append(line)
-        if seen or calls:
-            background = Background(name, 1)
-            background.steps = self.steps_from(calls)
-            self.backgrounds = [background]
+            else:
+                kept.append(line)
+        if names or calls:
+            self._take_background(names[-1] if names else "background", calls)
         return "".join(kept)
+
+    def _take_background(self, name: str, calls: List[tuple]) -> None:
+        background = Background(name, 1)
+        background.steps = self.steps_from(calls)
+        self.backgrounds = [background]
 
     @classmethod
     def calls_in(cls, body: str) -> List[tuple]:
@@ -194,7 +164,12 @@ class CodeScenario(Scenario, CodeStoryNode):
         """The example names a story file imports and the ones its examples comment lists, each once, in order."""
         listed = [match.group("names") for match in cls._IMPORT.finditer(content)] if cls._IMPORT is not None else []
         listed += [match.group(1) for match in cls._EXAMPLES_LINE.finditer(content)]
-        return _names_listed(listed)
+        names: List[str] = []
+        for part in (part for line in listed for part in line.split(",")):
+            name = part.strip().split(" as ")[-1].strip()
+            if name and name != "(" and name not in names:
+                names.append(name)
+        return names
 
     @classmethod
     def steps_from(cls, calls: List[tuple]) -> List[Step]:
@@ -202,17 +177,8 @@ class CodeScenario(Scenario, CodeStoryNode):
         previous: Optional[Step] = None
         for keyword, text in calls:
             word = keyword.lower()
-            if word == "and" and previous is not None:
-                previous.ands = [
-                    *previous.ands,
-                    Step(text, previous.step_type, len(previous.ands) + 1, keyword=word),
-                ]
-                continue
-            if word == "but" and previous is not None:
-                previous.ands = [
-                    *previous.ands,
-                    Step(text, previous.step_type, len(previous.ands) + 1, keyword=word),
-                ]
+            if word in ("and", "but") and previous is not None:
+                previous.ands = [*previous.ands, Step(text, previous.step_type, len(previous.ands) + 1, keyword=word)]
                 continue
             step_type = StepType.THEN if word == "but" else cls._STEP_TYPES.get(word)
             if step_type is None:
@@ -375,11 +341,14 @@ class CodeStory(Story, CodeStoryNode):
         for name, body in self._scenario_texts(content, scenario_blocks):
             self.add_scenario(name, body, examples)
         if self.backgrounds and self.backgrounds[0].examples:
-            for scenario in self.scenarios:
-                for background in scenario.backgrounds:
-                    if background.examples:
-                        continue
-                    background.examples = self.backgrounds[0].examples.clone(background)
+            self._share_background_examples()
+
+    def _share_background_examples(self) -> None:
+        """Give each scenario background that holds no examples those of the story's own background."""
+        shared = self.backgrounds[0].examples
+        for background in (background for scenario in self.scenarios for background in scenario.backgrounds):
+            if not background.examples:
+                background.examples = shared.clone(background)
 
 
 class CodeIncrement(Increment, CodeStoryNode):
@@ -387,11 +356,6 @@ class CodeIncrement(Increment, CodeStoryNode):
 
 
 class CodeEpic(Epic, CodeStoryNode):
-    @staticmethod
-    def epic_name_in(content: str) -> str:
-        match = re.search(r"Epic:\s*(.+)", content)
-        return match.group(1).strip() if match else ""
-
     def order_path(self) -> str:
         orders = []
         node = self
@@ -559,7 +523,7 @@ class CodeStoryModel(StoryModel):
             self._take_code(node, match)
             self._take_step_bodies(node, match)
 
-    def _take_code(self, node: Union[Epic, Story, Background, Scenario], kept) -> None:
+    def _take_code(self, node: Union[Epic, Story, Background, Scenario], kept: Optional[Union[Epic, Story, Background, Scenario]]) -> None:
         language = self.language
         if kept is None:
             return
@@ -568,7 +532,7 @@ class CodeStoryModel(StoryModel):
         if node.setup.language is not language:
             node.setup = kept.setup
 
-    def _take_step_bodies(self, node: Union[Background, Scenario], kept) -> None:
+    def _take_step_bodies(self, node: Union[Background, Scenario], kept: Optional[Union[Background, Scenario]]) -> None:
         if kept is None:
             return
         language = self.language
@@ -582,7 +546,9 @@ class CodeStoryModel(StoryModel):
         if not isinstance(external, dict):
             raise CodeStoryModelError(f"{type(self).__name__} reads a path-to-content dict of story files")
         self.epics.clear()
-        self.source_texts = dict(external)
+        self.sources = StorySources()
+        for path, text in external.items():
+            self.sources.add(path, text)
         paths = [path for path in self._ordered_paths(external) if self.is_story_file(path)]
         with self.batch_schema_sync():
             for index, path in enumerate(paths, start=1):
@@ -598,7 +564,7 @@ class CodeStoryModel(StoryModel):
     def _ordered_paths(self, external: Dict[str, str]) -> List[str]:
         def key(path: str) -> tuple:
             match = re.search(r"Orders:\s*([0-9.]+)", external.get(path, ""))
-            order = tuple(int(part) for part in match.group(1).split(".") if part) if match else (10**6,)
+            order = tuple(int(part) for part in match.group(1).split(".") if part) if match else _UNORDERED
             return (order, path)
 
         return sorted(external, key=key)
@@ -607,7 +573,7 @@ class CodeStoryModel(StoryModel):
         for epic in self.epics:
             if epic.slug == slug:
                 return epic
-        epic = self.epic_type(self.epic_type.name_from_slug(slug), len(self.epics) + 1)
+        epic = self.epic_type(self._name_from_slug(slug), len(self.epics) + 1)
         self.append_epic(epic)
         return epic
 
@@ -619,11 +585,11 @@ class CodeStoryModel(StoryModel):
         file is not a second level. A file in its own top folder is the epic itself, and its stories sit on the epic.
         """
         parts = self._under_tests_root(path.strip("/").replace("\\", "/").split("/"))
-        stem_slug = _file_stem_slug(parts[-1], self.story_file_suffixes) if parts is not None and len(parts) >= 2 else ""
+        stem_slug = self._stem_slug(parts[-1]) if parts is not None and len(parts) >= 2 else ""
         if not stem_slug:
             return
-        epic_name = CodeEpic.epic_name_in(content)
-        slugs = _epic_slugs(parts[:-1], stem_slug, (Name(epic_name).title_slug or "unnamed") if epic_name else stem_slug)
+        epic_name = self._epic_name_in(content)
+        slugs = self._epic_slugs(parts[:-1], stem_slug, (Name(epic_name).title_slug or "unnamed") if epic_name else stem_slug)
         holder = self.epic_for(slugs[0]) if len(slugs) == 1 else self.sub_epic_for(self.epic_for(slugs[0]), slugs[1:])
         if epic_name:
             holder.name = epic_name
@@ -634,12 +600,43 @@ class CodeStoryModel(StoryModel):
         stories, written = self.stories_of(content, source_file)
         for story in stories:
             if source_file and not story.has_source_file:
-                line = _quoted_name_line(content, story.name)
+                line = self._quoted_name_line(content, story.name)
                 story.source = source_at(source_file, line)
             holder.append_story(story)
         if written is not None:
             written.key = holder.name
             holder.written = written
+
+    def _quoted_name_line(self, content: str, name: str) -> int:
+        """The line that quotes name, counted from 1; the first line when none does."""
+        for index, line in enumerate(content.splitlines(), start=1):
+            if f"'{name}'" in line or f'"{name}"' in line:
+                return index
+        return 1
+
+    def _stem_slug(self, filename: str) -> str:
+        """The kebab slug of a story file's name without the story-file suffix it ends with; empty for any other file."""
+        suffix = next((item for item in self.story_file_suffixes if filename.endswith(item)), None)
+        return Name(filename[: -len(suffix)]).kebab if suffix else ""
+
+    def _epic_slugs(self, folders: List[str], stem_slug: str, leaf_slug: str) -> List[str]:
+        """The epic, then each sub-epic, a story file sits in, from the folders above it under the tests root. A last
+        folder with the file's or its epic's slug is that sub-epic, not a second level; a file in its own top folder is
+        the epic itself."""
+        folders = folders[:-1] if folders and folders[-1] in (stem_slug, leaf_slug) else list(folders)
+        if not folders:
+            return [leaf_slug]
+        nested = folders[1:]
+        return [folders[0], *(nested if nested and nested[-1] == leaf_slug else [*nested, leaf_slug])]
+
+    def _epic_name_in(self, content: str) -> str:
+        """The epic a story file's header names; empty when it names none."""
+        match = _EPIC_HEADER.search(content)
+        return match.group(1).strip() if match else ""
+
+    def _name_from_slug(self, slug: str) -> str:
+        """An epic's name from the folder it is read from, for a file whose header names none."""
+        return slug.replace("-", " ").title()
 
     def stories_of(self, content: str, source_file: str, project: Optional[Path] = None) -> tuple:
         """The stories of one story file at source_file, each with the code its scenarios and steps are written with,
@@ -655,7 +652,7 @@ class CodeStoryModel(StoryModel):
         for slug in slugs:
             found = next((item for item in parent.epics if item.slug == slug), None)
             if found is None:
-                found = self.epic_type(self.epic_type.name_from_slug(slug), len(parent.epics) + 1)
+                found = self.epic_type(self._name_from_slug(slug), len(parent.epics) + 1)
                 parent.append_epic(found)
             current = found
             parent = found

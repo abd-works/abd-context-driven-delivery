@@ -10,7 +10,7 @@ from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT,
 from cdd_guidance.practices.stories.model.brace_story import BraceStoryModel, BraceStoryWriting
 from cdd_guidance.practices.stories.model.brace_story_file import BraceStoryFile
 from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel
-from cdd_guidance.practices.stories.model.typescript.screen_spec_file import SCREEN_SPEC_SUFFIX, ScreenSpecFile
+from cdd_guidance.practices.stories.model.typescript.screen_spec_file import SCREEN_SPEC_SUFFIX, is_screen_spec
 from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptEpic, TypeScriptStory, _story_test_text
 
 
@@ -72,7 +72,7 @@ class TypeScriptStoryModel(BraceStoryModel):
     def story_file(self, content: str) -> BraceStoryFile | None:
         """The story file content is, read block by block; none for a screen spec, whose stories its story type reads
         from its describes and tests."""
-        return None if ScreenSpecFile.holds(content) else super().story_file(content)
+        return None if is_screen_spec(content) else super().story_file(content)
 
     def save(self) -> Dict[str, str]:
         # WHY: a tree read from TypeScript already brings its own story-test helper; only a new tree needs the seed.

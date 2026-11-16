@@ -9,11 +9,14 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List
 
 from harness.annotations.name import Name
 
 from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, StoryMapFiles
+
+if TYPE_CHECKING:
+    from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel, StoryNode
 
 _LINK = re.compile(r"\[([^\]\n]+)\]\(([^)\s]*)\)")
 
@@ -33,29 +36,6 @@ def heading_anchor(heading: str) -> str:
 
 # The prefix the draw.io editor of VS Code and Cursor gives the data it links a cell to a file with.
 CODE_LINK = "hedietLinkedDataV1"
-
-
-def _heading_line(path: Path, anchor: str) -> int:
-    """The zero-based line of the heading in path whose anchor is anchor; 0 when anchor is empty or no heading has it."""
-    if not anchor:
-        return 0
-    anchors = _Anchors()
-    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines()):
-        heading = re.match(r"#+ (.+)$", line)
-        if heading and anchors.next(heading.group(1)) == anchor:
-            return number
-    return 0
-
-
-def _slug(name: str) -> str:
-    return Name(unlink(name)).title_slug
-
-
-def _relative(target: Path, base: Path) -> str:
-    try:
-        return Path(os.path.relpath(target, base)).as_posix()
-    except ValueError:  # another drive on Windows
-        return target.as_posix()
 
 
 class _Anchors:
@@ -78,42 +58,30 @@ class StoryMapLinks:
     Paths are written relative to ``base``, the folder of the file being rendered.
     """
 
-    def __init__(
-        self,
-        story_map,
-        base: Path | str,
-        map_file: Optional[Path | str] = None,
-        story_files: Optional[Dict[str, Path | str]] = None,
-    ) -> None:
-        self.base = Path(base).resolve()
-        self.map_file = Path(map_file).resolve() if map_file else None
-        self.story_files = {_slug(k): Path(v).resolve() for k, v in (story_files or {}).items()}
-        self._entries = self._entries_of(story_map)
-
-    @classmethod
-    def from_workspace(cls, story_map, root: Path | str) -> "StoryMapLinks":
+    def __init__(self, story_map: "StoryModel", root: Path | str) -> None:
         """The links of story_map placed in the folder root: the markdown story map *StoryMapFiles* finds there and
         every ``*_story.test.md`` / ``*_story.spec.md`` under root, written relative to the folder that holds that
         story map, where the rendered story map sits beside it."""
         root = Path(root).resolve()
         maps = StoryMapFiles(root).markdown_below()
-        map_file = maps[0] if maps else None
-        story_files: Dict[str, Path] = {}
+        self.map_file = maps[0] if maps else None
+        self.base = self.map_file.parent if self.map_file is not None else root
+        self.story_files: Dict[str, Path] = {}
         for path in StoryMapFiles(root).story_files_below():
             stem = path.name
             for suffix in STORY_FILE_SUFFIXES:
                 stem = stem.removesuffix(suffix)
-            story_files.setdefault(_slug(stem), path)
-        return cls(story_map, map_file.parent if map_file is not None else root, map_file, story_files)
+            self.story_files.setdefault(self._slug(stem), path)
+        self._entries = self._entries_of(story_map)
 
-    def story_file(self, story) -> str:
+    def story_file(self, story: "Story") -> str:
         """Relative path to the story's own markdown file, or ``""`` when it has none."""
-        path = self.story_files.get(_slug(story.name))
+        path = self.story_files.get(self._slug(story.name))
         if path is None or not path.is_file():
             return ""
-        return _relative(path, self.base)
+        return self._relative(path)
 
-    def entry_for(self, node) -> str:
+    def entry_for(self, node: "StoryNode") -> str:
         """The node's ``story-map.md#anchor`` link; empty for a node the map does not hold, or with no story map."""
         return next((entry for held, entry in self._entries if held is node), "")
 
@@ -128,14 +96,36 @@ class StoryMapLinks:
         target = self.base / path
         if not path or not target.is_file():
             return {}
-        line = _heading_line(target, anchor)
+        line = self._heading_line(target, anchor)
         return {
             f"{CODE_LINK}_path": f"../{path}",
             f"{CODE_LINK}_start_line_x-num": str(line), f"{CODE_LINK}_start_col_x-num": "0",
             f"{CODE_LINK}_end_line_x-num": str(line), f"{CODE_LINK}_end_col_x-num": "0",
         }
 
-    def _entries_of(self, story_map) -> List[tuple]:
+    def _heading_line(self, path: Path, anchor: str) -> int:
+        """The zero-based line of the heading in path whose anchor is anchor; 0 when anchor is empty or no heading has
+        it."""
+        if not anchor:
+            return 0
+        anchors = _Anchors()
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines()):
+            heading = re.match(r"#+ (.+)$", line)
+            if heading and anchors.next(heading.group(1)) == anchor:
+                return number
+        return 0
+
+    def _slug(self, name: str) -> str:
+        return Name(unlink(name)).title_slug
+
+    def _relative(self, target: Path) -> str:
+        """target as a path from the folder the links are written in; as it is when it sits on another drive."""
+        try:
+            return Path(os.path.relpath(target, self.base)).as_posix()
+        except ValueError:  # another drive on Windows
+            return target.as_posix()
+
+    def _entries_of(self, story_map: "StoryModel") -> List[tuple]:
         """Each epic, sub-epic, and story of story_map with its ``story-map.md#anchor`` link, in map order.
 
         Anchors follow the outline headings the markdown story map renders:
@@ -145,24 +135,17 @@ class StoryMapLinks:
         """
         if self.map_file is None or not self.map_file.is_file():
             return []
-        target = _relative(self.map_file, self.base)
         anchors = _Anchors()
-        entries: List[tuple] = []
+        return [entry for epic in story_map.epics for entry in self._entries_under(epic, anchors)]
 
-        def story_entries(epic) -> None:
-            for story in epic.stories:
-                actor = f"{unlink(story.actors[0]).strip()} " if story.actors else ""
-                heading = f"{story.story_type.outline_mark} {actor}--> {story.name}"
-                entries.append((story, f"{target}#{anchors.next(heading)}"))
-
-        def sub_epic_entries(epics) -> None:
-            for sub in epics:
-                entries.append((sub, f"{target}#{anchors.next(f'(E) {sub.name}')}"))
-                story_entries(sub)
-                sub_epic_entries(sub.epics)
-
-        for epic in story_map.epics:
-            entries.append((epic, f"{target}#{anchors.next(f'(E) {epic.name}')}"))
-            story_entries(epic)
-            sub_epic_entries(epic.epics)
+    def _entries_under(self, epic: "Epic", anchors: "_Anchors") -> List[tuple]:
+        """The epic's entry, then each of its stories', then each of its sub-epics' and theirs, anchored in order."""
+        target = self._relative(self.map_file)
+        entries: List[tuple] = [(epic, f"{target}#{anchors.next(f'(E) {epic.name}')}")]
+        for story in epic.stories:
+            actor = f"{unlink(story.actors[0]).strip()} " if story.actors else ""
+            heading = f"{story.story_type.outline_mark} {actor}--> {story.name}"
+            entries.append((story, f"{target}#{anchors.next(heading)}"))
+        for sub in epic.epics:
+            entries.extend(self._entries_under(sub, anchors))
         return entries

@@ -56,14 +56,6 @@ def background_examples_line(story: Story, prefix: str) -> List[str]:
     return [f"{prefix}background-examples: {json.dumps(payload, ensure_ascii=False)}"]
 
 
-def joined(lines: List[str], child: List[str], raw: bool, gap: List[str]) -> List[str]:
-    """A child's lines after its parent's. A raw child brings the blank lines above it; a generic one gets the
-    language's gap, unless it is the first thing inside its parent or a blank line is already there."""
-    if raw or not lines or not lines[-1].strip():
-        return lines + child
-    return lines + gap + child
-
-
 class StoryWriting:
     """How one language writes stories: the generic render, and the spelling the language gives as data."""
 
@@ -120,7 +112,7 @@ class StoryWriting:
         opened = len(lines)
         for story in epic.stories:
             gap = [] if len(lines) == opened else [""]
-            lines = joined(lines, self.story_lines(story), self.is_as_read(story), gap)
+            lines = (lines if self.is_as_read(story) else self._spaced(lines, gap)) + self.story_lines(story)
         return path, "\n".join(lines + (written.closing if written is not None else [""]))
 
     def story_text(self, story: "Story") -> str:
@@ -174,8 +166,14 @@ class StoryWriting:
         lines[-1] += self.statement_end
         return lines
 
-    def is_as_read(self, node) -> bool:
+    def is_as_read(self, node: "Story | Scenario") -> bool:
         return as_read(node.written, self.language, node.code_key) is not None
+
+    def _spaced(self, lines: List[str], gap: List[str]) -> List[str]:
+        """lines with the language's gap after them, for a child written anew: none when they are empty, the child
+        being the first thing inside its parent, or already end in a blank line. A child written as read brings the
+        blank lines above it itself."""
+        return lines if not lines or not lines[-1].strip() else lines + gap
 
     def _story_head(self, story: "Story") -> List[str]:
         lines = self.story_open(story) + story.setup.lines_in(self.language, self.language.indent, "")
@@ -187,7 +185,7 @@ class StoryWriting:
         opened = len(lines)
         for scenario in story.scenarios:
             gap = [] if len(lines) == opened else self.scenario_gap
-            lines = joined(lines, self._scenario_lines(scenario, self.scenario_indent), self.is_as_read(scenario), gap)
+            lines = (lines if self.is_as_read(scenario) else self._spaced(lines, gap)) + self._scenario_lines(scenario, self.scenario_indent)
         return lines
 
     def _scenario_lines(self, scenario: "Scenario", indent: str) -> List[str]:

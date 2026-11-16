@@ -17,10 +17,13 @@ import sys
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, CodeBody
-from cdd_guidance.practices.stories.model.story_model import Example, StepType
+from cdd_guidance.practices.stories.model.story_model import Example, Scenario, StepType, Story
+
+if TYPE_CHECKING:
+    from cdd_guidance.practices.stories.model.story_recording import StoryRecording
 
 SHARED_SUFFIX = ".story.shared.py"
 _SHARED_MARK = re.compile(r"@\w+\.scenario\(")
@@ -35,16 +38,17 @@ class FixtureExample(Example):
     """An example a shared story file takes from its examples module: its fixture's fields as its value, and the facts
     the statements that use it give, which it records with in place of the facts a story file's own example reads."""
 
-    def __init__(self, name: str, value: Any = None, sequential_order: int = 0, scope=None, facts: dict | None = None) -> None:
-        super().__init__(name, value, sequential_order, scope)
+    def __init__(self, name: str, value: Any = None, facts: dict | None = None) -> None:
+        super().__init__(name, value)
         self.fixture_facts = dict(facts or {})
 
-    def recorded_facts(self, recording, file: str) -> dict:
+    def recorded_facts(self, recording: "StoryRecording", file: str) -> dict:
         return dict(self.fixture_facts)
 
     def clone(self) -> "FixtureExample":
-        value = dict(self.value) if isinstance(self.value, dict) else self.value
-        return type(self)(self.name, value, self.sequential_order, self.scope, self.fixture_facts)
+        cloned = type(self)(self.name, dict(self.value) if isinstance(self.value, dict) else self.value, self.fixture_facts)
+        cloned.sequential_order, cloned.scope = self.sequential_order, self.scope
+        return cloned
 
 
 @dataclass(frozen=True)
@@ -92,20 +96,20 @@ class FixtureModule:
             if isinstance(node, ast.ClassDef)
         }
 
-    def _cells(self, value: ast.expr) -> dict:
+    def _cells(self, built: ast.expr) -> dict:
         """The fields of a fixture built by calling a class of the module; one value for anything else."""
-        if isinstance(value, ast.Call) and isinstance(value.func, ast.Name) and value.func.id in self._fields:
-            fields = self._fields[value.func.id]
-            cells = {"group": value.func.id}
-            cells.update({name: self._shown(arg) for name, arg in zip(fields, value.args)})
-            cells.update({keyword.arg: self._shown(keyword.value) for keyword in value.keywords if keyword.arg})
+        if isinstance(built, ast.Call) and isinstance(built.func, ast.Name) and built.func.id in self._fields:
+            fields = self._fields[built.func.id]
+            cells = {"group": built.func.id}
+            cells.update({name: self._shown(arg) for name, arg in zip(fields, built.args)})
+            cells.update({keyword.arg: self._shown(keyword.value) for keyword in built.keywords if keyword.arg})
             return cells
-        return {"value": self._shown(value)}
+        return {"value": self._shown(built)}
 
-    def _shown(self, value: ast.expr) -> str:
-        if isinstance(value, ast.Constant):
-            return str(value.value)
-        return ast.get_source_segment(self._text, value) or ""
+    def _shown(self, expression: ast.expr) -> str:
+        if isinstance(expression, ast.Constant):
+            return str(expression.value)
+        return ast.get_source_segment(self._text, expression) or ""
 
 
 class SharedStoryFile:
@@ -117,23 +121,18 @@ class SharedStoryFile:
         self._lines = text.splitlines()
         self._search = [Path(folder) for folder in (search if search is not None else [Path.cwd(), *map(Path, sys.path)])]
 
-    @staticmethod
-    def holds(text: str) -> bool:
-        """True for the text of a shared story file: it declares its scenarios with ``@<stories>.scenario(...)``."""
-        return bool(_SHARED_MARK.search(text))
-
     def stories(self, story_type: type) -> list:
         """The stories of the file, each with its scenarios in the order the file writes them."""
         stories: dict[str, Any] = {}
         for function in self._tree.body:
-            named = _decorated_with(function, frozenset({_SCENARIO}))
+            named = self._decorated_with(function, frozenset({_SCENARIO}))
             if named is None or len(named) < 2:
                 continue
             story = stories.setdefault(named[0], story_type(named[0], len(stories) + 1))
             story.scenarios.append(self._scenario(story, named[1], function))
         return list(stories.values())
 
-    def _scenario(self, story, name: str, function: ast.FunctionDef):
+    def _scenario(self, story: Story, name: str, function: ast.FunctionDef) -> Scenario:
         scenario = story.scenario_type(name=name, sequential_order=len(story.scenarios) + 1)
         for step in self._steps_of(function):
             self._add_step(scenario, step)
@@ -143,7 +142,7 @@ class SharedStoryFile:
                 scenario.examples[name_used] = example.clone()
         return scenario
 
-    def _add_step(self, scenario, code: StepCode) -> None:
+    def _add_step(self, scenario: Scenario, code: StepCode) -> None:
         """Put the step code writes on scenario, as the kind its decorator names, its body the code it runs; an And or
         But continues the step before it, in that step's phase."""
         continued = scenario.steps[-1] if code.kind in _CONTINUATIONS and scenario.steps else None
@@ -160,9 +159,9 @@ class SharedStoryFile:
         """The step functions of a scenario's function, in order."""
         steps = []
         for item in function.body:
-            words = _decorated_with(item, frozenset({*_PHASES, *_CONTINUATIONS}))
+            words = self._decorated_with(item, frozenset({*_PHASES, *_CONTINUATIONS}))
             if words:
-                steps.append(StepCode(_decorator_name(item), words[0], item))
+                steps.append(StepCode(self._decorator_name(item), words[0], item))
         return steps
 
     def _code_of(self, function: ast.FunctionDef) -> str:
@@ -173,7 +172,7 @@ class SharedStoryFile:
         while pending:
             current = pending.pop(0)
             texts.append("\n".join(self._lines[current.lineno - 1 : current.end_lineno]))
-            for called in sorted({_called(node) for node in ast.walk(current) if isinstance(node, ast.Call)}):
+            for called in sorted({self._called(node) for node in ast.walk(current) if isinstance(node, ast.Call)}):
                 if called in self._helpers and called not in seen:
                     seen.append(called)
                     pending.append(self._helpers[called])
@@ -182,7 +181,7 @@ class SharedStoryFile:
     @cached_property
     def _helpers(self) -> dict[str, ast.FunctionDef]:
         """The file's own module-level functions, which its steps call, by name."""
-        return {node.name: node for node in self._tree.body if isinstance(node, ast.FunctionDef) and _decorated_with(node, frozenset({_SCENARIO})) is None}
+        return {node.name: node for node in self._tree.body if isinstance(node, ast.FunctionDef) and self._decorated_with(node, frozenset({_SCENARIO})) is None}
 
     @cached_property
     def _examples(self) -> dict[str, FixtureExample]:
@@ -221,24 +220,26 @@ class SharedStoryFile:
         reads = re.findall(rf"\b{re.escape(name)}\.(\w+)", self.text)
         return {"source_names": sorted(names), "source_reads": sorted(set(reads))}
 
-
-def _decorated_with(node: ast.AST, names: frozenset[str]) -> list[str] | None:
-    """The string arguments of node's decorator called one of names; none for any other node."""
-    if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+    def _decorated_with(self, node: ast.AST, names: frozenset[str]) -> list[str] | None:
+        """The string arguments of node's decorator called one of names; none for any other node."""
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            return None
+        for decorator in node.decorator_list:
+            if isinstance(decorator, ast.Call) and self._called(decorator) in names:
+                return [arg.value for arg in decorator.args if isinstance(arg, ast.Constant) and isinstance(arg.value, str)]
         return None
-    for decorator in node.decorator_list:
-        if isinstance(decorator, ast.Call) and _called(decorator) in names:
-            return [arg.value for arg in decorator.args if isinstance(arg, ast.Constant) and isinstance(arg.value, str)]
-    return None
+
+    def _decorator_name(self, node: ast.FunctionDef) -> str:
+        return next(self._called(decorator) for decorator in node.decorator_list if isinstance(decorator, ast.Call))
+
+    def _called(self, call: ast.Call) -> str:
+        """The name a call ends in: ``when`` for ``s.when(...)``, ``board_of`` for ``board_of(world)``."""
+        func = call.func
+        if isinstance(func, ast.Attribute):
+            return func.attr
+        return func.id if isinstance(func, ast.Name) else ""
 
 
-def _decorator_name(node: ast.FunctionDef) -> str:
-    return next(_called(decorator) for decorator in node.decorator_list if isinstance(decorator, ast.Call))
-
-
-def _called(call: ast.Call) -> str:
-    """The name a call ends in: ``when`` for ``s.when(...)``, ``board_of`` for ``board_of(world)``."""
-    func = call.func
-    if isinstance(func, ast.Attribute):
-        return func.attr
-    return func.id if isinstance(func, ast.Name) else ""
+def is_shared_story_file(text: str) -> bool:
+    """True for the text of a shared story file: it declares its scenarios with ``@<stories>.scenario(...)``."""
+    return bool(_SHARED_MARK.search(text))

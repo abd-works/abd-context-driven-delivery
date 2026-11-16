@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import List
 
 from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory, unescaped
-from cdd_guidance.practices.stories.model.python.shared_story_file import SharedStoryFile
+from cdd_guidance.practices.stories.model.python.shared_story_file import SharedStoryFile, is_shared_story_file
 from cdd_guidance.practices.stories.model.story_model import Background
 
 
@@ -55,7 +55,7 @@ class PythonStory(CodeStory):
     def stories_in(cls, content: str, project: Path | None) -> List["CodeStory"]:
         """Every story in one story file of project: a shared story file's examples module is looked for there first,
         then in the folders Python imports from."""
-        if SharedStoryFile.holds(content):
+        if is_shared_story_file(content):
             search = [*([project] if project is not None else []), Path.cwd(), *map(Path, sys.path)]
             return SharedStoryFile(content, search).stories(cls)
         return super().load_all(content)

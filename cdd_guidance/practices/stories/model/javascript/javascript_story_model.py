@@ -34,16 +34,16 @@ class JavaScriptStoryModel(BraceStoryModel):
 
     def save(self) -> Dict[str, str]:
         # WHY: a tree read from JavaScript already brings its own story-test helper; only a new tree needs the seed.
-        seed = {} if self.read_from_code() else {f"{self.tests_root}/story-test.js": _story_test_js()}
+        seed = {} if self.read_from_code() else {f"{self.tests_root}/story-test.js": self._story_test_helper()}
         return self.write_epics(seed)
 
-
-
-def _story_test_js() -> str:
-    seed = Path(__file__).resolve().parent / "seeds" / "story-test.js"
-    if seed.exists():
-        return seed.read_text(encoding="utf-8")
-    return (
-        'import { before, describe, it } from "node:test";\n\n'
-        "export function story(name, build) {\n  describe(name, build);\n}\n"
-    )
+    def _story_test_helper(self) -> str:
+        """The story-test helper a new JavaScript tree is seeded with: the seed file beside this format, else a
+        minimal one built on node:test."""
+        seed = Path(__file__).resolve().parent / "seeds" / "story-test.js"
+        if seed.exists():
+            return seed.read_text(encoding="utf-8")
+        return (
+            'import { before, describe, it } from "node:test";\n\n'
+            "export function story(name, build) {\n  describe(name, build);\n}\n"
+        )
