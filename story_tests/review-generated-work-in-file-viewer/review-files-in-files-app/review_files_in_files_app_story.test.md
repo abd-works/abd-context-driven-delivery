@@ -312,6 +312,15 @@ Requested by the person on 2026-11-16.
 *Then* the [source view](../../../harness/graph/app/source/SourceView.tsx) wraps line 14 onto the lines below it, and grows as tall as the wrapped file
 *And* the Files app keeps Wrap lines on for the next file the Person opens
 
+#### Scenario: A file from an older server lane opens without callouts
+
+Found on 2026-11-16 (debug report `debug-20261116T225500.md`): a page reaching a cdd server lane older than the page (the pinned stable lane, whose `session.file` answers no callouts) stopped with "Cannot read properties of undefined (reading 'map')".
+
+*Given* checkout-flow's session holds *order.py*, and the cdd server the page reaches answers *order.py* with its text but without callouts, steps or violations
+*When* the Person views *order.py*
+*Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* in the source view, with no callout and no broken rule
+*And* a server answer that is no file at all, such as the text of a call it cannot run, is shown and told as *order.py* not opening, and the page keeps working
+
 ## Story: Fold Classes And Operations
 
 Changed by the person on 2026-11-16 ("native expand collapse for class functions, heading levels in markdown etc like a real IDE"): the source view folds as Monaco folds the file's language, with or without Rules, in place of folds drawn by hand from the session's graph. Only the page folds, so these scenarios have no step in the Python story tiers; `harness/graph/app/app.test.tsx` holds them.

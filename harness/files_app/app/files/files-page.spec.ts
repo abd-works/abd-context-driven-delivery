@@ -9,6 +9,7 @@ import type { GuidanceSelectionData } from '@cdd/space/session/session'
 import { FilesLink } from './files-link'
 import { FilesPage, filesShown } from './files-page'
 import { drawioPageOf, revealLabelOf } from './files-paths'
+import { calloutsOf, rulesOf } from './source-of-file'
 
 // Each stage's fidelities by practice, as the session's practices declare them.
 const FIDELITIES: Record<string, Record<string, string>> = {
@@ -545,6 +546,64 @@ describe('Browse Files Without Reading Rules', () => {
         await page.toggleCrossFile()
         expect(lastRead(server)).toMatchObject({ rules: false, cross_file: true })
       })
+    })
+  })
+})
+
+describe('View File In Source View', () => {
+  // A cdd server lane older than the page, such as the pinned stable lane: its session.file answers what it knew then.
+  class OlderLaneFilesServer extends FakeFilesServer {
+    constructor(private readonly answer: unknown) {
+      super()
+    }
+
+    override async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
+      if (path.endsWith('/file')) return this.answer as Result
+      return super.post<Result>(path, body)
+    }
+  }
+
+  async function viewed(answer: unknown) {
+    const server = new OlderLaneFilesServer(answer)
+    const page = new FilesPage(server, new FilesLink(STAGE_LINK))
+    await started(page)
+    await page.open('src/order.py')
+    return { page, server }
+  }
+
+  const ORDER_PY = { path: 'src/order.py', text: 'class Order:\n    def place(self, cart: Cart) -> Order:\n        return self', language: 'python', comments: [], changes: [], folds: [] }
+
+  describe('with a server lane that answers order.py without callouts, steps or violations', () => {
+    it('should show order.py with no callout', async () => {
+      const { page } = await viewed(ORDER_PY)
+      expect(calloutsOf(page.state.file!)).toEqual([])
+    })
+
+    it('should show order.py with no broken rule', async () => {
+      const { page } = await viewed(ORDER_PY)
+      expect(rulesOf(page.state.file!)).toEqual([])
+    })
+
+    it('should say nothing went wrong', async () => {
+      expect((await viewed(ORDER_PY)).page.state.problem).toBe('')
+    })
+  })
+
+  describe('with a server lane that answers a step without what it invokes or observes', () => {
+    it('should put no callout on the step', async () => {
+      const { page } = await viewed({ ...ORDER_PY, steps: [{ line: 2 }] })
+      expect(calloutsOf(page.state.file!)).toEqual([])
+    })
+  })
+
+  describe('with a server lane that answers no file, such as the text of a call it cannot run', () => {
+    it('should show that order.py did not open', async () => {
+      const { page } = await viewed('Unknown tool: session.file')
+      expect(page.state.problem).toBe('src/order.py did not open: session.file answered no file: Unknown tool: session.file')
+    })
+
+    it('should hold no file to draw', async () => {
+      expect((await viewed('Unknown tool: session.file')).page.state.file).toBeNull()
     })
   })
 })
