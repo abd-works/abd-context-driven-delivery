@@ -168,3 +168,5 @@
 2026-11-16T20:07:56Z error session.graph_trees C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 622 no-chat
 2026-11-16T20:08:27Z error session.graph_trees C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 716 no-chat
 2026-11-16T20:10:39Z tool sessions.switch 5731abe5-a4c7-449c-9703-c87f3bda7c50 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\5731abe5-a4c7-449c-9703-c87f3bda7c50.jsonl 1-3182
+2026-11-16T20:10:51Z error session.graph_trees C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 810 no-chat
+2026-11-16T20:10:52Z error session.graph_trees C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 904 no-chat
