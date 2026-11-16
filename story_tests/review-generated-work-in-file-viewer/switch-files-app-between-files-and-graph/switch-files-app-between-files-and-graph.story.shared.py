@@ -32,6 +32,10 @@ from space.session.graph_view_examples import (
     KANBAN_MODEL,
     SHARED_STORY,
     STEP_LISTED,
+    STEP_STORY,
+    STEP_STORY_GIVEN_LINE,
+    STEP_STORY_WHEN_LINE,
+    TICKET_EXAMPLES,
     STORY_MAP_DELETE_LINE,
     STORY_TEST,
     TICKET_CODE,
@@ -395,3 +399,20 @@ def _(s):
     @s.then("the When shows an invokes group holding delete")
     def _(world):
         expect(world.when).to(equal(["delete"]))
+
+
+@shared_stories.scenario("Follow Story Steps To Code", "A story test's callouts sit on the step that invokes them")
+def _(s):
+    @s.given("the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose docstring names the class Ticket")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+        session_of(world).graph_trees(paths=STEP_LISTED)
+
+    @s.when("the Person views the shared story test")
+    def _(world):
+        world.steps = world.data_of(session_of(world).file(path=STEP_STORY, rules=True))["steps"]
+
+    @s.then("the When's line carries a callout to Ticket.delete, and the Given's line a callout to ticket_on_board, but the docstring's line carries none")
+    def _(world):
+        found = [(step["line"], [target["name"] for target in step["invokes"]], [target["file"] for target in step["invokes"]]) for step in world.steps]
+        expect(found).to(equal([(STEP_STORY_GIVEN_LINE, ["ticket_on_board"], [TICKET_EXAMPLES]), (STEP_STORY_WHEN_LINE, ["delete"], [TICKET_CODE])]))

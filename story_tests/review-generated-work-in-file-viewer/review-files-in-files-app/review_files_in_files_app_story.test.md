@@ -312,14 +312,80 @@ Requested by the person on 2026-11-16.
 
 ## Story: Fold Classes And Operations
 
-#### Scenario: Fold the file's class and its operations
+Changed by the person on 2026-11-16 ("native expand collapse for class functions, heading levels in markdown etc like a real IDE"): the source view folds as Monaco folds the file's language, with or without Rules, in place of folds drawn by hand from the session's graph. Only the page folds, so these scenarios have no step in the Python story tiers; `harness/graph/app/app.test.tsx` holds them.
+
+#### Scenario: Fold the file's class, its operations and their blocks
 
 Inherited from the graph's Unfold Calls And Classes In Source: the Files app reuses the graph explorer's source view (`harness/graph/app/source/SourceView.tsx`).
 
-*Given* checkout-flow's session holds *order.py*
-*And* checkout-flow's graph places the class *Order* on lines 5 to 41 of *order.py*, and its operation *place* on lines 12 to 14
-*When* the Person views *order.py* with Rules turned on
-*Then* the source view offers a fold of *Order* over lines 5 to 41, and a fold of *place* over lines 12 to 14
+*Given* checkout-flow's session holds *order.py*, its class *Order* on lines 5 to 41, its operation *place* on lines 12 to 14, and the *if* on line 13
+*When* the Person views *order.py*
+*Then* the source view offers a fold of *Order*, of *place* and of the *if*, each at its first line, as an IDE does
+
+#### Scenario: Fold a markdown file by its headings
+
+*Given* checkout-flow's session holds *README.md*, whose *# Checkout* holds *## Place an order* and *## Pay*
+*When* the Person views *README.md*
+*Then* the source view offers a fold of each heading over its section, *# Checkout* over both of the others
+*But* a heading inside a code block folds nothing
+
+## Story: Fold With Keyboard Shortcuts
+
+Requested by the person on 2026-11-16: "Cursor-equivalent keyboard shortcuts (or VS Code, configurable in a context config json), e.g. Ctrl+K Ctrl+0, Ctrl+M etc." The project's keys sit in `.context/files-app-keybindings.json`, written as VS Code's and Cursor's keybindings.json writes them. Only the page binds keys: `harness/files_app/app/files/files-fold-keys.spec.ts`.
+
+#### Scenario: Fold with VS Code's chords
+
+*Given* the project has no *.context/files-app-keybindings.json*
+*When* the Person presses Ctrl+K Ctrl+0 in *order.py*
+*Then* every fold of *order.py* closes
+*When* the Person presses Ctrl+K Ctrl+J
+*Then* every fold opens again
+
+#### Scenario: Fold with the keys the project's keybindings file gives
+
+*Given* *.context/files-app-keybindings.json* gives Ctrl+M Ctrl+M to *editor.toggleFold*
+*When* the Person presses Ctrl+M Ctrl+M on line 12 of *order.py*
+*Then* the fold of *place* closes
+
+#### Scenario: Keep VS Code's chords when the keybindings file is wrong
+
+Required by the cdd_web_domain_access rule `fail-loud-on-mcp` this session overlays.
+
+*Given* *.context/files-app-keybindings.json* is not a list of keys and fold commands
+*When* the Files app opens
+*Then* a toast says the file is not used, with why
+*And* Ctrl+K Ctrl+0 still folds every fold
+
+## Story: Open Calls And Classes In Place
+
+Requested by the person on 2026-11-16: "we are being too aggressive on the shading and double shading, e.g. the callout label then the actual callout content. On expand, hide the callout label and show the content; on collapse, bring it back. Only shade once." Only the page shows it: `harness/graph/app/app.test.tsx`.
+
+#### Scenario: Label a call while it is closed
+
+*Given* the Files app shows *order.py*, whose line 13 calls *cart.is_empty()*, after the graph view read checkout-flow's members
+*When* the Person views *order.py*
+*Then* line 13 ends with the label *▸ Cart.is_empty*, and nothing of *Cart.is_empty* shows under it
+
+#### Scenario: Open a call in place of its label, shaded once
+
+*Given* the Files app shows *order.py* with line 13 labelled *▸ Cart.is_empty*
+*When* the Person presses the label or its mark
+*Then* the lines of *Cart.is_empty* show under line 13, shaded once, without the marks the graph puts after each call
+*And* the label is hidden
+*When* the Person presses the mark again
+*Then* the lines of *Cart.is_empty* close and the label comes back
+
+#### Scenario: Open a call inside an open call one shade deeper
+
+*Given* the lines of *Cart.is_empty* show under line 13 of *order.py*, and they call *Cart.items*
+*When* the Person presses the mark beside that call
+*Then* the lines of *Cart.items* show under it, one shade deeper
+
+#### Scenario: Open nothing a comment or a docstring names
+
+*Given* *order.py*'s docstring and a comment name the class *Cart*
+*When* the Person views *order.py*
+*Then* neither line carries a label or a mark
 
 ## Story: Mark Lines A Broken Rule Names
 
@@ -339,7 +405,7 @@ Requested (the person, 2026-11-15): Rules and Cross-file toggles at the top, off
 *Given* checkout-flow's session holds *order.py*
 *And* checkout-flow's graph found *vocabulary-traces-to-source* broken on lines 12 to 14 of *order.py*
 *When* the Person views *order.py* with Rules off
-*Then* the source view shows *order.py* with no folds and no broken rules
+*Then* the source view shows *order.py* with no broken rules, folding only as its language folds
 
 ## Story: Save Edited File
 

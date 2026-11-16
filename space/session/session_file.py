@@ -11,6 +11,10 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Literal
 
+from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
+from cdd_guidance.practices.stories.stories import Stories
+from harness.graph.explorer import NodeSource
+from harness.graph.graph import Graph, Node, Source
 from harness.graph.saved_graph import GRAPH_FILE_NAME, SavedGraph, SavedGraphOutdated
 from harness.graph.violation import Violation
 from harness.installation.data_class import SourceFile, data_field
@@ -87,6 +91,34 @@ class FileCallout:
     def section(self) -> Range:
         """The linked heading's section, in the file it sits in, with its text."""
         return self._section
+
+
+class FileStep:
+    """A step of a story test in the file that reaches code or examples: the line it starts on, where the viewer opens in
+    place what it invokes and observes, so a story test's callouts sit on the step whose relationships they are."""
+
+    def __init__(self, line: int, invokes: list[NodeSource], observes: list[NodeSource]) -> None:
+        self._line = line
+        self._invokes = invokes
+        self._observes = observes
+
+    @property
+    @data_field
+    def line(self) -> int:
+        """The line, counted from 1, the step starts on: its decorator or its call."""
+        return self._line
+
+    @property
+    @data_field
+    def invokes(self) -> list[NodeSource]:
+        """The functions and operations the step calls, each with its text and file."""
+        return list(self._invokes)
+
+    @property
+    @data_field
+    def observes(self) -> list[NodeSource]:
+        """The examples whose state the step observes, each with its text and file."""
+        return list(self._observes)
 
 
 class FileChange:
@@ -194,6 +226,30 @@ class SessionFile:
         nodes = [node for node in self._nodes() if node.type in CLASS_TYPES | MEMBER_TYPES]
         folds = [Fold(self.range(node.line, node.end_line), "class" if node.type in CLASS_TYPES else "block", node.name) for node in nodes if node.end_line > node.line]
         return sorted(folds, key=lambda fold: (fold.range.start_line, -fold.range.end_line))
+
+    @property
+    @data_field
+    def steps(self) -> list[FileStep]:
+        """Each step of a story test in this file that invokes or observes something, in line order, as the session's
+        graph links it; none while the viewer reads no rules, which never reads a graph, or while the graph holds no
+        Stories."""
+        if not (self._reads_rules or self._cross_file):
+            return []
+        graph = self._session.graph
+        stories = graph.practices.loaded(Stories)
+        nodes = [node for node in (stories.reading.in_graph.nodes() if stories is not None else []) if node.source is not None and self._holds(node.source)]
+        found = [FileStep(node.source.start_line, self._sources(graph, "invokes", node), self._sources(graph, "observes", node)) for node in nodes]
+        return sorted((step for step in found if step.invokes or step.observes), key=lambda step: step.line)
+
+    @staticmethod
+    def _sources(graph: Graph, kind: str, node: Node) -> list[NodeSource]:
+        """What node reaches by kind, each with its source and the class it belongs to; a module's function belongs to none."""
+        owners = ((edge.child, str(edge.child.get_fact("owner", "") or "")) for edge in graph.edges_from(kind, node) if edge.child.source is not None)
+        return [NodeSource(child, owner="" if owner == MODULE_FUNCTION_HOLDER else owner) for child, owner in owners]
+
+    def _holds(self, source: Source) -> bool:
+        """Whether source, named from its own root, sits in this file."""
+        return bool(source.file) and Path(source.root or self._session.work_root, source.file).resolve() == self._session.path_named(self._path)
 
     @property
     @data_field

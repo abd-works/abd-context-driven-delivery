@@ -9,7 +9,7 @@ The *Files app* shows the files a link names and turns a person's reading into w
 
 ### FilesPage (`files/files-page.ts`)
 
-- The page: the files its link names, read once and kept by fidelity; the session's practices; the one file open; and what went wrong. Holds its *FilesStore*, its session client, and the parts that each do one job on it: *FileBar*, *GuidanceSelector* (`guidance`), *FileCommentsActions* (`comments`), *FileMenu* (`menu`, with its *FileBrowser*), *ChatContext* (`chatContext`), and *FilesNotices* (`notices`). Its own operations are reading and showing the files: `start`, `showScope`, `toggleRules`, `toggleCrossFile`, `open`, and `attempt`.
+- The page: the files its link names, read once and kept by fidelity; the session's practices; the one file open; and what went wrong. Holds its *FilesStore*, its session client, and the parts that each do one job on it: *FileBar*, *GuidanceSelector* (`guidance`), *FileCommentsActions* (`comments`), *FileMenu* (`menu`, with its *FileBrowser*), *ChatContext* (`chatContext`), *OpenFiles* (`openFiles`), *FilesFoldKeys* (`foldKeys`), and *FilesNotices* (`notices`). Its own operations are reading and showing the files: `start`, `showScope`, `toggleRules`, `toggleCrossFile`, `open`, and `attempt`.
 - `start()` lists the files and reads the practices; it reads the practices and the selection again every second while the page shows, so a practice turned on or off on the chat bar or the board hides or shows its files here, and whenever the person comes back to the page it reads the open file and the practices again.
   - -> Session.folderFiles, or FidelityProgress.files for each fidelity the link names
   - -> Session.show
@@ -25,6 +25,16 @@ The *Files app* shows the files a link names and turns a person's reading into w
   - -> Session.file(path, rules, cross_file)
 - `refreshOpen()` (private) reads the open file again, and again every two seconds while a comment on it is sent.
 - `attempt(what, work)` runs a call a person started; its failure is a toast naming what failed, and the open file is read again after it.
+
+### OpenFiles (`files/open-files.ts`)
+
+- The files open in the source view: the first, and each other one below it, such as those of the nodes selected in the graph view. Keeps the ones a person collapsed to their names in the page's *FilesStore* (`collapsedFiles`).
+- `toggle(path)` collapses one file or expands it again; `collapseAll()` and `expandAll()` do it to every open file; `isCollapsed(path)` says which it is.
+
+### FilesFoldKeys (`files/files-fold-keys.ts`)
+
+- The fold shortcuts the page binds in its source views: VS Code's (*FoldKeys*, `@source-view/source-folding`), each replaced by the key the project's `.context/files-app-keybindings.json` gives its command. `read()` reads the file once as the page opens; `bindIn(monaco)` binds the keys in the Monaco a source view loaded, again once the file is read. A wrong file keeps VS Code's keys and is told in a toast through *FilesNotices*.
+  - -> Session.read_file
 
 ### FileBar (`files/file-bar.ts`)
 

@@ -1,8 +1,9 @@
-import Editor, { type OnMount } from '@monaco-editor/react';
+import Editor, { type Monaco, type OnMount } from '@monaco-editor/react';
 import type { editor as monaco } from 'monaco-editor';
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { initialOpenFolds, inlineCallLayout, type FoldMember, type InlineFold } from './call-expansion';
-import { useCallouts, type SourceCallout } from './source-callouts';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CallCatalog, type FoldMember } from './call-expansion';
+import { useCallouts, type CalloutsWithin, type SourceCallout } from './source-callouts';
+import { foldMarkdownHeadings, useOpenAround, type SourceLines } from './source-folding';
 import type { NodeSourceData } from '@cdd/harness/graph/graph';
 import { buildViolationCorrectPrompt, type ViolationFocus } from './violation-prompt';
 import { reasonOf } from '../graph/graph-failures';
@@ -12,7 +13,6 @@ import './source.css';
 const LINE_HEIGHT = 20;
 
 type Decoration = monaco.IModelDeltaDecoration;
-type Decorations = { current: monaco.IEditorDecorationsCollection | null };
 
 export type SourceRule = {
   name: string;
@@ -21,36 +21,32 @@ export type SourceRule = {
 };
 
 export type SourceEditorInstance = Parameters<OnMount>[0];
+export type { SourceLines };
 
-// A fold a page names on the source's own lines, such as a class or operation the session's graph places in a whole
-// file.
-export type SourceFold = { start: number; end: number; kind: 'class' | 'block' };
-
-// Lines of the source a page wants shown, such as the nodes a person selected in the graph: every fold holding one of
-// them starts open, and every other fold starts closed.
-export type SourceLines = { start: number; end: number };
-
-// What a page showing a whole file adds to the view: the folds its graph names, whether every fold starts open so the
-// file reads whole until a person folds it, the language the file is in, and the editor itself once it is made, so the
-// page can add its own gutter marks (each with the class SOURCE_MARK, which the fold toggle leaves alone) and menu
-// actions, such as the Files app's comments; and whether long lines wrap, or scroll sideways (shift+wheel or a sideways
-// swipe, since the page, not the editor, scrolls up and down).
+// What a page showing a whole file adds to the view: the lines to open, such as the nodes selected in the graph, around
+// which every other fold closes; the language the file is in; whether calls and classes the code names open in place,
+// which a story test's page turns off, since its callouts are its steps' own; the callouts it opens in place itself;
+// whether long lines wrap, or scroll sideways (shift+wheel or a sideways swipe, since the page, not the editor, scrolls
+// up and down); and the editor and its Monaco once made, so the page can add its own gutter marks (each with the class
+// SOURCE_MARK) and menu actions, such as the Files app's comments, and bind its shortcuts. The file folds as Monaco folds
+// its language, by its classes, functions and blocks, and markdown by its headings.
 export type SourceHostProps = {
-  folds?: SourceFold[];
-  unfolded?: boolean;
   openAround?: SourceLines[];
   language?: string;
   keepGlyphMargin?: boolean;
   wordWrap?: boolean;
   callouts?: SourceCallout[];
-  onEditor?: (editor: SourceEditorInstance) => void;
+  opensCalls?: boolean;
+  onEditor?: (editor: SourceEditorInstance, monacoApi: Monaco) => void;
 };
 
 export const SOURCE_MARK = 'source-mark';
 
-const NO_FOLDS: SourceFold[] = [];
 const NO_LINES: SourceLines[] = [];
 const NO_CALLOUTS: SourceCallout[] = [];
+const NO_MEMBERS: NodeSourceData[] = [];
+// A text in no language Monaco reads as code holds no calls.
+const PROSE_LANGUAGES = new Set(['markdown', 'plaintext']);
 
 type SourceViewProps = SourceHostProps & {
   source: NodeSourceData | null;
@@ -74,200 +70,59 @@ export function SourceView({ source, note = '', violation, rules = [], activeRul
   );
 }
 
-function SourceEditor({
-  source,
-  violation,
-  rules,
-  activeRule,
-  onSelectRule,
-  folds = NO_FOLDS,
-  unfolded = false,
-  openAround = NO_LINES,
-  language = '',
-  keepGlyphMargin = false,
-  wordWrap = false,
-  callouts = NO_CALLOUTS,
-  onEditor,
-}: SourceHostProps & {
+type SourceEditorProps = SourceHostProps & {
   source: NodeSourceData;
   violation: ViolationFocus | null;
   rules: SourceRule[];
   activeRule: string;
   onSelectRule?: (name: string) => void;
-}) {
+};
+
+function SourceEditor({ source, violation, rules, activeRule, onSelectRule, openAround = NO_LINES, language = '', keepGlyphMargin = false, wordWrap = false, callouts = NO_CALLOUTS, opensCalls = true, onEditor }: SourceEditorProps) {
   const file = source.file ?? '';
   const text = source.text ?? '';
-  const markStart = violation?.startLine ?? source.start_line;
-  const markEnd = violation?.endLine ?? source.end_line;
-  const members = source.members ?? [];
-  const owner = members.find((member) => member.node_id === source.node_id)?.owner ?? '';
-  const prepared = useMemo(
-    () =>
-      withNamedFolds(
-        inlineCallLayout(text, members, owner, {
-          openedClass: source.type === 'OoadClass' ? source.name : '',
-          origin: source.start_line || 1,
-        }),
-        folds,
-      ),
-    [source, text, members, owner, folds],
-  );
-  const initialOpen = () =>
-    openAround.length ? foldsAround(prepared.folds, openAround) : unfolded ? prepared.folds.map(foldKey) : openBlockFolds(prepared.folds, source.type);
-  // The folds start again whenever the source or the lines to show change, such as a node selected in the graph.
-  const openKey = `${source.node_id}|${openAround.map((lines) => `${lines.start}-${lines.end}`).join(',')}|${prepared.folds.length}`;
-  const [openFor, setOpenFor] = useState(openKey);
-  const [openFolds, setOpenFolds] = useState<string[]>(initialOpen);
-  if (openFor !== openKey) {
-    setOpenFor(openKey);
-    setOpenFolds(initialOpen());
-  }
-  // Wrapped lines take more than one line's height, so a wrapping editor is as tall as the editor says its content is.
+  const origin = source.start_line || 1;
+  const shownLanguage = language || languageFor(file);
+  const [editor, setEditor] = useState<SourceEditorInstance | null>(null);
   const [contentHeight, setContentHeight] = useState(0);
-  const [mounted, setMounted] = useState<Parameters<OnMount>[0] | null>(null);
-  const calloutOpen = useCallouts(mounted, callouts, prepared.lineNumbers);
-  const glyphs = useRef(keepGlyphMargin);
-  glyphs.current = keepGlyphMargin;
-  const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
-  const decorations = useRef<monaco.IEditorDecorationsCollection | null>(null);
-  const hideSource = useRef({ id: 'call-folds' });
-  const foldsRef = useRef(prepared.folds);
-  const depthsRef = useRef(prepared.depths);
-  const openFoldsRef = useRef(openFolds);
-  foldsRef.current = prepared.folds;
-  depthsRef.current = prepared.depths;
-  openFoldsRef.current = openFolds;
-
-  useLayoutEffect(() => {
-    const editor = editorRef.current;
-    if (!editor) {
-      return;
-    }
-    if (editor.getValue() !== prepared.text) {
-      editor.setValue(prepared.text);
-    }
-    applyCallFolds(
-      editor,
-      prepared.folds,
-      openFolds,
-      hideSource.current,
-      decorations,
-      prepared.depths,
-      [...violationLineDecorations(prepared.lineNumbers, markStart, markEnd, Boolean(violation)), ...selectedLineDecorations(prepared.lineNumbers, openAround)],
-      glyphs.current,
-    );
-  }, [prepared.text, prepared.folds, prepared.depths, openFolds, prepared.lineNumbers, markStart, markEnd, violation, openAround]);
-
-  const onMount: OnMount = (editor) => {
-    editorRef.current = editor;
-    setMounted(editor);
-    applyCallFolds(
-      editor,
-      foldsRef.current,
-      openFoldsRef.current,
-      hideSource.current,
-      decorations,
-      depthsRef.current,
-      [...violationLineDecorations(prepared.lineNumbers, markStart, markEnd, Boolean(violation)), ...selectedLineDecorations(prepared.lineNumbers, openAround)],
-      glyphs.current,
-    );
-    const nodeEl = editor.getDomNode();
-    editor.onDidContentSizeChange((size) => setContentHeight(size.contentHeight));
-    nodeEl?.addEventListener('wheel', (event) => scrollSideways(editor, event), { passive: false });
-    nodeEl?.addEventListener(
-      'mousedown',
-      (event) => {
-        const target = editor.getTargetAtClientPoint(event.clientX, event.clientY);
-        const line = target?.position?.lineNumber;
-        const markHit = event.target instanceof Element && event.target.closest('.call-fold, .class-fold, .block-fold') !== null;
-        const pageMark = event.target instanceof Element && event.target.closest(`.${SOURCE_MARK}`) !== null;
-        if (!line || pageMark || (!markHit && target?.type !== 2)) {
-          return;
-        }
-        const fold = foldsRef.current.find((entry) => entry.glyph === line);
-        if (!fold) {
-          return;
-        }
-        event.preventDefault();
-        event.stopPropagation();
-        const key = foldKey(fold);
-        setOpenFolds((current) => (current.includes(key) ? current.filter((item) => item !== key) : [...current, key]));
-      },
-      true,
-    );
-    onEditor?.(editor);
+  const { shown, within } = useSourceCallouts(source, shownLanguage, callouts, opensCalls);
+  const editorLineOf = useCallback((fileLine: number) => fileLine - origin + 1, [origin]);
+  useCallouts(editor, shown, within, editorLineOf);
+  useOpenAround(editor, openAround, text);
+  useLineMarks(editor, origin, text, violation, openAround);
+  const onMount: OnMount = (made, monacoApi) => {
+    foldMarkdownHeadings(monacoApi);
+    made.onDidContentSizeChange((size) => setContentHeight(size.contentHeight));
+    made.getDomNode()?.addEventListener('wheel', (event) => scrollSideways(made, event), { passive: false });
+    setEditor(made);
+    onEditor?.(made, monacoApi);
   };
-
-  async function copyCorrectPrompt() {
-    if (!violation) {
-      return;
-    }
-    const prompt = buildViolationCorrectPrompt({
-      rule: violation.rule,
-      message: violation.message,
-      nodeName: source.name,
-      nodeType: source.type,
-      file: file,
-      startLine: violation?.startLine ?? source.start_line,
-      endLine: violation?.endLine ?? source.end_line,
-      excerpt: text,
-    });
-    try {
-      await navigator.clipboard.writeText(prompt);
-    } catch (cause) {
-      failures.fail(`The prompt was not copied: ${reasonOf(cause)}`, `Copy the correction prompt for ${violation.rule} in the Graph app`);
-    }
-  }
-
   return (
     <section className="knowledge-graph-panel source-snippet" data-open="true" data-file={file}>
-      {rules.length > 0 ? (
-        <div className="source-rules" data-testid="source-rules">
-          {rules.map((rule) => (
-            <button
-              key={rule.name}
-              type="button"
-              className={['source-rule', rule.status ?? '', rule.name === activeRule ? 'is-active' : ''].filter(Boolean).join(' ')}
-              title={rule.messages.join('\n') || undefined}
-              onClick={() => onSelectRule?.(rule.name)}
-            >
-              {rule.name}
-            </button>
-          ))}
-        </div>
-      ) : null}
-      {violation ? (
-        <div className="violation-banner" data-testid="violation-banner">
-          <div className="violation-banner-copy">
-            <p className="violation-rule">{violation.rule}</p>
-            <p className="violation-message">{violation.message}</p>
-          </div>
-          <button type="button" className="copy-prompt" data-testid="violation-correct" onClick={() => void copyCorrectPrompt()}>
-            Correct
-          </button>
-        </div>
-      ) : null}
+      <SourceRulesView rules={rules} activeRule={activeRule} onSelectRule={onSelectRule} />
+      {violation ? <ViolationBannerView violation={violation} source={source} /> : null}
       <p className="source-path">{file || source.name}</p>
       <div className="panel-source" data-testid="source-excerpt">
         <Editor
-          height={(wordWrap || calloutOpen) && contentHeight ? contentHeight + 16 : sourceHeight(prepared.text)}
-          language={language || languageFor(file)}
+          height={contentHeight ? contentHeight + 16 : sourceHeight(text)}
+          language={shownLanguage}
           theme={document.documentElement.dataset.theme === 'engineering' ? 'vs-dark' : 'vs'}
-          defaultValue={prepared.text}
+          value={text}
           onMount={onMount}
           options={{
             readOnly: true,
             domReadOnly: true,
-            folding: false,
-            showFoldingControls: 'never',
+            folding: true,
+            foldingStrategy: 'auto',
+            showFoldingControls: 'mouseover',
             minimap: { enabled: false },
             scrollBeyondLastLine: false,
             wordWrap: wordWrap ? 'on' : 'off',
             fontFamily: "'JetBrains Mono', ui-monospace, monospace",
             fontSize: 13,
             lineHeight: LINE_HEIGHT,
-            glyphMargin: keepGlyphMargin || prepared.folds.length > 0,
-            lineNumbers: (line: number) => prepared.lineNumbers[line - 1] ?? '',
+            glyphMargin: keepGlyphMargin || shown.length > 0,
+            lineNumbers: (line: number) => String(origin + line - 1),
             scrollbar: { handleMouseWheel: false, alwaysConsumeMouseWheel: false, horizontal: 'auto', horizontalScrollbarSize: 10 },
           }}
         />
@@ -276,223 +131,107 @@ function SourceEditor({
   );
 }
 
-function languageFor(file: string): string {
-  if (file.endsWith('.py')) {
-    return 'python';
-  }
-  if (file.endsWith('.tsx') || file.endsWith('.jsx')) {
-    return 'typescript';
-  }
-  return 'typescript';
+// The callouts the source shows: the page's own, then, while the code may open calls, each call and class its code
+// reaches among the graph's members; and the callouts inside an open one, the calls its own code reaches.
+function useSourceCallouts(source: NodeSourceData, language: string, callouts: SourceCallout[], opensCalls: boolean): { shown: SourceCallout[]; within: CalloutsWithin } {
+  const members = (source.members ?? NO_MEMBERS) as FoldMember[];
+  const owner = members.find((member) => member.node_id === source.node_id)?.owner ?? '';
+  const catalog = useMemo(() => new CallCatalog(members, owner), [members, owner]);
+  const isCode = !PROSE_LANGUAGES.has(language);
+  const shown = useMemo(() => {
+    const own = opensCalls && isCode ? catalog.calloutsIn(source.text ?? '', source.start_line || 1, language, [source.node_id]) : [];
+    return [...callouts, ...own];
+  }, [catalog, callouts, opensCalls, isCode, source, language]);
+  const within = useCallback<CalloutsWithin>((callout, stack) => (callout.kind === 'section' ? [] : catalog.calloutsIn(callout.text, callout.startLine, languageFor(callout.path), stack)), [catalog]);
+  return { shown, within };
 }
 
-const STORY_SOURCE_TYPES = new Set([
-  'Scenario',
-  'Story',
-  'Background',
-  'Step',
-  'Given',
-  'When',
-  'Then',
-  'Example',
-]);
-
-function openBlockFolds(folds: InlineFold[], nodeType?: string): string[] {
-  if (nodeType && STORY_SOURCE_TYPES.has(nodeType)) {
-    return folds.filter((fold) => fold.kind === 'block').map((fold) => foldKey(fold));
-  }
-  return folds.filter((fold) => initialOpenFolds([fold]).length > 0).map((fold) => foldKey(fold));
+// The lines of the broken rule chosen and of the nodes the page asked to show, marked whole.
+function useLineMarks(editor: SourceEditorInstance | null, origin: number, text: string, violation: ViolationFocus | null, openAround: SourceLines[]): void {
+  useEffect(() => {
+    if (!editor) return;
+    const lastLine = origin + text.split('\n').length - 1;
+    const violationLines = violation ? [{ start: violation.startLine ?? origin, end: violation.endLine ?? violation.startLine ?? lastLine }] : [];
+    const selected = openAround.filter((lines) => lines.start > origin || lines.end < lastLine);
+    const marks = editor.createDecorationsCollection([...linesMarked(violationLines, origin, 'violation-highlight'), ...linesMarked(selected, origin, 'selected-lines')]);
+    return () => marks.clear();
+  }, [editor, origin, text, violation, openAround]);
 }
 
-// The page's folds join the layout's own, one fold to a line: a fold the layout already starts on that line stays.
-function withNamedFolds<Layout extends { folds: InlineFold[] }>(layout: Layout, folds: SourceFold[]): Layout {
-  const named = folds.map(namedFold).filter((fold) => fold.end > fold.glyph && !layout.folds.some((held) => held.glyph === fold.glyph));
-  return named.length ? { ...layout, folds: [...layout.folds, ...named] } : layout;
+// Each editor line of each span, marked whole.
+function linesMarked(spans: SourceLines[], origin: number, className: string): Decoration[] {
+  const lines = spans.filter((span) => span.start >= 1).flatMap((span) => Array.from({ length: Math.max(span.start, span.end) - span.start + 1 }, (_, index) => span.start + index - origin + 1));
+  return lines.map((line) => ({ range: { startLineNumber: line, startColumn: 1, endLineNumber: line, endColumn: 1 }, options: { isWholeLine: true, className } }));
 }
 
-function namedFold(fold: SourceFold): InlineFold {
-  return { glyph: fold.start, start: fold.start + 1, end: fold.end, kind: fold.kind };
-}
-
-// The folds that hold one of the lines asked for, a class around a selected operation too.
-export function foldsAround(folds: InlineFold[], around: SourceLines[]): string[] {
-  return folds.filter((fold) => around.some((lines) => fold.glyph <= lines.start && fold.end >= lines.end)).map(foldKey);
-}
-
-function foldKey(fold: InlineFold): string {
-  return `${fold.kind}:${fold.start}:${fold.end}`;
-}
-
-function hiddenRanges(folds: InlineFold[], openFolds: string[]): InlineFold[] {
-  const open = new Set(openFolds);
-  return folds
-    .filter((fold) => !open.has(foldKey(fold)) && fold.end >= fold.start)
-    .filter(
-      (fold) =>
-        !folds.some(
-          (other) => other !== fold && other.start <= fold.start && other.end >= fold.end && !open.has(foldKey(other)),
-        ),
-    );
-}
-
-function glyphClass(kind: InlineFold['kind'], open: boolean): string {
-  if (kind === 'class') {
-    return `class-fold${open ? ' class-fold-open' : ''}`;
-  }
-  if (kind === 'block') {
-    return `block-fold${open ? ' block-fold-open' : ''}`;
-  }
-  return `call-fold${open ? ' call-fold-open' : ''}`;
-}
-
-function editorHasViewModel(editor: Parameters<OnMount>[0]): boolean {
-  return Boolean(
-    (editor as unknown as { _modelData?: { viewModel?: { getLineCount?: () => number } } })._modelData?.viewModel
-      ?.getLineCount,
+function SourceRulesView({ rules, activeRule, onSelectRule }: { rules: SourceRule[]; activeRule: string; onSelectRule?: (name: string) => void }) {
+  if (!rules.length) return null;
+  return (
+    <div className="source-rules" data-testid="source-rules">
+      {rules.map((rule) => (
+        <button
+          key={rule.name}
+          type="button"
+          className={['source-rule', rule.status ?? '', rule.name === activeRule ? 'is-active' : ''].filter(Boolean).join(' ')}
+          title={rule.messages.join('\n') || undefined}
+          onClick={() => onSelectRule?.(rule.name)}
+        >
+          {rule.name}
+        </button>
+      ))}
+    </div>
   );
+}
+
+function ViolationBannerView({ violation, source }: { violation: ViolationFocus; source: NodeSourceData }) {
+  async function copyCorrectPrompt() {
+    const prompt = buildViolationCorrectPrompt({
+      rule: violation.rule,
+      message: violation.message,
+      nodeName: source.name,
+      nodeType: source.type,
+      file: source.file ?? '',
+      startLine: violation.startLine ?? source.start_line,
+      endLine: violation.endLine ?? source.end_line,
+      excerpt: source.text ?? '',
+    });
+    try {
+      await navigator.clipboard.writeText(prompt);
+    } catch (cause) {
+      failures.fail(`The prompt was not copied: ${reasonOf(cause)}`, `Copy the correction prompt for ${violation.rule} in the Graph app`);
+    }
+  }
+  return (
+    <div className="violation-banner" data-testid="violation-banner">
+      <div className="violation-banner-copy">
+        <p className="violation-rule">{violation.rule}</p>
+        <p className="violation-message">{violation.message}</p>
+      </div>
+      <button type="button" className="copy-prompt" data-testid="violation-correct" onClick={() => void copyCorrectPrompt()}>
+        Correct
+      </button>
+    </div>
+  );
+}
+
+function languageFor(file: string): string {
+  if (file.endsWith('.py')) return 'python';
+  if (file.endsWith('.md')) return 'markdown';
+  return 'typescript';
 }
 
 // The editor leaves the wheel to the page, so the page scrolls up and down through a file as tall as it is; a sideways
 // swipe, or the wheel with shift held, scrolls the editor's long lines instead, and only while they have further to go.
-function scrollSideways(editor: Parameters<OnMount>[0], event: WheelEvent): void {
+function scrollSideways(editor: SourceEditorInstance, event: WheelEvent): void {
   const sideways = event.shiftKey ? event.deltaY || event.deltaX : Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : 0;
-  if (!sideways) {
-    return;
-  }
+  if (!sideways) return;
   const before = editor.getScrollLeft();
   editor.setScrollLeft(before + sideways);
-  if (editor.getScrollLeft() !== before) {
-    event.preventDefault();
-  }
+  if (editor.getScrollLeft() !== before) event.preventDefault();
 }
 
 function sourceHeight(text: string): number {
-  const lines = Math.max(1, text.split('\n').length);
-  return lines * LINE_HEIGHT + 16;
-}
-
-function shownLineCount(text: string, folds: InlineFold[], openFolds: string[]): number {
-  const hidden = new Set<number>();
-  for (const fold of hiddenRanges(folds, openFolds)) {
-    for (let line = fold.start; line <= fold.end; line += 1) {
-      hidden.add(line);
-    }
-  }
-  return Math.max(1, text.split('\n').length - hidden.size);
-}
-
-function violationLineDecorations(
-  lineNumbers: string[],
-  startLine: number,
-  endLine: number,
-  active: boolean,
-): Decoration[] {
-  if (!active || startLine < 1) {
-    return [];
-  }
-  return fileLineDecorations(lineNumbers, startLine, endLine >= startLine ? endLine : startLine, 'violation-highlight');
-}
-
-// The lines of the nodes a page asked to show, such as those selected in a graph view, marked so it is plain where the
-// page went; a node that covers the whole file marks nothing, since every line would be marked.
-function selectedLineDecorations(lineNumbers: string[], openAround: SourceLines[]): Decoration[] {
-  const lastLine = Math.max(0, ...lineNumbers.map((shown) => Number.parseInt(shown, 10)).filter(Number.isFinite));
-  return openAround
-    .filter((lines) => lines.start > 1 || lines.end < lastLine)
-    .flatMap((lines) => fileLineDecorations(lineNumbers, lines.start, Math.max(lines.start, lines.end), 'selected-lines'));
-}
-
-// Each editor line that shows a file line from startLine to endLine, marked whole with className; lineNumbers names the
-// file line each editor line shows, since calls opened in place add lines the file does not have there.
-function fileLineDecorations(lineNumbers: string[], startLine: number, endLine: number, className: string): Decoration[] {
-  const rows: Decoration[] = [];
-  for (let index = 0; index < lineNumbers.length; index += 1) {
-    const fileLine = Number.parseInt(lineNumbers[index] ?? '', 10);
-    if (!Number.isFinite(fileLine) || fileLine < startLine || fileLine > endLine) {
-      continue;
-    }
-    const editorLine = index + 1;
-    rows.push({
-      range: { startLineNumber: editorLine, startColumn: 1, endLineNumber: editorLine, endColumn: 1 },
-      options: { isWholeLine: true, className },
-    });
-  }
-  return rows;
-}
-
-function applyCallFolds(
-  editor: Parameters<OnMount>[0],
-  folds: InlineFold[],
-  openFolds: string[],
-  source: object,
-  decorations: Decorations,
-  depths: number[] = [],
-  violationMarks: Decoration[] = [],
-  keepGlyphMargin = false,
-) {
-  const open = new Set(openFolds);
-  const ranges = hiddenRanges(folds, openFolds).map((fold) => ({
-    startLineNumber: fold.start,
-    startColumn: 1,
-    endLineNumber: fold.end,
-    endColumn: 1000,
-  }));
-  const next = [
-    ...folds.map((fold) => ({
-      range: { startLineNumber: fold.glyph, startColumn: 1, endLineNumber: fold.glyph, endColumn: 1 },
-      options: { glyphMarginClassName: glyphClass(fold.kind, open.has(foldKey(fold))) },
-    })),
-    ...depths.flatMap((depth, index) => {
-      if (depth <= 0) {
-        return [];
-      }
-      const level = Math.min(depth, 5);
-      return [
-        {
-          range: { startLineNumber: index + 1, startColumn: 1, endLineNumber: index + 1, endColumn: 1 },
-          options: { isWholeLine: true, className: `call-nest call-nest-${level}` },
-        },
-      ];
-    }),
-    ...violationMarks,
-  ];
-  const withOptions = editor as Parameters<OnMount>[0] & { updateOptions?(options: { glyphMargin: boolean }): void };
-  withOptions.updateOptions?.({ glyphMargin: keepGlyphMargin || folds.length > 0 });
-  if (decorations.current) {
-    decorations.current.set(next);
-  } else {
-    decorations.current = editor.createDecorationsCollection(next);
-  }
-  const hidden = editor as Parameters<OnMount>[0] & { setHiddenAreas(ranges: object[], source?: object): void };
-  hidden.setHiddenAreas(ranges, source);
-  if (!editorHasViewModel(editor)) {
-    return;
-  }
-  const token = source as { generation?: number };
-  token.generation = (token.generation ?? 0) + 1;
-  const generation = token.generation;
-  let frames = 0;
-  const restore = () => {
-    if (token.generation !== generation || frames >= 8) {
-      return;
-    }
-    frames += 1;
-    if (viewIsStillFullyExpanded(editor)) {
-      decorations.current?.set(next);
-      hidden.setHiddenAreas([], source);
-      hidden.setHiddenAreas(ranges, source);
-      requestAnimationFrame(restore);
-    }
-  };
-  requestAnimationFrame(restore);
-}
-
-function viewIsStillFullyExpanded(editor: Parameters<OnMount>[0]): boolean {
-  const modelLines = editor.getModel()?.getLineCount() ?? 0;
-  const viewModel = (editor as unknown as { _modelData?: { viewModel?: { getLineCount?: () => number } } })._modelData
-    ?.viewModel;
-  const shown = viewModel?.getLineCount?.() ?? modelLines;
-  return modelLines > 1 && shown >= modelLines;
+  return Math.max(1, text.split('\n').length) * LINE_HEIGHT + 16;
 }
 
 export type { FoldMember };

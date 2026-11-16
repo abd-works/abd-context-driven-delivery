@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest'
 
 import type { CddApi } from '@cdd/cdd-shared'
 import type { ExplorerEntryData, GuidanceSelectionData } from '@cdd/space/session/session'
-import { foldsAround } from '@source-view/SourceView'
 
 import { FilesLink } from './files-link'
 import { FilesPage } from './files-page'
@@ -386,19 +385,10 @@ describe('Open Several Files From Graph Nodes', () => {
 })
 
 describe('Fold Open Files To Selected Nodes', () => {
-  // ticket.py's folds as the source view lays them: Ticket whole, and each of its operations as a block.
-  const TICKET_FOLDS = [
-    { glyph: 106, start: 107, end: 670, kind: 'class' as const },
-    { glyph: 460, start: 461, end: 465, kind: 'block' as const },
-    { glyph: 538, start: 539, end: 555, kind: 'block' as const },
-  ]
-
+  // Opening the lines asked for, with every other fold closed, is the source view's own (harness/graph/app/app.test.tsx,
+  // "should fold everything with Monaco's Fold All"); the page asks it for the lines of every node selected in the file.
   describe('with Ticket.activate selected and ticket.py open', () => {
-    it('should unfold the lines of Ticket.activate and Ticket, and leave Ticket.close folded', () => {
-      expect(foldsAround(TICKET_FOLDS, [{ start: 460, end: 465 }])).toEqual(['class:107:670', 'block:461:465'])
-    })
-
-    it('should unfold Ticket.close too once the Person also selects it, and keep every other operation folded', async () => {
+    it('should ask the source view to open Ticket.close too once the Person also selects it', async () => {
       const { page, stop } = await showingGraph()
       await page.graph.toggle(entryNamed(page, 'Clean Engineering'))
       await page.graph.toggle(entryNamed(page, 'Ticket'))
@@ -406,13 +396,9 @@ describe('Fold Open Files To Selected Nodes', () => {
       await page.graph.select(entryNamed(page, 'close'), true)
       await settled()
       stop()
-      const around = page.selectedLinesIn(TICKET_CODE)
-      expect([around, foldsAround(TICKET_FOLDS, around)]).toEqual([
-        [
-          { start: 460, end: 465 },
-          { start: 538, end: 555 },
-        ],
-        ['class:107:670', 'block:461:465', 'block:539:555'],
+      expect(page.selectedLinesIn(TICKET_CODE)).toEqual([
+        { start: 460, end: 465 },
+        { start: 538, end: 555 },
       ])
     })
   })

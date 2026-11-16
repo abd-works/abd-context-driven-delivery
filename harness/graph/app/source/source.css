@@ -1,6 +1,7 @@
-/* The source view's own look: its rule chips, its violation banner and marks, and the fold and call-nest marks in
-   Monaco's gutter. SourceView imports it, so every page that shows a source, the Graph app and the Files app alike,
-   draws it the same. The page supplies the colour and spacing tokens it reads (--raised, --border, --error, ...). */
+/* The source view's own look: its rule chips, its violation banner and marks, and its callouts: the mark in
+   Monaco's gutter, the label after a line and what opens in place. SourceView imports it, so every page that shows
+   a source, the Graph app and the Files app alike, draws it the same. The page supplies the colour and spacing tokens
+   it reads (--raised, --border, --error, ...). */
 
 .source-rules {
   display: flex;
@@ -95,69 +96,6 @@
   color: var(--muted);
 }
 
-.source-snippet .call-fold,
-.source-snippet .class-fold,
-.source-snippet .block-fold {
-  cursor: pointer;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 14px 14px;
-}
-
-.source-snippet .call-fold.codicon::before,
-.source-snippet .class-fold.codicon::before,
-.source-snippet .block-fold.codicon::before {
-  content: none;
-}
-
-.source-snippet .block-fold {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6 3.5 11.5 8 6 12.5' fill='none' stroke='%23333333' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
-
-.source-snippet .block-fold-open {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 6 8 11.5 12.5 6' fill='none' stroke='%23333333' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
-
-html[data-theme="engineering"] .source-snippet .block-fold {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6 3.5 11.5 8 6 12.5' fill='none' stroke='%23d4d4d4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
-
-html[data-theme="engineering"] .source-snippet .block-fold-open {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 6 8 11.5 12.5 6' fill='none' stroke='%23d4d4d4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
-
-.source-snippet .class-fold {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2.5' y='2.5' width='11' height='11' rx='0.5' fill='none' stroke='%23333333' stroke-width='1.5'/%3E%3Cpath d='M2.5 6.2h11' fill='none' stroke='%23333333' stroke-width='1.5'/%3E%3C/svg%3E");
-}
-
-.source-snippet .call-fold {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M5 4.5 2.5 8 5 11.5M11 4.5 13.5 8 11 11.5' fill='none' stroke='%23333333' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
-
-html[data-theme="engineering"] .source-snippet .class-fold {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2.5' y='2.5' width='11' height='11' rx='0.5' fill='none' stroke='%23d4d4d4' stroke-width='1.5'/%3E%3Cpath d='M2.5 6.2h11' fill='none' stroke='%23d4d4d4' stroke-width='1.5'/%3E%3C/svg%3E");
-}
-
-html[data-theme="engineering"] .source-snippet .call-fold {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M5 4.5 2.5 8 5 11.5M11 4.5 13.5 8 11 11.5' fill='none' stroke='%23d4d4d4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
-
-.source-snippet .lines-content .cdr.call-nest {
-  background-color: #e6dfd2 !important;
-}
-.source-snippet .lines-content .cdr.call-nest-1 { background-color: #e6dfd2 !important; }
-.source-snippet .lines-content .cdr.call-nest-2 { background-color: #d9d0c0 !important; }
-.source-snippet .lines-content .cdr.call-nest-3 { background-color: #cfc3b0 !important; }
-.source-snippet .lines-content .cdr.call-nest-4 { background-color: #c4b6a0 !important; }
-.source-snippet .lines-content .cdr.call-nest-5 { background-color: #b9aa92 !important; }
-
-html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest,
-html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest-1 { background-color: #32323c !important; }
-html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest-2 { background-color: #3e3e4a !important; }
-html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest-3 { background-color: #4a4a58 !important; }
-html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest-4 { background-color: #565668 !important; }
-html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest-5 { background-color: #626276 !important; }
-
 .source-snippet .source-toggle {
   position: static;
   flex: none;
@@ -199,37 +137,54 @@ html[data-theme="engineering"] .source-snippet .lines-content .cdr.call-nest-5 {
   overflow-anchor: none;
 }
 
-/* A callout: the mark beside a line whose link opens another file's section in place, and that section, open. */
+/* A callout: the mark beside a line whose call, class or link opens something in place, the label after the line naming
+   what it opens while closed, and what it opens, shaded once; a callout opened inside another is one shade deeper. */
 .source-snippet .callout-mark {
   cursor: pointer;
 }
-.source-snippet .callout-mark::after {
-  content: '\25B8';
+.source-snippet .callout-mark::after,
+.source-snippet .callout-inner-mark::after {
+  content: 'B8';
   display: block;
   text-align: center;
   color: var(--accent);
   font-size: 12px;
 }
-.source-snippet .callout-mark.callout-mark-open::after {
-  content: '\25BE';
+.source-snippet .callout-mark.callout-mark-open::after,
+.source-snippet .callout-inner-mark.callout-mark-open::after {
+  content: 'BE';
+}
+.source-snippet .callout-label {
+  color: var(--muted);
+  font-style: italic;
+  cursor: pointer;
 }
 .source-snippet .callout-section {
   margin-left: 2rem;
-  border-left: 3px solid var(--accent);
-  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border-left: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
   overflow: hidden;
 }
-.source-snippet .callout-from {
-  margin: 0;
-  padding: 0 var(--space-xs, 4px);
-  font-size: 11px;
-  color: var(--muted);
+.source-snippet .callout-section .callout-section {
+  margin-left: 1rem;
 }
 .source-snippet .callout-text {
+  position: relative;
   margin: 0;
-  padding: 0 var(--space-xs, 4px);
+  padding: 0 var(--space-xs, 4px) 0 1.25rem;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 13px;
   line-height: 20px;
+  height: 20px;
   white-space: pre;
+}
+.source-snippet .callout-inner-mark {
+  position: absolute;
+  left: 0;
+  width: 1rem;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
 }

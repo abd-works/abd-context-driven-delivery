@@ -141,6 +141,18 @@ section: body
 *When* the Person also selects Board.reread  
 *Then* ticket.py and board.py are both open in the source view
 
+#### Scenario: Collapse one open file, then every open file
+
+Requested by the person on 2026-11-16: each of several open files collapses and expands on its own, with Collapse all and Expand all. Only the page shows it: `harness/files_app/app/files/open-files.spec.ts`.
+
+*Given* ticket.py and board.py are both open in the source view, with story-map.md below them  
+*When* the Person collapses board.py  
+*Then* board.py shows only its name, and ticket.py and story-map.md stay whole  
+*When* the Person presses Collapse all  
+*Then* every open file shows only its name  
+*When* the Person presses Expand all  
+*Then* every open file shows whole again
+
 #### Scenario: Selecting a folder's node opens every listed file below it
 
 *Given* the Files app shows checkout-flow's graph  

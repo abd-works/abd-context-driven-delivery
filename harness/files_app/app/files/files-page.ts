@@ -9,11 +9,13 @@ import { FileCommentsActions } from './file-comments-actions'
 import { FileMenu } from './file-menu'
 import type { FilesLink } from './files-link'
 import { FilesGraph } from './files-graph'
+import { FilesFoldKeys } from './files-fold-keys'
 import { FilesNotices } from './files-notices'
 import { isDrawio } from './files-paths'
 import { FilesStore, type FidelityFiles, type SelectedNode } from './files-state'
 import { formatGlyphOf } from './format-chips'
 import { GuidanceSelector } from './guidance-selector'
+import { OpenFiles } from './open-files'
 
 // While a comment on the open file is with a chat, the file is read again this often, so the chat's change and the
 // comment's processed state show without a reload. Nothing else is read again: never the list, never a board.
@@ -60,6 +62,8 @@ export class FilesPage {
   readonly chatContext: ChatContext
   readonly menu: FileMenu
   readonly graph: FilesGraph
+  readonly openFiles = new OpenFiles(this.store)
+  readonly foldKeys: FilesFoldKeys
   private refreshTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor(
@@ -68,6 +72,7 @@ export class FilesPage {
   ) {
     this.session = SessionClientGenerated.named(api, link.sessionFile)
     this.notices = new FilesNotices(this.store, api, link.chat)
+    this.foldKeys = new FilesFoldKeys(this.session, this.notices)
     this.chatContext = new ChatContext(this.session, link.chat, this.notices)
     this.menu = new FileMenu(this.store, this.chatContext, new FileBrowser(api, this.notices))
     this.comments = new FileCommentsActions(this)
@@ -91,6 +96,7 @@ export class FilesPage {
     void this.list()
     // A link naming no session, such as the app's bare address, has nothing to ask cdd about: list() says so.
     if (this.link.namesFiles) void this.readPlace()
+    if (this.link.namesFiles) void this.foldKeys.read()
     if (this.link.namesFiles && !this.link.isSessionFolder) void this.readRootFiles()
     const stopFollowing = this.follow()
     const reread = () => void this.refreshOpen()

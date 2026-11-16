@@ -53,6 +53,8 @@ export type FilesState = {
   file: SessionFileData | null
   // The other files open beside the first, each holding a node selected in the graph view; none outside it.
   moreFiles: SessionFileData[]
+  // The open files a person collapsed to their names; every other open file shows whole.
+  collapsedFiles: string[]
   graph: FilesGraphState
   problem: string
   toasts: string[]
@@ -79,6 +81,7 @@ export const NO_FILES: FilesState = {
   openPath: '',
   file: null,
   moreFiles: [],
+  collapsedFiles: [],
   graph: NO_GRAPH,
   problem: '',
   toasts: [],

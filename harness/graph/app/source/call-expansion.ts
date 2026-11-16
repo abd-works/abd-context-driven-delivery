@@ -1,4 +1,4 @@
-const MAX_DEPTH = 5;
+import type { SourceCallout } from "./source-callouts";
 
 const SKIP_TYPES = new Set([
   "string",
@@ -48,6 +48,12 @@ const CLASS_KINDS = new Set([
   "Specification",
 ]);
 
+// The marker the graph puts after a line for each call on it, `/* call:isinstance */`, which is no code and never shows.
+const CALL_MARKER = /[ \t]*\/\* call:[^*]*\*\//g;
+const MEMBER_CALL = /\b([A-Za-z_][A-Za-z0-9_]*)\??\.([A-Za-z_][A-Za-z0-9_]*)\s*\(/g;
+const QUOTED = /'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`/g;
+
+// A class, operation or property the session's graph holds, with its text, from which a callout opens it in place.
 export type FoldMember = {
   node_id: string;
   name: string;
@@ -60,696 +66,135 @@ export type FoldMember = {
   classes?: string[];
 };
 
-type ClassBody = { id: string; name: string; text: string; start: number };
-type CallBody = { id: string; member: string; label: string; text: string; start: number; types: ClassBody[] };
-type CallFold = { start: number; end: number; kind: "call" | "class" | "block"; member?: boolean; listed?: boolean };
+type Body = { id: string; name: string; label: string; text: string; file: string; start: number; end: number };
 
-export type InlineFold = { start: number; end: number; kind: "call" | "class" | "block"; glyph: number; member?: boolean; listed?: boolean };
+// The members of a graph a source view opens calls and classes from: each class by its name, each operation and property
+// by its class and name. calloutsIn finds, line by line, the calls and classes the code of a text reaches; a name in a
+// comment, a docstring or a string is prose, which opens nothing.
+export class CallCatalog {
+  private readonly classes = new Map<string, Body>();
+  private readonly bodies = new Map<string, Body>();
 
-export function initialOpenFolds(folds: InlineFold[]): number[] {
-  return folds
-    .filter((fold) => fold.kind === "block" && !fold.member)
-    .map((fold) => fold.start);
-}
-
-export type InlineLayout = { text: string; folds: InlineFold[]; lineNumbers: string[]; depths: number[] };
-
-export function classPanelLayout(text: string, folds: InlineFold[] = []): InlineLayout {
-  const lines = text ? text.split("\n") : [""];
-  return {
-    text,
-    folds: [...folds, ...braceFolds(text)],
-    lineNumbers: lines.map((_, index) => String(index + 1)),
-    depths: lines.map(() => 0),
-  };
-}
-
-const STORY_CALL = /^\s*\.?(?:shareStory|story|scenario|background|given|when|then|and|but)\s*\(/;
-
-function isStoryCall(line: string): boolean {
-  return STORY_CALL.test(line) && line.includes("{");
-}
-
-function isMemberHead(line: string): boolean {
-  const trimmed = line.trim();
-  if (isStoryCall(trimmed)) {
-    return true;
+  constructor(members: FoldMember[], owner = "") {
+    for (const member of members) this.hold(member, owner);
   }
-  if (/^(if|for|while|switch|catch|else|try|do|return|throw)\b/.test(trimmed)) {
-    return false;
-  }
-  if (/=>\s*\{/.test(trimmed) && !/^(public|private|protected|readonly|static|async|get|set|export)\b/.test(trimmed)) {
-    return false;
-  }
-  return /[{]/.test(trimmed);
-}
 
-function braceFolds(text: string): InlineFold[] {
-  const lines = text.split("\n");
-  const folds: InlineFold[] = [];
-  const classLine = /^\s*(export\s+)?(abstract\s+)?class\s+/;
-  let storyContainer = false;
-  for (let index = 0; index < lines.length; index += 1) {
-    const container = classLine.test(lines[index]) || (isStoryCall(lines[index]) && !storyContainer);
-    if (isStoryCall(lines[index])) {
-      storyContainer = true;
-    }
-    if (container || braceDepth(lines[index]) <= 0) {
-      continue;
-    }
-    const end = blockEnd(lines, index);
-    if (end <= index) {
-      continue;
-    }
-    folds.push({
-      glyph: index + 1,
-      start: index + 2,
-      end: end + 1,
-      kind: "block",
-      member: isMemberHead(lines[index]),
-    });
+  // The callouts of each line of text, which starts at file line origin: each call, then each class the line names in
+  // code, a class once per text. stack holds the members already open around it, which never open again inside.
+  calloutsIn(text: string, origin: number, language: string, stack: string[] = []): SourceCallout[] {
+    const code = codeOf(text, language).split("\n");
+    const bindings = variableTypes(code.join("\n"));
+    const seen = new Set<string>(stack);
+    return code.flatMap((line, index) => this.calloutsOn(line, origin + index, bindings, stack, seen));
   }
-  return folds;
-}
 
-function braceDepth(line: string): number {
-  return scanBraces(line, 0).depth;
-}
-
-function blockEnd(lines: string[], start: number): number {
-  let depth = 0;
-  let quote = "";
-  for (let line = start; line < lines.length; line += 1) {
-    const scanned = scanBraces(lines[line], depth, quote);
-    depth = scanned.depth;
-    quote = scanned.quote;
-    if (line > start && depth === 0) {
-      return line;
-    }
+  private calloutsOn(line: string, fileLine: number, bindings: Map<string, string>, stack: string[], seen: Set<string>): SourceCallout[] {
+    const calls = this.callsOn(line, bindings).filter((call) => !stack.includes(call.id));
+    const types = [...this.classes.values()].filter((type) => !seen.has(type.id) && (namesType(line, type.name) || boundOn(line, bindings, type.name)));
+    types.forEach((type) => seen.add(type.id));
+    return [...calls.map((call) => calloutOf(call, fileLine, "call")), ...types.map((type) => calloutOf(type, fileLine, "class"))];
   }
-  return start;
-}
 
-function scanBraces(line: string, depth: number, quote = ""): { depth: number; quote: string } {
-  for (let index = 0; index < line.length; index += 1) {
-    const char = line[index];
-    if (quote) {
-      if (char === "\\") {
-        index += 1;
-        continue;
-      }
-      if (char === quote) {
-        quote = "";
-      }
-      continue;
+  private callsOn(line: string, bindings: Map<string, string>): Body[] {
+    const found: Body[] = [];
+    for (const match of line.matchAll(MEMBER_CALL)) {
+      const body = SKIP_TYPES.has(match[1]) ? undefined : this.resolve(match[1], match[2], bindings.get(match[1]));
+      if (body && !found.includes(body)) found.push(body);
     }
-    if (char === "'" || char === '"' || char === "`") {
-      quote = char;
-      continue;
-    }
-    if (char === "{") {
-      depth += 1;
-    } else if (char === "}") {
-      depth -= 1;
-    }
+    return found;
   }
-  return { depth, quote };
-}
 
-export function inlineCallLayout(
-  text: string,
-  members: FoldMember[],
-  owner: string,
-  options: {
-    anchored?: FoldMember[];
-    listClasses?: boolean;
-    named?: FoldMember[];
-    openedClass?: string;
-    context?: string;
-    origin?: number;
-  } = {},
-): InlineLayout {
-  const classes = classCatalog(members);
-  const bodies = callCatalog(members, classes, owner);
-  const known = [...classes.values()];
-  const bindings = variableTypes(options.context ?? "");
-  const anchored = (options.anchored ?? [])
-    .map((member) => bodies.get(memberKey(member.owner || owner, member.name)) ?? bodiesByMember(bodies).get(member.name))
-    .filter((body): body is CallBody => Boolean(body));
-  const namedCalls: CallBody[] = [];
-  const namedClasses: ClassBody[] = [];
-  for (const member of options.named ?? []) {
+  private resolve(receiver: string, method: string, typeName?: string): Body | undefined {
+    const typed = typeName ? this.bodies.get(`${typeName}.${method}`) : undefined;
+    if (typed) return typed;
+    const exact = receiver === "this" ? undefined : this.bodies.get(`${receiver}.${method}`);
+    if (exact) return exact;
+    const byReceiver = [...this.bodies.entries()].find(([key]) => key.toLowerCase() === `${receiver}.${method}`.toLowerCase());
+    return byReceiver?.[1] ?? this.bodies.get(method);
+  }
+
+  private hold(member: FoldMember, owner: string): void {
+    if (!member.text) return;
+    const body = bodyOf(member);
     if (CLASS_KINDS.has(member.type)) {
-      const listed = classes.get(member.name);
-      if (listed && !namedClasses.some((item) => item.id === listed.id)) {
-        namedClasses.push(listed);
-      }
-      continue;
-    }
-    namedCalls.push({
-      id: member.node_id,
-      member: member.name,
-      label: member.name,
-      text: member.text || member.name,
-      start: member.start_line || 1,
-      types: (member.classes ?? [])
-        .map((name) => classes.get(name))
-        .filter((item): item is ClassBody => Boolean(item)),
-    });
-  }
-  const opened = options.openedClass ?? "";
-  const layout = displayedCallSource(
-    text,
-    bodies,
-    1,
-    opened ? known.filter((type) => type.name === opened).map((type) => type.id) : [],
-    known,
-    anchored,
-    options.listClasses ?? false,
-    namedCalls,
-    namedClasses,
-    new Set(),
-    new Set(),
-    bindings,
-    options.origin || 1,
-  );
-  return {
-    text: layout.text,
-    lineNumbers: layout.lineNumbers,
-    depths: layout.depths,
-    folds: layout.folds
-      .filter((fold) => fold.end > fold.start)
-      .map((fold) => ({
-        glyph: fold.start,
-        start: fold.start + 1,
-        end: fold.end,
-        kind: fold.kind,
-        member: fold.member,
-        listed: fold.listed,
-      })),
-  };
-}
-
-export function signatureTypeNames(text: string): string[] {
-  const head = text.split("{")[0] ?? "";
-  const params = head.match(/\(([^)]*)\)/)?.[1] ?? "";
-  const names: string[] = [];
-  for (const part of params.split(",")) {
-    if (!part.includes(":")) {
-      continue;
-    }
-    names.push(...typeIdentifiers(part.slice(part.indexOf(":") + 1)));
-  }
-  names.push(...returnTypeNames(head));
-  return names;
-}
-
-function returnTypeNames(text: string): string[] {
-  const returned = text.match(/\)\s*(?::|->)\s*([\s\S]*)$/)?.[1] ?? "";
-  return typeIdentifiers(returned);
-}
-
-function fieldTypeNames(text: string): string[] {
-  return typeIdentifiers(text.split(":").slice(1).join(":"));
-}
-
-function typeIdentifiers(text: string): string[] {
-  return text.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? [];
-}
-
-function variableTypes(text: string): Map<string, string> {
-  const bindings = new Map<string, string>();
-  const code = text
-    .replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`/g, " ")
-    .replace(/\/\/.*$/gm, " ");
-  const bind = (name: string, typeText: string) => {
-    if (!name || SKIP_TYPES.has(name)) {
+      if (!this.classes.has(member.name)) this.classes.set(member.name, body);
       return;
     }
-    const typeName = typeIdentifiers(typeText).find((item) => !SKIP_TYPES.has(item) && /^[A-Z]/.test(item));
-    if (typeName) {
-      bindings.set(name, typeName);
-    }
-  };
-  for (const match of code.matchAll(/\b(?:let|const|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^;=]+)/g)) {
-    bind(match[1], match[2]);
+    if ((member.type !== "Operation" && member.type !== "Property") || isSimpleProperty(member.text)) return;
+    const key = member.owner ? `${member.owner}.${member.name}` : member.name;
+    // A member of the class the text belongs to answers a bare name before any other class's.
+    if (!this.bodies.has(key)) this.bodies.set(key, body);
+    if (!this.bodies.has(member.name) || member.owner === owner) this.bodies.set(member.name, body);
   }
-  for (const match of code.matchAll(
-    /\b(?:let|const|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*new\s+([A-Za-z_][A-Za-z0-9_]*)/g,
-  )) {
-    bind(match[1], match[2]);
-  }
-  for (const match of code.matchAll(
-    /(?:\(|,)\s*(?:(?:public|private|protected|readonly)\s+)*([A-Za-z_][A-Za-z0-9_]*)\s*\??\s*:\s*([^,)=]+)/g,
-  )) {
-    bind(match[1], match[2]);
-  }
-  return bindings;
 }
 
-function classCatalog(members: FoldMember[]): Map<string, ClassBody> {
-  const classes = new Map<string, ClassBody>();
-  for (const member of members) {
-    if (!CLASS_KINDS.has(member.type) || !member.text || classes.has(member.name)) {
-      continue;
-    }
-    classes.set(member.name, { id: member.node_id, name: member.name, text: member.text, start: member.start_line || 1 });
+function bodyOf(member: FoldMember): Body {
+  const text = member.text.replace(CALL_MARKER, "");
+  const start = member.start_line || 1;
+  const label = member.owner ? `${member.owner}.${member.name}` : member.name;
+  return { id: member.node_id, name: member.name, label, text, file: member.file, start, end: member.end_line || start + text.split("\n").length - 1 };
+}
+
+function calloutOf(body: Body, line: number, kind: SourceCallout["kind"]): SourceCallout {
+  return { id: body.id, kind, line, title: body.label, path: body.file, startLine: body.start, endLine: body.end, text: body.text };
+}
+
+// The text with every comment, docstring and string blanked out, its lines kept, so only code is searched for names.
+export function codeOf(text: string, language: string): string {
+  const hashComments = language === "python";
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    const skipped = proseAt(text, index, hashComments);
+    out += skipped > index ? text.slice(index, skipped).replace(/[^\n]/g, " ") : text[index];
+    index = Math.max(skipped, index + 1);
   }
-  return classes;
+  return out;
 }
 
-function callCatalog(members: FoldMember[], classes: Map<string, ClassBody>, owner: string): Map<string, CallBody> {
-  const bodies = new Map<string, CallBody>();
-  const ordered = [...members].sort((left, right) => {
-    const leftOwner = left.owner === owner ? 0 : 1;
-    const rightOwner = right.owner === owner ? 0 : 1;
-    return leftOwner - rightOwner;
-  });
-  for (const member of ordered) {
-    if (member.type !== "Operation" && member.type !== "Property") {
-      continue;
-    }
-    if (!member.text || isSimpleProperty(member.text)) {
-      continue;
-    }
-    const key = memberKey(member.owner, member.name);
-    const body: CallBody = {
-      id: member.node_id,
-      member: member.name,
-      label: member.owner ? `${member.owner}.${member.name}` : member.name,
-      text: member.text,
-      start: member.start_line || 1,
-      types: typesIn(member.type, member.text, classes),
-    };
-    if (!bodies.has(key)) {
-      bodies.set(key, body);
-    }
-    if (!bodies.has(member.name)) {
-      bodies.set(member.name, body);
-    }
-  }
-  return bodies;
+// Where the comment or string starting at index ends; index itself when none starts there.
+function proseAt(text: string, index: number, hashComments: boolean): number {
+  const rest = text.slice(index, index + 3);
+  const closing = rest === '"""' || rest === "'''" ? rest : rest.startsWith("/*") ? "*/" : "";
+  if (closing) return endOf(text, text.indexOf(closing, index + 2), closing.length);
+  if (rest.startsWith("//") || (hashComments && rest.startsWith("#"))) return endOf(text, text.indexOf("\n", index), 0);
+  const quote = text[index];
+  if (quote !== "'" && quote !== '"' && quote !== "`") return index;
+  let at = index + 1;
+  while (at < text.length && text[at] !== quote && (quote === "`" || text[at] !== "\n")) at += text[at] === "\\" ? 2 : 1;
+  return Math.min(at + 1, text.length);
 }
 
-function bodiesByMember(bodies: Map<string, CallBody>): Map<string, CallBody> {
-  const byName = new Map<string, CallBody>();
-  for (const body of bodies.values()) {
-    if (!byName.has(body.member)) {
-      byName.set(body.member, body);
-    }
-  }
-  return byName;
+function endOf(text: string, found: number, length: number): number {
+  return found < 0 ? text.length : found + length;
 }
 
-function memberKey(owner: string, name: string): string {
-  return owner ? `${owner}.${name}` : name;
+function namesType(line: string, name: string): boolean {
+  return !SKIP_TYPES.has(name) && new RegExp(`\\b${name}\\b`).test(line);
 }
 
-function typesIn(kind: string, text: string, classes: Map<string, ClassBody>): ClassBody[] {
-  const wanted = kind === "Property" ? fieldTypeNames(text) : signatureTypeNames(text);
-  const types: ClassBody[] = [];
-  const seen = new Set<string>();
-  for (const name of wanted) {
-    if (SKIP_TYPES.has(name) || seen.has(name)) {
-      continue;
-    }
-    const match = classes.get(name);
-    if (!match) {
-      continue;
-    }
-    seen.add(name);
-    types.push(match);
-  }
-  return types;
-}
-
-function displayedCallSource(
-  text: string,
-  bodies: Map<string, CallBody>,
-  depth: number,
-  stack: string[],
-  known: ClassBody[],
-  anchored: CallBody[],
-  listClasses: boolean,
-  namedCalls: CallBody[] = [],
-  namedClasses: ClassBody[] = [],
-  hold: Set<string> = new Set(),
-  seenClasses: Set<string> = new Set(),
-  inherited: Map<string, string> = new Map(),
-  origin = 1,
-): { text: string; folds: CallFold[]; lineNumbers: string[]; depths: number[] } {
-  const bindings = new Map(inherited);
-  for (const [name, typeName] of variableTypes(text)) {
-    bindings.set(name, typeName);
-  }
-  const folds: CallFold[] = [];
-  const lineNumbers: string[] = [];
-  const depths: number[] = [];
-  const output: string[] = [];
-  const nest = Math.max(0, depth - 1);
-  const frames: { at: number; openedTo: number; member: boolean }[] = [];
-  let brace = 0;
-  let quote = "";
-  const classDecl = /^\s*(export\s+)?(abstract\s+)?class\s+/;
-  let storyContainer = false;
-  text.split("\n").forEach((line, index) => {
-    output.push(line);
-    lineNumbers.push(String(origin + index));
-    depths.push(nest);
-    const sourceLine = output.length;
-    const before = brace;
-    const scanned = scanBraces(line, brace, quote);
-    brace = scanned.depth;
-    quote = scanned.quote;
-    const openingStory = isStoryCall(line) && !storyContainer;
-    if (isStoryCall(line)) {
-      storyContainer = true;
-    }
-    if (!classDecl.test(line) && !openingStory) {
-      const member = isMemberHead(line);
-      for (let next = before + 1; next <= brace; next += 1) {
-        frames.push({ at: sourceLine, openedTo: next, member: member && next === before + 1 });
-      }
-    }
-    if (depth < MAX_DEPTH) {
-      const calls = callsOnLine(line, bodies, stack, bindings);
-      if (index === 0) {
-        for (const call of anchored) {
-          if (!calls.some((listed) => listed.id === call.id)) {
-            calls.push(call);
-          }
-        }
-      }
-      for (const call of namedCalls) {
-        if (wordHas(line, call.member) && !calls.some((listed) => listed.id === call.id) && !stack.includes(call.id)) {
-          calls.push(call);
-        }
-      }
-      const fromCalls = typesOn(calls);
-      const mentioned = known.filter(
-        (type) =>
-          !stack.includes(type.id) &&
-          !fromCalls.some((listed) => listed.id === type.id) &&
-          mentionsType(line, type.name),
-      );
-      for (const type of namedClasses) {
-        if (wordHas(line, type.name) && !fromCalls.some((listed) => listed.id === type.id) && !mentioned.some((listed) => listed.id === type.id)) {
-          mentioned.push(type);
-        }
-      }
-      for (const type of typesForVariables(line, bindings, known)) {
-        if (
-          stack.includes(type.id) ||
-          fromCalls.some((listed) => listed.id === type.id) ||
-          mentioned.some((listed) => listed.id === type.id)
-        ) {
-          continue;
-        }
-        mentioned.push(type);
-      }
-      const listedIds = new Set([...fromCalls, ...mentioned].map((type) => type.id));
-      const extras = index === 0 && listClasses ? known.filter((type) => !listedIds.has(type.id)) : [];
-      const constructed = typesConstructed(line, known);
-      const listedTypes = [...fromCalls, ...mentioned, ...extras, ...constructed].filter(
-        (type, typeIndex, all) =>
-          all.findIndex((item) => item.id === type.id) === typeIndex &&
-          (!hold.has(type.id) || constructed.some((item) => item.id === type.id)),
-      );
-      const pad = `${indentOf(line)}    `;
-      const callLine = output.length;
-      const held = new Set(listedTypes.map((type) => type.id));
-      for (const call of calls) {
-        appendOperation(output, lineNumbers, depths, folds, call, bodies, depth, stack, pad, known, held, seenClasses);
-      }
-      for (const type of listedTypes) {
-        appendClass(
-          output,
-          lineNumbers,
-          depths,
-          folds,
-          type,
-          pad,
-          stack,
-          depth,
-          seenClasses,
-          constructed.some((item) => item.id === type.id),
-        );
-      }
-      if ((calls.length > 0 || listedTypes.length > 0) && output.length > callLine) {
-        folds.push({
-          start: callLine,
-          end: output.length,
-          kind: calls.length > 0 ? "call" : "class",
-          listed: calls.length === 0,
-        });
-      }
-    }
-    while (frames.length > 0 && brace < frames[frames.length - 1].openedTo) {
-      const frame = frames.pop();
-      if (!frame || output.length <= frame.at) {
-        continue;
-      }
-      const listed = folds.some(
-        (fold) => fold.start === frame.at && (fold.kind === "call" || fold.kind === "class"),
-      );
-      if (listed) {
-        continue;
-      }
-      folds.push({ start: frame.at, end: output.length, kind: "block", member: frame.member });
-    }
-  });
-  return { text: output.join("\n"), folds, lineNumbers, depths };
-}
-
-function wordHas(line: string, name: string): boolean {
-  return new RegExp(`\\b${name}\\b`).test(line);
+function boundOn(line: string, bindings: Map<string, string>, typeName: string): boolean {
+  return [...bindings].some(([variable, bound]) => bound === typeName && new RegExp(`\\b${variable}\\b`).test(line));
 }
 
 function isSimpleProperty(text: string): boolean {
   const lines = text.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
-  if (lines.length !== 1) {
-    return false;
-  }
+  if (lines.length !== 1) return false;
   const line = lines[0];
-  if (/^(?:public\s+|private\s+|protected\s+|readonly\s+|static\s+|abstract\s+|override\s+|declare\s+)*(?:get|set)\s+[A-Za-z_]/.test(line) && line.includes("{") && line.includes("}")) {
-    return true;
-  }
+  if (/^(?:public\s+|private\s+|protected\s+|readonly\s+|static\s+|abstract\s+|override\s+|declare\s+)*(?:get|set)\s+[A-Za-z_]/.test(line) && line.includes("{") && line.includes("}")) return true;
   return !line.includes("(") && /[:=]/.test(line);
 }
 
-function typesForVariables(line: string, bindings: Map<string, string>, known: ClassBody[]): ClassBody[] {
-  const code = line.replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`/g, " ");
-  const found: ClassBody[] = [];
-  const seen = new Set<string>();
-  for (const [variable, typeName] of bindings) {
-    if (!wordHas(code, variable)) {
-      continue;
-    }
-    const type = known.find((item) => item.name === typeName);
-    if (!type || seen.has(type.id) || SKIP_TYPES.has(type.name)) {
-      continue;
-    }
-    seen.add(type.id);
-    found.push(type);
-  }
-  return found;
-}
-
-function callsOnLine(
-  line: string,
-  bodies: Map<string, CallBody>,
-  stack: string[],
-  bindings: Map<string, string>,
-): CallBody[] {
-  const found: CallBody[] = [];
-  const seen = new Set<string>();
-  const add = (body: CallBody | undefined) => {
-    if (!body || stack.includes(body.id) || seen.has(body.id) || isSimpleProperty(body.text)) {
-      return;
-    }
-    seen.add(body.id);
-    found.push(body);
+// The class each variable of the code is declared as, so a call on it opens that class's member.
+function variableTypes(code: string): Map<string, string> {
+  const bindings = new Map<string, string>();
+  const bind = (name: string, typeText: string) => {
+    const typeName = (typeText.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? []).find((item) => !SKIP_TYPES.has(item) && /^[A-Z]/.test(item));
+    if (name && !SKIP_TYPES.has(name) && typeName) bindings.set(name, typeName);
   };
-  const pattern = /\b([A-Za-z_][A-Za-z0-9_]*)\??\.([A-Za-z_][A-Za-z0-9_]*)\s*\(/g;
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(line))) {
-    if (!SKIP_TYPES.has(match[1])) {
-      add(resolveCall(bodies, match[1], match[2], bindings.get(match[1])));
-    }
-    const next = match.index + match[1].length + (match[0].includes("?.") ? 2 : 1);
-    if (pattern.lastIndex > next) {
-      pattern.lastIndex = next;
-    }
-  }
-  return found;
-}
-
-function resolveCall(
-  bodies: Map<string, CallBody>,
-  receiver: string,
-  method: string,
-  typeName?: string,
-): CallBody | undefined {
-  if (typeName) {
-    const typed = bodies.get(`${typeName}.${method}`);
-    if (typed) {
-      return typed;
-    }
-  }
-  if (receiver !== "this") {
-    const exact = bodies.get(`${receiver}.${method}`);
-    if (exact) {
-      return exact;
-    }
-    const wanted = receiver.toLowerCase();
-    for (const [key, body] of bodies) {
-      const dot = key.lastIndexOf(".");
-      if (dot < 0 || key.slice(dot + 1) !== method) {
-        continue;
-      }
-      if (key.slice(0, dot).toLowerCase() === wanted) {
-        return body;
-      }
-    }
-  }
-  return bodies.get(method);
-}
-
-function appendOperation(
-  output: string[],
-  lineNumbers: string[],
-  depths: number[],
-  folds: CallFold[],
-  call: CallBody,
-  bodies: Map<string, CallBody>,
-  depth: number,
-  stack: string[],
-  pad: string,
-  known: ClassBody[],
-  hold: Set<string>,
-  seenClasses: Set<string>,
-) {
-  output.push(`${pad}${call.member}`);
-  lineNumbers.push(String(call.start || ""));
-  depths.push(depth);
-  const operationLine = output.length;
-  const nested = displayedCallSource(
-    call.text,
-    bodies,
-    depth + 1,
-    [...stack, call.id],
-    known,
-    [],
-    false,
-    [],
-    [],
-    hold,
-    seenClasses,
-    new Map(),
-    call.start || 1,
-  );
-  const bodyPad = `${pad}    `;
-  for (const [index, nestedLine] of nested.text.split("\n").entries()) {
-    output.push(nestedLine.length > 0 ? `${bodyPad}${nestedLine}` : bodyPad);
-    lineNumbers.push(nested.lineNumbers[index] ?? "");
-    depths.push((nested.depths[index] ?? depth) + 1);
-  }
-  if (output.length > operationLine) {
-    folds.push({ start: operationLine, end: output.length, kind: "call" });
-  }
-  for (const fold of nested.folds) {
-    if (fold.start === 1 && fold.kind === "block") {
-      continue;
-    }
-    folds.push({
-      start: operationLine + fold.start,
-      end: operationLine + fold.end,
-      kind: fold.kind,
-      member: fold.member,
-      listed: fold.listed,
-    });
-  }
-}
-
-function appendClass(
-  output: string[],
-  lineNumbers: string[],
-  depths: number[],
-  folds: CallFold[],
-  type: ClassBody,
-  pad: string,
-  stack: string[],
-  depth: number,
-  seenClasses: Set<string>,
-  again = false,
-) {
-  if (stack.includes(type.id) || (seenClasses.has(type.id) && !again)) {
-    return;
-  }
-  seenClasses.add(type.id);
-  output.push(`${pad}${type.name}`);
-  lineNumbers.push(String(type.start || ""));
-  depths.push(depth);
-  const classLine = output.length;
-  const classLines = type.text.split("\n");
-  if (classLines.length === 0 || (classLines.length === 1 && classLines[0].trim() === type.name)) {
-    return;
-  }
-  const classPad = `${pad}    `;
-  classLines.forEach((classLineText, index) => {
-    output.push(classLineText.length > 0 ? `${classPad}${classLineText}` : classPad);
-    lineNumbers.push(String((type.start || 1) + index));
-    depths.push(depth + 1);
-  });
-  folds.push({ start: classLine, end: output.length, kind: "class", listed: true });
-  for (const brace of braceFolds(type.text)) {
-    folds.push({
-      start: classLine + brace.glyph,
-      end: classLine + brace.end,
-      kind: "block",
-      member: brace.member,
-    });
-  }
-}
-
-function typesConstructed(line: string, known: ClassBody[]): ClassBody[] {
-  const code = line.replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`/g, " ");
-  const found: ClassBody[] = [];
-  const seen = new Set<string>();
-  for (const match of code.matchAll(/\bnew\s+([A-Za-z_][A-Za-z0-9_]*)\b/g)) {
-    const type = known.find((item) => item.name === match[1]);
-    if (!type || seen.has(type.id) || SKIP_TYPES.has(type.name)) {
-      continue;
-    }
-    seen.add(type.id);
-    found.push(type);
-  }
-  return found;
-}
-
-function mentionsType(line: string, name: string): boolean {
-  if (SKIP_TYPES.has(name)) {
-    return false;
-  }
-  const code = line.replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`/g, " ");
-  return new RegExp(`\\b${name}\\b`).test(code);
-}
-
-function typesOn(calls: CallBody[]): ClassBody[] {
-  const types: ClassBody[] = [];
-  const seen = new Set<string>();
-  for (const call of calls) {
-    for (const type of call.types) {
-      if (seen.has(type.id)) {
-        continue;
-      }
-      seen.add(type.id);
-      types.push(type);
-    }
-  }
-  return types;
-}
-
-function indentOf(line: string): string {
-  return line.match(/^\s*/)?.[0] ?? "";
+  const plain = code.replace(QUOTED, " ");
+  for (const match of plain.matchAll(/\b(?:let|const|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^;=]+)/g)) bind(match[1], match[2]);
+  for (const match of plain.matchAll(/\b(?:let|const|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*new\s+([A-Za-z_][A-Za-z0-9_]*)/g)) bind(match[1], match[2]);
+  for (const match of plain.matchAll(/(?:\(|,)\s*(?:(?:public|private|protected|readonly)\s+)*([A-Za-z_][A-Za-z0-9_]*)\s*\??\s*:\s*([^,)=]+)/g)) bind(match[1], match[2]);
+  return bindings;
 }
