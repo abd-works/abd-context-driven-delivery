@@ -1,11 +1,17 @@
 // The Files app's acceptance tests for its graph view, story by story as
 // story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md
 // writes them; what the session's graph answers is proved by the sub-epic's story tests in story_tests/review-generated-work-in-file-viewer/.
+import { render } from '@testing-library/react'
+import { createElement } from 'react'
 import { describe, expect, it } from 'vitest'
 
 import type { CddApi } from '@cdd/cdd-shared'
 import type { ExplorerEntryData, GuidanceSelectionData } from '@cdd/space/session/session'
 
+import { NodeFilterLists } from '@graph-app/filter/FilterView'
+import { NO_CHOICES, NO_FILTER } from '@graph-app/filter/filter-selection'
+
+import { FilesGraphView } from './files-graph-view'
 import { FilesLink } from './files-link'
 import { FilesPage } from './files-page'
 
@@ -53,6 +59,12 @@ class FakeFilesServer implements CddApi {
   stages = ['discovery', 'implementation']
   practices = ['stories', 'clean_engineering']
   progress: string[] = []
+  // What graph_trees, graph_members and graph_filter_choices answer in place of the seed's, as a server lane that cannot
+  // run the call answers: a failure's text, an error, or nothing, rather than what the tool returns.
+  treesAnswer: unknown = undefined
+  membersAnswer: unknown = undefined
+  choicesAnswer: unknown = undefined
+  isChoicesAnswered = false
   private readonly waiting: (() => void)[] = []
   private held: Promise<void> | null = null
   private release: () => void = () => {}
@@ -69,12 +81,15 @@ class FakeFilesServer implements CddApi {
 
   async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
     this.posts.push({ path, body })
+    if (path.endsWith('/graph-trees') && this.treesAnswer !== undefined) return this.treesAnswer as Result
     if (path.endsWith('/guidance-selection')) return this.selection() as Result
     if (path.endsWith('/update-guidance-selection')) return this.update(body) as Result
     if (path.endsWith('/guidance-selection-after')) return (await this.after(Number(body.version))) as Result
     if (path.endsWith('/fidelity-files')) return {} as Result
     if (path.endsWith('/root-files')) return CHECKOUT_FLOW_FILES as Result
     if (path.endsWith('/graph-trees')) return (await this.heldTrees(body.paths as string[])) as Result
+    if (path.endsWith('/graph-filter-choices') && this.isChoicesAnswered) return this.choicesAnswer as Result
+    if (path.endsWith('/graph-members') && this.membersAnswer !== undefined) return this.membersAnswer as Result
     if (path.endsWith('/graph-filter-choices')) return this.choices(body.node_types as string[]) as Result
     if (path.endsWith('/graph-branch')) return this.entry(this.node(String(body.node_id)), body.paths as string[], true) as Result
     if (path.endsWith('/graph-node-ranges')) return this.ranges(this.node(String(body.node_id)), body.paths as string[]) as Result
@@ -439,6 +454,84 @@ describe('Open Calls Across Files', () => {
       const { page, stop } = await showingGraph()
       stop()
       expect(page.state.graph.members.map(member => member.name)).toEqual(['Delete Ticket', 'Ticket', 'activate', 'close', 'Board', 'reread'])
+    })
+  })
+})
+
+describe('Show A Graph Read That Failed', () => {
+  // The text a server lane answers when it cannot run a graph call, as an older lane does for a newer page's call.
+  const LANE_FAILURE = "TypeError: Session.graph_trees() got an unexpected keyword argument 'node_filter'"
+  const drawn = (page: FilesPage) => () => render(createElement(FilesGraphView, { page })).unmount()
+
+  describe("with session.graph_trees answering a failure's text instead of the trees", () => {
+    it('should hold no tree and show the failure in place of the graph', async () => {
+      const server = new FakeFilesServer()
+      server.treesAnswer = LANE_FAILURE
+      const { page, stop } = await showingGraph(server)
+      stop()
+      expect([page.state.graph.trees, page.state.graph.isReading, page.state.graph.problem]).toEqual([[], false, expect.stringContaining(LANE_FAILURE)])
+    })
+
+    it('should name session.graph_trees in the failure when it answers an error', async () => {
+      const server = new FakeFilesServer()
+      server.treesAnswer = { error: LANE_FAILURE }
+      const { page, stop } = await showingGraph(server)
+      stop()
+      expect(page.state.graph.problem).toContain('session.graph_trees')
+    })
+  })
+
+  describe('with session.graph_members answering something other than a list', () => {
+    it('should keep the trees and hold no member', async () => {
+      const server = new FakeFilesServer()
+      server.membersAnswer = 'no members'
+      const { page, stop } = await showingGraph(server)
+      stop()
+      expect([treeNames(page), page.state.graph.members]).toEqual([['Stories', 'Clean Engineering'], []])
+    })
+  })
+
+  for (const [said, answer] of [
+    ["a failure's text", "ToolNotEnrolled: session.graph_filter_choices"],
+    ['an error', { error: 'ToolNotEnrolled: session.graph_filter_choices' }],
+    ['nothing', undefined],
+    ['choices without offered_node_types', { node_types: [], relationships: [], rules: [] }],
+  ] as const) {
+    describe(`with session.graph_filter_choices answering ${said}`, () => {
+      async function shownWithChoices() {
+        const server = new FakeFilesServer()
+        server.isChoicesAnswered = true
+        server.choicesAnswer = answer
+        return showingGraph(server)
+      }
+
+      it('should draw the graph view with its node filter offering nothing', async () => {
+        const { page, stop } = await shownWithChoices()
+        stop()
+        expect(drawn(page)).not.toThrow()
+        expect(page.state.graph.choices).toEqual(NO_CHOICES)
+      })
+
+      it('should keep the trees it read', async () => {
+        const { page, stop } = await shownWithChoices()
+        stop()
+        expect(treeNames(page)).toEqual(['Stories', 'Clean Engineering'])
+      })
+
+      if (answer !== undefined) {
+        it('should tell the failure, naming session.graph_filter_choices', async () => {
+          const { page, stop } = await shownWithChoices()
+          stop()
+          expect(page.state.toasts.some(toast => toast.includes('session.graph_filter_choices'))).toBe(true)
+        })
+      }
+    })
+  }
+
+  describe('with a node filter given no lists to offer', () => {
+    it('should draw its lists empty rather than throw', () => {
+      const lists = { selection: NO_FILTER, nodeTypes: undefined, relationships: undefined, rules: undefined, onChange: () => {} }
+      expect(() => render(createElement(NodeFilterLists, lists)).unmount()).not.toThrow()
     })
   })
 })

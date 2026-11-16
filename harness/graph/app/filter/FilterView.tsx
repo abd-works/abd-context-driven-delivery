@@ -98,9 +98,9 @@ export function FilterView({
 
 type NodeFilterListsProps = {
   selection: FilterSelection;
-  nodeTypes: string[];
-  relationships: string[];
-  rules: string[];
+  nodeTypes?: string[];
+  relationships?: string[];
+  rules?: string[];
   onChange: (selection: FilterSelection) => void;
 };
 
@@ -126,7 +126,7 @@ export function NodeFilterLists({ selection, nodeTypes, relationships, rules, on
       <FilterSelect
         label="Rule"
         testId="filter-rule"
-        options={[...rules].sort((left, right) => left.localeCompare(right))}
+        options={[...(rules ?? [])].sort((left, right) => left.localeCompare(right))}
         selected={selection.rules}
         onChange={(rules) => onChange({ ...selection, rules })}
       />
@@ -166,7 +166,7 @@ function FilterSelect({
 }: {
   label: string;
   testId: string;
-  options: string[];
+  options?: string[];
   selected: string[];
   onChange: (selected: string[]) => void;
 }) {
@@ -175,7 +175,7 @@ function FilterSelect({
       <div className="filter-heading">
         <span className="filter-label">{label}</span>
         <div className="filter-actions">
-          <button type="button" onClick={() => onChange(options)}>
+          <button type="button" onClick={() => onChange(options ?? [])}>
             All
           </button>
           <button type="button" onClick={() => onChange([])}>
@@ -191,7 +191,7 @@ function FilterSelect({
           onChange(Array.from(event.target.selectedOptions).map((option) => option.value));
         }}
       >
-        {options.map((option) => (
+        {(options ?? []).map((option) => (
           <option key={option} value={option}>
             {option}
           </option>
