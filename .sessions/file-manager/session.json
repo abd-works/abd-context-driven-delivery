@@ -10,13 +10,15 @@
       "discovery",
       "implementation"
     ],
-    "version": 30
+    "version": 41
   },
   "practices": {
     "stories": {
       "formats": {
-        "story_map": [
-          "drawio"
+        "story_map": [],
+        "acceptance_tests": [],
+        "scenarios": [
+          "python"
         ]
       }
     },
@@ -30,9 +32,10 @@
     },
     "clean_engineering": {
       "formats": {
-        "modules": [
-          "markdown",
-          "drawio"
+        "modules": [],
+        "code": [],
+        "model": [
+          "python"
         ]
       },
       "enabled": true
