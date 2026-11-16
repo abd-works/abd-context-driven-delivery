@@ -2,7 +2,7 @@
 
 A board in Claude is a Whiteboard artifact whose store holds ``board/meta`` (``{v, title, order}``) and one
 ``elements/<id>`` record per element. A practice draws its diagram as a *Whiteboard*, saves it as a ``.whiteboard``
-file beside its other formats, and an agent sends ``Whiteboard.writes(previous)`` to the artifact's store.
+file beside its other formats, and an agent sends ``Whiteboard.batches(previous)`` to the artifact's store.
 """
 
 from __future__ import annotations
@@ -10,18 +10,30 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field, fields, replace
-from typing import ClassVar, Dict, Iterable, List, Optional, Tuple
+from typing import ClassVar, Dict, Iterable, List, Optional
 
 ID_PATTERN = re.compile(r"^[A-Za-z0-9_.~:@+-]{1,40}$")
 BATCH_SIZE = 50
 """The most writes the artifact store takes in one batch."""
 
-Box = Tuple[float, float, float, float]
-"""Where a node is drawn: x, y, width, height."""
-
 
 class UnreadableBoard(ValueError):
     """Text that is not a saved board, so no practice reads a model from it."""
+
+
+@dataclass(frozen=True)
+class Box:
+    """Where an element is drawn: its top-left corner, width and height in board units."""
+
+    x: float
+    y: float
+    w: float
+    h: float
+
+    def holds(self, other: "Box") -> bool:
+        """Whether other's middle lies inside this box, as a card inside the section drawn round it does."""
+        middle_x, middle_y = other.x + other.w / 2, other.y + other.h / 2
+        return self.x <= middle_x <= self.x + self.w and self.y <= middle_y <= self.y + self.h
 
 
 @dataclass
@@ -30,12 +42,9 @@ class BoardElement:
 
     id: str
     TYPE: ClassVar[str] = ""
-    KINDS: ClassVar[Dict[str, type]] = {}
-
-    def __init_subclass__(cls, **kwargs) -> None:
-        super().__init_subclass__(**kwargs)
-        if cls.TYPE:
-            BoardElement.KINDS[cls.TYPE] = cls
+    STORE_NAMES: ClassVar[Dict[str, str]] = {
+        "from_id": "from", "to_id": "to", "from_side": "fromSide", "to_side": "toSide", "text_align": "textAlign",
+    }
 
     def __post_init__(self) -> None:
         if not ID_PATTERN.match(self.id):
@@ -49,67 +58,25 @@ class BoardElement:
             value = getattr(self, item.name)
             if item.name == "id" or value is None or value is False or value == "":
                 continue
-            written[_store_name(item.name)] = value
+            written[self.STORE_NAMES.get(item.name, item.name)] = value
         return written
 
     @classmethod
     def from_record(cls, element_id: str, record: Dict[str, object]) -> "BoardElement":
         """The element a store record holds; a record of a type no practice draws, such as a person's note, is kept as
         an *OtherElement* so a board read back loses nothing."""
-        kind = cls.KINDS.get(str(record.get("type", "")))
+        kind = ELEMENT_KINDS.get(str(record.get("type", "")))
         if kind is None:
             return OtherElement(element_id, dict(record))
+        field_names = {store: name for name, store in cls.STORE_NAMES.items()}
         known = {item.name for item in fields(kind)}
-        values = {_field_name(name): value for name, value in record.items() if _field_name(name) in known}
-        return kind(id=element_id, **values)
+        values = {field_names.get(name, name): value for name, value in record.items()}
+        return kind(id=element_id, **{name: value for name, value in values.items() if name in known and name != "id"})
 
     @property
     def place(self) -> Optional[Box]:
         """Where a person sees the element; none for an element placed by what it joins."""
         return None
-
-    def placed_at(self, place: Box) -> "BoardElement":
-        return self
-
-
-@dataclass
-class Placed(BoardElement):
-    """An element with a box of its own."""
-
-    x: float = 0
-    y: float = 0
-    w: float = 0
-    h: float = 0
-
-    @property
-    def place(self) -> Optional[Box]:
-        return (self.x, self.y, self.w, self.h)
-
-    def placed_at(self, place: Box) -> "BoardElement":
-        x, y, w, h = place
-        return replace(self, x=x, y=y, w=w, h=h)
-
-
-@dataclass
-class Shape(Placed):
-    """A block: an epic bar, a story card, a class or module box."""
-
-    TYPE: ClassVar[str] = "shape"
-    kind: str = "rect"
-    color: str = ""
-    stroke: str = ""
-    size: str = ""
-    text: str = ""
-    text_align: str = ""
-
-
-@dataclass
-class Section(Placed):
-    """A container that holds other elements under its title; it lies behind what it holds."""
-
-    TYPE: ClassVar[str] = "container"
-    color: str = ""
-    text: str = ""
 
 
 @dataclass
@@ -125,10 +92,47 @@ class Label(BoardElement):
 
     @property
     def place(self) -> Optional[Box]:
-        return (self.x, self.y, 0, 0)
+        return Box(self.x, self.y, 0, 0)
 
-    def placed_at(self, place: Box) -> "BoardElement":
-        return replace(self, x=place[0], y=place[1])
+    def placed_at(self, place: Box) -> "Label":
+        return replace(self, x=place.x, y=place.y)
+
+
+@dataclass
+class Block(BoardElement):
+    """An element with a box of its own, a colour and words."""
+
+    x: float = 0
+    y: float = 0
+    w: float = 0
+    h: float = 0
+    color: str = ""
+    text: str = ""
+
+    @property
+    def place(self) -> Optional[Box]:
+        return Box(self.x, self.y, self.w, self.h)
+
+    def placed_at(self, place: Box) -> "Block":
+        return replace(self, x=place.x, y=place.y, w=place.w, h=place.h)
+
+
+@dataclass
+class Shape(Block):
+    """A block: an epic bar, a story card, a class or module box."""
+
+    TYPE: ClassVar[str] = "shape"
+    kind: str = "rect"
+    stroke: str = ""
+    size: str = ""
+    text_align: str = ""
+
+
+@dataclass
+class Section(Block):
+    """A container that holds other elements under its title; it lies behind what it holds."""
+
+    TYPE: ClassVar[str] = "container"
 
 
 @dataclass
@@ -144,10 +148,6 @@ class Arrow(BoardElement):
     dash: bool = False
     head: str = ""
 
-    @property
-    def joins(self) -> Tuple[str, str]:
-        return (self.from_id, self.to_id)
-
 
 @dataclass
 class OtherElement(BoardElement):
@@ -160,16 +160,8 @@ class OtherElement(BoardElement):
         return dict(self.fields_read)
 
 
-_STORE_NAMES = {"from_id": "from", "to_id": "to", "from_side": "fromSide", "to_side": "toSide", "text_align": "textAlign"}
-_FIELD_NAMES = {store: name for name, store in _STORE_NAMES.items()}
-
-
-def _store_name(name: str) -> str:
-    return _STORE_NAMES.get(name, name)
-
-
-def _field_name(name: str) -> str:
-    return _FIELD_NAMES.get(name, name)
+ELEMENT_KINDS: Dict[str, type] = {kind.TYPE: kind for kind in (Shape, Section, Label, Arrow)}
+"""The element kinds a practice draws, by the type the store names them with."""
 
 
 @dataclass(frozen=True)
@@ -190,8 +182,8 @@ class StoreWrite:
 
 
 class WhiteboardNode:
-    """What a practice's diagram node mixes in to be drawn on a board. The node says the box it is drawn in, its element
-    id, and the elements it draws there; the board places them back to front as the nodes are drawn."""
+    """What a practice's diagram node mixes in to be drawn on a board. The node says the box it is drawn in and the
+    elements it draws there; the board places them back to front as the nodes are drawn."""
 
     def board_box(self) -> Box:
         """The box the diagram placed this node in."""
@@ -201,10 +193,10 @@ class WhiteboardNode:
         """The elements this node draws, back to front."""
         raise NotImplementedError
 
-    def board_shape(self, element_id: str, **drawn) -> Shape:
+    def board_shape(self, element_id: str, **drawn: str) -> Shape:
         """A shape with this element id at this node's box."""
-        x, y, w, h = self.board_box()
-        return Shape(element_id, x=x, y=y, w=w, h=h, **drawn)
+        box = self.board_box()
+        return Shape(element_id, x=box.x, y=box.y, w=box.w, h=box.h, **drawn)
 
 
 class Whiteboard:
@@ -231,15 +223,12 @@ class Whiteboard:
         sections, so it never covers what it holds."""
         if element.id in self._elements:
             raise ValueError(f"The board already holds an element {element.id!r}")
-        if isinstance(element, Section):
-            sections = [key for key, held in self._elements.items() if isinstance(held, Section)]
-            rest = [key for key in self._elements if key not in sections]
-            ordered = {key: self._elements[key] for key in sections}
-            ordered[element.id] = element
-            ordered.update({key: self._elements[key] for key in rest})
-            self._elements = ordered
-        else:
+        if not isinstance(element, Section):
             self._elements[element.id] = element
+            return element
+        sections = {key: held for key, held in self._elements.items() if isinstance(held, Section)}
+        rest = {key: held for key, held in self._elements.items() if key not in sections}
+        self._elements = {**sections, element.id: element, **rest}
         return element
 
     def put(self, element: BoardElement) -> BoardElement:
@@ -287,21 +276,28 @@ class Whiteboard:
     def keep_places(self, previous: Optional["Whiteboard"]) -> "Whiteboard":
         """This board with every element previous also held put back where it was on previous, so a place a person
         moved an element to survives the next render; new elements stay where the render put them."""
-        if previous is None:
-            return self
-        for key, element in self._elements.items():
-            before = previous.element(key)
+        for key, element in list(self._elements.items()):
+            before = previous.element(key) if previous is not None else None
             if before is not None and before.place is not None and type(before) is type(element):
                 self._elements[key] = element.placed_at(before.place)
         return self
 
     def writes(self, previous: Optional["Whiteboard"] = None) -> List[StoreWrite]:
         """The store writes that turn previous, the board as it is in Claude, into this board: its meta, each new
-        element set, each changed element updated with only its changed fields, and each element previous held that a
-        practice drew and this board no longer holds deleted. Elements a person added, of a kind no practice draws, are
-        left alone and kept in the order."""
+        element set, each changed element updated with only its changed fields, and each element a practice drew that
+        this board no longer holds deleted. Elements a person added, of a kind no practice draws, are left alone and
+        kept at the back of the order."""
         before = previous or Whiteboard()
-        kept = [element for element in before.elements if isinstance(element, OtherElement)]
+        kept = [element.id for element in before.elements if isinstance(element, OtherElement)]
+        meta = {**self.meta, "order": kept + self.order}
+        return [StoreWrite("set", "board/meta", meta), *self._element_writes(before), *self._deletes(before)]
+
+    def batches(self, previous: Optional["Whiteboard"] = None) -> List[List[Dict[str, object]]]:
+        """The writes against previous as ArtifactData ``batch`` entries, at most fifty a batch, in order."""
+        entries = [write.entry for write in self.writes(previous)]
+        return [entries[start:start + BATCH_SIZE] for start in range(0, len(entries), BATCH_SIZE)]
+
+    def _element_writes(self, before: "Whiteboard") -> List[StoreWrite]:
         found: List[StoreWrite] = []
         for element in self.elements:
             had = before.element(element.id)
@@ -311,15 +307,10 @@ class Whiteboard:
             changed = {name: value for name, value in element.record.items() if had.record.get(name) != value}
             if changed:
                 found.append(StoreWrite("update", f"elements/{element.id}", changed))
-        for element in before.elements:
-            if self.element(element.id) is None and not isinstance(element, OtherElement):
-                found.append(StoreWrite("delete", f"elements/{element.id}"))
-        meta = dict(self.meta)
-        meta["order"] = [element.id for element in kept] + self.order
-        return [StoreWrite("set", "board/meta", meta)] + found
+        return found
 
-    @staticmethod
-    def batches(writes: List[StoreWrite]) -> List[List[Dict[str, object]]]:
-        """The writes as ArtifactData ``batch`` entries, at most fifty a batch, in order."""
-        entries = [write.entry for write in writes]
-        return [entries[start:start + BATCH_SIZE] for start in range(0, len(entries), BATCH_SIZE)]
+    def _deletes(self, before: "Whiteboard") -> List[StoreWrite]:
+        return [
+            StoreWrite("delete", f"elements/{element.id}") for element in before.elements
+            if self.element(element.id) is None and not isinstance(element, OtherElement)
+        ]

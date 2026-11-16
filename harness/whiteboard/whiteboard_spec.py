@@ -3,7 +3,7 @@
 from expects import equal, expect, raise_error
 from mamba import before, context, description, it
 
-from harness.whiteboard import Arrow, Section, Shape, StoreWrite, UnreadableBoard, Whiteboard, WhiteboardNode
+from harness.whiteboard import Arrow, Box, Section, Shape, StoreWrite, UnreadableBoard, Whiteboard, WhiteboardNode
 
 
 class CardNode(WhiteboardNode):
@@ -11,7 +11,7 @@ class CardNode(WhiteboardNode):
 
     def __init__(self, element_id: str, box) -> None:
         self.element_id = element_id
-        self.box = box
+        self.box = Box(*box)
 
     def board_box(self):
         return self.box
@@ -77,16 +77,16 @@ with description("a whiteboard") as self:
     with context("with a previous board on which a person moved a shape"):
         with before.each:
             previous = board_of_two_cards()
-            previous.put(previous.element("story.a1").placed_at((500, 300, 60, 50)))
+            previous.put(previous.element("story.a1").placed_at(Box(500, 300, 60, 50)))
             board = board_of_two_cards()
             board.draw(CardNode("story.c3", (180, 40, 60, 50)))
             self.board = board.keep_places(previous)
 
         with it("should keep the moved shape at the person's place"):
-            expect(self.board.element("story.a1").place).to(equal((500, 300, 60, 50)))
+            expect(self.board.element("story.a1").place).to(equal(Box(500, 300, 60, 50)))
 
         with it("should keep a new shape where the render placed it"):
-            expect(self.board.element("story.c3").place).to(equal((180, 40, 60, 50)))
+            expect(self.board.element("story.c3").place).to(equal(Box(180, 40, 60, 50)))
 
     with context("that writes itself against the previous board"):
         with before.each:
@@ -124,4 +124,4 @@ with description("a whiteboard") as self:
             board = Whiteboard("Orders")
             for index in range(60):
                 board.draw(CardNode(f"story.s{index}", (index * 70, 40, 60, 50)))
-            expect([len(batch) for batch in Whiteboard.batches(board.writes())]).to(equal([50, 11]))
+            expect([len(batch) for batch in board.batches()]).to(equal([50, 11]))

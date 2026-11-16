@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import List, Optional
 
 from cdd_guidance.practices.stories.model.story_model import Epic, Increment, Story, StoryModel, StoryType
 
@@ -128,6 +128,45 @@ class DiagramStoryNode:
         return children
 
 
+class DiagramStoryCell:
+    """One story-map element as it sits on a drawn map: its role (``epic``, ``subepic``, ``story`` or ``actor``), its
+    bar depth, its story kind, its words, and its box. Each diagram format reads its own elements into cells; the map
+    places them by where they sit, not by their order in the file, because people restack elements on a drawing."""
+
+    def __init__(self) -> None:
+        self.role = ""
+        self.depth = -1
+        self.kind = ""
+        self.text = ""
+        self.x = self.y = self.width = self.height = 0.0
+        self.node: Optional[Epic] = None
+
+    @property
+    def center(self) -> float:
+        return self.x + self.width / 2
+
+    @property
+    def story_type(self) -> StoryType:
+        return StoryType.from_mark(self.kind or None)
+
+    def spans(self, across: float) -> bool:
+        return self.x <= across < self.x + self.width
+
+    def story_below(self, stories: List["DiagramStoryCell"]) -> Optional["DiagramStoryCell"]:
+        """The story an actor names: the nearest one beneath it in the same column."""
+        column = [story for story in stories if story.spans(self.center) and story.y > self.y]
+        return min(column, key=lambda story: story.y, default=None)
+
+    def beneath(self, bars: List["DiagramStoryCell"], across: Optional[float] = None) -> Optional["DiagramStoryCell"]:
+        """The deepest bar spanning this cell's center, or ``across`` when given; the nearest bar when the cell was
+        dragged past every bar's edge."""
+        where = self.center if across is None else across
+        spanning = [bar for bar in bars if bar.spans(where)]
+        if spanning:
+            return max(spanning, key=lambda bar: bar.depth)
+        return min(bars, key=lambda bar: abs(bar.center - where), default=None)
+
+
 class DiagramEpic(Epic, DiagramStoryNode):
     row_y = 120
     nested_row_y = 195
@@ -171,6 +210,37 @@ class DiagramStoryModel(StoryModel):
     row_height = 100
     epic_type = DiagramEpic
     story_type = DiagramStory
+
+    def place_cells(self, cells: List[DiagramStoryCell]) -> List[DiagramStoryCell]:
+        """Read the epics and stories cells draw into this map by where they sit: epics left to right, each sub-epic
+        under the shallower bar above it, each story under the deepest bar over it with the actor just above it as its
+        actor. Answers the cells that became epics and sub-epics, which a format places what else it draws under."""
+        owners: List[DiagramStoryCell] = []
+        for cell in sorted((c for c in cells if c.role == "epic"), key=lambda c: c.x):
+            cell.node = self.epic_type(cell.text.strip(), len(self.epics) + 1)
+            self.append_epic(cell.node)
+            owners.append(cell)
+        for cell in sorted((c for c in cells if c.role == "subepic"), key=lambda c: (c.depth, c.x)):
+            owner = cell.beneath([o for o in owners if o.depth < cell.depth])
+            if owner is not None:
+                cell.node = self.epic_type(cell.text, len(owner.node.epics) + 1)
+                owner.node.append_epic(cell.node)
+                owners.append(cell)
+        self._place_stories(cells, owners)
+        return owners
+
+    def _place_stories(self, cells: List[DiagramStoryCell], owners: List[DiagramStoryCell]) -> None:
+        stories = sorted((c for c in cells if c.role == "story"), key=lambda c: (c.x, c.y))
+        actors = {id(story): actor for actor in cells if actor.role == "actor"
+                  for story in [actor.story_below(stories)] if story is not None}
+        for cell in stories:
+            owner = cell.beneath(owners)
+            if owner is None:
+                continue
+            story = self.story_type(cell.text, len(owner.node.stories) + 1, cell.story_type)
+            if id(cell) in actors:
+                story.actors = [actors[id(cell)].text.strip()]
+            owner.node.append_story(story)
 
     @property
     def max_sub_epic_depth(self) -> int:

@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from cdd_guidance.practices.stories.model.diagram_story_model import (
+    DiagramStoryCell,
     DiagramEpic,
     DiagramIncrement,
     DiagramStory,
@@ -225,51 +226,26 @@ class DrawIOParseError(Exception):
     """Raised when a document is not a valid Draw.io story map."""
 
 
-class _PlacedCell:
+class _PlacedCell(DiagramStoryCell):
     """One vertex of a story map diagram as it sits on screen: its role from the style, its bar depth, and its box."""
 
     def __init__(self, element: ET.Element) -> None:
+        super().__init__()
         self.style = element.attrib.get("style", "")
-        self.value = element.attrib.get("value", "")
+        self.text = element.attrib.get("value", "")
         self.cell_id = element.attrib.get("id", "")
         head = self.style.split(";", 1)[0]
         self.role = head.split(":", 1)[0]
         self.depth = int(head.split(":", 1)[1]) if self.role == "subepic" and ":" in head else -1
+        self.kind = head.split(":", 1)[1] if self.role == "story" and ":" in head else ""
         geometry = element.find("mxGeometry")
         box = geometry.attrib if geometry is not None else {}
         self.x, self.y = float(box.get("x", 0)), float(box.get("y", 0))
         self.width, self.height = float(box.get("width", 0)), float(box.get("height", 0))
-        self.node = None
-
-    @property
-    def center(self) -> float:
-        return self.x + self.width / 2
-
-    @property
-    def story_type(self) -> StoryType:
-        """The kind a story cell's style names after ``story:``."""
-        head = self.style.split(";", 1)[0]
-        return StoryType.from_mark(head.split(":", 1)[1] if ":" in head else None)
 
     @property
     def is_epic_estimate(self) -> bool:
         return self.cell_id.endswith("/epic-estimate") or (self.cell_id.endswith("/estimate") and self.cell_id.count("/") == 1)
-
-    def spans(self, x: float) -> bool:
-        return self.x <= x < self.x + self.width
-
-    def story_below(self, stories: List["_PlacedCell"]) -> Optional["_PlacedCell"]:
-        """The story an actor names: the nearest one beneath it in the same column."""
-        column = [story for story in stories if story.spans(self.center) and story.y > self.y]
-        return min(column, key=lambda story: story.y, default=None)
-
-    @staticmethod
-    def beneath(x: float, bars: List["_PlacedCell"]) -> Optional["_PlacedCell"]:
-        """The deepest bar spanning ``x``; the nearest bar when a cell was dragged past every bar's edge."""
-        spanning = [bar for bar in bars if bar.spans(x)]
-        if spanning:
-            return max(spanning, key=lambda bar: bar.depth)
-        return min(bars, key=lambda bar: abs(bar.center - x), default=None)
 
 
 class DrawIOStoryModel(DiagramStoryModel):
@@ -401,8 +377,7 @@ class DrawIOStoryModel(DiagramStoryModel):
         front, so bringing a cell forward or sending it back moves it in the file but not on screen."""
         cells = [_PlacedCell(element) for element in self._vertices(self._graph_model(text))]
         story_map = DrawIOStoryModel()
-        owners = self._place_epics(story_map, cells)
-        self._place_stories(cells, owners)
+        owners = story_map.place_cells(cells)
         self._place_estimates(cells, owners)
         return story_map
 
@@ -420,49 +395,18 @@ class DrawIOStoryModel(DiagramStoryModel):
             raise DrawIOParseError("mxfile has no mxGraphModel child")
         return tree
 
-    def _place_epics(self, story_map: "DrawIOStoryModel", cells: List["_PlacedCell"]) -> List["_PlacedCell"]:
-        """Epics left to right, then each sub-epic under the shallower bar it sits beneath."""
-        owners: List[_PlacedCell] = []
-        for cell in sorted((c for c in cells if c.role == "epic"), key=lambda c: c.x):
-            cell.node = DrawIOEpic(cell.value.strip(), len(story_map.epics) + 1)
-            story_map.append_epic(cell.node)
-            owners.append(cell)
-        for cell in sorted((c for c in cells if c.role == "subepic"), key=lambda c: (c.depth, c.x)):
-            owner = _PlacedCell.beneath(cell.center, [o for o in owners if o.depth < cell.depth])
-            if owner is None:
-                continue
-            cell.node = DrawIOEpic(cell.value, len(owner.node.epics) + 1)
-            owner.node.append_epic(cell.node)
-            owners.append(cell)
-        return owners
-
-    def _place_stories(self, cells: List["_PlacedCell"], owners: List["_PlacedCell"]) -> None:
-        """Stories by column, then down, each under the deepest epic it sits beneath, with the actor drawn just
-        above it."""
-        stories = sorted((c for c in cells if c.role == "story"), key=lambda c: (c.x, c.y))
-        actors = {id(story): actor for actor in cells if actor.role == "actor"
-                  for story in [actor.story_below(stories)] if story is not None}
-        for cell in stories:
-            owner = _PlacedCell.beneath(cell.center, owners)
-            if owner is None:
-                continue
-            story = DrawIOStory(cell.value, len(owner.node.stories) + 1, cell.story_type)
-            if id(cell) in actors:
-                story.actors = [actors[id(cell)].value.strip()]
-            owner.node.append_story(story)
-
     def _place_estimates(self, cells: List["_PlacedCell"], owners: List["_PlacedCell"]) -> None:
         epics = [owner for owner in owners if owner.depth < 0]
         for cell in cells:
             if cell.role == "text":
-                owner = _PlacedCell.beneath(cell.center, epics)
-                estimate = self._parse_estimate_value(cell.value)
-                if owner is not None and estimate and ("approx" in estimate.lower() or cell.value.strip().startswith("*")):
+                owner = cell.beneath(epics)
+                estimate = self._parse_estimate_value(cell.text)
+                if owner is not None and estimate and ("approx" in estimate.lower() or cell.text.strip().startswith("*")):
                     owner.node.estimate = estimate
             elif cell.role == "estimate":
-                owner = _PlacedCell.beneath(cell.x, epics if cell.is_epic_estimate else owners)
+                owner = cell.beneath(epics if cell.is_epic_estimate else owners, across=cell.x)
                 if owner is not None:
-                    owner.node.estimate = self._parse_estimate_value(cell.value)
+                    owner.node.estimate = self._parse_estimate_value(cell.text)
 
     def _vertices(self, tree) -> List[ET.Element]:
         """Vertex cells in document order. A linked cell sits in a ``UserObject`` that holds

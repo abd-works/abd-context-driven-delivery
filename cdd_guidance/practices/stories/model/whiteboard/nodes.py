@@ -1,42 +1,47 @@
-"""Claude Whiteboard story nodes: the diagram epic, story and increment drawn as board elements, and the story map that
-saves them as a ``.whiteboard`` file and reads one back.
+"""Claude Whiteboard story nodes: the diagram epic and story drawn as board elements, and the story map that saves them
+as a ``.whiteboard`` file and reads one back.
 
 A whiteboard reads at a zoom like a Miro board's, so its cards and columns are the Miro sizes. Each element's id names
 the node it draws (``epic.<key>``, ``subepic.<depth>.<key>``, ``story.<kind>.<key>``, ``actor.<key>``), where the key is
 a hash of the node's path, so the same node keeps its id from one render to the next. A board is read back by where
-its elements sit, as a drawio map is, because people move and restack elements on a shared board.
+its elements sit, as a drawio map is (``DiagramStoryModel.place_cells``), because people move and restack elements on
+a shared board.
 """
 
 from __future__ import annotations
 
 import hashlib
-from typing import List, Optional
+from typing import List
 
-from harness.whiteboard import BoardElement, Shape, UnreadableBoard, Whiteboard, WhiteboardNode
+from harness.whiteboard import BoardElement, Box, Shape, UnreadableBoard, Whiteboard, WhiteboardNode
 
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
     DiagramIncrement,
     DiagramStory,
+    DiagramStoryCell,
     DiagramStoryModel,
 )
-from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel, StoryType
+from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel
+
+KEY_LENGTH = 10
+"""Hex digits of a node's path hash in its element id: enough that two nodes of one map never share one."""
 
 
-def _key(node) -> str:
-    """A short key of the node's path from the map's root, the same on every render of the same map."""
-    names: List[str] = []
-    while node is not None and not isinstance(node, StoryModel):
-        names.append(f"{'epic' if isinstance(node, Epic) else 'story'}:{node.name}")
-        node = node.parent
-    return hashlib.sha1("/".join(reversed(names)).encode("utf-8")).hexdigest()[:10]
+class _BoardStoryNode(WhiteboardNode):
+    """A story-map node drawn on a board, keyed by its path from the map's root."""
+
+    @property
+    def board_key(self) -> str:
+        names: List[str] = []
+        node = self
+        while node is not None and not isinstance(node, StoryModel):
+            names.append(f"{'epic' if isinstance(node, Epic) else 'story'}:{node.name}")
+            node = node.parent
+        return hashlib.sha1("/".join(reversed(names)).encode("utf-8")).hexdigest()[:KEY_LENGTH]
 
 
-class WhiteboardIncrement(DiagramIncrement):
-    pass
-
-
-class WhiteboardStory(DiagramStory, WhiteboardNode):
+class WhiteboardStory(DiagramStory, _BoardStoryNode):
     """A story card on the story line under its epic, with its actor drawn above it. Every story's actor is drawn, even
     one the story before it shares, because a board element carries no field of a practice's own to hold it."""
 
@@ -56,27 +61,22 @@ class WhiteboardStory(DiagramStory, WhiteboardNode):
     def y(self) -> int:
         return self._story_line_y()
 
-    def board_box(self):
-        return (self.x, self.y, self.size, self.size)
+    def board_box(self) -> Box:
+        return Box(self.x, self.y, self.size, self.size)
 
     def board_elements(self) -> List[BoardElement]:
-        key = _key(self)
         drawn: List[BoardElement] = []
-        actor = self._actor
+        actor = self.actors[0].strip() if self.actors else ""
         if actor:
             drawn.append(Shape(
-                f"actor.{key}", x=self.x, y=self.y - self.actor_height - self.actor_gap, w=self.size,
+                f"actor.{self.board_key}", x=self.x, y=self.y - self.actor_height - self.actor_gap, w=self.size,
                 h=self.actor_height, kind="rect", color="blue", size="small", text=actor,
             ))
-        drawn.append(self.board_shape(f"story.{self.story_type.value}.{key}", kind="rect", color="yellow", size="small", text=self.name))
+        drawn.append(self.board_shape(f"story.{self.story_type.value}.{self.board_key}", kind="rect", color="yellow", size="small", text=self.name))
         return drawn
 
-    @property
-    def _actor(self) -> str:
-        return self.actors[0].strip() if self.actors else ""
 
-
-class WhiteboardEpic(DiagramEpic, WhiteboardNode):
+class WhiteboardEpic(DiagramEpic, _BoardStoryNode):
     """An epic bar; a sub-epic's bar sits one row lower for each level it is nested, under the epic that holds it."""
 
     tighten = 10
@@ -100,12 +100,12 @@ class WhiteboardEpic(DiagramEpic, WhiteboardNode):
             return self._sub_epic_bar_y(self.depth)
         return self.row_y
 
-    def board_box(self):
-        return (self.x, self.y, self.width, self.height)
+    def board_box(self) -> Box:
+        return Box(self.x, self.y, self.width, self.height)
 
     def board_elements(self) -> List[BoardElement]:
         nested = isinstance(self.parent, Epic)
-        element_id = f"subepic.{self.depth}.{_key(self)}" if nested else f"epic.{_key(self)}"
+        element_id = f"subepic.{self.depth}.{self.board_key}" if nested else f"epic.{self.board_key}"
         drawn: List[BoardElement] = [self.board_shape(
             element_id, kind="rounded", color="green" if nested else "purple", size="body", text=self.name,
         )]
@@ -122,7 +122,7 @@ class WhiteboardStoryModel(DiagramStoryModel):
     suffixes = (Whiteboard.SUFFIX,)
     epic_type = WhiteboardEpic
     story_type = WhiteboardStory
-    increment_type = WhiteboardIncrement
+    increment_type = DiagramIncrement
 
     def render(self, canonical: StoryModel | None = None, previous: str | None = None) -> str:
         """Draw canonical, or this map, as a board; the elements a previous board held stay where people put them."""
@@ -141,89 +141,32 @@ class WhiteboardStoryModel(DiagramStoryModel):
         return self.board().save()
 
     def parse(self, text: str) -> "WhiteboardStoryModel":
-        """The format-adapter entry point Stories renders through; the same as load."""
+        """The format-adapter entry point Stories renders through: the story map a board's text holds."""
         return self.load(text)
 
     def load(self, text: str) -> "WhiteboardStoryModel":
-        """Read the story map by where its elements sit, not their order on the board: epics left to right, each
-        sub-epic under the shallower bar above it, each story under the deepest bar over it, and the actor just above a
-        story as that story's actor."""
-        placed = [_Placed(element) for element in Whiteboard.load(text).elements if _Placed.draws(element)]
-        if not any(cell.role == "epic" for cell in placed):
+        """The story map a saved board holds, read by where its elements sit."""
+        cells = [cell for cell in (_BoardCell(element) for element in Whiteboard.load(text).elements) if cell.role]
+        if not any(cell.role == "epic" for cell in cells):
             raise UnreadableBoard("The board holds no story-map epic")
         story_map = WhiteboardStoryModel()
-        owners = self._place_epics(story_map, placed)
-        self._place_stories(placed, owners)
+        story_map.place_cells(cells)
         return story_map
 
-    def _place_epics(self, story_map: "WhiteboardStoryModel", placed: List["_Placed"]) -> List["_Placed"]:
-        owners: List[_Placed] = []
-        for cell in sorted((c for c in placed if c.role == "epic"), key=lambda c: c.x):
-            cell.node = WhiteboardEpic(cell.text, len(story_map.epics) + 1)
-            story_map.append_epic(cell.node)
-            owners.append(cell)
-        for cell in sorted((c for c in placed if c.role == "subepic"), key=lambda c: (c.depth, c.x)):
-            owner = _Placed.beneath(cell.center, [o for o in owners if o.depth < cell.depth])
-            if owner is None:
-                continue
-            cell.node = WhiteboardEpic(cell.text, len(owner.node.epics) + 1)
-            owner.node.append_epic(cell.node)
-            owners.append(cell)
-        return owners
 
-    def _place_stories(self, placed: List["_Placed"], owners: List["_Placed"]) -> None:
-        stories = sorted((c for c in placed if c.role == "story"), key=lambda c: (c.x, c.y))
-        actor_of = {}
-        for actor in (c for c in placed if c.role == "actor"):
-            below = actor.story_below(stories)
-            if below is not None:
-                actor_of[id(below)] = actor.text
-        for cell in stories:
-            owner = _Placed.beneath(cell.center, owners)
-            if owner is None:
-                continue
-            story = WhiteboardStory(cell.text, len(owner.node.stories) + 1, cell.story_type)
-            if id(cell) in actor_of:
-                story.actors = [actor_of[id(cell)]]
-            owner.node.append_story(story)
-
-
-class _Placed:
-    """One story-map element as it sits on the board: its role and depth from its id, its text, and its box."""
+class _BoardCell(DiagramStoryCell):
+    """A board element as a story-map cell: its role, bar depth and story kind from its id, its text, and its box. An
+    element no story map draws, such as a note a person added, has no role."""
 
     ROLES = ("epic", "subepic", "story", "actor")
 
-    def __init__(self, element: Shape) -> None:
+    def __init__(self, element: BoardElement) -> None:
+        super().__init__()
         parts = element.id.split(".")
+        if not isinstance(element, Shape) or parts[0] not in self.ROLES:
+            return
         self.role = parts[0]
         self.depth = int(parts[1]) if self.role == "subepic" else -1
         self.kind = parts[1] if self.role == "story" else ""
         self.text = element.text.strip()
-        self.x, self.y, self.width, self.height = element.place
-        self.node: Optional[Epic] = None
-
-    @classmethod
-    def draws(cls, element: BoardElement) -> bool:
-        return isinstance(element, Shape) and element.id.split(".")[0] in cls.ROLES
-
-    @property
-    def center(self) -> float:
-        return self.x + self.width / 2
-
-    @property
-    def story_type(self) -> StoryType:
-        return StoryType.from_mark(self.kind or None)
-
-    def spans(self, x: float) -> bool:
-        return self.x <= x < self.x + self.width
-
-    def story_below(self, stories: List["_Placed"]) -> Optional["_Placed"]:
-        column = [story for story in stories if story.spans(self.center) and story.y > self.y]
-        return min(column, key=lambda story: story.y, default=None)
-
-    @staticmethod
-    def beneath(x: float, bars: List["_Placed"]) -> Optional["_Placed"]:
-        spanning = [bar for bar in bars if bar.spans(x)]
-        if spanning:
-            return max(spanning, key=lambda bar: bar.depth)
-        return min(bars, key=lambda bar: abs(bar.center - x), default=None)
+        self.x, self.y, self.width, self.height = element.x, element.y, element.w, element.h

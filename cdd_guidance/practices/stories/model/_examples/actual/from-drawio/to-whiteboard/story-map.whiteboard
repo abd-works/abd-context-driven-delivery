@@ -139,10 +139,10 @@
    "y": 120,
    "w": 5328,
    "h": 60,
-   "kind": "rounded",
    "color": "purple",
-   "size": "body",
-   "text": "Onboard A Customer"
+   "text": "Onboard A Customer",
+   "kind": "rounded",
+   "size": "body"
   },
   "subepic.0.3e9eccb0db": {
    "type": "shape",
@@ -150,10 +150,10 @@
    "y": 195,
    "w": 288,
    "h": 60,
-   "kind": "rounded",
    "color": "green",
-   "size": "body",
-   "text": "Get Sign Up Plan"
+   "text": "Get Sign Up Plan",
+   "kind": "rounded",
+   "size": "body"
   },
   "actor.e35a882eaa": {
    "type": "shape",
@@ -161,10 +161,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Website"
+   "text": "Website",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.e35a882eaa": {
    "type": "shape",
@@ -172,10 +172,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Hand Off Sign Up To Onboarding"
+   "text": "Hand Off Sign Up To Onboarding",
+   "kind": "rect",
+   "size": "small"
   },
   "actor.4c6a9c0934": {
    "type": "shape",
@@ -183,10 +183,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Customer"
+   "text": "Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.4c6a9c0934": {
    "type": "shape",
@@ -194,10 +194,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Open Plan Deep Link"
+   "text": "Open Plan Deep Link",
+   "kind": "rect",
+   "size": "small"
   },
   "actor.df8267a788": {
    "type": "shape",
@@ -205,10 +205,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "My Paradise"
+   "text": "My Paradise",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.df8267a788": {
    "type": "shape",
@@ -216,10 +216,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Load Plan Catalog"
+   "text": "Load Plan Catalog",
+   "kind": "rect",
+   "size": "small"
   },
   "actor.ccd791b1d2": {
    "type": "shape",
@@ -227,10 +227,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Customer"
+   "text": "Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.ccd791b1d2": {
    "type": "shape",
@@ -238,10 +238,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Apply Catalog Voucher"
+   "text": "Apply Catalog Voucher",
+   "kind": "rect",
+   "size": "small"
   },
   "subepic.0.046cec75cf": {
    "type": "shape",
@@ -249,10 +249,10 @@
    "y": 195,
    "w": 1296,
    "h": 60,
-   "kind": "rounded",
    "color": "green",
-   "size": "body",
-   "text": "Create Customer"
+   "text": "Create Customer",
+   "kind": "rounded",
+   "size": "body"
   },
   "story.user.ba6fbc694f": {
    "type": "shape",
@@ -260,10 +260,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Enter Account Credentials"
+   "text": "Enter Account Credentials",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.0c397a86d5": {
    "type": "shape",
@@ -271,10 +271,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Create Unconfirmed Cognito User"
+   "text": "Create Unconfirmed Cognito User",
+   "kind": "rect",
+   "size": "small"
   },
   "actor.bf7775206b": {
    "type": "shape",
@@ -282,10 +282,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "My Paradise"
+   "text": "My Paradise",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.bf7775206b": {
    "type": "shape",
@@ -293,10 +293,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Enter Validation Code"
+   "text": "Enter Validation Code",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.c095c84c51": {
    "type": "shape",
@@ -304,10 +304,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Confirm Cognito User"
+   "text": "Confirm Cognito User",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.6cd0d39b49": {
    "type": "shape",
@@ -315,10 +315,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Issue Account Token To Browser Session"
+   "text": "Issue Account Token To Browser Session",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.f285d010a5": {
    "type": "shape",
@@ -326,10 +326,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Validate Mavenir Customer in Cognito User Attributes"
+   "text": "Validate Mavenir Customer in Cognito User Attributes",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.56188d85aa": {
    "type": "shape",
@@ -337,10 +337,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Submit Create Customer Request to Mid-Tier"
+   "text": "Submit Create Customer Request to Mid-Tier",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.01a2cdf993": {
    "type": "shape",
@@ -348,10 +348,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Validate Cognito User"
+   "text": "Validate Cognito User",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.802fcd423d": {
    "type": "shape",
@@ -359,10 +359,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Submit Create Mavenir Customer"
+   "text": "Submit Create Mavenir Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "actor.0b37d30d9d": {
    "type": "shape",
@@ -370,10 +370,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "My Paradise"
+   "text": "My Paradise",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.0b37d30d9d": {
    "type": "shape",
@@ -381,10 +381,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Create Customer"
+   "text": "Create Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.c83bb0f369": {
    "type": "shape",
@@ -392,10 +392,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Store Mavenir Customer Id on Cognito User"
+   "text": "Store Mavenir Customer Id on Cognito User",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.43c3e1dcb0": {
    "type": "shape",
@@ -403,10 +403,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Load My Paradise Customer From Midtier And Store In Session"
+   "text": "Load My Paradise Customer From Midtier And Store In Session",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.68637048ef": {
    "type": "shape",
@@ -414,10 +414,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Get Mavenir Customer and Transform To My Paradise Customer And Return"
+   "text": "Get Mavenir Customer and Transform To My Paradise Customer And Return",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.972d2b9c65": {
    "type": "shape",
@@ -425,10 +425,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Get Mavenir Customer"
+   "text": "Get Mavenir Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.3174856b72": {
    "type": "shape",
@@ -436,10 +436,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Ensure Cart on Customer"
+   "text": "Ensure Cart on Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.6862d1742e": {
    "type": "shape",
@@ -447,10 +447,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Fix Orphan Cognito Account"
+   "text": "Fix Orphan Cognito Account",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.5b6c15dd8b": {
    "type": "shape",
@@ -458,10 +458,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Read False Initial Activation"
+   "text": "Read False Initial Activation",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.a1029141bb": {
    "type": "shape",
@@ -469,10 +469,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Sign In With Existing Account"
+   "text": "Sign In With Existing Account",
+   "kind": "rect",
+   "size": "small"
   },
   "subepic.0.07201d6d18": {
    "type": "shape",
@@ -480,10 +480,10 @@
    "y": 195,
    "w": 1728,
    "h": 60,
-   "kind": "rounded",
    "color": "green",
-   "size": "body",
-   "text": "Get Number"
+   "text": "Get Number",
+   "kind": "rounded",
+   "size": "body"
   },
   "actor.829e1e65ea": {
    "type": "shape",
@@ -491,10 +491,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Customer"
+   "text": "Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.829e1e65ea": {
    "type": "shape",
@@ -502,10 +502,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Determine Number"
+   "text": "Determine Number",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.1e6107a541": {
    "type": "shape",
@@ -513,10 +513,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Query Msisdn Inventory"
+   "text": "Query Msisdn Inventory",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.31bf4cabc4": {
    "type": "shape",
@@ -524,10 +524,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "List Msisdn Resources"
+   "text": "List Msisdn Resources",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.6ab81bd621": {
    "type": "shape",
@@ -535,10 +535,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Search Msisdn Inventory"
+   "text": "Search Msisdn Inventory",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.9fb816d016": {
    "type": "shape",
@@ -546,10 +546,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Search Msisdn Resources"
+   "text": "Search Msisdn Resources",
+   "kind": "rect",
+   "size": "small"
   },
   "actor.1fa09a02d3": {
    "type": "shape",
@@ -557,10 +557,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Customer"
+   "text": "Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.1fa09a02d3": {
    "type": "shape",
@@ -568,10 +568,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Choose a Number"
+   "text": "Choose a Number",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.ee2ea83db6": {
    "type": "shape",
@@ -579,10 +579,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Submit Reserve Number Request to Mid-Tier"
+   "text": "Submit Reserve Number Request to Mid-Tier",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.d3ed59f870": {
    "type": "shape",
@@ -590,10 +590,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Submit Reserve Msisdn"
+   "text": "Submit Reserve Msisdn",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.72c6f8029c": {
    "type": "shape",
@@ -601,10 +601,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Reserve Msisdn Resource"
+   "text": "Reserve Msisdn Resource",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.f807aa8679": {
    "type": "shape",
@@ -612,10 +612,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Submit Patch Cart With Number Request to Mid-Tier"
+   "text": "Submit Patch Cart With Number Request to Mid-Tier",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.b6ef8dc0fe": {
    "type": "shape",
@@ -623,10 +623,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Patch Cart With Number"
+   "text": "Patch Cart With Number",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.f1707adee7": {
    "type": "shape",
@@ -634,10 +634,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Patch Shopping Cart"
+   "text": "Patch Shopping Cart",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.e8dc7ae571": {
    "type": "shape",
@@ -645,10 +645,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Bring a Number"
+   "text": "Bring a Number",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.493562532a": {
    "type": "shape",
@@ -656,10 +656,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Confirm Number Already With Paradise"
+   "text": "Confirm Number Already With Paradise",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.bff0641968": {
    "type": "shape",
@@ -667,10 +667,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Evaluate Porting Two Factor Flag"
+   "text": "Evaluate Porting Two Factor Flag",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.7dcabffb42": {
    "type": "shape",
@@ -678,10 +678,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Submit Portability Request to Mid-Tier"
+   "text": "Submit Portability Request to Mid-Tier",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.c04b1e5897": {
    "type": "shape",
@@ -689,10 +689,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Patch Cart With Portability"
+   "text": "Patch Cart With Portability",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.d1fa1d2f41": {
    "type": "shape",
@@ -700,10 +700,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Send Port Verification"
+   "text": "Send Port Verification",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.6523ebc4c4": {
    "type": "shape",
@@ -711,10 +711,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Send Verification Sms"
+   "text": "Send Verification Sms",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.6ff53848f4": {
    "type": "shape",
@@ -722,10 +722,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Enter Porting Sms Code"
+   "text": "Enter Porting Sms Code",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.fd6f563d69": {
    "type": "shape",
@@ -733,10 +733,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Check Port Verification"
+   "text": "Check Port Verification",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.c0e61c7192": {
    "type": "shape",
@@ -744,10 +744,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Check Verification"
+   "text": "Check Verification",
+   "kind": "rect",
+   "size": "small"
   },
   "actor.002063412b": {
    "type": "shape",
@@ -755,10 +755,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Customer"
+   "text": "Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.002063412b": {
    "type": "shape",
@@ -766,10 +766,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Keep Current Number"
+   "text": "Keep Current Number",
+   "kind": "rect",
+   "size": "small"
   },
   "actor.cfd7217436": {
    "type": "shape",
@@ -777,10 +777,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Care"
+   "text": "Care",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.cfd7217436": {
    "type": "shape",
@@ -788,10 +788,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Sweep Stale Number Reservations"
+   "text": "Sweep Stale Number Reservations",
+   "kind": "rect",
+   "size": "small"
   },
   "subepic.0.3743f31af7": {
    "type": "shape",
@@ -799,10 +799,10 @@
    "y": 195,
    "w": 504,
    "h": 60,
-   "kind": "rounded",
    "color": "green",
-   "size": "body",
-   "text": "Get Onboarding Plan"
+   "text": "Get Onboarding Plan",
+   "kind": "rounded",
+   "size": "body"
   },
   "story.user.cdd496faf0": {
    "type": "shape",
@@ -810,10 +810,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Query Product Offerings And Map To Catalog"
+   "text": "Query Product Offerings And Map To Catalog",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.c20436bfe0": {
    "type": "shape",
@@ -821,10 +821,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "List Product Offerings"
+   "text": "List Product Offerings",
+   "kind": "rect",
+   "size": "small"
   },
   "actor.fc31af3a1a": {
    "type": "shape",
@@ -832,10 +832,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "My Paradise"
+   "text": "My Paradise",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.fc31af3a1a": {
    "type": "shape",
@@ -843,10 +843,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Load Plan Catalog"
+   "text": "Load Plan Catalog",
+   "kind": "rect",
+   "size": "small"
   },
   "actor.90f968270a": {
    "type": "shape",
@@ -854,10 +854,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Customer"
+   "text": "Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.90f968270a": {
    "type": "shape",
@@ -865,10 +865,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Choose Onboarding Plan"
+   "text": "Choose Onboarding Plan",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.a32d4f84ab": {
    "type": "shape",
@@ -876,10 +876,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Patch Cart With Plan"
+   "text": "Patch Cart With Plan",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.fb58d866d8": {
    "type": "shape",
@@ -887,10 +887,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Patch Shopping Cart"
+   "text": "Patch Shopping Cart",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.50ddd1dd10": {
    "type": "shape",
@@ -898,10 +898,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Keep Current Plan"
+   "text": "Keep Current Plan",
+   "kind": "rect",
+   "size": "small"
   },
   "subepic.0.11faed9e3e": {
    "type": "shape",
@@ -909,10 +909,10 @@
    "y": 195,
    "w": 360,
    "h": 60,
-   "kind": "rounded",
    "color": "green",
-   "size": "body",
-   "text": "Get Sim"
+   "text": "Get Sim",
+   "kind": "rounded",
+   "size": "body"
   },
   "actor.b4858ae868": {
    "type": "shape",
@@ -920,10 +920,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Customer"
+   "text": "Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.b4858ae868": {
    "type": "shape",
@@ -931,10 +931,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Choose Esim"
+   "text": "Choose Esim",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.c3fa664365": {
    "type": "shape",
@@ -942,10 +942,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Request a Paradise Sim Card"
+   "text": "Request a Paradise Sim Card",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.6da822153b": {
    "type": "shape",
@@ -953,10 +953,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Enter Existing Sim"
+   "text": "Enter Existing Sim",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.2df265dfce": {
    "type": "shape",
@@ -964,10 +964,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Activate Sim"
+   "text": "Activate Sim",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.e509cac17a": {
    "type": "shape",
@@ -975,10 +975,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Complete Draft Sim Order"
+   "text": "Complete Draft Sim Order",
+   "kind": "rect",
+   "size": "small"
   },
   "subepic.0.f73b70fde5": {
    "type": "shape",
@@ -986,10 +986,10 @@
    "y": 195,
    "w": 144,
    "h": 60,
-   "kind": "rounded",
    "color": "green",
-   "size": "body",
-   "text": "Get Verified Profile"
+   "text": "Get Verified Profile",
+   "kind": "rounded",
+   "size": "body"
   },
   "actor.95131782d9": {
    "type": "shape",
@@ -997,10 +997,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Customer"
+   "text": "Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.95131782d9": {
    "type": "shape",
@@ -1008,10 +1008,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Customer Complete Persona Kyc"
+   "text": "Customer Complete Persona Kyc",
+   "kind": "rect",
+   "size": "small"
   },
   "actor.637c2816b4": {
    "type": "shape",
@@ -1019,10 +1019,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Ambassador"
+   "text": "Ambassador",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.637c2816b4": {
    "type": "shape",
@@ -1030,10 +1030,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Collect Identity With Brand Amassador"
+   "text": "Collect Identity With Brand Amassador",
+   "kind": "rect",
+   "size": "small"
   },
   "subepic.0.b70edfd9df": {
    "type": "shape",
@@ -1041,10 +1041,10 @@
    "y": 195,
    "w": 216,
    "h": 60,
-   "kind": "rounded",
    "color": "green",
-   "size": "body",
-   "text": "Get Order Review"
+   "text": "Get Order Review",
+   "kind": "rounded",
+   "size": "body"
   },
   "actor.24428674e3": {
    "type": "shape",
@@ -1052,10 +1052,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Customer"
+   "text": "Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.24428674e3": {
    "type": "shape",
@@ -1063,10 +1063,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Check The Order"
+   "text": "Check The Order",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.ecbd55becb": {
    "type": "shape",
@@ -1074,10 +1074,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Upgrade To Data Freedom"
+   "text": "Upgrade To Data Freedom",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.0f3c9cc58a": {
    "type": "shape",
@@ -1085,10 +1085,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Change Plan From Review"
+   "text": "Change Plan From Review",
+   "kind": "rect",
+   "size": "small"
   },
   "subepic.0.fb237e28da": {
    "type": "shape",
@@ -1096,10 +1096,10 @@
    "y": 195,
    "w": 360,
    "h": 60,
-   "kind": "rounded",
    "color": "green",
-   "size": "body",
-   "text": "Get Payment"
+   "text": "Get Payment",
+   "kind": "rounded",
+   "size": "body"
   },
   "actor.b322564c3b": {
    "type": "shape",
@@ -1107,10 +1107,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Customer"
+   "text": "Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.b322564c3b": {
    "type": "shape",
@@ -1118,10 +1118,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Enter Payment"
+   "text": "Enter Payment",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.a78b8d6c12": {
    "type": "shape",
@@ -1129,10 +1129,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Evaluate Payment Flags"
+   "text": "Evaluate Payment Flags",
+   "kind": "rect",
+   "size": "small"
   },
   "actor.cacd6b6441": {
    "type": "shape",
@@ -1140,10 +1140,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "My Paradise"
+   "text": "My Paradise",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.cacd6b6441": {
    "type": "shape",
@@ -1151,10 +1151,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Authorize Card"
+   "text": "Authorize Card",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.ee9337a446": {
    "type": "shape",
@@ -1162,10 +1162,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Provide Apple Pay Certificate"
+   "text": "Provide Apple Pay Certificate",
+   "kind": "rect",
+   "size": "small"
   },
   "actor.860fbbda94": {
    "type": "shape",
@@ -1173,10 +1173,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Care"
+   "text": "Care",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.860fbbda94": {
    "type": "shape",
@@ -1184,10 +1184,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Adjust Credit Manually"
+   "text": "Adjust Credit Manually",
+   "kind": "rect",
+   "size": "small"
   },
   "subepic.0.3d171f1178": {
    "type": "shape",
@@ -1195,10 +1195,10 @@
    "y": 195,
    "w": 360,
    "h": 60,
-   "kind": "rounded",
    "color": "green",
-   "size": "body",
-   "text": "Place Order"
+   "text": "Place Order",
+   "kind": "rounded",
+   "size": "body"
   },
   "actor.cac4e07e19": {
    "type": "shape",
@@ -1206,10 +1206,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "My Paradise"
+   "text": "My Paradise",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.cac4e07e19": {
    "type": "shape",
@@ -1217,10 +1217,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Create Billing Account"
+   "text": "Create Billing Account",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.0cba92aee4": {
    "type": "shape",
@@ -1228,10 +1228,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Create Product Order"
+   "text": "Create Product Order",
+   "kind": "rect",
+   "size": "small"
   },
   "actor.42d6f3df02": {
    "type": "shape",
@@ -1239,10 +1239,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Customer"
+   "text": "Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.42d6f3df02": {
    "type": "shape",
@@ -1250,10 +1250,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "View Order Result"
+   "text": "View Order Result",
+   "kind": "rect",
+   "size": "small"
   },
   "actor.9133e1cddc": {
    "type": "shape",
@@ -1261,10 +1261,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "My Paradise"
+   "text": "My Paradise",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.9133e1cddc": {
    "type": "shape",
@@ -1272,10 +1272,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Create Order Ticket"
+   "text": "Create Order Ticket",
+   "kind": "rect",
+   "size": "small"
   },
   "actor.c6fe94e889": {
    "type": "shape",
@@ -1283,10 +1283,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Care"
+   "text": "Care",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.c6fe94e889": {
    "type": "shape",
@@ -1294,10 +1294,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "View Order History"
+   "text": "View Order History",
+   "kind": "rect",
+   "size": "small"
   },
   "subepic.0.2bdbda7481": {
    "type": "shape",
@@ -1305,10 +1305,10 @@
    "y": 195,
    "w": 72,
    "h": 60,
-   "kind": "rounded",
    "color": "green",
-   "size": "body",
-   "text": "Get Voucher Credit"
+   "text": "Get Voucher Credit",
+   "kind": "rounded",
+   "size": "body"
   },
   "actor.70be5d4230": {
    "type": "shape",
@@ -1316,10 +1316,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "My Paradise"
+   "text": "My Paradise",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.70be5d4230": {
    "type": "shape",
@@ -1327,10 +1327,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Redeem Voucher and Apply Credit"
+   "text": "Redeem Voucher and Apply Credit",
+   "kind": "rect",
+   "size": "small"
   },
   "epic.7c0e23b02a": {
    "type": "shape",
@@ -1338,10 +1338,10 @@
    "y": 120,
    "w": 864,
    "h": 60,
-   "kind": "rounded",
    "color": "purple",
-   "size": "body",
-   "text": "Self-Serve Subscription"
+   "text": "Self-Serve Subscription",
+   "kind": "rounded",
+   "size": "body"
   },
   "subepic.0.d7319d0686": {
    "type": "shape",
@@ -1349,10 +1349,10 @@
    "y": 195,
    "w": 288,
    "h": 60,
-   "kind": "rounded",
    "color": "green",
-   "size": "body",
-   "text": "Access Selfcare"
+   "text": "Access Selfcare",
+   "kind": "rounded",
+   "size": "body"
   },
   "actor.8d67b8bdcf": {
    "type": "shape",
@@ -1360,10 +1360,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Customer"
+   "text": "Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.8d67b8bdcf": {
    "type": "shape",
@@ -1371,10 +1371,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Enter Sign In Credentials"
+   "text": "Enter Sign In Credentials",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.33331bdfe6": {
    "type": "shape",
@@ -1382,10 +1382,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Reset Password"
+   "text": "Reset Password",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.ea9e443c41": {
    "type": "shape",
@@ -1393,10 +1393,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Edit Profile"
+   "text": "Edit Profile",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.d801edeb1a": {
    "type": "shape",
@@ -1404,10 +1404,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Sign Out"
+   "text": "Sign Out",
+   "kind": "rect",
+   "size": "small"
   },
   "subepic.0.b429d11ca1": {
    "type": "shape",
@@ -1415,10 +1415,10 @@
    "y": 195,
    "w": 216,
    "h": 60,
-   "kind": "rounded",
    "color": "green",
-   "size": "body",
-   "text": "Manage Billing"
+   "text": "Manage Billing",
+   "kind": "rounded",
+   "size": "body"
   },
   "actor.de1421e60e": {
    "type": "shape",
@@ -1426,10 +1426,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Customer"
+   "text": "Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.de1421e60e": {
    "type": "shape",
@@ -1437,10 +1437,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "View Billing"
+   "text": "View Billing",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.1629242394": {
    "type": "shape",
@@ -1448,10 +1448,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Pay Now"
+   "text": "Pay Now",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.94412aa070": {
    "type": "shape",
@@ -1459,10 +1459,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Enter New Payment Method"
+   "text": "Enter New Payment Method",
+   "kind": "rect",
+   "size": "small"
   },
   "subepic.0.02bbecf0b1": {
    "type": "shape",
@@ -1470,10 +1470,10 @@
    "y": 195,
    "w": 360,
    "h": 60,
-   "kind": "rounded",
    "color": "green",
-   "size": "body",
-   "text": "Manage Services"
+   "text": "Manage Services",
+   "kind": "rounded",
+   "size": "body"
   },
   "actor.0353f6eb1c": {
    "type": "shape",
@@ -1481,10 +1481,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Customer"
+   "text": "Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.0353f6eb1c": {
    "type": "shape",
@@ -1492,10 +1492,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "View Dashboard"
+   "text": "View Dashboard",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.966ae65425": {
    "type": "shape",
@@ -1503,10 +1503,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Change Plan"
+   "text": "Change Plan",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.24352fc8d9": {
    "type": "shape",
@@ -1514,10 +1514,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Request Line Portability"
+   "text": "Request Line Portability",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.c396daa1fe": {
    "type": "shape",
@@ -1525,10 +1525,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Purchase Device"
+   "text": "Purchase Device",
+   "kind": "rect",
+   "size": "small"
   },
   "actor.15425e2182": {
    "type": "shape",
@@ -1536,10 +1536,10 @@
    "y": 281,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "blue",
-   "size": "small",
-   "text": "Customer"
+   "text": "Customer",
+   "kind": "rect",
+   "size": "small"
   },
   "story.user.15425e2182": {
    "type": "shape",
@@ -1547,10 +1547,10 @@
    "y": 345,
    "w": 60,
    "h": 60,
-   "kind": "rect",
    "color": "yellow",
-   "size": "small",
-   "text": "Send Support Request"
+   "text": "Send Support Request",
+   "kind": "rect",
+   "size": "small"
   }
  }
 }
