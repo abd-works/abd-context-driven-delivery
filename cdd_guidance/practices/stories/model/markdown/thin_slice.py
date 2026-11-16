@@ -54,7 +54,7 @@ class MarkdownIncrement(Increment):
         """This increment as the thin slice writes it, numbered number: as read where it is unchanged."""
         heading = f"### Increment {number}: {self.name}"
         if self.lines is None:
-            return [heading, *(described(self.description_text) or [""]), _STORIES_LABEL, "", *map(_bullet, self.stories), ""]
+            return [heading, *(described(self.description_text) or [""]), _STORIES_LABEL, "", *map(self._bullet, self.stories), ""]
         lines = self.lines
         bullets = self._bullets()
         # The first story of an increment read with none sits apart from the label above it.
