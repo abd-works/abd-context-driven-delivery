@@ -54,17 +54,16 @@ class OneAssertionPerTest(PracticeGraphRule):
 
 class NoImplementation(PracticeGraphRule):
     """A behavior-fidelity block holds signatures only. A finished spec (``developed``) has replaced every signature
-    with its test body, so its blocks are not judged. Judged over the whole practice, so each spec's fact is read once
-    for all its blocks."""
+    with its test body, so its blocks are not judged: the read keeps on each block whether its spec is finished
+    (``in_developed_spec``)."""
 
     slug = "no-implementation"
     node_types = ("Observation", "Context")
 
     def check_practice(self, context: RuleCheckContext) -> list[tuple[str, str]]:
-        finished = {spec.source.file for spec in context.nodes("Spec") if spec.get_fact("developed", False)}
         return [
             (node.node_id, f"{node.type} {node.name!r} at behavior fidelity must not contain tests or imports.")
             for kind in self.node_types
             for node in context.nodes(kind)
-            if node.source.file not in finished and node.get_fact("has_implementation")
+            if not node.get_fact("in_developed_spec") and node.get_fact("has_implementation")
         ]

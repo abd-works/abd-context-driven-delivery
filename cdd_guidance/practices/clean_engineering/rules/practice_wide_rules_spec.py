@@ -146,6 +146,14 @@ with description("modules across the graph"):
             self.just_over = practice_from_files(tree)
             self.outside_scope = practice_from_files(_shop_importing("Cart", "Line", "Price"))
             self.outside_scope.read_only(["cart"])
+            pricing = "class Levy:\n    pass\n\n\nclass Rate:\n    pass\n\n\nclass Fee:\n    pass\n"
+            tree = _module("cart", {"cart.py": "from cart.pricing.pricing import Levy, Rate\n\n\n" + _CART_CLASSES})
+            tree.update(_module("cart/pricing", {"pricing.py": "from cart.cart import Cart, Line, Price, Discount\n\n\n" + pricing}))
+            self.used_inside = practice_from_files(tree)
+            tree = _module("cart", {"cart.py": "class Cart:\n    pass\n\n\nclass Line:\n    pass\n\n\nclass Price:\n    pass\n"})
+            tree.update(_module("cart/pricing", {"pricing.py": pricing}))
+            tree.update(_module("shop", {"checkout.py": "from cart.pricing.pricing import Levy, Rate, Fee\n"}))
+            self.nested_named_outside = practice_from_files(tree)
 
         with it("should flag a module whose classes other modules mostly import, and accept one with one public class"):
             self.mostly_imported.check()
@@ -174,6 +182,21 @@ with description("modules across the graph"):
         with it("should count a caller outside the validated scope"):
             expect(_hits("deep-module", self.outside_scope)).to(
                 equal(["Module 'cart' exposes 3 of 5 classes to other modules, more than the 2 that 40% allows: Cart, Line, Price. Keep most classes behind a few public ones."])
+            )
+
+        with it("should keep private a class only its nested module names, and measure the nested module on its own"):
+            expect(_hits("deep-module", self.used_inside)).to(
+                equal(["Module 'pricing' exposes 2 of 3 classes to other modules, more than the 1 that 40% allows: Levy, Rate. Keep most classes behind a few public ones."])
+            )
+
+        with it("should count a nested module's classes in its parent, and those named outside the parent as its public ones"):
+            expect(_hits("deep-module", self.nested_named_outside)).to(
+                equal(
+                    [
+                        "Module 'cart' exposes 3 of 6 classes to other modules, more than the 2 that 40% allows: Fee, Levy, Rate. Keep most classes behind a few public ones.",
+                        "Module 'pricing' exposes 3 of 3 classes to other modules, more than the 1 that 40% allows: Fee, Levy, Rate. Keep most classes behind a few public ones.",
+                    ]
+                )
             )
 
     with context("source-parses"):

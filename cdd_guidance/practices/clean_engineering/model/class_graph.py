@@ -1,8 +1,9 @@
-"""The classes of one practice graph, indexed for rules that compare a class with the rest of the graph.
+"""The classes of Clean Engineering's graph, indexed for the facts that compare a class with the rest of the graph.
 
 A second object model, a service-plus-bag pair, or a pass-through layer looks fine inside the file that holds it; the
-rules that catch them have to see every class at once. ``ClassGraph`` reads the graph once per check and answers by
-class name, so each rule compares classes instead of rescanning every edge for every class.
+facts that catch them have to see every class at once. ``ClassGraph`` reads the graph once after each read, from the
+nodes' saved facts and the graph's edges, and answers by class name, so each fact compares classes instead of rescanning
+every edge for every class.
 """
 
 from __future__ import annotations
@@ -11,14 +12,13 @@ import re
 from typing import TYPE_CHECKING, Callable
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
-from cdd_guidance.practices.clean_engineering.model.graph_reading import CodeIndex, GraphReading
 from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
-    from harness.guidance.guidance import PracticeGuidance
-    from harness.graph.rule_context import RuleCheckContext
+
+    from cdd_guidance.practices.clean_engineering.model.graph_reading import GraphReading
 
 _IDENTIFIER = re.compile(r"[A-Za-z_]\w*")
 # A constructor handing its base a message: Python's `super().__init__("...")`, a brace language's `super("...")`.
@@ -72,25 +72,26 @@ _VALUE_BASES = frozenset(
 class ClassGraph:
     """Every production class in the practice, its public operations, and the fields it holds."""
 
-    def __init__(self, context: "RuleCheckContext") -> None:
-        self.classes = [node for node in context.nodes("OoadClass") if self._is_production(node)]
+    def __init__(self, reading: "GraphReading") -> None:
+        in_graph = reading.in_graph
+        self.classes = [node for node in in_graph.nodes("OoadClass") if self.is_production(node)]
         # The index of the classes Clean Engineering read by name, which its type linking asks too.
-        self._index = self._code_index_of(context.practice)
+        self._index = reading.code_index
         self._operations: dict[str, list["Node"]] = {}
-        for edge in context.edges("owns"):
+        for edge in in_graph.edge_index.of("owns"):
             if edge.child.type == "Operation" and edge.parent.type == "OoadClass":
                 self._operations.setdefault(edge.parent.node_id, []).append(edge.child)
         # A class mixed in comes before the base a class derives from: `class Model(Reading, BaseModel)`.
         self._mixins = {base for node in self.classes for base in self.bases_of(node)[:-1]}
         self._defining: dict[str, set[str]] = {}
-        for node in context.nodes("OoadClass"):
+        for node in in_graph.nodes("OoadClass"):
             for operation in self.operations(node):
                 self._defining.setdefault(operation.name, set()).add(node.node_id)
         self.kinds = ClassKinds(self)
 
     def named(self, type_name: str) -> list["Node"]:
         """The production classes the graph holds called type_name."""
-        return [node for node in self._index.classes_named(type_name) if self._is_production(node)]
+        return [node for node in self._index.classes_named(type_name) if self.is_production(node)]
 
     def is_mixin(self, node: "Node") -> bool:
         """True for a class another class mixes in before the base it derives from, such as a reading mixed into a model."""
@@ -121,13 +122,8 @@ class ClassGraph:
             for shape in node.get_fact("operation_shapes", []) or []
         )
 
-    def _code_index_of(self, practice: "PracticeGuidance") -> CodeIndex:
-        """The code index of the Clean Engineering practice whose rules run: the practice itself, or the one a practice
-        that holds its rules, such as DDD, extends."""
-        reading = practice.reading
-        return reading.code_index if isinstance(reading, GraphReading) else practice.working_set.extended.reading.code_index
-
-    def _is_production(self, node: "Node") -> bool:
+    def is_production(self, node: "Node") -> bool:
+        """A class of production code: neither read from a spec or test support, nor the holder of a file's functions."""
         return node.name != MODULE_FUNCTION_HOLDER and not is_test_code(node.source.file)
 
 
@@ -185,6 +181,12 @@ class ClassKinds:
     def _declares_value(self, node: "Node") -> bool:
         stereotypes = {str(item).lower() for item in node.get_fact("stereotypes", []) or []}
         return "value object" in stereotypes
+
+
+def parameters_of(operation: "Node") -> list["Node"]:
+    """The parameters an operation takes, in the order it declares them: the nodes its hasParameter edges lead to, which
+    a graph read back from its saved file keeps too."""
+    return [edge.child for edge in operation.graph.edges.from_parent("hasParameter", operation)]
 
 
 def names_in(type_hint: str) -> set[str]:

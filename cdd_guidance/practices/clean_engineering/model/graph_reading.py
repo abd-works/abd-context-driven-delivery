@@ -22,6 +22,7 @@ from harness.graph.schema_conformance import EXEMPT_FACT
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.code_read import PRODUCTION_FACT, CodeRead
+from cdd_guidance.practices.clean_engineering.model.compared_facts import ComparedFacts
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
@@ -67,6 +68,7 @@ class GraphReading(PracticeReading):
             CodeRead(self).read()
             self.model_documents.read()
         CallLinks(self).link()
+        ComparedFacts(self).record()
         self._exempt_test_code()
 
     def _exempt_test_code(self) -> None:
@@ -248,9 +250,3 @@ class ModelDocuments:
             dirnames[:] = [name for name in dirnames if not skips_folder(name)]
             folders.add(Path(dirpath))
         return folders
-
-
-def parameters_of(operation: Node) -> list[Node]:
-    """The parameters an operation takes, in the order it declares them: the nodes its hasParameter edges lead to, which
-    a graph read back from its saved file keeps too."""
-    return [edge.child for edge in operation.graph.edges.from_parent("hasParameter", operation)]

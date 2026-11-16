@@ -412,6 +412,7 @@ One rule a practice checks on loaded nodes (`practice_rule.py`). A practice writ
 + check_practice(context: RuleCheckContext): list[tuple[str, str]]
 	// (node_id, message) pairs from one pass over the whole practice
 + applies_to(node_type): bool
+	Invariant: check and check_practice read only node facts (`get_fact`), node identity and source, and the graph's edges, and compare them with the rule's limit; a fact that compares a node with others is recorded by the practice's read, never worked out here (CDR 0004)
 
 ## SharedPracticeGraphRule : PracticeGraphRule
 

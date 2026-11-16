@@ -68,19 +68,16 @@ class OutlineEntriesLoopOverExamples(PracticeGraphRule):
 
 class PlaywrightTestsBrowserInteraction(PracticeGraphRule):
     """Every story has a screen story: a Playwright file whose describe names it drives the page the domain and server
-    specs cannot see. Validate keeps only the stories the session's ticket names."""
+    specs cannot see. Validate keeps only the stories the session's ticket names. The overlay's read keeps on each story
+    whether one names it (``has_screen_story``)."""
 
     slug = "playwright-tests-browser-interaction"
     node_types = ("Story",)
 
     def check_practice(self, context: RuleCheckContext) -> list[tuple[str, str]]:
-        driven = {self._story_key(name) for spec in context.nodes("PlaywrightSpec") for name in spec.get_fact("screen_stories", [])}
         return [
             (story.node_id, f"{story.source.file}: story `{story.name}` has no screen story: no Playwright file "
                             f"(`*.story.ui.spec.ts`) has a describe named for it; write one that drives its screen.")
             for story in context.nodes("Story")
-            if self._story_key(story.name) not in driven
+            if not story.get_fact("has_screen_story")
         ]
-
-    def _story_key(self, name: str) -> str:
-        return " ".join(name.lower().split())

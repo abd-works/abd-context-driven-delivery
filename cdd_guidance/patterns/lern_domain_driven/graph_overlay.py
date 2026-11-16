@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 
 from harness.graph.edge import EdgeType
-from harness.graph.graph import Graph, Node
+from harness.graph.graph import Graph, Node, PracticeNodes
 from harness.graph.pattern_overlays import GraphOverlay
 from harness.graph.skipped_folders import scanned_files
 
@@ -71,6 +71,7 @@ class _LernReading:
         for folder, aggregate in sorted(aggregates.items()):
             self._aggregate(folder, aggregate)
         self._story_files()
+        _record_screen_stories(self.story_nodes)
 
     def _behaviors(self) -> None:
         """LERN behavior files on the BDD practice, each carrying the facts its tier rules read."""
@@ -233,3 +234,16 @@ class _AggregateTiers:
         if filename == f"{self.slug}-client.tsx" or not filename.endswith(".tsx"):
             return False
         return not any(filename.endswith(f"{suffix}.tsx") for suffix in _VIEW_SKIP_SUFFIXES)
+
+
+def _record_screen_stories(story_nodes: PracticeNodes) -> None:
+    """Whether a Playwright file's describe names each story (``has_screen_story``), which the screen-story rule reads:
+    the screen story that drives the page the domain and server specs cannot see."""
+    driven = {_story_key(name) for spec in story_nodes.nodes("PlaywrightSpec") for name in spec.get_fact("screen_stories", [])}
+    for story in story_nodes.nodes("Story"):
+        story.set_fact("has_screen_story", _story_key(story.name) in driven)
+
+
+def _story_key(name: str) -> str:
+    """A story's name as a describe may write it: lower case, with its words one space apart."""
+    return " ".join(name.lower().split())

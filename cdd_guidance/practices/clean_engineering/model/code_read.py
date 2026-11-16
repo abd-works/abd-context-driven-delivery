@@ -303,7 +303,7 @@ class CodeFolders:
             return self._in_graph.root
         if not is_test_code(relative):
             self._imports[owner].extend(module.dependencies)
-            self._nodes[owner].merge_fact("imported_names", module.imported_names)
+            self._record_imported_names(self._nodes[owner], relative, module.imported_names)
             self._record_sibling_imports(self._nodes[owner], relative, module.dependencies)
         return self._nodes[owner]
 
@@ -327,6 +327,12 @@ class CodeFolders:
             self._graph.edges.link("owns", parent, folder)
             if self._modules[relative].type == "Package":
                 self._graph.edges.relate("belongsTo", folder, parent)
+
+    def _record_imported_names(self, folder: "Node", relative: str, names: list[str]) -> None:
+        """The class names a production file imports or qualifies, kept on its folder by the file's path, so a refresh
+        that reads the file again replaces what it named before and keeps what the folder's other files name."""
+        kept = folder.get_fact("imported_names_by_file") if folder.has_fact("imported_names_by_file") else {}
+        folder.set_fact("imported_names_by_file", {**kept, relative: sorted(names)})
 
     def _record_sibling_imports(self, folder: "Node", relative: str, targets: list[str]) -> None:
         """The files of its own folder a production file imports, kept on the folder by file name, so the one-way-deps

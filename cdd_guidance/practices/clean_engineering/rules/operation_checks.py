@@ -2,20 +2,14 @@
 
 from __future__ import annotations
 
-import ast
 import re
-import textwrap
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-from cdd_guidance.practices.clean_engineering.model.graph_reading import parameters_of
-from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
+from cdd_guidance.practices.clean_engineering.model.class_graph import parameters_of
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import StatementCount
-from cdd_guidance.practices.clean_engineering.rules.class_graph import ClassGraph
-from cdd_guidance.practices.clean_engineering.rules.near_copies import MIN_LINES, NearCopies
 from cdd_guidance.practices.clean_engineering.rules.operation_semantics import SEMANTIC_RULES
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:
@@ -67,12 +61,6 @@ _TYPE_NAME = re.compile(r"[A-Za-z_]\w*")
 _TYPE_WORD = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z0-9]+")
 
 
-# The last word of a class that reaches outside its owner: storage, a remote system, a file, or another process.
-_OUTSIDE_COLLABORATOR = re.compile(
-    r"(?:Repository|Repo|Service|Client|Gateway|Api|API|Provider|File|Connection|Database|Server|Cli|Socket|Process"
-    r"|Daemon|Store)$"
-)
-
 _VAGUE_PARAMETER_NAMES = frozenset({"options", "opts", "config", "settings"})
 
 GENERIC_NAMES = {
@@ -100,31 +88,15 @@ class UseExplicitDependencies(ProductionCodeRule):
     the owner builds once and keeps: a class of the program's own that is no outside collaborator. An outside
     collaborator is a class the program does not declare, such as a library's client, or one whose name says it reaches
     outside the object (a repository, service, client, gateway, file, connection, or other process): the caller has to
-    be able to hand it a different one."""
+    be able to hand it a different one. The build keeps the first such collaborator on the class
+    (``constructs_collaborator``)."""
 
     slug = "use-explicit-dependencies"
     node_types = ("OoadClass",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
-        classes = context.index(ClassGraph)
-        for type_name in node.get_fact("constructs", []):
-            if type_name == node.name or classes.kinds.is_value(type_name) or self._owned_part(node, type_name, classes):
-                continue
-            # <<Entity>> / <<Aggregate Root>> may compose sibling types from the same file.
-            if node.get_fact("composes_peers") and type_name in node.get_fact("peer_names", []):
-                continue
-            return [f"Class '{node.name}' constructs '{type_name}' inside its constructor."]
-        return []
-
-    def _owned_part(self, owner: "Node", type_name: str, classes: ClassGraph) -> bool:
-        """True for a class the program declares, whose name names no outside collaborator, that the constructor builds
-        from nothing: `EdgeIndex()`. One built from something outside the object, `Sessions(Path.cwd())`, ties the
-        class to that outside thing."""
-        if not classes.named(type_name) or _OUTSIDE_COLLABORATOR.search(type_name) is not None:
-            return False
-        built_empty = re.compile(rf"(?<![\w.$]){re.escape(type_name)}\s*\(\s*\)")
-        constructors = [operation for operation in classes.operations(owner) if operation.name in CONSTRUCTOR_NAMES]
-        return any(built_empty.search(operation.get_fact("body_text") or "") for operation in constructors)
+        built = node.get_fact("constructs_collaborator") or ""
+        return [f"Class '{node.name}' constructs '{built}' inside its constructor."] if built else []
 
 
 class OperationMeasureRule(ProductionCodeRule):
@@ -364,61 +336,29 @@ class UsePropertyNotAccessor(ProductionCodeRule):
 
 class EliminateDuplication(PracticeGraphRule):
     """Production operations whose bodies are the same, or nearly the same: a copy with a renamed variable or one
-    changed line is still a second place the same fix has to go."""
+    changed line is still a second place the same fix has to go. The build keeps on each copy the operation it copies
+    (``duplicate_of``, ``near_copy_of``)."""
 
     slug = "eliminate-duplication"
     node_types = ("Operation",)
 
     def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
-        operations = [node for node in context.nodes("Operation") if not is_test_code(node.source.file)]
-        hits = self._exact_copies(operations)
-        copied = {node_id for node_id, _ in hits}
-        near = NearCopies([node for node in operations if node.node_id not in copied])
-        for copy, original, shared in near.pairs():
-            hits.append(
-                (
-                    copy.node_id,
-                    f"Operation '{copy.name}' nearly duplicates '{original.name}' ({original.source.file}): "
-                    f"{round(100 * shared)}% of their code is the same. Give the shared logic one function.",
-                )
-            )
-        return hits
-
-    def _exact_copies(self, operations: list["Node"]) -> list[tuple[str, str]]:
-        """Each operation whose body has the same fingerprint as one before it; a near copy is only looked for among the
-        rest, so a body is reported once."""
-        seen: dict[str, str] = {}
         hits: list[tuple[str, str]] = []
-        for operation in [node for node in operations if self._compared(node)]:
-            fingerprint = operation.get_fact("body_fingerprint", "")
-            if fingerprint in seen:
-                hits.append((operation.node_id, f"Operation '{operation.name}' duplicates the body of '{seen[fingerprint]}'."))
-            else:
-                seen[fingerprint] = operation.name
+        for operation in context.nodes("Operation"):
+            original = operation.get_fact("duplicate_of") or ""
+            near = operation.get_fact("near_copy_of") or []
+            if original:
+                hits.append((operation.node_id, f"Operation '{operation.name}' duplicates the body of '{original}'."))
+            elif near:
+                hits.append((operation.node_id, self._near_copy_message(operation, near)))
         return hits
 
-
-    def _compared(self, operation: "Node") -> bool:
-        """An operation whose body is long enough to copy, and is more than its class's configuration."""
-        counted = bool(operation.get_fact("body_fingerprint", "")) and operation.get_fact("line_count", 0) >= MIN_LINES
-        return counted and not self._configures_only(operation)
-
-    def _configures_only(self, operation: "Node") -> bool:
-        """True for a body that is one call given only literal values, such as a pattern's
-        `super().__init__(format="typescript", default_workspace_folder="harness")`: each class's own configuration,
-        not logic one function could hold."""
-        call = self._sole_call(operation.get_fact("body_text") or "")
-        return call is not None and all(isinstance(value, ast.Constant) for value in [*call.args, *(keyword.value for keyword in call.keywords)])
-
-    def _sole_call(self, body: str) -> ast.Call | None:
-        """The call a Python body makes as its one statement, its docstring aside; none for any other body."""
-        try:
-            statements = ast.parse(textwrap.dedent(body)).body
-        except SyntaxError:
-            return None
-        code = [item for item in statements if not (isinstance(item, ast.Expr) and isinstance(item.value, ast.Constant))]
-        sole = code[0] if len(code) == 1 else None
-        return sole.value if isinstance(sole, ast.Expr) and isinstance(sole.value, ast.Call) else None
+    def _near_copy_message(self, operation: "Node", near: list) -> str:
+        name, file, percent = near
+        return (
+            f"Operation '{operation.name}' nearly duplicates '{name}' ({file}): "
+            f"{percent}% of their code is the same. Give the shared logic one function."
+        )
 
 
 CODE_RULES: tuple[PracticeGraphRule, ...] = (
