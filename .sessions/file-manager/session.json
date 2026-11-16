@@ -11,7 +11,7 @@
       "specification",
       "implementation"
     ],
-    "version": 79
+    "version": 80
   },
   "practices": {
     "stories": {
@@ -36,7 +36,7 @@
           "drawio"
         ]
       },
-      "enabled": false
+      "enabled": true
     },
     "clean_engineering": {
       "formats": {
