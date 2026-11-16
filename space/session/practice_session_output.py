@@ -31,16 +31,9 @@ _OUTPUT_PATTERN_MARKS = {"*", "{"}
 # is its own extension alone.
 _CODE_EXTENSIONS = {"typescript": (".ts", ".tsx"), "javascript": (".js", ".jsx")}
 # Report and handoff names end with the time they were made, written so names sort by time.
+ChosenOutputs = dict[str, object]
+"""What session.json keeps for one practice under `outputs`: the root a person chose, and each fidelity's own choices."""
 REPORT_DATE_FORMAT = "%Y%m%dT%H%M%S"
-
-
-def _canvas_link(file: Path) -> str:
-    """The link a design canvas's ``canvas.json`` is published at (``<design-canvas>/version-N/project/canvas.json``),
-    as its versions record it; none for any other file, or a version not yet published."""
-    if file.name != "canvas.json" or file.parent.name != "project":
-        return ""
-    version = file.parent.parent
-    return CanvasVersions(version.parent).links().get(version.name, "")
 
 
 @identity("session_file", "name")
@@ -140,12 +133,12 @@ class PracticeSessionOutput:
         return self
 
     @property
-    def chosen_outputs(self) -> dict:
+    def chosen_outputs(self) -> ChosenOutputs:
         """What session.json's ``outputs`` keeps for this practice: the root a person chose, and under each fidelity's
         name what that fidelity keeps for itself."""
         return dict(self._session.fields.get("outputs", {}).get(self.name, {}))
 
-    def _save_chosen_outputs(self, chosen: dict) -> None:
+    def _save_chosen_outputs(self, chosen: ChosenOutputs) -> None:
         outputs = dict(self._session.fields.get("outputs", {}))
         self._session.save_fields(outputs={**outputs, self.name: chosen})
 
@@ -177,7 +170,7 @@ class PracticeSessionOutput:
         pattern fills in, such as ``story_tests`` for ``story_tests/{epic}/{sub-epic}/...``: a viewer of the session's
         files reads each of them."""
         paths = (path for fidelity in self.fidelities.entries.values() for paths in self.of_fidelity(fidelity).output_paths().values() for path in paths)
-        return {_fixed_folder(path) for path in paths}
+        return {self._fixed_folder(path) for path in paths}
 
     @property
     @data_field
@@ -237,6 +230,14 @@ class PracticeSessionOutput:
         """Write this practice's files under its default root again: the workpath plus the practice's own folder."""
         self._save_chosen_outputs({key: value for key, value in self.chosen_outputs.items() if key != "root"})
         return self
+
+    def _fixed_folder(self, path: str) -> Path:
+        """The folder of path up to its first part a name or pattern fills in; a file's own folder when none does."""
+        parts = Path(path).parts
+        filled = next((index for index, part in enumerate(parts) if set(part) & set("{*?")), None)
+        if filled is not None:
+            return Path(*parts[:filled])
+        return Path(path) if path.endswith("/") else Path(path).parent
 
 
 class FormatNotOffered(ValueError):
@@ -506,7 +507,7 @@ class FidelitySessionOutput:
         listed, declared = self._listed(path), self._declared(path)
         found = [] if listed.names_one_path else self._found(label, listed)
         if found:
-            return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed(), _canvas_link(file)) for file in found]
+            return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed(), self._canvas_link(file)) for file in found]
         if declared.names_one_path:
             named = repo.root / declared.glob
             return [FileEntry(declared.glob, named.exists(), named.exists() and named.resolve() in changed())]
@@ -570,11 +571,11 @@ class FidelitySessionOutput:
         `.context`."""
         return Path(*root.parts[: root.parts.index(CONTEXT_FOLDER)])
 
+    def _canvas_link(self, file: Path) -> str:
+        """The link a design canvas's ``canvas.json`` is published at (``<design-canvas>/version-N/project/canvas.json``),
+        as its versions record it; none for any other file, or a version not yet published."""
+        if file.name != "canvas.json" or file.parent.name != "project":
+            return ""
+        version = file.parent.parent
+        return CanvasVersions(version.parent).links().get(version.name, "")
 
-def _fixed_folder(path: str) -> Path:
-    """The folder of path up to its first part a name or pattern fills in; a file's own folder when none does."""
-    parts = Path(path).parts
-    filled = next((index for index, part in enumerate(parts) if set(part) & set("{*?")), None)
-    if filled is not None:
-        return Path(*parts[:filled])
-    return Path(path) if path.endswith("/") else Path(path).parent

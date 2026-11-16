@@ -4,9 +4,10 @@ import type { EngineInterface } from 'claude-code'
 import type { AppData, AppServerData } from '@cdd/harness/diagnostics/app'
 
 import type { AppOpeningJson } from '../../types'
-import { after } from '../board-chat/board'
+import { after } from '../shared/clock'
 import { openInBrowserPane } from '../shared/browser-pane'
-import { reasonOf, showFailure, shownAsFailure } from '../error-display/failure-client'
+import { showFailure, shownAsFailure } from '../error-display/failure-client'
+import { reasonOf } from '../shared/reason'
 import { refreshHealth, SERVER } from './server-health-client'
 
 // A press on an app in the status row: Python's App.open installs it while it is not installed and answers it with its

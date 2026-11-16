@@ -34,8 +34,8 @@ export class RootChoiceClient {
   }
 
   // An item starts once a person has chosen the folder its session works in.
-  async openToStart(item: BacklogItemClient): Promise<void> {
-    this.page.store.change({ rootChoice: { ticket: null, startingItem: item.toJSON(), browsing: null } })
+  async openToStart(backlogItem: BacklogItemClient): Promise<void> {
+    this.page.store.change({ rootChoice: { ticket: null, startingItem: backlogItem.toJSON(), browsing: null } })
     await this.browse(TICKET_ROOT, '')
   }
 

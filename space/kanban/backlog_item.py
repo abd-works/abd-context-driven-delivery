@@ -21,19 +21,23 @@ from space.session.session import SESSION_FILE
 from harness.mcp.mcp_annotations import mcp
 
 
+# How long the system may take to hand a file to the app it opens that kind of file with.
+OPEN_WITH_SYSTEM_SECONDS = 30
+
+
 def open_with_system(path: Path) -> None:
     """Hand path to the app this computer opens its kind of file with, as a double-click in the file browser does."""
     if sys.platform == "win32":
         os.startfile(path)  # noqa: S606 - a file of the Backlog, opened as the person's own file browser would
     else:
-        subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", str(path)], check=True, timeout=30)
+        subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", str(path)], check=True, timeout=OPEN_WITH_SYSTEM_SECONDS)
 
 
 class BacklogNestingError(ValueError):
     """Raised when a backlog item cannot be made another's child: the Backlog nests one level, in plain idea folders."""
 
-    def __init__(self, item: str, parent: str, reason: str) -> None:
-        super().__init__(f"{item} cannot be a child of {parent}: {reason}")
+    def __init__(self, child: str, parent: str, reason: str) -> None:
+        super().__init__(f"{child} cannot be a child of {parent}: {reason}")
 
 
 @identity("title")

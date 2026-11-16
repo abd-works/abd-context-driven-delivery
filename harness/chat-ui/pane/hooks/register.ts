@@ -1,6 +1,6 @@
 import type { EngineInterface, Register } from 'claude-code'
 
-import { keepInTouch } from './board-chat/board-chat-client'
+import { keepInTouch } from './chat-bar/check-in-client'
 import { isCheckInDue, turnCompleted, turnStarted } from './board-chat/chat-turns'
 import { readName } from './board-chat/chat-name'
 import { openedBoard } from './board-chat/board-server'
@@ -196,7 +196,7 @@ export const register: Register = on => {
       busy: await currentBusy($),
       health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band), icons: ServerHealthIconsView(elements, band) },
       version: { label: version.label, badge: VersionBadgeView(elements, version, versionActions), dialog: UpdateDialogView(elements, version, versionActions) },
-      push: { buttons: PushButtonsView(elements, repo, pushActions), dialog: PushDialogView(elements, repo, chatBar.title || chatBar.sessionName, pushActions) },
+      push: { buttons: PushButtonsView(elements, repo, pushActions), dialog: PushDialogView(elements, repo, pushActions) },
       width: e.props.bodyColumns,
       maxRows: e.props.maxRows,
     })

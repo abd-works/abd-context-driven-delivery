@@ -12,7 +12,7 @@ class DiagnosticsNeedACall(Exception):
     """A diagnostics toolset was asked to probe without the call it answers, so it cannot tell which project's install
     to probe or which MCP host to probe through."""
 
-    def __init__(self, toolset: object) -> None:
+    def __init__(self, toolset: CallDiagnostics) -> None:
         super().__init__(f"{type(toolset).__name__} probes only for a call; the MCP server makes it with for_call(call)")
 
 

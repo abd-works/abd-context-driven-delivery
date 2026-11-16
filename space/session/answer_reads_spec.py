@@ -13,7 +13,7 @@ from expects import equal, expect
 from mamba import after, before, context, description, it
 
 from space.session import Sessions
-from space.session.throwaway_project import SpecRunHome
+from space.session.throwaway_project import SPEC_RUN_HOME
 
 
 def _written_by_another_process(session, **fields) -> None:
@@ -24,7 +24,7 @@ def _written_by_another_process(session, **fields) -> None:
 
 with description("a session's reads"):
     with before.each:
-        SpecRunHome.ensure()
+        SPEC_RUN_HOME.ensure()
         self.repo = Path(tempfile.mkdtemp())
         Sessions(self.repo).create("alpha", title="First title")
 

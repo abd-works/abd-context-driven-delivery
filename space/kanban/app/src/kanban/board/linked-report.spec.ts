@@ -22,7 +22,7 @@ describe('Linked Report', () => {
   with_link('naming a ticket and its fidelity', () => {
     it('should open that fidelity report panel', async () => {
       const { page } = board.unreadPage()
-      await page.openLinkedReport(`?report=${TICKET}&fidelity=${SLUG}`)
+      await page.links.openReport(`?report=${TICKET}&fidelity=${SLUG}`)
       const panel = page.store.state.panels.find(shown => shown.kind === 'report') as ReportPanel
       expect([panel.ticket.name, panel.progress?.fidelity.slug]).toEqual([TICKET, SLUG])
     })
@@ -31,7 +31,7 @@ describe('Linked Report', () => {
   with_link('naming a fidelity the ticket does not have', () => {
     it('should open no panel', async () => {
       const { page } = await board.page()
-      await page.openLinkedReport(`?report=${TICKET}&fidelity=no-such-fidelity`)
+      await page.links.openReport(`?report=${TICKET}&fidelity=no-such-fidelity`)
       expect(page.store.state.panels.some(shown => shown.kind === 'report')).toBe(false)
     })
   })
@@ -39,7 +39,7 @@ describe('Linked Report', () => {
   with_link('naming nothing', () => {
     it('should open no panel', async () => {
       const { page } = await board.page()
-      await page.openLinkedReport('')
+      await page.links.openReport('')
       expect(page.store.state.panels).toEqual([])
     })
   })

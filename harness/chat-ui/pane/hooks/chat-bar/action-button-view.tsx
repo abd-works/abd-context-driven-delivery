@@ -5,7 +5,8 @@ import { GlyphButtonView } from '../shared/glyph-button-view'
 import { chooseAction, clearChosenAction, toggleActionPicker } from './action-picker-client'
 import { moveNext, type ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
-import { runActionOn } from './fidelity-progress-client'
+import { promptCommand } from '../error-display/failure-client'
+import { commandOn } from './fidelity-progress-client'
 import { formatArgumentOf } from './format-choices-client'
 import { overlayArgumentOf } from './overlay-choices-client'
 
@@ -31,7 +32,8 @@ export function shownActionOf(chatBar: ChatBarClient, chosenAction: string | nul
   return chosenAction && chatBar.actionFidelity ? chosenAction : actionOf(chatBar)
 }
 
-// The action button runs what it shows: advance moves the session on, and every other action is a command the chat runs,
+// The action button runs what it shows: advance moves the session on, and every other action is a command put in the
+// prompt box for the person to send,
 // with the formats its chips have chosen and the session's pattern overlays. A picked action is run once, and the button then
 // shows the next one again.
 async function pressAction($: EngineInterface, { chatBar, formats, overlays }: ChatBarDraw, action: string): Promise<unknown> {
@@ -39,7 +41,7 @@ async function pressAction($: EngineInterface, { chatBar, formats, overlays }: C
   await clearChosenAction($)
   if (action === 'advance') return moveNext($, chatBar)
   if (!fidelity) return
-  await runActionOn($, chatBar.actionFidelities, action, formatArgumentOf(chatBar, formats, action) + overlayArgumentOf(overlays))
+  await promptCommand($, commandOn(chatBar.actionFidelities, action) + formatArgumentOf(chatBar, formats, action) + overlayArgumentOf(overlays))
 }
 
 // The orange chip of the canvas, an orange Box holding the next action's icon, then the ▾ that opens

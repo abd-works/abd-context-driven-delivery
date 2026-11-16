@@ -4,8 +4,9 @@ import type { EngineInterface } from 'claude-code'
 import type { FailureData } from '@cdd/tools/error_display/failure'
 
 import type { FailureJson } from '../../types'
-import { commandOf } from '../shared/chat-command'
+import { commandOf, filledPrompt } from '../shared/chat-command'
 import { debugCommandOf } from '../shared/debug-command'
+import { reasonOf } from '../shared/reason'
 
 // Every failure in the mod is shown the same way, above the chat bar's line: what failed with the reason it gave, the
 // context it failed in, Fix, which sends both to this chat to find the cause and fix it, and ✕ to dismiss it. It stays
@@ -34,11 +35,6 @@ export class FailureClient {
   get fixPrompt(): string {
     return debugCommandOf('', `The CDD chat bar above the prompt shows this failure. Failure: ${this.failure} Context: ${this.context}`)
   }
-}
-
-// The words a failure carries: the server's own text for a failed cdd tool, a thrown error's message otherwise.
-export function reasonOf(failure: unknown): string {
-  return failure instanceof Error ? failure.message : String(failure)
 }
 
 export async function currentFailure($: EngineInterface): Promise<FailureClient | null> {
@@ -80,4 +76,12 @@ export async function fixFailure($: EngineInterface, failure: FailureClient): Pr
     return showFailure($, 'The fix did not reach the chat', `Pressing Fix on: ${failure.failure}`, thrown)
   }
   await dismissFailure($)
+}
+
+// Puts a slash command in the prompt box the moment a button is pressed, as the handoff button does, and the person
+// presses Enter to send it. Running it straight away waits until the chat is idle, so a press showed nothing for a
+// long time.
+export async function promptCommand($: EngineInterface, command: string): Promise<void> {
+  const unfilled = await filledPrompt($, command).catch(reasonOf)
+  if (unfilled) await showFailure($, `${command} could not go in the prompt box: ${unfilled}`, `Pressing the button that puts ${command} in the prompt box`)
 }

@@ -2,7 +2,8 @@ import type { EngineInterface } from 'claude-code'
 
 import type { LeaveChoicesData, TicketData } from '@cdd/space/kanban/ticket'
 
-import { reasonOf, showFailure, shownAsFailure } from '../error-display/failure-client'
+import { showFailure, shownAsFailure } from '../error-display/failure-client'
+import { reasonOf } from '../shared/reason'
 import { chosenFolder } from '../shared/folder-dialog'
 import { callTool, callToolText, currentChatBar, refreshChatBar, type ChatBarClient } from './chat-bar-client'
 import { whileBusy } from './busy-client'

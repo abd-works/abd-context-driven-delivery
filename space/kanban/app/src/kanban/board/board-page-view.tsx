@@ -149,8 +149,8 @@ export class PageFailureView extends Component<{ failures: PageFailures; childre
     return { failure: error instanceof Error ? error.message : String(error) }
   }
 
-  componentDidCatch(error: unknown, info: ErrorInfo) {
-    this.props.failures.failWith(error, `A Kanban board view failed to draw:${info.componentStack ?? ''}`)
+  componentDidCatch(error: unknown, whereItFailed: ErrorInfo) {
+    this.props.failures.failWith(error, `A Kanban board view failed to draw:${whereItFailed.componentStack ?? ''}`)
   }
 
   render() {

@@ -5,11 +5,16 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 _REPO = Path(__file__).resolve().parents[1]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
+
+if TYPE_CHECKING:
+    from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
+    from harness.guidance.rule import RulesCollection
+    from harness.hooks.hook_server import HookServer
 
 _SKIP = {
     ".git",
@@ -35,37 +40,42 @@ _TEXT_SUFFIXES = {
 }
 
 
+HookResult = dict[str, Any]
+"""One JSON entry of the exercise report, as written to stdout."""
+
+_LARGEST_EXAMPLE_BYTES = 1_000_000
+"""Examples bigger than this are generated data, not a hand-written example worth touching."""
+
+
 class HookExercise:
     """Touch one fidelity-named example and require that fidelity's rules in chat."""
 
     def __init__(self, repo: Path | str | None = None) -> None:
         self.repo = Path(repo or _REPO).resolve()
+        self._hook_server: HookServer | None = None
 
     def run(self) -> int:
         ping = self._ping()
         live = self._live_injects()
-        checks = []
-        for practice in self._practices():
-            checks.extend(self._exercise_practice(practice))
-        failed = [item for item in checks if not item["ok"]]
-        report = {
-            "ok": ping["ping"] == "pong" and live and not failed,
-            "ping": ping["ping"],
-            "host": ping.get("host"),
-            "port": ping.get("port"),
-            "live_injects": live,
-            "checks": checks,
-            "counts": {
-                "checked": len(checks),
-                "passed": len(checks) - len(failed),
-                "failed": len(failed),
-            },
-        }
+        checks = [check for practice in self._practices() for check in self._exercise_practice(practice)]
+        report = self._report(ping, live, checks)
         json.dump(report, sys.stdout, indent=2)
         sys.stdout.write("\n")
         return 0 if report["ok"] else 1
 
-    def _ping(self) -> dict[str, Any]:
+    def _report(self, ping: HookResult, live: HookResult, checks: list[HookResult]) -> HookResult:
+        failed = [item for item in checks if not item["ok"]]
+        return {
+            "ok": ping["ping"] == "pong" and live["live_injects"] and not failed,
+            "ping": ping["ping"],
+            "host": ping.get("host"),
+            "port": ping.get("port"),
+            **live,
+            "checks": checks,
+            "counts": {"checked": len(checks), "passed": len(checks) - len(failed), "failed": len(failed)},
+        }
+
+    def _ping(self) -> HookResult:
         from harness.hooks.hook_daemon import HookDaemon
 
         address = HookDaemon(self.repo).live_address()
@@ -73,33 +83,27 @@ class HookExercise:
             return {"ping": "down"}
         return {"ping": "pong", "host": address.host, "port": address.port, "pid": address.pid}
 
-    def _live_injects(self) -> bool:
-        from harness.hooks.hook_daemon import HookDaemon
+    def _live_injects(self) -> HookResult:
+        """Whether the running hook daemon injects a fidelity's rules, with the reason when it could not be asked."""
+        from harness.hooks.hook_daemon import HookDaemon, HookDaemonNotReady, HookPortTaken
 
         sample = self._example_for("modules", "clean-engineering")
         if sample is None:
-            return False
+            return {"live_injects": False, "live_error": "no clean-engineering modules example found"}
         try:
-            result = HookDaemon(self.repo).ensure().handle_stdin(
-                json.dumps(self._payload(sample)).encode("utf-8")
-            )
-        except Exception:
-            return False
-        return "domain-nouns-only" in (result.get("additional_context") or "")
+            result = HookDaemon(self.repo).ensure().handle_stdin(json.dumps(self._payload(sample)).encode("utf-8"))
+        except (HookDaemonNotReady, HookPortTaken, OSError) as error:
+            return {"live_injects": False, "live_error": f"{type(error).__name__}: {error}"}
+        return {"live_injects": "domain-nouns-only" in (result.get("additional_context") or "")}
 
-    def _server(self) -> Any:
-        cached = getattr(self, "_hook_server", None)
-        if cached is not None:
-            return cached
-        from harness.hooks.hook_server import HookServer
+    def _server(self) -> HookServer:
+        if self._hook_server is None:
+            from harness.hooks.hook_server import HookServer
 
-        self._hook_server = HookServer.from_handlers(
-            self.repo / ".cursor" / "hook-handlers.json",
-            repo=self.repo,
-        )
+            self._hook_server = HookServer.from_handlers(self.repo / ".cursor" / "hook-handlers.json", repo=self.repo)
         return self._hook_server
 
-    def _payload(self, path: Path) -> dict[str, Any]:
+    def _payload(self, path: Path) -> HookResult:
         return {
             "hook_event_name": "postToolUse",
             "tool_name": "Write",
@@ -109,44 +113,26 @@ class HookExercise:
             "tool_input": {"path": str(path)},
         }
 
-    def _practices(self) -> list[Any]:
+    def _practices(self) -> list[PracticeGuidance]:
         """Every installed practice with fidelities, found the way the installer finds toolsets."""
         from harness.agent_tools.agent_tools import AgentToolSet
         from harness.guidance.guidance import PracticeGuidance
         from harness.installation.repository_toolsets import RepositoryToolsets
 
-        loaded = []
-        for reference in RepositoryToolsets(self.repo).references():
-            try:
-                practice = AgentToolSet.instantiate(reference.toolset_class)
-            except Exception:  # noqa: BLE001
-                continue
-            if not isinstance(practice, PracticeGuidance):
-                continue
-            entries = getattr(getattr(practice, "fidelities", None), "entries", None) or {}
-            if entries:
-                loaded.append(practice)
-        return loaded
+        practice_classes = [
+            toolset for toolset in RepositoryToolsets(self.repo).classes() if issubclass(toolset, PracticeGuidance)
+        ]
+        practices = [AgentToolSet.instantiate(toolset) for toolset in practice_classes]
+        return [practice for practice in practices if practice.fidelities.entries]
 
-    def _exercise_practice(self, practice: Any) -> list[dict[str, Any]]:
-        checks = []
+    def _exercise_practice(self, practice: PracticeGuidance) -> list[HookResult]:
+        practice_name = getattr(practice, "slug", None) or type(practice).__name__
         fidelities = practice.fidelities
-        for name in fidelities.entries:
-            checks.append(
-                self._exercise_fidelity(
-                    practice,
-                    fidelities[name],
-                    name,
-                    getattr(practice, "slug", None) or type(practice).__name__,
-                )
-            )
-        return checks
+        return [self._exercise_fidelity(practice_name, name, fidelities[name]) for name in fidelities.entries]
 
-    def _exercise_fidelity(
-        self, practice: Any, fidelity: Any, name: str, practice_name: str
-    ) -> dict[str, Any]:
+    def _exercise_fidelity(self, practice_name: str, name: str, fidelity: FidelityGuidance) -> HookResult:
         example = self._example_for(name, practice_name)
-        slugs = self._rule_slugs(getattr(fidelity, "rules", None))
+        slugs = self._rule_slugs(fidelity.rules)
         base = {
             "practice": practice_name,
             "fidelity": name,
@@ -158,29 +144,21 @@ class HookExercise:
         try:
             with self._touched(example):
                 injected, chat = self._fire(example)
-        except Exception as error:
-            return {
-                **base,
-                "ok": False,
-                "hook_fired": False,
-                "error": f"{type(error).__name__}: {error}",
-            }
+        except OSError as error:
+            return {**base, "ok": False, "hook_fired": False, "error": f"{type(error).__name__}: {error}"}
+        return {**base, **self._injection_outcome(slugs, injected, chat)}
+
+    def _injection_outcome(self, slugs: list[str], injected: str, chat: str) -> HookResult:
+        """Whether the hook injected anything and, when the fidelity has rules, whether every one reached the chat."""
         missing = [slug for slug in slugs if slug not in injected or slug not in chat]
-        fired = True
-        if not slugs:
-            ok = bool(injected.strip())
-            error = "" if ok else "hook returned no additional_context"
-        else:
-            ok = bool(injected.strip()) and not missing
-            error = ""
-            if not injected.strip():
-                error = "hook returned no additional_context"
-            elif missing:
-                error = "injected chat is missing fidelity rules"
+        error = ""
+        if not injected.strip():
+            error = "hook returned no additional_context"
+        elif missing:
+            error = "injected chat is missing fidelity rules"
         return {
-            **base,
-            "ok": ok,
-            "hook_fired": fired,
+            "ok": not error,
+            "hook_fired": True,
             "injected": bool(injected.strip()),
             "missing_rules": missing,
             "error": error,
@@ -231,22 +209,20 @@ class HookExercise:
         for dirpath, dirnames, filenames in os.walk(root):
             dirnames[:] = [name for name in dirnames if name not in _SKIP and not name.startswith(".")]
             folder = Path(dirpath)
-            for name in filenames:
-                path = folder / name
-                posix = path.as_posix().casefold()
-                in_examples = (
-                    "/catalog/_examples/" in posix
-                    or "/examples/" in posix
-                    or "/_examples/" in posix
-                )
-                if not in_examples or not self._named_for_fidelity(path, needle):
-                    continue
-                if not self._in_practice(path, aliases):
-                    continue
-                if path.stat().st_size > 1_000_000:
-                    continue
-                found.append(path)
+            found.extend(
+                folder / name for name in filenames if self._is_fidelity_example(folder / name, needle, aliases)
+            )
         return found
+
+    def _is_fidelity_example(self, path: Path, needle: str, aliases: list[str]) -> bool:
+        posix = path.as_posix().casefold()
+        in_examples = "/catalog/_examples/" in posix or "/examples/" in posix or "/_examples/" in posix
+        return (
+            in_examples
+            and self._named_for_fidelity(path, needle)
+            and self._in_practice(path, aliases)
+            and path.stat().st_size <= _LARGEST_EXAMPLE_BYTES
+        )
 
     def _named_for_fidelity(self, path: Path, needle: str) -> bool:
         stem = path.stem.casefold().replace("_", "-")
@@ -276,8 +252,8 @@ class HookExercise:
         owned = 0 if self._in_practice(path, aliases) else 1
         return (catalog, owned, len(posix), posix)
 
-    def _rule_slugs(self, rules: Any) -> list[str]:
-        entries = getattr(rules, "entries", None) or {}
+    def _rule_slugs(self, rules: RulesCollection) -> list[str]:
+        entries = rules.entries or {}
         slugs: list[str] = []
         for key, rule in entries.items():
             slug = str(getattr(rule, "slug", None) or key).strip()
@@ -285,7 +261,7 @@ class HookExercise:
                 slugs.append(slug)
         return slugs
 
-    def _touched(self, path: Path):
+    def _touched(self, path: Path) -> _FileTouch:
         return _FileTouch(path)
 
 

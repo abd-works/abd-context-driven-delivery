@@ -36,7 +36,7 @@ from space.session.sessions import SessionNameRequiredError
 from space.work_state import WorkState
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
-from space.session.throwaway_project import ExampleHome, SpecRunHome
+from space.session.throwaway_project import ExampleHome, SPEC_RUN_HOME
 from harness.guidance.practice_catalogue import PracticeCatalogue
 
 # The first practices a process makes read and parse their guidance for every later one; made once here, before any
@@ -1554,7 +1554,7 @@ with description("a session read for a board") as self:
 with description("a session whose graph two calls first ask for at once"):
     # The two calls race once, made slow on purpose, and every example reads what that one race left.
     with before.all:
-        SpecRunHome.ensure()
+        SPEC_RUN_HOME.ensure()
         self.repo = Path(tempfile.mkdtemp())
         session = Sessions(self.repo).current()
         self.original = Graph.open_saved

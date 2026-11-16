@@ -28,7 +28,7 @@ export class SidePanelClient {
   }
 
   private changeReport(change: (panel: ReportPanel) => ReportPanel): void {
-    this.store.change(state => ({ panels: state.panels.map(panel => (panel.kind === 'report' ? change(panel) : panel)) }))
+    this.store.change(state => ({ panels: state.panels.map((panel: SidePanel) => (panel.kind === 'report' ? change(panel) : panel)) }))
   }
 
   widthOf(kind: string): number {

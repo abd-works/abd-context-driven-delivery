@@ -3,6 +3,7 @@ import type { SessionFileData } from '@cdd/space/session/session'
 
 import type { BoardStore, FilesPanel, FilesSource, SidePanel } from '../shared/board-store'
 import type { FidelityProgressClient } from './fidelity-progress-client'
+import { OpenFileComments } from './open-file-comments'
 import type { FilesByFidelity, TicketClient } from './ticket-client'
 
 // A folder's files are read as the files of one entry, which no practice filter hides.
@@ -32,12 +33,20 @@ export const practicesOf = (panel: Pick<FilesPanel, 'progress'>): string[] => [.
 
 const isShowable = (panel: FilesPanel, path: string): boolean => shownTabs(panel).some(tab => tab.path === path)
 
+// Which files a panel shows: where they come from, the fidelities they are read for, and the practices filtered on.
+type FilesChoice = Pick<FilesPanel, 'source' | 'progress' | 'practicesOn'>
+
+// A line of a file, such as the one a violation names.
+export type FileLine = { path: string; line: number }
+
 // The files panel beside the board: practice filters and a tab per file along its top, and the open file under them.
 export class FilesPanelClient {
+  readonly comments: OpenFileComments = new OpenFileComments(this)
+
   constructor(private readonly store: BoardStore) {}
 
   get panel(): FilesPanel | undefined {
-    return this.store.state.panels.find((panel): panel is FilesPanel => panel.kind === 'files')
+    return this.store.state.panels.find((panel: SidePanel): panel is FilesPanel => panel.kind === 'files')
   }
 
   private show(panel: FilesPanel): void {
@@ -45,10 +54,10 @@ export class FilesPanelClient {
   }
 
   private change(change: (panel: FilesPanel) => FilesPanel): void {
-    this.store.change(state => ({ panels: state.panels.map(panel => (panel.kind === 'files' ? change(panel) : panel)) }))
+    this.store.change(state => ({ panels: state.panels.map((panel: SidePanel) => (panel.kind === 'files' ? change(panel) : panel)) }))
   }
 
-  private async read(ticket: TicketClient, source: FilesSource, progress: FidelityProgressClient[]): Promise<FilesByFidelity | null> {
+  private async read(ticket: TicketClient, { source, progress }: Pick<FilesChoice, 'source' | 'progress'>): Promise<FilesByFidelity | null> {
     if (source === 'fidelities') return ticket.filesOf(progress)
     const entries = await (source === 'session' ? ticket.sessionClient.folderFiles() : ticket.sessionClient.workpathFiles())
     return entries && { [FOLDER_ENTRY]: { [FOLDER_ENTRY]: entries } }
@@ -59,27 +68,27 @@ export class FilesPanelClient {
   async openFiles(ticket: TicketClient, progress: FidelityProgressClient[]): Promise<void> {
     const offered = ticket.stageProgress.length ? ticket.stageProgress : progress
     const stage = [...offered, ...progress.filter(entry => !offered.some(shown => shown.fidelity.slug === entry.fidelity.slug))]
-    await this.openPanel(ticket, 'fidelities', stage, [...new Set(progress.map(entry => entry.practice.key))])
+    await this.openPanel(ticket, { source: 'fidelities', progress: stage, practicesOn: [...new Set(progress.map(entry => entry.practice.key))] })
   }
 
   async openSessionFolder(ticket: TicketClient): Promise<void> {
-    await this.openPanel(ticket, 'session', [], [])
+    await this.openPanel(ticket, folderOf('session'))
   }
 
   // The folder the session works in, as the details' workpath link opens it.
   async openWorkpath(ticket: TicketClient): Promise<void> {
-    await this.openPanel(ticket, 'workpath', [], [])
+    await this.openPanel(ticket, folderOf('workpath'))
   }
 
   // The session folder, with one of its files open, such as its latest handoff.
   async openSessionFile(ticket: TicketClient, path: string): Promise<void> {
-    await this.openPanel(ticket, 'session', [], [], path)
+    await this.openPanel(ticket, folderOf('session'), path)
   }
 
-  private async openPanel(ticket: TicketClient, source: FilesSource, progress: FidelityProgressClient[], practicesOn: string[], tab = ''): Promise<void> {
-    const files = await this.read(ticket, source, progress)
+  private async openPanel(ticket: TicketClient, choice: FilesChoice, tab: string = ''): Promise<void> {
+    const files = await this.read(ticket, choice)
     if (!files) return
-    const panel: FilesPanel = { kind: 'files', ticket, source, progress, files, practicesOn, changedOnly: false, activeTab: '', shown: null, lines: {}, isExpanded: false }
+    const panel: FilesPanel = { kind: 'files', ticket, ...choice, files, changedOnly: false, activeTab: '', shown: null, lines: {}, isExpanded: false }
     this.show(panel)
     await this.openTab(tab || (shownTabs(panel)[0]?.path ?? ''))
   }
@@ -120,7 +129,7 @@ export class FilesPanelClient {
   }
 
   // A violation can name a file its fidelity does not declare, so its file is read whatever the panel lists.
-  async openFileAtLine(ticket: TicketClient, progress: FidelityProgressClient | undefined, path: string, line: number): Promise<void> {
+  async openFileAtLine(ticket: TicketClient, progress: FidelityProgressClient | undefined, { path, line }: FileLine): Promise<void> {
     if (this.panel?.ticket.name !== ticket.name) await this.openFiles(ticket, progress ? [progress] : [])
     const shown = await this.fileOf(ticket, path, true)
     this.change(entry => ({ ...entry, activeTab: path, shown, lines: { ...entry.lines, [path]: line } }))
@@ -130,7 +139,7 @@ export class FilesPanelClient {
   async reload(): Promise<void> {
     const panel = this.panel
     if (!panel) return
-    const files = await this.read(panel.ticket, panel.source, panel.progress)
+    const files = await this.read(panel.ticket, panel)
     if (files) this.change(entry => ({ ...entry, files }))
     await this.refreshShown()
   }
@@ -151,36 +160,9 @@ export class FilesPanelClient {
     const saved = await panel.ticket.sessionClient.writeFile(panel.shown.path, text)
     if (saved) await this.refreshShown()
   }
+}
 
-  async addComment(startLine: number, endLine: number, text: string): Promise<void> {
-    const panel = this.panel
-    if (!panel?.shown) return
-    await panel.ticket.fileComments.add(panel.shown.path, startLine, endLine, text)
-    await this.refreshShown()
-  }
-
-  async removeComment(anchor: string): Promise<void> {
-    await this.panel?.ticket.fileComments.remove(anchor)
-    await this.refreshShown()
-  }
-
-  // A comment goes to the chat working on the ticket; one the chat cannot take stays not sent, and the toast says why.
-  async sendComment(anchor: string): Promise<void> {
-    const panel = this.panel
-    if (!panel) return
-    await panel.ticket.fileComments.send(anchor, panel.ticket.chat.id)
-    await this.refreshShown()
-  }
-
-  async sendOpenComments(): Promise<void> {
-    const panel = this.panel
-    if (!panel) return
-    await panel.ticket.fileComments.sendOpen(panel.ticket.chat.id)
-    await this.refreshShown()
-  }
-
-  async clearProcessedComments(): Promise<void> {
-    await this.panel?.ticket.fileComments.clearProcessed()
-    await this.refreshShown()
-  }
+// A folder's files, with no fidelity read and no practice filtered on.
+function folderOf(source: Exclude<FilesSource, 'fidelities'>): FilesChoice {
+  return { source, progress: [], practicesOn: [] }
 }

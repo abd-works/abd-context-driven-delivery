@@ -55,6 +55,8 @@ _READY_POLL_SECONDS = 0.2
 _CALL_TIMEOUT_SECONDS = 600
 # A ping answers at once from a live daemon, so a dead or busy address is found quickly.
 _PING_TIMEOUT_SECONDS = 5
+# One message a hook command and its daemon exchange: a JSON object naming the method and its fields, or the answer.
+DaemonMessage = dict[str, Any]
 # The hook server's own code: a daemon that loaded older copies of these is a different daemon.
 _HOOK_SERVER_FILES = (
     Path(__file__).resolve(),
@@ -135,9 +137,9 @@ class HookDaemonAddress:
         """The fields the daemon's hook server answers for the event an IDE wrote on stdin."""
         return self._call({"method": "handle_stdin", "raw": raw.decode("utf-8-sig")}, _CALL_TIMEOUT_SECONDS)
 
-    def _call(self, payload: dict, timeout: float) -> dict:
+    def _call(self, request: DaemonMessage, timeout: float) -> DaemonMessage:
         with ExclusivePort(self.host, self.port).connect(timeout) as conn:
-            _Wire(conn).write(payload)
+            _Wire(conn).write(request)
             return _Wire(conn).read()
 
 
@@ -178,11 +180,11 @@ class _Wire:
     def __init__(self, conn: socket.socket) -> None:
         self._conn = conn
 
-    def write(self, payload: dict) -> None:
-        raw = json.dumps(payload).encode("utf-8")
+    def write(self, message: DaemonMessage) -> None:
+        raw = json.dumps(message).encode("utf-8")
         self._conn.sendall(f"{len(raw)}\n".encode("ascii") + raw)
 
-    def read(self) -> dict:
+    def read(self) -> DaemonMessage:
         header = b""
         while not header.endswith(b"\n"):
             header += self._received(1)
@@ -424,6 +426,10 @@ class HookDaemon:
         if holder.stamp == self.source_stamp:
             logger.warning("the hook daemon of %s on this code already serves port %s (pid %s)", self.repo, self.port, holder.pid)
             return None
+        return self._taken_over_from(holder, port)
+
+    def _taken_over_from(self, holder: HookDaemonAddress, port: ExclusivePort) -> socket.socket:
+        """The port, claimed once this checkout's daemon on older code that holds it has stopped."""
         older = self._process_of(holder, port)
         try:
             self._stop_process(older)

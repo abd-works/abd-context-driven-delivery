@@ -11,7 +11,7 @@ import sys
 import time
 from enum import Enum
 from pathlib import Path
-from typing import ClassVar
+from typing import Callable, ClassVar
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, tool_subject
@@ -83,13 +83,13 @@ class AppSources:
     @property
     def packages(self) -> str:
         """The fingerprint of the package files npm installs from."""
-        return _fingerprint_of(self._folder, [self._folder / name for name in self.PACKAGE_FILES])
+        return self._fingerprint_of([self._folder / name for name in self.PACKAGE_FILES])
 
     @property
     def build(self) -> str:
         """The fingerprint of every file the build reads, the package files among them."""
         read = [path for folder in (self._folder, *self._imports) for path in self._files_in(folder)]
-        return _fingerprint_of(self._folder, read)
+        return self._fingerprint_of(read)
 
     def _files_in(self, folder: Path) -> list[Path]:
         found = []
@@ -98,14 +98,13 @@ class AppSources:
             found.extend(Path(parent) / name for name in files)
         return found
 
-
-def _fingerprint_of(folder: Path, paths: list[Path]) -> str:
-    """A hash over each file's place and contents, in a fixed order; a file not there counts as absent."""
-    digest = hashlib.sha256()
-    for path in sorted(path for path in paths if path.is_file()):
-        digest.update(os.path.relpath(path, folder).replace(os.sep, "/").encode())
-        digest.update(hashlib.sha256(path.read_bytes()).digest())
-    return digest.hexdigest()
+    def _fingerprint_of(self, paths: list[Path]) -> str:
+        """A hash over each file's place and contents, in a fixed order; a file not there counts as absent."""
+        digest = hashlib.sha256()
+        for path in sorted(path for path in paths if path.is_file()):
+            digest.update(os.path.relpath(path, self._folder).replace(os.sep, "/").encode())
+            digest.update(hashlib.sha256(path.read_bytes()).digest())
+        return digest.hexdigest()
 
 
 class PortProbe:
@@ -176,7 +175,7 @@ class AppServer:
         self._wait_until(lambda: self.port is None, f"it still answers on port {port} after it was stopped")
         return True
 
-    def _wait_until(self, done, reason: str) -> None:
+    def _wait_until(self, done: Callable[[], bool], reason: str) -> None:
         deadline = time.monotonic() + RESTART_SECONDS
         while not done():
             if time.monotonic() > deadline:
@@ -190,15 +189,6 @@ class AppServerNotRestarted(Exception):
     def __init__(self, server: AppServer, reason: str) -> None:
         super().__init__(f"{' '.join(server.command)} was not restarted: {reason}. Stop it and run that command in {server.folder}.")
         self.server = server
-
-
-def _stop_process(process: int) -> None:
-    """Stop the process, and on Windows the ones it started. Elsewhere only the process itself: a server a chat started
-    shares the chat's process group, so stopping the group would stop the chat too."""
-    if sys.platform == "win32":
-        subprocess.run(["taskkill", "/PID", str(process), "/T", "/F"], capture_output=True)
-        return
-    os.kill(process, signal.SIGTERM)
 
 
 class NpmRun:
@@ -240,10 +230,18 @@ class Npm:
         try:
             stdout, stderr = process.communicate(timeout=self.seconds)
         except subprocess.TimeoutExpired as slow:
-            _stop_process(process.pid)
+            self._stop_process(process.pid)
             process.communicate()
             raise NpmTooSlow(self.seconds) from slow
         return NpmRun(process.returncode, stdout, stderr)
+
+    def _stop_process(self, process: int) -> None:
+        """Stop the process, and on Windows the ones it started. Elsewhere only the process itself: a server a chat
+        started shares the chat's process group, so stopping the group would stop the chat too."""
+        if sys.platform == "win32":
+            subprocess.run(["taskkill", "/PID", str(process), "/T", "/F"], capture_output=True)
+            return
+        os.kill(process, signal.SIGTERM)
 
 
 @identity("label")
@@ -412,15 +410,14 @@ class App:
         except NpmTooSlow as slow:
             raise AppNotStarted(self, f"npm {' '.join(arguments)} {slow}") from slow
         if ran.code != 0:
-            raise AppNotStarted(self, _reason_of(ran.stderr or ran.stdout) or f"npm {' '.join(arguments)} exited with {ran.code}")
+            raise AppNotStarted(self, self._reason_of(ran.stderr or ran.stdout) or f"npm {' '.join(arguments)} exited with {ran.code}")
 
-
-def _reason_of(output: str) -> str:
-    """The lines of a failed step's output that say why: the first error lines npm and node print, such as
-    ``npm error code ENOENT``, else its last lines."""
-    lines = output.strip().splitlines()
-    errors = [line for line in lines if "err" in line.lower()]
-    return "\n".join(errors[:REASON_LINES] if errors else lines[-REASON_LINES:])
+    def _reason_of(self, output: str) -> str:
+        """The lines of a failed step's output that say why: the first error lines npm and node print, such as
+        ``npm error code ENOENT``, else its last lines."""
+        lines = output.strip().splitlines()
+        errors = [line for line in lines if "err" in line.lower()]
+        return "\n".join(errors[:REASON_LINES] if errors else lines[-REASON_LINES:])
 
 
 # harness/graph sits below this module and imports nothing of it, so the Graph app is made and registered here, from

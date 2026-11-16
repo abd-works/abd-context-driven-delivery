@@ -122,11 +122,6 @@ class Report:
 
 
 
-def _changed_at(path: Path) -> int:
-    """When path was last written, in nanoseconds; none while it is not there."""
-    return path.stat().st_mtime_ns if path.exists() else 0
-
-
 class ReportFile:
     """A validation report of one fidelity, saved in a session folder, with the graph the validation checked saved
     beside it. It knows which of its practice's rules it answers for."""
@@ -161,7 +156,7 @@ class ReportFile:
         """What changes whenever what this report counts can change: the report itself, which the agent's judgment is
         added to after Validate saves it, the graph saved beside it, and the session's reports folder, which a newer
         report of an earlier fidelity joins and so takes over that fidelity's rules."""
-        stamps = [_changed_at(path) for path in (self._file, self._graph, self._file.parent)]
+        stamps = [self._changed_at(path) for path in (self._file, self._graph, self._file.parent)]
         return ":".join([self._file.name, *map(str, stamps)])
 
     @property
@@ -289,6 +284,10 @@ class ReportFile:
         root = self._repo.root
         target = (root / location).resolve()
         return target if root in target.parents else root
+
+    def _changed_at(self, path: Path) -> int:
+        """When path was last written, in nanoseconds; none while it is not there."""
+        return path.stat().st_mtime_ns if path.exists() else 0
 
 
 class Judgment:

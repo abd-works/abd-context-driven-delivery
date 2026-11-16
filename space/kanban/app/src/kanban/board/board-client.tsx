@@ -124,10 +124,6 @@ export class BoardClient extends BoardClientGenerated {
     return this.stages.find(stage => stage.name === name)
   }
 
-  select(address: string): void {
-    this.page.store.change({ selected: address })
-  }
-
   // A ticket moved back into the Backlog leaves the columns and comes back as the backlog item that, Python says, holds it.
   returnsSince(before: BoardClient): string[] {
     const names = new Set(this.tickets.map(ticket => ticket.name))

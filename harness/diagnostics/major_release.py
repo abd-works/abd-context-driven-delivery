@@ -18,6 +18,8 @@ COMPLETE_SESSIONS = ".sessions/_complete"
 _VERSION_LINE = re.compile(r'^version\s*=\s*"([^"]*)"', re.MULTILINE)
 # The release tiers, in the order /release runs them.
 RELEASE_TIERS = (TestTier.E2E, TestTier.HEAVY)
+# How much of a commit hash release notes show: enough to find the commit, short enough to read.
+SHORT_COMMIT_CHARS = 12
 
 
 class ReleaseOnRed(RuntimeError):
@@ -59,7 +61,7 @@ class ReleaseNotes:
 
     def text(self, version: str) -> str:
         since = self.previous_release
-        lines = [f"# CDD {version}", "", f"Since {since[:12] if since else 'the first commit'}."]
+        lines = [f"# CDD {version}", "", f"Since {since[:SHORT_COMMIT_CHARS] if since else 'the first commit'}."]
         lines += ["", "## Completed stories", ""] + ([f"- {name}" for name in self.completed_stories] or ["- none"])
         lines += ["", "## Commits", ""] + ([f"- {subject}" for subject in self.commits] or ["- none"])
         return "\n".join(lines) + "\n"
@@ -73,10 +75,10 @@ class MajorRelease:
     """The next major release of the checkout at project: previewed until it is published, which writes the version,
     commits and pushes it, tags it, and creates the GitHub release."""
 
-    def __init__(self, project: Path | str, git: Git, gh: GitHubCli, test_runs: TestRunRecord) -> None:
+    def __init__(self, project: Path | str, git: Git, github_cli: GitHubCli, test_runs: TestRunRecord) -> None:
         self._project = Path(project)
         self._git = git
-        self._gh = gh
+        self._github_cli = github_cli
         self._test_runs = test_runs
         self._notes = ReleaseNotes(git)
         self.url = ""
@@ -86,18 +88,21 @@ class MajorRelease:
     def check_green(self) -> MajorRelease:
         """Refuse with ReleaseOnRed unless the latest e2e and heavy runs passed on HEAD."""
         head = self._git.run("rev-parse", "HEAD")
-        problems = []
-        for tier in RELEASE_TIERS:
-            run = self._test_runs.latest(tier)
-            if run is None:
-                problems.append(f"{tier.value} has not run")
-            elif run.outcome is not RunOutcome.PASSED:
-                problems.append(f"{tier.value}'s latest run is {run.outcome.value}")
-            elif run.commit != head:
-                problems.append(f"{tier.value} last passed on {run.commit[:9]}, not on HEAD {head[:9]}")
+        problems = [problem for problem in (self._problem_with(tier, head) for tier in RELEASE_TIERS) if problem]
         if problems:
             raise ReleaseOnRed(problems)
         return self
+
+    def _problem_with(self, tier: TestTier, head: str) -> str:
+        """Why the tier's latest run does not allow a release on head; empty when it passed on head."""
+        run = self._test_runs.latest(tier)
+        if run is None:
+            return f"{tier.value} has not run"
+        if run.outcome is not RunOutcome.PASSED:
+            return f"{tier.value}'s latest run is {run.outcome.value}"
+        if run.commit != head:
+            return f"{tier.value} last passed on {run.commit[:9]}, not on HEAD {head[:9]}"
+        return ""
 
     def publish(self) -> MajorRelease:
         """Write the version, commit pyproject.toml alone, push, tag v<version>, push the tag, and create the release."""
@@ -113,7 +118,7 @@ class MajorRelease:
         with tempfile.TemporaryDirectory(prefix="cdd-release-") as folder:
             notes_file = Path(folder) / "notes.md"
             notes_file.write_text(notes, encoding="utf-8")
-            answer = self._gh.run("release", "create", tag, "--title", f"CDD {tag}", "--notes-file", str(notes_file), "--verify-tag")
+            answer = self._github_cli.run("release", "create", tag, "--title", f"CDD {tag}", "--notes-file", str(notes_file), "--verify-tag")
         self.url = answer.strip().splitlines()[-1] if answer.strip() else ""
         self._published_notes = notes
         self.is_published = True

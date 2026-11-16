@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
 import type { ToMainJson } from '../../types'
-import { callTool, refreshChatBar } from '../chat-bar/chat-bar-client'
+import { callTool, currentChatBar, refreshChatBar } from '../chat-bar/chat-bar-client'
 import { showFailure } from '../error-display/failure-client'
 
 // Where a push lands: the session's own branch, or merged into main on origin.
@@ -16,7 +16,10 @@ const toMain = atom({ plugin: 'cdd-board', key: 'toMain' } as const, { isAsking:
 
 // Mirrors the Python Repo for the chat bar's two pushes: whether Push to main's dialog is open, and how the last push went.
 export class RepoClient {
-  constructor(private readonly json: ToMainJson) {}
+  constructor(
+    private readonly json: ToMainJson,
+    readonly session: string,
+  ) {}
 
   get isAsking(): boolean {
     return this.json.isAsking
@@ -31,9 +34,11 @@ export class RepoClient {
   }
 }
 
-// Atom toMain, declared in pane/types/index.d.ts and kept in this file.
+// Atom toMain, declared in pane/types/index.d.ts and kept in this file. The session the pushes carry is named as the
+// chat bar names it: its title, else its ticket's name.
 export async function currentRepo($: EngineInterface): Promise<RepoClient> {
-  return new RepoClient(await read($, toMain))
+  const chatBar = await currentChatBar($)
+  return new RepoClient(await read($, toMain), chatBar.title || chatBar.sessionName)
 }
 
 export async function askToPush($: EngineInterface): Promise<void> {

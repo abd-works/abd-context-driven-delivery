@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, TypeVar
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
@@ -46,6 +46,8 @@ MARKED_DONE = "done"
 MARKED_IN_PROGRESS = "in-progress"
 # The session.json fields that record a ticket's stage and its mark there.
 _STAGE_FIELD = "stage"
+# What a ticket worked out about itself and keeps until it next writes something.
+Remembered = TypeVar("Remembered")
 _STAGE_MARK_FIELD = "stage_mark"
 # The actions that check or convert a fidelity's output, so they wait until there is some.
 ONCE_THERE_IS_OUTPUT = (VALIDATE, RENDER)
@@ -123,7 +125,7 @@ class Ticket(Card):
         # asks each many times, for every column, mark, and drop target. Forgotten whenever the ticket writes anything.
         self._remembered: dict[str, object] = {}
 
-    def _remember(self, name: str, read):
+    def _remember(self, name: str, read: Callable[[], Remembered]) -> Remembered:
         """What read answers, worked out once until the ticket next writes something (``forget_reads``)."""
         if name not in self._remembered:
             self._remembered[name] = read()

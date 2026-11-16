@@ -15,7 +15,7 @@ from harness.agent_tools.agent_tools import noSessionLog, subAgent, tool_subject
 from harness.agent_tools.tool_call import ToolCall
 from harness.chat.chat import Chat
 from harness.graph.explorer import ExplorerEntry, NodeSource
-from harness.graph.graph import Graph
+from harness.graph.graph import FilterRequest, Graph
 from harness.graph.saved_graph import GRAPH_FILE_NAME, SavedGraph
 from harness.guidance.stages import STAGES
 from harness.graph.pattern_overlays import PatternOverlays
@@ -27,7 +27,7 @@ from harness.installation.json_file import HeldJsonFile, JsonFile
 from harness.mcp.mcp_annotations import long_call, mcp
 from harness.installation.context_config import CONTEXT_FOLDER, ContextConfig
 from space.repo.repo import Repo
-from space.session.answer_reads import AnswerReads, HeldForAnswer
+from space.session.answer_reads import ANSWER_READS, HeldForAnswer
 from space.session.chat_injections import ChatInjections
 from space.session.decision_records import FORMAT_FILE, DecisionRecords
 from space.session.file_manager import FileEntry, FileText
@@ -59,12 +59,6 @@ _PULLED_OUT_FIELD = "pulled_out"
 _TAGS_FIELD = "tags"
 # How much of a saved value a save's commit message shows: a workpath or a list can be long.
 _SHOWN_CHARACTERS = 40
-
-
-def _shown(value: object) -> str:
-    """A saved value as a commit message names it, cut short."""
-    text = str(value)
-    return text if len(text) <= _SHOWN_CHARACTERS else f"{text[:_SHOWN_CHARACTERS]}…"
 
 
 # How long a page's waiting read of the guidance selection waits for a change before answering it unchanged, and how
@@ -263,18 +257,21 @@ class Session:
         with self._parts_lock:
             working = frozenset(key for key, output in self._own_outputs.items() if output.enabled)
             if self._graph is None or working != self._graph_practices:
-                # Only the practices the session works on: a practice turned off for it is never read into its graph.
-                graph = Graph(self._own_outputs[key].guidance for key in self._own_outputs if key in working)
+                self._graph = self._graph_of(working)
                 self._graph_practices = working
-                # A session uses a graph created for it and saved in its own folder; a graph saved anywhere else, such
-                # as the graph tool's, is not the session's.
-                graph.kept_in = self.session_path
-                graph.open_saved(self.work_root)
-                if self.overlays:
-                    graph.overlays = self.overlays
-                self._graph = graph
                 self._graph_opened_at = time.time()
             return self._graph
+
+    def _graph_of(self, working: frozenset[str]) -> Graph:
+        """A graph of only the practices the session works on: a practice turned off for it is never read into it. A
+        session uses a graph created for it and saved in its own folder; a graph saved anywhere else, such as the graph
+        tool's, is not the session's."""
+        graph = Graph(self._own_outputs[key].guidance for key in self._own_outputs if key in working)
+        graph.kept_in = self.session_path
+        graph.open_saved(self.work_root)
+        if self.overlays:
+            graph.overlays = self.overlays
+        return graph
 
     def file_alone(self, path: Path) -> SavedGraph:
         """The file at path read on its own, as it is now, with only its own rules run: no other file is read or linked
@@ -476,8 +473,8 @@ class Session:
             file.write({**file.read(), **values})
         finally:
             self._fields.drop()
-            AnswerReads.begin()
-        self._saved(", ".join(f"{name} {_shown(value)}" for name, value in values.items()))
+            ANSWER_READS.begin()
+        self._saved(", ".join(f"{name} {self._shown(value)}" for name, value in values.items()))
 
     def _saved(self, change: str) -> None:
         """Queue the save on main of change to this session, such as ``stage Specification``: every change to a session
@@ -660,17 +657,25 @@ class Session:
         """Select exactly these stages (such as discovery), practices (such as stories), and format groups (such as markdown), each list in place of what was selected, a list left out unchanged; save it in session.json, raise the version once, and return the selection. A practice selected is one the session works on; a format group selected is chosen for every selected fidelity offering it."""
         with self._guidance_batch():
             if practices is not None:
-                for output in self.own_practices.values():
-                    if output.enabled != (output.name in practices):
-                        output.enable(output.name in practices)
+                self._select_practices(practices)
             if stages is not None:
                 self._save_guidance(stages=[stage for stage in STAGES.names if stage in stages])
             if formats is not None:
-                for group in GuidanceSelection(self).formats:
-                    if group.is_selected != (group.label in formats):
-                        group.select(group.label in formats)
+                self._select_format_groups(formats)
         self.guidance_changed()
         return GuidanceSelection(self)
+
+    def _select_practices(self, practices: list[str]) -> None:
+        """Turn on exactly the practices named, each changed only when it differs, so an unchanged one writes nothing."""
+        for output in self.own_practices.values():
+            if output.enabled != (output.name in practices):
+                output.enable(output.name in practices)
+
+    def _select_format_groups(self, formats: list[str]) -> None:
+        """Choose exactly the format groups named for every selected fidelity offering them."""
+        for group in GuidanceSelection(self).formats:
+            if group.is_selected != (group.label in formats):
+                group.select(group.label in formats)
 
     @long_call
     @mcp
@@ -756,7 +761,7 @@ class Session:
         """Return every class, operation, and property this session's graph holds, each with its text and the class it belongs to, so a viewer opens a call in place even when it reaches another file. Read after graph_trees, which reads the files the page lists."""
         return self.graph.explorer.source_members()
 
-    def _collect_spans(self, node_id: str, request: dict, spans: dict[Path, tuple[int, int]], seen: set[str]) -> None:
+    def _collect_spans(self, node_id: str, request: FilterRequest, spans: dict[Path, tuple[int, int]], seen: set[str]) -> None:
         """Widen spans with the lines node_id covers in its file, or, read from no file's lines, with those of the nodes below it."""
         if node_id in seen:
             return
@@ -934,3 +939,8 @@ class Session:
         """Step 4 - When a qualifying decision crystallises, offer a CDR briefly (title + one-line gist). If the user accepts, write the record to a file and call write_cdr immediately with a kebab slug and paths set to that file. Do not pass the record body. Do not batch; do not wait until the end."""
         """Step 5 - Keep CDRs short. Prefer a single paragraph. Add Status / Considered Options / Consequences only when they add genuine value."""
         return "CDR session active."
+
+    def _shown(self, saved: object) -> str:
+        """A saved value as a commit message names it, cut short."""
+        text = str(saved)
+        return text if len(text) <= _SHOWN_CHARACTERS else f"{text[:_SHOWN_CHARACTERS]}…"

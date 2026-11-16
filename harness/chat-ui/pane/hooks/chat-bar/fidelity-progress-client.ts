@@ -6,10 +6,8 @@ import type { BoardPracticeData } from '@cdd/space/kanban/board'
 import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
-import { promptCommand } from '../shared/chat-command'
 import { post } from '../board-chat/board'
 import { clearChosenAction } from './action-picker-client'
-
 
 // The canvas's progress looks (design/StageStrip.dc.html), one for each state FidelityProgress.state sends; each
 // practice's colour comes with the board.
@@ -131,6 +129,11 @@ export class PracticeDotClient {
     return this.practice
   }
 
+  // The session.json of the ticket's session, which a press on the dot turns the practice on or off in.
+  get sessionFile(): string {
+    return this.least.sessionFile
+  }
+
   get least(): FidelityProgressClient {
     const rank = (fidelity: FidelityProgressClient) => STATES_BY_PROGRESS.indexOf(fidelity.state)
     return [...this.fidelities].sort((one, other) => rank(one) - rank(other))[0]!
@@ -153,16 +156,12 @@ export class PracticeDotClient {
 // How faint a practice turned off draws its dot.
 const OFF_SHADE = '30'
 
-// The action's command goes in the prompt box for the person to send. Generate renders the earlier fidelity first
-// itself when that fidelity has no file in the format, so every action is one command.
-export async function runAction($: EngineInterface, fidelity: FidelityProgressClient, action: string): Promise<void> {
-  await promptCommand($, fidelity.commandFor(action))
-}
-
 // One command for several fidelities, as the actions take a list of slugs: the first one's command with every slug.
-export async function runActionOn($: EngineInterface, fidelities: FidelityProgressClient[], action: string, suffix = ''): Promise<void> {
+// Generate renders the earlier fidelity first itself when that fidelity has no file in the format, so every action is
+// one command; none without a fidelity.
+export function commandOn(fidelities: FidelityProgressClient[], action: string): string {
   const [first, ...rest] = fidelities
-  if (!first) return
+  if (!first) return ''
   const command = first.commandFor(action)
-  await promptCommand($, (rest.length ? command.replace(` ${first.slug} `, ` ${fidelities.map(fidelity => fidelity.slug).join(' ')} `) : command) + suffix)
+  return rest.length ? command.replace(` ${first.slug} `, ` ${fidelities.map(fidelity => fidelity.slug).join(' ')} `) : command
 }

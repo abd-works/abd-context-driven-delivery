@@ -12,7 +12,9 @@ Appends to ``.sessions/{name}/logs/prompt-log.txt`` in the project being worked 
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
+from typing import TypedDict
 
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.hooks.hook_server import HookPayload
@@ -57,6 +59,13 @@ class LoggedFile:
         if "/references/" in str(Path(self.path)).replace("\\", "/").lower():
             return "reference"
         return installed or "file"
+
+
+class PromptAttachment(TypedDict, total=False):
+    """A file or rule the IDE attached to a prompt, as the hook event names it."""
+
+    file_path: str
+    type: str
 
 
 class PromptLogEntry:
@@ -104,7 +113,7 @@ class PromptLogEntry:
             self._lines.append(f"path [{file.kind}]: {file.path}")
         return self
 
-    def with_fields(self, fields, names: tuple[str, ...]) -> PromptLogEntry:
+    def with_fields(self, fields: Mapping[str, object], names: tuple[str, ...]) -> PromptLogEntry:
         """Each of names that fields gives a value, with a preview of that value."""
         self._lines += [f"{name}: {self._preview(str(fields.get(name)))}" for name in names if fields.get(name)]
         return self
@@ -116,12 +125,12 @@ class PromptLogEntry:
         model = self._payload.get("model", "")
         return f"\n{'=' * _RULE_WIDTH}\n{stamp}  {event}  conv={chat}  gen={generation}  model={model}\n{'-' * _RULE_WIDTH}\n"
 
-    def _attachment_line(self, attachment: dict) -> str:
+    def _attachment_line(self, attachment: PromptAttachment) -> str:
         file = LoggedFile(attachment.get("file_path", ""))
         kind = "rule" if attachment.get("type", "file") == "rule" else file.kind
         return f"  [{kind}] {file.path}"
 
-    def _preview(self, text) -> str:
+    def _preview(self, text: object) -> str:
         if text is None:
             return ""
         if not isinstance(text, str):

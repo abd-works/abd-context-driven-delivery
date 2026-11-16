@@ -129,6 +129,10 @@ class Worktrees:
             opened = self._listed(self._repo.root, branch.name)
             opened.fetch_pull()
             return opened
+        return self._added_from_origin(branch)
+
+    def _added_from_origin(self, branch: Branch) -> Worktree:
+        """A new sibling worktree for branch, up to date with origin, or from local refs when origin cannot be reached."""
         try:
             # Fetched first so a branch pushed from elsewhere starts from origin's copy.
             self._repo.fetch()

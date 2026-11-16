@@ -7,14 +7,7 @@ from pathlib import Path
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the one cdd MCP server over HTTP.")
-    parser.add_argument("--port", type=int, default=None, help="Port to serve on; CDD_SERVER_PORT, else 47800.")
-    parser.add_argument(
-        "--toolsets",
-        default=os.environ.get("MCP_TOOLSET_REFS", ""),
-        help="Comma-separated module:Class toolset references; every annotated toolset in the checkout when empty.",
-    )
-    arguments = parser.parse_args()
+    arguments = _arguments()
     from harness.installation.repository_toolsets import RepositoryToolsets
     from harness.mcp.cdd_home import CddHome
     from harness.mcp.mcp_daemon import McpDaemon
@@ -25,13 +18,24 @@ def main() -> None:
     toolsets = RepositoryToolsets(source)
     toolsets.ensure_import_path()
     daemon = McpDaemon(CddHome(), port=arguments.port)
-    listener = daemon.claim_port()
+    listener = daemon.this_process.claim_port()
     if listener is None:
         return
-    daemon.end_with_owner()
+    daemon.this_process.end_with_owner()
     refs = tuple(ref.strip() for ref in arguments.toolsets.split(",") if ref.strip())
     host = McpHost.from_refs(refs, repo=str(source)) if refs else McpHost.from_repo(source)
     host.serve(daemon, listener)
+
+
+def _arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run the one cdd MCP server over HTTP.")
+    parser.add_argument("--port", type=int, default=None, help="Port to serve on; CDD_SERVER_PORT, else 47800.")
+    parser.add_argument(
+        "--toolsets",
+        default=os.environ.get("MCP_TOOLSET_REFS", ""),
+        help="Comma-separated module:Class toolset references; every annotated toolset in the checkout when empty.",
+    )
+    return parser.parse_args()
 
 
 if __name__ == "__main__":

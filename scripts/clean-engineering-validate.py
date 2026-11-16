@@ -16,6 +16,22 @@ if str(_REPO) not in sys.path:
 
 
 def main() -> int:
+    args = _arguments()
+    from harness.installation.repository_toolsets import RepositoryToolsets
+
+    RepositoryToolsets(_REPO).ensure_import_path()
+    _use_workpath(args.workpath)
+    if args.sync_file:
+        print(_parsed_classes(Path(args.sync_file).resolve()))
+
+    from cdd_guidance.actions.validate.validate import Validate
+
+    report = Validate().validate(args.guidance)
+    print(report)
+    return 1 if "!" in report.splitlines()[0:1] else 0
+
+
+def _arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Validate artifacts under a workpath using clean-engineering (or other) guidance.",
     )
@@ -34,37 +50,24 @@ def main() -> int:
         default=None,
         help="Optional .py file to parse with PythonCleanEngineeringModel before validate.",
     )
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    from harness.installation.repository_toolsets import RepositoryToolsets
 
-    RepositoryToolsets(_REPO).ensure_import_path()
-    work = Path(
-        args.workpath
-        or os.environ.get("CDD_PROJECT")
-        or (_REPO / "harness" / "agent_tools")
-    ).resolve()
+def _use_workpath(workpath: str | None) -> None:
+    """Point the validate action at the module folder to judge, the way the MCP host names the project."""
+    work = Path(workpath or os.environ.get("CDD_PROJECT") or (_REPO / "harness" / "agent_tools")).resolve()
     os.environ.setdefault("CDD_REPO", str(_REPO))
     os.environ["CDD_PROJECT"] = str(work)
 
-    if args.sync_file:
-        target = Path(args.sync_file).resolve()
-        from cdd_guidance.practices.clean_engineering.model.python.python_class_model import (
-            PythonCleanEngineeringModel,
-        )
 
-        text = target.read_text(encoding="utf-8")
-        model = PythonCleanEngineeringModel().parse(text)
-        classes = sum(len(module.classes) for module in model.modules)
-        print(f"sync {target}: {len(model.modules)} module(s), {classes} class(es)")
+def _parsed_classes(target: Path) -> str:
+    from cdd_guidance.practices.clean_engineering.model.python.python_class_model import (
+        PythonCleanEngineeringModel,
+    )
 
-    from cdd_guidance.actions.validate.validate import Validate
-
-    report = Validate().validate(args.guidance)
-    print(report)
-    if "!" in report.splitlines()[0:1]:
-        return 1
-    return 0
+    model = PythonCleanEngineeringModel().parse(target.read_text(encoding="utf-8"))
+    classes = sum(len(module.classes) for module in model.modules)
+    return f"sync {target}: {len(model.modules)} module(s), {classes} class(es)"
 
 
 if __name__ == "__main__":

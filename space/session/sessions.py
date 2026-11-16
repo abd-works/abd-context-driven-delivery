@@ -19,7 +19,7 @@ from harness.annotations.name import Name
 from space.repo.repo import Repo
 from space.session.file_manager import FileManager
 from space.session.session_saves import SERVED_SAVES, SessionSaves
-from space.session.answer_reads import AnswerReads
+from space.session.answer_reads import ANSWER_READS
 from space.session.session import COMPLETE_FOLDER, MAIN_SESSION_NAME, SESSION_FILE, Session, SessionNotFoundError
 from space.work_state import SESSIONS_FOLDER, WorkState
 
@@ -141,13 +141,13 @@ class Sessions:
     def answer(self) -> int | None:
         """The answer these sessions are giving, which their sessions hold what they read from their files for
         (*AnswerReads*); none when the process serves no calls from them, so their sessions read on every ask."""
-        return AnswerReads.current() if self._serves_answers else None
+        return ANSWER_READS.current if self._serves_answers else None
 
     def serve_answer(self) -> None:
         """Begin an answer from these sessions: what their sessions read from their files is read again, so a change
         another process wrote since the last answer is seen."""
         self._serves_answers = True
-        AnswerReads.begin()
+        ANSWER_READS.begin()
 
     @cached_property
     def board_practices(self) -> BoardPractices:
@@ -431,8 +431,7 @@ class Sessions:
         opened = self.open(session, chat)
         return self._outside_worktree_note(session, call) + self._default_roots_note(opened) + opened.log.instructions()
 
-    @staticmethod
-    def _default_roots_note(session: Session) -> str:
+    def _default_roots_note(self, session: Session) -> str:
         """What a chat opening session is told about the practices it works on whose roots nobody set, so it points each
         at the folder that already holds its artifacts; nothing for main, or when every root was set."""
         if session.name == MAIN_SESSION_NAME:
@@ -444,8 +443,7 @@ class Sessions:
         ]
         return _DEFAULT_ROOTS_NOTE.format(roots=", ".join(defaults)) if defaults else ""
 
-    @staticmethod
-    def _worktree_ticket_note(ticket: Session, asked: str) -> str:
+    def _worktree_ticket_note(self, ticket: Session, asked: str) -> str:
         """What a chat in ticket's worktree that asked for another session is told; nothing when it asked for none or
         for ticket."""
         cleaned = Name(asked).title_slug if asked else ""

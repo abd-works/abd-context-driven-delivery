@@ -8,18 +8,8 @@ const subjectOf = (help: HelpData): PracticeGuidanceData | FidelityGuidanceData 
 
 import { useBoard } from '../shared/board-context'
 import type { HelpPanel } from '../shared/board-store'
-import { MarkdownBlockView } from '../shared/markdown-view'
+import { MarkdownView } from '../shared/markdown-view'
 import { helpBlocksOf } from './help-text'
-
-function HelpTextView({ markdown, className }: { markdown: string; className: string }) {
-  return (
-    <>
-      {helpBlocksOf(markdown).map((block, index) => (
-        <MarkdownBlockView key={index} block={block} className={className} />
-      ))}
-    </>
-  )
-}
 
 export function HelpPanelHeadView({ panel: { help } }: { panel: HelpPanel }) {
   const { page } = useBoard()
@@ -70,11 +60,11 @@ export function HelpPanelBodyView({ panel: { help } }: { panel: HelpPanel }) {
   return (
     <div className="panel-body help-body">
       <div className="help-group">
-        <HelpTextView markdown={subject.overview} className="help-overview" />
+        <MarkdownView blocks={helpBlocksOf(subject.overview)} className="help-overview" />
       </div>
       {subject.guidance.trim() ? (
         <HelpGroupView heading="GUIDANCE">
-          <HelpTextView markdown={subject.guidance} className="help-guidance" />
+          <MarkdownView blocks={helpBlocksOf(subject.guidance)} className="help-guidance" />
         </HelpGroupView>
       ) : null}
       {subject.rules.length ? <HelpRulesView help={help} /> : null}

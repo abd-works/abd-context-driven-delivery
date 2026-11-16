@@ -10,6 +10,14 @@ _PREVIEW_CHARS = 180
 _FAILURE_CHARS = 400
 
 
+def raised_by_a_bug(failure: Exception) -> bool:
+    """True when a probed call failed with a built-in programming error, such as a TypeError or an AttributeError, which
+    is a bug in the tool or the probe and must raise. A failure the program declares, such as a refusal a module
+    defines, or the computer refusing a file, a process, or a connection (OSError, a timeout among them), is what the
+    probe is there to find, so it becomes the call's red outcome."""
+    return type(failure).__module__ == "builtins" and not isinstance(failure, OSError)
+
+
 class ProbeOutcome:
     """What probing one MCP operation found: green with a preview of its answer, yellow when the probe skipped it, red
     with what failed."""
@@ -24,7 +32,7 @@ class ProbeOutcome:
         self.details = details
 
     @classmethod
-    def from_answer(cls, mcp: str, answer: Any) -> ProbeOutcome:
+    def from_answer(cls, mcp: str, answer: object) -> ProbeOutcome:
         """Green with a preview of what the operation answered; red when it answered nothing."""
         text = answer.strip() if isinstance(answer, str) else "" if answer is None else json.dumps(answer, default=str)
         if not text:
@@ -32,7 +40,7 @@ class ProbeOutcome:
         return cls(mcp, cls.GREEN, chars=len(text), preview=text[:_PREVIEW_CHARS])
 
     @classmethod
-    def from_failure(cls, mcp: str, failure: BaseException) -> ProbeOutcome:
+    def from_failure(cls, mcp: str, failure: Exception) -> ProbeOutcome:
         """Red, naming the failure the call raised."""
         return cls(mcp, cls.RED, failure=f"{type(failure).__name__}: {failure}"[:_FAILURE_CHARS])
 

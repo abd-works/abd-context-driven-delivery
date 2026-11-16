@@ -11,8 +11,9 @@ import re
 import socket
 import sys
 import threading
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 from typing import TYPE_CHECKING
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
     import mcp.types as types
     from mcp.server.models import InitializationOptions
 
-from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetReference
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetConfiguration, ToolsetReference
 from harness.agent_tools.chat_pointer import ChatPointer
 from harness.process.claude_chat_process import ClaudeChatProcess, is_desktop_spare
 from harness.agent_tools.tool_call import ToolCall
@@ -154,10 +155,10 @@ class McpInstallation(ServerInstallation):
         self._ide_config(dest).write(manifest)
         self.track_write(dest)
 
-    def allow_cdd_tools(self, settings: Path) -> None:
+    def allow_cdd_tools(self, settings_path: Path) -> None:
         """Let Claude Code call every ``cdd`` tool without a prompt. The user's settings file
         holds their own permissions too, so add the one entry and never track the file for clean."""
-        settings_file = self._ide_config(settings)
+        settings_file = self._ide_config(settings_path)
         try:
             data = settings_file.read()
         except McpConfigUnreadable as unreadable:
@@ -181,8 +182,8 @@ class McpInstallation(ServerInstallation):
         if self._user_level:
             self._drop_cdd_entry(self.layout.user_mcp_config, "user's", remove_when_empty=False)
 
-    def _drop_cdd_entry(self, config: Path, whose: str, *, remove_when_empty: bool) -> None:
-        config_file = self._ide_config(config)
+    def _drop_cdd_entry(self, config_path: Path, whose: str, *, remove_when_empty: bool) -> None:
+        config_file = self._ide_config(config_path)
         try:
             data = config_file.read()
         except McpConfigUnreadable as unreadable:
@@ -193,7 +194,7 @@ class McpInstallation(ServerInstallation):
             return
         del servers["cdd"]
         if remove_when_empty and not servers and len(data) == 1:
-            config.unlink()
+            config_path.unlink()
             return
         config_file.write(data)
 
@@ -305,7 +306,7 @@ class McpInstallation(ServerInstallation):
 
     def serves_this_process(self) -> bool:
         """True when this process is the cdd server, as it is when an install runs as one of its tool calls."""
-        return self.daemon.runs_this_process()
+        return self.daemon.this_process.is_this_process()
 
     @property
     def _checkout(self) -> Path:
@@ -372,19 +373,19 @@ class McpServer:
         self._tools.clear()
         self._prompts.clear()
         self.skipped.clear()
-        for item in self._toolsets:
-            for toolset in self._loaded(item):
+        for configured in self._toolsets:
+            for toolset in self._loaded(configured):
                 self._enroll_with_children(toolset)
         self._started = True
 
-    def _loaded(self, item: Any) -> list[Any]:
+    def _loaded(self, configured: ToolsetConfiguration) -> list[AgentToolSet]:
         try:
-            return AgentToolSet.from_items([item])
+            return AgentToolSet.from_items([configured])
         except AgentToolSet.LOAD_FAILURES as error:
-            self.skipped.skip(str(item), error)
+            self.skipped.skip(str(configured), error)
             return []
 
-    def _enroll_with_children(self, toolset: Any) -> None:
+    def _enroll_with_children(self, toolset: AgentToolSet) -> None:
         try:
             for each in (toolset, *toolset.child_toolsets()):
                 self._enroll_toolset(each)
@@ -419,7 +420,7 @@ class McpServer:
             del sys.modules[name]
         importlib.invalidate_caches()
 
-    def _is_checkout_module(self, module: Any) -> bool:
+    def _is_checkout_module(self, module: ModuleType) -> bool:
         """Whether module was imported from this checkout. A package folder with no ``__init__.py`` has no file, only
         its folders, and kept while the packages around it are forgotten it looks for a parent that is gone."""
         folders = list(getattr(module, "__path__", None) or [])
@@ -431,7 +432,7 @@ class McpServer:
         path = Path(file).resolve()
         return self.repo in path.parents and self.venv not in path.parents
 
-    def _enroll_toolset(self, toolset: Any) -> None:
+    def _enroll_toolset(self, toolset: AgentToolSet) -> None:
         if not toolset.is_served_on_mcp:
             return
         for tool in toolset.tools_for(InstallDestination.MCP):
@@ -516,31 +517,6 @@ class ProjectIsClaudeSettings(Exception):
         self.folder = folder
 
 
-def _mcp_types() -> Any:
-    """The MCP SDK's types, loaded the first time the host speaks the protocol: the SDK takes seconds to import, and
-    making or asking a server about its toolsets never needs it."""
-    import mcp.types
-
-    return mcp.types
-
-
-def _cdd_protocol_server(name: str) -> Any:
-    """The MCP protocol server, telling every client that a restart can change the tool list."""
-    from mcp.server import NotificationOptions, Server
-
-    class _CddProtocolServer(Server):
-        def create_initialization_options(
-            self,
-            notification_options: NotificationOptions | None = None,
-            experimental_capabilities: dict[str, dict[str, Any]] | None = None,
-        ) -> InitializationOptions:
-            return super().create_initialization_options(
-                notification_options or NotificationOptions(tools_changed=True), experimental_capabilities
-            )
-
-    return _CddProtocolServer(name)
-
-
 class McpHost:
     """The cdd server's MCP side: one *McpServer* for each project a chat works on, answering every chat. The server
     on the checkout it serves from answers the tool list, which every project shares, and gives each new project its
@@ -563,7 +539,7 @@ class McpHost:
         """The MCP protocol server answering chats, made with its handlers the first time the host speaks MCP: a call
         dispatched in-process (a probe, a script, a spec) never loads the SDK."""
         if self._protocol_server is None:
-            self._protocol_server = _cdd_protocol_server("cdd")
+            self._protocol_server = self._cdd_protocol_server("cdd")
             self._register_handlers()
         return self._protocol_server
 
@@ -595,8 +571,32 @@ class McpHost:
         with self._servers_lock:
             return sorted(self._servers)
 
+    def _mcp_types(self) -> Any:
+        """The MCP SDK's types, loaded the first time the host speaks the protocol: the SDK takes seconds to import, and
+        making or asking a server about its toolsets never needs it."""
+        import mcp.types
+
+        return mcp.types
+
+
+    def _cdd_protocol_server(self, name: str) -> Any:
+        """The MCP protocol server, telling every client that a restart can change the tool list."""
+        from mcp.server import NotificationOptions, Server
+
+        class _CddProtocolServer(Server):
+            def create_initialization_options(
+                self,
+                notification_options: NotificationOptions | None = None,
+                experimental_capabilities: dict[str, dict[str, Any]] | None = None,
+            ) -> InitializationOptions:
+                return super().create_initialization_options(
+                    notification_options or NotificationOptions(tools_changed=True), experimental_capabilities
+                )
+
+        return _CddProtocolServer(name)
+
     def _register_handlers(self) -> None:
-        types = _mcp_types()
+        types = self._mcp_types()
 
         @self._protocol.list_tools()
         async def handle_list_tools() -> list[types.Tool]:
@@ -613,6 +613,12 @@ class McpHost:
             await anyio.lowlevel.checkpoint()
             return result
 
+        self._register_prompt_handlers()
+
+    def _register_prompt_handlers(self) -> None:
+        """The prompt list is empty: every cdd operation is a tool, so a prompt is answered only by its name."""
+        types = self._mcp_types()
+
         @self._protocol.list_prompts()
         async def handle_list_prompts() -> list[types.Prompt]:
             return []
@@ -627,7 +633,7 @@ class McpHost:
             return types.GetPromptResult(description=prompt.description or None, messages=[message])
 
     def _tool_list(self) -> list[types.Tool]:
-        types = _mcp_types()
+        types = self._mcp_types()
         builtins = [
             types.Tool(
                 name=BUILTIN_PING_TOOL,
@@ -647,7 +653,7 @@ class McpHost:
     async def _answer_chat(self, name: str, arguments: dict[str, object] | None) -> types.CallToolResult:
         """Answer one call a chat sent. A failure goes back as an error result, which the client shows as a failed call
         rather than as the tool's output."""
-        types = _mcp_types()
+        types = self._mcp_types()
         try:
             call = self._call_from_chat(name, arguments)
             value = await self._answer_off_loop(call)
@@ -724,22 +730,26 @@ class McpHost:
         named = headers.get(PROJECT_HEADER)
         if tool in (BUILTIN_PING_TOOL, BUILTIN_RESTART_TOOL):
             return Path(named) if named else None
-        # A desktop spare folder is never the project: it only means the chat has not reached its folder yet.
-        connected_from = Path(named) if self._names_a_project(headers) else None
-        process = self._requesting_process(headers)
-        project = (
-            (process.working_folder if process is not None else None)
-            or self._folder_of_chat(process.session_id if process is not None else None)
-            or self._folder_of_chat(headers.get(CHAT_HEADER))
-            or connected_from
-        )
+        project = self._folder_the_chat_works_in(headers)
         if project is None:
             raise ProjectNotNamed(tool)
         if project.resolve() == self._claude_settings:
             raise ProjectIsClaudeSettings(tool, project)
         return project
 
-    def _requesting_process(self, headers: Any) -> ClaudeChatProcess | None:
+    def _folder_the_chat_works_in(self, headers: Mapping[str, str]) -> Path | None:
+        """The first folder the request's chat is known to work in, in the order ``_requested_project`` gives."""
+        # A desktop spare folder is never the project: it only means the chat has not reached its folder yet.
+        connected_from = Path(headers[PROJECT_HEADER]) if self._names_a_project(headers) else None
+        process = self._requesting_process(headers)
+        return (
+            (process.working_folder if process is not None else None)
+            or self._folder_of_chat(process.session_id if process is not None else None)
+            or self._folder_of_chat(headers.get(CHAT_HEADER))
+            or connected_from
+        )
+
+    def _requesting_process(self, headers: Mapping[str, str]) -> ClaudeChatProcess | None:
         """The Claude Code process the request comes from: the one ``X-CDD-Chat-Process`` names, else, when the request
         names no project either, the one holding the request's connection. Claude Code runs the headers helper once,
         when a chat connects, and the desktop app can connect a chat from its spare folder before it records the
@@ -749,13 +759,13 @@ class McpHost:
             return named
         return ClaudeChatProcess.from_connection(self._request_client_port())
 
-    def _names_a_project(self, headers: Any) -> bool:
+    def _names_a_project(self, headers: Mapping[str, str]) -> bool:
         """Whether ``X-CDD-Project`` names a folder to work in: a desktop spare folder only means the chat has not
         reached its folder yet."""
         named = headers.get(PROJECT_HEADER)
         return bool(named) and not is_desktop_spare(Path(named))
 
-    def _request_headers(self) -> Any:
+    def _request_headers(self) -> Mapping[str, str]:
         """The headers of the request being answered; none for a call made outside a request."""
         request = self._current_request()
         return request.headers if request is not None else {}
@@ -829,9 +839,9 @@ class McpHost:
         if session is not None:
             session.log.by(call.chat).failure(failure, tool=call.tool)
 
-    def _content_blocks(self, value: object) -> list[types.TextContent]:
-        types = _mcp_types()
-        text = value if isinstance(value, str) else json.dumps(data_of(value))
+    def _content_blocks(self, answer: object) -> list[types.TextContent]:
+        types = self._mcp_types()
+        text = answer if isinstance(answer, str) else json.dumps(data_of(answer))
         return [types.TextContent(type="text", text=text)]
 
     def serve(self, daemon: McpDaemon, listener: socket.socket) -> None:
@@ -840,13 +850,13 @@ class McpHost:
 
         from harness.mcp.listening_loop import _ListeningLoop
 
-        daemon.publish(self._checkout_server.repo)
+        daemon.this_process.publish(self._checkout_server.repo)
         self._home = daemon.home
         try:
             server = uvicorn.Server(uvicorn.Config(self.http_app(daemon.port), log_level="warning"))
             asyncio.run(server.serve(sockets=[listener]), loop_factory=_ListeningLoop(server).new_event_loop)
         finally:
-            daemon.withdraw()
+            daemon.this_process.withdraw()
 
     def http_app(self, port: int) -> Any:
         """MCP over Streamable HTTP at ``/mcp`` and a ``/ping`` that says which pid and checkout are serving. Only this
@@ -855,21 +865,23 @@ class McpHost:
         from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
         from mcp.server.transport_security import TransportSecuritySettings
         from starlette.applications import Starlette
-        from starlette.responses import JSONResponse
         from starlette.routing import Route
 
         security = TransportSecuritySettings(allowed_hosts=[f"127.0.0.1:{port}", f"localhost:{port}"], allowed_origins=[])
         # A chat can sit idle for hours, so its session lives until the chat closes it.
         manager = StreamableHTTPSessionManager(app=self._protocol, security_settings=security, session_idle_timeout=None)
 
-        async def ping(_request: Any) -> JSONResponse:
-            return JSONResponse(
-                {"ok": True, "pid": os.getpid(), "source": str(self._checkout_server.repo), "projects": [str(item) for item in self.projects]}
-            )
-
         return Starlette(
-            routes=[Route(PING_PATH, ping), Route(MCP_PATH, endpoint=StreamableHTTPASGIApp(manager))],
+            routes=[Route(PING_PATH, self._answer_ping), Route(MCP_PATH, endpoint=StreamableHTTPASGIApp(manager))],
             lifespan=lambda _app: manager.run(),
+        )
+
+    async def _answer_ping(self, _request: Any) -> Any:
+        """The ``/ping`` answer: which process and checkout serve, and the projects its chats work on."""
+        from starlette.responses import JSONResponse
+
+        return JSONResponse(
+            {"ok": True, "pid": os.getpid(), "source": str(self._checkout_server.repo), "projects": [str(project) for project in self.projects]}
         )
 
     def ping(self) -> str:

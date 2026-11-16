@@ -6,7 +6,8 @@ import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
 import type { ChatBarJson } from '../../types'
-import { reasonOf, showFailure } from '../error-display/failure-client'
+import { showFailure } from '../error-display/failure-client'
+import { reasonOf } from '../shared/reason'
 import { SERVER } from '../health/server-health-client'
 import { debugCommandOf } from '../shared/debug-command'
 import type { GuidanceSelectionData } from '@cdd/space/session/session'
@@ -102,7 +103,7 @@ export class ChatBarClient {
   get stages(): StageClient[] {
     const columns = this.board?.columns ?? []
     const sessionPlace = columns.findIndex(column => column.name === this.stage)
-    return columns.map((column, place) => new StageClient(column, place, sessionPlace, this.selectedStages.includes(column.name)))
+    return columns.map((column, place) => new StageClient(column, place - sessionPlace, this.selectedStages.includes(column.name)))
   }
 
   // Every action a person can run on a fidelity of the shown stage, its steps first, as the stage sends them.
@@ -269,7 +270,7 @@ export class MoveRefused {
 // carrying the server's own text. Every call names the folder the chat works in now as chat_folder, so the server reads
 // the sessions of that folder's branch and worktree, not of the folder the chat connected from, and names the chat as
 // conversation_id, so the server answers with the session this chat has open, as it does for the agent's own calls.
-export async function callTool<T>($: EngineInterface, tool: string, args: object): Promise<T> {
+export async function callTool<T>($: EngineInterface, tool: string, args: ToolArguments): Promise<T> {
   const text = await callToolText($, tool, args)
   try {
     return JSON.parse(text) as T
@@ -278,8 +279,11 @@ export async function callTool<T>($: EngineInterface, tool: string, args: object
   }
 }
 
+// The arguments a cdd tool takes, each by the name its Python operation gives it.
+export type ToolArguments = { readonly [argument: string]: unknown }
+
 // A tool that answers in prose, such as repos.open, read as its text; one flagged isError is a CddToolFailed.
-export async function callToolText($: EngineInterface, tool: string, args: object): Promise<string> {
+export async function callToolText($: EngineInterface, tool: string, args: ToolArguments): Promise<string> {
   const result = await $.mcp.call(SERVER, tool, { ...args, chat_folder: await $.session.root(), conversation_id: await $.session.id() })
   const text = result.content[0]?.text ?? ''
   if (result.isError) throw new CddToolFailed(tool, text || `${tool} failed`)

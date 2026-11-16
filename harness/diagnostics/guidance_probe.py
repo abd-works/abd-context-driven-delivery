@@ -3,12 +3,16 @@ each guidance action with arguments made for the probe."""
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 from harness.agent_tools.agent_tools import ToolsetReference
 from harness.diagnostics.probe_arguments import ProbeArguments
 from harness.guidance.action_catalogue import ActionCatalogue
-from harness.diagnostics.probe_outcome import ProbeOutcome, ProbeSection
+from harness.diagnostics.probe_outcome import ProbeOutcome, ProbeSection, raised_by_a_bug
+
+if TYPE_CHECKING:
+    from harness.agent_tools.agent_tools import AgentTool, AgentToolSet
+    from harness.installation.installer import Installer
 
 # The guidance probed when the caller names none: one practice and one fidelity of another practice.
 GUIDANCE_PROBE = ["stories", "clean-engineering-model"]
@@ -26,13 +30,13 @@ class GuidanceProbe:
     """A probe of the guidance one install deployed, made for its Installer and the guidance slugs that filter what it
     calls. Its arguments make the temporary files and folders the actions it calls need, and remove them after."""
 
-    def __init__(self, installer: Any, slugs: list[str]) -> None:
+    def __init__(self, installer: Installer, slugs: list[str]) -> None:
         self.installer = installer
         self.slugs = list(slugs)
         self.arguments = ProbeArguments(installer.repo, self.slugs)
 
     @classmethod
-    def from_filter(cls, installer: Any, guidance: list[str] | None) -> GuidanceProbe:
+    def from_filter(cls, installer: Installer, guidance: list[str] | None) -> GuidanceProbe:
         """The probe for a diagnostics call, which probes ``GUIDANCE_PROBE`` when it names no guidance."""
         return cls(installer, list(guidance or GUIDANCE_PROBE))
 
@@ -87,7 +91,8 @@ class GuidanceProbe:
         try:
             text = practice.answers_to(slug).instructions
         except Exception as failure:
-            # A probe reports what failed: the failure is its red outcome.
+            if raised_by_a_bug(failure):
+                raise
             return ProbeOutcome.from_failure(mcp_name, failure)
         return ProbeOutcome.from_answer(mcp_name, text)
 
@@ -95,10 +100,12 @@ class GuidanceProbe:
         try:
             toolset = toolset_class()
         except Exception as failure:
+            if raised_by_a_bug(failure):
+                raise
             return [ProbeOutcome.from_failure(str(ToolsetReference.of(toolset_class)), failure)]
         return [self._action(toolset, tool) for tool in toolset.tools.values() if tool.install_to_mcp and tool.mcp_name in published]
 
-    def _action(self, toolset: Any, tool: Any) -> ProbeOutcome:
+    def _action(self, toolset: AgentToolSet, tool: AgentTool) -> ProbeOutcome:
         if tool.mcp_name in _LEFT_ALONE:
             return ProbeOutcome.from_skip(tool.mcp_name, _LEFT_ALONE[tool.mcp_name])
         if tool.mcp_name in _WRITES_UNDER_SESSION_ROOT:
@@ -110,5 +117,7 @@ class GuidanceProbe:
         try:
             answer = member(**arguments) if tool.kind == "tool" else tool.invoke(arguments)
         except Exception as failure:
+            if raised_by_a_bug(failure):
+                raise
             return ProbeOutcome.from_failure(tool.mcp_name, failure)
         return ProbeOutcome.from_answer(tool.mcp_name, answer).called_on(arguments.get("paths") or [])

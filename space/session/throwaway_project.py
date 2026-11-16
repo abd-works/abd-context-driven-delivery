@@ -19,32 +19,34 @@ class FolderSweeper:
     deleted: deleting a project's folders took a tenth of a board spec's time. The run waits for every folder to go
     before it ends, so none is left behind."""
 
-    _folders: queue.SimpleQueue[Path] = queue.SimpleQueue()
-    _thread: threading.Thread | None = None
-    _lock = threading.Lock()
+    def __init__(self) -> None:
+        self._folders: queue.SimpleQueue[Path | None] = queue.SimpleQueue()
+        self._thread: threading.Thread | None = None
+        self._lock = threading.Lock()
 
-    @classmethod
-    def remove(cls, folder: Path) -> None:
+    def remove(self, folder: Path) -> None:
         """Remove folder soon, with all it holds."""
-        with cls._lock:
-            if cls._thread is None:
-                cls._thread = threading.Thread(target=cls._sweep, name="folder-sweeper", daemon=True)
-                cls._thread.start()
-                atexit.register(cls.finish)
-        cls._folders.put(folder)
+        with self._lock:
+            if self._thread is None:
+                self._thread = threading.Thread(target=self._sweep, name="folder-sweeper", daemon=True)
+                self._thread.start()
+                atexit.register(self.finish)
+        self._folders.put(folder)
 
-    @classmethod
-    def finish(cls) -> None:
+    def finish(self) -> None:
         """Wait until every folder handed over is removed."""
-        if cls._thread is not None:
-            cls._folders.put(None)
-            cls._thread.join()
-            cls._thread = None
+        if self._thread is not None:
+            self._folders.put(None)
+            self._thread.join()
+            self._thread = None
 
-    @classmethod
-    def _sweep(cls) -> None:
-        while (folder := cls._folders.get()) is not None:
+    def _sweep(self) -> None:
+        while (folder := self._folders.get()) is not None:
             shutil.rmtree(folder, ignore_errors=True)
+
+
+# The one sweeper of a spec run: every project's folders go through it, so the run waits for all of them once.
+FOLDER_SWEEPER = FolderSweeper()
 
 
 class SpecRunHome:
@@ -55,18 +57,22 @@ class SpecRunHome:
     rewrites that whole file on every session switch, so the file grew to thousands of spec projects and switches
     slowed. A run that names its own ``CDD_HOME``, as ``scripts/test.ps1`` does, keeps it."""
 
-    _folder: Path | None = None
+    def __init__(self) -> None:
+        self._folder: Path | None = None
 
-    @classmethod
-    def ensure(cls) -> None:
+    def ensure(self) -> None:
         """Name a throwaway cdd home for this run, removed when the run ends, unless a cdd home is named already. Asked
         again by every spec, since a spec that names a home of its own for a while puts back no home when it is done."""
         if os.environ.get(CDD_HOME_ENV):
             return
-        if cls._folder is None:
-            cls._folder = Path(tempfile.mkdtemp(prefix="cdd-spec-home-"))
-            atexit.register(shutil.rmtree, cls._folder, True)
-        os.environ[CDD_HOME_ENV] = str(cls._folder)
+        if self._folder is None:
+            self._folder = Path(tempfile.mkdtemp(prefix="cdd-spec-home-"))
+            atexit.register(shutil.rmtree, self._folder, True)
+        os.environ[CDD_HOME_ENV] = str(self._folder)
+
+
+# The one cdd home of a spec run, made the first time a spec asks for it.
+SPEC_RUN_HOME = SpecRunHome()
 
 
 class ExampleHome:
@@ -101,7 +107,7 @@ class ThrowawayProject:
     _open: list[ThrowawayProject] = []
 
     def __init__(self, name: str = "") -> None:
-        SpecRunHome.ensure()
+        SPEC_RUN_HOME.ensure()
         self._folder = Path(tempfile.mkdtemp(prefix="cdd-spec-project-"))
         self.root = (self._folder / name).resolve() if name else self._folder
         self.root.mkdir(exist_ok=True)
@@ -128,4 +134,4 @@ class ThrowawayProject:
             os.environ.pop("CDD_PROJECT", None)
         else:
             os.environ["CDD_PROJECT"] = self._saved
-        FolderSweeper.remove(self._folder)
+        FOLDER_SWEEPER.remove(self._folder)

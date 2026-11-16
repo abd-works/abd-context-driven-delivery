@@ -76,15 +76,15 @@ class CddVersion:
     badge can show it green, yellow, or red and offer the update."""
 
     def __init__(self, checkout: Path | str, git: Git | None = None, project: Path | str | None = None, project_git: Git | None = None,
-                 gh: GitHubCli | None = None, test_runs: TestRunRecord | None = None) -> None:
+                 github_cli: GitHubCli | None = None, test_runs: TestRunRecord | None = None) -> None:
         """checkout is the CDD checkout whose version the chat runs; project is the repository /version and /release
-        write the next version in, commit it in, and push from, the one the chat works in. gh publishes a release, and
+        write the next version in, commit it in, and push from, the one the chat works in. github_cli publishes a release, and
         test_runs is where the tiers /release runs record their results."""
         self._checkout = Path(checkout)
         self._project = Path(project) if project is not None else self._checkout
         self._git = git or Git(self._checkout)
         self._project_git = project_git or Git(self._project)
-        self._gh = gh
+        self._github_cli = github_cli
         self._test_runs = test_runs
         self._fetch_problem = ""
 
@@ -153,7 +153,7 @@ class CddVersion:
         4. On their yes, call this with publish true. It raises the major version in pyproject.toml, commits that file
            alone and pushes, tags the commit v<version> and pushes the tag, and runs gh release create with the notes.
         5. Hand the person release_url, the release's page on the repository."""
-        release = MajorRelease(self._project, self._project_git, self._gh or GitHubCli(self._project),
+        release = MajorRelease(self._project, self._project_git, self._github_cli or GitHubCli(self._project),
                                self._test_runs or TestRunRecord(default_record_folder()))
         return release.publish() if publish else release.check_green()
 

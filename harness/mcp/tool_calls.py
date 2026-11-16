@@ -90,9 +90,9 @@ class _RunningCall:
         # The run is its own task, so a caller that stops waiting does not cancel it.
         self._task = asyncio.get_running_loop().create_task(run(self))
 
-    def finish(self, value: object) -> None:
-        """The run returned value."""
-        self._value = value
+    def finish(self, answer: object) -> None:
+        """The run returned answer."""
+        self._value = answer
         self._failure = None
 
     def fail(self, failure: BaseException) -> None:

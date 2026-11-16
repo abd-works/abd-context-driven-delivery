@@ -2,24 +2,24 @@ import { ChatClientGenerated, type ChatData } from '@cdd/harness/chat/chat'
 
 import type { BoardApi } from '../board/board-api'
 import type { BoardStore } from '../shared/board-store'
+import { ChatAssignments, ChatOpening } from './chat-opening'
 
 const SHOWN_COMMAND = 80
-// A ticket's new chat is not opened again for this long, while the person confirms it and it checks in.
-const STARTING_CHAT_MILLISECONDS = 120_000
-
-// The prompt a ticket's new chat opens with. The Claude app gives a new chat no title, so the prompt asks for the ticket's.
-const newChatPrompt = (ticket: string): string => `Title this session "${ticket}". You are the chat of the session board's ticket ${ticket}; work on that ticket. First call sessions.switch with name ${ticket}, so every tool works on its session, then read the session's latest handoff.`
-
 type CommandKind = 'submit' | 'fill' | 'command'
 
 const shortened = (text: string): string => (text.length > SHOWN_COMMAND ? `${text.slice(0, SHOWN_COMMAND)}…` : text)
 
 // The chat a person works in. Commands wait in the chat's own folder until its cdd-board mod checks in and takes them.
 export class ChatClient {
+  readonly opening: ChatOpening
+  readonly assignments = new ChatAssignments()
+
   constructor(
     private readonly store: BoardStore,
     private readonly api: BoardApi,
-  ) {}
+  ) {
+    this.opening = new ChatOpening(store, api)
+  }
 
   // A chat is connected to send to; which one is decided per send: the ticket's own, else the one a person picked.
   get canSend(): boolean {
@@ -52,32 +52,6 @@ export class ChatClient {
     return this.store.state.chats.find(entry => entry.id === chat)
   }
 
-  // Opening a ticket's worktree and then its chat in the Claude app takes a while, so the click shows at once that the chat
-  // is on its way. Until it checks in, clicking the ticket again opens no second one.
-  beginOpening(ticket: string): boolean {
-    if (this.isOpeningFor(ticket)) return false
-    this.store.change({ startingChats: { ...this.store.state.startingChats, [ticket]: Date.now() } })
-    this.store.toast(`Opening the chat of ${ticket}…`)
-    return true
-  }
-
-  // Until the ticket's chat checks in, which the ticket then names, it is on its way.
-  isOpeningFor(ticket: string): boolean {
-    const asked = this.store.state.startingChats[ticket]
-    return asked !== undefined && Date.now() - asked < STARTING_CHAT_MILLISECONDS
-  }
-
-  // A ticket's new chat opens in the Claude app on the ticket's worktree, through Python's chat.open; the app asks the
-  // person to confirm the folder and send.
-  async startFor(ticket: string, worktree: string): Promise<void> {
-    if (!worktree) {
-      const { [ticket]: _given, ...starting } = this.store.state.startingChats
-      this.store.change({ startingChats: starting })
-      return
-    }
-    if (await ChatClientGenerated.open(this.api, worktree, newChatPrompt(ticket))) this.store.toast(`Confirm the folder and send in the Claude app to start the chat of ${ticket}`)
-  }
-
   get hasPicked(): boolean {
     return this.store.state.targetChat !== null
   }
@@ -89,24 +63,6 @@ export class ChatClient {
   choose(chat: string): void {
     this.store.change({ pickedChat: chat || null, targetChat: chat || null })
     void this.readMessages()
-  }
-
-  // The chat a person has just assigned to each ticket, until a board read names it as the ticket's chat. A read can
-  // take longer than the person waits before pressing the ticket, and one started before the assignment still names
-  // the chat from before it, so until a read catches up the assignment is the ticket's chat.
-  private readonly assigning = new Map<string, string>()
-
-  assign(ticket: string, chat: string): void {
-    if (chat) this.assigning.set(ticket, chat)
-    else this.assigning.delete(ticket)
-  }
-
-  // The id of ticket's chat: the one just assigned while board reads still name another, else the one the read names.
-  chatOf(ticket: string, read: string): string {
-    const assigned = this.assigning.get(ticket)
-    if (assigned === undefined) return read
-    if (assigned === read) this.assigning.delete(ticket)
-    return assigned
   }
 
   // A message the chat took but did not show goes back in its queue, and the chat takes it again.
@@ -192,7 +148,7 @@ export class TicketChat {
   ) {}
 
   get found(): ChatData | undefined {
-    const chat = this.chats.chatOf(this.ticket, this.working?.id ?? '')
+    const chat = this.chats.assignments.chatOf(this.ticket, this.working?.id ?? '')
     return chat ? this.chats.connected(chat) : undefined
   }
 
@@ -203,7 +159,7 @@ export class TicketChat {
   }
 
   get isOpening(): boolean {
-    return !this.found && this.chats.isOpeningFor(this.ticket)
+    return !this.found && this.chats.opening.isOpeningFor(this.ticket)
   }
 
   // A ticket's commands go to its own chat, else to the chat a person picked; with neither, the person is asked for one
@@ -227,11 +183,11 @@ export class TicketChat {
   }
 
   beginOpening(): boolean {
-    return this.chats.beginOpening(this.ticket)
+    return this.chats.opening.begin(this.ticket)
   }
 
   // The new chat opens on the worktree given, which can have been opened only now.
   start(worktree: string): Promise<void> {
-    return this.chats.startFor(this.ticket, worktree)
+    return this.chats.opening.startFor(this.ticket, worktree)
   }
 }

@@ -45,75 +45,89 @@ window.addEventListener('message', async event => {{
 
 
 class DrawioFiles:
-    def __init__(self, root):
+    """The folder the viewer serves: it lists the draw.io files under it, finds the file a request names, and labels
+    each file by its path from the folder."""
+
+    def __init__(self, root: Path | str) -> None:
         self.root = Path(root).resolve()
 
-    def all(self):
+    def all(self) -> list[Path]:
         return sorted(
             path for path in self.root.rglob("*")
             if path.name.endswith(EXTENSIONS) and not SKIPPED_FOLDERS.intersection(path.relative_to(self.root).parts)
         )
 
-    def resolve(self, name):
+    def resolve(self, name: str) -> Path:
         path = Path(name)
         path = (path if path.is_absolute() else self.root / path).resolve()
         if not path.name.endswith(EXTENSIONS):
             raise ValueError(f"not a draw.io file: {name}")
         return path
 
-    def label(self, path):
+    def label(self, path: Path) -> str:
         return path.relative_to(self.root).as_posix() if path.is_relative_to(self.root) else str(path)
 
 
-def handler_for(files, port):
-    own_origin = f"http://127.0.0.1:{port}"
+class DrawioViewerHandler(BaseHTTPRequestHandler):
+    """Answers one request to the viewer: the list of diagrams, the editor on one of them, or a save from the editor.
+    ``handler_for`` makes the handler class for one folder and port, since the server makes a handler per request."""
 
-    class Handler(BaseHTTPRequestHandler):
-        def do_GET(self):
-            url = urllib.parse.urlparse(self.path)
-            if url.path == "/":
-                items = "".join(
-                    f'<li><a href="/edit?f={urllib.parse.quote(files.label(path))}">{html.escape(files.label(path))}</a></li>'
-                    for path in files.all()
-                )
-                return self.reply(200, INDEX_PAGE.format(root=html.escape(str(files.root)), items=items))
-            if url.path == "/edit":
-                name = urllib.parse.parse_qs(url.query).get("f", [""])[0]
-                try:
-                    path = files.resolve(name)
-                    xml = path.read_text(encoding="utf-8") if path.exists() else ""
-                except (ValueError, OSError) as error:
-                    return self.reply(404, str(error), "text/plain")
-                return self.reply(200, EDITOR_PAGE.format(
-                    title=html.escape(path.name), embed=EMBED_URL,
-                    file=json.dumps(files.label(path)).replace("</", "<\\/"),
-                    xml=json.dumps(xml).replace("</", "<\\/"),
-                ))
-            self.reply(404, "not found", "text/plain")
+    files: DrawioFiles
+    own_origin: str
 
-        def do_POST(self):
-            if self.path != "/save" or self.headers.get("Origin") != own_origin:
-                return self.reply(403, "refused", "text/plain")
-            body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
-            try:
-                path = files.resolve(body["f"])
-                path.write_text(body["xml"], encoding="utf-8")
-            except (ValueError, OSError) as error:
-                return self.reply(400, str(error), "text/plain")
-            self.reply(200, "saved", "text/plain")
+    def do_GET(self) -> None:
+        url = urllib.parse.urlparse(self.path)
+        if url.path == "/":
+            return self.reply(200, self._index_page())
+        if url.path == "/edit":
+            return self._open_editor(urllib.parse.parse_qs(url.query).get("f", [""])[0])
+        self.reply(404, "not found", "text/plain")
 
-        def reply(self, status, text, content_type="text/html"):
-            data = text.encode("utf-8")
-            self.send_response(status)
-            self.send_header("Content-Type", f"{content_type}; charset=utf-8")
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-            self.wfile.write(data)
+    def do_POST(self) -> None:
+        if self.path != "/save" or self.headers.get("Origin") != self.own_origin:
+            return self.reply(403, "refused", "text/plain")
+        body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        try:
+            path = self.files.resolve(body["f"])
+            path.write_text(body["xml"], encoding="utf-8")
+        except (ValueError, OSError) as error:
+            return self.reply(400, str(error), "text/plain")
+        self.reply(200, "saved", "text/plain")
 
-        def log_message(self, *args):
-            pass
+    def reply(self, status: int, text: str, content_type: str = "text/html") -> None:
+        data = text.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", f"{content_type}; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
 
-    return Handler
+    def log_message(self, *args: object) -> None:
+        """Print nothing for each request: the viewer's console shows only the line saying where it answers."""
+
+    def _index_page(self) -> str:
+        items = "".join(
+            f'<li><a href="/edit?f={urllib.parse.quote(self.files.label(path))}">{html.escape(self.files.label(path))}</a></li>'
+            for path in self.files.all()
+        )
+        return INDEX_PAGE.format(root=html.escape(str(self.files.root)), items=items)
+
+    def _open_editor(self, name: str) -> None:
+        try:
+            path = self.files.resolve(name)
+            xml = path.read_text(encoding="utf-8") if path.exists() else ""
+        except (ValueError, OSError) as error:
+            return self.reply(404, str(error), "text/plain")
+        self.reply(200, EDITOR_PAGE.format(
+            title=html.escape(path.name), embed=EMBED_URL,
+            file=json.dumps(self.files.label(path)).replace("</", "<\\/"),
+            xml=json.dumps(xml).replace("</", "<\\/"),
+        ))
+
+
+def handler_for(files: DrawioFiles, port: int) -> type[DrawioViewerHandler]:
+    """The handler class for the viewer serving files on port: a save is taken only from the viewer's own page."""
+    return type("Handler", (DrawioViewerHandler,), {"files": files, "own_origin": f"http://127.0.0.1:{port}"})
 
 
 if __name__ == "__main__":

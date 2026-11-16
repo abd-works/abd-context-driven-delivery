@@ -30,6 +30,8 @@ _VISIBILITIES = ("private", "public", "internal")
 _GITIGNORE_HEADER = "# Ignored as the CDD checkout ignores (written by repos.open)"
 _INSTALL_SECONDS = 600
 _PUBLISH_SECONDS = 180
+# How much of a failed install's output its error carries: the end, where the reason is, short enough to read.
+_INSTALL_FAILURE_CHARS = 2000
 
 
 class RepoNameRequiredError(ValueError):
@@ -121,8 +123,8 @@ class CddConfig:
         found = self.file.read().get(key)
         return found if isinstance(found, str) else ""
 
-    def set(self, key: str, value: str) -> None:
-        self.file.write({**self.file.read(), key: value})
+    def set(self, key: str, setting: str) -> None:
+        self.file.write({**self.file.read(), key: setting})
 
 
 class SiblingRepo:
@@ -157,19 +159,20 @@ class SiblingRepo:
         """Whether CDD is installed in its .claude."""
         return (self.folder / ".claude" / "commands").is_dir()
 
-    @staticmethod
-    def is_one(folder: Path) -> bool:
-        return (folder / ".git").is_dir()
+    @property
+    def is_repository(self) -> bool:
+        """Whether its folder is a repository of its own: its ``.git`` is a folder, not a linked worktree's file."""
+        return (self.folder / ".git").is_dir()
 
 
 @agent_toolset
 class Repos:
     """The repositories in the repos folder, each a sibling of the others; opening one gives it its own chat."""
 
-    def __init__(self, project: Path | str, config: CddConfig | None = None) -> None:
+    def __init__(self, project: Path | str, cdd_config: CddConfig | None = None) -> None:
         # The checkout the calling chat works in: by default the repos folder is the folder its main clone sits in.
         self.project = Path(project).resolve()
-        self.config = config or CddConfig()
+        self.cdd_config = cdd_config or CddConfig()
 
     @classmethod
     @tool_subject
@@ -181,7 +184,7 @@ class Repos:
     def folder(self) -> Path:
         """The folder holding the repositories: the one chosen with ``/repos-folder``, else the folder the calling
         chat's main clone sits in, which for a CDD worktree such as abd-cdd-x is the folder beside abd-context-driven-delivery."""
-        chosen = self.config.value(_REPOS_FOLDER)
+        chosen = self.cdd_config.value(_REPOS_FOLDER)
         if chosen:
             return Path(chosen)
         return Repo.of_project(self.project).main_clone.root.parent
@@ -196,7 +199,7 @@ class Repos:
         folder = Path(path).expanduser().resolve()
         if not folder.is_dir():
             raise NotAReposFolderError(folder)
-        self.config.set(_REPOS_FOLDER, str(folder))
+        self.cdd_config.set(_REPOS_FOLDER, str(folder))
         return f"Repositories are kept in {folder}."
 
     @mcp
@@ -209,7 +212,8 @@ class Repos:
         folder = self.folder
         if not folder.is_dir():
             return []
-        return [SiblingRepo(child) for child in sorted(folder.iterdir(), key=lambda f: f.name.lower()) if child.is_dir() and SiblingRepo.is_one(child)]
+        children = sorted((child for child in folder.iterdir() if child.is_dir()), key=lambda child: child.name.lower())
+        return [repo for repo in map(SiblingRepo, children) if repo.is_repository]
 
     @long_call
     @mcp
@@ -232,10 +236,8 @@ class Repos:
             raise UnknownVisibilityError(visibility)
         root = (Path(folder).expanduser().resolve() if folder else self.folder) / cleaned
         steps = [self._create(root), self._ignore_as_cdd_does(root)]
-        if publish:
-            steps.append(self._publish(root, visibility))
-        if install:
-            steps.append(self._install_cdd(root))
+        steps += [self._publish(root, visibility)] if publish else []
+        steps += [self._install_cdd(root)] if install else []
         # A new repository's main session is the session of the branch it is created on.
         chat = NewChat(root, cleaned, _DEFAULT_BRANCH)
         steps.append(chat.open() if start_chat else chat.instructions)
@@ -260,7 +262,7 @@ class Repos:
     def _create(self, root: Path) -> str:
         if (root / ".git").is_file():
             raise FolderIsAWorktreeError(root)
-        if SiblingRepo.is_one(root):
+        if SiblingRepo(root).is_repository:
             branch = Git(root).run("branch", "--show-current")
             if branch != _DEFAULT_BRANCH:
                 return f"{root} is a repository already, on {branch or 'no branch'}; the new chat opens it as it is."
@@ -320,7 +322,7 @@ class Repos:
             stdin=subprocess.DEVNULL, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
         if answer.returncode != 0:
-            raise InstallFailedError(f"installing CDD into {root / '.claude'} failed: {(answer.stderr or answer.stdout).strip()[-2000:]}")
+            raise InstallFailedError(f"installing CDD into {root / '.claude'} failed: {(answer.stderr or answer.stdout).strip()[-_INSTALL_FAILURE_CHARS:]}")
         return f"Installed CDD into {root / '.claude'}."
 
 

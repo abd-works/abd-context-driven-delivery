@@ -6,7 +6,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, NamedTuple
 
 _REPO = Path(__file__).resolve().parents[1]
 _SCRIPTS = Path(__file__).resolve().parent
@@ -14,13 +14,33 @@ for _entry in (str(_REPO), str(_SCRIPTS)):
     if _entry not in sys.path:
         sys.path.insert(0, _entry)
 
-from harness.graph.graph_app import GRAPH_APP_PORTS
 from instances import (
+    GRAPH_APP,
+    GRAPH_WEB,
+    HttpService,
+    PingAnswer,
+    PingAnswers,
     PingReport,
     RepoProcesses,
-    graph_app,
-    graph_web,
 )
+
+START_WAIT_SECONDS = 30
+"""How long a started service has to answer its ping before the start is reported down."""
+
+STOP_WAIT_SECONDS = 10
+"""How long the stopped copies have to disappear from the process list before the new one starts anyway."""
+
+POLL_SECONDS = 0.25
+"""How often a wait asks again; short enough that a fast start is reported at once."""
+
+
+class ServiceLaunch(NamedTuple):
+    """The command that starts a service, the folder it runs in, its log, and its environment."""
+
+    command: str
+    cwd: Path
+    log: Path
+    env: dict[str, str]
 
 
 class ServiceStart:
@@ -28,20 +48,13 @@ class ServiceStart:
 
     def __init__(self, processes: RepoProcesses | None = None) -> None:
         self.processes = processes or RepoProcesses()
+        self.answers = PingAnswers()
         self.repo = self.processes.repo
         self.app = self.repo / "harness" / "graph" / "app"
         self.logs = _SCRIPTS / ".run"
 
     def graph_app(self) -> int:
-        return self._http(
-            graph_app,
-            "npm run dev",
-            self.app,
-            self.logs / "graph-app.log",
-            os.environ.copy(),
-            preferred_ports=GRAPH_APP_PORTS.of("app"),
-            expect_service="graph_app",
-        )
+        return self._http(GRAPH_APP, ServiceLaunch("npm run dev", self.app, self.logs / "graph-app.log", os.environ.copy()))
 
     def graph_web(self) -> int:
         env = os.environ.copy()
@@ -50,15 +63,7 @@ class ServiceStart:
         python = self.repo / ".venv" / "Scripts" / "python.exe"
         if python.is_file():
             env["PYTHON"] = str(python)
-        return self._http(
-            graph_web,
-            "npm run server",
-            self.app,
-            self.logs / "graph-web.log",
-            env,
-            preferred_ports=GRAPH_APP_PORTS.of("web"),
-            expect_service="graph_web",
-        )
+        return self._http(GRAPH_WEB, ServiceLaunch("npm run server", self.app, self.logs / "graph-web.log", env))
 
     def hook(self) -> int:
         from harness.hooks.hook_daemon import HookDaemon
@@ -66,42 +71,36 @@ class ServiceStart:
         stopped = self._stop(self._hook_command)
         daemon = HookDaemon(self.repo)
         daemon.spawn()
-        deadline = time.time() + 30
-        address = None
-        while time.time() < deadline:
-            address = daemon.live_address()
-            if address is not None:
-                break
-            time.sleep(0.25)
-        host, port, pid = (address.host, address.port, address.pid) if address is not None else (None, None, None)
+        address = self._waited(daemon.live_address)
         ok = address is not None
         return PingReport().emit(
             {
                 "ok": ok,
                 "ping": "pong" if ok else "down",
-                "host": host,
-                "port": port,
-                "pid": pid,
+                "host": address.host if ok else None,
+                "port": address.port if ok else None,
+                "pid": address.pid if ok else None,
                 "stopped": stopped,
                 "log": "" if ok else str(daemon.log_path),
             }
         )
 
-    def _http(
-        self,
-        include: Callable[[str], bool],
-        command: str,
-        cwd: Path,
-        log: Path,
-        env: dict[str, str],
-        preferred_ports: tuple[int, ...] = (),
-        expect_service: str | None = None,
-    ) -> int:
-        stopped = self._stop(include)
-        self._spawn(command, cwd, log, env)
-        pid, body = self._wait_pong(include, preferred_ports, expect_service)
+    def _waited(self, answer: Callable[[], Any]) -> Any:
+        """The first answer that is not None within the start wait, or None when none came."""
+        deadline = time.time() + START_WAIT_SECONDS
+        while time.time() < deadline:
+            found = answer()
+            if found is not None:
+                return found
+            time.sleep(POLL_SECONDS)
+        return None
+
+    def _http(self, service: HttpService, launch: ServiceLaunch) -> int:
+        stopped = self._stop(service.include)
+        self._spawn(launch)
+        pid, body = self._waited(lambda: self._pong(service)) or (None, None)
         ok = body is not None
-        report: dict[str, Any] = {
+        report: PingAnswer = {
             "ok": ok,
             "ping": "pong" if ok else "down",
             "url": None if body is None else body.get("url"),
@@ -110,78 +109,54 @@ class ServiceStart:
             "stopped": stopped,
         }
         if not ok:
-            report["log"] = str(log)
+            report["log"] = str(launch.log)
         return PingReport().emit(report)
 
     def _stop(self, include: Callable[[str], bool]) -> list[int]:
         found = self._roots(include)
         for pid in found:
             self.processes.stop(pid)
-        deadline = time.time() + 10
+        deadline = time.time() + STOP_WAIT_SECONDS
         while time.time() < deadline and self._roots(include):
-            time.sleep(0.2)
+            time.sleep(POLL_SECONDS)
         return found
 
-    def _wait_pong(
-        self,
-        include: Callable[[str], bool],
-        preferred_ports: tuple[int, ...] = (),
-        expect_service: str | None = None,
-    ) -> tuple[int | None, dict[str, Any] | None]:
-        deadline = time.time() + 30
-        while time.time() < deadline:
-            for pid in self._roots(include):
-                body = self._first_pong(self.processes.tree_ports(pid), preferred_ports, expect_service)
-                if body is not None:
-                    return pid, body
-            time.sleep(0.25)
-        return None, None
-
-    def _first_pong(
-        self,
-        ports: list[int],
-        preferred_ports: tuple[int, ...] = (),
-        expect_service: str | None = None,
-    ) -> dict[str, Any] | None:
-        candidates = list(preferred_ports) if preferred_ports else sorted(ports)
-        for port in candidates:
-            body = self.processes.http_ping(port, expect_service)
+    def _pong(self, service: HttpService) -> tuple[int, PingAnswer] | None:
+        for pid in self._roots(service.include):
+            body = self.answers.first_pong(service, self.processes.tree_ports(pid))
             if body is not None:
-                return body
+                return pid, body
         return None
 
     def _roots(self, include: Callable[[str], bool]) -> list[int]:
-        self.processes._process_cache = None
-        self.processes._port_cache = None
-
-        def scoped(command: str) -> bool:
-            return self.processes.in_repo(command) and include(command)
-
-        return [item.pid for item in self.processes.roots(self.processes.matching(scoped))]
+        self.processes.refresh()
+        return self.processes.root_pids(include)
 
     def _hook_command(self, command: str) -> bool:
         return "harness.hooks.hook_daemon" in command.casefold()
 
-    def _spawn(self, command: str, cwd: Path, log: Path, env: dict[str, str]) -> None:
-        log.parent.mkdir(parents=True, exist_ok=True)
-        stream = open(log, "a", encoding="utf-8")
-        stream.write(f"\n--- {command} ---\n")
+    def _spawn(self, launch: ServiceLaunch) -> None:
+        launch.log.parent.mkdir(parents=True, exist_ok=True)
+        stream = open(launch.log, "a", encoding="utf-8")
+        stream.write(f"\n--- {launch.command} ---\n")
         stream.flush()
-        kwargs: dict[str, Any] = {
-            "args": command,
-            "cwd": str(cwd),
-            "env": env,
-            "stdin": subprocess.DEVNULL,
-            "stdout": stream,
-            "stderr": subprocess.STDOUT,
-            "shell": True,
-            "close_fds": True,
-        }
-        if sys.platform == "win32":
-            from harness.process.process import BackgroundStart
+        subprocess.Popen(
+            args=launch.command,
+            cwd=str(launch.cwd),
+            env=launch.env,
+            stdin=subprocess.DEVNULL,
+            stdout=stream,
+            stderr=subprocess.STDOUT,
+            shell=True,
+            close_fds=True,
+            **self._detached(),
+        )
 
-            kwargs["creationflags"] = BackgroundStart().creationflags
-            kwargs["startupinfo"] = BackgroundStart().startupinfo
-        else:
-            kwargs["start_new_session"] = True
-        subprocess.Popen(**kwargs)
+    def _detached(self) -> dict[str, Any]:
+        """The options that keep the started service running after this script exits, without a console window."""
+        if sys.platform != "win32":
+            return {"start_new_session": True}
+        from harness.process.process import BackgroundStart
+
+        background = BackgroundStart()
+        return {"creationflags": background.creationflags, "startupinfo": background.startupinfo}

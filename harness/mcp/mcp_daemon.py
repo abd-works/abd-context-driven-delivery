@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from typing import Any, TextIO
 
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_address import McpAddress
@@ -35,11 +36,15 @@ class ServerDidNotStart(Exception):
         self.url = url
 
 
+PingAnswer = dict[str, Any]
+"""What the cdd server's ``/ping`` answers, as JSON: its pid, the checkout it serves, and its chats' projects."""
+
+
 class RunningServer:
     """The cdd server answering on the port, as its ping describes it: its process, the checkout it serves code from,
     and the projects its chats have worked on."""
 
-    def __init__(self, answer: dict) -> None:
+    def __init__(self, answer: PingAnswer) -> None:
         self.pid = int(answer.get("pid") or 0)
         self.source = str(answer.get("source") or "")
         self.projects = [str(project) for project in answer.get("projects") or []]
@@ -61,6 +66,8 @@ class McpDaemon:
         self.home = home
         self.address = address or McpAddress(port)
         self._listening = listening or ListeningPorts()
+        # This process, when it is the server: the port it claims and the address it publishes.
+        self.this_process = ServingProcess(home, self.address)
 
     @property
     def port(self) -> int:
@@ -141,39 +148,9 @@ class McpDaemon:
                 log.flush()
                 self._start_process(log, BackgroundStart().inside_starters_job())
 
-    def _start_process(self, log, start: BackgroundStart) -> None:
+    def _start_process(self, log: TextIO, start: BackgroundStart) -> None:
         command = [self.home.interpreter.windowless, "-m", "harness.mcp", "--port", str(self.port)]
         start.run(command, cwd=self.home.source, env={**os.environ, **self.home.server_environment}, log=log)
-
-    def claim_port(self) -> socket.socket | None:
-        """A listening socket on the server port, or ``None`` when another server already holds it."""
-        return ExclusivePort(self.address.HOST, self.port).claim()
-
-    def publish(self, source: Path) -> None:
-        """Write the address and pid for tools that look for the server without calling it."""
-        self.home.state_file.write({"url": self.url, "port": self.port, "pid": os.getpid(), "source": str(source)})
-
-    def end_with_owner(self) -> None:
-        """When ``CDD_SERVER_OWNER`` names the process this server belongs to, end this server once that process has
-        ended, withdrawing its address first; a server that names no owner runs until it is stopped."""
-        owner = RunningProcess(int(os.environ.get(SERVER_OWNER_ENV) or 0))
-        if owner.pid <= 0:
-            return
-        threading.Thread(target=self._end_after, args=(owner,), name="cdd-server-owner", daemon=True).start()
-
-    def _end_after(self, owner: RunningProcess) -> None:
-        while owner.alive:
-            time.sleep(OWNER_CHECK_SECONDS)
-        self.withdraw()
-        os._exit(0)
-
-    def withdraw(self) -> None:
-        if self.runs_this_process():
-            self.home.state_path.unlink(missing_ok=True)
-
-    def runs_this_process(self) -> bool:
-        """True when the server this home publishes is this process, as it is for code a tool call runs inside it."""
-        return self.home.state_file.read().get("pid") == os.getpid()
 
     def _wait_for_ping(self) -> RunningServer:
         deadline = time.time() + _START_SECONDS
@@ -189,3 +166,44 @@ class McpDaemon:
             return "(no log)"
         lines = self.home.log_path.read_text(encoding="utf-8", errors="replace").splitlines()
         return "\n".join(lines[-_LOG_LINES_SHOWN:])
+
+
+class ServingProcess:
+    """The cdd server as the process that runs it: it claims the server port, publishes its address for tools that
+    look for the server without calling it, withdraws that address when it ends, and ends with the process it belongs
+    to when one is named."""
+
+    def __init__(self, home: CddHome, address: McpAddress) -> None:
+        self.home = home
+        self.address = address
+
+    def claim_port(self) -> socket.socket | None:
+        """A listening socket on the server port, or ``None`` when another server already holds it."""
+        return ExclusivePort(self.address.HOST, self.address.port).claim()
+
+    def publish(self, source: Path) -> None:
+        """Write the address and pid for tools that look for the server without calling it."""
+        self.home.state_file.write({"url": self.address.url, "port": self.address.port, "pid": os.getpid(), "source": str(source)})
+
+    def end_with_owner(self) -> None:
+        """When ``CDD_SERVER_OWNER`` names the process this server belongs to, end this server once that process has
+        ended, withdrawing its address first; a server that names no owner runs until it is stopped."""
+        owner = RunningProcess(int(os.environ.get(SERVER_OWNER_ENV) or 0))
+        if owner.pid <= 0:
+            return
+        threading.Thread(target=self._end_after, args=(owner,), name="cdd-server-owner", daemon=True).start()
+
+    def withdraw(self) -> None:
+        if self.is_this_process():
+            self.home.state_path.unlink(missing_ok=True)
+
+    def is_this_process(self) -> bool:
+        """True when the server this home publishes is this process, as it is for code a tool call runs inside it."""
+        return self.home.state_file.read().get("pid") == os.getpid()
+
+    def _end_after(self, owner: RunningProcess) -> None:
+        while owner.alive:
+            time.sleep(OWNER_CHECK_SECONDS)
+        self.withdraw()
+        # The server's threads would keep the process alive past its owner; nothing is left to clean up after withdraw.
+        os._exit(0)

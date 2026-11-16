@@ -15,8 +15,8 @@ type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 export const CARD_SCOPE = 'session-card'
 
 // The widths of the card's columns, each fitting its widest entry: the box and name, so every state starts in one
-// column, and the whole row, so every folder chip does.
-type CardColumns = { names: number; fidelities: number }
+// column, and the whole row, so every folder chip does; and the fidelities whose folder chip shows beside them.
+type CardColumns = { names: number; fidelities: number; foldersShown: Set<string> }
 const FOLDER_GAP = 3
 const STATE_GAP = 2
 
@@ -27,18 +27,18 @@ const stateWidthOf = (fidelity: FidelityProgressClient): number => `${fidelity.m
 
 function cardColumnsOf(chatBar: ChatBarClient): CardColumns {
   const names = Math.max(0, ...chatBar.fidelities.map(nameWidthOf)) + STATE_GAP
-  return { names, fidelities: names + Math.max(0, ...chatBar.fidelities.map(stateWidthOf)) + FOLDER_GAP }
+  return { names, fidelities: names + Math.max(0, ...chatBar.fidelities.map(stateWidthOf)) + FOLDER_GAP, foldersShown: chatBar.foldersListedBeside }
 }
 
 // The shown stage in orange over the fidelities, and at the right end the health icons, the session name, and a ✕ that
 // closes a card pinned open.
-function HeaderView($: EngineInterface, elements: ElementTable, chatBar: ChatBarClient, healthIcons: ChatBarDraw['health']['icons']) {
+function HeaderView($: EngineInterface, elements: ElementTable, { chatBar, health }: ChatBarDraw) {
   const { Box, Text } = elements
   return (
     <Box key="card-header" flexDirection="row" gap={2} alignItems="center">
       <Text weight="bold" color={BRAND.accent}>{chatBar.shownStages.join(' · ')}</Text>
       <Box flexGrow={1} />
-      {healthIcons}
+      {health.icons}
       <Text weight="bold" color={BRAND.text} wrap="truncate-end">{chatBar.sessionName}</Text>
       {GlyphButtonView(elements, 'card-close', '✕', BRAND.muted, () => closeCard($))}
     </Box>
@@ -48,26 +48,14 @@ function HeaderView($: EngineInterface, elements: ElementTable, chatBar: ChatBar
 // One fidelity under the dots: its box, ticked when selected, and its name, one press that selects it as a press on its
 // dot does; its state in the next column, a press on violations opening the validation report as the count on the line
 // does; its folder beside it as a small chip, a press showing its files, on the first line of that folder.
-function FidelityRowView($: EngineInterface, elements: ElementTable, fidelity: FidelityProgressClient, columns: CardColumns, isFolderShown: boolean) {
-  const { Box, Button, Text } = elements
-  const nameColour = fidelity.state === 'not_started' ? BRAND.muted : BRAND.text
-  const state = <Text key={`card-state-words-${fidelity.slug}`} color={fidelity.lookColour}>{`${fidelity.mark} ${fidelity.word}`}</Text>
+function FidelityRowView($: EngineInterface, elements: ElementTable, fidelity: FidelityProgressClient, columns: CardColumns) {
+  const { Box } = elements
   return (
     <Box key={`card-${fidelity.slug}`} flexDirection="row" alignItems="center">
       <Box width={columns.fidelities}>
-        <Box key={`card-cell-${fidelity.slug}`} flexDirection="row" alignItems="center">
-          <Box width={columns.names}>
-            <Button key={`card-pick-${fidelity.slug}`} plain onPress={() => togglePractice($, fidelity.sessionFile, fidelity.progress.practice.key)}>
-              <Text key="card-square" color={fidelity.shade}>{`${boxOf(fidelity)} `}</Text>
-              <Text key="card-name" color={nameColour}>{fidelity.name}</Text>
-            </Button>
-          </Box>
-          {fidelity.violationCount ? (
-            <Button key={`card-report-${fidelity.slug}`} plain onPress={() => openReport($, fidelity)}>{state}</Button>
-          ) : state}
-        </Box>
+        {FidelityCellView($, elements, fidelity, columns)}
       </Box>
-      {isFolderShown ? (
+      {columns.foldersShown.has(fidelity.slug) ? (
         <Box key={`card-folder-chip-${fidelity.slug}`} paddingX={1} backgroundColor={BRAND.surface}>
           {GlyphButtonView(elements, `card-folder-${fidelity.slug}`, `▸ ${fidelity.folder}`, BRAND.muted, () => openFiles($, fidelity))}
         </Box>
@@ -76,11 +64,31 @@ function FidelityRowView($: EngineInterface, elements: ElementTable, fidelity: F
   )
 }
 
+// The fidelity's box and name, a press selecting its practice, then its state, a press on violations opening the report.
+function FidelityCellView($: EngineInterface, { Box, Button, Text }: ElementTable, fidelity: FidelityProgressClient, columns: CardColumns) {
+  const nameColour = fidelity.state === 'not_started' ? BRAND.muted : BRAND.text
+  const state = <Text key={`card-state-words-${fidelity.slug}`} color={fidelity.lookColour}>{`${fidelity.mark} ${fidelity.word}`}</Text>
+  return (
+    <Box key={`card-cell-${fidelity.slug}`} flexDirection="row" alignItems="center">
+      <Box width={columns.names}>
+        <Button key={`card-pick-${fidelity.slug}`} plain onPress={() => togglePractice($, fidelity.sessionFile, fidelity.progress.practice.key)}>
+          <Text key="card-square" color={fidelity.shade}>{`${boxOf(fidelity)} `}</Text>
+          <Text key="card-name" color={nameColour}>{fidelity.name}</Text>
+        </Button>
+      </Box>
+      {fidelity.violationCount ? (
+        <Button key={`card-report-${fidelity.slug}`} plain onPress={() => openReport($, fidelity)}>{state}</Button>
+      ) : state}
+    </Box>
+  )
+}
+
 // The session card above the line, as wide as the chat with a line of space below it: the server health panel on top
 // while something needs a person, then, once there is a session, the shown stage's fidelities under a header holding
 // the health icons; with no session, the icons alone. Hovering the session name or the
 // health mark shows it; a press on either pins it, and ✕ or another press closes it.
-export function SessionCardView($: EngineInterface, elements: ElementTable, { chatBar, view, health, width }: ChatBarDraw) {
+export function SessionCardView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
+  const { chatBar, view, health, width } = draw
   const { Box } = elements
   const shown = view.isCardOpen ? {} : { display: 'none' as const, hover: { display: 'flex' as const, scope: CARD_SCOPE } }
   const columns = cardColumnsOf(chatBar)
@@ -90,8 +98,8 @@ export function SessionCardView($: EngineInterface, elements: ElementTable, { ch
         {health.panel}
         {chatBar.hasSession ? (
           <Box key="card-grid" flexDirection="column" width={width} borderStyle="round" borderColor={BRAND.card} backgroundColor={BRAND.card}>
-            {HeaderView($, elements, chatBar, health.icons)}
-            {chatBar.fidelities.map(fidelity => FidelityRowView($, elements, fidelity, columns, chatBar.foldersListedBeside.has(fidelity.slug)))}
+            {HeaderView($, elements, draw)}
+            {chatBar.fidelities.map(fidelity => FidelityRowView($, elements, fidelity, columns))}
           </Box>
         ) : (
           <Box key="card-icons" flexDirection="row" width={width} justifyContent="flex-end" borderStyle="round" borderColor={BRAND.card} backgroundColor={BRAND.card}>

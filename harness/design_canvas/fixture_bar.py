@@ -144,11 +144,8 @@ class FixtureScreen:
 
     @property
     def html(self) -> str:
-        title, head, root_class, body, own_methods, vals = (
-            self.title, self.head, self.root_class, self.body, self.own_methods, self.vals
-        )
-        width, height, artboard, source = self.width, self.height, self.artboard, self.source
-        story, scenario, path = source.story, source.scenario, source.path
+        title, head, root_class, body = self.title, self.head, self.root_class, self.body
+        artboard = self.artboard
         return f'''<!doctype html>
 <html lang="en">
 <head>
@@ -169,7 +166,16 @@ a.button-primary{{display:inline-flex;align-items:center;justify-content:center;
 {bar(artboard)}{body}
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{{"story":{{"editor":null}},"scenario":{{"editor":null}},"go":{{"editor":null}},"$preview":{{"width":{width},"height":{height}}}}}'>
+{self._component}</body>
+</html>
+'''
+
+    @property
+    def _component(self) -> str:
+        """The screen's script: the bar's shared methods, the screen's own, and the values it renders."""
+        own_methods, vals, width, height = self.own_methods, self.vals, self.width, self.height
+        story, scenario, path = self.source.story, self.source.scenario, self.source.path
+        return f'''<script type="text/x-dc" data-dc-script data-props='{{"story":{{"editor":null}},"scenario":{{"editor":null}},"go":{{"editor":null}},"$preview":{{"width":{width},"height":{height}}}}}'>
 class Component extends DCLogic {{
 {methods(story, scenario, path)}{own_methods}renderVals() {{
 const st = this.state || {{}};
@@ -179,6 +185,4 @@ return Object.assign(this.barVals(), {{
 }}
 }}
 </script>
-</body>
-</html>
 '''

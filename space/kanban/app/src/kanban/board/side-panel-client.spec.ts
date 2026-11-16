@@ -185,7 +185,7 @@ describe('View Fidelity Files', () => {
     async function opened() {
       board.write('src/other.py', 'x\n')
       const { page } = await board.page()
-      await page.files.openFileAtLine(ticketOn(page), storyMapOn(page), 'src/other.py', FAILING_LINE)
+      await page.files.openFileAtLine(ticketOn(page), storyMapOn(page), { path: 'src/other.py', line: FAILING_LINE })
       return page
     }
 
@@ -203,7 +203,7 @@ describe('Add Comment To File Selection', () => {
   async function commented() {
     const { page } = await board.page()
     await page.files.openFiles(ticketOn(page), [storyMapOn(page)])
-    await page.files.addComment(3, 3, 'name the payment step after what the person does')
+    await page.files.comments.add(3, 3, 'name the payment step after what the person does')
     return page
   }
 
@@ -213,7 +213,7 @@ describe('Add Comment To File Selection', () => {
 
   it('should take the comment away once deleted', async () => {
     const page = await commented()
-    await page.files.removeComment('.context/story-map.md:L3-L3')
+    await page.files.comments.remove('.context/story-map.md:L3-L3')
     expect(filesPanel(page).shown?.comments).toEqual([])
   })
 })
@@ -222,7 +222,7 @@ describe('Save Edited File', () => {
   it('should show the file as saved', async () => {
     board.write('src/other.py', 'x\n')
     const { page } = await board.page()
-    await page.files.openFileAtLine(ticketOn(page), storyMapOn(page), 'src/other.py', 1)
+    await page.files.openFileAtLine(ticketOn(page), storyMapOn(page), { path: 'src/other.py', line: 1 })
     await page.files.save('y\n')
     expect(filesPanel(page).shown?.text).toBe('y\n')
   })
@@ -254,7 +254,7 @@ describe('Open Validation Report', () => {
     it('should send its fidelity to validate again', async () => {
       const { page } = await board.page()
       const chat = await board.connectChat(page)
-      await ticketOn(page).validateAgain(storyMapOn(page))
+      await ticketOn(page).prompts.validateAgain(storyMapOn(page))
       expect(await chat.checkIn()).toEqual([{ kind: 'command', text: `/actions-validate ${SLUG} ${SESSION}` }])
     })
   })

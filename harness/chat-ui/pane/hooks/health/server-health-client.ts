@@ -165,7 +165,12 @@ async function toastNewFailures($: EngineInterface, health: ServerHealthClient):
 async function installCommand($: EngineInterface): Promise<string[]> {
   const published = `${$.plugin.root}/install.json`
   if (!(await $.fs.exists(published))) throw new Error(`this board mod was not published by a cdd home, so it has no install command; run python scripts/install.py --ide Claude in a CDD checkout`)
-  return (JSON.parse(await $.fs.read(published)) as { command: string[] }).command
+  return commandIn(await $.fs.read(published))
+}
+
+// The install command install.json holds, as the cdd home writes it.
+function commandIn(installJson: string): string[] {
+  return (JSON.parse(installJson) as { command: string[] }).command
 }
 
 const lastLines = (text: string): string => text.trim().split('\n').slice(-ERROR_LINES_SHOWN).join('\n')

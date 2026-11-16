@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { MouseEvent } from 'react'
+import type { MouseEvent, RefObject } from 'react'
 
 import type { FileChangeData, FileCommentData, FileViolationData, FoldData, SessionFileData } from '@cdd/space/session/session'
 
@@ -53,8 +53,8 @@ function CommentCardView({ comment, onClose }: { comment: FileCommentData; onClo
       </div>
       <p className="comment-text">{comment.text}</p>
       <div className="comment-actions">
-        {comment.state === 'not_sent' ? <button onClick={() => void page.files.sendComment(comment.anchor)}>Send</button> : null}
-        <button onClick={() => void page.files.removeComment(comment.anchor).then(onClose)}>Delete</button>
+        {comment.state === 'not_sent' ? <button onClick={() => void page.files.comments.send(comment.anchor)}>Send</button> : null}
+        <button onClick={() => void page.files.comments.remove(comment.anchor).then(onClose)}>Delete</button>
         <button onClick={onClose}>Close</button>
       </div>
     </div>
@@ -69,7 +69,7 @@ function CommentComposerView({ lines, onDone }: { lines: Lines; onDone: () => vo
       <div className="comment-card-head">Comment on {rangeWords(lines)}</div>
       <textarea aria-label="Comment" autoFocus value={text} onChange={event => setText(event.target.value)} />
       <div className="comment-actions">
-        <button disabled={!text.trim()} onClick={() => void page.files.addComment(lines.start, lines.end, text.trim()).then(onDone)}>
+        <button disabled={!text.trim()} onClick={() => void page.files.comments.add(lines.start, lines.end, text.trim()).then(onDone)}>
           Add comment
         </button>
         <button onClick={onDone}>Cancel</button>
@@ -109,9 +109,18 @@ type CodeState = {
   opened: string
 }
 
-// The file's numbered lines: a fold toggle where a class or member starts, a marker beside each comment's first line,
-// and the lines a broken rule names marked with it. A click on a line number selects it; shift extends the selection.
-function CodeLinesView({ file, marked }: { file: SessionFileData; marked: number }) {
+// What a person has done to the numbered lines, and what they do next: fold, select, comment, open a comment.
+type CodeLines = {
+  state: CodeState
+  marked: number
+  markedLine: RefObject<HTMLDivElement>
+  change: (changes: Partial<CodeState>) => void
+  select: (line: number) => (event: MouseEvent) => void
+  compose: (line: number) => (event: MouseEvent) => void
+  toggle: (fold: FoldData) => void
+}
+
+function useCodeLines(file: SessionFileData, marked: number): CodeLines {
   const markedLine = useRef<HTMLDivElement>(null)
   const [state, setState] = useState<CodeState>({ closed: [], selected: null, composing: null, opened: '' })
   const change = (changes: Partial<CodeState>) => setState(current => ({ ...current, ...changes }))
@@ -128,6 +137,74 @@ function CodeLinesView({ file, marked }: { file: SessionFileData; marked: number
     change({ composing: covers(state.selected, line) ? state.selected : { start: line, end: line } })
   }
   const toggle = (fold: FoldData) => change({ closed: state.closed.includes(foldKey(fold)) ? state.closed.filter(key => key !== foldKey(fold)) : [...state.closed, foldKey(fold)] })
+  return { state, marked, markedLine, change, select, compose, toggle }
+}
+
+// What one line carries: the folds and comments that start on it, the rules it breaks, how the branch changed it, and
+// the classes and hover notes that draw those.
+function lineLookOf(file: SessionFileData, line: number, { state, marked }: CodeLines) {
+  const broken = file.violations.filter(found => line >= found.range.start_line && line <= found.range.end_line)
+  const changed = file.changes.find(change => change.kind !== 'removed' && line >= change.range.start_line && line <= change.range.end_line)
+  const comments = file.comments.filter(comment => comment.range.start_line === line)
+  return {
+    folds: file.folds.filter(fold => fold.range.start_line === line),
+    comments,
+    opened: comments.find(comment => comment.anchor === state.opened),
+    replaced: file.changes.filter(change => change.range.start_line === line && change.removed.length),
+    changed,
+    classes: ['code-line', line === marked ? 'is-failing' : '', broken.length ? 'is-violated' : '', changed ? `is-${changed.kind}` : '', covers(state.selected, line) ? 'is-selected' : ''].filter(Boolean).join(' '),
+    notes: [changed ? CHANGE_WORDS[changed.kind] : '', ...broken.map(found => `${found.violation.rule}: ${found.violation.message}`)].filter(Boolean),
+  }
+}
+
+// One numbered line, with the lines the branch removed above it, the rules it breaks below it, and its open comment.
+function CodeRowView({ file, line, text, lines }: { file: SessionFileData; line: number; text: string; lines: CodeLines }) {
+  const { state, change } = lines
+  const look = lineLookOf(file, line, lines)
+  return (
+    <div className="code-row" data-line={line} data-change={look.changed?.kind}>
+      {look.replaced.map(change => (
+        <RemovedLinesView key={change.range.anchor} change={change} />
+      ))}
+      <CodeLineView line={line} text={text} lines={lines} look={look} />
+      {file.violations.filter(found => found.range.start_line === line).map(found => (
+        <ViolationNoteView key={`${found.violation.rule}:${found.range.anchor}`} found={found} />
+      ))}
+      {look.opened ? <CommentCardView comment={look.opened} onClose={() => change({ opened: '' })} /> : null}
+      {state.composing?.end === line ? <CommentComposerView lines={state.composing} onDone={() => change({ composing: null, selected: null })} /> : null}
+    </div>
+  )
+}
+
+// The line itself: its comment markers, its number, a fold toggle where a class or member starts, and its text.
+function CodeLineView({ line, text, lines, look }: { line: number; text: string; lines: CodeLines; look: ReturnType<typeof lineLookOf> }) {
+  const { state, change } = lines
+  return (
+    <div ref={line === lines.marked ? lines.markedLine : undefined} className={look.classes} title={look.notes.join('\n') || undefined} onContextMenu={lines.compose(line)}>
+      <span className="line-gutter">
+        {look.comments.map(comment => (
+          <CommentMarkerView key={comment.anchor} comment={comment} onOpen={() => change({ opened: state.opened === comment.anchor ? '' : comment.anchor })} />
+        ))}
+      </span>
+      <button className="line-number" aria-label={`Line ${line}`} onClick={lines.select(line)}>
+        {line}
+      </button>
+      <span className="fold-gutter">
+        {look.folds.slice(0, 1).map(fold => (
+          <FoldToggleView key={foldKey(fold)} fold={fold} isClosed={state.closed.includes(foldKey(fold))} onToggle={() => lines.toggle(fold)} />
+        ))}
+      </span>
+      <span className="line-text">{text}</span>
+      {look.folds.some(fold => state.closed.includes(foldKey(fold))) ? <span className="fold-rest">⋯</span> : null}
+    </div>
+  )
+}
+
+// The file's numbered lines: a fold toggle where a class or member starts, a marker beside each comment's first line,
+// and the lines a broken rule names marked with it. A click on a line number selects it; shift extends the selection.
+function CodeLinesView({ file, marked }: { file: SessionFileData; marked: number }) {
+  const lines = useCodeLines(file, marked)
+  const { state, change } = lines
   return (
     <div className="file-lines">
       {state.selected && !state.composing ? (
@@ -136,47 +213,9 @@ function CodeLinesView({ file, marked }: { file: SessionFileData; marked: number
           <button onClick={() => change({ composing: state.selected })}>Comment</button>
         </div>
       ) : null}
-      {file.text.split('\n').map((text, index) => {
-        const line = index + 1
-        if (isFolded(file.folds, state.closed, line)) return null
-        const folds = file.folds.filter(fold => fold.range.start_line === line)
-        const comments = file.comments.filter(comment => comment.range.start_line === line)
-        const broken = file.violations.filter(found => line >= found.range.start_line && line <= found.range.end_line)
-        const opened = comments.find(comment => comment.anchor === state.opened)
-        const replaced = file.changes.filter(change => change.range.start_line === line && change.removed.length)
-        const changed = file.changes.find(change => change.kind !== 'removed' && line >= change.range.start_line && line <= change.range.end_line)
-        const classes = ['code-line', line === marked ? 'is-failing' : '', broken.length ? 'is-violated' : '', changed ? `is-${changed.kind}` : '', covers(state.selected, line) ? 'is-selected' : ''].filter(Boolean).join(' ')
-        const notes = [changed ? CHANGE_WORDS[changed.kind] : '', ...broken.map(found => `${found.violation.rule}: ${found.violation.message}`)].filter(Boolean)
-        return (
-          <div key={line} className="code-row" data-line={line} data-change={changed?.kind}>
-            {replaced.map(change => (
-              <RemovedLinesView key={change.range.anchor} change={change} />
-            ))}
-            <div ref={line === marked ? markedLine : undefined} className={classes} title={notes.join('\n') || undefined} onContextMenu={compose(line)}>
-              <span className="line-gutter">
-                {comments.map(comment => (
-                  <CommentMarkerView key={comment.anchor} comment={comment} onOpen={() => change({ opened: state.opened === comment.anchor ? '' : comment.anchor })} />
-                ))}
-              </span>
-              <button className="line-number" aria-label={`Line ${line}`} onClick={select(line)}>
-                {line}
-              </button>
-              <span className="fold-gutter">
-                {folds.slice(0, 1).map(fold => (
-                  <FoldToggleView key={foldKey(fold)} fold={fold} isClosed={state.closed.includes(foldKey(fold))} onToggle={() => toggle(fold)} />
-                ))}
-              </span>
-              <span className="line-text">{text}</span>
-              {folds.some(fold => state.closed.includes(foldKey(fold))) ? <span className="fold-rest">⋯</span> : null}
-            </div>
-            {file.violations.filter(found => found.range.start_line === line).map(found => (
-              <ViolationNoteView key={`${found.violation.rule}:${found.range.anchor}`} found={found} />
-            ))}
-            {opened ? <CommentCardView comment={opened} onClose={() => change({ opened: '' })} /> : null}
-            {state.composing?.end === line ? <CommentComposerView lines={state.composing} onDone={() => change({ composing: null, selected: null })} /> : null}
-          </div>
-        )
-      })}
+      {file.text.split('\n').map((text, index) =>
+        isFolded(file.folds, state.closed, index + 1) ? null : <CodeRowView key={index + 1} file={file} line={index + 1} text={text} lines={lines} />,
+      )}
     </div>
   )
 }
@@ -188,10 +227,10 @@ function FileToolbarView({ file, editing, onEdit }: { file: SessionFileData; edi
   const processed = file.comments.filter(comment => comment.state === 'processed').length
   return (
     <div className="file-toolbar">
-      <button disabled={!open} onClick={() => void page.files.sendOpenComments()}>
+      <button disabled={!open} onClick={() => void page.files.comments.sendOpen()}>
         Send all open comments
       </button>
-      <button disabled={!processed} onClick={() => void page.files.clearProcessedComments()}>
+      <button disabled={!processed} onClick={() => void page.files.comments.clearProcessed()}>
         Clear processed comments
       </button>
       <span className="toolbar-gap" />
@@ -208,16 +247,22 @@ function FileToolbarView({ file, editing, onEdit }: { file: SessionFileData; edi
 }
 
 // The open file: markdown drawn as its page, any other file as numbered lines; read-only until a person edits it.
-export function FileViewerView({ file, marked }: { file: SessionFileData | null; marked: number }) {
+// While a comment on the file is with a chat, the file is read again every few seconds, so the chat's change and the
+// comment's processed state show without a reload.
+function useRefreshWhileSent(file: SessionFileData | null): void {
   const { page } = useBoard()
-  const [editing, setEditing] = useState<string | null>(null)
-  const [isSource, setSource] = useState(false)
   const isSent = Boolean(file?.comments.some(comment => comment.state === 'sent'))
   useEffect(() => {
     if (!isSent) return
     const timer = setInterval(() => void page.files.refreshShown(), SENT_REFRESH_MILLISECONDS)
     return () => clearInterval(timer)
   }, [isSent, page])
+}
+
+export function FileViewerView({ file, marked }: { file: SessionFileData | null; marked: number }) {
+  const [editing, setEditing] = useState<string | null>(null)
+  const [isSource, setSource] = useState(false)
+  useRefreshWhileSent(file)
   useEffect(() => setEditing(null), [file?.path])
   if (!file) return <div className="file-lines">{NOT_GENERATED.map(line => <p key={line} className="panel-note">{line}</p>)}</div>
   // A file opened at a failing line shows its numbered lines, so the line is marked; markdown is a page otherwise.

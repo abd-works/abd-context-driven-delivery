@@ -19,6 +19,8 @@ VIOLATION_COUNT = "violation_count"
 SAVE_SECONDS = 1.0
 
 Kept = TypeVar("Kept", bool, int)
+KeptAnswers = dict[str, dict[str, dict[str, object]]]
+"""The answers kept, by fidelity, then by question: each the key it was worked out under and its value."""
 
 
 class ProgressCache:
@@ -74,12 +76,12 @@ class ProgressCache:
             self._saving = None
             self._write(dict(self._read()))
 
-    def _read(self) -> dict:
+    def _read(self) -> KeptAnswers:
         if self._held is None:
             self._held = self._from_file()
         return self._held
 
-    def _from_file(self) -> dict:
+    def _from_file(self) -> KeptAnswers:
         if self._file is None:
             return {}
         try:
@@ -88,7 +90,7 @@ class ProgressCache:
             logger.warning("%s; its answers are worked out again", unreadable)
             return {}
 
-    def _write(self, held: dict) -> None:
+    def _write(self, held: KeptAnswers) -> None:
         if self._file is None or not self._file.path.parent.is_dir():
             return
         try:

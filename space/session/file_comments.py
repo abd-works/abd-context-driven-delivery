@@ -5,7 +5,7 @@ worked on it has ended."""
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, TypedDict
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
@@ -24,6 +24,22 @@ NOT_SENT = "not_sent"
 SENT = "sent"
 PROCESSED = "processed"
 FileCommentState = Literal["not_sent", "sent", "processed"]
+
+
+class CommentRecord(TypedDict, total=False):
+    """One comment as file-comments.json holds it: the lines it is on and what they held, its words, and the chat,
+    message, and file text it was sent with."""
+
+    path: str
+    start_line: int
+    end_line: int
+    selected_text: str
+    text: str
+    chat: str
+    message: str
+    sent_text: str
+
+
 # A chat's message moves on once the chat is done with it; a failed one never reached the chat.
 _UNDELIVERED = (FAILED,)
 
@@ -50,7 +66,7 @@ class FileComment:
         self._sent_text = sent_text
 
     @classmethod
-    def from_record(cls, record: dict) -> FileComment:
+    def from_record(cls, record: CommentRecord) -> FileComment:
         range = Range(record["path"], record["start_line"], record["end_line"], record["selected_text"])
         return cls(range, record["text"], record.get("chat", ""), record.get("message", ""), record.get("sent_text", ""))
 
@@ -107,7 +123,7 @@ class FileComment:
         return FileComment(self._range, self._text, chat, message, sent_text)
 
     @property
-    def record(self) -> dict:
+    def record(self) -> CommentRecord:
         return {
             "path": self.path,
             "start_line": self._range.start_line,

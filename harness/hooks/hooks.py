@@ -3,7 +3,7 @@ command for each event, and ``hook-handlers.json``, which lists the operations t
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Callable
 
 from harness.agent_tools.agent_tools import InstallDestination
 from harness.annotations.annotation import Annotation, Destination
@@ -19,7 +19,7 @@ class Hooks(Annotation):
     flag = "_hooks"
     copied = False
 
-    def __new__(cls, target: Any = None, *, disabled: bool = False, deploy: bool = True):
+    def __new__(cls: type[Hooks], target: type | None = None, *, disabled: bool = False, deploy: bool = True) -> Hooks | type:
         annotation = object.__new__(cls)
         annotation.disabled = disabled
         annotation.deploy = deploy
@@ -32,17 +32,17 @@ class Hooks(Annotation):
         return toolset_class
 
     @classmethod
-    def _on(cls, toolset: Any) -> Hooks | None:
+    def _on(cls, toolset: object) -> Hooks | None:
         return getattr(type(toolset), cls.flag, None)
 
     @classmethod
-    def disabled_on(cls, toolset: Any) -> bool:
+    def disabled_on(cls, toolset: object) -> bool:
         """True when ``@Hooks(disabled=True)`` turned off every hook of toolset's class."""
         annotation = cls._on(toolset)
         return annotation is not None and annotation.disabled
 
     @classmethod
-    def deploys(cls, toolset: Any) -> bool:
+    def deploys(cls, toolset: object) -> bool:
         """False when ``@Hooks(deploy=False)`` keeps the hooks of toolset's class out of install."""
         annotation = cls._on(toolset)
         return annotation is None or annotation.deploy
@@ -71,7 +71,9 @@ class Hook(Destination):
         }
     )
 
-    def __new__(cls, target: Any = None, event: str | None = None, *, disabled: bool = False):
+    def __new__(
+        cls: type[Hook], target: Callable[..., object] | str | None = None, event: str | None = None, *, disabled: bool = False
+    ) -> Hook | Callable[..., object]:
         if isinstance(target, str):
             event = target
             target = None
@@ -90,7 +92,7 @@ class Hook(Destination):
             return inst.annotate(target)
         return inst
 
-    def annotate(self, target: Any) -> Any:
+    def annotate(self, target: Callable[..., object]) -> Callable[..., object]:
         annotated = super().annotate(target)
         if self.disabled:
             setattr(annotated, self.disabled_flag, True)
@@ -110,7 +112,7 @@ class Hook(Destination):
         return (event, *cls._ALSO_SERVES.get(event, ()))
 
     @classmethod
-    def disabled_on(cls, operation: Any) -> bool:
+    def disabled_on(cls, operation: Callable[..., object]) -> bool:
         """True when ``@Hook(..., disabled=True)`` turned the hook on this operation off."""
         return bool(getattr(operation, cls.disabled_flag, False))
 

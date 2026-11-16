@@ -129,7 +129,7 @@ function useCannotFill(ticket: TicketClient): boolean {
 }
 
 function SplitActionView({ ticket }: { ticket: TicketClient }) {
-  return <SessionActionView action="split" label="Split" hint="Split into child tickets, one per story" isOff={useCannotFill(ticket)} onPress={() => ticket.fillSplit()} />
+  return <SessionActionView action="split" label="Split" hint="Split into child tickets, one per story" isOff={useCannotFill(ticket)} onPress={() => ticket.prompts.fillSplit()} />
 }
 
 // What a card does for its session, as icons in its bottom-left corner.
@@ -139,9 +139,9 @@ function SessionActionsView({ ticket }: { ticket: TicketClient }) {
   return (
     <span className="file-views">
       <SessionActionView action="next" label={ticket.runNextLabel} hint={ticket.runNextHint} isOff={!ticket.canRunNext} onPress={() => ticket.runNext()} />
-      <SessionActionView action="handoff" label="Handoff" hint="Write a handoff for this session" isOff={cannotFill} onPress={() => ticket.fillHandoff()} />
+      <SessionActionView action="handoff" label="Handoff" hint="Write a handoff for this session" isOff={cannotFill} onPress={() => ticket.prompts.fillHandoff()} />
       {ticket.isOpen ? (
-        <SessionActionView action="close" label="Close" hint={ticket.closeHint} isOff={false} onPress={() => ticket.startClose()} />
+        <SessionActionView action="close" label="Close" hint={ticket.prompts.closeHint} isOff={false} onPress={() => ticket.prompts.startClose()} />
       ) : ticket.isMain ? null : (
         <SessionActionView action="activate" label="Activate" hint="Open this ticket in its own worktree" isOff={ticket.isClosed} onPress={() => page.activation.activate(ticket)} />
       )}

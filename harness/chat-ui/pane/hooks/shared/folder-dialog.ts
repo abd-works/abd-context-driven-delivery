@@ -1,6 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 
-import { reasonOf } from '../error-display/failure-client'
+import { reasonOf } from './reason'
 
 // The system's own folder picker, as each system offers one to a program with no window: Windows' folder browser, kept
 // on top of the Claude app so it is not opened behind it, macOS's choose folder, and zenity on Linux. Mods have no

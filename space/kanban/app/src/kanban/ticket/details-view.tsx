@@ -26,41 +26,56 @@ function PlaceLinkView({ label, hint, isOff = false, onPress }: { label: string;
 
 // The ticket's place and notes, each a way in: its session folder, its stage's files, its latest handoff, its next step.
 function TicketBarView({ ticket }: { ticket: TicketClient }) {
-  const { page } = useBoard()
-  const stage = page.board.stageOf(ticket)
-  const stageProgress = stage ? ticket.progressIn(stage) : []
   return (
     <div className="details-bar-words">
       <div className="details-heading">
         <div className="details-title">
           <h2>{ticket.title}</h2>
-          <span className="details-place">
-            <PlaceLinkView label={ticket.name} hint="Browse the session folder" onPress={() => page.files.openSessionFolder(ticket)} />
-            {ticket.origin ? ` · ${ticket.origin}` : ''}
-            {' · root '}
-            <PlaceLinkView label={ticket.session.workpath || 'whole repository'} hint="Browse the folder the session works in" onPress={() => page.files.openWorkpath(ticket)} />{' '}
-            <PlaceLinkView label="roots" hint="Choose the session's workpath and each practice's practice root" onPress={() => page.roots.openFor(ticket)} />
-            {' · '}
-            <PlaceLinkView label={ticket.stagePlace} hint={`Browse the files of ${stage?.name ?? 'this stage'}`} isOff={!stageProgress.length} onPress={() => page.files.openFiles(ticket, stageProgress)} />
-          </span>
+          <TicketPlaceView ticket={ticket} />
         </div>
-        <div className="details-place">
-          {ticket.session.handoff ? (
-            <>
-              Latest handoff: <PlaceLinkView label={ticket.session.handoff} hint="Open the handoff" onPress={() => page.files.openSessionFile(ticket, ticket.session.handoff)} />
-            </>
-          ) : (
-            'No handoff yet'
-          )}
-          {ticket.nextNote ? (
-            <>
-              {' · '}
-              <PlaceLinkView label={ticket.nextNote} hint={ticket.runNextHint} isOff={!ticket.canRunNext} onPress={() => ticket.runNext()} />
-            </>
-          ) : null}
-          {ticket.lockNote ? ` · ${ticket.lockNote}` : ''}
-        </div>
+        <TicketNotesView ticket={ticket} />
       </div>
+    </div>
+  )
+}
+
+// Where the ticket works: its session folder, the folder its session works in, its roots, and its stage's files.
+function TicketPlaceView({ ticket }: { ticket: TicketClient }) {
+  const { page } = useBoard()
+  const stage = page.board.stageOf(ticket)
+  const stageProgress = stage ? ticket.progressIn(stage) : []
+  return (
+    <span className="details-place">
+      <PlaceLinkView label={ticket.name} hint="Browse the session folder" onPress={() => page.files.openSessionFolder(ticket)} />
+      {ticket.origin ? ` · ${ticket.origin}` : ''}
+      {' · root '}
+      <PlaceLinkView label={ticket.session.workpath || 'whole repository'} hint="Browse the folder the session works in" onPress={() => page.files.openWorkpath(ticket)} />{' '}
+      <PlaceLinkView label="roots" hint="Choose the session's workpath and each practice's practice root" onPress={() => page.roots.openFor(ticket)} />
+      {' · '}
+      <PlaceLinkView label={ticket.stagePlace} hint={`Browse the files of ${stage?.name ?? 'this stage'}`} isOff={!stageProgress.length} onPress={() => page.files.openFiles(ticket, stageProgress)} />
+    </span>
+  )
+}
+
+// The ticket's notes: its latest handoff, its next step, and what locks it.
+function TicketNotesView({ ticket }: { ticket: TicketClient }) {
+  const { page } = useBoard()
+  return (
+    <div className="details-place">
+      {ticket.session.handoff ? (
+        <>
+          Latest handoff: <PlaceLinkView label={ticket.session.handoff} hint="Open the handoff" onPress={() => page.files.openSessionFile(ticket, ticket.session.handoff)} />
+        </>
+      ) : (
+        'No handoff yet'
+      )}
+      {ticket.nextNote ? (
+        <>
+          {' · '}
+          <PlaceLinkView label={ticket.nextNote} hint={ticket.runNextHint} isOff={!ticket.canRunNext} onPress={() => ticket.runNext()} />
+        </>
+      ) : null}
+      {ticket.lockNote ? ` · ${ticket.lockNote}` : ''}
     </div>
   )
 }

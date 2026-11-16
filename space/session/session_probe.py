@@ -6,10 +6,17 @@ import shutil
 import tempfile
 import traceback
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from harness.agent_tools.chat_pointer import ChatPointer
 from harness.agent_tools.tool_call import ToolCall
+from harness.diagnostics.probe_outcome import raised_by_a_bug
+
+if TYPE_CHECKING:
+    from space.session.session import Session
+
+ProbeReport = dict[str, Any]
+"""The probe's result as diagnostics.json holds it: its colour, its report line, each check, and the log's last lines."""
 
 _SESSION_PROBE_NAME = "guidance-probe"
 # How many of the log's last lines the report shows, enough to see the lines the probe's actions wrote.
@@ -26,21 +33,24 @@ class SessionProbe:
         self._work = self._repo / "work"
         self._work.mkdir()
 
-    def run(self) -> dict[str, Any]:
+    def run(self) -> ProbeReport:
         """The probe's result for diagnostics.json: green when every check passed, else red with what failed. A probe's
-        job is to report a failure, so one raised while probing is reported red with its trace, not raised."""
+        job is to report a failure, so a failure the program declares while probing is reported red with its trace; a
+        built-in programming error is a bug, and raises."""
         from harness.installation.repository_toolsets import RepositoryToolsets
 
         RepositoryToolsets.of_running_checkout().ensure_import_path()
         try:
             return self._report(*self._run_actions())
         except Exception as failure:
+            if raised_by_a_bug(failure):
+                raise
             trace = traceback.format_exception(type(failure), failure, failure.__traceback__)
             return {"color": "red", "report": f"session log: {type(failure).__name__}: {failure}", "checks": {}, "tail": trace}
         finally:
             shutil.rmtree(self._repo, ignore_errors=True)
 
-    def _run_actions(self):
+    def _run_actions(self) -> tuple[Session, Path]:
         """Generate and validate BDD in the probe's session, opened for the probe's own chat, so its log lines point
         there and no other chat's do."""
         from cdd_guidance.actions.generate.generate import Generate
@@ -50,15 +60,20 @@ class SessionProbe:
         sessions = Sessions(self._repo)
         sessions.switch(_SESSION_PROBE_NAME, self._work)
         session = sessions.current()
-        transcript = session.session_path / "chats" / "guidance-probe.md"
-        transcript.parent.mkdir(parents=True, exist_ok=True)
-        transcript.write_text("guidance diagnostics probe\n", encoding="utf-8")
+        transcript = self._probe_transcript(session)
         call = ToolCall(chat=ChatPointer("guidance-probe", transcript, "1"))
         Generate(session, call).generate(["bdd"])
         Validate(session, call).validate(["bdd"])
         return session, transcript
 
-    def _report(self, session, transcript: Path) -> dict[str, Any]:
+    def _probe_transcript(self, session: Session) -> Path:
+        """A transcript file for the probe's chat, so the chat pointer on each log line names a file that is there."""
+        transcript = session.session_path / "chats" / "guidance-probe.md"
+        transcript.parent.mkdir(parents=True, exist_ok=True)
+        transcript.write_text("guidance diagnostics probe\n", encoding="utf-8")
+        return transcript
+
+    def _report(self, session: Session, transcript: Path) -> ProbeReport:
         log_text = self._log_text(session)
         checks = {
             "generate_line": "generate" in log_text and "bdd" in log_text,
@@ -74,11 +89,11 @@ class SessionProbe:
         report = "session log: generate and validate lines include practice and workpath"
         return {"color": "green", "report": report, "checks": checks, "tail": tail}
 
-    def _log_text(self, session) -> str:
+    def _log_text(self, session: Session) -> str:
         """The session's log as its lines read, through the log, which is the one reader of its file."""
         return "\n".join(entry.text for entry in session.log.entries)
 
-    def _marks_loops(self, session) -> bool:
+    def _marks_loops(self, session: Session) -> bool:
         session.log.by(None).next_loop()
         session.log.by(None).next_loop()
         text = self._log_text(session)

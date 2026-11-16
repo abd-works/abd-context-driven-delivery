@@ -32,12 +32,12 @@ export function PushButtonsView(elements: ElementTable, repo: RepoClient, action
 }
 
 // Asked from Push & merge: what pushing the session's work to main does, then Cancel or go ahead.
-export function PushDialogView(elements: ElementTable, repo: RepoClient, session: string, actions: PushActions) {
+export function PushDialogView(elements: ElementTable, repo: RepoClient, actions: PushActions) {
   const { Box, Button, Text } = elements
   if (!repo.isAsking) return null
   return (
     <Box key="push-dialog" flexDirection="column" paddingX={1} borderStyle="single" borderColor={BRAND.accent} backgroundColor={BRAND.raised}>
-      <Text weight="semibold" color={BRAND.text}>{`Push ${session} and merge it to origin/main?`}</Text>
+      <Text weight="semibold" color={BRAND.text}>{`Push ${repo.session} and merge it to origin/main?`}</Text>
       <Text color={BRAND.muted}>Commits the work, pushes its branch, merges it into the default branch and pushes that. The version is not raised; run /version first for a release.</Text>
       <Box flexDirection="row" gap={1}>
         <Button key="push-cancel" label="Cancel" onPress={actions.cancel} />

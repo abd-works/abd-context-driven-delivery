@@ -75,10 +75,10 @@ class MockGit:
             self.has_origin = True
             self.push(self.default_branch)
 
-    def add_branch(self, name: str, at: str = "") -> None:
-        """A branch made from at, the checked-out branch when none is named."""
+    def add_branch(self, name: str, start_point: str = "") -> None:
+        """A branch made from start_point, the checked-out branch when none is named."""
         with self.lock:
-            start = at or self.checked_out.get(self.root, self.default_branch)
+            start = start_point or self.checked_out.get(self.root, self.default_branch)
             self.trees[name] = dict(self.trees.get(start, {}))
             self.logs[name] = list(self.logs.get(start, []))
             self.forks[name] = dict(self.trees[name])
@@ -117,7 +117,7 @@ class MockGit:
         """The files in checkout, or under a folder of it, whose content its branch has not committed, as paths from the
         checkout's top; the files .gitignore names are not counted."""
         committed = self.trees.get(self.branch_of(checkout), {})
-        return sorted(path for path, digest in _files(checkout, under or checkout).items() if committed.get(path) != digest)
+        return sorted(path for path, digest in self._files(checkout, under or checkout).items() if committed.get(path) != digest)
 
     def changed_since_fork(self, branch: str) -> list[str]:
         """The files branch committed since it was made from the default branch."""
@@ -132,7 +132,7 @@ class MockGit:
         with self.lock:
             branch = self.branch_of(checkout)
             tree = self.trees.setdefault(branch, {})
-            changed = {path: digest for folder in paths for path, digest in _files(checkout, folder).items() if tree.get(path) != digest and (untracked or path in tree)}
+            changed = {path: digest for folder in paths for path, digest in self._files(checkout, folder).items() if tree.get(path) != digest and (untracked or path in tree)}
             if not changed:
                 return False
             tree.update(changed)
@@ -177,6 +177,29 @@ class MockGit:
             self.checked_out.pop(folder, None)
             shutil.rmtree(folder, ignore_errors=True)
             self.calls.append(("remove_worktree", str(folder)))
+
+    def _files(self, checkout: Path, under: Path) -> dict[str, str]:
+        """Every file under the folder under in checkout, by its path from checkout's top, with the hash of its content;
+        what checkout's .gitignore names, and the .git marker, are left out, as git leaves them out."""
+        ignored = _ignore_patterns(checkout)
+        top = checkout.resolve()
+        found = {}
+        for path in self._files_at(under.resolve()):
+            if not path.is_relative_to(top):
+                continue
+            relative = path.relative_to(top).as_posix()
+            if relative.split("/", 1)[0] in _IGNORED_ALWAYS or any(pattern.search(relative) for pattern in ignored):
+                continue
+            found[relative] = hashlib.sha1(path.read_bytes()).hexdigest()
+        return found
+
+    def _files_at(self, start: Path) -> list[Path]:
+        """The file start names, or every file under the folder it names; none when nothing is there."""
+        if start.is_file():
+            return [start]
+        if start.is_dir():
+            return [path for path in start.rglob("*") if path.is_file()]
+        return []
 
 
 class MockRepo(Repo):
@@ -339,29 +362,6 @@ class MockWorktrees(Worktrees):
 
     def remove(self, worktree: Worktree) -> None:
         self._held.remove_worktree(worktree.path)
-
-
-def _files(checkout: Path, under: Path) -> dict[str, str]:
-    """Every file under the folder under in checkout, by its path from checkout's top, with the hash of its content;
-    what checkout's .gitignore names, and the .git marker, are left out, as git leaves them out."""
-    ignored = _ignore_patterns(checkout)
-    top = checkout.resolve()
-    start = under.resolve()
-    if start.is_file():
-        candidates = [start]
-    elif start.is_dir():
-        candidates = [path for path in start.rglob("*") if path.is_file()]
-    else:
-        return {}
-    found = {}
-    for path in candidates:
-        if not path.is_relative_to(top):
-            continue
-        relative = path.relative_to(top).as_posix()
-        if relative.split("/", 1)[0] in _IGNORED_ALWAYS or any(pattern.search(relative) for pattern in ignored):
-            continue
-        found[relative] = hashlib.sha1(path.read_bytes()).hexdigest()
-    return found
 
 
 def _ignore_patterns(checkout: Path) -> list[re.Pattern[str]]:

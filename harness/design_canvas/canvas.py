@@ -10,13 +10,31 @@ import html
 import json
 import re
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, NamedTuple, Optional, TypedDict
+
+from harness.design_canvas.look import CardLook
 
 
 PROJECT = "project"
 # The date canvas.json gives for its files. It is fixed, so regenerating a canvas whose boards did not change writes
 # the same canvas.json, and a version shows only the changes people or the generator made.
 FILES_CREATED_AT = "2026-10-28T18:00:00Z"
+# How round a card's corners are, unless its caller says otherwise.
+CARD_RADIUS = 6
+
+
+class CanvasBoard(TypedDict, total=False):
+    """Where canvas.json places one artboard: its place and size on the canvas, the page it is on, its title, and
+    whether it runs and fills its frame."""
+
+    x: int
+    y: int
+    w: int
+    h: int
+    page: str
+    title: str
+    is_interactive: bool
+    expand: str
 
 
 class DesignCanvas:
@@ -28,7 +46,7 @@ class DesignCanvas:
         # The canvas's project folder (``<version>/project``) when it is already on disk; none for a canvas drawn fresh.
         self.project = Path(project) if project is not None else None
         self._pages: List[dict] = []
-        self._boards: Dict[str, dict] = {}
+        self._boards: Dict[str, CanvasBoard] = {}
         self._order: List[str] = []
         self._files: Dict[str, str] = {}
 
@@ -39,7 +57,7 @@ class DesignCanvas:
     def add_page(self, page_id: str, name: str) -> None:
         self._pages.append({"id": page_id, "name": name})
 
-    def add_board(self, name: str, board: dict, text: Optional[str] = None) -> None:
+    def add_board(self, name: str, board: CanvasBoard, text: Optional[str] = None) -> None:
         """Place artboard *name* (its path under ``project/``) on a page; *text* is its file when the canvas writes it."""
         self._boards[name] = board
         self._order.append(name)
@@ -110,7 +128,7 @@ def artboard(title: str, width: int, height: int, body: str, style: str, root_st
     """A static ``.dc.html`` artboard: *body* absolutely placed inside a *width* × *height* root. A *zoomable* artboard
     zooms with a trackpad pinch (or ctrl + wheel) and its − / fit / + buttons."""
     if zoomable:
-        return _zoomable_artboard(title, width, height, body, style, root_style, head)
+        return _zoomable_artboard(_ArtboardPage(title, width, height, body, style, root_style, head))
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -150,33 +168,16 @@ PINCH_PIXELS_PER_E = 200
 ZOOM_BUTTON_FACTOR = 1.25
 
 
-def _zoomable_artboard(title: str, width: int, height: int, body: str, style: str, root_style: str, head: str) -> str:
-    """The artboard fills its frame and scrolls; the map inside zooms with CSS ``zoom`` through one class per 5% step
-    (the canvas fills holes in class names, not inside styles), so zooming never shrinks the frame."""
-    zoom_classes = "".join(f".zoom-{level}{{zoom:{level / 100}}}" for level in ZOOM_RANGE)
-    return f"""<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>{html.escape(title)}</title>
-<script src="./support.js"></script>
-</head>
-<body>
-<x-dc>
-<helmet>{head}<style>{style}{zoom_classes}</style></helmet>
-<div style="position: relative; width: 100%; height: 100vh; overflow: auto; {root_style}">
-<div class="{{{{zoomClass}}}}" style="position: relative; width: {width}px; height: {height}px">
-{body}
-</div>
-</div>
-<div style="position: fixed; top: 12px; right: 12px; display: flex; gap: 6px; z-index: 10">
+# The − / fit / + buttons every zoomable artboard shows in its top right corner.
+ZOOM_CONTROLS = f"""<div style="position: fixed; top: 12px; right: 12px; display: flex; gap: 6px; z-index: 10">
 <button type="button" style="{ZOOM_BUTTON}" onClick="{{{{zoomOut}}}}" aria-label="Zoom out">−</button>
 <button type="button" style="{ZOOM_BUTTON}" onClick="{{{{zoomReset}}}}" aria-label="Actual size">{{{{zoomLabel}}}}</button>
 <button type="button" style="{ZOOM_BUTTON}" onClick="{{{{zoomIn}}}}" aria-label="Zoom in">+</button>
 </div>
-</x-dc>
-<script type="text/x-dc" data-dc-script data-props='{{"$preview":{{"width":{width},"height":{height}}}}}'>
-const LINK_KEY = '{LINK_KEY}';
+"""
+# The script every zoomable artboard runs: it keeps the hash of a link clicked on it, zooms on a pinch, and answers the
+# zoom class and label its buttons show.
+ZOOM_COMPONENT = f"""const LINK_KEY = '{LINK_KEY}';
 class Component extends DCLogic {{
 componentDidMount() {{
 this.keepLink = (event) => {{
@@ -215,13 +216,50 @@ zoomReset: () => this.zoomTo(1)
 }};
 }}
 }}
-</script>
+"""
+
+
+class _ArtboardPage(NamedTuple):
+    """One artboard's page: its title, its size, what it shows, its styles, and what its head adds."""
+
+    title: str
+    width: int
+    height: int
+    body: str
+    style: str
+    root_style: str
+    head: str
+
+
+def _zoomable_artboard(page: _ArtboardPage) -> str:
+    """The artboard fills its frame and scrolls; the map inside zooms with CSS ``zoom`` through one class per 5% step
+    (the canvas fills holes in class names, not inside styles), so zooming never shrinks the frame."""
+    title, width, height, body, style, root_style, head = page
+    zoom_classes = "".join(f".zoom-{level}{{zoom:{level / 100}}}" for level in ZOOM_RANGE)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{html.escape(title)}</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>{head}<style>{style}{zoom_classes}</style></helmet>
+<div style="position: relative; width: 100%; height: 100vh; overflow: auto; {root_style}">
+<div class="{{{{zoomClass}}}}" style="position: relative; width: {width}px; height: {height}px">
+{body}
+</div>
+</div>
+{ZOOM_CONTROLS}</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{{"$preview":{{"width":{width},"height":{height}}}}}'>
+{ZOOM_COMPONENT}</script>
 </body>
 </html>
 """
 
 
-def box(left, top, width, height, look: dict, text: str, radius: int = 6, icon: str = "") -> str:
+def box(left: int, top: int, width: int, height: int, look: CardLook, text: str, radius: int = CARD_RADIUS, icon: str = "") -> str:
     """A labelled card at an absolute place, drawn in *look* (fill, stroke, color, font, size, weight, extra css)."""
     return (f'<div style="position: absolute; left: {left}px; top: {top}px; width: {width}px; height: {height}px; '
             f'box-sizing: border-box; padding: 4px 8px; gap: 6px; display: flex; align-items: center; justify-content: center; '

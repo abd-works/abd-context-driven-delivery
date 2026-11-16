@@ -6,6 +6,11 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from harness.installation.installer import Installer
+    from harness.mcp.mcp_server import McpInstallation
 
 _REPO = Path(__file__).resolve().parents[1]
 if str(_REPO) not in sys.path:
@@ -16,6 +21,16 @@ def main() -> int:
     # The step lines carry symbols a Windows console's code page cannot write when the output is piped.
     for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(encoding="utf-8", errors="replace")
+    args = _parser().parse_args()
+    chat_checkout = _other_chat_checkout(args)
+    if chat_checkout is not None:
+        return _install_from_chat_checkout(args, chat_checkout)
+    if args.from_latest:
+        return _install_from_latest(args)
+    return _install(args)
+
+
+def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Install CDD toolsets into the IDE path.")
     parser.add_argument(
         "--ide",
@@ -74,15 +89,26 @@ def main() -> int:
         help="Install for the chat working in FOLDER: from FOLDER when it is a CDD checkout, the one the person is "
         "working on, else from this checkout. The chat bar's Run install runs this.",
     )
-    args = parser.parse_args()
-    if args.from_chat is not None:
-        chat_checkout = Path(args.from_chat).resolve()
-        if chat_checkout != _REPO and (chat_checkout / "scripts" / "install.py").is_file():
-            passed = [*(["--ide", args.ide] if args.ide else []), *(["--from-latest"] if args.from_latest else [])]
-            command = [sys.executable, str(chat_checkout / "scripts" / "install.py"), *passed]
-            return subprocess.run(command, cwd=chat_checkout, check=False).returncode
-    if args.from_latest:
-        return _install_from_latest(args)
+    return parser
+
+
+def _other_chat_checkout(args: argparse.Namespace) -> Path | None:
+    """The CDD checkout a chat works in, when ``--from-chat`` names one other than this checkout."""
+    if args.from_chat is None:
+        return None
+    chat_checkout = Path(args.from_chat).resolve()
+    if chat_checkout == _REPO or not (chat_checkout / "scripts" / "install.py").is_file():
+        return None
+    return chat_checkout
+
+
+def _install_from_chat_checkout(args: argparse.Namespace, chat_checkout: Path) -> int:
+    passed = [*(["--ide", args.ide] if args.ide else []), *(["--from-latest"] if args.from_latest else [])]
+    command = [sys.executable, str(chat_checkout / "scripts" / "install.py"), *passed]
+    return subprocess.run(command, cwd=chat_checkout, check=False).returncode
+
+
+def _install(args: argparse.Namespace) -> int:
     # The MCP and hook installations register with the Installer when their modules are imported.
     import harness.hooks.hook_installation  # noqa: F401
     from harness.installation.installer import Installer
@@ -96,28 +122,36 @@ def main() -> int:
 
         Repo.of_project(_REPO).catch_up_with_origin()
     if args.pin_runtime or args.update or args.serve_from_checkout:
-        print(f"cdd server: {_switch_server(args, server)}")
-        if installer.layout.is_claude_code:
-            print(f"cdd-board: {server.claude_plugins.install_board()}")
-        print(f"language adapters: {len(installer.write_language_adapters())} written")
-        _write_runtime_adapters(installer, server)
-        return 0
+        return _switch_server_only(args, installer, server)
     if args.restart_everything:
         _restart_everything(installer, server)
         _step_started(4)
-    if args.self:
-        installer.install_self(replace=not args.no_replace)
-    else:
-        installer.install(replace=not args.no_replace)
-        # A plain install from the main checkout also moves the server onto the commit it just installed.
-        restarted = server.keep_pinned_current()
-        if restarted:
-            print(f"cdd server: {restarted}")
-        _write_runtime_adapters(installer, server)
+    _install_toolsets(args, installer, server)
     if args.restart_everything:
         _step_done(4, "installed")
         return _ping_server(server)
     return 0
+
+
+def _switch_server_only(args: argparse.Namespace, installer: Installer, server: McpInstallation) -> int:
+    print(f"cdd server: {_switch_server(args, server)}")
+    if installer.layout.is_claude_code:
+        print(f"cdd-board: {server.claude_plugins.install_board()}")
+    print(f"language adapters: {len(installer.write_language_adapters())} written")
+    _write_runtime_adapters(installer, server)
+    return 0
+
+
+def _install_toolsets(args: argparse.Namespace, installer: Installer, server: McpInstallation) -> None:
+    if args.self:
+        installer.install_self(replace=not args.no_replace)
+        return
+    installer.install(replace=not args.no_replace)
+    # A plain install from the main checkout also moves the server onto the commit it just installed.
+    restarted = server.keep_pinned_current()
+    if restarted:
+        print(f"cdd server: {restarted}")
+    _write_runtime_adapters(installer, server)
 
 
 # The steps of /install-latest. The script reports each one as it starts and as it is done, flushed at once, so the agent
@@ -145,7 +179,7 @@ def _step_failed(number: int, error: str) -> None:
     print(f"✗ {number}/{len(INSTALL_LATEST_STEPS)} {INSTALL_LATEST_STEPS[number]}: {error}", file=sys.stderr, flush=True)
 
 
-def _install_from_latest(args) -> int:
+def _install_from_latest(args: argparse.Namespace) -> int:
     _step_started(1)
     pulled = subprocess.run(["git", "pull", "origin", "main"], cwd=_REPO, check=False, capture_output=True, text=True)
     if pulled.returncode != 0:
@@ -181,7 +215,7 @@ def _match_origin_version() -> str:
     return f"{origin_line.group(0)} (set from origin main)"
 
 
-def _switch_server(args, server) -> str:
+def _switch_server(args: argparse.Namespace, server: McpInstallation) -> str:
     """Serve the code the flags name: the checkout on disk, the pinned commit, or for an update, the current code served
     the way it already is, so an update from the board leaves a person working on CDD itself on their checkout."""
     if args.serve_from_checkout:
@@ -191,7 +225,7 @@ def _switch_server(args, server) -> str:
     return server.pin_server()
 
 
-def _restart_everything(installer, server) -> None:
+def _restart_everything(installer: Installer, server: McpInstallation) -> None:
     """Stop each server an install replaces the code of, so none keeps serving what it loaded before. The cdd server
     starts again at once rather than after the install: a chat that connects while it is down runs its header helper,
     which waits for a server longer than Claude Code waits for the helper, and Claude Code then sends no project header,
@@ -212,7 +246,7 @@ def _restart_everything(installer, server) -> None:
     _step_done(3, f"pid {restarted.pid}")
 
 
-def _ping_server(server) -> int:
+def _ping_server(server: McpInstallation) -> int:
     _step_started(5)
     running = server.daemon.ping()
     if running is None:
@@ -222,7 +256,7 @@ def _ping_server(server) -> int:
     return 0
 
 
-def _write_runtime_adapters(installer, server) -> None:
+def _write_runtime_adapters(installer: Installer, server: McpInstallation) -> None:
     """The apps the server launches run from the pinned runtime, and their pages import the CDD domain through the
     language adapters under its IDE folder, which git never copies there. The runtime is this checkout's commit, so a pin
     copies the adapters this checkout's install wrote, in place of any an earlier pin left. Every install from the

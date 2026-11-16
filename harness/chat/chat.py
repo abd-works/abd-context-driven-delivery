@@ -9,7 +9,7 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Callable, Literal, TypeVar
+from typing import Callable, Literal, TypedDict, TypeVar
 from urllib.parse import quote
 
 from harness.agent_tools import agent_toolset
@@ -52,6 +52,30 @@ MessageState = Literal["waiting", "taken", "shown", "done", "failed"]
 T = TypeVar("T")
 
 
+class SentCommand(TypedDict, total=False):
+    """A command as its file holds it: its kind and text, when it was sent, why the chat could not show it, and whether
+    the chat has been busy with it since it showed it."""
+
+    kind: str
+    text: str
+    sent_at: float
+    reason: str
+    is_worked_on: bool
+
+
+class ChatCheckIn(TypedDict, total=False):
+    """What a chat's mod last said at check-in, as the chat's state file holds it, with the title read for the chat and
+    the transcript it was read from."""
+
+    name: str
+    is_busy: bool
+    seen: float
+    folder: str
+    title: str
+    title_read: float
+    transcript: str
+
+
 class ChatCommand:
     """A command a chat takes at its check-in: the message it came in, and what to do with its text."""
 
@@ -79,11 +103,11 @@ class ChatCommand:
 class ChatMessage(ChatCommand):
     """A message sent to a chat, as the board lists it: when it was sent, where it stands, and why it failed."""
 
-    def __init__(self, message: str, kind: str, text: str, sent_at: float, state: MessageState, reason: str) -> None:
-        super().__init__(message, kind, text)
-        self._sent_at = sent_at
+    def __init__(self, message: str, sent: SentCommand, state: MessageState) -> None:
+        super().__init__(message, sent["kind"], sent["text"])
+        self._sent_at = sent.get("sent_at", 0.0)
         self._state = state
-        self._reason = reason
+        self._reason = sent.get("reason", "")
 
     @property
     @data_field
@@ -108,22 +132,16 @@ class ChatNotConnectedError(LookupError):
         super().__init__(f"chat {chat!r} is not connected: is the cdd-board mod loaded in it?")
 
 
-def _chats_folder() -> Path:
-    return Path(os.environ.get("CDD_CHATS_FOLDER") or Path.home() / ".claude" / "cdd-chats")
+class ChatsFolder:
+    """The folder that holds every chat's own folder: the one ``CDD_CHATS_FOLDER`` names, as a test run does, else the
+    user's. It is read each time, so a run that names its own folder reaches only its own chats."""
+
+    @property
+    def path(self) -> Path:
+        return Path(os.environ.get("CDD_CHATS_FOLDER") or Path.home() / ".claude" / "cdd-chats")
 
 
-def _join_opener_section() -> str:
-    """What a new chat is told so it lands beside the chat that opened it: the app knows that chat by its title and
-    folder, not by the transcript id cdd has, so the new chat finds it by those. Empty when no titled chat asked."""
-    call = ToolCall.answering()
-    opener = Chat.load(call.chat_id) if call is not None and call.chat_id else None
-    if opener is None or not opener.title:
-        return ""
-    return (
-        f'This chat was opened from the chat titled "{opener.title}" in {opener.folder}. When list_sessions shows that '
-        'chat filed under a sidebar section, move this chat into the same section with move_sessions and session "self"; '
-        "otherwise leave it where the app put it."
-    )
+CHATS_FOLDER = ChatsFolder()
 
 
 class ChatLinks:
@@ -139,8 +157,21 @@ class ChatLinks:
     def link_to_new(self, folder: str, prompt: str) -> str:
         """The link that opens a new chat on folder with prompt filled in. The app files a new chat under its
         repository's name; when a chat asked for it, the prompt also has the new chat join that chat's sidebar section."""
-        prompt = " ".join(part for part in (prompt, _join_opener_section()) if part)
+        prompt = " ".join(part for part in (prompt, self._join_opener_section()) if part)
         return f"{NEW_CHAT_LINK}?folder={quote(folder, safe='')}&q={quote(prompt, safe='')}"
+
+    def _join_opener_section(self) -> str:
+        """What a new chat is told so it lands beside the chat that opened it: the app knows that chat by its title and
+        folder, not by the transcript id cdd has, so the new chat finds it by those. Empty when no titled chat asked."""
+        call = ToolCall.answering()
+        opener = Chat.load(call.chat_id) if call is not None and call.chat_id else None
+        if opener is None or not opener.title:
+            return ""
+        return (
+            f'This chat was opened from the chat titled "{opener.title}" in {opener.folder}. When list_sessions shows that '
+            'chat filed under a sidebar section, move this chat into the same section with move_sessions and session "self"; '
+            "otherwise leave it where the app put it."
+        )
 
     def hand_over(self, link: str) -> None:
         if sys.platform == "win32":
@@ -186,12 +217,12 @@ class Chat:
     def __init__(self, folder: Path) -> None:
         self._folder = folder
         # What the chat's mod last said at check-in: its name, whether a turn runs, its folder, and its title.
-        self._state_file = JsonFile(folder / STATE_FILE)
+        self._state_file = ChatStateFile(self, JsonFile(folder / STATE_FILE))
 
     @classmethod
     @tool_subject
     def load(cls, chat: str) -> Chat:
-        return cls(_chats_folder() / chat)
+        return cls(CHATS_FOLDER.path / chat)
 
     @classmethod
     @mcp
@@ -199,7 +230,7 @@ class Chat:
     @noSessionLog
     def list(cls) -> list[Chat]:
         """List the chats whose cdd-board mod has checked in lately: each one's id, the title the app shows for it, and whether a turn is running."""
-        folder = _chats_folder()
+        folder = CHATS_FOLDER.path
         chats = [cls.load(entry.name) for entry in sorted(folder.iterdir())] if folder.is_dir() else []
         return [chat for chat in chats if chat.is_connected]
 
@@ -248,13 +279,13 @@ class Chat:
     @noSessionLog
     def check_in(self, is_busy: bool = False, name: str = "", folder: str = "") -> list[ChatCommand]:
         """Check chat in, as its cdd-board mod does every second: say whether a turn is running, what to call the chat, and the folder it works in, and take the commands ready for it. A fill stays waiting while a turn runs, because one made during a turn can report success and show nothing."""
-        with _checking_in(self._folder):
+        with CHECK_IN_LOCKS.of(self._folder):
             return self._check_in(is_busy, name, folder)
 
     def _check_in(self, is_busy: bool, name: str, folder: str) -> list[ChatCommand]:
         self._folder.mkdir(parents=True, exist_ok=True)
-        state = {"name": name, "is_busy": is_busy, "seen": self.clock(), "folder": folder}
-        self._write({**state, **self._title_state(self._state)})
+        state: ChatCheckIn = {"name": name, "is_busy": is_busy, "seen": self.clock(), "folder": folder}
+        self._state_file.write({**state, **self._state_file.title_state()})
         self._finish_worked_on(is_busy)
         return self._take_ready(is_busy)
 
@@ -343,23 +374,8 @@ class Chat:
         return self.clock() - self._state.get("seen", 0) < CHAT_GONE_SECONDS
 
     @property
-    def _state(self) -> dict:
-        return _while_windows_holds(self._state_read)
-
-    def _state_read(self) -> dict:
-        """The state a chat last wrote; none when it never checked in, or when two check-ins written over each other
-        left a file that does not read, so the chat's next check-in writes it afresh. A file Windows holds for another
-        process's rename is read again (``_while_windows_holds``)."""
-        try:
-            return self._state_file.read()
-        except JsonFileUnreadable as unreadable:
-            if isinstance(unreadable.cause, PermissionError):
-                raise unreadable.cause from unreadable
-            return {}
-
-    # A mod that reloads can check in twice at once; the state file is swapped in whole, so neither reads half of it.
-    def _write(self, state: dict) -> None:
-        _while_windows_holds(lambda: self._state_file.write(state))
+    def _state(self) -> ChatCheckIn:
+        return self._state_file.read()
 
     # Oldest first. Each sent command is its own file, so a sender never writes a file the chat is reading. A taken command
     # waits in the taken folder until the chat confirms it, so the board can show what the chat never showed.
@@ -385,22 +401,6 @@ class Chat:
             elif not is_busy and sent.get("is_worked_on"):
                 self._move(path, DONE)
 
-    def _title_state(self, state: dict) -> dict:
-        """The chat's title, when it was read, and the transcript it was read from: read again once the last read is
-        older than TITLE_READ_SECONDS, since reading a long transcript on every check-in is slow. The transcript is
-        found once and kept in the chat's state, so a later read does not search the Claude projects folder again."""
-        if self.clock() - state.get("title_read", 0) <= TITLE_READ_SECONDS:
-            return {"title": state.get("title", ""), "title_read": state["title_read"], "transcript": state.get("transcript", "")}
-        transcript = self._transcript_kept_in(state)
-        return {"title": _latest_title(transcript), "title_read": self.clock(), "transcript": str(transcript or "")}
-
-    def _transcript_kept_in(self, state: dict) -> Path | None:
-        kept = Path(state["transcript"]) if state.get("transcript") else None
-        if kept is not None and kept.is_file():
-            return kept
-        found = ChatPointer.from_claude_chat(self.id)
-        return found.transcript if found is not None else None
-
     # Windows' clock repeats within a quick burst of sends, so the name moves past every one already sent; it still
     # sorts in the order sent.
     def _next_file_name(self) -> str:
@@ -422,40 +422,87 @@ class Chat:
             path.unlink()
 
     def _message(self, path: Path, state: MessageState) -> ChatMessage:
-        sent = JsonFile(path).read()
-        return ChatMessage(path.stem, sent["kind"], sent["text"], sent.get("sent_at", 0.0), state, sent.get("reason", ""))
+        return ChatMessage(path.stem, JsonFile(path).read(), state)
 
 
-# A mod that reloads checks in twice at once, and one cdd server answers every chat, so both arrive in this process. Each
-# chat checks in one call at a time, so a waiting command is taken once and never moved while the other call reads it.
-_CHECK_IN_LOCKS: dict[Path, threading.Lock] = {}
-_CHECK_IN_LOCKS_GUARD = threading.Lock()
+class ChatStateFile:
+    """The file a chat's mod writes at each check-in, read and written for that one chat. Windows refuses a file another
+    process is renaming, for a moment, so each read and write is tried again while it does; the file is swapped in whole,
+    so a mod that reloads and checks in twice at once never reads half of it."""
 
+    def __init__(self, chat: Chat, file: JsonFile) -> None:
+        self._chat = chat
+        self._file = file
 
-def _checking_in(folder: Path) -> threading.Lock:
-    with _CHECK_IN_LOCKS_GUARD:
-        return _CHECK_IN_LOCKS.setdefault(folder.resolve(), threading.Lock())
+    def read(self) -> ChatCheckIn:
+        return self._while_windows_holds(self._read_once)
 
+    def write(self, state: ChatCheckIn) -> None:
+        self._while_windows_holds(lambda: self._file.write(state))
 
-def _while_windows_holds(operation: Callable[[], T]) -> T:
-    """Run operation on the state file, again while Windows holds the file for another process's rename."""
-    for _ in range(HELD_FILE_ATTEMPTS - 1):
+    def title_state(self) -> ChatCheckIn:
+        """The chat's title, when it was read, and the transcript it was read from: read again once the last read is
+        older than TITLE_READ_SECONDS, since reading a long transcript on every check-in is slow. The transcript is
+        found once and kept in the chat's state, so a later read does not search the Claude projects folder again."""
+        state = self.read()
+        if self._chat.clock() - state.get("title_read", 0) <= TITLE_READ_SECONDS:
+            return {"title": state.get("title", ""), "title_read": state["title_read"], "transcript": state.get("transcript", "")}
+        transcript = self._transcript_kept_in(state)
+        return {"title": self._latest_title(transcript), "title_read": self._chat.clock(), "transcript": str(transcript or "")}
+
+    def _read_once(self) -> ChatCheckIn:
+        """The state a chat last wrote; none when it never checked in, or when two check-ins written over each other
+        left a file that does not read, so the chat's next check-in writes it afresh. A file Windows holds for another
+        process's rename raises, so it is read again."""
         try:
-            return operation()
-        except PermissionError:
-            time.sleep(HELD_FILE_PAUSE_SECONDS)
-    return operation()
+            return self._file.read()
+        except JsonFileUnreadable as unreadable:
+            if isinstance(unreadable.cause, PermissionError):
+                raise unreadable.cause from unreadable
+            return {}
+
+    def _transcript_kept_in(self, state: ChatCheckIn) -> Path | None:
+        kept = Path(state["transcript"]) if state.get("transcript") else None
+        if kept is not None and kept.is_file():
+            return kept
+        found = ChatPointer.from_claude_chat(self._chat.id)
+        return found.transcript if found is not None else None
+
+    def _while_windows_holds(self, operation: Callable[[], T]) -> T:
+        """Run operation on the state file, again while Windows holds the file for another process's rename."""
+        for _ in range(HELD_FILE_ATTEMPTS - 1):
+            try:
+                return operation()
+            except PermissionError:
+                time.sleep(HELD_FILE_PAUSE_SECONDS)
+        return operation()
+
+    def _latest_title(self, transcript: Path | None) -> str:
+        """The latest title in a transcript, or nothing; a renamed chat writes a new title line, so the last one counts."""
+        if transcript is None:
+            return ""
+        title = ""
+        with transcript.open(encoding="utf-8", errors="replace") as lines:
+            # Most lines are messages; only a line naming the title is parsed.
+            for line in lines:
+                if TITLE_MARK in line:
+                    entry = json.loads(line)
+                    title = entry.get("customTitle", title) if entry.get("type") == TITLE_MARK else title
+        return title
 
 
-def _latest_title(transcript: Path | None) -> str:
-    """The latest title in a transcript, or nothing; a renamed chat writes a new title line, so the last one counts."""
-    if transcript is None:
-        return ""
-    title = ""
-    with transcript.open(encoding="utf-8", errors="replace") as lines:
-        # Most lines are messages; only a line naming the title is parsed.
-        for line in lines:
-            if TITLE_MARK in line:
-                entry = json.loads(line)
-                title = entry.get("customTitle", title) if entry.get("type") == TITLE_MARK else title
-    return title
+class CheckInLocks:
+    """One lock for each chat's folder. A mod that reloads checks in twice at once, and one cdd server answers every
+    chat, so both arrive in this process; each chat checks in one call at a time, so a waiting command is taken once and
+    never moved while the other call reads it."""
+
+    def __init__(self) -> None:
+        self._locks: dict[Path, threading.Lock] = {}
+        self._guard = threading.Lock()
+
+    def of(self, folder: Path) -> threading.Lock:
+        with self._guard:
+            return self._locks.setdefault(folder.resolve(), threading.Lock())
+
+
+CHECK_IN_LOCKS = CheckInLocks()

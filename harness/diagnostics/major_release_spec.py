@@ -73,7 +73,7 @@ with description("a major release") as self:
         self.ran(TestTier.HEAVY)
 
     def version(self) -> CddVersion:
-        return CddVersion(self.project, git=self.git, project=self.project, project_git=self.git, gh=self.gh, test_runs=self.record)
+        return CddVersion(self.project, git=self.git, project=self.project, project_git=self.git, github_cli=self.gh, test_runs=self.record)
 
     with context("previewed with e2e and heavy green on HEAD"):
         with before.each:

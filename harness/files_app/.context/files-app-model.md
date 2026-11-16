@@ -83,4 +83,4 @@ The *Files app* shows the files a link names and turns a person's reading into w
 
 ### Chat (Python, `harness/chat`)
 
-- `send("refresh", text)` queues a refresh; the chat's chat bar takes it at its next check-in and reads the board again, with no toast (`board-chat-client.ts` `refreshed`).
+- `send("refresh", text)` queues a refresh; the chat's chat bar takes it at its next check-in and reads the board again, with no toast (`check-in-client.ts` `refreshed`).
