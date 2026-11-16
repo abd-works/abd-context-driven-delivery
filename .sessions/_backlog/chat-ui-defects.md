@@ -178,3 +178,14 @@ Pressing Fix on that failure failed the same way. `FailureClient.fixPrompt` is t
 refuses for text that starts with `/`. Fixed on file-manager (2026-11-16): `fixFailure` runs a slash command with
 `$.command.run`, as the board's own commands do, and submits any other text. Not walked in a chat yet: needs main and a
 repin to reach the installed mod.
+
+## The Files app could not open a story test in story_tests
+
+Reported 2026-11-16 (screenshot: "story_tests/move-work-forward-from-chat-bar/generate-fidelity-outputs-in-chat-bar/
+generate-fidelity-outputs-in-chat-bar.story.shared.py did not open: cdd session.file failed: PathOutsideRootsError ...
+is outside the session's roots"), right after the story map moved to the project's .context and every story test to
+story_tests/. The session's file manager read only each practice's folder and output root, and story_tests sits beside
+the Stories root's .context, not under it. Fixed on file-manager (2026-11-16): its roots also hold every folder a
+practice's fidelities write their declared outputs in, up to the first part a name fills in
+(`PracticeSessionOutput.output_folders`), which brings in story_tests. Not walked in the Files app yet: needs main and a
+repin.

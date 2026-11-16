@@ -986,6 +986,12 @@ with description("a practice"):
                     outputs = self.stories.fidelities["scenarios"].output_paths()
                     expect(outputs["markdown"]).to(equal([(self.work / "story_tests" / "{epic}/{sub-epic}/{story_snake}_story.test.md").resolve().as_posix()]))
 
+                with it("should let the session's file manager read the story tests in that story_tests"):
+                    story_test = self.work / "story_tests" / "manage-orders" / "place-order" / "place-order.story.shared.py"
+                    story_test.parent.mkdir(parents=True)
+                    story_test.write_text("shared_stories = None\n", encoding="utf-8")
+                    expect(self.session.session_files.file_manager.read("story_tests/manage-orders/place-order/place-order.story.shared.py").text).to(equal("shared_stories = None\n"))
+
             with context("with session.json naming a root folder for the fidelity too"):
                 with before.each:
                     self.write_overrides({"stories": {"root": "docs/stories", "story_map": {"root": "docs/map"}}})

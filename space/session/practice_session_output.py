@@ -172,6 +172,14 @@ class PracticeSessionOutput:
         return self._session.folder_under_root(self._chosen_or_configured_root or ".")
 
     @property
+    def output_folders(self) -> set[Path]:
+        """Every folder this practice's fidelities write their declared outputs in, up to the first part a name or a
+        pattern fills in, such as ``story_tests`` for ``story_tests/{epic}/{sub-epic}/...``: a viewer of the session's
+        files reads each of them."""
+        paths = (path for fidelity in self.fidelities.entries.values() for paths in self.of_fidelity(fidelity).output_paths().values() for path in paths)
+        return {_fixed_folder(path) for path in paths}
+
+    @property
     @data_field
     def design_view(self) -> str:
         """The Claude Design link recorded for the latest version of the design canvas kept under the folder this
@@ -536,3 +544,12 @@ class FidelitySessionOutput:
         """The folder holding the `.context` root sits in, where a project keeps its `story_tests` beside its
         `.context`."""
         return Path(*root.parts[: root.parts.index(CONTEXT_FOLDER)])
+
+
+def _fixed_folder(path: str) -> Path:
+    """The folder of path up to its first part a name or pattern fills in; a file's own folder when none does."""
+    parts = Path(path).parts
+    filled = next((index for index, part in enumerate(parts) if set(part) & set("{*?")), None)
+    if filled is not None:
+        return Path(*parts[:filled])
+    return Path(path) if path.endswith("/") else Path(path).parent
