@@ -10,13 +10,14 @@ schema naming it in a ``rules:`` block: the graph's pattern overlays add it to t
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.schema_edges import CHILD_LISTS, SchemaKey
 from harness.guidance.rule import Rule
 
 if TYPE_CHECKING:
+    from harness.graph.graph import Node
     from harness.graph.rule_context import RuleCheckContext
 
 
@@ -49,14 +50,14 @@ class RequiredRelationship:
             return self.target_stage == self.owner_stage
         return self.target_stage <= current_stage
 
-    def owners(self, context: RuleCheckContext) -> list[Any]:
+    def owners(self, context: RuleCheckContext) -> list[Node]:
         """The checked practice's nodes of the owner type, read as either of its node types; a step's phase key
         (``when``) holds a ``Step`` only when the step is of that phase."""
         phase, general = self.owner.phase, self.owner.node_type
         nodes = [node for node_type in self.owner.node_types for node in context.nodes(node_type)]
         return [node for node in nodes if not phase or node.type != general or getattr(node, "phase", "") == phase]
 
-    def gap_on(self, node: Any, context: RuleCheckContext) -> str:
+    def gap_on(self, node: Node, context: RuleCheckContext) -> str:
         """What node lacks of this relationship: none when an edge of the field leads from it to a node of a target type,
         or, for a child list, when it holds a node of a target type under any kind its practice records it."""
         if self.field in (node.get_fact(EXEMPT_FACT) or []):

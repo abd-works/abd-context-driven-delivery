@@ -5,10 +5,24 @@ sit below all of them."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Generic, TypedDict, TypeVar
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
+
+# What an edge joins: two nodes on a graph, or, in a saved graph, the ids of those nodes.
+End = TypeVar("End")
+
+
+class EdgeRecord(TypedDict):
+    """An edge as ``graph.json`` writes it: the ids of its ends and its EdgeType's fields."""
+
+    parent: str
+    child: str
+    kind: str
+    order: int
+    display: str
+
 
 # How an edge's nodes are shown under its parent: as children (``direct``) or under a child named for the kind.
 Display = str
@@ -84,14 +98,20 @@ class EdgeType:
         return cls(kind, EDGE_ORDER.get(kind, default), display)
 
 
-class Edge:
-    """One edge: the EdgeType of its kind, which says where its group sits and how its nodes show, and the two nodes it
-    joins."""
+class Edge(Generic[End]):
+    """One edge: the EdgeType of its kind, which says where its group sits and how its nodes show, and the two ends it
+    joins. On a graph the ends are nodes; a saved graph keeps the same edge with the ids of its nodes (``saved``), which
+    a restore turns back into nodes."""
 
-    def __init__(self, type: EdgeType, parent: Node, child: Node) -> None:
+    def __init__(self, type: EdgeType, parent: End, child: End) -> None:
         self.type = type
         self.parent = parent
         self.child = child
+
+    @classmethod
+    def from_record(cls, record: EdgeRecord) -> Edge[str]:
+        edge_type = EdgeType(str(record["kind"]), int(record.get("order") or 0), str(record.get("display") or "direct"))
+        return Edge(edge_type, str(record["parent"]), str(record["child"]))
 
     @property
     def kind(self) -> str:
@@ -101,6 +121,21 @@ class Edge:
     def display(self) -> Display:
         return self.type.display
 
+    @property
+    def saved(self) -> Edge[str]:
+        """This edge of a graph as a saved graph keeps it, by the ids of its nodes."""
+        return Edge(self.type, self.parent.node_id, self.child.node_id)
+
+    @property
+    def key(self) -> tuple[str, str, str]:
+        """What tells this saved edge apart from another of the practice's: its kind and the ids of its ends."""
+        return (self.type.kind, self.parent, self.child)
+
+    @property
+    def record(self) -> EdgeRecord:
+        """This saved edge as ``graph.json`` writes it."""
+        return {"parent": self.parent, "child": self.child, "kind": self.type.kind, "order": self.type.order, "display": self.type.display}
+
 
 class EdgeIndex:
     """The edges one practice holds, by kind, with the EdgeType of each kind, and the indexes a build reads them by:
@@ -109,7 +144,7 @@ class EdgeIndex:
     indexes change with them. A practice's part of the graph makes one and keeps it (``in_graph.edge_index``)."""
 
     def __init__(self) -> None:
-        self._edges: dict[str, list[Edge]] = {}
+        self._edges: dict[str, list[Edge[Node]]] = {}
         self.types: dict[str, EdgeType] = {}
         self._pairs: dict[str, set[tuple[int, int]]] = {}
         self._from_parent: dict[str, dict[int, list[Edge]]] = {}

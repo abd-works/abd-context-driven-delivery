@@ -7,17 +7,19 @@ import copy
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from harness.graph.graph import Node
     from harness.graph.rule_context import RuleCheckContext
+    from harness.guidance.guidance import PracticeGuidance
 
 
 class PracticeGraphRule:
     slug = ""
     node_types: tuple[str, ...] = ()
 
-    def check(self, node, context: "RuleCheckContext") -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         return []
 
-    def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
+    def check_practice(self, context: RuleCheckContext) -> list[tuple[str, str]]:
         """Optional whole-practice pass. Returns (node_id, message) pairs."""
         return []
 
@@ -33,7 +35,7 @@ class SharedPracticeGraphRule(PracticeGraphRule):
     node_types_by_practice: dict[type, tuple[str, ...]] = {}
     """Each practice's class to the node types the rule checks there."""
 
-    def for_practice(self, practice) -> PracticeGraphRule | None:
+    def for_practice(self, practice: PracticeGuidance) -> PracticeGraphRule | None:
         """A copy whose node types are practice's, matched by its class; none for a practice it does not name."""
         node_types = next(
             (types for practice_class, types in self.node_types_by_practice.items() if isinstance(practice, practice_class)),

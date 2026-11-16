@@ -16,6 +16,7 @@ from harness.graph.pattern_overlays import GraphOverlay
 from harness.graph.schema_conformance import FRAMEWORK_RULES, RequiredRelationship
 from harness.graph.schema_edges import SchemaKey
 from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.rule import RulesCollection
 from harness.guidance.schema import Schema
 
 # Fields every schema type may carry that describe the type itself, not a relationship.
@@ -44,7 +45,7 @@ class PracticeSchema:
         return frozenset(found)
 
     @cached_property
-    def rules(self) -> dict[str, tuple[str, ...]]:
+    def _rules(self) -> dict[str, tuple[str, ...]]:
         """Each node type with the rule slugs it carries: its own, its supertypes', and its anchored type's."""
         extended = self.practice.extended
         if extended is None:
@@ -68,7 +69,7 @@ class PracticeSchema:
 
     def slugs_for(self, node_type: str) -> tuple[str, ...]:
         """The rule slugs a node of this type carries, with those of each type its practice says it also carries."""
-        table = self.rules
+        table = self._rules
         listed = self.practice.reading.rule_types.get(node_type, ())
         return merged(table.get(node_type, ()), *(table.get(other, ()) for other in listed), tuple(FRAMEWORK_RULES))
 
@@ -94,7 +95,7 @@ class PracticeSchema:
         """Each rule slug with the node types it applies to: the types that carry it, and those the practice says also
         carry it."""
         found: dict[str, list[str]] = {}
-        carried = [(node_type, slugs) for node_type, slugs in self.rules.items()]
+        carried = [(node_type, slugs) for node_type, slugs in self._rules.items()]
         carried.extend((node_type, self.slugs_for(node_type)) for node_type in self.practice.reading.rule_types)
         carried.extend((node_type, tuple(FRAMEWORK_RULES)) for node_type in sorted(self.types))
         for node_type, slugs in carried:
@@ -129,7 +130,7 @@ class PracticeSchema:
                 merged.update(self._longest_prose(collection))
         return merged
 
-    def _prose_collections(self, guidance) -> list:
+    def _prose_collections(self, guidance: PracticeGuidance) -> list[RulesCollection | None]:
         """The rule collections guidance gives prose from: a practice's or pattern's shared rules and each fidelity's;
         a supplement's sections, each named for the fidelities it applies to (it has no shared rules)."""
         if getattr(guidance, "supplemented_fidelities", None) is not None:
@@ -145,7 +146,7 @@ class PracticeSchema:
         return [
             RequiredRelationship(
                 SchemaKey(key), field, self._node_types_named(references),
-                source, self.stage_of(key), self._earliest_stage(references),
+                source, self._stage_of(key), self._earliest_stage(references),
             )
             for source, schema in sources
             for key, kind in schema.types.items()
@@ -159,7 +160,7 @@ class PracticeSchema:
         order = list(self.practice.fidelities.entries.values())
         return next((index for index, fidelity in enumerate(order) if fidelity is current), None)
 
-    def stage_of(self, reference: str) -> int | None:
+    def _stage_of(self, reference: str) -> int | None:
         """The place among its practice's fidelities of the fidelity that creates the type reference names: a key of
         this practice's schemas (``route``) or ``practice.type`` (``ddd.entityRoot``), read from that practice's schema
         when another practice of the graph holds it. None when no schema says which fidelity creates it."""
@@ -167,14 +168,14 @@ class PracticeSchema:
         if practice_key and practice_key != self.key:
             graph = self.practice.reading.graph
             other = graph.practices.held.get(practice_key) if graph is not None else None
-            return self._schema_of(other, self.overlays).stage_of(key) if other is not None else None
+            return self._schema_of(other, self.overlays)._stage_of(key) if other is not None else None
         fidelity = self._fidelity_named(key, frozenset())
         order = list(self.practice.fidelities.entries)
         return order.index(fidelity) if fidelity in order else None
 
     def _earliest_stage(self, references: tuple[str, ...]) -> int | None:
         """The earliest stage among the types references names; none when any of them has none, so it is always due."""
-        stages = [self.stage_of(reference) for reference in references]
+        stages = [self._stage_of(reference) for reference in references]
         return None if None in stages else min(stages)
 
     def _node_types_named(self, references: tuple[str, ...]) -> tuple[str, ...]:
@@ -263,7 +264,7 @@ class PracticeSchema:
         prefix, _, tail = reference.partition(".")
         return bool(tail) and prefix == self.key and SchemaKey(tail).node_type == node_type
 
-    def _longest_prose(self, collection) -> dict[str, str]:
+    def _longest_prose(self, collection: RulesCollection | None) -> dict[str, str]:
         """Each rule slug in one rules collection with its longest prose body; a later collection's prose wins."""
         found: dict[str, str] = {}
         for rule in (getattr(collection, "entries", None) or {}).values():

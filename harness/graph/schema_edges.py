@@ -13,10 +13,17 @@ import re
 from collections.abc import Iterator
 from contextlib import contextmanager
 from functools import cached_property
+from typing import TYPE_CHECKING
 
 from harness.graph.edge import EdgeType
 from harness.guidance.schema import VALUE_TYPES, Schema
 from harness.annotations.name import Name
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Graph
+    from harness.graph.model_node import ModelNode
+    from harness.graph.pattern_overlays import GraphOverlay
+    from harness.guidance.guidance import PracticeGuidance
 
 
 # Child-list edges. A model object's child list records these itself.
@@ -109,13 +116,14 @@ class SchemaKey:
 class SchemaField:
     """One field of a schema type whose value names other types: a relationship the owner type has with them."""
 
-    def __init__(self, owner: str, kind: str, targets: tuple[str, ...], phase: str = "") -> None:
-        self.owner = owner
+    def __init__(self, owner: SchemaKey, kind: str, targets: tuple[str, ...]) -> None:
+        self.owner = owner.node_type
         self.kind = kind
         self.targets = targets
-        self.phase = phase
+        # The step phase an owner of this field is in, for a field of one phase's steps; empty for any other owner.
+        self.phase = owner.phase
 
-    def links_from(self, owner) -> bool:
+    def links_from(self, owner: ModelNode) -> bool:
         """True when this field is a relationship a node like owner records here."""
         if self.owner != owner.semantic_type() or self.kind in _SKIPPED:
             return False
@@ -126,16 +134,16 @@ class SchemaFields:
     """Every relationship field in the schema of each practice one graph holds, and in the schema every pattern keeps
     for each of those practices, applied or not."""
 
-    def __init__(self, fields: tuple[SchemaField, ...]) -> None:
-        self.fields = fields
+    def __init__(self, schemas: list[Schema]) -> None:
+        self.fields = tuple(field for schema in schemas for field in self._fields_of(schema))
 
     @classmethod
-    def of(cls, practices, overlays) -> SchemaFields:
+    def of(cls, practices: list[PracticeGuidance], overlays: list[GraphOverlay]) -> SchemaFields:
         """The fields of practices' schemas and of the schema each overlay keeps for one of them (``practice_file``)."""
         schemas = [practice.schema for practice in practices]
         pattern_files = (overlay.practice_file(practice.key, "schema.yaml") for overlay in overlays for practice in practices)
         schemas.extend(Schema.load(path) for path in sorted(path for path in pattern_files if path.is_file()))
-        return cls(tuple(field for schema in schemas for field in cls._fields_of(schema)))
+        return cls(schemas)
 
     def inverses(self, owner_type: str, target_type: str, forward: str) -> list[str]:
         """The relationships owner_type names back to target_type, other than forward and the child lists."""
@@ -147,21 +155,20 @@ class SchemaFields:
                 found.append(field.kind)
         return found
 
-    @classmethod
-    def _fields_of(cls, schema: Schema) -> list[SchemaField]:
+    def _fields_of(self, schema: Schema) -> list[SchemaField]:
         found: list[SchemaField] = []
         for key, kind in schema.types.items():
             for name, value in kind.fields:
                 targets = [target for target in re.findall(r"[A-Za-z]\w*", value.strip()) if target not in VALUE_TYPES]
                 if targets and '"' not in value:
-                    found.append(SchemaField(SchemaKey(key).node_type, name, tuple(SchemaKey(target).node_type for target in targets), SchemaKey(key).phase))
+                    found.append(SchemaField(SchemaKey(key), name, tuple(SchemaKey(target).node_type for target in targets)))
         return found
 
 
 class NodeEvidence:
     """What a model object's source shows: the names it mentions, calls, and reads, and the module it sits in."""
 
-    def __init__(self, node) -> None:
+    def __init__(self, node: ModelNode) -> None:
         self.node = node
 
     @cached_property
@@ -192,7 +199,7 @@ class NodeEvidence:
         return self.calls(name) or name in self.callees
 
     @property
-    def module(self):
+    def module(self) -> ModelNode | None:
         """The Module node this object sits under, through its parents; none when it sits under none."""
         current, seen = self.node, set()
         while current is not None and id(current) not in seen:
@@ -202,7 +209,7 @@ class NodeEvidence:
             current = getattr(current, "parent", None)
         return None
 
-    def _steps_under(self) -> list:
+    def _steps_under(self) -> list[ModelNode]:
         if not hasattr(self.node, "subtree"):
             return []
         return [node for node in self.node.subtree() if node is not self.node and node.semantic_type() == "Step"]
@@ -215,10 +222,10 @@ class SchemaEdges:
     from a working copy, whose practices record their own edges (``syncs``), and never while a batch of links is still
     being made (``held``) or a sync is under way."""
 
-    def __init__(self, graph) -> None:
+    def __init__(self, graph: Graph) -> None:
         self.graph = graph
-        self.nodes: list = []
-        self._by_type: dict[str, list] = {}
+        self.nodes: list[ModelNode] = []
+        self._by_type: dict[str, list[ModelNode]] = {}
         # Whether model objects joining the graph record their schema edges; a working copy's load turns it off.
         self.syncs = True
         self._holds = 0
@@ -262,7 +269,7 @@ class SchemaEdges:
         for node in self.nodes:
             self._by_type.setdefault(node.semantic_type(), []).append(node)
 
-    def _record_from(self, owner) -> None:
+    def _record_from(self, owner: ModelNode) -> None:
         """Record each schema edge from owner, and each relationship its targets name back to it."""
         schema = self.fields
         for field in (field for field in schema.fields if field.links_from(owner)):
@@ -271,7 +278,7 @@ class SchemaEdges:
                 for inverse in schema.inverses(target.semantic_type(), owner.semantic_type(), field.kind):
                     self._record(inverse, target, owner)
 
-    def _linked_targets(self, field: SchemaField, owner) -> list:
+    def _linked_targets(self, field: SchemaField, owner: ModelNode) -> list[ModelNode]:
         """The nodes owner links to through field: for a field read from evidence, the targets its evidence matches;
         for any other, the nodes owner holds in the list attribute named for the field (``showsSteps`` is ``shows_steps``)."""
         if field.kind not in _EVIDENCE_KINDS:
@@ -282,13 +289,13 @@ class SchemaEdges:
         targets = [target for type_name in field.targets for target in self._by_type.get(type_name, ())]
         return [target for target in targets if target is not owner and self._matches(field.kind, owner, target)]
 
-    def _record(self, kind: str, parent, child) -> None:
+    def _record(self, kind: str, parent: ModelNode, child: ModelNode) -> None:
         edge_type = EdgeType.from_kind(kind, _DISPLAY.get(kind, "relationship"))
         self.graph.record(edge_type, parent, child)
         if parent.practice is not child.practice:
             self.graph.record(edge_type, child, parent)
 
-    def _matches(self, kind: str, owner, target) -> bool:
+    def _matches(self, kind: str, owner: ModelNode, target: ModelNode) -> bool:
         evidence = NodeEvidence(owner)
         if kind == "invokes":
             return evidence.invokes(target.name)
@@ -309,7 +316,7 @@ class SchemaEdges:
             return re.search(rf"\b{re.escape(target.name)}\b", str(hint)) is not None if target.name else False
         return False
 
-    def _epic_uses(self, epic, module) -> bool:
+    def _epic_uses(self, epic: ModelNode, module: ModelNode) -> bool:
         """True when an epic's examples name a class of the module, or its steps call one of the module's members."""
         if epic.semantic_type() != "Epic" or module.semantic_type() != "Module":
             return False

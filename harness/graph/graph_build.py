@@ -22,11 +22,11 @@ import weakref
 from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import IO, TYPE_CHECKING, TypedDict
 
 from harness.agent_tools.progress import report_progress
 from harness.graph.explorer import GraphLoaded
-from harness.graph.file_lines import FileLines
+from harness.graph.file_lines import BuildReads
 from harness.graph.load_scope import LoadScope
 from harness.graph.saved_graph import GraphChanges, SavedGraph
 
@@ -65,6 +65,13 @@ class GraphBuildFailed(RuntimeError):
         self.errors = errors
 
 
+class CheckedFilesDocument(TypedDict):
+    """The checked files as an order writes them for the worker."""
+
+    paths: list[str]
+    file: str
+
+
 class CheckedFiles:
     """The files a validate checks after a refresh, each a file or folder from a practice's source root, and the file
     the nodes read from them are written to, as they save: the build that refreshes the graph writes it, in the worker
@@ -74,8 +81,13 @@ class CheckedFiles:
         self.paths = list(paths)
         self.file = Path(file)
 
+    @classmethod
+    def from_document(cls, document: CheckedFilesDocument | None) -> CheckedFiles | None:
+        """The checked files an order names; none when it names none."""
+        return None if document is None else cls(list(document["paths"]), Path(document["file"]))
+
     @property
-    def document(self) -> dict:
+    def document(self) -> CheckedFilesDocument:
         return {"paths": self.paths, "file": str(self.file)}
 
     def write(self, graph: Graph) -> None:
@@ -129,12 +141,8 @@ class BuildOrder:
         roots = {key: Path(root) for key, root in (document.get("roots") or {}).items()}
         return cls(
             BuildStep(document["step"]), scope, roots, list(document.get("overlays") or []), before, list(document.get("modules") or []),
-            bool(document.get("saves")), cls._checked_in(document.get("checked")),
+            bool(document.get("saves")), CheckedFiles.from_document(document.get("checked")),
         )
-
-    @staticmethod
-    def _checked_in(document: dict | None) -> CheckedFiles | None:
-        return None if document is None else CheckedFiles(list(document["paths"]), Path(document["file"]))
 
     @property
     def state(self) -> SavedGraph:
@@ -218,26 +226,19 @@ class HeldAnswer:
 class WorkerBuild:
     """One order carried out by a worker process: started with this interpreter and this import path, it reports its
     progress one line at a time, which goes on to report_progress, writes the graph it built to the answer file it is
-    given, and, for a refresh the order asks it of, what it changed to a file of its own."""
+    given, and, for a refresh the order asks it of, what it changed to a file of its own. The graph the order was made
+    for holds what the worker answers."""
 
-    def __init__(self, report_progress: Callable[[str], None]) -> None:
-        self._report_progress = report_progress
+    def __init__(self, graph: Graph) -> None:
+        self._graph = graph
 
-    def carry_out(
-        self,
-        ordered: Callable[[], BuildOrder],
-        answer: Path,
-        hold: Callable[[SavedGraph], None],
-        take: Callable[[GraphChanges], None],
-    ) -> None:
-        """Make the order and write it, run the worker on it, which writes the graph it built to answer, then hold that
-        graph, or take only the changes the worker answers when it answers them; ``GraphBuildFailed`` when the worker
-        exits with an error, and then nothing is held and answer is gone. Making the order and holding the answer each
-        take the server's turn; the worker runs while other builds take theirs."""
+    def carry_out(self, ordered: Callable[[], BuildOrder], answer: Path) -> None:
+        """Make the order and write it, run the worker on it, which writes the graph it built to answer, then have the
+        graph hold that graph, or take only the changes the worker answers when it answers them; ``GraphBuildFailed``
+        when the worker exits with an error, and then nothing is held and answer is gone. Making the order and holding
+        the answer each take the server's turn; the worker runs while other builds take theirs."""
         with tempfile.TemporaryDirectory(prefix="cdd-graph-build-") as folder:
-            order_file = Path(folder) / "order.json"
-            changes_file = Path(folder) / "changes.json"
-            errors_file = Path(folder) / "errors.txt"
+            order_file, changes_file, errors_file = (Path(folder) / name for name in ("order.json", "changes.json", "errors.txt"))
             with _SERVER_TURN:
                 order_file.write_text(ordered().text, encoding="utf-8")
             with open(errors_file, "w", encoding="utf-8") as errors:
@@ -246,12 +247,17 @@ class WorkerBuild:
                 answer.unlink(missing_ok=True)
                 raise GraphBuildFailed(exit_code, errors_file.read_text(encoding="utf-8", errors="replace"))
             with _SERVER_TURN:
-                if changes_file.is_file():
-                    take(GraphChanges.from_text(changes_file.read_text(encoding="utf-8")))
-                else:
-                    hold(SavedGraph.from_file(answer))
+                self._take_answer(answer, changes_file)
 
-    def _run(self, arguments: list[str], errors) -> int:
+    def _take_answer(self, answer: Path, changes_file: Path) -> None:
+        """Have the graph take the changes the worker answered, when it answered them, else hold the graph it built."""
+        practices = self._graph.practices
+        if changes_file.is_file():
+            practices.take(GraphChanges.from_text(changes_file.read_text(encoding="utf-8")))
+        else:
+            practices.hold(SavedGraph.from_file(answer), self._graph.scope.folder)
+
+    def _run(self, arguments: list[str], errors: IO[str]) -> int:
         process = subprocess.Popen(
             [sys.executable, "-m", WORKER_MODULE, *arguments],
             cwd=os.getcwd(),
@@ -267,7 +273,7 @@ class WorkerBuild:
         for line in process.stdout:
             message = line.rstrip("\n")
             if message:
-                self._report_progress(message)
+                report_progress(message)
         return process.wait()
 
 
@@ -327,10 +333,10 @@ class GraphBuild:
         answers a chat has a worker process carry it out."""
         if call is not None and call.answers_a_chat:
             answer = self._answer.next_file()
-            WorkerBuild(report_progress).carry_out(lambda: self._order(step, state, saves, checked), answer, self._hold, self.graph.practices.take)
+            WorkerBuild(self.graph).carry_out(lambda: self._order(step, state, saves, checked), answer)
             self._answer.keep(answer)
             return
-        with FileLines.during_build():
+        with BuildReads():
             if state is not None:
                 self._hold(state)
             self._carry_out(step)
@@ -346,7 +352,7 @@ class GraphBuild:
         graph.practices.choose({held[key]: root for key, root in order.roots.items()})
         graph.overlays = order.overlays
         graph.schema_edges.syncs = False
-        with FileLines.during_build():
+        with BuildReads():
             self._hold(order.state)
             self._carry_out(order.step)
             self._finish(order.saves, order.checked)

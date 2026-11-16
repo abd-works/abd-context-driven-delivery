@@ -9,15 +9,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, TypeAlias, TypedDict
 
-from harness.graph.edge import EdgeType
-from harness.graph.violation import Violation
+from harness.graph.edge import Edge, EdgeRecord
+from harness.graph.violation import Violation, ViolationData
 from harness.installation.data_class import data_of
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 
 if TYPE_CHECKING:
-    from harness.graph.edge import Edge
     from harness.graph.graph import Graph, Node
     from harness.guidance.guidance import PracticeGuidance
 
@@ -25,11 +24,60 @@ GRAPH_FILE_NAME = "graph.json"
 # The shape this code writes. A saved graph of any other shape is read as no saved graph, so the next load replaces it.
 SAVED_SHAPE_VERSION = 3
 
+# What a node knows about itself beyond its place, by name, as a graph's parser read it and ``graph.json`` keeps it.
+# One fact a node records: plain JSON data, as a parser read it.
+FactValue: TypeAlias = Any
+NodeFacts: TypeAlias = dict[str, FactValue]
+
+
+class NodeRecord(TypedDict):
+    """A node as ``graph.json`` writes it."""
+
+    node_id: str
+    name: str
+    type: str
+    practice: str
+    file: str
+    line: int
+    end_line: int
+    stage: str
+    facts: NodeFacts
+
+
+class PracticeRecord(TypedDict):
+    """A practice as ``graph.json`` writes it: violations as their data (``data_of``)."""
+
+    source_root: str
+    root_facts: NodeFacts
+    nodes: list[NodeRecord]
+    edges: list[EdgeRecord]
+    violations: list[ViolationData]
+
+
+class GraphDocument(TypedDict, total=False):
+    """``graph.json`` as a whole: its shape version, the overlays it was loaded with, and each practice by key."""
+
+    version: int
+    overlays: list[str]
+    practices: dict[str, PracticeRecord]
+    held_beside: list[str]
+
+
+class PracticeChangesRecord(TypedDict):
+    """How one practice changed in a build, as a worker writes it for the server."""
+
+    dropped_nodes: list[str]
+    nodes: list[NodeRecord]
+    dropped_edges: list[list[str]]
+    edges: list[EdgeRecord]
+    violations: dict[str, list[ViolationData]]
+    root_facts: NodeFacts | None
+
 
 class SavedGraphOutdated(Exception):
     """A saved graph in another shape than this code writes. Load the working copy again to replace it."""
 
-    def __init__(self, source: str, version: object) -> None:
+    def __init__(self, source: str, version: int | str | None) -> None:
         super().__init__(f"{source or 'The saved graph'} is in shape {version!r}, not {SAVED_SHAPE_VERSION}; load the working copy again.")
         self.source = source
         self.version = version
@@ -38,7 +86,7 @@ class SavedGraphOutdated(Exception):
 class SavedNode:
     """One node as the saved graph keeps it: what it is, where it sits in its file, its stage, and its facts."""
 
-    def __init__(self, node_id: str, name: str, type: str, practice: str, file: str, line: int, end_line: int, stage: str, facts: dict) -> None:
+    def __init__(self, node_id: str, name: str, type: str, practice: str, file: str, line: int, end_line: int, stage: str, facts: NodeFacts) -> None:
         self.node_id = node_id
         self.name = name
         self.type = type
@@ -50,7 +98,7 @@ class SavedNode:
         self.facts = facts
 
     @classmethod
-    def from_record(cls, record: dict) -> SavedNode:
+    def from_record(cls, record: NodeRecord) -> SavedNode:
         return cls(
             str(record["node_id"]),
             str(record["name"]),
@@ -64,7 +112,7 @@ class SavedNode:
         )
 
     @property
-    def record(self) -> dict:
+    def record(self) -> NodeRecord:
         return {
             "node_id": self.node_id,
             "name": self.name,
@@ -78,39 +126,11 @@ class SavedNode:
         }
 
 
-class SavedEdge:
-    """One edge as the saved graph keeps it: the ids of the nodes it joins, and the EdgeType of its kind."""
-
-    def __init__(self, parent: str, child: str, type: EdgeType) -> None:
-        self.parent = parent
-        self.child = child
-        self.type = type
-
-    @classmethod
-    def from_edge(cls, edge: Edge) -> SavedEdge:
-        return cls(edge.parent.node_id, edge.child.node_id, edge.type)
-
-    @classmethod
-    def from_record(cls, record: dict) -> SavedEdge:
-        edge_type = EdgeType(str(record["kind"]), int(record.get("order") or 0), str(record.get("display") or "direct"))
-        return cls(str(record["parent"]), str(record["child"]), edge_type)
-
-    @property
-    def key(self) -> tuple[str, str, str]:
-        """What tells this edge apart from another of the practice's: its kind and the ids of its ends."""
-        return (self.type.kind, self.parent, self.child)
-
-    @property
-    def record(self) -> dict:
-        edge_type = self.type
-        return {"parent": self.parent, "child": self.child, "kind": edge_type.kind, "order": edge_type.order, "display": edge_type.display}
-
-
 class SavedPractice:
     """One practice as the saved graph keeps it: the folder its source was read from, the facts about the practice as a
     whole (kept on its root, such as the Clean Engineering model's members), and its nodes, edges, and violations."""
 
-    def __init__(self, name: str, source_root: str, root_facts: dict, nodes: list[SavedNode], edges: list[SavedEdge], violations: list[Violation]) -> None:
+    def __init__(self, name: str, source_root: str, root_facts: NodeFacts, nodes: list[SavedNode], edges: list[Edge[str]], violations: list[Violation]) -> None:
         self.name = name
         self.source_root = source_root
         self.root_facts = root_facts
@@ -119,29 +139,28 @@ class SavedPractice:
         self.violations = violations
 
     @classmethod
-    def from_practice(cls, practice: PracticeGuidance, files: list[str] | None = None) -> SavedPractice:
-        """The practice as the graph that holds it has it now; with files, only its nodes read from them (each a file
-        or folder from its source root) and the edges that join two of them or one of them to the practice's root."""
-        graph = practice.reading.graph
-        nodes = [node for node in practice.reading.in_graph.nodes() if _read_from(node, files)]
-        edges = [edge for edge in practice.reading.in_graph.edges() if _joins_kept(edge, files)]
+    def from_practice(cls, practice: PracticeGuidance, files: SavedFiles) -> SavedPractice:
+        """The practice as the graph that holds it has it now, only its nodes read from files and the edges files
+        keeps."""
+        nodes = [node for node in practice.reading.in_graph.nodes() if files.reads(node)]
+        edges = [edge for edge in practice.reading.in_graph.edges() if files.keeps(edge)]
         return cls(
             practice.key,
             practice.reading.in_graph.source_root,
             practice.reading.in_graph.root.facts,
             [SavedNode(node.node_id, node.name, node.type, node.practice.key, node.source.file, node.source.start_line, node.source.end_line, node.stage, node.facts) for node in nodes],
-            [SavedEdge.from_edge(edge) for edge in edges],
+            [edge.saved for edge in edges],
             [violation for node in nodes for violation in node.rules.violations],
         )
 
     @classmethod
-    def from_record(cls, name: str, record: dict) -> SavedPractice:
+    def from_record(cls, name: str, record: PracticeRecord) -> SavedPractice:
         return cls(
             name,
             str(record.get("source_root") or ""),
             dict(record.get("root_facts") or {}),
             [SavedNode.from_record(item) for item in record.get("nodes") or []],
-            [SavedEdge.from_record(item) for item in record.get("edges") or []],
+            [Edge.from_record(item) for item in record.get("edges") or []],
             [Violation.from_data(item) for item in record.get("violations") or []],
         )
 
@@ -165,10 +184,24 @@ class SavedPractice:
     @property
     def violations_by_node(self) -> dict[str, list[Violation]]:
         """The practice's violations, by the id of the node each was found on."""
-        return _violations_by_node(self.violations)
+        found: dict[str, list[Violation]] = {}
+        for violation in self.violations:
+            found.setdefault(violation.node_id, []).append(violation)
+        return found
+
+    def violations_changed_since(self, before: SavedPractice, nodes: RecordChanges) -> dict[str, list[Violation]]:
+        """Each node this practice holds whose violations changed since before, with those it has now. A node changed
+        in place is given its violations again, since a node of another type carries other rules."""
+        old_hits, new_hits = before.violations_by_node, self.violations_by_node
+        differ = {node_id for node_id in {*old_hits, *new_hits} if self._data_of(old_hits.get(node_id)) != self._data_of(new_hits.get(node_id))}
+        hit = {node.node_id for node in nodes.changed} | differ
+        return {node_id: new_hits.get(node_id, []) for node_id in sorted(hit) if node_id in nodes.after}
+
+    def _data_of(self, violations: list[Violation] | None) -> list[ViolationData]:
+        return [data_of(violation) for violation in violations or []]
 
     @property
-    def record(self) -> dict:
+    def record(self) -> PracticeRecord:
         return {
             "source_root": self.source_root,
             "root_facts": self.root_facts,
@@ -192,12 +225,13 @@ class SavedGraph:
     def from_graph(cls, graph: Graph, files: list[str] | None = None) -> SavedGraph:
         """The graph as it is now; with files, only the nodes read from them, and the folders, two levels deep, of every
         other file the graph held a node of."""
+        kept = SavedFiles(files)
         opened = graph.practices.opened
-        beside = [] if files is None else _folders_beside(graph, files)
-        return cls(graph.overlays, {name: SavedPractice.from_practice(practice, files) for name, practice in opened.items()}, beside)
+        beside = [] if files is None else kept.folders_beside(graph)
+        return cls(graph.overlays, {name: SavedPractice.from_practice(practice, kept) for name, practice in opened.items()}, beside)
 
     @classmethod
-    def from_document(cls, document: dict, source: str = "") -> SavedGraph:
+    def from_document(cls, document: GraphDocument, source: str = "") -> SavedGraph:
         """The saved graph a JSON document holds; ``SavedGraphOutdated`` when it is in another shape."""
         version = document.get("version")
         if version != SAVED_SHAPE_VERSION:
@@ -244,8 +278,8 @@ class SavedGraph:
         return cls(list(overlays or []), {name: SavedPractice(name, "", {}, [], [], hits) for name, hits in found.items()})
 
     @property
-    def document(self) -> dict:
-        document = {
+    def document(self) -> GraphDocument:
+        document: GraphDocument = {
             "version": SAVED_SHAPE_VERSION,
             "overlays": list(self.overlays),
             "practices": {name: practice.record for name, practice in self.practices.items()},
@@ -281,13 +315,44 @@ class SavedGraph:
         saved = self.practices.get(practice)
         if saved is None:
             return set()
-        wanted = {_name_key(name) for name in names}
-        inside = saved.held_under({node.node_id for node in saved.nodes if _name_key(node.name) in wanted})
+        wanted = {self._name_key(name) for name in names}
+        inside = saved.held_under({node.node_id for node in saved.nodes if self._name_key(node.name) in wanted})
         return {node.node_id for node in saved.nodes if node.type in types and node.node_id not in inside}
 
     def violations(self, practices: list[str] | None = None) -> list[Violation]:
         """Every violation the saved practices hold; with practices, only those the named practices found."""
         return [violation for name, saved in self.practices.items() if not practices or name in practices for violation in saved.violations]
+
+    def _name_key(self, name: str) -> str:
+        """name as ``outside`` matches it: lower case, with its spacing made single."""
+        return " ".join(name.lower().split())
+
+
+class SavedFiles:
+    """Which of a graph's nodes and edges a save keeps: with files, each a file or folder from its practice's source
+    root, the nodes read from them and the edges that join two of them or one of them to the practice's root; every
+    node and edge when no files are named."""
+
+    def __init__(self, files: list[str] | None) -> None:
+        self._named = None if files is None else [entry.replace("\\", "/").rstrip("/") for entry in files]
+
+    def reads(self, node: Node) -> bool:
+        """Whether node was read from one of the files."""
+        if self._named is None:
+            return True
+        file = (node.source.file or "").replace("\\", "/")
+        return any(file == item or file.startswith(f"{item}/") for item in self._named)
+
+    def keeps(self, edge: Edge[Node]) -> bool:
+        """Whether edge joins two nodes read from the files, or one of them to its practice's root."""
+        ends = (edge.parent, edge.child)
+        return all(self.reads(end) or end.type == "Practice" for end in ends) and any(self.reads(end) for end in ends)
+
+    def folders_beside(self, graph: Graph) -> list[str]:
+        """The folders, two levels deep, of the files graph holds a node of besides these files."""
+        held = (node for practice in graph.practices.opened.values() for node in practice.reading.in_graph.nodes())
+        beside = {PurePosixPath(node.source.file.replace("\\", "/")).parent for node in held if node.source.file not in ("", ".") and not self.reads(node)}
+        return sorted({"/".join(folder.parts[:2]) or "." for folder in beside})
 
 
 class SavedGraphFile:
@@ -332,9 +397,9 @@ class PracticeChanges:
         dropped_nodes: list[str],
         nodes: list[SavedNode],
         dropped_edges: list[tuple[str, str, str]],
-        edges: list[SavedEdge],
+        edges: list[Edge[str]],
         violations: dict[str, list[Violation]],
-        root_facts: dict | None,
+        root_facts: NodeFacts | None,
     ) -> None:
         self.dropped_nodes = dropped_nodes
         self.nodes = nodes
@@ -352,23 +417,23 @@ class PracticeChanges:
             nodes.changed,
             [*edges.gone, *edges.replaced],
             edges.changed,
-            _violations_changed(before, after, nodes),
+            after.violations_changed_since(before, nodes),
             after.root_facts if after.root_facts != before.root_facts else None,
         )
 
     @classmethod
-    def from_record(cls, record: dict) -> PracticeChanges:
+    def from_record(cls, record: PracticeChangesRecord) -> PracticeChanges:
         return cls(
             [str(node_id) for node_id in record.get("dropped_nodes") or []],
             [SavedNode.from_record(item) for item in record.get("nodes") or []],
             [(str(kind), str(parent), str(child)) for kind, parent, child in record.get("dropped_edges") or []],
-            [SavedEdge.from_record(item) for item in record.get("edges") or []],
+            [Edge.from_record(item) for item in record.get("edges") or []],
             {node_id: [Violation.from_data(item) for item in hits] for node_id, hits in (record.get("violations") or {}).items()},
             record.get("root_facts"),
         )
 
     @property
-    def record(self) -> dict:
+    def record(self) -> PracticeChangesRecord:
         return {
             "dropped_nodes": self.dropped_nodes,
             "nodes": [node.record for node in self.nodes],
@@ -429,50 +494,3 @@ class GraphChanges:
     @property
     def text(self) -> str:
         return json.dumps({"practices": {key: changes.record for key, changes in self.practices.items()}}, separators=(",", ":"))
-
-
-def _violations_changed(before: SavedPractice, after: SavedPractice, nodes: RecordChanges) -> dict[str, list[Violation]]:
-    """Each node after holds whose violations changed, with those it has now. A node changed in place is given its
-    violations again, since a node of another type carries other rules."""
-    old_hits, new_hits = before.violations_by_node, after.violations_by_node
-    differ = {node_id for node_id in {*old_hits, *new_hits} if _records(old_hits.get(node_id)) != _records(new_hits.get(node_id))}
-    hit = {node.node_id for node in nodes.changed} | differ
-    return {node_id: new_hits.get(node_id, []) for node_id in sorted(hit) if node_id in nodes.after}
-
-
-def _violations_by_node(violations: list[Violation]) -> dict[str, list[Violation]]:
-    found: dict[str, list[Violation]] = {}
-    for violation in violations:
-        found.setdefault(violation.node_id, []).append(violation)
-    return found
-
-
-def _records(violations: list[Violation] | None) -> list[dict]:
-    return [data_of(violation) for violation in violations or []]
-
-
-def _folders_beside(graph: Graph, files: list[str]) -> list[str]:
-    """The folders, two levels deep, of the files graph holds a node of besides files."""
-    held = (node for practice in graph.practices.opened.values() for node in practice.reading.in_graph.nodes())
-    beside = {PurePosixPath(node.source.file.replace("\\", "/")).parent for node in held if node.source.file not in ("", ".") and not _read_from(node, files)}
-    return sorted({"/".join(folder.parts[:2]) or "." for folder in beside})
-
-
-def _read_from(node: Node, files: list[str] | None) -> bool:
-    """Whether node was read from one of files, each a file or folder from its practice's source root; every node is
-    when no files are named."""
-    if files is None:
-        return True
-    file = (node.source.file or "").replace("\\", "/")
-    named = [entry.replace("\\", "/").rstrip("/") for entry in files]
-    return any(file == item or file.startswith(f"{item}/") for item in named)
-
-
-def _joins_kept(edge: Edge, files: list[str] | None) -> bool:
-    """Whether edge joins two nodes read from files, or one of them to its practice's root."""
-    ends = (edge.parent, edge.child)
-    return all(_read_from(end, files) or end.type == "Practice" for end in ends) and any(_read_from(end, files) for end in ends)
-
-
-def _name_key(name: str) -> str:
-    return " ".join(name.lower().split())

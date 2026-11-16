@@ -31,6 +31,10 @@ LOOPBACK_CONNECT_SECONDS = 0.5
 _TCP_TABLE_OWNER_PID_LISTENER = 3
 # The table's leading socket count, a DWORD, before its rows.
 _TCP_TABLE_COUNT_BYTES = 4
+# A row's local port sits in the low 16 bits of its DWORD, in network byte order.
+_PORT_BITS = 0xFFFF
+# How long ``ss`` may take to list this computer's listening sockets before the answer is taken as empty.
+_LISTENER_QUERY_SECONDS = 30
 
 
 class _TcpRowOwnerPid(ctypes.Structure):
@@ -73,7 +77,7 @@ class ListeningPorts:
         table = self._windows_listener_table()
         count = ctypes.cast(table, ctypes.POINTER(ctypes.c_uint32))[0]
         rows = ctypes.cast(ctypes.addressof(table) + _TCP_TABLE_COUNT_BYTES, ctypes.POINTER(_TcpRowOwnerPid * count))[0]
-        return [(row.owning_pid, socket.ntohs(row.local_port & 0xFFFF)) for row in rows]
+        return [(row.owning_pid, socket.ntohs(row.local_port & _PORT_BITS)) for row in rows]
 
     def _windows_listener_table(self) -> ctypes.Array:
         get_table = ctypes.windll.iphlpapi.GetExtendedTcpTable
@@ -95,7 +99,7 @@ class ListeningPorts:
 
     def _output(self, command: list[str]) -> str:
         try:
-            completed = subprocess.run(command, capture_output=True, text=True, timeout=30, check=False)
+            completed = subprocess.run(command, capture_output=True, text=True, timeout=_LISTENER_QUERY_SECONDS, check=False)
         except (OSError, subprocess.TimeoutExpired):
             return ""
         return completed.stdout or ""
@@ -220,19 +224,7 @@ class RunningProcess:
         if self.pid <= 0:
             return False
         if sys.platform == "win32":
-            import ctypes
-
-            kernel = ctypes.windll.kernel32
-            handle = kernel.OpenProcess(_PROCESS_QUERY_LIMITED_INFORMATION, False, self.pid)
-            if not handle:
-                return False
-            # A process that has exited can still be opened while another process holds a handle to it.
-            code = ctypes.c_ulong()
-            try:
-                answered = kernel.GetExitCodeProcess(handle, ctypes.byref(code))
-            finally:
-                kernel.CloseHandle(handle)
-            return not answered or code.value == _STILL_ACTIVE
+            return self._alive_on_windows()
         try:
             os.kill(self.pid, 0)
         except PermissionError:
@@ -240,6 +232,19 @@ class RunningProcess:
         except OSError:
             return False
         return True
+
+    def _alive_on_windows(self) -> bool:
+        kernel = ctypes.windll.kernel32
+        handle = kernel.OpenProcess(_PROCESS_QUERY_LIMITED_INFORMATION, False, self.pid)
+        if not handle:
+            return False
+        # A process that has exited can still be opened while another process holds a handle to it.
+        code = ctypes.c_ulong()
+        try:
+            answered = kernel.GetExitCodeProcess(handle, ctypes.byref(code))
+        finally:
+            kernel.CloseHandle(handle)
+        return not answered or code.value == _STILL_ACTIVE
 
 
 class ProcessNotStopped(Exception):

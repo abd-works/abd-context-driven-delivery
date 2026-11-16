@@ -9,14 +9,15 @@ import { GraphClient } from './graph/GraphClient';
 import { reasonOf } from './graph/graph-failures';
 import { api, failures } from './graph/graph-page';
 import { GraphView } from './graph/GraphView';
-import { childrenOf, isRule, ruleHits, selectionForRule, withBranch, type GraphSelection, type TreeItem } from './graph/graph-selection';
+import { childrenOf, isRule, ruleHits, selectionForRule, withBranch, type GraphSelection, type TreeItem, type ViolationFocus } from './graph/graph-selection';
 import { SourceView, type SourceRule } from './source/SourceView';
 import { normalizeInventoryBundle } from './inventory-bundle';
 import { overlayPathLabel } from './labels/overlay-labels';
-import type { ViolationFocus } from './source/violation-prompt';
 
 const LAST_FOLDER = 'cdd-graph-folder';
 const LAST_OVERLAYS = 'cdd-graph-overlays';
+// How often the page reads the cdd server's progress while it shows.
+const PROGRESS_READ_MS = 400;
 const EMPTY: FilterSelection = {
   practices: [],
   overlays: [],
@@ -100,25 +101,31 @@ export function App() {
     return () => window.removeEventListener('focus', reread);
   }, []);
 
+  // The newest line of the server's progress, added to the log once, and shown as the label while the graph loads.
+  function logLine(line: string, labels: boolean) {
+    setLoadingLog((current) => (current[current.length - 1] === line ? current : [...current, line]));
+    if (labels && loadingRef.current) {
+      setLoadingLabel(line);
+    }
+  }
+
+  async function readProgress() {
+    try {
+      const steps = (await graphs.api.post<CddProgress[]>('/cdd/progress', {})) ?? [];
+      const newest = steps[steps.length - 1]?.message;
+      if (newest) logLine(newest, true);
+    } catch (cause) {
+      logLine(`error: Progress check failed: ${reasonOf(cause)}`, false);
+      failures.fail(`The Graph app did not read the cdd server's progress: ${reasonOf(cause)}`, 'Reading the progress of the cdd server while the page shows');
+    }
+  }
+
   useEffect(() => {
     let stop = false;
     async function tick() {
       while (!stop) {
-        try {
-          const steps = (await graphs.api.post<CddProgress[]>('/cdd/progress', {})) ?? [];
-          const newest = steps[steps.length - 1]?.message;
-          if (newest) {
-            setLoadingLog((current) => (current[current.length - 1] === newest ? current : [...current, newest]));
-            if (loadingRef.current) {
-              setLoadingLabel(newest);
-            }
-          }
-        } catch (cause) {
-          const line = `error: Progress check failed: ${reasonOf(cause)}`;
-          setLoadingLog((current) => (current[current.length - 1] === line ? current : [...current, line]));
-          failures.fail(`The Graph app did not read the cdd server's progress: ${reasonOf(cause)}`, 'Reading the progress of the cdd server while the page shows');
-        }
-        await new Promise((resolve) => setTimeout(resolve, 400));
+        await readProgress();
+        await new Promise((resolve) => setTimeout(resolve, PROGRESS_READ_MS));
       }
     }
     void tick();
@@ -164,7 +171,7 @@ export function App() {
     failures.fail(reasonOf(cause), context);
   }
 
-  async function load(root: string, next = selection, force = false) {
+  async function load(root: string, next: FilterSelection = selection, force: boolean = false) {
     const trimmed = root.trim();
     if (!trimmed) {
       return;
@@ -177,23 +184,7 @@ export function App() {
     setError('');
     try {
       await read(trimmed, force);
-      if (generation !== loadGeneration.current) {
-        return;
-      }
-      const bundle = normalizeInventoryBundle(await graphs.inventory());
-      if (generation !== loadGeneration.current) {
-        return;
-      }
-      const synced = { ...next, overlays: bundle.overlays?.length ? bundle.overlays : next.overlays };
-      setAvailableOverlays(bundle.available_overlays ?? []);
-      await offerChoices(synced);
-      await showFilter(synced);
-      setLoadedFolder(trimmed);
-      if (!api.project) {
-        window.localStorage.setItem(LAST_FOLDER, trimmed);
-      }
-      window.localStorage.setItem(LAST_OVERLAYS, JSON.stringify(bundle.overlays));
-      setLoadingLog([]);
+      if (generation === loadGeneration.current) await showLoaded(trimmed, next, generation);
     } catch (cause) {
       if (generation !== loadGeneration.current) {
         failures.fail(reasonOf(cause), `Loading the graph of ${trimmed}, a load the page has since started again`);
@@ -205,6 +196,24 @@ export function App() {
         setLoading(false);
       }
     }
+  }
+
+  // Show the graph a load read from root, with the overlays it applied, unless a later load started since.
+  async function showLoaded(root: string, next: FilterSelection, generation: number) {
+    const bundle = normalizeInventoryBundle(await graphs.inventory());
+    if (generation !== loadGeneration.current) {
+      return;
+    }
+    const synced = { ...next, overlays: bundle.overlays?.length ? bundle.overlays : next.overlays };
+    setAvailableOverlays(bundle.available_overlays ?? []);
+    await offerChoices(synced);
+    await showFilter(synced);
+    setLoadedFolder(root);
+    if (!api.project) {
+      window.localStorage.setItem(LAST_FOLDER, root);
+    }
+    window.localStorage.setItem(LAST_OVERLAYS, JSON.stringify(bundle.overlays));
+    setLoadingLog([]);
   }
 
   async function choose(selection: GraphSelection) {
@@ -235,18 +244,22 @@ export function App() {
     setLoadingLabel('Applying pattern overlays…');
     setError('');
     try {
-      const bundle = normalizeInventoryBundle(await graphs.setOverlays(overlays));
-      setAvailableOverlays(bundle.available_overlays ?? []);
-      // The overlays change the node types the practices hold, so the node choice starts again from every one offered.
-      const applied = { ...next, overlays: bundle.overlays?.length ? bundle.overlays : overlays, node_types: [] };
-      await showFilter(chosen(applied, await offerChoices(applied)));
-      window.localStorage.setItem(LAST_OVERLAYS, JSON.stringify(bundle.overlays));
+      await showOverlaysApplied(overlays, next);
     } catch (cause) {
       failed(cause, 'Applying pattern overlays in the Graph app');
     } finally {
       setOverlayApplying(false);
       setLoading(false);
     }
+  }
+
+  async function showOverlaysApplied(overlays: string[], next: FilterSelection) {
+    const bundle = normalizeInventoryBundle(await graphs.setOverlays(overlays));
+    setAvailableOverlays(bundle.available_overlays ?? []);
+    // The overlays change the node types the practices hold, so the node choice starts again from every one offered.
+    const applied = { ...next, overlays: bundle.overlays?.length ? bundle.overlays : overlays, node_types: [] };
+    await showFilter(chosen(applied, await offerChoices(applied)));
+    window.localStorage.setItem(LAST_OVERLAYS, JSON.stringify(bundle.overlays));
   }
 
   async function addOverlayFolder() {
@@ -458,7 +471,10 @@ function chosen(next: FilterSelection, choices: FilterData): FilterSelection {
 // The overlays a person last applied. Saved text that is not a list of overlays fails the load that reads it, which
 // says so, instead of loading with none.
 function readSavedOverlays(): string[] {
-  const raw = window.localStorage.getItem(LAST_OVERLAYS);
+  return savedOverlays(window.localStorage.getItem(LAST_OVERLAYS));
+}
+
+function savedOverlays(raw: string | null): string[] {
   if (!raw) {
     return [];
   }
@@ -473,12 +489,12 @@ function overlayIsActive(overlays: string[], name: string): boolean {
   return overlays.some((item) => overlayPathLabel(item) === name || item === name);
 }
 
-function findNode(nodes: TreeItem[], id: string): TreeItem | null {
+function findNode(nodes: TreeItem[], nodeId: string): TreeItem | null {
   for (const node of nodes) {
-    if (node.node_id === id) {
+    if (node.node_id === nodeId) {
       return node;
     }
-    const child = findNode(childrenOf(node), id);
+    const child = findNode(childrenOf(node), nodeId);
     if (child) {
       return child;
     }

@@ -1,8 +1,8 @@
 import React, { Component, useEffect, type ErrorInfo, type ReactNode } from 'react';
-import { App } from '../App';
-import { FailureToasts } from './FailureToasts';
-import { reasonOf } from './graph-failures';
-import { failures } from './graph-page';
+import { App } from './App';
+import { FailureToasts } from './graph/FailureToasts';
+import { reasonOf } from './graph/graph-failures';
+import { failures } from './graph/graph-page';
 
 const UNCAUGHT = 'An uncaught failure in the Graph page';
 
@@ -14,8 +14,8 @@ class ExplorerErrorBoundary extends Component<{ children: ReactNode }, { error: 
   }
 
   // What stopped the page goes to the chat bar too, so the person sees it there and not only on the page.
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    failures.fail(`The Graph app stopped rendering: ${error.message}`, `Rendering the Graph page:${info.componentStack ?? ''}`);
+  componentDidCatch(error: Error, rendering: ErrorInfo) {
+    failures.fail(`The Graph app stopped rendering: ${error.message}`, `Rendering the Graph page:${rendering.componentStack ?? ''}`);
   }
 
   render() {

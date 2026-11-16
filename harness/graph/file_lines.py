@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from contextlib import contextmanager
-from contextvars import ContextVar
+from contextvars import ContextVar, Token
 from enum import Enum
 from pathlib import Path
+from types import TracebackType
 
 
 class PathKind(Enum):
@@ -18,58 +17,65 @@ class PathKind(Enum):
 _READ: ContextVar[dict[str, tuple[PathKind, list[str]]] | None] = ContextVar("harness_graph_file_lines", default=None)
 
 
+class BuildReads:
+    """While a graph build runs (``with BuildReads():``) each path is looked at and read from disk once, and every
+    node's *Source* there answers from those lines; when the build ends they are dropped, so the next build, such as a
+    refresh after the file changed, reads it as it is then. A build nested inside another shares its lines."""
+
+    def __init__(self) -> None:
+        self._token: Token | None = None
+
+    def __enter__(self) -> BuildReads:
+        if _READ.get() is None:
+            self._token = _READ.set({})
+        return self
+
+    def __exit__(self, kind: type[BaseException] | None, error: BaseException | None, trace: TracebackType | None) -> None:
+        if self._token is not None:
+            _READ.reset(self._token)
+            self._token = None
+
+
 class FileLines:
     """The lines at a path as a graph build reads them: a file's lines, or a folder's code files' lines, each file's
-    after a ``// path`` line naming it from the folder; none when nothing is there. Inside ``during_build`` each path is
-    looked at and read from disk once, and every node's *Source* there answers from those lines; when the build ends
-    they are dropped, so the next build, such as a refresh after the file changed, reads it as it is then. Outside a
-    build every call reads the disk again. The lines answered are shared: a reader slices or copies them and never
-    changes them."""
+    after a ``// path`` line naming it from the folder; none when nothing is there. Inside a build (*BuildReads*) each
+    path is read from disk once; outside one every read goes to the disk again. The lines answered are shared: a reader
+    slices or copies them and never changes them."""
 
     FOLDER_SUFFIXES = frozenset({".ts", ".tsx", ".js", ".py"})
 
-    @staticmethod
-    @contextmanager
-    def during_build() -> Iterator[None]:
-        """Keep each path's lines while the block runs; a build nested inside another shares its lines."""
-        if _READ.get() is not None:
-            yield
-            return
-        token = _READ.set({})
-        try:
-            yield
-        finally:
-            _READ.reset(token)
+    def __init__(self, path: Path) -> None:
+        self.path = path
 
-    @staticmethod
-    def of(path: Path) -> list[str]:
-        """The lines at path."""
-        return FileLines._at(path)[1]
+    @property
+    def lines(self) -> list[str]:
+        """The lines at the path."""
+        return self._at()[1]
 
-    @staticmethod
-    def kind(path: Path) -> PathKind:
-        """Whether path is a file, a folder, or not there."""
-        return FileLines._at(path)[0]
+    @property
+    def kind(self) -> PathKind:
+        """Whether the path is a file, a folder, or not there."""
+        return self._at()[0]
 
-    @staticmethod
-    def _at(path: Path) -> tuple[PathKind, list[str]]:
+    def _at(self) -> tuple[PathKind, list[str]]:
         kept = _READ.get()
         if kept is None:
-            return FileLines._read(path)
-        key = str(path)
+            return self._read()
+        key = str(self.path)
         if key not in kept:
-            kept[key] = FileLines._read(path)
+            kept[key] = self._read()
         return kept[key]
 
-    @staticmethod
-    def _read(path: Path) -> tuple[PathKind, list[str]]:
+    def _read(self) -> tuple[PathKind, list[str]]:
+        path = self.path
         if path.is_file():
             return PathKind.FILE, path.read_text(encoding="utf-8").splitlines()
         if not path.is_dir():
             return PathKind.MISSING, []
         lines: list[str] = []
         for inside in sorted(path.rglob("*")):
-            if inside.suffix.lower() in FileLines.FOLDER_SUFFIXES and FileLines.kind(inside) is PathKind.FILE:
+            read = FileLines(inside)
+            if inside.suffix.lower() in self.FOLDER_SUFFIXES and read.kind is PathKind.FILE:
                 lines.append(f"// {inside.relative_to(path).as_posix()}")
-                lines.extend(FileLines.of(inside))
+                lines.extend(read.lines)
         return PathKind.FOLDER, lines

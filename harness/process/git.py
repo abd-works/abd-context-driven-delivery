@@ -60,8 +60,7 @@ class Git:
             return False
         return True
 
-    @staticmethod
-    def _executable() -> str:
+    def _executable(self) -> str:
         found = _installed_git()
         if not found:
             raise RepoConnectError("Cannot connect git: `git` is not available.")
@@ -88,8 +87,7 @@ class Git:
             raise
         return process.returncode, stdout, stderr
 
-    @staticmethod
-    def _kill_process_tree(process: subprocess.Popen) -> None:
+    def _kill_process_tree(self, process: subprocess.Popen) -> None:
         # Git for Windows' cmd\git.exe is a launcher; killing only the launcher leaves the real
         # git holding the output pipes, so communicate() would block long past the timeout.
         if os.name == "nt":

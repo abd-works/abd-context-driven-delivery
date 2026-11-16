@@ -15,7 +15,10 @@ from __future__ import annotations
 import sys
 from functools import cached_property
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from harness.guidance.guidance import PracticeGuidance
 
 if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
@@ -33,7 +36,7 @@ class FixtureSchema(PracticeSchema):
     fixture's rule labels (``practice.node.rule``). Everything else a schema answers, it answers as the practice's
     own does."""
 
-    def __init__(self, practice, labels: list[str]) -> None:
+    def __init__(self, practice: PracticeGuidance, labels: list[str]) -> None:
         super().__init__(practice)
         carried: dict[str, list[str]] = {}
         for label in labels:
@@ -42,7 +45,7 @@ class FixtureSchema(PracticeSchema):
         self._carried = {node_type: tuple(slugs) for node_type, slugs in carried.items()}
 
     @cached_property
-    def rules(self) -> dict[str, tuple[str, ...]]:
+    def _rules(self) -> dict[str, tuple[str, ...]]:
         return dict(self._carried)
 
 
@@ -51,12 +54,12 @@ class FixtureGraph:
     an edge of each kind a node type sits on joins that node to the practice's root, and the practice's rule run reads
     the fixture's schema."""
 
-    def __init__(self, fixture: dict[str, Any]) -> None:
-        self.graph = Graph()
+    def __init__(self, graph: Graph, fixture: dict[str, Any]) -> None:
+        self.graph = graph
         for key, held in fixture["practices"].items():
             self._fill(self.graph.practice(key), held, fixture["edges_of_type"])
 
-    def _fill(self, practice, held: dict[str, Any], edges_of_type: dict[str, list[str]]) -> None:
+    def _fill(self, practice: PracticeGuidance, held: dict[str, Any], edges_of_type: dict[str, list[str]]) -> None:
         part = practice.reading.in_graph
         part.rule_run.schema_with = lambda overlays, schema=FixtureSchema(practice, list(held["rules"])): schema
         nodes = {node_type: part.add_named(node_type, f"{practice.key}:{node_type}", node_type.lower(), Source("fixture", 1, 1)) for node_type in held["node_types"]}
@@ -72,7 +75,7 @@ class FixtureGraph:
 
 def recorded(fixture: dict[str, Any]) -> dict[str, Any]:
     """The fixture with Python's answer to each of its requests."""
-    graph = FixtureGraph(fixture)
+    graph = FixtureGraph(Graph(), fixture)
     return {**fixture, "answers": [{"request": entry["request"], "answer": graph.answer(entry["request"])} for entry in fixture["answers"]]}
 
 

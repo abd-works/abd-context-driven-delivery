@@ -6,9 +6,12 @@ from __future__ import annotations
 
 import copy
 from pathlib import Path
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, TypedDict
 
 from harness.installation.data_class import SourceFile, data_field
+
+if TYPE_CHECKING:
+    from harness.graph.graph_rules_collection import GraphRule
 
 # A judgment or scanner that cannot tie its finding to a file names this place.
 UNKNOWN_LOCATION = "unknown"
@@ -30,6 +33,28 @@ class SourceLine:
     @data_field
     def text(self) -> str:
         return self._text
+
+
+class SourceLineData(TypedDict):
+    """A SourceLine as ``data_of`` sends it."""
+
+    number: int
+    text: str
+
+
+class ViolationData(TypedDict, total=False):
+    """A violation as ``data_of`` sends it for ``graph.return_nodes`` and writes it in the saved graph."""
+
+    rule: str
+    message: str
+    practice: str
+    node_id: str
+    subject: str
+    location: str
+    line: int | None
+    end_line: int | None
+    severity: str
+    source: list[SourceLineData]
 
 
 class Violation:
@@ -63,18 +88,18 @@ class Violation:
         self._source = list(source or [])
 
     @classmethod
-    def from_data(cls, data: dict) -> Violation:
+    def from_data(cls, sent: ViolationData) -> Violation:
         """A violation sent as data, the way ``data_of`` writes it for ``graph.return_nodes`` and the saved graph."""
         return cls(
-            str(data.get("rule") or ""),
-            str(data.get("message") or ""),
-            practice=str(data.get("practice") or ""),
-            node_id=str(data.get("node_id") or ""),
-            subject=str(data.get("subject") or ""),
-            location=str(data.get("location") or ""),
-            line=data.get("line"),
-            end_line=data.get("end_line"),
-            severity=str(data.get("severity") or "error"),
+            str(sent.get("rule") or ""),
+            str(sent.get("message") or ""),
+            practice=str(sent.get("practice") or ""),
+            node_id=str(sent.get("node_id") or ""),
+            subject=str(sent.get("subject") or ""),
+            location=str(sent.get("location") or ""),
+            line=sent.get("line"),
+            end_line=sent.get("end_line"),
+            severity=str(sent.get("severity") or "error"),
         )
 
     @property
@@ -195,7 +220,7 @@ class NodeViolation(Violation):
 
     def __init__(
         self,
-        found_by: Any,
+        found_by: GraphRule,
         message: str,
         *,
         location: str = "",
@@ -207,7 +232,7 @@ class NodeViolation(Violation):
         self.found_by = found_by
 
     @classmethod
-    def at_node(cls, found_by: Any, message: str) -> NodeViolation:
+    def at_node(cls, found_by: GraphRule, message: str) -> NodeViolation:
         """A violation the rule found_by found on its node, at the node's place in its file, or on the lines a Finding
         names."""
         source = found_by.node.source
