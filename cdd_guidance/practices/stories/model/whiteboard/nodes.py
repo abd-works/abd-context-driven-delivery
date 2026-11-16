@@ -11,6 +11,7 @@ a shared board.
 from __future__ import annotations
 
 import hashlib
+import re
 from typing import List
 
 from harness.whiteboard import BoardElement, Box, Shape, UnreadableBoard, Whiteboard, WhiteboardNode
@@ -42,44 +43,44 @@ class _BoardStoryNode(WhiteboardNode):
 
 
 class WhiteboardStory(DiagramStory, _BoardStoryNode):
-    """A story card on the story line under its epic, with its actor drawn above it. Every story's actor is drawn, even
-    one the story before it shares, because a board element carries no field of a practice's own to hold it."""
+    """A story card on the story line under its epic: its actor in italics on the first line, then its name. A board
+    grows a block too small for its words over its neighbours, so the card is sized for a story name of three lines
+    at the board's small text, and cards stand the board's 24 units apart."""
 
-    pitch = 72
-    size = 60
-    actor_height = size
-    column_pad = 5
+    card_width = 160
+    size = 112
+    pitch = card_width + 24
+    column_pad = 12
+    row_y = 280
+    actor_height = 0
+    actor_gap = 0
 
     @property
     def x(self) -> int:
         parent = self.parent
         if not isinstance(parent, Epic):
             return 0
-        return parent.x + WhiteboardEpic.tighten + self.column_pad + parent.stories.index(self) * self.pitch
+        return parent.x + self.column_pad + parent.stories.index(self) * self.pitch
 
     @property
     def y(self) -> int:
         return self._story_line_y()
 
     def board_box(self) -> Box:
-        return Box(self.x, self.y, self.size, self.size)
+        return Box(self.x, self.y, self.card_width, self.size)
 
     def board_elements(self) -> List[BoardElement]:
-        drawn: List[BoardElement] = []
         actor = self.actors[0].strip() if self.actors else ""
-        if actor:
-            drawn.append(Shape(
-                f"actor.{self.board_key}", box=Box(self.x, self.y - self.actor_height - self.actor_gap, self.size, self.actor_height),
-                kind="rect", color="blue", size="small", text=actor,
-            ))
-        drawn.append(self.board_shape(f"story.{self.story_type.value}.{self.board_key}", kind="rect", color="yellow", size="small", text=self.name))
-        return drawn
+        text = f"*{actor}*\n{self.name}" if actor else self.name
+        return [self.board_shape(f"story.{self.story_type.value}.{self.board_key}", kind="rounded", color="yellow", size="small", text=text)]
 
 
 class WhiteboardEpic(DiagramEpic, _BoardStoryNode):
     """An epic bar; a sub-epic's bar sits one row lower for each level it is nested, under the epic that holds it."""
 
-    tighten = 10
+    tighten = 0
+    bar_gap = 8
+    """The space left between two bars side by side, so each sub-epic reads as its own."""
     first_x = DiagramEpic.left_margin
     epic_spacing = DiagramEpic.gap
     story_pitch = WhiteboardStory.pitch
@@ -101,7 +102,7 @@ class WhiteboardEpic(DiagramEpic, _BoardStoryNode):
         return self.row_y
 
     def board_box(self) -> Box:
-        return Box(self.x, self.y, self.width, self.height)
+        return Box(self.x, self.y, self.width - self.bar_gap, self.height)
 
     def board_elements(self) -> List[BoardElement]:
         nested = isinstance(self.parent, Epic)
@@ -172,5 +173,8 @@ class _BoardCell(DiagramStoryCell):
         self.role = element.role
         self.depth = int(parts[1]) if self.role == "subepic" else -1
         self.kind = parts[1] if self.role == "story" else ""
-        self.text = element.text.strip()
+        lines = [line.strip() for line in element.text.strip().splitlines() if line.strip()]
+        actor = re.match(r"^\*([^*].*)\*$", lines[0]) if self.role == "story" and len(lines) > 1 else None
+        self.actor = actor.group(1).strip() if actor else ""
+        self.text = " ".join(lines[1:] if actor else lines)
         self.x, self.y, self.width, self.height = element.box.x, element.box.y, element.box.w, element.box.h

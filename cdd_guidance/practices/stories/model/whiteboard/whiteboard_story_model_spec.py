@@ -8,11 +8,7 @@ from mamba import before, context, description, it
 
 from harness.whiteboard import UnreadableBoard, Whiteboard
 from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import outline, round_trip_story_map
-from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryModel
-
-
-def drawn(story_map: WhiteboardStoryModel, prefix: str) -> list:
-    return [element for element in story_map.board().elements if element.id.startswith(prefix)]
+from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStory, WhiteboardStoryModel
 
 
 with description("a story map drawn on a Claude whiteboard") as self:
@@ -36,9 +32,23 @@ with description("a story map drawn on a Claude whiteboard") as self:
         with it("should draw the story as a card below its sub-epic's bar"):
             expect(self.bar.box.y + self.bar.box.h).to(be_below(self.card.box.y))
 
-        with it("should draw the story's actor above the card"):
-            actor = self.story.board_elements()[0]
-            expect((actor.text, actor.box.y + actor.box.h)).to(equal((self.story.actors[0], self.card.box.y - self.story.actor_gap)))
+        with it("should write the story's actor in italics above its name on the card"):
+            expect(self.card.text).to(equal(f"*{self.story.actors[0]}*\n{self.story.name}"))
+
+    with context("that is drawn on a board"):
+        with before.each:
+            self.cards = [element for element in self.story_map.board().elements if element.role == "story"]
+
+        with it("should leave no two story cards overlapping"):
+            boxes = sorted((card.box for card in self.cards), key=lambda box: (box.y, box.x))
+            touching = [(first, second) for first, second in zip(boxes, boxes[1:])
+                        if first.y == second.y and second.x < first.x + first.w + 24]
+            expect(touching).to(equal([]))
+
+        with it("should size each card for its actor and a name of three lines of small text"):
+            letters_per_line = (WhiteboardStory.card_width - 24) // 7.5
+            lines_room = (WhiteboardStory.size - 24) // 21
+            expect(all(len(story.name) <= 3 * letters_per_line and lines_room >= 4 for story in self.story_map.every_story())).to(equal(True))
 
     with context("that is drawn twice"):
         with it("should give each epic and story the same element id both times"):

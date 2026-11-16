@@ -138,6 +138,8 @@ class DiagramStoryCell:
         self.depth = -1
         self.kind = ""
         self.text = ""
+        # The actor a story cell names on itself, for a format that writes it on the card rather than in a cell above.
+        self.actor = ""
         self.x = self.y = self.width = self.height = 0.0
         self.node: Optional[Epic] = None
 
@@ -238,8 +240,9 @@ class DiagramStoryModel(StoryModel):
             if owner is None:
                 continue
             story = self.story_type(cell.text, len(owner.node.stories) + 1, cell.story_type)
-            if id(cell) in actors:
-                story.actors = [actors[id(cell)].text.strip()]
+            actor = actors[id(cell)].text.strip() if id(cell) in actors else cell.actor
+            if actor:
+                story.actors = [actor]
             owner.node.append_story(story)
 
     @property
