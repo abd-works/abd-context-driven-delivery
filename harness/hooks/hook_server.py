@@ -13,7 +13,7 @@ from typing import Any, Callable, Protocol
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetConfiguration, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
-from harness.annotations.annotation import HostedOnly
+from harness.annotations.annotation import hosted_only
 from harness.hooks.hooks import HookHandlersFile, Hooks, InstalledHookHandlers, events_served
 from harness.installation.destination import SkippedTools
 from harness.installation.context_config import ContextConfig
@@ -387,7 +387,7 @@ class HandlerCatalog:
                 self.failures.append((self.ref_label(configured), error))
                 continue
             self.toolsets.extend(
-                instance for instance in loaded if not HostedOnly.annotates(instance) and Hooks.from_toolset_class(type(instance)).deploy
+                instance for instance in loaded if not hosted_only.annotates(instance) and Hooks.from_toolset_class(type(instance)).deploy
             )
 
     def ref_label(self, configured: ToolsetConfiguration) -> str:

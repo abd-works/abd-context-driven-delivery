@@ -31,7 +31,7 @@ __all__ = [
     "MarkdownTypeUnresolved",
     "SOURCE_STAMPS",
     "markdown",
-    "markdownCollection",
+    "markdown_collection",
 ]
 
 _F = TypeVar("_F", bound=Callable[..., Any])
@@ -971,7 +971,7 @@ def markdown(operation_or_label: _F | str | None = None, *, label: str | None = 
     return _labelled(_section_text, operation_or_label, label)
 
 
-def markdownCollection(operation_or_label: _F | str | None = None, *, label: str | None = None) -> property | Callable[[_F], property]:
-    """``@markdownCollection`` or ``@markdownCollection("label")``: the operation's value is its owner's section under
+def markdown_collection(operation_or_label: _F | str | None = None, *, label: str | None = None) -> property | Callable[[_F], property]:
+    """``@markdown_collection`` or ``@markdown_collection("label")``: the operation's value is its owner's section under
     that label, read as a collection and kept on the owner."""
     return _labelled(_section_collection, operation_or_label, label)

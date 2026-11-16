@@ -96,7 +96,7 @@ class _ApproachMarkdown:
         if stage is not None:
             return stage.scope
         return StageScope(
-            stage_fields.get("shape", "square"), stage_fields.get("scope_name", title), stage_fields.get("scope_width", ""), ""
+            stage_fields.get("shape", "square"), stage_fields.get("scope_name", title), stage_fields.get("scope_width", "")
         )
 
     def _principle(self, title: str, text: str) -> PrincipleCopy:

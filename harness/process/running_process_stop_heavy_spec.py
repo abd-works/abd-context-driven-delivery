@@ -11,15 +11,15 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import equal, expect
 from mamba import context, description, it
 
-from harness.process.process import RunningProcess, StoppableProcess
+from harness.process.process import RunningProcess
 
 WAIT_SECONDS = 5
 
 
-with description("a stoppable process"):
+with description("a running process asked to stop"):
     with context("that has already exited"):
         with it("should stop without complaint"):
             child = subprocess.Popen([sys.executable, "-c", "pass"])
             child.wait()
-            StoppableProcess(child.pid).stop(WAIT_SECONDS)
+            RunningProcess(child.pid).stop(WAIT_SECONDS)
             expect(RunningProcess(child.pid).alive).to(equal(False))

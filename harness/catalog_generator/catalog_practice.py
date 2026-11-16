@@ -14,7 +14,7 @@ from harness.catalog_generator.catalog_examples import EXAMPLES_FOLDER, CatalogF
 from harness.catalog_generator.stage_columns import StageColumn
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
-from harness.installation.destination import NoCatalog
+from harness.annotations.annotation import noCatalog
 from harness.installation.files import FileChannel, FileInstallation
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.install_target import InstallTarget
@@ -110,7 +110,7 @@ class CatalogPractice:
         """Every practice in the practice catalogue with a fidelity on the board, unless annotated ``@noCatalog``, in the
         order each practice's catalog card gives. Each keeps its place in the catalogue, the order the approach's grids
         list the practices in, and all share one skill install."""
-        practices = [practice for practice in cls.of_practices(PRACTICE_CATALOGUE.create_all()) if not NoCatalog.annotates(type(practice.practice))]
+        practices = [practice for practice in cls.of_practices(PRACTICE_CATALOGUE.create_all()) if not noCatalog.annotates(type(practice.practice))]
         shown = [practice for practice in practices if practice.on_board]
         return sorted(shown, key=lambda practice: (practice.order, practice.display_name))
 
@@ -179,7 +179,7 @@ class CatalogPractice:
     @cached_property
     def shown_fidelities(self) -> list[CatalogFidelity]:
         """The catalog's view of each fidelity it shows, in declared order, made once."""
-        return [CatalogFidelity(fidelity, self) for fidelity in self.practice.fidelities if not NoCatalog.annotates(fidelity)]
+        return [CatalogFidelity(fidelity, self) for fidelity in self.practice.fidelities if not noCatalog.annotates(fidelity)]
 
     def fidelity_in(self, column: StageColumn) -> CatalogFidelity | None:
         """The practice's fidelity in ``column``; none when the practice has no fidelity at that stage."""

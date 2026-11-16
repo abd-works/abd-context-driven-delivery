@@ -20,7 +20,7 @@ from mamba import before, description, it
 
 from harness.catalog_generator.catalog_generator import LifecycleAction, Utility
 from harness.catalog_generator.catalog_practice import CatalogPractice
-from harness.installation.destination import NoCatalog, noCatalog
+from harness.annotations.annotation import NoCatalog, noCatalog
 from harness.guidance.action_catalogue import ACTION_CATALOGUE, Action
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.installation.files import Skill, skill

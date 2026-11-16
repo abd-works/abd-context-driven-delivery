@@ -3,8 +3,8 @@
 from expects import be_below, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from harness.whiteboard import Arrow, Box, Label, Section, Shape, UnreadableBoard, Whiteboard, WhiteboardNode
-from harness.whiteboard.whiteboard import StoreWrite
+from harness.whiteboard import BoardElement, Box, Whiteboard, WhiteboardNode
+from harness.whiteboard.whiteboard import StoreWrite, UnreadableBoard
 
 
 class CardNode(WhiteboardNode):
@@ -25,7 +25,7 @@ def board_of_two_cards() -> Whiteboard:
     board = Whiteboard("Orders")
     board.draw(CardNode("story.a1", (20, 40, 60, 50)))
     board.draw(CardNode("story.b2", (100, 40, 60, 50)))
-    board.add(Arrow("arrow.ab", from_id="story.a1", to_id="story.b2", from_side="right", to_side="left", label="then"))
+    board.add(BoardElement.arrow("arrow.ab", from_id="story.a1", to_id="story.b2", from_side="right", to_side="left", label="then"))
     return board
 
 
@@ -48,7 +48,7 @@ with description("a whiteboard") as self:
         with it("should list the section before the shapes it holds in board order"):
             board = Whiteboard("Orders")
             board.draw(CardNode("story.a1", (20, 40, 60, 50)))
-            board.add(Section("epic.e1", box=Box(0, 0, 200, 120), text="Place Order"))
+            board.add(BoardElement.section("epic.e1", Box(0, 0, 200, 120), text="Place Order"))
             expect(board.order).to(equal(["epic.e1", "story.a1"]))
 
     with context("with an arrow between two shapes"):
@@ -65,7 +65,7 @@ with description("a whiteboard") as self:
 
     with context("with a title that wraps nowhere"):
         with it("should write no wrap, so its words run on one line rather than one word to a line"):
-            expect("wrap" in Label("title", x=0, y=0, text="Shop - Classes", size="large").record).to(equal(False))
+            expect("wrap" in BoardElement.words("title", Box(0, 0, 0, 0), text="Shop - Classes", size="large").record).to(equal(False))
 
     with context("that is saved and loaded again"):
         with it("should load the same title, elements and order"):
@@ -73,6 +73,34 @@ with description("a whiteboard") as self:
             loaded = Whiteboard.from_text(board.save())
             expect((loaded.title, loaded.order, [element.record for element in loaded.elements])).to(
                 equal((board.title, board.order, [element.record for element in board.elements]))
+            )
+
+    with context("read back by kind"):
+        with before.each:
+            self.board = board_of_two_cards()
+            self.board.add(BoardElement.section("lane.l1", Box(0, 0, 300, 120), text="Release 1"))
+            self.board.add(BoardElement.words("title", Box(0, -40, 0, 0), text="Orders"))
+
+        with it("should answer its containers as its sections"):
+            expect([element.id for element in self.board.sections]).to(equal(["lane.l1"]))
+
+        with it("should answer its other blocks as its shapes"):
+            expect([element.id for element in self.board.shapes]).to(equal(["story.a1", "story.b2"]))
+
+        with it("should answer its words as its labels"):
+            expect([element.id for element in self.board.labels]).to(equal(["title"]))
+
+        with it("should answer its lines as its arrows"):
+            expect([element.id for element in self.board.arrows]).to(equal(["arrow.ab"]))
+
+    with context("read by a practice that needs an element of a role"):
+        with it("should answer the board when an element draws that role"):
+            board = board_of_two_cards()
+            expect(board.holding({"story"}, "story")).to(equal(board))
+
+        with it("should refuse a board with none as unreadable, naming what it lacks"):
+            expect(lambda: board_of_two_cards().holding({"epic"}, "story-map epic")).to(
+                raise_error(UnreadableBoard, "The board holds no story-map epic")
             )
 
     with context("that is loaded from text that is not a board"):
@@ -100,8 +128,8 @@ with description("a whiteboard") as self:
             previous.versions = {"meta": 3, "story.b2": 7, "story.gone": 9}
             board = board_of_two_cards()
             moved = board.element("story.b2")
-            board.put(Shape(
-                moved.id, box=moved.box, kind=moved.kind, color=moved.color,
+            board.put(BoardElement.shape(
+                moved.id, moved.box, kind=moved.kind, color=moved.color,
                 size=moved.size, text="Pay Order",
             ))
             board.draw(CardNode("story.new", (180, 40, 60, 50)))
@@ -131,10 +159,10 @@ with description("a whiteboard") as self:
 
         with it("should clear a field the element no longer has"):
             previous = Whiteboard("Orders")
-            previous.add(Section("lane.l1", box=Box(0, 0, 200, 120), text="Release 1"))
+            previous.add(BoardElement.section("lane.l1", Box(0, 0, 200, 120), text="Release 1"))
             previous.versions = {"meta": 1, "lane.l1": 4}
             board = Whiteboard("Orders")
-            board.add(Section("lane.l1", box=Box(0, 0, 200, 120)))
+            board.add(BoardElement.section("lane.l1", Box(0, 0, 200, 120)))
             expect(board.writes(previous)[1]).to(equal(StoreWrite("update", "elements", "lane.l1", {"text": {"__delete__": True}}, 4)))
 
         with it("should write nothing for an element that did not change"):
@@ -150,7 +178,7 @@ with description("a whiteboard") as self:
     with context("with a block wider than a board draws one"):
         with before.each:
             self.board = Whiteboard("Orders")
-            self.board.add(Shape("epic.e1", box=Box(100, 0, 20000, 60), text="Move Work Forward"))
+            self.board.add(BoardElement.shape("epic.e1", Box(100, 0, 20000, 60), text="Move Work Forward"))
 
         with it("should draw it as equal pieces side by side, none wider than a board draws"):
             expect([(element.id, element.box) for element in self.board.elements]).to(equal([
@@ -169,4 +197,4 @@ with description("a whiteboard") as self:
     with context("with a block taller than a board draws one"):
         with it("should refuse it"):
             board = Whiteboard("Orders")
-            expect(lambda: board.add(Shape("lane.l1", box=Box(0, 0, 100, 9000)))).to(raise_error(ValueError))
+            expect(lambda: board.add(BoardElement.shape("lane.l1", Box(0, 0, 100, 9000)))).to(raise_error(ValueError))

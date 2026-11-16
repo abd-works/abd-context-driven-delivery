@@ -12,7 +12,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import equal, expect
 from mamba import after, before, context, description, it
 
-from harness.process.process import RunningProcess, StoppableProcess
+from harness.process.process import RunningProcess
 
 WAIT_SECONDS = 5
 
@@ -24,7 +24,7 @@ def _sleeping_child() -> subprocess.Popen:
     return child
 
 
-with description("a stoppable process") as self:
+with description("a running process asked to stop") as self:
     with before.each:
         self.signalled = []
         self._kill = os.kill
@@ -39,7 +39,7 @@ with description("a stoppable process") as self:
         with it("should end when stopped"):
             child = _sleeping_child()
             try:
-                StoppableProcess(child.pid).stop(WAIT_SECONDS)
+                RunningProcess(child.pid).stop(WAIT_SECONDS)
                 expect(RunningProcess(child.pid).alive).to(equal(False))
             finally:
                 child.kill()
@@ -47,11 +47,11 @@ with description("a stoppable process") as self:
     with context("that is this process"):
         with it("should not be signalled"):
             self._record_signals()
-            StoppableProcess(os.getpid()).stop(WAIT_SECONDS)
+            RunningProcess(os.getpid()).stop(WAIT_SECONDS)
             expect(self.signalled).to(equal([]))
 
     with context("that an address file names with no id"):
         with it("should not be signalled"):
             self._record_signals()
-            StoppableProcess(0).stop(WAIT_SECONDS)
+            RunningProcess(0).stop(WAIT_SECONDS)
             expect(self.signalled).to(equal([]))

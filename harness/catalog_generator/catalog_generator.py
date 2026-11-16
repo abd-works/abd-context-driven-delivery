@@ -29,7 +29,7 @@ from harness.catalog_generator.markdown_html import MarkdownHtml
 from harness.catalog_generator.page_shell import PageShell
 from harness.catalog_generator.project_approach import ProjectApproach, ProjectFiles
 from harness.guidance.action_catalogue import ACTION_CATALOGUE, Action
-from harness.installation.destination import NoCatalog
+from harness.annotations.annotation import noCatalog
 from harness.installation.files import skill
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.mcp.mcp_annotations import mcp
@@ -77,7 +77,7 @@ class Utility:
         if unloadable:
             raise unloadable[0]
         utilities = [toolset_class for toolset_class in classes if toolset_class.__module__.startswith(_UTILITY_PACKAGES)]
-        return [cls(toolset_class) for toolset_class in utilities if not NoCatalog.annotates(toolset_class)]
+        return [cls(toolset_class) for toolset_class in utilities if not noCatalog.annotates(toolset_class)]
 
     @property
     def name(self) -> str:
@@ -102,7 +102,7 @@ class LifecycleAction:
     def load_all(cls) -> list[LifecycleAction]:
         """Every action in the action catalogue whose toolset has a live tool for it that the catalog shows: a toolset
         or an operation annotated ``@noCatalog`` stays out."""
-        shown = [cls(action) for action in ACTION_CATALOGUE.actions if not NoCatalog.annotates(action.toolset_class)]
+        shown = [cls(action) for action in ACTION_CATALOGUE.actions if not noCatalog.annotates(action.toolset_class)]
         return [action for action in shown if action.tool is not None]
 
     @property
@@ -121,7 +121,7 @@ class LifecycleAction:
         """The toolset's live tool for this action; none when it has no such tool or annotates it ``@noCatalog``."""
         tools = self.toolset.tools
         tool = tools[self.name] if self.name in tools else None
-        if tool is None or NoCatalog.annotates(getattr(tool, "callable", tool)):
+        if tool is None or noCatalog.annotates(getattr(tool, "callable", tool)):
             return None
         return tool
 

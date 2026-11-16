@@ -1,6 +1,6 @@
 # Hooks — object model (model fidelity)
 
-Markdown channel for **`harness/hooks`**. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet*, *AgentTool*, *ToolCall*, and *InstallDestination* belong to `harness/agent_tools`, *Destination* to `harness/annotations`, *Installation*, *RepositoryToolsets*, and *ContextConfig* to `harness/installation`, *RunningProcess*, *StoppableProcess*, and *ProcessNotStopped* to `harness/process`, and *Session* and its *ChatInjections* to `space/session`; they appear here only as names this module uses. *PromptLog* (`tools/prompt_log`) is one toolset whose members are hooks; it keeps its own model.
+Markdown channel for **`harness/hooks`**. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet*, *AgentTool*, *ToolCall*, and *InstallDestination* belong to `harness/agent_tools`, *Destination* to `harness/annotations`, *Installation*, *RepositoryToolsets*, and *ContextConfig* to `harness/installation`, *RunningProcess* and *ProcessNotStopped* to `harness/process`, and *Session* and its *ChatInjections* to `space/session`; they appear here only as names this module uses. *PromptLog* (`tools/prompt_log`) is one toolset whose members are hooks; it keeps its own model.
 
 **Install** writes files. **Runtime** is the IDE running `hook_daemon.py` (the hook command) with the event's JSON on stdin; that script finds or starts one long-running *HookServer* per repository through *HookDaemon* and passes the event to it. `@Hook` and `@mcp` on the same operation remain two independent installs.
 
@@ -27,13 +27,17 @@ The `@Hook` decorator on an operation. Event is required and must be an IDE even
 + disabled: bool
 + EVENTS: frozenset[str]
 ----
-+ annotate(operation): operation
-	// sets the hook annotation; disabled sets _hook_disabled
-+ companion_flags(): tuple[str, ...]
-	// the destination's flags plus _hook_disabled
-+ disabled_on(operation): bool
-	// the one reader of the disabled annotation
+	// Destination records the hook on the operation, and disabled as _hook_disabled, which DestinationKind's
+	// disabled_on reads (harness/annotations); Hook adds no kind of its own
 	// sessionStart → session_start
+
+## Toast : Destination
+
+`@Toast` on an operation or instructions: nothing is written at install; the notifier the hook server shows toasts
+with (`HOOK_TOASTS`, which tools/prompt_notify registers with) toasts the operation when an agent calls it.
+
+------
+----
 
 ## Hooks                                                          <!-- Md -->
 
@@ -299,7 +303,7 @@ The hook daemon of one checkout: it listens on the one port the checkout's daemo
 	-> replace_stale
 	-> spawn
 + replace_stale(): None
-	-> StoppableProcess.stop
+	-> RunningProcess.stop
 + stop(): None
 	// stop the daemon answering on the port as this checkout's, or as one of the older layout; remove both address files
 + spawn(): None

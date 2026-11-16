@@ -312,11 +312,10 @@ export async function restartServer($: EngineInterface): Promise<void> {
   try {
     const restarted = await callTool<RestartData>($, 'cdd.restart', {})
     $.ui.toast(`cdd server restarted with ${restarted.tools} tools`)
+    await refreshChatBar($)
   } catch (failure) {
     await shownAsFailure($, 'The cdd server did not restart', 'Restart on the health panel, calling cdd.restart')(failure)
-    return
   }
-  await refreshChatBar($)
 }
 
 // What Fix on a board that did not answer sends: the chat bar reads the board from the cdd MCP server, which runs a

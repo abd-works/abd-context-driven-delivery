@@ -1,4 +1,4 @@
-"""The ``@Hook`` and ``@Hooks`` annotations, and the files an IDE reads to run hooks: ``hooks.json``, which names the hook
+"""The ``@Hook``, ``@Hooks`` and ``@Toast`` annotations, and the files an IDE reads to run hooks: ``hooks.json``, which names the hook
 command for each event, and ``hook-handlers.json``, which lists the operations that command may run."""
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Callable
 
 from harness.agent_tools.agent_tools import InstallDestination
-from harness.annotations.annotation import Annotation, Destination, DestinationKind
+from harness.annotations.annotation import Annotation, Destination
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 
@@ -38,22 +38,20 @@ class Hooks(Annotation):
         return getattr(toolset_class, cls.flag, None) or cls()
 
 
-class HookKind(DestinationKind):
-    """The kind of ``@Hook``, which records whether the hook it puts on an operation is turned off."""
+class Toast(Destination):
+    """Annotate an operation or instructions so the IDE shows a toast naming it when an agent calls it. The notifier
+    the hook server shows toasts with reads this annotation; the operation names no notifier."""
 
-    def companion_flags(kind) -> tuple[str, ...]:
-        return (*super().companion_flags(), kind.disabled_flag)
-
-    def disabled_on(kind, operation: Callable[..., object]) -> bool:
-        """True when ``@Hook(..., disabled=True)`` turned the hook on this operation off."""
-        return bool(getattr(operation, kind.disabled_flag, False))
+    flag = "_toast"
 
 
-class Hook(Destination, metaclass=HookKind):
+class Hook(Destination):
+    """``@Hook("event")``: the IDE runs the operation on that event; ``disabled=True`` keeps the hook there but turned
+    off, which the destination records on the operation."""
+
     flag = "_hook"
     channel = InstallDestination.HOOK
     enlists_member = True
-    disabled_flag = "_hook_disabled"
     EVENTS = frozenset(
         {
             "sessionStart",
@@ -92,12 +90,6 @@ class Hook(Destination, metaclass=HookKind):
         if callable(target):
             return inst.annotate(target)
         return inst
-
-    def annotate(self, target: Callable[..., object]) -> Callable[..., object]:
-        annotated = super().annotate(target)
-        if self.disabled:
-            setattr(annotated, self.disabled_flag, True)
-        return annotated
 
 
 hook = Hook

@@ -39,7 +39,7 @@ with description("foundry chrome brand"):
             other.mkdir()
             (other / "mark.txt").write_text("alt", encoding="utf-8")
             commons = Brand().copy_commons(self.out / "catalog")
-            Brand(folder=other).apply(commons)
+            Brand(folder=other).copy_marks(commons)
             expect((commons / "brand" / "mark.txt").read_text(encoding="utf-8")).to(
                 equal("alt")
             )

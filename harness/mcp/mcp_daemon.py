@@ -11,7 +11,7 @@ from typing import Any
 
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_address import McpAddress
-from harness.process.process import BackgroundStart, ExclusivePort, ListeningPorts, RunningProcess, StoppableProcess
+from harness.process.process import BackgroundStart, ExclusivePort, RunningProcess
 
 # The process a throwaway server belongs to, such as the spec run that started it on a port of its own. The server ends
 # when that process does, so a run that is killed or hangs leaves no server behind; the person's own server names none.
@@ -48,7 +48,7 @@ class RunningServer:
         self.pid = int(answer.get("pid") or 0)
         self.source = str(answer.get("source") or "")
         self.projects = [str(project) for project in answer.get("projects") or []]
-        self.process = StoppableProcess(self.pid)
+        self.process = RunningProcess(self.pid)
 
 
 class McpDaemon:
@@ -56,10 +56,11 @@ class McpDaemon:
 
     Holding the port exclusively is the claim: two servers cannot both hold it, so a second start exits quietly."""
 
-    def __init__(self, home: CddHome, address: McpAddress | None = None, listening: ListeningPorts | None = None) -> None:
+    def __init__(self, home: CddHome, address: McpAddress | None = None, port: ExclusivePort | None = None) -> None:
         self.home = home
         self.address = address or McpAddress()
-        self._listening = listening or ListeningPorts()
+        # The server's port, asked which process holds it when the server there does not answer.
+        self._port = port or ExclusivePort(self.address.HOST, self.address.port)
         # This process, when it is the server: the port it claims and the address it publishes.
         self.this_process = ServingProcess(home, self.address)
 
@@ -98,7 +99,7 @@ class McpDaemon:
         by the port it listens on and stopped too: left running, it would keep every new server from claiming the
         port."""
         running = self.ping()
-        process = running.process if running is not None else self._listening.holder(self.port)
+        process = running.process if running is not None else self._port.holder()
         if process is not None:
             process.stop(_STOP_SECONDS)
 

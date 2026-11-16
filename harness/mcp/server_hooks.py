@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING
 
 from harness.agent_tools.agent_tools import agent_toolset, tool_subject
 from harness.hooks.hooks import hook
-from harness.installation.destination import noCatalog
+from harness.annotations.annotation import noCatalog
 from harness.mcp.cdd_home import CddHome
-from harness.installation.repository_toolsets import RepositoryToolsets
+from harness.installation.repository_toolsets import RUNNING_CHECKOUT
 from harness.mcp.mcp_daemon import McpDaemon, ServedCheckout
 
 if TYPE_CHECKING:
@@ -27,7 +27,7 @@ class CddServerHooks:
     @tool_subject
     def load(cls) -> CddServerHooks:
         """The hooks of the checkout this code runs from, starting the server of the cdd home."""
-        return cls(ServedCheckout(McpDaemon(CddHome()), RepositoryToolsets.of_running_checkout().root))
+        return cls(ServedCheckout(McpDaemon(CddHome()), RUNNING_CHECKOUT))
 
     @hook("sessionStart")
     def ensure_mcp_server_on_session_start(self, payload: HookPayload) -> str:

@@ -582,7 +582,7 @@ class AgentToolSet(AgentToolSetOrigin):
         self._mode = ExpansionMode(str(new_mode)).value
 
     @classmethod
-    def instantiate(cls, toolset: ToolsetConfiguration = None) -> Any:
+    def instantiate(cls, toolset: ToolsetConfiguration = None) -> AgentToolSet:
         """A toolset made from what configuration names: a ``<module>:<Class>`` reference, ``{"toolset": reference,
         "context": {...}}`` with the constructor's arguments, a toolset class, or a toolset already made."""
         if toolset is None:

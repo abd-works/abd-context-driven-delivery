@@ -1,5 +1,5 @@
 """Test doubles for *McpDaemon*'s boundaries, shared by its unit spec and its heavy spec: the server's address, which
-answers no ping, and the machine's listening ports, which name the process holding a port."""
+answers no ping, and the server's port, which names the process holding it."""
 from __future__ import annotations
 
 from harness.mcp.mcp_address import McpAddress
@@ -22,13 +22,14 @@ class RecordingProcess:
         self.stopped = True
 
 
-class ListeningPortsStub:
-    """The machine's listening ports, naming one holder for any port and recording the ports asked about."""
+class PortStub:
+    """The server's port, naming one holder and recording each time it was asked who holds it."""
 
-    def __init__(self, holder: RecordingProcess | None) -> None:
+    def __init__(self, port: int, holder: RecordingProcess | None) -> None:
+        self.port = port
         self._holder = holder
         self.asked: list[int] = []
 
-    def holder(self, port: int) -> RecordingProcess | None:
-        self.asked.append(port)
+    def holder(self) -> RecordingProcess | None:
+        self.asked.append(self.port)
         return self._holder
