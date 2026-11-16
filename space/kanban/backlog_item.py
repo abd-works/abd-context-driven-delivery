@@ -65,7 +65,7 @@ class BacklogItem(Card):
     @agent_tool
     @noSessionLog
     def create(cls, title: str, text: str = "", *, project: Path | str) -> BacklogItem:
-        """Add an idea to the Backlog, as the + on the board's Backlog column does: one markdown file, with title as its heading and text under it, committed on main and pushed. Run as /backlog, the words after the command are the title, and any further lines its text."""
+        """Add an idea to the Backlog, as the + on the board's Backlog column does: one markdown file, with title as its heading and text under it, committed on main and pushed. Run as the backlog slash command, the words after the command are the title, and any further lines its text."""
         board = Board.load(project)
         item = cls(board.sessions.backlog_folder / f"{Name(title).title_slug}.md", board)
         item._idea.write(title, text)
