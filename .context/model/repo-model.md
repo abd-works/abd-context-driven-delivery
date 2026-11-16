@@ -9,7 +9,7 @@ Dependencies list the modules a module's production code imports today. One runs
 An *Annotation* is what an author types on a class or operation to say how CDD treats it; a *Destination* is an annotation that says where a member is published, and an *OmissionAnnotation* leaves a member out. Each publisher defines its own destinations (harness/installation, harness/mcp, harness/hooks), and every kind joins one registry, `annotation_kinds`, as it is defined. *Name* is one name written in every case CDD needs: `StoryMap`, `story_map`, and `story-map` are the same *Name*. `class_folder(cls)` is the folder a class is defined in.
 
 - **Purpose:** Hold the annotations an author types, the one place a member's destinations are read, and the one way a name is written in each case, below every publisher, so publishers depend on toolsets and never the other way round.
-- **Seam (terms):** Annotation, OmissionAnnotation, HostedOnly (`@hosted_only`), Destination, NamedDestination, NamesAnnotation, Toast, Name, `annotation_kinds`, `class_folder`
+- **Seam (terms):** Annotation, NamesAnnotation, Destination, ClassRegistry, Name, `annotation_kinds`, `class_folder`, and the annotations an author types `@hosted_only`, `@noCatalog`, `@noDeploy` (their classes, *OmissionAnnotation*, and the kinds of kind stay behind them)
 - **Dependencies (one-way):** *(none)*
 
 ## Annotation
@@ -53,6 +53,21 @@ The base of an annotation that leaves what it annotates out of something: the ca
 ----
 + annotates(target: Any): bool
 
+## NoCatalog : OmissionAnnotation
+
+`@noCatalog` on a class or operation: the catalog leaves it out; install still publishes it.
+
+------
+----
+
+## NoDeploy : OmissionAnnotation
+
+`@noDeploy` on an operation: install publishes it to no destination, whatever else annotates it; the catalog can still list it.
+
+------
++ omits_install: bool
+----
+
 ## Destination : Annotation
 
 The base of an annotation that says where install publishes a member, by its `channel`: a skill, a command, a rules file, an MCP tool, or a hook.
@@ -63,20 +78,7 @@ The base of an annotation that says where install publishes a member, by its `ch
 ----
 + name_annotated_on(operation: Any): str
 + disabled_on(operation: Any): bool
-
-## NamedDestination : Destination
-
-A destination whose annotation may name what it installs: `@skill("name")`, `@command(name="name")`, or bare `@skill` for the operation's own name.
-
-------
-----
-
-## Toast : Destination
-
-`@Toast` on an operation or instructions: nothing is written at install; the prompt notifier shows a toast naming the operation when an agent calls it.
-
-------
-----
+	// reads `{flag}_disabled`, which a destination that holds `disabled` sets, as `@Hook(..., disabled=True)` does
 
 ## Name
 
@@ -98,10 +100,10 @@ A destination whose annotation may name what it installs: `@skill("name")`, `@co
 
 # harness/process
 
-*BackgroundStart* and *PythonInterpreter* start a server without a console window, *StoppableProcess* ends one by its id, *ExclusivePort* is the one port a server may hold, and *Git* runs every git command in one folder with the same time limits and errors.
+*BackgroundStart* and *PythonInterpreter* start a server without a console window, *RunningProcess* asks about and ends one by its id, *ExclusivePort* is the one port a server may hold, and *Git* runs every git command in one folder with the same time limits and errors.
 
 - **Purpose:** Start, name, and stop the processes the framework keeps, and run git, the same way on Windows and elsewhere.
-- **Seam (terms):** BackgroundStart, PythonInterpreter, ExclusivePort, ListeningPorts, RunningProcess, StoppableProcess, ProcessNotStopped, Git, RepoConnectError
+- **Seam (terms):** BackgroundStart, PythonInterpreter, ExclusivePort, RunningProcess, ProcessNotStopped, Git, RepoConnectError
 - **Dependencies (one-way):** *(none)*
 
 ## BackgroundStart
@@ -119,19 +121,13 @@ How a background server is started so it keeps running without a console window.
 
 ## RunningProcess
 
-A process by its id, to ask whether it is still running.
+A process by its id, to ask whether it is still running and which ports it listens on, and to end it, such as the server an address file names.
 
 + RunningProcess(pid: int)
 ------
 + pid: int
 + alive: bool
-----
-
-## StoppableProcess : RunningProcess
-
-A process by its id that this one may end, such as the server an address file names.
-
-------
++ listening_ports: list[int]
 ----
 + stop(wait_seconds: float): None
 	// never signals an id of 0 or this process's own id, so a blank or stale address file cannot end the process that reads it
@@ -157,19 +153,8 @@ The one port a long-running server of this computer may listen on, claimed by an
 + port: int
 ----
 + claim(): socket.socket | None
-+ holder(): StoppableProcess | None
----<<asks the holder of its port>>--> ListeningPorts
----<<names its holder as>>--> StoppableProcess
-
-## ListeningPorts
-
-Which process on this computer listens on which TCP port, as `netstat -ano` (Windows) or `ss -ltnp` (elsewhere) reports it now; `scripts/instances.py` reads it too.
-
-------
-----
-+ by_process(): dict[int, list[int]]
-+ holder(port: int): StoppableProcess | None
----<<creates>>--> StoppableProcess
++ holder(): RunningProcess | None
+---<<names its holder as>>--> RunningProcess
 
 ## PythonInterpreter
 
@@ -207,7 +192,7 @@ Raised when git cannot be run, or a git command fails, in a clone.
 *Markdown* is the prose a property loads from a folder, file, or section beside its class, located once from the *MarkdownScope* its owner hands over; *MarkdownText* reads a document's headings and sections; *Format* names the channel an artifact is written in. The whole model of this module, internals included, is `harness/markdown/.context/markdown-collection-model.md`; that document is canonical, and this section shows only the classes other modules use.
 
 - **Purpose:** Let a class keep its words in markdown beside it, read them back typed, and convert them to HTML.
-- **Seam (terms):** Markdown, MarkdownScope, MarkdownCollection, MarkdownText, FrontMatter, Format, `operation_property`; the annotations `@markdown` and `@markdownCollection`
+- **Seam (terms):** Markdown, MarkdownScope, MarkdownCollection, MarkdownText, FrontMatter, Format, `operation_property`; the annotations `@markdown` and `@markdown_collection`
 - **Dependencies (one-way):** harness/annotations
 
 ## Markdown
@@ -252,7 +237,7 @@ Where an owner keeps its markdown and which part of it the owner reads: the fold
 
 ## MarkdownCollection
 
-Listed or keyed extracts that keep the original markdown. `@markdownCollection` annotates the property that holds one.
+Listed or keyed extracts that keep the original markdown. `@markdown_collection` annotates the property that holds one.
 
 + MarkdownCollection(entries: dict[str, Any] | list[Any] | None = None, parent: Any = None)
 ------
@@ -691,7 +676,7 @@ Which chat a tool call, and the session.log line it writes, came from, so `read_
 The *Installer* publishes every annotated member of a repository's toolsets into one IDE folder, through an *Installation* for each channel laid out by its *IdeLayout*, then starts the servers its *ServerInstallation* channels point at; *RepositoryToolsets* finds every toolset a repository defines. The module also reads and writes a project's CDD configuration files (*ContextConfig*, *JsonFile*, *AppPorts*) and holds the annotations that say what an object's data is.
 
 - **Purpose:** Install one repository into one IDE folder through every channel, from one walk of the repository, and start the servers that install points at; give every channel the annotations, the data, and the writer it publishes a member with.
-- **Seam (terms):** Installer, InstallDiagnostics, Installation, ServerInstallation, FileInstallation, SkippedTool, SkippedTools, IdeLayout, RepositoryToolsets, ContextConfig, JsonFile, JsonFileUnreadable, AppPorts, SourceFile, DataClass, Skill, Command, Rules, NoCatalog, NoDeploy, DataField, Identity, LanguageAdapter; `data_of`, `CONTEXT_FOLDER`, `is_temporary`
+- **Seam (terms):** Installer, InstallDiagnostics, Installation, ServerInstallation, FileInstallation, SkippedTool, SkippedTools, IdeLayout, RepositoryToolsets, ContextConfig, JsonFile, JsonFileUnreadable, AppPorts, SourceFile, DataClass, NamedDestination, Skill, Command, Rules, DataField, Identity, LanguageAdapter; `data_of`, `CONTEXT_FOLDER`, `is_temporary`
 - **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/markdown
 
 ## Installer
@@ -878,13 +863,13 @@ How one IDE lays out the folder CDD installs into: the folder's name in a projec
 ------
 + GUIDANCE_FOLDER: str
 + IMPORT_FOLDERS: tuple[str, ...]
+	// RUNNING_CHECKOUT, a module constant beside it, is the CDD checkout this code was imported from
 + root: Path
 + unloadable: list[ToolsetUnloadable]
 + agents_folder: Path
 + standing_rules_folder: Path
 + references_folder: Path
 ----
-+ of_running_checkout(): RepositoryToolsets
 + import_path_entries(): list[str]
 + pythonpath(): str
 + pycache_prefix(): str
@@ -978,6 +963,13 @@ What the annotations on one class declare about its objects' data: the propertie
 ---<<reads the identity fields annotated>>--> Identity
 ---<<reads the languages annotated>>--> LanguageAdapter
 
+## NamedDestination : Destination
+
+A file destination whose annotation may name what it installs: `@skill("name")`, `@command(name="name")`, or bare `@skill` for the operation's own name.
+
+------
+----
+
 ## Skill : NamedDestination
 
 `@skill` or `@skill("name")` on an operation or instructions: install writes `{ide}/skills/{toolset}-{operation}/SKILL.md` (nested folders where the IDE reads them), which the IDE offers as a skill.
@@ -997,21 +989,6 @@ What the annotations on one class declare about its objects' data: the propertie
 `@rules` on a practice's or fidelity's rules: install writes `{ide}/rules/{practice}/{fidelity}.mdc` (`.md` scoped by `paths` for Claude Code), which the IDE applies by path.
 
 ------
-----
-
-## NoCatalog : OmissionAnnotation
-
-`@noCatalog` on a class or operation: the catalog leaves it out; install still publishes it.
-
-------
-----
-
-## NoDeploy : OmissionAnnotation
-
-`@noDeploy` on an operation: install publishes it to no destination, whatever else annotates it; the catalog can still list it.
-
-------
-+ omits_install: bool
 ----
 
 ## DataField : Annotation
@@ -1046,7 +1023,7 @@ What the annotations on one class declare about its objects' data: the propertie
 A *Hook* annotation makes a member answer an IDE event; the *HookServer* of a checkout runs every enabled hook for a *HookPayload* and merges their *HookResult*, and the *HookDaemon* keeps that server running. *HookInstallation* is the hook channel's server installation, registered with the Installer when the package is imported. The whole model of this module, internals included, is `harness/hooks/.context/hooks-runtime-model.md`; that document is canonical, and this section shows only the classes other modules use.
 
 - **Purpose:** Let a toolset member answer IDE events, through one hook server per checkout that runs every hooked member and merges their answers.
-- **Seam (terms):** Hook, Hooks, HookPayload, HookResult, HookServer, HookDaemon, HookInstallation; `rules_toast`, `TOAST_ARROW`
+- **Seam (terms):** Hook, Toast, Hooks, HookPayload, HookResult, HookServer, HookDaemon, HookInstallation; `rules_toast`, `TOAST_ARROW`
 - **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/process
 
 ## Hook : Destination
@@ -1056,10 +1033,14 @@ A *Hook* annotation makes a member answer an IDE event; the *HookServer* of a ch
 ------
 + EVENTS: frozenset[str]
 ----
-+ annotate(target: Any): Any
-+ companion_flags(): tuple[str, ...]
 + events_served(event: str): tuple[str, ...]
-+ disabled_on(operation: Any): bool
+
+## Toast : Destination
+
+`@Toast` on an operation or instructions: nothing is written at install; the notifier the hook server shows toasts with (tools/prompt_notify) shows a toast naming the operation when an agent calls it.
+
+------
+----
 
 ## Hooks : Annotation
 
@@ -1176,7 +1157,7 @@ The long-running hook server of one checkout, whichever IDE's hook command reach
 ---<<loads>>--> HookServer
 ---<<handles stdin>>--> HookServer
 ---<<claims its port with>>--> ExclusivePort
----<<creates>>--> StoppableProcess
+---<<stops older daemons as>>--> RunningProcess
 ---<<checks the lock holder is alive with>>--> RunningProcess
 ---<<raises>>--> HookPortTaken
 
@@ -1778,13 +1759,14 @@ One stage of the CDD approach: the name each fidelity's **Stage:** gives it, its
 
 How much of the solution a stage's work covers, drawn as a shape that narrows and deepens along the board: Discovery takes in the whole solution wide and shallow, Implementation one story narrow and deep.
 
-+ StageScope(shape: str, name: str, reach: str, covers: str)
++ StageScope(shape: str, name: str, reach: str)
 ------
 + shape: str
 + name: str
 + reach: str
 + covers: str
 ----
++ covering(covers: str): StageScope
 
 # harness/guidance_actions
 
@@ -1817,8 +1799,6 @@ An action, such as generate, on the guidance a call names, such as stories-story
 	-> ToolCall.session_named
 + session_for(call: ToolCall): Any
 + listed(): list
-+ practice_of(item: Any): Any
-+ fidelity_of(item: Any): Any
 + run(operation: Callable[[Any], Any], action: str = ''): list
 	-> WorkList.each
 + log_running(action: str): None
@@ -1883,7 +1863,7 @@ An action made for no session, such as one listed for install, was asked for the
 A *Graph* holds the practices it is given and, for each, a *PracticeNodes*: that practice's part of the graph, a tree of *Node* objects read from source, with its edges and the run of its graph rules; *PracticeGraphRule* checks report *Violation* records, and *SavedGraph* is the graph as `.context/graph.json` keeps it. What a practice gives the graph is its *PracticeReading* (harness/guidance), not a class of this module, and the graph's own jobs sit in parts of their own files: `graph_practices.py` (*GraphPractices*), `load_scope.py` (*LoadScope*), `graph_build.py` (*GraphBuild*, the worker build), `explorer.py` (the explorer's answers), `saved_graph.py`, `model_node.py`, `pattern_overlays.py`. The whole model of this module, internals included, is `harness/graph/.context/graph-populate-model.md`; that document is canonical, and this section shows only the classes other modules use.
 
 - **Purpose:** Turn a working copy into a graph of its practices that rules can check and a person can explore.
-- **Seam (terms):** Graph, GraphPractices, PracticeNodes, LoadScope, Node, Source, ModelNode, ModelChildren, ModelReferences, GraphOverlay, PatternOverlays, PracticeGraphRule, RuleCheckContext, Violation, SavedGraph, SavedNode, SavedPractice, SavedGraphOutdated; `schema_sync_paused()` (`model_node.py`), `scanned_files(root, suffixes)` and `skips_folder(name)` (`skipped_folders.py`), `GRAPH_APP_PORTS` (`graph_app.py`); the spec support RuleFixture, RulePair, SchemaRuleRun (`rule_fixture.py`), which each practice's `rules/rule_examples.py` imports
+- **Seam (terms):** Graph, GraphPractices, PracticeNodes, LoadScope, Node, NodeIdentity, Source, ModelNode, ModelChildren, ModelReferences, GraphOverlay, PatternOverlays, PracticeGraphRule, RuleCheckContext, Violation, SavedGraph, SavedNode, SavedPractice, SavedGraphOutdated; `schema_sync_paused()` (`model_node.py`), `scanned_files(root, suffixes)` and `skips_folder(name)` (`skipped_folders.py`), `GRAPH_APP_PORTS` (`graph_app.py`); the spec support RuleFixture, RulePair, SchemaRuleRun (`rule_fixture.py`), which each practice's `rules/rule_examples.py` imports
 - **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/mcp, harness/guidance
 
 ## Graph
@@ -1899,20 +1879,18 @@ One graph. Builders fill nodes, edges, and rules; the explorer reads the tree. E
 + << composition >> schema_edges: SchemaEdges
 + << composition >> edges: GraphEdges
 + << composition >> explorer: GraphExplorer
++ << composition >> reads: GraphReads
 + folder: str
 + overlays: list[str]
 + saved_file: SavedGraphFile
 ----
 + for_call(call: ToolCall): Graph
-+ open(folder: Path): None
-+ open_saved(folder: Path): None
 + practice(key: str): PracticeGuidance
 + node(node_id: str): Node | None
 + restored_from(saved: SavedGraph): None
 + load_working_copy(folder: str, practices: dict[str, str], database: str | None = None, overlays: list[str] | None = None, force: bool = False, call: ToolCall | None = None): GraphLoaded
 + load_files(folder: str, practices: list[str], files: list[str], overlays: list[str] | None = None, call: ToolCall | None = None): GraphLoaded
 + refresh(paths: list[str], call: ToolCall | None = None): GraphLoaded
-+ refreshed(paths: list[str], checked: Path, call: ToolCall | None = None): None
 + save_json(): GraphSaved
 + set_overlays(overlays: list[str], call: ToolCall | None = None): AppliedOverlays
 + overlay_of(folder: str): Overlay
@@ -1960,6 +1938,26 @@ The practices one graph holds, which the graph makes once and keeps (`graph.prac
 ---<<restores each practice from>>--> SavedGraph
 ---<<raises>>--> UnknownPractice
 
+## GraphReads
+
+What a graph reads, and when (`graph.reads`): open it on a folder, with or without its saved graph; load a working copy, its practices' session roots, or some files; refresh the files an action wrote; make sure it holds the whole working copy; apply pattern overlays. Each read runs alone. The graph's load tools hand each call to it in one line, with *WorkingCopyRead* or *FilesRead* naming what the call asked to read.
+
++ GraphReads(graph: Graph)
+------
++ << association >> graph: Graph
+----
++ open(folder: Path): None
++ open_saved(folder: Path): None
++ working_copy(read: WorkingCopyRead, call: ToolCall | None): GraphLoaded
++ practice_roots(call: ToolCall | None): GraphLoaded
++ files(read: FilesRead, call: ToolCall | None): GraphLoaded
++ refresh(paths: list[str], call: ToolCall | None): GraphLoaded
++ hold_whole(call: ToolCall | None = None): None
++ refreshed(paths: list[str], checked: Path, call: ToolCall | None = None): None
++ apply_overlays(overlays: list[str], call: ToolCall | None): Graph
+---<<calls load, refresh, and run on>>--> GraphBuild
+---<<creates>>--> LoadScope
+
 ## PracticeNodes
 
 One practice's part of the graph that holds it: the root node its explorer tree starts from, the folder its source is read from, and its nodes by type and by id. The graph makes one for each practice it holds and gives it to the practice, which reads it as `practice.reading.in_graph`.
@@ -1970,35 +1968,43 @@ One practice's part of the graph that holds it: the root node its explorer tree 
 + << association >> practice: PracticeGuidance
 + << composition >> edge_index: EdgeIndex
 + << composition >> rule_run: PracticeRuleRun
++ << composition >> loading: PracticeLoading
 + << composition >> restore: PracticeRestore
 + source_root_path: Path | None
 + source_root: str
 + root: Node
 + node_types: list[str]
 ----
-+ open(root: Path | None): None
-+ close(): None
 + nodes(type: str | None = None): list[Node]
-+ nodes_read_now(type: str | None = None): list[Node]
 + node(node_id: str): Node | None
 + holds(node_id: str): bool
 + offer_node_types(types: Iterable[str]): None
 + add(node: Node, node_id: str, location: Location): Node
 + add_file(type: str, relative: str, name: str): Node
 + hold(node: Node): None
-+ release(node: Node): None
 + unused_node_id(type: str, name: str): str
-+ forget_files(files: Iterable[Path]): set[int]
-+ forget(dropped: set[int]): set[int]
-+ put_in_source_order(): None
-+ renew_rules(): None
-+ rebuild_tree(): None
-+ edges(kind: str | None = None): list[Edge]
 ---<<keeps>>--> Node
 ---<<creates>>--> Source
 ---<<creates>>--> EdgeIndex
 ---<<creates>>--> PracticeRuleRun
+---<<creates>>--> PracticeLoading
 ---<<creates>>--> PracticeRestore
+
+## PracticeLoading
+
+What a load, a refresh, or a restore does to the nodes one practice holds (`practice.reading.in_graph.loading`): open the practice on a root with its root node alone, close it, let a node go to another practice, name the nodes the load in progress read, drop the nodes read from files read again, and hold the rest in source order. It shares its part's store of nodes by id and by type.
+
++ PracticeLoading(part: PracticeNodes, held: _HeldNodes)
+------
++ << association >> part: PracticeNodes
+----
++ open(root: Path | None): None
++ close(): None
++ release(node: Node): None
++ nodes_read_now(type: str | None = None): list[Node]
++ forget_files(files: Iterable[Path]): set[int]
++ forget(dropped: set[int]): set[int]
++ put_in_source_order(): None
 
 ## LoadScope
 
@@ -2018,9 +2024,9 @@ The folder one load or refresh reads, and the files it is limited to; the graph 
 
 ## Node
 
-children is the list populate writes on this node. Direct edges are the children; grouped and relationship edges sit under one child named for the kind.
+children is the list its tree's populate writes on this node. Direct edges are the children; grouped and relationship edges sit under one child named for the kind. *NodeIdentity* (`type`, `node_id`, `name`) is what a node is called, as one value.
 
-+ Node(practice: PracticeGuidance, type: str, node_id: str, name: str, source: Source)
++ Node(practice: PracticeGuidance, identity: NodeIdentity, source: Source)
 ------
 + << association >> practice: PracticeGuidance
 + type: str
@@ -2031,6 +2037,7 @@ children is the list populate writes on this node. Direct edges are the children
 + data: dict
 + << aggregation >> children: list[Node]
 + parent: Node | None
++ << composition >> tree: NodeTree
 + graph_facts: tuple[str, ...]
 + facts: dict
 + graph: Graph
@@ -2047,15 +2054,28 @@ children is the list populate writes on this node. Direct edges are the children
 + merge_fact(key: str, values: list): None
 + has_fact(key: str): bool
 + forget_rules(): None
-+ leave_tree(): None
 + place(file: str, start_line: int, end_line: int): None
-+ populate(parent: Node | None = None): None
-+ serialize(seen: set[str] | None = None, via: Node | None = None, stack: set[str] | None = None): ExplorerEntry
+---<<creates>>--> NodeTree
 ---<<reads its part of the graph from>>--> PracticeReading
 ---<<calls changed on>>--> PracticeNodes
 ---<<calls from_parent on>>--> GraphEdges
 ---<<reads schema from>>--> PracticeRuleRun
 ---<<creates>>--> GraphRulesCollection
+
+## NodeTree
+
+One node's place in its practice's explorer tree (`node.tree`): it puts the node under its parent and the nodes its edges lead to under it, takes it out again for a rebuild, and writes the node's entry with the entries below it.
+
++ NodeTree(node: Node)
+------
++ << association >> node: Node
+----
++ populate(parent: Node | None = None): None
++ leave(): None
++ rebuild(): None
++ serialize(seen: set[str] | None = None, via: Node | None = None, stack: set[str] | None = None): ExplorerEntry
+---<<calls from_parent on>>--> GraphEdges
+---<<creates>>--> ExplorerEntry
 
 ## ModelNode : Node
 
@@ -2743,7 +2763,10 @@ Local git clone: its branches and its commits. The checkouts beside it are its `
 + << composition >> git: Git
 + << composition >> worktrees: Worktrees
 + << composition >> publishing: Publishing
++ << composition >> refs: Refs
++ << composition >> working_tree: WorkingTree
 + is_clone: bool
++ is_linked_worktree: bool
 + checkout_folder: Path
 + branches: list[Branch]
 + current_branch: Branch
@@ -2756,17 +2779,9 @@ Local git clone: its branches and its commits. The checkouts beside it are its `
 ----
 + of_project(project: Path): Repo
 	-> ServedCheckouts.at
-+ find_root(): Path | None
-+ checkout_at(folder: Path | str): Repo
-	-> ServedCheckouts.at
-+ is_linked_worktree(): bool
 + primary_root(): Path
 + path_from_top(path: Path | str): str
 + branch_named(name: str): Branch
-+ has_ref(ref: str): bool
-+ is_dirty(path: str | Path | None = None, untracked: bool = True): bool
-+ commit(paths: list[str], message: str, untracked: bool = False): str
-	-> Git.run
 + push_upstream(): None
 + needs_push(): bool
 + fetch(): None
@@ -2917,6 +2932,8 @@ The work sessions of one checkout: open ones in `.sessions/{name}/`, closed ones
 + folder: Path
 + backlog_folder: Path
 + << composition >> opened: OpenSessions
++ << composition >> listing: SessionListing
++ << composition >> held: HeldSessions
 + << composition >> answers: ServedAnswers
 + << composition >> board_practices: BoardPractices
 + << composition >> file_manager: FileManager
@@ -2927,21 +2944,17 @@ The work sessions of one checkout: open ones in `.sessions/{name}/`, closed ones
 + all(): list[Session]
 + named(name: str): Session | None
 + with_file(session_file: str): Session
-+ load(folder: Path): Session
-	// one Session is held for each session folder, so every call in a session, from any chat, works on the same object
-+ root_of(session: Session): Path
-+ moved(session: Session, moved_from: Path): None
+	-> HeldSessions.load
 + create(name: str, workpath: Path | None = None, title: str = '', scope: str = '', parent: str = ''): Session
 + current(call: ToolCall | None = None): Session
 	-> OpenSessions.current
 + switch(name: str = '', workpath: Path | None = None, call: ToolCall | None = None): str
 	-> OpenSessions.switch
-+ open_ticket_names(): list[str]
-+ is_left_behind(folder: Path): bool
 ---<<creates>>--> Name
 ---<<calls of_project on>>--> Repo
 ---<<creates>>--> Session
----<<keeps>>--> Session
+---<<holds>>--> SessionListing
+---<<holds>>--> HeldSessions
 ---<<holds>>--> OpenSessions
 ---<<holds>>--> ServedAnswers
 ---<<raises>>--> SessionNotFoundError
@@ -2952,6 +2965,35 @@ The work sessions of one checkout: open ones in `.sessions/{name}/`, closed ones
 ---<<annotated with>>--> AgentToolAnnotation
 ---<<annotated with>>--> Mcp
 ---<<annotated with>>--> Command
+
+## SessionListing
+
+Which folders in a checkout's `.sessions` hold a session (`sessions.listing`): main, the open work sessions, and the closed ones, never the folders the sessions share or what a closed session left behind among the open ones.
+
++ SessionListing(sessions: Sessions)
+------
+----
++ work_folders(): list[Path]
++ is_work_session(name: str): bool
++ is_open(folder: Path): bool
++ is_left_behind(folder: Path): bool
++ open_names(): list[str]
+
+## HeldSessions
+
+The one *Session* a checkout's sessions hold for each session folder (`sessions.held`), made the first time it is read, so every call in a session, from any chat, works on the same object, and held under the folder it moves to.
+
++ HeldSessions(sessions: Sessions)
+------
+----
++ load(folder: Path): Session
+	// one Session is held for each session folder, so every call in a session, from any chat, works on the same object
+	-> SessionRoots.root_of
++ at(folder: Path): Session
++ moved(session: Session, moved_from: Path): None
++ removed(session: Session): None
+---<<creates>>--> Session
+---<<keeps>>--> Session
 
 ## OpenSessions
 
@@ -3065,23 +3107,15 @@ One named piece of work in a project, kept in `.sessions/{name}/`. It holds wher
 + close(): None
 	-> OpenSessions.close
 + choose_workpath(path: str = ''): Session
-+ folder_files(): list[FileEntry]
-	-> SessionFiles.in_folder
-+ read_file(path: str = ''): FileText
-	-> SessionFiles.read
-+ mark_loop(call: ToolCall): str
-	-> ChatLog.next_loop
-+ read_loop(number: int | None = None): str
-	-> SessionLog.read_loop
-+ append_log(call: ToolCall, note: str = '', loop: int | None = None, paths: list[str] | None = None): str
-	-> ChatLog.append_note
-+ write_handoff(content: str = '', paths: list[str] | str | None = None): str
-+ read_handoff_format(): str
-+ handoff_session(next_focus: str = ''): str
-+ read_cdr_format(): str
-+ list_cdrs(): str
-+ write_cdr(slug: str, content: str = '', paths: list[str] | str | None = None): str
-+ record_decisions_session(): str
++ show(): Session
++ add_tag(word: str): None
++ keep_text(text: str): None
++ choose_overlays(overlays: list[str]): None
+---<<mixes in>>--> SessionFileTools
+---<<mixes in>>--> SessionGraphTools
+---<<mixes in>>--> SessionGuidanceTools
+---<<mixes in>>--> SessionLogTools
+---<<mixes in>>--> SessionDecisionTools
 ---<<creates all practices from>>--> PracticeCatalogue
 ---<<creates>>--> PracticeSessionOutput
 ---<<calls work_in on>>--> PracticeGuidance
@@ -3097,6 +3131,75 @@ One named piece of work in a project, kept in `.sessions/{name}/`. It holds wher
 ---<<annotated with>>--> Command
 ---<<annotated with>>--> AgentInstructionsAnnotation
 ---<<annotated with>>--> NoSessionLog
+
+## SessionFileTools
+
+Mixed into *Session*: the published tools that list, read, and write a session's files and put a file into a chat's context, each asking its *SessionFiles*. A toolset publishes the tools its class's bases declare under its own name, so they stay `session.*`.
+
+----
++ folder_files(): list[FileEntry]
+	-> SessionFiles.in_folder
++ workpath_files(): list[FileEntry]
+	-> SessionFiles.in_workpath
++ read_file(path: str = ''): FileText
+	-> SessionFiles.read
++ write_file(path: str, text: str): FileText
+	-> SessionFiles.write
++ file(path: str, rules: bool = False, cross_file: bool = False): SessionFile
++ add_to_chat_context(chat: str, path: str, start_line: int = 0, end_line: int = 0): Chat
+
+## SessionGraphTools
+
+Mixed into *Session*: the published graph tools a page browsing the session's files calls, each asking its *SessionExplorer*.
+
+----
++ graph_trees(paths: list[str], call: ToolCall | None = None): list[ExplorerEntry]
+	-> SessionExplorer.trees
++ graph_branch(node_id: str, paths: list[str]): ExplorerEntry | None
+	-> SessionExplorer.branch
++ graph_node_ranges(node_id: str, paths: list[str]): list[Range]
+	-> SessionExplorer.node_ranges
++ graph_members(): list[NodeSource]
+	-> SessionExplorer.members
+
+## SessionGuidanceTools
+
+Mixed into *Session*: the published tools that read and change its guidance selection, whose versions its *GuidanceVersion* keeps.
+
+----
++ guidance_selection(): GuidanceSelection
++ update_guidance_selection(stages: list[str] | None = None, practices: list[str] | None = None, formats: list[str] | None = None): GuidanceSelection
+	-> GuidanceVersion.select
++ guidance_selection_after(version: int): GuidanceSelection
+	-> GuidanceVersion.wait_past
+
+## SessionLogTools
+
+Mixed into *Session*: the published tools that mark and read its log's loops, add notes to it, and hand its work on, each asking its *SessionLog* or its *Handoffs*.
+
+----
++ mark_loop(call: ToolCall): str
+	-> ChatLog.next_loop
++ read_loop(number: int | None = None): str
+	-> SessionLog.read_loop
++ append_log(call: ToolCall, note: str = '', loop: int | None = None, paths: list[str] | None = None): str
+	-> ChatLog.append_note
++ write_handoff(content: str = '', paths: list[str] | str | None = None): str
+	-> Handoffs.write
++ read_handoff_format(): str
++ handoff_session(next_focus: str = ''): str
++ debug_session(choice: str = '', details: str = ''): str
+
+## SessionDecisionTools
+
+Mixed into *Session*: the published tools that list and write its Context Decision Records, which its *DecisionRecords* keep.
+
+----
++ read_cdr_format(): str
++ list_cdrs(): str
++ write_cdr(slug: str, content: str = '', paths: list[str] | str | None = None): str
+	-> DecisionRecords.write
++ record_decisions_session(): str
 
 ## SessionLog
 
@@ -3238,14 +3341,31 @@ Where one fidelity writes in one session: its output paths by format, the files 
 + reports_folder: Path
 + root: Path
 + chosen_formats: list[str]
++ chosen_outputs: dict
++ << composition >> formats: FidelityFormats
++ << composition >> validation_reports: ValidationReports
++ << composition >> written: WrittenFiles
 ----
-+ reports(): list[Path]
-+ new_report_path(): Path
++ load(session: str, practice: str, fidelity: str, call: ToolCall): FidelitySessionOutput
++ choose_root(path: str): FidelitySessionOutput
 + choose_format(format: str, is_chosen: bool): FidelitySessionOutput
+---<<holds>>--> WrittenFiles
+
+## WrittenFiles
+
+The files one fidelity writes in a session (`session_output.written`): where it writes each format under its root, the files it declares there, whether any is there yet, and which the session's branch changed.
+
++ WrittenFiles(output: FidelitySessionOutput, fidelity: FidelityGuidance)
+------
+----
 + output_paths(): dict[str, list[str]]
 + files(): dict[str, list[FileEntry]]
 	-> SessionFiles.find
++ holds(file: Path): bool
++ every_file(): list[Path]
 + has_output(): bool
++ has_named_output(): bool
++ has_found_output(): bool
 ---<<matches declared paths with>>--> DeclaredFile
 ---<<lists the declared files as>>--> FileEntry
 
@@ -3497,7 +3617,7 @@ Show one work session as a unit of delivery and move it through the stages. Its 
 + load(ticket: str, project: Path | str): Ticket
 	-> Board.load
 + create(title: str, scope: str = 'feature', parent: str = '', path: str = '', project: Path | str): Ticket
-	-> Board.open_ticket
+	-> CardPlacement.open_ticket
 + branch(): Branch
 + work_branch(): Branch
 + assign_chat(chat: str = ''): Ticket
@@ -4156,6 +4276,7 @@ A named module boundary grouping closely related classes.
 + << composition >> classes: list[OoadClass]
 + path_parent: str | None
 + documentation: str
++ << composition >> source_facts: ModuleSourceFacts
 ----
 + as_record(): dict
 + external_deps(): list[str]
@@ -4164,10 +4285,7 @@ A named module boundary grouping closely related classes.
 + clone(): Module
 + load_module(source: Module): Module
 + load_class(source: OoadClass): OoadClass
-+ take_lines(text: str): None
-+ load_source_facts(file: Path, root: Path): None
-+ load_folder_facts(folder: Path): None
-+ take_public_sources(sources: list[Module]): None
++ import_targets(file: Path, root: Path): list[str]
 + reconcile_children(source: OoadNode): None
 ---<<creates>>--> OoadClass
 ---<<keeps>>--> OoadClass
@@ -4192,10 +4310,10 @@ A class in the model: what it remembers, what it does, and how it relates.
 + relationships: list[Relationship]
 + composes_peers: bool
 + held_fields: dict[str, str]
++ << composition >> source_facts: ClassSourceFacts
++ << composition >> arrows: ClassArrows
 ----
-+ take_lines(lines: list[str]): None
 + doc_comment(marked: bool): DocComment
-+ load_source_facts(): None
 + declared_bases(known_names: Iterable[str]): list[str]
 + update_self(source: OoadNode): None
 + clone(): OoadClass
@@ -4204,8 +4322,6 @@ A class in the model: what it remembers, what it does, and how it relates.
 + load_operation(source: Operation): Operation
 + reconcile_children(source: OoadNode): None
 + declares(member: OoadNode): bool
-+ place_relationship(relationship: Relationship): None
-+ depend_on(target: str, label: str): None
 ---<<keeps>>--> Operation
 ---<<keeps>>--> Property
 ---<<keeps>>--> Relationship
@@ -4221,15 +4337,13 @@ Something a class remembers or derives, with its relationship when its type name
 + value_type: str
 + owner: str
 + relationship: Relationship | None
++ << composition >> arrow: FieldArrow
 ----
 + from_signature(text: str): Property | None
 + keep_owner(): None
 + clone(): Property
 + take_note(text: str): None
-+ take_relationship(relationship: Relationship): None
-+ take_drawn_kind(kind: str): None
 + notes(): list[str]
-+ derive_relationship(): None
 + save(): str
 + as_record(): dict
 + update_self(source: OoadNode): None
@@ -4251,18 +4365,15 @@ Something a class does: its parameters, return, interactions, and invariants.
 + is_property: bool
 + value_type: str
 + source_lines: tuple[int, int]
++ << composition >> source_facts: OperationSourceFacts
 ----
 + from_signature(text: str): Operation | None
 + attach(child, kind: str): None
 + keep_owner(): None
 + clone(): Operation
-+ take_body(text: str, language): None
-+ take_lines(lines: list[str]): None
-+ load_span_facts(): None
 + save(): str
 + as_record(): dict
 + update_self(source: OoadNode): None
-+ load_parameter(source: Parameter): Parameter
 + reconcile_children(source: OoadNode): None
 ---<<creates>>--> CodeBody
 
@@ -4446,19 +4557,13 @@ A span of source in any language, such as an operation body, a class, or a markd
 + SourceText(text: str)
 ------
 + text: str
++ << composition >> failures: SpanFailures
++ << composition >> collaborators: SpanCollaborators
 ----
 + control_flow_depth(): int
-+ has_bare_catch(): bool
-+ swallows_exceptions(): bool
 + unnamed_numbers(): list[str]
-+ reaches_peer_private(own_objects: frozenset[str] = frozenset(), own_members: frozenset[str] = frozenset()): bool
-+ built_collaborators(parameter_names: frozenset[str], start_line: int): list[tuple[str, int]]
-+ locals_built_of(class_name: str): frozenset[str]
 + mixes_io_and_domain(): bool
 + calls_io_and_domain(): bool
-+ raises_on_empty(): bool
-+ exception_without_message(): str
-+ generic_exception_message(): bool
 + mutates_without_record(): bool
 + has_prose_comment(hash_only: bool = False): bool
 + prototype_swap(start_line: int): dict

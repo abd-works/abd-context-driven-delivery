@@ -34,7 +34,7 @@ with story("Activate Ticket"):
         with given("billing-report's session folder is not yet committed"):
             pass
         with when("the Person activates billing-report"):
-            # TicketCheckout -> Repo.commit(.sessions), Origin.push_upstream()
+            # TicketCheckout -> WorkingTree.commit(.sessions), Origin.push_upstream()
             pass
         with then("main on origin holds billing-report's session folder"):
             pass

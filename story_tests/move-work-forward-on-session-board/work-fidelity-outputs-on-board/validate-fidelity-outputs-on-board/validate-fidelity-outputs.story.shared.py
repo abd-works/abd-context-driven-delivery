@@ -63,7 +63,7 @@ def _(s):
     @s.given("pet-visits' story map is generated")
     def _(world):
         world.project.seed_session(PET_VISITS.with_log(generated("stories", "story_map")))
-        world.session = world.sessions.load(world.project.sessions / PET_VISITS.name)
+        world.session = world.sessions.held.load(world.project.sessions / PET_VISITS.name)
         world.stories = world.session.practice("stories").fidelities["story_map"].session_output
 
     @s.when("Claude Code validates the story map and finds no graph-rule violation")

@@ -484,7 +484,7 @@ Intended (`.sessions/_backlog/show-board-quickly.md`): `board.show` takes about 
 
 ### (S:technical) Board App --> Check Ticket Branches Once Per Board Build
 
-Intended (`.sessions/_backlog/show-board-quickly.md` cause 1): `TicketCheckout._found_branch` → `Branch.exists` → `Repo.has_ref` runs one `git show-ref` per check, about 70 ms each and about 7 per `board.show` (`space/kanban/ticket_checkout.py`, `space/repo/repo.py`); one board build checks each branch once.
+Intended (`.sessions/_backlog/show-board-quickly.md` cause 1): `TicketCheckout._found_branch` → `Branch.exists` → `Refs.has` runs one `git show-ref` per check, about 70 ms each and about 7 per `board.show` (`space/kanban/ticket_checkout.py`, `space/repo/repo.py`); one board build checks each branch once.
 
 ### (S:technical) Board App --> Cache Practice Guidance By File And Change Time
 
@@ -716,7 +716,7 @@ Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add fe
 
 ### (S) Person --> Commit Work From Chat Bar
 
-Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add feature to backlog button and buttons for common repo actions eg push, pull, commit"): a Commit button commits the active session's changes (`Repo.commit` in `space/repo/repo.py`).
+Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add feature to backlog button and buttons for common repo actions eg push, pull, commit"): a Commit button commits the active session's changes (`WorkingTree.commit`, `repo.working_tree`, in `space/repo/repo.py`).
 
 ### (S) Person --> [Push Work From Chat Bar](../space/repo/session_to_main_spec.py)
 

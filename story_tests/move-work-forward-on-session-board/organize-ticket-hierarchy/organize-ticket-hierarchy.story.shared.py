@@ -67,7 +67,7 @@ def _(s):
 
     @s.when('the Person adds the child ticket Enter card details to checkout-flow')
     def _(world):
-        # Board.ticket("checkout-flow")
+        # CardPlacement.ticket("checkout-flow")
         #   <- checkout-flow
         # checkout-flow.add_child("Enter card details")
         #   -> self.session.hierarchy.open_child("Enter card details", scope="story")
@@ -96,9 +96,9 @@ def _(s):
 
     @s.when('the Person makes pet-visits a child of checkout-flow')
     def _(world):
-        # Board.ticket("pet-visits")
+        # CardPlacement.ticket("pet-visits")
         #   <- pet-visits
-        # Board.ticket("checkout-flow")
+        # CardPlacement.ticket("checkout-flow")
         #   <- checkout-flow
         # pet-visits.reassign_parent(checkout-flow)
         #   -> self.session.hierarchy.set_parent(checkout-flow.session)
@@ -123,7 +123,7 @@ def _(s):
 
     @s.when('the Person pulls enter-card-details out of checkout-flow')
     def _(world):
-        # Board.ticket("enter-card-details")
+        # CardPlacement.ticket("enter-card-details")
         #   <- enter-card-details
         # enter-card-details.pull_out()
         #   -> self.session.hierarchy.mark_pulled_out()
@@ -154,7 +154,7 @@ def _(s):
 
     @s.when('the Person moves enter-card-details to Specification')
     def _(world):
-        # Board.ticket("enter-card-details")
+        # CardPlacement.ticket("enter-card-details")
         #   <- enter-card-details
         # enter-card-details.move_next()
         #   <- enter-card-details in Specification, its parent still checkout-flow
@@ -182,9 +182,9 @@ def _(s):
 
     @s.when('the Person makes billing-report the parent of enter-card-details')
     def _(world):
-        # Board.ticket("enter-card-details")
+        # CardPlacement.ticket("enter-card-details")
         #   <- enter-card-details
-        # Board.ticket("billing-report")
+        # CardPlacement.ticket("billing-report")
         #   <- billing-report
         # enter-card-details.reassign_parent(billing-report)
         #   -> self.session.hierarchy.set_parent(billing-report.session)
@@ -213,7 +213,7 @@ def _(s):
 
     @s.when('the Person takes enter-card-details off checkout-flow')
     def _(world):
-        # Board.ticket("enter-card-details")
+        # CardPlacement.ticket("enter-card-details")
         #   <- enter-card-details
         # enter-card-details.reassign_parent(None)
         #   -> self.session.hierarchy.set_parent(None)
@@ -246,9 +246,9 @@ def _(s):
 
     @s.when('the Person starts Gift cards as a child of checkout-flow')
     def _(world):
-        # Board.backlog_item("Gift cards")
+        # BoardReads.backlog_item("Gift cards")
         #   <- Gift cards
-        # Board.ticket("checkout-flow")
+        # CardPlacement.ticket("checkout-flow")
         #   <- checkout-flow
         # Gift cards.start_under(checkout-flow)
         #   -> self.start()
@@ -274,9 +274,9 @@ def _(s):
 
     @s.when('the Person tries to make checkout-flow a child of enter-card-details')
     def _(world):
-        # Board.ticket("checkout-flow")
+        # CardPlacement.ticket("checkout-flow")
         #   <- checkout-flow
-        # Board.ticket("enter-card-details")
+        # CardPlacement.ticket("enter-card-details")
         #   <- enter-card-details
         # checkout-flow.reassign_parent(enter-card-details)
         #   -> self.tree.can_be_child_of(enter-card-details)
@@ -324,7 +324,7 @@ def _(s):
 
     @s.when('the Person moves confirm-order to Specification')
     def _(world):
-        # Board.ticket("confirm-order")
+        # CardPlacement.ticket("confirm-order")
         #   <- confirm-order
         # confirm-order.move_next()
         #   <- confirm-order in Specification
@@ -348,7 +348,7 @@ def _(s):
 
     @s.when('the Person tries to move checkout-flow to Specification')
     def _(world):
-        # Board.ticket("checkout-flow")
+        # CardPlacement.ticket("checkout-flow")
         #   <- checkout-flow
         # checkout-flow.move_next()
         #   -> self.children

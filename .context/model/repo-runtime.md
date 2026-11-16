@@ -110,15 +110,15 @@ Starting, watching, stopping and talking to other processes. Every class here is
   - `HookDaemon` `-> RunningProcess(pid).alive` checks whether the hook server holding the address file is still alive · harness/hooks/hook_daemon.py:130
   - `scripts/instances.py` `-> RunningProcess(pid).alive` lists live servers · scripts/instances.py:85
 
-## StoppableProcess `<<is a>>` RunningProcess
+## RunningProcess, stopped
 
-- `StoppableProcess.stop`
-  - `-> raise ProcessNotStopped` when the signal is refused or the process outlives the wait · harness/process/stoppable_process.py:38
-- `StoppableProcess._wait_until_ended`
-  - `-> raise ProcessNotStopped` · harness/process/stoppable_process.py:46
+- `RunningProcess.stop`
+  - `-> raise ProcessNotStopped` when the signal is refused or the process outlives the wait · harness/process/process.py
+- `RunningProcess._wait_until_ended`
+  - `-> raise ProcessNotStopped` · harness/process/process.py
 - **Used by**
-  - `McpDaemon` `-> StoppableProcess(pid).stop(_STOP_SECONDS)` stops the old cdd server before a restart · harness/mcp/mcp_daemon.py:91
-  - `HookDaemon` `-> StoppableProcess(pid).stop(_STOP_SECONDS)` replaces a stale hook server · harness/hooks/hook_daemon.py:204
+  - `McpDaemon` `-> RunningProcess(pid).stop(_STOP_SECONDS)` stops the old cdd server before a restart · harness/mcp/mcp_daemon.py
+  - `HookDaemon` `-> RunningProcess(pid).stop(_STOP_SECONDS)` replaces a stale hook server · harness/hooks/hook_daemon.py
 
 ## PythonInterpreter
 
@@ -430,8 +430,8 @@ The one way the code runs git, with a timeout and no stdin.
 ## HookDaemon
 
 - `HookDaemon.replace_stale`
-  - `-> StoppableProcess().stop` creates · harness/hooks/hook_daemon.py:204
-  - `-> StoppableProcess()` creates · harness/hooks/hook_daemon.py:204
+  - `-> RunningProcess().stop` creates · harness/hooks/hook_daemon.py:204
+  - `-> RunningProcess()` creates · harness/hooks/hook_daemon.py:204
 - `HookDaemon.spawn`
   - `-> RepositoryToolsets()` creates · harness/hooks/hook_daemon.py:220
   - `-> RepositoryToolsets.pycache_prefix` calls pycache_prefix on · harness/hooks/hook_daemon.py:224
@@ -1033,7 +1033,7 @@ The one way the code runs git, with a timeout and no stdin.
 
 - `CatalogPractice.load_all`
   - `-> PracticeCatalogue.practices` lists practices from · harness/catalog_generator/catalog_generator.py:84
-  - `-> NoCatalog.annotates` reads the annotation · harness/catalog_generator/catalog_generator.py:84
+  - `-> noCatalog.annotates` reads the annotation · harness/catalog_generator/catalog_generator.py:84
   - `<- list[CatalogPractice]`
 - `CatalogPractice._card_of`
   - `-> Name()` creates · harness/catalog_generator/catalog_generator.py:90
@@ -1041,7 +1041,7 @@ The one way the code runs git, with a timeout and no stdin.
   - `-> PracticeGuidance.key` reads key of · harness/catalog_generator/catalog_generator.py:97
 - `CatalogPractice.fidelities`
   - `-> PracticeGuidance.fidelities` reads fidelities of · harness/catalog_generator/catalog_generator.py:137
-  - `-> NoCatalog.annotates` reads the annotation · harness/catalog_generator/catalog_generator.py:137
+  - `-> noCatalog.annotates` reads the annotation · harness/catalog_generator/catalog_generator.py:137
   - `<- list[FidelityGuidance]`
 - `CatalogPractice.column_of`
   - `-> FidelityGuidance.stage` reads stage of · harness/catalog_generator/catalog_generator.py:140
@@ -1084,11 +1084,11 @@ No class of this module acts on another class of the model at run time.
   - `-> Git.run` runs · space/repo/repo.py:191
 - `Repo.default_start_point`
   - `-> Git.succeeds` calls succeeds on · space/repo/repo.py:197
-- `Repo.has_ref`
+- `Refs.has`
   - `-> Git.succeeds` calls succeeds on · space/repo/repo.py:200
-- `Repo.is_dirty`
+- `WorkingTree.is_dirty`
   - `-> Git.run` runs · space/repo/repo.py:207
-- `Repo.commit`
+- `WorkingTree.commit`
   - `-> Git.run` runs · space/repo/repo.py:222
 - `Origin.push_upstream`
   - `-> Git.run` runs · space/repo/repo.py:229
@@ -1110,7 +1110,7 @@ No class of this module acts on another class of the model at run time.
 ## Branch
 
 - `Branch.exists`
-  - `-> Repo.has_ref` asks whether a ref exists through · space/repo/repo.py:477
+  - `-> Refs.has` asks whether a ref exists through · space/repo/repo.py:477
 - `Branch.is_checked_out`
   - `-> Repo.current_branch` reads current branch of · space/repo/repo.py:483
 - `Branch.is_default`
@@ -1119,7 +1119,7 @@ No class of this module acts on another class of the model at run time.
   - `-> Repo.worktrees` reads worktrees of · space/repo/repo.py:492
   - `<- Worktree | None`
 - `Branch.start_point`
-  - `-> Repo.has_ref` asks whether a ref exists through · space/repo/repo.py:497
+  - `-> Refs.has` asks whether a ref exists through · space/repo/repo.py:497
   - `-> Repo.default_start_point` reads default start point of · space/repo/repo.py:499
 - `Branch.changed_files`
   - `-> Repo.git` reads git of · space/repo/repo.py:506
@@ -1133,7 +1133,7 @@ No class of this module acts on another class of the model at run time.
   - `<- Worktree`
 - `Branch.delete`
   - `-> Repo.git` reads git of · space/repo/repo.py:566
-  - `-> Repo.has_ref` asks whether a ref exists through · space/repo/repo.py:567
+  - `-> Refs.has` asks whether a ref exists through · space/repo/repo.py:567
 
 ## Worktree
 
@@ -1154,7 +1154,7 @@ No class of this module acts on another class of the model at run time.
   - `-> Repo.root` reads root of · space/session/sessions.py:42
 - `Sessions.folder_of`
   - `-> Worktrees.primary_root` calls primary_root on · space/session/sessions.py:68
-- `Sessions.load`
+- `HeldSessions.load`
   - `-> Session.load` loads · space/session/sessions.py:98
   - `<- Session`
 - `Sessions.create`
@@ -1340,11 +1340,11 @@ No class of this module acts on another class of the model at run time.
 - `Board.active`
   - `-> Sessions.open_name` reads open name of · space/kanban/board.py:166
   - `<- Ticket | None`
-- `Board.ticket`
+- `CardPlacement.ticket`
   - `-> Sessions.named` loads · space/kanban/board.py:179
   - `-> Ticket()` creates · space/kanban/board.py:180
   - `<- Ticket | None`
-- `Board.open_ticket`
+- `CardPlacement.open_ticket`
   - `-> Name()` creates · space/kanban/board.py:188
   - `-> Repo.root` reads root of · space/kanban/board.py:189
   - `-> Sessions.create` loads · space/kanban/board.py:191
