@@ -162,23 +162,23 @@ Intended (increment 5, Repair Guidance From Mistakes; the person, 2026-11-11: no
 
 An overlay is guidance laid on top of the practices rather than a practice of its own. Today every overlay is a stack pattern under `cdd_guidance/patterns/`, such as lern_domain_driven, registered with `PatternOverlays` (`harness/graph/pattern_overlays.py`): it holds `practices/<practice>/` folders whose schema and rules the graph adds, and shared rules that Generate and Validate add on top of the practices' rules. The person asked on 2026-11-14 for overlays in general, such as a TDD overlay that adds one common test-first guideline to Clean Engineering `code`, Stories `acceptance_tests` and BDD `development`, at those fidelities only. Today that testing advice is spread over `cdd_guidance/practices/clean_engineering/rules/testing-approach.md` (the test shape ladder, not installed), `cdd_guidance/rules/test-timing.md`, `cdd_guidance/references/language-tools.md`, and red-green-refactor and boundary-stub rules restated in `bdd.md` and `stories.md` (session tdd-practice).
 
-### (S) Person --> [Select Pattern Overlays For Session](deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-select-pattern-overlays-for-session)
+### (S) Person --> [Select Pattern Overlays For Session](../story_tests/deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-select-pattern-overlays-for-session)
 
 Observed: an action run with an `overlays=` word, such as `overlays=lern_domain_driven,mern_domain_driven`, chooses those overlays on the session first, and the session keeps them in its `session.json`; a word with nothing after it clears them (`guidance_actions.py` `overlays_named`, `ticket.choose_overlays`). Requested (2026-11-14, "select pattern overlay(s) for session"): one or more overlays chosen for the session, whatever kind of overlay each is. The chat bar's + button is Choose Graph Overlays in Move Work Forward From Chat Bar.
 
-### (S:system) CDD Server --> [Decorate Practice Fidelity With Overlay Guidance](deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-decorate-practice-fidelity-with-overlay-guidance)
+### (S:system) CDD Server --> [Decorate Practice Fidelity With Overlay Guidance](../story_tests/deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-decorate-practice-fidelity-with-overlay-guidance)
 
 Requested (2026-11-14, "decorate guidelines with overlay guideline (eg TDD is added to CE, Stories, BDD at right fidelities)"): an overlay names the practices and fidelities its guidance decorates, such as a TDD overlay on Clean Engineering `code`, Stories `acceptance_tests` and BDD `development`, and adds its guidance and rules to those fidelities and no others. Observed today: a pattern decorates a practice only through its `practices/<practice>/model` schema and `rules` folders, which the graph reads (`GraphOverlay`, `pattern_overlays.py`); its shared rules are not tied to any fidelity.
 
-### (S) Agent --> [Inject Overlay Guidance Into Fidelity Instructions](deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-inject-overlay-guidance-into-fidelity-instructions)
+### (S) Agent --> [Inject Overlay Guidance Into Fidelity Instructions](../story_tests/deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-inject-overlay-guidance-into-fidelity-instructions)
 
 Requested (2026-11-14, "inject overlay guidance"): loading a fidelity's instructions, through its skill or MCP tool, includes the guidance of each chosen overlay that decorates that fidelity, so the agent follows it while it writes, not only when Generate or Validate runs. Observed today: the fidelity instructions hold the practice's words only, and the hook that injects rules after an action (`GuidanceAction.inject_rules`) injects the listed guidance's rules, not an overlay's.
 
-### (S) Agent --> [Generate With Overlay Rules](deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-generate-with-overlay-rules)
+### (S) Agent --> [Generate With Overlay Rules](../story_tests/deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-generate-with-overlay-rules)
 
 Observed: Generate adds each chosen overlay's shared rules on top of the practices' rules, under `## Pattern overlay: {name}` (`cdd_guidance/actions/generate/generate.py`, `GuidanceAction._overlay_rules`). Requested (2026-11-14, "generate with overlay rules"): only the overlays that decorate the fidelity being generated add their rules.
 
-### (S) Agent --> [Validate With Overlay Rules](deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-validate-with-overlay-rules)
+### (S) Agent --> [Validate With Overlay Rules](../story_tests/deliver-work-with-context-guidance/deliver-work-with-overlays/deliver_work_with_overlays_story.test.md#story-validate-with-overlay-rules)
 
 Observed: Validate judges the work against the overlaid patterns' shared rules too, for content paths name the patterns the work was generated with, and the graph adds each overlay's rules to the node types it names (`cdd_guidance/actions/validate/validate.py`, `practice_rules_registry.py` `pattern_rules_for_practice`). Requested (2026-11-14, "validate with overlay rules"): only the overlays that decorate the fidelity being validated are judged.
 
@@ -238,71 +238,71 @@ Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "restart refresh -
 
 ## (E) See Work On Session Board
 
-### (S) Person --> [Open Board](move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-open-board)
+### (S) Person --> [Open Board](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-open-board)
 
 Observed: `board-page.ts` `start()` reads the board when the page opens.
 
-### (S) Board App --> [Display Board](move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-board)
+### (S) Board App --> [Display Board](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-board)
 
 Observed: Backlog, Discovery, Specification, Implementation and Complete, with In progress and Done inside each stage; the board refreshes after each cdd tool call, and a toast announces a ticket's move or review.
 
-### (S) Person --> [Arrange Board And Details](move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-arrange-board-and-details)
+### (S) Person --> [Arrange Board And Details](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-arrange-board-and-details)
 
 Observed: a drag on the split bar resizes the board and details; either can take the whole page.
 
-### (S) Board App --> [Display Backlog Items As Tickets](move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-backlog-items-as-tickets)
+### (S) Board App --> [Display Backlog Items As Tickets](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-backlog-items-as-tickets)
 
 Observed: the Backlog column shows the title of each file in `.sessions/_backlog/`.
 
-### (S) Board App --> [Display Ticket Card](move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-ticket-card)
+### (S) Board App --> [Display Ticket Card](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-ticket-card)
 
 Observed: `ticket-card-view.tsx` draws the title, age and one block per enabled practice; the active ticket has a thick orange outline.
 
-### (S) Board App --> [Display Ticket Details](move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-ticket-details)
+### (S) Board App --> [Display Ticket Details](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-ticket-details)
 
 Observed: a press on a card shows its practices, fidelity progress and latest validation reports below the board; with none pressed, the details show the active ticket.
 
-### (S) Person --> [Set Stage WIP Limit](move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-set-stage-wip-limit)
+### (S) Person --> [Set Stage WIP Limit](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-set-stage-wip-limit)
 
 Observed: `Board.set_wip_limit`, saved in `.sessions/_board.json`.
 
-### (S) Person --> [Arrange Side Panel](move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-arrange-side-panel)
+### (S) Person --> [Arrange Side Panel](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-arrange-side-panel)
 
 Observed: the report, files and help panels resize, expand one at a time and close.
 
-### (S) Person --> [Expand Ticket From Empty Area](move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-expand-ticket-from-empty-area)
+### (S) Person --> [Expand Ticket From Empty Area](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-expand-ticket-from-empty-area)
 
 Intended (`.sessions/_backlog/maintain-tickets-on-board.md` "click any empty area to expand ticket"): a press anywhere on a card that is not a control expands it. Built today (checked 2026-11-11): a press on a card chooses it and shows its details (`ticket-card-view.tsx:198`); only the expand mark opens the card's actions (`ticket-card-view.tsx:57`). Missing: expanding from an empty area.
 
-Built (2026-11-12): on the board, driven by its screen story in `space/kanban/see-work-on-session-board.story.ui.spec.ts`, and by the domain and server tiers.
+Built (2026-11-12): on the board, driven by its screen story in `story_tests/move-work-forward-on-session-board/see-work-on-session-board/see-work-on-session-board.story.ui.spec.ts`, and by the domain and server tiers.
 
 ## (E) Steer Ticket Sessions
 
-### (S) Person --> [Open Ticket Session](move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-open-ticket-session)
+### (S) Person --> [Open Ticket Session](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-open-ticket-session)
 
 Observed: `Ticket.new` calls `Session.new`; a person can choose the folder the ticket's work goes in, for the whole ticket or one practice.
 
-### (S) Person --> [Activate Ticket](move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-activate-ticket)
+### (S) Person --> [Activate Ticket](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-activate-ticket)
 
 Observed: Activate opens a dialog with what to do on leaving (commit, push, merge into main) and on opening (branch and worktree), then calls `board.activate`.
 
-### (S) Person --> [Close Active Session](move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-close-active-session)
+### (S) Person --> [Close Active Session](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-close-active-session)
 
 Observed: Close asks what to do with the work, then `Ticket.close` moves the folder to `.sessions/_complete/`, so the ticket shows in Complete.
 
-### (S) Person --> [Move Ticket](move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-move-ticket)
+### (S) Person --> [Move Ticket](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-move-ticket)
 
 Observed: the arrows or a drag move a ticket one column on (`Ticket.move_next`) or back (`Ticket.move_previous`); out of Implementation it closes into Complete, and back out of Discovery it goes to the Backlog with its work.
 
-### (S) Person --> [Write Ticket Handoff](move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-write-ticket-handoff)
+### (S) Person --> [Write Ticket Handoff](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-write-ticket-handoff)
 
 Observed: Handoff fills the prompt with `/space-handoff-handoff-session`.
 
-### (S) Board App --> [Display Latest Handoff](move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-display-latest-handoff)
+### (S) Board App --> [Display Latest Handoff](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-display-latest-handoff)
 
 Observed: `Ticket.latest_handoff`.
 
-### (S) Person --> [Restrict Actions To Active Session](move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-restrict-actions-to-active-session)
+### (S) Person --> [Restrict Actions To Active Session](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-restrict-actions-to-active-session)
 
 Observed: with Active session only on, a ticket that is not the active session disables what sends commands to a chat; moving, activating and information stay open.
 
@@ -316,113 +316,113 @@ Observed (checked 2026-11-10): starting a backlog item opens Where <item> works,
 
 ## (E) Maintain Tickets
 
-### (S) Person --> [Add Backlog Item](move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-add-backlog-item)
+### (S) Person --> [Add Backlog Item](../story_tests/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-add-backlog-item)
 
 Observed: the + on the Backlog heading writes a title and text to one markdown file in `.sessions/_backlog/`; the → on a backlog card starts it as a ticket in Discovery (`BacklogItem.start`).
 
-### (S) Person --> [Edit Ticket Text](move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-edit-ticket-text)
+### (S) Person --> [Edit Ticket Text](../story_tests/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-edit-ticket-text)
 
 Intended (`.sessions/session-board/ticket-enhancements.md`; `harness/.context/ux/ticket-ui.drawio` "edit text in markdown file"): a double click on a card's text edits it; a session ticket's text is a markdown file in its session folder that the session's instructions refer to, so the board and the agent read the same text; the agent's half, naming the file in the system prompt, is a scenario of Add Active Ticket To System Prompt. Built today (checked 2026-11-11): starting a backlog item moves its markdown file, text and all, into the ticket's session folder (`BacklogItem.start`, `backlog_item.py:121-128`), and a backlog card shows the file's text (`backlog-item-view.tsx:62`). Missing: a ticket's card does not show its file's text, no card edits text, and the agent's context (`Ticket.agent_context`, `ticket.py:217-226`) does not name the file.
 
-Built (2026-11-12): on the board, driven by its screen story in `space/kanban/maintain-tickets.story.ui.spec.ts`, and by the domain and server tiers.
+Built (2026-11-12): on the board, driven by its screen story in `story_tests/move-work-forward-on-session-board/maintain-tickets/maintain-tickets.story.ui.spec.ts`, and by the domain and server tiers.
 
-### (S) Person --> [Reorder Tickets In Column](move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-reorder-tickets-in-column)
+### (S) Person --> [Reorder Tickets In Column](../story_tests/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-reorder-tickets-in-column)
 
 Intended (`.sessions/session-board/ticket-enhancements.md`): a ticket dragged up or down within its column keeps that place. Built today (checked 2026-11-11): a drag moves a ticket between columns only; the Backlog lists its items by file name (`board.py:328`) and no column keeps a place a person chose.
 
-Built (2026-11-12): on the board, driven by its screen story in `space/kanban/maintain-tickets.story.ui.spec.ts`, and by the domain and server tiers.
+Built (2026-11-12): on the board, driven by its screen story in `story_tests/move-work-forward-on-session-board/maintain-tickets/maintain-tickets.story.ui.spec.ts`, and by the domain and server tiers.
 
-### (S) Person --> [Archive Ticket](move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-archive-ticket)
+### (S) Person --> [Archive Ticket](../story_tests/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-archive-ticket)
 
 Observed as the `ticket.archive` tool (`Ticket.archive`). Intended (`.sessions/session-board/ticket-enhancements.md`): Archive on a card.
 
-### (S) Person --> [Delete Ticket](move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-delete-ticket)
+### (S) Person --> [Delete Ticket](../story_tests/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-delete-ticket)
 
 Intended (`.sessions/session-board/ticket-enhancements.md`): Delete on a card removes the ticket and its session folder. Built today (checked 2026-11-11): no delete operation on `Ticket` or `BacklogItem` (`ticket.py`, `backlog_item.py`); Archive is the nearest (`Ticket.archive`, `ticket.py:352`).
 
-Built (2026-11-12): on the board, driven by its screen story in `space/kanban/maintain-tickets.story.ui.spec.ts`, and by the domain and server tiers.
+Built (2026-11-12): on the board, driven by its screen story in `story_tests/move-work-forward-on-session-board/maintain-tickets/maintain-tickets.story.ui.spec.ts`, and by the domain and server tiers.
 
-### (S) Person --> [Tag Ticket Session](move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-tag-ticket-session)
+### (S) Person --> [Tag Ticket Session](../story_tests/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-tag-ticket-session)
 
 Intended (`.sessions/_backlog/maintain-tickets-on-board.md` "tagging sessions"): a person adds tags to a ticket's session, and the card shows them. Built today (checked 2026-11-11): none; `session.json` holds no tags (`sessions.py:276`).
 
-Built (2026-11-12): on the board, driven by its screen story in `space/kanban/maintain-tickets.story.ui.spec.ts`, and by the domain and server tiers.
+Built (2026-11-12): on the board, driven by its screen story in `story_tests/move-work-forward-on-session-board/maintain-tickets/maintain-tickets.story.ui.spec.ts`, and by the domain and server tiers.
 
 ## (E) Organize Ticket Hierarchy
 
-### (S) Person --> [Split Ticket Into Child Tickets](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-split-ticket-into-child-tickets)
+### (S) Person --> [Split Ticket Into Child Tickets](../story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-split-ticket-into-child-tickets)
 
 Observed: `Ticket.new` records the parent; Split fills the prompt through `fillSplit`. Intended (`.sessions/session-board/ticket-enhancements.md`): the AI slices the ticket thinly into the child tickets it proposes.
 
-### (S) Person --> [Add Child Ticket](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-add-child-ticket)
+### (S) Person --> [Add Child Ticket](../story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-add-child-ticket)
 
 Built (2026-11-11): a person adds a child ticket to a parent by hand: the plus on its card opens a title field, and Enter calls `ticket.add_child` (`add-child-view.tsx`). Split still asks the chat for one child per story.
 
-Built (2026-11-12): on the board, driven by its screen story in `space/kanban/organize-ticket-hierarchy.story.ui.spec.ts`, and by the domain and server tiers.
+Built (2026-11-12): on the board, driven by its screen story in `story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize-ticket-hierarchy.story.ui.spec.ts`, and by the domain and server tiers.
 
-### (S) Board App --> [Display Child Tickets In Parent](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-display-child-tickets-in-parent)
+### (S) Board App --> [Display Child Tickets In Parent](../story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-display-child-tickets-in-parent)
 
 Intended (`.sessions/session-board/ticket-enhancements.md`): a parent's card holds its child tickets stacked inside it, with the parent's title small above them. The drawing (`harness/.context/ux/ticket-ui.drawio`) adds: the parent's card counts its children, and a child pulled out of it keeps a dashed row there. Built today (checked 2026-11-11): a child's card names its scope and parent, such as "story of epic" (`ticket-client.tsx:97-98`), and sits in its column like any other ticket.
 
-Built (2026-11-12): on the board, driven by its screen story in `space/kanban/organize-ticket-hierarchy.story.ui.spec.ts`, and by the domain and server tiers.
+Built (2026-11-12): on the board, driven by its screen story in `story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize-ticket-hierarchy.story.ui.spec.ts`, and by the domain and server tiers.
 
-### (S) Person --> [Expand Parent Ticket](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-expand-parent-ticket)
+### (S) Person --> [Expand Parent Ticket](../story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-expand-parent-ticket)
 
 Intended (`.sessions/session-board/ticket-enhancements.md`; `harness/.context/ux/ticket-ui.drawio`): a parent collapses to its own card and expands to show its children; collapsed it reads + N children, expanded - N children above the child rows.
 
-Built (2026-11-12): on the board, driven by its screen story in `space/kanban/organize-ticket-hierarchy.story.ui.spec.ts`, and by the domain and server tiers.
+Built (2026-11-12): on the board, driven by its screen story in `story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize-ticket-hierarchy.story.ui.spec.ts`, and by the domain and server tiers.
 
-### (S) Person --> [Detach Child Ticket](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-detach-child-ticket)
+### (S) Person --> [Detach Child Ticket](../story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-detach-child-ticket)
 
 Intended (`.sessions/session-board/ticket-enhancements.md`; `harness/.context/ux/ticket-ui.drawio` "pull out of parent; and then drag and then move like regular ticket; remembers parent"): a child pulled out of its parent becomes a ticket of its own beside it, named parent.Child, that a person drags and moves like any ticket; it still has its parent. A person pulls a child out by dragging it out of its parent (the person, 2026-11-11).
 
-Built (2026-11-12): on the board, driven by its screen story in `space/kanban/organize-ticket-hierarchy.story.ui.spec.ts`, and by the domain and server tiers.
+Built (2026-11-12): on the board, driven by its screen story in `story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize-ticket-hierarchy.story.ui.spec.ts`, and by the domain and server tiers.
 
-### (S) Person --> [Reassign Ticket Parent](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-reassign-ticket-parent)
+### (S) Person --> [Reassign Ticket Parent](../story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-reassign-ticket-parent)
 
 Intended (`.sessions/session-board/ticket-enhancements.md` "Add a ticket as a child of a different parent" and "Make a child independent of its parent"; `harness/.context/ux/ticket-ui.drawio` "add and remove a child"): a ticket made the child of a different parent leaves its old parent, and a child taken off its parent becomes a ticket with no parent. A person drags a ticket onto another to make it that ticket's child, and Alt-drags a child out of its parent to leave it with none (the person, 2026-11-11). Both change which parent the ticket has, so they are one story. Was: Move Child Ticket To Another Parent.
 
 Built (2026-11-11): dragging a ticket onto another card makes it that ticket's child (`TicketClient.takeAsChild` calls `ticket.reassign_parent`), and dropping a Backlog item on a ticket starts it as that ticket's child (`backlog-item.start_under`); the Alt-drag out of a parent is not built yet.
 
-Built (2026-11-12): on the board, driven by its screen story in `space/kanban/organize-ticket-hierarchy.story.ui.spec.ts`, and by the domain and server tiers.
+Built (2026-11-12): on the board, driven by its screen story in `story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize-ticket-hierarchy.story.ui.spec.ts`, and by the domain and server tiers.
 
-### (S) Board App --> [Place Parent At Leftmost Child Stage](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-place-parent-at-leftmost-child-stage)
+### (S) Board App --> [Place Parent At Leftmost Child Stage](../story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-place-parent-at-leftmost-child-stage)
 
 Intended (`harness/.context/ux/ticket-ui.drawio` "parents cant be dragged; they change stage by taking on the stage of the leftmost ticket"): a parent sits in the stage of its child furthest back on the board and moves only as its children move; a person cannot drag a parent.
 
-Built (2026-11-12): on the board, driven by its screen story in `space/kanban/organize-ticket-hierarchy.story.ui.spec.ts`, and by the domain and server tiers.
+Built (2026-11-12): on the board, driven by its screen story in `story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize-ticket-hierarchy.story.ui.spec.ts`, and by the domain and server tiers.
 
-### (S) Claude Code --> [Nest Child Branch And Session](move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-nest-child-branch-and-session)
+### (S) Claude Code --> [Nest Child Branch And Session](../story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md#story-nest-child-branch-and-session)
 
 Intended (`.sessions/session-board/ticket-enhancements.md`): a child ticket's branch and session nest under its parent's, so the hierarchy holds in git and in `.sessions/` as on the board. Set aside in the Maybe Later increment (the person, 2026-11-11: complicated, not now).
 
 ## (E) Guide Work Through Practices On Board
 
-### (S) Board App --> [Display Fidelity Progress](move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-display-fidelity-progress)
+### (S) Board App --> [Display Fidelity Progress](../story_tests/move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-display-fidelity-progress)
 
 Observed: each fidelity on a tile shows Generate and Validate as ○ to do, … in progress or ✓ done; a fidelity whose latest validate passes is done.
 
-### (S) Person --> [Open Practice Tile](move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-open-practice-tile)
+### (S) Person --> [Open Practice Tile](../story_tests/move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-open-practice-tile)
 
 Observed: a tile opens after a short hover, closes on leaving, and a press keeps it open.
 
-### (S) Person --> [Choose Ticket Practices](move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-choose-ticket-practices)
+### (S) Person --> [Choose Ticket Practices](../story_tests/move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-choose-ticket-practices)
 
 Observed: `Ticket.enable_practice` saves the choice to the ticket's `session.json`.
 
-### (S) Person --> [Send Next Fidelity Action](move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-send-next-fidelity-action)
+### (S) Person --> [Send Next Fidelity Action](../story_tests/move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-send-next-fidelity-action)
 
 Observed: Run next names the step that runs next and steps through generate and validate for each practice in order (`Ticket.next_fidelity`, `Ticket.next_action`), holding on fix violations until they are fixed.
 
-### (S) Person --> [Send Action To Stage Practices](move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-send-action-to-stage-practices)
+### (S) Person --> [Send Action To Stage Practices](../story_tests/move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-send-action-to-stage-practices)
 
 Observed: the stage head sends one action for every enabled practice in a stage.
 
-### (S) Person --> [Mark Ticket Done In Stage](move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-mark-ticket-done-in-stage)
+### (S) Person --> [Mark Ticket Done In Stage](../story_tests/move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-mark-ticket-done-in-stage)
 
 Observed: the arrow takes an In progress ticket to Done without crossing a column, written as a `done <stage>` session log line, and back as `in-progress <stage>`.
 
-### (S) Person --> [Open Help](move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-open-help)
+### (S) Person --> [Open Help](../story_tests/move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-open-help)
 
 Observed: `Board.help`; the ? on a tile or practice name opens the overview, guidance and rules in a side panel, with a link to the Forge page.
 
@@ -498,23 +498,23 @@ Intended (`.sessions/_backlog/show-board-quickly.md` cause 3): `session.json` is
 
 ### (E) Generate Fidelity Outputs On Board
 
-#### (S) Person --> [Choose Action And Formats](move-work-forward-on-session-board/work-fidelity-outputs-on-board/generate-fidelity-outputs-on-board/generate_fidelity_outputs_on_board_story.test.md#story-choose-action-and-formats)
+#### (S) Person --> [Choose Action And Formats](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/generate-fidelity-outputs-on-board/generate_fidelity_outputs_on_board_story.test.md#story-choose-action-and-formats)
 
 Observed: the tile's action bar lists the actions and format chips, with the default format picked unless that output exists.
 
-#### (S) Claude Code --> [Resolve Fidelity Output Paths](move-work-forward-on-session-board/work-fidelity-outputs-on-board/generate-fidelity-outputs-on-board/generate_fidelity_outputs_on_board_story.test.md#story-resolve-fidelity-output-paths)
+#### (S) Claude Code --> [Resolve Fidelity Output Paths](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/generate-fidelity-outputs-on-board/generate_fidelity_outputs_on_board_story.test.md#story-resolve-fidelity-output-paths)
 
 Observed: `Generate` and `Session.fidelity_outputs` take the outputs a fidelity declares, with the `session.json` overrides.
 
-#### (S) Person --> [Generate Fidelity Output](move-work-forward-on-session-board/work-fidelity-outputs-on-board/generate-fidelity-outputs-on-board/generate_fidelity_outputs_on_board_story.test.md#story-generate-fidelity-output)
+#### (S) Person --> [Generate Fidelity Output](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/generate-fidelity-outputs-on-board/generate_fidelity_outputs_on_board_story.test.md#story-generate-fidelity-output)
 
 Observed: Run sends `/actions-generate <fidelities> format=<formats>`, rendering the earlier fidelity into a new format first (`Ticket.generate_commands`); a generate line in the session log counts as Generate done.
 
-#### (S) Person --> [Render Fidelity Format](move-work-forward-on-session-board/work-fidelity-outputs-on-board/generate-fidelity-outputs-on-board/generate_fidelity_outputs_on_board_story.test.md#story-render-fidelity-format)
+#### (S) Person --> [Render Fidelity Format](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/generate-fidelity-outputs-on-board/generate_fidelity_outputs_on_board_story.test.md#story-render-fidelity-format)
 
 Observed: Render sends `/actions-render`.
 
-#### (S) Person --> [Send Tile Action To Chat](move-work-forward-on-session-board/work-fidelity-outputs-on-board/generate-fidelity-outputs-on-board/generate_fidelity_outputs_on_board_story.test.md#story-send-tile-action-to-chat)
+#### (S) Person --> [Send Tile Action To Chat](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/generate-fidelity-outputs-on-board/generate_fidelity_outputs_on_board_story.test.md#story-send-tile-action-to-chat)
 
 Observed: Run sends `/actions-sketch`, `/actions-iterate` or `/actions-document` to the chosen chat.
 
@@ -532,23 +532,23 @@ Intended (`.sessions/_backlog/customize-board-workflow.md` "use sub agents toggl
 
 ### (E) Validate Fidelity Outputs On Board
 
-#### (S) Person --> [Validate Fidelity](move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-validate-fidelity)
+#### (S) Person --> [Validate Fidelity](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-validate-fidelity)
 
 Observed: Validate sends `/actions-validate`; a validate line counts as done only when it names no graph-rule violations.
 
-#### (S) Claude Code --> [Save Validation Report](move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-save-validation-report)
+#### (S) Claude Code --> [Save Validation Report](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-save-validation-report)
 
 Observed: `Validate` saves `.sessions/<session>/validation-reports/<practice>-<fidelity>-<date>.md` and the graph it checked beside it in `.json`.
 
-#### (S) Person --> [Open Validation Report](move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-open-validation-report)
+#### (S) Person --> [Open Validation Report](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-open-validation-report)
 
 Observed: `fidelity-progress.report` opens the latest report in a side panel.
 
-#### (S) Person --> [Fix Report Violations](move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-fix-report-violations)
+#### (S) Person --> [Fix Report Violations](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-fix-report-violations)
 
 Observed: Fix sends the chat the rule, the error at its file and line, and the content that failed; Fix all sends every violation of the rule in one message.
 
-#### (S) Board App --> [Display Violations Band](move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-display-violations-band)
+#### (S) Board App --> [Display Violations Band](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-display-violations-band)
 
 Observed: the band shows the active ticket's violations, only when it has some, and sends them to satisfy.
 
@@ -562,15 +562,15 @@ Observed (checked 2026-11-10): each violation that names a file and line shows a
 
 ### (E) Review Fidelity Outputs On Board
 
-#### (S) Person --> [List Ticket Files](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-list-ticket-files)
+#### (S) Person --> [List Ticket Files](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-list-ticket-files)
 
 Observed: `fidelity-progress.files` lists the tile's or ticket's fidelities' files; on a ticket working in the whole repository, only what its branch changed. Intended (the person, 2026-11-12, "this is a filter eg a checkbox on the file viewer at the top where tabs are; you click only changed files listed"): the list shows every file of the fidelity, and a changed-files-only check box at the top beside the tabs filters it to what the ticket's branch changed.
 
-#### (S) Person --> [Browse Ticket Files By Practice](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-browse-ticket-files-by-practice)
+#### (S) Person --> [Browse Ticket Files By Practice](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-browse-ticket-files-by-practice)
 
 Observed: the folder mode of the files panel groups the files under their folders. Requested (2026-11-12, "list a shortened form/image of each practice top to bottom on left side, filters preset when clicking files button in chat ui, user can toggle them; top has file tabs like now but colored to practice"): the practice filters sit along the top of the files panel, each by its short form (2026-11-12: "put the filter toggles on the top, it will waste less space"). Every file is a tab along the top, grouped by practice and colored in its practice's color. Opening the files from the chat bar presets the filters, which the person can toggle ("these are just filters on left; all files are shown in tabs above grouped by practice colored by practice color"). This replaces grouping by folder, and builds on the person's 2026-11-11 notes (groupings by knowledge-graph root such as practice, click to select, check box to select several).
 
-#### (S) Person --> [View Fidelity Files](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-view-fidelity-files)
+#### (S) Person --> [View Fidelity Files](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-view-fidelity-files)
 
 Observed: one tab per format the fidelity offers, generated or not; × closes one.
 
@@ -584,11 +584,11 @@ Intended (`.sessions/_backlog/review-work-in-board-files.md` "session informatio
 
 ### (E) Review Files In Viewer
 
-Moved (2026-11-14) to the Files app's map, [Review Files In Files App](../../../harness/files_app/.context/story-map.md): the Files app is now the one place a session's files are viewed and commented on, and its stories, scenarios (`harness/files_app/.context/review-files-in-files-app/`) and acceptance tests (`space/session/review-files-in-files-app.story.*.py`) live there. The board's own files panel (`space/kanban/app/src/kanban/ticket/file-viewer-view.tsx`) still draws the same behaviour; its UI spec stays in `space/kanban/review-files-in-viewer.story.ui.spec.ts`.
+Moved (2026-11-15) to [Review Generated Work In File Viewer](#e-review-generated-work-in-file-viewer): the Files app is the one place a session's files are viewed and commented on. The board's own files panel (`space/kanban/app/src/kanban/ticket/file-viewer-view.tsx`) still draws the same behaviour; its UI spec stays in `story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review-files-in-viewer.story.ui.spec.ts`.
 
 ### (E) Integrate Practice Content Editor Apps On Board
 
-#### (S) Person --> [Open Story UI On Ticket Scope](move-work-forward-on-session-board/integrate-practice-content-editor-apps-on-board/integrate_practice_content_editor_apps_on_board_story.test.md#story-open-story-ui-on-ticket-scope)
+#### (S) Person --> [Open Story UI On Ticket Scope](../story_tests/move-work-forward-on-session-board/integrate-practice-content-editor-apps-on-board/integrate_practice_content_editor_apps_on_board_story.test.md#story-open-story-ui-on-ticket-scope)
 
 Requested (2026-11-06, "board --> story ui for ticket's scope"): the board opens the Story UI editor on the part of the story map the ticket covers, from its session folder. Also Intended (`.sessions/_backlog/integrate-practice-content-editor-apps.md` "view story map / ux design canvas for a session"). Requested (2026-11-12): a small editor widget on the ticket's Stories story-map row opens it.
 
@@ -608,11 +608,11 @@ Requested (2026-11-06, non-functional): the Graph app runs on the same app serve
 
 Requested (2026-11-12, non-functional, "like above but for kanban board"): the CDD Kanban, like the Story UI app, follows the cdd_web_domain_access and lern_domain_driven patterns: its backend is the MCP-generated domain objects through the TypeScript adapter, not calls of its own. The repeatable behaviour: a change the agent makes through the tools shows on the board with no copy kept in the page, and a board whose cdd server is down says so.
 
-#### (S) Agent --> [Refactor Knowledge Graph App To Web Domain Access](move-work-forward-on-session-board/integrate-practice-content-editor-apps-on-board/integrate_practice_content_editor_apps_on_board_story.test.md#story-refactor-knowledge-graph-app-to-web-domain-access)
+#### (S) Agent --> [Refactor Knowledge Graph App To Web Domain Access](../story_tests/move-work-forward-on-session-board/integrate-practice-content-editor-apps-on-board/integrate_practice_content_editor_apps_on_board_story.test.md#story-refactor-knowledge-graph-app-to-web-domain-access)
 
 Observed (checked 2026-11-10; commit 23e3d037e): `GraphClient extends GraphClientGenerated` (`harness/graph/app/graph/GraphClient.ts:1-6`), with `GraphApi implements CddApi` as transport and the server mounting the generated `graphRoutes` (`server.ts:8,50`). Was: Requested (2026-11-06, non-functional): the Graph app reaches the CDD domain through the TypeScript language adapter generated by the cdd_web_domain_access pattern, instead of its own calls.
 
-#### (S) Person --> [Invoke Story Explorer In Session Context](move-work-forward-on-session-board/integrate-practice-content-editor-apps-on-board/integrate_practice_content_editor_apps_on_board_story.test.md#story-invoke-story-explorer-in-session-context)
+#### (S) Person --> [Invoke Story Explorer In Session Context](../story_tests/move-work-forward-on-session-board/integrate-practice-content-editor-apps-on-board/integrate_practice_content_editor_apps_on_board_story.test.md#story-invoke-story-explorer-in-session-context)
 
 Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "view story map / ux design canvas for a session", requested on 2026-11-06): the board opens the browser story explorer on the ticket's story map, framed by its design canvas screens.
 
@@ -622,27 +622,35 @@ The Chat Bar is the line above the chat prompt for the one session the chat work
 
 ## (E) Check CDD Server Health In Chat Bar
 
-### (S) Chat Bar --> [Display Server Health Mark](../../chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/display-server-health-mark/display_server_health_mark_story.test.ts)
+### (S) Chat Bar --> Display Server Health Mark
 
 Observed: `ServerHealthBandView` draws ✓ connected, ⟳ reconnecting, ✕ disconnected or ! tools missing, left of the session name.
 
-### (S) Person --> [Open Server Health Panel](../../chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/open-server-health-panel/open_server_health_panel_story.test.ts)
+### (S) Person --> Open Server Health Panel
 
 Observed: the panel shows MCP host, Tools with the loaded count, Kanban app, Graph app and Hook server, or a headline saying what is wrong; pressing the mark pins it open.
 
-### (S) Person --> [Reconnect CDD Server](../../chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/reconnect-cdd-server/reconnect_cdd_server_story.test.ts)
+### (S) Person --> Reconnect CDD Server
 
 Observed: Reconnect retries `cdd` up to three times (`RECONNECT_TRIES`), then reads the active session again.
 
-### (S) Person --> [Reinstall CDD Tools](../../chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/reinstall-cdd-tools/reinstall_cdd_tools_story.test.ts)
+### (S) Person --> Reinstall CDD Tools
 
 Observed: Run install runs the installer and says installing, installed (open a new session) or failed; Details shows the tool, error, server and fix.
 
+### (S) Chat Bar --> Display CDD Version Badge
+
+Observed (requested 2026-11-14, "a small button with v.<major.minor> ... green current version; yellow behind minor; red behind major"): as the chat opens, `cdd-version.check` (`CddVersion.check`, `harness/diagnostics/cdd_version.py`) fetches origin main and answers the version the cdd server runs, read as major and minor from `pyproject.toml`, the version on origin main, and how the two stand; the badge at the end of the line shows `v0.1` green when current, yellow a minor version behind, red a major version behind, grey when origin main was never fetched, with the summary on hover (`health/cdd-version-view.tsx`). Specs: `harness/diagnostics/cdd_version_spec.py`.
+
+### (S) Person --> Set Next CDD Version
+
+Observed (requested 2026-11-14, "/version --> enters the next version to repo config e.g. push", "dont version automatically"): `/version` (`cdd-version.set_next`, `CddVersion.set_next`) writes the next version into the `version` of the repository's `pyproject.toml`: the version given, such as `0.2` or `1.0.1`, or with none given the next minor version; text that is not a version is refused (*VersionNotValid*). Nothing raises the version by itself, so a person runs it when a change is a release, before pushing to main; the version badge in other chats turns yellow or red once that push reaches origin main. Specs: `harness/diagnostics/cdd_version_spec.py`.
+
 ### (S) Person --> Update CDD From Chat Bar
 
-Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "checkout latest and build"), and Requested on 2026-11-06 as the CDD Kanban does: get the latest commit, rebuild the board, pin the cdd server to that commit, and restart the board.
+Observed (requested 2026-11-14, "click opens dialog update and reinstall? use above script if yes"): pressing the version badge asks to update and reinstall; Update and reinstall runs `/harness:installation:install-latest` in the chat (`updateToLatest`, `health/cdd-version-client.ts`), so the chat lists its seven steps and ticks each off as it finishes: pull origin main, stop every app and the hook server, restart the cdd server, install every toolset, ping the server; once the command's turn ends the badge reads the version again; hovering the badge says updating…, up to date, or update failed, and a failure shows why on the failure line. The agent does the same with `/install-latest` (`Installer.install_latest`), which ticks off each step as `scripts/install.py` reports it.
 
-### (S) Person --> [Open App From Health Panel](../../chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/open-app-from-health-panel/open_app_from_health_panel_story.test.ts)
+### (S) Person --> Open App From Health Panel
 
 Observed: pressing the Kanban app or the Graph app on the server health panel opens it in the browser, and starts it first when it reads not running (requested 2026-11-10, "clicking on app in chat ui starts it if down, opens it if up"). The Kanban app starts as `/board` starts it (`startedBoard` in `board-server.ts`) and opens on this repository's board page; the Graph app starts with the repository's own `scripts/start_graph_web.py` and `scripts/start_graph_app.py` and opens where the second says it answers. A start that fails says why in a toast (`health/open-app-client.ts`).
 
@@ -656,19 +664,19 @@ Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "restart buttons n
 
 Observed: the `/board` command in `harness/chat-ui/pane/hooks/register.ts` opens the board, starting it when it is not running.
 
-### (S) Chat Bar --> [Display Stage Strip](../../chat-ui/pane/test/move-work-forward-from-chat-bar/see-work-in-chat-bar/display-stage-strip/display_stage_strip_story.test.ts)
+### (S) Chat Bar --> Display Stage Strip
 
 Observed: one line with the health mark, the session name, fidelity dots, action button, stage icons, then handoff, files and close (`chat-bar-view.tsx` `LineView`).
 
-### (S) Chat Bar --> [Display Session Fidelity Dots](../../chat-ui/pane/test/move-work-forward-from-chat-bar/see-work-in-chat-bar/display-fidelity-progress/display_fidelity_progress_story.test.ts)
+### (S) Chat Bar --> Display Session Fidelity Dots
 
 Observed: one square per fidelity of the shown stage in its practice's colour, fainter the less is done, with the violation count in red beside it and the fidelity's name above it on hover (`FidelityView`).
 
-### (S) Person --> [Display Stage Fidelities](../../chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/display-stage-fidelities/display_stage_fidelities_story.test.ts)
+### (S) Person --> Display Stage Fidelities
 
 Observed: pressing a stage icon shows that stage's fidelities on the dots, tinted while it is not the stage in progress, and drops an action picked from the menu (`stage-client.ts` `selectStage`).
 
-### (S) Person --> [Display Session Card](../../chat-ui/pane/test/move-work-forward-from-chat-bar/see-work-in-chat-bar/display-session-card/display_session_card_story.test.ts)
+### (S) Person --> Display Session Card
 
 Observed: the pointer on the session name shows the card, with each fidelity's name and state over its dot and its folder as a chip that opens its files; pressing the name pins the card open and ✕ closes it (`session-card-view.tsx`). The folder chip covers `.sessions/_backlog/bring-chat-bar-level-with-board.md` "Click a practice to get its file list".
 
@@ -676,21 +684,21 @@ Observed: the pointer on the session name shows the card, with each fidelity's n
 
 Observed (`register.ts` `showStatus`, `chat-bar-client.ts` `statusLine`): the status line below the chat, where the host draws a plugin's status, names the repository, the branch the session's chat works on, and the whole path of the folder the session works in. Requested on 2026-11-11 ("repo . session . root path of session . action selected", "below the actual chat edit like before"). Left aligned was also asked; the host places a plugin's status line itself, so a plugin cannot align it, and drawing the row in the chat bar or in the prompt hint line (tried in ce6b9157e and 066b2d3fc) lost it below the chat; the bar's own left-aligned row (c8abaf8d0) put it under the bar's menus, and it came back below the chat on 2026-11-13.
 
-### (S) Claude Code --> [Add Active Ticket To System Prompt](move-work-forward-from-chat-bar/see-work-in-chat-bar/see_work_in_chat_bar_story.test.md#story-add-active-ticket-to-system-prompt)
+### (S) Claude Code --> [Add Active Ticket To System Prompt](../story_tests/move-work-forward-from-chat-bar/see-work-in-chat-bar/see_work_in_chat_bar_story.test.md#story-add-active-ticket-to-system-prompt)
 
 Inferred: the `prompt.compose` hook in `register.ts` adds the active session and its next guidance, and leaves the prompt unchanged with no active session. Intended (`.sessions/session-board/ticket-enhancements.md`): the prompt also names the file that holds the ticket's text (increment Maintain Tickets On Board).
 
 ## (E) Steer Sessions
 
-### (S) Person --> [Create New Session](../../chat-ui/pane/test/move-work-forward-from-chat-bar/steer-sessions/create-new-session/create_new_session_story.test.ts)
+### (S) Person --> Create New Session
 
 Observed: the ▾ beside the session name opens the session list, whose field names a new session that `ticket.create` creates (`session-client.ts` `createSession`). Requested (2026-11-06, as the CDD Kanban does): choose the session root.
 
-### (S) Person --> [Open Session](../../chat-ui/pane/test/move-work-forward-from-chat-bar/steer-sessions/open-session/open_session_story.test.ts)
+### (S) Person --> Open Session
 
 Observed: picking a session from the list opens a dialog saying the active session is committed and pushed, with merge off, and that the new one opens on its own branch and worktree, then calls `board.activate` (`session-dialogs-view.tsx` `ActivateView`).
 
-### (S) Person --> [Write Session Handoff](../../chat-ui/pane/test/move-work-forward-from-chat-bar/steer-sessions/write-session-handoff/write_session_handoff_story.test.ts)
+### (S) Person --> Write Session Handoff
 
 Observed: the ⇥ handoff icon adds "Write a handoff for ticket <session> with /space-handoff-handoff-session." to the prompt (`chat-bar-client.ts` `runHandoff`).
 
@@ -698,7 +706,7 @@ Observed: the ⇥ handoff icon adds "Write a handoff for ticket <session> with /
 
 Requested (2026-11-06, as the CDD Kanban does): the chat bar shows the active session's latest handoff.
 
-### (S) Person --> [Close Session From Chat Bar](../../chat-ui/pane/test/move-work-forward-from-chat-bar/steer-sessions/close-active-session/close_active_session_story.test.ts)
+### (S) Person --> Close Session From Chat Bar
 
 Observed: the ✕ icon opens a dialog saying the session's work is committed and pushed first when it has a branch, then Close session calls `ticket.close` (`session-dialogs-view.tsx` `CloseView`).
 
@@ -710,9 +718,17 @@ Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add fe
 
 Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add feature to backlog button and buttons for common repo actions eg push, pull, commit"): a Commit button commits the active session's changes (`Repo.commit` in `space/repo/repo.py`).
 
-### (S) Person --> Push Work From Chat Bar
+### (S) Person --> [Push Work From Chat Bar](../space/repo/session_to_main_spec.py)
 
-Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add feature to backlog button and buttons for common repo actions eg push, pull, commit"): a Push button pushes the active session's branch (`repo.push_commit`).
+Observed (2026-11-14): the ⤴ icon, first of the session buttons, calls `repo.push_work` (`Repo.push_work`) for the folder the chat works in: the checkout commits its work on its branch and pushes the branch; nothing is merged. Was Requested (2026-11-10): a Push button pushes the active session's branch.
+
+### (S) Person --> [Push Session To Main From Chat Bar](../space/repo/session_to_main_heavy_spec.py)
+
+Observed (2026-11-14): the ⇪ icon after ⤴, "push & merge to origin/main", asks "Push <session> and merge it to origin/main?", and yes calls `repo.push_to_main` (`Repo.push_to_main`) for the folder the chat works in, whichever repository holds it: the checkout commits its work on its branch and pushes the branch, the main clone merges that branch into the repository's default branch (`Branch.merge_into_default`; `Repo.default_branch` is the branch origin's HEAD names, else main or master), pushes it, and goes back to the branch it had. On main itself it commits and pushes main. The version is not raised; `/version` does that when the person chooses. `repo.merge_to_main` does the same without pushing, for an agent; the chat bar has no button for it (2026-11-14: "we only need the other button").
+
+### (S) Person --> [Debug A Failure From Chat Bar](../space/session/debug_spec.py)
+
+Requested (the person, 2026-11-15): a debug button right after handoff sends the agent to capture what went wrong as fully as it can, stack traces included, then asks for more detail and whether to fix the bug or request help; help emails jeff.anderson@abdworks.com, and a fix is made in a sub-agent and pushed to main, or sent as a pull request to the CDD repository where the person cannot push there. The chat bar's Fix buttons take the same fix. Built (2026-11-15): the 🐞 icon after ⇥ puts `/space-session-debug-session` in the prompt box (`Session.debug_session`); it writes `debug/debug-{time}.md` in the session's folder, asks with AskUserQuestion, opens the help email as a draft in the person's mail program for them to send, and checks `gh api repos/<owner>/<repo> --jq .permissions.push` before pushing or opening the pull request. Fix on a failure line starts it with `choice=fix` and the failure as its details; Fix on a board that did not answer adds it as a last step.
 
 ### (S) Person --> Pull Latest From Chat Bar
 
@@ -720,9 +736,17 @@ Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add fe
 
 ## (E) Guide Work Through Practices In Chat Bar
 
-### (S) Person --> [Move Session To Next Stage](../../chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/move-session-to-next-stage/move_session_to_next_stage_story.test.ts)
+### (S) Person --> Move Session To Next Stage
 
 Observed: once every fidelity of the stage has passed validate, the action button shows ➜ and pressing it calls `ticket.move_next` (`action-button-view.tsx` `actionOf`).
+
+### (S) Person --> Invoke Next Fidelity Action
+
+From the chat bar's own map (harness/chat-ui/.context/story-map.md, folded in 2026-11-16). Mirrors Send Next Fidelity Action, for one fidelity: the action button runs generate, validate or review on the selected fidelity (CDR "Action button and ▾ picker"; "Actions run on one fidelity at a time"). Its story test was removed with the chat bar's stubbed tests (8c56ab052).
+
+### (S) Person --> Choose Fidelity Action
+
+From the chat bar's own map, folded in 2026-11-16. Mirrors Choose Action And Formats, without formats: the ▾ picker offers generate, validate, review, iterate, sketch, render and document (CDR "Action button and ▾ picker"); selecting another fidelity drops the picked action. Its story test was removed with the chat bar's stubbed tests (8c56ab052).
 
 ### (S) Person --> Move Session To Previous Stage
 
@@ -760,7 +784,7 @@ Requested (2026-11-11, "adds a new icon to bar, pushing action and format", "ico
 
 ### (E) Generate Fidelity Outputs In Chat Bar
 
-#### (S) Person --> [Select Fidelity](../../chat-ui/pane/test/move-work-forward-from-chat-bar/see-work-in-chat-bar/select-fidelity/select_fidelity_story.test.ts)
+#### (S) Person --> Select Fidelity
 
 Observed: pressing a dot selects that fidelity, and the action button then shows its next action, such as ▶ generate for a fidelity still to do; selecting another drops an action picked for the one before, and nothing is sent to the chat (`fidelity-client.ts` `selectFidelity`).
 
@@ -772,7 +796,7 @@ Requested (2026-11-06, "reorder buttons; action then practices"): the action but
 
 Observed (commit a585473e3; `fidelity-progress-client.ts` `selectFidelity`): a press on a fidelity, on the line or on the session card, adds it to or takes it out of the selection, and the action button runs one command on every selected fidelity. Requested on 2026-11-06 ("multi select").
 
-#### (S) Person --> [Choose Action](../../chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/choose-fidelity-action/choose_fidelity_action_story.test.ts)
+#### (S) Person --> Choose Action
 
 Observed: the ▾ on the action button opens a list of generate, validate, review, iterate, sketch, render and document, with the fidelity's next one marked next; picking one puts it on the button in place of the next action (`action-button-view.tsx` `PickerView`).
 
@@ -780,7 +804,7 @@ Observed: the ▾ on the action button opens a list of generate, validate, revie
 
 Observed (commits a6ddef81c, 21a87f4a7; `chat-bar-view.tsx`, `format-choices-client.ts`): one chip per format group the fidelities offer sits just before the action button, as on a board ticket; a press turns it on or off, and the picked formats go into generate and render. Requested on 2026-11-06 ("add format multi select"). Intended (`.sessions/_backlog/bring-chat-bar-level-with-board.md` "Toggle formats on the card, as the format chips do on the bar"): the session card carries the same chips.
 
-#### (S) Person --> [Generate Session Fidelity Output](../../chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/invoke-next-fidelity-action/invoke_next_fidelity_action_story.test.ts)
+#### (S) Person --> Generate Session Fidelity Output
 
 Observed: pressing the button on generate puts the commands of `ticket.generate_commands` for the fidelity's default format in the prompt box, a render first when the fidelity before it uses another format; the person presses Enter to send them (`fidelity-client.ts` `runAction`).
 
@@ -793,14 +817,14 @@ Observed: `Generate` and `Session.fidelity_outputs` take the outputs the fidelit
 Observed: pressing the button on validate, render, iterate, sketch or document puts `/actions-<action> <guidance>` in the prompt box for the person to send (`fidelity-client.ts` `runAction`).
 
 
-#### (S) Person --> [Run Fidelity Action With Overlays](move-work-forward-from-chat-bar/generate-fidelity-outputs-in-chat-bar/generate_fidelity_outputs_in_chat_bar_story.test.md)
+#### (S) Person --> [Run Fidelity Action With Overlays](../story_tests/move-work-forward-from-chat-bar/generate-fidelity-outputs-in-chat-bar/generate_fidelity_outputs_in_chat_bar_story.test.md)
 
 Requested (2026-11-11, "doesnt result in LERN being passed in as a param? shouldnt it?"): the command the action button puts in the prompt names the session's chosen overlays in an `overlays=` word beside `format=` (`overlay-choices-client.ts` `overlayArgumentOf`); an action run with that word chooses those overlays on the session first (`WorkList.take`), and Generate adds each overlay's shared rules on top of the practices' rules (`Generate._overlay_rules`).
 ### (E) Review Fidelity Outputs In Chat Bar
 
 #### (S) Person --> List Session Files, View Session Files
 
-Moved (2026-11-14) to the Files app's map as Open Stage Files From Chat Bar, Open Session Folder From Chat Bar and List Files The Link Names ([Review Files In Files App](../../../harness/files_app/.context/story-map.md)): the chat bar's files button and session name open the Files app beside the chat, no longer a tab per file in the chat bar.
+Moved (2026-11-15) to [Review Generated Work In File Viewer](#e-review-generated-work-in-file-viewer) as Open Stage Files From Chat Bar, Open Session Folder From Chat Bar and List Files The Link Names: the chat bar's files button and session name open the Files app beside the chat, no longer a tab per file in the chat bar.
 
 #### (S) Person --> Open Validation Report From Violation Count
 
@@ -828,7 +852,7 @@ Requested (2026-11-12, "same but for KG"): the Graph app opened from the chat ba
 
 Requested (2026-11-12, "same but for KG"): the open Graph app follows the session activated last.
 
-#### (S) Person --> [Invoke Claude Design Story Explorer From Chat Bar](move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/integrate_practice_content_editor_apps_in_chat_bar_story.test.md#story-invoke-claude-design-story-explorer-from-chat-bar)
+#### (S) Person --> [Invoke Claude Design Story Explorer From Chat Bar](../story_tests/move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/integrate_practice_content_editor_apps_in_chat_bar_story.test.md#story-invoke-claude-design-story-explorer-from-chat-bar)
 
 Intended (requested on 2026-11-06, as the CDD Kanban): the chat bar opens the Claude Design story explorer the design canvas draws today (`explorer.dc.html`) on the active session's story map and screens. Requested (2026-11-12, for now): the file viewer has a link that opens the design view attached to the session.
 
@@ -840,11 +864,11 @@ Requested (2026-11-06, non-functional): the Story UI app runs on the same app se
 
 Requested (2026-11-06, non-functional): the Story UI app reaches the CDD domain through the TypeScript language adapter generated by the cdd_web_domain_access pattern, instead of its own calls. Requested (2026-11-12): the story map's backend moves out of TypeScript into the MCP-generated domain objects, not a JSON story map; each edit is saved and rendered to the formats chosen in the chat bar, which the Story UI app can toggle.
 
-#### (S) Person --> [Open UX Design In Claude Design](move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/integrate_practice_content_editor_apps_in_chat_bar_story.test.md#story-open-ux-design-in-claude-design)
+#### (S) Person --> [Open UX Design In Claude Design](../story_tests/move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/integrate_practice_content_editor_apps_in_chat_bar_story.test.md#story-open-ux-design-in-claude-design)
 
 Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "claude design integration with ux tool"): the UX practice's design opens in Claude Design from the chat.
 
-#### (S) Person --> [Trace Story Through Artifacts](move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/integrate_practice_content_editor_apps_in_chat_bar_story.test.md#story-trace-story-through-artifacts)
+#### (S) Person --> [Trace Story Through Artifacts](../story_tests/move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/integrate_practice_content_editor_apps_in_chat_bar_story.test.md#story-trace-story-through-artifacts)
 
 Intended (`.sessions/_backlog/integrate-practice-content-editor-apps.md` "Trace pane"): picking a story shows its scenarios, tests and code from `harness/graph`, with the domain, class and bounded-context diagrams. Built today (checked 2026-11-10): the Graph app folds story, scenario and step and shows a step's invokes, observes and demonstrates with its source (`harness/graph/app/app.test.tsx:429,746`). Missing: one trace view of a picked story's scenarios, tests and code, and the diagrams.
 
@@ -898,249 +922,359 @@ Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "Banned word check
 
 Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "Branch guard"): a warning shows before a commit when the branch does not match the active ticket's session.
 
+# (E) Review Generated Work In File Viewer
+
+The file viewer is the Files app (`harness/files_app/`): a page of its own, opened beside the chat, where a person reads, filters and comments on the files a session generated, and, once its graph view is built, works the session's graph on those same files. Moved back (2026-11-15) from the Files app's own map, where release-2 had gathered every story about viewing a session's files on 2026-11-14 (commit 5aa8569f3); the person: "move the file viewer stories back to the main map under its own epic". Scenarios: [review_files_in_files_app_story.test.md](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md). Evidence words as there: **Observed** walked in the browser pane on 2026-11-14, **Built** in code and specs but not walked, **Intended** asked for and not done yet.
+
+Requested (2026-11-15): the file viewer becomes where the graph is worked too. A toggle at its top switches between its files and the graph; the graph view does what the Graph app does, but on the files the Files app lists, opening every file a person selects and folding them to the nodes selected. The person: "the actual file viewer is going to have a toggle that can switch from folder files and graph ... we basically ingest all of the stories and functionality that the Graph application can do except for you're now selecting file(s), eg more than one file opens; expand and collapse in file viewer based on the nodes in the graph; graph filtered like file filter is". Once these stories work, the Graph app's own epics (Explore Graph In Graph App, Filter Graph In Graph App, Review Violations In Graph App) retire into them.
+
+## (E) Open Files In Files App
+
+### (S) Person --> [Open Stage Files From Chat Bar](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-stage-files-from-chat-bar)
+
+Built (2026-11-14): the chat bar's ▤ files button opens the Files app beside the chat on every fidelity of the shown stage, every practice's, so the app's practice toggles filter them (`fidelity-files-client.ts` `openStageFiles`). A folder chip on the session card opens one fidelity's files (`openFiles`). Was the chat bar's List Session Files, which opened a tab per file in the chat bar.
+
+### (S) Person --> [Open Session Folder From Chat Bar](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-session-folder-from-chat-bar)
+
+Observed (2026-11-14): pressing the session's name opens the Files app on `.sessions/<session>`, listing its log, handoffs, notes and reports (`openSessionFolder`, `session.folder_files`).
+
+### (S) Story UI --> [Open File From Another Page](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-file-from-another-page)
+
+Built: a page the chat opened, such as the Story UI editor, sends the chat an `open_file`, and the chat opens that file in the Files app on its session folder (`board-chat-client.ts` `shown`, `openFileInViewer`).
+
+### (S) Files App --> [List Files The Link Names](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-list-files-the-link-names)
+
+Observed (2026-11-14): the page reads only the files its link names, each once, and never the board (`files-page.ts` `list`); a file not generated yet is listed but cannot be opened. Was View Fidelity Files on the board and the chat bar.
+
+### (S) Person --> [Open Diagram In Files App](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-diagram-in-files-app)
+
+Built (2026-11-15): a press on a `.drawio` file shows the draw.io editor in the file view, beside the file list, with a ↗ link to a tab of its own (`files-page-view.tsx` `DrawioFileView`); the app's browser pane opens no tab of its own, so a new tab took the Files app's place there. Was the chat bar's Open a diagram in the draw.io editor and the graph's Display Drawio File As Diagram; that story's Source tab and shape marking stay Intended.
+
+### (S) Person --> [Open File In File Browser](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-file-in-file-browser)
+
+Built (2026-11-15): a right-click on a file or folder shows a menu whose one choice opens it in the system's file browser, named for the system (`files-page.ts` `reveal`, `file-explorer.ts`).
+
+### (S) Person --> [Switch File Bar Between Folders And List](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-switch-file-bar-between-folders-and-list)
+
+Built (2026-11-14): the file bar collapses to its buttons and expands again, and shows its files as a list or in their folders, the open file's folders open (`file-bar.ts` *FileBar*, `files-page-view.tsx` `FileBarView`). Requested (the person, 2026-11-14): "expand collapse file bar with buttons to swap a folder view and file list".
+
+## (E) Filter Files In Files App
+
+What the file list shows follows the session's guidance selection and the chat bar's dots, so the same filter holds wherever the session is worked.
+
+
+### (S) Person --> [Resize File Bar](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-resize-file-bar)
+
+Built (2026-11-15): a line between the file bar and the open file drags the bar between 160 and 900 pixels wide, and this browser remembers the width (`file-bar.ts` `resize`).
+### (S) Person --> [List Only The Files The Branch Changed](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-list-only-the-files-the-branch-changed)
+
+Built (2026-11-15): the file bar's Changed button, with its count, lists only the files the session's branch changed, a published design canvas kept (`file-bar.ts` `toggleChangedOnly`, `entries`). Requested (the person, 2026-11-15): "Yes, add it", to a changed-only filter for a session on the whole repository, where UX's mockup pattern lists about 150 files.
+
+### (S) Person --> Follow Chat Bar Selection In Files App
+
+Built (2026-11-15): the chat bar sends its selected fidelity dots at check-in (`Chat.check_in` `selected_fidelities`, `Chat.show`); the Files app reads them every second and, while any it lists are selected, shows only their files, its practice toggles following the dots (`files-page.ts` `filesShown`, `isShown`). Requested (the person, 2026-11-15): "make sure that the filter in the Files window is inherited from the filter in the chatbar", pointing at the chat bar's fidelity dots.
+
+### (S) Person --> Select Guidance On The Session
+
+Built (2026-11-15): the stages, practices and format groups selected are one guidance selection the session holds (`Session.guidance_selection`, `update_guidance_selection`, and the waiting read `guidance_selection_after`), with a version every change raises. The chat bar and the Files app each follow it with one waiting read and draw a press at once; a practice's dot is the practice on or off for the session, all its fidelities of the stages selected. The chat's own selection, stage list, chip cache and refresh messages are gone. Requested (the person, 2026-11-15): "the CDD session object should already have this; it needs to follow the domain model: session.updateGuidanceSelection({stage, practice, format}) ... subscriber.notify()".
+
+### (S) Person --> Show Stages In Files App And Chat Bar
+
+Built (2026-11-15): the chat bar's single stage chip and its list become a button per stage, toggled on together; the dots show, and the action runs on, the fidelities of every stage shown. The Files app has the same buttons first in its header. The stages shown are the chat's, one choice held by cdd (`Chat.show_stages`), with each stage's fidelities listed by the chat bar from the board (`Chat.list_stages`). Requested (the person, 2026-11-15): "we don't have a sync for stages", "toggles to select one or more stage, default stage from chat bar", "a collection of buttons so you can toggle and generate across multiple stages; the action would then submit fidelities of all toggled-on stages", "and we have exact same thing on top of file viewer".
+
+### (S) Person --> Filter Files By Format In Files App
+
+Built (2026-11-15): format chips after the practice toggles, with the chat bar's glyphs (M↓, ◇, </>, ▦) and colours; a press chooses the format in the session (`ticket.choose_formats`), the same choice as the chat bar's chips, which read again on the refresh the page sends; while any is chosen the list shows only those formats' files (`format-chips.ts`, `filesShown`). Requested (the person, 2026-11-15): "we want formats to be a filter as well ... same exact functionality as practice filter; place buttons after practices; use same images as chat bar".
+
+### (S) Person --> [Toggle Practice In Files App](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-toggle-practice-in-files-app)
+
+Built (2026-11-14): the session's practices sit along the top as toggles, each in its practice colour, filled while on and an outline while off; a press turns the practice on or off for the session and the list shows only the files of the practices turned on (`files-page.ts` `togglePractice`, `practice_session_output.enable`). Requested (the person, 2026-11-14): "the patterns should be toggles at the top; be the practice color; and allow us to toggle the practice filter here". Builds on the board's Browse Ticket Files By Practice (2026-11-12): "put the filter toggles on the top".
+
+### (S) Files App --> [Keep Chat Bar Practices In Sync](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-keep-chat-bar-practices-in-sync)
+
+Built (2026-11-14): a practice turned on or off in the Files app sends the chat that opened it a `refresh`, and its chat bar reads the board again, so its fidelity dots show the same practices (`chat.send` kind `refresh`, `board-chat-client.ts` `refreshed`); the page reads the practices again every three seconds while it shows (and when the person comes back to it), so a practice turned off on the chat bar or the board hides its files there with no press: a page in a side pane is never focused again (fixed 2026-11-14, the person: "the file filter needs to respect the practice that is toggled"). Requested (the person, 2026-11-14): "also toggles the command bar so they stay in sync".
+
+## (E) View Files In Source View
+
+### (S) Person --> [View File In Source View](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-view-file-in-source-view)
+
+Observed (2026-11-14): the open file shows in the graph explorer's Monaco source view, read-only, its lines numbered and coloured by language (`file-source-view.tsx`, `@source-view/SourceView`). Was the board's View Files In Rich Viewer and the graph's Open Node Source. Intended: a markdown file rendered as the page it describes.
+
+### (S) Person --> [Fold Classes And Operations](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-fold-classes-and-operations)
+
+Built: the session's graph places each class and operation, and the source view folds each one as a block (`session.file` folds). Was the graph's Unfold Calls And Classes In Source.
+
+### (S) Person --> [Mark Lines A Broken Rule Names](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-mark-lines-a-broken-rule-names)
+
+Built: the rules the session's saved graph found broken in the file mark their lines with a rule chip (`session.file` violations). Was the graph's Open Violation In Source.
+
+### (S) Person --> Browse Files Without Reading Rules
+
+Built (2026-11-15): Rules and Cross-file toggles at the top of the Files app, both off by default. With Rules on, `Session.file(rules=True)` reads the open file into the session's live graph when it changed (about 1.5 s) and answers its folds and broken rules, with the last validate's saved findings beside them, as the Graph app's source view shows them; Cross-file has the graph hold the whole working copy first (`Graph.hold_whole`). Fixed (2026-11-15): the two toggles are independent; Rules reads the file alone (`Session.file_alone`, about 0.8 s), Cross-file adds only what the whole working copy finds. The person: "when loading files don't use cross file unless cross file is toggled, and vice versa". Requested (the person, 2026-11-15): "I don't see code folding in here I don't see any of the violations", then "toggle at top and have it off by default; for rules; same with cross file that way we don't incur a performance penalty when we just want to browse files".
+
+### (S) Person --> [Save Edited File](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-save-edited-file)
+
+Intended: Edit turns the file editable and Save writes it through the file manager (`session.write_file`). The board's panel does it; the Files app is read-only today.
+
+## (E) Review Files With Comments
+
+### (S) Person --> [Add Comment To File Selection](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-add-comment-to-file-selection)
+
+Observed (2026-11-14): select lines, right-click, Add comment; Enter adds the comment and sends it, Add keeps it unsent; a marker shows beside the selection's first line (`comment-box-view.tsx`, `file-comments.add`). The menu opened from the keyboard (Shift+F10); a right-click from the browser tool closed it at once, not yet checked by hand.
+
+### (S) Person --> [Open Edit And Delete File Comment](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-edit-and-delete-file-comment)
+
+Observed (2026-11-14): a press on the marker opens the comment under its lines with its state; Save keeps an edited comment, not sent again; Delete removes it.
+
+### (S) Person --> [Send File Comments To Chat](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-send-file-comments-to-chat)
+
+Observed (2026-11-14): a sent comment lands in the prompt box of the chat that opened the page, with its file, lines and session (`file-comments.send`, a fill); Send all open comments sends every comment not yet sent in one message.
+
+### (S) Chat --> [Mark File Comment Processed](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-mark-file-comment-processed)
+
+Built: a sent comment is processed once the chat's turn that worked on it has ended; the page reads the open file again every two seconds while a comment on it is sent (`SENT_REFRESH_MILLISECONDS`).
+
+### (S) Files App --> [Show Changed File After Comment](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-show-changed-file-after-comment)
+
+Built: when a comment on the open file is processed, the page shows the file as the chat changed it.
+
+### (S) Person --> [Clear Processed File Comments](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-clear-processed-file-comments)
+
+Built: Clear processed removes the processed comments and keeps the ones not sent or still sent. Not walked: no comment was processed on 2026-11-14.
+
+### (S) Files App --> [Show AI Changes As Diff](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-show-ai-changes-as-diff)
+
+Intended: the page marks what the chat changed in the file, as VS Code and Cursor do (`SessionFile.changes`); the board's panel draws it, the Files app does not yet.
+
+### (S) Person --> [Add File Or Selection To Chat Context](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-add-file-or-selection-to-chat-context)
+
+Requested (2026-11-15, "on right click of file we also need an add to context option; same with selected text in file viewer; adds to chat context like Claude functionality does in file viewer"). Intended: Add to context, in the right-click menu of a file in the file bar and, beside Add comment, of lines selected in the source view, attaches the file by its path from the session's root, or the path, line range and selected text, to the chat that opened the Files app. As Claude's own file viewer does, it goes with the chat's next prompt rather than being sent on its own. One mechanic, so a file and a selection are two scenarios of this story.
+
+Built (2026-11-15): Add to context on a file's or folder's right-click menu in the file bar, and beside Add comment on the source view's right-click menu for selected lines, calls `session.add_to_chat_context` (`Session.add_to_chat_context`), which queues a fill for the chat that opened the Files app: `@path ` for a whole file, the path, the range and each line quoted (`Range.context`) for a selection. A chat not connected refuses it, and the page says so in a toast.
+
+## (E) Switch Files App Between Files And Graph
+
+[Scenarios](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md).
+
+### (S) Person --> [Switch Files App To Graph View](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-switch-files-app-to-graph-view)
+
+Requested (2026-11-15, "the actual file viewer is going to have a toggle that can switch from folder files and graph"): a toggle at the top of the Files app switches its file bar between the files it lists, as a list or in folders (`file-bar.ts` *FileBar*), and the practice trees of the session's graph, as the Graph app's tree shows them. Switching back shows the files again.
+
+Built (2026-11-15), not walked: the file bar's Graph button beside List and Folders (`files-graph-view.tsx` *FilesGraphView*), reading `session.graph_trees` for the files the bar lists; each practice tree starts collapsed and the open file stays open. Fixed (2026-11-15, "why is story graph empty"): the session's graph read every practice from the session's root, where Stories found the repository's own story map above it, so the Stories tree held none of the listed story map's nodes; it now reads each practice from its own root (`Graph.hold_practice_roots`), and the paths filter also names a node's file from the graph's folder. Tests: `harness/files_app/app/files/files-graph.spec.ts`, `space/session/session_graph_spec.py`.
+
+### (S) Files App --> [Filter Graph Like The File List](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-filter-graph-like-the-file-list)
+
+Requested (2026-11-15, "graph filtered like file filter is"): the graph view holds only the nodes of the files the file list would show: the stages, practices and format groups of the session's guidance selection, the chat bar's selected fidelity dots while any are selected, and the Changed button's branch changes while it is on (`files-page.ts` `filesShown`, `file-bar.ts` `entries`). A filter changed in either view shows in both.
+
+Built (2026-11-15), not walked: the graph is read again whenever the bar lists other files (`FilesGraph.follow`), so a practice turned off here or on the chat bar, and the Changed button, narrow it as they narrow the list; the session keeps only the nodes read from those files (`Session.graph_trees`, the graph filter's `paths`).
+
+### (S) Person --> [Open Several Files From Graph Nodes](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-open-several-files-from-graph-nodes)
+
+Requested (2026-11-15, "except for you're now selecting file(s), eg more than one file opens"): selecting a node in the graph view opens its file in the source view; selecting nodes in more than one file opens each of those files, where the Files app opens one file today and the Graph app shows one node's source.
+
+Built (2026-11-15), not walked: selecting a node opens its file at its lines (`Session.graph_node_ranges`); a node no file's lines hold, such as a package that is a folder or a practice's root, opens each listed file below it, spanning the lines its nodes cover there ("module would show multiple files"); Ctrl, Cmd or Shift with the press selects it beside the others, and each other file opens below the first (`FilesPage.showNodes`).
+
+### (S) Files App --> [Fold Open Files To Selected Nodes](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-fold-open-files-to-selected-nodes)
+
+Requested (2026-11-15, "expand and collapse in file viewer based on the nodes in the graph"): each open file unfolds the blocks of the nodes selected in the graph and folds its other classes and operations, from the folds the session's graph places (`session.file` folds); selecting another node unfolds it and leaves the rest folded. Builds on the Files app's Fold Classes And Operations and the Graph app's Unfold Calls And Classes In Source.
+
+Built (2026-11-15), not walked: an open file reads its folds and opens only those holding a selected node, its class too (`SourceView` `openAround`, `foldsAround`), and the page scrolls the first a third of the way down the window: the editor is as tall as its file, so the page scrolls, not the editor ("we should scroll to line of member if it's below the fold").
+
+## (E) Explore Graph In Files App
+
+[Scenarios](../story_tests/review-generated-work-in-file-viewer/explore-graph-in-files-app/explore_graph_in_files_app_story.test.md). Requested (2026-11-15, "we basically ingest all of the stories and functionality that the Graph application can do"): each story brings one of the Graph app's into the Files app's graph view, working on the files it lists rather than on a folder chosen in the app.
+
+### (S) Person --> [Expand Practice Tree In Files App](../story_tests/review-generated-work-in-file-viewer/explore-graph-in-files-app/explore_graph_in_files_app_story.test.md#story-expand-practice-tree-in-files-app)
+
+Brings in the Graph app's Expand Practice Tree: each practice starts collapsed, and the person opens nodes one level at a time (`GraphView.tsx` `TreeNode`).
+
+Built (2026-11-15), not walked ("the viewer graph needs to borrow much more from original graph tree"): the graph view draws each row as the Graph app does, a twist, then the Graph app's mark for the node's kind (`labels/kind-mark.tsx` *KindMark*) and its name.
+
+### (S) Person --> [Follow Relationships Under Node In Files App](../story_tests/review-generated-work-in-file-viewer/explore-graph-in-files-app/explore_graph_in_files_app_story.test.md#story-follow-relationships-under-node-in-files-app)
+
+Brings in the Graph app's Follow Relationships Under Node: a node shows its relationship groups as children, such as the invokes under an operation, and selecting a related node opens its file beside the files already open.
+
+### (S) Person --> [Filter Graph By Node Type And Connector In Files App](../story_tests/review-generated-work-in-file-viewer/explore-graph-in-files-app/explore_graph_in_files_app_story.test.md#story-filter-graph-by-node-type-and-connector-in-files-app)
+
+Brings in the Graph app's Filter By Node Type, Filter By Connector and Select All Or No Filter Choices, on top of the file list's filters: choosing node types keeps only those nodes and narrows the connectors and rules offered (`Graph.filter_choices`). The Graph app's Filter By Practice is the Files app's practice toggles already.
+
+### (S) Person --> [Apply Pattern Overlays In Files App](../story_tests/review-generated-work-in-file-viewer/explore-graph-in-files-app/explore_graph_in_files_app_story.test.md#story-apply-pattern-overlays-in-files-app)
+
+Brings in the graph's Apply Pattern Overlays: the graph view shows the overlays the session has chosen, the same choice as the chat bar's overlay chips (`ticket.choose_overlays`), with each overlay's nodes and rules in the tree.
+
+### (S) Files App --> [Show Graph Load Steps In Files App](../story_tests/review-generated-work-in-file-viewer/explore-graph-in-files-app/explore_graph_in_files_app_story.test.md#story-show-graph-load-steps-in-files-app)
+
+Brings in the Graph app's Show Load Steps While Loading and Copy Load Failure For Agent: while the session's graph loads, the graph view shows the step it is on and how long it has run (`graph/query-progress.ts`); a failed load shows the server's reason, with a copy for the chat, instead of loading forever.
+
+Built (2026-11-15), not walked, the load steps only: while `session.graph_trees` runs, the page reads the cdd server's progress reports (`/cdd/progress`) into the graph state and shows them with the Graph app's own view, moved out of `GraphView` (`graph/LoadProgressView.tsx`). A failed load shows its reason but not yet the copy for the chat.
+
+### (S) Person --> [Open Calls Across Files In Files App](../story_tests/review-generated-work-in-file-viewer/explore-graph-in-files-app/explore_graph_in_files_app_story.test.md#story-open-calls-across-files-in-files-app)
+
+Requested (2026-11-15, "inner cross file code folding doesn't seem to be working; in original graph explorer folding expansion across files"): brings in the Graph app's Unfold Calls And Classes In Source across files: a call in the open file to an operation in another file opens that operation's lines in place.
+
+Built (2026-11-15), not walked: once the graph view read the trees, the page reads every member the graph holds (`Session.graph_members`, the explorer's `source_members`) and hands them to the source view with each open file (`sourceOf`), which the Graph app's call layout opens calls from.
+
+## (E) Review Graph Violations In Files App
+
+[Scenarios](../story_tests/review-generated-work-in-file-viewer/review-graph-violations-in-files-app/review_graph_violations_in_files_app_story.test.md). These take in the board's and the chat bar's Read Graph Violations sub-epics (2026-11-06): a violation is read from the session's live graph wherever it shows, and fixed from where it is read.
+
+### (S) Person --> [Show Only Violating Nodes In Files App](../story_tests/review-generated-work-in-file-viewer/review-graph-violations-in-files-app/review_graph_violations_in_files_app_story.test.md#story-show-only-violating-nodes-in-files-app)
+
+Brings in the Graph app's Show Only Violations and Filter Violations By Rule: the Violations switch keeps only the nodes that break a rule, and with rules chosen, only those that break a chosen one (`Filter._fails_selected_rule`).
+
+### (S) Person --> [See Rules Under Node In Files App](../story_tests/review-generated-work-in-file-viewer/review-graph-violations-in-files-app/review_graph_violations_in_files_app_story.test.md#story-see-rules-under-node-in-files-app)
+
+Brings in the Graph app's See Rules Under Node and Hover Violating Rule For Message: each node lists its passing, broken and prompt rules, a node that breaks one is marked in the tree, and hovering a broken rule shows its messages.
+
+### (S) Person --> [Open Violation In Files App Source](../story_tests/review-generated-work-in-file-viewer/review-graph-violations-in-files-app/review_graph_violations_in_files_app_story.test.md#story-open-violation-in-files-app-source)
+
+Brings in the Graph app's Open Violation In Source: selecting a broken rule opens its node's file with the rule and its message above the lines it names, unfolded, as the Files app's Mark Lines A Broken Rule Names marks them.
+
+### (S) Person --> [Fix Graph Violations From Files App](../story_tests/review-generated-work-in-file-viewer/review-graph-violations-in-files-app/review_graph_violations_in_files_app_story.test.md#story-fix-graph-violations-from-files-app)
+
+Requested (2026-11-06, "board and chat ... fix"; "/fix is a first class action; fix rule; file; default across all rules / files"): Fix this one on a violation, Fix rule on a rule and Fix all on the view send the Fix action to the chat that opened the page, for that violation, rule, or every violation the graph view shows. Takes in the board's Fix Graph Violations From Board and the Graph app's Copy Correct Prompt, whose prompt names the node, file and lines, rule, excerpt and message (`source/violation-prompt.ts`).
+
+### (S) Person --> [Fix Graph Violations From Chat Bar](../story_tests/review-generated-work-in-file-viewer/review-graph-violations-in-files-app/review_graph_violations_in_files_app_story.test.md#story-fix-graph-violations-from-chat-bar)
+
+Requested (2026-11-06, "board and chat ... fix"): Fix in the action picker sends the Fix action for the selected fidelities, every violation the live graph holds for them by default.
+
+### (S) Chat Bar --> [Count Session Violations From Live Graph](../story_tests/review-generated-work-in-file-viewer/review-graph-violations-in-files-app/review_graph_violations_in_files_app_story.test.md#story-count-session-violations-from-live-graph)
+
+Requested (2026-11-06, "default is to have a graph and just read the violations"; "board and chat generate"): each fidelity dot's red count comes from the session's live graph, not from the last validation report, so a generate, or a file read again in the Files app, updates the dots. Takes in Read Session Violations From Latest Graph and Generate And Judge Fidelity From Chat Bar.
+
+### (S) Board App --> [Count Fidelity Violations From Live Graph](../story_tests/review-generated-work-in-file-viewer/review-graph-violations-in-files-app/review_graph_violations_in_files_app_story.test.md#story-count-fidelity-violations-from-live-graph)
+
+Requested (2026-11-06, "default is to have a graph and just read the violations"; "board and chat generate"): a tile's violation count comes from the session's live graph, not from the last validation report. Also Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "better graph integration - load up front on session open, show all violations as a result of graph, no need for explicit run"). Takes in Read Fidelity Violations From Latest Graph and Generate And Judge Fidelity From Board.
+
 # (E) Author Story Maps
 
-This epic is the app's own story map, `C:/dev/story-ui/.context/story-map.md`; its evidence lines name the app's files.
+This epic is the app's own story map, `C:/dev/story-ui/.context/story-map.md`; its evidence lines name the app's files. Condensed on 2026-11-16 at the person's request on the story map whiteboard: stories that were one interaction each became one story with acceptance criteria, which stay here in the source until they become scenarios.
+
 ## (E) View Story Map
-### (S) Story Designer --> Open Story Map By Address
-
-Observed: The workspace loads the map named in the `?mapId=` query (or `default`) and, when no map with that id exists yet, the server creates and saves an empty one so the designer always lands on a map (main.tsx; stories-server.ts `createStoryMapRouter` GET `/`).
-
-### (S) Story Designer --> Pick Story Map From Dashboard
-
-Intended (story_map.information_architecture.md, Story Map Dashboard scaffold): a dashboard lists maps and "open map" takes the designer into the workspace; no dashboard screen exists.
-
 ### (S) Story Designer --> Browse Story Hierarchy
 
-Observed: The map renders Epic, SubEpic, and Story lanes on one shared grid, with each Story under its parent SubEpic column, lanes sized to their bottommost children, and collapsed titles kept on one line (stories-client.tsx `StoryHierarchyView`, `computeColumnLayout`; workspace.css).
+**Acceptance criteria:**
+- Observed: Epic, SubEpic and Story lanes render on one shared grid, each Story under its parent SubEpic column, lanes sized to their bottommost children and collapsed titles on one line (stories-client.tsx `StoryHierarchyView`, `computeColumnLayout`; workspace.css).
+- Intended: nested SubEpics render as two stacked SubEpic lanes under their parent SubEpic; the model in stories.ts holds only one SubEpic level (mern-story-map-ai-sketch.md, Browse Story Hierarchy).
+- Intended: selecting a Story shows its story_type and users, and a SubEpic its test_file and domain_concepts; the cards show only names and controls (mern-story-map-ai-sketch.md, "when the Story Designer selects a node").
 
-### (S) Story Designer --> Browse Nested SubEpic Lanes
+### (S) Story Designer --> Adjust Workspace View
 
-Intended (mern-story-map-ai-sketch.md, Browse Story Hierarchy): nested SubEpics render as two stacked SubEpic lanes under their parent SubEpic; the model in stories.ts holds only one SubEpic level.
+**Acceptance criteria:**
+- Observed: holding the right mouse button and dragging pans the canvas on both axes, without the browser menu, with a grabbing cursor, stopping on release even outside the canvas (stories-client.tsx `StoryMapWorkspaceView` `handleCanvasMouseDown`).
+- Observed: Map View and Increment View switch between the plain map and the map with increment lanes and an Unassigned drop zone (`useStoryMapViewState.toggleViewMode`, `StoryHierarchyView` `showIncrements`).
+- Intended: Show Scenarios and Show Examples show and hide them; today the buttons toggle but the card and scenario panel ignore them (story_map.information_architecture.md toolbar; story_map.modules.md session toggles).
+- Observed: the Executive / Engineering switch changes the theme and logo and remembers the choice in browser storage (`THEME_STORAGE_KEY`; workspace.css `data-theme`).
 
-### (S) Story Designer --> Inspect Selected Node Fields
+## (E) Build, Expand, Rearrange And Plan Story Map
+### (S) Story Designer --> Expand And Collapse Story Cards
 
-Intended (mern-story-map-ai-sketch.md, BDD "when the Story Designer selects a node"): selecting a Story shows story_type and users, a SubEpic shows test_file and domain_concepts; the cards show only names and controls.
+**Acceptance criteria:**
+- Observed: clicking a Story card or its expand button opens it inline with its Scenarios, Steps and Example tables while neighbours stay collapsed, and clicking again collapses it (stories-client.tsx `StoryCard`, `handleExpand`).
+- Observed: the expand button on an Epic or SubEpic opens every Story card beneath it (`getAllDescendantStoryIds`, `useStoryMapViewState.expandDescendants`).
+- Observed: the toolbar's Expand All and Collapse All open or close the whole map (`StoryMapWorkspaceView` toolbar, `collapseAll`).
+- Observed: an expanded card's column, the lanes above it and everything to its right widen to fit it, and narrow again on collapse (workspace.css `.story-card.expanded`; shared grid in `StoryHierarchyView`).
 
-### (S) Story Designer --> Pan Workspace Canvas With Right-Click Drag
+### (S) Story Designer --> Add, Remove And Rename Map Nodes
 
-Observed: Holding the right mouse button and dragging scrolls the canvas on both axes, suppresses the browser context menu, shows a grabbing cursor, and stops on release even outside the canvas (stories-client.tsx `StoryMapWorkspaceView` `handleCanvasMouseDown` and window mouse listeners).
+**Acceptance criteria:**
+- Observed: a map with no Epics shows one "+ Epic" starter button that opens the title popover (`StoryHierarchyView` Epic lane, `AddNodePopoverButton`).
+- Observed: the + on a card, or the leading + on a group's first card, adds an Epic, SubEpic or Story with the typed or a default title after that sibling or at the start; Cancel or Escape adds nothing (`AddNodePopoverButton`, `insertEpicAfter`, `insertSubEpicAfter`, `insertStoryAfter`; stories-server.ts POST routes).
+- Observed: the − on a card deletes that node and everything under it and renumbers its siblings (stories.ts `removeEpic`, `removeSubEpic`, `removeStory`).
+- Observed: double-clicking a card edits its name inline; Enter, Tab or leaving saves and Escape restores (`NodeNameInput`; stories-server.ts PATCH `/nodes/:nodeId`).
 
-### (S) Story Designer --> Switch Between Map View And Increment View
+### (S) Story Designer --> Rearrange Map Nodes By Dragging
 
-Observed: The toolbar's Map View and Increment View buttons switch between the plain map and the map with increment lanes and an Unassigned drop zone (stories-client.tsx `useStoryMapViewState.toggleViewMode`, `StoryHierarchyView` `showIncrements`).
+**Acceptance criteria:**
+- Observed: dragging a card within its lane or parent saves the new sibling order (`makeEpicDragHandlers`; stories.ts `reorderEpics`, `reorderSubEpics`, `reorderStories`).
+- Observed: dropping a Story on another SubEpic, or a SubEpic on another Epic, moves it there with everything under it (`StoryMapModel.moveStory`, `moveSubEpic`).
+- Observed: an empty Epic or SubEpic accepts a dropped node (`makeEmptyParentDropZone`).
+- Observed: the dragged card shows full-size at the spot it would land, with no browser drag image (`useDragVisuals`, `computeDisplayIds`, `suppressNativeDragImage`).
 
-### (S) Story Designer --> Show And Hide Scenarios And Examples
+### (S) Story Designer --> Manage Increments
 
-Intended (story_map.information_architecture.md toolbar; story_map.modules.md session toggles): Show Scenarios and Show Examples buttons toggle their active state in stories-client.tsx, but the story card and scenario panel ignore them, so nothing is shown or hidden.
+**Acceptance criteria:**
+- Observed: in Increment View "+ Increment" appends a new increment lane at the bottom (stories.ts `appendIncrement`).
+- Observed: the increment label is an inline name field saved on Enter, Tab or leaving it, Escape restoring the old name (`IncrementLabel`).
+- Observed: dragging an increment label up or down saves the new increment order (stories.ts `reorderIncrements`).
+- Observed: the − on an increment label deletes it and its Stories return to the unassigned spine (stories.ts `removeIncrement`; DELETE `/increments/:incrementId`).
 
-### (S) Story Designer --> Switch Color Mode
+### (S) Story Designer --> Manage Increment Stories
 
-Observed: The Executive / Engineering switch changes the page theme and logo and remembers the choice in browser storage (stories-client.tsx `StoryMapWorkspaceView` `THEME_STORAGE_KEY`; workspace.css `data-theme`).
-
-## (E) Expand Story Details
-### (S) Story Designer --> Expand One Story Card
-
-Observed: Clicking a Story card or its expand button opens that card inline to show its Scenarios, Steps, and Example tables while neighbouring cards stay collapsed in their columns; clicking again collapses it (stories-client.tsx `StoryCard`, `handleExpand`).
-
-### (S) Story Designer --> Expand Descendant Story Cards
-
-Observed: The expand button on an Epic or SubEpic opens every Story card beneath it side by side in their own columns (stories-client.tsx `getAllDescendantStoryIds`, `useStoryMapViewState.expandDescendants`).
-
-### (S) Story Designer --> Expand And Collapse Whole Map
-
-Observed: The toolbar's Expand All opens every Epic, SubEpic, and Story, and Collapse All closes them all (stories-client.tsx `StoryMapWorkspaceView` toolbar, `collapseAll`).
-
-### (S) Story UI --> Widen Columns Around Expanded Story Cards
-
-Observed: An expanded card grows to fit its content and its column, the SubEpic and Epic lanes above it, and everything to its right shift to make room, then narrow again on collapse (workspace.css `.story-card.expanded`; stories-client.tsx shared grid in `StoryHierarchyView`).
-
-## (E) Build Map Structure
-### (S) Story Designer --> Add First Epic To Empty Map
-
-Observed: A map with no Epics shows a single "+ Epic" starter button that opens the title popover (stories-client.tsx `StoryHierarchyView` Epic lane, `AddNodePopoverButton`).
-
-### (S) Story Designer --> Add Epic, SubEpic, Or Story At Chosen Position
-
-Observed: The + on a card, or the leading + on the first card in a group, opens a title popover; Add uses the typed title or a default name, Cancel or Escape creates nothing, and the new node lands after that sibling or at the start (stories-client.tsx `AddNodePopoverButton`, `insertEpicAfter`, `prependSubEpic`, `insertSubEpicAfter`, `prependStory`, `insertStoryAfter`; stories-server.ts POST `/epics`, `/epics/:epicId/sub-epics`, `/sub-epics/:subEpicId/stories`).
-
-### (S) Story Designer --> Remove Epic, SubEpic, Or Story
-
-Observed: The − on a card deletes that node and everything under it and renumbers the remaining siblings to close the gap (stories.ts `removeEpic`, `removeSubEpic`, `removeStory`; stories-server.ts DELETE routes).
-
-### (S) Story Designer --> Rename Node Inline
-
-Observed: Double-clicking a card focuses its name; Enter, Tab, or leaving the field saves the new name and Escape restores the old one (stories-client.tsx `NodeNameInput`, `focusNameFieldOnDoubleClick`; stories-server.ts PATCH `/nodes/:nodeId` via `translateFrom`).
-
-## (E) Rearrange Map By Dragging
-### (S) Story Designer --> Reorder Sibling Epics, SubEpics, And Stories
-
-Observed: Dragging a card within its own lane or parent saves the new sibling order with whole-number positions (stories-client.tsx `makeEpicDragHandlers`; stories.ts `reorderEpics`, `reorderSubEpics`, `reorderStories`).
-
-### (S) Story Designer --> Move Story To A Different SubEpic
-
-Observed: Dropping a Story card on another SubEpic, even under a different Epic, moves it there with its Scenarios at the dropped position (stories-client.tsx `makeStoryDragHandlers`; stories.ts `StoryMapModel.moveStory`).
-
-### (S) Story Designer --> Move SubEpic To A Different Epic
-
-Observed: Dropping a SubEpic lane on another Epic moves it and all its Stories there at the dropped position (stories-client.tsx `makeSubEpicDragHandlers`; stories.ts `StoryMapModel.moveSubEpic`).
-
-### (S) Story Designer --> Drop Node Into Empty Parent
-
-Observed: An Epic with no SubEpics or a SubEpic with no Stories accepts a dragged SubEpic or Story into its empty placeholder (stories-client.tsx `makeEmptyParentDropZone`).
-
-### (S) Story Designer --> See Full-Size Drop Preview While Dragging
-
-Observed: While dragging, the card itself shows full-size, greyed and dashed, at the spot it would land and its siblings shift around it, with no floating browser drag image (stories-client.tsx `useDragVisuals`, `computeDisplayIds`, `suppressNativeDragImage`).
-
-## (E) Plan Increments
-### (S) Story Designer --> Add Increment
-
-Observed: In Increment View the "+ Increment" button appends a new increment lane at the bottom (stories-client.tsx `StoryHierarchyView`; stories.ts `appendIncrement`).
-
-### (S) Story Designer --> Rename Increment
-
-Observed: The increment label is an inline name field saved on Enter, Tab, or leaving it, with Escape restoring the old name (stories-client.tsx `IncrementLabel`).
-
-### (S) Story Designer --> Reorder Increments
-
-Observed: Dragging an increment label up or down saves the new increment order (stories-client.tsx `IncrementLabel` drag handlers; stories.ts `reorderIncrements`).
-
-### (S) Story Designer --> Remove Increment
-
-Observed: The − on an increment label deletes that increment and its Stories return to the unassigned spine (stories.ts `removeIncrement`; stories-server.ts DELETE `/increments/:incrementId`).
-
-### (S) Story Designer --> Assign Story To Increment By Dragging
-
-Observed: Dropping a Story card on an increment lane moves it into that increment, out of any other, while it stays under its SubEpic column (stories-client.tsx increment lane `onDrop`; stories.ts `assignStoryToIncrement`).
-
-### (S) Story Designer --> Unassign Story From Increment
-
-Observed: Dropping a Story card on the "Unassigned" zone, shown only in Increment View, removes it from its increment and puts it back in the spine (stories-client.tsx Unassigned drop zone; stories.ts `unassignStoryFromIncrement`).
+**Acceptance criteria:**
+- Observed: dropping a Story card on an increment lane moves it into that increment, out of any other, while it stays under its SubEpic column (stories.ts `assignStoryToIncrement`).
+- Observed: dropping a Story card on the Unassigned zone, shown only in Increment View, removes it from its increment (stories.ts `unassignStoryFromIncrement`).
 
 ## (E) Author Scenarios And Steps
-### (S) Story Designer --> Add Scenario Under Story
+### (S) Story Designer --> Add, Rename, Remove And Reorder Scenarios
 
-Observed: The + beside Scenarios in an expanded Story card adds "New Scenario" at the end of that Story's Scenarios (stories-client.tsx `handleAppendScenario`; stories.ts `StoryModel.appendScenario`).
+**Acceptance criteria:**
+- Observed: the + beside Scenarios in an expanded card adds "New Scenario" at the end (`handleAppendScenario`; stories.ts `StoryModel.appendScenario`).
+- Observed: the Scenario name is an inline field saved on Enter, Tab or leaving it, Escape restoring the old name (`ScenarioPanel` `saveScenarioName`).
+- Observed: the − on a Scenario deletes it and renumbers the rest (stories.ts `StoryModel.removeScenario`).
+- Observed: dragging a Scenario by its handle saves the new order (`StoryCard` `makeDragHandlers`; stories.ts `reorderScenarios`).
 
-### (S) Story Designer --> Rename Scenario
+### (S) Story Designer --> Add, Edit, Remove And Reorder Steps
 
-Observed: The Scenario name is an inline field saved on Enter, Tab, or leaving it, with Escape restoring the old name (stories-client.tsx `ScenarioPanel` `saveScenarioName`).
-
-### (S) Story Designer --> Remove Scenario
-
-Observed: The − on a Scenario deletes it and renumbers the remaining Scenarios (stories.ts `StoryModel.removeScenario`).
-
-### (S) Story Designer --> Reorder Scenarios
-
-Observed: Dragging a Scenario by its handle within the expanded card saves the new Scenario order (stories-client.tsx `StoryCard` `makeDragHandlers`; stories.ts `reorderScenarios`).
-
-### (S) Story Designer --> Add Step
-
-Observed: The + beside Steps adds a "Given New step" at the end of that Scenario (stories-client.tsx `handleAddStep`; stories.ts `ScenarioModel.addStep`).
-
-### (S) Story Designer --> Edit Step Keyword And Text
-
-Observed: Each Step has a Given/When/Then/And/But selector and a text field, saved on Enter or Tab and restored on Escape (stories-client.tsx `StepEditor`; stories.ts `updateStep`).
-
-### (S) Story Designer --> Remove Step
-
-Observed: The − on a Step deletes it and renumbers the remaining Steps (stories.ts `ScenarioModel.removeStep`).
-
-### (S) Story Designer --> Reorder Steps
-
-Observed: Dragging a Step by its handle saves the new Step order within that Scenario (stories-client.tsx `ScenarioPanel` step drag handlers; stories.ts `reorderSteps`).
+**Acceptance criteria:**
+- Observed: the + beside Steps adds "Given New step" at the end of the Scenario (`handleAddStep`; stories.ts `ScenarioModel.addStep`).
+- Observed: each Step has a Given/When/Then/And/But selector and a text field, saved on Enter or Tab and restored on Escape (`StepEditor`; stories.ts `updateStep`).
+- Observed: the − on a Step deletes it and renumbers the rest (stories.ts `ScenarioModel.removeStep`).
+- Observed: dragging a Step by its handle saves the new order (stories.ts `reorderSteps`).
 
 ## (E) Author Examples
-### (S) Story Designer --> Add Example To Scenario
+### (S) Story Designer --> Add And Remove Examples On Scenario
 
-Observed: The + beside Examples adds an empty "New Example" table to the Scenario (stories-client.tsx `handleAddExample`; stories.ts `ScenarioModel.addExample`).
+**Acceptance criteria:**
+- Observed: the + beside Examples adds an empty "New Example" table (`handleAddExample`; stories.ts `ScenarioModel.addExample`).
+- Observed: the − on an Example deletes that table and renumbers the rest (stories.ts `ScenarioModel.removeExample`).
 
-### (S) Story Designer --> Remove Example From Scenario
+### (S) Story Designer --> Add And Remove Example Fields
 
-Observed: The − on an Example deletes that table and renumbers the remaining Examples (stories.ts `ScenarioModel.removeExample`).
+**Acceptance criteria:**
+- Observed: typing a field name in the header and pressing + adds a column, and a name already in the table is refused (`ExampleBlock`; stories.ts `addExampleField`, `DUPLICATE_FIELD_NAME`).
+- Observed: the − on a column header removes that field (stories.ts `ScenarioModel.removeExampleField`).
 
-### (S) Story Designer --> Add Example Field
+### (S) Story Designer --> Add, Edit, Remove And Reorder Example Lines
 
-Observed: Typing a field name in the header and pressing + adds a column, and a name already in the table is refused (stories-client.tsx `ExampleBlock`; stories.ts `addExampleField`, `DUPLICATE_FIELD_NAME`).
-
-### (S) Story Designer --> Remove Example Field
-
-Observed: The − on a column header removes that field from the Example (stories.ts `ScenarioModel.removeExampleField`).
-
-### (S) Story Designer --> Add Example Line
-
-Observed: The add button under the table adds an empty line at the bottom of the Example table (stories-client.tsx `handleAddExampleRow`; stories.ts `addExampleRow`).
-
-### (S) Story Designer --> Edit Example Cell
-
-Observed: Each cell is an inline field saved on Enter or leaving it (stories-client.tsx `ExampleCellEditor`; stories.ts `updateExampleRow`).
-
-### (S) Story Designer --> Remove Example Line
-
-Observed: The − on a line deletes it and renumbers the remaining lines (stories.ts `ScenarioModel.removeExampleRow`).
-
-### (S) Story Designer --> Reorder Example Lines
-
-Observed: Dragging a line by its handle saves the new line order in that Example (stories-client.tsx `ExampleBlock` line drag handlers; stories.ts `reorderExampleRows`).
+**Acceptance criteria:**
+- Observed: the add button under the table adds an empty line at the bottom (`handleAddExampleRow`; stories.ts `addExampleRow`).
+- Observed: each cell is an inline field saved on Enter or leaving it (`ExampleCellEditor`; stories.ts `updateExampleRow`).
+- Observed: the − on a line deletes it and renumbers the rest (stories.ts `ScenarioModel.removeExampleRow`).
+- Observed: dragging a line by its handle saves the new order (stories.ts `reorderExampleRows`).
 
 ## (E) Save And Share Changes
-### (S) Story UI --> Save Each Edit To The Server
+### (S) Story UI --> Save Valid Edits And Keep Their History
 
-Observed: Every edit is sent to the server as one request, saved to MongoDB, and the map is reloaded from the saved copy (stories-client.tsx `useStoryModel`; stories-server.ts `StoryMapRepositoryServer`, `StoryMapServer.persist`).
-
-### (S) Story UI --> Show Save Status
-
-Observed: The status rail shows synced, pending changes, or save error, and notes when an update report is available (stories-client.tsx `StoryMapWorkspaceView` status rail, `storyModelReducer`).
-
-### (S) Story UI --> Refuse Edits That Break Map Rules
-
-Observed: The server refuses a Scenario under a non-Story, an increment on a non-Story, an unknown increment, a node outside its claimed parent, or a duplicate field name, answers 422 with the rule code, and the status rail shows save error (stories.ts `MutationGuardError`; stories-server.ts error handler).
-
-### (S) Story UI --> Record One Save Event Per Save
-
-Intended (mern-story-map-ai-sketch.md Resolved Implementation Decisions; story_map.modules.md audit): stories-server.ts only comments that the collaboration layer emits the event, and no audit module exists.
-
-### (S) Story Designer --> Browse Save History
-
-Intended (story_map.information_architecture.md, Version History Timeline scaffold): no history screen or save record exists.
+**Acceptance criteria:**
+- Observed: every edit is sent to the server as one request, saved to MongoDB, and the map reloaded from the saved copy (`useStoryModel`; stories-server.ts `StoryMapRepositoryServer`, `StoryMapServer.persist`).
+- Observed: an edit that breaks a map rule (a Scenario under a non-Story, an increment on a non-Story, an unknown increment, a node outside its claimed parent, a duplicate field name) is refused with 422 and the rule code (stories.ts `MutationGuardError`).
+- Observed: the status rail shows synced, pending changes, or save error (`StoryMapWorkspaceView`, `storyModelReducer`).
+- Intended: each save records one save event; today stories-server.ts only comments that the collaboration layer emits it (mern-story-map-ai-sketch.md; story_map.modules.md audit).
+- Intended: the designer browses the saved versions on a history timeline; no history screen exists (story_map.information_architecture.md, Version History Timeline).
 
 ### (S) Story Designer --> Recover Workspace View State
 
-Intended (story_map.stories.md, Recover Persisted Story Map State; story_map.modules.md session): session.ts and session-server.ts can store view mode, expanded nodes, and toggles, but app.ts never mounts `createSessionRouter` and the workspace never calls `useStoryMapSession`, so a reload resets the view.
+**Acceptance criteria:**
+- Intended: reloading keeps the view mode, expanded nodes and toggles; session.ts and session-server.ts can store them, but app.ts never mounts `createSessionRouter` and the workspace never calls `useStoryMapSession` (story_map.stories.md, Recover Persisted Story Map State).
 
-### (S) Story Designer --> Join Real-Time Story Map Session
+### (S) Story Designer --> Share Real-Time Story Map Session
 
-Intended (story_map.stories.md, Synchronize Story Map State; story_map.modules.md collaboration): no collaboration module or broadcast exists.
-
-### (S) Story UI --> Reconcile Concurrent View State Changes
-
-Intended (story_map.stories.md, Resolve Concurrent View State Changes; mern-story-map-ai-sketch.md realtime-collaboration): no collaboration module exists.
+**Acceptance criteria:**
+- Intended: designers on the same map see each other's changes as they happen; no collaboration module or broadcast exists (story_map.stories.md, Synchronize Story Map State).
+- Intended: concurrent view-state changes are reconciled; no collaboration module exists (story_map.stories.md, Resolve Concurrent View State Changes).
 
 ### (S) Agent --> Test Story UI Editor On Session Story Map
 
-Requested on 2026-11-06: the Story UI editor opens a CDD session's `story-map.md`, edits it and saves it back, and its tests run against that map. Each gap a test finds becomes an Intended story in this app's map, fixed before the board or chat bar invokes the app.
+**Acceptance criteria:**
+- Requested on 2026-11-06: the Story UI editor opens a CDD session's `story-map.md`, edits it and saves it back, and its tests run against that map; each gap a test finds becomes an Intended story here, fixed before the board or chat bar invokes the app.
 
 ## (E) Author Story Changes With AI
-### (S) Story Designer --> Open AI Chat Panel
+### (S) Story Designer --> Change Story Map With AI
 
-Intended (story_map.information_architecture.md, open chat to AI Chat Panel scaffold): no chat panel exists.
-
-### (S) Story Designer --> Request AI Story Change
-
-Intended (story_map.stories.md, Request AI Story Mutation; story_map.modules.md ai-mutation): no ai-mutation module exists.
-
-### (S) Story Designer --> Review Proposed Map Changes
-
-Intended (story_map.stories.md, Review Proposed Graph Changes): no proposal view exists.
-
-### (S) Agent --> Apply AI Change To Story Map
-
-Intended (story_map.stories.md, Apply AI Mutation to Story Map; mern-story-map-ai-sketch.md "Direct auto-apply changes"): no ai-mutation module exists.
-
-### (S) Story Designer --> Place Notes On The Story Map
-
-Requested (2026-11-10, "native claude markup panel": "annotate on the story editor app with notes and have a canvas like experience, eg comments sent directly to claude for processing; then potentially reuse that for a bespoke class editor and realization editor"), from `.sessions/_backlog/integrate-stories-with-the-canvas-explorer.md`: a person places notes anywhere on the Story UI editor's map, as on a canvas, beside the nodes they are about. The same markup may later serve a bespoke class editor and a realization editor; those editors are not on this map yet.
+**Acceptance criteria:**
+- Intended: the designer asks for a change in an AI chat panel; no chat panel or ai-mutation module exists (story_map.stories.md, Request AI Story Mutation; story_map.information_architecture.md, AI Chat Panel).
+- Intended: the agent applies the change to the story map directly (story_map.stories.md, Apply AI Mutation to Story Map; mern-story-map-ai-sketch.md "Direct auto-apply changes").
 
 # (E) Explore Stories In Story UI
 
@@ -1227,7 +1361,7 @@ Requested (2026-11-06): new in the Story UI app; replaces what the design canvas
 
 # (E) Build Design Canvas Screens
 
-This epic is the app's own story map, [design_canvas/.context/story-map.md](../../design_canvas/.context/story-map.md); its evidence lines name the app's files.
+This epic holds the design canvas app's stories; its own map, harness/design_canvas/.context/story-map.md, was folded in here on 2026-11-16. Its evidence lines name the app's files.
 ## (E) Lay Out The Canvas Files
 ### (S) Design Canvas --> Place Pages On The Canvas
 
@@ -1282,6 +1416,30 @@ Inferred: inside the explorer the bar ends with **Edit**, a link to the screen's
 
 Inferred: the bar's values carry the loaded story and scenario, the pasted seed, or the loading problem (`fixture_bar.py` `barVals`).
 
+## (E) Browse The Story Map Artboard
+
+From the design canvas's own map (harness/design_canvas/.context/story-map.md, folded in 2026-11-16): the artboard stories Explore Stories In Story UI does not hold. Its thumbnail stories are Show Screen Frames In Story UI there.
+
+### (S) Design Canvas --> Draw The Whole Story Map On One Artboard
+
+Observed: `_story_map` in `nodes.py` draws every epic, sub-epic, actor and story card on the single `Main.dc.html` artboard, one column per story (`claude_design_story_model_spec.py`).
+
+### (S) Design Canvas --> Draw Each Epic Bar Across Its Sub-Epics
+
+Observed: the story map draws each epic bar once, spanning all of its sub-epics (`claude_design_story_model_spec.py`).
+
+### (S) Design Canvas --> Draw The Map In The abd Engineering Look
+
+Observed: `LOOK` in `look.py` gives epics, sub-epics, actors and stories their dark cards and orange accent, and `box` in `canvas.py` draws them; the map has no white background (`claude_design_story_model_spec.py`).
+
+### (S) Person --> Zoom The Story Map
+
+Inferred: a zoomable `artboard` in `canvas.py` lets the person zoom the map with a trackpad pinch or ctrl + wheel and its − / % / + buttons, without shrinking the frame.
+
+### (S) Design Canvas --> Keep A Clicked Link's Place For The Linked Artboard
+
+Inferred: the zoomable artboard in `canvas.py` stores a clicked link's `#` part in local storage under `design-canvas.link:`, because the canvas opens a linked artboard without it, and the explorer reads it back (`explorer.dc.html`).
+
 ## (E) Start A Canvas Version
 ### (S) Agent --> Start The First Version
 
@@ -1326,7 +1484,7 @@ Observed: `CanvasVersions.in_practice_root` opens `<ux root>/design-canvas`, in 
 
 ## (E) Reuse Production Assets On The Canvas
 
-Intended ([sync-design-canvas-with-production.md](../../../.sessions/_backlog/sync-design-canvas-with-production.md)): the product repo builds one package of its real CSS, images, fonts and React views, published as a pinned Design System artifact; each screen becomes a thin shell that mounts the real view, and a manifest proves every packaged file by hash. A published canvas only sees its own `project/` files, so links and symlinks cannot do this. The four feature groups below are the asset reuse plan's phases 1 to 4 and come before every other new design canvas story.
+Intended ([sync-design-canvas-with-production.md](../.sessions/_backlog/sync-design-canvas-with-production/sync-design-canvas-with-production.md)): the product repo builds one package of its real CSS, images, fonts and React views, published as a pinned Design System artifact; each screen becomes a thin shell that mounts the real view, and a manifest proves every packaged file by hash. A published canvas only sees its own `project/` files, so links and symlinks cannot do this. The four feature groups below are the asset reuse plan's phases 1 to 4 and come before every other new design canvas story.
 
 ### (E) Trace Canvas Files To Production
 
@@ -1396,7 +1554,7 @@ Intended (asset reuse plan, Phase 0 gate 5): the product's CSS stays inside the 
 
 #### (S) Person --> Type Scenario Values Into A Mounted Screen
 
-Intended (asset reuse plan, `one-scenario-list` under "Thin screens"; [integrate-stories-with-the-canvas-explorer.md](../../../.sessions/_backlog/integrate-stories-with-the-canvas-explorer.md) slice C): a mounted view owns its state, so a DOM driver types the scenario's entered values; the same driver plays UI steps in Play A Story's UI Steps On A Screen.
+Intended (asset reuse plan, `one-scenario-list` under "Thin screens"; [integrate-stories-with-the-canvas-explorer.md](../.sessions/_backlog/integrate-stories-with-the-canvas-explorer.md) slice C): a mounted view owns its state, so a DOM driver types the scenario's entered values; the same driver plays UI steps in Play A Story's UI Steps On A Screen.
 
 #### (S) Agent --> Generate Attached Screens Without Markup
 
@@ -1422,7 +1580,7 @@ Intended (asset reuse plan, Phase 4): once the change lands in the TSX the scree
 
 ## (E) Check Screens Against Their Scenarios
 
-Intended ([integrate-stories-with-the-canvas-explorer.md](../../../.sessions/_backlog/integrate-stories-with-the-canvas-explorer.md)): a person presses Test and sees, for each scenario, whether the screen behaves as its specs say. Built after Phase 0 of the asset reuse plan.
+Intended ([integrate-stories-with-the-canvas-explorer.md](../.sessions/_backlog/integrate-stories-with-the-canvas-explorer.md)): a person presses Test and sees, for each scenario, whether the screen behaves as its specs say. Built after Phase 0 of the asset reuse plan.
 
 ### (S) Agent --> Package End-To-End Results With The Canvas
 
@@ -1450,7 +1608,7 @@ Intended (integrate-stories-with-the-canvas-explorer.md slice D, only if slice C
 
 ## (E) Draw Linked Models On The Canvas
 
-Intended ([draw-linked-models-on-the-canvas.md](../../../.sessions/_backlog/draw-linked-models-on-the-canvas.md)): the bounded context map, the domain model and the module class models sit beside the story map as artboards that mirror their drawio layout and link to one another, so from any story a person reaches its screen, its classes and its bounded context and back.
+Intended ([draw-linked-models-on-the-canvas.md](../.sessions/_backlog/draw-linked-models-on-the-canvas.md)): the bounded context map, the domain model and the module class models sit beside the story map as artboards that mirror their drawio layout and link to one another, so from any story a person reaches its screen, its classes and its bounded context and back.
 
 ### (S:system) Design Canvas --> Draw Arrows From Drawio Waypoints
 
@@ -1486,7 +1644,7 @@ Intended (draw-linked-models-on-the-canvas.md slice 6, optional): nodes the grap
 
 # (E) Map Work Into Knowledge Graph
 
-This epic is the app's own story map, [graph/.context/story-map.md](../../graph/.context/story-map.md); its evidence lines name the app's files.
+This epic holds the Graph app's stories; its own map, harness/graph/.context/story-map.md, was folded in here on 2026-11-16. Its evidence lines name the app's files.
 ## (E) Load And Save Graph
 ### (S) Agent --> Load Working Copy Into Graph
 
@@ -1583,6 +1741,9 @@ Observed: `graph.set_overlays` applies the overlays, reloads the open folder, an
 Inferred: the app stores the applied overlays in browser storage and sends them with the next load (`App.tsx` `LAST_OVERLAYS`, `readSavedOverlays`).
 
 ## (E) Explore Graph In Graph App
+
+Retires (2026-11-15) into [Explore Graph In Files App](#e-explore-graph-in-files-app) once the Files app's graph view works.
+
 ### (S) Person --> Choose Repo Folder
 
 Observed: the Repo folder button opens a folder dialog on the server's machine, or the person types a path, and the app loads every practice on that folder and shows its classes (`App.tsx` `browse`, `choose_folder.py`, `app.test.tsx` "should put the chosen folder on the page and show its classes").
@@ -1620,6 +1781,9 @@ Observed: a failed call shows the server's diagnosis and traceback instead of lo
 Inferred: the Executive and Engineering buttons switch the page and editor between light and dark themes and remember the choice (`App.tsx` `applyTheme`, `main.tsx`).
 
 ## (E) Filter Graph In Graph App
+
+Retires (2026-11-15) into [Filter Graph Like The File List](#s-files-app----filter-graph-like-the-file-list) and [Filter Graph By Node Type And Connector In Files App](#s-person----filter-graph-by-node-type-and-connector-in-files-app) once the Files app's graph view works.
+
 ### (S) Person --> Filter By Practice
 
 Observed: choosing practices selects every node type, connector and rule those practices hold, and adding another practice keeps the first practice's choices (`Graph.filter_choices`, which `App.tsx` `offerChoices` asks, `app.test.tsx` "should select every node, connector, and rule for the practice", "should keep the first practice filters when another practice is added").
@@ -1655,7 +1819,7 @@ Observed: `violations: true` returns only nodes that fail a rule, each with only
 
 ### (S) Agent --> List Practice Inventory
 
-Observed: `graph.inventory` returns each loaded practice's node counts, edge count, node types, edge kinds and rules, with the overlays applied and available; `graph.explorer_trees` returns the trees, and the app shows the same counts (`graph.py` `Graph.inventory`, `app_smoke_spec.py` "should count the same nodes as the graph").
+Observed: `graph.inventory` returns each loaded practice's node counts, edge count, node types, edge kinds, rules and explorer tree, with the overlays applied and available, and the app shows the same counts (`graph.py` `Graph.inventory`, `app_smoke_spec.py` "should count the same nodes as the graph").
 
 ### (S) Agent --> List Filter Choices
 
@@ -1727,6 +1891,9 @@ Intended (`.sessions/_backlog/check-clean-engineering-across-files.md` "One-clas
 Intended (`.sessions/_backlog/check-clean-engineering-across-files.md` "Other cross-file checks"): where the graph cannot answer, Clean Engineering's validation judges the whole codebase in one pass, not one folder at a time, for second object models, the same behaviour in several files, second registries of practices, actions or stages, global or ambient state, state passed as parameters the object already holds, legacy names and dead code, and swallowed failures.
 
 ## (E) Review Violations In Graph App
+
+Retires (2026-11-15) into [Review Graph Violations In Files App](#e-review-graph-violations-in-files-app) once the Files app's graph view works.
+
 ### (S) Person --> See Rules Under Node
 
 Observed: each node has a rules entry listing its passing, violating and prompt rules, and a violating node is marked in the tree (`graph.py` `Node.rule_category`, `GraphView.tsx`, `app.test.tsx` "should show a passing rule and a violating rule under the operation").
@@ -1741,7 +1908,7 @@ Observed: selecting a violating rule opens the node's source with a banner namin
 
 ### (S) Person --> Display Drawio File As Diagram
 
-Requested on 2026-11-06: a `.drawio` file opens as its diagram, with a Source tab for the XML; a violation marks the shape it names in red, and pressing a shape opens its lines in the source. Opening a diagram moved (2026-11-14) to the Files app's Open Diagram In Files App ([Review Files In Files App](../../../harness/files_app/.context/story-map.md)), which shows the draw.io editor beside the file list. Missing still: a Source tab, marking the shape a violation names, and opening a pressed shape's lines.
+Requested on 2026-11-06: a `.drawio` file opens as its diagram, with a Source tab for the XML. A violation marks the shape it names in red, and pressing a shape opens its lines in the source. Built today (checked 2026-11-10): the chat bar's files view offers Open in draw.io, which opens the file in the draw.io editor through `tools/drawio_viewer` (`drawio-viewer-client.ts:44`). Missing: a Source tab, marking the shape a violation names, and opening a pressed shape's lines.
 
 ### (S) Person --> Copy Correct Prompt
 
@@ -1780,9 +1947,121 @@ Observed: the graph a validation checked is saved beside its report under the sa
 
 Observed: the session board reads the graph saved beside a validation report and counts its rule hits, so a fidelity with graph-rule violations still needs Validate (`space/kanban/report.py` `ReportFile.report`, `validate_fidelity_story.test.py` "Count Validate done only with no graph-rule violations").
 
+# (E) Draw Practice Models On Claude Whiteboard
+
+Requested (2026-11-15, ticket claude-whiteboard): Claude Whiteboard becomes one more channel a practice renders to and loads from, with the same architecture and object model as drawio and miro. The channel-agnostic diagram types (`DiagramNode`, `DiagramClass`, `DiagramModule` in `clean_engineering/model/diagram/diagram_node.py`; `DiagramStoryNode`, `DiagramStoryModel` in `stories/model/diagram_story_model.py`) are extended by whiteboard types exactly as `DrawIOClass`, `DrawIOModule` (`clean_engineering/model/drawio/diagram_node.py`) and `MiroStory`, `MiroEpic`, `MiroStoryModel` (`stories/model/miro/nodes.py`) extend them. The code every practice shares (the whiteboard element, the board and its writes) goes in `harness/whiteboard`; each practice's whiteboard types go in `cdd_guidance/practices/{practice}/model/whiteboard`; and the format is registered with the practice's adapters (`PracticeFormats`, `harness/guidance/practice_formats.py`) as `drawio` and `miro` are. A board is a Claude Artifact made from the Whiteboard type: `board/meta` holds its title and back-to-front order, and each `elements/<id>` is one shape, section, text or arrow, written and read through the artifact's store. The difference from drawio and miro is only that: the artifacts are whiteboards in Claude, loaded into the graph from what was rendered.
+
+## (E) Lay Out Shared Whiteboard Elements
+
+Requested (2026-11-15, "common code should go into harness/whiteboard (eg whiteboard node, whiteboard, etc)"): the board and its elements, which every practice's whiteboard types draw with, as `DrawioVertex` and the drawio page are for drawio.
+
+### (S:technical) Whiteboard Node --> Place Element From Diagram Geometry
+
+Requested: a whiteboard node takes the `Geometry` a diagram node was placed at (`clean_engineering/model/diagram/geometry.py`) and writes it as the element's `x`, `y`, `w` and `h`, so a whiteboard is laid out by the same placement as its drawio.
+
+### (S:technical) Whiteboard Node --> Write Node As Board Element
+
+Requested: each node writes itself as one `elements/<id>` record — a `shape` with its kind, colour and text, a `container` for a section, or a `text` for a title — as `DrawioVertex.append_to` writes one `mxCell`.
+
+### (S:technical) Whiteboard --> Order Board Elements Back To Front
+
+Requested: the board writes `board/meta` with its title and every element id in back-to-front order, sections before what they hold.
+
+### (S:technical) Whiteboard --> Join Elements With Arrows
+
+Requested: a dependency or relationship between two nodes is written as an `arrow` element from one element id to the other, with its sides and, where its meaning is not plain, its label.
+
+### (S:technical) Whiteboard --> Keep Element Ids Across Renders
+
+Requested (as drawio's `keep_positioning` and `previous` keep a diagram's layout): a node drawn before keeps its element id and the position a person moved it to, and only new nodes are placed.
+
+## (E) Render Practice Models To Whiteboard
+
+Requested (2026-11-15, "practice specific rendering goes in practices/{practice}/model/whiteboard"; "whiteboard should extend diagram just like drawio and hopefully miro"): each practice that draws a diagram today draws the same model on a whiteboard.
+
+### (S) Agent --> Lay Out Story Map On Whiteboard
+
+Requested: `WhiteboardStoryModel`, `WhiteboardEpic`, `WhiteboardStory` and `WhiteboardIncrement` extend the `Diagram*` story types as the miro types do, drawing epics and sub-epics as bars, stories as cards with their actor above, and increments as lanes.
+
+### (S) Agent --> Draw Module Dependencies On Whiteboard
+
+Requested: a whiteboard module extends `DiagramModule` as `DrawIOModule` does, drawing each module with its purpose and seam terms, and its dependencies as arrows.
+
+### (S) Agent --> Show Class Members And Relationships On Whiteboard
+
+Requested: a whiteboard class extends `DiagramClass` as `DrawIOClass` does, drawing each class with its stereotypes, properties and operations, an imported class dashed, and its relationships as arrows.
+
+### (S) Agent --> Group Aggregates In Bounded Context Sections
+
+Requested (DDD draws its bounded context map in drawio today, `ddd/model/drawio/drawio_bounded_context_map.py`): the same map drawn on a whiteboard, each context a section holding its aggregates.
+
+### (S) Agent --> Connect Screens By Navigation Moves
+
+Requested (UX draws its information architecture in drawio today, `ux/model/drawio/nodes.py` `DrawioUxMap`): the same screens and the moves between them drawn on a whiteboard.
+
+## (E) Publish Board To Claude
+
+Requested (2026-11-15, "the only difference you are creating whiteboard artifacts in claude"): what a render wrote reaches a Whiteboard artifact in Claude.
+
+### (S) Agent --> Create Whiteboard Artifact For Fidelity File
+
+Requested: the first render of a fidelity's file creates a Whiteboard artifact titled after it, and the board's address is kept beside the file, so the next render updates the same board.
+
+### (S) Agent --> Write Board Elements To Artifact Store
+
+Requested: the agent writes `board/meta` and the elements, back to front, to the board's store in batches the store accepts.
+
+### (S) Agent --> Update Changed Elements On Existing Board
+
+Requested: a render to a board that exists writes only the elements whose content changed, adds the new ones and removes the gone ones with their arrows, and never rebuilds the board, so what people moved or added stays.
+
+### (S) Agent --> Link Board From Fidelity Outputs
+
+Requested: the fidelity's files list the board's address with its drawio and markdown, so a person opens the board from where they open the other formats.
+
+## (E) Load Whiteboard Into Practice Model
+
+Requested (2026-11-15, "loading graph from that"): a board read back becomes the practice's model, as a drawio or miro file is parsed today (`MiroStoryModel.load`, `DrawIOModule.from_cell`).
+
+### (S) Agent --> Read Board Into Whiteboard File
+
+Requested: the agent reads the board's `board/meta` and every element from its store into a file in the session, which the practice reads as it reads a `.drawio` file.
+
+### (S:system) Whiteboard Story Model --> Parse Story Map From Board
+
+Requested: epics, sub-epics, stories with their actors, and increments come back from the board's elements, keeping each story's kind.
+
+### (S:system) Whiteboard Class Model --> Parse Classes And Modules From Board
+
+Requested: classes with their members and stereotypes, modules with their seam terms, and the arrows between them come back from the board's elements.
+
+### (S:system) Knowledge Graph --> Load Whiteboard File Into Graph
+
+Requested: a whiteboard file in a fidelity's outputs is read into the knowledge graph through its practice's adapter, as its drawio is, so graph rules run on what the board shows.
+
+## (E) Choose Whiteboard Format In Channels
+
+Requested (2026-11-15, "add claude whiteboard as a channel"): the whiteboard format is picked and run like any other format.
+
+### (S) Person --> Pick Whiteboard Format Chip
+
+Requested: the whiteboard is offered in the diagram format group (`Format.GROUPS`, `harness/markdown/format.py`), so its chip shows on the board ticket and in the chat bar for each fidelity that offers it.
+
+### (S) Agent --> Generate Fidelity Into Whiteboard
+
+Requested: `/actions-generate` with `format=whiteboard` writes the fidelity's whiteboard and publishes it, and `/actions-render` turns an artifact already written into one.
+
+### (S:system) Story Channel --> Round Trip Story Map Through Whiteboard
+
+Requested: the story channel spec (`stories/model/story_channel.feature.py`) saves a map to the whiteboard and reads it back from every other format, keeping each epic, sub-epic, story and actor, with scenarios left out as for drawio and miro.
+
+### (S) Agent --> Scan Whiteboard Layout Rules
+
+Requested (as `Drawio.scan` runs drawio's layout scanners): the whiteboard's own layout rules, such as no overlapping elements and no arrow crossing a shape, are scanned on its file, and a definitive failure sends the generator to repair.
+
 # (E) Connect Sessions Across Channels And Apps
 
-The chat bar, the CDD Kanban, the Story UI editor and the knowledge graph work on one ticket's session at a time, so each one opens the others on that ticket and shows what the others are doing. Validation moves into generate: the graph is rebuilt from what changed, its violations are read straight from it, and Fix is an action of its own. Every story here was requested on 2026-11-06 and none is built yet.
+The chat bar, the CDD Kanban, the Story UI editor and the knowledge graph work on one ticket's session at a time, so each one opens the others on that ticket and shows what the others are doing. Validation moves into generate: the graph is rebuilt from what changed, its violations are read straight from it, and Fix is an action of its own. The stories were requested on 2026-11-06.
 
 ## (E) Connect Chat Bar Board And Story UI
 
@@ -1830,39 +2109,11 @@ Requested (2026-11-06, "validate still exists as independent action"; "validate 
 
 ### (S:system) Claude Code --> Check Graph Rules When An Artifact Changes
 
-Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "Validate on save"): when an artifact in a session changes, the graph rules run on it and the band's violation count updates, with no explicit validate.
-
-## (E) Read Graph Violations On Board
-
-### (S) Board App --> Read Fidelity Violations From Latest Graph
-
-Requested (2026-11-06, "default is to have a graph and just read the violations"): a tile's violation count and list come from the latest graph, not from the last validation report. Also Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "better graph integration - load up front on session open, show all violations as a result of graph, no need for explicit run").
-
-### (S) Person --> Generate And Judge Fidelity From Board
-
-Requested (2026-11-06, "board and chat generate"): an expanded tile offers ▶ generate, which runs generate with its judgment on the ticket's enabled practices, and the tile shows the violations the refreshed graph holds. Built today (checked 2026-11-10): a tile's generate sends `/actions-generate`, which chains to validate. Missing: the tile's violations come from the report, not the refreshed graph.
-
-### (S) Person --> Fix Graph Violations From Board
-
-Requested (2026-11-06, "board and chat ... fix"): an expanded tile offers fix, and the Inspector offers Fix rule and Fix this one; each sends the Fix action for that scope, and with nothing picked it fixes every violation. Built today (checked 2026-11-10): the report panel has Fix per violation, Fix all per rule and Fix all violations (`report-rule-view.tsx:56,79`, `report-panel-view.tsx:71`), as prompts built from the report. Missing: Fix on the expanded tile, fed from the graph.
-
-## (E) Read Graph Violations In Chat Bar
-
-### (S) Chat Bar --> Read Session Violations From Latest Graph
-
-Requested (2026-11-06, "default is to have a graph and just read the violations"): each fidelity dot's red count comes from the latest graph, not from the last validation report.
-
-### (S) Person --> Generate And Judge Fidelity From Chat Bar
-
-Requested (2026-11-06, "board and chat generate"): generate from the action button runs generate with its judgment, and the dots update from the refreshed graph. Built today (checked 2026-11-10): generate from the action button chains to validate. Missing: the dots update from the report, not the graph.
-
-### (S) Person --> Fix Graph Violations From Chat Bar
-
-Requested (2026-11-06, "board and chat ... fix"): Fix in the action picker sends the Fix action for the selected fidelity, a rule or a file, every violation by default.
+Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "Validate on save"): when an artifact in a session changes, the graph rules run on it and the band's violation count updates, with no explicit validate. Built on release-2 (2026-11-15) for one file: with the Files app's Rules toggle on, `Session.file_alone` reads the open file into the session's live graph when it changed, in under a second, and answers its broken rules.
 
 ## (E) Change Stories From Canvas And Story UI
 
-Intended ([integrate-stories-with-the-canvas-explorer.md](../../../.sessions/_backlog/integrate-stories-with-the-canvas-explorer.md)): a person adds or changes a story from the canvas or from story-ui, or comments on one, and the map updates. Both paths send commands ("add story X under Y"), never a diff of the picture, and end in the same story code.
+Intended ([integrate-stories-with-the-canvas-explorer.md](../.sessions/_backlog/integrate-stories-with-the-canvas-explorer.md)): a person adds or changes a story from the canvas or from story-ui, or comments on one, and the map updates. Both paths send commands ("add story X under Y"), never a diff of the picture, and end in the same story code.
 
 ### (S:system) Design Canvas --> Give Each Map Card A Stable Node Id
 
@@ -1896,6 +2147,6 @@ Intended (integrate-stories-with-the-canvas-explorer.md slice 6, after Phase 0 o
 
 ## Scope boundary
 
-**In scope:** Authoring an Agent Toolset with `@agent_tool` and `@agent_instructions`. Installing that toolset as two writes — File Installation publishes skill, slash command, and rules as one story (same channel, same write) and Mcp Installation publishes `mcp.json` — then invoking the skill, slash command, and MCP tool and prompt. Installed rules are not invoked as a file check — they constrain valid output. Context Guidance is installed the same way (skill and `.mdc` rules), invoked so `instructions` come back, then used to generate content those rules constrain. Practice Guidance is that same Guidance plus registered fidelities — invoke at practice scope and at fidelity scope; shared rules and fidelity-specific rules each constrain the matching AI output. Hook dispatch; extracting co-located markdown via `@markdown`; the CDD Kanban and the Chat Bar as two channels that move a ticket's session through its practices, each with its own stories; the practice content editor apps those channels invoke (Story UI, design canvas, Graph app), with each app's own story map; connecting sessions across the channels and apps, which joins the channels and apps on one ticket, and validation read from the latest graph; every host-action kit from `actions/.context/module-context.md` (`partition`, `grill`, `sketch`, `iterate`, `generate`, `document`, `render`, `satisfy`, `validate`, `scan`, `repair`, `createRule`).
+**In scope:** Authoring an Agent Toolset with `@agent_tool` and `@agent_instructions`. Installing that toolset as two writes — File Installation publishes skill, slash command, and rules as one story (same channel, same write) and Mcp Installation publishes `mcp.json` — then invoking the skill, slash command, and MCP tool and prompt. Installed rules are not invoked as a file check — they constrain valid output. Context Guidance is installed the same way (skill and `.mdc` rules), invoked so `instructions` come back, then used to generate content those rules constrain. Practice Guidance is that same Guidance plus registered fidelities — invoke at practice scope and at fidelity scope; shared rules and fidelity-specific rules each constrain the matching AI output. Hook dispatch; extracting co-located markdown via `@markdown`; the CDD Kanban and the Chat Bar as two channels that move a ticket's session through its practices, each with its own stories; the practice content editor apps those channels invoke (Story UI, design canvas, Graph app), with each app's own story map; Claude Whiteboard as a format that practices render to and load from, extending the shared diagram types as drawio and miro do; connecting sessions across the channels and apps, which joins the channels and apps on one ticket, and validation read from the latest graph; every host-action kit from `actions/.context/module-context.md` (`partition`, `grill`, `sketch`, `iterate`, `generate`, `document`, `render`, `satisfy`, `validate`, `scan`, `repair`, `createRule`).
 
 **Out of scope:** Catalog HTML pages; on the Chat Bar, the board's whole-board views (columns, Backlog items, WIP limits, side panels, ticket hierarchy) and sending one action to a whole stage (CDR 0001); one-time renames and repository moves; YAML manifest CLI / `tools.ps1` invoke; inventing extra practices or product domains beyond this framework spine; scenario and acceptance-test text (later fidelities).

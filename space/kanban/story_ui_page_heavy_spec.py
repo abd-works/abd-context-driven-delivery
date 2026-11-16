@@ -18,7 +18,7 @@ from space.kanban.board_app import APP_FOLDER, BOARD_SERVER, STORY_UI_FOLDER
 from space.kanban.editor_apps_examples import free_port
 
 STORY_MAP_PAGE = "/story-map"
-FILE_LINK = "?file=harness/.context/stories/story-map.md"
+FILE_LINK = "?file=.context/story-map.md"
 STARTED_WITHIN_SECONDS = 30
 STOPPED_WITHIN_SECONDS = 5
 

@@ -16,6 +16,7 @@ from harness.design_canvas.versions import CanvasVersions
 from harness.guidance.guidance import DeclaredFile
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.mcp.mcp_annotations import mcp
+from cdd_guidance.practices.stories.model.story_map_files import STORY_TESTS_FOLDER
 from harness.installation.context_config import CONTEXT_FOLDER, DEFAULT_FORMAT
 from harness.markdown.format import Format
 from space.session.answer_reads import HeldForAnswer
@@ -521,9 +522,17 @@ class FidelitySessionOutput:
     def _under_root(self, name: str, root: Path) -> str:
         """A declared name under root, this fidelity's root. A root inside a ``.context`` folder, such as
         ``harness/.context/stories``, holds the practice's documents itself, so a declared ``.context/story-map.md``
-        lands in it as ``story-map.md`` rather than in a ``.context`` within the ``.context``."""
+        lands in it as ``story-map.md`` rather than in a ``.context`` within the ``.context``; a declared
+        ``story_tests/...`` lands in the ``story_tests`` beside that ``.context``."""
         folder_mark = "/" if name.endswith("/") else ""
         declared = PurePosixPath(name)
+        if CONTEXT_FOLDER in root.parts and declared.parts[:1] == (STORY_TESTS_FOLDER,):
+            return f"{(self._beside_context(root) / declared).as_posix()}{folder_mark}"
         if CONTEXT_FOLDER in root.parts and declared.parts[:1] == (CONTEXT_FOLDER,):
             declared = PurePosixPath(*declared.parts[1:])
         return f"{(root / declared).as_posix()}{folder_mark}"
+
+    def _beside_context(self, root: Path) -> Path:
+        """The folder holding the `.context` root sits in, where a project keeps its `story_tests` beside its
+        `.context`."""
+        return Path(*root.parts[: root.parts.index(CONTEXT_FOLDER)])

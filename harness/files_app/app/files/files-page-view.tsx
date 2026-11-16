@@ -4,6 +4,7 @@ import type { FileEntryData, SessionFileData } from '@cdd/space/session/session'
 
 import type { FileFolder } from './file-bar'
 import { FileSourceView } from './file-source-view'
+import { FilesGraphView } from './files-graph-view'
 import type { FilesPage } from './files-page'
 import { drawioPageOf, isDrawio, revealLabelOf } from './files-paths'
 import { formatGlyphOf } from './format-chips'
@@ -61,6 +62,7 @@ function FileListView({ page }: { page: FilesPage }) {
   const state = useFilesState(page)
   if (state.isListing) return <p className="files-note">Reading the files…</p>
   if (!state.entries.length) return <p className="files-note">{page.emptyReason}</p>
+  if (state.fileBar.view === 'graph') return <FilesGraphView page={page} />
   if (!page.fileBar.entries.length) return <p className="files-note">The branch changed none of these files.</p>
   if (state.fileBar.view === 'folders') return <FileFoldersView page={page} />
   return (
@@ -161,7 +163,7 @@ function FileBarDividerView({ page }: { page: FilesPage }) {
   )
 }
 
-// The file bar's buttons: collapse or expand it, and show its files as a list or in their folders.
+// The file bar's buttons: collapse or expand it, and show its files as a list, in their folders, or as the graph.
 function FileBarButtonsView({ page }: { page: FilesPage }) {
   const { fileBar } = useFilesState(page)
   return (
@@ -176,6 +178,9 @@ function FileBarButtonsView({ page }: { page: FilesPage }) {
           </button>
           <button className="file-bar-view" aria-pressed={fileBar.view === 'folders'} title="Show the files in their folders" onClick={() => page.fileBar.show('folders')}>
             Folders
+          </button>
+          <button className="file-bar-view" aria-pressed={fileBar.view === 'graph'} title="Show the session's graph of these files" onClick={() => page.fileBar.show('graph')}>
+            Graph
           </button>
         </>
       ) : null}
@@ -249,7 +254,21 @@ function OpenFileView({ page }: { page: FilesPage }) {
   return (
     <section className="open-file" aria-label={state.file.path}>
       <CommentToolbarView page={page} file={state.file} />
-      <FileSourceView key={state.file.path} file={state.file} actions={page.comments} onAddToContext={addLines} />
+      <FileSourceView key={state.file.path} file={state.file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(state.file.path)} members={state.graph.members} />
+      {state.moreFiles.map(file => (
+        <MoreFileView key={file.path} page={page} file={file} />
+      ))}
+    </section>
+  )
+}
+
+// A file open beside the first, holding a node selected in the graph view.
+function MoreFileView({ page, file }: { page: FilesPage; file: SessionFileData }) {
+  const addLines = useCallback((lines: { start: number; end: number }) => void page.chatContext.add(file.path, lines), [page, file.path])
+  return (
+    <section className="open-file more-file" aria-label={file.path}>
+      <p className="more-file-path">{file.path}</p>
+      <FileSourceView file={file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(file.path)} members={page.state.graph.members} />
     </section>
   )
 }

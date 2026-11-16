@@ -15,7 +15,7 @@ import { FidelityProgressClient, PracticeDotClient } from './fidelity-progress-c
 import { currentGuidance } from './guidance-client'
 import { StageClient } from './stage-client'
 
-// The chat bar: the active session's line above the prompt. Sources: harness/chat-ui/.context/story-map.md,
+// The chat bar: the active session's line above the prompt. Sources: .context/story-map.md (Move Work Forward From Chat Bar),
 // cdr/0001-stage-strip-band.md, design/StageStrip.dc.html. Every rule lives in the Python Ticket; this file shows its answers.
 // Main is the default session: the default branch in the repository's own folder, a ticket on the board like any other.
 export const MAIN_SESSION = 'main'

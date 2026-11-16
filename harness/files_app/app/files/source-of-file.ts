@@ -9,11 +9,12 @@ const VIOLATING = 'violating'
 
 const fileNameOf = (path: string): string => path.split('/').at(-1) ?? path
 
-// How the graph explorer's source view reads a session's file: the whole file as one source, from its first line, with
-// no members, so each line the editor shows is that line of the file.
-export function sourceOf(file: SessionFileData): NodeSourceData {
+// How the graph explorer's source view reads a session's file: the whole file as one source, from its first line, so
+// each line the editor shows is that line of the file, with the members of the session's graph, from which a call opens
+// in place, in this file or another; none until the graph view read them.
+export function sourceOf(file: SessionFileData, members: NodeSourceData[] = []): NodeSourceData {
   const lines = file.text.split('\n').length
-  return { node_id: file.path, name: fileNameOf(file.path), type: FILE_NODE, owner: '', file: file.path, text: file.text, start_line: 1, end_line: lines, members: [] }
+  return { node_id: file.path, name: fileNameOf(file.path), type: FILE_NODE, owner: '', file: file.path, text: file.text, start_line: 1, end_line: lines, members }
 }
 
 // The folds the session's graph places in the file: a class whole, each operation and property as a block.

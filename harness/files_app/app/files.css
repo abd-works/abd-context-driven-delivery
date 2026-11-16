@@ -72,6 +72,25 @@ button:disabled { cursor: default; opacity: 0.5; }
 .file-entry-note { color: var(--muted); }
 
 .open-file { min-width: 0; }
+.more-file { margin-top: var(--space-md); }
+.more-file-path { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2xs); }
+
+.graph-tree, .graph-tree ul { list-style: none; }
+.graph-tree ul { padding-left: 1.25rem; }
+.tree-row { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--space-2xs); min-width: 0; }
+.tree-twist, .tree-twist-spacer { width: var(--space-md); flex: 0 0 var(--space-md); padding: 0; border: none; background: transparent; color: var(--muted); font-size: var(--text-xs); }
+.graph-node { display: inline-flex; align-items: center; gap: var(--space-2xs); min-width: 0; padding: var(--space-2xs) 0; border: none; background: transparent; font-weight: 500; text-align: left; }
+.graph-node .node-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.graph-node.selected { color: var(--select); font-weight: 600; }
+.kind-mark { flex: none; width: 1rem; height: 1rem; color: var(--muted); }
+.graph-node.selected .kind-mark { color: var(--select); }
+/* The Graph app's load progress, while the graph view reads the session's graph. */
+.work-progress { font-family: var(--font-mono); font-size: var(--text-xs); font-weight: 600; color: var(--accent); }
+.query-now { color: var(--text); overflow-wrap: anywhere; }
+.load-meter { height: 6px; margin-top: var(--space-xs); background: color-mix(in srgb, var(--accent) 18%, transparent); border-radius: 999px; overflow: hidden; }
+.load-meter > span { display: block; height: 100%; background: var(--accent); }
+.loading-log { list-style: none; max-height: 50vh; overflow: auto; margin-top: var(--space-xs); font-weight: 500; line-height: 1.45; color: var(--muted); }
+.loading-log li:last-child, .loading-log li.is-current { color: var(--text); }
 .open-diagram { display: flex; flex-direction: column; height: calc(100vh - 7rem); }
 .drawio-frame { flex: 1; width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); background: #fff; }
 .file-menu-backdrop { position: fixed; inset: 0; z-index: 20; }

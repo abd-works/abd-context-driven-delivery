@@ -6,11 +6,9 @@
   "worktree": "C:\\dev\\abd-cdd-claude-whiteboard",
   "guidance": {
     "stages": [
-      "discovery",
-      "specification",
-      "implementation"
+      "discovery"
     ],
-    "version": 24
+    "version": 57
   },
   "practices": {
     "ux": {
@@ -27,7 +25,11 @@
     "stories": {
       "formats": {
         "story_map": [
-          "drawio"
+          "drawio",
+          "whiteboard"
+        ],
+        "scenarios": [
+          "python"
         ]
       },
       "enabled": true
@@ -35,8 +37,7 @@
     "clean_engineering": {
       "formats": {
         "modules": [
-          "markdown",
-          "drawio"
+          "markdown"
         ],
         "model": [
           "python"
@@ -45,13 +46,13 @@
           "python"
         ]
       },
-      "enabled": true
+      "enabled": false
     },
     "ddd": {
       "enabled": false
     },
     "bdd": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
         "behavior": [
           "python"
@@ -65,5 +66,7 @@
         ]
       }
     }
-  }
+  },
+  "stage": "Implementation",
+  "stage_mark": "in-progress"
 }

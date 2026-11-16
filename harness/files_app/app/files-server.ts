@@ -2,7 +2,7 @@ import express, { type Express, type NextFunction, type Request, type Response }
 import { join } from 'node:path'
 
 import type { ProjectConnections } from '@cdd/cdd-connection'
-import { CddRequestError, PROJECT_HEADER, type CddRoute } from '@cdd/cdd-shared'
+import { CddRequestError, PROJECT_HEADER, cddProgressRoutes, type CddRoute } from '@cdd/cdd-shared'
 import { ChatAdapter, chatRoutes } from '@cdd/harness/chat/chat'
 import { fidelityProgressRoutes } from '@cdd/space/kanban/fidelity-progress'
 import { ticketRoutes } from '@cdd/space/kanban/ticket'
@@ -25,10 +25,12 @@ const CHAT_ROUTES = ['/chat/:chat/send']
 // The ticket route the page lists its files through: every fidelity's files in one call.
 const TICKET_ROUTES = ['/ticket/:ticket/fidelity-files', '/ticket/:ticket/root-files']
 
-// The Files app reads a session's files, a fidelity's files, and the comments on them, turns the session's practices on
-// or off, and tells the chat that opened it; it never reads the board.
+// The Files app reads a session's files, a fidelity's files, and the comments on them, follows the cdd server's progress
+// while its graph view reads the graph, turns the session's practices on or off, and tells the chat that opened it; it
+// never reads the board.
 export const filesRoutes: CddRoute[] = [
   ...sessionRoutes,
+  ...cddProgressRoutes,
   ...fileCommentsRoutes,
   ...fidelityProgressRoutes,
   ...practiceSessionOutputRoutes,

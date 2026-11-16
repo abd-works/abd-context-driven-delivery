@@ -7,7 +7,7 @@ them where the session and the board read them.
 
 **Interaction** examples are what the Graph app shows: the practice trees it loads, each read from its practice root.
 
-Scenarios: harness/.context/stories/move-work-forward-on-session-board/integrate-practice-content-editor-apps-on-board/
+Scenarios: story_tests/move-work-forward-on-session-board/integrate-practice-content-editor-apps-on-board/
 and the Graph app's scenarios of .../move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/.
 """
 

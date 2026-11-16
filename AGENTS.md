@@ -24,6 +24,7 @@ Agentic tools that bring agile product, delivery, and engineering practices to A
 ## Where context lives
 
 - Root `.context/` — `cdd-approach.md` (stages and practices), `module-context.md` (every module's purpose, seams, constraints), `principles/`.
+- The story map, its thin slice and increments, and scenario realizations live in the root `.context/` (`story-map.md`, `story-map.drawio`, `thin-slice.md`). Every scenario file and story test — Python domain and server tiers, `*_story.test.py`, and the board's `*.story.ui.spec.ts` — lives in `story_tests/<epic>/<sub-epic>/`, mirroring the map. Plain specs (`*_spec.py`, `*.spec.ts`) stay beside the code they test.
 - Every module folder has its own `.context/` (`module-context.md`, `domain-context.md`, `cdr/` decisions) and some have an `AGENTS.md`. Read them before changing that module.
 - `catalog/workflow.md` — how practices, actions, and fidelities compose.
 

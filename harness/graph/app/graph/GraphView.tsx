@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KindMark } from '../labels/kind-mark';
 import type { ExplorerEntryData } from '@cdd/harness/graph/graph';
 import { childrenLeftOut, childrenOf, isRule, ruleHits, selectionForRule, type GraphSelection, type TreeItem } from './graph-selection';
 import { reasonOf } from './graph-failures';
 import { failures } from './graph-page';
-import { queryProgress } from './query-progress';
+import { LoadProgressView } from './LoadProgressView';
 
 type GraphViewProps = {
   trees: ExplorerEntryData[];
@@ -19,69 +19,10 @@ type GraphViewProps = {
   onOpenBranch: (nodeId: string) => Promise<void>;
 };
 
-function elapsedLabel(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  const rest = seconds % 60;
-  return `${minutes}:${rest.toString().padStart(2, '0')}`;
-}
-
 export function GraphView({ trees, loading, loadingLabel, loadingLog = [], error, selectedId, activeRule, onSelect, onOpenBranch }: GraphViewProps) {
-  const progress = queryProgress(loadingLog);
-  const log = useRef<HTMLOListElement>(null);
-  const [elapsed, setElapsed] = useState(0);
-  useEffect(() => {
-    if (!loading) {
-      setElapsed(0);
-      return;
-    }
-    const started = Date.now();
-    const id = window.setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000);
-    return () => window.clearInterval(id);
-  }, [loading]);
-  useEffect(() => {
-    const list = log.current;
-    if (list) {
-      list.scrollTop = list.scrollHeight;
-    }
-  }, [progress.headline, progress.steps.length, loadingLog.length, elapsed]);
-  const active =
-    progress.steps.length === 0 || progress.steps[progress.steps.length - 1]?.name !== progress.headline.split(' ').at(-1);
-  const headline = progress.headline === 'Loading the graph…' ? loadingLabel ?? progress.headline : progress.headline;
-  const shown = elapsed > 0 ? `${headline} · ${elapsedLabel(elapsed)}` : headline;
-  const fraction = progress.total > 0 ? Math.min(100, Math.round((100 * progress.index) / progress.total)) : 0;
   return (
     <div className="panel" data-testid="practice-graph-tree">
-      {loading ? (
-        <div className="empty-state work-progress is-working" data-testid="extraction-progress">
-          <p className="query-now">{shown}</p>
-          {progress.total > 0 ? (
-            <div
-              className="load-meter"
-              data-testid="load-meter"
-              role="progressbar"
-              aria-valuenow={progress.index}
-              aria-valuemin={0}
-              aria-valuemax={progress.total}
-              aria-label={headline}
-            >
-              <span style={{ width: `${fraction}%` }} />
-            </div>
-          ) : null}
-          <ol className="loading-log" data-testid="loading-log" ref={log}>
-            {progress.steps.map((step) => (
-              <li key={`${step.index}-${step.name}`}>
-                {step.index}/{step.total} {step.name}
-              </li>
-            ))}
-            {progress.steps.length === 0
-              ? (loadingLog.length > 0 ? loadingLog.slice(-12) : [shown]).map((line, index) => (
-                  <li key={`${index}-${line}`}>{line}</li>
-                ))
-              : null}
-            {active && progress.detail ? <li className="is-current">{progress.detail}</li> : null}
-          </ol>
-        </div>
-      ) : null}
+      {loading ? <LoadProgressView loadingLabel={loadingLabel} loadingLog={loadingLog} /> : null}
       {error && !loading ? (
         <div className="scan-error empty-state" data-testid="scan-error">
           <button type="button" className="copy-diagnosis" onClick={() => void copyDiagnosis(error)}>

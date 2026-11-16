@@ -71,9 +71,9 @@ const FORMAT_CHIPS = [
 const COLOUR = { 'Stories': '#E5A11A', 'DDD': '#3FB2A0', 'UX': '#5B8DEF', 'Clean Engineering': '#B07CE8', 'BDD': '#6FD39F' };
 const VIOLATIONS = {
   'checkout-flow': [
-    { id: 'v1', practice: 'Stories', rule: 'verb-noun-format', file: 'harness/.context/stories/story-map.md', line: 86, end: 88, story: 'Ticket Archive', what: 'name should start with a verb' },
-    { id: 'v7', practice: 'Stories', rule: 'verb-noun-format', file: 'harness/.context/stories/story-map.md', line: 90, end: 92, story: 'Delete Ticket', what: 'name should start with a verb' },
-    { id: 'v2', practice: 'Stories', rule: 'right-size-story-nodes', file: 'harness/.context/stories/story-map.md', line: 148, end: 150, story: 'Move Ticket', what: 'moves forward and back in one story' },
+    { id: 'v1', practice: 'Stories', rule: 'verb-noun-format', file: '.context/story-map.md', line: 86, end: 88, story: 'Ticket Archive', what: 'name should start with a verb' },
+    { id: 'v7', practice: 'Stories', rule: 'verb-noun-format', file: '.context/story-map.md', line: 90, end: 92, story: 'Delete Ticket', what: 'name should start with a verb' },
+    { id: 'v2', practice: 'Stories', rule: 'right-size-story-nodes', file: '.context/story-map.md', line: 148, end: 150, story: 'Move Ticket', what: 'moves forward and back in one story' },
     { id: 'v6', practice: 'UX', rule: 'screen-story-budget', file: 'harness/.context/information-architecture.drawio', line: 8, end: 10, story: 'Display Drawio File In Inspector', what: 'screen shows 7 stories, about 4 fit' },
     { id: 'v3', practice: 'Clean Engineering', rule: 'use-intention-revealing-names', file: 'harness/kanban/ticket.py', line: 212, end: 213, story: 'Activate Ticket', what: 'name says how, not why' },
   ],
@@ -128,7 +128,7 @@ const EXPLORE = {
 };
 const FILES = {
   'checkout-flow': [
-    { path: 'harness/.context/stories/story-map.md', practice: 'Stories', lines: [[84, '## (E) Maintain Tickets'], [85, ''], [86, '#### (S) Person --> Ticket Archive'], [87, ''], [88, 'Observed as the ticket.archive tool.'], [89, ''], [90, '#### (S) Person --> Ticket Delete'], [91, ''], [92, 'Observed as the ticket.delete tool.'], ['…', ''], [146, '## (E) Steer Ticket Sessions'], [147, ''], [148, '#### (S) Person --> Move Ticket'], [149, ''], [150, 'the arrows or a drag move a ticket on or back']] },
+    { path: '.context/story-map.md', practice: 'Stories', lines: [[84, '## (E) Maintain Tickets'], [85, ''], [86, '#### (S) Person --> Ticket Archive'], [87, ''], [88, 'Observed as the ticket.archive tool.'], [89, ''], [90, '#### (S) Person --> Ticket Delete'], [91, ''], [92, 'Observed as the ticket.delete tool.'], ['…', ''], [146, '## (E) Steer Ticket Sessions'], [147, ''], [148, '#### (S) Person --> Move Ticket'], [149, ''], [150, 'the arrows or a drag move a ticket on or back']] },
     { path: 'harness/.context/information-architecture.drawio', practice: 'UX', lines: [
       [1, '<mxfile host="drawio-ux">'], [2, '  <diagram name="Detailed IA">'],
       [3, '    <mxCell id="chat-bar" value="Chat Bar" vertex="1"/>'], [4, '    <mxCell id="board" value="Session Board" vertex="1"/>'],
