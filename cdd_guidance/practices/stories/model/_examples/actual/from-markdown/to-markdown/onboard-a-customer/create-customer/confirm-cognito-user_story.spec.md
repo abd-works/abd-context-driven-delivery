@@ -2,11 +2,11 @@
 
 ### Examples
 
-| example | validation code | error |
+| validation code | example | error |
 | --- | --- | --- |
-| mismatch validation code | validation code | CodeMismatchException |
-| expired validation code | validation code | ExpiredCodeException |
-| attempts exceeded validation code | validation code | LimitExceededException |
+| validation code | mismatch validation code | CodeMismatchException |
+| validation code | expired validation code | ExpiredCodeException |
+| validation code | attempts exceeded validation code | LimitExceededException |
 
 ### Scenario: Confirm Cognito User
 

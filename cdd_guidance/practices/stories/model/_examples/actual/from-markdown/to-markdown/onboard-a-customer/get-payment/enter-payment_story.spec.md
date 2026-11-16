@@ -4,9 +4,9 @@
 
 #### payment authorization
 
-| example | payment authorization | transactionId | totalAmount | salesChannel | group |
+| payment authorization | example | transactionId | totalAmount | salesChannel | group |
 | --- | --- | --- | --- | --- | --- |
-| stub auth | payment authorization | d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3 | 1 | ON-BOARDING | payment authorization |
+| payment authorization | stub auth | d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3 | 1 | ON-BOARDING | payment authorization |
 
 ### Scenario: Enter Payment
 

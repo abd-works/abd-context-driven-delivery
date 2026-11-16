@@ -2,11 +2,11 @@
 
 ### Examples
 
-| example | plan upgrade | currentPlan | newPlan |
+| plan upgrade | example | currentPlan | newPlan |
 | --- | --- | --- | --- |
-| upgrade to Data Freedom | plan upgrade | Essentials | Data Freedom |
-| upgrade to Ace | plan upgrade | Data Freedom | Ace |
-| upgrade to Atlas | plan upgrade | Ace | Atlas |
+| plan upgrade | upgrade to Data Freedom | Essentials | Data Freedom |
+| plan upgrade | upgrade to Ace | Data Freedom | Ace |
+| plan upgrade | upgrade to Atlas | Ace | Atlas |
 
 ### Scenario Outline: Upgrade plan from review
 

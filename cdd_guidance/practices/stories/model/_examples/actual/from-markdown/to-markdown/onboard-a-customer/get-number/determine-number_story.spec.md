@@ -4,16 +4,16 @@
 
 #### available number
 
-| example | available number | number | group |
+| available number | example | number | group |
 | --- | --- | --- | --- |
-| held available number | available number | 4415550100 | available number |
-| chosen available number | available number | 4415550101 | available number |
+| available number | held available number | 4415550100 | available number |
+| available number | chosen available number | 4415550101 | available number |
 
 #### search term
 
-| example | search term | input | converted | group |
+| search term | example | input | converted | group |
 | --- | --- | --- | --- | --- |
-| James search | search term | JAMES | 52637 | search term |
+| search term | James search | JAMES | 52637 | search term |
 
 ### Scenario: View available numbers
 

@@ -4,9 +4,9 @@
 
 #### Apple Pay certificate
 
-| example | Apple Pay certificate | keyIdentifier | group |
+| Apple Pay certificate | example | keyIdentifier | group |
 | --- | --- | --- | --- |
-| Bermuda Apple Pay cert | Apple Pay certificate | CertificateSerialNumber=08b3a3b7b23c2c56a625e95211699f0b | Apple Pay certificate |
+| Apple Pay certificate | Bermuda Apple Pay cert | CertificateSerialNumber=08b3a3b7b23c2c56a625e95211699f0b | Apple Pay certificate |
 
 ### Scenario: Provide Apple Pay certificate
 

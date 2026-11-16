@@ -4,9 +4,9 @@
 
 #### portability
 
-| example | portability | donorOperator | portNumber | accountNumber | userType | accountType | device | group |
+| portability | example | donorOperator | portNumber | accountNumber | userType | accountType | device | group |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| valid portability | portability | Digicel | 4412345678 | 12345 | Residential | Postpaid | Iphone | portability |
+| portability | valid portability | Digicel | 4412345678 | 12345 | Residential | Postpaid | Iphone | portability |
 
 ### Scenario: Bring a number
 

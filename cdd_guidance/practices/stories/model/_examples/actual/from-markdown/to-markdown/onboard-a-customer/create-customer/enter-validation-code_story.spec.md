@@ -4,13 +4,13 @@
 
 #### validation code
 
-| example | validation code | code | group |
+| validation code | example | code | group |
 | --- | --- | --- | --- |
-| valid validation code | validation code | 123456 | validation code |
-| mismatch validation code | validation code | Hmm. That code didn't work. | validation code |
-| expired validation code | validation code | Hmm. That code didn't work. | validation code |
-| attempts exceeded validation code | validation code | Attempts limit exceeded. Please try again later. | validation code |
-| example | validation code | helper | validation code |
+| validation code | valid validation code | 123456 | validation code |
+| validation code | mismatch validation code | Hmm. That code didn't work. | validation code |
+| validation code | expired validation code | Hmm. That code didn't work. | validation code |
+| validation code | attempts exceeded validation code | Attempts limit exceeded. Please try again later. | validation code |
+| validation code | example | helper | validation code |
 
 ### Scenario: Enter validation code
 
