@@ -12,7 +12,6 @@ export class ThenFeedback {
   }
 
   apply(result) {
-    this._explorer.markStep(result.step, result.ok);
     if (result.ok) {
       this._explorer.clearMessage();
     } else {

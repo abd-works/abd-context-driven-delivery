@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
+
+from harness.guidance.guidance import FidelityGuidance
+
+if TYPE_CHECKING:
+    from cdd_guidance.actions.validate.checked_graph import CheckedGraph
+    from space.session.session import Session
 
 
 class ReportFiles:
@@ -13,7 +19,7 @@ class ReportFiles:
     They are claimed before the graph is built, so the graph the call checks can be written beside its report and a
     report's violations stay on their nodes for as long as the report is kept."""
 
-    def __init__(self, session: Any, fidelities: list[Any]) -> None:
+    def __init__(self, session: Session, fidelities: list[FidelityGuidance]) -> None:
         self._session = session
         self.paths: list[Path] = [self._claimed(fidelity.session_output.new_report_path()) for fidelity in fidelities]
 
@@ -27,7 +33,7 @@ class ReportFiles:
         with tempfile.NamedTemporaryFile(dir=folder, prefix="edited-graph-", suffix=".json", delete=False) as file:
             return Path(file.name)
 
-    def save(self, report: str, graph: Any) -> None:
+    def save(self, report: str, graph: CheckedGraph) -> None:
         """Save the report into each claimed file, so the board can link to it, with the graph the call checked (its
         *CheckedGraph*) kept beside each under the same name."""
         for path in self.paths:

@@ -5,6 +5,7 @@ operations and properties of the code it drives."""
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from harness.annotations.name import Name
 from harness.graph.graph import Node
@@ -15,7 +16,13 @@ from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngi
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.clean_engineering.model.production_code import is_spec_file, is_test_code
 
+if TYPE_CHECKING:
+    from cdd_guidance.practices.bdd.model.bdd_model import BddModel
+    from cdd_guidance.practices.bdd.model.nodes import Reach
+
 _BEHAVIOR_EDGES = {"Description": "descriptions", "Context": "contexts", "Observation": "observations"}
+# The language a node read from Python names; a script spec drives script code.
+_PYTHON = "python"
 
 
 class BddGraphReading(PracticeReading):
@@ -48,27 +55,34 @@ class BddGraphReading(PracticeReading):
         return clean.reading if clean is not None else None
 
     def _add_spec(self, file: Path, relative: str) -> None:
-        """The spec file's describe tree, each node at its own lines with the facts its span holds, read by the model of
-        the file's language from the practice's own formats."""
-        try:
-            text = file.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+        """The spec file's describe tree, read by the model of the file's language from the practice's own formats."""
+        text = self._spec_text(file)
+        if text is None:
             return
         spec = self.practice.formats.for_file(file).parse_code(text)
         spec.load_source_facts(text)
-        lines = text.splitlines()
+        spec.name = file.stem
+        self._add_tree(spec, text.splitlines(), relative)
+
+    def _spec_text(self, file: Path) -> str | None:
+        """The spec file's text; none when it cannot be read as UTF-8, so the graph skips it."""
+        try:
+            return file.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            return None
+
+    def _add_tree(self, spec: BddModel, lines: list[str], relative: str) -> None:
+        """The spec and each node of its describe tree, each at its own lines with the facts its span holds."""
         behavior = spec.behavior_nodes()
         parents = {id(node): node.parent for node in behavior}
-        spec.name = file.stem
-        graph = self.graph
         added = {id(spec): self.in_graph.add(spec, f"bdd:Spec:{relative}", relative, 1, max(1, len(lines)))}
-        graph.link("owns", self.in_graph.root, added[id(spec)])
+        self.graph.link("owns", self.in_graph.root, added[id(spec)])
         for node in behavior:
             node.load_span_facts("\n".join(lines[node.line - 1 : node.end_line]))
             node_id = f"bdd:{node.type}:{relative}:{node.line}:{node.name}"
             added[id(node)] = self.in_graph.add(node, node_id, relative, node.line, node.end_line)
             parent = added.get(id(parents[id(node)]), added[id(spec)])
-            graph.link(_BEHAVIOR_EDGES[node.type], parent, added[id(node)])
+            self.graph.link(_BEHAVIOR_EDGES[node.type], parent, added[id(node)])
 
 
 class ObservationLinks:
@@ -83,21 +97,21 @@ class ObservationLinks:
         self.graph = bdd.graph
 
     def link(self) -> None:
-        by_file: dict[str, list] = {}
+        by_file: dict[str, list[Node]] = {}
         for node in self.bdd.in_graph.nodes():
             if node.type in _BEHAVIOR_EDGES and node.source.file:
                 by_file.setdefault(node.source.file, []).append(node)
         for nodes in by_file.values():
             nodes.sort(key=lambda node: node.source.start_line)
-            self._link_file(nodes, _is_python(nodes[0]))
+            self._link_file(nodes, nodes[0].file_language == _PYTHON)
 
-    def _link_file(self, nodes: list, is_python: bool) -> None:
+    def _link_file(self, nodes: list[Node], is_python: bool) -> None:
         for index, node in enumerate(nodes):
             if node.type != "Observation":
                 continue
-            invoked = self._invoked_by(node.get_fact("reach") or {}, is_python)
-            for setup in _enclosing(nodes, index):
-                found = self._invoked_by(setup.get_fact("setup_reach") or {}, is_python)
+            invoked = ReachedMembers(self.clean, node.get_fact("reach") or {}, is_python).invoked
+            for setup in self._enclosing(nodes, index):
+                found = ReachedMembers(self.clean, setup.get_fact("setup_reach") or {}, is_python).invoked
                 if found:
                     invoked = found + [member for member in invoked if member not in found]
                     break
@@ -105,64 +119,68 @@ class ObservationLinks:
                 self.graph.link("invokes", node, member, "relationship")
                 self.graph.link("invokedBy", member, node, "relationship")
 
-    def _invoked_by(self, reach: dict, is_python: bool) -> list:
-        """The members a block's reach names, in the order it names them, one per class and name; a tool it calls by
-        name is that toolset's operation, and the call carrying it is transport, not the act."""
-        invoked: list = []
-        seen: set[tuple[str, str]] = set()
+    def _enclosing(self, nodes: list[Node], index: int) -> list[Node]:
+        """Each describe or context around nodes[index], innermost first."""
+        observation = nodes[index]
+        return [
+            parent
+            for parent in reversed(nodes[:index])
+            if parent.type != "Observation" and parent.source.end_line >= observation.source.end_line
+        ]
 
-        def add(member) -> None:
-            key = (member.get_fact("owner"), member.name)
-            if key not in seen:
-                seen.add(key)
-                invoked.append(member)
 
-        transports = set()
-        for transport, toolset, operation in reach.get("tools", []):
-            transports.add(transport)
-            for member in self._code_members(Name(operation).snake, is_python):
-                if member.type == "Operation" and Name(member.get_fact("owner")).kebab == toolset:
-                    add(member)
-        reads = set(reach.get("reads", []))
-        for name in reach.get("names", []):
-            for member in self._members_reached(name, is_python, reads, transports):
-                add(member)
-        return invoked
+class ReachedMembers:
+    """The code members one block's reach names, in the spec's own language family: Python, or script."""
 
-    def _members_reached(self, name: str, is_python: bool, reads: set[str], transports: set[str]) -> list:
+    def __init__(self, clean: PracticeReading, reach: Reach, is_python: bool) -> None:
+        self._clean = clean
+        self._reach = reach
+        self._is_python = is_python
+        self._reads = set(reach.get("reads", []))
+        # A call that carries a tool by its name is transport, not the act, so it links to nothing itself.
+        self._transports = {transport for transport, _toolset, _operation in reach.get("tools", [])}
+
+    @property
+    def invoked(self) -> list[Node]:
+        """The members the reach names, in the order it names them, one per class and name; a tool it calls by name is
+        that toolset's operation."""
+        found = self._tool_operations() + [
+            member for name in self._reach.get("names", []) for member in self._members_reached(name)
+        ]
+        unique: dict[tuple[str, str], Node] = {}
+        for member in found:
+            unique.setdefault((member.get_fact("owner"), member.name), member)
+        return list(unique.values())
+
+    def _tool_operations(self) -> list[Node]:
+        return [
+            member
+            for _transport, toolset, operation in self._reach.get("tools", [])
+            for member in self._code_members(Name(operation).snake)
+            if member.type == "Operation" and Name(member.get_fact("owner")).kebab == toolset
+        ]
+
+    def _members_reached(self, name: str) -> list[Node]:
         members = [
-            member for member in self._code_members(name, is_python)
+            member for member in self._code_members(name)
             # A module function is reached by calling it; a read with its name belongs to some object's field.
-            if not (name in reads and member.get_fact("owner") == MODULE_FUNCTION_HOLDER)
+            if not (name in self._reads and member.get_fact("owner") == MODULE_FUNCTION_HOLDER)
         ]
         owners = {member.get_fact("owner") for member in members}
         # A name more than two classes share, such as `column`, does not say which one the observation reaches; a read,
         # which has no call to narrow it, links only when one class owns the name.
-        if name in transports or len(owners) > (1 if name in reads else 2):
+        if name in self._transports or len(owners) > (1 if name in self._reads else 2):
             return []
         # A getter is both an operation and a property of one class; the operation is the one that runs.
         return sorted(members, key=lambda member: member.type != "Operation")
 
-    def _code_members(self, name: str, is_python: bool) -> list:
+    def _code_members(self, name: str) -> list[Node]:
         """The code's operations and properties called name in the spec's language family. Specs and the helpers only
         specs use drive the code under test, so an observation never invokes them."""
         return [
             member
-            for member in self.clean.code_index.members_named(name)
-            if member.source.file and not is_test_code(member.source.file) and _is_python(member) == is_python
+            for member in self._clean.code_index.members_named(name)
+            if member.source.file
+            and not is_test_code(member.source.file)
+            and (member.file_language == _PYTHON) == self._is_python
         ]
-
-
-def _is_python(node: Node) -> bool:
-    """Whether the node was read from Python, which its file's language says; a script spec drives script code."""
-    return node.file_language == "python"
-
-
-def _enclosing(nodes: list, index: int) -> list:
-    """Each describe or context around nodes[index], innermost first."""
-    observation = nodes[index]
-    return [
-        parent
-        for parent in reversed(nodes[:index])
-        if parent.type != "Observation" and parent.source.end_line >= observation.source.end_line
-    ]

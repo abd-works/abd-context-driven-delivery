@@ -49,29 +49,24 @@ class ExplorerScreen:
         scenarios = [self._scenario_entry(name, index, scenario) for index, scenario in enumerate(self.story_tree.scenarios(story))] if story is not None else []
         return {"kind": "story", "name": name, "screenName": self.name, "key": key, "children": scenarios}
 
-    def _scenario_entry(self, story_name: str, index: int, scenario) -> dict:
+    def _scenario_entry(self, story_name: str, index: int, scenario: "Node") -> dict:
         key = f"scenario:{self.name}/{story_name}/{scenario.name}"
-        steps = [
-            {
-                "kind": "step",
-                "screenName": self.name,
-                "stepKind": step.get_fact("phase") or "",
-                "label": step.get_fact("text") or "",
-                "domainTerms": self.domain_terms,
-                "storyName": story_name,
-                "scenarioIndex": index,
-                "scenarioKey": key,
-            }
-            for step in self.story_tree.steps(scenario)
-        ]
+        scenario_entry = {"kind": "scenario", "name": scenario.name, "screenName": self.name, "key": key, "storyName": story_name, "scenarioIndex": index}
+        steps = [self._step_entry(scenario_entry, step) for step in self.story_tree.steps(scenario)]
+        return {**scenario_entry, "children": steps}
+
+    def _step_entry(self, scenario_entry: dict, step: "Node") -> dict:
+        """A step as the explorer lists it under its scenario (scenario_entry): it carries the scenario's story, index,
+        and key, so the explorer plays the scenario from any of its steps."""
         return {
-            "kind": "scenario",
-            "name": scenario.name,
+            "kind": "step",
             "screenName": self.name,
-            "key": key,
-            "storyName": story_name,
-            "scenarioIndex": index,
-            "children": steps,
+            "stepKind": step.get_fact("phase") or "",
+            "label": step.get_fact("text") or "",
+            "domainTerms": self.domain_terms,
+            "storyName": scenario_entry["storyName"],
+            "scenarioIndex": scenario_entry["scenarioIndex"],
+            "scenarioKey": scenario_entry["key"],
         }
 
 
@@ -88,6 +83,7 @@ class ExplorerTree:
         shown = [link.node for screen in screens for link in screen.story_links if link.node is not None]
         self.story_tree: Optional["StoryTree"] = shown[0].practice.reading.story_tree if shown else None
         self.screens = [ExplorerScreen(screen, self.story_tree) for screen in screens]
+        self.shown_stories: List["Node"] = [story for screen in self.screens for story, _entry in screen.stories if story is not None]
         self.screen_keys: Dict[str, List[str]] = {}
         self.nodes = self._epic_entries() or self._flat_entries()
 
@@ -100,32 +96,31 @@ class ExplorerTree:
         return [screen.entry() for screen in self.screens]
 
     def _epic_entries(self) -> List[dict]:
-        shown = [story for screen in self.screens for story, _entry in screen.stories if story is not None]
-        epics: List = []
-        for story in shown:
+        epics: List["Node"] = []
+        for story in self.shown_stories:
             epic = self.story_tree.epic_of(story)
             if epic is not None and epic not in epics:
                 epics.append(epic)
-        return [entry for entry in (self._epic_entry(epic, shown) for epic in epics) if entry is not None]
+        return [entry for entry in (self._epic_entry(epic) for epic in epics) if entry is not None]
 
-    def _epic_entry(self, epic, shown: List["Node"]) -> Optional[dict]:
+    def _epic_entry(self, epic: "Node") -> Optional[dict]:
         epic_key = f"epic:{epic.name}"
         children: List[dict] = []
         pending = list(self.story_tree.sub_epics(epic))
         while pending:
             sub_epic = pending.pop(0)
             sub_key = f"subepic:{epic.name}/{sub_epic.name}"
-            placed = self._placed(self.story_tree.stories_under(sub_epic), shown, f"{epic.name}/{sub_epic.name}", [epic_key, sub_key])
+            placed = self._placed(self.story_tree.stories_under(sub_epic), f"{epic.name}/{sub_epic.name}", [epic_key, sub_key])
             if placed:
                 children.append({"kind": "subepic", "name": sub_epic.name, "key": sub_key, "children": placed})
             pending[:0] = self.story_tree.sub_epics(sub_epic)
-        children.extend(self._placed(self.story_tree.stories_under(epic), shown, f"{epic.name}/", [epic_key]))
+        children.extend(self._placed(self.story_tree.stories_under(epic), f"{epic.name}/", [epic_key]))
         return {"kind": "epic", "name": epic.name, "key": epic_key, "children": children} if children else None
 
-    def _placed(self, stories: List["Node"], shown: List["Node"], place: str, opening: List[str]) -> List[dict]:
+    def _placed(self, stories: List["Node"], place: str, opening: List[str]) -> List[dict]:
         """The screens that show any of stories, each holding those it shows, ranked by the first in story-map order;
         each placed screen's keys are recorded the first time it is placed."""
-        order = {id(story): index for index, story in enumerate(item for item in stories if item in shown)}
+        order = {id(story): index for index, story in enumerate(item for item in stories if item in self.shown_stories)}
         ranked = [found for found in (screen.placed_entry(order, place) for screen in self.screens) if found is not None]
         ranked.sort(key=lambda item: item[0])
         for _rank, entry in ranked:

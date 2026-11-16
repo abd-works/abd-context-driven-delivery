@@ -14,6 +14,10 @@ from .reference_paths import ReferencePaths
 from .ux_node import UxNode
 
 
+ScreenCopies = dict[int, Screen]
+"""Each source screen's copy, by the identity of the source screen, while a map is copied."""
+
+
 class ScreenNotOnMap(KeyError):
     """A link names a screen the map does not have; transitions, tabs, and destinations join screens on one map."""
 
@@ -94,7 +98,7 @@ class UxMap(UxNode):
         copy.show_what(screen)
         return copy
 
-    def _take_screen_parts(self, screen: Screen, screens: dict) -> None:
+    def _take_screen_parts(self, screen: Screen, screens: ScreenCopies) -> None:
         copy = screens[id(screen)]
         copy.chrome_of = screens.get(id(screen.chrome_of)) if screen.chrome_of is not None else None
         for region in screen.regions:
@@ -103,7 +107,7 @@ class UxMap(UxNode):
                 region_copy.append_control(self._control_copy(control, screens))
             copy.append_region(region_copy)
 
-    def _control_copy(self, control: Control, screens: dict) -> Control:
+    def _control_copy(self, control: Control, screens: ScreenCopies) -> Control:
         common = (control.name, control.sequential_order, control.control_type, control.label, control.bound_field)
         if isinstance(control, StoryDemoControl):
             copy: Control = self.story_demo_control_type(
@@ -119,7 +123,7 @@ class UxMap(UxNode):
                                                 interaction.effect, destination))
         return copy
 
-    def _take_components(self, source: "UxMap", screens: dict) -> None:
+    def _take_components(self, source: "UxMap", screens: ScreenCopies) -> None:
         for transition in source.transitions:
             self.transitions.append(self.transition_type(
                 transition.name, transition.sequential_order, screens.get(id(transition.from_screen)),
@@ -138,8 +142,13 @@ class UxMap(UxNode):
     def from_workspace(cls, root: Path) -> Optional["UxMap"]:
         """The map this format reads from its file in the workspace folder root; none when the folder has no such file."""
         loader = cls.create()
-        found = loader.workspace_file(Path(root))
-        return None if found is None else loader.parse(found.read_text(encoding="utf-8"))
+        text = loader.workspace_text(Path(root))
+        return None if text is None else loader.parse(text)
+
+    def workspace_text(self, root: Path) -> Optional[str]:
+        """The text of this format's map file in the workspace folder root; none when the folder has no such file."""
+        found = self.workspace_file(root)
+        return None if found is None else found.read_text(encoding="utf-8")
 
     def workspace_file(self, root: Path) -> Optional[Path]:
         for pattern in self.workspace_files:

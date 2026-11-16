@@ -13,12 +13,12 @@ import { ThenFeedback } from "./then-feedback.js";
 
 export class StoryDemoPage {
   /**
-   * @param {{ mode?: 'Play' | 'Interactive', storyDemoFrame?: StoryDemoFrame }} [options]
+   * @param {{ mode?: 'Play' | 'Interactive', storyDemoFrame?: StoryDemoFrame, explorerFrame?: ExplorerFrame }} [demoSetup]
    */
-  constructor(options = {}) {
-    this.mode = options.mode ?? "Play";
-    this.storyDemoFrame = options.storyDemoFrame ?? new StoryDemoFrame();
-    this.explorerFrame = new ExplorerFrame();
+  constructor({ mode = "Play", storyDemoFrame, explorerFrame } = {}) {
+    this.mode = mode;
+    this.storyDemoFrame = storyDemoFrame ?? new StoryDemoFrame();
+    this.explorerFrame = explorerFrame ?? new ExplorerFrame();
     this.paintReflect = new PaintReflect(this.storyDemoFrame);
     this.thenFeedback = new ThenFeedback(this.explorerFrame, this.storyDemoFrame);
     this.runner = new PlayDualRunner({
@@ -39,15 +39,20 @@ export class StoryDemoPage {
     });
   }
 
-  static load(createStory, mode, options = {}) {
-    const page = new StoryDemoPage(options);
-    page.load(createStory, mode);
+  /**
+   * @param {(collectMode: string) => void} createStory
+   * @param {string} collectMode — the mode the story function is collected in
+   * @param {{ mode?: 'Play' | 'Interactive', storyDemoFrame?: StoryDemoFrame, explorerFrame?: ExplorerFrame }} [demoSetup]
+   */
+  static load(createStory, collectMode, demoSetup = {}) {
+    const page = new StoryDemoPage(demoSetup);
+    page.load(createStory, collectMode);
     return page;
   }
 
-  load(createStory, mode) {
-    this.story = this.runner.collect(createStory, mode);
-    this.explorerFrame.bindStoryTree(this.story);
+  load(createStory, collectMode) {
+    this.story = this.runner.collect(createStory, collectMode);
+    this.explorerFrame.showStory(this.story);
     return this.story;
   }
 
@@ -67,21 +72,21 @@ export class StoryDemoPage {
     const scenario = this.runner.scenario;
     if (!scenario?.setInputs || !root?.querySelectorAll) return;
     const values = {};
-    root.querySelectorAll("[data-input-field]").forEach((el) => {
-      const key = el.getAttribute("data-input-field");
-      const field = el.matches("input, select, textarea")
-        ? el
-        : el.querySelector("input, select, textarea");
+    root.querySelectorAll("[data-input-field]").forEach((element) => {
+      const key = element.getAttribute("data-input-field");
+      const field = element.matches("input, select, textarea")
+        ? element
+        : element.querySelector("input, select, textarea");
       if (!key || !field) return;
-      const raw = field.value;
-      if (field.type === "number") {
-        const n = Number(raw);
-        values[key] = Number.isFinite(n) ? n : raw;
-      } else {
-        values[key] = raw;
-      }
+      values[key] = this._fieldValue(field);
     });
     scenario.setInputs(values);
+  }
+
+  _fieldValue(field) {
+    if (field.type !== "number") return field.value;
+    const number = Number(field.value);
+    return Number.isFinite(number) ? number : field.value;
   }
 
   /**
@@ -94,24 +99,31 @@ export class StoryDemoPage {
     if (!scenario) return false;
     const whenStep = scenario.stepMatching(control.story_steps, { kind: "when" });
     if (!whenStep) return false;
-    // Shell applies pending Givens so Interactive does not require Play next first.
-    const whenIdx = scenario.steps.indexOf(whenStep);
-    while (scenario.index < whenIdx) {
-      const pending = scenario.steps[scenario.index];
-      if (pending?.kind !== "given") break;
-      this.runner.playNext();
-    }
-    this.syncInputsFromDom(root);
-    // List rows / picks: data-set-input="product" → scenario.input("product", default)
-    const setKey = control._el?.getAttribute("data-set-input");
-    if (setKey && control.name) {
-      scenario.setInputs({ [setKey]: control.name });
-    }
+    this._playGivensBefore(scenario, whenStep);
+    this._takeInputs(scenario, control, root);
     whenStep.fn();
     const snapshot = scenario.expose();
     this.paintReflect.apply(snapshot);
     this.storyDemoFrame.bind(snapshot);
     return true;
+  }
+
+  /** The shell plays the pending Givens, so Interactive does not need Play next first. */
+  _playGivensBefore(scenario, whenStep) {
+    const whenIndex = scenario.steps.indexOf(whenStep);
+    while (scenario.index < whenIndex) {
+      if (scenario.steps[scenario.index]?.kind !== "given") break;
+      this.runner.playNext();
+    }
+  }
+
+  /** Read the page's input fields, then the input the control picks: a list line sets `data-set-input` to its name. */
+  _takeInputs(scenario, control, root) {
+    this.syncInputsFromDom(root);
+    const inputKey = control.inputKey;
+    if (inputKey && control.name) {
+      scenario.setInputs({ [inputKey]: control.name });
+    }
   }
 
   get playNextInvocations() {

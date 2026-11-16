@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.guidance import SketchLens
@@ -78,10 +76,10 @@ class Ux(PracticeGuidance):
         )
 
     @agent_tool
-    def ensure_javascript(self, practice: str, source_format: str, content: Any) -> dict:
+    def ensure_javascript(self, practice: str, source_format: str, content: str) -> dict:
         """Ensure Stories or Clean Engineering JS exists - transform via that practice if needed.
         practice: 'stories' | 'clean_engineering', the practice's catalogue key: story steps come from Stories, the
-        object model from Clean Engineering. Returns {format: javascript, content: ...}."""
+        object model from Clean Engineering. content: the practice's text in source_format. Returns {format: javascript, content: ...}."""
         return self.javascript_practice(practice).render("javascript", content, source=source_format)
 
     def javascript_practice(self, key: str) -> PracticeGuidance:

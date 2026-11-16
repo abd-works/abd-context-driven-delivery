@@ -224,28 +224,32 @@ class JsonUxMap(UxMap):
     def parse(self, content: str | dict) -> UxMap:
         """A new map of this format read from a JSON document: its own fields, then each screen, each transition,
         content type, and navigation component reading its own record."""
-        data = json.loads(content) if isinstance(content, str) else content
-        ux_map = type(self).create(name=data.get("name", "UxMap"))
-        ux_map.read_record(data)
+        document = self._document_of(content)
+        ux_map = type(self).create(name=document.get("name", "UxMap"))
+        ux_map.read_record(document)
         return ux_map
 
-    def read_record(self, data: dict[str, Any]) -> None:
+    def _document_of(self, content: str | dict[str, Any]) -> dict[str, Any]:
+        """The JSON document content holds: decoded from text, or the document itself."""
+        return json.loads(content) if isinstance(content, str) else content
+
+    def read_record(self, document: dict[str, Any]) -> None:
         with self.batch_schema_sync():
-            self.scope = data.get("scope", "")
-            self.story_references = data.get("story_references", [])
-            self.object_references = data.get("object_references", [])
-            self.context.notes = list(data.get("notes", []))
-            self.context.invariants = list(data.get("invariants", []))
-            screens = data.get("screens", [])
+            self.scope = document.get("scope", "")
+            self.story_references = document.get("story_references", [])
+            self.object_references = document.get("object_references", [])
+            self.context.notes = list(document.get("notes", []))
+            self.context.invariants = list(document.get("invariants", []))
+            screens = document.get("screens", [])
             for index, record in enumerate(screens):
                 self.append_screen(self.screen_type.from_record(record, index, self))
             for screen, record in zip(self.screens, screens):
                 screen.read_record(record, self)
-            for index, record in enumerate(data.get("transitions", [])):
+            for index, record in enumerate(document.get("transitions", [])):
                 self.transitions.append(self.transition_type.from_record(record, index, self))
-            for index, record in enumerate(data.get("content_types", [])):
+            for index, record in enumerate(document.get("content_types", [])):
                 self.content_types.append(self.content_type_type.from_record(record, index, self))
-            for index, record in enumerate(data.get("nav_components", [])):
+            for index, record in enumerate(document.get("nav_components", [])):
                 self.nav_components.append(self.nav_component_type.from_record(record, index, self))
 
     def screen_named(self, name: str) -> Optional[Screen]:

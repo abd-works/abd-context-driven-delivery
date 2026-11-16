@@ -13,6 +13,10 @@ from typing import Dict, Iterable, List
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 
+PAGE_ID_LENGTH = 40
+"""The longest page id the canvas keeps; a screen's page id is cut to it."""
+
+
 class ClaudeDesignScreensNotReadable(NotImplementedError):
     """Claude Design screens are placed from the UX map and edited on the canvas; they are never read back into one."""
 
@@ -51,14 +55,12 @@ class ClaudeDesignUxMap(UxMap):
         names = self.prototype_names()
         return names + [name for name in files if name not in names]
 
-    @staticmethod
-    def title(name: str) -> str:
+    def title(self, name: str) -> str:
         return Path(name).name.removesuffix(".dc.html").replace("-", " ").capitalize()
 
-    @staticmethod
-    def page_of(name: str) -> str:
+    def page_of(self, name: str) -> str:
         """Each screen's own canvas page: the editor shows it alone there, so leaving Play lands on it to edit."""
-        return ("screen-" + Path(name).name.removesuffix(".dc.html"))[:40]
+        return ("screen-" + Path(name).name.removesuffix(".dc.html"))[:PAGE_ID_LENGTH]
 
     def pages(self, files: Iterable[str] = ()) -> List[dict]:
         return [{"id": self.page_of(name), "name": self.title(name)} for name in self.names(files)]

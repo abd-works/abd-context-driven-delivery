@@ -375,7 +375,7 @@ with description("a Segment"):
             expect(self.segment.path).to(equal(Path("/fake/test.md")))
 
         with it("should expose the config"):
-            expect(self.segment.config.min_body_chars).to(equal(120))
+            expect(self.segment.completeness.min_body_chars).to(equal(120))
 
     with context("that is built with an expected_names argument overriding the marker"):
         with before.each:
@@ -440,7 +440,7 @@ with description("a PartitionIndex"):
 
     with context("that is built from text with a partition-config block"):
         with before.each:
-            self.index = PartitionIndex.from_text(
+            self.index = PartitionIndex(
                 Path("/fake/index.md"), _INDEX_WITH_CONFIG
             )
 
@@ -462,7 +462,7 @@ with description("a PartitionIndex"):
 
     with context("that is built from text without a partition-config block"):
         with before.each:
-            self.index = PartitionIndex.from_text(
+            self.index = PartitionIndex(
                 Path("/fake/index.md"), _INDEX_NO_CONFIG
             )
 

@@ -4,10 +4,15 @@ them out from the class it is; a saved graph keeps them)."""
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
 from cdd_guidance.practices.clean_engineering.model.operation import CONSTRUCTOR_NAMES
 from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS
 from harness.graph.practice_rule import PracticeGraphRule
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
+    from harness.graph.rule_context import RuleCheckContext
 
 _TECHNICAL_SUFFIXES = frozenset({"result", "response", "dto", "request"})
 _AGENT_NOUNS = frozenset({"manager", "helper", "processor", "handler", "controller"})
@@ -18,7 +23,7 @@ class PrivateMethodNaming(PracticeGraphRule):
     slug = "private-method-naming"
     node_types = BUILDING_BLOCK_KINDS
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         if node.name.startswith("_"):
             return [f"Domain type name {node.name!r} should not start with '_'."]
         return [
@@ -34,7 +39,7 @@ class FlaccidDataObject(PracticeGraphRule):
     slug = "flaccid-data-object-no-behavior"
     node_types = ("EntityRoot", "Entity")
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         if node.type == "ValueObject" or not node.has_fact("operation_shapes"):
             return []
         public_ops = [name for name in node.get_fact("public_operation_names", []) if name not in CONSTRUCTOR_NAMES]
@@ -52,7 +57,7 @@ class EveryClassCarriesDddStereotype(PracticeGraphRule):
     slug = "every-class-carries-ddd-stereotype"
     node_types = ("Aggregate",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         return [
             f"Class '{name}' in aggregate '{node.name}' lacks a DDD stereotype "
             f"(<<Entity>>, <<Repository>>, or code @entity / @repository on the class)."
@@ -66,7 +71,7 @@ class DomainConceptsNotTechnicalNames(PracticeGraphRule):
     slug = "domain-concepts-not-technical-names"
     node_types = BUILDING_BLOCK_KINDS + ("Aggregate",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         """A name whose last word is a technical one (a result, a response) or that names an agent noun (a manager, a
         helper) names the code, not a domain concept."""
         tokens = [token.lower() for token in _CAMEL.findall(node.name or "") if token]
@@ -79,7 +84,7 @@ class ServiceIsHomeless(PracticeGraphRule):
     slug = "service-is-homeless"
     node_types = ("DomainService",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         if not node.get_fact("named_for_its_kind", False):
             return []
         for name in node.get_fact("delegating_operations", []):
@@ -93,7 +98,7 @@ class RepositoryIsCollectionLifecycle(PracticeGraphRule):
     slug = "repository-is-collection-lifecycle"
     node_types = ("Repository",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         if not node.get_fact("named_for_its_kind", False) or not node.has_fact("operation_shapes"):
             return []
         if node.get_fact("lifecycle_operations", []):
@@ -112,7 +117,7 @@ class LoadWithIdentityInHand(PracticeGraphRule):
     slug = "load-with-identity-in-hand"
     node_types = ("Repository",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         return [
             f"Repository '{node.name}.{name}' must take the identity already in hand."
             for name in node.get_fact("identity_free_loads", [])
@@ -123,7 +128,7 @@ class NoOrphanedObjects(PracticeGraphRule):
     slug = "no-orphaned-objects"
     node_types = ("EntityRoot", "Entity", "ValueObject")
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         if not node.has_fact("peer_names"):
             return []
         if len(node.get_fact("peer_names")) <= 1:
@@ -135,7 +140,7 @@ class ScreenInterfaceNotADomainObject(PracticeGraphRule):
     slug = "screen-interface-not-a-domain-object"
     node_types = ("EntityRoot", "Entity", "ValueObject", "DomainService")
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         if not node.has_fact("operation_shapes") or not node.get_fact("drives_a_screen", False):
             return []
         return [

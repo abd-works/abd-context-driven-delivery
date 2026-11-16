@@ -103,10 +103,10 @@ The spec, and the sketch format: an indented describe tree, with an observation'
 	// fills the facts the whole spec file owns
 + behavior_nodes(): list[BehaviorNode]
 	// every description, context, and observation, parents first
-+ setup_at(path: tuple): CodeBody
-+ body_at(path: tuple): CodeBody
-+ written_at(path: tuple): WrittenBlock | None
-	// path is the names from the description down; empty or None when this spec has no such block
++ add_child(kind: str, name: str, order: int | None = None): Description
+	// every block at the top of a spec is a description, whatever kind its file wrote it as
++ node_at(path: tuple): BddModel | Description | Context | Observation | None
+	// path is the names from the description down; the spec itself at the empty path, None when this spec has no such block
 
 ## SketchBddModel : BddModel
 
@@ -165,7 +165,7 @@ The `typescript` format: `describe`, `context`, `it`, and Playwright's `test.des
 	// TYPESCRIPT (the code_body constant)
 ----
 + parse_code(text: str): TypeScriptBddModel
-	// each outermost describe call is added through BddModel.add_description, each call inside one through DescribeBlock.add_child
+	// each outermost describe call is added through BddModel.add_child, each call inside one through DescribeBlock.add_child
 	-> DescribeCalls.describes
 + default_imports, block_open, block_close
 	// TypeScript spelling only. The marker is `// BDD: SIGNATURE`

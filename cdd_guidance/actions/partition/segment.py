@@ -5,11 +5,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from cdd_guidance.actions.partition.partition_index import PartitionIndex
-
 _EXPECTED_BLOCK = re.compile(
     r"<!--\s*expected-entries\s*\n(.*?)-->",
     re.IGNORECASE | re.DOTALL,
@@ -22,10 +17,13 @@ _HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 _ALL_CAPS = re.compile(r"^[A-Z][A-Z0-9 /'\-]{1,60}$")
 # An entry body shorter than this reads as a stub unless the index names a short-body pattern it matches.
 MIN_ENTRY_BODY_CHARS = 120
+# A shorter body still passes when it is at least this long and matches the index's short-body pattern.
+MIN_SHORT_BODY_CHARS = 40
 # Where a partition writes each segment under its folder: one folder for each top-level artifact its practice's Scaffold
 # names, such as `checks/.context/checks-segment.md`, or `powers/attack/.context/attack-segment.md` for a nested one.
 SEGMENT_FILE = "{artifact}/.context/{artifact}-segment.md"
-_SEGMENT_FILES = "**/.context/*-segment.md"
+# The glob that finds every segment file a partition wrote under its folder, wherever SEGMENT_FILE placed it.
+SEGMENT_FILES = "**/.context/*-segment.md"
 
 
 @dataclass(frozen=True)
@@ -37,6 +35,8 @@ class SegmentCompletenessConfig:
     short_body_pattern: re.Pattern[str] | None = None
 
 
+
+
 class SegmentEntry:
     """One expected named entry inside a segment chunk."""
 
@@ -44,11 +44,11 @@ class SegmentEntry:
         self,
         name: str,
         body: str | None,
-        config: SegmentCompletenessConfig,
+        completeness: SegmentCompletenessConfig,
     ) -> None:
         self._name = name
         self._body = body
-        self._config = config
+        self._completeness = completeness
 
     @property
     def name(self) -> str:
@@ -67,9 +67,9 @@ class SegmentEntry:
         if self._body is None:
             return "MISSING_HEADER"
         n = len(self._body)
-        pattern = self._config.short_body_pattern
-        short_ok = n >= 40 and pattern is not None and bool(pattern.search(self._body))
-        if n >= self._config.min_body_chars or short_ok:
+        pattern = self._completeness.short_body_pattern
+        short_ok = n >= MIN_SHORT_BODY_CHARS and pattern is not None and bool(pattern.search(self._body))
+        if n >= self._completeness.min_body_chars or short_ok:
             return "OK"
         return "STUB"
 
@@ -79,59 +79,42 @@ class SegmentEntry:
 
 
 class Segment:
-    """A partitioned ``*-segment.md`` chunk on disk (or in memory)."""
+    """A partitioned ``*-segment.md`` chunk on disk (or in memory). Its expected entries are the ones its
+    ``<!-- expected-entries -->`` marker names, unless the caller names them instead."""
 
-    def __init__(
-        self,
-        path: Path,
-        text: str,
-        config: SegmentCompletenessConfig,
-        *,
-        expected_names: list[str] | None = None,
-    ) -> None:
+    _FAIL_FOOTER = (
+        "",
+        "HARD FAIL: do not lock story inventory from this chunk.",
+        "Repair the segment (re-extract / re-OCR) until completeness PASS.",
+    )
+
+    def __init__(self, path: Path, text: str, completeness: SegmentCompletenessConfig) -> None:
         self._path = path
         self._text = text
-        self._config = config
-        self._expected_names = (
-            list(expected_names)
-            if expected_names is not None
-            else self._names_from_marker(text)
-        )
+        self._completeness = completeness
+        self._expected_names = self._names_from_marker()
 
     @classmethod
-    def at(
-        cls,
-        path: Path,
-        index: PartitionIndex | None,
-        *,
-        expected_names: str = "",
-        min_body_chars: int = MIN_ENTRY_BODY_CHARS,
-    ) -> Segment:
-        """The segment kept in the file at path, read from it. It is checked with the completeness settings of the
-        index it belongs to, or, when it belongs to none, with min_body_chars and the defaults."""
-        config = index.completeness if index is not None else SegmentCompletenessConfig(min_body_chars=int(min_body_chars))
+    def at(cls, path: Path, completeness: SegmentCompletenessConfig, expected_names: str = "") -> Segment:
+        """The segment kept in the file at path, read from it and checked with completeness."""
         resolved = path.resolve()
-        return cls.from_text(resolved, resolved.read_text(encoding="utf-8", errors="replace"), config, expected_names=expected_names)
-
-    @staticmethod
-    def files_under(folder: Path) -> list[Path]:
-        """Every segment file a partition wrote under folder, where ``SEGMENT_FILE`` places them, in path order."""
-        return sorted(path.resolve() for path in folder.glob(_SEGMENT_FILES) if path.is_file())
+        text = resolved.read_text(encoding="utf-8", errors="replace")
+        return cls.from_text(resolved, text, completeness, expected_names=expected_names)
 
     @classmethod
     def from_text(
         cls,
         path: Path,
         text: str,
-        config: SegmentCompletenessConfig,
+        completeness: SegmentCompletenessConfig,
         *,
         expected_names: str = "",
     ) -> Segment:
-        """Build a segment from already-loaded text."""
-        names = (
-            cls._split_names(expected_names) if expected_names.strip() else None
-        )
-        return cls(path, text, config, expected_names=names)
+        """Build a segment from already-loaded text; expected_names, when given, replace the names its marker lists."""
+        segment = cls(path, text, completeness)
+        if expected_names.strip():
+            segment._expected_names = segment._split_names(expected_names)
+        return segment
 
     @property
     def path(self) -> Path:
@@ -142,8 +125,8 @@ class Segment:
         return self._text
 
     @property
-    def config(self) -> SegmentCompletenessConfig:
-        return self._config
+    def completeness(self) -> SegmentCompletenessConfig:
+        return self._completeness
 
     @property
     def expected_names(self) -> list[str]:
@@ -154,13 +137,12 @@ class Segment:
         return bool(self._expected_names)
 
     def entries(self) -> list[SegmentEntry]:
-        lines = self._content_lines(self._text)
+        lines = self._content_lines
         return [self._entry_for(name, lines) for name in self._expected_names]
 
     @property
     def is_complete(self) -> bool:
-        found = self.entries()
-        return bool(found) and all(entry.is_complete for entry in found)
+        return self._passes(self.entries())
 
     def completeness_report(self) -> str:
         if not self.has_expected_names:
@@ -171,47 +153,36 @@ class Segment:
                 "<!-- expected-entries --> marker in segment\n"
             )
         entries = self.entries()
-        ok_count = sum(1 for entry in entries if entry.is_complete)
-        total = len(entries)
-        incomplete = total - ok_count
-        overall = "PASS" if incomplete == 0 and total > 0 else "FAIL"
-        lines = self._report_header(overall, ok_count, total, incomplete)
-        lines.extend(self._report_table_lines(entries, incomplete, total))
-        if overall == "FAIL":
-            lines.extend(self._fail_footer())
+        lines = self._report_header(entries)
+        lines.extend(self._report_table_lines(entries))
+        if not self._passes(entries):
+            lines.extend(self._FAIL_FOOTER)
         return "\n".join(lines) + "\n"
 
-    def _report_header(
-        self, overall: str, ok_count: int, total: int, incomplete: int
-    ) -> list[str]:
+    def _passes(self, entries: list[SegmentEntry]) -> bool:
+        """A segment passes when it has entries and every one is complete."""
+        return bool(entries) and all(entry.is_complete for entry in entries)
+
+    def _report_header(self, entries: list[SegmentEntry]) -> list[str]:
+        complete = sum(1 for entry in entries if entry.is_complete)
+        overall = "PASS" if self._passes(entries) else "FAIL"
         return [
             f"segment: {self._path}",
-            f"min_body_chars: {self._config.min_body_chars}",
-            (
-                f"completeness: {overall} "
-                f"({ok_count}/{total} OK, {incomplete} incomplete)"
-            ),
+            f"min_body_chars: {self._completeness.min_body_chars}",
+            f"completeness: {overall} ({complete}/{len(entries)} OK, {len(entries) - complete} incomplete)",
             "note: span length alone is a false PASS - named-entry completeness is required",
             "",
             "| Entry | Status | Body chars |",
             "|-------|--------|------------|",
         ]
 
-    @staticmethod
-    def _fail_footer() -> list[str]:
-        return [
-            "",
-            "HARD FAIL: do not lock story inventory from this chunk.",
-            "Repair the segment (re-extract / re-OCR) until completeness PASS.",
-        ]
-
     def _entry_for(self, name: str, lines: list[str]) -> SegmentEntry:
         header = name.upper().strip()
         idxs = [i for i, line in enumerate(lines) if line.strip() == header]
         if not idxs:
-            return SegmentEntry(name, None, self._config)
+            return SegmentEntry(name, None, self._completeness)
         body = self._body_after_header(lines, idxs[0], header)
-        return SegmentEntry(name, body, self._config)
+        return SegmentEntry(name, body, self._completeness)
 
     def _body_after_header(
         self, lines: list[str], header_index: int, header: str
@@ -229,7 +200,7 @@ class Segment:
         if not _ALL_CAPS.match(candidate):
             return False
         if (
-            candidate in self._config.non_entry_headers
+            candidate in self._completeness.non_entry_headers
             or candidate == current_header
         ):
             return False
@@ -237,39 +208,38 @@ class Segment:
             return False
         return True
 
-    def _report_table_lines(
-        self, entries: list[SegmentEntry], incomplete: int, total: int
-    ) -> list[str]:
+    def _report_table_lines(self, entries: list[SegmentEntry]) -> list[str]:
         table_lines = [
             f"| {entry.name} | {entry.status} | {entry.body_chars} |"
             for entry in entries
             if not entry.is_complete
         ]
-        if incomplete == 0 and total > 0:
+        if self._passes(entries):
             table_lines.append(
                 f"| - | (all expected entries) | OK | "
-                f">={self._config.min_body_chars} |"
+                f">={self._completeness.min_body_chars} |"
             )
         return table_lines
 
-    @classmethod
-    def _names_from_marker(cls, text: str) -> list[str]:
-        block = _EXPECTED_BLOCK.search(text)
+    def _names_from_marker(self) -> list[str]:
+        block = _EXPECTED_BLOCK.search(self._text)
         if block:
-            return cls._split_names(block.group(1))
-        inline = _EXPECTED_INLINE.search(text)
+            return self._split_names(block.group(1))
+        inline = _EXPECTED_INLINE.search(self._text)
         if inline:
-            return cls._split_names(inline.group(1))
+            return self._split_names(inline.group(1))
         return []
 
-    @staticmethod
-    def _content_lines(segment_text: str) -> list[str]:
-        return _HTML_COMMENT.sub("", segment_text).splitlines()
+    @property
+    def _content_lines(self) -> list[str]:
+        """The segment's lines with its HTML comments, such as the expected-entries marker, taken out."""
+        return _HTML_COMMENT.sub("", self._text).splitlines()
 
-    @staticmethod
-    def _split_names(raw: str) -> list[str]:
+    def _split_names(self, listed: str) -> list[str]:
+        """The distinct names a marker or argument lists, split on newlines, bars, commas and semicolons; a repeat
+        that differs only in case is dropped."""
         names: list[str] = []
-        for part in re.split(r"[\n|,;]+", raw):
+        for part in re.split(r"[\n|,;]+", listed):
             name = part.strip().strip("-").strip()
             if not name or name.startswith("#"):
                 continue

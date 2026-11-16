@@ -38,8 +38,9 @@ class BddModel(ModelNode):
         _SketchReader(self).read(text)
         return self
 
-    def add_description(self, name: str, order: int | None = None) -> Description:
-        """A new outermost describe named name, after the others unless order places it."""
+    def add_child(self, kind: str, name: str, order: int | None = None) -> Description:
+        """A new outermost describe named name, after the others unless order places it. Every block at the top of a
+        spec is a description, whatever kind its file wrote it as, so kind only matches DescribeBlock.add_child."""
         description = Description(name, order or len(self.descriptions) + 1)
         self.descriptions.append(description)
         return description
@@ -87,40 +88,30 @@ class BddModel(ModelNode):
             lines.extend(self._sketch_context(child, depth + 1))
         return lines
 
-    def _observation_lines(self, observations, pad: str) -> list[str]:
+    def _observation_lines(self, observations: list[Observation], pad: str) -> list[str]:
         """Each observation one level under its parent: a fenced block when it carries a realization, else its line."""
         lines: list[str] = []
         for observation in observations:
             if observation.surface_lines or observation.call_graph:
-                lines.append(f"{pad}  ```")
-                for surface in observation.surface_lines:
-                    lines.append(f"{pad}  -> {surface}")
-                if observation.call_graph:
-                    for graph_line in observation.call_graph.block().splitlines():
-                        lines.append(f"{pad}  {graph_line}")
-                lines.append(f"{pad}  it {observation.name}")
-                lines.append(f"{pad}  ```")
+                lines.extend(self._realized_lines(observation, f"{pad}  "))
             else:
                 lines.append(f"{pad}  it {observation.name}")
         return lines
 
-    def setup_at(self, path: tuple) -> CodeBody:
-        """The setup read for the describe at this path of names; empty when this spec has none."""
-        node = self._node_at(path)
-        return CodeBody() if node is None else node.setup
+    def _realized_lines(self, observation: Observation, pad: str) -> list[str]:
+        """The fenced block of an observation that carries a realization: its surface lines, its call graph, its name."""
+        graph_lines = observation.call_graph.block().splitlines() if observation.call_graph else []
+        return [
+            f"{pad}```",
+            *(f"{pad}-> {surface}" for surface in observation.surface_lines),
+            *(f"{pad}{graph_line}" for graph_line in graph_lines),
+            f"{pad}it {observation.name}",
+            f"{pad}```",
+        ]
 
-    def body_at(self, path: tuple) -> CodeBody:
-        """The test body read for the it at this path of names; empty when this spec has no it there."""
-        observation = self._node_at(path)
-        return observation.body if isinstance(observation, Observation) else CodeBody()
-
-    def written_at(self, path: tuple):
-        """How the block at this path of names was written; None when this spec has no such block."""
-        node = self._node_at(path)
-        return node.written if node is not None else None
-
-    def _node_at(self, path: tuple):
-        found, children = None, list(self.descriptions)
+    def node_at(self, path: tuple) -> BddModel | Description | Context | Observation | None:
+        """The block at this path of names, the spec itself at the empty path; None when this spec has no such block."""
+        found, children = self, list(self.descriptions)
         for name in path:
             found = next((child for child in children if child.name == name), None)
             if found is None:
@@ -153,17 +144,20 @@ class _SketchReader:
         stripped = raw.strip()
         if stripped.startswith("```"):
             self._toggle_fence(raw)
-        elif self._fence is not None:
-            self._fence.append(raw)
-        elif not stripped or stripped.startswith(("//", "#", "Fidelity:")):
             return
-        elif stripped.startswith("->"):
+        if self._fence is not None:
+            self._fence.append(raw)
+            return
+        if not stripped or stripped.startswith(("//", "#", "Fidelity:")):
+            return
+        if stripped.startswith("->"):
             self._read_surface(stripped)
-        elif stripped.startswith("it "):
+            return
+        if stripped.startswith("it "):
             self._read_observation(stripped[3:].strip(), self._level(raw))
-        else:
-            self._pending_surface = []
-            self._read_block(stripped, self._level(raw))
+            return
+        self._pending_surface = []
+        self._read_block(stripped, self._level(raw))
 
     def _toggle_fence(self, raw: str) -> None:
         if self._fence is not None:
@@ -213,7 +207,7 @@ class _SketchReader:
     def _read_block(self, name: str, level: int) -> None:
         """A line at the margin opens a description; an indented line opens a context inside the nearest open block."""
         if level == 0:
-            self._description = self.spec.add_description(name)
+            self._description = self.spec.add_child("description", name)
             self._open = []
             return
         if self._description is None:

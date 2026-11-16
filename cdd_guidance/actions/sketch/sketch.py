@@ -8,9 +8,10 @@ from pathlib import Path
 
 from cdd_guidance.actions.generate.generate import Generate
 from cdd_guidance.actions.grill_context.grill_context import GrillContext
-from harness.guidance_actions import GuidanceArg, GuidanceAction
+from harness.guidance_actions import ActionSession, GuidanceArg, GuidanceAction, WorkedGuidance
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.agent_tools.agent_tools import agent_tool
+from harness.agent_tools.tool_call import ToolCall
 from harness.installation.files import skill
 from harness.mcp.mcp_annotations import mcp
 
@@ -20,11 +21,11 @@ _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 class Sketch(GuidanceAction):
     """Sketch a solution interactively before generating the formal artifact."""
 
-    def __init__(self, agent_dir: str = "", session=None, call=None) -> None:
+    def __init__(self, agent_dir: str = "", session: ActionSession | None = None, call: ToolCall | None = None) -> None:
         super().__init__(session, call)
         self._agent_dir = agent_dir
 
-    def made_for(self, session, call=None) -> Sketch:
+    def made_for(self, session: ActionSession | None, call: ToolCall | None = None) -> Sketch:
         """A sketch made for session and call, which finds its template in this sketch's agent_dir."""
         return type(self)(agent_dir=self._agent_dir, session=session, call=call)
 
@@ -46,14 +47,14 @@ class Sketch(GuidanceAction):
         """The generate the agreed sketch becomes the formal artifact through, working on what this sketch lists."""
         return self._inside(Generate)
 
-    def _sketch_text(self, item) -> str:
+    def _sketch_text(self, guidance: WorkedGuidance) -> str:
         """What sketching one listed guidance asks for, read from the fidelity this sketch works at on it: its Scaffold
         section, which is the shell's level of detail, and its practice's sketch template, which is the notation; text
         guidance is itself. The rules the sketch answers are held to arrive once, with the generate the sketch ends with.
         The recipe reads the text returned."""
-        if isinstance(item, str):
-            return item
-        parts = (item.scaffold, item.sketch_template)
+        if isinstance(guidance, str):
+            return guidance
+        parts = (guidance.scaffold, guidance.sketch_template)
         return "\n\n".join(part.strip() for part in parts if part and part.strip())
 
     @mcp

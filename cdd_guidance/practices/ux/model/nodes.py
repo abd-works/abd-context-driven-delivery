@@ -25,11 +25,11 @@ class StoryStep:
     label: str = ""
 
     @classmethod
-    def from_value(cls, value: "StoryStep | Mapping[str, Any]") -> "StoryStep":
+    def from_value(cls, step: "StoryStep | Mapping[str, Any]") -> "StoryStep":
         """A step from a file's ``{kind, label}`` object, or the step itself."""
-        if isinstance(value, StoryStep):
-            return value
-        return cls(str(value.get("kind", "") or ""), str(value.get("label", "") or ""))
+        if isinstance(step, StoryStep):
+            return step
+        return cls(str(step.get("kind", "") or ""), str(step.get("label", "") or ""))
 
     def as_dict(self) -> dict:
         return {"kind": self.kind, "label": self.label}
@@ -227,8 +227,8 @@ class Screen(UxNode):
         if term and term not in self.domain_terms:
             self.domain_terms.append(term)
 
-    def _show(self, kind: str, item: Node | str) -> None:
-        link = StoryLink.from_item(kind, item)
+    def _show(self, kind: str, shown: Node | str) -> None:
+        link = StoryLink.from_shown(kind, shown)
         if not link.key or link.key in self._keys(kind):
             return
         self._story_links.append(link)

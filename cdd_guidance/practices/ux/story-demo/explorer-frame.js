@@ -7,84 +7,67 @@
 
 import { StoryDemoControl } from "./control.js";
 
-export class ExplorerFrame {
+/** The story titles the explorer lists above the active scenario, in map order, and whether the list is open. */
+export class StoryMapList {
   constructor() {
-    /** @type {{ name: string, scenarios: object[] } | null} */
-    this.storyTree = null;
-    /** Story map titles (above the active scenario in the explorer). */
-    this.storyMap = [];
-    this.activeStoryName = null;
-    /** When false, story map list is collapsed (active story still shown). */
-    this.storyMapExpanded = true;
-    /** Screen → story → scenario keys that are open in the explorer. */
-    this.expandedNodes = new Set();
-    /** Screen name last auto-opened because it became current. */
-    this.openScreen = null;
-    /** Loaded story catalog, so a screen can list scenarios and steps. */
-    this.catalog = [];
-    this.currentStep = null;
-    this.message = null;
-    this.stepMarks = [];
-    this.playNextControl = new StoryDemoControl({
-      name: "playNext",
-      label: "Play next",
-    });
-    this.resetControl = new StoryDemoControl({
-      name: "reset",
-      label: "Reset",
-    });
+    this.titles = [];
+    this.activeTitle = null;
+    /** When false, only the active story's title shows. */
+    this.expanded = true;
   }
 
   /**
-   * @param {string[]} titles — story names in map order (shown above the scenario)
+   * @param {string[]} titles — story names in map order
    * @param {string | null} [activeTitle]
    */
-  bindStoryMap(titles, activeTitle = null) {
-    this.storyMap = [...titles];
-    this.activeStoryName = activeTitle;
+  show(titles, activeTitle = null) {
+    this.titles = [...titles];
+    this.activeTitle = activeTitle;
+    return this;
   }
 
-  bindStoryTree(story) {
+  markActive(title) {
+    this.activeTitle = title;
+    return this;
+  }
+
+  expand() {
+    this.expanded = true;
+    return this;
+  }
+
+  toggle() {
+    this.expanded = !this.expanded;
+    return this.expanded;
+  }
+
+  /** The titles to draw: every title while the list is open, otherwise the active one alone. */
+  visibleTitles() {
+    return this.expanded ? this.titles : this.titles.filter((title) => title === this.activeTitle);
+  }
+}
+
+export class ExplorerFrame {
+  /**
+   * @param {{ storyMap?: StoryMapList, playNextControl?: StoryDemoControl }} [parts]
+   */
+  constructor({ storyMap, playNextControl } = {}) {
+    /** @type {{ name: string, scenarios: object[] } | null} */
+    this.storyTree = null;
+    this.storyMap = storyMap ?? new StoryMapList();
+    this.currentStep = null;
+    this.message = null;
+    this.playNextControl = playNextControl ?? new StoryDemoControl({ name: "playNext", label: "Play next" });
+  }
+
+  showStory(story) {
     this.storyTree = story;
-    if (story?.name) this.activeStoryName = story.name;
+    if (story?.name) this.storyMap.markActive(story.name);
+    return this;
   }
 
   shows(name) {
     return this.storyTree?.name === name;
-  }
-
-  showsStoryMapAboveScenario() {
-    return this.storyMap.length > 0;
-  }
-
-  expandStoryMap() {
-    this.storyMapExpanded = true;
-  }
-
-  collapseStoryMap() {
-    this.storyMapExpanded = false;
-  }
-
-  toggleStoryMap() {
-    this.storyMapExpanded = !this.storyMapExpanded;
-    return this.storyMapExpanded;
-  }
-
-  isStoryMapExpanded() {
-    return this.storyMapExpanded;
-  }
-
-  ensureExpanded(key) {
-    this.expandedNodes.add(key);
-  }
-
-  toggleExpanded(key) {
-    if (this.expandedNodes.has(key)) this.expandedNodes.delete(key);
-    else this.expandedNodes.add(key);
-  }
-
-  isExpanded(key) {
-    return this.expandedNodes.has(key);
   }
 
   showsStepLabels() {
@@ -110,9 +93,5 @@ export class ExplorerFrame {
 
   messageVisible() {
     return Boolean(this.message);
-  }
-
-  markStep(step, ok) {
-    this.stepMarks.push({ step, ok });
   }
 }

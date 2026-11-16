@@ -344,12 +344,12 @@ describe("scenario input values", () => {
       name: "Gadget",
       controlType: "list",
       storySteps: [{ kind: "when", label: "the Customer selects a Product from the list" }],
-    });
-    row._el = {
-      getAttribute(name) {
-        return name === "data-set-input" ? "product" : null;
+      element: {
+        getAttribute(name) {
+          return name === "data-set-input" ? "product" : null;
+        },
       },
-    };
+    });
     const page = StoryDemoPage.load(createParameterizedStory, "fake", {
       mode: "Interactive",
       storyDemoFrame: new StoryDemoFrame([row]),

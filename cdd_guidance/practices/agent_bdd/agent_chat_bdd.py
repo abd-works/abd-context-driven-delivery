@@ -26,7 +26,7 @@ class ChatAgentBlock(AgentBlock):
         text = self._poll_inbox_response(response_path, timeout_seconds)
         if text:
             return text
-        raise ChatInboxPending(f"timed out waiting for inbox response at {response_path}", prefix=prefix, log_dir=self._log_dir)
+        raise ChatInboxPending(f"{prefix} timed out waiting for inbox response at {response_path}", log_dir=self._log_dir)
 
     def _prepare_inbox(self, prefix: str, prompt: str) -> Path:
         inbox_dir = self._log_dir / "inbox"

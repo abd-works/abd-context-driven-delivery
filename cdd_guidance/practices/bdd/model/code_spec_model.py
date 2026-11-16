@@ -22,7 +22,8 @@ _SCRIPT_BLOCK = re.compile(
 # (first line, last line, read) for one child block; read(lead, order) builds the child's node.
 ChildBlock = Tuple[int, int, Callable[[List[str], int], object]]
 BehaviorBlock = Union[Description, Context, Observation]
-ParentBlock = Optional[Union[Description, Context]]
+# The block a read block is added under: the spec itself for an outermost describe.
+ParentBlock = Union[BddModel, Description, Context]
 
 
 class UnreadableSpec(ValueError):
@@ -80,7 +81,8 @@ class CodeBddModel(BddModel):
 
     def _render_body(self, observation: Observation, path: tuple, written: Optional[WrittenBlock]) -> List[str]:
         inner = self._indents(path)[1]
-        body = observation.body.in_language_of(self._kept.body_at(path), self.language)
+        kept = self._kept.node_at(path)
+        body = observation.body.in_language_of(kept.body if isinstance(kept, Observation) else CodeBody(), self.language)
         as_read = written.inside_for(body) if written is not None else None
         if as_read is not None:
             return as_read
@@ -123,7 +125,8 @@ class CodeBddModel(BddModel):
 
     def _render_inside(self, node: Union[Description, Context], path: tuple, written: Optional[WrittenBlock]) -> List[str]:
         inner = self._indents(path)[1]
-        body = node.setup.in_language_of(self._kept.setup_at(path), self.language)
+        kept = self._kept.node_at(path)
+        body = node.setup.in_language_of(kept.setup if kept is not None else CodeBody(), self.language)
         as_read = written.inside_for(body) if written is not None and body.language is self.language else None
         setup = as_read if as_read is not None else body.lines_in(self.language, inner, "")
         lines = list(setup)
@@ -136,7 +139,8 @@ class CodeBddModel(BddModel):
     def _written(self, node: Union[BddModel, BehaviorBlock], path: tuple) -> Optional[WrittenBlock]:
         """The node's own lines when it was read in this language, else the previous file's for the same block."""
         name = path[-1] if path else _SPEC
-        for written in (node.written, self._kept.written if not path else self._kept.written_at(path)):
+        kept = self._kept.node_at(path)
+        for written in (node.written, kept.written if kept is not None else None):
             if written is not None and written.is_in(self.language, name):
                 return written
         return None
@@ -171,9 +175,9 @@ class CodeBddModel(BddModel):
         marker = text.strip() in {self.marker_line(), self.language.comment(SIGNATURE)}
         return CodeBody("" if marker else text, self.language)
 
-    def _inline(self, node: BehaviorBlock, lead: List[str], heading: List[str], inline: str) -> BehaviorBlock:
+    def _inline(self, node: BehaviorBlock, written: WrittenBlock, inline: str) -> BehaviorBlock:
         """A block written on one line: the line is its heading and holds its body."""
-        node.written = WrittenBlock(self.language, node.name, lead, heading)
+        node.written = written
         node.written.inline = inline
         if isinstance(node, Observation):
             node.body = self._body(inline)
@@ -188,13 +192,6 @@ class CodeBddModel(BddModel):
         self.written = WrittenBlock(self.language, _SPEC, [], [])
         self.written.closing = self._read_block(self, (0, len(lines)), children)
         self.preamble, self.setup = self.setup, CodeBody()
-
-    def _add_block(self, kind: str, parent: ParentBlock, name: str, order: int) -> BehaviorBlock:
-        """A block read from the file, added where it stands: an outermost describe is one of this spec's descriptions,
-        and any other block is a context or an observation of the block that holds it."""
-        if parent is None:
-            return self.add_description(name, order)
-        return parent.add_child(kind, name, order)
 
 
 class PythonBddModel(CodeBddModel):
@@ -218,8 +215,8 @@ class PythonBddModel(CodeBddModel):
         except SyntaxError:
             return self
         self._lines = text.split("\n")
-        descriptions = [item for item in tree.body if self._block_kind(item) == "description"]
-        self._read_spec(self._lines, self._child_blocks(descriptions, None))
+        descriptions = [statement for statement in tree.body if self._block_kind(statement) == "description"]
+        self._read_spec(self._lines, self._child_blocks(descriptions, self))
         return self
 
     def default_imports(self) -> List[str]:
@@ -239,47 +236,49 @@ class PythonBddModel(CodeBddModel):
 
     def _child_blocks(self, statements: List[ast.stmt], parent: ParentBlock) -> List[ChildBlock]:
         return [
-            (item.lineno - 1, item.end_lineno - 1, self._reader(item, parent))
-            for item in statements
-            if self._block_kind(item)
+            (statement.lineno - 1, statement.end_lineno - 1, self._reader(statement, parent))
+            for statement in statements
+            if self._block_kind(statement)
         ]
 
-    def _reader(self, item: ast.With, parent: ParentBlock) -> Callable[[List[str], int], object]:
-        return lambda lead, order: self._node(item, parent, lead, order)
+    def _reader(self, statement: ast.With, parent: ParentBlock) -> Callable[[List[str], int], object]:
+        """Adds the block under parent in its place among the children, then reads it."""
+        kind, name = self._block_kind(statement), statement.items[0].context_expr.args[0].value
+        return lambda lead, order: self._node(statement, parent.add_child(kind, name, order), lead)
 
-    def _block_kind(self, item: ast.stmt) -> str:
-        if not isinstance(item, ast.With) or not item.items:
+    def _block_kind(self, statement: ast.stmt) -> str:
+        if not isinstance(statement, ast.With) or not statement.items:
             return ""
-        call = item.items[0].context_expr
+        call = statement.items[0].context_expr
         if not (isinstance(call, ast.Call) and isinstance(call.func, ast.Name) and call.args):
             return ""
         if not (isinstance(call.args[0], ast.Constant) and isinstance(call.args[0].value, str)):
             return ""
         return _MAMBA_BLOCKS.get(call.func.id, "")
 
-    def _node(self, item: ast.With, parent: ParentBlock, lead: List[str], order: int) -> BehaviorBlock:
-        """One `with <block>("name"):` statement as a Description, Context, or Observation."""
-        name = item.items[0].context_expr.args[0].value
-        node = self._add_block(self._block_kind(item), parent, name, order)
-        node.line, node.end_line = item.lineno, item.end_lineno
-        if item.body[0].lineno == item.lineno:
+    def _node(self, statement: ast.With, node: BehaviorBlock, lead: List[str]) -> BehaviorBlock:
+        """One `with <block>("name"):` statement read into the Description, Context, or Observation added for it."""
+        node.line, node.end_line = statement.lineno, statement.end_lineno
+        if statement.body[0].lineno == statement.lineno:
             source = "\n".join(self._lines)
-            inline = "\n".join(ast.get_source_segment(source, statement) or "" for statement in item.body)
-            return self._inline(node, lead, self._lines[item.lineno - 1 : item.end_lineno], inline)
-        heading_last = self._heading_last(item)
-        inside = (heading_last + 1, item.end_lineno)
-        node.written = WrittenBlock(self.language, name, lead, self._lines[item.lineno - 1 : heading_last + 1])
+            inline = "\n".join(ast.get_source_segment(source, inner) or "" for inner in statement.body)
+            whole = WrittenBlock(self.language, node.name, lead, self._lines[statement.lineno - 1 : statement.end_lineno])
+            return self._inline(node, whole, inline)
+        heading_last = self._heading_last(statement)
+        inside = (heading_last + 1, statement.end_lineno)
+        node.written = WrittenBlock(self.language, node.name, lead, self._lines[statement.lineno - 1 : heading_last + 1])
         if isinstance(node, Observation):
             node.written.inside = self._lines[slice(*inside)]
             node.body = self._body("\n".join(node.written.inside))
             return node
-        node.written.closing = self._read_block(node, inside, self._child_blocks(item.body, node))
+        node.written.closing = self._read_block(node, inside, self._child_blocks(statement.body, node))
         return node
 
-    def _heading_last(self, item: ast.With) -> int:
+    def _heading_last(self, statement: ast.With) -> int:
         """The last line of the `with ...:` opening; comments and blank lines below it belong to the body."""
-        index = item.body[0].lineno - 2
-        while index > item.lineno - 1 and (not self._lines[index].strip() or self._lines[index].strip().startswith("#")):
+        index = statement.body[0].lineno - 2
+        lines = self._lines
+        while index > statement.lineno - 1 and (not lines[index].strip() or lines[index].strip().startswith("#")):
             index -= 1
         return index
 
@@ -293,7 +292,7 @@ class TypeScriptBddModel(CodeBddModel):
 
     def parse_code(self, text: str) -> "TypeScriptBddModel":
         self._lines = text.split("\n")
-        self._read_spec(self._lines, self._child_blocks(DescribeCalls(text).describes, None))
+        self._read_spec(self._lines, self._child_blocks(DescribeCalls(text).describes, self))
         return self
 
     def default_imports(self) -> List[str]:
@@ -310,13 +309,13 @@ class TypeScriptBddModel(CodeBddModel):
         return [(call.first_line, call.last_line, self._reader(call, parent)) for call in calls]
 
     def _reader(self, call: "DescribeCall", parent: ParentBlock) -> Callable[[List[str], int], object]:
-        return lambda lead, order: self._node(call, parent, lead, order)
+        """Adds the call's block under parent in its place among the children, then reads it."""
+        return lambda lead, order: self._node(call, parent.add_child(call.behavior_kind, call.name, order), lead)
 
-    def _node(self, call: "DescribeCall", parent: ParentBlock, lead: List[str], order: int) -> BehaviorBlock:
-        node = self._add_block(call.behavior_kind, parent, call.name, order)
+    def _node(self, call: "DescribeCall", node: BehaviorBlock, lead: List[str]) -> BehaviorBlock:
         node.line, node.end_line = call.first_line + 1, call.last_line + 1
         if call.is_inline:
-            return self._inline(node, lead, call.whole_lines, call.body)
+            return self._inline(node, WrittenBlock(self.language, call.name, lead, call.whole_lines), call.body)
         node.written = WrittenBlock(self.language, call.name, lead, call.heading_lines)
         node.written.close = call.close_lines
         if isinstance(node, Observation):

@@ -13,11 +13,29 @@
 import { StoryDemoControl } from "./control.js";
 import { StoryDemoFrame } from "./story-demo-frame.js";
 import { StoryDemoPage } from "./story-demo-page.js";
-import { readExplorerTree, renderScreenTree } from "./screen-tree.js";
+import { readExplorerTree, ScreenTree, ScreenTreeExpansion } from "./screen-tree.js";
+
+/** How long the mount waits for composed fragments (`[data-include]`) to be inlined before it reads the page. */
+const INCLUDE_WAIT_MILLISECONDS = 3000;
+/** The mode each story function is collected in for the browser demo. */
+const COLLECT_MODE = "fake";
+/** Exposed domain values Interactive carries from one story to the next. */
+const SESSION_KEYS = ["cart", "product", "catalog", "paymentMethod"];
 
 function readBound(snapshot, path) {
   if (!path || snapshot == null) return undefined;
   return path.split(".").reduce((acc, key) => acc?.[key], snapshot);
+}
+
+/** List hosts are painted and wired from the scenario on every repaint, so they are not static controls or fields. */
+function isBoundListHost(element) {
+  return element.hasAttribute("data-bound-list") || element.getAttribute("data-type") === "bound-list";
+}
+
+function storyFunctionsIn(storyModule) {
+  return Object.entries(storyModule)
+    .filter(([exportName, exported]) => typeof exported === "function" && /^create.+Story$/.test(exportName))
+    .map(([exportName, exported]) => ({ name: exportName, fn: exported }));
 }
 
 async function loadCreateStoryFns() {
@@ -26,13 +44,8 @@ async function loadCreateStoryFns() {
     const src = script.getAttribute("src");
     if (!src) continue;
     try {
-      const url = new URL(src, document.baseURI).href;
-      const mod = await import(url);
-      for (const [key, value] of Object.entries(mod)) {
-        if (typeof value === "function" && /^create.+Story$/.test(key)) {
-          fns.push({ name: key, fn: value });
-        }
-      }
+      const storyModule = await import(new URL(src, document.baseURI).href);
+      fns.push(...storyFunctionsIn(storyModule));
     } catch (err) {
       console.warn(`[story-demo] failed to load ${src}:`, err);
     }
@@ -40,325 +53,261 @@ async function loadCreateStoryFns() {
   return fns;
 }
 
-function hydrateControls(root) {
-  const controls = [];
-  root.querySelectorAll("[data-story-steps], [data-bound-field]").forEach((el) => {
-    // List hosts are painted/wired dynamically — not static controls.
-    if (
-      el.hasAttribute("data-bound-list") ||
-      el.getAttribute("data-type") === "bound-list"
-    ) {
-      return;
-    }
-    const control = StoryDemoControl.fromElement(el);
-    if (control) {
-      control._el = el;
-      controls.push(control);
-    }
-  });
-  return controls;
-}
-
-function paintStoryMap(page, el, onPickStory) {
-  const mapEl = el.storyMap || el.tree;
-  if (!mapEl) return;
-  const titles = page.explorerFrame.storyMap;
-  const active = page.explorerFrame.activeStoryName ?? page.story?.name;
-  const expanded = page.explorerFrame.isStoryMapExpanded();
-
-  if (el.storyMapToggle) {
-    el.storyMapToggle.textContent = expanded ? "▼" : "▶";
-    el.storyMapToggle.setAttribute(
-      "aria-expanded",
-      expanded ? "true" : "false",
-    );
-    el.storyMapToggle.setAttribute(
-      "aria-label",
-      expanded ? "Collapse story map" : "Expand story map",
-    );
-  }
-
-  mapEl.hidden = false;
-  mapEl.innerHTML = "";
-  const visible = expanded
-    ? titles
-    : titles.filter((title) => title === active);
-  visible.forEach((title) => {
-    const index = titles.indexOf(title);
-    const li = document.createElement("li");
-    li.textContent = title;
-    li.style.cursor = "pointer";
-    if (title === active) li.classList.add("current");
-    li.addEventListener("click", () => {
-      if (!expanded) {
-        page.explorerFrame.expandStoryMap();
-        paintAll(page, el, document, onPickStory);
+/** Fragments must be inlined before the controls are read (compose-fragments.js top-level await). */
+function composedFragments(root) {
+  if (!root.querySelector?.("[data-include]")) return Promise.resolve();
+  return new Promise((resolve) => {
+    const start = performance.now();
+    const tick = () => {
+      if (!root.querySelector("[data-include]") || performance.now() - start > INCLUDE_WAIT_MILLISECONDS) {
+        resolve();
         return;
       }
-      onPickStory?.(index);
-    });
-    mapEl.appendChild(li);
+      requestAnimationFrame(tick);
+    };
+    tick();
   });
 }
 
-/** The runner's index of the story the explorer names: the loaded story function of that title. */
-function storyIndexNamed(catalog, name) {
-  return catalog.findIndex((entry) => entry.title === name || entry.story?.name === name);
+function controlsOn(root) {
+  return [...root.querySelectorAll("[data-story-steps], [data-bound-field]")]
+    .filter((element) => !isBoundListHost(element))
+    .map((element) => StoryDemoControl.fromElement(element))
+    .filter(Boolean);
 }
 
-function paintExplorer(page, el, root, handlers) {
-  if (el.tree && page) {
-    const screenEls = [...root.querySelectorAll(".screen")];
-    if (!screenEls.length && page.story) {
-      paintStoryMap(page, el, handlers.onPickStory);
-    } else if (screenEls.length) {
-    const frame = page.explorerFrame;
-    const tree = readExplorerTree(root);
-    const current = screenEls.find((screen) => screen.classList.contains("current"))
-      || screenEls.find((screen) => !screen.hidden);
-    const currentName = current?.getAttribute("data-slug")
-      || current?.querySelector("h2")?.textContent?.trim()
-      || "";
-    if (currentName && frame.openScreen !== currentName) {
-      frame.openScreen = currentName;
-      el.openScreen = currentName;
-      for (const key of tree.screenKeys[currentName] || []) frame.ensureExpanded(key);
-    }
-    if (!frame.expandedNodes) frame.expandedNodes = new Set();
-    renderScreenTree(el.tree, {
-      nodes: tree.nodes,
-      expanded: frame.expandedNodes,
-      currentScreen: currentName,
-      currentStory: page.story?.name ?? null,
-      currentScenario: page.runner.scenario?.name ?? null,
-      currentStep: page.runner.scenario?.currentStep ?? null,
-      scrollToCurrentScreen: Boolean(frame.scrollExplorerToScreen),
-    }, {
-      onToggle(key) {
-        frame.toggleExpanded(key);
-        handlers.repaint();
-      },
-      onScreen(name) {
-        showScreen(root, name);
-        frame.openScreen = null;
-        el.openScreen = null;
-        frame.scrollExplorerToScreen = true;
-        handlers.repaint();
-      },
-      onStory(storyName) {
-        const storyIndex = storyIndexNamed(frame.catalog || [], storyName);
-        if (storyIndex >= 0) handlers.onPickStory?.(storyIndex);
-      },
-      onScenario(storyName, scenarioIndex, key) {
-        frame.ensureExpanded(key);
-        handlers.onScenario?.(storyIndexNamed(frame.catalog || [], storyName), scenarioIndex, key);
-      },
-    });
-    frame.scrollExplorerToScreen = false;
-    }
-  }
-
-  if (el.message) {
-    el.message.hidden = !page.explorerFrame.message;
-    el.message.textContent = page.explorerFrame.message || "";
-  }
-}
-
-function paintCharacterSheet(snapshot, root) {
-  const character = readBound(snapshot, "character");
-  const tree = root.querySelector("[data-character-tree]");
-  if (tree && character) {
-    tree.querySelectorAll(".tree-node:not([data-role='folder'])").forEach((n) => n.remove());
-    const node = document.createElement("div");
-    node.className = "tree-node selected";
-    node.textContent = `· ${character.name || "Hero"}`;
-    tree.appendChild(node);
-  }
-  const list = root.querySelector("[data-ability-list]");
-  if (list && character?.abilities) {
-    list.innerHTML = "";
-    for (const [name, ability] of Object.entries(character.abilities)) {
-      if (name === "pointContribution") continue;
-      const row = document.createElement("div");
-      row.className = "control";
-      row.dataset.type = "list";
-      row.dataset.name = name;
-      row.textContent = `${name} · ${ability.rank ?? 0}`;
-      list.appendChild(row);
-    }
-  }
+function explorerChromeOn(root) {
+  return {
+    storyMap: root.querySelector("[data-story-map]") || root.querySelector("#story-list"),
+    storyMapToggle: root.querySelector("[data-toggle-story-map]"),
+    tree: root.querySelector("[data-explorer-tree]"),
+    message: root.querySelector("[data-explorer-message]"),
+    playNext: root.querySelector("[data-play-next]"),
+    reset: root.querySelector("[data-reset]"),
+  };
 }
 
 /**
  * Fill `{name}` / `{product}` (and other `{field}`) in item story-step templates.
- * List hosts use `data-item-story-steps` (not `data-story-steps`) so hydrate skips the container.
+ * List hosts use `data-item-story-steps` (not `data-story-steps`) so reading the controls skips the container.
  */
-function itemStoryStepsFor(item, rawTemplate, value) {
+function itemStoryStepsFor(lineItem, rawTemplate, pickedName) {
   if (!rawTemplate) return [];
   // The template is the step list the UX map wrote; one that does not read back is a defect to show, not hide.
   const template = JSON.parse(rawTemplate);
   if (!Array.isArray(template)) throw new Error(`data-item-story-steps holds no step list: ${rawTemplate}`);
-  const name = value ?? item?.name ?? item?.product ?? "";
+  const name = pickedName ?? lineItem?.name ?? lineItem?.product ?? "";
   return template.map((step) => ({
     ...step,
-    label: formatItemLabel(item, String(step.label ?? ""), name),
+    label: formatItemLabel(lineItem, String(step.label ?? ""), name),
   }));
 }
 
-function itemPickValue(item, valueField) {
-  if (valueField && item?.[valueField] != null) return String(item[valueField]);
-  if (item?.name != null) return String(item.name);
-  if (item?.product != null) return String(item.product);
+function pickNameOf(lineItem, valueField) {
+  if (valueField && lineItem?.[valueField] != null) return String(lineItem[valueField]);
+  if (lineItem?.name != null) return String(lineItem.name);
+  if (lineItem?.product != null) return String(lineItem.product);
   return "";
 }
 
-function formatItemLabel(item, template, fallbackName = "") {
+function formatItemLabel(lineItem, template, fallbackName = "") {
   if (template) {
     return template.replace(/\{(\w+)\}/g, (_, key) => {
       if (key === "name" || key === "product") {
-        return item?.[key] ?? fallbackName ?? "";
+        return lineItem?.[key] ?? fallbackName ?? "";
       }
-      return item?.[key] ?? "";
+      return lineItem?.[key] ?? "";
     });
   }
-  if (item?.product != null && item?.quantity != null) {
-    return `${item.product} × ${item.quantity} @ ${item.unitPrice ?? ""}`;
+  if (lineItem?.product != null && lineItem?.quantity != null) {
+    return `${lineItem.product} × ${lineItem.quantity} @ ${lineItem.unitPrice ?? ""}`;
   }
-  const name = item?.name ?? fallbackName;
-  const price = item?.unitPrice != null ? ` · ${item.unitPrice}` : "";
-  const cat = item?.category ? ` · ${item.category}` : "";
-  return `${name}${price}${cat}`.trim();
-}
-
-function removeBoundListControls(frame) {
-  if (!frame) return;
-  frame.controls = frame.controls.filter((c) => !c._fromBoundList);
-}
-
-function boundListHosts(root) {
-  return [...root.querySelectorAll("[data-bound-list]")];
-}
-
-function itemsForBoundList(list, snapshot) {
-  const path =
-    list.getAttribute("data-bound-field") ||
-    list.getAttribute("data-bound-list") ||
-    "";
-  if (path && path !== "true" && path !== "") {
-    const direct = readBound(snapshot, path);
-    if (Array.isArray(direct)) return direct;
-  }
-  return [];
+  const name = lineItem?.name ?? fallbackName;
+  const price = lineItem?.unitPrice != null ? ` · ${lineItem.unitPrice}` : "";
+  const category = lineItem?.category ? ` · ${lineItem.category}` : "";
+  return `${name}${price}${category}`.trim();
 }
 
 /**
- * Generic Interactive list host: paint rows from expose path.
- * - data-item-story-steps ⇒ row click runs When (action list)
- * - else data-set-input ⇒ row click selects only (select list)
+ * A list host on a screen (`data-bound-list`): it paints one line per item the scenario exposes at its path.
+ * - data-item-story-steps ⇒ a line click runs When (action list)
+ * - else data-set-input ⇒ a line click selects only (select list)
  */
-function paintBoundLists(snapshot, root, page, wireInteractive, wireLineSelect) {
-  removeBoundListControls(page?.storyDemoFrame);
-  for (const list of boundListHosts(root)) {
-    const items = itemsForBoundList(list, snapshot);
-    list.innerHTML = "";
-    if (!items?.length) {
-      const empty = document.createElement("div");
-      empty.className = "field dimmed";
-      empty.textContent = "(empty)";
-      list.appendChild(empty);
-      continue;
-    }
-    const setInput = list.getAttribute("data-set-input") || "product";
-    const valueField = list.getAttribute("data-item-value") || "";
-    const labelTemplate = list.getAttribute("data-item-label") || "";
-    const itemStepsRaw = list.getAttribute("data-item-story-steps");
-    const goto = list.getAttribute("data-goto");
-    const selectedName =
-      page?.runner?.scenario?.input?.(setInput, undefined) ??
-      readBound(snapshot, "product")?.name;
-    for (const item of items) {
-      const value = itemPickValue(item, valueField);
-      const row = document.createElement("div");
-      row.className = "control";
-      row.dataset.type = "list";
-      row.dataset.name = value;
-      row.style.cursor = "pointer";
-      row.setAttribute("data-set-input", setInput);
-      row.textContent = formatItemLabel(item, labelTemplate, value);
-      if (value && value === selectedName) row.classList.add("selected");
-      if (goto) row.setAttribute("data-goto", goto);
-      const storySteps = itemStoryStepsFor(item, itemStepsRaw, value);
-      if (storySteps.length) {
-        row.setAttribute("data-story-steps", JSON.stringify(storySteps));
-      }
-      list.appendChild(row);
-
-      if (page?.storyDemoFrame && storySteps.length) {
-        const control = new StoryDemoControl({
-          name: value,
-          controlType: "list",
-          label: row.textContent,
-          storySteps,
-        });
-        control._el = row;
-        control._fromBoundList = true;
-        page.storyDemoFrame.appendControl(control);
-        wireInteractive?.(control);
-      } else if (setInput) {
-        wireLineSelect?.(row, { ...item, product: value, name: value }, setInput);
-      }
-    }
+class BoundListHost {
+  constructor(element) {
+    this.element = element;
   }
+
+  get inputKey() {
+    return this.element.getAttribute("data-set-input") || "product";
+  }
+
+  get valueField() {
+    return this.element.getAttribute("data-item-value") || "";
+  }
+
+  get labelTemplate() {
+    return this.element.getAttribute("data-item-label") || "";
+  }
+
+  get itemStepsTemplate() {
+    return this.element.getAttribute("data-item-story-steps");
+  }
+
+  get destination() {
+    return this.element.getAttribute("data-goto");
+  }
+
+  items(snapshot) {
+    const path = this.element.getAttribute("data-bound-field") || this.element.getAttribute("data-bound-list") || "";
+    if (!path || path === "true") return [];
+    const direct = readBound(snapshot, path);
+    return Array.isArray(direct) ? direct : [];
+  }
+
+  clear() {
+    this.element.innerHTML = "";
+    return this;
+  }
+
+  showEmpty() {
+    const empty = document.createElement("div");
+    empty.className = "field dimmed";
+    empty.textContent = "(empty)";
+    this.element.appendChild(empty);
+    return this;
+  }
+}
+
+/** One painted line of a list host, for one item the scenario exposed. */
+class BoundListLine {
+  constructor(host, lineItem) {
+    this.host = host;
+    this.lineItem = lineItem;
+    this.pickedName = pickNameOf(lineItem, host.valueField);
+    this.storySteps = itemStoryStepsFor(lineItem, host.itemStepsTemplate, this.pickedName);
+    this.row = null;
+  }
+
+  paint(selectedName) {
+    const row = document.createElement("div");
+    row.className = "control";
+    row.dataset.type = "list";
+    row.dataset.name = this.pickedName;
+    row.style.cursor = "pointer";
+    row.setAttribute("data-set-input", this.host.inputKey);
+    row.textContent = formatItemLabel(this.lineItem, this.host.labelTemplate, this.pickedName);
+    if (this.pickedName && this.pickedName === selectedName) row.classList.add("selected");
+    if (this.host.destination) row.setAttribute("data-goto", this.host.destination);
+    if (this.storySteps.length) row.setAttribute("data-story-steps", JSON.stringify(this.storySteps));
+    this.host.element.appendChild(row);
+    this.row = row;
+    return this;
+  }
+
+  get runsWhen() {
+    return this.storySteps.length > 0;
+  }
+
+  control() {
+    return new StoryDemoControl({
+      name: this.pickedName,
+      controlType: "list",
+      label: this.row.textContent,
+      storySteps: this.storySteps,
+      element: this.row,
+      fromBoundList: true,
+    });
+  }
+}
+
+/** The story functions the mockup loaded, in map order, with the story each one collects to. */
+class StoryCatalog {
+  constructor(entries) {
+    this.entries = entries;
+    /** When label → story index, so Interactive can jump to the story that owns a control's When. */
+    this.whenStoryIndex = this._indexWhens();
+  }
+
+  static fromStoryFunctions(createStories) {
+    return new StoryCatalog(createStories.map(({ name, fn }) => {
+      const story = StoryDemoPage.load(fn, COLLECT_MODE, {}).story;
+      return { createName: name, fn, title: story.name, story };
+    }));
+  }
+
+  get titles() {
+    return this.entries.map((entry) => entry.title);
+  }
+
+  get length() {
+    return this.entries.length;
+  }
+
+  entry(storyIndex) {
+    return this.entries[storyIndex];
+  }
+
+  /** The index of the story the explorer names: the loaded story function of that title. */
+  indexNamed(name) {
+    return this.entries.findIndex((entry) => entry.title === name || entry.story?.name === name);
+  }
+
+  storyIndexForWhen(whenLabel) {
+    return this.whenStoryIndex.get(whenLabel);
+  }
+
+  _indexWhens() {
+    const index = new Map();
+    this.entries.forEach((entry, storyIndex) => {
+      const steps = (entry.story.scenarios ?? []).flatMap((scenario) => scenario.steps ?? []);
+      for (const step of steps) {
+        if (step.kind === "when" && step.label) index.set(step.label, storyIndex);
+      }
+    });
+    return index;
+  }
+}
+
+function paintCharacterTree(character, root) {
+  const tree = root.querySelector("[data-character-tree]");
+  if (!tree || !character) return;
+  tree.querySelectorAll(".tree-node:not([data-role='folder'])").forEach((node) => node.remove());
+  const node = document.createElement("div");
+  node.className = "tree-node selected";
+  node.textContent = `· ${character.name || "Hero"}`;
+  tree.appendChild(node);
+}
+
+function paintAbilities(character, root) {
+  const list = root.querySelector("[data-ability-list]");
+  if (!list || !character?.abilities) return;
+  list.innerHTML = "";
+  for (const [name, ability] of Object.entries(character.abilities)) {
+    if (name === "pointContribution") continue;
+    const row = document.createElement("div");
+    row.className = "control";
+    row.dataset.type = "list";
+    row.dataset.name = name;
+    row.textContent = `${name} · ${ability.rank ?? 0}`;
+    list.appendChild(row);
+  }
+}
+
+function boundFieldText(element, snapshot) {
+  const path = element.getAttribute("data-bound-field");
+  const boundValue = readBound(snapshot, path);
+  const label = element.getAttribute("data-bound-label") || path;
+  if (boundValue === undefined || boundValue === null) return `${label}: —`;
+  if (typeof boundValue === "object") return `${label}: ${JSON.stringify(boundValue)}`;
+  return `${label}: ${boundValue}`;
 }
 
 function paintBoundFields(snapshot, root) {
-  root.querySelectorAll("[data-bound-field]").forEach((el) => {
-    if (el.tagName === "BUTTON") return;
-    // List hosts own their children — do not overwrite with JSON blob.
-    if (
-      el.hasAttribute("data-bound-list") ||
-      el.getAttribute("data-type") === "bound-list"
-    ) {
-      return;
-    }
-    const path = el.getAttribute("data-bound-field");
-    const value = readBound(snapshot, path);
-    const label = el.getAttribute("data-bound-label") || path;
-    if (value === undefined || value === null) {
-      el.textContent = `${label}: —`;
-      return;
-    }
-    if (typeof value === "object") {
-      el.textContent = `${label}: ${JSON.stringify(value)}`;
-      return;
-    }
-    el.textContent = `${label}: ${value}`;
+  root.querySelectorAll("[data-bound-field]").forEach((element) => {
+    if (element.tagName === "BUTTON" || isBoundListHost(element)) return;
+    element.textContent = boundFieldText(element, snapshot);
   });
-}
-
-function paintControls(page, root = document, wireInteractive, wireLineSelect) {
-  const snapshot = page.runner.scenario?.expose?.() ?? {};
-  const step = page.runner.scenario?.currentStep;
-  paintCharacterSheet(snapshot, root);
-  paintBoundLists(snapshot, root, page, wireInteractive, wireLineSelect);
-  paintBoundFields(snapshot, root);
-  for (const control of page.storyDemoFrame.controls) {
-    const el = control._el;
-    if (!el) continue;
-    if (step) {
-      control.clearEmphasis();
-      if (control.matchesStep(step)) control.emphasize();
-    }
-    el.classList.toggle("emphasized", Boolean(control.emphasized));
-    el.classList.toggle("tinted", Boolean(control.tinted));
-  }
-}
-
-function paintAll(page, el, root = document, onPickStory, wireInteractive, wireLineSelect, onScenario) {
-  paintExplorer(page, el, root, { onPickStory, onScenario, repaint() {
-    paintAll(page, el, root, onPickStory, wireInteractive, wireLineSelect, onScenario);
-  } });
-  paintControls(page, root, wireInteractive, wireLineSelect);
 }
 
 function showScreensForStory(storyTitle, root) {
@@ -370,9 +319,8 @@ function showScreensForStory(storyTitle, root) {
       .getAttribute("data-for-story")
       .split(",")
       .map((s) => s.trim());
-    const match = allowed.includes(storyTitle);
     screen.classList.remove("current");
-    if (!match) {
+    if (!allowed.includes(storyTitle)) {
       screen.hidden = true;
       continue;
     }
@@ -393,40 +341,390 @@ function showScreen(root, dest) {
   }
 }
 
-function wireProductNav(root = document, onScreenSelected) {
-  const mockup = root.querySelector("#mockup");
-  mockup?.addEventListener("click", (event) => {
-    if (event.target.closest("[data-goto]")) return;
-    const screen = event.target.closest(".screen");
-    if (!screen || !mockup.contains(screen)) return;
-    const name = screen.getAttribute("data-slug") || screen.querySelector("h2")?.textContent?.trim();
-    showScreen(root, name);
-    onScreenSelected?.(name);
-  });
-
-  root.querySelectorAll("[data-goto]").forEach((el) => {
-    // Story-bound controls: Interactive owns goto after When (avoid empty-screen nav).
-    if (el.hasAttribute("data-story-steps")) return;
-    el.addEventListener("click", () => {
-      showScreen(root, el.getAttribute("data-goto"));
+/** A click on one `clickable` selects it and clears the selection from the `siblings` in its region. */
+function selectWithinRegion(root, clickable, siblings) {
+  root.querySelectorAll(clickable).forEach((element) => {
+    element.addEventListener("click", () => {
+      const region = element.closest("[data-region]");
+      region?.querySelectorAll(siblings).forEach((sibling) => sibling.classList.remove("selected"));
+      element.classList.add("selected");
     });
   });
+}
 
-  root.querySelectorAll(".tree-node:not([data-role='folder'])").forEach((el) => {
-    el.addEventListener("click", () => {
-      const tree = el.closest("[data-region]");
-      tree?.querySelectorAll(".tree-node").forEach((n) => n.classList.remove("selected"));
-      el.classList.add("selected");
-    });
-  });
+/** The explorer beside the product: the screen tree, or the story map when the page has no screens, and its message. */
+class ExplorerPanel {
+  /**
+   * @param {GeneratedMockup} mockup
+   * @param {ReturnType<typeof explorerChromeOn>} chrome
+   * @param {ScreenTreeExpansion} expansion
+   */
+  constructor(mockup, chrome, expansion) {
+    this.mockup = mockup;
+    this.chrome = chrome;
+    this.expansion = expansion;
+    this._explorerTree = null;
+  }
 
-  root.querySelectorAll("[data-type='list']").forEach((el) => {
-    el.addEventListener("click", () => {
-      const region = el.closest("[data-region]");
-      region?.querySelectorAll("[data-type='list']").forEach((n) => n.classList.remove("selected"));
-      el.classList.add("selected");
+  /** Scroll the current screen into view on the next painting. */
+  requestScroll() {
+    this.expansion.requestScroll();
+    return this;
+  }
+
+  /** The explorer tree the page carries, read the first time a screen is drawn. */
+  get explorerTree() {
+    this._explorerTree ??= readExplorerTree(this.mockup.root);
+    return this._explorerTree;
+  }
+
+  paint() {
+    const screens = [...this.mockup.root.querySelectorAll(".screen")];
+    if (this.chrome.tree && !screens.length && this.mockup.page.story) this._paintStoryMap();
+    else if (this.chrome.tree && screens.length) this._paintScreenTree(screens);
+    this._paintMessage();
+  }
+
+  _paintScreenTree(screens) {
+    const currentName = this._currentScreenName(screens);
+    this.expansion.followScreen(currentName, this.explorerTree.screenKeys[currentName]);
+    const scenario = this.mockup.page.runner.scenario;
+    const model = {
+      nodes: this.explorerTree.nodes,
+      expansion: this.expansion,
+      currentScreen: currentName,
+      currentStory: this.mockup.page.story?.name ?? null,
+      currentScenario: scenario?.name ?? null,
+      currentStep: scenario?.currentStep ?? null,
+      scrollToCurrentScreen: this.expansion.takeScrollRequest(),
+    };
+    new ScreenTree(model, this._treeHandlers()).drawInto(this.chrome.tree);
+  }
+
+  _currentScreenName(screens) {
+    const current = screens.find((screen) => screen.classList.contains("current"))
+      || screens.find((screen) => !screen.hidden);
+    return current?.getAttribute("data-slug") || current?.querySelector("h2")?.textContent?.trim() || "";
+  }
+
+  _treeHandlers() {
+    return {
+      onToggle: (key) => {
+        this.expansion.toggle(key);
+        this.mockup.repaint();
+      },
+      onScreen: (name) => {
+        showScreen(this.mockup.root, name);
+        this.expansion.forgetOpenScreen().requestScroll();
+        this.mockup.repaint();
+      },
+      onStory: (storyName) => {
+        const storyIndex = this.mockup.catalog.indexNamed(storyName);
+        if (storyIndex >= 0) this.mockup.activateStory(storyIndex);
+      },
+      onScenario: (storyName, scenarioIndex, key) => {
+        this.expansion.open(key);
+        this.mockup.openScenario(this.mockup.catalog.indexNamed(storyName), scenarioIndex);
+      },
+    };
+  }
+
+  _paintStoryMap() {
+    const mapElement = this.chrome.storyMap || this.chrome.tree;
+    if (!mapElement) return;
+    const storyMap = this.mockup.page.explorerFrame.storyMap;
+    this._paintStoryMapToggle(storyMap.expanded);
+    mapElement.hidden = false;
+    mapElement.innerHTML = "";
+    for (const title of storyMap.visibleTitles()) mapElement.appendChild(this._storyMapItem(title, storyMap));
+  }
+
+  _paintStoryMapToggle(expanded) {
+    const toggle = this.chrome.storyMapToggle;
+    if (!toggle) return;
+    toggle.textContent = expanded ? "▼" : "▶";
+    toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+    toggle.setAttribute("aria-label", expanded ? "Collapse story map" : "Expand story map");
+  }
+
+  _storyMapItem(title, storyMap) {
+    const storyIndex = storyMap.titles.indexOf(title);
+    const item = document.createElement("li");
+    item.textContent = title;
+    item.style.cursor = "pointer";
+    if (title === storyMap.activeTitle) item.classList.add("current");
+    item.addEventListener("click", () => {
+      if (!storyMap.expanded) {
+        storyMap.expand();
+        this.mockup.repaint();
+        return;
+      }
+      this.mockup.activateStory(storyIndex);
     });
-  });
+    return item;
+  }
+
+  _paintMessage() {
+    const messageElement = this.chrome.message;
+    if (!messageElement) return;
+    const message = this.mockup.page.explorerFrame.message;
+    messageElement.hidden = !message;
+    messageElement.textContent = message || "";
+  }
+}
+
+/** The product frame: the scenario's exposed values painted into its fields, lists, and controls. */
+class ProductPanel {
+  /** @param {GeneratedMockup} mockup */
+  constructor(mockup) {
+    this.mockup = mockup;
+  }
+
+  paint() {
+    const scenario = this.mockup.page.runner.scenario;
+    const snapshot = scenario?.expose?.() ?? {};
+    const character = readBound(snapshot, "character");
+    paintCharacterTree(character, this.mockup.root);
+    paintAbilities(character, this.mockup.root);
+    this._paintBoundLists(snapshot);
+    paintBoundFields(snapshot, this.mockup.root);
+    if (scenario?.currentStep) this.mockup.frame.emphasize(scenario.currentStep);
+    this.mockup.frame.paintEmphasis();
+  }
+
+  _paintBoundLists(snapshot) {
+    this.mockup.frame.dropBoundListControls();
+    for (const element of this.mockup.root.querySelectorAll("[data-bound-list]")) {
+      this._paintBoundList(new BoundListHost(element), snapshot);
+    }
+  }
+
+  _paintBoundList(host, snapshot) {
+    const items = host.items(snapshot);
+    host.clear();
+    if (!items.length) {
+      host.showEmpty();
+      return;
+    }
+    const selectedName = this.mockup.page.runner.scenario?.input?.(host.inputKey, undefined)
+      ?? readBound(snapshot, "product")?.name;
+    for (const lineItem of items) this._paintBoundListLine(new BoundListLine(host, lineItem), selectedName);
+  }
+
+  _paintBoundListLine(line, selectedName) {
+    line.paint(selectedName);
+    if (line.runsWhen) {
+      const control = line.control();
+      this.mockup.frame.appendControl(control);
+      this.mockup.wireInteractive(control);
+    } else {
+      this.mockup.wireLineSelect(line.row, line.pickedName, line.host.inputKey);
+    }
+  }
+}
+
+/** A UX-generated mockup page playing its stories: the product frame on the left, the explorer on the right. */
+class GeneratedMockup {
+  /**
+   * @param {ParentNode} root
+   * @param {StoryCatalog} catalog
+   * @param {{ frame: StoryDemoFrame, chrome: ReturnType<typeof explorerChromeOn>, expansion: ScreenTreeExpansion }} parts
+   */
+  constructor(root, catalog, { frame, chrome, expansion }) {
+    this.root = root;
+    this.catalog = catalog;
+    this.frame = frame;
+    this.chrome = chrome;
+    /** @type {StoryDemoPage | null} */
+    this.page = null;
+    this.index = 0;
+    this.mode = "Play";
+    /** @type {Record<string, unknown>} */
+    this.session = {};
+    this.wiredControls = new WeakSet();
+    this.explorer = new ExplorerPanel(this, chrome, expansion);
+    this.product = new ProductPanel(this);
+  }
+
+  start() {
+    this._wireProductNav();
+    for (const control of this.frame.controls) this.wireInteractive(control);
+    this.chrome.storyMapToggle?.addEventListener("click", () => {
+      this.page?.explorerFrame.storyMap.toggle();
+      this.repaint();
+    });
+    this.chrome.playNext?.addEventListener("click", () => this.playNext());
+    this.chrome.reset?.addEventListener("click", () => this.reset());
+    return this.activateStory(0);
+  }
+
+  activateStory(storyIndex, carryInputs = {}) {
+    this.index = storyIndex;
+    const entry = this.catalog.entry(storyIndex);
+    // Drop prior dynamic bound-list controls; static ones stay on the shared frame.
+    this.frame.dropBoundListControls();
+    this.page = this._loadPage(entry);
+    this.page.selectScenario(0);
+    this._applyCarried(carryInputs);
+    this._ensureInteractiveGivens();
+    this._captureSession();
+    showScreensForStory(entry.title, this.root);
+    this.repaint();
+    return this.page;
+  }
+
+  _loadPage(entry) {
+    const page = StoryDemoPage.load(entry.fn, COLLECT_MODE, { mode: this.mode, storyDemoFrame: this.frame });
+    page.explorerFrame.storyMap.show(this.catalog.titles, entry.title);
+    return page;
+  }
+
+  _applyCarried(carryInputs) {
+    const scenario = this.page.runner.scenario;
+    if (this.mode === "Interactive" && Object.keys(this.session).length) scenario.setSeed(this.session);
+    if (Object.keys(carryInputs).length) scenario.setInputs(carryInputs);
+  }
+
+  /** Interactive needs Givens applied so bound lists (catalog) can paint and receive clicks. */
+  _ensureInteractiveGivens() {
+    if (this.mode !== "Interactive" || !this.page) return;
+    const scenario = this.page.runner.scenario;
+    if (!scenario) return;
+    while (scenario.steps[scenario.index]?.kind === "given") {
+      this.page.runner.playNext();
+    }
+  }
+
+  _captureSession() {
+    if (this.mode !== "Interactive" || !this.page) return;
+    const snapshot = this.page.runner.scenario?.expose?.() ?? {};
+    for (const key of SESSION_KEYS) {
+      if (snapshot[key] != null) this.session[key] = snapshot[key];
+    }
+  }
+
+  playNext() {
+    if (!this.page) return;
+    const scenario = this.page.runner.scenario;
+    const atEnd = scenario != null && scenario.index >= (scenario.steps?.length ?? 0);
+    if (!atEnd) this.page.explorerFrame.playNextControl.trigger("click");
+    else if (this._playPastEnd(scenario)) return;
+    this.repaint();
+  }
+
+  /** Past a scenario's last step: play the story's next scenario, or open the next story. True when a story opened. */
+  _playPastEnd(scenario) {
+    const scenarios = this.page.story.scenarios;
+    const scenarioIndex = scenarios.indexOf(scenario);
+    if (scenarioIndex >= 0 && scenarioIndex < scenarios.length - 1) {
+      this.page.selectScenario(scenarioIndex + 1);
+      return false;
+    }
+    if (this.index >= this.catalog.length - 1) return false;
+    this.activateStory(this.index + 1);
+    return true;
+  }
+
+  reset() {
+    this.session = {};
+    this.activateStory(this.index);
+    this.page?.storyDemoFrame.clearEmphasis();
+    this.page?.explorerFrame.clearMessage();
+  }
+
+  openScenario(storyIndex, scenarioIndex) {
+    if (storyIndex >= 0 && storyIndex !== this.index) this.activateStory(storyIndex);
+    if (this.page && scenarioIndex >= 0) this.page.selectScenario(scenarioIndex);
+    this.repaint();
+  }
+
+  wireInteractive(control) {
+    if (!control || this.wiredControls.has(control)) return;
+    this.wiredControls.add(control);
+    control.appendInteraction({ trigger: "click", effect: (triggered) => this._runControl(triggered) });
+    control.listenForClicks(() => {
+      if (this.page?.mode === "Interactive") control.trigger("click");
+    });
+  }
+
+  _runControl(control) {
+    if (this.page?.mode !== "Interactive") return;
+    // Control may belong to another story on the map (e.g. Add to Cart while
+    // Select Product is active) — switch first so When can match.
+    this._activateStoryForControl(control);
+    if (this.page.onControlTrigger(control, this.root)) {
+      this._captureSession();
+      showScreen(this.root, control.destination);
+    }
+    this.repaint();
+  }
+
+  _activateStoryForControl(control) {
+    const whenLabel = (control.story_steps || []).find((s) => s.kind === "when")?.label;
+    if (!whenLabel) return;
+    const storyIndex = this.catalog.storyIndexForWhen(whenLabel);
+    const carry = this._carryInputsFrom(control);
+    if (storyIndex == null || storyIndex === this.index) {
+      if (Object.keys(carry).length) this.page?.runner?.scenario?.setInputs?.(carry);
+      return;
+    }
+    this.activateStory(storyIndex, carry);
+  }
+
+  _carryInputsFrom(control) {
+    const carry = {};
+    const exposed = this.page?.runner?.scenario?.expose?.();
+    if (exposed?.product?.name) carry.product = exposed.product.name;
+    if (control?.inputKey && control.name) carry[control.inputKey] = control.name;
+    return carry;
+  }
+
+  /** A cart line click selects which product Remove (etc.) will use — no When yet. */
+  wireLineSelect(row, pickedName, inputKey) {
+    row.addEventListener("click", () => {
+      if (this.page?.mode !== "Interactive") return;
+      const scenario = this.page.runner.scenario;
+      if (!scenario?.setInputs) return;
+      scenario.setInputs({ [inputKey]: pickedName });
+      this.repaint();
+    });
+  }
+
+  _wireProductNav() {
+    this._wireScreenClicks();
+    this._wireGotoLinks();
+    selectWithinRegion(this.root, ".tree-node:not([data-role='folder'])", ".tree-node");
+    selectWithinRegion(this.root, "[data-type='list']", "[data-type='list']");
+  }
+
+  _wireScreenClicks() {
+    const mockup = this.root.querySelector("#mockup");
+    mockup?.addEventListener("click", (event) => {
+      if (event.target.closest("[data-goto]")) return;
+      const screen = event.target.closest(".screen");
+      if (!screen || !mockup.contains(screen)) return;
+      showScreen(this.root, screen.getAttribute("data-slug") || screen.querySelector("h2")?.textContent?.trim());
+      if (!this.page) return;
+      this.explorer.requestScroll();
+      this.repaint();
+    });
+  }
+
+  _wireGotoLinks() {
+    this.root.querySelectorAll("[data-goto]").forEach((element) => {
+      // Story-bound controls: Interactive owns goto after When (avoid empty-screen nav).
+      if (element.hasAttribute("data-story-steps")) return;
+      element.addEventListener("click", () => {
+        showScreen(this.root, element.getAttribute("data-goto"));
+      });
+    });
+  }
+
+  repaint() {
+    if (!this.page) return;
+    this.explorer.paint();
+    this.product.paint();
+  }
 }
 
 /**
@@ -434,222 +732,17 @@ function wireProductNav(root = document, onScreenSelected) {
  * @returns {Promise<StoryDemoPage | null>}
  */
 export async function mountGeneratedMockup(root = document) {
-  // Fragments must be inlined before hydrate (compose-fragments.js top-level await).
-  if (root.querySelector?.("[data-include]")) {
-    await new Promise((resolve) => {
-      const start = performance.now();
-      const tick = () => {
-        if (!root.querySelector("[data-include]") || performance.now() - start > 3000) {
-          resolve();
-          return;
-        }
-        requestAnimationFrame(tick);
-      };
-      tick();
-    });
-  }
-
+  await composedFragments(root);
   const frameRoot = root.querySelector("#story-demo-frame") || root.querySelector("#mockup");
-  const controls = hydrateControls(frameRoot || root);
-  const frame = new StoryDemoFrame(controls);
+  const frame = new StoryDemoFrame(controlsOn(frameRoot || root));
+  const chrome = explorerChromeOn(root);
   const createStories = await loadCreateStoryFns();
-
-  const el = {
-    mode: root.querySelector("[data-story-demo-mode]"),
-    storyMap: root.querySelector("[data-story-map]") || root.querySelector("#story-list"),
-    storyMapToggle: root.querySelector("[data-toggle-story-map]"),
-    tree: root.querySelector("[data-explorer-tree]"),
-    message: root.querySelector("[data-explorer-message]"),
-    playNext: root.querySelector("[data-play-next]"),
-    reset: root.querySelector("[data-reset]"),
-  };
-
   if (!createStories.length) {
-    if (el.tree) {
-      el.tree.innerHTML = "<li>(story modules not playable in browser yet)</li>";
-    }
+    if (chrome.tree) chrome.tree.innerHTML = "<li>(story modules not playable in browser yet)</li>";
     return null;
   }
-
-  const catalog = createStories.map(({ name, fn }) => {
-    const probe = StoryDemoPage.load(fn, "fake", {});
-    return { createName: name, fn, title: probe.story.name, story: probe.story };
-  });
-  const mapTitles = catalog.map((e) => e.title);
-
-  /** When label → catalog index — Interactive can jump to the owning story. */
-  const whenLabelToStoryIndex = new Map();
-  catalog.forEach((entry, index) => {
-    for (const sc of entry.story.scenarios ?? []) {
-      for (const step of sc.steps ?? []) {
-        if (step.kind === "when" && step.label) {
-          whenLabelToStoryIndex.set(step.label, index);
-        }
-      }
-    }
-  });
-
-  /** @type {{ page: StoryDemoPage | null, index: number, mode: string, session: Record<string, unknown> }} */
-  const state = { page: null, index: 0, mode: "Play", session: {} };
-
-  function captureSession() {
-    if (state.mode !== "Interactive" || !state.page) return;
-    const snap = state.page.runner.scenario?.expose?.() ?? {};
-    for (const key of ["cart", "product", "catalog", "paymentMethod"]) {
-      if (snap[key] != null) state.session[key] = snap[key];
-    }
-  }
-
-  function carryInputsFrom(page, control) {
-    const carry = {};
-    const exposed = page?.runner?.scenario?.expose?.();
-    if (exposed?.product?.name) carry.product = exposed.product.name;
-    const setKey = control?._el?.getAttribute("data-set-input");
-    if (setKey && control.name) carry[setKey] = control.name;
-    return carry;
-  }
-
-  function activateStoryForControl(control) {
-    const whenLabel = (control.story_steps || []).find((s) => s.kind === "when")?.label;
-    if (!whenLabel) return;
-    const index = whenLabelToStoryIndex.get(whenLabel);
-    const carry = carryInputsFrom(state.page, control);
-    if (index == null || index === state.index) {
-      if (Object.keys(carry).length) state.page?.runner?.scenario?.setInputs?.(carry);
-      return;
-    }
-    activateStory(index, carry);
-  }
-
-  function wireInteractive(control) {
-    if (!control || control._interactiveWired) return;
-    control._interactiveWired = true;
-    control.appendInteraction({
-      trigger: "click",
-      effect: (c) => {
-        if (state.page?.mode !== "Interactive") return;
-        // Control may belong to another story on the map (e.g. Add to Cart while
-        // Select Product is active) — switch first so When can match.
-        activateStoryForControl(c);
-        const ok = state.page.onControlTrigger(c, root);
-        if (ok) {
-          captureSession();
-          showScreen(root, c._el?.getAttribute("data-goto"));
-        }
-        repaint();
-      },
-    });
-    control._el?.addEventListener("click", () => {
-      if (state.page?.mode === "Interactive") {
-        control.trigger("click");
-      }
-    });
-  }
-
-  /** Cart line click selects which product Remove (etc.) will use — no When yet. */
-  function wireLineSelect(row, item, setInput) {
-    row.addEventListener("click", () => {
-      if (state.page?.mode !== "Interactive") return;
-      const scenario = state.page.runner.scenario;
-      if (!scenario?.setInputs) return;
-      scenario.setInputs({ [setInput]: item.product });
-      repaint();
-    });
-  }
-
-  function openScenario(storyIndex, scenarioIndex) {
-    if (storyIndex >= 0 && storyIndex !== state.index) activateStory(storyIndex);
-    if (state.page && scenarioIndex >= 0) state.page.selectScenario(scenarioIndex);
-    repaint();
-  }
-
-  function repaint() {
-    if (state.page) {
-      paintAll(state.page, el, root, activateStory, wireInteractive, wireLineSelect, openScenario);
-    }
-  }
-
-  wireProductNav(root, () => {
-    if (!state.page) return;
-    state.page.explorerFrame.scrollExplorerToScreen = true;
-    repaint();
-  });
-
-  /** Interactive needs Givens applied so bound lists (catalog) can paint and receive clicks. */
-  function ensureInteractiveGivens() {
-    if (state.mode !== "Interactive" || !state.page) return;
-    const scenario = state.page.runner.scenario;
-    if (!scenario) return;
-    while (scenario.steps[scenario.index]?.kind === "given") {
-      state.page.runner.playNext();
-    }
-  }
-
-  function activateStory(index, carryInputs = {}) {
-    state.index = index;
-    const entry = catalog[index];
-    // Drop prior dynamic bound-list controls; static ones stay on the shared frame.
-    removeBoundListControls(frame);
-    state.page = StoryDemoPage.load(entry.fn, "fake", {
-      mode: state.mode,
-      storyDemoFrame: frame,
-    });
-    if (!el.expansion) el.expansion = new Set();
-    state.page.explorerFrame.expandedNodes = el.expansion;
-    state.page.explorerFrame.openScreen = el.openScreen ?? null;
-    state.page.explorerFrame.catalog = catalog;
-    state.page.explorerFrame.bindStoryMap(mapTitles, entry.title);
-    state.page.selectScenario(0);
-    if (state.mode === "Interactive" && Object.keys(state.session).length) {
-      state.page.runner.scenario.setSeed(state.session);
-    }
-    if (Object.keys(carryInputs).length) {
-      state.page.runner.scenario.setInputs(carryInputs);
-    }
-    ensureInteractiveGivens();
-    captureSession();
-    showScreensForStory(entry.title, root);
-    repaint();
-    return state.page;
-  }
-
-  for (const control of controls) {
-    wireInteractive(control);
-  }
-
-  el.storyMapToggle?.addEventListener("click", () => {
-    state.page?.explorerFrame.toggleStoryMap();
-    repaint();
-  });
-
-  el.playNext?.addEventListener("click", () => {
-    const page = state.page;
-    if (!page) return;
-    const scenario = page.runner.scenario;
-    const atEnd =
-      scenario != null && scenario.index >= (scenario.steps?.length ?? 0);
-    if (atEnd) {
-      const scIdx = page.story.scenarios.indexOf(scenario);
-      if (scIdx >= 0 && scIdx < page.story.scenarios.length - 1) {
-        page.selectScenario(scIdx + 1);
-      } else if (state.index < catalog.length - 1) {
-        activateStory(state.index + 1);
-        return;
-      }
-    } else {
-      page.explorerFrame.playNextControl.trigger("click");
-    }
-    repaint();
-  });
-
-  el.reset?.addEventListener("click", () => {
-    state.session = {};
-    activateStory(state.index);
-    state.page?.storyDemoFrame.clearEmphasis();
-    state.page?.explorerFrame.clearMessage();
-  });
-
-  return activateStory(0);
+  const catalog = StoryCatalog.fromStoryFunctions(createStories);
+  return new GeneratedMockup(root, catalog, { frame, chrome, expansion: new ScreenTreeExpansion() }).start();
 }
 
 if (typeof document !== "undefined" && document.querySelector("[data-story-demo-shell]")) {

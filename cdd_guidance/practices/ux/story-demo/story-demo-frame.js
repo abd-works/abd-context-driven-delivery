@@ -17,6 +17,18 @@ export class StoryDemoFrame {
     return this;
   }
 
+  /** Drop the list-line controls painted for the last story; the page's own controls stay. */
+  dropBoundListControls() {
+    this.controls = this.controls.filter((control) => !control.fromBoundList);
+    return this;
+  }
+
+  /** Show each control's emphasis and tint on its page element. */
+  paintEmphasis() {
+    for (const control of this.controls) control.paintEmphasis?.();
+    return this;
+  }
+
   controlFor(whenLabel) {
     return this.controls.find((c) =>
       c.story_steps?.some((s) => s.kind === "when" && s.label === whenLabel),

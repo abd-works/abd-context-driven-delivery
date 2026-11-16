@@ -66,7 +66,7 @@ function createSoftFailStory(_mode) {
 
 describe("a scenario told with given when and then", () => {
   describe("that has been collected by the dual runner", () => {
-    const collected = PlayDualRunner.collect(createSampleStory, "fake");
+    const collected = new PlayDualRunner().collect(createSampleStory, "fake");
     const session = collected.scenarios[0];
 
     it("should keep its name", () => {
