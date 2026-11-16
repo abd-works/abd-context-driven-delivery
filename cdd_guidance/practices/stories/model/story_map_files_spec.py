@@ -145,3 +145,11 @@ with description("the story files of a project's .context"):
         with it("should not reach the story_tests beside it"):
             _write(self.root, "shop/notes.md", _MAP)
             expect(StoryMapFiles(self.root / "shop").story_files_below()).to(equal([]))
+
+
+with description("the story maps read from files listed in several formats"):
+    with it("should read a map's markdown and leave out its drawio"):
+        from cdd_guidance.practices.stories.model.story_map_files import preferred_maps
+
+        listed = [Path("shop/.context/story-map.drawio"), Path("shop/.context/story-map.md"), Path("other/story-map.drawio")]
+        expect(preferred_maps(listed)).to(equal([Path("shop/.context/story-map.md"), Path("other/story-map.drawio")]))

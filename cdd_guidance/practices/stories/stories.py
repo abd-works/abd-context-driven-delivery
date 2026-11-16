@@ -10,7 +10,7 @@ from harness.guidance.guidance import PracticeGuidance
 
 from cdd_guidance.practices.stories.model.graph_reading import StoriesReading
 from cdd_guidance.practices.stories.model.sketch.sketch_story_model import SketchStoryModel
-from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, is_story_map_file
+from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, is_story_map_file, preferred_maps
 from cdd_guidance.practices.stories.model.story_model import StoryNode
 from cdd_guidance.practices.stories.stories_formats import StoriesFormats
 
@@ -94,7 +94,9 @@ class Stories(PracticeGuidance):
         """The story maps and story tests among files, merged into one story map whose nodes name their files as paths
         from project. A story test holds one Story's scenarios in its own language, and the story map says which epic
         that Story sits under, so a story test's scenarios go on the map's Story of the same name, and a story test
-        with no map listed reads the map in its own folder or the nearest one above it."""
+        with no map listed reads the map in its own folder or the nearest one above it. Where one thing is written in
+        several formats, one is read: a story test in code before the map's markdown scenarios, which it replaces, and a
+        map's markdown before its drawio (``preferred_maps``)."""
         from cdd_guidance.practices.stories.model.story_map_files import path_from
         from cdd_guidance.practices.stories.model.story_model import StoryModel
 
@@ -102,7 +104,7 @@ class Stories(PracticeGuidance):
         paths = [Path(item).resolve() for item in files]
         tests = [path for path in paths if self._story_test_reader(path) is not None]
         maps = [path for path in paths if is_story_map_file(path)]
-        maps += [found for found in self._maps_beside(tests, project) if found not in maps]
+        maps = preferred_maps(maps + [found for found in self._maps_beside(tests, project) if found not in maps])
         merged = StoryModel()
         for path in maps:
             read = self._story_map_file(path, project, on_file)

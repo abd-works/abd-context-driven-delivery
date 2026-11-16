@@ -250,10 +250,10 @@ with description("a working copy scan") as self:
                 ["board/.context/story-map.md", "board/.context/story-map.drawio", _STORY_TEST_PATH],
             ))
 
-        with it("should count the scenario on the story in each format"):
+        with it("should read the story once, from the markdown, with the scenario its story test holds"):
             expect(
                 sorted(node.get_fact("scenario_count") for node in _story_nodes(self.both_formats, "Open Board"))
-            ).to(equal([1, 1]))
+            ).to(equal([1]))
 
     with context("loaded with a relative practice root"):
         with before.all:

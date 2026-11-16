@@ -23,6 +23,7 @@ from space.session.graph_view_examples import (
     BOARD_CODE,
     LISTED,
     STORY_MAP,
+    STORY_TEST,
     TICKET_CODE,
     node_id_of,
     seed_checkout_flow_with_graph_files,
@@ -80,6 +81,37 @@ def _(s):
     @s.then("the Stories tree holds Delete Ticket, but none of the old story map's epics")
     def _(world):
         expect(("Delete Ticket" in world.names, "Run Old Layout" in world.names)).to(equal((True, False)))
+
+
+@shared_stories.scenario("Switch Files App To Graph View", "The Stories tree holds a story listed only by its story test in code")
+def _(s):
+    @s.given("the Files app lists only the code formats, so of the Stories files only Delete Ticket's story test")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person switches the file bar to the graph view")
+    def _(world):
+        world.names = names_in(world, [STORY_TEST])
+
+    @s.then("the Stories tree holds Manage Tickets, Remove Tickets and Delete Ticket, with the scenario its story test holds")
+    def _(world):
+        expect(world.names).to(contain("Manage Tickets", "Remove Tickets", "Delete Ticket", "a ticket is deleted"))
+
+
+@shared_stories.scenario("Switch Files App To Graph View", "A story map listed in markdown and drawio is read once, from its markdown")
+def _(s):
+    @s.given("the Files app lists checkout-flow's story map in markdown and in drawio")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+        world.project.seed_file(".context/story-map.drawio", world.project.root.joinpath(STORY_MAP).read_text(encoding="utf-8").replace("Manage Tickets", "Manage Tickets In Drawio"))
+
+    @s.when("the Person switches the file bar to the graph view")
+    def _(world):
+        world.names = names_in(world, [STORY_MAP, ".context/story-map.drawio"])
+
+    @s.then("the Stories tree holds Delete Ticket once, from the markdown")
+    def _(world):
+        expect((world.names.count("Delete Ticket"), "Manage Tickets In Drawio" in world.names)).to(equal((1, False)))
 
 
 # --- Filter Graph Like The File List ------------------------------------------------------------------------------

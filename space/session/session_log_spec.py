@@ -198,6 +198,10 @@ with description("a session a chat switches to"):
             answer = Sessions(self.repo).switch("alpha", self.repo)
             expect(answer).to(contain("practice-session-output.choose_root"))
 
+        with it("should tell the chat to give a fidelity kept apart, such as the story tests, a root of its own, as local as it can"):
+            answer = Sessions(self.repo).switch("alpha", self.repo)
+            expect(answer).to(contain("fidelity-session-output.choose_root", "most local folder"))
+
     with context("whose every practice has a chosen root"):
         with it("should not ask about roots"):
             Sessions(self.repo).switch("alpha", self.repo)

@@ -992,6 +992,16 @@ with description("a practice"):
                         outputs = self.stories.fidelities["scenarios"].output_paths()
                         expect(outputs["markdown"]).to(equal([(self.work / "story_tests" / "manage-orders" / "{sub-epic}/{story_snake}_story.test.md").resolve().as_posix()]))
 
+                with context("and a person chooses one epic's folder for the scenarios"):
+                    with it("should write the scenarios there and keep the story map in the practice's root"):
+                        self.stories.of_fidelity(self.stories.fidelities.entries["scenarios"]).choose_root("work/story_tests/manage-orders")
+                        scenarios = self.stories.fidelities["scenarios"].output_paths()["markdown"]
+                        story_map = self.fidelity.output_paths()["markdown"]
+                        expect((scenarios, story_map)).to(equal((
+                            [(self.work / "story_tests" / "manage-orders" / "{sub-epic}/{story_snake}_story.test.md").resolve().as_posix()],
+                            [(self.work / ".context" / "stories" / "story-map.md").resolve().as_posix()],
+                        )))
+
                 with it("should let the session's file manager read the story tests in that story_tests"):
                     story_test = self.work / "story_tests" / "manage-orders" / "place-order" / "place-order.story.shared.py"
                     story_test.parent.mkdir(parents=True)
