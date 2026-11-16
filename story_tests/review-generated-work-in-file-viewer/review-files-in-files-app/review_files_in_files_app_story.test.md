@@ -178,6 +178,8 @@ Requested (the person, 2026-11-15): "keep folder the default view and not reset 
 *When* the Person opens *.context*
 *Then* *.context* shows *story-map.md*
 
+## Sub-epic: Filter Files In Files App
+
 ## Story: Resize File Bar
 
 Requested (the person, 2026-11-15): "can allow drag resize for folder pane in file viewer". Only the page shows it, so it has no step in the Python story tiers.
