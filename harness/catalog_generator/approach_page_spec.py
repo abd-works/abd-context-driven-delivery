@@ -7,8 +7,9 @@ from mamba import before, context, description, it
 
 from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN, ApproachCopy
 from harness.catalog_generator.approach_page import ApproachGrids, ApproachPage, PrincipleBullets
+from harness.catalog_generator.catalog_examples import CatalogExamples
 from harness.catalog_generator.catalog_practice import CatalogPractice
-from harness.catalog_generator.hub_board import HubBoard
+from harness.catalog_generator.hub_board import BoardTools, HubBoard
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 _HAND_EDITED_MD = """# Approach
@@ -44,7 +45,7 @@ with description("the catalog board's stage columns"):
         with before.all:
             path = Path(tempfile.mkdtemp()) / "cdd-approach.md"
             path.write_text(_HAND_EDITED_MD, encoding="utf-8")
-            self.html = HubBoard([], [], [], ApproachCopy.load(path).board_stages).html()
+            self.html = HubBoard([], BoardTools(), ApproachCopy.load(path).board_stages).html()
 
         with it("should show each stage's chips in its column"):
             expect("ZZ-CHIP" in self.html).to(equal(True))
@@ -54,7 +55,7 @@ with description("the catalog board's stage columns"):
 
     with context("whose stages name the Stories practice's catalog examples"):
         with it("should link each column heading to its stage's example page"):
-            html = HubBoard(CatalogPractice.load_all(), [], [], ApproachCopy.load(APPROACH_MARKDOWN).board_stages).html()
+            html = HubBoard(CatalogPractice.load_all(), BoardTools(), ApproachCopy.load(APPROACH_MARKDOWN).board_stages).html()
             links = ('href="examples/discovery.html"', 'href="examples/specification.html"', 'href="examples/implementation.html"')
             expect(all(link in html for link in links)).to(equal(True))
 
@@ -64,7 +65,7 @@ with description("the approach page"):
         with before.all:
             path = Path(tempfile.mkdtemp()) / "cdd-approach.md"
             path.write_text(_HAND_EDITED_MD, encoding="utf-8")
-            self.html = ApproachPage(ApproachCopy.load(path), [], Path(tempfile.mkdtemp())).body
+            self.html = ApproachPage(ApproachCopy.load(path), [], CatalogExamples(Path(tempfile.mkdtemp()))).body
 
         with it("should show the stage copy"):
             expect("ZZ-PARA" in self.html).to(equal(True))
@@ -81,7 +82,7 @@ with description("the approach page"):
     with context("written from the catalog's own copy"):
         with before.all:
             self.out = Path(tempfile.mkdtemp())
-            page = ApproachPage(ApproachCopy.load(APPROACH_MARKDOWN), CatalogPractice.load_all(), self.out)
+            page = ApproachPage(ApproachCopy.load(APPROACH_MARKDOWN), CatalogPractice.load_all(), CatalogExamples(self.out))
             page.write_stage_example_pages()
             self.html = page.body
 
@@ -109,7 +110,7 @@ with description("the approach page"):
 
     with context("with a principle page for each principle"):
         with it("should write a coming-soon page for the practices the catalog does not hold yet"):
-            pages = ApproachPage(ApproachCopy.load(APPROACH_MARKDOWN), [], Path(tempfile.mkdtemp())).principle_pages
+            pages = ApproachPage(ApproachCopy.load(APPROACH_MARKDOWN), [], CatalogExamples(Path(tempfile.mkdtemp()))).principle_pages
             expect("customer-discovery.html" in pages and "devops.html" in pages).to(equal(True))
 
 
@@ -129,7 +130,7 @@ with description("a principle's bullets"):
 with description("the Product Engineering board"):
     with before.all:
         # Practice labels and colour families come from the practices' own catalog cards.
-        self.html = ApproachGrids(CatalogPractice.load_all(), (), None).product_engineering
+        self.html = ApproachGrids(CatalogPractice.load_all(), (), CatalogExamples(None)).product_engineering
 
     with it("should give each practice its own refine row"):
         rows = ("refine-row-stories", "refine-row-ddd", "refine-row-ux", "refine-row-clean_engineering", "refine-row-bdd")

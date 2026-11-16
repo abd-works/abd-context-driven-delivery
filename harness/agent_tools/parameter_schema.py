@@ -14,6 +14,16 @@ from typing import Any, NotRequired, Required, Union, get_args, get_origin, get_
 # ``NotRequired[int]``, so it is read through ``get_origin`` and ``get_args`` rather than by its class.
 type TypeHint = object
 
+# Python sets this flag on a built-in type, which keeps no attributes of its own (Py_TPFLAGS_IMMUTABLETYPE).
+_IMMUTABLE_TYPE_FLAG = 1 << 8
+
+
+def is_built_in(hint_class: type) -> bool:
+    """Whether hint_class is a type Python builds in, such as ``str`` or ``datetime``, rather than a class of the
+    program's: it names no object a tool acts on, and it keeps no attributes of its own."""
+    return bool(hint_class.__flags__ & _IMMUTABLE_TYPE_FLAG)
+
+
 _UNION_ORIGINS = {Union, py_types.UnionType}
 _ARRAY_ORIGINS = {list, tuple, Sequence}
 _OBJECT_ORIGINS = {dict, Mapping}

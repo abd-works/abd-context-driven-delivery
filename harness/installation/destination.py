@@ -166,7 +166,7 @@ class ServerInstallation(Installation):
     """An installation whose files point the IDE at a server process: the MCP entry at the cdd server, the hook entries
     at the hook server. Beside writing its files it stands that server up over what was installed to check it loads,
     starts it, and reports it. harness/mcp and harness/hooks each define one and register it with
-    ``Installer.installs_through`` when they are imported, so the Installer runs every server channel without
+    ``SERVER_CHANNELS.register`` when they are imported, so the Installer runs every server channel without
     importing them."""
 
     # Toolset classes every install publishes through this channel beside the repository's own, such as the hooks

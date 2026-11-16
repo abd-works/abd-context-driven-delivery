@@ -57,8 +57,15 @@ child(name: str, body: str): FidelityGuidance
 One practice: its identity, its words, its fidelities, and its set. It holds three parts, each made once at construction:
 its formats, its part in the knowledge graph, and its schema.
 
-PracticeGuidance(format, fidelity, default_workspace_folder, formats)
+PracticeGuidance(format, fidelity)
 ------
+default_workspace_folder: str
+	// a class attribute each practice sets, such as "tests" for Stories
+format_adapters: dict[str, Any]
+	// a class attribute: the parse and render adapter of each format the practice owns
+domain_markdown_path: Path
+scoped_markdown: str
+	// overview, guidance, shared rules, language, and the active fidelity's block (every block when none is active)
 fidelities: GuidanceCollection
 	// the Fidelities section; fidelities.current is the active fidelity
 format: Format
@@ -104,13 +111,8 @@ hold_set(practices: dict[str, PracticeGuidance], supplements: list[PracticeSuppl
 	// holds the practice it extends, its Clean Engineering companion, and each supplement whose supplemented_practices hold it
 answers_to(slug: str): PracticeGuidance | FidelityGuidance | None
 	// itself for its slug, the fidelity whose slug it is, else none
-fidelity_called(name: str): FidelityGuidance | None
-	// the fidelity named by its bare name, snake or kebab case
 work_in(session_output: PracticeSessionOutput): None
 	// the practice works in that output's session; each fidelity is given its FidelitySessionOutput through FidelityGuidance.work_in
-domain_markdown_path(): Path
-scoped_markdown(): str
-	// overview, guidance, shared rules, language, and the active fidelity's block (every block when none is active)
 generate_output(): str
 	// instruction-only by default; a practice that owns generation overrides it
 render(format: str, content: RenderContent, source: str | None, previous: str): dict
@@ -148,16 +150,16 @@ graph_overlay: GraphOverlay
 ----
 hold_set(practices: dict[str, PracticeGuidance]): None
 	// resolves the front matter's practice and fidelity names into the set's own fidelities, once
-	-> practices[key].fidelity_called(name)
+	-> practices[key].fidelities.called(name)
 text_for(fidelity: FidelityGuidance): str
 	// its Overview and Guidance, then each section whose heading names that fidelity's slug, headed "## Supplement: {name}"; empty for a fidelity it does not supplement
 rules_for(fidelity: FidelityGuidance): list[RulesCollection]
 	// the Rules of each section whose heading names that fidelity's slug; empty for a fidelity it does not supplement
 instructions: str
 	// read on its own (its skill and MCP prompt): its Overview, its Guidance, then every section named for a fidelity
-checked_rule_collections(): list[RulesCollection]
+checked_rule_collections: list[RulesCollection]
 	// the Rules of every section named for a fidelity; it has no Shared rules
-every_rule(): list[Rule]
+every_rule: list[Rule]
 
 ## PracticeFormats
 
@@ -274,12 +276,14 @@ templates: str
 	// its template in the format it works in, else its default format
 examples: str
 	// its practice's examples at this fidelity and format
-----
-checked_rule_collections(): list[RulesCollection]
+checked_rule_collections: list[RulesCollection]
 	// the practice's shared rules, then its own, then each supplement's rules for this fidelity
 	-> PracticeSupplement.rules_for
-every_rule(): list[Rule]
+every_rule: list[Rule]
 	-> practice_guidance.every_rule
+declared: DeclaredOutputs
+	// the files its outputs declare, made again whenever its outputs change
+----
 generate_output(): str
 	// the practice's generate_output recipe, expanded
 render(format: str, content: RenderContent, source: str | None): dict
@@ -289,15 +293,26 @@ render_files(format: str, paths: list[str] | str, source: str | None): dict
 	// a renderer that links to other files finds them in the folder of the first path
 	-> practice_guidance.formats.read
 	-> practice_guidance.formats.render RenderRequest(fidelity=self)
-declares(path: str, format: str = ""): bool
-	// a file one of its outputs names, in format when one is named; DeclaredFile matches the end of the path
 work_in(session_output: FidelitySessionOutput): None
-output_paths(): dict[str, list[str]]
-	-> session_output.output_paths
-files(): dict[str, list]
-	-> session_output.files
-has_declared_output(): bool
 	// its reports and where a new one goes are its session output's: session_output.reports(), new_report_path()
+
+## DeclaredOutputs
+
+The files one fidelity declares, made from its outputs. The fidelity holds it (`fidelity.declared`).
+
+DeclaredOutputs(fidelity: FidelityGuidance, outputs: dict[str, str | list[str]])
+------
+outputs: dict[str, str | list[str]]
+----
+includes(path: str, format: str = ""): bool
+	// a file one of its outputs names, in format when one is named; DeclaredFile matches the end of the path
+output_paths(): dict[str, list[str]]
+	-> fidelity.session_output.output_paths
+files(): dict[str, list]
+	-> fidelity.session_output.files
+has_output(): bool
+files_to_review(): dict[str, list]
+	// its fidelity's own files, or those of the fidelities it reviews files of, each file once
 
 ## Rule
 

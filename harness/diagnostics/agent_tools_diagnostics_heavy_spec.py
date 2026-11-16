@@ -18,7 +18,7 @@ RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 
 from expects import contain, equal, expect
 from mamba import after, before, context, description, it
-from space.session.throwaway_project import ThrowawayProject
+from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 from harness.diagnostics.agent_tools_diagnostics import AgentToolsDiagnostics
 from harness.mcp.mcp_server import McpInstallation
@@ -71,7 +71,7 @@ with description("mcp tools diagnostics"):
             self.elapsed, self.text = _call_agent_tools_diagnostics(self.project.root)
 
         with after.all:
-            ThrowawayProject.close_all()
+            OPEN_PROJECTS.close_all()
 
         with it("should complete within two minutes"):
             expect(self.elapsed < 120.0).to(equal(True))

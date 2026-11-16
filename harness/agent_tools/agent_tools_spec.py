@@ -15,7 +15,7 @@ sys.modules.pop("actions", None)
 import yaml
 from expects import be, be_true, contain, equal, expect, have_key, raise_error
 from mamba import after, before, context, description, it
-from space.session.throwaway_project import ThrowawayProject
+from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 from harness.agent_tools.agent_tools import (
     AgentInstructions,
@@ -196,7 +196,7 @@ with description("a class"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("with a toolset that declares @agent_instructions members"):
         with context("the travelTo action"):
@@ -269,7 +269,7 @@ with description("an action"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("that has instructions with templating"):
         with context("with templated placeholders for a parameter"):
@@ -343,7 +343,7 @@ with description("super() delegation in action bodies"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("a child class that calls super().generate() explicitly"):
         with it("should inline the parent's prose in the child expansion"):
@@ -364,7 +364,7 @@ with description("empty-body auto-super in action bodies"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("a child whose generate body is only Ellipsis"):
         with it("should inline the parent's prose"):
@@ -401,7 +401,7 @@ with description("AgentToolSet"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("on a live Car example instance"):
         with context("with a class-level description"):
@@ -773,7 +773,7 @@ with description("a for-each action over companion toolsets"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("when each companion is flipped to tool mode in the loop"):
         with before.each:
@@ -884,7 +884,7 @@ with description("a for-each action over nested instruction properties"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("when the loop names item.rules.markdown_block"):
         with before.each:
@@ -938,7 +938,7 @@ with description("an @agent_instructions body that runs unwrapped Python"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("when a conditional branch is taken"):
         with before.each:
@@ -992,7 +992,7 @@ with description("an @agent_instructions body with a line that fails"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("with an if test that fails"):
         with before.each:
@@ -1025,7 +1025,7 @@ with description("a cross-instance call whose provider cannot resolve"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with it("should fail the recipe line, naming the provider and its failure"):
         body = AgentInstructions.for_callable(
@@ -1048,7 +1048,7 @@ with description("AgentToolValidationError"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("when constructed without a line number"):
         with it("should format the message as class.action - message"):
@@ -1119,7 +1119,7 @@ with description("AgentInstructions"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("the description property"):
         with it("should return the docstring text from the instruction callable"):
@@ -1160,7 +1160,7 @@ with description("AgentToolSet destination catalog"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
 
     with context("tools_for a destination"):
@@ -1275,7 +1275,7 @@ with description("a class annotated as a toolset collection"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with it("should be a ToolSetCollection without subclassing it"):
         bag = _AnnotatedBag()
@@ -1294,7 +1294,7 @@ with description("a class annotated as a toolset collection"):
 
 with description("a toolset collection with collected child properties"):
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:
@@ -1320,7 +1320,7 @@ with description("a toolset that exposes annotated properties and child collecti
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("with an @agent_instructions property"):
         with it("should enroll the property getter on tools"):
@@ -1411,7 +1411,7 @@ class Pallet:
     @classmethod
     @tool_subject
     def load(cls, pallet: str, *, call: ToolCall) -> "Pallet":
-        return cls(pallet, call.chat.id if call.chat is not None else "no chat")
+        return cls(pallet, call.request.chat.id if call.request.chat is not None else "no chat")
 
     @_tool
     def lift(self) -> str:
@@ -1424,7 +1424,7 @@ with description("a domain class whose constructor takes collaborators"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("that annotates a @tool_subject loader"):
         with it("should build as a toolset with no arguments"):
@@ -1530,10 +1530,8 @@ with description("a toolset reference"):
 
 with description("a tool's MCP invoke line"):
     with it("should name the tool the installer reads back from it"):
-        from harness.agent_tools.agent_tools import AgentTool
-
         tool = next(iter(AgentToolSet.instantiate(CarStory).tools.values()))
-        expect(AgentTool.invoked_names(tool.invoke_line())).to(equal([tool.mcp_name]))
+        expect(tool.invoke_line.names).to(equal([tool.mcp_name]))
 
 
 @agent_toolset

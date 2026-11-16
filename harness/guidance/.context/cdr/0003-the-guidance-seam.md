@@ -16,7 +16,7 @@ The round-6 and round-7 reviews (harness core, rows 5 and 9 in round 7) counted 
 
 ## How a call's document is read
 
-`document_in(session, content, paths)` stays the one place that reads the document a call names. A guidance action and a practice may work in no session (an action run in process, a spec, a probe), and the framework cannot name space/session's *Session*, so the choice "read from the session's project, else as given" has to be made in harness. The session answers its half itself (`session.document_named`), and the files are read by `load_document`, which the session uses too, so the reading of a folder (skipping `.git`, environments and binary files) has one owner.
+`document_in(session, content, paths)` stays the one place that reads the document a call names. A guidance action and a practice may work in no session (an action run in process, a spec, a probe), and the framework cannot name space/session's *Session*, so the choice "read from the session's project, else as given" has to be made in harness. The session answers its half itself (`session.paths.document_named`), and the files are read by `load_document`, which the session uses too, so the reading of a folder (skipping `.git`, environments and binary files) has one owner.
 
 ## Consequences
 

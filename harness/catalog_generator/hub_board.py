@@ -3,9 +3,10 @@ below them, as the hub and every detail page show it."""
 from __future__ import annotations
 
 import html
+from dataclasses import dataclass, field
 
 from harness.catalog_generator.approach_copy import StageCopy
-from harness.catalog_generator.catalog_practice import CatalogPractice
+from harness.catalog_generator.catalog_practice import CatalogPractice, giving_stage_examples
 from harness.catalog_generator.catalog_examples import CatalogFidelity, StageExample
 from harness.catalog_generator.stage_columns import STAGE_COLUMNS, BoardLabel, StageColumn
 
@@ -61,18 +62,26 @@ _POLICY_TOGGLE = (
 )
 
 
+@dataclass(frozen=True)
+class BoardTools:
+    """The lifecycle actions and utilities a board lists below its stage columns, each with its ``name`` and page
+    ``href``."""
+
+    actions: list = field(default_factory=list)
+    utilities: list = field(default_factory=list)
+
+
 class HubBoard:
     """The board for one catalog: its practices in board order, its lifecycle actions and utilities (each with its
     ``name`` and page ``href``), and the approach's copy for each stage column. A practice page highlights its
     practice; a fidelity page highlights the fidelity too."""
 
-    def __init__(self, practices: list, actions: list, utilities: list, stages: dict[str, StageCopy]) -> None:
+    def __init__(self, practices: list, tools: BoardTools, stages: dict[str, StageCopy]) -> None:
         self.practices = practices
-        self.actions = actions
-        self.utilities = utilities
+        self.tools = tools
         self.stages = stages
         # The practice whose artifacts are the stage examples each column title opens (Stories).
-        self.stories = CatalogPractice.giving_stage_examples(practices)
+        self.stories = giving_stage_examples(practices)
 
     def html(
         self, *, path_prefix: str = "", practice: CatalogPractice | None = None, fidelity: CatalogFidelity | None = None
@@ -117,9 +126,9 @@ class _Ticket:
         self.label = html.escape(label)
         self.href = href
 
-    def html(self, classes: str, data: str = "") -> str:
+    def html(self, classes: str, attributes: str = "") -> str:
         return (
-            f'<a class="{classes}"{data} href="{html.escape(self.href)}">'
+            f'<a class="{classes}"{attributes} href="{html.escape(self.href)}">'
             f'<span class="kb-skill-tooltip-wrap">{self.label}'
             f'<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip">'
             f'<span class="kb-col-shape-tooltip__name">{self.label}</span>'
@@ -146,11 +155,11 @@ class _BoardOnPage:
             stage_questions=self._stage_policies(),
             action_tickets="".join(
                 _Ticket(str(BoardLabel(action.name)), path_prefix + action.href).html("kb-ticket aad-skill aad-fam-supporting")
-                for action in board.actions
+                for action in board.tools.actions
             ),
             utility_tickets="".join(
                 _Ticket(str(BoardLabel(utility.name)), path_prefix + utility.href).html("kb-ticket aad-skill aad-fam-foundational")
-                for utility in board.utilities
+                for utility in board.tools.utilities
             ),
         )
 

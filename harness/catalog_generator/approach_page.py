@@ -10,12 +10,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from harness.catalog_generator.approach_copy import ApproachCopy, PrincipleCopy, StageCopy
-from harness.catalog_generator.catalog_practice import CatalogPractice
+from harness.catalog_generator.catalog_practice import CatalogPractice, giving_stage_examples
 from harness.catalog_generator.catalog_examples import (
     MONACO_LOADER_SCRIPTS,
+    CatalogExamples,
     CatalogFidelity,
     ExampleFile,
-    ProjectExampleSources,
     StageExample,
 )
 from harness.catalog_generator.markdown_html import MarkdownHtml
@@ -172,21 +172,15 @@ class RefineBoard:
 class ApproachGrids:
     """The boards drawn under the approach's principles and in its library, for a catalog's practices in the order of
     the practice catalogue, which each practice keeps as its position. On a project's approach page the examples are
-    the project's own, under ``catalog_root``."""
+    the project's own, under the catalog's folder (*CatalogExamples*)."""
 
-    def __init__(
-        self,
-        practices: list,
-        stages: tuple[StageCopy, ...],
-        catalog_root: Path | None,
-        project_examples: ProjectExampleSources | None = None,
-    ) -> None:
+    def __init__(self, practices: list, stages: tuple[StageCopy, ...], examples: CatalogExamples) -> None:
         self.practices = sorted(practices, key=lambda practice: practice.position)
         self.stages = stages
-        self.catalog_root = catalog_root
-        self.project_examples = project_examples
+        self.catalog_root = examples.catalog_root
+        self.project_examples = examples.project
         # The practice whose artifacts are the approach's stage examples (Stories), among the practices shown.
-        self.stories = CatalogPractice.giving_stage_examples(self.practices)
+        self.stories = giving_stage_examples(self.practices)
 
     def html(self, kind: str) -> str:
         """The board a principle of ``kind`` draws: ``windows``, ``descriptions``, ``spec``, or ``tickets``."""
@@ -356,20 +350,14 @@ class ApproachGrids:
 
 
 class ApproachPage:
-    """The approach page's body and the pages it opens, for one catalog's practices. ``catalog_root`` is the catalog's
+    """The approach page's body and the pages it opens, for one catalog's practices. Its examples (*CatalogExamples*) name the catalog's
     folder; on a project's approach page the stage examples are the project's own, staged there."""
 
-    def __init__(
-        self,
-        copy: ApproachCopy,
-        practices: list,
-        catalog_root: Path,
-        project_examples: ProjectExampleSources | None = None,
-    ) -> None:
+    def __init__(self, copy: ApproachCopy, practices: list, examples: CatalogExamples) -> None:
         self.copy = copy
-        self.catalog_root = Path(catalog_root)
-        self.project_examples = project_examples
-        self.grids = ApproachGrids(practices, copy.stages, catalog_root, project_examples)
+        self.catalog_root = Path(examples.catalog_root)
+        self.project_examples = examples.project
+        self.grids = ApproachGrids(practices, copy.stages, examples)
 
     @property
     def body(self) -> str:

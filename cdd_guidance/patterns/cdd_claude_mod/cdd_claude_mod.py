@@ -17,11 +17,10 @@ class CddClaudeMod(PracticeGuidance):
 
     pattern = "cdd_claude_mod"
 
+    default_workspace_folder = "harness"
+
     def __init__(self) -> None:
-        super().__init__(
-            format="typescript",
-            default_workspace_folder="harness",
-        )
+        super().__init__(format="typescript")
 
     @cached_property
     def graph_overlay(self) -> GraphOverlay:

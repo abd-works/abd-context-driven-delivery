@@ -16,7 +16,7 @@ from expects import contain, equal, expect, have_key
 from mamba import after, before, context, description, it
 from harness.installation.installer import Installer
 from harness.hooks.hook_server import HookPayload
-from space.session.throwaway_project import ThrowawayProject
+from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 import tools.prompt_log.prompt_log as pl  # noqa: E402
 
@@ -192,7 +192,7 @@ with description("a prompt log hook"):
             )
 
         with after.each:
-            ThrowawayProject.close_all()
+            OPEN_PROJECTS.close_all()
 
         with it("should write the entry into the log of the session open in the project the event names"):
             log = self.project.root / ".sessions" / "main" / "logs" / "prompt-log.txt"

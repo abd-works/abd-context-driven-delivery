@@ -74,6 +74,10 @@ class _MarkdownReading:
             self._close_list()
             self._read_table()
             return
+        self._read_line_block(line)
+
+    def _read_line_block(self, line: str) -> None:
+        """Read a block that starts on one line: a heading, a list item, or prose."""
         if _HEADING.match(line):
             self._read_heading(line)
             return

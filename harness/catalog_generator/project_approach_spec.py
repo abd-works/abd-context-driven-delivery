@@ -16,7 +16,8 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
 from expects import be_true, contain, equal, expect
 from mamba import after, before, context, description, it
 
-from harness.catalog_generator.catalog_generator import Catalog
+from harness.catalog_generator.catalog_generator import Catalog, CatalogProject
+from harness.catalog_generator.git_citation import GitCitation
 from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.catalog_generator.project_approach import ExampleClassifier, ProjectApproach, ProjectFiles
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
@@ -89,7 +90,7 @@ with description("a project's approach page"):
                 (root / relative).parent.mkdir(parents=True, exist_ok=True)
                 (root / relative).write_text(text, encoding="utf-8")
 
-            catalog = Catalog(repo_url="https://example.com/demo", ref="abc", out_root=self.out_dir, project=root)
+            catalog = Catalog(CatalogProject(root, self.out_dir), GitCitation("https://example.com/demo", "abc"))
             self.message = catalog.generate_project_approach(project_title="Demo Project")
 
         with after.all:

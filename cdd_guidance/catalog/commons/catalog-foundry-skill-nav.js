@@ -55,7 +55,7 @@
 
   /** The scroll position the page head read from the kanbanScroll parameter, or the parameter itself. */
   function pendingScrollY() {
-    var y = window.__foundryPendingScrollY;
+    var y = window.foundryPendingScrollY;
     if (y != null && !isNaN(y)) return y;
     var raw = new URLSearchParams(window.location.search).get(KANBAN_SCROLL_PARAM);
     y = raw ? parseFloat(raw) : NaN;
@@ -77,7 +77,7 @@
     if (window.location.search.indexOf(KANBAN_SCROLL_PARAM + '=') >= 0) {
       stripScrollRestoreFromUrl();
     }
-    window.__foundryPendingScrollY = undefined;
+    window.foundryPendingScrollY = undefined;
   }
 
   /** The families a reader filtered the board to; an older page saved "other" as its own flag. */

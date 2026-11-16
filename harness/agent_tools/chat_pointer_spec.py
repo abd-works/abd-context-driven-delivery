@@ -13,7 +13,7 @@ from expects import be_none, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.chat_pointer import ChatPointer
-from harness.agent_tools.tool_call import ToolCall
+from harness.agent_tools.tool_call import ToolCall, ToolRequest
 
 CHAT_ID = "4f1c2b3a-1111-2222-3333-444455556666"
 
@@ -104,24 +104,24 @@ with description("a chat pointer"):
             self.call = ToolCall.sent({"conversation_id": "chat-a", "transcript_path": str(self.transcript), "path": "cart.py"}, self.config)
 
         with it("should be the call's chat"):
-            expect(self.call.chat).to(equal(ChatPointer("chat-a", self.transcript, "1")))
+            expect(self.call.request.chat).to(equal(ChatPointer("chat-a", self.transcript, "1")))
 
         with it("should leave the tool only its own arguments"):
             expect(self.call.arguments).to(equal({"path": "cart.py"}))
 
         with it("should not be the chat of another call"):
-            expect(ToolCall.sent({"path": "cart.py"}, self.config).chat).to(be_none)
+            expect(ToolCall.sent({"path": "cart.py"}, self.config).request.chat).to(be_none)
 
     # Every chat in one checkout shares that folder's open session unless its call names the chat.
     with context("of a tool call whose request names its chat but whose arguments do not"):
         with before.each:
-            self.call = ToolCall.sent({"path": "cart.py"}, self.config, sender=ChatPointer.from_request("chat-b"))
+            self.call = ToolCall.sent({"path": "cart.py"}, self.config, ToolRequest(ChatPointer.from_request("chat-b")))
 
         with it("should be the chat the request names"):
             expect(self.call.chat_id).to(equal("chat-b"))
 
         with it("should give way to a chat the arguments name"):
-            named = ToolCall.sent({"conversation_id": "chat-a", "path": "cart.py"}, self.config, sender=ChatPointer.from_request("chat-b"))
+            named = ToolCall.sent({"conversation_id": "chat-a", "path": "cart.py"}, self.config, ToolRequest(ChatPointer.from_request("chat-b")))
             expect(named.chat_id).to(equal("chat-a"))
 
     with context("named by a request from an IDE that names no chat"):

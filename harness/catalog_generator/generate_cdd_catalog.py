@@ -23,7 +23,8 @@ from harness.installation.repository_toolsets import RepositoryToolsets  # noqa:
 
 RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 
-from harness.catalog_generator.catalog_generator import Catalog
+from harness.catalog_generator.brand import Brand
+from harness.catalog_generator.catalog_generator import Catalog, CatalogProject
 from harness.catalog_generator.git_citation import GitCitation
 
 
@@ -32,12 +33,14 @@ def main(argv: list[str] | None = None) -> None:
     # Loading the checkout's toolsets imports the packages that register its practices and actions, as the cdd server
     # does, so the catalog shows them.
     RepositoryToolsets(_REPO_ROOT).classes()
-    catalog = _catalog(arguments)
+    print(_run(_catalog(arguments), arguments))
+
+
+def _run(catalog: Catalog, arguments: argparse.Namespace) -> str:
+    """Overlay the brand the arguments name on the catalog, or generate the whole catalog, and say what was done."""
     if arguments.apply_brand:
-        message = catalog.apply_brand(arguments.apply_brand)
-    else:
-        message = catalog.generate_catalog(brand=arguments.brand or "")
-    print(message)
+        return catalog.apply_brand(arguments.apply_brand)
+    return catalog.generate_catalog(brand=arguments.brand or "")
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -70,15 +73,11 @@ def _parser() -> argparse.ArgumentParser:
 
 def _catalog(arguments: argparse.Namespace) -> Catalog:
     """The catalog of this checkout the arguments name, citing its origin and HEAD unless they name others."""
-    citation = GitCitation.from_checkout(_REPO_ROOT)
-    return Catalog(
-        repo_url=arguments.repo_url or citation.repo_url,
-        ref=arguments.ref or citation.ref,
-        out_root=str(_REPO_ROOT / arguments.out),
-        brands_root=arguments.brands,
-        # This command regenerates the checkout it belongs to, whichever folder it is started from.
-        project=_REPO_ROOT,
-    )
+    checkout = GitCitation.from_checkout(_REPO_ROOT)
+    citation = GitCitation(arguments.repo_url or checkout.repo_url, arguments.ref or checkout.ref)
+    # This command regenerates the checkout it belongs to, whichever folder it is started from.
+    project = CatalogProject(_REPO_ROOT, _REPO_ROOT / arguments.out)
+    return Catalog(project, citation, Brand(collection=arguments.brands))
 
 
 if __name__ == "__main__":

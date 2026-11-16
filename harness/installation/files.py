@@ -1,12 +1,14 @@
 """The skill, command, and rule annotations, and the installation that writes their markdown files."""
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import os
 import re
 from pathlib import Path
 from typing import Protocol
 
-from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, InvokeLine
 from harness.annotations.name import Name
 from harness.installation.destination import Installation
 from harness.installation.ide_layout import IdeLayout
@@ -70,6 +72,16 @@ class InstructionsUnreadableAtInstall(Exception):
         )
 
 
+@dataclass(frozen=True)
+class FileChannel:
+    """The channel a file installation writes: skills, slash commands, or rules (``destination``), and whether the
+    operations it writes are also served on MCP, so each file tells the agent to call the MCP tool rather than run a
+    shell command (``served_on_mcp``). An install keeps one file installation per channel."""
+
+    destination: str = ""
+    served_on_mcp: bool = False
+
+
 class FileInstallation(Installation):
     """Write the markdown files of one channel — skills, slash commands, or rules — where the IDE reads them."""
 
@@ -85,42 +97,34 @@ class FileInstallation(Installation):
     # The channels a file installation writes, in the order a tool's files are written.
     CHANNELS = (InstallDestination.SKILL, InstallDestination.COMMAND, InstallDestination.RULE)
 
-    def __init__(
-        self,
-        layout: IdeLayout,
-        path: Path | str,
-        destination: str = "",
-        mcp_mode: bool = False,
-        repo: Path | str | None = None,
-    ) -> None:
+    def __init__(self, layout: IdeLayout, path: Path | str, channel: FileChannel = FileChannel(), repo: Path | str | None = None) -> None:
         super().__init__(layout, path, repo=repo)
-        self.destination = destination
-        self.mcp_mode = mcp_mode
+        self.channel = channel
 
     def relative_path(self, toolset: AgentToolSet, name: str) -> Path:
         """Where the file for toolset's operation name goes, from the IDE folder."""
         folder = self._kebab_folder(self.folder_for(toolset))
         operation = Name(name).kebab
-        if self.destination == InstallDestination.SKILL:
+        if self.channel.destination == InstallDestination.SKILL:
             skill_folder = self._skill_folder(toolset, operation)
             return Path("skills") / (skill_folder if self.layout.nests_skills else self._flat_skill_folder(skill_folder)) / "SKILL.md"
-        if self.destination == InstallDestination.COMMAND:
+        if self.channel.destination == InstallDestination.COMMAND:
             parent = folder.parent if toolset.is_part_of_practice and folder.name else folder
             return Path(self.layout.commands_folder) / parent / f"{self._command_stem(toolset, operation)}.md"
-        if self.destination == InstallDestination.RULE:
+        if self.channel.destination == InstallDestination.RULE:
             return self._rule_path(toolset, folder)
         return self.folder_for(toolset) / name
 
     def write(self, tool: AgentTool) -> None:
-        if not self.destination or (tool.kind == "tool" and self.destination not in self.CHANNELS):
+        if not self.channel.destination or (tool.kind == "tool" and self.channel.destination not in self.CHANNELS):
             return
         parts = self._parts(tool)
         relative = self.relative_path(tool.toolset, tool.deploy_name)
         body = "\n\n".join(part for part in parts if part).rstrip()
         text = f"{body}\n" if body else ""
-        if self.destination == InstallDestination.RULE:
+        if self.channel.destination == InstallDestination.RULE:
             text = self._rules_front_matter(text, self._published_rules(tool)) + text
-        elif self.destination == InstallDestination.SKILL:
+        elif self.channel.destination == InstallDestination.SKILL:
             text = self._skill_front_matter(relative.parent.name, self._skill_overview(tool.toolset, parts)) + text
         self._write_file(self.path / relative, text)
 
@@ -141,9 +145,9 @@ class FileInstallation(Installation):
         schema = self._schema_guide(tool)
         if schema and schema not in parts[0]:
             parts.append(schema)
-        if self.mcp_mode:
+        if self.channel.served_on_mcp:
             fidelity_parts = self._fidelity_invoke_parts(tool.toolset) if tool.name == "instructions" else []
-            parts.extend(fidelity_parts or [tool.invoke_line()])
+            parts.extend(fidelity_parts or [tool.invoke_line.text])
         elif self._needs_shell_invoke(tool):
             parts.append(self._shell_invoke_line(tool))
         return parts
@@ -216,12 +220,12 @@ class FileInstallation(Installation):
         return tool.docstring
 
     def _body_for(self, tool: AgentTool) -> str:
-        if self.mcp_mode:
+        if self.channel.served_on_mcp:
             # An ``"""overview"""`` docstring names the section the MCP tool returns; it is not body text.
             return "" if tool.docstring.strip() == "overview" else tool.docstring
         if tool.kind == "instructions":
             return self._instructions_at_install(tool)
-        if self.destination == InstallDestination.RULE:
+        if self.channel.destination == InstallDestination.RULE:
             published = self._published_rules(tool)
             return published.prose.strip() or published.formatted().strip()
         return tool.docstring
@@ -252,7 +256,7 @@ class FileInstallation(Installation):
 
     def _needs_shell_invoke(self, tool: AgentTool) -> bool:
         """``@agent_tool`` on skill/command without ``@mcp`` gets a Shell/python tail."""
-        return self.destination in {InstallDestination.SKILL, InstallDestination.COMMAND} and tool.kind == "tool" and not tool.install_to_mcp
+        return self.channel.destination in {InstallDestination.SKILL, InstallDestination.COMMAND} and tool.kind == "tool" and not tool.install_to_mcp
 
     def _shell_invoke_line(self, tool: AgentTool) -> str:
         return f"{self._SHELL_INVOKE}\n\n```text\n{self._shell_command(tool)}\n```"
@@ -263,7 +267,7 @@ class FileInstallation(Installation):
         parts: list[str] = []
         for child in toolset.child_toolsets():
             published = child.tools.get("instructions")
-            invoke = published.invoke_line() if published is not None and published.install_to_mcp else ""
+            invoke = published.invoke_line.text if published is not None and published.install_to_mcp else ""
             parts.append("\n\n".join(piece for piece in (self._fidelity_one_liner(child), invoke) if piece))
         return parts
 
@@ -306,7 +310,7 @@ class FileInstallation(Installation):
                 continue
             if stripped.startswith(self._SHELL_INVOKE.casefold()):
                 skip_shell_block = True
-            elif not AgentTool.is_invoke_line(line):
+            elif not InvokeLine(line).is_invoke_line:
                 lines.append(line)
         return "\n".join(lines).strip()
 

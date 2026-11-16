@@ -21,10 +21,10 @@ from harness.agent_tools.agent_tools import tool_subject
 from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN, ApproachCopy
 from harness.catalog_generator.approach_page import ApproachPage
 from harness.catalog_generator.brand import Brand
-from harness.catalog_generator.catalog_examples import CatalogFidelity
+from harness.catalog_generator.catalog_examples import CatalogExamples, CatalogFidelity
 from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.catalog_generator.git_citation import GitCitation
-from harness.catalog_generator.hub_board import HubBoard
+from harness.catalog_generator.hub_board import BoardTools, HubBoard
 from harness.catalog_generator.markdown_html import MarkdownHtml
 from harness.catalog_generator.page_shell import PageShell
 from harness.catalog_generator.project_approach import ProjectApproach, ProjectFiles
@@ -473,8 +473,14 @@ class CatalogProject:
     catalog shows that branch's practices and actions. Any other project shows the guidance the CDD tools serving it
     give its agents, written into the project's ``catalog`` folder beside the project's own approach slide."""
 
-    def __init__(self, root: Path | str) -> None:
+    def __init__(self, root: Path | str, out_root: Path | str | None = None) -> None:
         self.root = Path(root).resolve()
+        self._named_out_root = Path(out_root) if out_root else None
+
+    @property
+    def out_root(self) -> Path:
+        """The folder every page is written under: the one the caller named, else the project's catalog folder."""
+        return self._named_out_root or self.catalog_folder
 
     @property
     def is_cdd_checkout(self) -> bool:
@@ -571,6 +577,36 @@ _UTILITIES_GRID = _GridPage("tools", "Utilities", "Foundational utilities")
 _FIDELITIES_GRID = _GridPage("fidelities", "Fidelities", "Every fidelity ticket")
 
 
+@dataclass(frozen=True)
+class _GridCard:
+    """One card on a grid page: a link to a page, titled, with the label of its kind and a line saying what it is."""
+
+    title: str
+    href: str
+    summary: str
+    label: str = "Catalog"
+
+    @property
+    def html(self) -> str:
+        return (
+            f'<a class="cap-card" href="{html.escape(self.href)}">'
+            f'<p class="cap-card__title">{html.escape(self.title)}</p>'
+            f'<p class="cap-card__label">{html.escape(self.label)}</p>'
+            f'<p class="cap-card__summary">{html.escape(self.summary)}</p>'
+            f'<p class="cap-card__more">Open →</p></a>'
+        )
+
+
+@dataclass(frozen=True)
+class _ApproachHeading:
+    """The heading of an approach page: its browser title, its headline, and what follows its subhead, such as the
+    link to the repository it describes."""
+
+    title: str
+    headline: str
+    after_subhead: str
+
+
 @agent_toolset
 class Catalog:
     """The top-level entry point - the only class ``generate_cdd_catalog.py`` calls. Holds the project it is generated
@@ -579,21 +615,11 @@ class Catalog:
     copies the Foundry commons there."""
 
     def __init__(
-        self,
-        repo_url: str = "",
-        ref: str = "",
-        out_root: str = "",
-        brands_root: str | Path | None = None,
-        approach_md_path: str | Path | None = None,
-        project: str | Path | None = None,
+        self, project: CatalogProject | None = None, citation: GitCitation | None = None, brand: Brand | None = None
     ) -> None:
-        self.project = CatalogProject(project if project is not None else Path.cwd())
-        self._repo_url = repo_url
-        self._ref = ref
-        self._citation: GitCitation | None = None
-        self._named_out_root = Path(out_root) if out_root else None
-        self.approach_md_path = Path(approach_md_path) if approach_md_path is not None else APPROACH_MARKDOWN
-        self.brand = Brand(collection=brands_root)
+        self.project = project if project is not None else CatalogProject(Path.cwd())
+        self._citation = citation
+        self.brand = brand if brand is not None else Brand()
         self._practices: list[CatalogPractice] | None = None
         self._utilities: list[Utility] | None = None
         self._lifecycle_actions: list[LifecycleAction] | None = None
@@ -604,15 +630,14 @@ class Catalog:
     def load(cls, *, project: Path) -> Catalog:
         """The catalog of project, the folder the tool call names; one server answers every chat, so each call makes
         its own."""
-        return cls(project=project)
+        return cls(CatalogProject(project))
 
     @property
     def citation(self) -> GitCitation:
-        """The repository the pages cite: the URL and ref the caller named, else the checkout's origin and commit, read
-        from git the first time a page cites a file, so placing a brand or naming the output folder runs no git."""
+        """The repository the pages cite: the one the caller named, else the checkout's origin and commit, read from git
+        the first time a page cites a file, so placing a brand or naming the output folder runs no git."""
         if self._citation is None:
-            checkout = GitCitation(self._repo_url, self._ref) if self._repo_url and self._ref else GitCitation.from_checkout()
-            self._citation = GitCitation(self._repo_url or checkout.repo_url, self._ref or checkout.ref)
+            self._citation = GitCitation.from_checkout()
         return self._citation
 
     @property
@@ -622,7 +647,7 @@ class Catalog:
     @property
     def out_root(self) -> Path:
         """The folder every page is written under: the one the caller named, else the project's catalog folder."""
-        return self._named_out_root or self.project.catalog_folder
+        return self.project.out_root
 
     @property
     def practices(self) -> list[CatalogPractice]:
@@ -645,14 +670,14 @@ class Catalog:
 
     @property
     def approach_copy(self) -> ApproachCopy:
-        """The approach page's copy, read from ``approach_md_path`` on first use."""
+        """The approach page's copy, read from the approach's markdown on first use."""
         if self._approach_copy is None:
-            self._approach_copy = ApproachCopy.load(self.approach_md_path)
+            self._approach_copy = ApproachCopy.load(APPROACH_MARKDOWN)
         return self._approach_copy
 
     @property
     def board(self) -> HubBoard:
-        return HubBoard(self.practices, self.lifecycle_actions, self.utilities, self.approach_copy.board_stages)
+        return HubBoard(self.practices, BoardTools(self.lifecycle_actions, self.utilities), self.approach_copy.board_stages)
 
     @property
     def brands(self) -> dict[str, Path]:
@@ -843,8 +868,8 @@ class Catalog:
     def _write_approach_pages(self) -> None:
         for practice in self.practices:
             practice.copy_examples_into(self.out_root)
-        page = ApproachPage(self.approach_copy, self.practices, self.out_root)
-        self._write_approach(page, title=_SITE_TITLE, headline=_HEADLINE, after_subhead=self._repo_link)
+        page = ApproachPage(self.approach_copy, self.practices, CatalogExamples(self.out_root))
+        self._write_approach(page, _ApproachHeading(_SITE_TITLE, _HEADLINE, self._repo_link))
         for file_name, page_html in page.principle_pages.items():
             self.write_page(file_name, page_html)
 
@@ -852,18 +877,18 @@ class Catalog:
         """Write a project's own approach page, a ``ProjectApproach``, with the project's examples staged beside it."""
         self.out_root.mkdir(parents=True, exist_ok=True)
         self.brand.copy_commons(self.out_root)
-        page = ApproachPage(self.approach_copy, self.practices, self.out_root, approach.staged_into(self.out_root))
-        return self._write_approach(page, title=approach.page_title, headline=approach.headline, after_subhead=approach.repo_link)
+        page = ApproachPage(self.approach_copy, self.practices, CatalogExamples(self.out_root, approach.staged_into(self.out_root)))
+        return self._write_approach(page, _ApproachHeading(approach.page_title, approach.headline, approach.repo_link))
 
-    def _write_approach(self, page: ApproachPage, *, title: str, headline: str, after_subhead: str) -> Path:
+    def _write_approach(self, page: ApproachPage, heading: _ApproachHeading) -> Path:
         """Write the approach page's stage example pages, then the page itself as ``cdd-approach.html``."""
         page.write_stage_example_pages()
         shell = PageShell(
-            title=title,
-            h1=headline,
+            title=heading.title,
+            h1=heading.headline,
             tagline="",
             subhead=self.approach_copy.subhead,
-            after_subhead=after_subhead,
+            after_subhead=heading.after_subhead,
             body_inner=page.body,
             body_wrap_class="approach-wrap",
         )
@@ -886,9 +911,9 @@ class Catalog:
     def _write_grid_pages(
         self, practice_pages: list[PracticePage], action_pages: list[ActionPage], utility_pages: list[UtilityPage]
     ) -> None:
-        practices = [self._card(practice.display_name, practice.href, practice.display_name) for practice in self.practices]
-        actions = [self._card(action.name, action.href, "Lifecycle action") for action in self.lifecycle_actions]
-        utilities = [self._card(utility.name, utility.href, "Utility") for utility in self.utilities]
+        practices = [_GridCard(practice.display_name, practice.href, practice.display_name).html for practice in self.practices]
+        actions = [_GridCard(action.name, action.href, "Lifecycle action").html for action in self.lifecycle_actions]
+        utilities = [_GridCard(utility.name, utility.href, "Utility").html for utility in self.utilities]
         self._write_grid(_CONTEXT_TOOLS_GRID, practices, practice_pages)
         self._write_grid(_ACTIONS_GRID, actions, action_pages)
         self._write_grid(_UTILITIES_GRID, utilities, utility_pages)
@@ -897,12 +922,7 @@ class Catalog:
     @property
     def _fidelity_cards(self) -> list[str]:
         return [
-            self._card(
-                shown.name,
-                practice.fidelity_href(shown.fidelity),
-                f"{practice.display_name} · {shown.column.key}",
-                label="Fidelity",
-            )
+            _GridCard(shown.name, practice.fidelity_href(shown.fidelity), f"{practice.display_name} · {shown.column.key}", "Fidelity").html
             for practice in self.practices
             for shown in practice.board_fidelities
         ]
@@ -918,12 +938,3 @@ class Catalog:
             nav_current=grid.name,
         )
         self.write_page(f"{grid.name}.html", shell.html)
-
-    def _card(self, title: str, href: str, summary: str, label: str = "Catalog") -> str:
-        return (
-            f'<a class="cap-card" href="{html.escape(href)}">'
-            f'<p class="cap-card__title">{html.escape(title)}</p>'
-            f'<p class="cap-card__label">{html.escape(label)}</p>'
-            f'<p class="cap-card__summary">{html.escape(summary)}</p>'
-            f'<p class="cap-card__more">Open →</p></a>'
-        )

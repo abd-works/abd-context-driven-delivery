@@ -25,7 +25,7 @@ from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.annotations.annotation import Toast
 from harness.hooks.hook_server import TOAST_ARROW, HookPayload, HookServer, rules_toast
 from harness.hooks.hooks import hook
-from harness.installation.ide_layout import IdeLayout
+from harness.installation.ide_layout import installed_guidance_kind
 from space.session.session_log import LogTimestamp
 
 TOAST_NOTICE = ".cursor/prompt-notify-toast.json"
@@ -163,7 +163,7 @@ class PromptNotify:
         self, haystacks: list[str], action_names: set[str]
     ) -> tuple[str, str] | None:
         for hay in haystacks:
-            installed = IdeLayout.installed_guidance_kind(hay)
+            installed = installed_guidance_kind(hay)
             for token, kind in self.catalog:
                 if not self._token_in(hay, token):
                     continue
@@ -221,7 +221,7 @@ class PromptNotify:
         (``ToolCall.named_paths``), or a shell command that reads one."""
         command = payload.tool_input.get("command")
         named = [*payload.call.named_paths, *([command] if isinstance(command, str) else [])]
-        installed = [path for path in named if IdeLayout.installed_guidance_kind(path) in _TOASTED_KINDS]
+        installed = [path for path in named if installed_guidance_kind(path) in _TOASTED_KINDS]
         return [item for item in (payload.invoked_tool, payload.tool_name, *installed) if item]
 
     def _token_in(self, hay: str, token: str) -> bool:

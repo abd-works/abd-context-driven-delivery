@@ -43,7 +43,7 @@ class ExampleClassifier:
         relative = self._relative(Path(path).resolve())
         for practice in self.practices:
             for shown in practice.board_fidelities:
-                if shown.fidelity.declares(relative):
+                if shown.fidelity.declared.includes(relative):
                     return shown
         return None
 

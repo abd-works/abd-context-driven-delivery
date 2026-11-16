@@ -20,7 +20,7 @@ from harness.agent_tools.agent_tools import agent_toolset
 from harness.hooks.hook_server import HookPayload
 from harness.hooks.hooks import Hook, Hooks, hook
 from harness.installation.destination import noCatalog
-from harness.installation.ide_layout import IdeLayout
+from harness.installation.ide_layout import installed_guidance_kind
 from space.session.session_log import HookLog, LogTimestamp
 
 # A long prompt or file is shown by its first lines, cut at a length a person can still scan in the log.
@@ -46,12 +46,12 @@ class LoggedFile:
 
     @property
     def kind(self) -> str:
-        """What an install wrote the file as, which ``IdeLayout`` knows for every IDE; else an AGENTS.md, a skill's
+        """What an install wrote the file as, which ``installed_guidance_kind`` knows for every IDE; else an AGENTS.md, a skill's
         SKILL.md, a reference, or a file."""
         if not self.path:
             return "unknown"
         name = Path(self.path).name.lower()
-        installed = IdeLayout.installed_guidance_kind(self.path)
+        installed = installed_guidance_kind(self.path)
         if name == "agents.md":
             return "agents-md"
         if installed in ("agent", "rule") or name == "skill.md":

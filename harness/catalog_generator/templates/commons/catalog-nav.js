@@ -219,11 +219,17 @@
       '</div>';
   }
 
-  function modeButtonHtml(buttonMode, label, icon, iconClass) {
+  /** What the footer's switch shows for each display mode: its label, its icon, and the icon's class. */
+  var MODE_BUTTONS = {};
+  MODE_BUTTONS[EXECUTIVE] = { label: 'Executive', icon: '☀', iconClass: 'mode-icon--sun' };
+  MODE_BUTTONS[ENGINEERING] = { label: 'Engineer', icon: '☾', iconClass: 'mode-icon--moon' };
+
+  function modeButtonHtml(buttonMode) {
+    var shown = MODE_BUTTONS[buttonMode];
     return '<button class="mode-btn" type="button" data-mode="' + buttonMode + '"' +
       ' aria-label="Switch to ' + (buttonMode === EXECUTIVE ? 'Executive (light)' : 'Engineering (dark)') + ' mode">' +
-        '<span class="mode-icon ' + iconClass + '" aria-hidden="true">' + icon + '</span>' +
-        '<span class="mode-text">' + label + '</span>' +
+        '<span class="mode-icon ' + shown.iconClass + '" aria-hidden="true">' + shown.icon + '</span>' +
+        '<span class="mode-text">' + shown.label + '</span>' +
       '</button>';
   }
 
@@ -233,8 +239,8 @@
       '</a>' +
       '<p class="footer-tagline">' + brand.footerTagline + '</p>' +
       '<div class="footer-mode"><div class="mode-switch" role="group" aria-label="Display mode">' +
-        modeButtonHtml(EXECUTIVE, 'Executive', '☀', 'mode-icon--sun') +
-        modeButtonHtml(ENGINEERING, 'Engineer', '☾', 'mode-icon--moon') +
+        modeButtonHtml(EXECUTIVE) +
+        modeButtonHtml(ENGINEERING) +
       '</div></div>';
   }
 

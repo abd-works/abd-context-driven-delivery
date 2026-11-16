@@ -14,8 +14,8 @@ from typing import Any, Callable, ClassVar, Iterator, Mapping, get_type_hints
 
 from harness.annotations.class_folder import class_folder
 from harness.annotations.name import Name
-from harness.agent_tools.parameter_schema import ParameterSchema, TypeHint
-from harness.agent_tools.tool_call import ToolCall
+from harness.agent_tools.parameter_schema import ParameterSchema, TypeHint, is_built_in
+from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall
 from harness.markdown.markdown import Markdown, MarkdownCollection, OperationProperty
 from harness.annotations.annotation import Annotatable, Annotation, NamesAnnotation, annotation_kinds
 from harness.agent_tools.recipe import ExpansionMode, ExpansionResult, RecipeExpansion, RecipePlaceholders, RecipeSource, RecipeTarget
@@ -221,9 +221,6 @@ class Collect:
 collect = Collect
 
 
-# Python sets this flag on a built-in type, which keeps no attributes of its own (Py_TPFLAGS_IMMUTABLETYPE).
-_IMMUTABLE_TYPE_FLAG = 1 << 8
-
 
 class DeclaredMembers:
     """Every function, class or static method, and property getter one class declares, by name, walked once, and how
@@ -300,7 +297,7 @@ class ToolsetMembers:
         if held is not None and held._owner is owner:
             return held
         held = cls(owner)
-        if not owner.__flags__ & _IMMUTABLE_TYPE_FLAG:
+        if not is_built_in(owner):
             setattr(owner, cls._HELD_AS, held)
         return held
 
@@ -720,17 +717,17 @@ class AgentToolSet(AgentToolSetOrigin):
         return subject_loader.on_subject(member)
 
     def _discover_instruction_members(self) -> dict[str, AgentInstructions]:
-        members = self._members
-        return {
-            name: AgentInstructions(name=name, callable=members.declared.callable_on(self, name, member), toolset=self)
-            for name, member in members.annotated if AgentInstructionsAnnotation.annotates(member)
-        }
+        return self._members_as(AgentInstructions, AgentInstructionsAnnotation.annotates)
 
     def _discover_enlisted_members(self) -> dict[str, AgentTool]:
+        return self._members_as(AgentTool, annotation_kinds.enlisting)
+
+    def _members_as[T: AgentTool](self, kind: type[T], is_one: Callable[[ClassMember], bool]) -> dict[str, T]:
+        """Each annotated member that is_one accepts, as a tool of kind on this toolset, by its name."""
         members = self._members
         return {
-            name: AgentTool(name=name, callable=members.declared.callable_on(self, name, member), toolset=self)
-            for name, member in members.annotated if annotation_kinds.enlisting(member)
+            name: kind(name=name, callable=members.declared.callable_on(self, name, member), toolset=self)
+            for name, member in members.annotated if is_one(member)
         }
 
     def _discover_collection_tools(self) -> dict[str, AgentTool]:
@@ -903,7 +900,7 @@ class _OperationOnSubject:
     def _object_class_in(self, hint: TypeHint) -> type | None:
         """The class a hint names, a ``Ticket`` or a ``Ticket | None``; none for any other hint."""
         if isinstance(hint, type):
-            return hint if hint.__module__ != "builtins" else None
+            return None if is_built_in(hint) else hint
         named = [member for member in getattr(hint, "__args__", ()) if isinstance(member, type) and member is not type(None)]
         return named[0] if len(named) == 1 and type(None) in getattr(hint, "__args__", ()) else None
 
@@ -956,27 +953,44 @@ class AgentToolDestination:
         return [destination for destination in InstallDestination.LISTED if self.install_to(destination)]
 
 
+def names_alike(called: str, published: str) -> bool:
+    """Whether called and published spell one tool name: compared without an ``mcp__{server}__`` prefix, case folded,
+    with dots and hyphens as underscores, as every client spells a tool."""
+
+    def spelled(name: str) -> str:
+        return name.rsplit("__", 1)[-1].casefold().replace(".", "_").replace("-", "_")
+
+    return spelled(called) == spelled(published)
+
+
+class InvokeLine:
+    """Text that holds the ``Use MCP tool:`` line a skill or command ends with to tell the agent which MCP tool runs
+    it. A tool writes the line (``AgentTool.invoke_line``) and the installer reads the tool names back from installed
+    files, so both go through this one class."""
+
+    PREFIX: ClassVar[str] = "Use MCP tool:"
+    _NAMED: ClassVar[re.Pattern[str]] = re.compile(r"Use MCP tool:\s*`([A-Za-z0-9_.-]+)")
+
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+    @property
+    def names(self) -> list[str]:
+        """The MCP tool each ``Use MCP tool:`` line in the text names."""
+        return self._NAMED.findall(self.text)
+
+    @property
+    def is_invoke_line(self) -> bool:
+        """Whether the text is one ``Use MCP tool:`` line."""
+        return self.text.strip().casefold().startswith(self.PREFIX.casefold())
+
+
 @dataclass
 class AgentTool(AgentToolDestination):
     name: str
     callable: Callable[..., Any]
     toolset: AgentToolSet
     _body: str | None = field(default=None, repr=False)
-
-    # The line a skill or command ends with to tell the agent which MCP tool runs it. A tool writes it, and the
-    # installer reads the tool names back from installed files, so both go through here.
-    INVOKE_PREFIX: ClassVar[str] = "Use MCP tool:"
-    _INVOKED_NAME: ClassVar[re.Pattern[str]] = re.compile(r"Use MCP tool:\s*`([A-Za-z0-9_.-]+)")
-
-    @classmethod
-    def invoked_names(cls, text: str) -> list[str]:
-        """The MCP tool each ``Use MCP tool:`` line in text names."""
-        return cls._INVOKED_NAME.findall(text)
-
-    @classmethod
-    def is_invoke_line(cls, line: str) -> bool:
-        """Whether line is a ``Use MCP tool:`` line."""
-        return line.strip().casefold().startswith(cls.INVOKE_PREFIX.casefold())
 
     @property
     def slug(self) -> str:
@@ -1007,15 +1021,10 @@ class AgentTool(AgentToolDestination):
         or as an IDE spells it, with any ``mcp__{server}__`` prefix Claude Code adds, in any case, and with dots and
         hyphens written as underscores (``generate_generate``, ``fidelity_progress_files``). The server resolves a call
         and a rules hook recognises its own action's tool by this one rule, so the two never disagree on a name."""
-        return bool(called) and self.spelled(called) == self.spelled(self.mcp_name)
+        return bool(called) and names_alike(called, self.mcp_name)
 
-    @classmethod
-    def spelled(cls, name: str) -> str:
-        """name as every client spelling of it compares: without an ``mcp__{server}__`` prefix, case folded, with dots and
-        hyphens as underscores."""
-        return name.rsplit("__", 1)[-1].casefold().replace(".", "_").replace("-", "_")
-
-    def invoke_line(self) -> str:
+    @property
+    def invoke_line(self) -> InvokeLine:
         """The ``Use MCP tool:`` line a skill or command ends with, naming the tool and the parameters it takes."""
         try:
             signature = inspect.signature(self.callable)
@@ -1023,7 +1032,7 @@ class AgentTool(AgentToolDestination):
             suffix = str(params)
         except (TypeError, ValueError):
             suffix = "()"
-        return f"{self.INVOKE_PREFIX} `{self.mcp_name}{suffix}`"
+        return InvokeLine(f"{InvokeLine.PREFIX} `{self.mcp_name}{suffix}`")
 
     @functools.cached_property
     def parameter_schema(self) -> ParameterSchema:
@@ -1043,7 +1052,7 @@ class AgentTool(AgentToolDestination):
     def answer(self, call: ToolCall) -> Any:
         """Answer call on its toolset made for it: log the call in the session it works in, then call the tool with each
         argument in the type its parameter declares."""
-        with call.being_answered():
+        with CALLS_BEING_ANSWERED.answering(call):
             tool = self._on(self.toolset.for_call(call))
             tool.log_session_invocation(call)
             return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
@@ -1081,7 +1090,7 @@ class AgentTool(AgentToolDestination):
         session = self.toolset.session_for(call)
         if session is None:
             return
-        session.log.by(call.chat).tool(self.mcp_name, call.named_paths)
+        session.log.by(call.request.chat).tool(self.mcp_name, call.named_paths)
 
     @property
     def kind(self) -> str:
@@ -1240,32 +1249,25 @@ class AgentInstructions(AgentTool):
         own_class = type(self.toolset)
         method_name = self.callable.__name__
         own_recipe = own_class.__dict__.get(method_name)
-        after_class = self.defining_class
         if own_recipe is None:
             return None
-        classes = own_class.__mro__
-        if after_class is not None and after_class not in classes:
-            return None
-        above = classes[classes.index(after_class) + 1:] if after_class is not None else classes
-        for owner in above:
+        for owner in self._classes_above(own_class):
             recipe = owner.__dict__.get(method_name)
-            if recipe is None or (after_class is None and recipe is own_recipe):
+            if recipe is None or (self.defining_class is None and recipe is own_recipe):
                 continue
             if callable(recipe) and AgentInstructionsAnnotation.annotates(recipe):
                 return AgentInstructions(name=method_name, callable=recipe, toolset=self.toolset, defining_class=owner)
         return None
-        classes = own_class.__mro__
-        if after_class is not None and after_class not in classes:
-            return None
-        above = classes[classes.index(after_class) + 1:] if after_class is not None else classes
-        for owner in above:
-            recipe = owner.__dict__.get(method_name)
-            if recipe is None or (after_class is None and recipe is own_recipe):
-                continue
-            if callable(recipe) and AgentInstructionsAnnotation.annotates(recipe):
-                return AgentInstructions(name=method_name, callable=recipe, toolset=self.toolset), owner
-        return None
 
+    def _classes_above(self, own_class: type) -> tuple[type, ...]:
+        """The classes of own_class's order above the class defining this recipe; every class of it when none is named,
+        and none when the defining class is not one of them."""
+        classes = own_class.__mro__
+        if self.defining_class is None:
+            return classes
+        if self.defining_class not in classes:
+            return ()
+        return classes[classes.index(self.defining_class) + 1:]
 
 def _callable_needs_arguments(call: Callable[..., Any]) -> bool:
     try:

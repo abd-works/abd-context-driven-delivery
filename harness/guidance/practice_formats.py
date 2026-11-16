@@ -251,7 +251,7 @@ class PracticeFormats:
             return {}
         root = session.work_root
         found = session.session_files.find(f"{root.as_posix()}/**/*{extension}")
-        return {path.relative_to(root).as_posix(): session.document_named("", [str(path)]) for path in found}
+        return {path.relative_to(root).as_posix(): session.paths.document_named("", [str(path)]) for path in found}
 
     def _call_render(self, target: FormatAdapter, parsed: ObjectModel, request: RenderRequest) -> Any:
         """Ask target to render parsed, giving it the previous file and the linked files' folder when it takes them."""

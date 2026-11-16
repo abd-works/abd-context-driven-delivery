@@ -234,7 +234,7 @@ class GuidanceArgument:
             return None
         practices = self._practices()
         named = next((found for practice in practices if (found := practice.answers_to(slug)) is not None), None)
-        return named or next((found for practice in practices if (found := practice.fidelity_called(slug)) is not None), None)
+        return named or next((found for practice in practices if (found := practice.fidelities.called(slug)) is not None), None)
 
     def _json_ref(self, text: str) -> GuidanceRef | None:
         if not (text.startswith("{") and text.endswith("}")):
@@ -316,7 +316,7 @@ class WorkList:
             self._listed = [self._worked_on(named) for named in self._items]
         return self._listed
 
-    def entry(self, index: int) -> ListedGuidance:
+    def _entry(self, index: int) -> ListedGuidance:
         """The listed entry at index, its fidelity set to the format that entry names, so a fidelity listed once per
         format works in each format in turn."""
         listed = self.listed()[index]
@@ -356,6 +356,30 @@ class WorkList:
         if self._outer is not None:
             return self._outer.fidelity_of(guidance)
         return getattr(getattr(guidance, "fidelities", None), "current", None)
+
+    def at_fidelity(self, guidance: ListedGuidance) -> ListedGuidance:
+        """guidance, one of the Guidance this list holds, as the fidelity the action works at on it; guidance itself when
+        it has none."""
+        fidelity = self.fidelity_of(guidance)
+        return fidelity if fidelity is not None else guidance
+
+    def each(self, operation: Callable[[WorkedGuidance], Any]) -> list[Any]:
+        """Run ``operation`` once on a guidance string, or once per Guidance. A listed practice is handed over as the
+        fidelity the action works at on it, which answers its own instructions, templates, examples, rules and
+        generate_output, so another call that moves the practice to another fidelity never changes this one's text;
+        Guidance with no fidelity is handed over itself. A recipe reads only what the operation returns, so an
+        operation gives its text back rather than reading it into nothing."""
+        if self.text is not None:
+            return [operation(self.text)]
+        return [operation(self.at_fidelity(self._entry(index))) for index in range(len(self.listed()))]
+
+    @property
+    def rules_to_follow(self) -> str:
+        """The rules each listed guidance holds the agent to, read from the fidelity the action works at on it: its
+        shared rules and that fidelity's, or the guidance text itself. It checks nothing, so it saves no report and logs
+        no validate line, which would tell the session board the work had been checked."""
+        rules = (worked if isinstance(worked, str) else worked.checked_rules_text() for worked in self.each(lambda worked: worked))
+        return "\n\n".join(part for part in rules if part)
 
     def _held(self, sent: GuidanceEntry | ListedGuidance) -> GuidanceEntry | ListedGuidance:
         """sent as it is listed: a fidelity is its practice, worked at that fidelity; any other Guidance is itself."""
@@ -419,6 +443,39 @@ class ActionWorksInNoSession(Exception):
         self.action = action
 
 
+def source_label(content: str = "", paths: list[str] | str | None = None) -> str:
+    """What an instruction names as its source: the paths a call names, one per line, else its in-process text. The file
+    bodies stay on disk."""
+    if paths in ("", None, []):
+        return content or ""
+    return paths if isinstance(paths, str) else "\n".join(str(entry) for entry in paths)
+
+
+class ActionFiles:
+    """The files one guidance action names and writes in the session it works in: a path a call names, read from the
+    session's project; the document a call names, read from there; and the files the action just wrote, which the
+    session's graph is refreshed with. The action holds one (``action.files``), made with it."""
+
+    def __init__(self, action: GuidanceAction) -> None:
+        self._action = action
+
+    def path_named(self, named: str | Path) -> Path:
+        """named as a path in the action's session's project; an absolute path stays where it is, in no session too."""
+        path = Path(named)
+        return path.resolve() if path.is_absolute() else self._action.session.paths.path_named(path)
+
+    def read(self, content: str = "", paths: list[str] | str | None = None) -> str:
+        """The document a call names: content, or the files at paths read from the action's session's project; an action
+        made for no session, such as one run in process, reads paths as given."""
+        return document_in(self._action.works_in, content, paths)
+
+    def wrote(self, paths: list[str | Path]) -> None:
+        """Refresh the session's graph with exactly the files the action just wrote, so the graph holds them as they are
+        now; nothing watches the files. An action made for no session holds no graph to refresh."""
+        if self._action.works_in is not None:
+            self._action.graph.refresh([str(path) for path in paths], self._action.call)
+
+
 @agent_toolset
 class GuidanceAction:
     """An action, such as generate, on the guidance a call names, such as stories-story-map, made for the session that
@@ -449,6 +506,7 @@ class GuidanceAction:
         # What this action works on: the guidance its call named, read once, and the fidelity it works at on each
         # practice it lists. An action started inside another holds a list made inside that action's (``_inside``).
         self.work = WorkList(session)
+        self.files = ActionFiles(self)
 
     def for_call(self, call: ToolCall) -> GuidanceAction:
         """An action of this kind made for call and working on the guidance it names: in the session that guidance names
@@ -456,17 +514,22 @@ class GuidanceAction:
         A session is space/session's *Session*, which the call opens; the framework never names its class."""
         guidance = call.arguments.get("guidance")
         named = session_file_named(guidance)
-        action = self.made_for((call.session_named(named) if named else None) or call.session or self._session, call)
+        action = self._made_for((call.session_named(named) if named else None) or call.session or self._session, call)
         if guidance is not None:
             action.work.take(guidance)
         return action
 
-    def made_for(self, session: ActionSession | None, call: ToolCall | None = None) -> GuidanceAction:
+    def _made_for(self, session: ActionSession | None, call: ToolCall | None = None) -> GuidanceAction:
         """An action of this kind, set up as this one is, made for session and call."""
         return type(self)(session=session, call=call)
 
     def session_for(self, call: ToolCall) -> ActionSession | None:
         """The session this action logs call in: the one it was made for."""
+        return self._session
+
+    @property
+    def works_in(self) -> ActionSession | None:
+        """The session this action was made for; none for an action made for no session."""
         return self._session
 
     @property
@@ -479,7 +542,7 @@ class GuidanceAction:
     @property
     def log(self) -> Any:
         """What this action writes in its session's log: each line points at the chat of the call it was made for."""
-        return self.session.log.by(self.call.chat if self.call is not None else None)
+        return self.session.log.by(self.call.request.chat if self.call is not None else None)
 
     @property
     def graph(self) -> Any:
@@ -522,29 +585,6 @@ class GuidanceAction:
             f"Its whole guidance is its instructions, `{pattern.slug}_instructions`.\n\n"
             f"{pattern.section_text('Shared rules')}"
         )
-
-    def wrote(self, paths: list[str | Path]) -> None:
-        """Refresh the session's graph with exactly the files this action just wrote, so the graph holds them as they
-        are now; nothing watches the files. An action made for no session holds no graph to refresh."""
-        if self._session is not None:
-            self.graph.refresh([str(path) for path in paths], self.call)
-
-    def source_label(self, content: str = "", paths: list[str] | str | None = None) -> str:
-        """What an instruction names as its source: the paths a call names, one per line, else its in-process text. The
-        file bodies stay on disk."""
-        if paths in ("", None, []):
-            return content or ""
-        return paths if isinstance(paths, str) else "\n".join(str(entry) for entry in paths)
-
-    def path_named(self, named: str | Path) -> Path:
-        """named as a path in this action's session's project; an absolute path stays where it is, in no session too."""
-        path = Path(named)
-        return path.resolve() if path.is_absolute() else self.session.path_named(path)
-
-    def document_named(self, content: str = "", paths: list[str] | str | None = None) -> str:
-        """The document a call names: content, or the files at paths read from this action's session's project; an
-        action made for no session, such as one run in process, reads paths as given."""
-        return document_in(self._session, content, paths)
 
     @property
     def operation_type(self) -> type[AgentOperation]:
@@ -610,43 +650,19 @@ class GuidanceAction:
         inner.work.take_listed(guidance if guidance is not None else self.work.text if self.work.text is not None else self.listed())
         return inner
 
-    def each(self, operation: Callable[[WorkedGuidance], Any]) -> list[Any]:
-        """Run ``operation`` once on a guidance string, or once per Guidance. A listed practice is handed over as the
-        fidelity this action works at on it, which answers its own instructions, templates, examples, rules and
-        generate_output, so another call that moves the practice to another fidelity never changes this one's text;
-        Guidance with no fidelity is handed over itself. A recipe reads only what the operation returns, so an
-        operation gives its text back rather than reading it into nothing."""
-        text = self.work.text
-        if text is not None:
-            return [operation(text)]
-        return [operation(self.at_fidelity(self.work.entry(index))) for index in range(len(self.listed()))]
-
-    def as_tool(self) -> GuidanceAction:
-        """This action as another action's recipe names it: a tool the agent calls, listed by name, rather than its own
-        recipe pasted into the other's instructions with none of the call's arguments."""
-        self.mode = "tool"
-        return self
-
-    def rules_to_follow(self) -> str:
-        """The rules each listed guidance holds the agent to, read from the fidelity this action works at on it: its
-        shared rules and that fidelity's, or the guidance text itself. It checks nothing, so it saves no report and logs
-        no validate line, which would tell the session board the work had been checked."""
-        return "\n\n".join(part for part in self.each(self._rules_of) if part)
-
-    def _rules_of(self, worked: WorkedGuidance) -> str:
-        return worked if isinstance(worked, str) else worked.checked_rules_text()
-
-    def at_fidelity(self, guidance: ListedGuidance) -> ListedGuidance:
-        """guidance, one of the Guidance this action lists, as the fidelity this action works at on it; guidance itself
-        when it has none."""
-        fidelity = self.fidelity_of(guidance)
-        return fidelity if fidelity is not None else guidance
+    def _tool_inside(self, action_type: type[GuidanceAction]) -> GuidanceAction:
+        """An action of action_type started inside this one (``_inside``), as this action's recipe names it: a tool the
+        agent calls, listed by name, rather than its own recipe pasted into this one's instructions with none of the
+        call's arguments."""
+        inner = self._inside(action_type)
+        inner.mode = "tool"
+        return inner
 
     def run(self, operation: Callable[[WorkedGuidance], Any], *, action: str = "") -> list[Any]:
         """Run ``operation`` on the guidance this action works on: once on its string, or once per Guidance."""
         self.log_running(action)
         try:
-            return self.each(operation)
+            return self.work.each(operation)
         except BaseException as failure:
             if self._session is not None:
                 self.log.failure(failure, tool=action or type(self).__name__)
@@ -694,7 +710,7 @@ class GuidanceAction:
             *(["", "Where each listed practice writes:", *writes] if writes else []),
             "",
             "```json",
-            json.dumps(session.fields, indent=2),
+            json.dumps(session.record.fields, indent=2),
             "```",
         ])
 

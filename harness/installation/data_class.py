@@ -10,6 +10,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from harness.agent_tools.parameter_schema import is_built_in
 from harness.annotations.annotation import Annotatable, Annotation, NamesAnnotation
 
 
@@ -129,7 +130,7 @@ class DataClass:
         held = data_class.__dict__.get(cls._HELD_AS)
         if held is None:
             held = cls(data_class)
-            if not data_class.__flags__ & _IMMUTABLE_TYPE_FLAG:  # a built-in type keeps no attributes of its own
+            if not is_built_in(data_class):
                 setattr(data_class, cls._HELD_AS, held)
         return held
 
@@ -203,9 +204,6 @@ class DataClass:
             return [self._referenced(item) for item in held]
         return DataClass.of(type(held)).reference(held)
 
-
-# Python sets this flag on a built-in type, which keeps no attributes of its own (Py_TPFLAGS_IMMUTABLETYPE).
-_IMMUTABLE_TYPE_FLAG = 1 << 8
 
 # The types data_of sends as they are, matched exactly.
 _PLAIN_TYPES = frozenset({str, int, float, bool, type(None)})

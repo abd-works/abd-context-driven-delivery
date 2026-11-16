@@ -14,7 +14,7 @@ _BINARY_MARK = b"\x00"
 def document_in(session: WorkedSession | None, content: str = "", paths: NamedPaths = None) -> str:
     """The document a call names, read from the project of session, space/session's *Session*, when it works in one,
     since a path a call names is written from that project's root; read as given when it works in none."""
-    return session.document_named(content, paths) if session is not None else load_document(content, paths)
+    return session.paths.document_named(content, paths) if session is not None else load_document(content, paths)
 
 
 def load_document(content: str = "", paths: NamedPaths = None) -> str:

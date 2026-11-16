@@ -353,6 +353,15 @@ class CatalogFidelity:
 
 
 @dataclass(frozen=True)
+class CatalogExamples:
+    """Where an approach page's examples are: the catalog's folder (``catalog_root``), none for boards drawn apart from
+    any catalog, and on a project's approach page the project's own artifacts staged there (``project``)."""
+
+    catalog_root: Path | None
+    project: ProjectExampleSources | None = None
+
+
+@dataclass(frozen=True)
 class ProjectExampleSources:
     """A project's own artifacts, copied into the catalog's ``examples/`` folder, by the board fidelity each shows."""
 

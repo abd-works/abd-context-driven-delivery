@@ -19,3 +19,9 @@ The round-9 review (harness core, row 2) found *PracticeGuidance* held five jobs
 
 - Code holding a practice asks `practice.reading.in_graph` for its nodes, `practice.formats` for a format, and `practice.schema` for its schema. Nothing else on the practice answers those.
 - A new practice that reads files names a *PracticeReading* subclass; one that only checks rules names none.
+
+## Update
+
+- The fidelity's declared files are its part *DeclaredOutputs* (`fidelity.declared`, `declared_outputs.py`, beside *DeclaredFile*), made from its `outputs` whenever they change: `includes(path, format)`, `output_paths()`, `files()`, `has_output()` and `files_to_review()`. The fidelity's own `declares`, `output_paths`, `files`, `has_declared_output` and `files_to_review` are deleted, and every caller asks the part. The template lookup stays on the fidelity: its readers are properties (`templates`, `template_file`), so it adds no operation to the class.
+- The rule queries every guidance answers without arguments are properties (`checked_rule_collections`, `every_rule`), as are the practice's `domain_markdown_path` and `scoped_markdown`. A fidelity a person names by its bare name is the fidelities collection's answer (`practice.fidelities.called(name)`), and the catalogue keys a practice class by its folder (`class_folder`), so `fidelity_called` and `class_key` are deleted. A practice names its workspace folder and its format adapters as class attributes (`default_workspace_folder`, `format_adapters`), so its constructor takes only its format and fidelity.
+

@@ -7,7 +7,7 @@ from typing import Any
 
 from expects import be_true, contain, equal, expect
 from mamba import after, before, context, description, it
-from space.session.throwaway_project import ThrowawayProject
+from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
@@ -118,7 +118,7 @@ with description("CleanEngineering action expansion"):
         self.project = ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("a CleanEngineering generator constructed with format python"):
         with before.all:
@@ -207,7 +207,7 @@ with description("clean_engineering content helpers"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("load_concepts_section"):
         with it("should return non-empty text containing the word Contexts"):

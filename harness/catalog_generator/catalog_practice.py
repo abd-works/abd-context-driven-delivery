@@ -6,7 +6,7 @@ import shutil
 from functools import cached_property
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from harness.agent_tools.agent_tools import InstallDestination
 from harness.annotations.name import Name
@@ -15,7 +15,7 @@ from harness.catalog_generator.stage_columns import StageColumn
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.destination import NoCatalog
-from harness.installation.files import FileInstallation
+from harness.installation.files import FileChannel, FileInstallation
 from harness.installation.ide_layout import IdeLayout
 from harness.markdown.format import Format
 
@@ -24,13 +24,44 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SLASH_COMMAND_IDE = "Claude"
 
 
+def giving_stage_examples(practices: list[CatalogPractice]) -> CatalogPractice | None:
+    """Of practices, the one whose card says its artifacts are the approach's stage examples (Stories); none when none
+    of them is."""
+    return next((practice for practice in practices if practice.gives_stage_examples), None)
+
+
+class CatalogSkills:
+    """The skill install whose folder names are the slash commands the catalog shows, made once for the practices of one
+    catalog, which all share it. It works out each guidance's skill folder once: the folder follows from the guidance
+    and the install's place alone, so every catalog made for another project or session (the board makes its practices
+    once per checkout) answers from the first one that worked it out."""
+
+    _FOLDERS: ClassVar[dict[tuple[str, str], str]] = {}
+
+    def __init__(self) -> None:
+        layout = IdeLayout(_SLASH_COMMAND_IDE)
+        self._install = FileInstallation(layout, _REPO_ROOT / layout.folder_name, FileChannel(InstallDestination.SKILL), repo=_REPO_ROOT)
+
+    def skill_of(self, guidance: PracticeGuidance | FidelityGuidance) -> str:
+        """The skill that runs guidance, a practice or one of its fidelities: the folder the skill install writes its
+        skill into, such as ``practices-stories-stories-story-map``; empty when it installs no skill."""
+        named = guidance.slug if isinstance(guidance, FidelityGuidance) else type(guidance).__qualname__
+        key = (str(self._install.path), named)
+        held = CatalogSkills._FOLDERS.get(key)
+        if held is None:
+            tool = next((tool for tool in guidance.tools.values() if tool.install_to_skill), None)
+            held = self._install.relative_path(guidance, tool.deploy_name).parent.name if tool is not None else ""
+            CatalogSkills._FOLDERS[key] = held
+        return held
+
+
 class _PracticeGroup:
     """The practices one catalog shows together, made once: each keeps its place among them, and all share one skill
     install."""
 
     def __init__(self, practices: tuple[PracticeGuidance, ...] = ()) -> None:
         self.practices = practices
-        self.skills = CatalogPractice.skill_install()
+        self.skills = CatalogSkills()
 
     def position_of(self, practice: PracticeGuidance) -> int:
         """Where practice sits among the group's practices; the first place for a practice made outside any group."""
@@ -41,8 +72,8 @@ class CatalogPractice:
     """One practice as the catalog shows it: the live ``PracticeGuidance``, the catalog card it gives itself, its place in
     the practice catalogue, and the catalog's view of each fidelity it shows (a ``CatalogFidelity``), made once and
     kept with the fidelity's board column. Every page, board ticket, and grid card for the practice reads it. Its slash
-    command is the name the skill install gives the practice's skill, held in ``skills``, the one skill install the
-    practices of one catalog share."""
+    command is the name the skill install gives the practice's skill, asked of ``skills``, the one skill install the
+    practices of one catalog share (``catalogued.skills.skill_of(fidelity)``)."""
 
     _CARD_DEFAULTS: dict[str, Any] = {
         "family": "aad-fam-other",
@@ -53,31 +84,14 @@ class CatalogPractice:
         "stage_examples": False,
     }
 
-    # Each skill folder the catalog has worked out, by skill install, practice class, and guidance: the folder follows
-    # from the practice's class and the install's place alone, so every catalog made for another project or session
-    # (the board makes its practices once per checkout) answers from the first one that worked it out.
-    _SKILL_FOLDERS: dict[tuple[str, str, type, str], str] = {}
-
     def __init__(self, practice: PracticeGuidance, group: _PracticeGroup | None = None) -> None:
         self.practice = practice
         group = group if group is not None else _PracticeGroup()
         self.position = group.position_of(practice)
         # Every practice of the catalog this one was made with, made once, whose formats name a file this one cannot.
         self._catalogue = group.practices
-        self._skills = group.skills
-        # Each guidance's skill folder, worked out once: it is fixed for the install, and the board asks it on every read.
-        self._skill_names: dict[str, str] = {}
+        self.skills = group.skills
         self._card = self._card_of(type(practice))
-
-    @staticmethod
-    def skill_install() -> FileInstallation:
-        """The skill install whose folder names are the slash commands the catalog shows."""
-        return FileInstallation(
-            IdeLayout(_SLASH_COMMAND_IDE),
-            _REPO_ROOT / IdeLayout(_SLASH_COMMAND_IDE).folder_name,
-            destination=InstallDestination.SKILL,
-            repo=_REPO_ROOT,
-        )
 
     @classmethod
     def of_practices(cls, practices: Iterable[PracticeGuidance]) -> list[CatalogPractice]:
@@ -94,12 +108,6 @@ class CatalogPractice:
         practices = [practice for practice in cls.of_practices(PracticeCatalogue.create_all()) if not NoCatalog.annotates(type(practice.practice))]
         shown = [practice for practice in practices if practice.on_board]
         return sorted(shown, key=lambda practice: (practice.order, practice.display_name))
-
-    @staticmethod
-    def giving_stage_examples(practices: list[CatalogPractice]) -> CatalogPractice | None:
-        """Of practices, the one whose card says its artifacts are the approach's stage examples (Stories); none when
-        none of them is."""
-        return next((practice for practice in practices if practice.gives_stage_examples), None)
 
     def _card_of(self, practice_class: type) -> dict[str, Any]:
         card = {**self._CARD_DEFAULTS, **(getattr(practice_class, "catalog_card", None) or {})}
@@ -156,22 +164,7 @@ class CatalogPractice:
     def skill_name(self) -> str:
         """The slash command that runs the practice: the folder the skill install writes the practice's skill into; its
         key when the practice installs no skill."""
-        return self.skill_of(self.practice) or self.key
-
-    def skill_of(self, guidance: PracticeGuidance | FidelityGuidance) -> str:
-        """The skill that runs guidance, the practice or one of its fidelities: the folder the skill install writes its
-        skill into, such as ``practices-stories-stories-story-map``; empty when it installs no skill."""
-        named = guidance.slug if isinstance(guidance, FidelityGuidance) else type(guidance).__qualname__
-        held = self._skill_names.get(named)
-        if held is None:
-            key = (str(self._skills.path), self._skills.destination, type(self.practice), named)
-            held = type(self)._SKILL_FOLDERS.get(key)
-            if held is None:
-                tool = next((tool for tool in guidance.tools.values() if tool.install_to_skill), None)
-                held = self._skills.relative_path(guidance, tool.deploy_name).parent.name if tool is not None else ""
-                type(self)._SKILL_FOLDERS[key] = held
-            self._skill_names[named] = held
-        return held
+        return self.skills.skill_of(self.practice) or self.key
 
     @property
     def fidelities(self) -> list[FidelityGuidance]:

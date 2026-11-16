@@ -15,7 +15,7 @@ from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.catalog_generator.brand import Brand, UnknownBrand
-from harness.catalog_generator.catalog_generator import Catalog
+from harness.catalog_generator.catalog_generator import Catalog, CatalogProject
 
 
 with description("foundry chrome brand"):
@@ -79,10 +79,7 @@ with description("a catalog brands collection"):
 
     with context("with Catalog apply_brand given a collection name"):
         with it("should overlay that brand onto the catalog out_root commons"):
-            catalog = Catalog(
-                out_root=str(self.out_root),
-                brands_root=self.root / "brands",
-            )
+            catalog = Catalog(CatalogProject(Path.cwd(), self.out_root), brand=Brand(collection=self.root / "brands"))
             catalog.apply_brand("acme")
             expect(
                 (self.out_root / "commons" / "brand" / "mark.txt").read_text(
@@ -91,9 +88,6 @@ with description("a catalog brands collection"):
             ).to(equal("acme"))
 
         with it("should list known brands when apply_brand is given an empty name"):
-            catalog = Catalog(
-                out_root=str(self.out_root),
-                brands_root=self.root / "brands",
-            )
+            catalog = Catalog(CatalogProject(Path.cwd(), self.out_root), brand=Brand(collection=self.root / "brands"))
             expect(catalog.apply_brand("")).to(contain("acme"))
             expect(catalog.apply_brand("")).to(contain("abd-works"))
