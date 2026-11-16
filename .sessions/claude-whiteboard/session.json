@@ -8,7 +8,7 @@
     "stages": [
       "discovery"
     ],
-    "version": 47
+    "version": 48
   },
   "practices": {
     "ux": {
@@ -24,9 +24,7 @@
     },
     "stories": {
       "formats": {
-        "story_map": [
-          "drawio"
-        ],
+        "story_map": [],
         "scenarios": [
           "python"
         ]
