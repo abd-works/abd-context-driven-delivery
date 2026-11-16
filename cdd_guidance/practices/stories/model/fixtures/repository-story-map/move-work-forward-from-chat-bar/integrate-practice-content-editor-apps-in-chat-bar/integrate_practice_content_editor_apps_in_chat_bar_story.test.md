@@ -57,8 +57,8 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 | ++story-map.drawio++ | Stories | story map | Story UI editor |
 | ++chat bar scenarios++ (`move-work-forward-from-chat-bar/.../integrate_practice_content_editor_apps_in_chat_bar_story.test.md`) | Stories | scenarios | Story UI editor |
 | ++canvas.json++ (`harness/.context/ux/canvas.json`) | UX | mockup | none |
-| ++this repository's story map++ (`harness/.context/stories/story-map.md`, laid out by hand) | Stories | story map | Story UI editor |
-| ++this repository's thin slice++ (`harness/.context/stories/thin-slice.md`) | Stories | story map | none: its increments are edited on the story map |
+| ++this repository's story map++ (`.context/story-map.md`, laid out by hand) | Stories | story map | Story UI editor |
+| ++this repository's thin slice++ (`.context/thin-slice.md`) | Stories | story map | none: its increments are edited on the story map |
 
 ### chosen formats ([FidelitySessionOutput.chosen_formats](../../../editor-apps/.context/editor-apps-model.md#fidelitysessionoutput-extended))
 
@@ -78,8 +78,8 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 
 | violation | rule | file | lines | story |
 | --- | --- | --- | --- | --- |
-| ++Ticket Archive name++ | verb-noun-format | harness/.context/stories/story-map.md | 86 to 88 | Ticket Archive |
-| ++Move Ticket size++ | right-size-story-nodes | harness/.context/stories/story-map.md | 148 to 150 | Move Ticket |
+| ++Ticket Archive name++ | verb-noun-format | .context/story-map.md | 86 to 88 | Ticket Archive |
+| ++Move Ticket size++ | right-size-story-nodes | .context/story-map.md | 148 to 150 | Move Ticket |
 
 ## Story: Open Story UI Side Panel From Chat Bar
 
@@ -87,7 +87,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 
 | Source | Note |
 |--------|------|
-| `harness/.context/stories/story-map.md:803-805` | Requested (2026-11-12): the app status row lists the Story UI editor with its status; a press installs, launches and opens it in the side panel; the file viewer shows a story-map editor tile for every Stories file |
+| `.context/story-map.md:803-805` | Requested (2026-11-12): the app status row lists the Story UI editor with its status; a press installs, launches and opens it in the side panel; the file viewer shows a story-map editor tile for every Stories file |
 | `harness/chat-ui/pane/hooks/health/server-health-wording.ts:19-28` | Observed: the row lists MCP host, Tools, Kanban app, Graph app and Hook server today |
 | `harness/chat-ui/pane/hooks/board-chat/board-server.ts:40-120` | Observed: the chat bar starts the board only, in TypeScript; this moves to *App.open* |
 | `harness/chat-ui/pane/hooks/chat-bar/fidelity-files-view.tsx:55-75` | Observed: the file viewer's tabs, and the "Open in draw.io" button a diagram tab already has, which the editor tile sits beside |
@@ -147,7 +147,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 
 | Source | Note |
 |--------|------|
-| `harness/.context/stories/story-map.md:807-809` | Requested (2026-11-12, "same but for KG"): the status row lists the Graph app; a press installs, launches and opens it; the graph loads the folders the session's practice roots name and follows the session open in the project |
+| `.context/story-map.md:807-809` | Requested (2026-11-12, "same but for KG"): the status row lists the Graph app; a press installs, launches and opens it; the graph loads the folders the session's practice roots name and follows the session open in the project |
 | `harness/graph/app/ports.json` | the Graph app's ports, 5173 to 5176 |
 | `space/session/sessions.py:268-313` | Observed: a call that names no chat, as the Graph app's do, works in the session open in its project: the ticket of the worktree it names, else the project's own open session, the one the board shows as active. Decided (2026-11-12): no field records the session activated last ([Graph](../../../editor-apps/.context/editor-apps-model.md#graph-extended)) |
 
@@ -192,7 +192,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 
 | Source | Note |
 |--------|------|
-| `harness/.context/stories/story-map.md:811-813` | Requested (2026-11-12): the status row lists the CDD Kanban with its status; a press installs, launches and opens it in the side panel |
+| `.context/story-map.md:811-813` | Requested (2026-11-12): the status row lists the CDD Kanban with its status; a press installs, launches and opens it in the side panel |
 | `space/kanban/app/packages/session-board/ports.json` | the board's port, 8778 |
 
 #### Scenario Outline: A press on the CDD Kanban readies it by its status and opens it beside the chat
@@ -227,7 +227,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 
 | Source | Note |
 |--------|------|
-| `harness/.context/stories/story-map.md:815-817` | Requested (2026-11-12, for now): the file viewer has a link that opens the design view attached to the session; the explorer integration on the story map is deferred |
+| `.context/story-map.md:815-817` | Requested (2026-11-12, for now): the file viewer has a link that opens the design view attached to the session; the explorer integration on the story map is deferred |
 | `harness/design_canvas/versions.py` | Observed: *CanvasVersions* records the claude.ai link of each published version (`record_link`, `link`) |
 
 Deferred (still Intended on the map, 2026-11-06): the story explorer opening below the story map on a story's design canvas screen. Its two scenarios are dropped from this increment until that integration is planned.
@@ -252,7 +252,7 @@ Deferred (still Intended on the map, 2026-11-06): the story explorer opening bel
 
 | Source | Note |
 |--------|------|
-| `harness/.context/stories/story-map.md:819-821` | Requested (2026-11-06, non-functional): the Story UI app runs on the same app server and instance as the board's state; Requested (2026-11-12): built with the cdd_web_domain_access and lern_domain_driven patterns |
+| `.context/story-map.md:819-821` | Requested (2026-11-06, non-functional): the Story UI app runs on the same app server and instance as the board's state; Requested (2026-11-12): built with the cdd_web_domain_access and lern_domain_driven patterns |
 | `../story-ui/packages/story-map-workspace/serve.ts` | Observed: today it runs its own API on port 3001 and Vite on 3000 |
 
 #### Scenario: The board's server serves the Story UI editor
@@ -275,7 +275,7 @@ Deferred (still Intended on the map, 2026-11-06): the story explorer opening bel
 
 | Source | Note |
 |--------|------|
-| `harness/.context/stories/story-map.md:823-825` | Requested (2026-11-12): the story map's backend moves out of TypeScript into the MCP-generated domain objects, not a JSON story map; each edit is saved and rendered to the formats chosen in the chat bar, which the Story UI app can toggle |
+| `.context/story-map.md:823-825` | Requested (2026-11-12): the story map's backend moves out of TypeScript into the MCP-generated domain objects, not a JSON story map; each edit is saved and rendered to the formats chosen in the chat bar, which the Story UI app can toggle |
 | `../story-ui/packages/story-map-workspace/stories/stories.ts` | Observed: today the domain (`StoryMapModel`, `EpicModel`, `ScenarioModel`, `StoryMapRepository`) is TypeScript over a JSON story map |
 | `cdd_guidance/patterns/cdd_web_domain_access` | `domain-lives-in-python`, `state-lives-behind-the-tool`, `fail-loud-on-mcp` |
 | `harness/.context/grill-answers.md` (Decisions 2026-11-12, from the person) | Requested: descriptions on epics, sub-epics and stories, saved unchanged so hand-written maps are editable; scenario files editable; acceptance tests shown as links; examples as the model holds them; increments in the story model |
@@ -398,7 +398,7 @@ Deferred (still Intended on the map, 2026-11-06): the story explorer opening bel
 
 | Source | Note |
 |--------|------|
-| `harness/.context/stories/story-map.md` | Move Work Forward From Chat Bar > Integrate Practice Content Editor Apps In Chat Bar > Person --> Open UX Design In Claude Design |
+| `.context/story-map.md` | Move Work Forward From Chat Bar > Integrate Practice Content Editor Apps In Chat Bar > Person --> Open UX Design In Claude Design |
 | https://claude.ai/artifact/HCCiMNSTMhwB9zQT8tVV8p | the story explorer plays the first scenario on the integrated journey screen |
 
 #### Scenario: The ticket's UX design opens as a design canvas
@@ -421,7 +421,7 @@ Deferred (still Intended on the map, 2026-11-06): the story explorer opening bel
 
 | Source | Note |
 |--------|------|
-| `harness/.context/stories/story-map.md` | Move Work Forward From Chat Bar > Integrate Practice Content Editor Apps In Chat Bar > Person --> Trace Story Through Artifacts |
+| `.context/story-map.md` | Move Work Forward From Chat Bar > Integrate Practice Content Editor Apps In Chat Bar > Person --> Trace Story Through Artifacts |
 | `.sessions/_backlog/integrate-practice-content-editor-apps.md` | "Trace pane": a story's scenarios, tests, code and diagrams, read from the knowledge graph |
 
 #### Scenario Outline: The Inspector traces a violation's story through its artifacts
@@ -436,6 +436,6 @@ Deferred (still Intended on the map, 2026-11-06): the story explorer opening bel
 
 | violation | file | lines | story |
 | --- | --- | --- | --- |
-| Ticket Archive name | harness/.context/stories/story-map.md | 86 to 88 | Ticket Archive |
-| Move Ticket size | harness/.context/stories/story-map.md | 148 to 150 | Move Ticket |
+| Ticket Archive name | .context/story-map.md | 86 to 88 | Ticket Archive |
+| Move Ticket size | .context/story-map.md | 148 to 150 | Move Ticket |
 | Activate Ticket name | space/kanban/ticket.py | 212 to 213 | Activate Ticket |

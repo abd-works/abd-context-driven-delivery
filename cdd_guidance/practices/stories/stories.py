@@ -14,7 +14,7 @@ from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, 
 from cdd_guidance.practices.stories.model.story_model import StoryNode
 from cdd_guidance.practices.stories.stories_formats import StoriesFormats
 
-# A story test names its story map: `# Map: ../../.context/story-map.md#story` or `Map: harness/.context/stories/story-map.md.`
+# A story test names its story map: `# Map: ../../.context/story-map.md#story` or `Map: .context/story-map.md.`
 _MAP_LINE = re.compile(r"Map:\s*(\S+?\.md)\b")
 
 

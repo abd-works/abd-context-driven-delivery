@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 import threading
 from pathlib import Path
@@ -428,12 +429,12 @@ class Filter:
 
     def _named_from_folder(self, source: Source) -> str | None:
         """source's file named from the graph's folder, as a viewer listing the folder names it: a practice that reads from
-        a folder below it, such as Stories from .context/stories, names its files from there; none outside the folder."""
+        a folder of its own, such as Stories from the project's .context, names its files from there; a file above the
+        folder is named with `..`, as Session names the paths it filters by."""
         folder = self.graph.folder
         if not folder or not source.root or not source.file:
             return None
-        full, within = Path(source.root, source.file), Path(folder)
-        return full.relative_to(within).as_posix() if full.is_relative_to(within) else None
+        return os.path.relpath(os.path.normpath(Path(source.root, source.file)), folder).replace("\\", "/")
 
     def _under_paths(self, file: str | None) -> bool:
         """True when ``file`` is one of the chosen paths or sits under one."""

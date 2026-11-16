@@ -69,14 +69,14 @@ class Component extends DCLogic {
   }
   renderVals() {
     const all = [
-      { kind: 'epic', name: 'Move Work Forward On Session Board', depth: 0, violations: '', file: 'harness/.context/stories/story-map.md', source: '# (E) Move Work Forward On Session Board' },
-      { kind: 'sub-epic', name: 'Steer Ticket Sessions', depth: 1, violations: '', file: 'harness/.context/stories/story-map.md', source: '## (E) Steer Ticket Sessions' },
-      { kind: 'story', name: 'Activate Ticket', depth: 2, violations: '', file: 'harness/.context/stories/story-map.md', source: '### (S) Person --> Activate Ticket\n\nObserved: Activate opens a dialog with what to do on leaving and on opening, then calls board.activate.' },
+      { kind: 'epic', name: 'Move Work Forward On Session Board', depth: 0, violations: '', file: '.context/story-map.md', source: '# (E) Move Work Forward On Session Board' },
+      { kind: 'sub-epic', name: 'Steer Ticket Sessions', depth: 1, violations: '', file: '.context/story-map.md', source: '## (E) Steer Ticket Sessions' },
+      { kind: 'story', name: 'Activate Ticket', depth: 2, violations: '', file: '.context/story-map.md', source: '### (S) Person --> Activate Ticket\n\nObserved: Activate opens a dialog with what to do on leaving and on opening, then calls board.activate.' },
       { kind: 'scenario', name: 'Switch to another ticket, committing, pushing, and merging the one left', depth: 3, violations: '', file: 'activate_ticket_story.test.md', source: '#### Scenario: Switch to another ticket, committing, pushing, and merging the one left\n\n*When* the Person activates billing-report' },
       { kind: 'operation', name: 'Ticket.activate', depth: 3, violations: '', file: 'harness/kanban/ticket.py', source: 'def activate(self, ...):' },
-      { kind: 'story', name: 'Customize Workflow Stages', depth: 2, violations: '1', file: 'harness/.context/stories/story-map.md', source: '#### (S) Person --> Customize Workflow Stages' },
-      { kind: 'sub-epic', name: 'Register Agent Toolsets', depth: 1, violations: '', file: 'harness/.context/stories/story-map.md', source: '## (E) Register Agent Toolsets' },
-      { kind: 'story', name: 'Validate Instruction Body', depth: 2, violations: '1', file: 'harness/.context/stories/story-map.md', source: '### (S) Agent Toolset --> Validate Instruction Body' },
+      { kind: 'story', name: 'Customize Workflow Stages', depth: 2, violations: '1', file: '.context/story-map.md', source: '#### (S) Person --> Customize Workflow Stages' },
+      { kind: 'sub-epic', name: 'Register Agent Toolsets', depth: 1, violations: '', file: '.context/story-map.md', source: '## (E) Register Agent Toolsets' },
+      { kind: 'story', name: 'Validate Instruction Body', depth: 2, violations: '1', file: '.context/story-map.md', source: '### (S) Agent Toolset --> Validate Instruction Body' },
     ];
     const shown = this.state.onlyViolations ? all.filter((node) => node.violations) : all;
     const picked = all.find((node) => node.name === this.state.selected) || all[2];

@@ -88,8 +88,8 @@ with description("Stories"):
 
                 shutil.rmtree(self.root, ignore_errors=True)
 
-            with it("should sit in epic, sub-epic, and story folders"):
-                expect(self.filled).to(equal("move-work-on-board/display-board/open-board/open_board_story.test.py"))
+            with it("should sit in story_tests, in epic, sub-epic, and story folders"):
+                expect(self.filled).to(equal("story_tests/move-work-on-board/display-board/open-board/open_board_story.test.py"))
 
             with it("should give its scenarios to the Story of the same name on the map"):
                 expect([len(story.scenarios) for story in self.model.every_story()]).to(equal([1]))

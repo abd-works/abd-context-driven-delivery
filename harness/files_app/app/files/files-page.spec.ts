@@ -1,6 +1,6 @@
 // The Files app's acceptance tests for what only the page shows, story by story as
-// harness/.context/stories/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md writes them; what the
-// session answers is proved by space/session/review-files-in-files-app.story.domain.spec.py.
+// story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md writes them; what the
+// session answers is proved by story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review-files-in-files-app.story.domain.spec.py.
 import { describe, expect, it } from 'vitest'
 
 import type { CddApi } from '@cdd/cdd-shared'

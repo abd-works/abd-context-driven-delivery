@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import threading
 from contextlib import contextmanager
 import time
@@ -723,7 +724,7 @@ class Session:
     @agent_tool
     @noSessionLog
     def graph_trees(self, paths: list[str], call: ToolCall | None = None) -> list[ExplorerEntry]:
-        """Return the practice trees of this session's graph holding only the nodes read from the files at paths, each named from the project as the Files app lists them: each practice's root with the entries below it, closed, as graph.explorer_trees answers them. The graph holds the whole working copy first, each practice read from its own root, so links across files and practices hold and a story map in the Stories root is the one read. No paths, or none under the session's root, answer no tree."""
+        """Return the practice trees of this session's graph holding only the nodes read from the files at paths, each named from the project as the Files app lists them: each practice's root with the entries below it, closed, as graph.explorer_trees answers them. The graph holds the whole working copy first, each practice read from its own root, so links across files and practices hold and a story map in the Stories root is the one read. No paths, or none in the project, answer no tree."""
         under_root = self._under_root(paths)
         if not under_root:
             return []
@@ -763,7 +764,7 @@ class Session:
         source = node.source if node is not None else None
         if source is None:
             return
-        path = Path(source.root or self.work_root) / source.file if source.file else None
+        path = (Path(source.root or self.work_root) / source.file).resolve() if source.file else None
         if path is not None and source.start_line >= 1 and path.is_file():
             start, end = spans.get(path, (source.start_line, source.end_line))
             spans[path] = (min(start, source.start_line), max(end, source.end_line, source.start_line))
@@ -774,9 +775,10 @@ class Session:
                 self._collect_spans(child.node_id, request, spans, seen)
 
     def _under_root(self, paths: list[str]) -> list[str]:
-        """paths, named from the project, as the graph names its files: from the session's root, leaving out any outside it."""
-        root = self.work_root
-        return [found.relative_to(root).as_posix() for found in map(self.path_named, paths) if found.is_relative_to(root)]
+        """paths, named from the project, as the graph names its files: from the session's root, a file above it, such as
+        the project's story map in .context, with `..`; any outside the project left out."""
+        root, project = self.work_root, self.repo_path.resolve()
+        return [os.path.relpath(found, root).replace("\\", "/") for found in map(self.path_named, paths) if found.is_relative_to(project)]
 
     @mcp
     @agent_tool

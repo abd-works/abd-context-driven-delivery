@@ -982,6 +982,10 @@ with description("a practice"):
                 with it("should say the practice root is chosen"):
                     expect(self.stories.is_root_chosen).to(equal(True))
 
+                with it("should write the scenarios in the story_tests beside that .context"):
+                    outputs = self.stories.fidelities["scenarios"].output_paths()
+                    expect(outputs["markdown"]).to(equal([(self.work / "story_tests" / "{epic}/{sub-epic}/{story_snake}_story.test.md").resolve().as_posix()]))
+
             with context("with session.json naming a root folder for the fidelity too"):
                 with before.each:
                     self.write_overrides({"stories": {"root": "docs/stories", "story_map": {"root": "docs/map"}}})

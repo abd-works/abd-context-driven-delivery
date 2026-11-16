@@ -93,9 +93,9 @@ If this change will not stay here, follow `practices/stories.mdc`.
 default_format: python
 stage: specification
 outputs:
-  python: "{epic}/{sub-epic}/{story}/{story_snake}_story.test.py"
-  typescript: "{epic}/{sub-epic}/{story}/{story_snake}_story.test.ts"
-  markdown: ".context/{epic}/{sub-epic}/{story}/{story_snake}_story.test.md"
+  python: "story_tests/{epic}/{sub-epic}/{story}/{story_snake}_story.test.py"
+  typescript: "story_tests/{epic}/{sub-epic}/{story}/{story_snake}_story.test.ts"
+  markdown: "story_tests/{epic}/{sub-epic}/{story_snake}_story.test.md"
   realization: ".context/{scope}-scenario-realization.md"
 ```
 
@@ -177,13 +177,13 @@ stage: implementation
 clean_engineering: code
 outputs:
   python:
-    - "{sub_epic_slug}.story.shared.py"
-    - "{sub_epic_slug}.story.domain.spec.py"
-    - "{sub_epic_slug}.story.server.spec.py"
+    - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.shared.py"
+    - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.domain.spec.py"
+    - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.server.spec.py"
   typescript:
-    - "{sub_epic_slug}.story.shared.ts"
-    - "{sub_epic_slug}.story.domain.spec.ts"
-    - "{sub_epic_slug}.story.server.spec.ts"
+    - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.shared.ts"
+    - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.domain.spec.ts"
+    - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.server.spec.ts"
 ```
 
 #### Overview

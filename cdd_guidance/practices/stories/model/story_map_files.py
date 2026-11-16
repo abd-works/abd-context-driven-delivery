@@ -29,6 +29,9 @@ def path_from(base: Path, path: Path) -> str:
 STORY_MAP_SUFFIXES = (".md", ".drawio")
 # Documents go in a folder's `.context` while code sits straight in the folder, so a story map may sit in either.
 CONTEXT_FOLDER = ".context"
+# A project keeps its story map in its `.context` and the map's scenarios and story tests in `story_tests` beside it,
+# one folder per epic and sub-epic.
+STORY_TESTS_FOLDER = "story_tests"
 _MARKDOWN = ".md"
 # A story's own markdown file: `submit_order_story.test.md`, `submit_order_story.spec.md`.
 STORY_FILE_SUFFIXES = ("_story.test.md", "_story.spec.md")
@@ -92,13 +95,25 @@ class StoryMapFiles:
         """Each markdown file scenarios are written in, in this folder and the folders below it: in a `scenarios`, `md`
         or `stories` folder, a `scenarios.md` or `story-scenarios.md`, or a story's own file. Grouped by the kind of
         file in that order, then by path, so a folder's scenarios read in the same order every time."""
-        found = [(kind, path) for path in self._markdown_below() for kind in [_scenario_file_kind(PurePosixPath(path.relative_to(self.folder).as_posix()))] if kind is not None]
+        found = [(kind, path) for walked in self._walked() for path in self._markdown_in(walked) for kind in [_scenario_file_kind(PurePosixPath(path.relative_to(walked).as_posix()))] if kind is not None]
         return [path for _kind, path in sorted(found)]
 
+    def _walked(self) -> List[Path]:
+        """The folders this folder's story files sit in: this folder and, for a project's `.context`, the project's
+        `story_tests` beside it, where the map kept in that `.context` has its scenarios and story tests."""
+        story_tests = self.folder.parent / STORY_TESTS_FOLDER
+        return [self.folder, story_tests.resolve()] if self.folder.name == CONTEXT_FOLDER and story_tests.is_dir() else [self.folder]
+
     def _markdown_below(self) -> Iterator[Path]:
-        """Every markdown file in this folder and the folders below it, entering each folder's `.context`, where
-        documents are kept, and no folder a working-copy scan never enters."""
-        for folder, folders, names in os.walk(self.folder):
+        """Every markdown file in this folder and the folders below it, and in the `story_tests` beside a project's
+        `.context`."""
+        for walked in self._walked():
+            yield from self._markdown_in(walked)
+
+    def _markdown_in(self, top: Path) -> Iterator[Path]:
+        """Every markdown file in top and the folders below it, entering each folder's `.context`, where documents are
+        kept, and no folder a working-copy scan never enters."""
+        for folder, folders, names in os.walk(top):
             folders[:] = sorted(name for name in folders if name == CONTEXT_FOLDER or not skips_folder(name))
             yield from (Path(folder, name).resolve() for name in sorted(names) if name.lower().endswith(_MARKDOWN))
 

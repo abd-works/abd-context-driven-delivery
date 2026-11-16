@@ -118,3 +118,30 @@ with description("the nearest story map of a folder"):
         with it("should find the checkout's map"):
             found = StoryMapFiles(self.root / "checkout" / "work").nearest()
             expect(_named(self.root, [found])).to(equal(["checkout/.context/story-map.md"]))
+
+
+with description("the story files of a project's .context"):
+    with before.each:
+        self.folder = tempfile.TemporaryDirectory()
+        self.root = Path(self.folder.name)
+        _write(self.root, ".context/story-map.md", _MAP)
+        _write(self.root, "story_tests/manage-orders/place-order/submit_order_story.test.md", _STORY)
+
+    with after.each:
+        self.folder.cleanup()
+
+    with context("with the map's scenarios in story_tests beside it"):
+        with it("should find each story's own file there"):
+            expect(_named(self.root, StoryMapFiles(self.root / ".context").story_files_below())).to(
+                equal(["story_tests/manage-orders/place-order/submit_order_story.test.md"])
+            )
+
+        with it("should read the scenarios from there"):
+            expect(_named(self.root, StoryMapFiles(self.root / ".context").scenario_files_below())).to(
+                equal(["story_tests/manage-orders/place-order/submit_order_story.test.md"])
+            )
+
+    with context("for a folder that is not a .context"):
+        with it("should not reach the story_tests beside it"):
+            _write(self.root, "shop/notes.md", _MAP)
+            expect(StoryMapFiles(self.root / "shop").story_files_below()).to(equal([]))

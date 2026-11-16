@@ -1,6 +1,6 @@
 // The Files app's acceptance tests for its graph view, story by story as
-// harness/.context/stories/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md
-// writes them; what the session's graph answers is proved by space/session/session_graph_view_spec.py.
+// story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md
+// writes them; what the session's graph answers is proved by the sub-epic's story tests in story_tests/review-generated-work-in-file-viewer/.
 import { describe, expect, it } from 'vitest'
 
 import type { CddApi } from '@cdd/cdd-shared'
@@ -21,7 +21,7 @@ const PRACTICES = [
 ]
 
 // Seed: checkout-flow's files, as ticket.root_files answers them, the branch having changed the story map and ticket.py.
-const STORY_MAP = 'harness/.context/stories/story-map.md'
+const STORY_MAP = '.context/story-map.md'
 const TICKET_CODE = 'space/kanban/ticket.py'
 const BOARD_CODE = 'space/kanban/board.py'
 const rootFile = (path: string, format: string, fidelity: string, is_changed: boolean) => ({ path, exists: true, is_changed, link: '', format, fidelities: [fidelity] })

@@ -1,5 +1,5 @@
 /**
- * What a `space/kanban/{sub_epic}.story.ui.spec.ts` file reaches the board app's Playwright setup through. Those files
+ * What a `story_tests/{epic}/{sub_epic}/{sub_epic}.story.ui.spec.ts` file reaches the board app's Playwright setup through. Those files
  * sit beside the sub-epic's shared Python scenarios, outside this package, where `@playwright/test` cannot be resolved,
  * so the browser tier, its fixture project, and the Seed fixtures and page readings the sub-epics share come from here.
  */

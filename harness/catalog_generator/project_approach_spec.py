@@ -39,10 +39,10 @@ with description("a project file's place on the approach page"):
             expect(_place("stories/.context/story-map.drawio")).to(equal(("stories", "discovery")))
 
         with it("should map a story's scenario test to stories specification"):
-            expect(_place("qualify/offer/cross-sell-offer/cross_sell_offer_story.test.ts")).to(equal(("stories", "specification")))
+            expect(_place("story_tests/qualify/offer/cross-sell-offer/cross_sell_offer_story.test.ts")).to(equal(("stories", "specification")))
 
         with it("should map a sub-epic's shared story steps to stories implementation"):
-            expect(_place("qualify/qualify-offer.story.shared.ts")).to(equal(("stories", "implementation")))
+            expect(_place("story_tests/qualify/offer/qualify-offer.story.shared.ts")).to(equal(("stories", "implementation")))
 
         with it("should map the bounded context map to ddd discovery"):
             expect(_place("domain/.context/bounded-context-map.md")).to(equal(("ddd", "discovery")))

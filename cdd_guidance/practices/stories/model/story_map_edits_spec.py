@@ -2,7 +2,7 @@
 in the map's own file and rendered to the formats chosen for its fidelity in the session.
 
 Story: Refactor Story UI App To Web Domain Access
-(harness/.context/stories/move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/
+(story_tests/move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/
 integrate_practice_content_editor_apps_in_chat_bar_story.test.md)."""
 
 import difflib
@@ -42,8 +42,8 @@ STORIES = Path(__file__).resolve().parent / "fixtures" / "repository-story-map"
 MAP_FILE = ".context/story-map.md"
 THIN_SLICE_FILE = ".context/thin-slice.md"
 CHAT_BAR_FOLDER = "move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar"
-SCENARIO_FILE = f".context/{CHAT_BAR_FOLDER}/open-story-ui-side-panel-from-chat-bar/integrate_practice_content_editor_apps_in_chat_bar_story.test.md"
-STORY_TEST_FILE = f"{CHAT_BAR_FOLDER}/open-story-ui-side-panel-from-chat-bar/open_story_ui_side_panel_from_chat_bar_story.test.py"
+SCENARIO_FILE = f"story_tests/{CHAT_BAR_FOLDER}/integrate_practice_content_editor_apps_in_chat_bar_story.test.md"
+STORY_TEST_FILE = f"story_tests/{CHAT_BAR_FOLDER}/open-story-ui-side-panel-from-chat-bar/open_story_ui_side_panel_from_chat_bar_story.test.py"
 STORY_TEST = """from story_test import given, scenario, story
 
 # Story: Open Story UI Side Panel From Chat Bar
@@ -52,7 +52,7 @@ with story("Open Story UI Side Panel From Chat Bar"):
         with given("a story map"):
             pass
 """
-NAMED_EXAMPLES_FILE = f".context/{CHAT_BAR_FOLDER}/open-story-ui-side-panel-from-chat-bar/press_story_ui_story.test.md"
+NAMED_EXAMPLES_FILE = f"story_tests/{CHAT_BAR_FOLDER}/press_story_ui_story.test.md"
 # A scenario whose example rows are named by their example column.
 NAMED_EXAMPLES = """# Sub-epic: Integrate Practice Content Editor Apps In Chat Bar
 
@@ -474,7 +474,7 @@ with description("a story map edited through its tools") as self:
             expect(self.trace["examples"][0]["node"]).to(equal(f"{self.trace['node']}.example:example-1"))
 
         with it("should show each example row's fields as its table holds them"):
-            expect(self.trace["examples"][0]["fields"]).to(equal({"example": "example-1", "violation": "Ticket Archive name", "file": "harness/.context/stories/story-map.md", "lines": "86 to 88", "story": "Ticket Archive"}))
+            expect(self.trace["examples"][0]["fields"]).to(equal({"example": "example-1", "violation": "Ticket Archive name", "file": ".context/story-map.md", "lines": "86 to 88", "story": "Ticket Archive"}))
 
         with context("with an example's field edited"):
             with before.all:
@@ -484,8 +484,8 @@ with description("a story map edited through its tools") as self:
 
             with it("should change only that example's row"):
                 expect(_changed(self.written, self.project.text(SCENARIO_FILE))).to(equal((
-                    ["| Ticket Archive name | harness/.context/stories/story-map.md | 86 to 88 | Ticket Archive |"],
-                    ["| Ticket Archive name | harness/.context/stories/story-map.md | 86 to 90 | Ticket Archive |"],
+                    ["| Ticket Archive name | .context/story-map.md | 86 to 88 | Ticket Archive |"],
+                    ["| Ticket Archive name | .context/story-map.md | 86 to 90 | Ticket Archive |"],
                 )))
 
             with it("should answer the example as its file now holds it"):

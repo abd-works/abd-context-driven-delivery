@@ -37,7 +37,7 @@ _OUTSIDE_WORKTREE_NOTE = (
 _DEFAULT_ROOTS_NOTE = (
     "**Output roots.** These practices write under their default folders, which nobody has checked: {roots}. Before "
     "generating anything, look for where the repository already keeps each one's artifacts (for example a story map "
-    "in harness/.context/stories/ rather than harness/.context/). When they live elsewhere, call "
+    "in story_tests/ rather than harness/.context/). When they live elsewhere, call "
     "practice-session-output.choose_root for that practice with that folder, so the Files app, the board and validate "
     "find the existing files and new work lands beside them. Leave a default that already holds them, or where none "
     "exist yet.\n\n"

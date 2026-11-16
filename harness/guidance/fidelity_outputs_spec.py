@@ -52,13 +52,13 @@ with description("a fidelity's declared outputs") as self:
             ]
             expect(rooted).to(be_empty)
 
-        with it("should keep every markdown and drawio output in a .context folder"):
+        with it("should keep every markdown and drawio output in a .context folder, or a scenario file in story_tests"):
             outside = [
                 f"{type(practice).__name__}.{name}.{label}"
                 for practice in self.practices
                 for name, fidelity in practice.fidelities.entries.items()
                 for label, path in fidelity.outputs.items()
-                if label in ("markdown", "drawio", "realization") and ".context/" not in path
+                if label in ("markdown", "drawio", "realization") and ".context/" not in path and not path.startswith("story_tests/")
             ]
             expect(outside).to(be_empty)
 

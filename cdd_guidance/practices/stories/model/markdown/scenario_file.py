@@ -8,6 +8,8 @@ lines, a step the line it was read from, so an unchanged node is written back as
 
 from __future__ import annotations
 
+import os
+
 import re
 from pathlib import Path
 from typing import List, Optional
@@ -76,7 +78,7 @@ def scenario_sections_in(root: Path, scenario_type: type, *, on_file=None) -> Li
     files = [root] if root.is_file() else StoryMapFiles(root).scenario_files_below()
     sections: List[StorySection] = []
     for path in files:
-        rel = path.name if path == root else path.relative_to(root).as_posix()
+        rel = path.name if path == root else os.path.relpath(path, root).replace("\\", "/")
         if on_file is not None:
             on_file(rel)
         sections.extend(ScenarioFileReading(path.read_text(encoding="utf-8"), rel, scenario_type).read())

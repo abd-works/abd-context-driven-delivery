@@ -6,14 +6,14 @@ from __future__ import annotations
 
 from space.kanban.session_board_examples import SessionSeed
 
-# Seed: checkout-flow working in the whole project with Stories and Clean Engineering on, its Stories root holding its
-# story map below the project's own .context, which holds the project's story map.
+# Seed: checkout-flow working in the whole project with Stories and Clean Engineering on, its Stories root the project's
+# .context, where the story map is kept, its scenarios and story tests in story_tests beside it.
 CHECKOUT_FLOW = SessionSeed(
     "checkout-flow",
     "Checkout flow",
     fields={
         "practices": {key: {"enabled": False} for key in ("ux", "ddd", "bdd")},
-        "outputs": {"stories": {"root": "harness/.context/stories"}},
+        "outputs": {"stories": {"root": ".context"}},
     },
 )
 # Seed: the ticket code the branch changed, Ticket with its operations, delete invoking Board.reread.
@@ -32,18 +32,18 @@ TICKET_TEXT = (
 # Seed: the board code the branch did not change, Board with its operation.
 BOARD_CODE = "space/kanban/board.py"
 BOARD_TEXT = "class Board:\n    def reread(self) -> None:\n        return None\n"
-# Seed: checkout-flow's story map, in its Stories root.
-STORY_MAP = "harness/.context/stories/story-map.md"
+# Seed: checkout-flow's story map, in the project's .context.
+STORY_MAP = ".context/story-map.md"
 STORY_MAP_TEXT = "# Story Map\n\n(E) Manage Tickets\n    (E) Remove Tickets\n        (S) Person --> Delete Ticket\n"
-# Seed: the project's own story map, above the session's Stories root.
-PROJECT_MAP = ".context/story-map.md"
-PROJECT_MAP_TEXT = "# Story Map\n\n(E) Run Whole Project\n    (S) Person --> Open Project\n"
+# Seed: a story map left in a folder's .context from before maps moved to the project's .context.
+OLD_MAP = "harness/.context/stories/story-map.md"
+OLD_MAP_TEXT = "# Story Map\n\n(E) Run Old Layout\n    (S) Person --> Open Old Map\n"
 LISTED = [STORY_MAP, TICKET_CODE, BOARD_CODE]
 
 
 def seed_checkout_flow_with_graph_files(world) -> None:
     world.project.seed_session(CHECKOUT_FLOW)
-    for path, text in ((TICKET_CODE, TICKET_TEXT), (BOARD_CODE, BOARD_TEXT), (STORY_MAP, STORY_MAP_TEXT), (PROJECT_MAP, PROJECT_MAP_TEXT)):
+    for path, text in ((TICKET_CODE, TICKET_TEXT), (BOARD_CODE, BOARD_TEXT), (STORY_MAP, STORY_MAP_TEXT), (OLD_MAP, OLD_MAP_TEXT)):
         world.project.seed_file(path, text)
 
 
