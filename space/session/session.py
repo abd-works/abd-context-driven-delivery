@@ -756,11 +756,11 @@ class Session:
         """Return every class, operation, and property this session's graph holds, each with its text and the class it belongs to, so a viewer opens a call in place even when it reaches another file. Read after graph_trees, which reads the files the page lists."""
         return self.graph.explorer.source_members()
 
-    def _collect_spans(self, node_id: str, request: dict, spans: dict[Path, tuple[int, int]], seen: set[str], within: Path | None = None) -> None:
-        """Widen spans with the lines node_id covers in its file and the lines of the nodes below it in that same file,
-        such as a story's scenarios in its story test, which its own line alone does not reach; or, read from no file's
-        lines, with those of the nodes below it in any file. Within a file, a node from another file is left out, so a
-        step does not open the operations it invokes."""
+    def _collect_spans(self, node_id: str, request: dict, spans: dict[Path, tuple[int, int]], seen: set[str], below_lines: bool = False) -> None:
+        """Widen spans with the lines node_id covers in its file and the lines of the nodes it is made of, wherever they
+        sit, such as a story map's story and its scenarios in their own file, which its own line alone does not reach;
+        or, read from no file's lines, with those of the nodes below it. Below a node read from lines, a node read from
+        none, such as the invokes group a step's calls sit under, is left closed, so a step opens no operation it calls."""
         if node_id in seen:
             return
         seen.add(node_id)
@@ -770,20 +770,18 @@ class Session:
             return
         path = (Path(source.root or self.work_root) / source.file).resolve() if source.file else None
         if path is None or source.start_line < 1 or not path.is_file():
-            if within is None:
-                self._collect_children_spans(node_id, request, spans, seen, None)
-            return
-        if within is not None and path != within:
+            if not below_lines:
+                self._collect_children_spans(node_id, request, spans, seen)
             return
         start, end = spans.get(path, (source.start_line, source.end_line))
         spans[path] = (min(start, source.start_line), max(end, source.end_line, source.start_line))
-        self._collect_children_spans(node_id, request, spans, seen, path)
+        self._collect_children_spans(node_id, request, spans, seen, below_lines=True)
 
-    def _collect_children_spans(self, node_id: str, request: dict, spans: dict[Path, tuple[int, int]], seen: set[str], within: Path | None) -> None:
+    def _collect_children_spans(self, node_id: str, request: dict, spans: dict[Path, tuple[int, int]], seen: set[str], below_lines: bool = False) -> None:
         branch = self.graph.explorer.explorer_branch(node_id, request)
         for child in branch.children if branch is not None else []:
             if isinstance(child, ExplorerEntry):
-                self._collect_spans(child.node_id, request, spans, seen, within)
+                self._collect_spans(child.node_id, request, spans, seen, below_lines)
 
     def _in_project(self, paths: list[str]) -> list[str]:
         """paths, named from the project, as the graph view's graph names its files, which it reads from the project's

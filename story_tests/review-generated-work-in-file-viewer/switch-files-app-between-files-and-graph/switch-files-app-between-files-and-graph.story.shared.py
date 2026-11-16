@@ -26,7 +26,12 @@ from space.session.graph_view_examples import (
     RESTORE_TEST,
     SCENARIOS,
     SCENARIOS_GIVEN_LINE,
+    SCENARIOS_SCENARIO_LINE,
+    SCENARIOS_STORY_LINE,
+    SCENARIOS_THEN_LINE,
+    KANBAN_MODEL,
     SHARED_STORY,
+    STORY_MAP_DELETE_LINE,
     STORY_TEST,
     TICKET_CODE,
     node_id_of,
@@ -253,3 +258,105 @@ def _(s):
     @s.then("the scenarios file opens at the Given's own line")
     def _(world):
         expect(world.lines).to(equal([(SCENARIOS, SCENARIOS_GIVEN_LINE)]))
+
+
+# --- Open Story Scenarios Across Files ----------------------------------------------------------------------------
+
+
+def story_map_lines(world, name: str) -> list[tuple[str, int, int]]:
+    listed = [STORY_MAP, SCENARIOS]
+    ranges = world.data_of(session_of(world).graph_node_ranges(node_id=node_id_of(world, name, listed), paths=listed))
+    return [(found["path"], found["start_line"], found["end_line"]) for found in ranges]
+
+
+@shared_stories.scenario("Open Story Scenarios Across Files", "Selecting a story map story opens its scenarios file too")
+def _(s):
+    @s.given("the Files app shows the Stories tree of checkout-flow's story map and Delete Ticket's scenarios")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person selects the story Delete Ticket")
+    def _(world):
+        world.lines = story_map_lines(world, "Delete Ticket")
+
+    @s.then("the story map opens at Delete Ticket's line, and the scenarios file below it at the scenario a ticket is deleted")
+    def _(world):
+        expect(world.lines).to(equal([(STORY_MAP, STORY_MAP_DELETE_LINE, STORY_MAP_DELETE_LINE), (SCENARIOS, SCENARIOS_SCENARIO_LINE, SCENARIOS_THEN_LINE)]))
+
+
+@shared_stories.scenario("Open Story Scenarios Across Files", "Selecting a markdown scenario spans its heading through its last step")
+def _(s):
+    @s.given("the Files app shows the Stories tree of checkout-flow's story map and Delete Ticket's scenarios")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person selects the scenario a ticket is deleted")
+    def _(world):
+        world.lines = story_map_lines(world, "a ticket is deleted")
+
+    @s.then("the scenarios file opens at lines 5 to 9, its heading through its Then")
+    def _(world):
+        expect(world.lines).to(equal([(SCENARIOS, SCENARIOS_SCENARIO_LINE, SCENARIOS_THEN_LINE)]))
+
+
+# --- Open Linked Sections In Place --------------------------------------------------------------------------------
+
+BROKEN_LINKS = "notes/broken-links.md"
+BROKEN_LINKS_TEXT = (
+    "# Notes\n"
+    "\n"
+    "See the [missing heading](../space/kanban/.context/kanban-model.md#no-such-heading).\n"
+    "See the [missing file](../nowhere/gone.md#board).\n"
+)
+
+
+def callouts_of(world, path: str) -> list[tuple[int, str, int, int]]:
+    """Each callout session.file answers for path: the line it sits on, and the file and lines of the section it opens."""
+    found = world.data_of(session_of(world).file(path=path))["callouts"]
+    return [(callout["line"], callout["section"]["path"], callout["section"]["start_line"], callout["section"]["end_line"]) for callout in found]
+
+
+@shared_stories.scenario("Open Linked Sections In Place", "A story map story opens its scenarios in place")
+def _(s):
+    @s.given("checkout-flow's story map links Delete Ticket to the Story: Delete Ticket heading of its scenarios")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person views the story map")
+    def _(world):
+        world.callouts = callouts_of(world, STORY_MAP)
+
+    @s.then("line 5 carries a callout to the scenarios file's lines 3 to 9, holding Delete Ticket and its scenario")
+    def _(world):
+        expect(world.callouts).to(equal([(STORY_MAP_DELETE_LINE, SCENARIOS, SCENARIOS_STORY_LINE, SCENARIOS_THEN_LINE)]))
+
+
+@shared_stories.scenario("Open Linked Sections In Place", "A scenario's domain term opens its class in the markdown model")
+def _(s):
+    @s.given("Delete Ticket's Then links the board to the Board section of the kanban's class model")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person views the scenarios file")
+    def _(world):
+        world.callouts = callouts_of(world, SCENARIOS)
+
+    @s.then("line 9 carries a callout to the model's lines 3 to 5, the Board section")
+    def _(world):
+        expect(world.callouts).to(equal([(SCENARIOS_THEN_LINE, KANBAN_MODEL, 3, 5)]))
+
+
+@shared_stories.scenario("Open Linked Sections In Place", "A link to a heading no file holds carries no callout")
+def _(s):
+    @s.given("a markdown file links to a heading its target does not have, and to a file not there")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+        world.project.seed_file(BROKEN_LINKS, BROKEN_LINKS_TEXT)
+
+    @s.when("the Person views it")
+    def _(world):
+        world.callouts = callouts_of(world, BROKEN_LINKS)
+
+    @s.then("neither line carries a callout")
+    def _(world):
+        expect(world.callouts).to(equal([]))

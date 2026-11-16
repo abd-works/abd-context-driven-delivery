@@ -44,11 +44,20 @@ vi.mock('@monaco-editor/react', () => ({
       onDidContentSizeChange: (listener: (size: { contentHeight: number }) => void) => { dispose: () => void };
       getScrollLeft: () => number;
       setScrollLeft: (left: number) => void;
+      onMouseDown: (listener: (event: { target: { element: Element | null; position: { lineNumber: number } | null } }) => void) => { dispose: () => void };
+      changeViewZones: (
+        change: (accessor: { addZone: (zone: { afterLineNumber: number; domNode: HTMLElement }) => string; removeZone: (id: string) => void }) => void,
+      ) => void;
     }) => void;
   }) => {
     const text = value ?? defaultValue ?? '';
     const host = useRef<HTMLDivElement>(null);
-    const marks = useRef<{ range: { startLineNumber: number }; options: { glyphMarginClassName?: string; className?: string; isWholeLine?: boolean } }[]>([]);
+    type Mark = { range: { startLineNumber: number }; options: { glyphMarginClassName?: string; className?: string; isWholeLine?: boolean } };
+    // Each decorations collection the editor made keeps its own marks, as Monaco's do; every one paints.
+    const collections = useRef<Mark[][]>([]);
+    const marks = { get current(): Mark[] { return collections.current.flat(); } };
+    const zones = useRef<Map<string, { afterLineNumber: number; domNode: HTMLElement }>>(new Map());
+    const presses = useRef<((event: { target: { element: Element | null; position: { lineNumber: number } | null } }) => void)[]>([]);
     const hidden = useRef<{ startLineNumber: number; endLineNumber: number }[]>([]);
     foldMarks.scrollbar = options?.scrollbar;
     foldMarks.wordWrap = options?.wordWrap;
@@ -81,30 +90,60 @@ vi.mock('@monaco-editor/react', () => ({
             row.appendChild(mark);
           }
         }
+        row.dataset.editorLine = String(lineNumber);
         row.append(line);
         editor.appendChild(row);
+        for (const zone of zones.current.values()) {
+          if (zone.afterLineNumber === lineNumber) {
+            editor.appendChild(zone.domNode);
+          }
+        }
       });
     };
+    const pressed = (event: MouseEvent) => {
+      const element = event.target instanceof Element ? event.target : null;
+      const row = element?.closest<HTMLElement>('[data-editor-line]');
+      const position = row ? { lineNumber: Number(row.dataset.editorLine) } : null;
+      presses.current.forEach((listener) => listener({ target: { element, position } }));
+    };
+    // Monaco calls onMount once, with one editor; the fake calls it again only when its text changes.
+    const mounting = useRef(onMount);
+    mounting.current = onMount;
     useLayoutEffect(() => {
-      onMount?.({
+      mounting.current?.({
         getValue: () => text,
         setValue: () => undefined,
         getModel: () => ({ getLineCount: () => text.split('\n').length }),
         getDomNode: () => host.current ?? document.body,
         getTargetAtClientPoint: () => null,
         createDecorationsCollection: (next) => {
-          marks.current = next;
+          const index = collections.current.push(next) - 1;
           paint();
           return {
             set: (items) => {
-              marks.current = items;
+              collections.current[index] = items;
               paint();
             },
             clear: () => {
-              marks.current = [];
+              collections.current[index] = [];
               paint();
             },
           };
+        },
+        onMouseDown: (listener) => {
+          presses.current.push(listener);
+          return { dispose: () => (presses.current = presses.current.filter((held) => held !== listener)) };
+        },
+        changeViewZones: (change) => {
+          change({
+            addZone: (zone) => {
+              const id = `zone-${zones.current.size + 1}-${zone.afterLineNumber}`;
+              zones.current.set(id, zone);
+              return id;
+            },
+            removeZone: (id) => zones.current.delete(id),
+          });
+          paint();
         },
         setHiddenAreas: (ranges) => {
           hidden.current = ranges;
@@ -117,8 +156,8 @@ vi.mock('@monaco-editor/react', () => ({
           foldMarks.scrollLeft = Math.max(0, left);
         },
       });
-    }, [onMount, text]);
-    return <div ref={host} data-testid="source-editor" />;
+    }, [text]);
+    return <div ref={host} data-testid="source-editor" onMouseDown={(event) => pressed(event.nativeEvent)} />;
   },
 }));
 
@@ -502,6 +541,58 @@ it('should wrap long lines when the page asks', async () => {
   render(<SourceView source={longLine} violation={null} rules={[]} activeRule="" wordWrap />);
   await screen.findByTestId('source-editor');
   expect(foldMarks.wordWrap).toBe('on');
+});
+
+const storyMap = {
+  node_id: '.context/story-map.md',
+  name: 'story-map.md',
+  type: 'File',
+  file: '.context/story-map.md',
+  text: '# Story Map\n\n(E) Manage Tickets\n    (S) Person --> [Delete Ticket](../story_tests/remove_tickets_story.test.md#story-delete-ticket)',
+  start_line: 1,
+  end_line: 4,
+  owner: '',
+  members: [],
+};
+const deleteTicketScenarios = {
+  line: 4,
+  title: 'Delete Ticket',
+  path: 'story_tests/remove_tickets_story.test.md',
+  startLine: 3,
+  endLine: 9,
+  text: '## Story: Delete Ticket\n\n#### Scenario: a ticket is deleted\n\n*Given* a ticket on the board\n*When* the Person deletes it\n*Then* the board no longer shows it',
+};
+
+function pressCalloutMark(editor: HTMLElement): void {
+  const mark = editor.querySelector('[data-line="4"] .callout-mark');
+  if (!mark) throw new Error('line 4 carries no callout mark');
+  mark.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+}
+
+it('should mark a line whose link opens another file, its section closed', async () => {
+  render(<SourceView source={storyMap} violation={null} rules={[]} activeRule="" unfolded keepGlyphMargin callouts={[deleteTicketScenarios]} />);
+  const editor = await screen.findByTestId('source-editor');
+  await waitFor(() => expect(editor.querySelector('[data-line="4"] .callout-mark')).toBeTruthy());
+  expect(editor.querySelector('.callout-section')).toBeNull();
+});
+
+it("should open the linked section under its line, with the file it comes from, when its mark is pressed", async () => {
+  render(<SourceView source={storyMap} violation={null} rules={[]} activeRule="" unfolded keepGlyphMargin callouts={[deleteTicketScenarios]} />);
+  const editor = await screen.findByTestId('source-editor');
+  await waitFor(() => expect(editor.querySelector('.callout-mark')).toBeTruthy());
+  act(() => pressCalloutMark(editor));
+  await waitFor(() => expect(editor.querySelector('.callout-section .callout-text')?.textContent).toBe(deleteTicketScenarios.text));
+  expect(editor.querySelector('.callout-from')?.textContent).toBe('story_tests/remove_tickets_story.test.md · lines 3 to 9');
+});
+
+it('should close the linked section when its mark is pressed again', async () => {
+  render(<SourceView source={storyMap} violation={null} rules={[]} activeRule="" unfolded keepGlyphMargin callouts={[deleteTicketScenarios]} />);
+  const editor = await screen.findByTestId('source-editor');
+  await waitFor(() => expect(editor.querySelector('.callout-mark')).toBeTruthy());
+  act(() => pressCalloutMark(editor));
+  await waitFor(() => expect(editor.querySelector('.callout-section')).toBeTruthy());
+  act(() => pressCalloutMark(editor));
+  await waitFor(() => expect(editor.querySelector('.callout-section')).toBeNull());
 });
 
 function markedLines(editor: HTMLElement): string[] {

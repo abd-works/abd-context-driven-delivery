@@ -8,7 +8,7 @@ import { CommentCardView, CommentComposerView } from './comment-box-view'
 import { placeUnder, useAddCommentAction, useAddToContextAction, useFileMarks, useMarkerPresses } from './editor-comments'
 import type { CommentLines, FileCommentsActions } from './file-comments-actions'
 import { keepWrap, storedWrap, type ThemeFailure } from './files-theme'
-import { foldsOf, monacoLanguageOf, rulesOf, sourceOf, violationFocusOf } from './source-of-file'
+import { calloutsOf, foldsOf, monacoLanguageOf, rulesOf, sourceOf, violationFocusOf } from './source-of-file'
 
 // How far down the window the first line asked to show sits once the page scrolls to it: near the top, so it is plain
 // where the page went, with a line or two above it for context.
@@ -50,6 +50,7 @@ export function FileSourceView({
   }
   const source = useMemo(() => sourceOf(file, members), [file, members])
   const folds = useMemo(() => foldsOf(file), [file])
+  const callouts = useMemo(() => calloutsOf(file), [file])
   const rules = useMemo(() => rulesOf(file), [file])
   const rule = rules.some(shown => shown.name === chosenRule) ? chosenRule : (rules[0]?.name ?? '')
   const compose = useCallback((lines: CommentLines) => {
@@ -94,6 +95,7 @@ export function FileSourceView({
         language={monacoLanguageOf(file)}
         keepGlyphMargin
         wordWrap={wrap}
+        callouts={callouts}
         onEditor={setEditor}
       />
       {composing ? <CommentComposerView lines={composing} actions={actions} place={placeUnder(editor, wrapper.current, composing.end)} onDone={() => setComposing(null)} /> : null}

@@ -34,7 +34,12 @@ BOARD_CODE = "space/kanban/board.py"
 BOARD_TEXT = "class Board:\n    def reread(self) -> None:\n        return None\n"
 # Seed: checkout-flow's story map, in the project's .context.
 STORY_MAP = ".context/story-map.md"
-STORY_MAP_TEXT = "# Story Map\n\n(E) Manage Tickets\n    (E) Remove Tickets\n        (S) Person --> Delete Ticket\n"
+# Its Delete Ticket, on line 5, links to the Story: Delete Ticket heading of its scenarios, as the project's own map does.
+STORY_MAP_TEXT = (
+    "# Story Map\n\n(E) Manage Tickets\n    (E) Remove Tickets\n"
+    "        (S) Person --> [Delete Ticket](../story_tests/manage-tickets/remove-tickets/remove_tickets_story.test.md#story-delete-ticket)\n"
+)
+STORY_MAP_DELETE_LINE = 5
 # Seed: a story map left in a folder's .context from before maps moved to the project's .context.
 OLD_MAP = "harness/.context/stories/story-map.md"
 OLD_MAP_TEXT = "# Story Map\n\n(E) Run Old Layout\n    (S) Person --> Open Old Map\n"
@@ -48,7 +53,8 @@ STORY_TEST_TEXT = (
     '        with given("a ticket"):\n'
     "            pass\n"
 )
-# Seed: Delete Ticket's scenarios, in markdown, in story_tests under its epic and sub-epic; its Given on line 7.
+# Seed: Delete Ticket's scenarios, in markdown, in story_tests under its epic and sub-epic: its story's heading on line
+# 3, its scenario on lines 5 to 9, its Given on line 7, and its Then on line 9 naming the board, linked to the model.
 SCENARIOS = "story_tests/manage-tickets/remove-tickets/remove_tickets_story.test.md"
 SCENARIOS_TEXT = (
     "# Sub-epic: Remove Tickets\n"
@@ -59,9 +65,15 @@ SCENARIOS_TEXT = (
     "\n"
     "*Given* a ticket on the board  \n"
     "*When* the Person deletes it  \n"
-    "*Then* the board no longer shows it\n"
+    "*Then* the [board](../../../space/kanban/.context/kanban-model.md#board) no longer shows it\n"
 )
 SCENARIOS_GIVEN_LINE = 7
+SCENARIOS_STORY_LINE = 3
+SCENARIOS_SCENARIO_LINE = 5
+SCENARIOS_THEN_LINE = 9
+# Seed: the kanban's class model, in markdown, its Board section on lines 3 to 5.
+KANBAN_MODEL = "space/kanban/.context/kanban-model.md"
+KANBAN_MODEL_TEXT = "# Kanban Model\n\n### Board\n\n- The board shows every ticket not yet deleted.\n\n### Ticket\n\n- A ticket moves through the stages.\n"
 # Seed: Restore Ticket's story test, in code, for a story the markdown map does not have yet.
 RESTORE_TEST = "story_tests/manage-tickets/remove-tickets/restore-ticket/restore_ticket_story.test.py"
 RESTORE_TEST_TEXT = STORY_TEST_TEXT.replace("Delete Ticket", "Restore Ticket").replace("deleted", "restored")
@@ -97,7 +109,7 @@ LISTED = [STORY_MAP, TICKET_CODE, BOARD_CODE]
 
 def seed_checkout_flow_with_graph_files(world) -> None:
     world.project.seed_session(CHECKOUT_FLOW)
-    for path, text in ((TICKET_CODE, TICKET_TEXT), (BOARD_CODE, BOARD_TEXT), (STORY_MAP, STORY_MAP_TEXT), (OLD_MAP, OLD_MAP_TEXT), (STORY_TEST, STORY_TEST_TEXT), (RESTORE_TEST, RESTORE_TEST_TEXT), (SCENARIOS, SCENARIOS_TEXT), (SHARED_STORY, SHARED_STORY_TEXT)):
+    for path, text in ((TICKET_CODE, TICKET_TEXT), (BOARD_CODE, BOARD_TEXT), (STORY_MAP, STORY_MAP_TEXT), (OLD_MAP, OLD_MAP_TEXT), (STORY_TEST, STORY_TEST_TEXT), (RESTORE_TEST, RESTORE_TEST_TEXT), (SCENARIOS, SCENARIOS_TEXT), (SHARED_STORY, SHARED_STORY_TEXT), (KANBAN_MODEL, KANBAN_MODEL_TEXT)):
         world.project.seed_file(path, text)
 
 

@@ -1,6 +1,7 @@
 import type { NodeSourceData } from '@cdd/harness/graph/graph'
 import type { FileViolationData, SessionFileData } from '@cdd/space/session/session'
 import type { SourceFold, SourceRule } from '@source-view/SourceView'
+import type { SourceCallout } from '@source-view/source-callouts'
 import type { ViolationFocus } from '@source-view/violation-prompt'
 
 // The node type the source view is handed for a whole file, which it opens with every fold open.
@@ -20,6 +21,11 @@ export function sourceOf(file: SessionFileData, members: NodeSourceData[] = []):
 // The folds the session's graph places in the file: a class whole, each operation and property as a block.
 export function foldsOf(file: SessionFileData): SourceFold[] {
   return file.folds.map(fold => ({ start: fold.range.start_line, end: fold.range.end_line, kind: fold.kind }))
+}
+
+// The file's links to a heading in another file, each opening that heading's section in place under its line.
+export function calloutsOf(file: SessionFileData): SourceCallout[] {
+  return file.callouts.map(callout => ({ line: callout.line, title: callout.title, path: callout.section.path, startLine: callout.section.start_line, endLine: callout.section.end_line, text: callout.section.content }))
 }
 
 // Each rule broken in the file once, with every message it gives there.

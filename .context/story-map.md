@@ -1078,7 +1078,15 @@ Built (2026-11-15), not walked: selecting a node opens its file at its lines (`S
 
 Requested (2026-11-15, "expand and collapse in file viewer based on the nodes in the graph"): each open file unfolds the blocks of the nodes selected in the graph and folds its other classes and operations, from the folds the session's graph places (`session.file` folds); selecting another node unfolds it and leaves the rest folded. Builds on the Files app's Fold Classes And Operations and the Graph app's Unfold Calls And Classes In Source.
 
-Built (2026-11-15), not walked: an open file reads its folds and opens only those holding a selected node, its class too (`SourceView` `openAround`, `foldsAround`), and the page scrolls the first a third of the way down the window: the editor is as tall as its file, so the page scrolls, not the editor ("we should scroll to line of member if it's below the fold").
+Built (2026-11-15), not walked: an open file reads its folds and opens only those holding a selected node, its class too (`SourceView` `openAround`, `foldsAround`), and the page scrolls the first a third of the way down the window: the editor is as tall as its file, so the page scrolls, not the editor ("we should scroll to line of member if it's below the fold"). Changed (2026-11-16, "make that line be near the top of the screen so it's obvious we are there; select the lines of the clicked node in a file if it's not the whole file"): the first selected line scrolls near the top and the selected lines are marked.
+
+### (S) Person --> [Open Story Scenarios Across Files](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-open-story-scenarios-across-files)
+
+Requested (2026-11-16, "story map md story has scenario file"): selecting a story the markdown story map holds opens its scenarios, which live in another file, beside the story map's line; a markdown scenario spans its heading through its last step.
+
+### (S) Person --> [Open Linked Sections In Place](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-open-linked-sections-in-place)
+
+Requested (2026-11-16, "should have callout to expand and see story scenarios; scenario has domain references in its terms, callout to markdown class model if it exists"): a markdown line that links to a heading in another file carries a callout that opens that heading's section in place, as a call opens in place in code: a story map story opens its scenarios, and a scenario's domain term opens its class in the markdown model (`SessionFile.callouts`).
 
 ## (E) Explore Graph In Files App
 

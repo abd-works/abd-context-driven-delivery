@@ -2,6 +2,7 @@ import Editor, { type OnMount } from '@monaco-editor/react';
 import type { editor as monaco } from 'monaco-editor';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { initialOpenFolds, inlineCallLayout, type FoldMember, type InlineFold } from './call-expansion';
+import { useCallouts, type SourceCallout } from './source-callouts';
 import type { NodeSourceData } from '@cdd/harness/graph/graph';
 import { buildViolationCorrectPrompt, type ViolationFocus } from './violation-prompt';
 import { reasonOf } from '../graph/graph-failures';
@@ -41,6 +42,7 @@ export type SourceHostProps = {
   language?: string;
   keepGlyphMargin?: boolean;
   wordWrap?: boolean;
+  callouts?: SourceCallout[];
   onEditor?: (editor: SourceEditorInstance) => void;
 };
 
@@ -48,6 +50,7 @@ export const SOURCE_MARK = 'source-mark';
 
 const NO_FOLDS: SourceFold[] = [];
 const NO_LINES: SourceLines[] = [];
+const NO_CALLOUTS: SourceCallout[] = [];
 
 type SourceViewProps = SourceHostProps & {
   source: NodeSourceData | null;
@@ -83,6 +86,7 @@ function SourceEditor({
   language = '',
   keepGlyphMargin = false,
   wordWrap = false,
+  callouts = NO_CALLOUTS,
   onEditor,
 }: SourceHostProps & {
   source: NodeSourceData;
@@ -120,6 +124,8 @@ function SourceEditor({
   }
   // Wrapped lines take more than one line's height, so a wrapping editor is as tall as the editor says its content is.
   const [contentHeight, setContentHeight] = useState(0);
+  const [mounted, setMounted] = useState<Parameters<OnMount>[0] | null>(null);
+  const calloutOpen = useCallouts(mounted, callouts, prepared.lineNumbers);
   const glyphs = useRef(keepGlyphMargin);
   glyphs.current = keepGlyphMargin;
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
@@ -154,6 +160,7 @@ function SourceEditor({
 
   const onMount: OnMount = (editor) => {
     editorRef.current = editor;
+    setMounted(editor);
     applyCallFolds(
       editor,
       foldsRef.current,
@@ -243,7 +250,7 @@ function SourceEditor({
       <p className="source-path">{file || source.name}</p>
       <div className="panel-source" data-testid="source-excerpt">
         <Editor
-          height={wordWrap && contentHeight ? contentHeight + 16 : sourceHeight(prepared.text)}
+          height={(wordWrap || calloutOpen) && contentHeight ? contentHeight + 16 : sourceHeight(prepared.text)}
           language={language || languageFor(file)}
           theme={document.documentElement.dataset.theme === 'engineering' ? 'vs-dark' : 'vs'}
           defaultValue={prepared.text}

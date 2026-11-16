@@ -213,3 +213,58 @@ Requested by the person on 2026-11-16.
 *When* the Person selects Ticket.close, which covers lines 538 to 560  
 *Then* the source view marks lines 538 to 560 as selected  
   *And* a node that covers the whole file marks no lines
+
+## Story: Open Story Scenarios Across Files
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| user request, 2026-11-16 | "story map md story has scenario file", the story's scenarios not opened beside it |
+
+#### Scenario: Selecting a story map story opens its scenarios file too
+
+*Given* the Files app shows the Stories tree of checkout-flow's story map and Delete Ticket's scenarios  
+*When* the Person selects the story Delete Ticket  
+*Then* the story map opens at line 5, Delete Ticket's line  
+  *And* the scenarios file opens below it at lines 5 to 9, the scenario a ticket is deleted
+
+#### Scenario: Selecting a markdown scenario spans its heading through its last step
+
+*Given* the Files app shows the Stories tree of checkout-flow's story map and Delete Ticket's scenarios  
+*When* the Person selects the scenario a ticket is deleted  
+*Then* the scenarios file opens at lines 5 to 9, its heading through its Then
+
+## Story: Open Linked Sections In Place
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| user request, 2026-11-16 | "should have callout to expand and see story scenarios" |
+| user request, 2026-11-16 | "scenario has domain references in its terms, callout to markdown class model if it exists" |
+
+#### Scenario: A story map story opens its scenarios in place
+
+*Given* checkout-flow's story map links Delete Ticket to the Story: Delete Ticket heading of its scenarios  
+*When* the Person views the story map  
+*Then* line 5 carries a callout to the scenarios file's lines 3 to 9, holding Delete Ticket and its scenario
+
+#### Scenario: A scenario's domain term opens its class in the markdown model
+
+*Given* Delete Ticket's Then links the board to the Board section of the kanban's class model  
+*When* the Person views the scenarios file  
+*Then* line 9 carries a callout to the model's lines 3 to 5, the Board section
+
+#### Scenario: A link to a heading no file holds carries no callout
+
+*Given* a markdown file links to a heading its target does not have, and to a file not there  
+*When* the Person views it  
+*Then* neither line carries a callout
+
+#### Scenario: A callout opens and closes from its mark beside the line
+
+*Given* the Files app shows the story map, its callouts closed  
+*When* the Person presses the callout mark beside Delete Ticket  
+*Then* Delete Ticket's scenarios show under its line, with the file they come from  
+  *And* a second press closes them again

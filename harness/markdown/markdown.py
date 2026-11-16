@@ -92,6 +92,13 @@ def _markdown_to_html(text: str) -> str:
 LocationKind = Literal["file", "folder", "section"]
 
 
+def heading_anchor(heading: str) -> str:
+    """The anchor a link names a heading by, as GitHub writes it: lower case, its punctuation dropped, each space a hyphen
+    (``Story: Delete Ticket`` is ``story-delete-ticket``, ``FilesPage (`files/files-page.ts`)`` is
+    ``filespage-filesfiles-pagets``)."""
+    return re.sub(r"[^\w\- ]", "", heading.strip().lower()).replace(" ", "-")
+
+
 def _section_heading(label: str) -> str:
     if label.casefold() in {"context", "contexts", "overview"}:
         return "Overview"
@@ -188,6 +195,19 @@ class MarkdownText:
             len(self._text),
         )
         return self._text[start:end].strip()
+
+    def anchored_lines(self, anchor: str) -> tuple[int, int] | None:
+        """The lines, counted from 1, of the section under the heading a link names by anchor, such as
+        ``story-delete-ticket`` for ``## Story: Delete Ticket``: its heading through its last line with text before the
+        next heading as high or higher; none when no heading has that anchor."""
+        headings = self.headings()
+        found = next((index for index, item in enumerate(headings) if heading_anchor(item[3]) == anchor), None)
+        if found is None:
+            return None
+        start, _heading_end, level, _heading = headings[found]
+        end = next((position for position, _e, next_level, _h in headings[found + 1 :] if next_level <= level), len(self._text))
+        first = self._text.count("\n", 0, start) + 1
+        return first, first + self._text[start:end].rstrip().count("\n")
 
     def child_blocks(self, parent_heading: str) -> list[tuple[str, str]]:
         headings = self.headings()
