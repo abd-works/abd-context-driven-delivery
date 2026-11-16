@@ -1,7 +1,7 @@
-"""/release: a major release of CDD, never on red, tagged and published as a GitHub release with notes.
+"""/release: the version /version set, never on red, tagged and published as a GitHub release with notes.
 
-Git and gh are stubbed at the boundary *MajorRelease* runs them through, and the test runs are seeded in a record, so
-nothing here runs a tier, git or gh. major_release_heavy_spec.py releases a throwaway repository with real git and gh."""
+Git and gh are stubbed at the boundary *CddRelease* runs them through, and the test runs are seeded in a record, so
+nothing here runs a tier, git or gh. release_heavy_spec.py releases a throwaway repository with real git and gh."""
 import shutil
 import tempfile
 from datetime import datetime, timezone
@@ -11,7 +11,7 @@ from expects import be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.diagnostics.cdd_version import CddVersion
-from harness.diagnostics.major_release import ReleaseOnRed
+from harness.diagnostics.release import ReleaseAlreadyTagged, ReleaseOnRed
 from harness.diagnostics.test_runs import RunOutcome, TestRun, TestRunRecord, TestTier
 from harness.process.git import RepoConnectError
 
@@ -25,6 +25,11 @@ class GitStub:
     def __init__(self, tag: str = "v1.0.0") -> None:
         self.tag = tag
         self.ran: list[tuple[str, ...]] = []
+
+    def succeeds(self, *args: str) -> bool:
+        """Only the previous release's tag exists."""
+        self.ran.append(args)
+        return bool(self.tag) and args[-1] == f"refs/tags/{self.tag}"
 
     def run(self, *args: str, **_: object) -> str:
         self.ran.append(args)
@@ -51,13 +56,13 @@ class GhStub:
     def run(self, *args: str) -> str:
         self.ran.append(args)
         self.notes = Path(args[args.index("--notes-file") + 1]).read_text(encoding="utf-8")
-        return "https://github.com/owner/cdd/releases/tag/v2.0.0"
+        return "https://github.com/owner/cdd/releases/tag/v1.5.0"
 
 
-with description("a major release") as self:
+with description("a release") as self:
     with before.each:
-        self.project = Path(tempfile.mkdtemp(prefix="major-release-"))
-        (self.project / "pyproject.toml").write_text('[project]\nname = "cdd"\nversion = "1.4.2"\n', encoding="utf-8")
+        self.project = Path(tempfile.mkdtemp(prefix="release-"))
+        (self.project / "pyproject.toml").write_text('[project]\nname = "cdd"\nversion = "1.5.0"\n', encoding="utf-8")
         self.record = TestRunRecord(self.project / "home")
         self.git = GitStub()
         self.gh = GhStub()
@@ -80,8 +85,8 @@ with description("a major release") as self:
             self.green()
             self.release = self.version().release()
 
-        with it("should be the next major version"):
-            expect(self.release.version).to(equal("2.0.0"))
+        with it("should be the version /version set in pyproject.toml"):
+            expect(self.release.version).to(equal("1.5.0"))
 
         with it("should list the commits since the previous release tag"):
             expect(self.release.notes).to(contain("- Fix the board"))
@@ -98,6 +103,12 @@ with description("a major release") as self:
             self.green()
             self.version().release().notes
             expect(self.git.ran).to(contain(("log", "--no-merges", "--reverse", "--format=%s", "beef0001..HEAD")))
+
+    with context("that the version in pyproject.toml is already released"):
+        with it("should refuse, asking for /version first"):
+            (self.project / "pyproject.toml").write_text('[project]\nname = "cdd"\nversion = "1.0.0"\n', encoding="utf-8")
+            self.green()
+            expect(lambda: self.version().release(publish=True)).to(raise_error(ReleaseAlreadyTagged, contain("/version")))
 
     with context("that heavy failed"):
         with it("should refuse on red"):
@@ -121,20 +132,19 @@ with description("a major release") as self:
             self.green()
             self.release = self.version().release(publish=True)
 
-        with it("should write the major version in pyproject.toml"):
-            expect((self.project / "pyproject.toml").read_text(encoding="utf-8")).to(contain('version = "2.0.0"'))
+        with it("should leave the version in pyproject.toml as /version set it"):
+            expect((self.project / "pyproject.toml").read_text(encoding="utf-8")).to(contain('version = "1.5.0"'))
 
-        with it("should commit pyproject.toml alone, push, tag, and push the tag, in that order"):
+        with it("should push, tag, and push the tag, in that order, committing nothing"):
             changed = [args for args in self.git.ran if args[0] in ("commit", "push", "tag")]
             expect(changed).to(equal([
-                ("commit", "-m", "Release v2.0.0", "--", "pyproject.toml"),
                 ("push", "origin", "HEAD"),
-                ("tag", "-a", "v2.0.0", "-m", "Release v2.0.0"),
-                ("push", "origin", "v2.0.0"),
+                ("tag", "-a", "v1.5.0", "-m", "Release v1.5.0"),
+                ("push", "origin", "v1.5.0"),
             ]))
 
         with it("should create the GitHub release on its tag"):
-            expect(self.gh.ran[0][:3]).to(equal(("release", "create", "v2.0.0")))
+            expect(self.gh.ran[0][:3]).to(equal(("release", "create", "v1.5.0")))
 
         with it("should publish the notes"):
             expect(self.gh.notes).to(contain("- Add the release command"))
@@ -143,7 +153,7 @@ with description("a major release") as self:
             expect(self.release.notes).to(equal(self.gh.notes))
 
         with it("should hand back the release link"):
-            expect(self.release.release_url).to(equal("https://github.com/owner/cdd/releases/tag/v2.0.0"))
+            expect(self.release.release_url).to(equal("https://github.com/owner/cdd/releases/tag/v1.5.0"))
 
         with it("should read as published"):
             expect(self.release.published).to(be_true)

@@ -1,5 +1,5 @@
 """/release and the test cadence over their real boundaries: git in a throwaway repository with a bare origin, the gh
-command line, and scripts/test.ps1 run by PowerShell in a background process. major_release_spec.py and
+command line, and scripts/test.ps1 run by PowerShell in a background process. release_spec.py and
 test_runs_spec.py are their stubbed twins.
 
 gh is run for real without publishing: a release on GitHub is public, so the release here is created through a gh that
@@ -14,7 +14,7 @@ from pathlib import Path
 from expects import be_none, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.diagnostics.major_release import MajorRelease
+from harness.diagnostics.release import CddRelease, ReleaseAlreadyTagged
 from harness.diagnostics.test_runs import RunOutcome, TestCadence, TestRun, TestRunRecord, TestRunner, TestTier, main_checkout
 from harness.process.git import Git
 from harness.process.github_cli import GitHubCli, GitHubCliError
@@ -28,14 +28,15 @@ def git(folder: Path, *args: str) -> str:
 
 
 def throwaway_repository(root: Path) -> Path:
-    """A checkout on main of a bare origin, its first release tagged v1.0.0, two commits and one completed story since."""
+    """A checkout on main of a bare origin, its first release tagged v1.0.0, two commits and one completed story since,
+    the last of them raising the version to 1.4.0 as /version does."""
     origin, checkout = root / "origin.git", root / "checkout"
     subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True)
     subprocess.run(["git", "clone", "-q", str(origin), str(checkout)], check=True, capture_output=True)
     for setting in (("user.name", "Spec"), ("user.email", "spec@example.invalid"), ("commit.gpgsign", "false"), ("tag.gpgsign", "false")):
         git(checkout, "config", *setting)
     git(checkout, "checkout", "-q", "-b", "main")
-    (checkout / "pyproject.toml").write_text('[project]\nname = "cdd"\nversion = "1.4.0"\n', encoding="utf-8")
+    (checkout / "pyproject.toml").write_text('[project]\nname = "cdd"\nversion = "1.0.0"\n', encoding="utf-8")
     git(checkout, "add", "pyproject.toml")
     git(checkout, "commit", "-q", "-m", "First release")
     git(checkout, "tag", "-a", "v1.0.0", "-m", "Release v1.0.0")
@@ -47,6 +48,8 @@ def throwaway_repository(root: Path) -> Path:
     (story / "session.json").write_text("{}", encoding="utf-8")
     git(checkout, "add", ".sessions")
     git(checkout, "commit", "-q", "-m", "sessions: release-cadence moves to _complete")
+    (checkout / "pyproject.toml").write_text('[project]\nname = "cdd"\nversion = "1.4.0"\n', encoding="utf-8")
+    git(checkout, "commit", "-q", "-m", "Version v1.4", "--", "pyproject.toml")
     git(checkout, "push", "-q", "origin", "main", "--follow-tags")
     return checkout
 
@@ -64,16 +67,16 @@ class RecordingGh:
         return f"https://github.com/owner/cdd/releases/tag/{args[2]}"
 
 
-with description("a major release of a throwaway repository") as self:
+with description("a release of a throwaway repository") as self:
     with before.each:
-        self.root = Path(tempfile.mkdtemp(prefix="major-release-heavy-"))
+        self.root = Path(tempfile.mkdtemp(prefix="release-heavy-"))
         self.checkout = throwaway_repository(self.root)
         self.record = TestRunRecord(self.root / "home")
         head = git(self.checkout, "rev-parse", "HEAD")
         for tier in (TestTier.E2E, TestTier.HEAVY):
             self.record.save(TestRun(tier, head, datetime.now(timezone.utc), RunOutcome.PASSED))
         self.gh = RecordingGh()
-        self.release = MajorRelease(self.checkout, Git(self.checkout), self.gh, self.record)
+        self.release = CddRelease(self.checkout, Git(self.checkout), self.gh, self.record)
 
     with after.each:
         shutil.rmtree(self.root, ignore_errors=True)
@@ -90,17 +93,20 @@ with description("a major release of a throwaway repository") as self:
         with before.each:
             self.release.publish()
 
-        with it("should push the major version to origin main"):
-            expect(git(self.root / "origin.git", "show", "main:pyproject.toml")).to(contain('version = "2.0.0"'))
+        with it("should push the version /version set to origin main, unchanged"):
+            expect(git(self.root / "origin.git", "show", "main:pyproject.toml")).to(contain('version = "1.4.0"'))
 
-        with it("should commit pyproject.toml alone"):
-            expect(git(self.checkout, "show", "--name-only", "--format=", "HEAD")).to(equal("pyproject.toml"))
+        with it("should commit nothing"):
+            expect(git(self.checkout, "log", "-1", "--format=%s")).to(equal("Version v1.4"))
 
-        with it("should push the tag on the release commit"):
-            expect(git(self.root / "origin.git", "rev-list", "-n", "1", "v2.0.0")).to(equal(git(self.checkout, "rev-parse", "HEAD")))
+        with it("should push the tag on the commit the tests passed on"):
+            expect(git(self.root / "origin.git", "rev-list", "-n", "1", "v1.4.0")).to(equal(git(self.checkout, "rev-parse", "HEAD")))
 
         with it("should create the release on that tag with the notes"):
-            expect((self.gh.ran[0][2], self.gh.notes)).to(equal(("v2.0.0", self.release.notes)))
+            expect((self.gh.ran[0][2], self.gh.notes)).to(equal(("v1.4.0", self.release.notes)))
+
+        with it("should refuse to release the same version again"):
+            expect(lambda: self.release.publish()).to(raise_error(ReleaseAlreadyTagged))
 
 
 with description("the gh command line") as self:

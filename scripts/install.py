@@ -146,7 +146,7 @@ def _step_failed(number: int, error: str) -> None:
     print(f"✗ {number}/{len(INSTALL_LATEST_STEPS)} {INSTALL_LATEST_STEPS[number]}: {error}", file=sys.stderr, flush=True)
 
 
-# A release is a tag such as v2.0.0 that /release pushes (harness/diagnostics/major_release.py).
+# A release is a tag such as v2.0.0 that /release pushes (harness/diagnostics/release.py).
 _RELEASE_TAG = re.compile(r"^v\d+\.\d+(\.\d+)?$")
 
 

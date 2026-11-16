@@ -1,5 +1,6 @@
-"""A major release of CDD: never on red, it raises the major version, tags it, and publishes a GitHub release whose notes
-are the commits and the stories completed since the release before."""
+"""A release of CDD: never on red, it tags the version /version set in pyproject.toml and publishes a GitHub release
+whose notes are the commits and the stories completed since the release before. /version sets the number; /release only
+packages it, so a release changes no file."""
 from __future__ import annotations
 
 import re
@@ -27,6 +28,14 @@ class ReleaseOnRed(RuntimeError):
         super().__init__("Not released, the tests are not green on this commit: " + "; ".join(problems)
                          + ". Run each tier with python -m harness.diagnostics.test_runs <tier> . and fix what fails until both pass.")
         self.problems = problems
+
+
+class ReleaseAlreadyTagged(RuntimeError):
+    """A release asked for when the version in pyproject.toml already has its tag: /version sets the next one first."""
+
+    def __init__(self, tag: str) -> None:
+        super().__init__(f"Not released, {tag} is already released. Run /version to set the next version, then /release.")
+        self.tag = tag
 
 
 class ReleaseNotes:
@@ -69,9 +78,9 @@ class ReleaseNotes:
         return [f"{since}..HEAD"] if since else ["HEAD"]
 
 
-class MajorRelease:
-    """The next major release of the checkout at project: previewed until it is published, which writes the version,
-    commits and pushes it, tags it, and creates the GitHub release."""
+class CddRelease:
+    """The release of the version in the checkout's pyproject.toml: previewed until it is published, which pushes HEAD,
+    tags it v<version>, pushes the tag, and creates the GitHub release."""
 
     def __init__(self, project: Path | str, git: Git, gh: GitHubCli, test_runs: TestRunRecord) -> None:
         self._project = Path(project)
@@ -83,8 +92,11 @@ class MajorRelease:
         self.is_published = False
         self._published_notes = ""
 
-    def check_green(self) -> MajorRelease:
-        """Refuse with ReleaseOnRed unless the latest e2e and heavy runs passed on HEAD."""
+    def check_green(self) -> CddRelease:
+        """Refuse with ReleaseAlreadyTagged when this version is already released, and with ReleaseOnRed unless the
+        latest e2e and heavy runs passed on HEAD."""
+        if self._git.succeeds("rev-parse", "--verify", "--quiet", f"refs/tags/{self.tag}"):
+            raise ReleaseAlreadyTagged(self.tag)
         head = self._git.run("rev-parse", "HEAD")
         problems = []
         for tier in RELEASE_TIERS:
@@ -99,14 +111,11 @@ class MajorRelease:
             raise ReleaseOnRed(problems)
         return self
 
-    def publish(self) -> MajorRelease:
-        """Write the version, commit pyproject.toml alone, push, tag v<version>, push the tag, and create the release."""
+    def publish(self) -> CddRelease:
+        """Push HEAD, tag it v<version>, push the tag, and create the release. No file changes."""
         self.check_green()
         notes = self.notes
         tag = self.tag
-        file = self._project / PYPROJECT
-        file.write_text(_VERSION_LINE.sub(f'version = "{self.version}"', file.read_text(encoding="utf-8"), count=1), encoding="utf-8")
-        self._git.run("commit", "-m", f"Release {tag}", "--", PYPROJECT)
         self._git.run("push", "origin", "HEAD")
         self._git.run("tag", "-a", tag, "-m", f"Release {tag}")
         self._git.run("push", "origin", tag)
@@ -122,11 +131,8 @@ class MajorRelease:
     @property
     @data_field
     def version(self) -> str:
-        """The next major version, such as 2.0.0 after 1.4.2."""
-        current = _VERSION_LINE.search((self._project / PYPROJECT).read_text(encoding="utf-8")).group(1)
-        if self.is_published:
-            return current
-        return f"{int(current.split('.')[0]) + 1}.0.0"
+        """The version this releases, as /version set it in pyproject.toml, such as 1.5.0."""
+        return _VERSION_LINE.search((self._project / PYPROJECT).read_text(encoding="utf-8")).group(1)
 
     @property
     @data_field

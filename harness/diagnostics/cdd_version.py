@@ -8,7 +8,7 @@ from enum import Enum
 from pathlib import Path
 
 from harness.agent_tools import agent_toolset
-from harness.diagnostics.major_release import MajorRelease
+from harness.diagnostics.release import CddRelease
 from harness.diagnostics.test_runs import TestRunRecord, default_record_folder
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.data_class import data_field, language_adapter
@@ -147,21 +147,23 @@ class CddVersion:
     @command(name="release")
     @mcp
     @agent_tool
-    def release(self, publish: bool = False) -> MajorRelease:
-        """Release the next major CDD version, such as 2.0.0 after 1.4, never on red.
+    def release(self, publish: bool = False) -> CddRelease:
+        """Release the CDD version in pyproject.toml, never on red. /version sets the number; this tags and publishes
+        it, changing no file. A version already released is refused: run /version first.
         1. Run the e2e tier, then the heavy tier, each to its end in the background from the repository's folder with
            the main checkout's Python: `.venv/Scripts/python -m harness.diagnostics.test_runs e2e .`, then the same
            with heavy. Each records its result in the cdd home. When a tier fails, find the cause, fix it, commit, and
            run that tier again, then the other, until both pass on the same commit.
         2. Call this with publish false. It refuses with ReleaseOnRed unless the latest e2e and heavy runs passed on
-           HEAD, and otherwise answers the next version and its release notes: the commits and the completed stories
+           HEAD, and with ReleaseAlreadyTagged when the version already has its tag; otherwise it answers the version and
+           its release notes: the commits and the completed stories
            since the previous release tag. It changes nothing.
         3. Show the person the version and the notes, and ask before publishing, since publishing creates a public
            GitHub release.
-        4. On their yes, call this with publish true. It raises the major version in pyproject.toml, commits that file
-           alone and pushes, tags the commit v<version> and pushes the tag, and runs gh release create with the notes.
+        4. On their yes, call this with publish true. It pushes HEAD, tags it v<version> and pushes the tag, and runs
+           gh release create with the notes.
         5. Hand the person release_url, the release's page on the repository."""
-        release = MajorRelease(self._project, self._project_git, self._gh or GitHubCli(self._project),
+        release = CddRelease(self._project, self._project_git, self._gh or GitHubCli(self._project),
                                self._test_runs or TestRunRecord(default_record_folder()))
         return release.publish() if publish else release.check_green()
 
