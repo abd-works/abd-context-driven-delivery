@@ -8,8 +8,10 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.pattern_overlays import GraphOverlay
+from harness.graph.location import Location
 from harness.graph.skipped_folders import scanned_files
 
 from cdd_guidance.patterns.lern_domain_driven.tier_facts import TierFile
@@ -59,7 +61,7 @@ class _OssReading:
         self.root = root
 
     def _link(self, kind: str, parent: Node, child: Node) -> None:
-        self.graph.link(kind, parent, child, self.overlay.display_of(kind))
+        self.graph.edges.record(EdgeType.from_kind(kind, self.overlay.display_of(kind)), parent, child)
 
     def read(self) -> None:
         from cdd_guidance.practices.ddd.ddd import Ddd
@@ -110,7 +112,7 @@ class _OssReading:
             slug = file.parent.name
             folder = file.parent.relative_to(self.root).as_posix()
             if file.name in (f"{slug}-service.ts", f"{slug}-bff.ts") and folder.startswith("src/") and not self.ddd.reading.in_graph.holds(f"ddd:Aggregate:{folder}"):
-                self.ddd.reading.in_graph.add_named("Aggregate", f"ddd:Aggregate:{folder}", slug, Source(folder, 1, 1, self.ddd.reading.in_graph.source_root))
+                self.ddd.reading.in_graph.add_named("Aggregate", f"ddd:Aggregate:{folder}", slug, Source.from_root(self.ddd.reading.in_graph.source_root, Location(folder, 1, 1)))
 
     def _aggregate(self, folder: str, aggregate: Node, service: Node | None) -> None:
         slug = Path(folder).name

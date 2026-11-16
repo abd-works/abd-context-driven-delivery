@@ -1312,7 +1312,7 @@ with description("guidance agents"):
     with it("should install the agents from cdd_guidance/agents"):
         tree = Path(tempfile.mkdtemp())
         try:
-            Installer(ide="Cursor", path=tree, repo=_REPO_ROOT)._install_agents()
+            Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).deployment._install_agents()
             installed = sorted(path.name for path in (tree / "agents").glob("*.md"))
             expect(installed).to(equal(["context.md", "discoverer.md", "implementation.md", "specification.md"]))
             expect((tree / "agents" / "discoverer.md").read_text(encoding="utf-8")).to(contain("name: discoverer"))
