@@ -85,6 +85,12 @@ section: body
 *When* the Person switches the file bar to the graph view  
 *Then* the Stories tree holds each story once, read from the markdown: when one thing is written in several formats, code is read before markdown and markdown before a diagram
 
+#### Scenario: The Stories tree holds a story's scenarios listed in markdown
+
+*Given* the Files app lists only the markdown formats: checkout-flow's story map and Delete Ticket's scenarios  
+*When* the Person switches the file bar to the graph view  
+*Then* Delete Ticket holds its scenario and its steps from the scenarios file
+
 ## Story: Filter Graph Like The File List
 
 ### Evidence
@@ -141,6 +147,12 @@ section: body
 *When* the Person selects the Clean Engineering root, which no file's lines hold  
 *Then* ticket.py opens in the source view  
   *And* board.py opens below it at lines 104 to 397, the lines Board covers
+
+#### Scenario: Selecting a step opens its scenarios file at the step's line
+
+*Given* the Files app shows the Stories tree of checkout-flow's story map and Delete Ticket's scenarios  
+*When* the Person selects the Given step a ticket on the board  
+*Then* the scenarios file opens at the Given's own line
 
 ## Story: Fold Open Files To Selected Nodes
 

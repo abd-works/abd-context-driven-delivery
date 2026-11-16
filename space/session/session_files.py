@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -114,17 +116,18 @@ class SessionFiles:
         return path
 
     def from_root(self, named: str | Path) -> str:
-        """The path named, which must be there under the session's root, written from that root, the way the session's
-        graph names its files; a path outside the root is refused, since the graph would read nothing for it."""
+        """The path named, which must be there under one of the session's roots, written from the session's root the way
+        the session's graph names its files, a file above it with ``..``, such as a story test in the story_tests a
+        fidelity writes to; a path outside every root is refused, since the graph would read nothing for it."""
         path = self.existing(named)
         if not self.in_root(path):
             raise NamedPathNotFoundError(str(named), self._session.repo_path, self._session.work_root)
-        return path.relative_to(self._session.work_root).as_posix()
+        return Path(os.path.relpath(path, self._session.work_root)).as_posix()
 
     def in_root(self, path: Path) -> bool:
-        """Whether path is the session's root or lies under it."""
-        root = self._session.work_root
-        return path == root or root in path.parents
+        """Whether path lies under one of the session's roots: the folders its file manager reads, its root among them."""
+        roots = (self._session.work_root, *self.file_manager.roots)
+        return any(path == root or root in path.parents for root in (Path(root).resolve() for root in roots))
 
     def changed(self) -> set[Path]:
         """The files the session's branch changed since it left the default branch, with its uncommitted changes when

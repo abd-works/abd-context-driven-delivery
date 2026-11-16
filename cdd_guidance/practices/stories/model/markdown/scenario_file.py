@@ -71,14 +71,16 @@ def _named_by_place(path: Path) -> str:
     return path.stem.replace("-", " ")
 
 
-def scenario_sections_in(root: Path, scenario_type: type, *, on_file=None) -> List[StorySection]:
+def scenario_sections_in(root: Path, scenario_type: type, *, on_file=None, base: Path | None = None) -> List[StorySection]:
     """The story sections of every scenarios markdown file under root, or of root when it is one, each file read once
-    by a reading made for it."""
+    by a reading made for it, and named from base, the folder its story map's own file is named from, so every node of
+    one map names its file the same way; from root when no base is given."""
     root = Path(root).resolve()
+    named_from = Path(base).resolve() if base is not None else root
     files = [root] if root.is_file() else StoryMapFiles(root).scenario_files_below()
     sections: List[StorySection] = []
     for path in files:
-        rel = path.name if path == root else os.path.relpath(path, root).replace("\\", "/")
+        rel = path.name if path == root else os.path.relpath(path, named_from).replace("\\", "/")
         if on_file is not None:
             on_file(rel)
         sections.extend(ScenarioFileReading(path.read_text(encoding="utf-8"), rel, scenario_type).read())

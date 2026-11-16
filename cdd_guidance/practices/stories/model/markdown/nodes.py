@@ -413,10 +413,10 @@ class MarkdownStoryModel(StoryModel):
         if not self.epics:
             return
         workspace = root.parent if root.is_file() else root
-        self._attach_markdown(workspace, on_file=on_file)
+        self._attach_markdown(workspace, on_file=on_file, base=base)
 
-    def _attach_markdown(self, root, on_file=None) -> None:
-        sections = scenario_sections_in(root, MarkdownScenario, on_file=on_file)
+    def _attach_markdown(self, root, on_file=None, base=None) -> None:
+        sections = scenario_sections_in(root, MarkdownScenario, on_file=on_file, base=base)
         for story in self.every_story():
             story.load_scenarios(sections)
         if not self.increments and StoryMapFiles(root).thin_slicing() is not None:

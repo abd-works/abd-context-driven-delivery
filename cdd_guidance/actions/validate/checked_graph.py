@@ -172,7 +172,7 @@ class CheckedGraph:
             for path in paths
             if "{" not in path
         ]
-        return {path.relative_to(self.session.work_root).as_posix() for path in others if self.session.session_files.in_root(path)}
+        return {self.session.session_files.from_root(path) for path in others if path.exists() and self.session.session_files.in_root(path)}
 
     def _written_outputs(self) -> list[str]:
         """The folders holding what each listed fidelity declares in its checked format and has already written. The
