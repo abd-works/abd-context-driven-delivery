@@ -12,6 +12,12 @@ export type ServerHealthJson = {
 
 export type HealthViewJson = { areDetailsOpen: boolean }
 
+// One run of a test tier the cdd server runs on a cadence, as server-health.report lists it under test_runs.
+export type TestRunJson = { name: string; state: 'running' | 'passed' | 'failed' | 'abandoned'; run_id: string; started: string; summary: string; is_new_failure: boolean }
+
+// The runs whose new failure the chat has raised a toast for, so each is raised once.
+export type ToastedRunsJson = { runIds: string[] }
+
 export type InstallJson = { state: 'idle' | 'running' | 'installed' | 'failed'; error: string | null }
 
 // The CDD version badge. data is cdd-version.check's answer, read as the chat opens; isAsking while the update dialog
@@ -81,6 +87,7 @@ declare module 'claude-code' {
     'cdd-board': {
       serverHealth: ServerHealthJson
       healthView: HealthViewJson
+      toastedRuns: ToastedRunsJson
       install: InstallJson
       cddVersion: CddVersionJson
       toMain: ToMainJson

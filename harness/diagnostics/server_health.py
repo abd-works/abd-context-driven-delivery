@@ -6,6 +6,7 @@ from pathlib import Path
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.diagnostics.app import App
+from harness.diagnostics.test_runs import TestCadence, TestRun, TestRunRecord, default_record_folder, main_checkout
 from harness.hooks.hook_daemon import HookDaemon
 from harness.installation.data_class import data_field, language_adapter
 from harness.mcp.mcp_annotations import mcp
@@ -19,9 +20,10 @@ class ServerHealth:
     # The server health band reads this after every cdd call and every prompt, so its tool stays out of the session log.
     # This tool answers only while the MCP host is up, so the band itself works out that the host is lost.
 
-    def __init__(self, repo_root: Path | str, hook_daemon: HookDaemon | None = None) -> None:
+    def __init__(self, repo_root: Path | str, hook_daemon: HookDaemon | None = None, cadence: TestCadence | None = None) -> None:
         self._repo_root = Path(repo_root).resolve()
         self._hook_daemon = hook_daemon if hook_daemon is not None else HookDaemon(self._repo_root)
+        self._cadence = cadence if cadence is not None else TestCadence(main_checkout(self._repo_root), TestRunRecord(default_record_folder()))
 
     @classmethod
     @tool_subject
@@ -33,7 +35,9 @@ class ServerHealth:
     @agent_tool
     @noSessionLog
     def report(self) -> ServerHealth:
-        """Return each registered app with its status and the port it answers on, and whether the hook server is running."""
+        """Return each registered app with its status and the port it answers on, whether the hook server is running, and
+        the latest heavy and e2e runs. Reading it is the cadence's clock: a tier overdue on main starts in the background."""
+        self._cadence.start_due()
         return self
 
     @property
@@ -46,3 +50,9 @@ class ServerHealth:
     @data_field
     def is_hook_server_running(self) -> bool:
         return self._hook_daemon.is_running()
+
+    @property
+    @data_field
+    def test_runs(self) -> list[TestRun]:
+        """The latest run of each test tier the cdd server runs on a cadence, heavy and e2e, that has run."""
+        return self._cadence.latest_runs
