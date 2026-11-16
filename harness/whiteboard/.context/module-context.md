@@ -1,0 +1,16 @@
+# harness/whiteboard
+*Whiteboard* is a Claude Whiteboard board as a practice draws it: its title and its elements in back-to-front order, saved as a `.whiteboard` file in the session and loaded back from one. A practice renders its model to a *Whiteboard* and parses its model from one, as it does with a `.drawio` file; the board in Claude is the Whiteboard artifact whose store holds the same `board/meta` and `elements/<id>` records. `Whiteboard.writes(previous)` answers the store writes that turn the board as it was into this one, so an agent sends them to the artifact's store and never rebuilds a board people have worked on.
+
+*BoardElement* is one record on a board, under its element id. A *Shape* is a block (an epic bar, a story card, a class or module box), a *Section* holds other elements under a title, a *Label* is words with no box, and an *Arrow* joins two elements by their ids. An element's id names the kind of practice node it draws and a stable key of that node, so a board read back says which node each element was, and the same node keeps its id from one render to the next.
+
+*WhiteboardNode* is what a practice's diagram node mixes in to be drawn on a board: it answers the elements it draws, placed at the box the diagram already gave it, as `DrawioVertex` does for a draw.io cell. A node drawn on the previous board keeps the place a person moved it to (`Whiteboard.keep_places(previous)`).
+
+*StoreWrite* is one write to the artifact's store: set a record, update its changed fields, or delete it.
+
+- **Purpose:** Let any practice draw its diagram on a Claude Whiteboard and read it back, with one board format and one way of updating a board in Claude.
+- **Seam (terms):** Whiteboard, BoardElement, Shape, Section, Label, Arrow, WhiteboardNode, StoreWrite
+- **Dependencies (one-way):** none. The practices' whiteboard packages (`cdd_guidance/practices/stories/model/whiteboard`, `cdd_guidance/practices/clean_engineering/model/whiteboard`) depend on it; it names no practice and no diagram type, so a *WhiteboardNode* is handed the box it is drawn in.
+
+## Constraint
+
+Build a board by drawing practice nodes, each a *WhiteboardNode*, and read one through its practice's whiteboard model; never write `board/meta` or `elements/<id>` by hand. Send a rendered board to Claude only as the writes `Whiteboard.writes(previous)` answers, read against the board as it is in Claude, because people move, add and colour elements on a shared board and a whole rewrite would lose what they did. Element ids keep to the store's characters (`[A-Za-z0-9_.~:@+-]`, at most 40).
