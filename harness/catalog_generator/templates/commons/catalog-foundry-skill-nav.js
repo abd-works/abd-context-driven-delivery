@@ -12,16 +12,27 @@
   var COLLAPSED_COL_WIDTH = '28px';
   var PRACTICE_COL_WIDTH = '220px';
 
-  function stripScrollRestoreFromUrl() {
+  // The reader's board choices for this browser tab, kept by catalog-nav.js, which every catalog page loads first.
+  var preferences = window.catalogPreferences.session;
+
+  /** Change the address bar without reloading. A page opened from disk has no origin to rewrite its URL in, and the
+   * browser refuses with a SecurityError; the board still works, only the address does not follow it. */
+  function rewriteUrl(method, state, url) {
+    if (!window.history || !window.history[method]) return;
     try {
-      if (!window.history || !window.history.replaceState) return;
-      var params = new URLSearchParams(window.location.search);
-      if (!params.has(KANBAN_SCROLL_PARAM)) return;
-      params.delete(KANBAN_SCROLL_PARAM);
-      var q = params.toString();
-      var page = pageBasename();
-      window.history.replaceState({}, '', q ? page + '?' + q : page);
-    } catch (err) {}
+      window.history[method](state, '', url);
+    } catch (err) {
+      if (!(err instanceof DOMException && err.name === 'SecurityError')) throw err;
+    }
+  }
+
+  function stripScrollRestoreFromUrl() {
+    var params = new URLSearchParams(window.location.search);
+    if (!params.has(KANBAN_SCROLL_PARAM)) return;
+    params.delete(KANBAN_SCROLL_PARAM);
+    var query = params.toString();
+    var page = pageBasename();
+    rewriteUrl('replaceState', {}, query ? page + '?' + query : page);
   }
 
   function appendScrollRestoreToHref(href) {
@@ -42,15 +53,13 @@
     return Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
   }
 
+  /** The scroll position the page head read from the kanbanScroll parameter, or the parameter itself. */
   function pendingScrollY() {
     var y = window.__foundryPendingScrollY;
     if (y != null && !isNaN(y)) return y;
-    try {
-      var raw = new URLSearchParams(window.location.search).get(KANBAN_SCROLL_PARAM);
-      if (!raw) return null;
-      y = parseFloat(raw);
-      return isNaN(y) ? null : y;
-    } catch (err) { return null; }
+    var raw = new URLSearchParams(window.location.search).get(KANBAN_SCROLL_PARAM);
+    y = raw ? parseFloat(raw) : NaN;
+    return isNaN(y) ? null : y;
   }
 
   function applyPendingScrollRestore() {
@@ -68,46 +77,42 @@
     if (window.location.search.indexOf(KANBAN_SCROLL_PARAM + '=') >= 0) {
       stripScrollRestoreFromUrl();
     }
-    try { delete window.__foundryPendingScrollY; } catch (err) { window.__foundryPendingScrollY = undefined; }
+    window.__foundryPendingScrollY = undefined;
   }
 
+  /** The families a reader filtered the board to; an older page saved "other" as its own flag. */
   function readSavedFilter() {
-    try {
-      var raw = window.sessionStorage.getItem(FILTER_KEY);
-      if (!raw) return null;
-      var parsed = JSON.parse(raw);
-      var families = Array.isArray(parsed.families) ? parsed.families : [];
-      if (parsed.other && families.indexOf('other') === -1) families.push('other');
-      return { families: families };
-    } catch (err) { return null; }
+    var saved = preferences.readJson(FILTER_KEY, null);
+    if (!saved) return null;
+    var families = Array.isArray(saved.families) ? saved.families : [];
+    if (saved.other && families.indexOf('other') === -1) families.push('other');
+    return { families: families };
   }
 
   function saveFilter(families) {
-    try {
-      window.sessionStorage.setItem(FILTER_KEY, JSON.stringify({ families: families }));
-    } catch (err) {}
+    preferences.save(FILTER_KEY, JSON.stringify({ families: families }));
   }
 
+  /** A list saved as JSON, or forgotten when it is empty. */
+  function saveList(key, list) {
+    if (list && list.length) preferences.save(key, JSON.stringify(list));
+    else preferences.forget(key);
+  }
+
+  function readSavedList(key) {
+    var saved = preferences.readJson(key, []);
+    return Array.isArray(saved) ? saved : [];
+  }
+
+  /** The stages a reader filtered the board to; an older page saved a single stage as plain text. */
   function readSavedStageFilter() {
-    try {
-      var raw = window.sessionStorage.getItem(STAGE_FILTER_KEY);
-      if (!raw) return [];
-      if (raw.charAt(0) === '[') {
-        var parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
-      }
-      return raw ? [raw] : [];
-    } catch (err) { return []; }
+    var raw = preferences.read(STAGE_FILTER_KEY);
+    if (!raw) return [];
+    return raw.charAt(0) === '[' ? readSavedList(STAGE_FILTER_KEY) : [raw];
   }
 
   function saveStageFilter(stageIds) {
-    try {
-      if (stageIds && stageIds.length) {
-        window.sessionStorage.setItem(STAGE_FILTER_KEY, JSON.stringify(stageIds));
-      } else {
-        window.sessionStorage.removeItem(STAGE_FILTER_KEY);
-      }
-    } catch (err) {}
+    saveList(STAGE_FILTER_KEY, stageIds);
   }
 
   function isHubKanban() {
@@ -119,47 +124,28 @@
   }
 
   function readSkillsExpandedPref() {
-    try { return window.sessionStorage.getItem(skillsExpandedStorageKey()) === '1'; }
-    catch (err) { return false; }
+    return preferences.read(skillsExpandedStorageKey()) === '1';
   }
 
   function saveSkillsExpandedPref(expanded) {
-    try { window.sessionStorage.setItem(skillsExpandedStorageKey(), expanded ? '1' : '0'); }
-    catch (err) {}
+    preferences.save(skillsExpandedStorageKey(), expanded ? '1' : '0');
   }
 
   function readCrosscutPref() {
-    try {
-      var raw = window.sessionStorage.getItem(CROSSCUT_KEY);
-      if (!raw) return [];
-      var parsed = JSON.parse(raw);
-      return Array.isArray(parsed.groups) ? parsed.groups : [];
-    } catch (err) { return []; }
+    var saved = preferences.readJson(CROSSCUT_KEY, {});
+    return saved && Array.isArray(saved.groups) ? saved.groups : [];
   }
 
   function saveCrosscutPref(groups) {
-    try {
-      window.sessionStorage.setItem(CROSSCUT_KEY, JSON.stringify({ groups: groups }));
-    } catch (err) {}
+    preferences.save(CROSSCUT_KEY, JSON.stringify({ groups: groups }));
   }
 
   function readCollapsedColsPref() {
-    try {
-      var raw = window.sessionStorage.getItem(COLLAPSED_COLS_KEY);
-      if (!raw) return [];
-      var parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (err) { return []; }
+    return readSavedList(COLLAPSED_COLS_KEY);
   }
 
   function saveCollapsedColsPref(cols) {
-    try {
-      if (cols && cols.length) {
-        window.sessionStorage.setItem(COLLAPSED_COLS_KEY, JSON.stringify(cols));
-      } else {
-        window.sessionStorage.removeItem(COLLAPSED_COLS_KEY);
-      }
-    } catch (err) {}
+    saveList(COLLAPSED_COLS_KEY, cols);
   }
 
   function familyFromTicket(link) {
@@ -185,8 +171,7 @@
   }
 
   function stageFromUrl() {
-    try { return new URLSearchParams(window.location.search).get('stage') || ''; }
-    catch (err) { return ''; }
+    return new URLSearchParams(window.location.search).get('stage') || '';
   }
 
   function parseSkillHref(href) {
@@ -195,10 +180,7 @@
     if (hashIdx >= 0) href = href.slice(0, hashIdx);
     var q = href.indexOf('?');
     var base = q >= 0 ? href.slice(0, q) : href;
-    var stage = '';
-    if (q >= 0) {
-      try { stage = new URLSearchParams(href.slice(q)).get('stage') || ''; } catch (err) {}
-    }
+    var stage = q >= 0 ? new URLSearchParams(href.slice(q)).get('stage') || '' : '';
     return { base: base, stage: stage };
   }
 
@@ -366,32 +348,28 @@
     return Boolean(family && selectedFamilies.has(family));
   }
 
+  /** Show or hide each crosscut row, opening the skills of a shown one. */
+  function showCrosscutRows(crosscutRows, rowShown) {
+    crosscutRows.forEach(function (row) {
+      var shown = rowShown(row);
+      row.classList.toggle('is-filter-visible', shown);
+      updateCrosscutRowSkills(row, shown);
+    });
+  }
+
+  function showSection(section, shown) {
+    if (!section) return;
+    section.classList.toggle('is-filter-visible', shown);
+    section.hidden = !shown;
+  }
+
   function updateCrosscutSections() {
     var showSupporting = skillsExpanded || supportingOnly || cddAlwaysExpanded;
-    var showFoundations = cddAlwaysExpanded
-      ? true
-      : ((skillsExpanded && otherVisible()) || supportingOnly);
-
-    crosscutPracticeRows.forEach(function (row) {
-      var vis = (skillsExpanded || supportingOnly || cddAlwaysExpanded) && crosscutRowVisible(row);
-      row.classList.toggle('is-filter-visible', vis);
-      updateCrosscutRowSkills(row, vis);
-    });
-    if (supportingSection) {
-      supportingSection.classList.toggle('is-filter-visible', showSupporting);
-      supportingSection.hidden = !showSupporting;
-    }
-
-    crosscutOtherRows.forEach(function (row) {
-      var vis = showFoundations;
-      row.classList.toggle('is-filter-visible', vis);
-      updateCrosscutRowSkills(row, vis);
-    });
-    if (foundationalSection) {
-      foundationalSection.classList.toggle('is-filter-visible', showFoundations);
-      foundationalSection.hidden = !showFoundations;
-    }
-
+    var showFoundations = cddAlwaysExpanded || (skillsExpanded && otherVisible()) || supportingOnly;
+    showCrosscutRows(crosscutPracticeRows, function (row) { return showSupporting && crosscutRowVisible(row); });
+    showSection(supportingSection, showSupporting);
+    showCrosscutRows(crosscutOtherRows, function () { return showFoundations; });
+    showSection(foundationalSection, showFoundations);
     stageSkillRows.forEach(function (row) {
       row.classList.toggle('is-filter-visible', skillsExpanded && otherVisible());
     });
@@ -402,47 +380,24 @@
     surface.classList.toggle('foundry-skills-expanded', expanded || supportingOnly);
   }
 
+  /** The tracks below the practice rows: the gap before the stage skills and the three other-practice rows. */
+  function otherPracticeTracks() {
+    if (skillsExpanded && otherVisible()) return ['var(--foundry-stage-skills-gap-h)', ROW_H, ROW_H, ROW_H];
+    if (skillsExpanded || selectedFamilies.has('other')) return [ZERO_ROW, ROW_H, ZERO_ROW, ZERO_ROW];
+    return [ZERO_ROW, ZERO_ROW, ZERO_ROW, ZERO_ROW];
+  }
+
+  /** Size the board's rows: a practice row the family filter hides closes to nothing. */
   function syncBoardGridRows() {
     var board = surface.querySelector('.foundry-board-grid');
     if (!board) return;
-    var famRows = FAMILY_ROW_ORDER.map(function (family) {
-      if (skillsExpanded || cddAlwaysExpanded) return ROW_H;
-      if (selectedFamilies.size === 0) return ROW_H;
-      return selectedFamilies.has(family) ? ROW_H : ZERO_ROW;
+    var familyTracks = FAMILY_ROW_ORDER.map(function (family) {
+      var shown = skillsExpanded || cddAlwaysExpanded || selectedFamilies.size === 0 || selectedFamilies.has(family);
+      return shown ? ROW_H : ZERO_ROW;
     });
-    // CDD: six tool rows only — no other-practices tracks.
-    if (cddAlwaysExpanded) {
-      board.style.gridTemplateRows = [
-        'auto',
-        famRows[0], famRows[1], famRows[2], famRows[3], famRows[4], famRows[5]
-      ].join(' ');
-      return;
-    }
-    var stageGap = ZERO_ROW;
-    var otherTracks = [ZERO_ROW, ZERO_ROW, ZERO_ROW];
-    if (skillsExpanded) {
-      if (otherVisible()) {
-        stageGap = 'var(--foundry-stage-skills-gap-h)';
-        otherTracks = [ROW_H, ROW_H, ROW_H];
-      } else {
-        otherTracks = [ROW_H, ZERO_ROW, ZERO_ROW];
-      }
-    } else if (selectedFamilies.has('other')) {
-      otherTracks = [ROW_H, ZERO_ROW, ZERO_ROW];
-    }
-    board.style.gridTemplateRows = [
-      'auto',
-      famRows[0],
-      famRows[1],
-      famRows[2],
-      famRows[3],
-      famRows[4],
-      famRows[5],
-      stageGap,
-      otherTracks[0],
-      otherTracks[1],
-      otherTracks[2]
-    ].join(' ');
+    // The CDD board has only its practice rows, no other-practice tracks.
+    var tracks = ['auto'].concat(familyTracks, cddAlwaysExpanded ? [] : otherPracticeTracks());
+    board.style.gridTemplateRows = tracks.join(' ');
   }
 
   function toggleCrosscutGroup(btn) {
@@ -531,33 +486,40 @@
     return selectedStages.size === 0 && stage === highlightedStage && Boolean(highlightedStage);
   }
 
-  function applyStageColumnFilter() {
+  /** Mark the ticket for this page in the highlighted stage as the current one. */
+  function markCurrentTickets() {
     var pageName = pageBasename();
-    surface.querySelectorAll('.foundry-board-grid > .kb-col[data-stage]').forEach(function (col) {
-      col.classList.add('is-stage-filter-visible');
+    surface.querySelectorAll('.kb-ticket.aad-skill[data-stage]').forEach(function (ticket) {
+      if (ticket.classList.contains('foundry-family-toggle')) return;
+      var skillHref = (ticket.getAttribute('data-skill-href') || ticket.getAttribute('href') || '').split('?')[0];
+      var current = Boolean(highlightedStage) && skillHref === pageName && ticket.getAttribute('data-stage') === highlightedStage;
+      ticket.classList.toggle('kb-ticket--current', current);
+      if (current) ticket.setAttribute('aria-current', 'page');
+      else ticket.removeAttribute('aria-current');
     });
+  }
+
+  function markStageHeads() {
     surface.querySelectorAll('.kanban-stage-questions__cell[data-stage]').forEach(function (cell) {
       var stage = cell.getAttribute('data-stage');
       cell.classList.add('is-stage-filter-visible');
       cell.classList.toggle('is-active', stageHeadFiltered(stage) || stageHeadHighlighted(stage));
     });
-    surface.querySelectorAll('.kb-ticket.aad-skill[data-stage]').forEach(function (el) {
-      if (el.classList.contains('foundry-family-toggle')) return;
-      var skillHref = (el.getAttribute('data-skill-href') || el.getAttribute('href') || '').split('?')[0];
-      var onPage = skillHref === pageName;
-      var inStage = el.getAttribute('data-stage') === highlightedStage;
-      el.classList.toggle('kb-ticket--current', onPage && inStage && Boolean(highlightedStage));
-      if (onPage && inStage && highlightedStage) el.setAttribute('aria-current', 'page');
-      else el.removeAttribute('aria-current');
-    });
     colHeads.forEach(function (head) {
       var stage = head.getAttribute('data-stage');
       var filtered = stageHeadFiltered(stage);
-      var highlighted = stageHeadHighlighted(stage);
       head.classList.toggle('is-selected', filtered);
-      head.classList.toggle('kb-col-head--current', filtered || highlighted);
+      head.classList.toggle('kb-col-head--current', filtered || stageHeadHighlighted(stage));
       head.setAttribute('aria-pressed', filtered ? 'true' : 'false');
     });
+  }
+
+  function applyStageColumnFilter() {
+    surface.querySelectorAll('.foundry-board-grid > .kb-col[data-stage]').forEach(function (col) {
+      col.classList.add('is-stage-filter-visible');
+    });
+    markStageHeads();
+    markCurrentTickets();
     applyFilter();
     syncStageIdleState();
   }
@@ -574,20 +536,14 @@
     }
     var stageList = Array.from(selectedStages);
     saveStageFilter(stageList);
-    if (window.history && window.history.pushState) {
-      window.history.pushState({ foundryStage: stageList }, '', buildStageUrl(stageList));
-    }
+    rewriteUrl('pushState', { foundryStage: stageList }, buildStageUrl(stageList));
     applyStageColumnFilter();
   }
 
-  window.__foundryApplyStage = function (stageId) {
-    highlightedStage = stageId || '';
-    if (window.history && window.history.pushState) {
-      window.history.pushState({ foundryHighlight: stageId || '' }, '', buildStageUrl(stageId || ''));
-    }
-    applyStageColumnFilter();
+  // The tour (catalog-foundry-tour.js) opens and closes the skill rows as it walks the board.
+  window.catalogBoardSetSkillsExpanded = function (expanded) {
+    setSkillsExpanded(expanded);
   };
-  window.__foundrySetSkillsExpanded = setSkillsExpanded;
 
   crosscutToggles.forEach(function (btn) {
     btn.addEventListener('click', function (e) {
