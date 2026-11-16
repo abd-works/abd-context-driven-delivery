@@ -69,25 +69,22 @@ def queued_fills(world) -> list[str]:
 # --- Toggle Practice In Files App ---------------------------------------------------------------------------------
 
 
-def practices_saved(world) -> list[str]:
-    """The practices checkout-flow's session works on, read again from its session.json."""
-    selection = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.guidance_selection())
-    return [practice["key"] for practice in selection["practices"] if practice["is_selected"]]
-
-
 @shared_stories.scenario("Toggle Practice In Files App", "Turn a practice on to show its files")
 def _(s):
     @s.given("the Files app shows the DDD toggle as an outline")
     def _(world):
         world.project.seed_session(CHECKOUT_FLOW_WITHOUT_DDD)
+        world.selection = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.guidance_selection())
 
     @s.when("the Person turns DDD on")
     def _(world):
-        world.Ticket.load(CHECKOUT_FLOW.name).session.update_guidance_selection(practices=[*practices_saved(world), "ddd"])
+        turned_on = [practice["key"] for practice in world.selection["practices"] if practice["is_selected"] or practice["key"] == "ddd"]
+        world.Ticket.load(CHECKOUT_FLOW.name).session.update_guidance_selection(practices=turned_on)
 
     @s.then("checkout-flow's session works on DDD, saved in its session.json")
     def _(world):
-        expect(practices_saved(world)).to(contain("stories", "ddd"))
+        saved = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.guidance_selection())
+        expect([practice["key"] for practice in saved["practices"] if practice["is_selected"]]).to(contain("stories", "ddd"))
 
 
 @shared_stories.scenario("Toggle Practice In Files App", "Turn a practice off to hide its files")
@@ -95,14 +92,17 @@ def _(s):
     @s.given("the Files app shows the Stories toggle filled")
     def _(world):
         world.project.seed_session(CHECKOUT_FLOW_WITHOUT_DDD)
+        world.selection = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.guidance_selection())
 
     @s.when("the Person turns Stories off")
     def _(world):
-        world.Ticket.load(CHECKOUT_FLOW.name).session.update_guidance_selection(practices=[key for key in practices_saved(world) if key != "stories"])
+        turned_on = [practice["key"] for practice in world.selection["practices"] if practice["is_selected"] and practice["key"] != "stories"]
+        world.Ticket.load(CHECKOUT_FLOW.name).session.update_guidance_selection(practices=turned_on)
 
     @s.then("checkout-flow's session no longer works on Stories")
     def _(world):
-        expect("stories" in practices_saved(world)).to(equal(False))
+        saved = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.guidance_selection())
+        expect([practice["key"] for practice in saved["practices"] if practice["is_selected"]]).not_to(contain("stories"))
 
 
 # --- View Files In Rich Viewer ------------------------------------------------------------------------------------
