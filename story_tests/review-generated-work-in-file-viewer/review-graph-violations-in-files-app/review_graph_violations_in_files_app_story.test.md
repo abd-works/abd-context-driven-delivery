@@ -47,6 +47,7 @@ section: body
 |--------|------|
 | user request, 2026-11-15 | "we basically ingest all of the stories and functionality that the Graph application can do" |
 | Graph app, Show Only Violations, Filter Violations By Rule (Observed) | `FilterView.tsx`, `Filter._fails_selected_rule` |
+| person's decision, 2026-11-16 | Violations is a node filter: it applies together with the file list, narrowing the nodes of the files listed, never replacing the list. |
 
 #### Scenario: The Violations switch keeps only nodes that break a rule
 
