@@ -11,15 +11,13 @@
       "specification",
       "implementation"
     ],
-    "version": 58
+    "version": 60
   },
   "practices": {
     "stories": {
       "formats": {
         "story_map": [
-          "markdown",
-          "drawio",
-          "whiteboard"
+          "markdown"
         ],
         "scenarios": [
           "python",
@@ -39,15 +37,12 @@
     "clean_engineering": {
       "formats": {
         "modules": [
-          "markdown",
-          "drawio",
-          "whiteboard"
+          "markdown"
         ],
         "code": [],
         "model": [
           "python",
-          "drawio",
-          "whiteboard"
+          "markdown"
         ]
       },
       "enabled": true
