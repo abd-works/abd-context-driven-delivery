@@ -3,7 +3,7 @@ import wordmarkBlack from './brand/abd.works.wordmark.black.svg?url';
 import wordmarkWhite from './brand/abd.works.wordmark.white.svg?url';
 import type { CddProgress } from '@cdd/cdd-shared';
 import type { ExplorerEntryData, FilterData, GraphRuleData, NodeSourceData } from '@cdd/harness/graph/graph';
-import { nodeFilter, type FilterSelection } from './filter/filter-selection';
+import { NO_CHOICES, NO_FILTER, chosen, nodeFilter, type FilterSelection } from './filter/filter-selection';
 import { FilterView } from './filter/FilterView';
 import { GraphClient } from './graph/GraphClient';
 import { reasonOf } from './graph/graph-failures';
@@ -17,15 +17,6 @@ import type { ViolationFocus } from './source/violation-prompt';
 
 const LAST_FOLDER = 'cdd-graph-folder';
 const LAST_OVERLAYS = 'cdd-graph-overlays';
-const EMPTY: FilterSelection = {
-  practices: [],
-  overlays: [],
-  node_types: [],
-  relationships: [],
-  rules: [],
-  violations: false,
-};
-const NO_CHOICES: FilterData = { node_types: [], offered_node_types: [], relationships: [], rules: [] };
 
 // A page opened with ?folder= (the chat bar names the session's workpath) loads that folder; one opened on a project
 // (?project=, from a ticket's graph widget) shows the graph of the session open there, loaded on its practice roots; a
@@ -43,9 +34,9 @@ export function App() {
   const [folder, setFolder] = useState(() => openedOnFolder() || api.project || (window.localStorage.getItem(LAST_FOLDER) ?? ''));
   const [loadedFolder, setLoadedFolder] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(true);
-  const [selection, setSelection] = useState<FilterSelection>(EMPTY);
+  const [selection, setSelection] = useState<FilterSelection>(NO_FILTER);
   // The filter the trees on the page were read with, which a branch opened later is read with too.
-  const shownFilter = useRef<FilterSelection>(EMPTY);
+  const shownFilter = useRef<FilterSelection>(NO_FILTER);
   const [trees, setTrees] = useState<ExplorerEntryData[]>([]);
   const [practices, setPractices] = useState<string[]>([]);
   const [nodeTypes, setNodeTypes] = useState<string[]>([]);
@@ -448,11 +439,6 @@ export function App() {
 
 function joined(values: string[]): string {
   return values.join('\n');
-}
-
-// The selection with the node types, relationships, and rules Python's Filter chose for it.
-function chosen(next: FilterSelection, choices: FilterData): FilterSelection {
-  return { ...next, node_types: choices.node_types, relationships: choices.relationships, rules: choices.rules };
 }
 
 // The overlays a person last applied. Saved text that is not a list of overlays fails the load that reads it, which

@@ -91,6 +91,24 @@ export function FilterView({
           )}
         </ul>
       </div>
+      <NodeFilterLists selection={selection} nodeTypes={nodeTypes} relationships={relationships} rules={rules} onChange={onChange} />
+    </div>
+  );
+}
+
+type NodeFilterListsProps = {
+  selection: FilterSelection;
+  nodeTypes: string[];
+  relationships: string[];
+  rules: string[];
+  onChange: (selection: FilterSelection) => void;
+};
+
+// The node filter's lists, as every page that filters a graph's nodes shows them: node types, connectors, rules, and the
+// Violations switch.
+export function NodeFilterLists({ selection, nodeTypes, relationships, rules, onChange }: NodeFilterListsProps) {
+  return (
+    <>
       <FilterSelect
         label="Node"
         testId="filter-node"
@@ -125,7 +143,7 @@ export function FilterView({
           </span>
         </button>
       </div>
-    </div>
+    </>
   );
 }
 

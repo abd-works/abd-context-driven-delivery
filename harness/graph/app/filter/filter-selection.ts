@@ -1,3 +1,5 @@
+import type { FilterData } from '@cdd/harness/graph/graph';
+
 export type FilterSelection = {
   practices: string[];
   overlays: string[];
@@ -15,4 +17,13 @@ export function nodeFilter(selection: FilterSelection): Record<string, unknown> 
     ...(selection.relationships.length ? { relationships: selection.relationships } : {}),
     ...(selection.violations ? { violations: true, rules: selection.rules } : {}),
   };
+}
+
+// A selection that filters nothing, and the choices offered before Python's Filter answers any.
+export const NO_FILTER: FilterSelection = { practices: [], overlays: [], node_types: [], relationships: [], rules: [], violations: false };
+export const NO_CHOICES: FilterData = { node_types: [], offered_node_types: [], relationships: [], rules: [] };
+
+// The selection with the node types, relationships, and rules Python's Filter chose for it.
+export function chosen(next: FilterSelection, choices: FilterData): FilterSelection {
+  return { ...next, node_types: choices.node_types, relationships: choices.relationships, rules: choices.rules };
 }

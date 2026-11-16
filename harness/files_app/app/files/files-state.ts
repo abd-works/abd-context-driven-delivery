@@ -1,4 +1,5 @@
-import type { NodeSourceData } from '@cdd/harness/graph/graph'
+import type { FilterData, NodeSourceData } from '@cdd/harness/graph/graph'
+import { NO_CHOICES, NO_FILTER, type FilterSelection } from '@graph-app/filter/filter-selection'
 import type { ExplorerEntryData, FileEntryData, GuidanceSelectionData, RangeData, SessionFileData } from '@cdd/space/session/session'
 
 // One fidelity's files as the link names them, kept by fidelity so a practice turned off hides its own, with the format
@@ -11,10 +12,14 @@ export type SelectedNode = { nodeId: string; lines: RangeData }
 // The graph view of the file bar: the practice trees of the session's graph holding only the nodes of the files the bar
 // lists, read for those files (readFor names them), the branches a person opened and the entries read below them, the
 // nodes selected, every class, operation and property the graph holds, which the open file opens its calls in place from
-// even in another file, the cdd server's progress reports while a read is under way, and whether it failed.
+// even in another file, the cdd server's progress reports while a read is under way, and whether it failed. Its node
+// filter is the Graph app's, a filter other than the file list that applies with it: it narrows the nodes of the files
+// listed, with the node types, connectors and rules Python's Filter offers for it (choices).
 export type FilesGraphState = {
   trees: ExplorerEntryData[] | null
   readFor: string
+  filter: FilterSelection
+  choices: FilterData
   branches: Record<string, ExplorerEntryData>
   openNodes: string[]
   selected: SelectedNode[]
@@ -24,7 +29,7 @@ export type FilesGraphState = {
   problem: string
 }
 
-export const NO_GRAPH: FilesGraphState = { trees: null, readFor: '', branches: {}, openNodes: [], selected: [], members: [], log: [], isReading: false, problem: '' }
+export const NO_GRAPH: FilesGraphState = { trees: null, readFor: '', filter: NO_FILTER, choices: NO_CHOICES, branches: {}, openNodes: [], selected: [], members: [], log: [], isReading: false, problem: '' }
 
 // What the page draws: the session's practices with their toggles, the files its link names, the one open, and what went wrong. The open file is the session's
 // answer itself (text, comments, folds, violations, changes), never a copy kept beside it.

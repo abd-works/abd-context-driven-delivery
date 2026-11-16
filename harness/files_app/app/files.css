@@ -75,6 +75,14 @@ button:disabled { cursor: default; opacity: 0.5; }
 .more-file { margin-top: var(--space-md); }
 .more-file-path { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2xs); }
 
+/* The graph view's node filter: the Graph app's lists of node types, connectors and rules, and its Violations switch. */
+.graph-node-filter { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.5rem; border-bottom: 1px solid var(--border); }
+.graph-node-filter .filter-heading { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 0.75rem; }
+.graph-node-filter .filter-actions { display: flex; gap: 0.25rem; }
+.graph-node-filter .filter-actions button { background: var(--raised); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-size: 0.7rem; padding: 0 0.4rem; }
+.graph-node-filter select { width: 100%; min-height: 3.5rem; background: var(--surface); color: var(--text); border: 1px solid var(--border); font-size: 0.75rem; }
+.graph-node-filter .filter-switch { background: var(--raised); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-size: 0.75rem; }
+.graph-node-filter .filter-switch.is-on { border-color: var(--error); color: var(--error); }
 .graph-tree, .graph-tree ul { list-style: none; }
 .graph-tree ul { padding-left: 1.25rem; }
 .tree-row { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--space-2xs); min-width: 0; }

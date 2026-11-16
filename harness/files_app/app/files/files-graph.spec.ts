@@ -76,6 +76,7 @@ class FakeFilesServer implements CddApi {
     if (path.endsWith('/fidelity-files')) return {} as Result
     if (path.endsWith('/root-files')) return CHECKOUT_FLOW_FILES as Result
     if (path.endsWith('/graph-trees')) return (await this.heldTrees(body.paths as string[])) as Result
+    if (path.endsWith('/graph-filter-choices')) return this.choices(body.node_types as string[]) as Result
     if (path.endsWith('/graph-branch')) return this.entry(this.node(String(body.node_id)), body.paths as string[], true) as Result
     if (path.endsWith('/graph-node-ranges')) return this.ranges(this.node(String(body.node_id)), body.paths as string[]) as Result
     if (path.endsWith('/graph-members')) return CHECKOUT_FLOW_NODES.filter(node => node.file).map(node => ({ node_id: node.id, name: node.name, type: node.type, file: node.file })) as Result
@@ -148,6 +149,17 @@ class FakeFilesServer implements CddApi {
     }
     widen(node)
     return [...spans].map(([path, [start, end]]) => ({ path, start_line: start, end_line: end, content: '', anchor: `${path}:${start}-${end}` }))
+  }
+
+  // The choices Python's Filter offers for the node types chosen: operations sit on owns and invokes, and carry their rules.
+  private choices(nodeTypes: string[]) {
+    const operations = nodeTypes.includes('Operation')
+    return {
+      node_types: nodeTypes,
+      offered_node_types: ['OoadClass', 'Operation'],
+      relationships: operations ? ['owns', 'invokes'] : ['owns'],
+      rules: operations ? ['clean_engineering.Operation.keep-operations-small-focused'] : [],
+    }
   }
 
   posted(ending: string): { path: string; body: Record<string, unknown> }[] {
@@ -260,6 +272,80 @@ describe('Filter Graph Like The File List', () => {
       await settled()
       stop()
       expect(namesBelow(page, 'Clean Engineering')).toEqual(['Ticket'])
+    })
+  })
+})
+
+describe('Filter Graph By Node Type And Connector', () => {
+  describe("with checkout-flow's graph shown", () => {
+    async function filteredToOperations() {
+      const shown = await showingGraph()
+      await shown.page.graph.filterTo({ ...shown.page.state.graph.filter, node_types: ['Operation'] })
+      await settled()
+      return shown
+    }
+
+    it('should offer the node types the graph holds once it is read', async () => {
+      const { page, stop } = await showingGraph()
+      stop()
+      expect(page.state.graph.choices.offered_node_types).toEqual(['OoadClass', 'Operation'])
+    })
+
+    it('should read the graph again for the files listed, narrowed to operations, when the Person filters to operations', async () => {
+      const { server, stop } = await filteredToOperations()
+      stop()
+      expect(server.posted('/graph-trees').at(-1)?.body).toEqual({ paths: [STORY_MAP, TICKET_CODE, BOARD_CODE], node_filter: { types: ['Operation'], relationships: ['owns', 'invokes'] } })
+    })
+
+    it('should offer the connectors and rules operations carry', async () => {
+      const { page, stop } = await filteredToOperations()
+      stop()
+      expect([page.state.graph.choices.relationships, page.state.graph.choices.rules]).toEqual([['owns', 'invokes'], ['clean_engineering.Operation.keep-operations-small-focused']])
+    })
+
+    it('should keep only the nodes on the invokes connector when the Person chooses it', async () => {
+      const { page, server, stop } = await filteredToOperations()
+      await page.graph.filterTo({ ...page.state.graph.filter, relationships: ['invokes'] })
+      await settled()
+      stop()
+      expect(server.posted('/graph-trees').at(-1)?.body.node_filter).toEqual({ types: ['Operation'], relationships: ['invokes'] })
+    })
+
+    it('should open a node with the same node filter', async () => {
+      const { page, server, stop } = await filteredToOperations()
+      await page.graph.toggle(entryNamed(page, 'Clean Engineering'))
+      await page.graph.toggle(entryNamed(page, 'Ticket'))
+      stop()
+      expect(server.posted('/graph-branch').at(-1)?.body.node_filter).toEqual({ types: ['Operation'], relationships: ['owns', 'invokes'] })
+    })
+
+    it('should keep the node filter when the file list changes to the changed files', async () => {
+      const { page, server, stop } = await filteredToOperations()
+      page.showScope('session')
+      await settled()
+      stop()
+      expect(server.posted('/graph-trees').at(-1)?.body).toEqual({ paths: [STORY_MAP, TICKET_CODE], node_filter: { types: ['Operation'], relationships: ['owns', 'invokes'] } })
+    })
+
+    it('should send no node type once the Person clears the node types with None', async () => {
+      const { page, server, stop } = await filteredToOperations()
+      await page.graph.filterTo({ ...page.state.graph.filter, node_types: [] })
+      await settled()
+      stop()
+      expect(server.posted('/graph-trees').at(-1)?.body.node_filter).toEqual({ relationships: ['owns'] })
+    })
+
+    it('should keep only violating nodes, of the rules chosen, once the Person turns on Violations', async () => {
+      const { page, server, stop } = await filteredToOperations()
+      await page.graph.filterTo({ ...page.state.graph.filter, violations: true })
+      await settled()
+      stop()
+      expect(server.posted('/graph-trees').at(-1)?.body.node_filter).toEqual({
+        types: ['Operation'],
+        relationships: ['owns', 'invokes'],
+        violations: true,
+        rules: ['clean_engineering.Operation.keep-operations-small-focused'],
+      })
     })
   })
 })

@@ -1,10 +1,12 @@
 import { useSyncExternalStore, type MouseEvent } from 'react'
 
 import type { ExplorerEntryData } from '@cdd/space/session/session'
+import { NodeFilterLists } from '@graph-app/filter/FilterView'
 import { LoadProgressView } from '@graph-app/graph/LoadProgressView'
 import { KindMark, kindLabel } from '@graph-app/labels/kind-mark'
 
 import type { FilesPage } from './files-page'
+import type { FilesGraphState } from './files-state'
 
 function useFilesState(page: FilesPage) {
   return useSyncExternalStore(page.store.subscribe, () => page.store.state)
@@ -54,10 +56,36 @@ function GraphEntryView({ page, entry }: { page: FilesPage; entry: ExplorerEntry
   )
 }
 
-// The file bar's graph view: the practice trees of the session's graph holding only the nodes of the files the bar
-// lists, each collapsed until a person opens it.
+// The graph view's node filter, the Graph app's lists: node types, connectors, rules and the Violations switch, which
+// narrow the nodes of the files the bar lists.
+function GraphNodeFilterView({ page }: { page: FilesPage }) {
+  const { graph } = useFilesState(page)
+  return (
+    <div className="filters graph-node-filter" aria-label="Node filter">
+      <NodeFilterLists
+        selection={graph.filter}
+        nodeTypes={graph.choices.offered_node_types}
+        relationships={graph.choices.relationships}
+        rules={graph.choices.rules}
+        onChange={next => void page.graph.filterTo(next)}
+      />
+    </div>
+  )
+}
+
+// The file bar's graph view: its node filter, then the practice trees of the session's graph holding only the nodes of
+// the files the bar lists that the filter keeps, each collapsed until a person opens it.
 export function FilesGraphView({ page }: { page: FilesPage }) {
   const { graph } = useFilesState(page)
+  return (
+    <>
+      <GraphNodeFilterView page={page} />
+      <GraphTreesView page={page} graph={graph} />
+    </>
+  )
+}
+
+function GraphTreesView({ page, graph }: { page: FilesPage; graph: FilesGraphState }) {
   if (graph.problem) return <p className="files-note">{graph.problem}</p>
   if (graph.isReading) return <LoadProgressView loadingLabel="Reading the session's graph…" loadingLog={graph.log} />
   if (!graph.trees?.length) return <p className="files-note">The graph holds no node of these files.</p>
