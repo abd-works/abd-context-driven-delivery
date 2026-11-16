@@ -10,13 +10,14 @@
       "discovery",
       "implementation"
     ],
-    "version": 31
+    "version": 32
   },
   "practices": {
     "stories": {
       "formats": {
         "story_map": [
-          "drawio"
+          "drawio",
+          "markdown"
         ]
       }
     },
