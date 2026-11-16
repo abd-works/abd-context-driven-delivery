@@ -49,7 +49,7 @@
   },
   "outputs": {
     "stories": {
-      "root": ".context/stories"
+      "root": "../.context"
     }
   }
 }
