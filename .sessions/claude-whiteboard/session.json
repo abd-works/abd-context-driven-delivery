@@ -1,5 +1,7 @@
 {
   "name": "claude-whiteboard",
   "title": "claude-whiteboard",
-  "scope": "feature"
+  "scope": "feature",
+  "branch": "claude-whiteboard",
+  "worktree": "C:\\dev\\abd-cdd-claude-whiteboard"
 }
